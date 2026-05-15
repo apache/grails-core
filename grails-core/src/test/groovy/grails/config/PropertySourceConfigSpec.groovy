@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -30,7 +30,7 @@ import spock.lang.Specification
  */
 class PropertySourceConfigSpec extends Specification {
 
-    void "specifying targetType as Map in getProperty method should not return NavigableMap"() {
+    void 'specifying targetType as Map in getProperty method should not return NavigableMap'() {
         given:
         Map input = ['mongodb.username': 'test',
                      'mongodb.password': 'foo']
@@ -38,13 +38,13 @@ class PropertySourceConfigSpec extends Specification {
         when:
         PropertySourcesConfig config = new PropertySourcesConfig()
         config.merge(input)
-        Map value = config.getProperty("mongodb", Map.class)
+        Map value = config.getProperty('mongodb', Map.class)
 
         then:
         !(value instanceof NavigableMap)
     }
 
-    void "specifying targetType as Map in getProperty method should not return NavigableMap for List of Map value"() {
+    void 'specifying targetType as Map in getProperty method should not return NavigableMap for List of Map value'() {
         given:
         Map input = ['grails.mongodb.connections[0].username': 'test',
                      'grails.mongodb.connections[0].password': 'foo']
@@ -54,12 +54,11 @@ class PropertySourceConfigSpec extends Specification {
         config.merge(input)
 
         then:
-        !(config.getProperty("grails.mongodb.connections[0]", Map.class) instanceof NavigableMap)
-        !(config.getProperty("grails.mongodb.connections", List.class).get(0) instanceof NavigableMap)
+        !(config.getProperty('grails.mongodb.connections[0]', Map.class) instanceof NavigableMap)
+        !(config.getProperty('grails.mongodb.connections', List.class).get(0) instanceof NavigableMap)
     }
 
-
-    void "should merge sub-documents in yaml file to single config"() {
+    void 'should merge sub-documents in yaml file to single config'() {
 
         given:
         def propertySource = new YamlPropertySourceLoader()
@@ -73,7 +72,7 @@ class PropertySourceConfigSpec extends Specification {
         config.grails.containsKey('somekey') == true
     }
 
-    void "Should support conversion from null to other objects"() {
+    void 'Should support conversion from null to other objects'() {
 
         given:
         PropertySourcesConfig config = new PropertySourcesConfig()
@@ -82,11 +81,11 @@ class PropertySourceConfigSpec extends Specification {
         config.put('foo.bar', null)
 
         then:
-        config.getProperty("foo.bar", Map.class) == null
+        config.getProperty('foo.bar', Map.class) == null
 
     }
 
-    void "should support merging maps"() {
+    void 'should support merging maps'() {
 
         given:
         PropertySourcesConfig config = new PropertySourcesConfig()
@@ -131,7 +130,7 @@ class PropertySourceConfigSpec extends Specification {
         config.'a.d' == 1
     }
 
-    void "should support null safe navigation for getting"() {
+    void 'should support null safe navigation for getting'() {
 
         given:
         PropertySourcesConfig config = new PropertySourcesConfig()
@@ -141,7 +140,7 @@ class PropertySourceConfigSpec extends Specification {
         config.a.b.c as Map == null
     }
 
-    void "should support null safe navigation for setting"() {
+    void 'should support null safe navigation for setting'() {
 
         given:
         PropertySourcesConfig config = new PropertySourcesConfig()
@@ -155,7 +154,7 @@ class PropertySourceConfigSpec extends Specification {
         config.'a.b.c' == 1
     }
 
-    void "should support merging values when map already exists"() {
+    void 'should support merging values when map already exists'() {
 
         given:
         PropertySourcesConfig config = new PropertySourcesConfig()
@@ -188,7 +187,7 @@ class PropertySourceConfigSpec extends Specification {
         config.'a.b.e' == 3
     }
 
-    void "should support setting map in null safe navigation"() {
+    void 'should support setting map in null safe navigation'() {
 
         given:
         PropertySourcesConfig config = new PropertySourcesConfig()
@@ -205,7 +204,7 @@ class PropertySourceConfigSpec extends Specification {
         config.'a.b.c' == [d: 3, e: [f: 4]]
     }
 
-    void "should support removing values when key is set to null"() {
+    void 'should support removing values when key is set to null'() {
 
         given:
         PropertySourcesConfig config = new PropertySourcesConfig([a: [b: [c: [d: 1, e: 2]]]])
@@ -219,7 +218,7 @@ class PropertySourceConfigSpec extends Specification {
         config.'a.b.c' == 1
     }
 
-    void "should support casting to boolean"() {
+    void 'should support casting to boolean'() {
 
         given:
         PropertySourcesConfig config = new PropertySourcesConfig()
@@ -234,7 +233,7 @@ class PropertySourceConfigSpec extends Specification {
         config as boolean == false
     }
 
-    void "should support with"() {
+    void 'should support with'() {
         given:
         PropertySourcesConfig config = new PropertySourcesConfig()
 
@@ -252,7 +251,7 @@ class PropertySourceConfigSpec extends Specification {
         config.'a.b.c.e' == 2
     }
 
-    void "null safe navigation should be supported without creating keys"() {
+    void 'null safe navigation should be supported without creating keys'() {
 
         given:
         PropertySourcesConfig config = new PropertySourcesConfig()

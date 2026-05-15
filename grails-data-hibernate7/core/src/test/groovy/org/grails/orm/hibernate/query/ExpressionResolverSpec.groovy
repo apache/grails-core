@@ -1,14 +1,14 @@
 /*
  * Copyright 2024-2025 the original author or authors.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
+ * Licensed under the Apache License, Version 2.0 (the 'License')
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * distributed under the License is distributed on an 'AS IS' BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -27,7 +27,7 @@ import spock.lang.Specification
  */
 class ExpressionResolverSpec extends Specification {
 
-    def "test resolve simple property path"() {
+    def 'test resolve simple property path'() {
         given:
         def root = Mock(From)
         def propPath = Mock(Path)
@@ -36,86 +36,86 @@ class ExpressionResolverSpec extends Specification {
         def resolver = new ExpressionResolver(aliasRegistry, joinTracker)
 
         when:
-        def result = resolver.resolve("firstName")
+        def result = resolver.resolve('firstName')
 
         then:
-        1 * root.get("firstName") >> propPath
+        1 * root.get('firstName') >> propPath
         result == propPath
     }
 
-    def "test resolve {alias} returns root"() {
+    def 'test resolve {alias} returns root'() {
         given:
         def root = Mock(From)
         def joinTracker = new JoinTracker(root)
         def resolver = new ExpressionResolver(new AliasRegistry(), joinTracker)
 
         expect:
-        resolver.resolve("{alias}") == root
-        resolver.resolve("root") == root
+        resolver.resolve('{alias}') == root
+        resolver.resolve('root') == root
     }
 
-    def "test resolve with alias:property separator"() {
+    def 'test resolve with alias:property separator'() {
         given:
         def root = Mock(From)
         def faceJoin = Mock(Join)
         def namePath = Mock(Path)
         def aliasRegistry = new AliasRegistry()
-        aliasRegistry.define("f", new HibernateAlias("face", "f", JoinType.INNER))
+        aliasRegistry.define('f', new HibernateAlias('face', 'f', JoinType.INNER))
         def joinTracker = new JoinTracker(root)
         def resolver = new ExpressionResolver(aliasRegistry, joinTracker)
 
         when:
-        def result = resolver.resolve("f:name")
+        def result = resolver.resolve('f:name')
 
         then:
-        1 * root.join("face", JoinType.INNER) >> faceJoin
-        1 * faceJoin.get("name") >> namePath
+        1 * root.join('face', JoinType.INNER) >> faceJoin
+        1 * faceJoin.get('name') >> namePath
         result == namePath
-        aliasRegistry.getRealized("f") == faceJoin
-        joinTracker.getJoin("f") == faceJoin
+        aliasRegistry.getRealized('f') == faceJoin
+        joinTracker.getJoin('f') == faceJoin
     }
 
-    def "test resolve with dot notation alias.property"() {
+    def 'test resolve with dot notation alias.property'() {
         given:
         def root = Mock(From)
         def faceJoin = Mock(Join)
         def namePath = Mock(Path)
         def aliasRegistry = new AliasRegistry()
-        aliasRegistry.define("f", new HibernateAlias("face", "f", JoinType.INNER))
+        aliasRegistry.define('f', new HibernateAlias('face', 'f', JoinType.INNER))
         def joinTracker = new JoinTracker(root)
         def resolver = new ExpressionResolver(aliasRegistry, joinTracker)
 
         when:
-        def result = resolver.resolve("f.name")
+        def result = resolver.resolve('f.name')
 
         then:
-        1 * root.join("face", JoinType.INNER) >> faceJoin
-        1 * faceJoin.get("name") >> namePath
+        1 * root.join('face', JoinType.INNER) >> faceJoin
+        1 * faceJoin.get('name') >> namePath
         result == namePath
     }
 
-    def "test resolve using already joined path"() {
+    def 'test resolve using already joined path'() {
         given:
         def root = Mock(From)
         def nicknamesJoin = Mock(Join)
         def joinTracker = new JoinTracker(root)
-        joinTracker.addJoin("nicknames", nicknamesJoin)
+        joinTracker.addJoin('nicknames', nicknamesJoin)
         def resolver = new ExpressionResolver(new AliasRegistry(), joinTracker)
 
         expect:
-        resolver.resolve("nicknames") == nicknamesJoin
+        resolver.resolve('nicknames') == nicknamesJoin
     }
 
-    def "test resolve with parent context (correlated subquery)"() {
+    def 'test resolve with parent context (correlated subquery)'() {
         given:
         // Parent context
         def parentRoot = Mock(From)
         def faceJoin = Mock(Join)
         def parentAliasRegistry = new AliasRegistry()
-        parentAliasRegistry.define("f", new HibernateAlias("face", "f", JoinType.INNER))
-        parentAliasRegistry.realize("f", faceJoin)
+        parentAliasRegistry.define('f', new HibernateAlias('face', 'f', JoinType.INNER))
+        parentAliasRegistry.realize('f', faceJoin)
         def parentJoinTracker = new JoinTracker(parentRoot)
-        parentJoinTracker.addJoin("f", faceJoin)
+        parentJoinTracker.addJoin('f', faceJoin)
 
         // Subquery context
         def subRoot = Mock(From)
@@ -126,11 +126,11 @@ class ExpressionResolverSpec extends Specification {
         def namePath = Mock(Path)
 
         when:
-        def result = resolver.resolve("f.name")
+        def result = resolver.resolve('f.name')
 
         then:
         0 * subRoot.join(_, _) // Should NOT join on subquery root
-        1 * faceJoin.get("name") >> namePath
+        1 * faceJoin.get('name') >> namePath
         result == namePath
     }
 }

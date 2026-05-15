@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -51,6 +51,7 @@ import static java.time.temporal.ChronoUnit.DAYS
  * Created by graemerocher on 27/09/2016.
  */
 class CustomCodecSpec extends AutoStartedMongoSpec {
+
     @Shared
     @AutoCleanup
     MongoDatastore mongoDatastore
@@ -71,29 +72,29 @@ class CustomCodecSpec extends AutoStartedMongoSpec {
         ], Person, InstantHolder)
     }
 
-    void "Test custom codecs"() {
-        when: "A new person is saved"
+    void 'Test custom codecs'() {
+        when: 'A new person is saved'
         Person.DB.drop()
         def birthday = new Birthday(new Date())
-        new Person(name: "Fred", birthday: birthday).save(flush: true)
+        new Person(name: 'Fred', birthday: birthday).save(flush: true)
 
         Person p = Person.first()
 
-        then: "The result is correct"
-        p.name == "Fred"
+        then: 'The result is correct'
+        p.name == 'Fred'
         p.birthday
         Person.findByBirthday(birthday)
         !Person.findByBirthday(new Birthday(new Date() - 7))
     }
 
-    void "Test codec overriding for simple type Instant"() {
+    void 'Test codec overriding for simple type Instant'() {
         setup:
         def defaultInstantDecoder = SimpleDecoder.SIMPLE_TYPE_DECODERS[Instant]
         def defaultInstantEncoder = SimpleEncoder.SIMPLE_TYPE_ENCODERS[Instant]
         SimpleDecoder.SIMPLE_TYPE_DECODERS[Instant] = new InstantAsBsonDateTimeDecoder()
         SimpleEncoder.SIMPLE_TYPE_ENCODERS[Instant] = new InstantAsBsonDateTimeEncoder()
 
-        when: "A new instant holder is saved"
+        when: 'A new instant holder is saved'
         InstantAsBsonDateTimeCodec.resetCounts()
         InstantHolder.DB.drop()
         def instant = Instant.now()
@@ -106,7 +107,7 @@ class CustomCodecSpec extends AutoStartedMongoSpec {
         holder.save(flush: true)
         InstantHolder ih = InstantHolder.first()
 
-        then: "The serialization is correct"
+        then: 'The serialization is correct'
         serializedInstant.class == BsonDateTime
         codecRegistry.get(Instant).class == InstantAsBsonDateTimeCodec
         ih.anInstant
@@ -124,6 +125,7 @@ class CustomCodecSpec extends AutoStartedMongoSpec {
 }
 
 class BirthdayCodec implements Codec<Birthday> {
+
     Birthday decode(BsonReader reader, DecoderContext decoderContext) {
         return new Birthday(new Date(reader.readDateTime()))
     }
@@ -136,6 +138,7 @@ class BirthdayCodec implements Codec<Birthday> {
 }
 
 class InstantAsBsonDateTimeCodec implements Codec<Instant> {
+
     public static AtomicLong decodeCount = new AtomicLong()
     public static AtomicLong encodeCount = new AtomicLong()
 
@@ -177,6 +180,7 @@ trait InstantAsBsonDateTimeConverter implements TemporalBsonConverter<Instant>, 
 }
 
 class InstantAsBsonDateTimeEncoder implements SimpleEncoder.TypeEncoder, InstantAsBsonDateTimeConverter {
+
     @Override
     void encode(BsonWriter writer, PersistentProperty property, Object value) {
         write(writer, (Instant) value)
@@ -184,6 +188,7 @@ class InstantAsBsonDateTimeEncoder implements SimpleEncoder.TypeEncoder, Instant
 }
 
 class InstantAsBsonDateTimeDecoder implements SimpleDecoder.TypeDecoder, InstantAsBsonDateTimeConverter {
+
     @Override
     void decode(BsonReader reader, PersistentProperty property, EntityAccess entityAccess) {
         entityAccess.setPropertyNoConversion(property.name, read(reader))
@@ -192,6 +197,7 @@ class InstantAsBsonDateTimeDecoder implements SimpleDecoder.TypeDecoder, Instant
 
 @Entity
 class InstantHolder implements MongoEntity<InstantHolder> {
+
     ObjectId id
     Instant anInstant
 }

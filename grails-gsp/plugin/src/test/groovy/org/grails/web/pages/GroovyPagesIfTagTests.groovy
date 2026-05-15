@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -30,7 +30,7 @@ class GroovyPagesIfTagTests extends AbstractGrailsTagTests {
     @Test
     void testGreaterThan() {
         def template = '<g:if test="${2 > 1}">rechoice</g:if>'
-        assertOutputEquals "rechoice", template
+        assertOutputEquals 'rechoice', template
     }
 
     @Test
@@ -38,7 +38,7 @@ class GroovyPagesIfTagTests extends AbstractGrailsTagTests {
         def template = '<g:if test="${[1, 2, 3, 4].sum() { it * 2 } - [2, 3, 4, 5].sum() { (0..it).sum() { it * 2 } } > 0}">hello</g:if><g:else>goodbye</g:else>'
         printCompiledSource template
 
-        assertCompiledSourceContains "if([1, 2, 3, 4].sum() { it * 2 } - [2, 3, 4, 5].sum() { (0..it).sum() { it * 2 } } > 0) {", template
-        assertOutputEquals "goodbye", template
+        assertCompiledSourceContains 'if([1, 2, 3, 4].sum() { it * 2 } - [2, 3, 4, 5].sum() { (0..it).sum() { it * 2 } } > 0) {', template
+        assertOutputEquals 'goodbye', template
     }
 }

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -34,58 +34,58 @@ import spock.lang.Specification
 class MultiDataSourceSessionSpec extends Specification {
 
     @Shared Map config = [
-            'dataSource.url':"jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
+            'dataSource.url': 'jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000',
             'dataSource.dbCreate': 'create-drop',
             'dataSource.dialect': H2Dialect.name,
             'dataSource.formatSql': 'true',
             'hibernate.flush.mode': 'COMMIT',
             'hibernate.cache.queries': 'true',
             'hibernate.hbm2ddl.auto': 'create-drop',
-            'dataSources.secondary':[url:"jdbc:h2:mem:secondaryDb;LOCK_TIMEOUT=10000"],
+            'dataSources.secondary': [url:'jdbc:h2:mem:secondaryDb;LOCK_TIMEOUT=10000'],
     ]
 
     @Shared @AutoCleanup HibernateDatastore datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config), OsivBook, OsivAuthor)
 
-    def "withSession on default datasource works with OSIV"() {
-        given: "OSIV interceptor configured with the datastore"
+    def 'withSession on default datasource works with OSIV'() {
+        given: 'OSIV interceptor configured with the datastore'
         def interceptor = new GrailsOpenSessionInViewInterceptor()
         interceptor.setHibernateDatastore(datastore)
         WebRequest webRequest = Mock(WebRequest)
 
-        when: "OSIV preHandle is called"
+        when: 'OSIV preHandle is called'
         interceptor.preHandle(webRequest)
 
-        then: "a session is bound for the default SessionFactory"
+        then: 'a session is bound for the default SessionFactory'
         TransactionSynchronizationManager.hasResource(datastore.sessionFactory)
 
-        when: "withSession is called on default datasource"
+        when: 'withSession is called on default datasource'
         boolean sessionObtained = false
         OsivAuthor.withSession { Session s ->
             sessionObtained = s != null
         }
 
-        then: "session is available"
+        then: 'session is available'
         sessionObtained
 
         cleanup:
         interceptor.afterCompletion(webRequest, null)
     }
 
-    def "withSession on secondary datasource works with OSIV"() {
-        given: "OSIV interceptor configured with the datastore"
+    def 'withSession on secondary datasource works with OSIV'() {
+        given: 'OSIV interceptor configured with the datastore'
         def interceptor = new GrailsOpenSessionInViewInterceptor()
         interceptor.setHibernateDatastore(datastore)
         WebRequest webRequest = Mock(WebRequest)
 
-        when: "OSIV preHandle is called"
+        when: 'OSIV preHandle is called'
         interceptor.preHandle(webRequest)
 
-        then: "a session is bound for both the default and secondary SessionFactory"
+        then: 'a session is bound for both the default and secondary SessionFactory'
         def secondaryDatastore = datastore.getDatastoreForConnection('secondary')
         TransactionSynchronizationManager.hasResource(datastore.sessionFactory)
         TransactionSynchronizationManager.hasResource(secondaryDatastore.sessionFactory)
 
-        when: "withSession is called on secondary datasource"
+        when: 'withSession is called on secondary datasource'
         boolean sessionObtained = false
         OsivBook.secondary.withSession { Session s ->
             sessionObtained = s != null
@@ -98,8 +98,8 @@ class MultiDataSourceSessionSpec extends Specification {
         interceptor.afterCompletion(webRequest, null)
     }
 
-    def "afterCompletion cleans up sessions for all datasources"() {
-        given: "OSIV interceptor with preHandle already called"
+    def 'afterCompletion cleans up sessions for all datasources'() {
+        given: 'OSIV interceptor with preHandle already called'
         def interceptor = new GrailsOpenSessionInViewInterceptor()
         interceptor.setHibernateDatastore(datastore)
         WebRequest webRequest = Mock(WebRequest)
@@ -107,16 +107,16 @@ class MultiDataSourceSessionSpec extends Specification {
 
         def secondaryDatastore = datastore.getDatastoreForConnection('secondary')
 
-        when: "afterCompletion is called"
+        when: 'afterCompletion is called'
         interceptor.afterCompletion(webRequest, null)
 
-        then: "sessions are unbound for all datasources"
+        then: 'sessions are unbound for all datasources'
         !TransactionSynchronizationManager.hasResource(datastore.sessionFactory)
         !TransactionSynchronizationManager.hasResource(secondaryDatastore.sessionFactory)
     }
 
-    def "OSIV skips secondary datasource if session already bound"() {
-        given: "a pre-bound session for the secondary datasource"
+    def 'OSIV skips secondary datasource if session already bound'() {
+        given: 'a pre-bound session for the secondary datasource'
         def interceptor = new GrailsOpenSessionInViewInterceptor()
         interceptor.setHibernateDatastore(datastore)
         WebRequest webRequest = Mock(WebRequest)
@@ -127,10 +127,10 @@ class MultiDataSourceSessionSpec extends Specification {
         SessionHolder preBoundHolder = new SessionHolder(preBoundSession)
         TransactionSynchronizationManager.bindResource(secondarySf, preBoundHolder)
 
-        when: "OSIV preHandle is called"
+        when: 'OSIV preHandle is called'
         interceptor.preHandle(webRequest)
 
-        then: "the pre-bound session is preserved (not replaced)"
+        then: 'the pre-bound session is preserved (not replaced)'
         def currentHolder = TransactionSynchronizationManager.getResource(secondarySf)
         currentHolder.is(preBoundHolder)
 
@@ -142,30 +142,30 @@ class MultiDataSourceSessionSpec extends Specification {
         preBoundSession.close()
     }
 
-    def "CRUD operations work on secondary datasource with OSIV"() {
-        given: "OSIV interceptor configured and preHandle called"
+    def 'CRUD operations work on secondary datasource with OSIV'() {
+        given: 'OSIV interceptor configured and preHandle called'
         def interceptor = new GrailsOpenSessionInViewInterceptor()
         interceptor.setHibernateDatastore(datastore)
         WebRequest webRequest = Mock(WebRequest)
         interceptor.preHandle(webRequest)
 
-        when: "data is saved to secondary datasource within a transaction"
+        when: 'data is saved to secondary datasource within a transaction'
         OsivBook book = OsivBook.withTransaction {
-            new OsivBook(title: "Test Book").save(flush: true)
+            new OsivBook(title: 'Test Book').save(flush: true)
             OsivBook.first()
         }
 
-        then: "the book is saved successfully"
+        then: 'the book is saved successfully'
         book != null
-        book.title == "Test Book"
+        book.title == 'Test Book'
 
-        when: "data is read from secondary datasource using withSession"
+        when: 'data is read from secondary datasource using withSession'
         int count = 0
         OsivBook.secondary.withSession { Session s ->
             count = OsivBook.count()
         }
 
-        then: "the count is correct"
+        then: 'the count is correct'
         count == 1
 
         cleanup:
@@ -178,6 +178,7 @@ class MultiDataSourceSessionSpec extends Specification {
 
 @Entity
 class OsivBook {
+
     String title
     Date dateCreated
     Date lastUpdated
@@ -189,5 +190,6 @@ class OsivBook {
 
 @Entity
 class OsivAuthor {
+
     String name
 }

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -33,15 +33,15 @@ class MultiTenantFilterDefinitionBinderSpec extends HibernateGormDatastoreSpec {
 
     MultiTenantFilterDefinitionBinder filterDefinitionBinder = new MultiTenantFilterDefinitionBinder()
 
-    void "test create adds filter definition"() {
+    void 'test create adds filter definition'() {
         given:
         def buildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def property = new Property()
-        property.setName("tenantId")
+        property.setName('tenantId')
         
-        def table = new Table("ROOT_TABLE")
+        def table = new Table('ROOT_TABLE')
         def value = new BasicValue(buildingContext, table)
-        value.setTypeName("long")
+        value.setTypeName('long')
         property.setValue(value)
         
         def filterName = GormProperties.TENANT_IDENTITY
@@ -56,7 +56,7 @@ class MultiTenantFilterDefinitionBinderSpec extends HibernateGormDatastoreSpec {
         filterDefinition.get().getParameterNames().contains(filterName)
     }
 
-    void "test create returns empty if property value is not BasicValue"() {
+    void 'test create returns empty if property value is not BasicValue'() {
         given:
         def property = new Property()
         def filterName = GormProperties.TENANT_IDENTITY

@@ -4,14 +4,14 @@
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
+ * 'License'); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
  *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
@@ -66,26 +66,26 @@ class JsonUtilsSpec extends Specification {
 
     void 'verifyJsonTree ignores object key order for map and json string expectations'() {
         given:
-        def response = mockResponse('{"b":2,"a":1,"nested":{"d":4,"c":3}}')
+        def response = mockResponse('{'b':2,'a': 1,'nested': {'d':4,'c': 3}}')
 
         expect:
         JsonUtils.verifyJsonTree(response, [a: 1, b: 2, nested: [c: 3, d: 4]])
-        JsonUtils.verifyJsonTree(response, '{"nested":{"c":3,"d":4},"a":1,"b":2}')
+        JsonUtils.verifyJsonTree(response, '{'nested':{'c':3,'d': 4},'a': 1,'b': 2}')
     }
 
     void 'verifyJsonTree accepts lax json only when configured'() {
         given:
-        def response = mockResponse("{name:'Widget', nested:{ok:true}}")
+        def response = mockResponse("{name:'Widget', nested: {ok:true}}")
         def config = new JsonUtils.SlurperConfig(parserType: JsonParserType.LAX)
 
         when:
-        JsonUtils.verifyJsonTree(response, "{name:'Widget', nested:{ok:true}}")
+        JsonUtils.verifyJsonTree(response, "{name:'Widget', nested: {ok:true}}")
 
         then:
         thrown(JsonException)
 
         when:
-        JsonUtils.verifyJsonTree(response, "{nested:{ok:true}, name:'Widget'}", config)
+        JsonUtils.verifyJsonTree(response, "{nested:{ok:true}, name: 'Widget'}", config)
 
         then:
         noExceptionThrown()
@@ -93,17 +93,17 @@ class JsonUtilsSpec extends Specification {
 
     void 'verifyJsonTreeContains accepts lax json subsets only when configured'() {
         given:
-        def response = mockResponse("{name:'Widget', nested:{ok:true}, tags:['a','b']}")
+        def response = mockResponse("{name:'Widget', nested: {ok:true}, tags: ['a','b']}")
         def config = new JsonUtils.SlurperConfig(parserType: JsonParserType.LAX)
 
         when:
-        JsonUtils.verifyJsonTreeContains(response, "{nested:{ok:true}}")
+        JsonUtils.verifyJsonTreeContains(response, '{nested:{ok:true}}')
 
         then:
         thrown(JsonException)
 
         when:
-        JsonUtils.verifyJsonTreeContains(response, "{nested:{ok:true}, tags:['a']}", config)
+        JsonUtils.verifyJsonTreeContains(response, "{nested:{ok:true}, tags: ['a']}", config)
 
         then:
         noExceptionThrown()
@@ -111,7 +111,7 @@ class JsonUtilsSpec extends Specification {
 
     void 'verifyJsonTreeContains reports mismatch paths in assertion message'() {
         given:
-        def response = mockResponse('{"nested":{"ok":false},"items":[1],"name":"Widget"}')
+        def response = mockResponse('{'nested':{'ok':false},'items': [1],'name': 'Widget'}')
 
         when:
         JsonUtils.verifyJsonTreeContains(response, [nested: [ok: true], items: [1, 2], missing: 1])
@@ -126,17 +126,17 @@ class JsonUtilsSpec extends Specification {
 
     void 'verifyJsonTree failures include canonicalized expected and actual payloads'() {
         given:
-        def response = mockResponse('{"b":2,"a":1}')
+        def response = mockResponse('{'b':2,'a': 1}')
 
         when:
-        JsonUtils.verifyJsonTree(response, '{"a":1,"b":3}')
+        JsonUtils.verifyJsonTree(response, '{'a':1,'b': 3}')
 
         then:
         def error = thrown(AssertionFailedError)
-        error.expected.value.contains('"a": 1')
-        error.expected.value.contains('"b": 3')
-        error.actual.value.contains('"a": 1')
-        error.actual.value.contains('"b": 2')
+        error.expected.value.contains(''a': 1')
+        error.expected.value.contains(''b': 3')
+        error.actual.value.contains(''a': 1')
+        error.actual.value.contains(''b': 2')
     }
 
     private static HttpResponse<String> mockResponse(String bodyText) {
@@ -153,7 +153,4 @@ class JsonUtilsSpec extends Specification {
         ] as HttpResponse<String>
     }
 }
-
-
-
 

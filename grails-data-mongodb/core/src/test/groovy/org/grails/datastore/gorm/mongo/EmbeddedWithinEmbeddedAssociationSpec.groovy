@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -29,8 +29,8 @@ class EmbeddedWithinEmbeddedAssociationSpec extends MongoDatastoreSpec {
         manager.addAllDomainClasses([Customer, Vehicle, Maker, Part, Component])
     }
 
-    void "Test that nested embedded associations can be persisted"() {
-        given: "a domain model with lots of nesting"
+    void 'Test that nested embedded associations can be persisted'() {
+        given: 'a domain model with lots of nesting'
         def customer = new Customer(name: 'Kruttik Aggarwal').save(failOnError: true, flush: true)
         def maker = new Maker(name: 'Good Year').save(failOnError: true, flush: true)
         def vehicle1 = new Vehicle(type: 'car', owners: [customer], parts: [new Part(type: 'wheel', maker: maker)]).save(failOnError: true, flush: true)
@@ -41,18 +41,18 @@ class EmbeddedWithinEmbeddedAssociationSpec extends MongoDatastoreSpec {
 
         manager.session.clear()
 
-        when: "The domain model is queries"
+        when: 'The domain model is queries'
         customer = Customer.findByName('Kruttik Aggarwal')
 
-        then: "We get the right results back"
+        then: 'We get the right results back'
         customer != null
         customer.vehicles.size() == 2
 
-        when: "we get the individual cars"
+        when: 'we get the individual cars'
         def car = customer.vehicles.find { it.type == 'car' }
         def truck = customer.vehicles.find { it.type == 'truck' }
 
-        then: "make sure those are present and valid"
+        then: 'make sure those are present and valid'
         car != null
         truck != null
         car.parts.size() == 1
@@ -62,19 +62,19 @@ class EmbeddedWithinEmbeddedAssociationSpec extends MongoDatastoreSpec {
         truck.parts.iterator().next().type == 'headlight'
         truck.parts.iterator().next().maker != null
 
-        when: "we check the bus"
-        def bus = Vehicle.findByType("bus")
+        when: 'we check the bus'
+        def bus = Vehicle.findByType('bus')
 
-        then: "the bus is valid too"
+        then: 'the bus is valid too'
         bus != null
         bus.parts.size() == 1
 
-        when: "We get the part of the bus"
+        when: 'We get the part of the bus'
         Part busPart = bus.parts.iterator().next()
 
-        then: "Check that it is valid"
-        busPart.type == "plate"
-        busPart.maker.name == "Good Year"
+        then: 'Check that it is valid'
+        busPart.type == 'plate'
+        busPart.maker.name == 'Good Year'
         busPart.components.size() == 1
     }
 }
@@ -91,6 +91,7 @@ class Customer {
 
 @Entity
 class Vehicle {
+
     Long id
     String type
     List<Part> parts = new ArrayList<Part>()
@@ -103,6 +104,7 @@ class Vehicle {
 
 @Entity
 class Part {
+
     Long id
     String type
     Maker maker
@@ -113,12 +115,14 @@ class Part {
 
 @Entity
 class Maker {
+
     Long id
     String name
 }
 
 @Entity
 class Component {
+
     Long id
     String type
 }

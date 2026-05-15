@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -26,13 +26,14 @@ import grails.gorm.specs.Person
  * Tests related to caching of entities.
  */
 class SessionCachingSpec extends MongoDatastoreSpec {
+
     void setupSpec() {
         manager.addAllDomainClasses([Person])
     }
 
-    void "test cache used for get"() {
+    void 'test cache used for get'() {
         given:
-        def a = new Person(firstName: "Bob", lastName: "Builder").save()
+        def a = new Person(firstName: 'Bob', lastName: 'Builder').save()
         manager.session.flush()
 
         when:
@@ -44,10 +45,10 @@ class SessionCachingSpec extends MongoDatastoreSpec {
         aa.is(a)
     }
 
-    void "test cache used for getAll"() {
+    void 'test cache used for getAll'() {
         given:
-        def a = new Person(firstName: "Bob", lastName: "Builder").save()
-        def b = new Person(firstName: "Another", lastName: "Builder").save()
+        def a = new Person(firstName: 'Bob', lastName: 'Builder').save()
+        def b = new Person(firstName: 'Another', lastName: 'Builder').save()
         manager.session.flush()
         manager.session.clear()
 
@@ -64,13 +65,13 @@ class SessionCachingSpec extends MongoDatastoreSpec {
         list[1].is(a)
     }
 
-    void "test unique queried elements are from cache"() {
+    void 'test unique queried elements are from cache'() {
         given:
-        def p = new Person(firstName: "Bob", lastName: "Builder").save()
+        def p = new Person(firstName: 'Bob', lastName: 'Builder').save()
         manager.session.flush()
 
         when:
-        def pp = Person.findByFirstName("Bob")
+        def pp = Person.findByFirstName('Bob')
 
         then:
         p.attached
@@ -79,13 +80,13 @@ class SessionCachingSpec extends MongoDatastoreSpec {
         p.is(pp)
     }
 
-    void "test multi-queried elements are in cache"() {
+    void 'test multi-queried elements are in cache'() {
         given:
-        def p = new Person(firstName: "Bob", lastName: "Builder").save()
+        def p = new Person(firstName: 'Bob', lastName: 'Builder').save()
         manager.session.flush()
 
         when:
-        def test = Person.findAllByFirstName("Bob")
+        def test = Person.findAllByFirstName('Bob')
 
         then:
         test.size() == 1

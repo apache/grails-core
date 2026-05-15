@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -59,11 +59,11 @@ class DiscriminatorPropertyBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.setEntityName(DiscriminatorPropertyBinderSpecEntity.name)
         rootClass.setJpaEntityName(DiscriminatorPropertyBinderSpecEntity.name)
         rootClass.setClassName(DiscriminatorPropertyBinderSpecEntity.name)
-        rootClass.setTable(new Table("orm", "DISCRIMINATOR_TEST_ENTITY"))
+        rootClass.setTable(new Table('orm', 'DISCRIMINATOR_TEST_ENTITY'))
         return rootClass
     }
 
-    def "test bindDiscriminatorProperty with no discriminator config uses default binder"() {
+    def 'test bindDiscriminatorProperty with no discriminator config uses default binder'() {
         given:
         def rootClass = createRootClass()
         def mapping = new Mapping()
@@ -79,11 +79,11 @@ class DiscriminatorPropertyBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.getDiscriminator().getColumns().iterator().next().getName() == GrailsDomainBinder.JPA_DEFAULT_DISCRIMINATOR_TYPE
     }
 
-    def "test bindDiscriminatorProperty with discriminator config uses configured binder"() {
+    def 'test bindDiscriminatorProperty with discriminator config uses configured binder'() {
         given:
         def rootClass = createRootClass()
         def mapping = new Mapping()
-        def discriminatorConfig = new DiscriminatorConfig(value: "TEST")
+        def discriminatorConfig = new DiscriminatorConfig(value: 'TEST')
         mapping.setDiscriminator(discriminatorConfig)
         getGrailsDomainBinder().getMappingCacheHolder().cacheMapping(DiscriminatorPropertyBinderSpecEntity, mapping)
 
@@ -93,15 +93,15 @@ class DiscriminatorPropertyBinderSpec extends HibernateGormDatastoreSpec {
         then:
         rootClass.getDiscriminator() != null
         rootClass.getDiscriminator() instanceof BasicValue
-        rootClass.getDiscriminatorValue() == "TEST"
+        rootClass.getDiscriminatorValue() == 'TEST'
         rootClass.getDiscriminator().getColumns().iterator().next().getName() == GrailsDomainBinder.JPA_DEFAULT_DISCRIMINATOR_TYPE
     }
 
-    def "test bindDiscriminatorProperty with custom discriminator column name"() {
+    def 'test bindDiscriminatorProperty with custom discriminator column name'() {
         given:
         def rootClass = createRootClass()
         def mapping = new Mapping()
-        def discriminatorConfig = new DiscriminatorConfig(value: "TEST", column: [name: "MY_TYPE"])
+        def discriminatorConfig = new DiscriminatorConfig(value: 'TEST', column: [name: 'MY_TYPE'])
         mapping.setDiscriminator(discriminatorConfig)
         getGrailsDomainBinder().getMappingCacheHolder().cacheMapping(DiscriminatorPropertyBinderSpecEntity, mapping)
 
@@ -109,14 +109,14 @@ class DiscriminatorPropertyBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindDiscriminatorProperty(rootClass)
 
         then:
-        rootClass.getDiscriminator().getColumns().iterator().next().getName() == "MY_TYPE"
+        rootClass.getDiscriminator().getColumns().iterator().next().getName() == 'MY_TYPE'
     }
 
-    def "test bindDiscriminatorProperty with formula"() {
+    def 'test bindDiscriminatorProperty with formula'() {
         given:
         def rootClass = createRootClass()
         def mapping = new Mapping()
-        def discriminatorConfig = new DiscriminatorConfig(value: "TEST", formula: "case when type=1 then 'A' else 'B' end")
+        def discriminatorConfig = new DiscriminatorConfig(value: 'TEST', formula: "case when type=1 then 'A' else 'B' end")
         mapping.setDiscriminator(discriminatorConfig)
         getGrailsDomainBinder().getMappingCacheHolder().cacheMapping(DiscriminatorPropertyBinderSpecEntity, mapping)
 
@@ -130,6 +130,7 @@ class DiscriminatorPropertyBinderSpec extends HibernateGormDatastoreSpec {
 
 @Entity
 class DiscriminatorPropertyBinderSpecEntity {
+
     Long id
     String name
 }

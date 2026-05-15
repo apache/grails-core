@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -26,41 +26,41 @@ import spock.lang.Issue
 @Issue('https://github.com/grails/grails-data-mapping/issues/1299')
 class PersistentPropertySpec extends HibernateGormDatastoreSpec {
 
-    void "test isUnidirectionalOneToMany"() {
+    void 'test isUnidirectionalOneToMany'() {
         when:
-        def p = createPersistentEntity(Unidirectional).getPropertyByName("foos")
+        def p = createPersistentEntity(Unidirectional).getPropertyByName('foos')
 
         then:
         p.isUnidirectionalOneToMany()
 
         when:
-        p = createPersistentEntity(BidirectionalParent).getPropertyByName("bars")
+        p = createPersistentEntity(BidirectionalParent).getPropertyByName('bars')
 
         then:
         !p.isUnidirectionalOneToMany()
 
         when:
-        p = createPersistentEntity(Unidirectional).getPropertyByName("name")
+        p = createPersistentEntity(Unidirectional).getPropertyByName('name')
 
         then:
         !p.isUnidirectionalOneToMany()
     }
 
-    void "test isLazyAble"() {
+    void 'test isLazyAble'() {
         when:
-        def p = createPersistentEntity(Unidirectional).getPropertyByName("foos")
+        def p = createPersistentEntity(Unidirectional).getPropertyByName('foos')
 
         then:
         p.isLazyAble()
 
         when:
-        p = createPersistentEntity(BidirectionalChild).getPropertyByName("bar")
+        p = createPersistentEntity(BidirectionalChild).getPropertyByName('bar')
 
         then:
         p.isLazyAble()
 
         when:
-        p = createPersistentEntity(Unidirectional).getPropertyByName("name")
+        p = createPersistentEntity(Unidirectional).getPropertyByName('name')
 
         then:
         p.isLazyAble()
@@ -70,23 +70,27 @@ class PersistentPropertySpec extends HibernateGormDatastoreSpec {
 
 @Entity
 class Unidirectional {
+
     String name
     static hasMany = [foos: UnidirectionalChild]
 }
 
 @Entity
 class UnidirectionalChild {
+
     String name
 }
 
 @Entity
 class BidirectionalParent {
+
     String name
     static hasMany = [bars: BidirectionalChild]
 }
 
 @Entity
 class BidirectionalChild {
+
     String name
     static belongsTo = [bar: BidirectionalParent]
 }

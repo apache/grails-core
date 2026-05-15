@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -59,17 +59,17 @@ class CollectionWithJoinTableBinderSpec extends HibernateGormDatastoreSpec {
         )
     }
 
-    void "test bindCollectionWithJoinTable delegates to BasicCollectionElementBinder for basic type"() {
+    void 'test bindCollectionWithJoinTable delegates to BasicCollectionElementBinder for basic type'() {
         given:
         PersistentEntity authorEntity = createPersistentEntity(CWJTBAuthor)
-        HibernateToManyProperty property = (HibernateToManyProperty) authorEntity.getPropertyByName("tags")
+        HibernateToManyProperty property = (HibernateToManyProperty) authorEntity.getPropertyByName('tags')
         def domainBinder = getGrailsDomainBinder()
 
         InFlightMetadataCollector mappings = Mock(InFlightMetadataCollector)
 
         def owner = new RootClass(domainBinder.metadataBuildingContext)
         Collection collection = new Set(domainBinder.metadataBuildingContext, owner)
-        collection.setCollectionTable(new Table("CWJTB_TAGS"))
+        collection.setCollectionTable(new Table('CWJTB_TAGS'))
 
         def basicValue = new org.hibernate.mapping.BasicValue(domainBinder.metadataBuildingContext, collection.getCollectionTable())
         property.setCollection(collection)
@@ -84,18 +84,18 @@ class CollectionWithJoinTableBinderSpec extends HibernateGormDatastoreSpec {
         1 * collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(property)
     }
 
-    void "test bindCollectionWithJoinTable creates ManyToOne element for entity association"() {
+    void 'test bindCollectionWithJoinTable creates ManyToOne element for entity association'() {
         given:
         createPersistentEntity(CWJTBBook)
         PersistentEntity authorEntity = createPersistentEntity(CWJTBAuthor)
-        HibernateToManyProperty property = (HibernateToManyProperty) authorEntity.getPropertyByName("books")
+        HibernateToManyProperty property = (HibernateToManyProperty) authorEntity.getPropertyByName('books')
         def domainBinder = getGrailsDomainBinder()
 
         InFlightMetadataCollector mappings = Mock(InFlightMetadataCollector)
 
         def owner = new RootClass(domainBinder.metadataBuildingContext)
         Collection collection = new Set(domainBinder.metadataBuildingContext, owner)
-        collection.setCollectionTable(new Table("CWJTB_BOOKS"))
+        collection.setCollectionTable(new Table('CWJTB_BOOKS'))
 
         property.setCollection(collection)
         def manyToOne = new ManyToOne(domainBinder.metadataBuildingContext, collection.getCollectionTable())
@@ -109,12 +109,12 @@ class CollectionWithJoinTableBinderSpec extends HibernateGormDatastoreSpec {
         1 * collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(property)
     }
 
-    void "test bindCollectionWithJoinTable with null associated entity skips column binding"() {
+    void 'test bindCollectionWithJoinTable with null associated entity skips column binding'() {
         given:
         def domainBinder = getGrailsDomainBinder()
         def owner = new RootClass(domainBinder.metadataBuildingContext)
         Collection collection = new Set(domainBinder.metadataBuildingContext, owner)
-        collection.setCollectionTable(new Table("CWJTB_NULL_ASSOC"))
+        collection.setCollectionTable(new Table('CWJTB_NULL_ASSOC'))
 
         def manyToOne = new ManyToOne(domainBinder.metadataBuildingContext, collection.getCollectionTable())
 
@@ -133,12 +133,12 @@ class CollectionWithJoinTableBinderSpec extends HibernateGormDatastoreSpec {
         0 * compositeIdentifierToManyToOneBinder._
     }
 
-    void "test bindCollectionWithJoinTable with composite identity delegates to compositeIdentifierToManyToOneBinder"() {
+    void 'test bindCollectionWithJoinTable with composite identity delegates to compositeIdentifierToManyToOneBinder'() {
         given:
         def domainBinder = getGrailsDomainBinder()
         def owner = new RootClass(domainBinder.metadataBuildingContext)
         Collection collection = new Set(domainBinder.metadataBuildingContext, owner)
-        collection.setCollectionTable(new Table("CWJTB_COMPOSITE"))
+        collection.setCollectionTable(new Table('CWJTB_COMPOSITE'))
 
         def manyToOne = new ManyToOne(domainBinder.metadataBuildingContext, collection.getCollectionTable())
 
@@ -156,19 +156,21 @@ class CollectionWithJoinTableBinderSpec extends HibernateGormDatastoreSpec {
         binder.bindCollectionWithJoinTable(property)
 
         then:
-        1 * compositeIdentifierToManyToOneBinder.bindCompositeIdentifierToManyToOne(property, manyToOne, compositeId, associatedEntity, "")
+        1 * compositeIdentifierToManyToOneBinder.bindCompositeIdentifierToManyToOne(property, manyToOne, compositeId, associatedEntity, '')
         1 * collectionForPropertyConfigBinder.bindCollectionForPropertyConfig(property)
     }
 }
 
 @Entity
 class CWJTBBook {
+
     Long id
     String title
 }
 
 @Entity
 class CWJTBAuthor {
+
     Long id
     String name
     java.util.Set<CWJTBBook> books

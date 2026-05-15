@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -51,7 +51,7 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         def domainBinder = getGrailsDomainBinder()
         def metadataCollector = domainBinder.getMetadataBuildingContext().getMetadataCollector()
         metadataBuildingContext = new org.hibernate.boot.internal.MetadataBuildingContextRootImpl(
-                "default",
+                'default',
                 metadataCollector.getBootstrapContext(),
                 metadataCollector.getMetadataBuildingOptions(),
                 metadataCollector,
@@ -72,21 +72,21 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         simpleIdBinder = new SimpleIdBinder(metadataBuildingContext, basicValueCreator, simpleValueBinder, propertyBinder)
     }
 
-    def "bindSimpleId with identity generator"() {
+    def 'bindSimpleId with identity generator'() {
         given:
         def mapping = Mock(org.grails.orm.hibernate.cfg.Mapping) {
             isTablePerConcreteClass() >> false
         }
         def testProperty = Mock(HibernateSimpleIdentityProperty) {
-            getName() >> "id"
+            getName() >> 'id'
         }
         def rootClass = new RootClass(metadataBuildingContext)
-        currentTable = new Table("TEST_TABLE")
+        currentTable = new Table('TEST_TABLE')
         rootClass.setTable(currentTable)
         def domainClass = Mock(HibernatePersistentEntity) {
             getMappedForm() >> mapping
             getIdentity() >> testProperty
-            getName() >> "TestEntity"
+            getName() >> 'TestEntity'
             getIdentityProperty() >> testProperty
             getRootClass() >> rootClass
         }
@@ -95,7 +95,7 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         simpleIdBinder.bindSimpleId(domainClass)
 
         then:
-        1 * simpleValueBinder.bindSimpleValue(testProperty, null, _, "")
+        1 * simpleValueBinder.bindSimpleValue(testProperty, null, _, '')
         1 * propertyBinder.bindProperty(testProperty, _)
 
         rootClass.identifier instanceof BasicValue
@@ -104,21 +104,21 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.table.primaryKey instanceof PrimaryKey
     }
 
-    def "bindSimpleId with sequence generator"() {
+    def 'bindSimpleId with sequence generator'() {
         given:
         def mapping = Mock(org.grails.orm.hibernate.cfg.Mapping) {
             isTablePerConcreteClass() >> true
         }
         def testProperty = Mock(HibernateSimpleIdentityProperty) {
-            getName() >> "id"
+            getName() >> 'id'
         }
         def rootClass = new RootClass(metadataBuildingContext)
-        currentTable = new Table("TEST_TABLE")
+        currentTable = new Table('TEST_TABLE')
         rootClass.setTable(currentTable)
         def domainClass = Mock(HibernatePersistentEntity) {
             getMappedForm() >> mapping
             getIdentity() >> testProperty
-            getName() >> "TestEntity"
+            getName() >> 'TestEntity'
             getIdentityProperty() >> testProperty
             getRootClass() >> rootClass
         }
@@ -127,7 +127,7 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         simpleIdBinder.bindSimpleId(domainClass)
 
         then:
-        1 * simpleValueBinder.bindSimpleValue(testProperty, null, _, "")
+        1 * simpleValueBinder.bindSimpleValue(testProperty, null, _, '')
         1 * propertyBinder.bindProperty(testProperty, _)
 
         rootClass.identifier instanceof BasicValue
@@ -136,19 +136,19 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.table.primaryKey instanceof PrimaryKey
     }
 
-    def "bindSimpleId with synthetic identifier property"() {
+    def 'bindSimpleId with synthetic identifier property'() {
         given:
         def mapping = Mock(org.grails.orm.hibernate.cfg.Mapping) {
             isTablePerConcreteClass() >> false
         }
         def reflector = Mock(EntityReflector)
         def rootClass = new RootClass(metadataBuildingContext)
-        currentTable = new Table("TEST_TABLE")
+        currentTable = new Table('TEST_TABLE')
         rootClass.setTable(currentTable)
         def domainClass = Mock(HibernatePersistentEntity) {
             getMappedForm() >> mapping
             getIdentity() >> null
-            getName() >> "TestEntity"
+            getName() >> 'TestEntity'
             getMappingContext() >> getGrailsDomainBinder().hibernateMappingContext
             getMapping() >> Mock(org.grails.datastore.mapping.model.ClassMapping)
             getReflector() >> reflector
@@ -160,7 +160,7 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         simpleIdBinder.bindSimpleId(domainClass)
 
         then:
-        1 * simpleValueBinder.bindSimpleValue(_, null, _, "")
+        1 * simpleValueBinder.bindSimpleValue(_, null, _, '')
         1 * propertyBinder.bindProperty(_, _)
 
         rootClass.identifier instanceof BasicValue
@@ -169,11 +169,11 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.table.primaryKey instanceof PrimaryKey
     }
 
-    def "bindSimpleId throws MappingException when identity property is not a HibernateSimpleIdentityProperty"() {
+    def 'bindSimpleId throws MappingException when identity property is not a HibernateSimpleIdentityProperty'() {
         given:
         def domainClass = Mock(HibernatePersistentEntity) {
             getIdentityProperty() >> null
-            getName() >> "InvalidEntity"
+            getName() >> 'InvalidEntity'
         }
 
         when:
@@ -181,10 +181,10 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         def e = thrown(org.hibernate.MappingException)
-        e.message.contains("InvalidEntity")
+        e.message.contains('InvalidEntity')
     }
 
-    def "getMetadataBuildingContext returns the context passed to constructor"() {
+    def 'getMetadataBuildingContext returns the context passed to constructor'() {
         expect:
         simpleIdBinder.getMetadataBuildingContext() == metadataBuildingContext
     }

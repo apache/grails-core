@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -35,7 +35,7 @@ import java.lang.annotation.RetentionPolicy
 
 class HibernateAssociationSpec extends Specification {
 
-    def "isAssociationColumnNullable defaults to true"() {
+    def 'isAssociationColumnNullable defaults to true'() {
         given:
         def assoc = new TestHibernateAssociation()
 
@@ -43,7 +43,7 @@ class HibernateAssociationSpec extends Specification {
         assoc.isAssociationColumnNullable()
     }
 
-    def "getHibernateInverseSide returns casted inverse side"() {
+    def 'getHibernateInverseSide returns casted inverse side'() {
         given:
         def inverse = Mock(HibernateAssociation)
         def assoc = new TestHibernateAssociation(inverseSide: inverse)
@@ -52,7 +52,7 @@ class HibernateAssociationSpec extends Specification {
         assoc.getHibernateInverseSide() == inverse
     }
 
-    def "getHibernateAssociatedEntity returns casted associated entity"() {
+    def 'getHibernateAssociatedEntity returns casted associated entity'() {
         given:
         def entity = Mock(GrailsHibernatePersistentEntity)
         def assoc = new TestHibernateAssociation(associatedEntity: entity)
@@ -61,30 +61,30 @@ class HibernateAssociationSpec extends Specification {
         assoc.getHibernateAssociatedEntity() == entity
     }
 
-    def "getReferencedEntityName returns entity name"() {
+    def 'getReferencedEntityName returns entity name'() {
         given:
         def entity = Mock(GrailsHibernatePersistentEntity)
-        entity.getName() >> "Foo"
+        entity.getName() >> 'Foo'
         def assoc = new TestHibernateAssociation(associatedEntity: entity)
 
         expect:
-        assoc.getReferencedEntityName() == "Foo"
+        assoc.getReferencedEntityName() == 'Foo'
     }
 
-    def "validateAssociation throws exception if userType is present"() {
+    def 'validateAssociation throws exception if userType is present'() {
         given:
         def config = new PropertyConfig(type: Object)
-        def assoc = new TestHibernateAssociation(name: "myAssoc", type: List, mappedForm: config)
+        def assoc = new TestHibernateAssociation(name: 'myAssoc', type: List, mappedForm: config)
 
         when:
         assoc.validateAssociation()
 
         then:
         def e = thrown(MappingException)
-        e.message == "Cannot bind association property [myAssoc] of type [interface java.util.List] to a user type"
+        e.message == 'Cannot bind association property [myAssoc] of type [interface java.util.List] to a user type'
     }
 
-    def "validateAssociation does not throw exception if userType is null"() {
+    def 'validateAssociation does not throw exception if userType is null'() {
         given:
         def assoc = new TestHibernateAssociation()
 
@@ -95,7 +95,7 @@ class HibernateAssociationSpec extends Specification {
         noExceptionThrown()
     }
 
-    def "isBidirectionalManyToOneWithListMapping returns true for bidirectional list mapping"() {
+    def 'isBidirectionalManyToOneWithListMapping returns true for bidirectional list mapping'() {
         given:
         def inverse = Mock(PersistentProperty)
         def assoc = new TestHibernateAssociation(
@@ -111,7 +111,7 @@ class HibernateAssociationSpec extends Specification {
         assoc.isBidirectionalManyToOneWithListMapping(prop)
     }
 
-    def "isBidirectionalManyToOneWithListMapping returns false for various conditions"() {
+    def 'isBidirectionalManyToOneWithListMapping returns false for various conditions'() {
         expect:
         assoc.isBidirectionalManyToOneWithListMapping(prop) == result
 
@@ -130,7 +130,7 @@ class HibernateAssociationSpec extends Specification {
         return prop
     }
 
-    def "getTypeName returns null if propertyType matches type and associated entity exists"() {
+    def 'getTypeName returns null if propertyType matches type and associated entity exists'() {
         given:
         def entity = Mock(GrailsHibernatePersistentEntity)
         def assoc = new TestHibernateAssociation(type: List, associatedEntity: entity)
@@ -139,16 +139,17 @@ class HibernateAssociationSpec extends Specification {
         assoc.getTypeName(List, null, null) == null
     }
 
-    def "getTypeName calls super if conditions not met"() {
+    def 'getTypeName calls super if conditions not met'() {
         given:
         def assoc = new TestHibernateAssociation(type: List, associatedEntity: null)
 
-        expect: "It falls back to HibernatePersistentProperty.getTypeName which returns the class name for non-enums"
+        expect: 'It falls back to HibernatePersistentProperty.getTypeName which returns the class name for non-enums'
         assoc.getTypeName(List, null, null) == List.name
     }
 
     // Additional tests for coverage of HibernatePersistentProperty methods through HibernateAssociation
-    def "isLazyAble returns true for HibernateAssociation"() {
+    def 'isLazyAble returns true for HibernateAssociation'() {
+
         given:
         def assoc = new TestHibernateAssociation()
 
@@ -156,7 +157,7 @@ class HibernateAssociationSpec extends Specification {
         assoc.isLazyAble()
     }
 
-    def "isUserButNotCollectionType coverage"() {
+    def 'isUserButNotCollectionType coverage'() {
         given:
         def config = new PropertyConfig(type: Object)
         def assoc = new TestHibernateAssociation(mappedForm: config)
@@ -165,7 +166,7 @@ class HibernateAssociationSpec extends Specification {
         assoc.isUserButNotCollectionType()
     }
 
-    def "isEnumType coverage"() {
+    def 'isEnumType coverage'() {
         given:
         def assoc = new TestHibernateAssociation(type: RetentionPolicy)
 
@@ -175,6 +176,7 @@ class HibernateAssociationSpec extends Specification {
 
     // Stub implementation to test default methods of HibernateAssociation
     static class TestHibernateAssociation implements HibernateAssociation {
+
         String name
         Class type
         PersistentProperty<?> inverseSide
@@ -210,7 +212,7 @@ class HibernateAssociationSpec extends Specification {
         @Override EntityReflector.PropertyReader getReader() { null }
         @Override EntityReflector.PropertyWriter getWriter() { null }
 
-        @Override String getTypeName(PropertyConfig config, Mapping mapping) { "defaultType" }
+        @Override String getTypeName(PropertyConfig config, Mapping mapping) { 'defaultType' }
         @Override boolean supportsJoinColumnMapping() { true }
     }
 }

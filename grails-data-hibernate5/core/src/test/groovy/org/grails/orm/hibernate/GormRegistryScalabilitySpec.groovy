@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -50,11 +50,11 @@ class GormRegistryScalabilitySpec extends Specification {
     @Shared HibernateDatastore datastore
 
     void setupSpec() {
-        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "")
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, '')
         Map config = [
-            "grails.gorm.multiTenancy.mode"              : "SCHEMA",
-            "grails.gorm.multiTenancy.tenantResolverClass": ScalabilityTenantsResolver,
-            'dataSource.url'                              : "jdbc:h2:mem:scalabilityDBH5;LOCK_TIMEOUT=10000",
+            'grails.gorm.multiTenancy.mode'              : 'SCHEMA',
+            'grails.gorm.multiTenancy.tenantResolverClass': ScalabilityTenantsResolver,
+            'dataSource.url'                              : 'jdbc:h2:mem:scalabilityDBH5;LOCK_TIMEOUT=10000',
             'dataSource.dbCreate'                         : 'update',
             'dataSource.dialect'                          : H2Dialect.name,
             'hibernate.flush.mode'                        : 'COMMIT',
@@ -75,19 +75,19 @@ class GormRegistryScalabilitySpec extends Specification {
     // O(M) — API maps must have exactly one entry per entity class, not per tenant
     // -------------------------------------------------------------------------
 
-    void "GormRegistry staticApis map size equals number of entity classes (O(M))"() {
+    void 'GormRegistry staticApis map size equals number of entity classes (O(M))'() {
         given:
         GormRegistry registry = GormRegistry.instance
 
-        expect: "one static API entry per entity — never multiplied by tenant count"
+        expect: 'one static API entry per entity — never multiplied by tenant count'
         registry.staticApiRegistry.containsKey(ScalabilityBook.name)
         registry.staticApiRegistry.containsKey(ScalabilityAuthor.name)
 
-        and: "our two entities contribute exactly 2 keys (not 2 × tenant count)"
+        and: 'our two entities contribute exactly 2 keys (not 2 × tenant count)'
         registry.staticApiRegistry.keySet().count { it == ScalabilityBook.name || it == ScalabilityAuthor.name } == 2
     }
 
-    void "GormRegistry instanceApis map size equals number of entity classes (O(M))"() {
+    void 'GormRegistry instanceApis map size equals number of entity classes (O(M))'() {
         given:
         GormRegistry registry = GormRegistry.instance
 
@@ -95,11 +95,11 @@ class GormRegistryScalabilitySpec extends Specification {
         registry.instanceApiRegistry.containsKey(ScalabilityBook.name)
         registry.instanceApiRegistry.containsKey(ScalabilityAuthor.name)
 
-        and: "our two entities contribute exactly 2 keys (not 2 × tenant count)"
+        and: 'our two entities contribute exactly 2 keys (not 2 × tenant count)'
         registry.instanceApiRegistry.keySet().count { it == ScalabilityBook.name || it == ScalabilityAuthor.name } == 2
     }
 
-    void "GormRegistry validationApis map size equals number of entity classes (O(M))"() {
+    void 'GormRegistry validationApis map size equals number of entity classes (O(M))'() {
         given:
         GormRegistry registry = GormRegistry.instance
 
@@ -107,7 +107,7 @@ class GormRegistryScalabilitySpec extends Specification {
         registry.validationApiRegistry.containsKey(ScalabilityBook.name)
         registry.validationApiRegistry.containsKey(ScalabilityAuthor.name)
 
-        and: "our two entities contribute exactly 2 keys (not 2 × tenant count)"
+        and: 'our two entities contribute exactly 2 keys (not 2 × tenant count)'
         registry.validationApiRegistry.keySet().count { it == ScalabilityBook.name || it == ScalabilityAuthor.name } == 2
     }
 
@@ -115,21 +115,21 @@ class GormRegistryScalabilitySpec extends Specification {
     // O(1) — same API singleton returned regardless of qualifier
     // -------------------------------------------------------------------------
 
-    void "getStaticApi returns the same singleton instance for any qualifier (O(1) retrieval)"() {
+    void 'getStaticApi returns the same singleton instance for any qualifier (O(1) retrieval)'() {
         given:
         GormRegistry registry = GormRegistry.instance
         GormStaticApi defaultApi = registry.getStaticApi(ScalabilityBook.name)
 
-        expect: "default qualifier retrieves the canonical singleton"
+        expect: 'default qualifier retrieves the canonical singleton'
         defaultApi != null
 
-        and: "retrieval remains O(1) and returns the same singleton regardless of tenant loop context"
+        and: 'retrieval remains O(1) and returns the same singleton regardless of tenant loop context'
         ScalabilityTenantsResolver.TENANTS.every { tenantId ->
             registry.getStaticApi(ScalabilityBook.name).is(defaultApi)
         }
     }
 
-    void "getInstanceApi returns the same singleton instance for any qualifier (O(1) retrieval)"() {
+    void 'getInstanceApi returns the same singleton instance for any qualifier (O(1) retrieval)'() {
         given:
         GormRegistry registry = GormRegistry.instance
         GormInstanceApi defaultApi = registry.getInstanceApi(ScalabilityAuthor.name)
@@ -145,14 +145,14 @@ class GormRegistryScalabilitySpec extends Specification {
     // O(N) — qualifier map must grow with tenants (datastoresByQualifier)
     // -------------------------------------------------------------------------
 
-    void "datastoresByQualifier contains all registered tenants (O(N) qualifier map)"() {
+    void 'datastoresByQualifier contains all registered tenants (O(N) qualifier map)'() {
         given:
         GormRegistry registry = GormRegistry.instance
 
-        expect: "at minimum, the default qualifier is registered"
+        expect: 'at minimum, the default qualifier is registered'
         registry.datastoresByQualifier.containsKey(ConnectionSource.DEFAULT)
 
-        and: "the qualifier map has at least one entry (the parent datastore)"
+        and: 'the qualifier map has at least one entry (the parent datastore)'
         registry.datastoresByQualifier.size() >= 1
     }
 
@@ -160,19 +160,19 @@ class GormRegistryScalabilitySpec extends Specification {
     // No spurious entries — unknown qualifiers must not pollute the registry
     // -------------------------------------------------------------------------
 
-    void "looking up an unknown qualifier does not create a spurious registry entry"() {
+    void 'looking up an unknown qualifier does not create a spurious registry entry'() {
         given:
         GormRegistry registry = GormRegistry.instance
-        String ghost = "ghost_tenant_" + System.currentTimeMillis()
+        String ghost = 'ghost_tenant_' + System.currentTimeMillis()
         int sizeBefore = registry.datastoresByQualifier.size()
 
         when:
         def result = registry.getDatastore(ScalabilityBook.name, ghost)
 
-        then: "nothing is found"
+        then: 'nothing is found'
         result == null
 
-        and: "the map size is unchanged — no null/empty entry was inserted"
+        and: 'the map size is unchanged — no null/empty entry was inserted'
         registry.datastoresByQualifier.size() == sizeBefore
     }
 }
@@ -182,7 +182,8 @@ class GormRegistryScalabilitySpec extends Specification {
 // ---------------------------------------------------------------------------
 
 class ScalabilityTenantsResolver implements AllTenantsResolver {
-    static final List<String> TENANTS = ["schemaA", "schemaB", "schemaC", "schemaD", "schemaE"]
+
+    static final List<String> TENANTS = ['schemaA', 'schemaB', 'schemaC', 'schemaD', 'schemaE']
 
     @Override
     Serializable resolveTenantIdentifier() {
@@ -197,11 +198,13 @@ class ScalabilityTenantsResolver implements AllTenantsResolver {
 
 @Entity
 class ScalabilityBook implements MultiTenant<ScalabilityBook> {
+
     String title
     String author
 }
 
 @Entity
 class ScalabilityAuthor implements MultiTenant<ScalabilityAuthor> {
+
     String name
 }

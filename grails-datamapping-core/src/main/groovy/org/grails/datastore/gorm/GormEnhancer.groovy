@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -23,7 +23,6 @@ import groovy.transform.CompileStatic
 
 import grails.gorm.MultiTenant
 import org.grails.datastore.mapping.core.Datastore
-
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport
@@ -32,7 +31,6 @@ import org.grails.datastore.mapping.reflect.MetaClassUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.transaction.PlatformTransactionManager
-
 
 /**
  * Enhances a class with GORM methods
@@ -56,8 +54,6 @@ class GormEnhancer implements Closeable {
      */
     boolean includeExternal = true
 
-
-
     /**
      * Construct a new GormEnhancer for the given arguments.
      *
@@ -66,16 +62,16 @@ class GormEnhancer implements Closeable {
      * @param settings The connection source settings (required)
      * @param registry The GORM registry (optional, defaults to singleton instance)
      */
-    GormEnhancer(Datastore datastore, 
-                 PlatformTransactionManager ignoredTransactionManager, 
+    GormEnhancer(Datastore datastore,
+                 PlatformTransactionManager ignoredTransactionManager,
                  ConnectionSourceSettings settings,
                  GormRegistry registry = GormRegistry.getInstance()) {
         assert datastore != null, 'Datastore is required'
         assert settings != null, 'ConnectionSourceSettings is required'
-        
+
         this.datastore = datastore
         this.registry = registry
-        
+
         this.failOnError = settings.isFailOnError()
         Boolean markDirty = settings.getMarkDirty()
         this.markDirty = markDirty == null ? true : markDirty
@@ -88,6 +84,7 @@ class GormEnhancer implements Closeable {
         for (entity in datastore.mappingContext.persistentEntities) {
             registerEntity(entity)
         }
+
     }
 
     /**
@@ -99,7 +96,7 @@ class GormEnhancer implements Closeable {
         if (!entity.isExternal()) {
             // Delegate entity registration orchestration to the registry
             registry.registerEntity(entity, this)
-            
+
             // Add dynamic methods to the class
             addStaticMethods(entity)
             addInstanceMethods(entity)
@@ -115,6 +112,7 @@ class GormEnhancer implements Closeable {
      */
     @CompileDynamic
     List<String> allQualifiers(Datastore datastore, PersistentEntity entity) {
+
         List<String> qualifiers = new ArrayList<>()
         qualifiers.addAll(ConnectionSourcesSupport.getConnectionSourceNames(entity))
 
@@ -179,9 +177,9 @@ class GormEnhancer implements Closeable {
             def cls = entity.javaClass
             def className = cls.name
             registry.removeEntityDatastore(className, datastore)
-            
+
             boolean stillManaged = (registry.getStaticApi(className) != null)
-            
+
             if (!stillManaged) {
                 metaClassRegistry.removeMetaClass(cls)
             }
@@ -191,7 +189,7 @@ class GormEnhancer implements Closeable {
     @CompileDynamic
     protected void removeConstraints() {
         try {
-            def cls = Class.forName("org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator", false, GormEnhancer.classLoader)
+            def cls = Class.forName('org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator', false, GormEnhancer.classLoader)
             if (cls != null) {
                 def factory = datastore.mappingContext.mappingFactory
                 if (factory.hasProperty('entityContext')) {
@@ -212,7 +210,7 @@ class GormEnhancer implements Closeable {
     protected void addStaticMethods(PersistentEntity e) {
         def cls = e.javaClass
         ExpandoMetaClass mc = MetaClassUtils.getExpandoMetaClass(cls)
-        
+
         mc.static.methodMissing = { String name, args ->
             def api = registry.findStaticApi(cls, null)
             try {
@@ -237,13 +235,11 @@ class GormEnhancer implements Closeable {
         }
     }
 
-
-
     @CompileDynamic
     protected void addInstanceMethods(PersistentEntity e) {
         Class cls = e.javaClass
         ExpandoMetaClass mc = MetaClassUtils.getExpandoMetaClass(cls)
-        
+
         mc.methodMissing = { String name, args ->
             def api = registry.findInstanceApi(cls, null)
             try {

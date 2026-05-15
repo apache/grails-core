@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -33,10 +33,10 @@ class HibernateToOnePropertySpec extends HibernateGormDatastoreSpec {
 
     // ─── HibernateManyToOneProperty Tests ────────────────────────────────────
 
-    def "HibernateManyToOneProperty behavior"() {
+    def 'HibernateManyToOneProperty behavior'() {
         given:
         def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(HTOPBook.name)
-        def prop = (HibernateManyToOneProperty) entity.getPropertyByName("author")
+        def prop = (HibernateManyToOneProperty) entity.getPropertyByName('author')
 
         expect:
         prop.getHibernateAssociatedEntity().getName() == HTOPAuthor.name
@@ -46,7 +46,7 @@ class HibernateToOnePropertySpec extends HibernateGormDatastoreSpec {
 
     // ─── HibernateOneToOneProperty Tests ─────────────────────────────────────
 
-    def "HibernateOneToOneProperty mock-based bidirectional mapping"() {
+    def 'HibernateOneToOneProperty mock-based bidirectional mapping'() {
         given:
         def profileProp = Mock(HibernateOneToOneProperty)
         def authorProp = Mock(HibernateOneToOneProperty)
@@ -62,7 +62,7 @@ class HibernateToOnePropertySpec extends HibernateGormDatastoreSpec {
         profileProp.getOwner() >> authorEntity
         profileProp.getAssociatedEntity() >> profileEntity
         profileProp.isOwningSide() >> false
-        profileProp.getName() >> "profile"
+        profileProp.getName() >> 'profile'
         profileProp.isHibernateConstrained() >> { authorProp.isHasOne() }
         profileProp.getHibernateReferencedEntityName() >> { profileProp.getHibernateInverseSide()?.getOwner()?.getName() ?: profileProp.getAssociatedEntity().getName() }
         profileProp.getHibernateReferencedPropertyName() >> { profileProp.getHibernateInverseSide()?.getName() }
@@ -75,7 +75,7 @@ class HibernateToOnePropertySpec extends HibernateGormDatastoreSpec {
         authorProp.getOwner() >> profileEntity
         authorProp.getAssociatedEntity() >> authorEntity
         authorProp.isOwningSide() >> true
-        authorProp.getName() >> "author"
+        authorProp.getName() >> 'author'
         authorProp.isHasOne() >> true
         authorProp.isHibernateConstrained() >> { profileProp.isHasOne() } // hasOne is only on authorProp side in this test
         authorProp.getHibernateReferencedEntityName() >> { authorProp.getHibernateInverseSide()?.getOwner()?.getName() ?: authorProp.getAssociatedEntity().getName() }
@@ -84,27 +84,27 @@ class HibernateToOnePropertySpec extends HibernateGormDatastoreSpec {
         authorProp.needsSimpleValueBinding() >> { authorProp.isHibernateConstrained() || authorProp.getHibernateReferencedPropertyName() == null }
         authorProp.isAssociationColumnNullable() >> { if(true && !authorProp.isOwningSide()) { def inv = authorProp.getHibernateInverseSide(); return inv == null || !inv.isHasOne() }; return true }
 
-        expect: "Inverse side (Author -> Profile) is constrained because authorProp hasOne"
+        expect: 'Inverse side (Author -> Profile) is constrained because authorProp hasOne'
         profileProp.isHibernateConstrained()
         profileProp.getHibernateReferencedEntityName() == HTOPProfile.name
-        profileProp.getHibernateReferencedPropertyName() == "author"
+        profileProp.getHibernateReferencedPropertyName() == 'author'
         profileProp.getHibernateForeignKeyDirection() == ForeignKeyDirection.FROM_PARENT
         profileProp.needsSimpleValueBinding()
         !profileProp.isAssociationColumnNullable()
 
-        and: "Owning side (Profile -> Author) is not constrained"
+        and: 'Owning side (Profile -> Author) is not constrained'
         !authorProp.isHibernateConstrained()
         authorProp.getHibernateReferencedEntityName() == HTOPAuthor.name
-        authorProp.getHibernateReferencedPropertyName() == "profile"
+        authorProp.getHibernateReferencedPropertyName() == 'profile'
         authorProp.getHibernateForeignKeyDirection() == ForeignKeyDirection.TO_PARENT
         !authorProp.needsSimpleValueBinding()
         authorProp.isAssociationColumnNullable()
     }
 
-    def "HibernateOneToOneProperty unidirectional"() {
+    def 'HibernateOneToOneProperty unidirectional'() {
         given:
         def authorEntity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(HTOPAuthor.name)
-        def addressProp = (HibernateOneToOneProperty) authorEntity.getPropertyByName("address")
+        def addressProp = (HibernateOneToOneProperty) authorEntity.getPropertyByName('address')
 
         expect:
         !addressProp.isBidirectional()
@@ -121,11 +121,11 @@ class HibernateToOnePropertySpec extends HibernateGormDatastoreSpec {
         addressProp.isAssociationColumnNullable()
     }
 
-    def "getHibernateFetchMode returns configured or default"() {
+    def 'getHibernateFetchMode returns configured or default'() {
         given:
         def authorEntity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(HTOPAuthor.name)
-        def profileProp = (HibernateOneToOneProperty) authorEntity.getPropertyByName("profile")
-        def addressProp = (HibernateOneToOneProperty) authorEntity.getPropertyByName("address")
+        def profileProp = (HibernateOneToOneProperty) authorEntity.getPropertyByName('profile')
+        def addressProp = (HibernateOneToOneProperty) authorEntity.getPropertyByName('address')
 
         expect:
         profileProp.getHibernateFetchMode() == FetchMode.JOIN
@@ -137,6 +137,7 @@ class HibernateToOnePropertySpec extends HibernateGormDatastoreSpec {
 
 @Entity
 class HTOPAuthor {
+
     Long id
     String name
     HTOPProfile profile
@@ -150,6 +151,7 @@ class HTOPAuthor {
 
 @Entity
 class HTOPBook {
+
     Long id
     String title
     HTOPAuthor author
@@ -157,12 +159,14 @@ class HTOPBook {
 
 @Entity
 class HTOPProfile {
+
     Long id
     static belongsTo = [author: HTOPAuthor]
 }
 
 @Entity
 class HTOPAddress {
+
     Long id
     String city
 }

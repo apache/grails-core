@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -43,7 +43,7 @@ class CacheTagLib {
      * is rendered, it does not need to be evaluated again.
      *
      * @attr key An optional cache key allowing the same block to be cached with different content
-     * @attr cache Cache name ("grailsBlocksCache" is used if not specified)
+     * @attr cache Cache name ('grailsBlocksCache' is used if not specified)
      */
     def block = { attrs, body ->
         if (!grailsCacheManager) {
@@ -87,13 +87,13 @@ class CacheTagLib {
      *
      * @attr template REQUIRED The name of the template to apply
      * @attr key An optional cache key allowing the same template to be cached with different content
-     * @attr contextPath the context path to use (relative to the application context path). Defaults to "" or path to the plugin for a plugin view or template.
+     * @attr contextPath the context path to use (relative to the application context path). Defaults to '' or path to the plugin for a plugin view or template.
      * @attr bean The bean to apply the template against
      * @attr model The model to apply the template against as a java.util.Map
      * @attr collection A collection of model objects to apply the template to
      * @attr var The variable name of the bean to be referenced in the template
      * @attr plugin The plugin to look for the template in
-     * @attr cache Cache name ("grailsTemplatesCache" is used if not specified)
+     * @attr cache Cache name ('grailsTemplatesCache' is used if not specified)
      */
     def render = { attrs ->
         if (!grailsCacheManager) {

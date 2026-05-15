@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -46,7 +46,7 @@ class GroovyChangeSpec extends Specification {
         // For simple tests we might not need shouldRun() to return true if we don't trigger it
     }
 
-    def "load correctly populates fields from ParsedNode"() {
+    def 'load correctly populates fields from ParsedNode'() {
         given:
         ParsedNode parsedNode = Mock()
         ResourceAccessor resourceAccessor = Mock()
@@ -60,25 +60,25 @@ class GroovyChangeSpec extends Specification {
 
         then:
         1 * parsedNode.getChildValue(null, 'applicationContext', ApplicationContext) >> applicationContext
-        1 * parsedNode.getChildValue(null, DATA_SOURCE_NAME_KEY, String) >> "dataSource_myDb"
+        1 * parsedNode.getChildValue(null, DATA_SOURCE_NAME_KEY, String) >> 'dataSource_myDb'
         1 * parsedNode.getChildValue(null, 'init', Closure) >> init
         1 * parsedNode.getChildValue(null, 'validate', Closure) >> validate
         1 * parsedNode.getChildValue(null, 'change', Closure) >> changeClosure
         1 * parsedNode.getChildValue(null, 'rollback', Closure) >> rollback
-        1 * parsedNode.getChildValue(null, 'confirm', String) >> "Confirmed!"
-        1 * parsedNode.getChildValue(null, 'checksum', String) >> "mychecksum"
+        1 * parsedNode.getChildValue(null, 'confirm', String) >> 'Confirmed!'
+        1 * parsedNode.getChildValue(null, 'checksum', String) >> 'mychecksum'
 
         change.ctx == applicationContext
-        change.dataSourceName == "myDb"
+        change.dataSourceName == 'myDb'
         change.initClosure == init
         change.validateClosure == validate
         change.changeClosure == changeClosure
         change.rollbackClosure == rollback
-        change.confirmationMessage == "Confirmed!"
-        change.checksumString == "mychecksum"
+        change.confirmationMessage == 'Confirmed!'
+        change.checksumString == 'mychecksum'
     }
 
-    def "finishInitialization executes initClosure"() {
+    def 'finishInitialization executes initClosure'() {
         given:
         boolean called = false
         change.initClosure = { -> called = true }
@@ -91,9 +91,9 @@ class GroovyChangeSpec extends Specification {
         change.initClosureCalled
     }
 
-    def "validate executes validateClosure and collects errors"() {
+    def 'validate executes validateClosure and collects errors'() {
         given:
-        change.validateClosure = { -> delegate.error("error 1") }
+        change.validateClosure = { -> delegate.error('error 1') }
         // We need shouldRun() to be true. In Liquibase Scope it defaults to true if not LoggingExecutor.
         // If it fails due to Scope, we might need to mock Scope.
 
@@ -102,11 +102,11 @@ class GroovyChangeSpec extends Specification {
 
         then:
         errors.hasErrors()
-        errors.errorMessages.contains("error 1")
+        errors.errorMessages.contains('error 1')
         change.validateClosureCalled
     }
 
-    def "generateStatements executes changeClosure and returns statements"() {
+    def 'generateStatements executes changeClosure and returns statements'() {
         given:
         SqlStatement stmt = Mock()
         // We override shouldRun to avoid Liquibase Scope issues in unit test
@@ -126,7 +126,7 @@ class GroovyChangeSpec extends Specification {
         changeSpy.changeClosureCalled
     }
 
-    def "supportsRollback returns true if not in logging mode"() {
+    def 'supportsRollback returns true if not in logging mode'() {
         given:
         GroovyChange changeSpy = Spy(GroovyChange) {
             shouldRun() >> true

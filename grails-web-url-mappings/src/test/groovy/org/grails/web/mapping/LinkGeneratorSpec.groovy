@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -41,22 +41,21 @@ import spock.lang.Specification
  */
 class LinkGeneratorSpec extends Specification {
 
-    def baseUrl = "https://myserver.com/foo"
-    def context = "/bar"
+    def baseUrl = 'https://myserver.com/foo'
+    def context = '/bar'
     def resourcePath = ''
-    def someAbsoluteUrl = "https://grails.apache.org/"
+    def someAbsoluteUrl = 'https://grails.apache.org/'
     def resource = null
     def linkParams = [:]
     def pluginManager
 
-    def mainCssResource = [dir:'css', file:'main.css']
+    def mainCssResource = [dir: 'css', file: 'main.css']
 
     def setup() {
         WebUtils.clearGrailsWebRequest()
     }
 
-
-    def "relative links contain the context with resource path"() {
+    def 'relative links contain the context with resource path'() {
         when:
         resource = mainCssResource
 
@@ -71,7 +70,7 @@ class LinkGeneratorSpec extends Specification {
         link == "$context$resourcePath/$resource.dir/$resource.file"
     }
 
-    def "Test absolute link"() {
+    def 'Test absolute link'() {
         when:
             linkParams.uri = someAbsoluteUrl
             linkParams.absolute = true
@@ -85,7 +84,7 @@ class LinkGeneratorSpec extends Specification {
             link == someAbsoluteUrl
     }
 
-    def "Test create link with root URI"() {
+    def 'Test create link with root URI'() {
         when:
             linkParams.uri = '/'
 
@@ -99,49 +98,49 @@ class LinkGeneratorSpec extends Specification {
             link == '/bar'
     }
 
-    def "Test create relative link with custom context"() {
-        when: "No custom context path specified"
+    def 'Test create relative link with custom context'() {
+        when: 'No custom context path specified'
             linkParams.controller = 'one'
             linkParams.action = 'two'
 
-        then: "The default is used"
+        then: 'The default is used'
             link == '/bar/one/two'
 
-        when: "A custom context path is specified"
+        when: 'A custom context path is specified'
             linkParams.contextPath = '/different'
             linkParams.controller = 'one'
             linkParams.action = 'two'
 
-        then: "The custom context path is used"
+        then: 'The custom context path is used'
             link == '/different/one/two'
 
-       when: "A blank context path is specified"
+       when: 'A blank context path is specified'
             linkParams.contextPath = ''
             linkParams.controller = 'one'
             linkParams.action = 'two'
 
-        then: "No context path is used"
+        then: 'No context path is used'
             link == '/one/two'
     }
 
-    def "absolute links contains the base url and context when cached"() {
+    def 'absolute links contains the base url and context when cached'() {
         when:
-            resource = mainCssResource + [absolute:true]
+            resource = mainCssResource + [absolute: true]
 
         then:
             cachedLink == "$baseUrl/$resource.dir/$resource.file"
             cachedLink == "$baseUrl/$resource.dir/$resource.file"
     }
 
-    def "absolute links contains the base url and context"() {
+    def 'absolute links contains the base url and context'() {
         when:
-            resource = mainCssResource + [absolute:true]
+            resource = mainCssResource + [absolute: true]
 
         then:
             link == "$baseUrl/$resource.dir/$resource.file"
     }
 
-    def "relative links contain the context"() {
+    def 'relative links contain the context'() {
         when:
             resource = mainCssResource
 
@@ -149,7 +148,7 @@ class LinkGeneratorSpec extends Specification {
             link == "$context/$resource.dir/$resource.file"
     }
 
-    def "default to absolute links when no context path is specified"() {
+    def 'default to absolute links when no context path is specified'() {
         given:
             context = null
 
@@ -160,14 +159,14 @@ class LinkGeneratorSpec extends Specification {
             link == "$baseUrl/$resource.dir/$resource.file"
     }
 
-    def "plugin paths are resolved with the plugin attribute"() {
+    def 'plugin paths are resolved with the plugin attribute'() {
         given:
             plugins = [CoreGrailsPlugin]
 
         and:
 
         and:
-            def pluginName = "core"
+            def pluginName = 'core'
             def pluginVersion = pluginManager.getGrailsPlugin(pluginName).version
 
         when:
@@ -177,9 +176,9 @@ class LinkGeneratorSpec extends Specification {
             link == "$context/plugins/$pluginName-$pluginVersion/$resource.dir/$resource.file"
     }
 
-    def "link contains given explicit context path"() {
+    def 'link contains given explicit context path'() {
         given:
-            def customContextPath = "/test"
+            def customContextPath = '/test'
 
         when:
             resource = mainCssResource + [contextPath: customContextPath]
@@ -188,9 +187,9 @@ class LinkGeneratorSpec extends Specification {
             link == "$customContextPath/$resource.dir/$resource.file"
     }
 
-    def "link has no context path if blank context supplied"() {
+    def 'link has no context path if blank context supplied'() {
         given:
-            def customContextPath = ""
+            def customContextPath = ''
 
         when:
             resource = mainCssResource + [contextPath: customContextPath]
@@ -199,7 +198,7 @@ class LinkGeneratorSpec extends Specification {
             link == "/$resource.dir/$resource.file"
     }
 
-    def "test absolute links created from request scheme"() {
+    def 'test absolute links created from request scheme'() {
 
         given:
             final webRequest = GrailsWebMockUtil.bindMockWebRequest()
@@ -207,7 +206,7 @@ class LinkGeneratorSpec extends Specification {
 
         when:
             baseUrl = null
-            resource = mainCssResource + [absolute:true]
+            resource = mainCssResource + [absolute: true]
             webRequest.baseUrl = null
         then:
             link == "http://localhost/$resource.dir/$resource.file"
@@ -219,14 +218,14 @@ class LinkGeneratorSpec extends Specification {
             link == "http://localhost:8081/$resource.dir/$resource.file"
 
         when:
-            request.contextPath = "/blah"
+            request.contextPath = '/blah'
             request.serverPort = 8081
             webRequest.baseUrl = null
         then:
             link == "http://localhost:8081/blah/$resource.dir/$resource.file"
     }
 
-    def "caching should take request Host header, scheme and port in to account"() {
+    def 'caching should take request Host header, scheme and port in to account'() {
 
         given:
             final webRequest = GrailsWebMockUtil.bindMockWebRequest()
@@ -235,15 +234,15 @@ class LinkGeneratorSpec extends Specification {
             def cachingGenerator = getGenerator(true)
 
         when:
-            resource = mainCssResource + [absolute:true]
+            resource = mainCssResource + [absolute: true]
             def cachedlink = cachingGenerator.resource(resource)
 
         then:
             cachedlink == "http://localhost/$resource.dir/$resource.file"
 
         when:
-            request.serverName = "some.other.host"
-            request.scheme = "https"
+            request.serverName = 'some.other.host'
+            request.scheme = 'https'
             request.serverPort = 443
             webRequest.baseUrl = null
             cachedlink = cachingGenerator.resource(resource)
@@ -251,8 +250,8 @@ class LinkGeneratorSpec extends Specification {
             cachedlink == "https://some.other.host/$resource.dir/$resource.file"
 
         when:
-            request.serverName = "localhost"
-            request.scheme = "http"
+            request.serverName = 'localhost'
+            request.scheme = 'http'
             request.serverPort = 8081
             webRequest.baseUrl = null
             cachedlink = cachingGenerator.resource(resource)
@@ -260,7 +259,7 @@ class LinkGeneratorSpec extends Specification {
             cachedlink == "http://localhost:8081/$resource.dir/$resource.file"
 
         when:
-            request.contextPath = "/blah"
+            request.contextPath = '/blah'
             request.serverPort = 8081
             webRequest.baseUrl = null
             cachedlink = cachingGenerator.resource(resource)
@@ -269,7 +268,7 @@ class LinkGeneratorSpec extends Specification {
     }
         
     
-    def "caching should ignore request.baseUrl when base is provided for absolute links"() {
+    def 'caching should ignore request.baseUrl when base is provided for absolute links'() {
 
         given:
             final webRequest = GrailsWebMockUtil.bindMockWebRequest()
@@ -278,18 +277,18 @@ class LinkGeneratorSpec extends Specification {
             def cachingGenerator = getGenerator(true)
 
         when:
-            def cacheKey = cachingGenerator.makeKey(CachingLinkGenerator.RESOURCE_PREFIX, [:]);
+            def cacheKey = cachingGenerator.makeKey(CachingLinkGenerator.RESOURCE_PREFIX, [:])
         then:
-            cacheKey == "resource[:][]"
+            cacheKey == 'resource[:][]'
 
         when:
-            cacheKey = cachingGenerator.makeKey(CachingLinkGenerator.RESOURCE_PREFIX, [absolute:true]);
+            cacheKey = cachingGenerator.makeKey(CachingLinkGenerator.RESOURCE_PREFIX, [absolute: true])
         then:
-            cacheKey == "resourcehttp://localhost[absolute:true]"
+            cacheKey == 'resourcehttp://localhost[absolute: true]'
         when:
-            cacheKey = cachingGenerator.makeKey(CachingLinkGenerator.RESOURCE_PREFIX, [absolute:true, base: "https://some.other.host"]);
+            cacheKey = cachingGenerator.makeKey(CachingLinkGenerator.RESOURCE_PREFIX, [absolute: true, base: 'https://some.other.host'])
         then:
-            cacheKey == "resourcehttps://some.other.host[absolute:true, base:https://some.other.host]"
+            cacheKey == 'resourcehttps://some.other.host[absolute: true, base: https://some.other.host]'
     }
     
     @Issue('GRAILS-10883')
@@ -303,13 +302,13 @@ class LinkGeneratorSpec extends Specification {
             def w2 = new Widget(id: 2, name: 'Some Widget')
 
         when:
-            def cacheKey = cachingGenerator.makeKey('somePrefix', [resource:w1]);
+            def cacheKey = cachingGenerator.makeKey('somePrefix', [resource: w1])
         then:
-            cacheKey == "somePrefix[resource:org.grails.web.mapping.Widget->1]"
+            cacheKey == 'somePrefix[resource: org.grails.web.mapping.Widget->1]'
         when:
-            cacheKey = cachingGenerator.makeKey('somePrefix', [resource:w2]);
+            cacheKey = cachingGenerator.makeKey('somePrefix', [resource: w2])
         then:
-            cacheKey == "somePrefix[resource:org.grails.web.mapping.Widget->2]"
+            cacheKey == 'somePrefix[resource: org.grails.web.mapping.Widget->2]'
     }
 
     @Issue('https://github.com/apache/grails-core/issues/13627')
@@ -323,16 +322,16 @@ class LinkGeneratorSpec extends Specification {
         linkParams.resource = new Widget(id: 1, name: 'Some Widget')
 
         then:
-        link == "/bar/widget/show/1"
+        link == '/bar/widget/show/1'
 
         then:
         linkParams.resource.identCalled
 
-        when: "A controller is specified"
+        when: 'A controller is specified'
         linkParams.controller = 'widgetAdmin'
 
         then:
-        link == "/bar/widgetAdmin/show/1"
+        link == '/bar/widgetAdmin/show/1'
     }
 
     def 'link should take into affect namespace'() {
@@ -341,40 +340,40 @@ class LinkGeneratorSpec extends Specification {
         MockHttpServletRequest request = webRequest.currentRequest
         linkParams.contextPath = ''
 
-        when: "A namespace is specified"
+        when: 'A namespace is specified'
         linkParams.namespace = 'fooBar'
         linkParams.controller = 'one'
         linkParams.action = 'two'
 
-        then: "it exists in the url"
+        then: 'it exists in the url'
         link == '/fooBar/one/two'
 
-        when: "The namespace is in the request params"
-        webRequest.setControllerNamespace("fooBarReq")
+        when: 'The namespace is in the request params'
+        webRequest.setControllerNamespace('fooBarReq')
         webRequest.setControllerName('one')
         linkParams.remove('namespace')
         linkParams.controller = 'one'
         linkParams.action = 'two'
 
-        then: "it exists in the url"
+        then: 'it exists in the url'
         link == '/fooBarReq/one/two'
 
-        when: "The namespace is in the request params and the current controller is different"
-        webRequest.setControllerNamespace("fooBarReq")
-        webRequest.setControllerName("abc")
+        when: 'The namespace is in the request params and the current controller is different'
+        webRequest.setControllerNamespace('fooBarReq')
+        webRequest.setControllerName('abc')
         linkParams.controller = 'one'
         linkParams.action = 'two'
 
-        then: "it is not included in the URL"
+        then: 'it is not included in the URL'
         link == '/one/two'
 
-        when: "Params and the request attribute exist"
-        webRequest.setControllerNamespace("fooBarReq")
+        when: 'Params and the request attribute exist'
+        webRequest.setControllerNamespace('fooBarReq')
         linkParams.namespace = 'fooBarParam'
         linkParams.controller = 'one'
         linkParams.action = 'two'
 
-        then: "params wins"
+        then: 'params wins'
         link == '/fooBarParam/one/two'
     }
 
@@ -433,6 +432,7 @@ class LinkGeneratorSpec extends Specification {
 
 @Artefact('Domain')
 class Widget {
+
     Long id
     String name
     boolean identCalled = false

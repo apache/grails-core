@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -26,9 +26,9 @@ import groovy.transform.CompileStatic
  *
  * <p>Each entry in the annotation value can be:</p>
  * <ul>
- *   <li>{@code "datasourceName"} — clean the named datasource, auto-discover the cleaner
+ *   <li>{@code 'datasourceName'} — clean the named datasource, auto-discover the cleaner
  *       via {@link DatabaseCleaner#supports(javax.sql.DataSource)}</li>
- *   <li>{@code "datasourceName:databaseType"} — clean the named datasource using the
+ *   <li>{@code 'datasourceName:databaseType'} — clean the named datasource using the
  *       cleaner that declares the specified {@link DatabaseCleaner#databaseType()}</li>
  * </ul>
  *
@@ -107,8 +107,8 @@ class DatasourceCleanupMapping {
     /**
      * Parses the raw annotation value array into a {@link DatasourceCleanupMapping}.
      *
-     * <p>Each entry is parsed as either {@code "name"} (datasource name only, auto-discover
-     * cleaner) or {@code "name:type"} (datasource name with explicit database type).</p>
+     * <p>Each entry is parsed as either {@code 'name'} (datasource name only, auto-discover
+     * cleaner) or {@code 'name:type'} (datasource name with explicit database type).</p>
      *
      * @param annotationValues the raw string array from {@link DatabaseCleanup#value()}
      * @return the parsed mapping

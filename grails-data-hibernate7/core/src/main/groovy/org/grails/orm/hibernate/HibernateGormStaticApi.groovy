@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -20,7 +20,6 @@ package org.grails.orm.hibernate
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import org.grails.datastore.gorm.GormInstanceApi
 import org.grails.datastore.gorm.GormStaticApi
 import grails.orm.HibernateCriteriaBuilder
 import org.grails.datastore.mapping.core.Datastore
@@ -28,7 +27,6 @@ import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.SessionCallback
 import org.grails.datastore.gorm.proxy.GroovyProxyFactory
 import org.grails.datastore.mapping.query.api.BuildableCriteria
-import org.grails.datastore.mapping.engine.EntityPersister
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.config.GormProperties
@@ -38,7 +36,6 @@ import org.grails.datastore.mapping.model.types.Simple
 import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.query.Restrictions
 import org.grails.datastore.mapping.reflect.ClassUtils
-import org.grails.orm.hibernate.query.HibernateHqlQuery
 import org.grails.orm.hibernate.query.HibernateHqlQueryCreator
 import org.grails.orm.hibernate.query.PagedResultList
 import org.grails.orm.hibernate.query.HqlQueryContext
@@ -46,18 +43,11 @@ import org.grails.orm.hibernate.query.HqlListQueryBuilder
 import org.grails.orm.hibernate.query.MutationHqlQuery
 import org.grails.orm.hibernate.query.SelectHqlQuery
 import org.hibernate.FlushMode
-import org.hibernate.query.QueryFlushMode
-import org.hibernate.SessionFactory
 import org.springframework.core.convert.ConversionService
 import org.springframework.transaction.PlatformTransactionManager
-import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.grails.datastore.gorm.DatastoreResolver
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.gorm.finders.DynamicFinder
-import org.grails.orm.hibernate.support.hibernate7.SessionHolder
-import org.grails.datastore.mapping.query.event.PreQueryEvent
-import org.grails.datastore.mapping.query.event.PostQueryEvent
-import org.springframework.context.ApplicationEventPublisher
 
 /**
  * Hibernate GORM static API.
@@ -82,7 +72,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
             DynamicFinder.ARGUMENT_TIMEOUT,
             DynamicFinder.ARGUMENT_READ_ONLY,
             DynamicFinder.ARGUMENT_FLUSH_MODE,
-            "cache"
+            'cache'
     )))
 
     HibernateGormStaticApi(Class<D> persistentClass, HibernateDatastore datastore, List<FinderMethod> finders, DatastoreResolver datastoreResolver, String qualifier, ClassLoader classLoader) {
@@ -136,12 +126,12 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         PersistentEntity pe = getGormPersistentEntity()
 
         return (Boolean) getHibernateTemplate().execute { org.hibernate.Session session ->
-            StringBuilder hql = new StringBuilder("select count(e) from ").append(pe.name).append(" e where ")
+            StringBuilder hql = new StringBuilder('select count(e) from ').append(pe.name).append(' e where ')
             Map<String, Object> params = [:]
 
             PersistentProperty identity = pe.getIdentity()
             if (identity != null) {
-                hql.append("e.").append(identity.name).append(" = :id")
+                hql.append('e.').append(identity.name).append(' = :id')
                 params.id = id
             } else {
                 PersistentProperty[] compositeId = pe.getCompositeIdentity()
@@ -151,7 +141,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
                         conditions << ("e.${prop.name} = :${prop.name}".toString())
                         params[prop.name] = id[prop.name]
                     }
-                    hql.append(conditions.join(" and "))
+                    hql.append(conditions.join(' and '))
                 } else {
                     return false
                 }

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -44,66 +44,66 @@ class HqlQueryDelegateSpec extends Specification {
         }
     }
 
-    def "default setMaxResults is a no-op"() {
+    def 'default setMaxResults is a no-op'() {
         given:
         def delegate = stub()
         expect:
         delegate.setMaxResults(10) == null
     }
 
-    def "default setFirstResult is a no-op"() {
+    def 'default setFirstResult is a no-op'() {
         given:
         def delegate = stub()
         expect:
         delegate.setFirstResult(5) == null
     }
 
-    def "default setCacheable is a no-op"() {
+    def 'default setCacheable is a no-op'() {
         given:
         def delegate = stub()
         expect:
         delegate.setCacheable(true) == null
     }
 
-    def "default setFetchSize is a no-op"() {
+    def 'default setFetchSize is a no-op'() {
         given:
         def delegate = stub()
         expect:
         delegate.setFetchSize(50) == null
     }
 
-    def "default setReadOnly is a no-op"() {
+    def 'default setReadOnly is a no-op'() {
         given:
         def delegate = stub()
         expect:
         delegate.setReadOnly(true) == null
     }
 
-    def "default setLockMode is a no-op"() {
+    def 'default setLockMode is a no-op'() {
         given:
         def delegate = stub()
         expect:
         delegate.setLockMode(LockModeType.READ) == null
     }
 
-    def "default setParameterList with Collection is a no-op"() {
+    def 'default setParameterList with Collection is a no-op'() {
         given:
         def delegate = stub()
         expect:
-        delegate.setParameterList("names", ["a", "b"] as Collection) == null
+        delegate.setParameterList('names', ['a', 'b'] as Collection) == null
     }
 
-    def "default setParameterList with Object array is a no-op"() {
+    def 'default setParameterList with Object array is a no-op'() {
         given:
         def delegate = stub()
         expect:
-        delegate.setParameterList("names", "a", "b") == null
+        delegate.setParameterList('names', 'a', 'b') == null
     }
 
-    def "stub setHint is a no-op"() {
+    def 'stub setHint is a no-op'() {
         given:
         def delegate = stub()
         expect:
-        delegate.setHint("hint", "value") == null
+        delegate.setHint('hint', 'value') == null
     }
 }

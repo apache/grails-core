@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -76,54 +76,54 @@ class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
         return owner.getPropertyByName(propertyName)
     }
 
-    def "should bind enum type for a collection element"() {
-        given: "An entity with a collection of enums"
-        def table = new Table("person_statuses")
-        def property = setupProperty(PersonWithCollection, "statuses", table)
+    def 'should bind enum type for a collection element'() {
+        given: 'An entity with a collection of enums'
+        def table = new Table('person_statuses')
+        def property = setupProperty(PersonWithCollection, 'statuses', table)
 
-        expect: "The property is a ToMany property"
+        expect: 'The property is a ToMany property'
         property instanceof HibernateBasicProperty == true
 
-        when: "the enum is bound for the collection column"
+        when: 'the enum is bound for the collection column'
         // This will now successfully call property.getComponentType() internally
         def result = binder.bindEnumTypeForColumn(property as HibernateBasicProperty)
 
-        then: "The BasicValue is configured correctly"
+        then: 'The BasicValue is configured correctly'
         result.getEnumerationStyle() == EnumType.STRING
         result.getTypeParameters().getProperty(GrailsDomainBinder.ENUM_CLASS_PROP) == Status01.name
     }
 
     @Unroll
     def "should bind enum type as #expectedHibernateType when mapping specifies enumType as '#enumTypeMapping'"() {
-        given: "A root entity and its enum property"
-        def table = new Table("person")
-        def property = setupProperty(clazz, "status", table)
+        given: 'A root entity and its enum property'
+        def table = new Table('person')
+        def property = setupProperty(clazz, 'status', table)
 
-        when: "the enum is bound via the standard path"
-        def simpleValue = binder.bindEnumType(property as HibernateEnumProperty, "")
+        when: 'the enum is bound via the standard path'
+        def simpleValue = binder.bindEnumType(property as HibernateEnumProperty, '')
 
-        then: "the correct hibernate type is set"
+        then: 'the correct hibernate type is set'
         simpleValue.getTypeName() == expectedHibernateType
         simpleValue.getEnumerationStyle() == expectedEnumStyle
         simpleValue.isNullable() == nullable
 
         where:
         clazz    | enumTypeMapping  | expectedHibernateType            | expectedEnumStyle | nullable
-        Person01 | "default"        | null                             | EnumType.STRING   | false
-        Person02 | "string"         | null                             | EnumType.STRING   | true
-        Person03 | "ordinal"        | null                             | EnumType.ORDINAL  | true
-        Person04 | "identity"       | IdentityEnumType.class.getName() | null              | false
+        Person01 | 'default'        | null                             | EnumType.STRING   | false
+        Person02 | 'string'         | null                             | EnumType.STRING   | true
+        Person03 | 'ordinal'        | null                             | EnumType.ORDINAL  | true
+        Person04 | 'identity'       | IdentityEnumType.class.getName() | null              | false
         Person05 | UserTypeEnumType | UserTypeEnumType.class.getName() | null              | false
     }
 
     @Unroll
-    def "should set column nullability"() {
-        given: "A root entity and its enum property"
-        def table = new Table("person")
-        def property = setupProperty(clazz, "status", table)
+    def 'should set column nullability'() {
+        given: 'A root entity and its enum property'
+        def table = new Table('person')
+        def property = setupProperty(clazz, 'status', table)
 
-        when: "the enum is bound"
-        def simpleValue = binder.bindEnumType(property as HibernateEnumProperty, "")
+        when: 'the enum is bound'
+        def simpleValue = binder.bindEnumType(property as HibernateEnumProperty, '')
 
         then:
         simpleValue.getColumns()[0].isNullable() == nullable
@@ -135,30 +135,29 @@ class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
         Clown01  | true
     }
 
-    def "should bind enum type with explicit table"() {
-        given: "A root entity and its enum property"
-        def table = new Table("explicit_table")
-        def property = setupProperty(Person01, "status", new Table("internal"))
+    def 'should bind enum type with explicit table'() {
+        given: 'A root entity and its enum property'
+        def table = new Table('explicit_table')
+        def property = setupProperty(Person01, 'status', new Table('internal'))
 
-
-        when: "the enum is bound with an explicit table"
-        def simpleValue = binder.bindEnumType(property as HibernateEnumProperty,  "myPath")
+        when: 'the enum is bound with an explicit table'
+        def simpleValue = binder.bindEnumType(property as HibernateEnumProperty,  'myPath')
 
         then: "the provided table is used instead of the property's internal table"
         simpleValue.getTable() == table
     }
 
-    def "should bind explicit column for enum"() {
+    def 'should bind explicit column for enum'() {
         given:
-        def table = new Table("person")
-        def property = setupProperty(PersonWithExplicitColumn, "status", table)
+        def table = new Table('person')
+        def property = setupProperty(PersonWithExplicitColumn, 'status', table)
 
         when:
-        def simpleValue = binder.bindEnumType(property as HibernateEnumProperty, "")
+        def simpleValue = binder.bindEnumType(property as HibernateEnumProperty, '')
 
         then:
         1 * columnBinder.bindColumnConfigToColumn(_, _, _)
-        1 * indexBinder.bindIndex("status_col", _, _, _)
+        1 * indexBinder.bindIndex('status_col', _, _, _)
     }
 }
 
@@ -168,32 +167,39 @@ enum Status01 { AVAILABLE, OUT_OF_STOCK }
 
 @Entity class Person01 { Long id; Status01 status }
 @Entity class Person02 {
+
     Long id; Status01 status
-    static mapping = { status enumType: "string", nullable: true }
+    static mapping = { status enumType: 'string', nullable: true }
 }
 @Entity class Person03 {
+
     Long id; Status01 status
-    static mapping = { status enumType: "ordinal", nullable: true }
+    static mapping = { status enumType: 'ordinal', nullable: true }
 }
 @Entity class Person04 {
+
     Long id; Status01 status
-    static mapping = { status enumType: "identity" }
+    static mapping = { status enumType: 'identity' }
 }
 @Entity class Person05 {
+
     Long id; Status01 status
     static mapping = { status type: UserTypeEnumType }
 }
 @Entity class PersonWithCollection {
+
     Long id
     Set<Status01> statuses
 }
 @Entity class PersonWithExplicitColumn {
+
     Long id; Status01 status
-    static mapping = { status column: "status_col", index: "idx_status" }
+    static mapping = { status column: 'status_col', index: 'idx_status' }
 }
 @Entity class Clown01 extends Person01 { String clownName }
 
 class UserTypeEnumType implements UserType {
+
     @Override int getSqlType() { 0 }
     @Override Class returnedClass() { Status01 }
     @Override boolean equals(Object x, Object y) { x == y }

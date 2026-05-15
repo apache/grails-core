@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -45,13 +45,13 @@ class EmbeddedContainerWithGrailsSpec extends Specification {
         context.close()
     }
 
-    void "Test that you can load Grails in an embedded server config"() {
+    void 'Test that you can load Grails in an embedded server config'() {
         given: 'bootstrapped context'
         ConfigurableEnvironment env = new StandardServletEnvironment()
         PluginDiscovery pluginDiscovery = new DefaultPluginDiscovery()
         pluginDiscovery.init(env)
 
-        when: "An embedded server config is created"
+        when: 'An embedded server config is created'
         this.context = new AnnotationConfigServletWebServerApplicationContext()
         // simulate spring's environment setup
         this.context.setEnvironment(env)
@@ -62,7 +62,7 @@ class EmbeddedContainerWithGrailsSpec extends Specification {
         // load it
         this.context.refresh()
 
-        then: "The context is valid"
+        then: 'The context is valid'
         context != null
         new URL("http://localhost:${context.webServer.port}/foo/bar").text == 'hello world'
         new URL("http://localhost:${context.webServer.port}/foos").text == 'all foos'
@@ -83,11 +83,11 @@ class EmbeddedContainerWithGrailsSpec extends Specification {
 class FooController {
 
     def bar() {
-        render "hello world"
+        render 'hello world'
     }
 
     def list() {
-        render "all foos"
+        render 'all foos'
     }
 
     def closure = {}
@@ -98,6 +98,6 @@ class UrlMappings {
 
     static mappings = {
         "/$controller/$action?/$id?(.$format)?"()
-        "/foos"(controller: 'foo', action: "list")
+        '/foos'(controller: 'foo', action: 'list')
     }
 }

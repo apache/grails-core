@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -28,15 +28,16 @@ import spock.lang.Issue
  * @since 1.0
  */
 class DeleteAllWhereSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
+
     void setupSpec() {
         manager.addAllDomainClasses([Club])
     }
 
     @Issue('https://github.com/apache/grails-data-mapping/issues/969')
-    void "test delete all type conversion"() {
+    void 'test delete all type conversion'() {
         given:
-        new Club(name: "Manchester United").save()
-        new Club(name: "Arsenal").save(flush: true)
+        new Club(name: 'Manchester United').save()
+        new Club(name: 'Arsenal').save(flush: true)
 
         when:
         int count = Club.count
@@ -45,13 +46,13 @@ class DeleteAllWhereSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManage
         count == 2
 
         when:
-        def idList = [Club.findByName("Arsenal").id as Integer]
+        def idList = [Club.findByName('Arsenal').id as Integer]
         Club.where {
             id in idList
         }.deleteAll()
 
         then:
         Club.count == 1
-        Club.findByName("Manchester United")
+        Club.findByName('Manchester United')
     }
 }

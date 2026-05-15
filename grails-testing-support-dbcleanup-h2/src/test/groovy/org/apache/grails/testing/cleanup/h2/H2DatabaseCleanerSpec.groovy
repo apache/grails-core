@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -75,7 +75,7 @@ class H2DatabaseCleanerSpec extends Specification {
         cleaner.databaseType() == 'h2'
     }
 
-    def "supports returns true for H2 datasource"() {
+    def 'supports returns true for H2 datasource'() {
         given:
         def cleaner = new H2DatabaseCleaner()
 
@@ -83,7 +83,7 @@ class H2DatabaseCleanerSpec extends Specification {
         cleaner.supports(dataSource)
     }
 
-    def "supports returns false for non-H2 datasource"() {
+    def 'supports returns false for non-H2 datasource'() {
         given:
         def cleaner = new H2DatabaseCleaner()
         def nonH2DataSource = Mock(javax.sql.DataSource) {
@@ -98,7 +98,7 @@ class H2DatabaseCleanerSpec extends Specification {
         !cleaner.supports(nonH2DataSource)
     }
 
-    def "supports returns false when connection fails"() {
+    def 'supports returns false when connection fails'() {
         given:
         def cleaner = new H2DatabaseCleaner()
         def badDataSource = Mock(javax.sql.DataSource) {
@@ -109,7 +109,7 @@ class H2DatabaseCleanerSpec extends Specification {
         !cleaner.supports(badDataSource)
     }
 
-    def "cleanup truncates tables with data and returns stats"() {
+    def 'cleanup truncates tables with data and returns stats'() {
         given:
         sql.execute("INSERT INTO book (title) VALUES ('The Definitive Guide to Grails')")
         sql.execute("INSERT INTO book (title) VALUES ('Grails in Action')")
@@ -129,7 +129,7 @@ class H2DatabaseCleanerSpec extends Specification {
         sql.firstRow('SELECT COUNT(*) AS cnt FROM author').cnt == 0
     }
 
-    def "cleanup does not report tables with no data"() {
+    def 'cleanup does not report tables with no data'() {
         given: 'tables exist but have no rows'
         def cleaner = new H2DatabaseCleaner()
 
@@ -140,10 +140,10 @@ class H2DatabaseCleanerSpec extends Specification {
         stats.tableRowCounts.isEmpty() || stats.tableRowCounts.values().every { it == 0L }
     }
 
-    def "cleanup handles tables with reserved word names"() {
+    def 'cleanup handles tables with reserved word names'() {
         given:
-        sql.execute('CREATE TABLE IF NOT EXISTS "USER" (id BIGINT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255))')
-        sql.execute('INSERT INTO "USER" (name) VALUES (\'Test User\')')
+        sql.execute('CREATE TABLE IF NOT EXISTS 'USER' (id BIGINT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255))')
+        sql.execute('INSERT INTO 'USER' (name) VALUES (\'Test User\')')
 
         def cleaner = new H2DatabaseCleaner()
 
@@ -154,13 +154,13 @@ class H2DatabaseCleanerSpec extends Specification {
         stats.tableRowCounts['USER'] == 1L
 
         and: 'table is now empty'
-        sql.firstRow('SELECT COUNT(*) AS cnt FROM "USER"').cnt == 0
+        sql.firstRow('SELECT COUNT(*) AS cnt FROM 'USER'').cnt == 0
 
         cleanup:
-        sql.execute('DROP TABLE IF EXISTS "USER"')
+        sql.execute('DROP TABLE IF EXISTS 'USER'')
     }
 
-    def "cleanup restores referential integrity after truncation"() {
+    def 'cleanup restores referential integrity after truncation'() {
         given:
         sql.execute('CREATE TABLE IF NOT EXISTS category (id BIGINT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255))')
         sql.execute('CREATE TABLE IF NOT EXISTS item (id BIGINT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255), category_id BIGINT, FOREIGN KEY (category_id) REFERENCES category(id))')
@@ -186,7 +186,7 @@ class H2DatabaseCleanerSpec extends Specification {
         sql.execute('DROP TABLE IF EXISTS category')
     }
 
-    def "cleanup works with different database names"() {
+    def 'cleanup works with different database names'() {
         given:
         def customDataSource = new JdbcDataSource()
         customDataSource.URL = 'jdbc:h2:mem:grailsDB;DB_CLOSE_DELAY=-1'
@@ -213,7 +213,7 @@ class H2DatabaseCleanerSpec extends Specification {
         customSql.close()
     }
 
-    def "cleanup returns empty stats when schema cannot be resolved"() {
+    def 'cleanup returns empty stats when schema cannot be resolved'() {
         given:
         def badDataSource = Mock(javax.sql.DataSource) {
             getConnection() >> { throw new RuntimeException('Cannot connect') }

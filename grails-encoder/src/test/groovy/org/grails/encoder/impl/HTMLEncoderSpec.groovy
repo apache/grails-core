@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -27,7 +27,8 @@ import spock.lang.Specification
 import spock.lang.Unroll
 
 class HTMLEncoderSpec extends Specification {
-    def "html encoding should support streaming interface"() {
+
+    def 'html encoding should support streaming interface'() {
         given:
             def encoder=new HTMLEncoder()
         expect:
@@ -35,7 +36,7 @@ class HTMLEncoderSpec extends Specification {
     }
 
     @Unroll
-    def "streaming should encode longest part at a time for #streamingEncoder.codecIdentifier.codecName codec"(StreamingEncoder streamingEncoder) {
+    def 'streaming should encode longest part at a time for #streamingEncoder.codecIdentifier.codecName codec'(StreamingEncoder streamingEncoder) {
         given:
              EncodedAppender appender=Mock(EncodedAppender)
              EncodingState encodingState=Mock(EncodingState)
@@ -73,7 +74,7 @@ class HTMLEncoderSpec extends Specification {
             streamingEncoder << [new HTMLEncoder(), new HTML4Encoder(), new BasicXMLEncoder()]
     }
     
-    @Issue("GRAILS-10684")
+    @Issue('GRAILS-10684')
     def "html encoder shouldn't throw NPE when toString() returns null"() {
         given:
             def encoder=new HTMLEncoder()
@@ -83,5 +84,6 @@ class HTMLEncoderSpec extends Specification {
 }
 
 class ToStringNull {
+
      public String toString() { null }   
 }

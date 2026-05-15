@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -41,77 +41,72 @@ import static com.mongodb.client.model.Filters.*
 @RestoreSystemProperties
 class MultiTenancySpec extends AutoStartedMongoSpec {
 
-    @Shared @AutoCleanup MongoDatastore datastore
+    @AutoCleanup MongoDatastore datastore
 
     @Override
     boolean shouldInitializeDatastore() {
         false
     }
 
-    void setupSpec() {
-        org.grails.datastore.gorm.GormRegistry.reset()
+    void setup() {
+        // Ensure tenant property is cleared before each test for test isolation
+        System.clearProperty(SystemPropertyTenantResolver.PROPERTY_NAME)
         Map config = [
-                "grails.gorm.multiTenancy.mode"               :"DISCRIMINATOR",
-                "grails.gorm.multiTenancy.tenantResolverClass": MyResolver,
+                'grails.gorm.multiTenancy.mode'               :'DISCRIMINATOR',
+                'grails.gorm.multiTenancy.tenantResolverClass': MyResolver,
                 (MongoSettings.SETTING_URL)                   : "mongodb://${mongoHost}:${mongoPort}/defaultDb" as String,
         ]
         this.datastore = new MongoDatastore(config, getDomainClasses() as Class[])
     }
 
-    void setup() {
-        // Ensure tenant property is cleared before each test for test isolation
-        System.clearProperty(SystemPropertyTenantResolver.PROPERTY_NAME)
-    }
-
-
-    void "Test persist and retrieve entities with multi tenancy"() {
+    void 'Test persist and retrieve entities with multi tenancy'() {
         setup:
         CompanyC.DB.drop()
 
-        when:"A tenant id is present"
-        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "test1")
+        when:'A tenant id is present'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'test1')
 
-        then:"the correct tenant is used"
+        then:'the correct tenant is used'
         CompanyC.count() == 0
         CompanyC.DB.name == 'defaultDb'
 
-        when:"An object is saved"
-        new CompanyC(name: "Foo").save(flush:true)
+        when:'An object is saved'
+        new CompanyC(name: 'Foo').save(flush: true)
 
-        then:"The results are correct"
+        then:'The results are correct'
         CompanyC.count() == 1
 
-        when:"An object is updated"
-        CompanyC c = CompanyC.findByName("Foo")
-        c.name = "Bar"
-        c.save(flush:true)
+        when:'An object is updated'
+        CompanyC c = CompanyC.findByName('Foo')
+        c.name = 'Bar'
+        c.save(flush: true)
 
         then:
-        !CompanyC.findByName("Foo")
-        CompanyC.findByName("Bar")?.version == 1
+        !CompanyC.findByName('Foo')
+        CompanyC.findByName('Bar')?.version == 1
 
-        when:"The tenant id is switched"
-        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "test2")
+        when:'The tenant id is switched'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'test2')
 
-        then:"the correct tenant is used"
+        then:'the correct tenant is used'
         CompanyC.DB.name == 'defaultDb'
         CompanyC.count() == 0
-        !CompanyC.find(eq("name", "Foo")).first()
-        !CompanyC.find(eq("name", "Bar")).first()
-        CompanyC.withTenant("test1") { Serializable tenantId, Session s ->
+        !CompanyC.find(eq('name', 'Foo')).first()
+        !CompanyC.find(eq('name', 'Bar')).first()
+        CompanyC.withTenant('test1') { Serializable tenantId, Session s ->
             assert tenantId
             assert s
             CompanyC.count() == 1
         }
 
-        when:"each tenant is iterated over"
+        when:'each tenant is iterated over'
         Map tenantIds = [:]
         CompanyC.eachTenant { String tenantId ->
             tenantIds.put(tenantId, CompanyC.count())
         }
 
-        then:"The result is correct"
-        tenantIds == [test1:1, test2:0]
+        then:'The result is correct'
+        tenantIds == [test1: 1, test2: 0]
     }
 
     List getDomainClasses() {
@@ -119,6 +114,7 @@ class MultiTenancySpec extends AutoStartedMongoSpec {
     }
 
     static class MyResolver extends SystemPropertyTenantResolver implements AllTenantsResolver {
+
         @Override
         Iterable<Serializable> resolveTenantIds() {
             ['test1','test2']
@@ -128,6 +124,7 @@ class MultiTenancySpec extends AutoStartedMongoSpec {
 }
 @Entity
 class CompanyC implements MongoEntity<CompanyC>, MultiTenant {
+
     ObjectId id
     String name
     String parent

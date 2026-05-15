@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -48,7 +48,7 @@ class LayoutWriterStackTests extends Specification implements TagLibUnitTest<Two
 
     void testNestedLayoutTags() {
         given:
-        def nested = template.replaceAll("leftContent", template)
+        def nested = template.replaceAll('leftContent', template)
         String result = applyTemplate(nested)
 
         expect:
@@ -71,20 +71,20 @@ class LayoutWriterStackTests extends Specification implements TagLibUnitTest<Two
     }
 }
 
-@Artefact("TagLib")
+@Artefact('TagLib')
 class TwoColumnTagLib {
 
     Closure twoColumn = {attrs, body ->
         def parts = LayoutWriterStack.writeParts(body)
-        out << "<div class='twoColumn'>left: " << parts.left << ", right: " << parts.right << ", body: " << parts.body << "</div>"
+        out << "<div class='twoColumn'>left: " << parts.left << ', right: ' << parts.right << ', body: ' << parts.body << '</div>'
     }
     Closure left = {attrs, body ->
         def w = LayoutWriterStack.currentWriter('left')
-        w << "<div class='left'>" << body() << "</div>"
+        w << "<div class='left'>" << body() << '</div>'
     }
 
     Closure right = {attrs, body ->
         def w = LayoutWriterStack.currentWriter('right')
-        w << "<div class='right'>" << body() << "</div>"
+        w << "<div class='right'>" << body() << '</div>'
     }
 }

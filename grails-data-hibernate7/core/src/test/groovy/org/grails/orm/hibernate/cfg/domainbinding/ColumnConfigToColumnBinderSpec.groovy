@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -29,15 +29,15 @@ import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBin
 class ColumnConfigToColumnBinderSpec extends Specification {
 
     def binder = new ColumnConfigToColumnBinder()
-    def column = new Column("test")
+    def column = new Column('test')
 
-    def "should bind column properties when values are valid"() {
+    def 'should bind column properties when values are valid'() {
         given:
         def columnConfig = new ColumnConfig()
         columnConfig.length = 100
         columnConfig.precision = 10
         columnConfig.scale = 2
-        columnConfig.sqlType = "VARCHAR"
+        columnConfig.sqlType = 'VARCHAR'
         columnConfig.unique = true
 
         when:
@@ -47,11 +47,11 @@ class ColumnConfigToColumnBinderSpec extends Specification {
         column.length == 100
         column.precision == 10
         column.scale == 2
-        column.sqlType == "VARCHAR"
+        column.sqlType == 'VARCHAR'
         column.unique
     }
 
-    def "should not bind properties when values are -1"() {
+    def 'should not bind properties when values are -1'() {
         given:
         def columnConfig = new ColumnConfig()
         columnConfig.length = -1
@@ -69,7 +69,7 @@ class ColumnConfigToColumnBinderSpec extends Specification {
         !column.unique
     }
 
-    def "should use default precision 15 for H2 when no precision set"() {
+    def 'should use default precision 15 for H2 when no precision set'() {
         given:
         def h2Binder = new ColumnConfigToColumnBinder(new org.hibernate.dialect.H2Dialect())
         def columnConfig = new ColumnConfig(precision: -1)
@@ -81,7 +81,7 @@ class ColumnConfigToColumnBinderSpec extends Specification {
         column.precision == 15
     }
 
-    def "should use Oracle-specific default precision 126 when no precision set"() {
+    def 'should use Oracle-specific default precision 126 when no precision set'() {
         given:
         def oracleBinder = new ColumnConfigToColumnBinder(new org.hibernate.dialect.OracleDialect())
         def columnConfig = new ColumnConfig(precision: -1)
@@ -93,7 +93,7 @@ class ColumnConfigToColumnBinderSpec extends Specification {
         column.precision == 126
     }
 
-    def "should use default precision 15 for other dialects when no precision set"() {
+    def 'should use default precision 15 for other dialects when no precision set'() {
         given:
         def pgBinder = new ColumnConfigToColumnBinder(new org.hibernate.dialect.PostgreSQLDialect())
         def columnConfig = new ColumnConfig(precision: -1)
@@ -105,14 +105,14 @@ class ColumnConfigToColumnBinderSpec extends Specification {
         column.precision == 15
     }
 
-    def "column config honors uniqueness property"() {
+    def 'column config honors uniqueness property'() {
         given:
         def columnConfig = new ColumnConfig()
         columnConfig.length = -1
         columnConfig.precision = -1
         columnConfig.scale = -1
         PropertyConfig mappedForm = new PropertyConfig()
-        mappedForm.setUnique("name")
+        mappedForm.setUnique('name')
 
         when:
         binder.bindColumnConfigToColumn(column, columnConfig, mappedForm)
@@ -125,10 +125,10 @@ class ColumnConfigToColumnBinderSpec extends Specification {
         !column.unique
     }
 
-    def "column config honors uniqueness property when set to a string (named group)"() {
+    def 'column config honors uniqueness property when set to a string (named group)'() {
         given:
-        def columnConfig = new ColumnConfig(unique: "group1")
-        PropertyConfig mappedForm = new PropertyConfig(unique: "group1")
+        def columnConfig = new ColumnConfig(unique: 'group1')
+        PropertyConfig mappedForm = new PropertyConfig(unique: 'group1')
 
         when:
         binder.bindColumnConfigToColumn(column, columnConfig, mappedForm)
@@ -137,10 +137,10 @@ class ColumnConfigToColumnBinderSpec extends Specification {
         !column.unique // Should be false because it's handled via unique groups in Hibernate
     }
 
-    def "column config honors uniqueness property when set to a list (composite groups)"() {
+    def 'column config honors uniqueness property when set to a list (composite groups)'() {
         given:
-        def columnConfig = new ColumnConfig(unique: ["group1", "group2"])
-        PropertyConfig mappedForm = new PropertyConfig(unique: ["group1", "group2"])
+        def columnConfig = new ColumnConfig(unique: ['group1', 'group2'])
+        PropertyConfig mappedForm = new PropertyConfig(unique: ['group1', 'group2'])
 
         when:
         binder.bindColumnConfigToColumn(column, columnConfig, mappedForm)
@@ -149,7 +149,7 @@ class ColumnConfigToColumnBinderSpec extends Specification {
         !column.unique
     }
 
-    def "column config honors uniqueness property when set to boolean true"() {
+    def 'column config honors uniqueness property when set to boolean true'() {
         given:
         def columnConfig = new ColumnConfig(unique: true)
         PropertyConfig mappedForm = new PropertyConfig(unique: true)
@@ -161,7 +161,7 @@ class ColumnConfigToColumnBinderSpec extends Specification {
         column.unique
     }
 
-    def "column config honors uniqueness property when set to boolean false"() {
+    def 'column config honors uniqueness property when set to boolean false'() {
         given:
         def columnConfig = new ColumnConfig(unique: false)
         PropertyConfig mappedForm = new PropertyConfig(unique: false)
@@ -173,7 +173,7 @@ class ColumnConfigToColumnBinderSpec extends Specification {
         !column.unique
     }
 
-    def "column config honors uniqueness property when mappedForm is empty"() {
+    def 'column config honors uniqueness property when mappedForm is empty'() {
         given:
         def columnConfig = new ColumnConfig()
         columnConfig.length = -1

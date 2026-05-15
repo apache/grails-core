@@ -77,9 +77,9 @@ import org.grails.orm.hibernate.EventListenerIntegrator;
 import org.grails.orm.hibernate.GrailsSessionContext;
 import org.grails.orm.hibernate.HibernateEventListeners;
 import org.grails.orm.hibernate.MetadataIntegrator;
+import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
-import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyProvider;
 import org.grails.orm.hibernate.proxy.GrailsBytecodeProvider;
 
@@ -323,10 +323,10 @@ public class HibernateMappingContextConfiguration extends Configuration
             for (Class additionalClass : additionalClasses) {
                 if (GormEntity.class.isAssignableFrom(additionalClass)) {
                     PersistentEntity pe = hibernateMappingContext.addPersistentEntity(additionalClass);
-                    if (pe instanceof GrailsHibernatePersistentEntity && ((GrailsHibernatePersistentEntity)pe).usesConnectionSource(dataSourceName)) {
-                         if (additionalClass.isAnnotationPresent(Entity.class) || additionalClass.isAnnotationPresent(grails.gorm.annotation.Entity.class)) {
-                             annotatedClasses.add(additionalClass);
-                         }
+                    if (pe instanceof GrailsHibernatePersistentEntity && ((GrailsHibernatePersistentEntity) pe).usesConnectionSource(dataSourceName)) {
+                        if (additionalClass.isAnnotationPresent(Entity.class) || additionalClass.isAnnotationPresent(grails.gorm.annotation.Entity.class)) {
+                            annotatedClasses.add(additionalClass);
+                        }
                     }
                 }
             }

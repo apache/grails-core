@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -30,8 +30,8 @@ class MutationHqlQuerySpec extends HibernateGormDatastoreSpec {
     }
 
     def setup() {
-        new MutationHqlQuerySpecBook(title: "The Hobbit", pages: 310).save()
-        new MutationHqlQuerySpecBook(title: "Fellowship", pages: 423).save(flush: true)
+        new MutationHqlQuerySpecBook(title: 'The Hobbit', pages: 310).save()
+        new MutationHqlQuerySpecBook(title: 'Fellowship', pages: 423).save(flush: true)
     }
 
     private Query buildMutationQuery(CharSequence hql, Map namedParams = [:], Collection positionalParams = null) {
@@ -40,31 +40,31 @@ class MutationHqlQuerySpec extends HibernateGormDatastoreSpec {
         HibernateHqlQueryCreator.createHqlQuery(datastore, sessionFactory, entity, ctx)
     }
 
-    void "executeUpdate with named parameters updates correctly"() {
+    void 'executeUpdate with named parameters updates correctly'() {
         when:
-        int updated = buildMutationQuery("update MutationHqlQuerySpecBook set pages = :p where title = :t", [p: 999, t: "The Hobbit"]).executeUpdate()
+        int updated = buildMutationQuery('update MutationHqlQuerySpecBook set pages = :p where title = :t', [p: 999, t: 'The Hobbit']).executeUpdate()
         MutationHqlQuerySpecBook.withSession { it.clear() }
         
         then:
         updated == 1
-        MutationHqlQuerySpecBook.findByTitle("The Hobbit").pages == 999
+        MutationHqlQuerySpecBook.findByTitle('The Hobbit').pages == 999
     }
 
-    void "executeUpdate with positional parameters updates correctly"() {
+    void 'executeUpdate with positional parameters updates correctly'() {
         when:
         // Pass positionalParams explicitly to force ordinal parameters (?1, ?2)
-        int updated = buildMutationQuery("update MutationHqlQuerySpecBook set pages = ?1 where title = ?2", [:], [1000, "Fellowship"]).executeUpdate()
+        int updated = buildMutationQuery('update MutationHqlQuerySpecBook set pages = ?1 where title = ?2', [:], [1000, 'Fellowship']).executeUpdate()
         MutationHqlQuerySpecBook.withSession { it.clear() }
         
         then:
         updated == 1
-        MutationHqlQuerySpecBook.findByTitle("Fellowship").pages == 1000
+        MutationHqlQuerySpecBook.findByTitle('Fellowship').pages == 1000
     }
 
-    void "executeUpdate with GString updates correctly"() {
+    void 'executeUpdate with GString updates correctly'() {
         given:
         int newPages = 111
-        String title = "The Hobbit"
+        String title = 'The Hobbit'
         
         when:
         // By default GString uses named parameters (p0, p1, etc.)
@@ -73,13 +73,13 @@ class MutationHqlQuerySpec extends HibernateGormDatastoreSpec {
         
         then:
         updated == 1
-        MutationHqlQuerySpecBook.findByTitle("The Hobbit").pages == 111
+        MutationHqlQuerySpecBook.findByTitle('The Hobbit').pages == 111
     }
 
-    void "executeUpdate with GString and positional parameters updates correctly"() {
+    void 'executeUpdate with GString and positional parameters updates correctly'() {
         given:
         int newPages = 444
-        String title = "Fellowship"
+        String title = 'Fellowship'
         
         when:
         // Pass an empty collection to opt-in to positional expansion (?1, ?2, etc.)
@@ -88,44 +88,44 @@ class MutationHqlQuerySpec extends HibernateGormDatastoreSpec {
         
         then:
         updated == 1
-        MutationHqlQuerySpecBook.findByTitle("Fellowship").pages == 444
+        MutationHqlQuerySpecBook.findByTitle('Fellowship').pages == 444
     }
 
-    void "list() throws UnsupportedOperationException"() {
+    void 'list() throws UnsupportedOperationException'() {
         when:
-        buildMutationQuery("update MutationHqlQuerySpecBook set pages = 1").list()
+        buildMutationQuery('update MutationHqlQuerySpecBook set pages = 1').list()
         
         then:
         thrown(UnsupportedOperationException)
     }
 
-    void "singleResult() throws UnsupportedOperationException"() {
+    void 'singleResult() throws UnsupportedOperationException'() {
         when:
-        buildMutationQuery("update MutationHqlQuerySpecBook set pages = 1").singleResult()
+        buildMutationQuery('update MutationHqlQuerySpecBook set pages = 1').singleResult()
         
         then:
         thrown(UnsupportedOperationException)
     }
 
-    void "executeQuery() throws UnsupportedOperationException"() {
+    void 'executeQuery() throws UnsupportedOperationException'() {
         when:
-        def query = buildMutationQuery("update MutationHqlQuerySpecBook set pages = 1")
+        def query = buildMutationQuery('update MutationHqlQuerySpecBook set pages = 1')
         query.executeQuery(mappingContext.getPersistentEntity(MutationHqlQuerySpecBook.name), null)
         
         then:
         thrown(UnsupportedOperationException)
     }
 
-    void "selectQuery returns null for MutationHqlQuery"() {
+    void 'selectQuery returns null for MutationHqlQuery'() {
         expect:
-        buildMutationQuery("update MutationHqlQuerySpecBook set pages = 1").selectQuery() == null
+        buildMutationQuery('update MutationHqlQuerySpecBook set pages = 1').selectQuery() == null
     }
 
-    void "buildQuery handles hints for mutation query"() {
+    void 'buildQuery handles hints for mutation query'() {
         given:
         def entity = mappingContext.getPersistentEntity(MutationHqlQuerySpecBook.name)
-        def hql = "update MutationHqlQuerySpecBook set pages = 1"
-        def hints = ["org.hibernate.comment": "update hint"]
+        def hql = 'update MutationHqlQuerySpecBook set pages = 1'
+        def hints = ['org.hibernate.comment': 'update hint']
         def ctx = HqlQueryContext.prepare(entity, hql, [:], null, [:], hints, false, true)
 
         when:
@@ -138,6 +138,7 @@ class MutationHqlQuerySpec extends HibernateGormDatastoreSpec {
 
 @Entity
 class MutationHqlQuerySpecBook {
+
     String title
     Integer pages
 }

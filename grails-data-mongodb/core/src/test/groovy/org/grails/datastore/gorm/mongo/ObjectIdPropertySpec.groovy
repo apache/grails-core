@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -33,23 +33,23 @@ class ObjectIdPropertySpec extends MongoDatastoreSpec {
         manager.addAllDomainClasses([ObjectIdPerson])
     }
 
-    void "test save and retrieve object id"() {
-        when: "an object is saved and retrieved"
+    void 'test save and retrieve object id'() {
+        when: 'an object is saved and retrieved'
 
         def id = new ObjectId()
-        ObjectIdPerson o = new ObjectIdPerson(name: "Fred", scopeId: id)
+        ObjectIdPerson o = new ObjectIdPerson(name: 'Fred', scopeId: id)
         o.save(flush: true)
         manager.session.clear()
         o = ObjectIdPerson.get(o.id)
 
-        then: "The id is correct"
+        then: 'The id is correct'
         o.scopeId == id
         manager.session.clear()
 
-        when: "A query is used to retrieve the object"
+        when: 'A query is used to retrieve the object'
         o = ObjectIdPerson.findByScopeId(id)
 
-        then: "The result is correct"
+        then: 'The result is correct'
         o != null
         o.scopeId == id
     }
@@ -57,7 +57,8 @@ class ObjectIdPropertySpec extends MongoDatastoreSpec {
 
 @Entity
 class ObjectIdPerson {
-    ObjectId id;
-    String name;
+
+    ObjectId id
+    String name
     ObjectId scopeId
 }

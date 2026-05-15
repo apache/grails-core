@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -31,7 +31,7 @@ class DbmMarkNextChangesetRanSqlCommandSpec extends ApplicationContextDatabaseMi
     @AutoCleanup('delete')
     File outputFile = File.createTempFile('update', 'sql')
 
-    def "writes SQL to mark the next change as executed in the database to STDOUT"() {
+    def 'writes SQL to mark the next change as executed in the database to STDOUT'() {
         given:
             command.changeLogFile << CHANGE_LOG_CONTENT
 
@@ -44,7 +44,7 @@ class DbmMarkNextChangesetRanSqlCommandSpec extends ApplicationContextDatabaseMi
             !(output =~ /INSERT INTO .+'changeSet2'/)
     }
 
-    def "writes SQL to mark the next change as executed in the database to a file given as arguments"() {
+    def 'writes SQL to mark the next change as executed in the database to a file given as arguments'() {
         given:
             command.changeLogFile << CHANGE_LOG_CONTENT
 
@@ -59,9 +59,9 @@ class DbmMarkNextChangesetRanSqlCommandSpec extends ApplicationContextDatabaseMi
 
     static final String CHANGE_LOG_CONTENT = '''
 databaseChangeLog = {
-    changeSet(author: "John Smith", id: "changeSet1") {
+    changeSet(author: 'John Smith', id: 'changeSet1') {
     }
-    changeSet(author: "John Smith", id: "changeSet2") {
+    changeSet(author: 'John Smith', id: 'changeSet2') {
     }
 }
 '''

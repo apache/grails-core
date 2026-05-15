@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -22,7 +22,7 @@ import spock.lang.Specification
 
 class MappingCacheHolderSpec extends Specification {
 
-    def "getMapping returns null for null class"() {
+    def 'getMapping returns null for null class'() {
         given:
         def holder = new MappingCacheHolder()
 
@@ -30,7 +30,7 @@ class MappingCacheHolderSpec extends Specification {
         holder.getMapping(null) == null
     }
 
-    def "getMapping returns null for unknown class"() {
+    def 'getMapping returns null for unknown class'() {
         given:
         def holder = new MappingCacheHolder()
 
@@ -38,7 +38,8 @@ class MappingCacheHolderSpec extends Specification {
         holder.getMapping(String) == null
     }
 
-    def "cacheMapping with class and Mapping stores and retrieves it"() {
+    def 'cacheMapping with class and Mapping stores and retrieves it'() {
+
         given:
         def holder = new MappingCacheHolder()
         def mapping = new Mapping()
@@ -50,7 +51,8 @@ class MappingCacheHolderSpec extends Specification {
         holder.getMapping(String).is(mapping)
     }
 
-    def "cacheMapping with null class is ignored"() {
+    def 'cacheMapping with null class is ignored'() {
+
         given:
         def holder = new MappingCacheHolder()
 
@@ -61,7 +63,7 @@ class MappingCacheHolderSpec extends Specification {
         noExceptionThrown()
     }
 
-    def "cacheMapping with null mapping is ignored"() {
+    def 'cacheMapping with null mapping is ignored'() {
         given:
         def holder = new MappingCacheHolder()
 
@@ -72,7 +74,7 @@ class MappingCacheHolderSpec extends Specification {
         holder.getMapping(String) == null
     }
 
-    def "clear removes all cached mappings"() {
+    def 'clear removes all cached mappings'() {
         given:
         def holder = new MappingCacheHolder()
         holder.cacheMapping(String, new Mapping())
@@ -86,7 +88,8 @@ class MappingCacheHolderSpec extends Specification {
         holder.getMapping(Integer) == null
     }
 
-    def "clear(Class) removes only the specified class mapping"() {
+    def 'clear(Class) removes only the specified class mapping'() {
+
         given:
         def holder = new MappingCacheHolder()
         def mappingA = new Mapping()

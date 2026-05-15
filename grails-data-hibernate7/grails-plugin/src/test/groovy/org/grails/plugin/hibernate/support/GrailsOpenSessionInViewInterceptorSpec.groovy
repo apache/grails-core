@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -35,28 +35,28 @@ import spock.lang.Specification
 class GrailsOpenSessionInViewInterceptorSpec extends Specification {
 
     @Shared Map config = [
-            'dataSource.url':"jdbc:h2:mem:osivSpecDB;LOCK_TIMEOUT=10000",
+            'dataSource.url': 'jdbc:h2:mem:osivSpecDB;LOCK_TIMEOUT=10000',
             'dataSource.dbCreate': 'create-drop',
             'dataSource.dialect': H2Dialect.name,
             'dataSource.formatSql': 'true',
             'hibernate.flush.mode': 'COMMIT',
             'hibernate.cache.queries': 'true',
             'hibernate.hbm2ddl.auto': 'create-drop',
-            'dataSources.secondary':[url:"jdbc:h2:mem:osivSecondaryDb;LOCK_TIMEOUT=10000"],
+            'dataSources.secondary': [url:'jdbc:h2:mem:osivSecondaryDb;LOCK_TIMEOUT=10000'],
     ]
 
     @Shared @AutoCleanup HibernateDatastore datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config), OsivSpecBook, OsivSpecAuthor)
 
-    def "test hibernateFlushMode is correctly applied to default session"() {
-        given: "An OSIV interceptor"
+    def 'test hibernateFlushMode is correctly applied to default session'() {
+        given: 'An OSIV interceptor'
         def interceptor = new GrailsOpenSessionInViewInterceptor()
         interceptor.setHibernateDatastore(datastore)
         WebRequest webRequest = Mock(WebRequest)
 
-        when: "preHandle is called"
+        when: 'preHandle is called'
         interceptor.preHandle(webRequest)
 
-        then: "the session is bound with the correct flush mode"
+        then: 'the session is bound with the correct flush mode'
         SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(datastore.sessionFactory)
         sessionHolder != null
         sessionHolder.session.hibernateFlushMode == FlushMode.COMMIT
@@ -65,18 +65,18 @@ class GrailsOpenSessionInViewInterceptorSpec extends Specification {
         interceptor.afterCompletion(webRequest, null)
     }
 
-    def "test hibernateFlushMode is correctly applied to secondary session"() {
-        given: "An OSIV interceptor"
+    def 'test hibernateFlushMode is correctly applied to secondary session'() {
+        given: 'An OSIV interceptor'
         def interceptor = new GrailsOpenSessionInViewInterceptor()
         interceptor.setHibernateDatastore(datastore)
         WebRequest webRequest = Mock(WebRequest)
 
         def secondaryDatastore = datastore.getDatastoreForConnection('secondary')
 
-        when: "preHandle is called"
+        when: 'preHandle is called'
         interceptor.preHandle(webRequest)
 
-        then: "the secondary session is bound with the correct flush mode"
+        then: 'the secondary session is bound with the correct flush mode'
         SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(secondaryDatastore.sessionFactory)
         sessionHolder != null
         sessionHolder.session.hibernateFlushMode == FlushMode.COMMIT
@@ -85,8 +85,8 @@ class GrailsOpenSessionInViewInterceptorSpec extends Specification {
         interceptor.afterCompletion(webRequest, null)
     }
 
-    def "test sessions are unbound and closed after completion"() {
-        given: "An OSIV interceptor with bound sessions"
+    def 'test sessions are unbound and closed after completion'() {
+        given: 'An OSIV interceptor with bound sessions'
         def interceptor = new GrailsOpenSessionInViewInterceptor()
         interceptor.setHibernateDatastore(datastore)
         WebRequest webRequest = Mock(WebRequest)
@@ -96,20 +96,20 @@ class GrailsOpenSessionInViewInterceptorSpec extends Specification {
         SessionFactory primarySf = datastore.sessionFactory
         SessionFactory secondarySf = secondaryDatastore.sessionFactory
 
-        expect: "Sessions are bound"
+        expect: 'Sessions are bound'
         TransactionSynchronizationManager.hasResource(primarySf)
         TransactionSynchronizationManager.hasResource(secondarySf)
 
-        when: "afterCompletion is called"
+        when: 'afterCompletion is called'
         interceptor.afterCompletion(webRequest, null)
 
-        then: "Sessions are unbound"
+        then: 'Sessions are unbound'
         !TransactionSynchronizationManager.hasResource(primarySf)
         !TransactionSynchronizationManager.hasResource(secondarySf)
     }
 
-    def "test postHandle flushes session if not manual"() {
-        given: "An OSIV interceptor with a mocked session"
+    def 'test postHandle flushes session if not manual'() {
+        given: 'An OSIV interceptor with a mocked session'
         def interceptor = new GrailsOpenSessionInViewInterceptor()
         def mockSessionFactory = Mock(SessionFactory)
         def mockSession = Mock(Session)
@@ -121,10 +121,10 @@ class GrailsOpenSessionInViewInterceptorSpec extends Specification {
 
         WebRequest webRequest = Mock(WebRequest)
 
-        when: "postHandle is called"
+        when: 'postHandle is called'
         interceptor.postHandle(webRequest, null)
 
-        then: "session.flush() was called exactly once"
+        then: 'session.flush() was called exactly once'
         1 * mockSession.flush()
 
         cleanup:
@@ -134,6 +134,7 @@ class GrailsOpenSessionInViewInterceptorSpec extends Specification {
 
 @Entity
 class OsivSpecBook {
+
     String title
     static mapping = {
         datasource 'secondary'
@@ -142,5 +143,6 @@ class OsivSpecBook {
 
 @Entity
 class OsivSpecAuthor {
+
     String name
 }

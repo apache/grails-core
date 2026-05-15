@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -31,11 +31,13 @@ class DomainFieldModifierSpec extends Specification {
 
     DomainFieldModifier modifier = new DomainFieldModifier()
 
-    def "should find domain class file by simple name"() {
+    def 'should find domain class file by simple name'() {
+
         given:
         createDomainFile('example', 'Book', '''
             package example
             class Book {
+
             }
         ''')
 
@@ -47,11 +49,13 @@ class DomainFieldModifierSpec extends Specification {
         found.name == 'Book.groovy'
     }
 
-    def "should find domain class file by fully qualified name"() {
+    def 'should find domain class file by fully qualified name'() {
+
         given:
         createDomainFile('com/example', 'Author', '''
             package com.example
             class Author {
+
             }
         ''')
 
@@ -63,7 +67,8 @@ class DomainFieldModifierSpec extends Specification {
         found.name == 'Author.groovy'
     }
 
-    def "should return null when domain class not found"() {
+    def 'should return null when domain class not found'() {
+
         given:
         createDomainDir()
 
@@ -71,11 +76,12 @@ class DomainFieldModifierSpec extends Specification {
         modifier.findDomainFile(tempDir.toFile(), 'NonExistent') == null
     }
 
-    def "should detect existing property"() {
+    def 'should detect existing property'() {
         given:
         def domainFile = createDomainFile('example', 'Book', '''
             package example
             class Book {
+
                 String title
             }
         ''')
@@ -85,7 +91,7 @@ class DomainFieldModifierSpec extends Specification {
         modifier.memberExists(domainFile, 'author') == false
     }
 
-    def "should add property to empty domain class"() {
+    def 'should add property to empty domain class'() {
         given:
         def domainFile = createDomainFile('example', 'Book', '''
 package example
@@ -112,12 +118,14 @@ class Book {
         content.contains('title blank: false, maxSize: 255')
     }
 
-    def "should add property to domain class with existing properties"() {
+    def 'should add property to domain class with existing properties'() {
+
         given:
         def domainFile = createDomainFile('example', 'Book', '''
 package example
 
 class Book {
+
     String title
 
     static constraints = {
@@ -140,12 +148,13 @@ class Book {
         content.contains('author nullable: true')
     }
 
-    def "should create constraints block if not present"() {
+    def 'should create constraints block if not present'() {
         given:
         def domainFile = createDomainFile('example', 'Book', '''
 package example
 
 class Book {
+
 }
 ''')
         def property = PropertyDefinition.builder()
@@ -164,12 +173,13 @@ class Book {
         content.contains('title nullable: false')
     }
 
-    def "should not add constraints block when no constraints specified"() {
+    def 'should not add constraints block when no constraints specified'() {
         given:
         def domainFile = createDomainFile('example', 'Book', '''
 package example
 
 class Book {
+
 }
 ''')
         def property = new PropertyDefinition(name: 'title', type: 'String')
@@ -183,12 +193,14 @@ class Book {
         !content.contains('static constraints = {')
     }
 
-    def "should handle domain class with multiple properties"() {
+    def 'should handle domain class with multiple properties'() {
+
         given:
         def domainFile = createDomainFile('example', 'Book', '''
 package example
 
 class Book {
+
     String title
     Integer pages
     BigDecimal price
@@ -217,7 +229,7 @@ class Book {
         content.contains('pages nullable: true')
     }
 
-    def "should throw exception when domain file does not exist"() {
+    def 'should throw exception when domain file does not exist'() {
         given:
         def nonExistentFile = new File(tempDir.toFile(), 'NonExistent.groovy')
         def property = new PropertyDefinition(name: 'title', type: 'String')
@@ -229,7 +241,7 @@ class Book {
         thrown(IllegalStateException)
     }
 
-    def "should add multiple properties sequentially"() {
+    def 'should add multiple properties sequentially'() {
         given:
         def domainFile = createDomainFile('example', 'Book', '''
 package example
@@ -270,12 +282,13 @@ class Book {
 
     // Jakarta Validation annotation tests
 
-    def "should add property with Jakarta annotations only"() {
+    def 'should add property with Jakarta annotations only'() {
         given:
         def domainFile = createDomainFile('example', 'Book', '''
 package example
 
 class Book {
+
 }
 ''')
         def property = PropertyDefinition.builder()
@@ -302,7 +315,7 @@ class Book {
         !content.contains('static constraints = {')
     }
 
-    def "should add property with both Grails constraints and Jakarta annotations"() {
+    def 'should add property with both Grails constraints and Jakarta annotations'() {
         given:
         def domainFile = createDomainFile('example', 'Book', '''
 package example
@@ -336,12 +349,13 @@ class Book {
         content.contains('String title')
     }
 
-    def "should not duplicate imports when adding multiple properties"() {
+    def 'should not duplicate imports when adding multiple properties'() {
         given:
         def domainFile = createDomainFile('example', 'Book', '''
 package example
 
 class Book {
+
 }
 ''')
 
@@ -367,7 +381,7 @@ class Book {
         content.count('@NotNull') == 2
     }
 
-    def "should add imports after existing imports"() {
+    def 'should add imports after existing imports'() {
         given:
         def domainFile = createDomainFile('example', 'Book', '''
 package example
@@ -375,6 +389,7 @@ package example
 import java.util.Date
 
 class Book {
+
     Date publishedDate
 }
 ''')
@@ -396,7 +411,7 @@ class Book {
         notNullImportIndex > dateImportIndex
     }
 
-    def "should use Grails constraints by default"() {
+    def 'should use Grails constraints by default'() {
         given:
         def domainFile = createDomainFile('example', 'Book', '''
 package example
@@ -423,16 +438,18 @@ class Book {
         !content.contains('import jakarta.validation.constraints')
     }
 
-    def "should throw exception when multiple domain classes have same simple name"() {
+    def 'should throw exception when multiple domain classes have same simple name'() {
         given:
         createDomainFile('com/foo', 'Book', '''
             package com.foo
             class Book {
+
             }
         ''')
         createDomainFile('com/bar', 'Book', '''
             package com.bar
             class Book {
+
             }
         ''')
 
@@ -446,16 +463,19 @@ class Book {
         e.message.contains('fully qualified class name')
     }
 
-    def "should find correct domain class when FQN is used with duplicates"() {
+    def 'should find correct domain class when FQN is used with duplicates'() {
+
         given:
         createDomainFile('com/foo', 'Book', '''
             package com.foo
             class Book {
+
             }
         ''')
         createDomainFile('com/bar', 'Book', '''
             package com.bar
             class Book {
+
             }
         ''')
 
@@ -467,11 +487,13 @@ class Book {
         found.path.contains("com${File.separator}bar${File.separator}Book.groovy")
     }
 
-    def "should throw exception when domain class has syntax errors"() {
+    def 'should throw exception when domain class has syntax errors'() {
+
         given:
         def domainFile = createDomainFile('example', 'Book', '''
             package example
             class Book {
+
                 String title
                 // missing closing brace - syntax error
         ''')

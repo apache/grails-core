@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -278,7 +278,7 @@ class GormRegistry {
      */
     void removeDatastore(Datastore datastore) {
         if (datastore == null) return
-        
+
         allDatastores.remove(datastore)
         datastoresByType.remove(datastore.getClass())
         
@@ -369,6 +369,7 @@ class GormRegistry {
      * @param entity The persistent entity (for entity-specific qualifier resolution)
      */
     void registerEntityDatastores(String className, Object datastore, List<String> connectionSourceNames, Object entity) {
+
         if (datastore == null) return
         
         // Register datastores for each connection source
@@ -396,7 +397,7 @@ class GormRegistry {
         }
 
         // Determine what to register under DEFAULT for entity-specific qualifiers
-        // If the entity declares explicit qualifiers that do NOT include DEFAULT (e.g. connections "test1","test2"),
+        // If the entity declares explicit qualifiers that do NOT include DEFAULT (e.g. connections 'test1','test2'),
         // then the first declared qualifier is the entity's primary connection
         List<String> entityQualifiers = org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport.getConnectionSourceNames((org.grails.datastore.mapping.model.PersistentEntity) entity)
         boolean entityDeclaresDefault = entityQualifiers.contains(ConnectionSource.DEFAULT) ||
@@ -446,7 +447,7 @@ class GormRegistry {
             def context = ((Datastore) datastore).mappingContext
             def factory = context.mappingFactory
             if (factory.hasProperty('entityContext')) {
-                def constraintsEvaluator = factory.entityContext.getBean(Class.forName("org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator", false, GormRegistry.classLoader))
+                def constraintsEvaluator = factory.entityContext.getBean(Class.forName('org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator', false, GormRegistry.classLoader))
                 if (constraintsEvaluator != null) {
                     for (entity in context.persistentEntities) {
                         constraintsEvaluator.evaluate(entity.javaClass)
@@ -454,7 +455,7 @@ class GormRegistry {
                 }
             }
         } catch (Throwable e) {
-            log.debug("Could not register GORM constraints: $e.message")
+            log.debug('Could not register GORM constraints: {}', e.message)
         }
     }
 
@@ -548,6 +549,7 @@ class GormRegistry {
      * @return The GormStaticApi instance
      */
     <D> GormStaticApi<D> createStaticApi(Class<D> cls, Datastore datastore, DatastoreResolver resolver, String qualifier) {
+
         GormApiFactory apiFactory = getApiFactory(datastore)
         return apiFactory.createStaticApi(cls, datastore.getMappingContext(), resolver, qualifier, this)
     }
@@ -563,6 +565,7 @@ class GormRegistry {
      * @return The GormInstanceApi instance
      */
     <D> GormInstanceApi<D> createInstanceApi(Class<D> cls, Datastore datastore, DatastoreResolver resolver, boolean failOnError, boolean markDirty) {
+
         GormApiFactory apiFactory = getApiFactory(datastore)
         return apiFactory.createInstanceApi(cls, datastore.getMappingContext(), resolver, this, failOnError, markDirty)
     }
@@ -576,6 +579,7 @@ class GormRegistry {
      * @return The GormValidationApi instance
      */
     <D> GormValidationApi<D> createValidationApi(Class<D> cls, Datastore datastore, DatastoreResolver resolver) {
+
         GormApiFactory apiFactory = getApiFactory(datastore)
         return apiFactory.createValidationApi(cls, datastore.getMappingContext(), resolver, this)
     }
@@ -587,6 +591,7 @@ class GormRegistry {
      * @return A DatastoreResolver instance
      */
     DatastoreResolver createClassDatastoreResolver(Class cls) {
+
         new DatastoreResolver() {
             @Override
             Datastore resolve() {
@@ -620,6 +625,7 @@ class GormRegistry {
      * @return The GormStaticApi instance
      */
     <D> GormStaticApi<D> getStaticApi(Class<D> cls, Datastore datastore, DatastoreResolver resolver, String qualifier) {
+
         return createStaticApi(cls, datastore, resolver, qualifier)
     }
 
@@ -635,6 +641,7 @@ class GormRegistry {
      * @return The GormInstanceApi instance
      */
     <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, Datastore datastore, DatastoreResolver resolver, boolean failOnError, boolean markDirty) {
+
         return createInstanceApi(cls, datastore, resolver, failOnError, markDirty)
     }
 
@@ -648,6 +655,7 @@ class GormRegistry {
      * @return The GormValidationApi instance
      */
     <D> GormValidationApi<D> getValidationApi(Class<D> cls, Datastore datastore, DatastoreResolver resolver) {
+
         return createValidationApi(cls, datastore, resolver)
     }
 }

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -42,7 +42,7 @@ class DetachedCriteriaCountSpec extends Specification {
     }
 
     @Rollback
-    def "count without projections returns total row count"() {
+    def 'count without projections returns total row count'() {
         given:
         createTestData()
 
@@ -54,7 +54,7 @@ class DetachedCriteriaCountSpec extends Specification {
     }
 
     @Rollback
-    def "count with criteria filter returns filtered count"() {
+    def 'count with criteria filter returns filtered count'() {
         given:
         createTestData()
 
@@ -67,7 +67,7 @@ class DetachedCriteriaCountSpec extends Specification {
 
     @Rollback
     @Issue('https://github.com/apache/grails-core/issues/14569')
-    def "count with groupProperty and count projections returns number of groups"() {
+    def 'count with groupProperty and count projections returns number of groups'() {
         given:
         createTestData()
 
@@ -88,7 +88,7 @@ class DetachedCriteriaCountSpec extends Specification {
     }
 
     @Rollback
-    def "count with groupProperty projection only returns number of groups"() {
+    def 'count with groupProperty projection only returns number of groups'() {
         given:
         createTestData()
 
@@ -105,7 +105,7 @@ class DetachedCriteriaCountSpec extends Specification {
     }
 
     @Rollback
-    def "count with single aggregate projection returns 1"() {
+    def 'count with single aggregate projection returns 1'() {
         given:
         createTestData()
 
@@ -121,7 +121,7 @@ class DetachedCriteriaCountSpec extends Specification {
     }
 
     @Rollback
-    def "count with groupProperty and criteria filter returns filtered group count"() {
+    def 'count with groupProperty and criteria filter returns filtered group count'() {
         given:
         createTestData()
 
@@ -142,6 +142,7 @@ class DetachedCriteriaCountSpec extends Specification {
 
 @Entity
 class CountItem {
+
     int itemGroup
     String itemValue
 }

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -40,7 +40,7 @@ import org.apache.grails.testing.cleanup.core.DatabaseCleanupStats
  *
  * These tests require Docker to be available on the system.
  *
- * Run with: {@code ./gradlew test --tests "PostgresDatabaseCleanerFunctionalSpec"}
+ * Run with: {@code ./gradlew test --tests 'PostgresDatabaseCleanerFunctionalSpec'}
  */
 @RestoreSystemProperties
 @Requires({ os.linux || !System.getenv().containsKey('CI') })
@@ -84,7 +84,7 @@ class PostgresDatabaseCleanerFunctionalSpec extends Specification {
         dataSource
     }
 
-    def "test cleanup with currentSchema parameter"() {
+    def 'test cleanup with currentSchema parameter'() {
         given:
         PGSimpleDataSource dataSource = createDataSourceWithSchema('testschema')
         Sql sql = new Sql(dataSource)
@@ -120,7 +120,7 @@ class PostgresDatabaseCleanerFunctionalSpec extends Specification {
         sql.close()
     }
 
-    def "test cleanup does not remove tables in other schemas"() {
+    def 'test cleanup does not remove tables in other schemas'() {
         given:
         PGSimpleDataSource dataSource = createDataSourceWithSchema('schema1')
         Sql sql = new Sql(dataSource)
@@ -158,7 +158,7 @@ class PostgresDatabaseCleanerFunctionalSpec extends Specification {
         sql.close()
     }
 
-    def "test supports method identifies PostgreSQL databases"() {
+    def 'test supports method identifies PostgreSQL databases'() {
         given:
         PGSimpleDataSource dataSource = createDataSourceWithSchema()
         PostgresDatabaseCleaner cleaner = new PostgresDatabaseCleaner()
@@ -168,7 +168,7 @@ class PostgresDatabaseCleanerFunctionalSpec extends Specification {
         cleaner.databaseType() == 'postgresql'
     }
 
-    def "test cleanup handles foreign key constraints with CASCADE"() {
+    def 'test cleanup handles foreign key constraints with CASCADE'() {
         given:
         PGSimpleDataSource dataSource = createDataSourceWithSchema('fktest')
         Sql sql = new Sql(dataSource)
@@ -201,7 +201,7 @@ class PostgresDatabaseCleanerFunctionalSpec extends Specification {
         sql.close()
     }
 
-    def "test cleanup with complex foreign key relationships"() {
+    def 'test cleanup with complex foreign key relationships'() {
         given:
         PGSimpleDataSource dataSource = createDataSourceWithSchema('fkcomplex')
         Sql sql = new Sql(dataSource)
@@ -249,7 +249,7 @@ class PostgresDatabaseCleanerFunctionalSpec extends Specification {
         sql.close()
     }
 
-    def "test cleanup verifies foreign key constraints are disabled during cleanup"() {
+    def 'test cleanup verifies foreign key constraints are disabled during cleanup'() {
         given:
         PGSimpleDataSource dataSource = createDataSourceWithSchema('fkreplica')
         Sql sql = new Sql(dataSource)
@@ -283,7 +283,7 @@ class PostgresDatabaseCleanerFunctionalSpec extends Specification {
         sql.close()
     }
 
-    def "test cleanup with self-referencing foreign key"() {
+    def 'test cleanup with self-referencing foreign key'() {
         given:
         PGSimpleDataSource dataSource = createDataSourceWithSchema('fkself')
         Sql sql = new Sql(dataSource)

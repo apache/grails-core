@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -41,41 +41,40 @@ import jakarta.servlet.http.HttpServletResponse
  */
 class JsonViewTemplateResolverSpec extends Specification {
 
-    void "Test resolve paths for locale"() {
-        given:"A view resolver"
+    void 'Test resolve paths for locale'() {
+        given:'A view resolver'
         def viewResolver = new JsonViewResolver()
         def templateResolver = Mock(TemplateResolver)
         viewResolver.templateResolver = templateResolver
 
-        when:"We resolve a view uri"
-        viewResolver.resolveView("/foo/bar", Locale.ENGLISH)
+        when:'We resolve a view uri'
+        viewResolver.resolveView('/foo/bar', Locale.ENGLISH)
 
-        then:"We get calls to resolve views"
+        then:'We get calls to resolve views'
         1 * templateResolver.resolveTemplate('/foo/bar_en.gson')
         1 * templateResolver.resolveTemplate('/foo/bar.gson')
 
-        when:"We resolve a view uri"
-        viewResolver.resolveView("/foo/bar", Locale.ENGLISH)
+        when:'We resolve a view uri'
+        viewResolver.resolveView('/foo/bar', Locale.ENGLISH)
 
-        then:"Calls were cached"
+        then:'Calls were cached'
         0 * templateResolver.resolveTemplate('/foo/bar_en.gson')
         0 * templateResolver.resolveTemplate('/foo/bar.gson')
 
     }
 
-
-    void "Test resolve paths for local and request version"() {
-        given:"A view resolver"
+    void 'Test resolve paths for local and request version'() {
+        given:'A view resolver'
         def viewResolver = new JsonViewResolver()
         def applicationAttributes = Mock(GrailsApplicationAttributes)
-        applicationAttributes.getControllerUri(_) >> "/test"
+        applicationAttributes.getControllerUri(_) >> '/test'
 
         def webRequest = Mock(GrailsWebRequest)
         webRequest.getAttributes() >> applicationAttributes
         RequestContextHolder.setRequestAttributes(webRequest)
         def request = Mock(HttpServletRequest)
         def response = Mock(HttpServletResponse)
-        request.getHeader(HttpHeaders.ACCEPT_VERSION) >> "1.1"
+        request.getHeader(HttpHeaders.ACCEPT_VERSION) >> '1.1'
         request.getLocale() >> Locale.ENGLISH
         webRequest.getCurrentRequest() >> request
         webRequest.getRequest() >> request
@@ -83,10 +82,10 @@ class JsonViewTemplateResolverSpec extends Specification {
         def templateResolver = Mock(TemplateResolver)
         viewResolver.templateResolver = templateResolver
 
-        when:"We resolve a view uri"
-        viewResolver.resolveView("/foo/bar", request, response)
+        when:'We resolve a view uri'
+        viewResolver.resolveView('/foo/bar', request, response)
 
-        then:"We get calls to resolve views"
+        then:'We get calls to resolve views'
         1 * templateResolver.resolveTemplate('/foo/bar.gson')
         1 * templateResolver.resolveTemplate('/foo/bar_en.gson')
         1 * templateResolver.resolveTemplate('/foo/bar_1.1.gson')
@@ -98,50 +97,45 @@ class JsonViewTemplateResolverSpec extends Specification {
         1 * templateResolver.resolveTemplate('/foo/bar_html_1.1.gson')
         1 * templateResolver.resolveTemplate('/foo/bar_en_html_1.1.gson')
 
-
         cleanup:
         RequestContextHolder.setRequestAttributes(null)
 
     }
 
-
-    void "Test that the template resolver works for absolute view URI"() {
-        given:"A viewResolver with a mock template resolver"
+    void 'Test that the template resolver works for absolute view URI'() {
+        given:'A viewResolver with a mock template resolver'
         def viewResolver = new JsonViewResolver()
 
         def templateResolver = Mock(TemplateResolver)
 
         def templateEngine = Mock(ResolvableGroovyTemplateEngine)
-        templateResolver.resolveTemplate('/foo/bar.gson') >> new URL("file://foo/bar.gson")
+        templateResolver.resolveTemplate('/foo/bar.gson') >> new URL('file://foo/bar.gson')
         templateEngine.resolveTemplate(_,_) >> new WritableScriptTemplate(GrailsView.class)
 
         viewResolver.templateResolver = templateResolver
         viewResolver.templateEngine = templateEngine
 
+        when:'We resolve a template'
+        GenericGroovyTemplateView view = (GenericGroovyTemplateView)viewResolver.resolveView('/foo/bar', Locale.ENGLISH)
 
-        when:"We resolve a template"
-        GenericGroovyTemplateView view = (GenericGroovyTemplateView)viewResolver.resolveView("/foo/bar", Locale.ENGLISH)
-
-        then:"The view is not null"
+        then:'The view is not null'
         view != null
         view.url == '/foo/bar.gson'
         view.templateEngine != null
         view.contentType == 'application/json'
 
-
     }
 
-    void "Test that the template resolver works for relative URI"() {
-        given:"A viewResolver with a mock template resolver"
+    void 'Test that the template resolver works for relative URI'() {
+        given:'A viewResolver with a mock template resolver'
 
         def smartResolver = new JsonViewResolver()
         def viewResolver = new GenericGroovyTemplateViewResolver(smartResolver)
 
-
         def webRequest = Mock(GrailsWebRequest)
 
         def applicationAttributes = Mock(GrailsApplicationAttributes)
-        applicationAttributes.getControllerUri(_) >> "/test"
+        applicationAttributes.getControllerUri(_) >> '/test'
         webRequest.getAttributes() >> applicationAttributes
         webRequest.getCurrentRequest() >> new MockHttpServletRequest()
         RequestContextHolder.setRequestAttributes(webRequest)
@@ -149,10 +143,10 @@ class JsonViewTemplateResolverSpec extends Specification {
 
         smartResolver.templateEngine.templateResolver = templateResolver
 
-        when:"We resolve a template"
-        GenericGroovyTemplateView view = (GenericGroovyTemplateView)viewResolver.resolveViewName("bar", Locale.ENGLISH)
+        when:'We resolve a template'
+        GenericGroovyTemplateView view = (GenericGroovyTemplateView)viewResolver.resolveViewName('bar', Locale.ENGLISH)
 
-        then:"The view is not null"
+        then:'The view is not null'
         1 * templateResolver.resolveTemplateClass('/test/bar.gson')
         1 * templateResolver.resolveTemplateClass('/test/bar_en.gson')
         1 * templateResolver.resolveTemplateClass('/test/bar_html.gson')
@@ -176,18 +170,18 @@ class JsonViewTemplateResolverSpec extends Specification {
 
         and: 'the default controller URI'
         def applicationAttributes = Mock(GrailsApplicationAttributes)
-        applicationAttributes.getControllerUri(_) >> "/test"
+        applicationAttributes.getControllerUri(_) >> '/test'
         webRequest.getAttributes() >> applicationAttributes
 
         and: 'the actual URI because of a redirect'
-        webRequest.getCurrentRequest() >> new MockHttpServletRequest("", "/foo")
+        webRequest.getCurrentRequest() >> new MockHttpServletRequest('', '/foo')
         RequestContextHolder.setRequestAttributes(webRequest)
         def templateResolver = Mock(TemplateResolver)
 
         smartResolver.templateEngine.templateResolver = templateResolver
 
         when: 'we resolve a template'
-        GenericGroovyTemplateView view = (GenericGroovyTemplateView)viewResolver.resolveViewName("bar", Locale.ENGLISH)
+        GenericGroovyTemplateView view = (GenericGroovyTemplateView)viewResolver.resolveViewName('bar', Locale.ENGLISH)
 
         then: 'the view is not null'
         1 * templateResolver.resolveTemplateClass('/foo/bar.gson')

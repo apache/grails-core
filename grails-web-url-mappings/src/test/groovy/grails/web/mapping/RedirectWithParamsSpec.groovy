@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -46,10 +46,10 @@ class RedirectWithParamsSpec extends AbstractUrlMappingsSpec {
     }
 
     @Issue('#10622, #10965')
-    void "Test that redirects keeps params previously stored in the request only with the option enabled"() {
+    void 'Test that redirects keeps params previously stored in the request only with the option enabled'() {
         given: 'a link generator'
         def linkGenerator = getLinkGenerator {
-            "/example/my-action"(redirect: [uri: "/example/new-foo", keepParamsWhenRedirect: true])
+            '/example/my-action'(redirect: [uri: '/example/new-foo', keepParamsWhenRedirect: true])
         }
         def responseRedirector = new ResponseRedirector(linkGenerator)
 
@@ -67,19 +67,19 @@ class RedirectWithParamsSpec extends AbstractUrlMappingsSpec {
 
         then: 'the location header includes the params'
         1 * response.setStatus(302)
-        1 * response.setHeader(HttpHeaders.LOCATION, "http://localhost/example/my-action?foo=bar&baz=123")
+        1 * response.setHeader(HttpHeaders.LOCATION, 'http://localhost/example/my-action?foo=bar&baz=123')
 
         cleanup:
         RequestContextHolder.setRequestAttributes(null)
     }
 
-    void "Test that keepParamsWhenRedirect flag redirects also merge params from UrlMappings config with original params"() {
+    void 'Test that keepParamsWhenRedirect flag redirects also merge params from UrlMappings config with original params'() {
 
         given: 'a link generator'
         UrlMappings urlMappings = createUrlMappingHolder('''
         mappings {
-          '/images'(redirect:[uri:'/v1/images', permanent:true, keepParamsWhenRedirect: true, params: [test: '123']])
-          "/v1/$controller"(namespace: "v1")
+          '/images'(redirect: [uri: '/v1/images', permanent: true, keepParamsWhenRedirect: true, params: [test: '123']])
+          "/v1/$controller'(namespace: 'v1")
         }
         ''')
         LinkGenerator linkGenerator = new LinkGeneratorFactory().create(urlMappings)
@@ -94,7 +94,7 @@ class RedirectWithParamsSpec extends AbstractUrlMappingsSpec {
         HttpServletResponse response = Mock(HttpServletResponse)
 
         when:
-        UrlMappingInfo[] matchedUrlMappings = urlMappings.matchAll("/images")
+        UrlMappingInfo[] matchedUrlMappings = urlMappings.matchAll('/images')
 
         then:
         matchedUrlMappings
@@ -107,16 +107,16 @@ class RedirectWithParamsSpec extends AbstractUrlMappingsSpec {
 
         then: 'the location header includes the params'
         1 * response.setStatus(301)
-        1 * response.setHeader(HttpHeaders.LOCATION, "http://localhost/v1/images?test=123&foo=bar")
+        1 * response.setHeader(HttpHeaders.LOCATION, 'http://localhost/v1/images?test=123&foo=bar')
     }
 
-    void "Test keepParamsWhenRedirect flag redirects alongside original request parameters"() {
+    void 'Test keepParamsWhenRedirect flag redirects alongside original request parameters'() {
 
         given: 'a link generator'
         UrlMappings urlMappings = createUrlMappingHolder('''
         mappings {
-          '/images'(redirect:[uri:'/v1/images', permanent:true, keepParamsWhenRedirect: true])
-          "/v1/$controller"(namespace: "v1")
+          '/images'(redirect: [uri: '/v1/images', permanent: true, keepParamsWhenRedirect: true])
+          "/v1/$controller'(namespace: 'v1")
         }
         ''')
         LinkGenerator linkGenerator = new LinkGeneratorFactory().create(urlMappings)
@@ -131,7 +131,7 @@ class RedirectWithParamsSpec extends AbstractUrlMappingsSpec {
         HttpServletResponse response = Mock(HttpServletResponse)
 
         when:
-        UrlMappingInfo[] matchedUrlMappings = urlMappings.matchAll("/images")
+        UrlMappingInfo[] matchedUrlMappings = urlMappings.matchAll('/images')
 
         then:
         matchedUrlMappings
@@ -144,7 +144,7 @@ class RedirectWithParamsSpec extends AbstractUrlMappingsSpec {
 
         then: 'the location header includes the params'
         1 * response.setStatus(301)
-        1 * response.setHeader(HttpHeaders.LOCATION, "http://localhost/v1/images?foo=bar")
+        1 * response.setHeader(HttpHeaders.LOCATION, 'http://localhost/v1/images?foo=bar')
 
         when:
         webRequest = GrailsWebMockUtil.bindMockWebRequest()
@@ -153,17 +153,17 @@ class RedirectWithParamsSpec extends AbstractUrlMappingsSpec {
 
         then: 'the location header includes the params'
         1 * response.setStatus(301)
-        1 * response.setHeader(HttpHeaders.LOCATION, "http://localhost/v1/images?baz=123")
+        1 * response.setHeader(HttpHeaders.LOCATION, 'http://localhost/v1/images?baz=123')
 
         cleanup:
         RequestContextHolder.setRequestAttributes(null)
     }
 
     @Issue('#10622, #10965')
-    void "Test that redirects does not keeps params previously stored in the request because the option is not enabled"() {
+    void 'Test that redirects does not keeps params previously stored in the request because the option is not enabled'() {
         given: 'a link generator'
         def linkGenerator = getLinkGenerator {
-            "/example/my-action"(redirect: [uri: "/example/new-foo"])
+            '/example/my-action'(redirect: [uri: '/example/new-foo'])
         }
         def responseRedirector = new ResponseRedirector(linkGenerator)
 
@@ -181,7 +181,7 @@ class RedirectWithParamsSpec extends AbstractUrlMappingsSpec {
 
         then: 'the location header includes the params'
         1 * response.setStatus(302)
-        1 * response.setHeader(HttpHeaders.LOCATION, "http://localhost/example/my-action")
+        1 * response.setHeader(HttpHeaders.LOCATION, 'http://localhost/example/my-action')
 
         cleanup:
         RequestContextHolder.setRequestAttributes(null)

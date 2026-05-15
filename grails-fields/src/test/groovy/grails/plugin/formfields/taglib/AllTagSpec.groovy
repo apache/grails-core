@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -44,13 +44,13 @@ class AllTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<
         mockEmbeddedGrailsLayout(tagLib)
     }
 
-    void "all tag renders fields for all properties"() {
+    void 'all tag renders fields for all properties'() {
         given:
-        views["/_fields/default/_field.gsp"] = '${property} '
-        views["/_fields/default/_wrapper.gsp"] = '${widget}'
+        views['/_fields/default/_field.gsp'] = '${property} '
+        views['/_fields/default/_wrapper.gsp'] = '${widget}'
 
         when:
-        def output = applyTemplate('<f:all bean="personInstance"/>', [personInstance: personInstance])
+        def output = applyTemplate('<f:all bean='personInstance'/>', [personInstance: personInstance])
 
         then:
         output =~ /\bname\b/
@@ -63,11 +63,11 @@ class AllTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<
     @Issue('https://github.com/grails/fields/issues/21')
     void 'all tag skips #excluded property and includes #included property'() {
         given:
-        views["/_fields/default/_field.gsp"] = '${property} '
-        views["/_fields/default/_wrapper.gsp"] = '${widget}'
+        views['/_fields/default/_field.gsp'] = '${property} '
+        views['/_fields/default/_wrapper.gsp'] = '${widget}'
 
         when:
-        def output = applyTemplate('<f:all bean="personInstance"/>', [personInstance: personInstance])
+        def output = applyTemplate('<f:all bean='personInstance'/>', [personInstance: personInstance])
 
         then:
         !output.contains(excluded)
@@ -80,12 +80,12 @@ class AllTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<
 
     void 'all tag skips custom #excluded property and includes #included property'() {
         given:
-        views["/_fields/default/_field.gsp"] = '${property} '
-        views["/_fields/default/_wrapper.gsp"] = '${widget}'
+        views['/_fields/default/_field.gsp'] = '${property} '
+        views['/_fields/default/_wrapper.gsp'] = '${widget}'
         tagLib.exclusionsInput = ['id', 'created', 'modified', 'version']
 
         when:
-        def output = applyTemplate('<f:all bean="cyborgInstance"/>', [cyborgInstance: cyborgInstance])
+        def output = applyTemplate('<f:all bean='cyborgInstance'/>', [cyborgInstance: cyborgInstance])
 
         then:
         !output.contains(excluded)
@@ -99,11 +99,11 @@ class AllTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<
     @Issue('https://github.com/grails/fields/issues/12')
     void 'all tag skips properties listed with the except attribute'() {
         given:
-        views["/_fields/default/_field.gsp"] = '${property} '
-        views["/_fields/default/_wrapper.gsp"] = '${widget}'
+        views['/_fields/default/_field.gsp'] = '${property} '
+        views['/_fields/default/_wrapper.gsp'] = '${widget}'
 
         when:
-        def output = applyTemplate('<f:all bean="personInstance" except="password, minor"/>', [personInstance: personInstance])
+        def output = applyTemplate('<f:all bean='personInstance' except='password, minor'/>', [personInstance: personInstance])
 
         then:
         !output.contains('password')
@@ -113,11 +113,11 @@ class AllTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<
     @Issue('https://github.com/grails3-plugins/fields/issues/9')
     void 'all tag respects the order attribute'() {
         given:
-        views["/_fields/default/_field.gsp"] = '|${property}|'
-        views["/_fields/default/_wrapper.gsp"] = '${widget}'
+        views['/_fields/default/_field.gsp'] = '|${property}|'
+        views['/_fields/default/_wrapper.gsp'] = '${widget}'
 
         when:
-        def output = applyTemplate('<f:all bean="personInstance" order="name, minor, gender"/>', [personInstance: personInstance])
+        def output = applyTemplate('<f:all bean='personInstance' order='name, minor, gender'/>', [personInstance: personInstance])
 
         then:
         output == '|name||minor||gender|'
@@ -127,27 +127,27 @@ class AllTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<
     @Issue('https://github.com/grails/fields/issues/347')
     void 'allow order and except attributes'() {
         given:
-        views["/_fields/default/_field.gsp"] = '|${property}|'
-        views["/_fields/default/_wrapper.gsp"] = '${widget}'
+        views['/_fields/default/_field.gsp'] = '|${property}|'
+        views['/_fields/default/_wrapper.gsp'] = '${widget}'
 
         when:
-        def output = applyTemplate('<f:all bean="personInstance" except="minor, password" order="name, minor, gender"/>', [personInstance: personInstance])
+        def output = applyTemplate('<f:all bean='personInstance' except='minor, password' order='name, minor, gender'/>', [personInstance: personInstance])
 
         then:
         output == '|name||gender|'
     }
 
-    void "f:all tag supports theme"() {
+    void 'f:all tag supports theme'() {
         given:
-        mockFormFieldsTemplateService.findTemplate(_, 'widget', _, "test") >> [path: '/_fields/_themes/test/default/field']
-        mockFormFieldsTemplateService.findTemplate(_, 'wrapper', _, "test") >> [path: '/_fields/_themes/test/default/wrapper']
+        mockFormFieldsTemplateService.findTemplate(_, 'widget', _, 'test') >> [path: '/_fields/_themes/test/default/field']
+        mockFormFieldsTemplateService.findTemplate(_, 'wrapper', _, 'test') >> [path: '/_fields/_themes/test/default/wrapper']
 
         and:
-        views["/_fields/_themes/test/default/_field.gsp"] = 'theme-${property} '
-        views["/_fields/_themes/test/default/_wrapper.gsp"] = 'theme-${widget}'
+        views['/_fields/_themes/test/default/_field.gsp'] = 'theme-${property} '
+        views['/_fields/_themes/test/default/_wrapper.gsp'] = 'theme-${widget}'
 
         when:
-        def output = applyTemplate('<f:all bean="personInstance" theme="test"/>', [personInstance: personInstance])
+        def output = applyTemplate('<f:all bean='personInstance' theme='test'/>', [personInstance: personInstance])
 
         then:
         output =~ /\btheme-name\b/

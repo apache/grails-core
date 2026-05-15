@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -33,14 +33,14 @@ class MultipleDataSourcesWithEventsSpec extends HibernateGormDatastoreSpec {
         manager.addAllDomainClasses([EventsBook, SecondaryBook])
         manager.grailsConfig = [
                 'dataSource': [
-                        'url'        : "jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
+                        'url'        : 'jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000',
                         'dbCreate'   : 'update',
                         'dialect'    : H2Dialect.name,
                         'formatSql'  : 'true'
                 ],
                 'dataSources': [
                         'books': [
-                                'url'        : "jdbc:h2:mem:books;LOCK_TIMEOUT=10000",
+                                'url'        : 'jdbc:h2:mem:books;LOCK_TIMEOUT=10000',
                                 'dbCreate'   : 'update',
                                 'dialect'    : H2Dialect.name,
                                 'formatSql'  : 'true'
@@ -56,52 +56,53 @@ class MultipleDataSourcesWithEventsSpec extends HibernateGormDatastoreSpec {
     }
 
     @Issue('https://github.com/grails/grails-core/issues/10451')
-    void "Test multiple data sources register the correct events"() {
-        given: "A configuration for multiple data sources"
+    void 'Test multiple data sources register the correct events'() {
+        given: 'A configuration for multiple data sources'
 
-        when: "A entity is saved with the default connection"
-        EventsBook book = new EventsBook(name: "test")
+        when: 'A entity is saved with the default connection'
+        EventsBook book = new EventsBook(name: 'test')
         EventsBook.withTransaction {
             book.save(flush: true)
             book.discard()
             book = EventsBook.get(book.id)
         }
 
-        then: "The events were triggered"
+        then: 'The events were triggered'
         book != null
         book.name == 'TEST'
-        book.time.startsWith("Time: ")
+        book.time.startsWith('Time: ')
 
-        when: "A entity is saved with a secondary connection connection"
-        EventsBook book2 = new EventsBook(name: "test2")
+        when: 'A entity is saved with a secondary connection connection'
+        EventsBook book2 = new EventsBook(name: 'test2')
         EventsBook.books.withTransaction {
             book2.books.save(flush: true)
             book2.books.discard()
             book2 = EventsBook.books.get(book2.id)
         }
 
-        then: "The events were triggered"
+        then: 'The events were triggered'
         book2 != null
         book2.name == 'TEST2'
-        book2.time.startsWith("Time: ")
+        book2.time.startsWith('Time: ')
 
-        when: "An entity is saved that uses only a secondary datasource"
-        SecondaryBook book3 = new SecondaryBook(name: "test3")
+        when: 'An entity is saved that uses only a secondary datasource'
+        SecondaryBook book3 = new SecondaryBook(name: 'test3')
         SecondaryBook.books.withTransaction {
             book3.books.save(flush: true)
             book3.books.discard()
             book3 = SecondaryBook.books.get(book3.id)
         }
 
-        then: "The events were triggered"
+        then: 'The events were triggered'
         book3 != null
         book3.name == 'TEST3'
-        book3.time.startsWith("Time: ")
+        book3.time.startsWith('Time: ')
     }
 }
 
 @Entity
 class SecondaryBook {
+
     String time
     String name
 
@@ -114,12 +115,13 @@ class SecondaryBook {
     }
 
     static mapping = {
-        datasource "books"
+        datasource 'books'
     }
 }
 
 @Entity
 class EventsBook {
+
     String time
     String name
 

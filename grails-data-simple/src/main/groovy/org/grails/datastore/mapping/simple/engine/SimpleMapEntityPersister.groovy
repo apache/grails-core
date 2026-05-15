@@ -2,21 +2,16 @@
  *  Licensed to the Apache Software Foundation (ASF) under one
  *  or more contributor license agreements.  See the NOTICE file
  *  distributed with this work for additional information
- *  regarding copyright ownership.  The AS
- *
- *  Licensed to the Apache Software Foundation (ASF) under one
- *  or more contributor license agreements.  See the NOTICE file
- *  distributed with this work for additional information
- *  regarding copyright ownership.  The AS licenses this file
+ *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -25,7 +20,6 @@ package org.grails.datastore.mapping.simple.engine
 
 import org.grails.datastore.mapping.engine.AssociationIndexer
 import org.grails.datastore.mapping.engine.EntityAccess
-import org.grails.datastore.mapping.engine.NativeEntryEntityPersister
 import org.grails.datastore.mapping.engine.PropertyValueIndexer
 import org.grails.datastore.mapping.keyvalue.engine.AbstractKeyValueEntityPersister
 import org.grails.datastore.mapping.model.MappingContext
@@ -35,15 +29,11 @@ import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.Basic
 import org.grails.datastore.mapping.model.types.Custom
 import org.grails.datastore.mapping.model.types.Embedded
-import org.grails.datastore.mapping.model.types.Embedded
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
-import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.simple.SimpleMapDatastore
 import org.grails.datastore.mapping.simple.SimpleMapSession
-import org.grails.datastore.mapping.simple.query.SimpleMapQuery
 import grails.gorm.multitenancy.Tenants
 import org.springframework.context.ApplicationEventPublisher
-import org.grails.datastore.mapping.core.OptimisticLockingException
 import org.grails.datastore.mapping.core.Session
 import java.util.concurrent.ConcurrentHashMap
 
@@ -142,11 +132,11 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
             return embeddedEntry
         } else if (prop instanceof Association) {
             if (value instanceof Collection) {
-                 return value.collect { 
-                     if (it == null) return null
-                     def persister = session.getPersister(it)
-                     return persister != null ? persister.getObjectIdentifier(it) : it
-                 }.findAll { it != null }
+                return value.collect {
+                    if (it == null) return null
+                    def persister = session.getPersister(it)
+                    return persister != null ? persister.getObjectIdentifier(it) : it
+                }.findAll { it != null }
             } else if (value != null) {
                 def persister = session.getPersister(value)
                 def id = persister != null ? persister.getObjectIdentifier(value) : value
@@ -169,19 +159,18 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
         if (dsMap[family] == null) {
             dsMap[family] = new ConcurrentHashMap<>()
         }
-        
+
         Object k = key instanceof Number ? key.longValue() : key
         Map existing = (Map) dsMap[family].get(k)
-        
 
         if (isVersioned(entityAccess)) {
             if (existing == null || isDirty(entityAccess.getEntity(), existing)) {
                 incrementVersion(entityAccess)
             }
         }
-        
+
         populateEntry(persistentEntity, entityAccess, entry)
-        
+
         if (existing == null) {
             dsMap[family].put(k, entry)
         }
@@ -249,7 +238,7 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
             if (datastore.getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
                 def currentId = Tenants.currentId(datastore)
                 if (currentId != null) {
-                    def entryTenantId = entry.get("tenantId")
+                    def entryTenantId = entry.get('tenantId')
                     if (entryTenantId != null && entryTenantId.toString() != currentId.toString()) {
                         return null
                     }
@@ -451,7 +440,7 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
 
     @Override
     protected PersistentEntity discriminatePersistentEntity(PersistentEntity persistentEntity, Map nativeEntry) {
-        def disc = nativeEntry?.get("discriminator")
+        def disc = nativeEntry?.get('discriminator')
         if (disc) {
             def child = mappingContext.getChildEntityByDiscriminator(persistentEntity.rootEntity, disc.toString())
             if (child) return child

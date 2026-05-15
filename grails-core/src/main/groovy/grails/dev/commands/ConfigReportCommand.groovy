@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -141,7 +141,7 @@ class ConfigReportCommand implements ApplicationCommand {
             categories.each { String categoryName, List<ConfigPropertyMetadata> categoryProperties ->
                 writer.writeLine("== ${categoryName}")
                 writer.writeLine('')
-                writer.writeLine('[cols="2,5,2", options="header"]')
+                writer.writeLine("[cols='2,5,2', options='header']")
                 writer.writeLine('|===')
                 writer.writeLine('| Property | Description | Default')
                 writer.writeLine('')
@@ -169,7 +169,7 @@ class ConfigReportCommand implements ApplicationCommand {
             if (!otherProperties.isEmpty()) {
                 writer.writeLine('== Other Properties')
                 writer.writeLine('')
-                writer.writeLine('[cols="2,3", options="header"]')
+                writer.writeLine("[cols='2,3', options='header']")
                 writer.writeLine('|===')
                 writer.writeLine('| Property | Default')
                 writer.writeLine('')
@@ -187,7 +187,7 @@ class ConfigReportCommand implements ApplicationCommand {
                 }
                 writer.writeLine('== Environment Properties')
                 writer.writeLine('')
-                writer.writeLine('[cols="2,3", options="header"]')
+                writer.writeLine("[cols='2,3', options='header']")
                 writer.writeLine('|===')
                 writer.writeLine('| Property | Default')
                 writer.writeLine('')
@@ -343,6 +343,7 @@ class ConfigReportCommand implements ApplicationCommand {
     }
 
     static class ConfigPropertyMetadata {
+
         final String name
         final String type
         final String description
@@ -359,6 +360,7 @@ class ConfigReportCommand implements ApplicationCommand {
     }
 
     static class MetadataResult {
+
         final List<ConfigPropertyMetadata> properties
         final Map<String, String> groupDescriptions
 

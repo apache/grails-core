@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -49,25 +49,25 @@ class MultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec {
         filterBinder = new MultiTenantFilterBinder(grailsPropertyResolver, filterDefinitionBinder, mockCollector, fetcher)
     }
 
-    void "test add multi tenant filter to root class"() {
+    void 'test add multi tenant filter to root class'() {
         given:
         def entity = Mock(HibernatePersistentEntity)
         def buildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def persistentClass = new RootClass(buildingContext)
         
         def tenantId = Mock(HibernatePersistentProperty)
-        tenantId.getName() >> "tenantId"
+        tenantId.getName() >> 'tenantId'
         
         def property = new Property()
-        property.setName("tenantId")
+        property.setName('tenantId')
         
-        def table = new Table("ROOT_TABLE")
+        def table = new Table('ROOT_TABLE')
         def value = new BasicValue(buildingContext, table)
-        value.setTypeName("long")
+        value.setTypeName('long')
         
         entity.isMultiTenant() >> true
         entity.getHibernateTenantId() >> tenantId
-        grailsPropertyResolver.getProperty(persistentClass, "tenantId") >> property
+        grailsPropertyResolver.getProperty(persistentClass, 'tenantId') >> property
         
         property.setValue(value)
         persistentClass.setTable(table)
@@ -76,39 +76,40 @@ class MultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec {
         // Setup for FilterDefinition
         mockCollector.getFilterDefinition(GormProperties.TENANT_IDENTITY) >> null
         
-        entity.getMultiTenantFilterCondition(fetcher) >> "tenant_id = :tenantId"
+        entity.getMultiTenantFilterCondition(fetcher) >> 'tenant_id = :tenantId'
 
         when:
         filterBinder.bind(entity, persistentClass)
 
         then:
         1 * mockCollector.addFilterDefinition(_ as FilterDefinition)
-        persistentClass.getFilters().any { it.getName() == GormProperties.TENANT_IDENTITY && it.getCondition() == "tenant_id = :tenantId" }
+        persistentClass.getFilters().any { it.getName() == GormProperties.TENANT_IDENTITY && it.getCondition() == 'tenant_id = :tenantId' }
     }
 
-    void "test skip filter for single table subclass (redundant)"() {
+    void 'test skip filter for single table subclass (redundant)'() {
+
         given:
         def entity = Mock(HibernatePersistentEntity)
         def buildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def rootClass = new RootClass(buildingContext)
-        def table = new Table("ROOT_TABLE")
+        def table = new Table('ROOT_TABLE')
         rootClass.setTable(table)
         
         def persistentClass = new SingleTableSubclass(rootClass, buildingContext)
         def tenantId = Mock(HibernatePersistentProperty)
-        tenantId.getName() >> "tenantId"
+        tenantId.getName() >> 'tenantId'
         
         def property = new Property()
-        property.setName("tenantId")
+        property.setName('tenantId')
         def value = new BasicValue(buildingContext, table)
-        value.setTypeName("long")
+        value.setTypeName('long')
         property.setValue(value)
         
         rootClass.addProperty(property)
         
         entity.isMultiTenant() >> true
         entity.getHibernateTenantId() >> tenantId
-        grailsPropertyResolver.getProperty(persistentClass, "tenantId") >> property 
+        grailsPropertyResolver.getProperty(persistentClass, 'tenantId') >> property 
         
         entity.isTablePerHierarchySubclass() >> true
         mockCollector.getFilterDefinition(_) >> Mock(FilterDefinition)
@@ -120,34 +121,35 @@ class MultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec {
         !persistentClass.getFilters().any { it.getName() == GormProperties.TENANT_IDENTITY }
     }
 
-    void "test skip filter for joined subclass if inherited (alias safety)"() {
+    void 'test skip filter for joined subclass if inherited (alias safety)'() {
+
         given:
         def entity = Mock(HibernatePersistentEntity)
         def buildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def rootClass = new RootClass(buildingContext)
-        def rootTable = new Table("ROOT_TABLE")
-        rootTable.setName("ROOT_TABLE")
+        def rootTable = new Table('ROOT_TABLE')
+        rootTable.setName('ROOT_TABLE')
         rootClass.setTable(rootTable)
 
         def persistentClass = new JoinedSubclass(rootClass, buildingContext)
-        def subTable = new Table("SUB_TABLE")
-        subTable.setName("SUB_TABLE")
+        def subTable = new Table('SUB_TABLE')
+        subTable.setName('SUB_TABLE')
         persistentClass.setTable(subTable)
         
         def tenantId = Mock(HibernatePersistentProperty)
-        tenantId.getName() >> "tenantId"
+        tenantId.getName() >> 'tenantId'
         
         def property = new Property()
-        property.setName("tenantId")
+        property.setName('tenantId')
         def value = new BasicValue(buildingContext, rootTable)
-        value.setTypeName("long")
+        value.setTypeName('long')
         property.setValue(value)
         
         rootClass.addProperty(property)
 
         entity.isMultiTenant() >> true
         entity.getHibernateTenantId() >> tenantId
-        grailsPropertyResolver.getProperty(persistentClass, "tenantId") >> property 
+        grailsPropertyResolver.getProperty(persistentClass, 'tenantId') >> property 
         
         mockCollector.getFilterDefinition(_) >> Mock(FilterDefinition)
 
@@ -158,39 +160,40 @@ class MultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec {
         !persistentClass.getFilters().any { it.getName() == GormProperties.TENANT_IDENTITY }
     }
 
-    void "test add filter for union subclass (own table)"() {
+    void 'test add filter for union subclass (own table)'() {
+
         given:
         def entity = Mock(HibernatePersistentEntity)
         def buildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def rootClass = new RootClass(buildingContext)
-        def subTable = new Table("SUB_TABLE")
+        def subTable = new Table('SUB_TABLE')
 
         def persistentClass = new UnionSubclass(rootClass, buildingContext)
         persistentClass.setTable(subTable)
         
         def tenantId = Mock(HibernatePersistentProperty)
-        tenantId.getName() >> "tenantId"
+        tenantId.getName() >> 'tenantId'
         
         def property = new Property()
-        property.setName("tenantId")
+        property.setName('tenantId')
         def value = new BasicValue(buildingContext, subTable)
-        value.setTypeName("long")
+        value.setTypeName('long')
         property.setValue(value)
         
         persistentClass.addProperty(property)
 
         entity.isMultiTenant() >> true
         entity.getHibernateTenantId() >> tenantId
-        grailsPropertyResolver.getProperty(persistentClass, "tenantId") >> property 
+        grailsPropertyResolver.getProperty(persistentClass, 'tenantId') >> property 
         
         entity.isTablePerHierarchySubclass() >> false
         mockCollector.getFilterDefinition(_) >> Mock(FilterDefinition)
-        entity.getMultiTenantFilterCondition(fetcher) >> "tenant_id = :tenantId"
+        entity.getMultiTenantFilterCondition(fetcher) >> 'tenant_id = :tenantId'
 
         when:
         filterBinder.bind(entity, persistentClass)
 
         then:
-        persistentClass.getFilters().any { it.getName() == GormProperties.TENANT_IDENTITY && it.getCondition() == "tenant_id = :tenantId" }
+        persistentClass.getFilters().any { it.getName() == GormProperties.TENANT_IDENTITY && it.getCondition() == 'tenant_id = :tenantId' }
     }
 }

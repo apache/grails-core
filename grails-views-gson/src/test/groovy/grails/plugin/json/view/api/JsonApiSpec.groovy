@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -75,17 +75,17 @@ class JsonApiSpec extends Specification implements JsonViewTest, GrailsUnitTest 
         then:
         objectMapper.readTree(result.jsonText) == objectMapper.readTree('''
             {
-                "data": {
-                    "type": "widget",
-                    "id": "5",
-                    "attributes": {
-                        "width": 4,
-                        "height": 7,
-                        "name": "One"
+                'data': {
+                    'type': 'widget',
+                    'id': '5',
+                    'attributes': {
+                        'width': 4,
+                        'height': 7,
+                        'name': 'One'
                     }
                 },
-                "links": {
-                    "self": "/widget/5"
+                'links': {
+                    'self': '/widget/5'
                 }
             }
         ''')
@@ -113,26 +113,26 @@ class JsonApiSpec extends Specification implements JsonViewTest, GrailsUnitTest 
         then: 'The JSON relationships are in place'
         objectMapper.readTree(result.jsonText) == objectMapper.readTree('''
             {
-                "data": {
-                    "type": "book",
-                    "id": "3",
-                    "attributes": {
-                        "title": "The Return of the King"
+                'data': {
+                    'type': 'book',
+                    'id': '3',
+                    'attributes': {
+                        'title': 'The Return of the King'
                     },
-                    "relationships": {
-                        "author": {
-                            "links": {
-                                "self": "/author/9"
+                    'relationships': {
+                        'author': {
+                            'links': {
+                                'self': '/author/9'
                             },
-                            "data": {
-                                "type": "author",
-                                "id": "9"
+                            'data': {
+                                'type': 'author',
+                                'id': '9'
                             }
                         }
                     }
                 },
-                "links": {
-                    "self": "/book/3"
+                'links': {
+                    'self': '/book/3'
                 }
             }
         ''')
@@ -165,41 +165,41 @@ class JsonApiSpec extends Specification implements JsonViewTest, GrailsUnitTest 
         then: 'The JSON relationships are in place'
         objectMapper.readTree(result.jsonText) == objectMapper.readTree('''
             {
-                "data": {
-                    "type": "researchPaper",
-                    "id": "3",
-                    "attributes": {
-                        "title": "The Return of the King"
+                'data': {
+                    'type': 'researchPaper',
+                    'id': '3',
+                    'attributes': {
+                        'title': 'The Return of the King'
                     },
-                    "relationships": {
-                        "subAuthors": {
-                            "data": [
-                                { "type": "author", "id": "12" },
-                                { "type": "author", "id": "13" }
+                    'relationships': {
+                        'subAuthors': {
+                            'data': [
+                                { 'type': 'author', 'id': '12' },
+                                { 'type': 'author', 'id': '13' }
                             ]
                         },
-                        "leadAuthor": {
-                            "links": {
-                                "self": "/author/9"
+                        'leadAuthor': {
+                            'links': {
+                                'self': '/author/9'
                             },
-                            "data": {
-                                "type": "author",
-                                "id": "9"
+                            'data': {
+                                'type': 'author',
+                                'id': '9'
                             }
                         },
-                        "coAuthor": {
-                            "links": {
-                                "self": "/author/10"
+                        'coAuthor': {
+                            'links': {
+                                'self': '/author/10'
                             },
-                            "data": {
-                                "type": "author",
-                                "id": "10"
+                            'data': {
+                                'type': 'author',
+                                'id': '10'
                             }
                         }
                     }
                 },
-                "links": {
-                    "self": "/researchPaper/3"
+                'links': {
+                    'self': '/researchPaper/3'
                 }
             }
         ''')
@@ -208,7 +208,7 @@ class JsonApiSpec extends Specification implements JsonViewTest, GrailsUnitTest 
     void 'test errors'() {
         given:
         def mutepool = new SuperHero()
-        mutepool.name = ""
+        mutepool.name = ''
         mutepool.validate()
 
         when:
@@ -224,15 +224,16 @@ class JsonApiSpec extends Specification implements JsonViewTest, GrailsUnitTest 
         then:
         objectMapper.readTree(result.jsonText) == objectMapper.readTree('''
             {
-                "errors": [
+                'errors': [
                     {
-                        "code": "blank",
-                        "detail": "Property [name] of class [class grails.plugin.json.view.api.SuperHero] cannot be blank",
-                        "source": {
-                            "object": "grails.plugin.json.view.api.SuperHero",
-                            "field": "name",
-                            "rejectedValue": "",
-                            "bindingError": false
+                        'code': 'blank',
+                        'detail': 'Property [name] of class [class grails.plugin.json.view.api.SuperHero] cannot be blank',
+                        'source': {
+
+                            'object': 'grails.plugin.json.view.api.SuperHero',
+                            'field': 'name',
+                            'rejectedValue': '',
+                            'bindingError': false
                         }
                     }
                 ]
@@ -258,20 +259,20 @@ class JsonApiSpec extends Specification implements JsonViewTest, GrailsUnitTest 
         then:
         objectMapper.readTree(result.jsonText) == objectMapper.readTree('''
             {
-                "jsonapi": {
-                    "version": "1.0"
+                'jsonapi': {
+                    'version': '1.0'
                 },
-                "data": {
-                    "type": "widget",
-                    "id": "5",
-                    "attributes": {
-                        "width": 4,
-                        "height": 7,
-                        "name": "One"
+                'data': {
+                    'type': 'widget',
+                    'id': '5',
+                    'attributes': {
+                        'width': 4,
+                        'height': 7,
+                        'name': 'One'
                     }
                 },
-                "links": {
-                    "self": "/widget/5"
+                'links': {
+                    'self': '/widget/5'
                 }
             }
         ''')
@@ -299,36 +300,36 @@ class JsonApiSpec extends Specification implements JsonViewTest, GrailsUnitTest 
         then: 'The JSON relationships are in place'
         objectMapper.readTree(result.jsonText) == objectMapper.readTree('''
             {
-                "data": {
-                    "type": "book",
-                    "id": "3",
-                    "attributes": {
-                        "title": "The Return of the King"
+                'data': {
+                    'type': 'book',
+                    'id': '3',
+                    'attributes': {
+                        'title': 'The Return of the King'
                     },
-                    "relationships": {
-                        "author": {
-                            "links": {
-                                "self": "/author/9"
+                    'relationships': {
+                        'author': {
+                            'links': {
+                                'self': '/author/9'
                             },
-                            "data": {
-                                "type": "author",
-                                "id": "9"
+                            'data': {
+                                'type': 'author',
+                                'id': '9'
                             }
                         }
                     }
                 },
-                "links": {
-                    "self": "/book/3"
+                'links': {
+                    'self': '/book/3'
                 },
-                "included": [
+                'included': [
                     {
-                        "type": "author",
-                        "id": "9",
-                        "attributes": {
-                            "name": "J.R.R. Tolkien"
+                        'type': 'author',
+                        'id': '9',
+                        'attributes': {
+                            'name': 'J.R.R. Tolkien'
                         },
-                        "links": {
-                            "self": "/author/9"
+                        'links': {
+                            'self': '/author/9'
                         }
                     }
                 ]
@@ -362,27 +363,27 @@ class JsonApiSpec extends Specification implements JsonViewTest, GrailsUnitTest 
         then:
         objectMapper.readTree(result.jsonText) == objectMapper.readTree('''
             {
-                "jsonapi": {
-                    "version": "1.0",
-                    "meta": {
-                        "copyright": "Copyright 2015 Example Corp.",
-                        "authors": [
-                            "Yehuda Katz",
-                            "Steve Klabnik"
+                'jsonapi': {
+                    'version': '1.0',
+                    'meta': {
+                        'copyright': 'Copyright 2015 Example Corp.',
+                        'authors': [
+                            'Yehuda Katz',
+                            'Steve Klabnik'
                         ]
                     }
                 },
-                "data": {
-                    "type": "widget",
-                    "id": "5",
-                    "attributes": {
-                        "width": 4,
-                        "height": 7,
-                        "name": "One"
+                'data': {
+                    'type': 'widget',
+                    'id': '5',
+                    'attributes': {
+                        'width': 4,
+                        'height': 7,
+                        'name': 'One'
                     }
                 },
-                "links": {
-                    "self": "/widget/5"
+                'links': {
+                    'self': '/widget/5'
                 }
             }
         ''')
@@ -414,24 +415,24 @@ class JsonApiSpec extends Specification implements JsonViewTest, GrailsUnitTest 
         then:
         objectMapper.readTree(result.jsonText) == objectMapper.readTree('''
             {
-                "meta": {
-                    "copyright": "Copyright 2015 Example Corp.",
-                    "authors": [
-                        "Yehuda Katz",
-                        "Steve Klabnik"
+                'meta': {
+                    'copyright': 'Copyright 2015 Example Corp.',
+                    'authors': [
+                        'Yehuda Katz',
+                        'Steve Klabnik'
                     ]
                 },
-                "data": {
-                    "type": "widget",
-                    "id": "5",
-                    "attributes": {
-                        "width": 4,
-                        "height": 7,
-                        "name": "One"
+                'data': {
+                    'type': 'widget',
+                    'id': '5',
+                    'attributes': {
+                        'width': 4,
+                        'height': 7,
+                        'name': 'One'
                     }
                 },
-                "links": {
-                    "self": "/widget/5"
+                'links': {
+                    'self': '/widget/5'
                 }
             }
         ''')
@@ -440,6 +441,7 @@ class JsonApiSpec extends Specification implements JsonViewTest, GrailsUnitTest 
 
 @Entity
 class Widget {
+
     String name
     int width
     int height
@@ -447,12 +449,14 @@ class Widget {
 
 @Entity
 class Book {
+
     String title
     Author author
 }
 
 @Entity
 class ResearchPaper {
+
     String title
 
     @SuppressWarnings('unused')
@@ -463,10 +467,12 @@ class ResearchPaper {
 
 @Entity
 class Author {
+
     String name
 }
 
 class SuperHero implements Validateable {
+
     String name
 
     @SuppressWarnings('unused')

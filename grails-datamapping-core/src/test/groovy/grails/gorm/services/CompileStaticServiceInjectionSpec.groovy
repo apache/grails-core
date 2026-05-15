@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -27,7 +27,7 @@ import org.grails.datastore.mapping.core.Datastore
  * compile correctly under @CompileStatic. Verifies the fix for the bug where
  * ServiceTransformation generated lazy getters on the abstract class's PropertyNode
  * that referenced a 'datastore' field only present on the generated implementation class.
- * Under @CompileStatic, this caused "Unexpected return statement" compilation failures
+ * Under @CompileStatic, this caused 'Unexpected return statement' compilation failures
  * because StaticTypeCheckingVisitor.visitProperty() cannot handle ReturnStatement
  * in property getter blocks.
  *
@@ -38,8 +38,9 @@ import org.grails.datastore.mapping.core.Datastore
  */
 class CompileStaticServiceInjectionSpec extends Specification {
 
-    void "test @CompileStatic abstract class with injected @Service properties compiles"() {
-        when: "A @CompileStatic @Service abstract class has a property of another @Service type"
+    void 'test @CompileStatic abstract class with injected @Service properties compiles'() {
+
+        when: 'A @CompileStatic @Service abstract class has a property of another @Service type'
         def service = new GroovyClassLoader().parseClass('''
 import grails.gorm.services.Service
 import grails.gorm.annotation.Entity
@@ -47,11 +48,13 @@ import groovy.transform.CompileStatic
 
 @Entity
 class Book {
+
     String title
 }
 
 @Entity
 class Author {
+
     String name
 }
 
@@ -63,6 +66,7 @@ interface AuthorDataService {
 @CompileStatic
 @Service(Book)
 abstract class BookService implements BookDataService {
+
     AuthorDataService authorDataService
 
     Book findBookAndAuthor(Serializable bookId, Serializable authorId) {
@@ -94,7 +98,8 @@ interface BookDataService {
         impl.getDeclaredMethod('setDatastore', Datastore) != null
     }
 
-    void "test abstract class without @CompileStatic still works with injected @Service properties"() {
+    void 'test abstract class without @CompileStatic still works with injected @Service properties'() {
+
         when: 'A @Service abstract class without @CompileStatic has a @Service-typed property'
         def service = new GroovyClassLoader().parseClass('''
 import grails.gorm.services.Service
@@ -102,11 +107,13 @@ import grails.gorm.annotation.Entity
 
 @Entity
 class Item {
+
     String description
 }
 
 @Entity
 class Category {
+
     String name
 }
 
@@ -117,6 +124,7 @@ interface CategoryDataService {
 
 @Service(Item)
 abstract class ItemService implements ItemDataService {
+
     CategoryDataService categoryDataService
 
     Item findItemWithCategory(Serializable itemId, Serializable catId) {
@@ -143,7 +151,8 @@ interface ItemDataService {
         impl.getDeclaredMethod('getDatastore').returnType == Datastore
     }
 
-    void "test abstract class without @Service-typed properties does NOT get datastore infrastructure"() {
+    void 'test abstract class without @Service-typed properties does NOT get datastore infrastructure'() {
+
         when: 'A @Service abstract class has NO @Service-typed properties'
         def service = new GroovyClassLoader().parseClass('''
 import grails.gorm.services.Service
@@ -151,11 +160,13 @@ import grails.gorm.annotation.Entity
 
 @Entity
 class Task {
+
     String name
 }
 
 @Service(Task)
 abstract class TaskService implements TaskDataService {
+
     String someConfig
 
     Task createTask(String name) {
@@ -180,7 +191,8 @@ interface TaskDataService {
         impl.declaredFields.find { it.name == 'datastore' } == null
     }
 
-    void "test @CompileStatic abstract class with multiple injected @Service properties compiles"() {
+    void 'test @CompileStatic abstract class with multiple injected @Service properties compiles'() {
+
         when: 'A @CompileStatic @Service abstract class has multiple @Service-typed properties'
         def service = new GroovyClassLoader().parseClass('''
 import grails.gorm.services.Service
@@ -189,16 +201,19 @@ import groovy.transform.CompileStatic
 
 @Entity
 class Order {
+
     String reference
 }
 
 @Entity
 class Customer {
+
     String name
 }
 
 @Entity
 class Product {
+
     String sku
 }
 
@@ -215,6 +230,7 @@ interface ProductDataService {
 @CompileStatic
 @Service(Order)
 abstract class OrderService implements OrderDataService {
+
     CustomerDataService customerDataService
     ProductDataService productDataService
 
@@ -244,7 +260,7 @@ interface OrderDataService {
         impl.getDeclaredMethod('setDatastore', Datastore) != null
     }
 
-    void "test @CompileStatic with custom methods and return statements compiles"() {
+    void 'test @CompileStatic with custom methods and return statements compiles'() {
         when: 'A @CompileStatic @Service abstract class has custom methods with complex return statements'
         def service = new GroovyClassLoader().parseClass('''
 import grails.gorm.services.Service
@@ -253,12 +269,14 @@ import groovy.transform.CompileStatic
 
 @Entity
 class Report {
+
     String title
     String status
 }
 
 @Entity
 class Setting {
+
     String key
     String value
 }
@@ -272,6 +290,7 @@ interface SettingDataService {
 @CompileStatic
 @Service(Report)
 abstract class ReportService implements ReportDataService {
+
     SettingDataService settingDataService
 
     Map<String, Object> generateSummary(Serializable reportId) {
@@ -310,7 +329,8 @@ interface ReportDataService {
         org.grails.datastore.mapping.services.Service.isAssignableFrom(impl)
     }
 
-    void "test impl has datastore infrastructure when abstract class has @Service properties"() {
+    void 'test impl has datastore infrastructure when abstract class has @Service properties'() {
+
         when: 'A @Service abstract class with @Service-typed properties is compiled'
         def service = new GroovyClassLoader().parseClass('''
 import grails.gorm.services.Service
@@ -318,11 +338,13 @@ import grails.gorm.annotation.Entity
 
 @Entity
 class Record {
+
     String value
 }
 
 @Entity
 class Tag {
+
     String label
 }
 
@@ -333,6 +355,7 @@ interface TagDataService {
 
 @Service(Record)
 abstract class RecordService implements RecordDataService {
+
     TagDataService tagDataService
 }
 

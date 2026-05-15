@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -32,7 +32,7 @@ import java.io.IOException
 
 class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
 
-    void "test basic properties"() {
+    void 'test basic properties'() {
         expect:
         datastore.sessionFactory != null
         datastore.dataSource != null
@@ -42,7 +42,7 @@ class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
         datastore.dataSourceName == 'default'
     }
 
-    void "test configuration settings"() {
+    void 'test configuration settings'() {
         expect:
         !datastore.autoFlush // COMMIT mode in setupSpec
         datastore.defaultFlushMode == FlushMode.COMMIT
@@ -50,14 +50,14 @@ class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
         datastore.cacheQueries
     }
 
-    void "test getDatastoreForConnection"() {
+    void 'test getDatastoreForConnection'() {
         expect:
         datastore.getDatastoreForConnection('dataSource') == datastore
         datastore.getDatastoreForConnection('default') == datastore
         datastore.getDatastoreForConnection('DEFAULT') == datastore
     }
 
-    void "test withFlushMode"() {
+    void 'test withFlushMode'() {
         when:
         boolean result = false
         datastore.withFlushMode(FlushMode.ALWAYS) {
@@ -70,7 +70,7 @@ class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
         datastore.sessionFactory.currentSession.hibernateFlushMode == FlushMode.COMMIT
     }
 
-    void "test application context integration"() {
+    void 'test application context integration'() {
         given:
         def ctx = new GenericApplicationContext()
         ctx.refresh()
@@ -82,24 +82,24 @@ class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
         datastore.applicationContext == ctx
     }
 
-    void "test configure via map (Legacy/Test constructor)"() {
-        when:"The map constructor is used"
-        def config = Collections.singletonMap(Settings.SETTING_DB_CREATE,  "create-drop")
+    void 'test configure via map (Legacy/Test constructor)'() {
+        when:'The map constructor is used'
+        def config = Collections.singletonMap(Settings.SETTING_DB_CREATE,  'create-drop')
         HibernateDatastore testDatastore = new HibernateDatastore(config, GHUBook)
 
-        then:"GORM is configured correctly"
+        then:'GORM is configured correctly'
         testDatastore.getMappingContext().getPersistentEntity(GHUBook.name) != null
         
         cleanup:
         testDatastore.close()
     }
 
-    void "test resolveTenantIds returns empty list in non-multi-tenant mode"() {
+    void 'test resolveTenantIds returns empty list in non-multi-tenant mode'() {
         expect:
         datastore.resolveTenantIds() == []
     }
 
-    void "test resolveTenantIdentifier throws TenantNotFoundException when no tenant is set"() {
+    void 'test resolveTenantIdentifier throws TenantNotFoundException when no tenant is set'() {
         when:
         datastore.resolveTenantIdentifier()
 
@@ -107,13 +107,13 @@ class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
         thrown(TenantNotFoundException)
     }
 
-    void "test getDataSource(connectionName) returns the default DataSource for default connection"() {
+    void 'test getDataSource(connectionName) returns the default DataSource for default connection'() {
         expect:
         datastore.getDataSource('default') != null
         datastore.getDataSource('default').is(datastore.dataSource)
     }
 
-    void "test getHibernateTemplate returns a singleton instance"() {
+    void 'test getHibernateTemplate returns a singleton instance'() {
         when:
         def template1 = datastore.getHibernateTemplate()
         def template2 = datastore.getHibernateTemplate()
@@ -123,7 +123,7 @@ class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
         template1.is(template2)
     }
 
-    void "test getHibernateTemplate(flushMode) returns a new instance"() {
+    void 'test getHibernateTemplate(flushMode) returns a new instance'() {
         when:
         def template = datastore.getHibernateTemplate(GrailsHibernateTemplate.FLUSH_AUTO)
 
@@ -132,7 +132,7 @@ class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
         template instanceof GrailsHibernateTemplate
     }
 
-    void "test openSession opens a session with the default flush mode"() {
+    void 'test openSession opens a session with the default flush mode'() {
         when:
         def session = datastore.openSession()
 
@@ -144,20 +144,20 @@ class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
         session.close()
     }
 
-    void "test hasCurrentSession returns true when a session is bound to the transaction"() {
+    void 'test hasCurrentSession returns true when a session is bound to the transaction'() {
         expect:
         // The per-feature transaction from the TCK manager binds a session
         datastore.hasCurrentSession()
     }
 
-    void "test withFlushMode does not restore mode when callable throws"() {
+    void 'test withFlushMode does not restore mode when callable throws'() {
         given:
         def session = datastore.sessionFactory.currentSession
         def originalMode = session.hibernateFlushMode
 
         when:
         datastore.withFlushMode(FlushMode.ALWAYS) {
-            throw new RuntimeException("fail")
+            throw new RuntimeException('fail')
         }
 
         then:
@@ -168,7 +168,7 @@ class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
         session.setHibernateFlushMode(originalMode)
     }
 
-    void "test setApplicationContext with non-ConfigurableApplicationContext is a no-op"() {
+    void 'test setApplicationContext with non-ConfigurableApplicationContext is a no-op'() {
         given:
         def ctx = Mock(ApplicationContext)
 
@@ -179,12 +179,12 @@ class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
         noExceptionThrown()
     }
 
-    void "test getDatastoreForTenantId returns self in non-DATABASE multi-tenancy mode"() {
+    void 'test getDatastoreForTenantId returns self in non-DATABASE multi-tenancy mode'() {
         expect:
         datastore.getDatastoreForTenantId('someTenant').is(datastore)
     }
 
-    void "test addTenantForSchema throws ConfigurationException in non-SCHEMA mode"() {
+    void 'test addTenantForSchema throws ConfigurationException in non-SCHEMA mode'() {
         when:
         datastore.addTenantForSchema('some_schema')
 
@@ -192,9 +192,9 @@ class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
         thrown(ConfigurationException)
     }
 
-    void "test destroy is idempotent — second call is a no-op"() {
+    void 'test destroy is idempotent — second call is a no-op'() {
         given:
-        def config = Collections.singletonMap(Settings.SETTING_DB_CREATE, "create-drop")
+        def config = Collections.singletonMap(Settings.SETTING_DB_CREATE, 'create-drop')
         def ds = new HibernateDatastore(config, GHUBook)
         ds.destroy()
 
@@ -208,13 +208,13 @@ class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
         ds.close()
     }
 
-    void "test destroy logs error when closeConnectionSources throws IOException"() {
+    void 'test destroy logs error when closeConnectionSources throws IOException'() {
         given:
-        def config = Collections.singletonMap(Settings.SETTING_DB_CREATE, "create-drop")
+        def config = Collections.singletonMap(Settings.SETTING_DB_CREATE, 'create-drop')
         def ds = new HibernateDatastore(config, GHUBook) {
             @Override
             protected void closeConnectionSources() throws IOException {
-                throw new IOException("connection close failure")
+                throw new IOException('connection close failure')
             }
         }
 
@@ -228,13 +228,13 @@ class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
         ds.close()
     }
 
-    void "test destroy logs error when closeGormEnhancer throws IOException"() {
+    void 'test destroy logs error when closeGormEnhancer throws IOException'() {
         given:
-        def config = Collections.singletonMap(Settings.SETTING_DB_CREATE, "create-drop")
+        def config = Collections.singletonMap(Settings.SETTING_DB_CREATE, 'create-drop')
         def ds = new HibernateDatastore(config, GHUBook) {
             @Override
             protected void closeGormEnhancer() throws IOException {
-                throw new IOException("enhancer close failure")
+                throw new IOException('enhancer close failure')
             }
         }
 
@@ -248,14 +248,14 @@ class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
         ds.close()
     }
 
-    void "test isAutoFlush reflects defaultFlushMode"() {
+    void 'test isAutoFlush reflects defaultFlushMode'() {
         expect:
         !datastore.autoFlush
         datastore.defaultFlushMode == FlushMode.COMMIT
         datastore.defaultFlushModeName == 'COMMIT'
     }
 
-    void "test isFailOnError, isOsivReadOnly, isPassReadOnlyToHibernate, isCacheQueries"() {
+    void 'test isFailOnError, isOsivReadOnly, isPassReadOnlyToHibernate, isCacheQueries'() {
         expect:
         !datastore.failOnError
         !datastore.osivReadOnly
@@ -263,40 +263,40 @@ class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
         datastore.cacheQueries
     }
 
-    void "test getMetadata returns non-null Metadata"() {
+    void 'test getMetadata returns non-null Metadata'() {
         expect:
         datastore.getMetadata() != null
     }
 
-    void "test toString returns datasource name"() {
+    void 'test toString returns datasource name'() {
         expect:
-        datastore.toString() == "HibernateDatastore: default"
+        datastore.toString() == 'HibernateDatastore: default'
     }
 
-    void "test withSession and withNewSession for connectionName"() {
+    void 'test withSession and withNewSession for connectionName'() {
         when:
-        def result1 = datastore.withSession("default") { session -> return "session1" }
-        def result2 = datastore.withNewSession("default") { session -> return "session2" }
+        def result1 = datastore.withSession('default') { session -> return 'session1' }
+        def result2 = datastore.withNewSession('default') { session -> return 'session2' }
 
         then:
-        result1 == "session1"
-        result2 == "session2"
+        result1 == 'session1'
+        result2 == 'session2'
     }
 
-    void "test withNewSession with tenantId for non-DATABASE multitenancy"() {
+    void 'test withNewSession with tenantId for non-DATABASE multitenancy'() {
         when:
-        def result = datastore.withNewSession((Serializable) "someTenant") { session -> return "sessionTenant" }
+        def result = datastore.withNewSession((Serializable) 'someTenant') { session -> return 'sessionTenant' }
 
         then:
-        result == "sessionTenant"
+        result == 'sessionTenant'
     }
 
-    void "test close handles exception"() {
+    void 'test close handles exception'() {
         given:
-        def ds = new HibernateDatastore(Collections.singletonMap(Settings.SETTING_DB_CREATE, "create-drop"), GHUBook) {
+        def ds = new HibernateDatastore(Collections.singletonMap(Settings.SETTING_DB_CREATE, 'create-drop'), GHUBook) {
             @Override
             void destroy() throws Exception {
-                throw new RuntimeException("destroy failed")
+                throw new RuntimeException('destroy failed')
             }
         }
         
@@ -310,65 +310,65 @@ class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
         ds.close()
     }
     
-    void "test constructors"() {
+    void 'test constructors'() {
         given:
         def configMap = new HashMap<>(manager.grailsConfig)
-        configMap.put("dataSource.url", "jdbc:h2:mem:grailsDB-constructors;LOCK_TIMEOUT=10000") // avoid clash with datastore
+        configMap.put('dataSource.url', 'jdbc:h2:mem:grailsDB-constructors;LOCK_TIMEOUT=10000') // avoid clash with datastore
         org.springframework.core.env.PropertyResolver propertyResolver = org.grails.datastore.mapping.core.DatastoreUtils.createPropertyResolver(configMap)
         def dataSource = datastore.dataSource
         def eventPublisher = datastore.applicationEventPublisher as org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher
         Package pkg = String.getPackage()
         
-        when: "Constructor with EventPublisher and Classes"
+        when: 'Constructor with EventPublisher and Classes'
         def ds1 = new HibernateDatastore(propertyResolver, eventPublisher, GHUBook)
         then:
         ds1 != null
         ds1.close()
 
-        when: "Constructor with DataSource, EventPublisher and Classes"
+        when: 'Constructor with DataSource, EventPublisher and Classes'
         def ds2 = new HibernateDatastore(dataSource, propertyResolver, eventPublisher, GHUBook)
         then:
         ds2 != null
         ds2.close()
 
-        when: "Constructor with EventPublisher and Packages"
+        when: 'Constructor with EventPublisher and Packages'
         def ds3 = new HibernateDatastore(propertyResolver, eventPublisher, pkg)
         then:
         ds3 != null
         ds3.close()
 
-        when: "Constructor with DataSource, EventPublisher and Packages"
+        when: 'Constructor with DataSource, EventPublisher and Packages'
         def ds4 = new HibernateDatastore(dataSource, propertyResolver, eventPublisher, pkg)
         then:
         ds4 != null
         ds4.close()
 
-        when: "Constructor with Configuration Map and Packages"
+        when: 'Constructor with Configuration Map and Packages'
         def ds5 = new HibernateDatastore(configMap, pkg)
         then:
         ds5 != null
         ds5.close()
         
-        when: "Constructor with Packages only"
+        when: 'Constructor with Packages only'
         def ds6 = new HibernateDatastore(pkg)
         then:
         ds6 != null
         ds6.close()
         
-        when: "Constructor with MappingContext, SessionFactory, PropertyResolver, ApplicationContext, dataSourceName"
-        def ds7 = new HibernateDatastore(datastore.mappingContext, datastore.sessionFactory, propertyResolver, datastore.applicationContext, "default")
+        when: 'Constructor with MappingContext, SessionFactory, PropertyResolver, ApplicationContext, dataSourceName'
+        def ds7 = new HibernateDatastore(datastore.mappingContext, datastore.sessionFactory, propertyResolver, datastore.applicationContext, 'default')
         then:
         ds7 != null
         ds7.close()
         
-        when: "Constructor with MappingContext, SessionFactory, PropertyResolver"
+        when: 'Constructor with MappingContext, SessionFactory, PropertyResolver'
         def ds8 = new HibernateDatastore(datastore.mappingContext, datastore.sessionFactory, propertyResolver)
         then:
         ds8 != null
         ds8.close()
     }
 
-    void "test setMessageSource"() {
+    void 'test setMessageSource'() {
         when:
         datastore.setMessageSource(Mock(org.springframework.context.MessageSource))
 
@@ -379,6 +379,7 @@ class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
 
 @Entity
 class GHUBook {
+
     Long id
     String title
 }

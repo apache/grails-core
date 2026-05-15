@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -42,11 +42,11 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
         manager.addAllDomainClasses([Location, Person, Pet])
     }
 
-    void "test isInitialized for native Hibernate proxy"() {
+    void 'test isInitialized for native Hibernate proxy'() {
         given:
         Long savedId = 1L
         Location.withTransaction {
-            savedId = new Location(name: "Test Location", code: "TL1").save(flush: true).id
+            savedId = new Location(name: 'Test Location', code: 'TL1').save(flush: true).id
         }
         manager.session.clear()
         manager.hibernateSession.clear()
@@ -65,11 +65,11 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
         proxyHandler.isInitialized(proxy)
     }
 
-    void "test unwrap for a native Hibernate proxy"() {
+    void 'test unwrap for a native Hibernate proxy'() {
         given:
         Long savedId = 1L
         Location.withTransaction {
-            savedId = new Location(name: "Test Location").save(flush: true).id
+            savedId = new Location(name: 'Test Location').save(flush: true).id
         }
         manager.session.clear()
         manager.hibernateSession.clear()
@@ -81,14 +81,14 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
         then:
         unwrapped != proxy
         unwrapped instanceof Location
-        unwrapped.name == "Test Location"
+        unwrapped.name == 'Test Location'
     }
 
-    void "test getIdentifier"() {
+    void 'test getIdentifier'() {
         given:
         Long savedId = 1L
         Location.withTransaction {
-            savedId = new Location(name: "Test").save(flush: true).id
+            savedId = new Location(name: 'Test').save(flush: true).id
         }
         manager.session.clear()
         manager.hibernateSession.clear()
@@ -100,11 +100,11 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
         proxyHandler.getIdentifier(proxy) == savedId
     }
 
-    void "test createProxy"() {
+    void 'test createProxy'() {
         given:
         Long savedId = 1L
         Location.withTransaction {
-            savedId = new Location(name: "Test").save(flush: true).id
+            savedId = new Location(name: 'Test').save(flush: true).id
         }
         manager.session.clear()
         manager.hibernateSession.clear()
@@ -119,11 +119,11 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
         !proxyHandler.isInitialized(proxy)
     }
 
-    void "test getAssociationProxy"() {
+    void 'test getAssociationProxy'() {
         given:
         Long petId
         Person.withTransaction {
-            Person p = new Person(firstName: "Homer", lastName: "Simpson").save()
+            Person p = new Person(firstName: 'Homer', lastName: 'Simpson').save()
             petId = new Pet(name: "Santa's Little Helper", owner: p).save(flush: true).id
         }
         manager.session.clear()
@@ -138,19 +138,19 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
         !proxyHandler.isInitialized(ownerProxy)
     }
 
-    void "test isInitialized for a non-proxied object"() {
+    void 'test isInitialized for a non-proxied object'() {
         given:
-        Location location = new Location(name: "Test Location").save(flush: true)
+        Location location = new Location(name: 'Test Location').save(flush: true)
 
         expect:
         proxyHandler.isInitialized(location)
     }
 
-    void "test isInitialized for a Groovy proxy before initialization"() {
+    void 'test isInitialized for a Groovy proxy before initialization'() {
         given:
         def originalFactory = manager.session.mappingContext.proxyFactory
         manager.session.mappingContext.proxyFactory = new GroovyProxyFactory()
-        Location location = new Location(name: "Test Location").save(flush: true)
+        Location location = new Location(name: 'Test Location').save(flush: true)
         manager.session.clear()
         manager.hibernateSession.clear()
 
@@ -164,11 +164,11 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
         manager.session.mappingContext.proxyFactory = originalFactory
     }
 
-    void "test unwrap for a Groovy proxy"() {
+    void 'test unwrap for a Groovy proxy'() {
         given:
         def originalFactory = manager.session.mappingContext.proxyFactory
         manager.session.mappingContext.proxyFactory = new GroovyProxyFactory()
-        Location location = new Location(name: "Test Location").save(flush: true)
+        Location location = new Location(name: 'Test Location').save(flush: true)
         manager.session.clear()
         manager.hibernateSession.clear()
 
@@ -183,16 +183,16 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
         manager.session.mappingContext.proxyFactory = originalFactory
     }
 
-    void "test isInitialized for null"() {
+    void 'test isInitialized for null'() {
         expect:
         !proxyHandler.isInitialized(null)
     }
 
-    void "test isInitialized for a persistent collection"() {
+    void 'test isInitialized for a persistent collection'() {
         given:
         Long personId
         Person.withTransaction {
-            Person p = new Person(firstName: "Homer", lastName: "Simpson").save()
+            Person p = new Person(firstName: 'Homer', lastName: 'Simpson').save()
             new Pet(name: "Santa's Little Helper", owner: p).save(flush: true)
             personId = p.id
         }
@@ -212,11 +212,11 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
         proxyHandler.isInitialized(pets)
     }
 
-    void "test isInitialized for association name"() {
+    void 'test isInitialized for association name'() {
         given:
         Long personId
         Person.withTransaction {
-            Person p = new Person(firstName: "Homer", lastName: "Simpson").save()
+            Person p = new Person(firstName: 'Homer', lastName: 'Simpson').save()
             new Pet(name: "Santa's Little Helper", owner: p).save(flush: true)
             personId = p.id
         }
@@ -235,16 +235,16 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
         proxyHandler.isInitialized(loaded, 'pets')
     }
 
-    void "test isInitialized for association name with null object"() {
+    void 'test isInitialized for association name with null object'() {
         expect:
         !proxyHandler.isInitialized(null, 'any')
     }
 
-    void "test isProxy"() {
+    void 'test isProxy'() {
         given:
         Long savedId
         Location.withTransaction {
-            savedId = new Location(name: "Test").save(flush: true).id
+            savedId = new Location(name: 'Test').save(flush: true).id
         }
         manager.session.clear()
         manager.hibernateSession.clear()
@@ -253,32 +253,32 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
 
         expect:
         proxyHandler.isProxy(proxy)
-        !proxyHandler.isProxy(new Location(name: "Not a proxy"))
+        !proxyHandler.isProxy(new Location(name: 'Not a proxy'))
         !proxyHandler.isProxy(null)
     }
 
-    void "test getProxiedClass"() {
+    void 'test getProxiedClass'() {
         given:
         Long savedId
         Location.withTransaction {
-            savedId = new Location(name: "Test").save(flush: true).id
+            savedId = new Location(name: 'Test').save(flush: true).id
         }
         manager.session.clear()
         manager.hibernateSession.clear()
 
         def proxy = manager.hibernateSession.getReference(Location, savedId)
-        Location location = new Location(name: "Not a proxy")
+        Location location = new Location(name: 'Not a proxy')
 
         expect:
         proxyHandler.getProxiedClass(proxy) == Location
         proxyHandler.getProxiedClass(location) == Location
     }
 
-    void "test initialize"() {
+    void 'test initialize'() {
         given:
         Long savedId
         Location.withTransaction {
-            savedId = new Location(name: "Test").save(flush: true).id
+            savedId = new Location(name: 'Test').save(flush: true).id
         }
         manager.session.clear()
         manager.hibernateSession.clear()
@@ -295,11 +295,11 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
         Hibernate.isInitialized(proxy)
     }
 
-    void "test unwrap for persistent collection"() {
+    void 'test unwrap for persistent collection'() {
         given:
         Long personId
         Person.withTransaction {
-            Person p = new Person(firstName: "Homer", lastName: "Simpson").save()
+            Person p = new Person(firstName: 'Homer', lastName: 'Simpson').save()
             new Pet(name: "Santa's Little Helper", owner: p).save(flush: true)
             personId = p.id
         }
@@ -320,7 +320,7 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
         proxyHandler.isInitialized(pets)
     }
 
-    void "test createProxy with AssociationQueryExecutor"() {
+    void 'test createProxy with AssociationQueryExecutor'() {
         when:
         proxyHandler.createProxy(manager.session, null, null)
 
@@ -328,10 +328,10 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
         thrown(UnsupportedOperationException)
     }
 
-    void "test createProxy throws IllegalStateException if native interface is not GrailsHibernateTemplate"() {
+    void 'test createProxy throws IllegalStateException if native interface is not GrailsHibernateTemplate'() {
         given:
         def mockSession = Stub(org.grails.datastore.mapping.core.Session)
-        mockSession.getNativeInterface() >> "not a template"
+        mockSession.getNativeInterface() >> 'not a template'
 
         when:
         proxyHandler.createProxy(mockSession, Location, 1L)
@@ -340,17 +340,17 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
         thrown(IllegalStateException)
     }
 
-    void "test deprecated unwrapProxy and unwrapIfProxy"() {
+    void 'test deprecated unwrapProxy and unwrapIfProxy'() {
         given:
         Long savedId
         Location.withTransaction {
-            savedId = new Location(name: "Test").save(flush: true).id
+            savedId = new Location(name: 'Test').save(flush: true).id
         }
         manager.session.clear()
         manager.hibernateSession.clear()
 
         def proxy = manager.hibernateSession.getReference(Location, savedId)
-        Location location = new Location(name: "Not a proxy")
+        Location location = new Location(name: 'Not a proxy')
 
         expect:
         proxyHandler.unwrapProxy(proxy) != proxy
@@ -359,11 +359,11 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
         proxyHandler.unwrapIfProxy(location) == location
     }
 
-    void "test getAssociationProxy returns null for non-association property"() {
+    void 'test getAssociationProxy returns null for non-association property'() {
         given:
         Long petId
         Person.withTransaction {
-            Person p = new Person(firstName: "Homer", lastName: "Simpson").save()
+            Person p = new Person(firstName: 'Homer', lastName: 'Simpson').save()
             petId = new Pet(name: "Santa's Little Helper", owner: p).save(flush: true).id
         }
         manager.session.clear()
@@ -375,15 +375,15 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
         proxyHandler.getAssociationProxy(loadedPet, 'name') == null
     }
 
-    void "test getIdentifier for non-proxy returns null"() {
+    void 'test getIdentifier for non-proxy returns null'() {
         given:
-        Location location = new Location(name: "Test")
+        Location location = new Location(name: 'Test')
 
         expect:
         proxyHandler.getIdentifier(location) == null
     }
 
-    void "test isInitialized delegates to EntityProxy"() {
+    void 'test isInitialized delegates to EntityProxy'() {
         given:
         def ep = Mock(org.grails.datastore.mapping.proxy.EntityProxy) {
             isInitialized() >> true
@@ -393,9 +393,9 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
         proxyHandler.isInitialized(ep)
     }
 
-    void "test unwrap delegates to EntityProxy.getTarget"() {
+    void 'test unwrap delegates to EntityProxy.getTarget'() {
         given:
-        Location target = new Location(name: "Target")
+        Location target = new Location(name: 'Target')
         def ep = Mock(org.grails.datastore.mapping.proxy.EntityProxy) {
             getTarget() >> target
         }
@@ -404,7 +404,7 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
         proxyHandler.unwrap(ep).is(target)
     }
 
-    void "test getIdentifier delegates to EntityProxy.getProxyKey"() {
+    void 'test getIdentifier delegates to EntityProxy.getProxyKey'() {
         given:
         def ep = Mock(org.grails.datastore.mapping.proxy.EntityProxy) {
             getProxyKey() >> 42L
@@ -414,7 +414,7 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
         proxyHandler.getIdentifier(ep) == 42L
     }
 
-    void "test initialize delegates to EntityProxy.initialize"() {
+    void 'test initialize delegates to EntityProxy.initialize'() {
         given:
         def ep = Mock(org.grails.datastore.mapping.proxy.EntityProxy)
 
@@ -425,11 +425,11 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
         1 * ep.initialize()
     }
 
-    void "test initialize on Groovy proxy calls proxyTarget"() {
+    void 'test initialize on Groovy proxy calls proxyTarget'() {
         given:
         def originalFactory = manager.session.mappingContext.proxyFactory
         manager.session.mappingContext.proxyFactory = new GroovyProxyFactory()
-        Location location = new Location(name: "Init Test").save(flush: true)
+        Location location = new Location(name: 'Init Test').save(flush: true)
         manager.session.clear()
         manager.hibernateSession.clear()
 
@@ -448,16 +448,16 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
         manager.session.mappingContext.proxyFactory = originalFactory
     }
 
-    void "test getAssociationProxy returns null on RuntimeException"() {
+    void 'test getAssociationProxy returns null on RuntimeException'() {
         expect:
-        proxyHandler.getAssociationProxy(new ProxyHandlerThrowingObj(), "anything") == null
+        proxyHandler.getAssociationProxy(new ProxyHandlerThrowingObj(), 'anything') == null
     }
 
-    void "test getIdentifier for Groovy proxy returns id via GroovyProxyInterceptorLogic"() {
+    void 'test getIdentifier for Groovy proxy returns id via GroovyProxyInterceptorLogic'() {
         given:
         def originalFactory = manager.session.mappingContext.proxyFactory
         manager.session.mappingContext.proxyFactory = new GroovyProxyFactory()
-        Location location = new Location(name: "Id Test").save(flush: true)
+        Location location = new Location(name: 'Id Test').save(flush: true)
         Long locationId = location.id
         manager.session.clear()
         manager.hibernateSession.clear()
@@ -473,5 +473,6 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
 }
 
 class ProxyHandlerThrowingObj {
-    def getAnything() { throw new RuntimeException("deliberate failure") }
+
+    def getAnything() { throw new RuntimeException('deliberate failure') }
 }

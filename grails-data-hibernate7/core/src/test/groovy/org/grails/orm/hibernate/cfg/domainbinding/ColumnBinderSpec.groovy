@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -35,7 +35,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.CreateKeyForProps
 
 class ColumnBinderSpec extends HibernateGormDatastoreSpec {
 
-    def "association ManyToMany without userType uses fetched name and is not nullable"() {
+    def 'association ManyToMany without userType uses fetched name and is not nullable'() {
         given:
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def stringBinder = Mock(StringColumnConstraintsBinder)
@@ -52,24 +52,25 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
         )
 
         def entity = createPersistentEntity(CBBook)
-        def prop = entity.getPropertyByName("authors")
+        def prop = entity.getPropertyByName('authors')
         def column = new Column()
         def table = new Table()
 
         // stubs
-        columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "mtm_fk"
+        columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> 'mtm_fk'
 
         when:
         binder.bindColumn(prop, null, column, null, null, table)
 
         then:
-        column.getName() == "mtm_fk"
+        column.getName() == 'mtm_fk'
         column.isNullable() == true
-        1 * keyCreator.createKeyForProps(prop, null, table, "mtm_fk")
-        1 * indexBinder.bindIndex("mtm_fk", column, null, table)
+        1 * keyCreator.createKeyForProps(prop, null, table, 'mtm_fk')
+        1 * indexBinder.bindIndex('mtm_fk', column, null, table)
     }
 
-    def "numeric non-association property applies config, numeric constraints, unique and subclass TPH nullable"() {
+    def 'numeric non-association property applies config, numeric constraints, unique and subclass TPH nullable'() {
+
         given:
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def stringBinder = Mock(StringColumnConstraintsBinder)
@@ -86,33 +87,34 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
         )
 
         def entity = createPersistentEntity(CBNumericSub)
-        def prop = entity.getPropertyByName("num")
+        def prop = entity.getPropertyByName('num')
         def parentProp = Mock(HibernatePersistentProperty)
-        def column = new Column("test")
+        def column = new Column('test')
         def table = new Table()
-        def cc = new ColumnConfig(comment: "cmt", defaultValue: "def", read: "r", write: "w")
+        def cc = new ColumnConfig(comment: 'cmt', defaultValue: 'def', read: 'r', write: 'w')
 
         // stubs
-        columnNameFetcher.getColumnNameForPropertyAndPath(prop, "p", cc) >> "num_col"
+        columnNameFetcher.getColumnNameForPropertyAndPath(prop, 'p', cc) >> 'num_col'
         parentProp.isNullable() >> true // should make column initially nullable
 
         when:
-        binder.bindColumn(prop, parentProp, column, cc, "p", table)
+        binder.bindColumn(prop, parentProp, column, cc, 'p', table)
 
         then:
-        column.getName() == "num_col"
+        column.getName() == 'num_col'
         column.isNullable() == true // due to subclass TPH logic
-        column.getComment() == "cmt"
-        column.getDefaultValue() == "def"
-        column.getCustomRead() == "r"
-        column.getCustomWrite() == "w"
+        column.getComment() == 'cmt'
+        column.getDefaultValue() == 'def'
+        column.getCustomRead() == 'r'
+        column.getCustomWrite() == 'w'
 
         1 * numericBinder.bindNumericColumnConstraints(column, cc, _)
-        1 * keyCreator.createKeyForProps(prop, "p", table, "num_col")
-        1 * indexBinder.bindIndex("num_col", column, cc, table)
+        1 * keyCreator.createKeyForProps(prop, 'p', table, 'num_col')
+        1 * indexBinder.bindIndex('num_col', column, cc, table)
     }
 
-    def "one-to-one inverse non-owning with hasOne keeps existing name and sets nullable=false"() {
+    def 'one-to-one inverse non-owning with hasOne keeps existing name and sets nullable=false'() {
+
         given:
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def stringBinder = Mock(StringColumnConstraintsBinder)
@@ -130,24 +132,24 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
 
         createPersistentEntity(CBOwner)
         def entity = createPersistentEntity(CBPet)
-        def prop = entity.getPropertyByName("owner")
-        def column = new Column("pre_existing")
+        def prop = entity.getPropertyByName('owner')
+        def column = new Column('pre_existing')
         def table = new Table()
 
         // stubs
-        columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "fetched_col"
+        columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> 'fetched_col'
 
         when:
         binder.bindColumn(prop, null, column, null, null, table)
 
         then:
-        column.getName() == "pre_existing" // should not overwrite existing name
+        column.getName() == 'pre_existing' // should not overwrite existing name
         column.isNullable() == false
-        1 * keyCreator.createKeyForProps(prop, null, table, "fetched_col")
-        1 * indexBinder.bindIndex("fetched_col", column, null, table)
+        1 * keyCreator.createKeyForProps(prop, null, table, 'fetched_col')
+        1 * indexBinder.bindIndex('fetched_col', column, null, table)
     }
 
-    def "string property triggers string constraints binder only"() {
+    def 'string property triggers string constraints binder only'() {
         given:
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def stringBinder = Mock(StringColumnConstraintsBinder)
@@ -164,24 +166,24 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
         )
 
         def entity = createPersistentEntity(CBBook)
-        def prop = entity.getPropertyByName("title")
-        def column = new Column("test")
+        def prop = entity.getPropertyByName('title')
+        def column = new Column('test')
         def table = new Table()
 
-        columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "str_col"
+        columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> 'str_col'
 
         when:
         binder.bindColumn(prop, null, column, null, null, table)
 
         then:
-        column.getName() == "str_col"
+        column.getName() == 'str_col'
         column.isNullable() == false
         1 * stringBinder.bindStringColumnConstraints(column, _)
-        1 * keyCreator.createKeyForProps(prop, null, table, "str_col")
-        1 * indexBinder.bindIndex("str_col", column, null, table)
+        1 * keyCreator.createKeyForProps(prop, null, table, 'str_col')
+        1 * indexBinder.bindIndex('str_col', column, null, table)
     }
 
-    def "one-to-one inverse non-owning without hasOne sets nullable=true"() {
+    def 'one-to-one inverse non-owning without hasOne sets nullable=true'() {
         given:
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def stringBinder = Mock(StringColumnConstraintsBinder)
@@ -199,23 +201,23 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
 
         createPersistentEntity(CBFace)
         def entity = createPersistentEntity(CBNose)
-        def prop = entity.getPropertyByName("face")
+        def prop = entity.getPropertyByName('face')
         def column = new Column()
         def table = new Table()
 
-        columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "one_to_one_fk"
+        columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> 'one_to_one_fk'
 
         when:
         binder.bindColumn(prop, null, column, null, null, table)
 
         then:
-        column.getName() == "one_to_one_fk"
+        column.getName() == 'one_to_one_fk'
         column.isNullable() == true
-        1 * keyCreator.createKeyForProps(prop, null, table, "one_to_one_fk")
-        1 * indexBinder.bindIndex("one_to_one_fk", column, null, table)
+        1 * keyCreator.createKeyForProps(prop, null, table, 'one_to_one_fk')
+        1 * indexBinder.bindIndex('one_to_one_fk', column, null, table)
     }
 
-    def "to-one circular association sets nullable=true"() {
+    def 'to-one circular association sets nullable=true'() {
         given:
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def stringBinder = Mock(StringColumnConstraintsBinder)
@@ -232,23 +234,23 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
         )
 
         def entity = createPersistentEntity(CBCircular)
-        def prop = entity.getPropertyByName("parent")
+        def prop = entity.getPropertyByName('parent')
         def column = new Column()
         def table = new Table()
 
-        columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "to_one_fk"
+        columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> 'to_one_fk'
 
         when:
         binder.bindColumn(prop, null, column, null, null, table)
 
         then:
-        column.getName() == "to_one_fk"
+        column.getName() == 'to_one_fk'
         column.isNullable() == true
-        1 * keyCreator.createKeyForProps(prop, null, table, "to_one_fk")
-        1 * indexBinder.bindIndex("to_one_fk", column, null, table)
+        1 * keyCreator.createKeyForProps(prop, null, table, 'to_one_fk')
+        1 * indexBinder.bindIndex('to_one_fk', column, null, table)
     }
 
-    def "association default nullable falls back to property.isNullable()"() {
+    def 'association default nullable falls back to property.isNullable()'() {
         given:
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def stringBinder = Mock(StringColumnConstraintsBinder)
@@ -265,23 +267,23 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
         )
 
         def entity = createPersistentEntity(CBBook)
-        def prop = entity.getPropertyByName("authors")
+        def prop = entity.getPropertyByName('authors')
         def column = new Column()
         def table = new Table()
 
-        columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "assoc_fk"
+        columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> 'assoc_fk'
 
         when:
         binder.bindColumn(prop, null, column, null, null, table)
 
         then:
-        column.getName() == "assoc_fk"
+        column.getName() == 'assoc_fk'
         column.isNullable() == true
-        1 * keyCreator.createKeyForProps(prop, null, table, "assoc_fk")
-        1 * indexBinder.bindIndex("assoc_fk", column, null, table)
+        1 * keyCreator.createKeyForProps(prop, null, table, 'assoc_fk')
+        1 * indexBinder.bindIndex('assoc_fk', column, null, table)
     }
 
-    def "non-association nullable computed as property OR parent (prop=true, parent=false)"() {
+    def 'non-association nullable computed as property OR parent (prop=true, parent=false)'() {
         given:
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def stringBinder = Mock(StringColumnConstraintsBinder)
@@ -298,25 +300,25 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
         )
 
         def entity = createPersistentEntity(CBNullableEntity)
-        def prop = entity.getPropertyByName("nullableProp")
+        def prop = entity.getPropertyByName('nullableProp')
         def parentProp = Mock(HibernatePersistentProperty)
-        def column = new Column("test")
+        def column = new Column('test')
         def table = new Table()
 
-        columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "na_col"
+        columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> 'na_col'
         parentProp.isNullable() >> false
 
         when:
         binder.bindColumn(prop, parentProp, column, null, null, table)
 
         then:
-        column.getName() == "na_col"
+        column.getName() == 'na_col'
         column.isNullable() == true
-        1 * keyCreator.createKeyForProps(prop, null, table, "na_col")
-        1 * indexBinder.bindIndex("na_col", column, null, table)
+        1 * keyCreator.createKeyForProps(prop, null, table, 'na_col')
+        1 * indexBinder.bindIndex('na_col', column, null, table)
     }
 
-    def "non-association nullable computed as property OR parent (prop=false, parent=true)"() {
+    def 'non-association nullable computed as property OR parent (prop=false, parent=true)'() {
         given:
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def stringBinder = Mock(StringColumnConstraintsBinder)
@@ -333,25 +335,25 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
         )
 
         def entity = createPersistentEntity(CBBook)
-        def prop = entity.getPropertyByName("title")
+        def prop = entity.getPropertyByName('title')
         def parentProp = Mock(HibernatePersistentProperty)
-        def column = new Column("test")
+        def column = new Column('test')
         def table = new Table()
 
-        columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "na_col2"
+        columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> 'na_col2'
         parentProp.isNullable() >> true
 
         when:
         binder.bindColumn(prop, parentProp, column, null, null, table)
 
         then:
-        column.getName() == "na_col2"
+        column.getName() == 'na_col2'
         column.isNullable() == true
-        1 * keyCreator.createKeyForProps(prop, null, table, "na_col2")
-        1 * indexBinder.bindIndex("na_col2", column, null, table)
+        1 * keyCreator.createKeyForProps(prop, null, table, 'na_col2')
+        1 * indexBinder.bindIndex('na_col2', column, null, table)
     }
 
-    def "non-association nullable computed as property OR parent (both false)"() {
+    def 'non-association nullable computed as property OR parent (both false)'() {
         given:
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def stringBinder = Mock(StringColumnConstraintsBinder)
@@ -368,25 +370,25 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
         )
 
         def entity = createPersistentEntity(CBBook)
-        def prop = entity.getPropertyByName("title")
+        def prop = entity.getPropertyByName('title')
         def parentProp = Mock(HibernatePersistentProperty)
-        def column = new Column("test")
+        def column = new Column('test')
         def table = new Table()
 
-        columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "na_col3"
+        columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> 'na_col3'
         parentProp.isNullable() >> false
 
         when:
         binder.bindColumn(prop, parentProp, column, null, null, table)
 
         then:
-        column.getName() == "na_col3"
+        column.getName() == 'na_col3'
         column.isNullable() == false
-        1 * keyCreator.createKeyForProps(prop, null, table, "na_col3")
-        1 * indexBinder.bindIndex("na_col3", column, null, table)
+        1 * keyCreator.createKeyForProps(prop, null, table, 'na_col3')
+        1 * indexBinder.bindIndex('na_col3', column, null, table)
     }
 
-    def "uniqueness handling scenarios"() {
+    def 'uniqueness handling scenarios'() {
         given:
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def stringBinder = Mock(StringColumnConstraintsBinder)
@@ -403,14 +405,14 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
         )
 
         def entity = createPersistentEntity(CBUniqueEntity)
-        def column = new Column("test")
+        def column = new Column('test')
         def table = new Table()
 
-        def propUnique = entity.getPropertyByName("uniqueProp")
-        columnNameFetcher.getColumnNameForPropertyAndPath(propUnique, null, null) >> "u_col"
+        def propUnique = entity.getPropertyByName('uniqueProp')
+        columnNameFetcher.getColumnNameForPropertyAndPath(propUnique, null, null) >> 'u_col'
 
-        def propNotUnique = entity.getPropertyByName("notUniqueProp")
-        columnNameFetcher.getColumnNameForPropertyAndPath(propNotUnique, null, null) >> "nu_col"
+        def propNotUnique = entity.getPropertyByName('notUniqueProp')
+        columnNameFetcher.getColumnNameForPropertyAndPath(propNotUnique, null, null) >> 'nu_col'
 
         when:
         binder.bindColumn(propUnique, null, column, null, null, table)
@@ -419,14 +421,14 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
         column.isUnique()
 
         when:
-        def column2 = new Column("test2")
+        def column2 = new Column('test2')
         binder.bindColumn(propNotUnique, null, column2, null, null, table)
 
         then:
         !column2.isUnique()
     }
 
-    def "owner not root with tablePerHierarchy=false sets nullable to property.isNullable()"() {
+    def 'owner not root with tablePerHierarchy=false sets nullable to property.isNullable()'() {
         given:
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def stringBinder = Mock(StringColumnConstraintsBinder)
@@ -443,23 +445,23 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
         )
 
         def entity = createPersistentEntity(CBSubNonTph)
-        def prop = entity.getPropertyByName("subProp")
-        def column = new Column("test")
+        def prop = entity.getPropertyByName('subProp')
+        def column = new Column('test')
         def table = new Table()
 
-        columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "sub_col"
+        columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> 'sub_col'
 
         when:
         binder.bindColumn(prop, null, column, null, null, table)
 
         then:
-        column.getName() == "sub_col"
+        column.getName() == 'sub_col'
         !column.isNullable()
-        1 * keyCreator.createKeyForProps(prop, null, table, "sub_col")
-        1 * indexBinder.bindIndex("sub_col", column, null, table)
+        1 * keyCreator.createKeyForProps(prop, null, table, 'sub_col')
+        1 * indexBinder.bindIndex('sub_col', column, null, table)
     }
 
-    def "byte array property triggers string constraints binder"() {
+    def 'byte array property triggers string constraints binder'() {
         given:
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def stringBinder = Mock(StringColumnConstraintsBinder)
@@ -476,11 +478,11 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
         )
 
         def entity = createPersistentEntity(CBByteArrayEntity)
-        def prop = entity.getPropertyByName("data")
-        def column = new Column("test")
+        def prop = entity.getPropertyByName('data')
+        def column = new Column('test')
         def table = new Table()
 
-        columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "data_col"
+        columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> 'data_col'
 
         when:
         binder.bindColumn(prop, null, column, null, null, table)
@@ -489,7 +491,7 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
         1 * stringBinder.bindStringColumnConstraints(column, _)
     }
 
-    def "uniqueness is false when uniqueWithinGroup is true"() {
+    def 'uniqueness is false when uniqueWithinGroup is true'() {
         given:
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def stringBinder = Mock(StringColumnConstraintsBinder)
@@ -506,11 +508,11 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
         )
 
         def entity = createPersistentEntity(CBUniqueGroupEntity)
-        def prop = entity.getPropertyByName("groupedProp")
-        def column = new Column("test")
+        def prop = entity.getPropertyByName('groupedProp')
+        def column = new Column('test')
         def table = new Table()
 
-        columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> "g_col"
+        columnNameFetcher.getColumnNameForPropertyAndPath(prop, null, null) >> 'g_col'
 
         when:
         binder.bindColumn(prop, null, column, null, null, table)
@@ -522,10 +524,11 @@ class ColumnBinderSpec extends HibernateGormDatastoreSpec {
 
 @Entity
 class CBBook {
+
     String title
     static hasMany = [authors: CBAuthor]
     static mapping = {
-        authors joinTable: [name: "cb_book_authors", key: "book_id", column: "author_id"]
+        authors joinTable: [name: 'cb_book_authors', key: 'book_id', column: 'author_id']
     }
     static constraints = {
         title nullable: false
@@ -535,6 +538,7 @@ class CBBook {
 
 @Entity
 class CBAuthor {
+
     String name
     static constraints = {
         name nullable: false
@@ -543,10 +547,12 @@ class CBAuthor {
 
 @Entity
 class CBNumericBase {
+
 }
 
 @Entity
 class CBNumericSub extends CBNumericBase {
+
     Integer num
     static constraints = {
         num nullable: false
@@ -555,32 +561,38 @@ class CBNumericSub extends CBNumericBase {
 
 @Entity
 class CBOwner {
+
     static hasOne = [pet: CBPet]
 }
 
 @Entity
 class CBPet {
+
     String name
     CBOwner owner
 }
 
 @Entity
 class CBFace {
+
     CBNose nose
 }
 
 @Entity
 class CBNose {
+
     CBFace face
 }
 
 @Entity
 class CBCircular {
+
     CBCircular parent
 }
 
 @Entity
 class CBNullableEntity {
+
     String nullableProp
     static constraints = {
         nullableProp nullable: true
@@ -589,6 +601,7 @@ class CBNullableEntity {
 
 @Entity
 class CBUniqueEntity {
+
     String uniqueProp
     String notUniqueProp
     static mapping = {
@@ -599,6 +612,7 @@ class CBUniqueEntity {
 
 @Entity
 class CBBaseNonTph {
+
     static mapping = {
         tablePerHierarchy false
     }
@@ -606,6 +620,7 @@ class CBBaseNonTph {
 
 @Entity
 class CBSubNonTph extends CBBaseNonTph {
+
     String subProp
     static constraints = {
         subProp nullable: false
@@ -614,11 +629,13 @@ class CBSubNonTph extends CBBaseNonTph {
 
 @Entity
 class CBByteArrayEntity {
+
     byte[] data
 }
 
 @Entity
 class CBUniqueGroupEntity {
+
     String groupedProp
     static mapping = {
         groupedProp unique: 'group1'

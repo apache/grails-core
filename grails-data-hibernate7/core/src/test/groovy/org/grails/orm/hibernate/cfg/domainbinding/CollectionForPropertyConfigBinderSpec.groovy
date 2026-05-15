@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -34,12 +34,9 @@ class CollectionForPropertyConfigBinderSpec extends HibernateGormDatastoreSpec {
     @Subject
     CollectionForPropertyConfigBinder binder = new CollectionForPropertyConfigBinder()
 
-
-
-
     @Unroll
     def "should bind lazy settings based on fetch mode '#fetchMode.name()'} and an explicit lazy config of #lazySetting"() {
-        given: "A hibernate collection and a mocked property"
+        given: 'A hibernate collection and a mocked property'
         def owner = new RootClass(grailsDomainBinder.metadataBuildingContext)
         def collection = new Set(grailsDomainBinder.metadataBuildingContext, owner)
         def property = Mock(HibernateToManyProperty)
@@ -48,13 +45,13 @@ class CollectionForPropertyConfigBinderSpec extends HibernateGormDatastoreSpec {
         collection.setLazy(false)
         collection.setExtraLazy(false)
 
-        and: "the property is stubbed"
+        and: 'the property is stubbed'
         property.getFetchMode() >> fetchMode
         property.getLazy() >> lazySetting
         property.getCollection() >> collection
         property.isLazy() >> expectedIsLazy
 
-        when: "the binder is applied"
+        when: 'the binder is applied'
         binder.bindCollectionForPropertyConfig(property)
 
         then: "the collection's lazy and extraLazy properties are set according to the binder's logic"
@@ -71,7 +68,5 @@ class CollectionForPropertyConfigBinderSpec extends HibernateGormDatastoreSpec {
         FetchMode.SELECT  | null        || true           | false
 //        FetchMode.SUBSELECT | true      || true           | true
     }
-
-
 
 }

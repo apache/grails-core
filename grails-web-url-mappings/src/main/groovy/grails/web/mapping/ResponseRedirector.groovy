@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -101,7 +101,7 @@ class ResponseRedirector {
         // @Issue('11673')
         if (absolute) namedParameters.put(LinkGenerator.ATTRIBUTE_CONTEXT_PATH, BLANK)
 
-        // If the request parameters contain "keepParamsWhenRedirect = true", then we add the original params. The
+        // If the request parameters contain 'keepParamsWhenRedirect = true', then we add the original params. The
         // new attribute can be used from UrlMappings to redirect from old URLs to new ones while keeping the params
         // See https://github.com/apache/grails-core/issues/10622 & https://github.com/apache/grails-core/issues/10965
         if (Boolean.valueOf(arguments.get(KEEP_PARAMS_WHEN_REDIRECT).toString())) {

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -52,129 +52,129 @@ class DomainClassPropertyAccessorSpec extends BuildsAccessorFactory {
     }
 
     void setup() {
-        address = new Address(street: "94 Evergreen Terrace", city: "Springfield", country: "USA")
-        person = new Person(name: "Bart Simpson", password: "bartman", gender: Gender.Male, dateOfBirth: Date.parse('yyyy-MM-dd', '1987-04-19'), address: address)
-        person.emails = [home: "bart@thesimpsons.net", school: "bart.simpson@springfieldelementary.edu"]
+        address = new Address(street: '94 Evergreen Terrace', city: 'Springfield', country: 'USA')
+        person = new Person(name: 'Bart Simpson', password: 'bartman', gender: Gender.Male, dateOfBirth: Date.parse('yyyy-MM-dd', '1987-04-19'), address: address)
+        person.emails = [home: 'bart@thesimpsons.net', school: 'bart.simpson@springfieldelementary.edu']
         person.save(failOnError: true)
 
         employee = new Employee(name: 'Homer J Simpson', password: 'mmmdonuts', gender: Gender.Male, address: address, salary: 120)
         employee.save(failOnError: true)
 
-        author = new Author(name: "William Gibson")
-        author.addToBooks new Book(title: "Pattern Recognition")
-        author.addToBooks new Book(title: "Spook Country")
-        author.addToBooks new Book(title: "Zero History")
+        author = new Author(name: 'William Gibson')
+        author.addToBooks new Book(title: 'Pattern Recognition')
+        author.addToBooks new Book(title: 'Spook Country')
+        author.addToBooks new Book(title: 'Zero History')
         author.save(failOnError: true)
     }
 
-    void "fails sensibly when given an invalid property path"() {
+    void 'fails sensibly when given an invalid property path'() {
         when:
-        factory.accessorFor(person, "invalid")
+        factory.accessorFor(person, 'invalid')
 
         then:
         thrown NotReadablePropertyException
     }
 
-    void "resolves basic property"() {
+    void 'resolves basic property'() {
         given:
-        def propertyAccessor = factory.accessorFor(person, "name")
+        def propertyAccessor = factory.accessorFor(person, 'name')
 
         expect:
         propertyAccessor.value == person.name
         propertyAccessor.rootBeanType == Person
         propertyAccessor.beanType == Person
         propertyAccessor.entity.javaClass == Person
-        propertyAccessor.pathFromRoot == "name"
-        propertyAccessor.propertyName == "name"
+        propertyAccessor.pathFromRoot == 'name'
+        propertyAccessor.propertyName == 'name'
         propertyAccessor.propertyType == String
-        propertyAccessor.domainProperty.name == "name"
+        propertyAccessor.domainProperty.name == 'name'
     }
 
-    void "resolves embedded property"() {
+    void 'resolves embedded property'() {
         given:
-        def propertyAccessor = factory.accessorFor(person, "address.city")
+        def propertyAccessor = factory.accessorFor(person, 'address.city')
 
         expect:
         propertyAccessor.value == address.city
         propertyAccessor.rootBeanType == Person
         propertyAccessor.beanType == Address
         propertyAccessor.entity == null // TODO: check if this is really the case when not mocked
-        propertyAccessor.pathFromRoot == "address.city"
-        propertyAccessor.propertyName == "city"
+        propertyAccessor.pathFromRoot == 'address.city'
+        propertyAccessor.propertyName == 'city'
         propertyAccessor.propertyType == String
         propertyAccessor.domainProperty == null
     }
 
-    void "resolves property of indexed association"() {
+    void 'resolves property of indexed association'() {
         given:
-        def propertyAccessor = factory.accessorFor(author, "books[0].title")
+        def propertyAccessor = factory.accessorFor(author, 'books[0].title')
 
         expect:
-        propertyAccessor.value == "Pattern Recognition"
+        propertyAccessor.value == 'Pattern Recognition'
         propertyAccessor.rootBeanType == Author
         propertyAccessor.beanType == Book
         propertyAccessor.entity.javaClass == Book
-        propertyAccessor.pathFromRoot == "books[0].title"
-        propertyAccessor.propertyName == "title"
+        propertyAccessor.pathFromRoot == 'books[0].title'
+        propertyAccessor.propertyName == 'title'
         propertyAccessor.propertyType == String
-        propertyAccessor.domainProperty.name == "title"
+        propertyAccessor.domainProperty.name == 'title'
     }
 
-    void "resolves other side of many-to-one association"() {
+    void 'resolves other side of many-to-one association'() {
         given:
-        def propertyAccessor = factory.accessorFor(author.books[0], "author.name")
+        def propertyAccessor = factory.accessorFor(author.books[0], 'author.name')
 
         expect:
         propertyAccessor.value == author.name
         propertyAccessor.rootBeanType == Book
         propertyAccessor.beanType == Author
         propertyAccessor.entity.javaClass == Author
-        propertyAccessor.pathFromRoot == "author.name"
-        propertyAccessor.propertyName == "name"
+        propertyAccessor.pathFromRoot == 'author.name'
+        propertyAccessor.propertyName == 'name'
         propertyAccessor.propertyType == String
-        propertyAccessor.domainProperty.name == "name"
+        propertyAccessor.domainProperty.name == 'name'
     }
 
-    void "resolves property of simple mapped association"() {
+    void 'resolves property of simple mapped association'() {
         given:
-        def propertyAccessor = factory.accessorFor(person, "emails[home]")
+        def propertyAccessor = factory.accessorFor(person, 'emails[home]')
 
         expect:
-        propertyAccessor.value == "bart@thesimpsons.net"
+        propertyAccessor.value == 'bart@thesimpsons.net'
         propertyAccessor.rootBeanType == Person
         propertyAccessor.beanType == Person
-        propertyAccessor.pathFromRoot == "emails[home]"
-        propertyAccessor.propertyName == "emails"
+        propertyAccessor.pathFromRoot == 'emails[home]'
+        propertyAccessor.propertyName == 'emails'
         propertyAccessor.propertyType == String
-        propertyAccessor.domainProperty.name == "emails"
+        propertyAccessor.domainProperty.name == 'emails'
     }
 
-    void "resolves basic property when value is null"() {
+    void 'resolves basic property when value is null'() {
         given:
         person.name = null
 
         and:
-        def propertyAccessor = factory.accessorFor(person, "name")
+        def propertyAccessor = factory.accessorFor(person, 'name')
 
         expect:
         propertyAccessor.value == null
-        propertyAccessor.pathFromRoot == "name"
-        propertyAccessor.propertyName == "name"
+        propertyAccessor.pathFromRoot == 'name'
+        propertyAccessor.propertyName == 'name'
         propertyAccessor.propertyType == String
-        propertyAccessor.domainProperty.name == "name"
+        propertyAccessor.domainProperty.name == 'name'
     }
 
-    void "resolves embedded property when intervening path is null"() {
+    void 'resolves embedded property when intervening path is null'() {
         given:
         person.address = null
 
         and:
-        def propertyAccessor = factory.accessorFor(person, "address.city")
+        def propertyAccessor = factory.accessorFor(person, 'address.city')
 
         expect:
         propertyAccessor.value == null
-        propertyAccessor.pathFromRoot == "address.city"
-        propertyAccessor.propertyName == "city"
+        propertyAccessor.pathFromRoot == 'address.city'
+        propertyAccessor.propertyName == 'city'
         propertyAccessor.propertyType == String
         propertyAccessor.domainProperty == null
     }
@@ -199,9 +199,10 @@ class DomainClassPropertyAccessorSpec extends BuildsAccessorFactory {
         'author.placeOfBirth' | false
     }
 
-    void "resolves constraints of basic domain class property"() {
+    void 'resolves constraints of basic domain class property'() {
+
         given:
-        def propertyAccessor = factory.accessorFor(person, "name")
+        def propertyAccessor = factory.accessorFor(person, 'name')
 
         expect:
         !propertyAccessor.constraints.nullable
@@ -218,21 +219,21 @@ class DomainClassPropertyAccessorSpec extends BuildsAccessorFactory {
 
         where:
         beanType | property         | type
-        Person   | "dateOfBirth"    | Date
-        Person   | "address"        | Address
-        Person   | "address.city"   | String
-        Author   | "books"          | List
-        Author   | "books[0]"       | Book
-        Author   | "books[0].title" | String
+        Person   | 'dateOfBirth'    | Date
+        Person   | 'address'        | Address
+        Person   | 'address.city'   | String
+        Author   | 'books'          | List
+        Author   | 'books[0]'       | Book
+        Author   | 'books[0].title' | String
     }
 
-    void "resolves constraints of embedded property"() {
+    void 'resolves constraints of embedded property'() {
         given:
-        def propertyAccessor = factory.accessorFor(person, "address.country")
+        def propertyAccessor = factory.accessorFor(person, 'address.country')
 
         expect:
         !propertyAccessor.constraints.nullable
-        propertyAccessor.constraints.inList == ["USA", "UK", "Canada"]
+        propertyAccessor.constraints.inList == ['USA', 'UK', 'Canada']
     }
 
 	@Issue('https://github.com/grails/fields/issues/38')
@@ -255,6 +256,7 @@ class DomainClassPropertyAccessorSpec extends BuildsAccessorFactory {
 
 	@Issue('https://github.com/grails/fields/issues/340')
 	void "label keys for '#property' are '#labels' when addPathFromRoot == true"() {
+
 		given:
 		config.setAt('grails.plugin.fields.i18n.addPathFromRoot', true)
 		def bean = beanType.list().find { it.class == beanType}
@@ -273,6 +275,7 @@ class DomainClassPropertyAccessorSpec extends BuildsAccessorFactory {
 	}
 
     void "default label for '#property' is '#label'"() {
+
         given:
         def bean = beanType.list().first()
         def propertyAccessor = factory.accessorFor(bean, property)
@@ -282,91 +285,91 @@ class DomainClassPropertyAccessorSpec extends BuildsAccessorFactory {
 
         where:
         beanType | property         | label
-        Person   | "name"           | "Name"
-        Person   | "dateOfBirth"    | "Date Of Birth"
-        Person   | "address"        | "Address"
-        Person   | "address.city"   | "City"
-        Author   | "books[0].title" | "Title"
+        Person   | 'name'           | 'Name'
+        Person   | 'dateOfBirth'    | 'Date Of Birth'
+        Person   | 'address'        | 'Address'
+        Person   | 'address.city'   | 'City'
+        Author   | 'books[0].title' | 'Title'
     }
 
-    void "resolves errors for a basic property"() {
+    void 'resolves errors for a basic property'() {
         given:
-        person.name = ""
+        person.name = ''
 
         and:
-        def propertyAccessor = factory.accessorFor(person, "name")
+        def propertyAccessor = factory.accessorFor(person, 'name')
 
         expect:
         !person.validate()
 
         and:
-        propertyAccessor.errors.first().code == "blank"
+        propertyAccessor.errors.first().code == 'blank'
         propertyAccessor.invalid
     }
 
-    @Issue("http://jira.grails.org/browse/GRAILS-7713")
-    void "resolves errors for an embedded property"() {
+    @Issue('http://jira.grails.org/browse/GRAILS-7713')
+    void 'resolves errors for an embedded property'() {
         given:
-        person.address.country = "Australia"
+        person.address.country = 'Australia'
         person.errors.rejectValue('address.country', 'not.inList') // http://jira.grails.org/browse/GRAILS-8480
 
         when:
-        BeanPropertyAccessor propertyAccessor = factory.accessorFor(person, "address.country")
+        BeanPropertyAccessor propertyAccessor = factory.accessorFor(person, 'address.country')
 
         then:
-        propertyAccessor.errors.first().code == "not.inList"
+        propertyAccessor.errors.first().code == 'not.inList'
         propertyAccessor.invalid
     }
 
-    @Issue("http://jira.grails.org/browse/GRAILS-7713")
-    void "resolves errors for an indexed property"() {
+    @Issue('http://jira.grails.org/browse/GRAILS-7713')
+    void 'resolves errors for an indexed property'() {
         given:
-        author.books[0].title = ""
+        author.books[0].title = ''
         author.errors.rejectValue('books[0].title', 'blank') // http://jira.grails.org/browse/GRAILS-7713
 
         and:
-        def propertyAccessor = factory.accessorFor(author, "books[0].title")
+        def propertyAccessor = factory.accessorFor(author, 'books[0].title')
 
         expect:
-        propertyAccessor.errors.first().code == "blank"
+        propertyAccessor.errors.first().code == 'blank'
         propertyAccessor.invalid
     }
 
     @Issue('https://github.com/grails/fields/issues/160')
-    void "resolves transient property"() {
+    void 'resolves transient property'() {
         given:
-        def propertyAccessor = factory.accessorFor(person, "transientText")
+        def propertyAccessor = factory.accessorFor(person, 'transientText')
 
         expect:
         propertyAccessor.value == person.transientText
         propertyAccessor.rootBeanType == Person
         propertyAccessor.beanType == Person
         propertyAccessor.entity.javaClass == Person
-        propertyAccessor.pathFromRoot == "transientText"
-        propertyAccessor.propertyName == "transientText"
+        propertyAccessor.pathFromRoot == 'transientText'
+        propertyAccessor.propertyName == 'transientText'
         propertyAccessor.propertyType == String
         propertyAccessor.domainProperty == null
         propertyAccessor.constraints.nullable
     }
 
     @Issue('https://github.com/grails/fields/issues/160')
-    void "resolves id property that has no constraints"() {
+    void 'resolves id property that has no constraints'() {
         given:
-        def propertyAccessor = factory.accessorFor(person, "id")
+        def propertyAccessor = factory.accessorFor(person, 'id')
 
         expect:
         propertyAccessor.value == person.id
         propertyAccessor.rootBeanType == Person
         propertyAccessor.beanType == Person
         propertyAccessor.entity.javaClass == Person
-        propertyAccessor.pathFromRoot == "id"
-        propertyAccessor.propertyName == "id"
+        propertyAccessor.pathFromRoot == 'id'
+        propertyAccessor.propertyName == 'id'
         propertyAccessor.propertyType == Long
-        propertyAccessor.domainProperty.name == "id"
+        propertyAccessor.domainProperty.name == 'id'
         //propertyAccessor.constraints == null
     }
 
-    void "the #path property is required:#expected"() {
+    void 'the #path property is required:#expected'() {
         given:
         def propertyAccessor = factory.accessorFor(person, path)
 
@@ -375,12 +378,12 @@ class DomainClassPropertyAccessorSpec extends BuildsAccessorFactory {
 
         where:
         path          | expected
-        "name"        | true // non-blank string
-        "dateOfBirth" | false // nullable object
+        'name'        | true // non-blank string
+        'dateOfBirth' | false // nullable object
         // Fails in Grails 2.4.3:
-        // "password"    | false // blank string
-        "gender"      | true // non-nullable string
-        "minor"       | false // boolean properties are never considered required
+        // 'password'    | false // blank string
+        'gender'      | true // non-nullable string
+        'minor'       | false // boolean properties are never considered required
     }
 
     def 'the superclasses of #type.simpleName are #expected'() {
@@ -421,7 +424,6 @@ class DomainClassPropertyAccessorSpec extends BuildsAccessorFactory {
         'gender'      | [Enum, Constable]
         'dateOfBirth' | []
     }
-
 
     void 'the superclasses of a primitive include the superclasses of the wrapper'() {
         given:

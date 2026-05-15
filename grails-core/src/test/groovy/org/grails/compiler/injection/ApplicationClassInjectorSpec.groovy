@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -26,7 +26,7 @@ import spock.util.environment.RestoreSystemProperties
 class ApplicationClassInjectorSpec extends Specification {
 
     @Unroll
-    def "EXCLUDED_AUTO_CONFIGURE_CLASSES contains expected entry #className"(String className) {
+    def 'EXCLUDED_AUTO_CONFIGURE_CLASSES contains expected entry #className'(String className) {
         expect:
         ApplicationClassInjector.EXCLUDED_AUTO_CONFIGURE_CLASSES.contains(className)
 
@@ -39,7 +39,7 @@ class ApplicationClassInjectorSpec extends Specification {
     }
 
     @Unroll
-    def "CONDITIONAL_EXCLUSIONS contains expected entry #expected.excludeClass"(Map<String, String> expected) {
+    def 'CONDITIONAL_EXCLUSIONS contains expected entry #expected.excludeClass'(Map<String, String> expected) {
         when:
         def exclusion = ApplicationClassInjector.CONDITIONAL_EXCLUSIONS.find {
             it.excludeClass == expected.excludeClass
@@ -60,7 +60,7 @@ class ApplicationClassInjectorSpec extends Specification {
         ]
     }
 
-    def "system property defaults to true (exclusion enabled)"() {
+    def 'system property defaults to true (exclusion enabled)'() {
         given:
         def prop = 'grails.autoconfigure.exclude.liquibase'
 
@@ -71,7 +71,7 @@ class ApplicationClassInjectorSpec extends Specification {
         Boolean.parseBoolean(System.getProperty(prop, 'true'))
     }
 
-    def "system property set to false disables exclusion"() {
+    def 'system property set to false disables exclusion'() {
         given:
         def prop = 'grails.autoconfigure.exclude.liquibase'
 
@@ -82,7 +82,7 @@ class ApplicationClassInjectorSpec extends Specification {
         !Boolean.parseBoolean(System.getProperty(prop, 'true'))
     }
 
-    def "shouldInject returns false for null URL"() {
+    def 'shouldInject returns false for null URL'() {
         given:
         def injector = new ApplicationClassInjector()
 
@@ -90,7 +90,7 @@ class ApplicationClassInjectorSpec extends Specification {
         !injector.shouldInject(null)
     }
 
-    def "artefact types contains Application"() {
+    def 'artefact types contains Application'() {
         given:
         def injector = new ApplicationClassInjector()
 

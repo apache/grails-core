@@ -4,27 +4,27 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
  */
 
-description("Creates a scaffolded controller") {
+description('Creates a scaffolded controller') {
   	usage 'create-scaffold-controller [controller name]'
     completer org.grails.cli.interactive.completers.DomainClassCompleter
-    argument name:'Controller Name', description:"The name of controller", required:true
-    flag name:'force', description:"Whether to overwrite existing files"
-    flag name:'namespace', description:"The namespace for the controller"
-    flag name:'service', description:"Use grails.plugin.scaffolding.RestfulServiceController instead of grails.rest.RestfulController"
-    flag name:'extends', description:"The class to extend (default: grails.rest.RestfulController)"
+    argument name:'Controller Name', description: 'The name of controller', required: true
+    flag name:'force', description: 'Whether to overwrite existing files'
+    flag name:'namespace', description: 'The namespace for the controller'
+    flag name:'service', description: 'Use grails.plugin.scaffolding.RestfulServiceController instead of grails.rest.RestfulController'
+    flag name:'extends', description: 'The class to extend (default: grails.rest.RestfulController)'
  }
 
 def modelInstance = model(args[0])
@@ -46,7 +46,7 @@ if (namespace) {
 }
 
 render 	 template: template('scaffolding/ScaffoldedController.groovy'),
-	     destination: file("${destinationPath}/${modelInstance.convention("Controller")}.groovy"),
+	     destination: file("${destinationPath}/${modelInstance.convention('Controller')}.groovy"),
 	     model: templateModel,
 	     overwrite: overwrite
 

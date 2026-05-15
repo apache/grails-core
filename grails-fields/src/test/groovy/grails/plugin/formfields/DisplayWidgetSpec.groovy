@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -32,71 +32,71 @@ class DisplayWidgetSpec extends AbstractFormFieldsTagLibSpec implements TagLibUn
 	}
 
 	def setup() {
-        mockFormFieldsTemplateService.getTemplateFor('displayWidget') >> "displayWidget"
+        mockFormFieldsTemplateService.getTemplateFor('displayWidget') >> 'displayWidget'
 		tagLib.formFieldsTemplateService = mockFormFieldsTemplateService
 	}
 
 	void 'f:displayWidget without template and a date value renders the formatted date'() {
 		expect:
-		applyTemplate('<f:displayWidget bean="personInstance" property="dateOfBirth"/>', [personInstance: personInstance]) == applyTemplate('<g:formatDate date="${personInstance.dateOfBirth}" type="DATETIME"/>', [personInstance: personInstance])
+		applyTemplate('<f:displayWidget bean='personInstance' property='dateOfBirth'/>', [personInstance: personInstance]) == applyTemplate('<g:formatDate date="${personInstance.dateOfBirth}' type='DATETIME"/>', [personInstance: personInstance])
 	}
 
 	void 'f:displayWidget without template and an instant value renders the formatted date'() {
 		expect:
-		applyTemplate('<f:displayWidget bean="cyborgInstance" property="timestamp"/>', [cyborgInstance: cyborgInstance]) == applyTemplate('<g:formatDate date="${cyborgInstance.timestamp}" type="DATETIME"/>', [cyborgInstance: cyborgInstance])
+		applyTemplate('<f:displayWidget bean='cyborgInstance' property='timestamp'/>', [cyborgInstance: cyborgInstance]) == applyTemplate('<g:formatDate date="${cyborgInstance.timestamp}' type='DATETIME"/>', [cyborgInstance: cyborgInstance])
 	}
 
 	void 'f:displayWidget without template and a LocalDate value renders the formatted date'() {
 		expect:
-		applyTemplate('<f:displayWidget bean="cyborgInstance" property="birthDate"/>', [cyborgInstance: cyborgInstance]) == applyTemplate('<g:formatDate date="${cyborgInstance.birthDate}" type="DATE"/>', [cyborgInstance: cyborgInstance])
+		applyTemplate('<f:displayWidget bean='cyborgInstance' property='birthDate'/>', [cyborgInstance: cyborgInstance]) == applyTemplate('<g:formatDate date="${cyborgInstance.birthDate}' type='DATE"/>', [cyborgInstance: cyborgInstance])
 	}
 
 	void 'f:displayWidget without template and a boolean value renders the formatted boolean'() {
 		expect:
-		applyTemplate('<f:displayWidget bean="personInstance" property="minor"/>', [personInstance: personInstance]) == applyTemplate('<g:formatBoolean boolean="${personInstance.minor}"/>', [personInstance: personInstance])
+		applyTemplate('<f:displayWidget bean='personInstance' property='minor'/>', [personInstance: personInstance]) == applyTemplate('<g:formatBoolean boolean="${personInstance.minor}"/>', [personInstance: personInstance])
 	}
 
 	void 'f:displayWidget without template and a Boolean value renders the formatted Boolean'() {
 		expect:
-		applyTemplate('<f:displayWidget bean="personInstance" property="grailsDeveloper"/>', [personInstance: personInstance]) == applyTemplate('<g:formatBoolean boolean="${personInstance.grailsDeveloper}"/>', [personInstance: personInstance])
+		applyTemplate('<f:displayWidget bean='personInstance' property='grailsDeveloper'/>', [personInstance: personInstance]) == applyTemplate('<g:formatBoolean boolean="${personInstance.grailsDeveloper}"/>', [personInstance: personInstance])
 	}
 
 	void 'f:displayWidget without template and a regular value renders the field value'() {
 		expect:
-		applyTemplate('<f:displayWidget bean="personInstance" property="salutation"/>', [personInstance: personInstance]) == applyTemplate('<g:fieldValue bean="${personInstance}" field="salutation"/>', [personInstance: personInstance])
+		applyTemplate('<f:displayWidget bean='personInstance' property='salutation'/>', [personInstance: personInstance]) == applyTemplate('<g:fieldValue bean="${personInstance}' field='salutation"/>', [personInstance: personInstance])
 	}
 
 	void 'f:displayWidget without template and a String value renders the String value'() {
 		expect:
-		applyTemplate('<f:displayWidget bean="personInstance" property="name"/>', [personInstance: personInstance]) == personInstance.name
+		applyTemplate('<f:displayWidget bean='personInstance' property='name'/>', [personInstance: personInstance]) == personInstance.name
 	}
 
     void 'f:displayWidget with a template renders the template'() {
         given:
-        views["/_fields/person/name/_displayWidget.gsp"] = 'Some displayWidget'
+        views['/_fields/person/name/_displayWidget.gsp'] = 'Some displayWidget'
 
         and:
         mockFormFieldsTemplateService.findTemplate(_, 'displayWidget', null, null) >> [path: '/_fields/person/name/displayWidget']
 
         expect:
-		applyTemplate('<f:displayWidget bean="personInstance" property="name"/>', [personInstance: personInstance]) == 'Some displayWidget'
+		applyTemplate('<f:displayWidget bean='personInstance' property='name'/>', [personInstance: personInstance]) == 'Some displayWidget'
 	}
 
 	void 'f:displayWidget with a template and theme renders the template from theme'() {
 		given:
-		views["/_fields/person/name/_displayWidget.gsp"] = 'Some displayWidget'
-		views["/_fields/_themes/test/person/name/_displayWidget.gsp"] = 'theme displayWidget'
+		views['/_fields/person/name/_displayWidget.gsp'] = 'Some displayWidget'
+		views['/_fields/_themes/test/person/name/_displayWidget.gsp'] = 'theme displayWidget'
 
 		and:
-		mockFormFieldsTemplateService.findTemplate(_, 'displayWidget', null, "test") >> [path: '/_fields/_themes/test/person/name/displayWidget']
+		mockFormFieldsTemplateService.findTemplate(_, 'displayWidget', null, 'test') >> [path: '/_fields/_themes/test/person/name/displayWidget']
 
 		expect:
-		applyTemplate('<f:displayWidget bean="personInstance" property="name" theme="test"/>', [personInstance: personInstance]) == 'theme displayWidget'
+		applyTemplate('<f:displayWidget bean='personInstance' property='name' theme='test'/>', [personInstance: personInstance]) == 'theme displayWidget'
 	}
 
 	void 'f:displayWidget escapes values to avoid XSS atacks'() {
 		expect:
-		applyTemplate('<f:displayWidget bean="productInstance" property="name"/>', [productInstance: productInstance]) == "&lt;script&gt;alert(&#39;XSS&#39;);&lt;/script&gt;"
+		applyTemplate('<f:displayWidget bean='productInstance' property='name'/>', [productInstance: productInstance]) == '&lt;script&gt;alert(&#39;XSS&#39;);&lt;/script&gt;'
 	}
 
 }

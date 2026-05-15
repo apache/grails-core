@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -66,49 +66,50 @@ class InvokeTagLibWithBodyAsMethodTests extends Specification implements TagLibU
 
 @Artefact('TagLib')
 class TestTagLib {
+
     Closure testInvokeWithBodyClosure = { attrs, body ->
-        out << eachItem(items:[1,2,3]) { bodyAttrs ->
+        out << eachItem(items: [1,2,3]) { bodyAttrs ->
              out << "body=${bodyAttrs.var}"
         }
     }
     Closure eachItem = { attrs, body ->
         def items = attrs.items
         items.each { i ->
-            out << body(var:i)
+            out << body(var: i)
         }
     }
     Closure testWithClosureAndGStringReturn = { attrs, body ->
-        def foo = "bar"
-        out << "one" << test(foo:"bar") { "$foo" } << "four"
+        def foo = 'bar'
+        out << 'one' << test(foo: 'bar') { "$foo' } << 'four"
     }
 
     Closure testWithClosureAndStringReturn = { attrs, body ->
 
-        out << "one" << test(foo:"bar") { "foo" } << "four"
+        out << 'one' << test(foo: 'bar') { 'foo' } << 'four'
     }
 
     Closure testWithGStringBody = { attrs, body ->
-        def foo = "bar"
-        out << "one" << test(foo:"bar", "$foo") << "four"
+        def foo = 'bar'
+        out << 'one' << test(foo: 'bar', "$foo') << 'four"
     }
 
     Closure testWithStringBody = { attrs, body ->
-        out << "one" << test(foo:"bar", "foo") << "four"
+        out << 'one' << test(foo: 'bar', 'foo') << 'four'
     }
 
     Closure testWithResultOfBody= { attrs, body ->
-        out << "one" << test(foo:"bar", body()) << "four"
+        out << 'one' << test(foo: 'bar', body()) << 'four'
     }
 
     Closure testWithClosureBody = { attrs, body ->
-        out << "one" << test(foo:"bar") {
-            out << "big" << "body"
+        out << 'one' << test(foo: 'bar') {
+            out << 'big' << 'body'
         }
-        out << "four"
+        out << 'four'
     }
     Closure test = { attrs, body ->
         def value = body()
-        out << "two" << value << "three"
+        out << 'two' << value << 'three'
     }
 }
 

@@ -25,6 +25,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -65,8 +66,8 @@ import org.grails.datastore.mapping.transactions.Transaction;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
-import org.grails.orm.hibernate.query.HibernateHqlQueryCreator;
 import org.grails.orm.hibernate.query.HibernateHqlQuery;
+import org.grails.orm.hibernate.query.HibernateHqlQueryCreator;
 import org.grails.orm.hibernate.query.HibernateQuery;
 import org.grails.orm.hibernate.query.HqlQueryContext;
 import org.grails.orm.hibernate.query.MutationHqlQuery;
@@ -453,9 +454,10 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
             return Collections.emptyList();
         }
         // Determine the unique set of keys for the HQL IN query
-        Collection<Object> uniqueKeys = new LinkedHashMap<Object, Object>() {{
-            for (Object k : inputKeys) { put(k, k); }
-        }}.keySet();
+        Collection<Object> uniqueKeys = new LinkedHashSet<>();
+        for (Object k : inputKeys) {
+            uniqueKeys.add(k);
+        }
 
         final String hql = "from " + entityName + " as e where e." + idName + " in (:keys)";
 
@@ -559,7 +561,7 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
                 @Override public Datastore resolve() { return getDatastore(); }
             },
             ConnectionSource.DEFAULT,
-            ((HibernateDatastore)getDatastore()).getMappingContext().getMappingFactory().getClass().getClassLoader()
+            ((HibernateDatastore) getDatastore()).getMappingContext().getMappingFactory().getClass().getClassLoader()
         );
     }
 }

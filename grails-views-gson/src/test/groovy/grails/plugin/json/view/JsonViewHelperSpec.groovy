@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -52,10 +52,10 @@ class JsonViewHelperSpec extends Specification implements JsonViewTest, GrailsUn
         then: 'The result is correct'
         objectMapper.readTree(result.toString()) == objectMapper.readTree('''
             {
-                "name": "Barcelona",
-                "players": [
-                    { "name": "Iniesta" },
-                    { "name": "Messi" }
+                'name': 'Barcelona',
+                'players': [
+                    { 'name': 'Iniesta' },
+                    { 'name': 'Messi' }
                 ]
             }
         ''')
@@ -68,10 +68,10 @@ class JsonViewHelperSpec extends Specification implements JsonViewTest, GrailsUn
         then: 'The result is correct'
         objectMapper.readTree(result.toString()) == objectMapper.readTree('''
             {
-                "name": "Barcelona",
-                "players": [
-                    { "id": 1 },
-                    { "id": 2 }
+                'name': 'Barcelona',
+                'players': [
+                    { 'id': 1 },
+                    { 'id': 2 }
                 ]
             }
         ''')
@@ -84,15 +84,14 @@ class JsonViewHelperSpec extends Specification implements JsonViewTest, GrailsUn
         then: 'The result is correct'
         objectMapper.readTree(result.toString()) == objectMapper.readTree('''
             {
-                "name": "Barcelona",
-                "players": [
-                    { "id": 1, "name": "Iniesta" },
-                    { "id": 2, "name":"Messi" }
+                'name': 'Barcelona',
+                'players': [
+                    { 'id': 1, 'name': 'Iniesta' },
+                    { 'id': 2, 'name': 'Messi' }
                 ]
             }
         ''')
     }
-
 
     void 'test jsonapi render toMany association'() {
         given: 'A view helper'
@@ -112,29 +111,29 @@ class JsonViewHelperSpec extends Specification implements JsonViewTest, GrailsUn
             @Field Team team
     
             json jsonapi.render(team)
-        ''', [team:team])
+        ''', [team: team])
 
         then: 'The result is correct'
         objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('''
             {
-                "data": {
-                    "type": "team",
-                    "id": "1",
-                    "attributes": {
-                        "titles": null,
-                        "name": "Barcelona"
+                'data': {
+                    'type': 'team',
+                    'id': '1',
+                    'attributes': {
+                        'titles': null,
+                        'name': 'Barcelona'
                     },
-                    "relationships": {
-                        "players": {
-                            "data": [
-                                { "type": "player", "id": "1" },
-                                { "type": "player", "id": "2" }
+                    'relationships': {
+                        'players': {
+                            'data': [
+                                { 'type': 'player', 'id': '1' },
+                                { 'type': 'player', 'id': '2' }
                             ]
                         },
-                        "captain": { "data": null }
+                        'captain': { 'data': null }
                     }
                 },
-                "links": { "self": "/team/1" }
+                'links': { 'self': '/team/1' }
             }
         ''')
     }
@@ -151,10 +150,10 @@ class JsonViewHelperSpec extends Specification implements JsonViewTest, GrailsUn
         then: 'The result is correct'
         objectMapper.readTree(result.toString()) == objectMapper.readTree('''
             {
-                "titles": [
-                    "La Liga"
+                'titles': [
+                    'La Liga'
                 ],
-                "name":"Barcelona"
+                'name': 'Barcelona'
             }
         ''')
 
@@ -164,12 +163,12 @@ class JsonViewHelperSpec extends Specification implements JsonViewTest, GrailsUn
         then: 'The result is correct'
         objectMapper.readTree(result.toString()) == objectMapper.readTree('''
             {
-                "titles": [
-                    "La Liga"
+                'titles': [
+                    'La Liga'
                 ],
-                "name": "Barcelona",
-                "captain": {
-                    "name": "Iniesta" 
+                'name': 'Barcelona',
+                'captain': {
+                    'name': 'Iniesta' 
                 }
             }
         ''')
@@ -181,11 +180,11 @@ class JsonViewHelperSpec extends Specification implements JsonViewTest, GrailsUn
         then: 'The result is correct'
         objectMapper.readTree(result.toString()) == objectMapper.readTree('''
             {
-                "titles": [
-                    "La Liga"
+                'titles': [
+                    'La Liga'
                 ],
-                "name": "Barcelona",
-                "captain": { "id": 1 }
+                'name': 'Barcelona',
+                'captain': { 'id': 1 }
             }
         ''')
 
@@ -196,13 +195,13 @@ class JsonViewHelperSpec extends Specification implements JsonViewTest, GrailsUn
         then: 'The result is correct'
         objectMapper.readTree(result.toString()) == objectMapper.readTree('''
             {
-                "titles": [
-                    "La Liga"
+                'titles': [
+                    'La Liga'
                 ],
-                "name": "Barcelona",
-                "captain": {
-                    "id": 1,
-                    "name": "Iniesta"
+                'name': 'Barcelona',
+                'captain': {
+                    'id': 1,
+                    'name': 'Iniesta'
                 }
             }
         ''')
@@ -214,11 +213,11 @@ class JsonViewHelperSpec extends Specification implements JsonViewTest, GrailsUn
         then: 'The result is correct'
         objectMapper.readTree(result.toString()) == objectMapper.readTree('''
             {
-                "titles": [
-                    "La Liga"
+                'titles': [
+                    'La Liga'
                 ],
-                "name": "Barcelona",
-                "captain": { "id": 1 }
+                'name': 'Barcelona',
+                'captain': { 'id': 1 }
             }
         ''')
 
@@ -229,8 +228,8 @@ class JsonViewHelperSpec extends Specification implements JsonViewTest, GrailsUn
         then: 'The result is correct'
         objectMapper.readTree(result.toString()) == objectMapper.readTree('''
             {
-                "captain": {
-                    "name": "Iniesta"
+                'captain': {
+                    'name': 'Iniesta'
                 }
             }
         ''')
@@ -254,19 +253,19 @@ class JsonViewHelperSpec extends Specification implements JsonViewTest, GrailsUn
             @Field Team team
     
             json jsonapi.render(team, [includes: ['name']])
-        ''', [team:team])
+        ''', [team: team])
 
         then: 'The result is correct'
         objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('''
             {
-                "data": {
-                    "type": "team",
-                    "id": "1",
-                    "attributes": {"name":"Barcelona"},
-                    "relationships": {}
+                'data': {
+                    'type': 'team',
+                    'id': '1',
+                    'attributes': {'name':'Barcelona'},
+                    'relationships': {}
                 },
-                "links": {
-                    "self": "/team/1"
+                'links': {
+                    'self': '/team/1'
                 }
             }
         ''')
@@ -279,20 +278,20 @@ class JsonViewHelperSpec extends Specification implements JsonViewTest, GrailsUn
             @Field Team team
     
             json jsonapi.render(team, [includes: ['name', 'captain']])
-        ''', [team:team])
+        ''', [team: team])
 
         then: 'The result is correct'
         objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('''
             {
-                "data": {
-                    "type": "team",
-                    "id": "1",
-                    "attributes": { "name": "Barcelona" },
-                    "relationships": {
-                        "captain": { "data": null }
+                'data': {
+                    'type': 'team',
+                    'id': '1',
+                    'attributes': { 'name': 'Barcelona' },
+                    'relationships': {
+                        'captain': { 'data': null }
                     }
                 },
-                "links": { "self": "/team/1" }
+                'links': { 'self': '/team/1' }
             }
         ''')
     }
@@ -315,18 +314,18 @@ class JsonViewHelperSpec extends Specification implements JsonViewTest, GrailsUn
             @Field Team team
     
             json jsonapi.render(team, [excludes: ['captain', 'players', 'titles']])
-        ''', [team:team])
+        ''', [team: team])
 
         then: 'The result is correct'
         objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('''
             {
-                "data": {
-                    "type": "team",
-                    "id": "1",
-                    "attributes": { "name": "Barcelona" },
-                    "relationships": {}
+                'data': {
+                    'type': 'team',
+                    'id': '1',
+                    'attributes': { 'name': 'Barcelona' },
+                    'relationships': {}
                 },
-                "links": { "self": "/team/1" }
+                'links': { 'self': '/team/1' }
             }
         ''')
 
@@ -338,28 +337,28 @@ class JsonViewHelperSpec extends Specification implements JsonViewTest, GrailsUn
             @Field Team team
     
             json jsonapi.render(team, [excludes: ['name']])
-        ''', [team:team])
+        ''', [team: team])
 
         then: 'The result is correct'
         objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('''
             {
-                "data": {
-                    "type": "team",
-                    "id": "1",
-                    "attributes": {
-                        "titles": null
+                'data': {
+                    'type': 'team',
+                    'id': '1',
+                    'attributes': {
+                        'titles': null
                     },
-                    "relationships": {
-                        "players": {
-                            "data": [
-                                {"type": "player", "id":"1" },
-                                {"type": "player", "id": "2"}
+                    'relationships': {
+                        'players': {
+                            'data': [
+                                {'type': 'player', 'id': '1' },
+                                {'type': 'player', 'id': '2'}
                             ]
                         },
-                        "captain": { "data": null }
+                        'captain': { 'data': null }
                     }
                 },
-                "links": { "self": "/team/1" }
+                'links': { 'self': '/team/1' }
             }
         ''')
 
@@ -371,47 +370,47 @@ class JsonViewHelperSpec extends Specification implements JsonViewTest, GrailsUn
             @Field Team team
     
             json jsonapi.render(team, [expand: ['players']])
-        ''', [team:team])
+        ''', [team: team])
 
         then: 'The result is correct'
         objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('''
             {
-                "data": {
-                    "type": "team",
-                    "id": "1",
-                    "attributes": {
-                        "titles": null,
-                        "name": "Barcelona"
+                'data': {
+                    'type': 'team',
+                    'id': '1',
+                    'attributes': {
+                        'titles': null,
+                        'name': 'Barcelona'
                     },
-                    "relationships": {
-                        "players": {
-                            "data": [
-                                { "type": "player", "id": "1" },
-                                { "type": "player", "id": "2" }
+                    'relationships': {
+                        'players': {
+                            'data': [
+                                { 'type': 'player', 'id': '1' },
+                                { 'type': 'player', 'id': '2' }
                             ]
                         },
-                        "captain": { "data": null }
+                        'captain': { 'data': null }
                     }
                 },
-                "links": { "self": "/team/1" },
-                "included": [
+                'links': { 'self': '/team/1' },
+                'included': [
                     {
-                        "type": "player",
-                        "id": "1",
-                        "attributes": { "name": "Iniesta" },
-                        "relationships": {
-                            "team": { "data": null }
+                        'type': 'player',
+                        'id': '1',
+                        'attributes': { 'name': 'Iniesta' },
+                        'relationships': {
+                            'team': { 'data': null }
                         },
-                        "links": { "self": "/player/1" }
+                        'links': { 'self': '/player/1' }
                     },
                     {
-                        "type": "player",
-                        "id": "2",
-                        "attributes": { "name": "Messi" },
-                        "relationships": {
-                            "team": { "data": null }
+                        'type': 'player',
+                        'id': '2',
+                        'attributes': { 'name': 'Messi' },
+                        'relationships': {
+                            'team': { 'data': null }
                         },
-                        "links": { "self": "/player/2" }
+                        'links': { 'self': '/player/2' }
                     }
                 ]
             }
@@ -432,36 +431,36 @@ class JsonViewHelperSpec extends Specification implements JsonViewTest, GrailsUn
         then: 'The result is correct'
         objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('''
             {
-                "data": {
-                    "type": "team",
-                    "id": "1",
-                    "attributes": {
-                        "titles": null,
-                        "name": "Barcelona"
+                'data': {
+                    'type': 'team',
+                    'id': '1',
+                    'attributes': {
+                        'titles': null,
+                        'name': 'Barcelona'
                     },
-                    "relationships": {
-                        "players": {
-                            "data": [
-                                { "type": "player", "id": "1" },
-                                { "type": "player", "id": "2" }
+                    'relationships': {
+                        'players': {
+                            'data': [
+                                { 'type': 'player', 'id': '1' },
+                                { 'type': 'player', 'id': '2' }
                             ]
                         },
-                        "captain": {
-                            "links": { "self": "/player/10" },
-                            "data": { "type": "player", "id": "10" }
+                        'captain': {
+                            'links': { 'self': '/player/10' },
+                            'data': { 'type': 'player', 'id': '10' }
                         }
                     }
                 },
-                "links": { "self": "/team/1" },
-                "included": [
+                'links': { 'self': '/team/1' },
+                'included': [
                     {
-                        "type": "player",
-                        "id": "10",
-                        "attributes": {},
-                        "relationships": {
-                            "team": { "data": null }
+                        'type': 'player',
+                        'id': '10',
+                        'attributes': {},
+                        'relationships': {
+                            'team': { 'data': null }
                         },
-                        "links": { "self": "/player/10" }
+                        'links': { 'self': '/player/10' }
                     }
                 ]
             }
@@ -482,45 +481,45 @@ class JsonViewHelperSpec extends Specification implements JsonViewTest, GrailsUn
         then: 'The result is correct'
         objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('''
             {
-                "data": {
-                    "type": "team",
-                    "id": "1",
-                    "attributes": {
-                        "titles": null,
-                        "name": "Barcelona"
+                'data': {
+                    'type': 'team',
+                    'id': '1',
+                    'attributes': {
+                        'titles': null,
+                        'name': 'Barcelona'
                     },
-                    "relationships": {
-                        "players": {
-                            "data": [
-                                { "type": "player", "id": "1" },
-                                { "type": "player", "id": "2" }
+                    'relationships': {
+                        'players': {
+                            'data': [
+                                { 'type': 'player', 'id': '1' },
+                                { 'type': 'player', 'id': '2' }
                             ]
                         },
-                        "captain": {
-                            "links": { "self": "/player/10" },
-                            "data": { "type": "player", "id": "10" }
+                        'captain': {
+                            'links': { 'self': '/player/10' },
+                            'data': { 'type': 'player', 'id': '10' }
                         }
                     }
                 },
-                "links": { "self": "/team/1" },
-                "included": [
+                'links': { 'self': '/team/1' },
+                'included': [
                     {
-                        "type": "player",
-                        "id": "1",
-                        "attributes": {},
-                        "relationships": {
-                            "team": { "data": null }
+                        'type': 'player',
+                        'id': '1',
+                        'attributes': {},
+                        'relationships': {
+                            'team': { 'data': null }
                         },
-                        "links": { "self": "/player/1" }
+                        'links': { 'self': '/player/1' }
                     },
                     {
-                        "type": "player",
-                        "id": "2",
-                        "attributes": {},
-                        "relationships": {
-                            "team": { "data": null }
+                        'type': 'player',
+                        'id': '2',
+                        'attributes': {},
+                        'relationships': {
+                            'team': { 'data': null }
                         },
-                        "links": { "self": "/player/2" }
+                        'links': { 'self': '/player/2' }
                     }
                 ]
             }
@@ -540,12 +539,12 @@ class JsonViewHelperSpec extends Specification implements JsonViewTest, GrailsUn
         then: 'The result is correct'
         objectMapper.readTree(result.toString()) == objectMapper.readTree('''
             {
-                "id": 1,
-                "title": "The Stand",
-                "author": {
-                    "name": "Stephen King"
+                'id': 1,
+                'title': 'The Stand',
+                'author': {
+                    'name': 'Stephen King'
                 },
-                "pages": 1000
+                'pages': 1000
             }
         ''')
     }
@@ -564,12 +563,12 @@ class JsonViewHelperSpec extends Specification implements JsonViewTest, GrailsUn
         then: 'The result is correct'
         objectMapper.readTree(result.toString()) == objectMapper.readTree('''
             {
-                "author": {
-                    "name": "Stephen King"
+                'author': {
+                    'name': 'Stephen King'
                 },
-                "id": 1,
-                "title": "The Stand",
-                "pages": 1000
+                'id': 1,
+                'title': 'The Stand',
+                'pages': 1000
             }
         ''')
     }
@@ -586,10 +585,10 @@ class JsonViewHelperSpec extends Specification implements JsonViewTest, GrailsUn
         then: 'The result is correct'
         objectMapper.readTree(result.toString()) == objectMapper.readTree('''
             {
-                "id": 1,
-                "title": "The Stand",
-                "author": {
-                    "name": "Stephen King"
+                'id': 1,
+                'title': 'The Stand',
+                'author': {
+                    'name': 'Stephen King'
                 }
             }
         ''')
@@ -599,7 +598,7 @@ class JsonViewHelperSpec extends Specification implements JsonViewTest, GrailsUn
                 new Test(title: 'The Stand', author: new TestAuthor(name: 'Stephen King')), [excludes: ['author']]
         )
         then: 'The result is correct'
-        objectMapper.readTree(result.toString()) == objectMapper.readTree('{"title":"The Stand"}')
+        objectMapper.readTree(result.toString()) == objectMapper.readTree('{'title':'The Stand'}')
     }
 
     void 'Test render object method with plain object'() {
@@ -612,15 +611,15 @@ class JsonViewHelperSpec extends Specification implements JsonViewTest, GrailsUn
         then: 'The result is correct'
         objectMapper.readTree(result.toString()) == objectMapper.readTree('''
             {
-                "author": "Stephen King",
-                "title": "The Stand"
+                'author': 'Stephen King',
+                'title': 'The Stand'
             }
         ''')
 
         when: 'We render an object'
         result = viewHelper.render(new Test2(title: 'The Stand', author: 'Stephen King'), [excludes: ['author']])
         then: 'The result is correct'
-        objectMapper.readTree(result.toString()) == objectMapper.readTree('{"title":"The Stand"}')
+        objectMapper.readTree(result.toString()) == objectMapper.readTree('{'title':'The Stand'}')
     }
 
     void 'Test render collection as null produces empty list'() {
@@ -661,6 +660,7 @@ class JsonViewHelperSpec extends Specification implements JsonViewTest, GrailsUn
 
 @Entity
 class Team {
+
     String name
     Player captain
     List players
@@ -670,6 +670,7 @@ class Team {
 }
 @Entity
 class Player {
+
     Long version
     String name
     @SuppressWarnings('unused')
@@ -678,17 +679,20 @@ class Player {
 
 @Entity
 class PlayerWithAge {
+
     String name
     int age
 }
 
 @Entity
 class Circular {
+
     String name
 }
 
 @Entity
 class Test {
+
     String title
     TestAuthor author
     @SuppressWarnings('unused')
@@ -696,10 +700,12 @@ class Test {
 }
 
 class TestAuthor {
+
     String name
 }
 
 class Test2 {
+
     String title
     String author
 }

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -33,9 +33,9 @@ import spock.lang.Specification
 /**
  * Created by graemerocher on 06/02/14.
  */
-class HibernateGormAutoConfigurationSpec extends Specification{
+class HibernateGormAutoConfigurationSpec extends Specification {
 
-    protected AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+    protected AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()
 
     void cleanup() {
         context.close()
@@ -43,43 +43,44 @@ class HibernateGormAutoConfigurationSpec extends Specification{
 
     void setup() {
 
-        AutoConfigurationPackages.register(context, "org.grails.datastore.gorm.boot.autoconfigure")
-        this.context.getEnvironment().getPropertySources().addFirst(new MapPropertySource("foo", ['hibernate.hbm2ddl.auto':'create']))
+        AutoConfigurationPackages.register(context, 'org.grails.datastore.gorm.boot.autoconfigure')
+        this.context.getEnvironment().getPropertySources().addFirst(new MapPropertySource('foo', ['hibernate.hbm2ddl.auto': 'create']))
         def beanFactory = this.context.defaultListableBeanFactory
-        beanFactory.registerSingleton("dataSource", new DriverManagerDataSource("jdbc:h2:mem:grailsDb1;LOCK_TIMEOUT=10000;DB_CLOSE_DELAY=-1", 'sa', ''))
+        beanFactory.registerSingleton('dataSource', new DriverManagerDataSource('jdbc:h2:mem:grailsDb1;LOCK_TIMEOUT=10000;DB_CLOSE_DELAY=-1', 'sa', ''))
         this.context.register( TestConfiguration.class,
-                PropertyPlaceholderAutoConfiguration.class);
+                PropertyPlaceholderAutoConfiguration.class)
     }
 
     void 'Test that GORM is correctly configured'() {
-        when:"The context is refreshed"
+        when:'The context is refreshed'
             context.refresh()
 
             def result = Person.withTransaction {
                 Person.count()
             }
 
-        then:"GORM queries work"
+        then:'GORM queries work'
             result == 0
 
-        when:"The addTo* methods are called"
+        when:'The addTo* methods are called'
             def p = new Person()
-            p.addToChildren(firstName:"Bob")
+            p.addToChildren(firstName: 'Bob')
 
-        then:"They work too"
+        then:'They work too'
             p.children.size() == 1
     }
 
     @Configuration
     @Import(HibernateGormAutoConfiguration)
     static class TestConfiguration {
+
     }
 
 }
 
-
 @Entity
 class Person {
+
     String firstName
     String lastName
     Integer age = 18
@@ -87,5 +88,4 @@ class Person {
     Set children = []
     static hasMany = [children: Person]
 }
-
 

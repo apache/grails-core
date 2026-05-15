@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -45,10 +45,10 @@ class PrimaryKeyValueCreatorSpec extends HibernateGormDatastoreSpec {
         creator = new PrimaryKeyValueCreator(metadataBuildingContext)
     }
 
-    void "test createPrimaryKeyValue with default identifier"() {
+    void 'test createPrimaryKeyValue with default identifier'() {
         given:
         Table ownerTable = new Table()
-        ownerTable.setName("OWNER")
+        ownerTable.setName('OWNER')
         RootClass owner = new RootClass(metadataBuildingContext)
         owner.setTable(ownerTable)
         
@@ -56,7 +56,7 @@ class PrimaryKeyValueCreatorSpec extends HibernateGormDatastoreSpec {
         owner.setIdentifier(identifier)
 
         Table collectionTable = new Table()
-        collectionTable.setName("COLLECTION")
+        collectionTable.setName('COLLECTION')
         Collection collection = new Bag(metadataBuildingContext, owner)
         collection.setCollectionTable(collectionTable)
         collection.setSorted(true)
@@ -66,30 +66,30 @@ class PrimaryKeyValueCreatorSpec extends HibernateGormDatastoreSpec {
 
         then:
         result != null
-        result.getTable().name == "COLLECTION"
+        result.getTable().name == 'COLLECTION'
         result.isSorted()
         result.isNullable()
         result.isUpdateable()
     }
 
-    void "test createPrimaryKeyValue with referenced property"() {
+    void 'test createPrimaryKeyValue with referenced property'() {
         given:
         Table ownerTable = new Table()
-        ownerTable.setName("OWNER")
+        ownerTable.setName('OWNER')
         RootClass owner = new RootClass(metadataBuildingContext)
         owner.setTable(ownerTable)
         
         Property referencedProperty = new Property()
-        referencedProperty.name = "myProp"
+        referencedProperty.name = 'myProp'
         KeyValue propertyValue = new BasicValue(metadataBuildingContext, ownerTable)
         referencedProperty.setValue(propertyValue)
         owner.addProperty(referencedProperty)
 
         Table collectionTable = new Table()
-        collectionTable.setName("COLLECTION")
+        collectionTable.setName('COLLECTION')
         Collection collection = new Bag(metadataBuildingContext, owner)
         collection.setCollectionTable(collectionTable)
-        collection.setReferencedPropertyName("myProp")
+        collection.setReferencedPropertyName('myProp')
         collection.setSorted(false)
 
         when:

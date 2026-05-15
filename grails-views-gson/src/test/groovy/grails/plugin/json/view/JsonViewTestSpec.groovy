@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -24,7 +24,7 @@ import spock.lang.Specification
 
 class JsonViewTestSpec extends Specification implements JsonViewTest {
 
-    void "Test render nested object"() {
+    void 'Test render nested object'() {
 
         given:
         String source = '''
@@ -38,21 +38,21 @@ json g.render(customer)
 '''
 
         when:
-        def result = render source, [customer: new Customer(firstName: "John", lastName: "Doe", contactInfo: new ContactInfo())]
+        def result = render source, [customer: new Customer(firstName: 'John', lastName: 'Doe', contactInfo: new ContactInfo())]
 
         then:
-        result.jsonText == '''{"contactInfo":{},"firstName":"John","lastName":"Doe"}'''
+        result.jsonText == '''{'contactInfo':{},'firstName': 'John','lastName': 'Doe'}'''
 
         when:
-        result = render source, [customer: new Customer(firstName: "John", lastName: "Doe", contactInfo: new ContactInfo(phoneNumber: "+123-234479343"))]
+        result = render source, [customer: new Customer(firstName: 'John', lastName: 'Doe', contactInfo: new ContactInfo(phoneNumber: '+123-234479343'))]
 
         then:
-        result.jsonText == '''{"contactInfo":{"phoneNumber":"+123-234479343"},"firstName":"John","lastName":"Doe"}'''
+        result.jsonText == '''{'contactInfo':{'phoneNumber':'+123-234479343'},'firstName': 'John','lastName': 'Doe'}'''
 
     }
 
-    void "Test render a raw GSON view"() {
-        when:"A gson view is rendered"
+    void 'Test render a raw GSON view'() {
+        when:'A gson view is rendered'
         def result = render'''
 model {
     String person
@@ -61,54 +61,54 @@ json.person {
     name person
     model person
 }
-''', [person:"æøå ÆØÅ"]
+''', [person: 'æøå ÆØÅ']
 
-        then:"The json is correct"
-        result.jsonText == '''{"person":{"name":"æøå ÆØÅ","model":"æøå ÆØÅ"}}'''
+        then:'The json is correct'
+        result.jsonText == '''{'person':{'name':'æøå ÆØÅ','model': 'æøå ÆØÅ'}}'''
     }
 
-    void "Test render a GSON view"() {
-        when:"A gson view is rendered"
-        def result = render(view: "/foo") {
-            method "POST"
+    void 'Test render a GSON view'() {
+        when:'A gson view is rendered'
+        def result = render(view: '/foo') {
+            method 'POST'
         }
 
-        then:"The json is correct"
+        then:'The json is correct'
         result.json.person.name == 'bob'
     }
 
-    void "Test render a GSON template"() {
-        when:"A gson view is rendered"
-        def result = render(template: "/child", model:[age:10])
+    void 'Test render a GSON template'() {
+        when:'A gson view is rendered'
+        def result = render(template: '/child', model: [age:10])
 
-        then:"The json is correct"
+        then:'The json is correct'
         result.json.name == 'Fred'
         result.json.age == 10
     }
 
-    void "Test render a GSON view that generates a link"() {
-        when:"A gson view is rendered"
-        def result = render(view: "/linkingView")
+    void 'Test render a GSON view that generates a link'() {
+        when:'A gson view is rendered'
+        def result = render(view: '/linkingView')
 
-        then:"The json is correct"
+        then:'The json is correct'
         result.json.person.name == 'bob'
         result.json.person.homepage == '/person'
     }
 
-    void "Test render a GSON view that sets headers"() {
-        when:"A gson view is rendered"
-        def result = render(view: "/pageConfigure")
+    void 'Test render a GSON view that sets headers'() {
+        when:'A gson view is rendered'
+        def result = render(view: '/pageConfigure')
 
-        then:"The json is correct"
+        then:'The json is correct'
         result.json.person.name == 'Bob'
         result.headers['foo'] == 'bar'
         result.contentType == 'application/hal+json'
     }
 }
 
-
 @Entity
 class Customer {
+
     String firstName
     String lastName
     ContactInfo contactInfo
@@ -116,5 +116,6 @@ class Customer {
 
 @Entity
 class ContactInfo {
+
     String phoneNumber
 }

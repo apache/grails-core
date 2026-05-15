@@ -27,11 +27,12 @@ import groovy.lang.GroovySystem;
 import groovy.lang.MetaClass;
 import groovy.lang.MissingMethodException;
 
+import org.springframework.core.convert.ConversionException;
+
 import org.grails.datastore.gorm.DatastoreResolver;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
 import org.grails.datastore.mapping.model.MappingContext;
-import org.springframework.core.convert.ConversionException;
 
 /**
  * Finder used to return a single result

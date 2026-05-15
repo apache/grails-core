@@ -4,21 +4,20 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The AS licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
  */
 package org.grails.datastore.mapping.simple.query
 
-import org.grails.datastore.mapping.engine.EntityPersister
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Association
@@ -30,9 +29,6 @@ import org.grails.datastore.mapping.simple.SimpleMapSession
 import org.grails.datastore.mapping.simple.engine.SimpleMapEntityPersister
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import grails.gorm.multitenancy.Tenants
-import org.grails.datastore.mapping.query.event.PreQueryEvent
-import org.grails.datastore.mapping.query.event.PostQueryEvent
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * A query implementation for the simple map-based datastore
@@ -84,7 +80,7 @@ class SimpleMapQuery extends Query {
                 def currentTenantId = Tenants.currentId(datastoreInstance)
                 if (currentTenantId != null) {
                     entityMap = entityMap.findAll { entry ->
-                        def entryTenantId = entry.value.get("tenantId")
+                        def entryTenantId = entry.value.get('tenantId')
                         return entryTenantId == null || entryTenantId.toString() == currentTenantId.toString()
                     }
                 }
@@ -171,7 +167,7 @@ class SimpleMapQuery extends Query {
         else {
             List<Query.Projection> projectionList = projections.projectionList
             boolean hasAggregate = projectionList.any { it instanceof Query.CountProjection || it instanceof Query.CountDistinctProjection || it instanceof Query.AvgProjection || it instanceof Query.MinProjection || it instanceof Query.MaxProjection || it instanceof Query.SumProjection }
-            
+
             if (hasAggregate) {
                 def results = []
                 for (p in projectionList) {
@@ -183,21 +179,21 @@ class SimpleMapQuery extends Query {
                         results << propertyValues.unique().size()
                     }
                     else if (p instanceof Query.AvgProjection || p instanceof Query.MinProjection || p instanceof Query.MaxProjection || p instanceof Query.SumProjection) {
-                         def propertyValues = resultList.collect { it.value[p.propertyName] }.findAll { it != null }
-                         if (p instanceof Query.MinProjection) {
-                             results << propertyValues.min()
-                         }
-                         else if (p instanceof Query.MaxProjection) {
-                             results << propertyValues.max()
-                         }
-                         else if (p instanceof Query.SumProjection) {
-                             results << propertyValues.sum()
-                         }
-                         else if (p instanceof Query.AvgProjection) {
-                             def res = propertyValues.isEmpty() ? 0 : propertyValues.sum() / propertyValues.size()
-                             if (res instanceof BigDecimal) res = res.doubleValue()
-                             results << res
-                         }
+                        def propertyValues = resultList.collect { it.value[p.propertyName] }.findAll { it != null }
+                        if (p instanceof Query.MinProjection) {
+                            results << propertyValues.min()
+                        }
+                        else if (p instanceof Query.MaxProjection) {
+                            results << propertyValues.max()
+                        }
+                        else if (p instanceof Query.SumProjection) {
+                            results << propertyValues.sum()
+                        }
+                        else if (p instanceof Query.AvgProjection) {
+                            def res = propertyValues.isEmpty() ? 0 : propertyValues.sum() / propertyValues.size()
+                            if (res instanceof BigDecimal) res = res.doubleValue()
+                            results << res
+                        }
                     }
                     else if (p instanceof Query.IdProjection) {
                         results << (resultList.isEmpty() ? null : resultList[0].key)
@@ -205,10 +201,10 @@ class SimpleMapQuery extends Query {
                     else if (p instanceof Query.PropertyProjection) {
                         def val = resultList.isEmpty() ? null : resultList[0].value[p.propertyName]
                         if (val != null) {
-                             PersistentProperty prop = entity.getPropertyByName(p.propertyName)
-                             if (prop instanceof ToOne && !(prop.type.isInstance(val))) {
-                                 val = session.retrieve(prop.type, (Serializable)val)
-                             }
+                            PersistentProperty prop = entity.getPropertyByName(p.propertyName)
+                            if (prop instanceof ToOne && !(prop.type.isInstance(val))) {
+                                val = session.retrieve(prop.type, (Serializable) val)
+                            }
                         }
                         results << val
                     }
@@ -242,13 +238,13 @@ class SimpleMapQuery extends Query {
 
     List list(Map params) {
         String sortProperty = params.sort?.toString()
-        String sortDirection = params.order?.toString() ?: "asc"
-        
+        String sortDirection = params.order?.toString() ?: 'asc'
+
         if (sortProperty || params.order) {
             if (!sortProperty) {
-                sortProperty = entity.getIdentity()?.getName() ?: "id"
+                sortProperty = entity.getIdentity()?.getName() ?: 'id'
             }
-            if (sortDirection.equalsIgnoreCase("desc")) {
+            if (sortDirection.equalsIgnoreCase('desc')) {
                 order(Query.Order.desc(sortProperty))
             } else {
                 order(Query.Order.asc(sortProperty))
@@ -264,9 +260,9 @@ class SimpleMapQuery extends Query {
         List results = list()
         if (params.max || params.offset) {
             try {
-                def pagedResultListClass = Class.forName("grails.gorm.PagedResultList")
-                def pagedResultList = pagedResultListClass.getConstructor(Query.class).newInstance(this)
-                return (List)pagedResultList
+                def pagedResultListClass = Class.forName('grails.gorm.PagedResultList')
+                def pagedResultList = pagedResultListClass.getConstructor(Query).newInstance(this)
+                return (List) pagedResultList
             } catch (Throwable e) {
                 // ignore
             }
@@ -300,7 +296,7 @@ class SimpleMapQuery extends Query {
                 def currentTenantId = Tenants.currentId(datastoreInstance)
                 if (currentTenantId != null) {
                     entityMap = entityMap.findAll { entry ->
-                        def entryTenantId = entry.value.get("tenantId")
+                        def entryTenantId = entry.value.get('tenantId')
                         return entryTenantId == null || entryTenantId.toString() == currentTenantId.toString()
                     }
                 }
@@ -415,7 +411,7 @@ class SimpleMapQuery extends Query {
                     // ignore
                 }
             }
-            def marshaller = property.respondsTo("getCustomTypeMarshaller") ? property.getCustomTypeMarshaller() : null
+            def marshaller = property.respondsTo('getCustomTypeMarshaller') ? property.getCustomTypeMarshaller() : null
             if (marshaller != null && marshaller.supports(session.getMappingContext())) {
                 try {
                     value = marshaller.write(property, value, [:])
@@ -486,7 +482,7 @@ class SimpleMapQuery extends Query {
         }
         else if (pc instanceof Query.ILike) {
             if (val != null && value != null) {
-                def pattern = "(?i)" + value.toString().replace('%', '.*').replace('_', '.')
+                def pattern = '(?i)' + value.toString().replace('%', '.*').replace('_', '.')
                 return val.toString() ==~ pattern
             }
         }
@@ -963,21 +959,21 @@ class SimpleMapQuery extends Query {
 
     protected Object applyFunction(String functionName, Object value) {
         switch (functionName) {
-            case "year":
+            case 'year':
                 if (value instanceof Date) {
                     Calendar cal = Calendar.getInstance()
                     cal.time = (Date)value
                     return cal.get(Calendar.YEAR)
                 }
                 break
-            case "month":
+            case 'month':
                 if (value instanceof Date) {
                     Calendar cal = Calendar.getInstance()
                     cal.time = (Date)value
                     return cal.get(Calendar.MONTH) + 1
                 }
                 break
-            case "day":
+            case 'day':
                 if (value instanceof Date) {
                     Calendar cal = Calendar.getInstance()
                     cal.time = (Date)value
@@ -988,7 +984,7 @@ class SimpleMapQuery extends Query {
         return value
     }
 
-    public String getFamily() {
+    String getFamily() {
         return entity.rootEntity.name
     }
 }

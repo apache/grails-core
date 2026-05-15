@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -38,11 +38,12 @@ import jakarta.persistence.Entity
 import jakarta.persistence.Transient
 
 class PersistentEntityValidatorSpec extends Specification {
+
     @Shared Validator authorValidator
 
     void setupSpec() {
-        MappingContext mappingContext = new KeyValueMappingContext("test")
-        mappingContext.mappingFactory = new GormKeyValueMappingFactory("test")
+        MappingContext mappingContext = new KeyValueMappingContext('test')
+        mappingContext.mappingFactory = new GormKeyValueMappingFactory('test')
         mappingContext.syntaxStrategy = new GormMappingConfigurationStrategy(mappingContext.mappingFactory)
 
         PersistentEntity authorEntity = mappingContext.addPersistentEntity(Author)
@@ -55,7 +56,7 @@ class PersistentEntityValidatorSpec extends Specification {
 
     // beforeValidate on the initial save is part of the GormValidationApi doValidate() call
     @Issue('https://github.com/apache/grails-data-mapping/issues/1102')
-    def "validation of root object does NOT trigger beforeValidate here"() {
+    def 'validation of root object does NOT trigger beforeValidate here'() {
         Author author = new Author()
         Errors errors = new ValidationErrors(author)
 
@@ -68,7 +69,7 @@ class PersistentEntityValidatorSpec extends Specification {
     }
 
     @Issue('https://github.com/apache/grails-data-mapping/issues/1102')
-    def "cascading validation triggers beforeValidate callback on to-many association"() {
+    def 'cascading validation triggers beforeValidate callback on to-many association'() {
         Author author = new Author(name: 'Author', books: [new Book()])
         Errors errors = new ValidationErrors(author)
 
@@ -78,11 +79,11 @@ class PersistentEntityValidatorSpec extends Specification {
         then:
         !errors.hasErrors()
         author.books.first()
-        author.books.first().name == "name"
+        author.books.first().name == 'name'
     }
 
     @Issue('https://github.com/apache/grails-data-mapping/issues/1102')
-    def "cascading validation triggers beforeValidate callback on to-one association"() {
+    def 'cascading validation triggers beforeValidate callback on to-one association'() {
         Author author = new Author(name: 'Author', publisher: new Publisher())
         Errors errors = new ValidationErrors(author)
 
@@ -91,71 +92,71 @@ class PersistentEntityValidatorSpec extends Specification {
 
         then:
         !errors.hasErrors()
-        author.publisher.name == "name"
+        author.publisher.name == 'name'
     }
 
     @Issue('https://github.com/apache/grails-data-mapping/issues/1106')
-    def "validation cascades by default if association is owned or has cascade options of PERSIST or MERGE"() {
+    def 'validation cascades by default if association is owned or has cascade options of PERSIST or MERGE'() {
         Author author = new Author(name: 'Author', publisher: new Publisher())
         Errors errors = new ValidationErrors(author)
 
         when:
         authorValidator.validate(author, errors)
 
-        then: "validate was called for this by default"
+        then: 'validate was called for this by default'
         author.publisher.validateCalled
     }
 
     @Issue('https://github.com/apache/grails-data-mapping/issues/1106')
-    def "toMany validation cascades when isOwningSide is true if cascadeValidate option is set to owned or default"() {
+    def 'toMany validation cascades when isOwningSide is true if cascadeValidate option is set to owned or default'() {
         Author author = new Author(name: 'Author', books: [new Book()], defaultBooks: [new Book()], noneBooks: [new Book()])
         Errors errors = new ValidationErrors(author)
 
         when:
         authorValidator.validate(author, errors)
 
-        then: "validate is called for books"
+        then: 'validate is called for books'
         !errors.hasErrors()
         author.books.first()
-        author.books.first().name == "name"
+        author.books.first().name == 'name'
 
-        and: "validate is called for defaultBooks"
+        and: 'validate is called for defaultBooks'
         author.defaultBooks.first()
-        author.defaultBooks.first().name == "name"
+        author.defaultBooks.first().name == 'name'
 
-        and: "validate is not called for noneBooks"
+        and: 'validate is not called for noneBooks'
         author.noneBooks.first()
         author.noneBooks.first().name == null
     }
 
     @Issue('https://github.com/apache/grails-data-mapping/issues/1106')
-    def "toMany validation does not cascade when cascadeValidate option is set to none"() {
+    def 'toMany validation does not cascade when cascadeValidate option is set to none'() {
         Author author = new Author(name: 'Author', noneBooks: [new Book()])
         Errors errors = new ValidationErrors(author)
 
         when:
         authorValidator.validate(author, errors)
 
-        then: "validate is not called for noneBooks"
+        then: 'validate is not called for noneBooks'
         !errors.hasErrors()
         author.noneBooks.first()
         author.noneBooks.first().name == null
     }
 
     @Issue('https://github.com/apache/grails-data-mapping/issues/1106')
-    def "toOne validation does not cascade if cascadeValidate option is none"() {
+    def 'toOne validation does not cascade if cascadeValidate option is none'() {
         Author author = new Author(name: 'Author', nonePublisher: new Publisher())
         Errors errors = new ValidationErrors(author)
 
         when:
         authorValidator.validate(author, errors)
 
-        then: "validate is not called for publisher"
+        then: 'validate is not called for publisher'
         !errors.hasErrors()
         !author.nonePublisher.validateCalled
     }
 
-    def "toOne validation cascades if the associated object is dirty and cascadeValidate option set to dirty"() {
+    def 'toOne validation cascades if the associated object is dirty and cascadeValidate option set to dirty'() {
         Author author = new Author(name: 'Author', dirtyPublisher: new Publisher())
         Errors errors = new ValidationErrors(author)
 
@@ -167,7 +168,7 @@ class PersistentEntityValidatorSpec extends Specification {
         author.dirtyPublisher.validateCalled
     }
 
-    def "validation does not cascade if the associated object is not dirty and cascadeValidate option set to dirty"() {
+    def 'validation does not cascade if the associated object is not dirty and cascadeValidate option set to dirty'() {
         Author author = new Author(name: 'Author', dirtyPublisher: new Publisher())
         Errors errors = new ValidationErrors(author)
         author.dirtyPublisher.trackChanges()
@@ -175,7 +176,7 @@ class PersistentEntityValidatorSpec extends Specification {
         when:
         authorValidator.validate(author, errors)
 
-        then: "validate is not called for publisher"
+        then: 'validate is not called for publisher'
         !errors.hasErrors()
         !author.dirtyPublisher.validateCalled
     }
@@ -183,6 +184,7 @@ class PersistentEntityValidatorSpec extends Specification {
 
 @Entity
 class Author {
+
     String name
 
     Publisher publisher
@@ -220,23 +222,25 @@ class Author {
 
 @Entity
 class Book {
+
     String name
     static belongsTo = [author: Author]
 
     def beforeValidate() {
-        name = "name"
+        name = 'name'
     }
 }
 
 @Entity
 class Publisher implements DirtyCheckable {
+
     String name
 
     @Transient
     boolean validateCalled = false
 
     def beforeValidate() {
-        name = "name"
+        name = 'name'
         validateCalled = true
     }
 

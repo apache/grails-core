@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -55,8 +55,8 @@ abstract class ConfigurationBuilder<B, C> {
 
     /**
      * @param propertyResolver The property resolver
-     * @param configurationPrefix The prefix to resolve settings from within the configuration. Example "grails.gorm.neo4j" or "grails.gorm.mongodb"
-     * @param builderMethodPrefix The prefix to builder method calls. Default is null which results in builder methods like "foo(...)". Seting a prefix of "with" results in "withFoo(..)"
+     * @param configurationPrefix The prefix to resolve settings from within the configuration. Example 'grails.gorm.neo4j' or 'grails.gorm.mongodb'
+     * @param builderMethodPrefix The prefix to builder method calls. Default is null which results in builder methods like 'foo(...)'. Seting a prefix of 'with' results in 'withFoo(..)'
      *
      */
     @CompileDynamic
@@ -69,8 +69,8 @@ abstract class ConfigurationBuilder<B, C> {
 
     /**
      * @param propertyResolver The property resolver
-     * @param configurationPrefix The prefix to resolve settings from within the configuration. Example "grails.gorm.neo4j" or "grails.gorm.mongodb"
-     * @param builderMethodPrefix The prefix to builder method calls. Default is null which results in builder methods like "foo(...)". Seting a prefix of "with" results in "withFoo(..)"
+     * @param configurationPrefix The prefix to resolve settings from within the configuration. Example 'grails.gorm.neo4j' or 'grails.gorm.mongodb'
+     * @param builderMethodPrefix The prefix to builder method calls. Default is null which results in builder methods like 'foo(...)'. Seting a prefix of 'with' results in 'withFoo(..)'
      * @param fallBackConfiguration An object to read the fallback configuration from
      */
     @CompileDynamic

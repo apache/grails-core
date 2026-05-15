@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -29,7 +29,7 @@ import org.grails.plugins.DefaultGrailsPlugin
 class PluginUtilsSpec extends Specification {
 
     @Unroll
-    def "isPluginVersionCompatible checks that plugin with grailsVersion=#pluginGrailsVersion is compatible with grails #grailsVersion"() {
+    def 'isPluginVersionCompatible checks that plugin with grailsVersion=#pluginGrailsVersion is compatible with grails #grailsVersion'() {
         expect:
         PluginUtils.isPluginVersionCompatible(
             '1.0.0',  // pluginVersion
@@ -51,7 +51,7 @@ class PluginUtilsSpec extends Specification {
         '4.0.1'       | '3.3.10 > *'               || true
     }
 
-    def "isPluginVersionCompatible handles null grailsVersion"() {
+    def 'isPluginVersionCompatible handles null grailsVersion'() {
         when:
         def compatible = PluginUtils.isPluginVersionCompatible(
             '1.0.0',
@@ -64,7 +64,7 @@ class PluginUtilsSpec extends Specification {
         compatible
     }
 
-    def "isPluginVersionCompatible handles null pluginSupportedVersion"() {
+    def 'isPluginVersionCompatible handles null pluginSupportedVersion'() {
         when:
         def compatible = PluginUtils.isPluginVersionCompatible(
             '1.0.0',
@@ -77,7 +77,7 @@ class PluginUtilsSpec extends Specification {
         compatible
     }
 
-    def "isPluginVersionCompatible handles @ in pluginSupportedVersion"() {
+    def 'isPluginVersionCompatible handles @ in pluginSupportedVersion'() {
         when:
         def compatible = PluginUtils.isPluginVersionCompatible(
             '1.0.0',
@@ -92,7 +92,7 @@ class PluginUtilsSpec extends Specification {
 
     // Tests for extractPluginMetadata method
     
-    def "extractPluginMetadata extracts loadAfter, loadBefore, and dependsOn"() {
+    def 'extractPluginMetadata extracts loadAfter, loadBefore, and dependsOn'() {
         when:
         def metadata = PluginUtils.extractPluginMetadata(PluginWithAllOrderingGrailsPlugin)
 
@@ -104,7 +104,7 @@ class PluginUtilsSpec extends Specification {
         metadata.dependsOnNames == ['delta'] as String[]
     }
 
-    def "extractPluginMetadata returns empty arrays for plugin with no ordering declarations"() {
+    def 'extractPluginMetadata returns empty arrays for plugin with no ordering declarations'() {
         when:
         def metadata = PluginUtils.extractPluginMetadata(UtilsTestSimpleGrailsPlugin)
 
@@ -116,17 +116,18 @@ class PluginUtilsSpec extends Specification {
         metadata.dependsOnNames.length == 0
     }
 
-    def "extractPluginMetadata returns null for class not ending in GrailsPlugin"() {
+    def 'extractPluginMetadata returns null for class not ending in GrailsPlugin'() {
+
         expect:
         PluginUtils.extractPluginMetadata(String) == null
     }
 
-    def "extractPluginMetadata returns null for null input"() {
+    def 'extractPluginMetadata returns null for null input'() {
         expect:
         PluginUtils.extractPluginMetadata(null) == null
     }
 
-    def "extractPluginMetadata handles plugin that throws on instantiation"() {
+    def 'extractPluginMetadata handles plugin that throws on instantiation'() {
         when:
         PluginUtils.extractPluginMetadata(FailingConstructorUtilsGrailsPlugin)
 
@@ -134,7 +135,7 @@ class PluginUtilsSpec extends Specification {
         thrown(IllegalStateException)
     }
 
-    def "extractPluginMetadata extracts multiple dependsOn names"() {
+    def 'extractPluginMetadata extracts multiple dependsOn names'() {
         when:
         def metadata = PluginUtils.extractPluginMetadata(PluginWithMultipleDepsGrailsPlugin)
 
@@ -144,7 +145,7 @@ class PluginUtilsSpec extends Specification {
         metadata.dependsOnNames as Set == ['core', 'i18n'] as Set
     }
 
-    def "readPluginConfiguration returns null when no plugin.yml or plugin.groovy exists"() {
+    def 'readPluginConfiguration returns null when no plugin.yml or plugin.groovy exists'() {
         when:
         def resource = PluginUtils.readPluginConfiguration(UtilsTestSimpleGrailsPlugin)
 
@@ -152,7 +153,7 @@ class PluginUtilsSpec extends Specification {
         !resource
     }
 
-    def "getConfigurationResource returns resource that does not exist for non-existent path"() {
+    def 'getConfigurationResource returns resource that does not exist for non-existent path'() {
         when: 'a resource is requested for a non-existent path'
         def resource = PluginUtils.getConfigurationResource(
                 UtilsTestSimpleGrailsPlugin,
@@ -169,7 +170,7 @@ class PluginUtilsSpec extends Specification {
     // Tests for additional public methods
 
     @Unroll
-    def "normalizePluginName converts name #input"(String input, String output) {
+    def 'normalizePluginName converts name #input'(String input, String output) {
         expect:
         PluginUtils.normalizePluginName(input) == output
 
@@ -181,7 +182,8 @@ class PluginUtilsSpec extends Specification {
     }
 
     @Unroll
-    def "getLogicalPluginNameFromClassName extracts plugin name from class name #input"(String input, String output) {
+    def 'getLogicalPluginNameFromClassName extracts plugin name from class name #input'(String input, String output) {
+
         expect:
         PluginUtils.getLogicalPluginNameFromClassName(input) == output
 
@@ -193,7 +195,7 @@ class PluginUtilsSpec extends Specification {
     }
 
     @Unroll
-    def "isGrailsPluginClassNamedCorrectly validates plugin naming correctly for #clazz"(Class<?> clazz, boolean isValidPluginClassName) {
+    def 'isGrailsPluginClassNamedCorrectly validates plugin naming correctly for #clazz'(Class<?> clazz, boolean isValidPluginClassName) {
         expect:
         PluginUtils.isGrailsPluginClassNamedCorrectly(clazz) == isValidPluginClassName
 
@@ -207,7 +209,7 @@ class PluginUtilsSpec extends Specification {
     }
 
     @Unroll
-    def "isGrailsPluginLoadable returns #isLoadable for #clazz"(Class<?> clazz, boolean isLoadable) {
+    def 'isGrailsPluginLoadable returns #isLoadable for #clazz'(Class<?> clazz, boolean isLoadable) {
         expect:
         PluginUtils.isGrailsPluginLoadable(clazz) == isLoadable
 
@@ -219,12 +221,13 @@ class PluginUtilsSpec extends Specification {
         null                              || false
     }
 
-    def "supportsValueInIncludeExcludeMap returns true for empty map"() {
+    def 'supportsValueInIncludeExcludeMap returns true for empty map'() {
+
         expect:
         PluginUtils.supportsValueInIncludeExcludeMap([:], 'anything')
     }
 
-    def "supportsValueInIncludeExcludeMap checks includes/excludes"() {
+    def 'supportsValueInIncludeExcludeMap checks includes/excludes'() {
         when:
         def mapWithIncludes = ['includes': ['dev', 'test'] as Set]
 
@@ -235,7 +238,7 @@ class PluginUtilsSpec extends Specification {
         }
     }
 
-    def "supportsValueInIncludeExcludeMap checks excludes"() {
+    def 'supportsValueInIncludeExcludeMap checks excludes'() {
         when:
         def mapWithExcludes = ['excludes': ['prod'] as Set]
 
@@ -246,7 +249,7 @@ class PluginUtilsSpec extends Specification {
         }
     }
 
-    def "scanPluginDescriptors returns empty list when no descriptors found"() {
+    def 'scanPluginDescriptors returns empty list when no descriptors found'() {
         when:
         def classNames = PluginUtils.scanPluginDescriptors(
                 new URLClassLoader([] as URL[], (ClassLoader) null)
@@ -256,7 +259,7 @@ class PluginUtilsSpec extends Specification {
         classNames.empty
     }
 
-    def "scanPluginDescriptorResources returns empty list when no descriptors found"() {
+    def 'scanPluginDescriptorResources returns empty list when no descriptors found'() {
         when:
         def descriptors = PluginUtils.scanPluginDescriptorResources(
                 new URLClassLoader([] as URL[], (ClassLoader) null)
@@ -267,7 +270,8 @@ class PluginUtilsSpec extends Specification {
     }
 
     @Unroll
-    def "getLogicalPluginName derives plugin name #expectedName from plugin class #clazz"(Class<?> clazz, String expectedName) {
+    def 'getLogicalPluginName derives plugin name #expectedName from plugin class #clazz'(Class<?> clazz, String expectedName) {
+
         expect:
         PluginUtils.getLogicalPluginName(clazz) == expectedName
 
@@ -278,7 +282,7 @@ class PluginUtilsSpec extends Specification {
         PluginWithMultipleDepsGrailsPlugin || 'pluginWithMultipleDeps'
     }
 
-    def "evaluateIncludeExcludeProperty parses include/exclude map structure"() {
+    def 'evaluateIncludeExcludeProperty parses include/exclude map structure'() {
         given:
         def plugin = new GroovyObject() {
             def environments = [
@@ -301,7 +305,7 @@ class PluginUtilsSpec extends Specification {
         result['excludes'] == ['prod'] as Set
     }
 
-    def "evaluateIncludeExcludeProperty handles string values"() {
+    def 'evaluateIncludeExcludeProperty handles string values'() {
         given:
         def plugin = new GroovyObject() {
             def scope = 'development'
@@ -319,7 +323,7 @@ class PluginUtilsSpec extends Specification {
         result['includes'] == ['development'] as Set
     }
 
-    def "evaluateIncludeExcludeProperty handles list values"() {
+    def 'evaluateIncludeExcludeProperty handles list values'() {
         given:
         def plugin = new GroovyObject() {
             def scopes = ['dev', 'test']
@@ -341,10 +345,12 @@ class PluginUtilsSpec extends Specification {
 // Test fixture plugin classes for GrailsPluginUtilsSpec
 
 class UtilsTestSimpleGrailsPlugin {
+
     def version = '1.0'
 }
 
 class PluginWithAllOrderingGrailsPlugin {
+
     def version = '1.0'
     def loadAfter = ['alpha', 'beta']
     def loadBefore = ['gamma']
@@ -352,6 +358,7 @@ class PluginWithAllOrderingGrailsPlugin {
 }
 
 class FailingConstructorUtilsGrailsPlugin {
+
     def version = '1.0'
 
     FailingConstructorUtilsGrailsPlugin() {
@@ -360,6 +367,7 @@ class FailingConstructorUtilsGrailsPlugin {
 }
 
 class PluginWithMultipleDepsGrailsPlugin {
+
     def version = '1.0'
     def dependsOn = [core: '1.0', i18n: '1.0']
 }

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -25,125 +25,125 @@ package grails.web.mapping
  */
 class UrlMappingsWithGreedyExtensionSpec extends AbstractUrlMappingsSpec {
 
-    void "Test that required greedy parameter splits at last dot"() {
-        given: "A URL mapping with required greedy parameter"
+    void 'Test that required greedy parameter splits at last dot'() {
+        given: 'A URL mapping with required greedy parameter'
             def urlMappingsHolder = getUrlMappingsHolder {
-                "/$id+(.$format)?"(controller: "user", action: "profile")
+                "/$id+(.$format)?'(controller: 'user', action: 'profile")
             }
 
-        when: "Matching a URL with multiple dots"
+        when: 'Matching a URL with multiple dots'
             def info = urlMappingsHolder.match('/test.test.json')
 
-        then: "The id captures everything up to the last dot"
+        then: 'The id captures everything up to the last dot'
             info != null
             info.parameters.id == 'test.test'
             info.parameters.format == 'json'
     }
 
-    void "Test that required greedy parameter works with single dot"() {
-        given: "A URL mapping with required greedy parameter"
+    void 'Test that required greedy parameter works with single dot'() {
+        given: 'A URL mapping with required greedy parameter'
             def urlMappingsHolder = getUrlMappingsHolder {
-                "/$id+(.$format)?"(controller: "user", action: "profile")
+                "/$id+(.$format)?'(controller: 'user', action: 'profile")
             }
 
-        when: "Matching a URL with single dot"
+        when: 'Matching a URL with single dot'
             def info = urlMappingsHolder.match('/test.json')
 
-        then: "The id captures up to the dot"
+        then: 'The id captures up to the dot'
             info != null
             info.parameters.id == 'test'
             info.parameters.format == 'json'
     }
 
-    void "Test that required greedy parameter works without any dots"() {
-        given: "A URL mapping with required greedy parameter"
+    void 'Test that required greedy parameter works without any dots'() {
+        given: 'A URL mapping with required greedy parameter'
             def urlMappingsHolder = getUrlMappingsHolder {
-                "/$id+(.$format)?"(controller: "user", action: "profile")
+                "/$id+(.$format)?'(controller: 'user', action: 'profile")
             }
 
-        when: "Matching a URL without any dots"
+        when: 'Matching a URL without any dots'
             def info = urlMappingsHolder.match('/simpletest')
 
-        then: "The id captures the entire value with no format"
+        then: 'The id captures the entire value with no format'
             info != null
             info.parameters.id == 'simpletest'
             info.parameters.format == null
     }
 
-    void "Test that required greedy parameter works without explicit extension marker"() {
-        given: "A URL mapping with required greedy parameter"
+    void 'Test that required greedy parameter works without explicit extension marker'() {
+        given: 'A URL mapping with required greedy parameter'
             def urlMappingsHolder = getUrlMappingsHolder {
-                "/$id+(.$format)?"(controller: "user", action: "profile")
+                "/$id+(.$format)?'(controller: 'user', action: 'profile")
             }
 
-        when: "Matching a URL like /test.test (ambiguous - could be id with extension or id without)"
+        when: 'Matching a URL like /test.test (ambiguous - could be id with extension or id without)'
             def info = urlMappingsHolder.match('/test.test')
 
-        then: "The greedy pattern treats last dot as extension separator"
+        then: 'The greedy pattern treats last dot as extension separator'
             info != null
             info.parameters.id == 'test'
             info.parameters.format == 'test'
     }
 
-    void "Test that required greedy parameter works with many dots"() {
-        given: "A URL mapping with required greedy parameter"
+    void 'Test that required greedy parameter works with many dots'() {
+        given: 'A URL mapping with required greedy parameter'
             def urlMappingsHolder = getUrlMappingsHolder {
-                "/$id+(.$format)?"(controller: "user", action: "profile")
+                "/$id+(.$format)?'(controller: 'user', action: 'profile")
             }
 
-        when: "Matching a URL with many dots"
+        when: 'Matching a URL with many dots'
             def info = urlMappingsHolder.match('/foo.bar.baz.xml')
 
-        then: "The id captures everything up to the last dot"
+        then: 'The id captures everything up to the last dot'
             info != null
             info.parameters.id == 'foo.bar.baz'
             info.parameters.format == 'xml'
     }
 
-    void "Test that optional greedy parameter splits at last dot"() {
-        given: "A URL mapping with optional greedy parameter"
+    void 'Test that optional greedy parameter splits at last dot'() {
+        given: 'A URL mapping with optional greedy parameter'
             def urlMappingsHolder = getUrlMappingsHolder {
-                "/$id+?(.$format)?"(controller: "user", action: "profile")
+                "/$id+?(.$format)?'(controller: 'user', action: 'profile")
             }
 
-        when: "Matching a URL with multiple dots"
+        when: 'Matching a URL with multiple dots'
             def info = urlMappingsHolder.match('/test.test.json')
 
-        then: "The id captures everything up to the last dot"
+        then: 'The id captures everything up to the last dot'
             info != null
             info.parameters.id == 'test.test'
             info.parameters.format == 'json'
     }
 
-    void "Test that optional greedy parameter allows missing id"() {
-        given: "A URL mapping with optional greedy parameter"
+    void 'Test that optional greedy parameter allows missing id'() {
+        given: 'A URL mapping with optional greedy parameter'
             def urlMappingsHolder = getUrlMappingsHolder {
-                "/$id+?(.$format)?"(controller: "user", action: "profile")
+                "/$id+?(.$format)?'(controller: 'user', action: 'profile")
             }
 
-        when: "Matching a URL without id"
+        when: 'Matching a URL without id'
             def info = urlMappingsHolder.match('/')
 
-        then: "The mapping matches with null id"
+        then: 'The mapping matches with null id'
             info != null
             info.parameters.id == null
             info.parameters.format == null
     }
 
-    void "Test that greedy parameter differs from non-greedy behavior"() {
-        given: "Two URL mappings - greedy and non-greedy"
+    void 'Test that greedy parameter differs from non-greedy behavior'() {
+        given: 'Two URL mappings - greedy and non-greedy'
             def greedyHolder = getUrlMappingsHolder {
-                "/$id+(.$format)?"(controller: "user", action: "profile")
+                "/$id+(.$format)?'(controller: 'user', action: 'profile")
             }
             def nonGreedyHolder = getUrlMappingsHolder {
-                "/$id(.$format)?"(controller: "user", action: "profile")
+                "/$id(.$format)?'(controller: 'user', action: 'profile")
             }
 
-        when: "Matching the same URL with both"
+        when: 'Matching the same URL with both'
             def greedyInfo = greedyHolder.match('/test.test.json')
             def nonGreedyInfo = nonGreedyHolder.match('/test.test.json')
 
-        then: "Greedy splits at last dot, non-greedy at first dot"
+        then: 'Greedy splits at last dot, non-greedy at first dot'
             greedyInfo.parameters.id == 'test.test'
             greedyInfo.parameters.format == 'json'
 
@@ -151,16 +151,16 @@ class UrlMappingsWithGreedyExtensionSpec extends AbstractUrlMappingsSpec {
             nonGreedyInfo.parameters.format == 'test.json'
     }
 
-    void "Test that greedy parameter works in complex mappings"() {
-        given: "A URL mapping with controller, action, and greedy id"
+    void 'Test that greedy parameter works in complex mappings'() {
+        given: 'A URL mapping with controller, action, and greedy id'
             def urlMappingsHolder = getUrlMappingsHolder {
                 "/$controller/$action/$id+(.$format)?"()
             }
 
-        when: "Matching a complex URL"
+        when: 'Matching a complex URL'
             def info = urlMappingsHolder.match('/user/show/test.test.json')
 
-        then: "All parameters are correctly extracted"
+        then: 'All parameters are correctly extracted'
             info != null
             info.parameters.controller == 'user'
             info.parameters.action == 'show'
@@ -168,41 +168,41 @@ class UrlMappingsWithGreedyExtensionSpec extends AbstractUrlMappingsSpec {
             info.parameters.format == 'json'
     }
 
-    void "Test that greedy links are generated correctly with format"() {
-        given: "A link generator with greedy parameter mapping"
+    void 'Test that greedy links are generated correctly with format'() {
+        given: 'A link generator with greedy parameter mapping'
             def linkGenerator = getLinkGenerator {
-                "/$id+(.$format)?"(controller: "user", action: "profile")
+                "/$id+(.$format)?'(controller: 'user', action: 'profile")
             }
 
-        when: "Generating a link with id containing dots and format"
-            def link = linkGenerator.link(controller: "user", action: "profile",
-                                         id: "test.test", params: [format: 'json'])
+        when: 'Generating a link with id containing dots and format'
+            def link = linkGenerator.link(controller: 'user', action: 'profile',
+                                         id: 'test.test', params: [format: 'json'])
 
-        then: "The link is correctly formatted"
-            link == "http://localhost/test.test.json"
+        then: 'The link is correctly formatted'
+            link == 'http://localhost/test.test.json'
     }
 
-    void "Test that greedy links are generated correctly without format"() {
-        given: "A link generator with greedy parameter mapping"
+    void 'Test that greedy links are generated correctly without format'() {
+        given: 'A link generator with greedy parameter mapping'
             def linkGenerator = getLinkGenerator {
-                "/$id+(.$format)?"(controller: "user", action: "profile")
+                "/$id+(.$format)?'(controller: 'user', action: 'profile")
             }
 
-        when: "Generating a link with id containing dots but no format"
-            def link = linkGenerator.link(controller: "user", action: "profile",
-                                         id: "test.test")
+        when: 'Generating a link with id containing dots but no format'
+            def link = linkGenerator.link(controller: 'user', action: 'profile',
+                                         id: 'test.test')
 
-        then: "The link is correctly formatted without extension"
-            link == "http://localhost/test.test"
+        then: 'The link is correctly formatted without extension'
+            link == 'http://localhost/test.test'
     }
 
-    void "Test that greedy parameter works with different file extensions"() {
-        given: "A URL mapping with required greedy parameter"
+    void 'Test that greedy parameter works with different file extensions'() {
+        given: 'A URL mapping with required greedy parameter'
             def urlMappingsHolder = getUrlMappingsHolder {
-                "/$id+(.$format)?"(controller: "user", action: "profile")
+                "/$id+(.$format)?'(controller: 'user', action: 'profile")
             }
 
-        expect: "Various file extensions are correctly parsed"
+        expect: 'Various file extensions are correctly parsed'
             urlMappingsHolder.match('/file.name.pdf').parameters.id == 'file.name'
             urlMappingsHolder.match('/file.name.pdf').parameters.format == 'pdf'
 
@@ -213,44 +213,44 @@ class UrlMappingsWithGreedyExtensionSpec extends AbstractUrlMappingsSpec {
             urlMappingsHolder.match('/file.name.csv').parameters.format == 'csv'
     }
 
-    void "Test that greedy parameter does not match across path segments"() {
-        given: "A URL mapping with required greedy parameter"
+    void 'Test that greedy parameter does not match across path segments'() {
+        given: 'A URL mapping with required greedy parameter'
             def urlMappingsHolder = getUrlMappingsHolder {
-                "/$id+(.$format)?"(controller: "user", action: "profile")
+                "/$id+(.$format)?'(controller: 'user', action: 'profile")
             }
 
-        when: "Matching a URL with a path separator"
+        when: 'Matching a URL with a path separator'
             def info = urlMappingsHolder.match('/9002/show')
 
-        then: "The greedy parameter should not match across path segments"
+        then: 'The greedy parameter should not match across path segments'
             info == null
     }
 
-    void "Test that UrlMappingData reports greedy extension correctly"() {
-        given: "A URL mapping with greedy parameter"
+    void 'Test that UrlMappingData reports greedy extension correctly'() {
+        given: 'A URL mapping with greedy parameter'
             def urlMappingsHolder = getUrlMappingsHolder {
-                "/$id+(.$format)?"(controller: "user", action: "profile")
+                "/$id+(.$format)?'(controller: 'user', action: 'profile")
             }
 
-        when: "Matching a URL"
+        when: 'Matching a URL'
             def info = urlMappingsHolder.match('/test.test.json')
 
-        then: "The UrlMappingData indicates greedy extension parameter"
+        then: 'The UrlMappingData indicates greedy extension parameter'
             info != null
             info.urlData.hasGreedyExtensionParam()
             info.urlData.hasOptionalExtension()
     }
 
-    void "Test that greedy id with optional action matches controller-only URL with format"() {
-        given: "A complex URL mapping with optional action and optional greedy id"
+    void 'Test that greedy id with optional action matches controller-only URL with format'() {
+        given: 'A complex URL mapping with optional action and optional greedy id'
             def urlMappingsHolder = getUrlMappingsHolder {
                 "/$controller/$action?/$id+?(.$format)?"()
             }
 
-        when: "Matching a URL with just controller and format (no action, no id)"
+        when: 'Matching a URL with just controller and format (no action, no id)'
             def info = urlMappingsHolder.match('/mobile.json')
 
-        then: "The controller and format are correctly extracted without greedy behavior affecting controller"
+        then: 'The controller and format are correctly extracted without greedy behavior affecting controller'
             info != null
             info.parameters.controller == 'mobile'
             info.parameters.action == null
@@ -258,16 +258,16 @@ class UrlMappingsWithGreedyExtensionSpec extends AbstractUrlMappingsSpec {
             info.parameters.format == 'json'
     }
 
-    void "Test that greedy id works correctly when all parameters are present"() {
-        given: "A complex URL mapping with optional action and optional greedy id"
+    void 'Test that greedy id works correctly when all parameters are present'() {
+        given: 'A complex URL mapping with optional action and optional greedy id'
             def urlMappingsHolder = getUrlMappingsHolder {
                 "/$controller/$action?/$id+?(.$format)?"()
             }
 
-        when: "Matching a URL with all parameters including id with dots"
+        when: 'Matching a URL with all parameters including id with dots'
             def info = urlMappingsHolder.match('/user/show/bob.smith.json')
 
-        then: "The greedy id captures everything up to the last dot"
+        then: 'The greedy id captures everything up to the last dot'
             info != null
             info.parameters.controller == 'user'
             info.parameters.action == 'show'
@@ -275,16 +275,16 @@ class UrlMappingsWithGreedyExtensionSpec extends AbstractUrlMappingsSpec {
             info.parameters.format == 'json'
     }
 
-    void "Test that greedy id does not affect controller when only controller and action are present"() {
-        given: "A complex URL mapping with optional action and optional greedy id"
+    void 'Test that greedy id does not affect controller when only controller and action are present'() {
+        given: 'A complex URL mapping with optional action and optional greedy id'
             def urlMappingsHolder = getUrlMappingsHolder {
                 "/$controller/$action?/$id+?(.$format)?"()
             }
 
-        when: "Matching a URL with controller and action only"
+        when: 'Matching a URL with controller and action only'
             def info = urlMappingsHolder.match('/user/show.json')
 
-        then: "The controller and action are correctly extracted with format"
+        then: 'The controller and action are correctly extracted with format'
             info != null
             info.parameters.controller == 'user'
             info.parameters.action == 'show'
@@ -292,16 +292,16 @@ class UrlMappingsWithGreedyExtensionSpec extends AbstractUrlMappingsSpec {
             info.parameters.format == 'json'
     }
 
-    void "Test that controller with dots is handled correctly without greedy id"() {
-        given: "A complex URL mapping with optional action and optional greedy id"
+    void 'Test that controller with dots is handled correctly without greedy id'() {
+        given: 'A complex URL mapping with optional action and optional greedy id'
             def urlMappingsHolder = getUrlMappingsHolder {
                 "/$controller/$action?/$id+?(.$format)?"()
             }
 
-        when: "Matching a URL with controller containing dots and format"
+        when: 'Matching a URL with controller containing dots and format'
             def info = urlMappingsHolder.match('/test.test.json')
 
-        then: "The URL /test.test.json should NOT apply greedy to controller"
+        then: 'The URL /test.test.json should NOT apply greedy to controller'
             info != null
             // The greedy + modifier only applies to $id, not $controller
             // So /test.test.json should be parsed using non-greedy behavior:
@@ -312,8 +312,8 @@ class UrlMappingsWithGreedyExtensionSpec extends AbstractUrlMappingsSpec {
             info.parameters.format == 'test.json'
     }
 
-    void "Test greedy id with no explicit format - what happens with bob.smith"() {
-        given: "A complex URL mapping with optional action and optional greedy id"
+    void 'Test greedy id with no explicit format - what happens with bob.smith'() {
+        given: 'A complex URL mapping with optional action and optional greedy id'
             def urlMappingsHolder = getUrlMappingsHolder {
                 "/$controller/$action?/$id+?(.$format)?"()
             }
@@ -321,7 +321,7 @@ class UrlMappingsWithGreedyExtensionSpec extends AbstractUrlMappingsSpec {
         when: "Matching a URL where the id contains a dot but there's no real format"
             def info = urlMappingsHolder.match('/user/show/bob.smith')
 
-        then: "With greedy matching, the last dot is treated as format separator"
+        then: 'With greedy matching, the last dot is treated as format separator'
             info != null
             // With greedy matching, the last dot is treated as format separator
             // So bob.smith becomes id=bob, format=smith
@@ -332,8 +332,8 @@ class UrlMappingsWithGreedyExtensionSpec extends AbstractUrlMappingsSpec {
             info.parameters.format == 'smith'
     }
 
-    void "Test non-greedy vs greedy behavior with bob.smith"() {
-        given: "Both greedy and non-greedy mappings"
+    void 'Test non-greedy vs greedy behavior with bob.smith'() {
+        given: 'Both greedy and non-greedy mappings'
             def greedyHolder = getUrlMappingsHolder {
                 "/$controller/$action/$id+(.$format)?"()
             }
@@ -341,11 +341,11 @@ class UrlMappingsWithGreedyExtensionSpec extends AbstractUrlMappingsSpec {
                 "/$controller/$action/$id(.$format)?"()
             }
 
-        when: "Matching the same URL"
+        when: 'Matching the same URL'
             def greedyInfo = greedyHolder.match('/user/show/bob.smith')
             def nonGreedyInfo = nonGreedyHolder.match('/user/show/bob.smith')
 
-        then: "Greedy splits at last dot, non-greedy at first dot"
+        then: 'Greedy splits at last dot, non-greedy at first dot'
             // Greedy: splits at LAST dot
             greedyInfo.parameters.id == 'bob'
             greedyInfo.parameters.format == 'smith'
@@ -356,8 +356,8 @@ class UrlMappingsWithGreedyExtensionSpec extends AbstractUrlMappingsSpec {
             // Wait - they're the same for single dot! Let's check with multiple dots
     }
 
-    void "Test non-greedy vs greedy with multiple dots in id"() {
-        given: "Both greedy and non-greedy mappings"
+    void 'Test non-greedy vs greedy with multiple dots in id'() {
+        given: 'Both greedy and non-greedy mappings'
             def greedyHolder = getUrlMappingsHolder {
                 "/$controller/$action/$id+(.$format)?"()
             }
@@ -365,11 +365,11 @@ class UrlMappingsWithGreedyExtensionSpec extends AbstractUrlMappingsSpec {
                 "/$controller/$action/$id(.$format)?"()
             }
 
-        when: "Matching URL with multiple dots"
+        when: 'Matching URL with multiple dots'
             def greedyInfo = greedyHolder.match('/user/show/bob.smith.jones')
             def nonGreedyInfo = nonGreedyHolder.match('/user/show/bob.smith.jones')
 
-        then: "Greedy splits at last dot, non-greedy at first dot"
+        then: 'Greedy splits at last dot, non-greedy at first dot'
             // Greedy: splits at LAST dot - id gets bob.smith, format gets jones
             greedyInfo.parameters.id == 'bob.smith'
             greedyInfo.parameters.format == 'jones'
@@ -379,8 +379,8 @@ class UrlMappingsWithGreedyExtensionSpec extends AbstractUrlMappingsSpec {
             nonGreedyInfo.parameters.format == 'smith.jones'
     }
 
-    void "Test format constraint to reject invalid formats"() {
-        given: "A mapping with format constraint to only allow known formats"
+    void 'Test format constraint to reject invalid formats'() {
+        given: 'A mapping with format constraint to only allow known formats'
             def holder = getUrlMappingsHolder {
                 "/$controller/$action/$id+(.$format)?" {
                     constraints {
@@ -389,11 +389,11 @@ class UrlMappingsWithGreedyExtensionSpec extends AbstractUrlMappingsSpec {
                 }
             }
 
-        when: "Matching URL where last segment is not a valid format"
+        when: 'Matching URL where last segment is not a valid format'
             def infoWithInvalidFormat = holder.match('/user/show/bob.smith')
             def infoWithValidFormat = holder.match('/user/show/bob.smith.json')
 
-        then: "Invalid format should not match, valid format should work"
+        then: 'Invalid format should not match, valid format should work'
             // With constraint, 'smith' is not a valid format so it should fail to match
             infoWithInvalidFormat == null
 
@@ -403,8 +403,8 @@ class UrlMappingsWithGreedyExtensionSpec extends AbstractUrlMappingsSpec {
             infoWithValidFormat.parameters.format == 'json'
     }
 
-    void "Test two mappings - greedy with format constraint plus fallback"() {
-        given: "Two mappings - greedy with format constraint first, plain fallback second"
+    void 'Test two mappings - greedy with format constraint plus fallback'() {
+        given: 'Two mappings - greedy with format constraint first, plain fallback second'
             def holder = getUrlMappingsHolder {
                 // First: greedy with format constraint for valid formats
                 "/$controller/$action/$id+(.$format)?" {
@@ -416,13 +416,13 @@ class UrlMappingsWithGreedyExtensionSpec extends AbstractUrlMappingsSpec {
                 "/$controller/$action/$id"()
             }
 
-        when: "Testing various URLs"
+        when: 'Testing various URLs'
             def bobSmith = holder.match('/user/show/bob.smith')
             def bobSmithJson = holder.match('/user/show/bob.smith.json')
             def bobSmithJones = holder.match('/user/show/bob.smith.jones')
             def bobSmithJonesXml = holder.match('/user/show/bob.smith.jones.xml')
 
-        then: "URLs with valid formats use greedy, others use fallback"
+        then: 'URLs with valid formats use greedy, others use fallback'
             // bob.smith - 'smith' is not valid format, fallback captures whole id
             bobSmith != null
             bobSmith.parameters.id == 'bob.smith'

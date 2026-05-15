@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -38,15 +38,14 @@ class ExecuteQueryWithinValidatorSpec extends Specification {
     @Shared PlatformTransactionManager transactionManager = hibernateDatastore.transactionManager
 
     @Rollback
-    void "test executeQuery method executed during validation"() {
-        when:"a validator executed an HQL query"
-        NameType nt = new NameType(nameType: "test").save(flush:true)
+    void 'test executeQuery method executed during validation'() {
+        when:'a validator executed an HQL query'
+        NameType nt = new NameType(nameType: 'test').save(flush: true)
         Named.withSession { Session session ->
             session.persist(new Named(nameType: nt))
         }
 
-
-        then:"no stackoverflow occurs"
+        then:'no stackoverflow occurs'
         NameType.count() == 1
         Named.count() == 1
     }
@@ -54,6 +53,7 @@ class ExecuteQueryWithinValidatorSpec extends Specification {
 
 @Entity
 class Named {
+
     NameType nameType
 
     static constraints = {
@@ -66,7 +66,7 @@ class Named {
                 if (rows !=null && rows.size() ==1)
                     found =true
                 if (!found) {
-                    errors.rejectValue("nameType","personNames.nameType.invalidValue")
+                    errors.rejectValue('nameType','personNames.nameType.invalidValue')
                 }
 
                 // handle case-sensitivity if (val.trim() != rows[0]) obj.nametype = rows[0]
@@ -77,5 +77,6 @@ class Named {
 
 @Entity
 class NameType {
+
     String nameType
 }

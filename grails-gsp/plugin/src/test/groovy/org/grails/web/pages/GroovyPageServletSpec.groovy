@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -39,7 +39,7 @@ import spock.lang.Specification
 /**
  *  Tests for the GSP servlet
  */
-class GroovyPageServletSpec extends Specification{
+class GroovyPageServletSpec extends Specification {
 
     private SimpleMapResourceLoader resourceLoader
 
@@ -50,107 +50,107 @@ class GroovyPageServletSpec extends Specification{
         RequestContextHolder.resetRequestAttributes()
     }
 
-    void "Test create response writer method"() {
-        when:"a response writer is created without a web request"
+    void 'Test create response writer method'() {
+        when:'a response writer is created without a web request'
             def gps = new GroovyPagesServlet()
             def writer = gps.createResponseWriter(new MockHttpServletResponse())
-        then:"An exception is thrown"
+        then:'An exception is thrown'
             thrown IllegalStateException
 
-        when:"A response writer is created with a web request"
+        when:'A response writer is created with a web request'
             RequestContextHolder.setRequestAttributes new GrailsWebRequest(
                 new MockHttpServletRequest(), new MockHttpServletResponse(), new MockServletContext())
 
             gps = new GroovyPagesServlet()
             writer = gps.createResponseWriter(new MockHttpServletResponse())
 
-        then:"The writer is created correctly"
+        then:'The writer is created correctly'
             writer != null
     }
 
-    void "Test default 404 response"() {
-        given:"An initialized gsp servlet"
+    void 'Test default 404 response'() {
+        given:'An initialized gsp servlet'
             GroovyPagesServlet servlet = systemUnderTest()
 
-        when:"A basic request is sent"
+        when:'A basic request is sent'
             def request = new MockHttpServletRequest()
-            request.method = "GET"
+            request.method = 'GET'
             def response = new MockHttpServletResponse()
             servlet.service(request, response)
-        then:"A 404 is returned"
+        then:'A 404 is returned'
             response.status == HttpServletResponse.SC_NOT_FOUND
     }
 
-    void "Test a 404 is sent for forbidden GSP pages"() {
-        given:"An initialized gsp servlet and a non public GSP"
+    void 'Test a 404 is sent for forbidden GSP pages'() {
+        given:'An initialized gsp servlet and a non public GSP'
             GroovyPagesServlet servlet = systemUnderTest()
             nonPublicGsgPage()
 
-        when:"The page is queried in the script engine"
-            def page = servlet.groovyPagesTemplateEngine.findScriptSource("/foo/nonPublic.gsp")
+        when:'The page is queried in the script engine'
+            def page = servlet.groovyPagesTemplateEngine.findScriptSource('/foo/nonPublic.gsp')
 
-        then:"The page is found"
+        then:'The page is found'
             page != null
             !page.isPublic()
 
-        when:"A non public page is rendered"
+        when:'A non public page is rendered'
             def request = new MockHttpServletRequest()
-            request.method = "GET"
-            request.servletPath = "/foo/nonPublic.gsp"
+            request.method = 'GET'
+            request.servletPath = '/foo/nonPublic.gsp'
             def response = new MockHttpServletResponse()
             servlet.service(request, response)
-        then:"A 404 is sent"
+        then:'A 404 is sent'
             response.status == HttpServletResponse.SC_NOT_FOUND
     }
 
-    void "Test include is allowed for forbidden GSP pages"() {
-        given:"An initialized gsp servlet and a non public GSP"
+    void 'Test include is allowed for forbidden GSP pages'() {
+        given:'An initialized gsp servlet and a non public GSP'
             GroovyPagesServlet servlet = systemUnderTest()
             nonPublicGsgPage()
 
-        when:"The page is queried in the script engine"
-            def page = servlet.groovyPagesTemplateEngine.findScriptSource("/foo/nonPublic.gsp")
+        when:'The page is queried in the script engine'
+            def page = servlet.groovyPagesTemplateEngine.findScriptSource('/foo/nonPublic.gsp')
 
-        then:"The page is found"
+        then:'The page is found'
             page != null
             !page.isPublic()
 
-        when:"A non public page is rendered"
+        when:'A non public page is rendered'
             def request = new MockHttpServletRequest()
-            request.method = "GET"
-            request.setAttribute(WebUtils.INCLUDE_REQUEST_URI_ATTRIBUTE, "/foo/nonPublic.gsp")
-            request.servletPath = "/foo/nonPublic.gsp"
+            request.method = 'GET'
+            request.setAttribute(WebUtils.INCLUDE_REQUEST_URI_ATTRIBUTE, '/foo/nonPublic.gsp')
+            request.servletPath = '/foo/nonPublic.gsp'
             def response = new MockHttpServletResponse()
             servlet.service(request, response)
-        then:"A 404 is sent"
+        then:'A 404 is sent'
             response.status == HttpServletResponse.SC_OK
             servlet.pageRendered.URI == page.URI
     }
-    void "Test a publicly exposed page is rendered"() {
-        given:"An initialized gsp servlet and a non public GSP"
+    void 'Test a publicly exposed page is rendered'() {
+        given:'An initialized gsp servlet and a non public GSP'
             GroovyPagesServlet servlet = systemUnderTest()
             publicGsgPage()
 
-        when:"The page is queried in the script engine"
-            def page = servlet.groovyPagesTemplateEngine.findScriptSource("/foo/public.gsp")
+        when:'The page is queried in the script engine'
+            def page = servlet.groovyPagesTemplateEngine.findScriptSource('/foo/public.gsp')
 
-        then:"The page is found"
+        then:'The page is found'
             page != null
             page.isPublic()
 
-        when:"A non public page is rendered"
+        when:'A non public page is rendered'
             def request = new MockHttpServletRequest()
-            request.method = "GET"
-            request.servletPath = "/foo/public.gsp"
+            request.method = 'GET'
+            request.servletPath = '/foo/public.gsp'
             def response = new MockHttpServletResponse()
             servlet.service(request, response)
-        then:"A 404 is sent"
+        then:'A 404 is sent'
             response.status == HttpServletResponse.SC_OK
             servlet.pageRendered.URI == page.URI
     }
 
     protected def nonPublicGsgPage() {
-        resourceLoader.resources['/WEB-INF/grails-app/views/foo/nonPublic.gsp'] = new ByteArrayResource("Hello".bytes) {
+        resourceLoader.resources['/WEB-INF/grails-app/views/foo/nonPublic.gsp'] = new ByteArrayResource('Hello'.bytes) {
             @Override
             URL getURL() {
                 new URL('http://localhost/WEB-INF/grails-app/views/foo/nonPublic.gsp')
@@ -159,7 +159,7 @@ class GroovyPageServletSpec extends Specification{
     }
 
     protected def publicGsgPage() {
-        resourceLoader.resources['/foo/public.gsp'] = new ByteArrayResource("Hello".bytes) {
+        resourceLoader.resources['/foo/public.gsp'] = new ByteArrayResource('Hello'.bytes) {
             @Override
             URL getURL() {
                 return new URL('http://localhost/foo/public.gsp')
@@ -175,7 +175,7 @@ class GroovyPageServletSpec extends Specification{
         resourceLoader = new SimpleMapResourceLoader()
         locator.addResourceLoader(resourceLoader)
         engine.setGroovyPageLocator(locator)
-        appCtx.beanFactory.registerSingleton("groovyPagesTemplateEngine", engine)
+        appCtx.beanFactory.registerSingleton('groovyPagesTemplateEngine', engine)
 
         def servlet = new GroovyPagesServlet() {
             GroovyPageScriptSource pageRendered

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -33,40 +33,40 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
 
     // Removed setupSpec to prevent loading all entities at once
 
-    void "resolveJoinTableForeignKeyColumnName derives name from associated entity when no explicit config"() {
-        given: "Register only entities for this specific test"
-        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
+    void 'resolveJoinTableForeignKeyColumnName derives name from associated entity when no explicit config'() {
+        given: 'Register only entities for this specific test'
+        def property = createTestHibernateToManyProperty(HTMPAuthor, 'books')
         def namingStrategy = getGrailsDomainBinder().namingStrategy
 
-        and: "Trigger Hibernate First Pass"
+        and: 'Trigger Hibernate First Pass'
         hibernateFirstPass()
 
         when:
         String columnName = property.resolveJoinTableForeignKeyColumnName(namingStrategy)
 
         then:
-        columnName == "htmpbook_id"
+        columnName == 'htmpbook_id'
     }
 
-    void "resolveJoinTableForeignKeyColumnName uses explicit join table column name when configured"() {
-        given: "Register only entities for this specific test"
-        def property = createTestHibernateToManyProperty(HTMPAuthorCustom, "books")
+    void 'resolveJoinTableForeignKeyColumnName uses explicit join table column name when configured'() {
+        given: 'Register only entities for this specific test'
+        def property = createTestHibernateToManyProperty(HTMPAuthorCustom, 'books')
         def namingStrategy = getGrailsDomainBinder().namingStrategy
 
-        and: "Trigger Hibernate First Pass"
+        and: 'Trigger Hibernate First Pass'
         hibernateFirstPass()
 
         when:
         String columnName = property.resolveJoinTableForeignKeyColumnName(namingStrategy)
 
         then:
-        columnName == "custom_book_fk"
+        columnName == 'custom_book_fk'
     }
 
-    void "isAssociationColumnNullable returns false for ManyToMany"() {
-        given: "Register only entities for this specific test"
+    void 'isAssociationColumnNullable returns false for ManyToMany'() {
+        given: 'Register only entities for this specific test'
         createPersistentEntity(HTMPCourse) // Course is needed because Student refers to it
-        def studentProp = createTestHibernateToManyProperty(HTMPStudent, "courses")
+        def studentProp = createTestHibernateToManyProperty(HTMPStudent, 'courses')
 
         when:
         hibernateFirstPass()
@@ -75,54 +75,54 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
         !studentProp.isAssociationColumnNullable()
     }
 
-    void "test index column configuration"() {
-        given: "Register the HTMPOrder entity using the helper"
-        def property = createTestHibernateToManyProperty(HTMPOrder, "items")
+    void 'test index column configuration'() {
+        given: 'Register the HTMPOrder entity using the helper'
+        def property = createTestHibernateToManyProperty(HTMPOrder, 'items')
         def namingStrategy = getGrailsDomainBinder().namingStrategy
 
-        and: "Trigger Hibernate First Pass"
+        and: 'Trigger Hibernate First Pass'
         hibernateFirstPass()
 
-        expect: "The index column name and type are resolved from the column list"
+        expect: 'The index column name and type are resolved from the column list'
         verifyAll(property) {
-            getIndexColumnName(namingStrategy) == "item_idx"
-            getIndexColumnType("integer") == "integer"
+            getIndexColumnName(namingStrategy) == 'item_idx'
+            getIndexColumnType('integer') == 'integer'
         }
     }
 
-    void "test index column configuration with map"() {
+    void 'test index column configuration with map'() {
         given:
-        def property = createTestHibernateToManyProperty(HTMPOrderMap, "items")
+        def property = createTestHibernateToManyProperty(HTMPOrderMap, 'items')
         def namingStrategy = getGrailsDomainBinder().namingStrategy
 
-        and: "Trigger Hibernate First Pass"
-        hibernateFirstPass()
-
-        expect:
-        verifyAll(property) {
-            getIndexColumnName(namingStrategy) == "map_idx"
-            getIndexColumnType("integer") == "string"
-        }
-    }
-
-    void "test index column configuration with closure"() {
-        given:
-        def property = createTestHibernateToManyProperty(HTMPOrderClosure, "items")
-        def namingStrategy = getGrailsDomainBinder().namingStrategy
-
-        and: "Trigger Hibernate First Pass"
+        and: 'Trigger Hibernate First Pass'
         hibernateFirstPass()
 
         expect:
         verifyAll(property) {
-            getIndexColumnName(namingStrategy) == "closure_idx"
-            getIndexColumnType("integer") == "long"
+            getIndexColumnName(namingStrategy) == 'map_idx'
+            getIndexColumnType('integer') == 'string'
         }
     }
 
-    void "getComponentType returns element type for basic collection"() {
+    void 'test index column configuration with closure'() {
         given:
-        def property = createTestHibernateToManyProperty(HTMPOrder, "items")
+        def property = createTestHibernateToManyProperty(HTMPOrderClosure, 'items')
+        def namingStrategy = getGrailsDomainBinder().namingStrategy
+
+        and: 'Trigger Hibernate First Pass'
+        hibernateFirstPass()
+
+        expect:
+        verifyAll(property) {
+            getIndexColumnName(namingStrategy) == 'closure_idx'
+            getIndexColumnType('integer') == 'long'
+        }
+    }
+
+    void 'getComponentType returns element type for basic collection'() {
+        given:
+        def property = createTestHibernateToManyProperty(HTMPOrder, 'items')
 
         and:
         hibernateFirstPass()
@@ -131,10 +131,11 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
         property.getComponentType() == String
     }
 
-    void "getComponentType returns associated entity class for one-to-many"() {
+    void 'getComponentType returns associated entity class for one-to-many'() {
+
         given:
         createPersistentEntity(HTMPBook)
-        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
+        def property = createTestHibernateToManyProperty(HTMPAuthor, 'books')
 
         and:
         hibernateFirstPass()
@@ -143,10 +144,11 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
         property.getComponentType() == HTMPBook
     }
 
-    void "getComponentType returns associated entity class for many-to-many"() {
+    void 'getComponentType returns associated entity class for many-to-many'() {
+
         given:
         createPersistentEntity(HTMPCourse)
-        def property = createTestHibernateToManyProperty(HTMPStudent, "courses")
+        def property = createTestHibernateToManyProperty(HTMPStudent, 'courses')
 
         and:
         hibernateFirstPass()
@@ -155,9 +157,9 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
         property.getComponentType() == HTMPCourse
     }
 
-    void "isEnum returns true for enum element collection"() {
+    void 'isEnum returns true for enum element collection'() {
         given:
-        def property = createTestHibernateToManyProperty(HTMPEntityWithEnum, "statuses")
+        def property = createTestHibernateToManyProperty(HTMPEntityWithEnum, 'statuses')
 
         and:
         hibernateFirstPass()
@@ -166,9 +168,9 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
         property.isEnum()
     }
 
-    void "isEnum returns false for non-enum basic collection"() {
+    void 'isEnum returns false for non-enum basic collection'() {
         given:
-        def property = createTestHibernateToManyProperty(HTMPOrder, "items")
+        def property = createTestHibernateToManyProperty(HTMPOrder, 'items')
 
         and:
         hibernateFirstPass()
@@ -177,31 +179,31 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
         !property.isEnum()
     }
 
-    void "getElementTypeName returns java.lang.String for String basic collection"() {
+    void 'getElementTypeName returns java.lang.String for String basic collection'() {
         given:
-        def property = createTestHibernateToManyProperty(HTMPOrder, "items")
+        def property = createTestHibernateToManyProperty(HTMPOrder, 'items')
 
         and:
         hibernateFirstPass()
 
         expect:
-        property.getElementTypeName() == "java.lang.String"
+        property.getElementTypeName() == 'java.lang.String'
     }
 
-    void "getElementTypeName defaults to string for embedded collection with no explicit type"() {
+    void 'getElementTypeName defaults to string for embedded collection with no explicit type'() {
         given:
-        def property = createTestHibernateToManyProperty(HTMPOrderMap, "items")
+        def property = createTestHibernateToManyProperty(HTMPOrderMap, 'items')
 
         and:
         hibernateFirstPass()
 
         expect:
-        property.getElementTypeName() == "java.lang.String"
+        property.getElementTypeName() == 'java.lang.String'
     }
 
-    void "isBasic returns true for basic element collection"() {
+    void 'isBasic returns true for basic element collection'() {
         given:
-        def property = createTestHibernateToManyProperty(HTMPOrder, "items")
+        def property = createTestHibernateToManyProperty(HTMPOrder, 'items')
 
         expect:
         property.isBasic()
@@ -209,9 +211,9 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
         !property.isManyToMany()
     }
 
-    void "isOneToMany returns true for one-to-many association"() {
+    void 'isOneToMany returns true for one-to-many association'() {
         given:
-        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
+        def property = createTestHibernateToManyProperty(HTMPAuthor, 'books')
 
         expect:
         property.isOneToMany()
@@ -219,10 +221,10 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
         !property.isManyToMany()
     }
 
-    void "isManyToMany returns true for many-to-many association"() {
+    void 'isManyToMany returns true for many-to-many association'() {
         given:
         createPersistentEntity(HTMPCourse)
-        def property = createTestHibernateToManyProperty(HTMPStudent, "courses")
+        def property = createTestHibernateToManyProperty(HTMPStudent, 'courses')
 
         expect:
         property.isManyToMany()
@@ -230,165 +232,165 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
         !property.isOneToMany()
     }
 
-    void "hasSort returns true and getSort/getOrder return values when configured"() {
+    void 'hasSort returns true and getSort/getOrder return values when configured'() {
         given:
-        def property = createTestHibernateToManyProperty(HTMPAuthorSorted, "books")
+        def property = createTestHibernateToManyProperty(HTMPAuthorSorted, 'books')
 
         expect:
         property.hasSort()
-        property.getSort() == "title"
-        property.getOrder() == "asc"
+        property.getSort() == 'title'
+        property.getOrder() == 'asc'
     }
 
-    void "hasSort returns false when no sort is configured"() {
+    void 'hasSort returns false when no sort is configured'() {
         given:
-        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
+        def property = createTestHibernateToManyProperty(HTMPAuthor, 'books')
 
         expect:
         !property.hasSort()
     }
 
-    void "getLazy returns false when explicitly set to false"() {
+    void 'getLazy returns false when explicitly set to false'() {
         given:
-        def property = createTestHibernateToManyProperty(HTMPAuthorLazy, "books")
+        def property = createTestHibernateToManyProperty(HTMPAuthorLazy, 'books')
 
         expect:
         property.getLazy() == false
     }
 
-    void "getIgnoreNotFound returns false by default"() {
+    void 'getIgnoreNotFound returns false by default'() {
         given:
-        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
+        def property = createTestHibernateToManyProperty(HTMPAuthor, 'books')
 
         expect:
         !property.getIgnoreNotFound()
     }
 
-    void "getCacheUsage returns cache usage string when cache is configured"() {
+    void 'getCacheUsage returns cache usage string when cache is configured'() {
         given:
-        def property = createTestHibernateToManyProperty(HTMPAuthorCached, "books")
+        def property = createTestHibernateToManyProperty(HTMPAuthorCached, 'books')
 
         expect:
         property.getCacheUsage() != null
     }
 
-    void "getCacheUsage returns null when no cache is configured"() {
+    void 'getCacheUsage returns null when no cache is configured'() {
         given:
-        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
+        def property = createTestHibernateToManyProperty(HTMPAuthor, 'books')
 
         expect:
         property.getCacheUsage() == null
     }
 
-    void "getIndexColumnName returns default name when mapped form has no index column or columns"() {
+    void 'getIndexColumnName returns default name when mapped form has no index column or columns'() {
         given:
         createPersistentEntity(HTMPBook)
-        def property = createTestHibernateToManyProperty(HTMPAuthorSorted, "books")
+        def property = createTestHibernateToManyProperty(HTMPAuthorSorted, 'books')
         def namingStrategy = getGrailsDomainBinder().namingStrategy
 
         expect:
         property.getIndexColumnName(namingStrategy) != null
     }
 
-    void "getIndexColumnType returns defaultType when mapped form has no index column or columns"() {
+    void 'getIndexColumnType returns defaultType when mapped form has no index column or columns'() {
         given:
         createPersistentEntity(HTMPBook)
-        def property = createTestHibernateToManyProperty(HTMPAuthorSorted, "books")
+        def property = createTestHibernateToManyProperty(HTMPAuthorSorted, 'books')
 
         expect:
-        property.getIndexColumnType("mydefault") == "mydefault"
+        property.getIndexColumnType('mydefault') == 'mydefault'
     }
 
-    void "getFetchMode returns a non-null fetch mode"() {
+    void 'getFetchMode returns a non-null fetch mode'() {
         given:
-        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
+        def property = createTestHibernateToManyProperty(HTMPAuthor, 'books')
 
         expect:
         property.getFetchMode() != null
     }
 
-    void "getCascade returns cascade string (may be null if not configured)"() {
+    void 'getCascade returns cascade string (may be null if not configured)'() {
         given:
-        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
+        def property = createTestHibernateToManyProperty(HTMPAuthor, 'books')
 
         expect:
         property.getCascade() == null || property.getCascade() instanceof String
     }
 
-    void "getBatchSize returns -1 when no batch size is configured"() {
+    void 'getBatchSize returns -1 when no batch size is configured'() {
         given:
-        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
+        def property = createTestHibernateToManyProperty(HTMPAuthor, 'books')
 
         expect:
         property.getBatchSize() == -1
     }
 
-    void "getRole returns qualified entity and property name"() {
+    void 'getRole returns qualified entity and property name'() {
         given:
-        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
+        def property = createTestHibernateToManyProperty(HTMPAuthor, 'books')
 
         expect:
-        property.getRole("") != null
-        property.getRole("parent.books") != null
+        property.getRole('') != null
+        property.getRole('parent.books') != null
     }
 
-    void "getMapElementName returns default element column name when no join table column configured"() {
+    void 'getMapElementName returns default element column name when no join table column configured'() {
         given:
-        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
+        def property = createTestHibernateToManyProperty(HTMPAuthor, 'books')
         def namingStrategy = getGrailsDomainBinder().namingStrategy
 
         expect:
         property.getMapElementName(namingStrategy) != null
-        property.getMapElementName(namingStrategy).endsWith("_elt")
+        property.getMapElementName(namingStrategy).endsWith('_elt')
     }
 
-    void "joinTableColumName returns derived column name for basic String collection (no explicit column)"() {
+    void 'joinTableColumName returns derived column name for basic String collection (no explicit column)'() {
         given:
-        def property = createTestHibernateToManyProperty(HTMPOrder, "items")
+        def property = createTestHibernateToManyProperty(HTMPOrder, 'items')
         def namingStrategy = getGrailsDomainBinder().namingStrategy
 
         expect:
         property.joinTableColumName(namingStrategy) != null
     }
 
-    void "joinTableColumName returns derived column name for enum collection"() {
+    void 'joinTableColumName returns derived column name for enum collection'() {
         given:
-        def property = createTestHibernateToManyProperty(HTMPEntityWithEnum, "statuses")
+        def property = createTestHibernateToManyProperty(HTMPEntityWithEnum, 'statuses')
         def namingStrategy = getGrailsDomainBinder().namingStrategy
 
         expect:
         property.joinTableColumName(namingStrategy) != null
     }
 
-    void "joinTableColumName uses explicit join table column name when present"() {
+    void 'joinTableColumName uses explicit join table column name when present'() {
         given:
-        def property = createTestHibernateToManyProperty(HTMPJoinColOwner, "tags")
+        def property = createTestHibernateToManyProperty(HTMPJoinColOwner, 'tags')
         def namingStrategy = getGrailsDomainBinder().namingStrategy
 
         expect:
-        property.joinTableColumName(namingStrategy) == "tag_val"
+        property.joinTableColumName(namingStrategy) == 'tag_val'
     }
 
-    void "getColumnConfigOptional returns empty when no join table column config"() {
+    void 'getColumnConfigOptional returns empty when no join table column config'() {
         given:
-        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
+        def property = createTestHibernateToManyProperty(HTMPAuthor, 'books')
 
         expect:
         !property.getColumnConfigOptional().isPresent()
     }
 
-    void "shouldBindWithForeignKey returns false by default"() {
+    void 'shouldBindWithForeignKey returns false by default'() {
         given:
-        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
+        def property = createTestHibernateToManyProperty(HTMPAuthor, 'books')
 
         expect:
         !property.shouldBindWithForeignKey()
     }
 
-    void "validateOwningSide throws MappingException when Hibernate collection is not a List"() {
+    void 'validateOwningSide throws MappingException when Hibernate collection is not a List'() {
         given:
         createPersistentEntity(HTMPBook)
-        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
+        def property = createTestHibernateToManyProperty(HTMPAuthor, 'books')
 
         and:
         hibernateFirstPass()
@@ -400,9 +402,9 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
         thrown(MappingException)
     }
 
-    void "getCollection throws MappingException when Hibernate collection is not initialized"() {
+    void 'getCollection throws MappingException when Hibernate collection is not initialized'() {
         given:
-        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
+        def property = createTestHibernateToManyProperty(HTMPAuthor, 'books')
 
         when:
         property.getCollection()
@@ -411,9 +413,9 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
         thrown(MappingException)
     }
 
-    void "setCollection with null does not throw"() {
+    void 'setCollection with null does not throw'() {
         given:
-        def property = createTestHibernateToManyProperty(HTMPAuthor, "books")
+        def property = createTestHibernateToManyProperty(HTMPAuthor, 'books')
 
         when:
         property.setCollection(null)
@@ -424,18 +426,18 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
 
     // ─── Additional edge cases for coverage ───────────────────────────────────
 
-    void "test index column name with empty columns"() {
+    void 'test index column name with empty columns'() {
         given:
-        def property = createTestHibernateToManyProperty(HTMPOrderEmptyIndex, "items")
+        def property = createTestHibernateToManyProperty(HTMPOrderEmptyIndex, 'items')
         def namingStrategy = getGrailsDomainBinder().namingStrategy
 
         expect:
-        property.getIndexColumnName(namingStrategy).endsWith("_idx")
+        property.getIndexColumnName(namingStrategy).endsWith('_idx')
     }
 
-    void "test setCollection handles orphan delete"() {
+    void 'test setCollection handles orphan delete'() {
         given:
-        def property = createTestHibernateToManyProperty(HTMPAuthorOrphan, "books")
+        def property = createTestHibernateToManyProperty(HTMPAuthorOrphan, 'books')
         def mockCollection = Mock(org.hibernate.mapping.Set)
 
         when:
@@ -457,18 +459,18 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
     // HibernateToManyCollectionProperty.getElementTypeName — all 4 branches
     // -------------------------------------------------------------------------
 
-    void "getElementTypeName returns component type name when componentType is non-null and has a mapped Hibernate type"() {
+    void 'getElementTypeName returns component type name when componentType is non-null and has a mapped Hibernate type'() {
         given: "a String-valued basic collection — componentType is String, typeName resolves to 'string'"
-        def prop = createTestHibernateToManyProperty(HTMPOwnerString, "tags") as HibernateToManyCollectionProperty
+        def prop = createTestHibernateToManyProperty(HTMPOwnerString, 'tags') as HibernateToManyCollectionProperty
 
         expect:
         prop.getElementTypeName() != null
         prop.getElementTypeName() != Object.class.name
     }
 
-    void "getElementTypeName falls back to StandardBasicTypes.STRING for Object-typed collections"() {
-        given: "a collection whose element type resolves to Object"
-        def prop = createTestHibernateToManyProperty(HTMPOwnerObject, "items") as HibernateToManyCollectionProperty
+    void 'getElementTypeName falls back to StandardBasicTypes.STRING for Object-typed collections'() {
+        given: 'a collection whose element type resolves to Object'
+        def prop = createTestHibernateToManyProperty(HTMPOwnerObject, 'items') as HibernateToManyCollectionProperty
 
         expect:
         prop.getElementTypeName() == org.hibernate.type.StandardBasicTypes.STRING.getName()
@@ -476,7 +478,7 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
 
     // ─── Tests for default methods via Stub ──────────────────────────────────
 
-    def "isAssociationColumnNullable returns true for non-ManyToMany"() {
+    def 'isAssociationColumnNullable returns true for non-ManyToMany'() {
         given:
         def entity = (GrailsHibernatePersistentEntity) getMappingContext().getPersistentEntity(HTMPAuthor.name)
         def stub = new TestHibernateToManyProperty(entity, HTMPBook, null)
@@ -485,7 +487,7 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
         stub.isAssociationColumnNullable()
     }
 
-    def "isBidirectionalManyToOneWithListMapping coverage"() {
+    def 'isBidirectionalManyToOneWithListMapping coverage'() {
         given:
         def entity = (GrailsHibernatePersistentEntity) getMappingContext().getPersistentEntity(HTMPAuthor.name)
         def stub = new TestHibernateToManyProperty(entity, HTMPBook, null)
@@ -497,12 +499,12 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
         !stub.isBidirectionalManyToOneWithListMapping(prop)
     }
 
-    def "getTypeName priority logic for ToMany"() {
+    def 'getTypeName priority logic for ToMany'() {
         given:
         def entity = (GrailsHibernatePersistentEntity) getMappingContext().getPersistentEntity(HTMPAuthor.name)
         def stub = new TestHibernateToManyProperty(entity, String, null)
         
-        def config1 = new PropertyConfig(type: "custom")
+        def config1 = new PropertyConfig(type: 'custom')
         def mapping1 = Mock(Mapping)
         
         def config2 = new PropertyConfig(type: null)
@@ -511,17 +513,17 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
         def config3 = new PropertyConfig(type: null)
         def mapping3 = Mock(Mapping)
 
-        expect: "Config priority"
-        stub.getTypeName(String, config1, mapping1) == "custom"
+        expect: 'Config priority'
+        stub.getTypeName(String, config1, mapping1) == 'custom'
 
-        when: "Mapping priority"
+        when: 'Mapping priority'
         def res2 = stub.getTypeName(String, config2, mapping2)
         
         then:
-        1 * mapping2.getTypeName(String) >> "mapped"
-        res2 == "mapped"
+        1 * mapping2.getTypeName(String) >> 'mapped'
+        res2 == 'mapped'
 
-        when: "Neither have it"
+        when: 'Neither have it'
         def res3 = stub.getTypeName(String, config3, mapping3)
         
         then:
@@ -530,6 +532,7 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
     }
 
     static class TestHibernateToManyProperty implements HibernateToManyProperty {
+
         GrailsHibernatePersistentEntity ownerField
         Class componentTypeField
         PropertyConfig mappedFormField
@@ -542,7 +545,7 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
 
         @Override Class getComponentType() { componentTypeField }
         @Override PropertyConfig getMappedForm() { mappedFormField }
-        @Override String getName() { "books" }
+        @Override String getName() { 'books' }
         @Override Class getType() { List }
         @Override PersistentEntity getOwner() { ownerField }
 
@@ -577,12 +580,14 @@ class HibernateToManyPropertySpec extends HibernateGormDatastoreSpec {
 
 @Entity
 class HTMPBook {
+
     Long id
     String title
 }
 
 @Entity
 class HTMPAuthor {
+
     Long id
     String name
     static hasMany = [books: HTMPBook]
@@ -590,6 +595,7 @@ class HTMPAuthor {
 
 @Entity
 class HTMPAuthorCustom {
+
     Long id
     String name
     static hasMany = [books: HTMPBook]
@@ -600,6 +606,7 @@ class HTMPAuthorCustom {
 
 @Entity
 class HTMPStudent {
+
     Long id
     String name
     static hasMany = [courses: HTMPCourse]
@@ -607,6 +614,7 @@ class HTMPStudent {
 
 @Entity
 class HTMPCourse {
+
     Long id
     String title
     static hasMany = [students: HTMPStudent]
@@ -614,6 +622,7 @@ class HTMPCourse {
 
 @Entity // Only if outside grails-app/domain
 class HTMPOrder {
+
     Long id
 
     List<String> items // Remove the = []
@@ -622,15 +631,16 @@ class HTMPOrder {
 
     static mapping = {
         items joinTable: [
-                name: "htmp_order_items",
-                key: "order_id",
-                column: "item_value"
-        ], index: "item_idx" // Defines the column for the List index
+                name: 'htmp_order_items',
+                key: 'order_id',
+                column: 'item_value'
+        ], index: 'item_idx' // Defines the column for the List index
     }
 }
 
 @Entity
 class HTMPOrderMap {
+
     Long id
     List<String> items
     static hasMany = [items: String]
@@ -641,6 +651,7 @@ class HTMPOrderMap {
 
 @Entity
 class HTMPOrderClosure {
+
     Long id
     List<String> items
     static hasMany = [items: String]
@@ -654,6 +665,7 @@ class HTMPOrderClosure {
 
 @Entity
 class HTMPOrderEmptyIndex {
+
     Long id
     List<String> items
     static hasMany = [items: String]
@@ -666,12 +678,14 @@ enum HTMPStatus { ACTIVE, INACTIVE }
 
 @Entity
 class HTMPEntityWithEnum {
+
     Long id
     static hasMany = [statuses: HTMPStatus]
 }
 
 @Entity
 class HTMPAuthorSorted {
+
     Long id
     String name
     static hasMany = [books: HTMPBook]
@@ -682,6 +696,7 @@ class HTMPAuthorSorted {
 
 @Entity
 class HTMPAuthorLazy {
+
     Long id
     String name
     static hasMany = [books: HTMPBook]
@@ -692,6 +707,7 @@ class HTMPAuthorLazy {
 
 @Entity
 class HTMPAuthorCached {
+
     Long id
     String name
     static hasMany = [books: HTMPBook]
@@ -702,6 +718,7 @@ class HTMPAuthorCached {
 
 @Entity
 class HTMPAuthorOrphan {
+
     Long id
     String name
     static hasMany = [books: HTMPBook]
@@ -712,18 +729,21 @@ class HTMPAuthorOrphan {
 
 @Entity
 class HTMPOwnerString {
+
     Long id
     static hasMany = [tags: String]
 }
 
 @Entity
 class HTMPOwnerObject {
+
     Long id
     static hasMany = [items: Object]
 }
 
 @Entity
 class HTMPJoinColOwner {
+
     Long id
     static hasMany = [tags: String]
     static mapping = {

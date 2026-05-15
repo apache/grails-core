@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -46,9 +46,9 @@ class SchemaMultiTenantSpec extends Specification {
 
     void setup() {
         Map config = [
-                "grails.gorm.multiTenancy.mode":"SCHEMA",
-                "grails.gorm.multiTenancy.tenantResolverClass":MyResolver,
-                'dataSource.url':"jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
+                'grails.gorm.multiTenancy.mode': 'SCHEMA',
+                'grails.gorm.multiTenancy.tenantResolverClass': MyResolver,
+                'dataSource.url': 'jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000',
                 'dataSource.dbCreate': 'update',
                 'dataSource.dialect': H2Dialect.name,
                 'dataSource.formatSql': 'true',
@@ -60,123 +60,122 @@ class SchemaMultiTenantSpec extends Specification {
         datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config), SingleTenantAuthor )
     }
 
-    void "Test a database per tenant multi tenancy"() {
-        given:"A configuration for multiple data sources"
-        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "")
+    void 'Test a database per tenant multi tenancy'() {
+        given:'A configuration for multiple data sources'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, '')
 
         HibernateConnectionSource connectionSource = datastore.getConnectionSources().defaultConnectionSource
         def connection = connectionSource.dataSource.getConnection()
         connection.close()
-        when:"no tenant id is present"
+        when:'no tenant id is present'
         SingleTenantAuthor.list()
 
-        then:"An exception is thrown"
+        then:'An exception is thrown'
         thrown(TenantNotFoundException)
 
-        when:"no tenant id is present"
+        when:'no tenant id is present'
         new SingleTenantAuthor().save()
 
-        then:"An exception is thrown"
+        then:'An exception is thrown'
         thrown(TenantNotFoundException)
 
-        when:"A tenant id is present"
-        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "moreBooks")
+        when:'A tenant id is present'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'moreBooks')
 
-        then:"the correct tenant is used"
+        then:'the correct tenant is used'
         SingleTenantAuthor.withTransaction { SingleTenantAuthor.count() == 0 }
         SingleTenantAuthor.withTransaction {
             SingleTenantAuthor.withSession { Session s ->
                 def conn = ((JdbcSessionOwner) s).getJdbcConnectionAccess().obtainConnection()
-                assert conn.metaData.getURL() == "jdbc:h2:mem:grailsDB"
+                assert conn.metaData.getURL() == 'jdbc:h2:mem:grailsDB'
                 return true
             }
         }
 
-        when:"An object is saved"
+        when:'An object is saved'
         SingleTenantAuthor.withTransaction {
-            SingleTenantAuthor.withSession{ Session s ->
+            SingleTenantAuthor.withSession { Session s ->
                 def conn = ((JdbcSessionOwner) s).getJdbcConnectionAccess().obtainConnection()
-                assert conn.metaData.getURL() == "jdbc:h2:mem:grailsDB"
-                new SingleTenantAuthor(name: "Stephen King").save(flush:true)
+                assert conn.metaData.getURL() == 'jdbc:h2:mem:grailsDB'
+                new SingleTenantAuthor(name: 'Stephen King').save(flush: true)
             }
         }
 
-        then:"The results are correct"
+        then:'The results are correct'
         SingleTenantAuthor.withTransaction { SingleTenantAuthor.count() == 1 }
 
         when:
         def author =  SingleTenantAuthor.withNewSession {
-            SingleTenantAuthor.find { name == "Stephen King"}
+            SingleTenantAuthor.find { name == 'Stephen King'}
         }
 
         then:
         author != null
 
-        when:"An a transaction is used"
-        SingleTenantAuthor.withTransaction{
-            new SingleTenantAuthor(name: "James Patterson").save(flush:true)
+        when:'An a transaction is used'
+        SingleTenantAuthor.withTransaction {
+            new SingleTenantAuthor(name: 'James Patterson').save(flush: true)
         }
 
-        then:"The results are correct"
+        then:'The results are correct'
         SingleTenantAuthor.withTransaction { SingleTenantAuthor.count() == 2 }
 
-        when:"The tenant id is switched"
-        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "books")
+        when:'The tenant id is switched'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'books')
 
-
-        then:"the correct tenant is used"
+        then:'the correct tenant is used'
         SingleTenantAuthor.withTransaction { SingleTenantAuthor.count() == 0 }
         SingleTenantAuthor.withTransaction {
 
             SingleTenantAuthor.withSession { Session s ->
                 def conn = ((JdbcSessionOwner) s).getJdbcConnectionAccess().obtainConnection()
-                assert conn.metaData.getURL() == "jdbc:h2:mem:grailsDB"
+                assert conn.metaData.getURL() == 'jdbc:h2:mem:grailsDB'
                 SingleTenantAuthor.count() == 0
             }
         }
-        SingleTenantAuthor.withTenant("moreBooks") { String tenantId, Session s ->
+        SingleTenantAuthor.withTenant('moreBooks') { String tenantId, Session s ->
             assert s != null
             SingleTenantAuthor.count() == 2
         }
-        Tenants.withId("books") {
+        Tenants.withId('books') {
             SingleTenantAuthor.count() == 0
         }
-        Tenants.withId("moreBooks") {
+        Tenants.withId('moreBooks') {
             SingleTenantAuthor.count() == 2
         }
         Tenants.withCurrent {
             SingleTenantAuthor.count() == 0
         }
 
-        SingleTenantAuthor.withTransaction{
-            new SingleTenantAuthor(name: "JRR Tolkien").save(flush:true)
+        SingleTenantAuthor.withTransaction {
+            new SingleTenantAuthor(name: 'JRR Tolkien').save(flush: true)
         }
 
-        when:"A new tenant is added at runtime"
-        MyResolver.tenantIds.add("evenMoreBooks")
-        datastore.addTenantForSchema("evenMoreBooks")
+        when:'A new tenant is added at runtime'
+        MyResolver.tenantIds.add('evenMoreBooks')
+        datastore.addTenantForSchema('evenMoreBooks')
 
         then:
-        SingleTenantAuthor.withTenant("evenMoreBooks") { String tenantId, Session s ->
+        SingleTenantAuthor.withTenant('evenMoreBooks') { String tenantId, Session s ->
             assert s != null
             def count = SingleTenantAuthor.count()
             count == 0
         }
 
-        when:"each tenant is iterated over"
+        when:'each tenant is iterated over'
         Map tenantIds = [:]
         SingleTenantAuthor.eachTenant { String tenantId ->
             tenantIds.put(tenantId, SingleTenantAuthor.count())
         }
 
-        then:"The result is correct"
-        tenantIds == [moreBooks:2, books:1, evenMoreBooks:0]
-
+        then:'The result is correct'
+        tenantIds == [moreBooks: 2, books: 1, evenMoreBooks: 0]
 
     }
 
     static class MyResolver extends SystemPropertyTenantResolver implements AllTenantsResolver {
-        static List<Serializable> tenantIds = ["moreBooks", "books"]
+
+        static List<Serializable> tenantIds = ['moreBooks', 'books']
         @Override
         Iterable<Serializable> resolveTenantIds() {
 

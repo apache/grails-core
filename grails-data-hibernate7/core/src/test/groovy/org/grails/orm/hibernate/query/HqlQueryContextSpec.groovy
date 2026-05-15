@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -36,13 +36,13 @@ class HqlQueryContextSpec extends Specification {
         bookEntity = datastore.mappingContext.getPersistentEntity(HqlQueryContextSpecBook.name)
     }
 
-    void "prepare with plain HQL string"() {
+    void 'prepare with plain HQL string'() {
         when:
-        def ctx = HqlQueryContext.prepare(bookEntity, "from HqlQueryContextSpecBook where title = :t", [t: "Test"], null, [max: 10], [:], false, false)
+        def ctx = HqlQueryContext.prepare(bookEntity, 'from HqlQueryContextSpecBook where title = :t', [t: 'Test'], null, [max: 10], [:], false, false)
 
         then:
-        ctx.hql() == "from HqlQueryContextSpecBook where title = :t"
-        ctx.namedParams() == [t: "Test"]
+        ctx.hql() == 'from HqlQueryContextSpecBook where title = :t'
+        ctx.namedParams() == [t: 'Test']
         ctx.positionalParams() == []
         ctx.querySettings() == [max: 10]
         !ctx.isUpdate()
@@ -50,17 +50,17 @@ class HqlQueryContextSpec extends Specification {
         ctx.targetClass() == HqlQueryContextSpecBook
     }
 
-    void "prepare with empty HQL defaults to from Entity"() {
+    void 'prepare with empty HQL defaults to from Entity'() {
         when:
-        def ctx = HqlQueryContext.prepare(bookEntity, "", [:], null, [:], [:], false, false)
+        def ctx = HqlQueryContext.prepare(bookEntity, '', [:], null, [:], [:], false, false)
 
         then:
         ctx.hql() == "from ${HqlQueryContextSpecBook.name} e"
     }
 
-    void "prepare expands GString into named parameters"() {
+    void 'prepare expands GString into named parameters'() {
         given:
-        String t = "The Hobbit"
+        String t = 'The Hobbit'
         int p = 300
         GString gq = "from HqlQueryContextSpecBook where title = ${t} and pages > ${p}"
 
@@ -68,13 +68,13 @@ class HqlQueryContextSpec extends Specification {
         def ctx = HqlQueryContext.prepare(bookEntity, gq, [:], null, [:], [:], false, false)
 
         then:
-        ctx.hql() == "from HqlQueryContextSpecBook where title = :p0 and pages > :p1"
-        ctx.namedParams() == [p0: "The Hobbit", p1: 300]
+        ctx.hql() == 'from HqlQueryContextSpecBook where title = :p0 and pages > :p1'
+        ctx.namedParams() == [p0: 'The Hobbit', p1: 300]
     }
 
-    void "prepare expands GString into positional parameters when explicitly requested"() {
+    void 'prepare expands GString into positional parameters when explicitly requested'() {
         given:
-        String t = "The Hobbit"
+        String t = 'The Hobbit'
         GString gq = "from HqlQueryContextSpecBook where title = ${t}"
 
         when:
@@ -83,8 +83,8 @@ class HqlQueryContextSpec extends Specification {
         def ctx = HqlQueryContext.prepare(bookEntity, gq, [:], [], [:], [:], false, false)
 
         then:
-        ctx.hql() == "from HqlQueryContextSpecBook where title = :p0"
-        ctx.namedParams() == [p0: "The Hobbit"]
+        ctx.hql() == 'from HqlQueryContextSpecBook where title = :p0'
+        ctx.namedParams() == [p0: 'The Hobbit']
     }
 
     @Unroll
@@ -94,15 +94,15 @@ class HqlQueryContextSpec extends Specification {
 
         where:
         hql                                                     | expected
-        "from Book"                                             | HqlQueryContextSpecBook
-        "select b from Book b"                                  | HqlQueryContextSpecBook
-        "select b.title from Book b"                            | Object
-        "select b.title, b.pages from Book b"                   | Object[]
-        "select count(b.id) from Book b"                        | null
-        "select sum(b.pages) from Book b"                       | null
-        "select avg(b.pages) from Book b"                       | null
-        "select new map(b.title as title) from Book b"          | Object
-        "select distinct b.author from Book b"                  | Object
+        'from Book'                                             | HqlQueryContextSpecBook
+        'select b from Book b'                                  | HqlQueryContextSpecBook
+        'select b.title from Book b'                            | Object
+        'select b.title, b.pages from Book b'                   | Object[]
+        'select count(b.id) from Book b'                        | null
+        'select sum(b.pages) from Book b'                       | null
+        'select avg(b.pages) from Book b'                       | null
+        'select new map(b.title as title) from Book b'          | Object
+        'select distinct b.author from Book b'                  | Object
     }
 
     @Unroll
@@ -112,16 +112,16 @@ class HqlQueryContextSpec extends Specification {
 
         where:
         hql                                         | expected
-        "select title from Book"                    | "select e.title from Book e"
-        "select Book from Book"                     | "select e from Book e"
-        "select b.title from Book b"                | "select b.title from Book b"
-        "select count(title) from Book"             | "select count(title) from Book e"
-        "select distinct title from Book"           | "select distinct e.title from Book e"
+        'select title from Book'                    | 'select e.title from Book e'
+        'select Book from Book'                     | 'select e from Book e'
+        'select b.title from Book b'                | 'select b.title from Book b'
+        'select count(title) from Book'             | 'select count(title) from Book e'
+        'select distinct title from Book'           | 'select distinct e.title from Book e'
     }
 
-    void "GString expansion adds spaces if needed"() {
+    void 'GString expansion adds spaces if needed'() {
         given:
-        String val = "value"
+        String val = 'value'
         // No space before interpolation
         GString gq = "from Book where title=${val}"
 
@@ -129,10 +129,10 @@ class HqlQueryContextSpec extends Specification {
         def ctx = HqlQueryContext.prepare(bookEntity, gq, [:], null, [:], [:], false, false)
 
         then:
-        ctx.hql() == "from Book where title= :p0"
+        ctx.hql() == 'from Book where title= :p0'
     }
 
-    void "normalizeMultiLineQueryString replaces newlines with spaces"() {
+    void 'normalizeMultiLineQueryString replaces newlines with spaces'() {
         given:
         String hql = "from Book\nwhere title = :t\norder by id"
 
@@ -140,7 +140,7 @@ class HqlQueryContextSpec extends Specification {
         def resolved = HqlQueryContext.normalizeMultiLineQueryString(hql)
 
         then:
-        resolved == "from Book where title = :t order by id"
+        resolved == 'from Book where title = :t order by id'
     }
 
     @Unroll
@@ -150,12 +150,12 @@ class HqlQueryContextSpec extends Specification {
 
         where:
         input                               | expected
-        "a, b"                              | 1
-        "a, b, c"                           | 2
-        "func(a, b), c"                     | 1
+        'a, b'                              | 1
+        'a, b, c'                           | 2
+        'func(a, b), c'                     | 1
         "'a, b', c"                         | 1
         "\"a, b\", c"                       | 1
-        "a"                                 | 0
+        'a'                                 | 0
     }
 
     @Unroll
@@ -165,11 +165,11 @@ class HqlQueryContextSpec extends Specification {
 
         where:
         hql                                 | expected
-        "select a from Book"                | 1
-        "select a, b from Book"             | 2
-        "from Book"                         | 0
-        "select distinct a from Book"       | 1
-        "select count(a) from Book"         | 1
+        'select a from Book'                | 1
+        'select a, b from Book'             | 2
+        'from Book'                         | 0
+        'select distinct a from Book'       | 1
+        'select count(a) from Book'         | 1
     }
 
     @Unroll
@@ -179,9 +179,9 @@ class HqlQueryContextSpec extends Specification {
 
         where:
         hql                             | cur | end | expected
-        "from Book b where"             | 10  | 11  | true  // 'b' is alias
-        "from Book where"               | 10  | 15  | false // 'where' is keyword
-        "from Book join"                | 10  | 14  | false // 'join' is keyword
+        'from Book b where'             | 10  | 11  | true  // 'b' is alias
+        'from Book where'               | 10  | 15  | false // 'where' is keyword
+        'from Book join'                | 10  | 14  | false // 'join' is keyword
     }
 
     @Unroll
@@ -191,14 +191,15 @@ class HqlQueryContextSpec extends Specification {
 
         where:
         hql                             | expected
-        "select b.title from Book b"    | true
-        "select b from Book b"          | false
-        "select count(b.id) from Book b"| true
+        'select b.title from Book b'    | true
+        'select b from Book b'          | false
+        'select count(b.id) from Book b'| true
     }
 }
 
 @Entity
 class HqlQueryContextSpecBook {
+
     String title
     Integer pages
 }

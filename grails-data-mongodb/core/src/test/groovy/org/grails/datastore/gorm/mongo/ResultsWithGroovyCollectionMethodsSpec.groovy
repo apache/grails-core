@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -34,69 +34,69 @@ class ResultsWithGroovyCollectionMethodsSpec extends MongoDatastoreSpec {
     }
 
     @Issue('GPMONGODB-316')
-    void "Test removeAll method on mongo results"() {
-        given: "Some test data"
-        new Plant(name: "Cabbage", goesInPatch: true).save()
-        new Plant(name: "Carrot", goesInPatch: true).save()
-        new Plant(name: "Pineapple", goesInPatch: false).save()
-        new Plant(name: "Coconut Tree", goesInPatch: false).save()
-        new Plant(name: "Lettuce", goesInPatch: true).save(flush: true)
+    void 'Test removeAll method on mongo results'() {
+        given: 'Some test data'
+        new Plant(name: 'Cabbage', goesInPatch: true).save()
+        new Plant(name: 'Carrot', goesInPatch: true).save()
+        new Plant(name: 'Pineapple', goesInPatch: false).save()
+        new Plant(name: 'Coconut Tree', goesInPatch: false).save()
+        new Plant(name: 'Lettuce', goesInPatch: true).save(flush: true)
         manager.session.clear()
 
-        when: "A mongo result list is returned and the removeAll method is used on the results"
+        when: 'A mongo result list is returned and the removeAll method is used on the results'
         def results = Plant.list()
 
-        then: "The origin results are correct"
+        then: 'The origin results are correct'
         results.size() == 5
 
-        when: "The removeAll method is used"
+        when: 'The removeAll method is used'
         results.removeAll { !it.goesInPatch }
 
-        then: "It works as expected"
+        then: 'It works as expected'
         results.size() == 3
-        results.find { it.name == "Cabbage" }
-        results.find { it.name == "Carrot" }
-        results.find { it.name == "Lettuce" }
+        results.find { it.name == 'Cabbage' }
+        results.find { it.name == 'Carrot' }
+        results.find { it.name == 'Lettuce' }
     }
 
     @Issue('GPMONGODB-371')
-    void "Test reverse method on mongo results"() {
-        given: "Some test data"
-        new Plant(name: "Cabbage", goesInPatch: true).save()
-        new Plant(name: "Carrot", goesInPatch: true).save()
-        new Plant(name: "Pineapple", goesInPatch: false).save()
-        new Plant(name: "Coconut Tree", goesInPatch: false).save()
-        new Plant(name: "Lettuce", goesInPatch: true).save(flush: true)
+    void 'Test reverse method on mongo results'() {
+        given: 'Some test data'
+        new Plant(name: 'Cabbage', goesInPatch: true).save()
+        new Plant(name: 'Carrot', goesInPatch: true).save()
+        new Plant(name: 'Pineapple', goesInPatch: false).save()
+        new Plant(name: 'Coconut Tree', goesInPatch: false).save()
+        new Plant(name: 'Lettuce', goesInPatch: true).save(flush: true)
         manager.session.clear()
 
-        when: "A mongo result list is retrieved and reversed"
+        when: 'A mongo result list is retrieved and reversed'
         def results = Plant.findAllByGoesInPatch(true).sort { it.name }.reverse()
 
-        then: "The result list contains the correct number of records"
+        then: 'The result list contains the correct number of records'
         results.size() == 3
 
-        and: "The results are in the reverse order"
+        and: 'The results are in the reverse order'
         results[0].name == 'Lettuce'
         results[1].name == 'Carrot'
         results[2].name == 'Cabbage'
     }
 
-    void "Test retainAll can return empty list"() {
-        given: "Some test data"
-        new Plant(name: "Cabbage", goesInPatch: true).save()
-        new Plant(name: "Carrot", goesInPatch: true).save()
-        new Plant(name: "Pineapple", goesInPatch: false).save()
-        new Plant(name: "Coconut Tree", goesInPatch: false).save()
-        new Plant(name: "Lettuce", goesInPatch: true).save(flush: true)
+    void 'Test retainAll can return empty list'() {
+        given: 'Some test data'
+        new Plant(name: 'Cabbage', goesInPatch: true).save()
+        new Plant(name: 'Carrot', goesInPatch: true).save()
+        new Plant(name: 'Pineapple', goesInPatch: false).save()
+        new Plant(name: 'Coconut Tree', goesInPatch: false).save()
+        new Plant(name: 'Lettuce', goesInPatch: true).save(flush: true)
         manager.session.clear()
 
-        when: "The results are retrieved"
+        when: 'The results are retrieved'
         def results = Plant.findAll()
 
-        and: "Only the Tomato plants are retained"
+        and: 'Only the Tomato plants are retained'
         results.retainAll { it.name == 'Tomato' }
 
-        then: "The results are empty"
+        then: 'The results are empty'
         !results
     }
 }

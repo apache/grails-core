@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -159,6 +159,7 @@ abstract class ResolvableGroovyTemplateEngine extends TemplateEngine {
      * @param extension The file extension
      */
     ResolvableGroovyTemplateEngine(ViewConfiguration configuration, ClassLoader classLoader) {
+
         this.viewConfiguration = configuration
         this.enableReloading = configuration.enableReloading
         this.shouldCache = configuration.cache
@@ -239,6 +240,7 @@ abstract class ResolvableGroovyTemplateEngine extends TemplateEngine {
      * @return The template
      */
     protected WritableScriptTemplate createTemplate(Class<? extends Template> cls) {
+
         createTemplate(cls, null)
     }
 
@@ -249,6 +251,7 @@ abstract class ResolvableGroovyTemplateEngine extends TemplateEngine {
      * @return The template
      */
     protected WritableScriptTemplate createTemplate(Class<? extends Template> cls, File sourceFile) {
+
         def template = new GrailsViewTemplate((Class<? extends GrailsView>) cls, sourceFile)
         return initializeTemplate(template, sourceFile)
     }
@@ -466,6 +469,7 @@ abstract class ResolvableGroovyTemplateEngine extends TemplateEngine {
         // if we reach here, use a throw away child class loader for dynamic templates
         def fileName = getDynamicTemplatePrefix() + templateCounter++
         try {
+
             def clazz = new GroovyClassLoader(classLoader, cc).parseClass(new GroovyCodeSource(reader, fileName, GroovyShell.DEFAULT_CODE_BASE))
             return createTemplate(clazz)
         } catch (CompilationFailedException e) {

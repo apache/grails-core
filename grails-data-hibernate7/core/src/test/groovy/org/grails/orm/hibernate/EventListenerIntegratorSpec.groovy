@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -43,7 +43,7 @@ class EventListenerIntegratorSpec extends Specification {
         serviceRegistry.getService(EventListenerRegistry) >> listenerRegistry
     }
 
-    def "integrate throws IllegalStateException if EventListenerRegistry is not available"() {
+    def 'integrate throws IllegalStateException if EventListenerRegistry is not available'() {
         given:
         def localSfi = Mock(SessionFactoryImplementor)
         def localServiceRegistry = Mock(SessionFactoryServiceRegistry)
@@ -57,10 +57,10 @@ class EventListenerIntegratorSpec extends Specification {
 
         then:
         def e = thrown(IllegalStateException)
-        e.message == "EventListenerRegistry not available from ServiceRegistry"
+        e.message == 'EventListenerRegistry not available from ServiceRegistry'
     }
 
-    def "integrate with null hibernateEventListeners and null eventListeners map is a no-op"() {
+    def 'integrate with null hibernateEventListeners and null eventListeners map is a no-op'() {
         given:
         EventListenerIntegrator integrator = new EventListenerIntegrator(null, null)
 
@@ -73,7 +73,7 @@ class EventListenerIntegratorSpec extends Specification {
         0 * listenerRegistry.setListeners(*_)
     }
 
-    def "integrate appends a custom listener from eventListeners map using a Collection"() {
+    def 'integrate appends a custom listener from eventListeners map using a Collection'() {
         given:
         LoadEventListener customListener = Mock(LoadEventListener)
         EventListenerGroup<LoadEventListener> group = Mock(EventListenerGroup)
@@ -88,7 +88,7 @@ class EventListenerIntegratorSpec extends Specification {
         1 * group.appendListener(customListener)
     }
 
-    def "integrate appends a singleton listener from eventListeners map when value is not a collection"() {
+    def 'integrate appends a singleton listener from eventListeners map when value is not a collection'() {
         given:
         LoadEventListener customListener = Mock(LoadEventListener)
         EventListenerGroup<LoadEventListener> group = Mock(EventListenerGroup)
@@ -103,7 +103,7 @@ class EventListenerIntegratorSpec extends Specification {
         1 * group.appendListener(customListener)
     }
 
-    def "integrate skips null values in eventListeners map"() {
+    def 'integrate skips null values in eventListeners map'() {
         given:
         EventListenerIntegrator integrator = new EventListenerIntegrator(null, ['load': null])
 
@@ -115,7 +115,7 @@ class EventListenerIntegratorSpec extends Specification {
         0 * listenerRegistry.appendListeners(*_)
     }
 
-    def "integrate uses setListeners (override) for DefaultMergeEventListener on MERGE event"() {
+    def 'integrate uses setListeners (override) for DefaultMergeEventListener on MERGE event'() {
         given:
         DefaultMergeEventListener mergeListener = new DefaultMergeEventListener()
         HibernateEventListeners hibernateEventListeners = Mock(HibernateEventListeners)
@@ -130,7 +130,7 @@ class EventListenerIntegratorSpec extends Specification {
         1 * listenerRegistry.setListeners(EventType.MERGE, mergeListener)
     }
 
-    def "integrate appends (not overrides) non-merge non-persist listeners from hibernateEventListeners"() {
+    def 'integrate appends (not overrides) non-merge non-persist listeners from hibernateEventListeners'() {
         given:
         LoadEventListener loadListener = Mock(LoadEventListener)
         HibernateEventListeners hibernateEventListeners = Mock(HibernateEventListeners)
@@ -145,7 +145,7 @@ class EventListenerIntegratorSpec extends Specification {
         1 * listenerRegistry.appendListeners(EventType.LOAD, loadListener)
     }
 
-    def "disintegrate is a no-op"() {
+    def 'disintegrate is a no-op'() {
         given:
         EventListenerIntegrator integrator = new EventListenerIntegrator(null, [:])
 
@@ -156,7 +156,7 @@ class EventListenerIntegratorSpec extends Specification {
         noExceptionThrown()
     }
 
-    def "appendListeners(registry, eventType, Collection) skips null listeners in collection"() {
+    def 'appendListeners(registry, eventType, Collection) skips null listeners in collection'() {
         given:
         EventListenerGroup<LoadEventListener> group = Mock(EventListenerGroup)
         listenerRegistry.getEventListenerGroup(EventType.LOAD) >> group
@@ -170,7 +170,7 @@ class EventListenerIntegratorSpec extends Specification {
         0 * group.appendListener(_)
     }
 
-    def "appendListeners with clearListeners is triggered for MergeEventListener in collection"() {
+    def 'appendListeners with clearListeners is triggered for MergeEventListener in collection'() {
         given:
         DefaultMergeEventListener mergeListener = new DefaultMergeEventListener()
         EventListenerGroup group = Mock(EventListenerGroup)

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -148,22 +148,22 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
             if (!containsValue && body) value = body()
         }
 
-        this."$scope"."$var" = value
+        this."$scope'.'$var" = value
         null
     }
 
     /**
      * Creates a link to a resource, generally used as a method rather than a tag.<br/>
      *
-     * eg. &lt;link type="text/css" href="${resource(dir:'css',file:'main.css')}" /&gt;
+     * eg. &lt;link type='text/css' href="${resource(dir: 'css',file: 'main.css')}" /&gt
      *
      * @emptyTag
      *
      * @attr base Sets the prefix to be added to the link target address, typically an absolute server URL. This overrides the behaviour of the absolute property, if both are specified.x≈
-     * @attr contextPath the context path to use (relative to the application context path). Defaults to "" or path to the plugin for a plugin view or template.
+     * @attr contextPath the context path to use (relative to the application context path). Defaults to '' or path to the plugin for a plugin view or template.
      * @attr dir the name of the directory within the grails app to link to
      * @attr file the name of the file within the grails app to link to
-     * @attr absolute If set to "true" will prefix the link target address with the value of the grails.serverURL property from Config, or http://localhost:&lt;port&gt; if no value in Config and not running in production.
+     * @attr absolute If set to 'true' will prefix the link target address with the value of the grails.serverURL property from Config, or http://localhost:&lt;port&gt; if no value in Config and not running in production.
      * @attr plugin The plugin to look for the resource in
      */
     Closure resource = { attrs ->
@@ -179,7 +179,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
 
     /**
      * Render an img tag with src set to a static resource
-     * @attr dir Optional name of resource directory, defaults to "images"
+     * @attr dir Optional name of resource directory, defaults to 'images'
      * @attr file Name of resource file (optional if uri specified)
      * @attr plugin Optional the name of the grails plugin if the resource is not part of the application
      * @attr uri Optional app-relative URI path of the resource if not using dir/file attributes - only if Resources plugin is in use
@@ -203,8 +203,8 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
     /**
      * General linking to controllers, actions etc. Examples:<br/>
      *
-     * &lt;g:link action="myaction"&gt;link 1&lt;/gr:link&gt;<br/>
-     * &lt;g:link controller="myctrl" action="myaction"&gt;link 2&lt;/gr:link&gt;<br/>
+     * &lt;g:link action='myaction'&gt;link 1&lt;/gr:link&gt;<br/>
+     * &lt;g:link controller='myctrl' action='myaction'&gt;link 2&lt;/gr:link&gt;<br/>
      *
      * @attr action The name of the action to use in the link, if not specified the default action will be linked
      * @attr controller The name of the controller to use in the link, if not specified the current controller will be linked
@@ -218,7 +218,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      * @attr url A map containing the action, controller, id etc.
      * @attr uri A string for a relative path in the running app.
      * @attr relativeUri Used to specify a uri relative to the current path.
-     * @attr absolute If set to "true" will prefix the link target address with the value of the grails.serverURL property from Config, or http://localhost:&lt;port&gt; if no value in Config and not running in production.
+     * @attr absolute If set to 'true' will prefix the link target address with the value of the grails.serverURL property from Config, or http://localhost:&lt;port&gt; if no value in Config and not running in production.
      * @attr base Sets the prefix to be added to the link target address, typically an absolute server URL. This overrides the behaviour of the absolute property, if both are specified.
      * @attr event Webflow _eventId parameter
      * @attr elementId DOM element id
@@ -352,7 +352,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      * link can then be included in links, ajax calls etc. Generally used as a method call
      * rather than a tag eg.<br/>
      *
-     * &lt;a href="${createLink(action:'list')}"&gt;List&lt;/a&gt;
+     * &lt;a href="${createLink(action: 'list')}"&gt;List&lt;/a&gt
      *
      * @emptyTag
      *
@@ -361,7 +361,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      * @attr uri relative URI
      * @attr url A map containing the action, controller, id etc.
      * @attr base Sets the prefix to be added to the link target address, typically an absolute server URL. This overrides the behaviour of the absolute property, if both are specified.
-     * @attr absolute If set to "true" will prefix the link target address with the value of the grails.serverURL property from Config, or http://localhost:&lt;port&gt; if no value in Config and not running in production.
+     * @attr absolute If set to 'true' will prefix the link target address with the value of the grails.serverURL property from Config, or http://localhost:&lt;port&gt; if no value in Config and not running in production.
      * @attr id The id to use in the link
      * @attr fragment The link fragment (often called anchor tag) to use
      * @attr params A map containing URL query parameters
@@ -401,7 +401,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
     /**
      * Helper method for creating tags called like:<br/>
      * <pre>
-     *    withTag(name:'script',attrs:[type:'text/javascript']) {
+     *    withTag(name: 'script',attrs: [type:'text/javascript']) {
      *    ...
      *    }
      * </pre>
@@ -434,12 +434,12 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      * @emptyTag
      *
      * @attr REQUIRED in The collection to iterate over
-     * @attr delimiter The value of the delimiter to use during the join. If no delimiter is specified then ", " (a comma followed by a space) will be used as the delimiter.
+     * @attr delimiter The value of the delimiter to use during the join. If no delimiter is specified then ', ' (a comma followed by a space) will be used as the delimiter.
      */
     Closure join = { attrs ->
         def collection = attrs.'in'
         if (collection == null) {
-            throwTagError('Tag ["join"] missing required attribute ["in"]')
+            throwTagError('Tag ['join'] missing required attribute ['in']')
         }
 
         def delimiter = attrs.delimiter == null ? ', ' : attrs.delimiter
@@ -455,7 +455,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      */
     Closure meta = { attrs ->
         if (!attrs.name) {
-            throwTagError('Tag ["meta"] missing required attribute ["name"]')
+            throwTagError('Tag ['meta'] missing required attribute ['name']')
         }
         return Metadata.current.getOrDefault(attrs.name, null)
     }
@@ -535,7 +535,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
         out << "<i class=\"${icon}\"></i>"
         out << message.toString().encodeAsHTML()
         if (dismissible) {
-            out << '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>'
+            out << "<button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Close'></button>"
         }
         out << '</div>'
     }

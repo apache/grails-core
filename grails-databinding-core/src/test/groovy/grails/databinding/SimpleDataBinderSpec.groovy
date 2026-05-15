@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -137,7 +137,7 @@ class SimpleDataBinderSpec extends Specification {
         def obj = new DateContainer()
         def nowUtilDate = new Date()
         def nowSqlDate = new java.sql.Date(nowUtilDate.time)
-        def localDateTime = "2013-04-15T21:26:31.973"
+        def localDateTime = '2013-04-15T21:26:31.973'
         def nowCalendar = Calendar.instance
 
         when:
@@ -151,10 +151,10 @@ class SimpleDataBinderSpec extends Specification {
 
         when:
         binder.registerConverter(new LocalDateTimeConverter())
-        binder.bind(obj, new SimpleMapDataBindingSource([localDateTime: "2013-04-15T21:26:31.974"]))
+        binder.bind(obj, new SimpleMapDataBindingSource([localDateTime: '2013-04-15T21:26:31.974']))
 
         then:
-        obj.localDateTime == LocalDateTime.parse("2013-04-15T21:26:31.974", DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+        obj.localDateTime == LocalDateTime.parse('2013-04-15T21:26:31.974', DateTimeFormatter.ISO_LOCAL_DATE_TIME)
     }
 
     @Issue('GRAILS-10925')
@@ -216,13 +216,13 @@ class SimpleDataBinderSpec extends Specification {
         obj.formattedUtilDate == null
         bindingErrors.size() == 1
         bindingErrors[0].rejectedValue == 'BAD'
-        bindingErrors[0].cause.message == 'Unparseable date: "BAD"'
+        bindingErrors[0].cause.message == 'Unparseable date: 'BAD''
     }
 
     void 'Test binding string to date'() {
         given:
         def binder = new SimpleDataBinder()
-        binder.registerConverter new DateConversionHelper(formatStrings: ['yyyy-MM-dd HH:mm:ss.S',"yyyy-MM-dd'T'HH:mm:ss'Z'","yyyy-MM-dd HH:mm:ss.S z","yyyy-MM-dd'T'HH:mm:ss.SSSX"])
+        binder.registerConverter new DateConversionHelper(formatStrings: ['yyyy-MM-dd HH:mm:ss.S',"yyyy-MM-dd'T'HH:mm:ss'Z'",'yyyy-MM-dd HH:mm:ss.S z',"yyyy-MM-dd'T'HH:mm:ss.SSSX"])
 
         def obj = new DateContainer()
 
@@ -249,7 +249,7 @@ class SimpleDataBinderSpec extends Specification {
 
         when:
         obj.utilDate = null
-        binder.bind obj, new SimpleMapDataBindingSource([utilDate: "2011-03-12T09:24:22Z"])
+        binder.bind obj, new SimpleMapDataBindingSource([utilDate: '2011-03-12T09:24:22Z'])
         calendar.setTime(obj.utilDate)
 
         then:
@@ -384,7 +384,7 @@ class SimpleDataBinderSpec extends Specification {
         def dates = obj.dates
 
         then:
-        dates == [new SimpleDateFormat('yyyy-MM-d').parse("2012-11-9"), new SimpleDateFormat('yyyy-MM-d').parse("2012-12-13")]
+        dates == [new SimpleDateFormat('yyyy-MM-d').parse('2012-11-9'), new SimpleDateFormat('yyyy-MM-d').parse('2012-12-13')]
     }
 
     void 'Test binding String to enum'() {
@@ -444,7 +444,7 @@ class SimpleDataBinderSpec extends Specification {
         bindingSource.name = 'My Factory'
 
         // this list contains Maps and a Widget instance.  The Maps should be transformed into Widget instances
-        bindingSource.widgets = [widget:[[alpha: 'alpha 1', beta: 'beta 1'], new Widget(alpha: 'alpha 2', beta: 'beta 2'), [alpha: 'alpha 3', beta: 'beta 3']]]
+        bindingSource.widgets = [widget: [[alpha: 'alpha 1', beta: 'beta 1'], new Widget(alpha: 'alpha 2', beta: 'beta 2'), [alpha: 'alpha 3', beta: 'beta 3']]]
         def factory = new Factory()
 
         when:
@@ -654,6 +654,7 @@ class SimpleDataBinderSpec extends Specification {
 
     @Issue('https://github.com/apache/grails-core/issues/12150')
     void 'Test binding when class and embedded classes both implements an interface'() {
+
         given:
         SimpleDataBinder binder = new SimpleDataBinder()
 
@@ -670,6 +671,7 @@ class SimpleDataBinderSpec extends Specification {
 
     @Issue('https://github.com/apache/grails-core/issues/12150')
     void 'Test binding when class and embedded classes extends abstract class and implements an interface'() {
+
         given:
         SimpleDataBinder binder = new SimpleDataBinder()
 
@@ -710,12 +712,14 @@ class SimpleDataBinderSpec extends Specification {
 }
 
 class Factory {
+
     def name
     List<Widget> widgets
     boolean isActive
 }
 
 class Widget {
+
     def alpha
     def beta
     Integer delta
@@ -741,15 +745,18 @@ class Widget {
 }
 
 class Gadget extends Widget {
+
     def gamma
 }
 
 class Fidget {
+
     def name
     Gadget gadget
 }
 
 class DateContainer {
+
     LocalDateTime localDateTime
     Date utilDate
     java.sql.Date sqlDate
@@ -764,10 +771,12 @@ enum Role {
 }
 
 class SystemUser {
+
     Role role
 }
 
 abstract class AbstractClassWithTypedCollection {
+
     List<Integer> list
     Map<String, Integer> map
 }
@@ -775,14 +784,17 @@ abstract class AbstractClassWithTypedCollection {
 class ClassWithInheritedTypedCollection extends AbstractClassWithTypedCollection {}
 
 class DateCollection {
+
     List<Date> dates
 }
 
 class Comment {
+
     Set<Attachment> attachments
 }
 
 class Attachment {
+
     String filename
 }
 
@@ -795,14 +807,17 @@ interface InterfaceB {
 }
 
 class ClassA implements InterfaceA {
+
     String data
 }
 
 class ClassB implements InterfaceB {
+
     ClassA a
 }
 
 class AbstractB {
+
     ClassA a
 }
 

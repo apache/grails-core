@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -34,6 +34,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * Tests validation semantics.
  */
 class HibernateValidationSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
+
     void setupSpec() {
 
         manager.addAllDomainClasses([ClassWithListArgBeforeValidate, ClassWithNoArgBeforeValidate,
@@ -41,7 +42,7 @@ class HibernateValidationSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckM
 
     }
 
-    void "Test that validate works without a bound Session"() {
+    void 'Test that validate works without a bound Session'() {
         given:
         def t
 
@@ -52,7 +53,7 @@ class HibernateValidationSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckM
             resource = TransactionSynchronizationManager.unbindResource(manager.session.datastore.sessionFactory)
         }
 
-        t = new TestEntity(name:"")
+        t = new TestEntity(name: '')
 
         then:
         TransactionSynchronizationManager.getResource(manager.session.datastore.sessionFactory) == null
@@ -68,9 +69,9 @@ class HibernateValidationSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckM
 
         when:
         t.clearErrors()
-        t.name = "Bob"
+        t.name = 'Bob'
         t.age = 45
-        t.child = new ChildEntity(name:"Fred")
+        t.child = new ChildEntity(name: 'Fred')
         t = t.save(flush: true)
 
         then:

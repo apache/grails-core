@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -35,47 +35,46 @@ class SequenceGeneratorsSpec extends HibernateGormDatastoreSpec {
                                      EntityWithAssigned])
     }
 
-
     @Rollback
-    void "test identity generator"() {
+    void 'test identity generator'() {
         when:
-        def entity = new EntityWithIdentity(name: "test").save(flush: true)
+        def entity = new EntityWithIdentity(name: 'test').save(flush: true)
 
         then:
         entity.id != null
     }
 
     @Rollback
-    void "test native generator"() {
+    void 'test native generator'() {
         when:
-        def entity = new EntityWithNative(name: "test").save(flush: true)
+        def entity = new EntityWithNative(name: 'test').save(flush: true)
 
         then:
         entity.id != null
     }
 
     @Rollback
-    void "test sequence generator"() {
+    void 'test sequence generator'() {
         when:
-        def entity = new EntityWithSequence(name: "test").save(flush: true)
+        def entity = new EntityWithSequence(name: 'test').save(flush: true)
 
         then:
         entity.id != null
     }
 
     @Rollback
-    void "test table generator"() {
+    void 'test table generator'() {
         when:
-        def entity = new EntityWithTable(name: "test").save(flush: true)
+        def entity = new EntityWithTable(name: 'test').save(flush: true)
 
         then:
         entity.id != null
     }
 
     @Rollback
-    void "test uuid generator"() {
+    void 'test uuid generator'() {
         when:
-        def entity = new EntityWithUUID(name: "test").save(flush: true)
+        def entity = new EntityWithUUID(name: 'test').save(flush: true)
 
         then:
         entity.id != null
@@ -83,9 +82,9 @@ class SequenceGeneratorsSpec extends HibernateGormDatastoreSpec {
     }
 
     @Rollback
-    void "test assigned generator"() {
+    void 'test assigned generator'() {
         when:
-        def entity = new EntityWithAssigned(id: 123, name: "test").save(flush: true)
+        def entity = new EntityWithAssigned(id: 123, name: 'test').save(flush: true)
 
         then:
         entity.id == 123
@@ -94,6 +93,7 @@ class SequenceGeneratorsSpec extends HibernateGormDatastoreSpec {
 
 @Entity
 class EntityWithIdentity {
+
     Long id
     String name
     static mapping = {
@@ -103,6 +103,7 @@ class EntityWithIdentity {
 
 @Entity
 class EntityWithNative {
+
     Long id
     String name
     static mapping = {
@@ -112,6 +113,7 @@ class EntityWithNative {
 
 @Entity
 class EntityWithSequence {
+
     Long id
     String name
     static mapping = {
@@ -121,6 +123,7 @@ class EntityWithSequence {
 
 @Entity
 class EntityWithTable {
+
     Long id
     String name
     static mapping = {
@@ -130,6 +133,7 @@ class EntityWithTable {
 
 @Entity
 class EntityWithUUID {
+
     String id
     String name
     static mapping = {
@@ -139,6 +143,7 @@ class EntityWithUUID {
 
 @Entity
 class EntityWithAssigned {
+
     Long id
     String name
     static mapping = {

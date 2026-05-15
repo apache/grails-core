@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -53,7 +53,7 @@ class DatabaseCleanupExtension implements IGlobalExtension {
 
     /**
      * System property that enables validation of {@code @DatabaseCleanup} placement on
-     * non-feature methods. Set to {@code "true"} to enable:
+     * non-feature methods. Set to {@code 'true'} to enable:
      * {@code -Dgrails.testing.cleanup.validate=true}
      */
     static final String VALIDATE_PROPERTY = 'grails.testing.cleanup.validate'
@@ -62,7 +62,7 @@ class DatabaseCleanupExtension implements IGlobalExtension {
 
     /**
      * Returns {@code true} if the {@code grails.testing.cleanup.validate} system property
-     * is set to {@code "true"}.
+     * is set to {@code 'true'}.
      */
     static boolean isValidateEnabled() {
         Boolean.getBoolean(VALIDATE_PROPERTY)
@@ -157,6 +157,7 @@ class DatabaseCleanupExtension implements IGlobalExtension {
      * @return a new resolver instance
      */
     private static ApplicationContextResolver createResolver(Class<? extends ApplicationContextResolver> resolverClass) {
+
         try {
             resolverClass.getDeclaredConstructor().newInstance()
         }
@@ -175,7 +176,7 @@ class DatabaseCleanupExtension implements IGlobalExtension {
      * Spock feature methods (test methods) or at the class level.
      *
      * <p>This validation is opt-in and only runs when the system property
-     * {@code grails.testing.cleanup.validate} is set to {@code "true"}, since iterating
+     * {@code grails.testing.cleanup.validate} is set to {@code 'true'}, since iterating
      * over all declared methods via reflection has a performance cost.</p>
      *
      * @param spec the spec to validate
@@ -189,6 +190,7 @@ class DatabaseCleanupExtension implements IGlobalExtension {
         // This necessarily uses spec.reflection since we need to scan raw Java methods
         // that are not exposed as Spock features
         def invalid = spec.reflection.declaredMethods.find {
+
             it.isAnnotationPresent(DatabaseCleanup) && !featureMethodNames.contains(it.name)
         }
         if (invalid) {
@@ -210,6 +212,7 @@ class DatabaseCleanupExtension implements IGlobalExtension {
      * @throws IllegalStateException if a method-level annotation has cleanupAfterSpec = true
      */
     private static void validateNoMethodLevelCleanupAfterSpec(SpecInfo spec) {
+
         def invalid = spec.features.find {
             def method = it.featureMethod
             method.isAnnotationPresent(DatabaseCleanup) &&
@@ -229,6 +232,7 @@ class DatabaseCleanupExtension implements IGlobalExtension {
      * class level or on any feature method.
      */
     private static boolean hasDatabaseCleanupAnnotation(SpecInfo spec) {
+
         spec.isAnnotationPresent(DatabaseCleanup) ||
                 spec.features.any { it.featureMethod.isAnnotationPresent(DatabaseCleanup) }
     }

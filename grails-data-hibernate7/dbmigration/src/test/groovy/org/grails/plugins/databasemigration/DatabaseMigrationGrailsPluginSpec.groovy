@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -38,7 +38,7 @@ import javax.sql.DataSource
 
 class DatabaseMigrationGrailsPluginSpec extends Specification {
 
-    void "test doWithSpring registers beans"() {
+    void 'test doWithSpring registers beans'() {
         given:
         DatabaseMigrationGrailsPlugin plugin = new DatabaseMigrationGrailsPlugin()
         GrailsApplication application = Mock(GrailsApplication)
@@ -64,7 +64,7 @@ class DatabaseMigrationGrailsPluginSpec extends Specification {
     }
 
     @Unroll
-    void "test getDataSourceNames with config: #configMap"() {
+    void 'test getDataSourceNames with config: #configMap'() {
         given:
         DatabaseMigrationGrailsPlugin plugin = new DatabaseMigrationGrailsPlugin()
         GrailsApplication application = Mock(GrailsApplication)
@@ -83,7 +83,7 @@ class DatabaseMigrationGrailsPluginSpec extends Specification {
     }
 
     @Unroll
-    void "test getDataSourceName for #input is #expected"() {
+    void 'test getDataSourceName for #input is #expected'() {
         expect:
         DatabaseMigrationGrailsPlugin.getDataSourceName(input) == expected
 
@@ -96,7 +96,7 @@ class DatabaseMigrationGrailsPluginSpec extends Specification {
     }
 
     @Unroll
-    void "test isDefaultDataSource for #input is #expected"() {
+    void 'test isDefaultDataSource for #input is #expected'() {
         expect:
         DatabaseMigrationGrailsPlugin.isDefaultDataSource(input) == expected
 
@@ -108,7 +108,7 @@ class DatabaseMigrationGrailsPluginSpec extends Specification {
         'other'         | false
     }
 
-    void "test doWithApplicationContext skip when no updateOnStart"() {
+    void 'test doWithApplicationContext skip when no updateOnStart'() {
         given:
         DatabaseMigrationGrailsPlugin plugin = new DatabaseMigrationGrailsPlugin()
         GrailsApplication application = Mock(GrailsApplication)
@@ -129,7 +129,7 @@ class DatabaseMigrationGrailsPluginSpec extends Specification {
         0 * applicationContext.getBean('grailsLiquibaseFactory', GrailsLiquibase)
     }
 
-    void "test doWithApplicationContext triggers update when updateOnStart is true"() {
+    void 'test doWithApplicationContext triggers update when updateOnStart is true'() {
         given:
         DatabaseMigrationGrailsPlugin plugin = new DatabaseMigrationGrailsPlugin()
         GrailsApplication application = Mock(GrailsApplication)

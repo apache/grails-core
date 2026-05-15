@@ -4,23 +4,20 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
  */
 package org.grails.orm.hibernate
 
-import java.util.Arrays
-import java.util.Collections
-import java.util.ArrayList
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import org.grails.datastore.gorm.GormInstanceApi
@@ -48,7 +45,6 @@ import org.hibernate.collection.spi.PersistentCollection
 import jakarta.persistence.LockModeType
 import org.codehaus.groovy.runtime.InvokerHelper
 import org.grails.datastore.mapping.model.PersistentProperty
-import org.grails.orm.hibernate.HibernateGormValidationApi
 import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.orm.hibernate.support.HibernateRuntimeUtils
 import org.grails.orm.hibernate.support.ClosureEventListener
@@ -82,10 +78,10 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     }
 
     protected void initializeValidationException(ClassLoader classLoader) {
-        for (cl in [classLoader, Thread.currentThread().getContextClassLoader(), HibernateGormInstanceApi.class.classLoader]) {
+        for (cl in [classLoader, Thread.currentThread().getContextClassLoader(), HibernateGormInstanceApi.classLoader]) {
             if (cl == null) continue
             try {
-                this.validationException = (Class<? extends Exception>) cl.loadClass("grails.validation.ValidationException")
+                this.validationException = (Class<? extends Exception>) cl.loadClass('grails.validation.ValidationException')
                 return
             } catch (Throwable e) {
                 // ignore
@@ -107,11 +103,11 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
      */
     @CompileDynamic
     Object methodMissing(Object target, String name, Object[] args) {
-        if ("isInitialized" == name) {
+        if ('isInitialized' == name) {
             Boolean groovyResult = GroovyProxyInterceptorLogic.isInitialized(target)
             return groovyResult != null ? groovyResult : Hibernate.isInitialized(target)
         }
-        if ("initialize" == name || "getTarget" == name) {
+        if ('initialize' == name || 'getTarget' == name) {
             Hibernate.initialize(target)
             return target
         }
@@ -120,6 +116,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
     @Override
     HibernateGormInstanceApi<D> forQualifier(String qualifier) {
+
         Datastore ds = getDatastore()
         if (ds == null) return this
         
@@ -294,7 +291,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
     static {
         try {
-            DEFERRED_BINDING = HibernateGormInstanceApi.class.classLoader.loadClass("org.grails.datastore.mapping.core.DeferredBindingActions")
+            DEFERRED_BINDING = HibernateGormInstanceApi.classLoader.loadClass('org.grails.datastore.mapping.core.DeferredBindingActions')
         } catch (Throwable e) {
             DEFERRED_BINDING = null
         }
@@ -325,8 +322,8 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     }
 
     protected boolean shouldFlush(Map arguments) {
-        if (arguments?.containsKey("flush")) {
-            return ClassUtils.getBooleanFromMap("flush", arguments)
+        if (arguments?.containsKey('flush')) {
+            return ClassUtils.getBooleanFromMap('flush', arguments)
         }
         if (arguments?.containsKey(DynamicFinder.ARGUMENT_FLUSH_MODE)) {
             return ClassUtils.getBooleanFromMap(DynamicFinder.ARGUMENT_FLUSH_MODE, arguments)
@@ -335,8 +332,8 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     }
 
     protected boolean shouldValidate(Map arguments, PersistentEntity domainClass) {
-        if (arguments?.containsKey("validate")) {
-            return ClassUtils.getBooleanFromMap("validate", arguments)
+        if (arguments?.containsKey('validate')) {
+            return ClassUtils.getBooleanFromMap('validate', arguments)
         }
         if (arguments?.containsKey(org.grails.datastore.gorm.GormValidationApi.ARGUMENT_DEEP_VALIDATE)) {
             return ClassUtils.getBooleanFromMap(org.grails.datastore.gorm.GormValidationApi.ARGUMENT_DEEP_VALIDATE, arguments)
@@ -345,8 +342,8 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     }
 
     protected boolean shouldFail(Map arguments) {
-        if (arguments?.containsKey("failOnError")) {
-            return ClassUtils.getBooleanFromMap("failOnError", arguments)
+        if (arguments?.containsKey('failOnError')) {
+            return ClassUtils.getBooleanFromMap('failOnError', arguments)
         }
         return isFailOnError()
     }
@@ -483,10 +480,10 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     protected void flushSession(Session session) {
         HibernateDatastore datastore = getHibernateDatastore()
         if (datastore.isOsivReadOnly(datastore.sessionFactory)) {
-            System.err.println "SKIPPING flush because OSIV is read-only"
+            System.err.println 'SKIPPING flush because OSIV is read-only'
             return
         }
-        System.err.println "Executing session.flush() on ${session}"
+        System.err.println('Executing session.flush() on ' + session)
         session.flush()
     }
 
@@ -508,7 +505,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         getHibernateTemplate().execute { Session session ->
             D merged
             if (sessionContains(session, target)) {
-                // a second PersistentCollection for the same role+key ("two representations").
+                // a second PersistentCollection for the same role+key ('two representations').
                 // Just use the entity as-is; dirty-checking + cascade will handle children.
                 merged = target
             } else {
@@ -553,7 +550,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
     /**
      * Reconciles collection fields on an entity before session.merge() to prevent H7's
-     * "Found two representations of same collection" error.
+     * 'Found two representations of same collection' error.
      *
      * Two scenarios cause this error:
      *

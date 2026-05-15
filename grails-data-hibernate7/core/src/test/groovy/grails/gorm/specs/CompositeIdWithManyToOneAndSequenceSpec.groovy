@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -37,18 +37,18 @@ class CompositeIdWithManyToOneAndSequenceSpec extends HibernateGormDatastoreSpec
 
     @Rollback
     @Issue('https://github.com/grails/grails-data-mapping/issues/835')
-    void "Test composite id one to many and sequence"() {
+    void 'Test composite id one to many and sequence'() {
 
-        when:"a one to many association is created"
+        when:'a one to many association is created'
         def tooth = new Tooth()
         def td = new ToothDisease(idColumn: 1, nrVersion: 1)
         tooth.addToToothDiseases(td)
         tooth.save(flush: true, failOnError: true)
 
-        and:"the session is cleared to ensure we are checking persisted state"
+        and:'the session is cleared to ensure we are checking persisted state'
         manager.session.clear()
 
-        then:"The object was saved and the association is correct"
+        then:'The object was saved and the association is correct'
         Tooth.count() == 1
         ToothDisease.count() == 1
         def reloadedTooth = Tooth.list().first()
@@ -57,9 +57,9 @@ class CompositeIdWithManyToOneAndSequenceSpec extends HibernateGormDatastoreSpec
 
 }
 
-
 @Entity
 class Tooth {
+
     Integer id
     SortedSet<ToothDisease> toothDiseases
 
@@ -74,6 +74,7 @@ class Tooth {
 
 @Entity
 class ToothDisease implements Serializable, Comparable<ToothDisease> {
+
     Integer idColumn
     Integer nrVersion
 

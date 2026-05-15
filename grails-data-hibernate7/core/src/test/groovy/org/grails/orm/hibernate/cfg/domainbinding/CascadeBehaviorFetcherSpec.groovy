@@ -4,14 +4,14 @@
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
+ * 'License'); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
  * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
@@ -47,63 +47,63 @@ class CascadeBehaviorFetcherSpec extends HibernateGormDatastoreSpec {
     // A single, comprehensive source of truth for all metadata test scenarios.
     private static final List cascadeMetadataTestData = [
             // --- UNIDIRECTIONAL hasMany (should be supported in Hibernate 6+) ---
-            ["uni: explicit 'all'", AW_All_Uni, "books", BookUni, ALL.getValue()],
-            ["uni: explicit 'persist,merge'", AW_SaveUpdate_Uni, "books", BookUni, SAVE_UPDATE.getValue()],
-            ["uni: explicit 'merge'", AW_Merge_Uni, "books", BookUni, MERGE.getValue()],
-            ["uni: explicit 'delete'", AW_Delete_Uni, "books", BookUni, DELETE.getValue()],
-            ["uni: explicit 'lock'", AW_Lock_Uni, "books", BookUni, LOCK.getValue()],
-            ["uni: explicit 'replicate'", AW_Replicate_Uni, "books", BookUni, REPLICATE.getValue()],
-            ["uni: explicit 'evict'", AW_Evict_Uni, "books", BookUni, EVICT.getValue()],
-            ["uni: explicit 'persist'", AW_Persist_Uni, "books", BookUni, PERSIST.getValue()],
-            ["uni: invalid string", AW_Invalid_Uni, "books", BookUni, MappingException],
+            ["uni: explicit 'all'", AW_All_Uni, 'books', BookUni, ALL.getValue()],
+            ["uni: explicit 'persist,merge'", AW_SaveUpdate_Uni, 'books', BookUni, SAVE_UPDATE.getValue()],
+            ["uni: explicit 'merge'", AW_Merge_Uni, 'books', BookUni, MERGE.getValue()],
+            ["uni: explicit 'delete'", AW_Delete_Uni, 'books', BookUni, DELETE.getValue()],
+            ["uni: explicit 'lock'", AW_Lock_Uni, 'books', BookUni, LOCK.getValue()],
+            ["uni: explicit 'replicate'", AW_Replicate_Uni, 'books', BookUni, REPLICATE.getValue()],
+            ["uni: explicit 'evict'", AW_Evict_Uni, 'books', BookUni, EVICT.getValue()],
+            ["uni: explicit 'persist'", AW_Persist_Uni, 'books', BookUni, PERSIST.getValue()],
+            ['uni: invalid string', AW_Invalid_Uni, 'books', BookUni, MappingException],
 
             // --- OTHER RELATIONSHIP TYPES ---
-            ["uni: string", AW_Default_Uni, "books", BookUni, SAVE_UPDATE.getValue()],
+            ['uni: string', AW_Default_Uni, 'books', BookUni, SAVE_UPDATE.getValue()],
             // FIX: This now expects ALL instead of MappingException to support Basic collections
-            ["uni: String collection", AW_Default_String, "books", String, ALL.getValue()],
-            ["bi: default", AW_Default_Bi, "books", Book_BT_Default, ALL.getValue()],
-            ["bi: hasOne (with belongsTo)", AW_HasOne_Bi, "profile", Profile_BT, ALL.getValue()],
-            ["uni: hasOne (no belongsTo)", AW_HasOne_Uni, "passport", Passport, ALL.getValue()],
-            ["many-to-many (owning side)", Post, "tags", Tag_BT, SAVE_UPDATE.getValue()],
-            ["many-to-many (circular subclass)", Dog, "animals", Mammal, SAVE_UPDATE.getValue()],
-            ["many-to-many (inverse side)", Tag_BT, "posts", Post, NONE.getValue()],
-            ["many-to-many (circular superclass)", Mammal, "dogs", Dog, NONE.getValue()],
-            ["many-to-one (belongsTo)", Book_BT_Default, "author", AW_Default_Bi, NONE.getValue()],
-            ["many-to-one (unidirectional)", A, "manyToOne", ManyToOne, SAVE_UPDATE.getValue()],
-            ["many-to-one (bidirectional but superclass)", Bird, "canary", Canary, NONE.getValue()],
+            ['uni: String collection', AW_Default_String, 'books', String, ALL.getValue()],
+            ['bi: default', AW_Default_Bi, 'books', Book_BT_Default, ALL.getValue()],
+            ['bi: hasOne (with belongsTo)', AW_HasOne_Bi, 'profile', Profile_BT, ALL.getValue()],
+            ['uni: hasOne (no belongsTo)', AW_HasOne_Uni, 'passport', Passport, ALL.getValue()],
+            ['many-to-many (owning side)', Post, 'tags', Tag_BT, SAVE_UPDATE.getValue()],
+            ['many-to-many (circular subclass)', Dog, 'animals', Mammal, SAVE_UPDATE.getValue()],
+            ['many-to-many (inverse side)', Tag_BT, 'posts', Post, NONE.getValue()],
+            ['many-to-many (circular superclass)', Mammal, 'dogs', Dog, NONE.getValue()],
+            ['many-to-one (belongsTo)', Book_BT_Default, 'author', AW_Default_Bi, NONE.getValue()],
+            ['many-to-one (unidirectional)', A, 'manyToOne', ManyToOne, SAVE_UPDATE.getValue()],
+            ['many-to-one (bidirectional but superclass)', Bird, 'canary', Canary, NONE.getValue()],
 
             // --- Additional Hibernate 6+ specific scenarios ---
-            ["uni: hasMany with explicit none", AW_None_Uni, "books", BookUni, NONE.getValue()],
-            ["bi: hasOne default conservative", AW_HasOne_Default, "profile", Profile_Default, ALL.getValue()],
-            ["orphan removal scenario", AW_OrphanRemoval, "books", Book_Orphan, ALL_DELETE_ORPHAN.getValue()],
+            ['uni: hasMany with explicit none', AW_None_Uni, 'books', BookUni, NONE.getValue()],
+            ['bi: hasOne default conservative', AW_HasOne_Default, 'profile', Profile_Default, ALL.getValue()],
+            ['orphan removal scenario', AW_OrphanRemoval, 'books', Book_Orphan, ALL_DELETE_ORPHAN.getValue()],
 
             // --- Map Association Scenarios ---
-            ["map with belongsTo", ImpliedMapParent_All, "settings", ImpliedMapChild_All, ALL.getValue()],
-            ["map without belongsTo", ImpliedMapParent_SaveUpdate, "settings", ImpliedMapChild_SaveUpdate, SAVE_UPDATE.getValue()],
+            ['map with belongsTo', ImpliedMapParent_All, 'settings', ImpliedMapChild_All, ALL.getValue()],
+            ['map without belongsTo', ImpliedMapParent_SaveUpdate, 'settings', ImpliedMapChild_SaveUpdate, SAVE_UPDATE.getValue()],
 
             // --- Composite ID Scenario ---
-            ["many-to-one in composite id", CompositeIdManyToOne, "parent", CompositeIdParent, ALL.getValue()],
+            ['many-to-one in composite id', CompositeIdManyToOne, 'parent', CompositeIdParent, ALL.getValue()],
 
             // --- Embedded Association Scenario ---
-            ["embedded association", EOwner, "address", EAddress, ALL.getValue()],
+            ['embedded association', EOwner, 'address', EAddress, ALL.getValue()],
 
             // --- EmbeddedCollection Scenario ---
-            ["embedded collection", EmbeddedCollOwner, "items", EmbeddedItem, ALL.getValue()],
+            ['embedded collection', EmbeddedCollOwner, 'items', EmbeddedItem, ALL.getValue()],
 
             // --- ManyToOne correctly owned (non-circular) → ALL ---
-            ["many-to-one (correctly owned, non-circular)", MtoAllA, "b", MtoAllB, ALL.getValue()]
+            ['many-to-one (correctly owned, non-circular)', MtoAllA, 'b', MtoAllB, ALL.getValue()]
     ]
 
     @Shared CascadeBehaviorFetcher fetcher = new CascadeBehaviorFetcher()
 
     @Unroll
-    void "test cascade behavior fetcher for #description"() {
-        given: "A persistent property from the test entity"
+    void 'test cascade behavior fetcher for #description'() {
+        given: 'A persistent property from the test entity'
         createPersistentEntity(childClass, grailsDomainBinder)
         def testProperty = createPersistentEntity(ownerClass, grailsDomainBinder)
                 .getPropertyByName(associationName)
 
-        when: "Getting the cascade behavior"
+        when: 'Getting the cascade behavior'
         def result = null
         def thrownException = null
         try {
@@ -112,7 +112,7 @@ class CascadeBehaviorFetcherSpec extends HibernateGormDatastoreSpec {
             thrownException = e
         }
 
-        then: "The result matches the expectation"
+        then: 'The result matches the expectation'
         if (expectation instanceof Class && Exception.isAssignableFrom(expectation)) {
             assert thrownException != null
             assert expectation.isAssignableFrom(thrownException.class)
@@ -125,7 +125,7 @@ class CascadeBehaviorFetcherSpec extends HibernateGormDatastoreSpec {
         [description, ownerClass, associationName, childClass, expectation] << cascadeMetadataTestData
     }
 
-    def "getCascadeBehaviour throws MappingException when associated entity is null for non-basic association"() {
+    def 'getCascadeBehaviour throws MappingException when associated entity is null for non-basic association'() {
         given:
         def association = Mock(HibernateManyToOneProperty)
         association.getMappedForm() >> null
@@ -139,7 +139,7 @@ class CascadeBehaviorFetcherSpec extends HibernateGormDatastoreSpec {
         thrown(MappingException)
     }
 
-    def "getCascadeBehaviour throws MappingException for unrecognized association type"() {
+    def 'getCascadeBehaviour throws MappingException for unrecognized association type'() {
         given:
         def association = Mock(UnrecognizedTestAssociation)
         association.getMappedForm() >> null
@@ -162,54 +162,63 @@ class CascadeBehaviorFetcherSpec extends HibernateGormDatastoreSpec {
 
 @Entity
 class AW_All_Uni {
+
     static hasMany = [books: BookUni]
     static mapping = { books cascade: 'all' }
 }
 
 @Entity
 class AW_SaveUpdate_Uni {
+
     static hasMany = [books: BookUni]
     static mapping = { books cascade: 'persist,merge' }
 }
 
 @Entity
 class AW_Merge_Uni {
+
     static hasMany = [books: BookUni]
     static mapping = { books cascade: 'merge' }
 }
 
 @Entity
 class AW_Delete_Uni {
+
     static hasMany = [books: BookUni]
     static mapping = { books cascade: 'delete' }
 }
 
 @Entity
 class AW_Lock_Uni {
+
     static hasMany = [books: BookUni]
     static mapping = { books cascade: 'lock' }
 }
 
 @Entity
 class AW_Replicate_Uni {
+
     static hasMany = [books: BookUni]
     static mapping = { books cascade: 'replicate' }
 }
 
 @Entity
 class AW_Evict_Uni {
+
     static hasMany = [books: BookUni]
     static mapping = { books cascade: 'evict' }
 }
 
 @Entity
 class AW_Persist_Uni {
+
     static hasMany = [books: BookUni]
     static mapping = { books cascade: 'persist' }
 }
 
 @Entity
 class AW_Invalid_Uni {
+
     static hasMany = [books: BookUni]
     static mapping = { books cascade: 'invalid-string' }
 }
@@ -219,12 +228,14 @@ class AW_Invalid_Uni {
 // FIX: Replaced class Buffalo with String to test Basic collections properly
 @Entity
 class AW_Default_String {
+
     String title
     static hasMany = [books: String]
 }
 
 @Entity
 class Book_BT_Default {
+
     String title
     static belongsTo = [author: AW_Default_Bi]
 }
@@ -239,6 +250,7 @@ class Book_BT_Default {
 
 @Entity
 class Profile_BT {
+
     String bio
     static belongsTo = [author: AW_HasOne_Bi]
 }
@@ -247,12 +259,14 @@ class Profile_BT {
 
 @Entity
 class Post {
+
     String content
     static hasMany = [tags: Tag_BT]
 }
 
 @Entity
 class Tag_BT {
+
     String name
     static hasMany = [posts: Post]
     static belongsTo = Post
@@ -266,12 +280,14 @@ class Tag_BT {
 
 @Entity
 class AW_None_Uni {
+
     static hasMany = [books: BookUni]
     static mapping = { books cascade: 'none' }
 }
 
 @Entity
 class Profile_Default {
+
     String bio
     static belongsTo = [author: AW_HasOne_Default]
 }
@@ -280,30 +296,35 @@ class Profile_Default {
 
 @Entity
 class Book_Orphan {
+
     String title
     static belongsTo = [author: AW_OrphanRemoval]
 }
 
 @Entity
 class AW_OrphanRemoval {
+
     static hasMany = [books: Book_Orphan]
     static mapping = { books cascade: 'all-delete-orphan' }
 }
 
 @Entity
 class ImpliedMapParent_All {
+
     static hasMany = [settings: ImpliedMapChild_All]
     Map<String, ImpliedMapChild_All> settings
 }
 
 @Entity
 class ImpliedMapChild_All {
+
     String value
     static belongsTo = [parent: ImpliedMapParent_All]
 }
 
 @Entity
 class ImpliedMapParent_SaveUpdate {
+
     static hasMany = [settings: ImpliedMapChild_SaveUpdate]
     Map<String, ImpliedMapChild_SaveUpdate> settings
 }
@@ -312,6 +333,7 @@ class ImpliedMapParent_SaveUpdate {
 
 @Entity
 class CompositeIdParent {
+
     Long id
     String name
     static hasMany = [children: CompositeIdManyToOne]
@@ -319,6 +341,7 @@ class CompositeIdParent {
 
 @Entity
 class CompositeIdManyToOne implements Serializable {
+
     String name
     CompositeIdParent parent
     static mapping = { id composite: ['name', 'parent'] }
@@ -327,6 +350,7 @@ class CompositeIdManyToOne implements Serializable {
 
 @Entity
 class EOwner {
+
     EAddress address
     static embedded = ['address']
 }
@@ -338,6 +362,7 @@ class EOwner {
 
 @Entity
 class EmbeddedCollOwner {
+
     static hasMany = [items: EmbeddedItem]
     static embedded = ['items']
 }
@@ -350,12 +375,14 @@ class EmbeddedCollOwner {
 // → returns ALL at L117
 @Entity
 class MtoAllA {
+
     MtoAllB b
     static belongsTo = [b: MtoAllB]
 }
 
 @Entity
 class MtoAllB {
+
     MtoAllA a
     static belongsTo = [a: MtoAllA]
 }
@@ -363,6 +390,7 @@ class MtoAllB {
 // --- Abstract helper for unrecognized association type mock (L124) ---
 abstract class UnrecognizedTestAssociation extends org.grails.datastore.mapping.model.types.Association<PropertyConfig>
         implements HibernatePersistentProperty {
+
     UnrecognizedTestAssociation(
             org.grails.datastore.mapping.model.PersistentEntity owner,
             org.grails.datastore.mapping.model.MappingContext context,

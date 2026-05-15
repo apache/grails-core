@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -33,10 +33,10 @@ class MarkDirtyFalseSpec extends MongoDatastoreSpec {
         manager.configuration.putAll([(MongoSettings.SETTING_MARK_DIRTY): false])
     }
 
-    void "test behavior with mark dirty false"() {
+    void 'test behavior with mark dirty false'() {
         when:
-        def b = new Bar(foo:"stuff", strings:['a', 'b'])
-        b.save(flush:true)
+        def b = new Bar(foo: 'stuff', strings: ['a', 'b'])
+        b.save(flush: true)
         manager.session.clear()
         b = Bar.get(b.id)
         b.save(flush: true)
@@ -45,8 +45,8 @@ class MarkDirtyFalseSpec extends MongoDatastoreSpec {
         b.version == 0
 
         when:
-        def bTs = new BarWithTimestamp(foo:"stuff")
-        bTs.save(flush:true)
+        def bTs = new BarWithTimestamp(foo: 'stuff')
+        bTs.save(flush: true)
         manager.session.clear()
         bTs = BarWithTimestamp.get(bTs.id)
         bTs.save(flush: true)
@@ -59,6 +59,7 @@ class MarkDirtyFalseSpec extends MongoDatastoreSpec {
 @Entity
 @DirtyCheck
 class BarWithTimestamp {
+
     ObjectId id
 
     String foo

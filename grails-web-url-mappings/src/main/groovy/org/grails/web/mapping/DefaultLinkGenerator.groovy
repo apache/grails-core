@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -293,7 +293,7 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
         try {
             // Three options for using indent():
             // 1. Check instanceof GormEntity, but that would require coupling web-common to grails-datastore-gorm
-            // 2. GrailsMetaClassUtils.invokeMethodIfExists(o, "ident", new Object[0]); Slow?
+            // 2. GrailsMetaClassUtils.invokeMethodIfExists(o, 'ident', new Object[0]); Slow?
             // 3. Just assuming resource is a GormEntity or has ident() implemented and catching an exception if it is not.
             def ident = resourceAttribute.ident()
             if (ident) {
@@ -390,7 +390,7 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
     }
 
     /**
-     * Check for "absolute" attribute and render server URL if available from Config or deducible in non-production.
+     * Check for 'absolute' attribute and render server URL if available from Config or deducible in non-production.
      */
     private handleAbsolute(Map attrs) {
         def base = attrs.base

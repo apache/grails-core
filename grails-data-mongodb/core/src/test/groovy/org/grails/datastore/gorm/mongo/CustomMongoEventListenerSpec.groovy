@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -37,17 +37,18 @@ import static org.grails.datastore.mapping.engine.event.EventType.PreLoad
 import static org.grails.datastore.mapping.engine.event.EventType.PreUpdate
 
 class CustomMongoEventListenerSpec extends MongoDatastoreSpec {
+
     void setupSpec() {
         manager.addAllDomainClasses([Listener])
     }
 
-    void "Test corrects are triggered for persistence life cycle"() {
-        given: "A registered event listener"
+    void 'Test corrects are triggered for persistence life cycle'() {
+        given: 'A registered event listener'
         def listener = new MyPersistenceListener(manager.session.datastore)
         manager.session.datastore.applicationEventPublisher.addApplicationListener(listener)
 
-        when: "An entity is saved"
-        def p = new Listener(name: "Cabbage")
+        when: 'An entity is saved'
+        def p = new Listener(name: 'Cabbage')
         p.save(flush: true)
 
         then:
@@ -64,20 +65,22 @@ class CustomMongoEventListenerSpec extends MongoDatastoreSpec {
 
 @Entity
 class Listener {
+
     Long id
     Long version
     String name
 
     def beforeInsert() {
-        println "ENTITY PRE INSERT"
+        println 'ENTITY PRE INSERT'
     }
 
     def afterInsert() {
-        println "ENTITY POST INSERT"
+        println 'ENTITY POST INSERT'
     }
 }
 
 class MyPersistenceListener extends AbstractPersistenceEventListener {
+
     int preInsertCount
     int postInsertCount
     int preUpdateCount
@@ -105,27 +108,27 @@ class MyPersistenceListener extends AbstractPersistenceEventListener {
             case PreUpdate:
                 println "LISTENER PRE UPDATE ${event.entityObject}"
                 preUpdateCount++
-                break;
+                break
             case PostUpdate:
                 println "LISTENER POST UPDATE ${event.entityObject}"
                 postUpdateCount++
-                break;
+                break
             case PreDelete:
                 println "LISTENER PRE DELETE ${event.entityObject}"
                 preDeleteCount++
-                break;
+                break
             case PostDelete:
                 println "LISTENER POST DELETE ${event.entityObject}"
                 postDeleteCount++
-                break;
+                break
             case PreLoad:
                 println "LISTENER PRE LOAD ${event.entityObject}"
                 preLoadCount++
-                break;
+                break
             case PostLoad:
                 println "LISTENER POST LOAD ${event.entityObject}"
                 postLoadCount++
-                break;
+                break
         }
     }
 

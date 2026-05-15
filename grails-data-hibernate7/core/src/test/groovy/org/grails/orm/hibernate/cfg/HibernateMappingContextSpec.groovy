@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -41,7 +41,7 @@ class HibernateMappingContextSpec extends HibernateGormDatastoreSpec {
 
     // --- unit-style tests (no datastore required) ---
 
-    void "default constructor creates a usable context"() {
+    void 'default constructor creates a usable context'() {
         when:
         def ctx = new HibernateMappingContext()
 
@@ -50,7 +50,7 @@ class HibernateMappingContextSpec extends HibernateGormDatastoreSpec {
         ctx.getMappingSyntaxStrategy() instanceof JpaMappingConfigurationStrategy
     }
 
-    void "custom type marshaller is registered on the mapping factory"() {
+    void 'custom type marshaller is registered on the mapping factory'() {
         given:
         HibernateConnectionSourceSettings settings = new HibernateConnectionSourceSettings()
         settings.custom.types = [new MappingContextTypeMarshaller(MappingContextUUID)]
@@ -62,7 +62,7 @@ class HibernateMappingContextSpec extends HibernateGormDatastoreSpec {
         ctx.mappingFactory.isCustomType(MappingContextUUID)
     }
 
-    void "entity with custom id generator resolves to ValueGenerator.CUSTOM"() {
+    void 'entity with custom id generator resolves to ValueGenerator.CUSTOM'() {
         when:
         def ctx = new HibernateMappingContext()
         PersistentEntity entity = ctx.addPersistentEntity(CustomIdGeneratorEntity)
@@ -71,7 +71,7 @@ class HibernateMappingContextSpec extends HibernateGormDatastoreSpec {
         entity.mapping.identifier.generator == ValueGenerator.CUSTOM
     }
 
-    void "Errors type is not treated as a custom type by the syntax strategy"() {
+    void 'Errors type is not treated as a custom type by the syntax strategy'() {
         when:
         def ctx = new HibernateMappingContext()
         def strategy = ctx.getMappingSyntaxStrategy() as GrailsJpaMappingConfigurationStrategy
@@ -80,7 +80,7 @@ class HibernateMappingContextSpec extends HibernateGormDatastoreSpec {
         !strategy.supportsCustomType(Errors)
     }
 
-    void "arbitrary non-Errors type is supported as a custom type by the syntax strategy"() {
+    void 'arbitrary non-Errors type is supported as a custom type by the syntax strategy'() {
         when:
         def ctx = new HibernateMappingContext()
         def strategy = ctx.getMappingSyntaxStrategy() as GrailsJpaMappingConfigurationStrategy
@@ -89,7 +89,7 @@ class HibernateMappingContextSpec extends HibernateGormDatastoreSpec {
         strategy.supportsCustomType(MappingContextUUID)
     }
 
-    void "getPersistentEntity strips Hibernate proxy suffix"() {
+    void 'getPersistentEntity strips Hibernate proxy suffix'() {
         when:
         def ctx = new HibernateMappingContext()
         ctx.addPersistentEntity(CustomIdGeneratorEntity)
@@ -98,7 +98,8 @@ class HibernateMappingContextSpec extends HibernateGormDatastoreSpec {
         ctx.getPersistentEntity("org.grails.orm.hibernate.cfg.CustomIdGeneratorEntity\$HibernateProxy\$XYZ") != null
     }
 
-    void "non-GormEntity class is not added as a persistent entity"() {
+    void 'non-GormEntity class is not added as a persistent entity'() {
+
         when:
         def ctx = new HibernateMappingContext()
         def entity = ctx.addPersistentEntity(MappingContextUUID)
@@ -109,18 +110,18 @@ class HibernateMappingContextSpec extends HibernateGormDatastoreSpec {
 
     // --- integration-style tests (use live datastore) ---
 
-    void "mappingContext is a HibernateMappingContext"() {
+    void 'mappingContext is a HibernateMappingContext'() {
         expect:
         mappingContext instanceof HibernateMappingContext
     }
 
-    void "registered domain classes appear as persistent entities"() {
+    void 'registered domain classes appear as persistent entities'() {
         expect:
         mappingContext.getPersistentEntity(MappingContextBook.name) != null
         mappingContext.getPersistentEntity(MappingContextAuthor.name) != null
     }
 
-    void "getHibernatePersistentEntities returns GrailsHibernatePersistentEntity instances"() {
+    void 'getHibernatePersistentEntities returns GrailsHibernatePersistentEntity instances'() {
         when:
         def entities = mappingContext.getHibernatePersistentEntities(ConnectionSource.DEFAULT)
 
@@ -129,15 +130,15 @@ class HibernateMappingContextSpec extends HibernateGormDatastoreSpec {
         entities.every { it.dataSourceName == ConnectionSource.DEFAULT }
     }
 
-    void "getHibernatePersistentEntities sets the dataSourceName on each entity"() {
+    void 'getHibernatePersistentEntities sets the dataSourceName on each entity'() {
         when:
-        def entities = mappingContext.getHibernatePersistentEntities("myDs")
+        def entities = mappingContext.getHibernatePersistentEntities('myDs')
 
         then:
-        entities.every { it.dataSourceName == "myDs" }
+        entities.every { it.dataSourceName == 'myDs' }
     }
 
-    void "embedded entity is created correctly"() {
+    void 'embedded entity is created correctly'() {
         when:
         def embedded = mappingContext.createEmbeddedEntity(MappingContextAddress)
 
@@ -146,30 +147,30 @@ class HibernateMappingContextSpec extends HibernateGormDatastoreSpec {
         embedded.javaClass == MappingContextAddress
     }
 
-    void "MappingContextBook has expected persistent properties"() {
+    void 'MappingContextBook has expected persistent properties'() {
         when:
         PersistentEntity entity = mappingContext.getPersistentEntity(MappingContextBook.name)
 
         then:
-        entity.persistentProperties.find { it.name == "title" } != null
-        entity.persistentProperties.find { it.name == "author" } != null
+        entity.persistentProperties.find { it.name == 'title' } != null
+        entity.persistentProperties.find { it.name == 'author' } != null
     }
 
-    void "MappingContextAuthor oneToMany relationship is mapped"() {
+    void 'MappingContextAuthor oneToMany relationship is mapped'() {
         when:
         PersistentEntity entity = mappingContext.getPersistentEntity(MappingContextAuthor.name)
 
         then:
-        entity.persistentProperties.find { it.name == "books" } != null
+        entity.persistentProperties.find { it.name == 'books' } != null
     }
 
-    void "getMappingFactory returns a HibernateMappingFactory"() {
+    void 'getMappingFactory returns a HibernateMappingFactory'() {
         expect:
         mappingContext.mappingFactory != null
         mappingContext.mappingFactory instanceof org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateMappingFactory
     }
 
-    void "setDefaultConstraints propagates to the mapping factory"() {
+    void 'setDefaultConstraints propagates to the mapping factory'() {
         given:
         def ctx = new HibernateMappingContext()
         Closure constraints = { maxSize 100 }
@@ -181,7 +182,7 @@ class HibernateMappingContextSpec extends HibernateGormDatastoreSpec {
         noExceptionThrown()
     }
 
-    void "createPersistentEntity returns null for non-GormEntity class"() {
+    void 'createPersistentEntity returns null for non-GormEntity class'() {
         given:
         def ctx = new HibernateMappingContext()
 
@@ -192,7 +193,7 @@ class HibernateMappingContextSpec extends HibernateGormDatastoreSpec {
         entity == null
     }
 
-    void "PersistentEntityNamingStrategy default resolveTableName delegates to resolveTableName(String)"() {
+    void 'PersistentEntityNamingStrategy default resolveTableName delegates to resolveTableName(String)'() {
         given:
         def entity = mappingContext.getPersistentEntity(MappingContextBook.name) as GrailsHibernatePersistentEntity
         def strategy = new PersistentEntityNamingStrategyTestImpl()
@@ -209,6 +210,7 @@ class HibernateMappingContextSpec extends HibernateGormDatastoreSpec {
 
 @Entity
 class MappingContextBook implements HibernateEntity<MappingContextBook> {
+
     String title
     MappingContextAuthor author
     static belongsTo = [author: MappingContextAuthor]
@@ -216,11 +218,13 @@ class MappingContextBook implements HibernateEntity<MappingContextBook> {
 
 @Entity
 class MappingContextAuthor implements HibernateEntity<MappingContextAuthor> {
+
     String name
     static hasMany = [books: MappingContextBook]
 }
 
 class MappingContextAddress {
+
     String street
     String city
 }
@@ -229,15 +233,17 @@ class MappingContextAddress {
 
 @Entity
 class CustomIdGeneratorEntity {
+
     String name
     static mapping = {
-        id(generator: "org.grails.orm.hibernate.cfg.MappingContextUUID", type: "uuid-binary")
+        id(generator: 'org.grails.orm.hibernate.cfg.MappingContextUUID', type: 'uuid-binary')
     }
 }
 
 class MappingContextUUID {}
 
 class MappingContextTypeMarshaller extends AbstractMappingAwareCustomTypeMarshaller {
+
     MappingContextTypeMarshaller(Class targetType) { super(targetType) }
 
     @Override
@@ -248,6 +254,7 @@ class MappingContextTypeMarshaller extends AbstractMappingAwareCustomTypeMarshal
 }
 
 class PersistentEntityNamingStrategyTestImpl implements PersistentEntityNamingStrategy {
+
     @Override
     String resolveColumnName(String logicalName) { logicalName }
     @Override

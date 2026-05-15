@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -30,12 +30,13 @@ import spock.lang.Specification
  */
 class HibernateEntityTransformationSpec extends Specification {
 
-    void "test hibernate entity transformation"() {
-        when:"A hibernate interceptor is set"
+    void 'test hibernate entity transformation'() {
+        when:'A hibernate interceptor is set'
         Class cls = new GroovyClassLoader().parseClass('''
 import grails.gorm.hibernate.annotation.ManagedEntity
 @ManagedEntity
 class MyEntity {
+
     String name
     String lastName
     int age
@@ -60,7 +61,6 @@ class MyEntity {
             new PersistentAttributeInterceptor() {
                 @Override
                 boolean readBoolean(Object obj, String name, boolean oldValue) {
-
 
                 }
 
@@ -141,12 +141,12 @@ class MyEntity {
 
                 @Override
                 Object readObject(Object obj, String name, Object oldValue) {
-                    return "good"
+                    return 'good'
                 }
 
                 @Override
                 Object writeObject(Object obj, String name, Object oldValue, Object newValue) {
-                    return "changed"
+                    return 'changed'
                 }
 
                 @Override
@@ -161,20 +161,20 @@ class MyEntity {
             }
         )
 
-        then:"the interceptor is used when reading a property"
+        then:'the interceptor is used when reading a property'
         myEntity.name == 'good'
         myEntity.lastName == 'good'
         myEntity.age == 10
 
-        when:"A setter is set"
+        when:'A setter is set'
         myEntity.name = 'something'
         myEntity.age = 5
         ((PersistentAttributeInterceptable)myEntity).$$_hibernate_setInterceptor( null )
 
-        then:"The value is changed"
+        then:'The value is changed'
         myEntity.name == 'changed'
 
-        and: "by transformation added methods are all marked as Generated"
+        and: 'by transformation added methods are all marked as Generated'
         cls.getMethod('$$_hibernate_getInterceptor').isAnnotationPresent(Generated)
         cls.getMethod('$$_hibernate_setInterceptor', PersistentAttributeInterceptor).isAnnotationPresent(Generated)
         cls.getMethod('$$_hibernate_getEntityInstance').isAnnotationPresent(Generated)

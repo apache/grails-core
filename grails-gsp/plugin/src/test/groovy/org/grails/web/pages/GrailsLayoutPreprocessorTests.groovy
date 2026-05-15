@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -31,9 +31,9 @@ class GrailsLayoutPreprocessorTests {
         def gspBody = '''
 <html>
         <head>
-        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <meta http-equiv='Content-Type' content='text/html; charset=UTF-8'>
         <title>This is the title</title></head>
-        <body onload="test();">
+        <body onload='test();'>
             body text
         </body>
 </html>
@@ -42,9 +42,9 @@ class GrailsLayoutPreprocessorTests {
         def gspBodyExpected = '''
 <html>
         <grailsLayout:captureHead>
-        <grailsLayout:captureMeta gsp_sm_xmlClosingForEmptyTag="" http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+        <grailsLayout:captureMeta gsp_sm_xmlClosingForEmptyTag='' http-equiv='Content-Type' content='text/html; charset=UTF-8'/>
         <grailsLayout:wrapTitleTag><grailsLayout:captureTitle>This is the title</grailsLayout:captureTitle></grailsLayout:wrapTitleTag></grailsLayout:captureHead>
-        <grailsLayout:captureBody onload="test();">
+        <grailsLayout:captureBody onload='test();'>
             body text
         </grailsLayout:captureBody>
 </html>
@@ -57,10 +57,10 @@ class GrailsLayoutPreprocessorTests {
         def gspBody = '''
 <html>
         <head><title>This is the title</title></head>
-        <body onload="test();">
+        <body onload='test();'>
             body text
         </body>
-        <content tag="nav">
+        <content tag='nav'>
             content test
         </content>
 </html>
@@ -69,10 +69,10 @@ class GrailsLayoutPreprocessorTests {
         def gspBodyExpected = '''
 <html>
         <grailsLayout:captureHead><grailsLayout:wrapTitleTag><grailsLayout:captureTitle>This is the title</grailsLayout:captureTitle></grailsLayout:wrapTitleTag></grailsLayout:captureHead>
-        <grailsLayout:captureBody onload="test();">
+        <grailsLayout:captureBody onload='test();'>
             body text
         </grailsLayout:captureBody>
-        <grailsLayout:captureContent tag="nav">
+        <grailsLayout:captureContent tag='nav'>
             content test
         </grailsLayout:captureContent>
 </html>
@@ -85,13 +85,13 @@ class GrailsLayoutPreprocessorTests {
         def gspBody = '''
 <html>
         <head><title>This is the title</title></head>
-        <body onload="test();">
+        <body onload='test();'>
             body text
         </body>
-        <content tag="nav">
+        <content tag='nav'>
             content test
         </content>
-        <content tag="nav">
+        <content tag='nav'>
             content test
         </content>
 </html>
@@ -100,13 +100,13 @@ class GrailsLayoutPreprocessorTests {
         def gspBodyExpected = '''
 <html>
         <grailsLayout:captureHead><grailsLayout:wrapTitleTag><grailsLayout:captureTitle>This is the title</grailsLayout:captureTitle></grailsLayout:wrapTitleTag></grailsLayout:captureHead>
-        <grailsLayout:captureBody onload="test();">
+        <grailsLayout:captureBody onload='test();'>
             body text
         </grailsLayout:captureBody>
-        <grailsLayout:captureContent tag="nav">
+        <grailsLayout:captureContent tag='nav'>
             content test
         </grailsLayout:captureContent>
-        <grailsLayout:captureContent tag="nav">
+        <grailsLayout:captureContent tag='nav'>
             content test
         </grailsLayout:captureContent>
 </html>
@@ -119,7 +119,7 @@ class GrailsLayoutPreprocessorTests {
         def gspBody = '''
 <html>
         <head><title>This is the title</title>
-            <parameter name="foo" value="bar" />
+            <parameter name='foo' value='bar' />
         </head>
         <body>
             body text
@@ -130,7 +130,7 @@ class GrailsLayoutPreprocessorTests {
         def gspBodyExpected = '''
 <html>
         <grailsLayout:captureHead><grailsLayout:wrapTitleTag><grailsLayout:captureTitle>This is the title</grailsLayout:captureTitle></grailsLayout:wrapTitleTag>
-            <grailsLayout:parameter name="foo" value="bar" />
+            <grailsLayout:parameter name='foo' value='bar' />
         </grailsLayout:captureHead>
         <grailsLayout:captureBody>
             body text

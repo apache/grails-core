@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -28,13 +28,13 @@ import spock.lang.Specification
  */
 class EntityReflectorSpec extends Specification {
 
-    void "test retrieve and set a property from a trait"() {
+    void 'test retrieve and set a property from a trait'() {
         when:
-        MappingContext mappingContext = new KeyValueMappingContext("test")
+        MappingContext mappingContext = new KeyValueMappingContext('test')
         PersistentEntity entity = mappingContext.addPersistentEntity(Bar)
 
-        then:"the property from the trait can be reflected"
-        entity.reflector.getPropertyReader('bar').read(new Bar(bar: "test")) == 'test'
+        then:'the property from the trait can be reflected'
+        entity.reflector.getPropertyReader('bar').read(new Bar(bar: 'test')) == 'test'
     }
 }
 
@@ -43,5 +43,6 @@ trait Foo {
 }
 
 class Bar implements Foo {
+
     String name
 }

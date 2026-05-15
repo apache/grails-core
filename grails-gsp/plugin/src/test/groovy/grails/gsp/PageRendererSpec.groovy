@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -32,67 +32,67 @@ class PageRendererSpec extends Specification {
 
     SimpleMapResourceLoader resourceLoader = new SimpleMapResourceLoader()
 
-    void "Test render simple template"() {
+    void 'Test render simple template'() {
         given:
-            resourceLoader.resources.put("/foo/_bar.gsp", new ByteArrayResource("Hello \${person}".bytes))
+            resourceLoader.resources.put('/foo/_bar.gsp', new ByteArrayResource("Hello \${person}".bytes))
         when:
-            def contents = pageRenderer.render(template:"/foo/bar", model:[person:"John"])
+            def contents = pageRenderer.render(template: '/foo/bar', model: [person:'John'])
         then:
             contents != null
-            contents == "Hello John"
+            contents == 'Hello John'
     }
 
-    void "Test render template with tag"() {
+    void 'Test render template with tag'() {
         given:
-            resourceLoader.resources.put("/foo/_bar.gsp", new ByteArrayResource('Hello <g:join in="[\'john\', \'fred\']" />'.bytes))
+            resourceLoader.resources.put('/foo/_bar.gsp', new ByteArrayResource('Hello <g:join in="[\'john\', \'fred\']" />'.bytes))
         when:
-            def contents = pageRenderer.render(template:"/foo/bar", model:[person:"John"])
+            def contents = pageRenderer.render(template: '/foo/bar', model: [person:'John'])
         then:
             contents != null
-            contents == "Hello john, fred"
+            contents == 'Hello john, fred'
     }
 
-    void "Test renderTo simple template"() {
+    void 'Test renderTo simple template'() {
         given:
-            resourceLoader.resources.put("/foo/_bar.gsp", new ByteArrayResource("Hello \${person}".bytes))
+            resourceLoader.resources.put('/foo/_bar.gsp', new ByteArrayResource("Hello \${person}".bytes))
         when:
             def sw = new StringWriter()
-            pageRenderer.renderTo(template:"/foo/bar", model:[person:"John"], sw)
+            pageRenderer.renderTo(template: '/foo/bar', model: [person:'John'], sw)
             def contents = sw.toString()
 
         then:
             contents != null
-            contents == "Hello John"
+            contents == 'Hello John'
     }
 
-    void "Test render page with embedded JavaScript function call"() {
+    void 'Test render page with embedded JavaScript function call'() {
         given:
-            resourceLoader.resources.put("/foo/_bar.gsp", new ByteArrayResource("""
+            resourceLoader.resources.put('/foo/_bar.gsp', new ByteArrayResource("""
             <h1>\${person}</h1>
-            <script type="text/javascript">
-            alert("\${person}");
+            <script type='text/javascript'>
+            alert("\${person}")
             </script>
             """.bytes))
         when:
-            def contents = pageRenderer.render(template:"/foo/bar", model:[person:"John"])
+            def contents = pageRenderer.render(template: '/foo/bar', model: [person:'John'])
         then:
             contents != null
             contents == """
             <h1>John</h1>
-            <script type="text/javascript">
-            alert("John");
+            <script type='text/javascript'>
+            alert('John')
             </script>
             """
     }
 
-    void "Test render page with curly braces in parens"() {
+    void 'Test render page with curly braces in parens'() {
         given:
-            resourceLoader.resources.put("/foo/_bar.gsp", new ByteArrayResource('''
-                <g:each var="formatter" in="${formatters}">
+            resourceLoader.resources.put('/foo/_bar.gsp', new ByteArrayResource('''
+                <g:each var='formatter' in="${formatters}">
                   <h2>${formatter.object} (${formatter.options})</h2>
                 </g:each>'''.bytes))
         when:
-            def contents = pageRenderer.render(template:"/foo/bar", model:[formatters:[[object: 'obj1', options: 'opt1'], [object: 'obj2', options: 'opt2']]])
+            def contents = pageRenderer.render(template: '/foo/bar', model: [formatters:[[object: 'obj1', options: 'opt1'], [object: 'obj2', options: 'opt2']]])
         then:
 
         println "C: $contents"
@@ -106,13 +106,13 @@ class PageRendererSpec extends Specification {
                 '''
     }
 
-    void "Test render page with brackets in HTML"() {
+    void 'Test render page with brackets in HTML'() {
         given:
-            resourceLoader.resources.put("/foo/_bar.gsp", new ByteArrayResource("""
+            resourceLoader.resources.put('/foo/_bar.gsp', new ByteArrayResource("""
 				{<% if(something) { %> \${message} ({[<% } %>)
             """.bytes))
         when:
-            def contents = pageRenderer.render(template:"/foo/bar", model:[something:true,message:"hello, world"])
+            def contents = pageRenderer.render(template: '/foo/bar', model: [something:true,message: 'hello, world'])
         then:
             contents != null
 

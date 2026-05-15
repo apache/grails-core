@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -29,14 +29,14 @@ class HibernatePagedResultListSpec extends HibernateGormDatastoreSpec {
         manager.addAllDomainClasses([HPBook])
     }
 
-    void "test PagedResultList totalCount with HQL query"() {
+    void 'test PagedResultList totalCount with HQL query'() {
         given:
         (1..10).each { i -> new HPBook(title: "Book $i").save() }
         session.flush()
         session.clear()
 
         when:
-        def results = HPBook.list(max: 3, offset: 2, sort: "id")
+        def results = HPBook.list(max: 3, offset: 2, sort: 'id')
 
         then:
         results instanceof PagedResultList
@@ -44,23 +44,23 @@ class HibernatePagedResultListSpec extends HibernateGormDatastoreSpec {
         results.totalCount == 10
         results.max == 3
         results.offset == 2
-        results[0].title == "Book 3"
-        results[1].title == "Book 4"
-        results[2].title == "Book 5"
+        results[0].title == 'Book 3'
+        results[1].title == 'Book 4'
+        results[2].title == 'Book 5'
     }
 
-    void "test PagedResultList totalCount with Criteria query"() {
+    void 'test PagedResultList totalCount with Criteria query'() {
         given:
-        new HPBook(title: "The Stand").save()
-        new HPBook(title: "The Shining").save()
-        new HPBook(title: "Carrie").save()
+        new HPBook(title: 'The Stand').save()
+        new HPBook(title: 'The Shining').save()
+        new HPBook(title: 'Carrie').save()
         session.flush()
         session.clear()
 
         when:
         def results = HPBook.createCriteria().list(max: 2) {
-            like("title", "The %")
-            order("title")
+            like('title', 'The %')
+            order('title')
         }
 
         then:
@@ -69,18 +69,18 @@ class HibernatePagedResultListSpec extends HibernateGormDatastoreSpec {
         results.totalCount == 2
         results.max == 2
         results.offset == 0
-        results[0].title == "The Shining"
-        results[1].title == "The Stand"
+        results[0].title == 'The Shining'
+        results[1].title == 'The Stand'
     }
 
-    void "test PagedResultList serialization"() {
+    void 'test PagedResultList serialization'() {
         given:
         (1..5).each { i -> new HPBook(title: "Book $i").save() }
         session.flush()
         session.clear()
 
         when:
-        def results = HPBook.list(max: 2, offset: 1, sort: "id")
+        def results = HPBook.list(max: 2, offset: 1, sort: 'id')
         results.totalCount // Ensure initialized before serialization
 
         // Serialize
@@ -100,17 +100,17 @@ class HibernatePagedResultListSpec extends HibernateGormDatastoreSpec {
         deserializedResults.totalCount == 5
         deserializedResults.max == 2
         deserializedResults.offset == 1
-        deserializedResults[0].title == "Book 2"
-        deserializedResults[1].title == "Book 3"
+        deserializedResults[0].title == 'Book 2'
+        deserializedResults[1].title == 'Book 3'
     }
 
-    void "test constructor with generic Query"() {
+    void 'test constructor with generic Query'() {
         given:
         def mockQuery = Mock(org.grails.datastore.mapping.query.Query)
         mockQuery.getEntity() >> null
         mockQuery.getMax() >> 10
         mockQuery.getOffset() >> null
-        mockQuery.list() >> ["a", "b"]
+        mockQuery.list() >> ['a', 'b']
 
         when:
         def results = new PagedResultList(mockQuery)
@@ -125,6 +125,7 @@ class HibernatePagedResultListSpec extends HibernateGormDatastoreSpec {
 
 @Entity
 class HPBook implements HibernateEntity<HPBook>, Serializable {
+
     Long id
     String title
 }

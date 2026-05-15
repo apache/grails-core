@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -23,25 +23,25 @@ import spock.lang.Unroll
 
 class PropertyDefinitionSpec extends Specification {
 
-    def "should parse simple property specification"() {
+    def 'should parse simple property specification'() {
         when:
-        def prop = PropertyDefinition.parse("title")
+        def prop = PropertyDefinition.parse('title')
 
         then:
-        prop.name == "title"
-        prop.type == "String"  // default type
+        prop.name == 'title'
+        prop.type == 'String'  // default type
     }
 
-    def "should parse property specification with type"() {
+    def 'should parse property specification with type'() {
         when:
-        def prop = PropertyDefinition.parse("count:Integer")
+        def prop = PropertyDefinition.parse('count:Integer')
 
         then:
-        prop.name == "count"
-        prop.type == "Integer"
+        prop.name == 'count'
+        prop.type == 'Integer'
     }
 
-    def "should throw exception for null property spec"() {
+    def 'should throw exception for null property spec'() {
         when:
         PropertyDefinition.parse(null)
 
@@ -49,15 +49,15 @@ class PropertyDefinitionSpec extends Specification {
         thrown(IllegalArgumentException)
     }
 
-    def "should throw exception for empty property spec"() {
+    def 'should throw exception for empty property spec'() {
         when:
-        PropertyDefinition.parse("")
+        PropertyDefinition.parse('')
 
         then:
         thrown(IllegalArgumentException)
     }
 
-    def "should validate valid property names"() {
+    def 'should validate valid property names'() {
         given:
         def prop = new PropertyDefinition(name: name, type: 'String')
 
@@ -86,7 +86,7 @@ class PropertyDefinitionSpec extends Specification {
         name << ['Title', '1count', 'first_name', '', null]
     }
 
-    def "should validate built-in types"() {
+    def 'should validate built-in types'() {
         given:
         def prop = new PropertyDefinition(name: 'test', type: type)
 
@@ -101,7 +101,7 @@ class PropertyDefinitionSpec extends Specification {
         type << ['String', 'Integer', 'Long', 'Boolean', 'Date', 'BigDecimal', 'Double', 'Float']
     }
 
-    def "should accept custom types like enums and domain classes"() {
+    def 'should accept custom types like enums and domain classes'() {
         given:
         def prop = new PropertyDefinition(name: 'test', type: type)
 
@@ -116,7 +116,7 @@ class PropertyDefinitionSpec extends Specification {
         type << ['Status', 'Author', 'BookCategory', 'UUID', 'LocalDate', 'LocalDateTime']
     }
 
-    def "should accept fully qualified type names"() {
+    def 'should accept fully qualified type names'() {
         given:
         def prop = new PropertyDefinition(name: 'test', type: type)
 
@@ -145,7 +145,7 @@ class PropertyDefinitionSpec extends Specification {
         type << ['string', 'integer', '123Type', '', null]
     }
 
-    def "should reject blank constraint for non-String type"() {
+    def 'should reject blank constraint for non-String type'() {
         given:
         def prop = new PropertyDefinition(name: 'count', type: 'Integer', blank: false)
 
@@ -156,7 +156,7 @@ class PropertyDefinitionSpec extends Specification {
         thrown(IllegalArgumentException)
     }
 
-    def "should reject maxSize constraint for non-String type"() {
+    def 'should reject maxSize constraint for non-String type'() {
         given:
         def prop = new PropertyDefinition(name: 'count', type: 'Integer', maxSize: 255)
 
@@ -167,7 +167,7 @@ class PropertyDefinitionSpec extends Specification {
         thrown(IllegalArgumentException)
     }
 
-    def "should generate property declaration"() {
+    def 'should generate property declaration'() {
         given:
         def prop = new PropertyDefinition(name: 'title', type: 'String')
 
@@ -175,7 +175,7 @@ class PropertyDefinitionSpec extends Specification {
         prop.toDeclaration() == 'String title'
     }
 
-    def "should generate constraint line with all constraints"() {
+    def 'should generate constraint line with all constraints'() {
         given:
         def prop = new PropertyDefinition(
             name: 'title',
@@ -189,7 +189,7 @@ class PropertyDefinitionSpec extends Specification {
         prop.toConstraintLine() == 'title nullable: false, blank: false, maxSize: 255'
     }
 
-    def "should return null constraint line when no constraints"() {
+    def 'should return null constraint line when no constraints'() {
         given:
         def prop = new PropertyDefinition(name: 'title', type: 'String')
 
@@ -197,7 +197,7 @@ class PropertyDefinitionSpec extends Specification {
         prop.toConstraintLine() == null
     }
 
-    def "should generate constraint line with nullable only"() {
+    def 'should generate constraint line with nullable only'() {
         given:
         def prop = new PropertyDefinition(name: 'description', type: 'String', nullable: true)
 
@@ -205,7 +205,7 @@ class PropertyDefinitionSpec extends Specification {
         prop.toConstraintLine() == 'description nullable: true'
     }
 
-    def "should use builder pattern"() {
+    def 'should use builder pattern'() {
         when:
         def prop = PropertyDefinition.builder()
             .name('title')
@@ -225,7 +225,7 @@ class PropertyDefinitionSpec extends Specification {
 
     // Jakarta Validation annotation tests
 
-    def "should generate NotNull annotation for nullable false"() {
+    def 'should generate NotNull annotation for nullable false'() {
         given:
         def prop = new PropertyDefinition(name: 'title', type: 'String', nullable: false)
 
@@ -233,7 +233,7 @@ class PropertyDefinitionSpec extends Specification {
         prop.toAnnotations() == ['@NotNull']
     }
 
-    def "should generate NotBlank annotation for blank false on String"() {
+    def 'should generate NotBlank annotation for blank false on String'() {
         given:
         def prop = new PropertyDefinition(name: 'title', type: 'String', blank: false)
 
@@ -241,7 +241,7 @@ class PropertyDefinitionSpec extends Specification {
         prop.toAnnotations() == ['@NotBlank']
     }
 
-    def "should generate Size annotation for maxSize"() {
+    def 'should generate Size annotation for maxSize'() {
         given:
         def prop = new PropertyDefinition(name: 'title', type: 'String', maxSize: 255)
 
@@ -249,7 +249,7 @@ class PropertyDefinitionSpec extends Specification {
         prop.toAnnotations() == ['@Size(max = 255)']
     }
 
-    def "should generate Size annotation with min and max"() {
+    def 'should generate Size annotation with min and max'() {
         given:
         def prop = new PropertyDefinition(name: 'title', type: 'String', minSize: 5, maxSize: 255)
 
@@ -257,7 +257,7 @@ class PropertyDefinitionSpec extends Specification {
         prop.toAnnotations() == ['@Size(min = 5, max = 255)']
     }
 
-    def "should generate multiple annotations"() {
+    def 'should generate multiple annotations'() {
         given:
         def prop = new PropertyDefinition(
             name: 'title',
@@ -271,7 +271,7 @@ class PropertyDefinitionSpec extends Specification {
         prop.toAnnotations() == ['@NotNull', '@NotBlank', '@Size(max = 255)']
     }
 
-    def "should return empty annotations when no constraints"() {
+    def 'should return empty annotations when no constraints'() {
         given:
         def prop = new PropertyDefinition(name: 'title', type: 'String')
 
@@ -279,7 +279,7 @@ class PropertyDefinitionSpec extends Specification {
         prop.toAnnotations() == []
     }
 
-    def "should return empty annotations when nullable is true"() {
+    def 'should return empty annotations when nullable is true'() {
         given:
         def prop = new PropertyDefinition(name: 'title', type: 'String', nullable: true)
 
@@ -287,7 +287,7 @@ class PropertyDefinitionSpec extends Specification {
         prop.toAnnotations() == []
     }
 
-    def "should get required imports for NotNull"() {
+    def 'should get required imports for NotNull'() {
         given:
         def prop = new PropertyDefinition(name: 'title', type: 'String', nullable: false)
 
@@ -295,7 +295,7 @@ class PropertyDefinitionSpec extends Specification {
         prop.getRequiredImports() == ['jakarta.validation.constraints.NotNull'] as Set
     }
 
-    def "should get required imports for multiple annotations"() {
+    def 'should get required imports for multiple annotations'() {
         given:
         def prop = new PropertyDefinition(
             name: 'title',
@@ -313,7 +313,7 @@ class PropertyDefinitionSpec extends Specification {
         ] as Set
     }
 
-    def "should default to GRAILS constraint style"() {
+    def 'should default to GRAILS constraint style'() {
         given:
         def prop = new PropertyDefinition(name: 'title', type: 'String')
 
@@ -323,7 +323,7 @@ class PropertyDefinitionSpec extends Specification {
         !prop.usesJakartaAnnotations()
     }
 
-    def "should support JAKARTA constraint style"() {
+    def 'should support JAKARTA constraint style'() {
         given:
         def prop = new PropertyDefinition(
             name: 'title',
@@ -336,7 +336,7 @@ class PropertyDefinitionSpec extends Specification {
         prop.usesJakartaAnnotations()
     }
 
-    def "should support BOTH constraint style"() {
+    def 'should support BOTH constraint style'() {
         given:
         def prop = new PropertyDefinition(
             name: 'title',
@@ -349,7 +349,7 @@ class PropertyDefinitionSpec extends Specification {
         prop.usesJakartaAnnotations()
     }
 
-    def "should use builder with constraint style"() {
+    def 'should use builder with constraint style'() {
         when:
         def prop = PropertyDefinition.builder()
             .name('title')

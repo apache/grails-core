@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -42,7 +42,7 @@ class GroovyPageRenderingTests extends Specification implements TagLibUnitTest<A
 
         when:
         def template = '${foo.bar.next}'
-        System.setProperty(Environment.KEY, "production")
+        System.setProperty(Environment.KEY, 'production')
         applyTemplate(template)
 
         then:
@@ -50,13 +50,13 @@ class GroovyPageRenderingTests extends Specification implements TagLibUnitTest<A
     }
 
     def cleanupSpec() {
-        System.setProperty(Environment.KEY, "")
+        System.setProperty(Environment.KEY, '')
     }
 
     def testForeach() {
         when:
-        def template='<g:each in="${toplist}"><g:each var="t" in="${it.sublist}">${t}</g:each></g:each>'
-        def result = applyTemplate(template, [toplist: [[sublist:['a','b']],[sublist:['c','d']]]])
+        def template='<g:each in="${toplist}'><g:each var='t' in='${it.sublist}">${t}</g:each></g:each>'
+        def result = applyTemplate(template, [toplist: [[sublist: ['a','b']],[sublist: ['c','d']]]])
 
         then:
         result == 'abcd'
@@ -64,8 +64,8 @@ class GroovyPageRenderingTests extends Specification implements TagLibUnitTest<A
 
     def testForeachInTagbody() {
         when:
-        def template='<g:set var="p"><g:each in="${toplist}"><g:each var="t" in="${it.sublist}">${t}</g:each></g:each></g:set>${p}'
-        def result = applyTemplate(template, [toplist: [[sublist:['a','b']],[sublist:['c','d']]]])
+        def template='<g:set var='p'><g:each in="${toplist}'><g:each var='t' in='${it.sublist}">${t}</g:each></g:each></g:set>${p}'
+        def result = applyTemplate(template, [toplist: [[sublist: ['a','b']],[sublist: ['c','d']]]])
 
         then:
         result == 'abcd'
@@ -73,7 +73,7 @@ class GroovyPageRenderingTests extends Specification implements TagLibUnitTest<A
 
     def testForeachIteratingMap() {
         when:
-        def template='<g:each var="k,v" in="[a:1,b:2,c:3]">${k}=${v},</g:each>'
+        def template='<g:each var='k,v' in='[a: 1,b: 2,c: 3]'>${k}=${v},</g:each>'
         def result = applyTemplate(template, [:])
 
         then:
@@ -82,7 +82,7 @@ class GroovyPageRenderingTests extends Specification implements TagLibUnitTest<A
 
     def testForeachRenaming() {
         when:
-        def template='<g:each in="${list}"><g:each in="${list}">.</g:each></g:each>'
+        def template='<g:each in="${list}'><g:each in='${list}">.</g:each></g:each>'
         def result=applyTemplate(template, [list: 1..10])
 
         then:
@@ -91,16 +91,16 @@ class GroovyPageRenderingTests extends Specification implements TagLibUnitTest<A
 
     def testForeachGRAILS8089() {
         when:
-        def template='''<g:each in="${mockGrailsApplication.domainClasses.findAll{it.clazz=='we' && (it.clazz != 'no')}.sort({a,b->a.fullName.compareTo(b.fullName)})}"><option value="${it.fullName}"><g:message code="content.item.name.${it.fullName}" encodeAs="HTML"/></option></g:each>'''
-        def result=applyTemplate(template, [mockGrailsApplication: [domainClasses: [[fullName: 'MyClass2', clazz:'we'], [fullName: 'MyClass1', clazz:'we'], [fullName: 'MyClass3', clazz:'no']] ]])
+        def template='''<g:each in="${mockGrailsApplication.domainClasses.findAll {it.clazz=='we' && (it.clazz != 'no')}.sort({a,b->a.fullName.compareTo(b.fullName)})}'><option value='${it.fullName}'><g:message code='content.item.name.${it.fullName}' encodeAs='HTML"/></option></g:each>'''
+        def result=applyTemplate(template, [mockGrailsApplication: [domainClasses: [[fullName: 'MyClass2', clazz: 'we'], [fullName: 'MyClass1', clazz: 'we'], [fullName: 'MyClass3', clazz: 'no']] ]])
 
         then:
-        result == '<option value="MyClass1">content.item.name.MyClass1</option><option value="MyClass2">content.item.name.MyClass2</option>'
+        result == '<option value='MyClass1'>content.item.name.MyClass1</option><option value='MyClass2'>content.item.name.MyClass2</option>'
     }
 
     def testNestedExpression() {
         when:
-        def template='''<g:set var="a" value="hello"/><g:set var="b" value='${[test: "${a} ${a}"]}'/>${b.test}'''
+        def template='''<g:set var='a' value='hello'/><g:set var='b' value='${[test: "${a} ${a}"]}'/>${b.test}'''
         def result = applyTemplate(template, [:])
 
         then:
@@ -109,7 +109,7 @@ class GroovyPageRenderingTests extends Specification implements TagLibUnitTest<A
 
     def testGstring() {
         when:
-        def template='''<g:set var="a" value="hello"/><g:set var="b" value='${"${a} ${a}"}'/>${b}'''
+        def template='''<g:set var='a' value='hello'/><g:set var='b' value='${"${a} ${a}"}'/>${b}'''
         def result = applyTemplate(template, [:])
 
         then:
@@ -118,7 +118,7 @@ class GroovyPageRenderingTests extends Specification implements TagLibUnitTest<A
 
     def testGstring2() {
         when:
-        def template='''<g:set var="a" value="hello"/><g:set var="b" value='${a} ${a}'/>${b}'''
+        def template='''<g:set var='a' value='hello'/><g:set var='b' value='${a} ${a}'/>${b}'''
         def result = applyTemplate(template, [:])
 
         then:
@@ -127,7 +127,7 @@ class GroovyPageRenderingTests extends Specification implements TagLibUnitTest<A
 
     def testGstring3() {
         when:
-        def template='''<g:set var="a" value="hello"/><g:set var="b" value='${a} hello'/>${b}'''
+        def template='''<g:set var='a' value='hello'/><g:set var='b' value='${a} hello'/>${b}'''
         def result = applyTemplate(template, [:])
 
         then:
@@ -136,7 +136,7 @@ class GroovyPageRenderingTests extends Specification implements TagLibUnitTest<A
 
     def testGstring4() {
         when:
-        def template='''<g:set var="a" value="hello"/><g:set var="b" value='hello ${a}'/>${b}'''
+        def template='''<g:set var='a' value='hello'/><g:set var='b' value='hello ${a}'/>${b}'''
         def result = applyTemplate(template, [:])
 
         then:
@@ -145,7 +145,7 @@ class GroovyPageRenderingTests extends Specification implements TagLibUnitTest<A
 
     def testGstring5() {
         when:
-        def template='''<g:set var="a" value="hello"/><g:set var="b" value='hello ${a} hello'/>${b}'''
+        def template='''<g:set var='a' value='hello'/><g:set var='b' value='hello ${a} hello'/>${b}'''
         def result = applyTemplate(template, [:])
 
         then:
@@ -154,7 +154,7 @@ class GroovyPageRenderingTests extends Specification implements TagLibUnitTest<A
 
     def testNotGstring() {
         when:
-        def template='''<g:set var="a" value="hello"/><g:set var="b" value="${'hello ${a} hello'}"/>${b}'''
+        def template='''<g:set var='a' value='hello'/><g:set var='b' value="${'hello ${a} hello'}"/>${b}'''
         def result = applyTemplate(template, [:])
 
         then:
@@ -163,7 +163,7 @@ class GroovyPageRenderingTests extends Specification implements TagLibUnitTest<A
 
     def testNotGstring2() {
         when:
-        def template='''<g:set var="a" value="hello"/><g:set var="b" value='${"hello \\${a} hello"}'/>${b}'''
+        def template='''<g:set var='a' value='hello'/><g:set var='b' value='${"hello \\${a} hello"}'/>${b}'''
         def result = applyTemplate(template, [:])
 
         then:
@@ -172,7 +172,7 @@ class GroovyPageRenderingTests extends Specification implements TagLibUnitTest<A
 
     def testNotGstring3() {
         when:
-        def template='''<g:set var="a" value="hello"/><g:set var="b" value="${a + '${'}"/>${b}'''
+        def template='''<g:set var='a' value='hello'/><g:set var='b' value="${a + '${'}"/>${b}'''
         def result = applyTemplate(template, [:])
 
         then:
@@ -181,7 +181,7 @@ class GroovyPageRenderingTests extends Specification implements TagLibUnitTest<A
 
     def testNestedExpressionInMap() {
         when:
-        def template='''<g:set var="a" value="hello"/><g:set var="b" value='[test: "${a} ${a}"]'/>${b.test}'''
+        def template='''<g:set var='a' value='hello'/><g:set var='b' value='[test: "${a} ${a}"]'/>${b.test}'''
         def result = applyTemplate(template, [:])
 
         then:

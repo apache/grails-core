@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -40,24 +40,24 @@ class DefaultDateHelperSpec extends Specification {
     @Shared
     DefaultGrailsTagDateHelper helper = new DefaultGrailsTagDateHelper()
 
-    void "test getTimeZone"() {
+    void 'test getTimeZone'() {
         expect:
-        helper.getTimeZone(TimeZone.getTimeZone('UTC')) == ZoneId.of("UTC")
-        helper.getTimeZone(ZoneId.of("UTC")) == ZoneId.of("UTC")
-        helper.getTimeZone("UTC") == ZoneId.of("UTC")
+        helper.getTimeZone(TimeZone.getTimeZone('UTC')) == ZoneId.of('UTC')
+        helper.getTimeZone(ZoneId.of('UTC')) == ZoneId.of('UTC')
+        helper.getTimeZone('UTC') == ZoneId.of('UTC')
         helper.getTimeZone(null) == ZoneId.systemDefault()
     }
 
-    void "test getFormatFromPattern"() {
+    void 'test getFormatFromPattern'() {
         given:
-        DateTimeFormatter format = helper.getFormatFromPattern("yyyy-MM-dd", ZoneId.of('UTC'), Locale.ENGLISH)
+        DateTimeFormatter format = helper.getFormatFromPattern('yyyy-MM-dd', ZoneId.of('UTC'), Locale.ENGLISH)
 
         expect:
         format.zone == ZoneId.of('UTC')
-        format.format(localDate) == "1941-01-05"
+        format.format(localDate) == '1941-01-05'
     }
 
-    void "test getDateFormat"() {
+    void 'test getDateFormat'() {
         given:
         DateTimeFormatter format
 
@@ -78,7 +78,7 @@ class DefaultDateHelperSpec extends Specification {
 
     @Requires({ Jvm.current.isJava17() })
     @Unroll
-    void "Java 17 - getTimeFormat for style #style returns #expected"(String style, String expected) {
+    void 'Java 17 - getTimeFormat for style #style returns #expected'(String style, String expected) {
         given:
         DateTimeFormatter format
 
@@ -98,7 +98,7 @@ class DefaultDateHelperSpec extends Specification {
 
     @Requires({ Jvm.current.isJava20Compatible() })
     @Unroll
-    void "Java 20+ - getTimeFormat for style #style returns #expected"(String style, String expected) {
+    void 'Java 20+ - getTimeFormat for style #style returns #expected'(String style, String expected) {
         given:
         DateTimeFormatter format
 
@@ -118,7 +118,7 @@ class DefaultDateHelperSpec extends Specification {
 
     @Requires({ Jvm.current.isJava17() })
     @Unroll
-    void "Java 17 - Full getTimeFormat for style #style returns #expected"(String style, String expected) {
+    void 'Java 17 - Full getTimeFormat for style #style returns #expected'(String style, String expected) {
         given:
         DateTimeFormatter format
 
@@ -136,7 +136,7 @@ class DefaultDateHelperSpec extends Specification {
 
     @Requires({ Jvm.current.isJava20Compatible() })
     @Unroll
-    void "Java 20+ - Full getTimeFormat for style #style returns #expected"(String style, String expected) {
+    void 'Java 20+ - Full getTimeFormat for style #style returns #expected'(String style, String expected) {
         given:
         DateTimeFormatter format
 
@@ -153,8 +153,8 @@ class DefaultDateHelperSpec extends Specification {
     }
 
     @Requires({ jvm.isJava8() })
-    @Unroll("for getDateTimeFormat(#dateStyle, #timeStyle) => #expected")
-    void "Java 8 - test getDateTimeFormat"(String dateStyle, String timeStyle, String expected) {
+    @Unroll('for getDateTimeFormat(#dateStyle, #timeStyle) => #expected')
+    void 'Java 8 - test getDateTimeFormat'(String dateStyle, String timeStyle, String expected) {
         given:
         DateTimeFormatter format
 
@@ -174,8 +174,8 @@ class DefaultDateHelperSpec extends Specification {
     }
 
     @Requires({ Jvm.current.isJava17() })
-    @Unroll("for getDateTimeFormat(#dateStyle, #timeStyle) => #expected")
-    void "Java 17 - test getDateTimeFormat"(String dateStyle, String timeStyle, String expected) {
+    @Unroll('for getDateTimeFormat(#dateStyle, #timeStyle) => #expected')
+    void 'Java 17 - test getDateTimeFormat'(String dateStyle, String timeStyle, String expected) {
         given:
         DateTimeFormatter format
 
@@ -190,13 +190,13 @@ class DefaultDateHelperSpec extends Specification {
         dateStyle | timeStyle | expected
         'FULL'    | 'FULL'    | 'Sunday, January 5, 1941 at 8:00:00 AM Coordinated Universal Time'
         'LONG'    | 'LONG'    | 'January 5, 1941 at 8:00:00 AM UTC'
-        'MEDIUM'  | 'MEDIUM'  | 'Jan 5, 1941, 8:00:00 AM'
-        null      | null      | '1/5/41, 8:00 AM'
+        'MEDIUM'  | 'MEDIUM'  | 'Jan 5, 1941, 8: 00:00 AM'
+        null      | null      | '1/5/41, 8: 00 AM'
     }
 
     @Requires({ Jvm.current.isJava20Compatible() })
-    @Unroll("for getDateTimeFormat(#dateStyle, #timeStyle) => #expected")
-    void "Java 20+ - test getDateTimeFormat"(String dateStyle, String timeStyle, String expected) {
+    @Unroll('for getDateTimeFormat(#dateStyle, #timeStyle) => #expected')
+    void 'Java 20+ - test getDateTimeFormat'(String dateStyle, String timeStyle, String expected) {
         given:
         DateTimeFormatter format
 
@@ -209,13 +209,13 @@ class DefaultDateHelperSpec extends Specification {
 
         where:
         dateStyle | timeStyle | expected
-        'FULL'    | 'FULL'    | 'Sunday, January 5, 1941, 8:00:00\u202FAM Coordinated Universal Time'
-        'LONG'    | 'LONG'    | 'January 5, 1941, 8:00:00\u202FAM UTC'
-        'MEDIUM'  | 'MEDIUM'  | 'Jan 5, 1941, 8:00:00\u202FAM'
-        null      | null      | '1/5/41, 8:00\u202FAM'
+        'FULL'    | 'FULL'    | 'Sunday, January 5, 1941, 8: 00:00\u202FAM Coordinated Universal Time'
+        'LONG'    | 'LONG'    | 'January 5, 1941, 8: 00:00\u202FAM UTC'
+        'MEDIUM'  | 'MEDIUM'  | 'Jan 5, 1941, 8: 00:00\u202FAM'
+        null      | null      | '1/5/41, 8: 00\u202FAM'
     }
 
-    void "test supportsDatePickers"() {
+    void 'test supportsDatePickers'() {
         expect:
         helper.supportsDatePicker(Date)
         helper.supportsDatePicker(LocalDate)
@@ -226,7 +226,7 @@ class DefaultDateHelperSpec extends Specification {
         helper.supportsDatePicker(ZonedDateTime)
     }
 
-    void "test buildCalendar"() {
+    void 'test buildCalendar'() {
         //TemporalAccessors without date aren't designed to be supported here
         expect:
         helper.buildCalendar(new Date()) instanceof GregorianCalendar
@@ -236,11 +236,11 @@ class DefaultDateHelperSpec extends Specification {
         helper.buildCalendar(ZonedDateTime.now()) instanceof GregorianCalendar
     }
 
-    void "test format"() {
+    void 'test format'() {
         given:
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.of('UTC'))
-        DateTimeFormatter timeOnlyFormatter = DateTimeFormatter.ofPattern("HH:mm:ss").withZone(ZoneId.of('UTC'))
-        DateTimeFormatter dateOnlyFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd").withZone(ZoneId.of('UTC'))
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern('yyyy-MM-dd HH:mm:ss').withZone(ZoneId.of('UTC'))
+        DateTimeFormatter timeOnlyFormatter = DateTimeFormatter.ofPattern('HH:mm:ss').withZone(ZoneId.of('UTC'))
+        DateTimeFormatter dateOnlyFormatter = DateTimeFormatter.ofPattern('yyyy-MM-dd').withZone(ZoneId.of('UTC'))
 
         LocalDateTime localDateTime = LocalDateTime.of(localDate, localTime)
 
@@ -275,10 +275,10 @@ class DefaultDateHelperSpec extends Specification {
         thrown(IllegalArgumentException)
     }
 
-    void "test format for java.sql.Date"() {
+    void 'test format for java.sql.Date'() {
 
         given:
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd").withZone(ZoneId.of('UTC'))
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern('yyyy-MM-dd').withZone(ZoneId.of('UTC'))
         def date = new java.sql.Date(localDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli())
 
         expect:

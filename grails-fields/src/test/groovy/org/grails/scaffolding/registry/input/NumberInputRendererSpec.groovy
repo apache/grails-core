@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -38,7 +38,7 @@ class NumberInputRendererSpec extends ClosureCaptureSpecification {
         renderer = new NumberInputRenderer()
     }
 
-    void "test supports"() {
+    void 'test supports'() {
         given:
         DomainProperty property
 
@@ -60,7 +60,7 @@ class NumberInputRendererSpec extends ClosureCaptureSpecification {
         Double  | _
     }
 
-    void "test render"() {
+    void 'test render'() {
         given:
         DomainProperty property
         ClosureCapture closureCapture
@@ -74,8 +74,8 @@ class NumberInputRendererSpec extends ClosureCaptureSpecification {
         closureCapture = getClosureCapture(renderer.renderInput([:], property))
 
         then:
-        closureCapture.calls[0].name == "input"
-        closureCapture.calls[0].args[0] == ["type": "range", "min": 1, "max": 5]
+        closureCapture.calls[0].name == 'input'
+        closureCapture.calls[0].args[0] == ['type': 'range', 'min': 1, 'max': 5]
 
         when:
         property = Mock(DomainProperty) {
@@ -90,8 +90,8 @@ class NumberInputRendererSpec extends ClosureCaptureSpecification {
         closureCapture = getClosureCapture(renderer.renderInput([:], property))
 
         then:
-        closureCapture.calls[0].name == "input"
-        closureCapture.calls[0].args[0] == ["type": "number"]
+        closureCapture.calls[0].name == 'input'
+        closureCapture.calls[0].args[0] == ['type': 'number']
 
         when:
         property = Mock(DomainProperty) {
@@ -106,8 +106,8 @@ class NumberInputRendererSpec extends ClosureCaptureSpecification {
         closureCapture = getClosureCapture(renderer.renderInput([:], property))
 
         then:
-        closureCapture.calls[0].name == "input"
-        closureCapture.calls[0].args[0] == ["type": "number", "step": "any"]
+        closureCapture.calls[0].name == 'input'
+        closureCapture.calls[0].args[0] == ['type': 'number', 'step': 'any']
 
         when:
         property = Mock(DomainProperty) {
@@ -122,8 +122,8 @@ class NumberInputRendererSpec extends ClosureCaptureSpecification {
         closureCapture = getClosureCapture(renderer.renderInput([:], property))
 
         then:
-        closureCapture.calls[0].name == "input"
-        closureCapture.calls[0].args[0] == ["type": "number", "step": "0.001"]
+        closureCapture.calls[0].name == 'input'
+        closureCapture.calls[0].args[0] == ['type': 'number', 'step': '0.001']
 
         when:
         property = Mock(DomainProperty) {
@@ -138,8 +138,8 @@ class NumberInputRendererSpec extends ClosureCaptureSpecification {
         closureCapture = getClosureCapture(renderer.renderInput([:], property))
 
         then:
-        closureCapture.calls[0].name == "input"
-        closureCapture.calls[0].args[0] == ["type": "number", "min": 5, "max": 6]
+        closureCapture.calls[0].name == 'input'
+        closureCapture.calls[0].args[0] == ['type': 'number', 'min': 5, 'max': 6]
 
     }
 }

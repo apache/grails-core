@@ -9,7 +9,7 @@ import grails.testing.mixin.integration.Integration
 @Integration
 class ${className}Spec extends GebSpec {
 
-    void "home page loads"() {
+    void 'home page loads'() {
         when: 'The home page is visited'
             go('/')
 

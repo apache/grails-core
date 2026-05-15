@@ -4,21 +4,20 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
  */
 
 package org.grails.orm.hibernate
-
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.gorm.annotation.Entity
@@ -31,7 +30,7 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         manager.addAllDomainClasses([HibernateGormStaticApiEntity, Club, HibernateGormStaticApiMultiTenantEntity])
     }
 
-    void "Test that HibernateGormStaticApi uses the shared template from the datastore"() {
+    void 'Test that HibernateGormStaticApi uses the shared template from the datastore'() {
         given:
         def api = GormRegistry.instance.findStaticApi(HibernateGormStaticApiEntity)
 
@@ -39,9 +38,9 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         api.hibernateTemplate.is(manager.hibernateDatastore.getHibernateTemplate())
     }
 
-    void "proxy test"() {
+    void 'proxy test'() {
         given:
-        def entity = new Club(name: "test").save(flush: true, failOnError: true)
+        def entity = new Club(name: 'test').save(flush: true, failOnError: true)
         def entityId = entity.id
         manager.session.clear()
 
@@ -55,9 +54,9 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         // The proxy may be initialized during retrieval, so we don't assert !isInitialized
     }
 
-    void "Test that get returns the correct instance"() {
+    void 'Test that get returns the correct instance'() {
         given:
-        def entity = new HibernateGormStaticApiEntity(name: "test").save(flush: true, failOnError: true)
+        def entity = new HibernateGormStaticApiEntity(name: 'test').save(flush: true, failOnError: true)
 
         when:
         def instance = HibernateGormStaticApiEntity.get(entity.id)
@@ -67,29 +66,29 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         instance.name == 'test'
     }
 
-    void "Test that read returns a read-only instance"() {
+    void 'Test that read returns a read-only instance'() {
         given:
-        def entity = new HibernateGormStaticApiEntity(name: "test").save(flush: true, failOnError: true)
+        def entity = new HibernateGormStaticApiEntity(name: 'test').save(flush: true, failOnError: true)
         def entityId = entity.id
         session.clear()
 
         when:
         def instance = HibernateGormStaticApiEntity.read(entityId)
-        instance.name = "modified"
+        instance.name = 'modified'
         session.flush()
 
-        and: "the instance is reloaded from the database"
+        and: 'the instance is reloaded from the database'
         session.clear()
         def reloadedInstance = HibernateGormStaticApiEntity.get(entityId)
 
         then:
-        "the change was not persisted"
-        reloadedInstance.name == "test"
+        'the change was not persisted'
+        reloadedInstance.name == 'test'
     }
 
-    void "Test that load returns"() {
+    void 'Test that load returns'() {
         given:
-        def entity = new HibernateGormStaticApiEntity(name: "test").save(flush: true, failOnError: true)
+        def entity = new HibernateGormStaticApiEntity(name: 'test').save(flush: true, failOnError: true)
         session.clear()
 
         when:
@@ -101,10 +100,10 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
 
     }
 
-    void "Test that getAll returns all instances"() {
+    void 'Test that getAll returns all instances'() {
         given:
-        new HibernateGormStaticApiEntity(name: "test1").save(failOnError: true)
-        new HibernateGormStaticApiEntity(name: "test2").save(flush: true, failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test1').save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test2').save(flush: true, failOnError: true)
 
         when:
         def instances = HibernateGormStaticApiEntity.getAll()
@@ -115,11 +114,11 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         instances.find { it.name == 'test2' }
     }
 
-    void "Test that getAll with a list of ids returns correct instances"() {
+    void 'Test that getAll with a list of ids returns correct instances'() {
         given:
-        def e1 = new HibernateGormStaticApiEntity(name: "test1").save(failOnError: true)
-        new HibernateGormStaticApiEntity(name: "test2").save(failOnError: true)
-        def e3 = new HibernateGormStaticApiEntity(name: "test3").save(flush: true, failOnError: true)
+        def e1 = new HibernateGormStaticApiEntity(name: 'test1').save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test2').save(failOnError: true)
+        def e3 = new HibernateGormStaticApiEntity(name: 'test3').save(flush: true, failOnError: true)
 
         when:
         def instances = HibernateGormStaticApiEntity.getAll([e1.id, e3.id])
@@ -130,10 +129,10 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         instances.find { it.id == e3.id }
     }
 
-    void "Test that count returns the correct number of instances"() {
+    void 'Test that count returns the correct number of instances'() {
         given:
-        new HibernateGormStaticApiEntity(name: "test1").save(failOnError: true)
-        new HibernateGormStaticApiEntity(name: "test2").save(flush: true, failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test1').save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test2').save(flush: true, failOnError: true)
 
         when:
         def count = HibernateGormStaticApiEntity.count()
@@ -142,9 +141,9 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         count == 2
     }
 
-    void "Test that exists returns true for an existing instance"() {
+    void 'Test that exists returns true for an existing instance'() {
         given:
-        def entity = new HibernateGormStaticApiEntity(name: "test").save(flush: true, failOnError: true)
+        def entity = new HibernateGormStaticApiEntity(name: 'test').save(flush: true, failOnError: true)
 
         when:
         def exists = HibernateGormStaticApiEntity.exists(entity.id)
@@ -153,7 +152,7 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         exists
     }
 
-    void "Test that exists returns false for a non-existent instance"() {
+    void 'Test that exists returns false for a non-existent instance'() {
         when:
         def exists = HibernateGormStaticApiEntity.exists(-1L)
 
@@ -161,10 +160,10 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         !exists
     }
 
-    void "Test findWhere returns a single instance"() {
+    void 'Test findWhere returns a single instance'() {
         given:
-        new HibernateGormStaticApiEntity(name: "test1").save(failOnError: true)
-        new HibernateGormStaticApiEntity(name: "test2").save(flush: true, failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test1').save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test2').save(flush: true, failOnError: true)
 
         when:
         def instance = HibernateGormStaticApiEntity.findWhere(name: 'test1')
@@ -173,10 +172,10 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         instance.name == 'test1'
     }
 
-    void "Test findAllWhere returns multiple instances"() {
+    void 'Test findAllWhere returns multiple instances'() {
         given:
-        new HibernateGormStaticApiEntity(name: "test").save(failOnError: true)
-        new HibernateGormStaticApiEntity(name: "test").save(flush: true, failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test').save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test').save(flush: true, failOnError: true)
 
         when:
         def instances = HibernateGormStaticApiEntity.findAllWhere(name: 'test')
@@ -185,25 +184,25 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         instances.size() == 2
     }
 
-    void "Test findAll with HQL using named params"() {
+    void 'Test findAll with HQL using named params'() {
         given:
-        new HibernateGormStaticApiEntity(name: "test1").save(failOnError: true)
-        new HibernateGormStaticApiEntity(name: "test2").save(flush: true, failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test1').save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test2').save(flush: true, failOnError: true)
 
         when:
-        def instances = HibernateGormStaticApiEntity.findAll("from HibernateGormStaticApiEntity where name like :pattern", [pattern: 'test%'])
+        def instances = HibernateGormStaticApiEntity.findAll('from HibernateGormStaticApiEntity where name like :pattern', [pattern: 'test%'])
 
         then:
         instances.size() == 2
     }
 
-    void "Test findAll with plain String"() {
+    void 'Test findAll with plain String'() {
         given:
-        new HibernateGormStaticApiEntity(name: "test1").save(failOnError: true)
-        new HibernateGormStaticApiEntity(name: "test2").save(flush: true, failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test1').save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test2').save(flush: true, failOnError: true)
 
         when:
-        String hql = "from HibernateGormStaticApiEntity where name = ?1"
+        String hql = 'from HibernateGormStaticApiEntity where name = ?1'
         def results = HibernateGormStaticApiEntity.findAll(hql, ['test1'])
 
         then:
@@ -211,37 +210,37 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         results[0].name == 'test1'
     }
 
-    void "Test find with plain String"() {
+    void 'Test find with plain String'() {
         given:
-        new HibernateGormStaticApiEntity(name: "test1").save(failOnError: true)
-        new HibernateGormStaticApiEntity(name: "test2").save(flush: true, failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test1').save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test2').save(flush: true, failOnError: true)
 
         when:
-        String hql = "from HibernateGormStaticApiEntity where name = :name"
+        String hql = 'from HibernateGormStaticApiEntity where name = :name'
         def result = HibernateGormStaticApiEntity.find(hql, [name: 'test2'])
 
         then:
         result.name == 'test2'
     }
 
-    void "Test executeQuery with plain String"() {
+    void 'Test executeQuery with plain String'() {
         given:
-        new HibernateGormStaticApiEntity(name: "test1").save(failOnError: true)
-        new HibernateGormStaticApiEntity(name: "test2").save(flush: true, failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test1').save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test2').save(flush: true, failOnError: true)
 
         when:
-        String hql = "select name from HibernateGormStaticApiEntity"
+        String hql = 'select name from HibernateGormStaticApiEntity'
         List results = HibernateGormStaticApiEntity.executeQuery(hql)
 
         then:
         results.size() == 2
-        results.contains("test1")
-        results.contains("test2")
+        results.contains('test1')
+        results.contains('test2')
     }
 
-    void "Test executeUpdate with plain String"() {
+    void 'Test executeUpdate with plain String'() {
         given:
-        new HibernateGormStaticApiEntity(name: "test").save(flush: true, failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test').save(flush: true, failOnError: true)
 
         when:
         String hql = "update HibernateGormStaticApiEntity set name = 'updated' where name = 'test'"
@@ -249,17 +248,14 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
 
         then:
         result == 1
-        HibernateGormStaticApiEntity.countByName("updated") == 1
+        HibernateGormStaticApiEntity.countByName('updated') == 1
     }
 
-
-
-
-    void "Test count"() {
+    void 'Test count'() {
         given:
-        new HibernateGormStaticApiEntity(name: "test").save(failOnError: true)
-        new HibernateGormStaticApiEntity(name: "test").save(failOnError: true)
-        new HibernateGormStaticApiEntity(name: "other").save(flush: true, failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test').save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test').save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'other').save(flush: true, failOnError: true)
 
         when:
         def count = HibernateGormStaticApiEntity.count()
@@ -268,12 +264,11 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         count == 3
     }
 
-
-    void "TestwithSession"() {
+    void 'TestwithSession'() {
         when:
         HibernateGormStaticApiEntity.withSession { s ->
             // In Hibernate 6, getIdentifier on a transient (not associated) instance throws TransientObjectException
-            s.getIdentifier(new HibernateGormStaticApiEntity(name: "test"))
+            s.getIdentifier(new HibernateGormStaticApiEntity(name: 'test'))
         }
 
         then:
@@ -281,13 +276,13 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
     }
 
     //TODO no transaction is in progress
-    void "Test withNewSession"() {
+    void 'Test withNewSession'() {
         given:
-        new HibernateGormStaticApiEntity(name: "outer").save(flush: true, failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'outer').save(flush: true, failOnError: true)
 
         when:
         session.clear()
-        new HibernateGormStaticApiEntity(name: "inner").save(flush: true, failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'inner').save(flush: true, failOnError: true)
         session.clear()
 
         def count = HibernateGormStaticApiEntity.count()
@@ -296,13 +291,13 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         count == 2
     }
 
-    void "Test executeUpdate"() {
+    void 'Test executeUpdate'() {
         given:
-        def entity = new HibernateGormStaticApiEntity(name: "test").save(flush: true, failOnError: true)
+        def entity = new HibernateGormStaticApiEntity(name: 'test').save(flush: true, failOnError: true)
         def entityId = entity.id
 
         when:
-        def updatedCount = HibernateGormStaticApiEntity.executeUpdate("update HibernateGormStaticApiEntity set name = :newName where name = :oldName", [newName: 'updated', oldName: 'test'])
+        def updatedCount = HibernateGormStaticApiEntity.executeUpdate('update HibernateGormStaticApiEntity set name = :newName where name = :oldName', [newName: 'updated', oldName: 'test'])
         session.clear()
         def instance = HibernateGormStaticApiEntity.get(entityId)
 
@@ -314,61 +309,59 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         HibernateGormStaticApiEntity.findAll().each { it.delete(flush: true) }
     }
 
-    void "Test lock"() {
+    void 'Test lock'() {
         given:
-        def entity = new HibernateGormStaticApiEntity(name: "test").save(flush: true, failOnError: true)
+        def entity = new HibernateGormStaticApiEntity(name: 'test').save(flush: true, failOnError: true)
         session.clear()
-
 
         when:
         def newEntity = HibernateGormStaticApiEntity.lock(entity.id)
-
 
         then:
         entity.id == newEntity.id
     }
 
-    void "Test that save does not flush immediately"() {
+    void 'Test that save does not flush immediately'() {
         when:
-        def entity = new HibernateGormStaticApiEntity(name: "test")
+        def entity = new HibernateGormStaticApiEntity(name: 'test')
         entity.save(failOnError: true)
         def found = HibernateGormStaticApiEntity.findWhere(name: 'test')
 
         then:
-        "The instance is found in the session even without a flush"
+        'The instance is found in the session even without a flush'
         found != null
     }
 
-    void "Test find with example returns matching instance"() {
+    void 'Test find with example returns matching instance'() {
         given:
-        new HibernateGormStaticApiEntity(name: "alpha").save(failOnError: true)
-        new HibernateGormStaticApiEntity(name: "beta").save(flush: true, failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'alpha').save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'beta').save(flush: true, failOnError: true)
         manager.session.clear()
 
         when:
-        def result = HibernateGormStaticApiEntity.find(new HibernateGormStaticApiEntity(name: "beta"))
+        def result = HibernateGormStaticApiEntity.find(new HibernateGormStaticApiEntity(name: 'beta'))
 
         then:
         result != null
-        result.name == "beta"
+        result.name == 'beta'
     }
 
-    void "Test find with example returns null when no match"() {
+    void 'Test find with example returns null when no match'() {
         given:
-        new HibernateGormStaticApiEntity(name: "alpha").save(flush: true, failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'alpha').save(flush: true, failOnError: true)
         manager.session.clear()
 
         when:
-        def result = HibernateGormStaticApiEntity.find(new HibernateGormStaticApiEntity(name: "nonexistent"))
+        def result = HibernateGormStaticApiEntity.find(new HibernateGormStaticApiEntity(name: 'nonexistent'))
 
         then:
         result == null
     }
 
-    void "Test first method"() {
+    void 'Test first method'() {
         given:
-        new HibernateGormStaticApiEntity(name: "test1").save(failOnError: true)
-        new HibernateGormStaticApiEntity(name: "test2").save(flush: true, failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test1').save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test2').save(flush: true, failOnError: true)
 
         when:
         def instance = HibernateGormStaticApiEntity.first()
@@ -377,10 +370,10 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         instance.name == 'test1'
     }
 
-    void "Test last method"() {
+    void 'Test last method'() {
         given:
-        new HibernateGormStaticApiEntity(name: "test1").save(failOnError: true)
-        new HibernateGormStaticApiEntity(name: "test2").save(flush: true, failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test1').save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test2').save(flush: true, failOnError: true)
 
         when:
         def instance = HibernateGormStaticApiEntity.last()
@@ -389,52 +382,50 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         instance.name == 'test2'
     }
 
-    void "Test find with named parameters"() {
+    void 'Test find with named parameters'() {
         given:
-        new HibernateGormStaticApiEntity(name: "test1").save(failOnError: true)
-        new HibernateGormStaticApiEntity(name: "test2").save(flush: true, failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test1').save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test2').save(flush: true, failOnError: true)
 
         when:
-        def instance = HibernateGormStaticApiEntity.find("from HibernateGormStaticApiEntity where name = :name", [name: 'test2'])
+        def instance = HibernateGormStaticApiEntity.find('from HibernateGormStaticApiEntity where name = :name', [name: 'test2'])
 
         then:
         instance.name == 'test2'
     }
 
-    void "Test find with positional parameters"() {
+    void 'Test find with positional parameters'() {
         given:
-        new HibernateGormStaticApiEntity(name: "test1").save(failOnError: true)
-        new HibernateGormStaticApiEntity(name: "test2").save(flush: true, failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test1').save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test2').save(flush: true, failOnError: true)
 
         when:
-        def instance = HibernateGormStaticApiEntity.find("from HibernateGormStaticApiEntity where name = ?1", ['test2'])
+        def instance = HibernateGormStaticApiEntity.find('from HibernateGormStaticApiEntity where name = ?1', ['test2'])
 
         then:
         instance.name == 'test2'
     }
 
-
-
-    void "Test executeQuery with positional params"() {
+    void 'Test executeQuery with positional params'() {
         given:
-        new HibernateGormStaticApiEntity(name: "test1").save(failOnError: true)
-        new HibernateGormStaticApiEntity(name: "test2").save(flush: true, failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test1').save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test2').save(flush: true, failOnError: true)
 
         when:
-        def entities = HibernateGormStaticApiEntity.executeQuery("from HibernateGormStaticApiEntity h where h.name like ?1", ['test%'])
+        def entities = HibernateGormStaticApiEntity.executeQuery('from HibernateGormStaticApiEntity h where h.name like ?1', ['test%'])
 
         then:
         entities.size() == 2
-        entities.collect{ it.name}.containsAll(['test1', 'test2'])
+        entities.collect { it.name}.containsAll(['test1', 'test2'])
     }
 
-    void "Test executeQuery with named params"() {
+    void 'Test executeQuery with named params'() {
         given:
-        new HibernateGormStaticApiEntity(name: "test1").save(failOnError: true)
-        new HibernateGormStaticApiEntity(name: "test2").save(flush: true, failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test1').save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test2').save(flush: true, failOnError: true)
 
         when:
-        def names = HibernateGormStaticApiEntity.executeQuery("select h.name from HibernateGormStaticApiEntity h where h.name like :name", [name: 'test%'],[:])
+        def names = HibernateGormStaticApiEntity.executeQuery('select h.name from HibernateGormStaticApiEntity h where h.name like :name', [name: 'test%'],[:])
 
         then:
         names.size() == 2
@@ -442,52 +433,52 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         names.contains('test2')
     }
 
-    void "Test findAll with positional parameters"() {
+    void 'Test findAll with positional parameters'() {
         given:
-        new HibernateGormStaticApiEntity(name: "test").save(failOnError: true)
-        new HibernateGormStaticApiEntity(name: "test").save(failOnError: true)
-        new HibernateGormStaticApiEntity(name: "other").save(flush: true, failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test').save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test').save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'other').save(flush: true, failOnError: true)
 
         when:
-        def instances = HibernateGormStaticApiEntity.findAll("from HibernateGormStaticApiEntity where name = ?1", ['test'])
+        def instances = HibernateGormStaticApiEntity.findAll('from HibernateGormStaticApiEntity where name = ?1', ['test'])
 
         then:
         instances.size() == 2
     }
 
-    void "Test findAll with example returns matching instances"() {
+    void 'Test findAll with example returns matching instances'() {
         given:
-        new HibernateGormStaticApiEntity(name: "match").save(failOnError: true)
-        new HibernateGormStaticApiEntity(name: "match").save(failOnError: true)
-        new HibernateGormStaticApiEntity(name: "other").save(flush: true, failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'match').save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'match').save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'other').save(flush: true, failOnError: true)
         manager.session.clear()
 
         when:
-        def results = HibernateGormStaticApiEntity.findAll(new HibernateGormStaticApiEntity(name: "match"))
+        def results = HibernateGormStaticApiEntity.findAll(new HibernateGormStaticApiEntity(name: 'match'))
 
         then:
         results.size() == 2
-        results.every { it.name == "match" }
+        results.every { it.name == 'match' }
     }
 
-    void "Test findAll with empty example returns empty list"() {
+    void 'Test findAll with empty example returns empty list'() {
         given:
-        new HibernateGormStaticApiEntity(name: "a").save(failOnError: true)
-        new HibernateGormStaticApiEntity(name: "b").save(flush: true, failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'a').save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'b').save(flush: true, failOnError: true)
         manager.session.clear()
 
-        when: "no non-null properties to constrain on"
+        when: 'no non-null properties to constrain on'
         def results = HibernateGormStaticApiEntity.findAll(new HibernateGormStaticApiEntity())
 
-        then: "findAllWhere with empty map returns null (by design guard)"
+        then: 'findAllWhere with empty map returns null (by design guard)'
         results == null
     }
 
-    void "Test getAll with long varargs"() {
+    void 'Test getAll with long varargs'() {
         given:
-        def e1 = new HibernateGormStaticApiEntity(name: "test1").save(failOnError: true)
-        new HibernateGormStaticApiEntity(name: "test2").save(failOnError: true)
-        def e3 = new HibernateGormStaticApiEntity(name: "test3").save(flush: true, failOnError: true)
+        def e1 = new HibernateGormStaticApiEntity(name: 'test1').save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test2').save(failOnError: true)
+        def e3 = new HibernateGormStaticApiEntity(name: 'test3').save(flush: true, failOnError: true)
 
         when:
         def instances = HibernateGormStaticApiEntity.getAll(e1.id, e3.id)
@@ -498,7 +489,7 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         instances.find { it.id == e3.id }
     }
 
-    void "Test getAll with empty list returns empty list"() {
+    void 'Test getAll with empty list returns empty list'() {
         when:
         def instances = HibernateGormStaticApiEntity.getAll([])
 
@@ -506,25 +497,25 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         instances == []
     }
 
-    void "Test getAll preserves input id order"() {
+    void 'Test getAll preserves input id order'() {
         given:
-        def e1 = new HibernateGormStaticApiEntity(name: "first").save(failOnError: true)
-        def e2 = new HibernateGormStaticApiEntity(name: "second").save(failOnError: true)
-        def e3 = new HibernateGormStaticApiEntity(name: "third").save(flush: true, failOnError: true)
+        def e1 = new HibernateGormStaticApiEntity(name: 'first').save(failOnError: true)
+        def e2 = new HibernateGormStaticApiEntity(name: 'second').save(failOnError: true)
+        def e3 = new HibernateGormStaticApiEntity(name: 'third').save(flush: true, failOnError: true)
 
-        when: "ids are requested in reverse order"
+        when: 'ids are requested in reverse order'
         def instances = HibernateGormStaticApiEntity.getAll([e3.id, e1.id, e2.id])
 
-        then: "results are in the same order as the requested ids"
+        then: 'results are in the same order as the requested ids'
         instances.size() == 3
         instances[0].id == e3.id
         instances[1].id == e1.id
         instances[2].id == e2.id
     }
 
-    void "Test getAll returns null in position for non-existent ids"() {
+    void 'Test getAll returns null in position for non-existent ids'() {
         given:
-        def e1 = new HibernateGormStaticApiEntity(name: "exists").save(flush: true, failOnError: true)
+        def e1 = new HibernateGormStaticApiEntity(name: 'exists').save(flush: true, failOnError: true)
         def missingId = e1.id + 9999L
 
         when:
@@ -536,9 +527,9 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         instances[1] == null
     }
 
-    void "Test getAll with duplicate ids returns entry at each position"() {
+    void 'Test getAll with duplicate ids returns entry at each position'() {
         given:
-        def e1 = new HibernateGormStaticApiEntity(name: "dup").save(flush: true, failOnError: true)
+        def e1 = new HibernateGormStaticApiEntity(name: 'dup').save(flush: true, failOnError: true)
 
         when:
         def instances = HibernateGormStaticApiEntity.getAll([e1.id, e1.id])
@@ -549,13 +540,13 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         instances[1].id == e1.id
     }
 
-    void "Test list method"() {
+    void 'Test list method'() {
         given:
-        new HibernateGormStaticApiEntity(name: "test1").save(failOnError: true)
-        new HibernateGormStaticApiEntity(name: "test2").save(flush: true, failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test1').save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test2').save(flush: true, failOnError: true)
 
         when:
-        def instances = HibernateGormStaticApiEntity.list(sort: "name", order: "desc")
+        def instances = HibernateGormStaticApiEntity.list(sort: 'name', order: 'desc')
 
         then:
         instances.size() == 2
@@ -563,7 +554,7 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         instances[1].name == 'test1'
     }
 
-    void "Test createCriteria"() {
+    void 'Test createCriteria'() {
         when:
         def criteria = HibernateGormStaticApiEntity.createCriteria()
 
@@ -571,13 +562,13 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         criteria != null
     }
 
-    void "Test executeUpdate with named params"() {
+    void 'Test executeUpdate with named params'() {
         given:
-        def entity = new HibernateGormStaticApiEntity(name: "test").save(flush: true, failOnError: true)
+        def entity = new HibernateGormStaticApiEntity(name: 'test').save(flush: true, failOnError: true)
         def entityId = entity.id
 
         when:
-        def updatedCount = HibernateGormStaticApiEntity.executeUpdate("update HibernateGormStaticApiEntity set name = :newName where name = :oldName", [newName: 'updated', oldName: 'test'])
+        def updatedCount = HibernateGormStaticApiEntity.executeUpdate('update HibernateGormStaticApiEntity set name = :newName where name = :oldName', [newName: 'updated', oldName: 'test'])
         session.clear()
         def instance = HibernateGormStaticApiEntity.get(entityId)
 
@@ -591,13 +582,13 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         }
     }
 
-    void "Test executeUpdate with positional params"() {
+    void 'Test executeUpdate with positional params'() {
         given:
-        def entity = new HibernateGormStaticApiEntity(name: "test").save(flush: true, failOnError: true)
+        def entity = new HibernateGormStaticApiEntity(name: 'test').save(flush: true, failOnError: true)
         def entityId = entity.id
 
         when:
-        def updatedCount = HibernateGormStaticApiEntity.executeUpdate("update HibernateGormStaticApiEntity set name = ?1 where name = ?2", ['updated', 'test'])
+        def updatedCount = HibernateGormStaticApiEntity.executeUpdate('update HibernateGormStaticApiEntity set name = ?1 where name = ?2', ['updated', 'test'])
         session.clear()
         def instance = HibernateGormStaticApiEntity.get(entityId)
 
@@ -611,38 +602,37 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         }
     }
 
-
-    void "test simple sql query"() {
+    void 'test simple sql query'() {
 
         given:
         setupTestData()
 
-        when:"A static native SQL query with no user input"
-        List<Club> results = Club.findAllWithNativeSql("select * from club c order by c.name")
+        when:'A static native SQL query with no user input'
+        List<Club> results = Club.findAllWithNativeSql('select * from club c order by c.name')
 
-        then:"The results are correct"
+        then:'The results are correct'
         results.size() == 3
         results[0] instanceof Club
         Club club = results[0] as Club
         club.name == 'Arsenal'
     }
 
-    void "test deprecated findAllWithSql delegates to findAllWithNativeSql"() {
+    void 'test deprecated findAllWithSql delegates to findAllWithNativeSql'() {
         given:
         setupTestData()
 
-        when:"The deprecated name still works as a delegate"
-        List<Club> results = Club.findAllWithSql("select * from club c order by c.name")
+        when:'The deprecated name still works as a delegate'
+        List<Club> results = Club.findAllWithSql('select * from club c order by c.name')
 
-        then:"The results are correct"
+        then:'The results are correct'
         results.size() == 3
     }
 
-    void "test deprecated findWithSql delegates to findWithNativeSql"() {
+    void 'test deprecated findWithSql delegates to findWithNativeSql'() {
         given:
         setupTestData()
 
-        when:"The deprecated name still works as a delegate"
+        when:'The deprecated name still works as a delegate'
         Club result = Club.findWithSql("select * from club c where c.name = 'Arsenal'")
 
         then:
@@ -650,74 +640,73 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         result.name == 'Arsenal'
     }
 
-    void "test sql query with gstring parameters"() {
+    void 'test sql query with gstring parameters'() {
         given:
         setupTestData()
 
-        when:"Some test data is saved"
-        String p = "%l%"
+        when:'Some test data is saved'
+        String p = '%l%'
         List<Club> results = Club.findAllWithNativeSql("select * from club c where c.name like $p order by c.name")
 
-        then:"The results are correct"
+        then:'The results are correct'
         results.size() == 2
     }
 
-    void "test escape HQL in findAll with gstring"() {
+    void 'test escape HQL in findAll with gstring'() {
         given:
         setupTestData()
 
-        when:"A query is used that embeds a GString with a value that should be encoded for the query to succeed"
-        String p = "%l%"
+        when:'A query is used that embeds a GString with a value that should be encoded for the query to succeed'
+        String p = '%l%'
         List<Club> results = Club.findAll("from Club c where c.name like $p order by c.name")
 
-        then:"Exception is thrown"
+        then:'Exception is thrown'
         results.size() == 2
 
-        when:"A query that passes arguments is used"
-        results = Club.findAll("from Club c where c.name like $p and c.name like :test order by c.name", [test:'%e%'])
+        when:'A query that passes arguments is used'
+        results = Club.findAll("from Club c where c.name like $p and c.name like :test order by c.name", [test: '%e%'])
 
-        then:"The results are correct"
+        then:'The results are correct'
         results.size() == 2
         results[0] instanceof Club
         results.first().name == 'Arsenal'
 
     }
 
-    void "test escape HQL in executeQuery with gstring"() {
+    void 'test escape HQL in executeQuery with gstring'() {
         given:
         setupTestData()
 
-        when:"A query is used that embeds a GString with a value that should be encoded for the query to succeed"
-        String p = "%l%"
+        when:'A query is used that embeds a GString with a value that should be encoded for the query to succeed'
+        String p = '%l%'
         List<Club> results = Club.executeQuery("from Club c where c.name like $p order by c.name")
 
-        then:"The results are correct"
+        then:'The results are correct'
         results.size() == 2
 
+        when:'A query that passes arguments is used'
+        results = Club.executeQuery("from Club c where c.name like $p and c.name like :test order by c.name", [test: '%e%'],[:])
 
-        when:"A query that passes arguments is used"
-        results = Club.executeQuery("from Club c where c.name like $p and c.name like :test order by c.name", [test:'%e%'],[:])
-
-        then:"The results are correct"
+        then:'The results are correct'
         results.size() == 2
     }
 
-    void "test escape HQL in find with gstring"() {
+    void 'test escape HQL in find with gstring'() {
         given:
         setupTestData()
 
-        when:"A query is used that embeds a GString with a value that should be encoded for the query to succeed"
-        String p = "%chester%"
+        when:'A query is used that embeds a GString with a value that should be encoded for the query to succeed'
+        String p = '%chester%'
         Club c = Club.find("from Club c where c.name like $p order by c.name")
 
-        then:"The results are correct"
+        then:'The results are correct'
         c != null
-        c.name == "Manchester United"
+        c.name == 'Manchester United'
 
-        when:"A query that passes arguments is used"
-        c = Club.find("from Club c where c.name like $p and c.name like :test order by c.name", [test:'%e%'])
+        when:'A query that passes arguments is used'
+        c = Club.find("from Club c where c.name like $p and c.name like :test order by c.name", [test: '%e%'])
 
-        then:"The results are correct"
+        then:'The results are correct'
         c != null
         c.name == 'Manchester United'
     }
@@ -726,41 +715,41 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
     // null-id guard branches
     // -------------------------------------------------------------------------
 
-    void "get returns null for null id"() {
+    void 'get returns null for null id'() {
         expect:
         Club.get(null) == null
     }
 
-    void "read returns null for null id"() {
+    void 'read returns null for null id'() {
         expect:
         Club.read(null) == null
     }
 
-    void "load returns null for non-convertible id"() {
+    void 'load returns null for non-convertible id'() {
         expect: "String that can't be converted to Long makes convertIdentifier return null"
-        Club.load("not-a-long") == null
+        Club.load('not-a-long') == null
     }
 
-    void "proxy returns null for null id"() {
+    void 'proxy returns null for null id'() {
         expect:
         Club.proxy(null) == null
     }
 
-    void "exists returns false for non-convertible id"() {
+    void 'exists returns false for non-convertible id'() {
         expect:
-        !Club.exists("not-a-long")
+        !Club.exists('not-a-long')
     }
 
     // -------------------------------------------------------------------------
     // first / last on empty table
     // -------------------------------------------------------------------------
 
-    void "first returns null when table is empty"() {
+    void 'first returns null when table is empty'() {
         expect:
         Club.first() == null
     }
 
-    void "last returns null when table is empty"() {
+    void 'last returns null when table is empty'() {
         expect:
         Club.last() == null
     }
@@ -769,42 +758,42 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
     // findWhere / findAllWhere with empty map
     // -------------------------------------------------------------------------
 
-    void "findWhere with empty queryMap returns null"() {
+    void 'findWhere with empty queryMap returns null'() {
         expect:
         Club.findWhere([:]) == null
         Club.findWhere(null) == null
     }
 
-    void "findAllWhere with empty queryMap returns null"() {
+    void 'findAllWhere with empty queryMap returns null'() {
         expect:
         Club.findAllWhere([:]) == null
         Club.findAllWhere(null) == null
     }
 
-    void "Test proxy returns null when id is null"() {
+    void 'Test proxy returns null when id is null'() {
         expect:
         HibernateGormStaticApiEntity.proxy(null) == null
     }
 
-    void "Test load returns null when id is null"() {
+    void 'Test load returns null when id is null'() {
         expect:
         HibernateGormStaticApiEntity.load(null) == null
     }
 
-    void "Test findWhere returns null when queryMap is null"() {
+    void 'Test findWhere returns null when queryMap is null'() {
         expect:
         HibernateGormStaticApiEntity.findWhere(null) == null
     }
 
-    void "Test findAllWhere returns null when queryMap is null"() {
+    void 'Test findAllWhere returns null when queryMap is null'() {
         expect:
         HibernateGormStaticApiEntity.findAllWhere(null) == null
     }
 
-    void "Test getAll with Iterable"() {
+    void 'Test getAll with Iterable'() {
         given:
-        def e1 = new HibernateGormStaticApiEntity(name: "test1").save(failOnError: true)
-        def e2 = new HibernateGormStaticApiEntity(name: "test2").save(flush: true, failOnError: true)
+        def e1 = new HibernateGormStaticApiEntity(name: 'test1').save(failOnError: true)
+        def e2 = new HibernateGormStaticApiEntity(name: 'test2').save(flush: true, failOnError: true)
 
         when:
         Iterable<Serializable> iterableIds = [e1.id, e2.id] as Set
@@ -814,10 +803,10 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         instances.size() == 2
     }
 
-    void "Test findAllWhere with queryMap and args"() {
+    void 'Test findAllWhere with queryMap and args'() {
         given:
-        new HibernateGormStaticApiEntity(name: "test").save(failOnError: true)
-        new HibernateGormStaticApiEntity(name: "test").save(flush: true, failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test').save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: 'test').save(flush: true, failOnError: true)
 
         when:
         def instances = HibernateGormStaticApiEntity.findAllWhere([name: 'test'], [max: 1])
@@ -830,7 +819,7 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
     // list with max — returns PagedResultList
     // -------------------------------------------------------------------------
 
-    void "list with max parameter returns a PagedResultList"() {
+    void 'list with max parameter returns a PagedResultList'() {
         given:
         setupTestData()
 
@@ -846,16 +835,16 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
     // convertIdentifier — convert throws (non-parseable String → Long)
     // -------------------------------------------------------------------------
 
-    void "get with non-parseable String id returns null via convertIdentifier"() {
+    void 'get with non-parseable String id returns null via convertIdentifier'() {
         expect: "conversion from 'notALong' to Long throws internally, returns null"
-        Club.get("notALong") == null
+        Club.get('notALong') == null
     }
 
     // -------------------------------------------------------------------------
     // getQualifier — field set explicitly
     // -------------------------------------------------------------------------
 
-    void "getQualifier returns the explicit qualifier when set in constructor"() {
+    void 'getQualifier returns the explicit qualifier when set in constructor'() {
         when:
         def api = new HibernateGormStaticApi<Club>(
                 Club,
@@ -863,26 +852,28 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
                 [],
                 Thread.currentThread().contextClassLoader,
                 null,
-                "secondary"
+                'secondary'
         )
 
         then:
-        api.getQualifier() == "secondary"
+        api.getQualifier() == 'secondary'
     }
 
     protected void setupTestData() {
-        new Club(name: "Barcelona").save()
-        new Club(name: "Arsenal").save()
-        new Club(name: "Manchester United").save(flush: true)
+        new Club(name: 'Barcelona').save()
+        new Club(name: 'Arsenal').save()
+        new Club(name: 'Manchester United').save(flush: true)
     }
 }
 
 @Entity
 class HibernateGormStaticApiEntity {
+
     String name
 }
 
 @Entity
 class HibernateGormStaticApiMultiTenantEntity implements grails.gorm.MultiTenant<HibernateGormStaticApiMultiTenantEntity> {
+
     String name
 }

@@ -4,14 +4,14 @@
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
+ * 'License'); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
  *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
@@ -51,7 +51,7 @@ class DataServiceMultiTenantConnectionRoutingSpec extends GrailsDataTckSpec {
         }
     }
 
-    void "save routes to secondary datasource with tenant isolation"() {
+    void 'save routes to secondary datasource with tenant isolation'() {
         given:
         tenant = 'tenant1'
 
@@ -65,7 +65,7 @@ class DataServiceMultiTenantConnectionRoutingSpec extends GrailsDataTckSpec {
         saved.amount == 100
     }
 
-    void "get retrieves from secondary datasource"() {
+    void 'get retrieves from secondary datasource'() {
         given: 'a metric saved under tenant1'
         tenant = 'tenant1'
         def saved = metricService.save(new DataServiceRoutingMetric(name: 'sessions', amount: 42))
@@ -80,7 +80,7 @@ class DataServiceMultiTenantConnectionRoutingSpec extends GrailsDataTckSpec {
         found.amount == 42
     }
 
-    void "count is scoped to current tenant on secondary datasource"() {
+    void 'count is scoped to current tenant on secondary datasource'() {
         given: 'metrics saved under tenant1'
         tenant = 'tenant1'
         metricService.save(new DataServiceRoutingMetric(name: 'alpha', amount: 1))
@@ -103,7 +103,7 @@ class DataServiceMultiTenantConnectionRoutingSpec extends GrailsDataTckSpec {
         count2 == 1
     }
 
-    void "delete removes from secondary datasource"() {
+    void 'delete removes from secondary datasource'() {
         given: 'a metric saved under tenant1'
         tenant = 'tenant1'
         def saved = metricService.save(new DataServiceRoutingMetric(name: 'disposable', amount: 0))
@@ -117,7 +117,7 @@ class DataServiceMultiTenantConnectionRoutingSpec extends GrailsDataTckSpec {
         metricService.count() == 0
     }
 
-    void "findByName routes to secondary datasource with tenant isolation"() {
+    void 'findByName routes to secondary datasource with tenant isolation'() {
         given: 'same-named metrics under different tenants'
         tenant = 'tenant1'
         metricService.save(new DataServiceRoutingMetric(name: 'shared_name', amount: 100))

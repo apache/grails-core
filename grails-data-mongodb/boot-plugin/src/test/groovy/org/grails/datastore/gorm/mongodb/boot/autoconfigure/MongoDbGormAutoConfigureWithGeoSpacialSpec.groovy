@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -39,7 +39,7 @@ import spock.util.environment.RestoreSystemProperties
 @RestoreSystemProperties
 class MongoDbGormAutoConfigureWithGeoSpacialSpec extends AutoStartedMongoSpec {
 
-    protected AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+    protected AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()
 
     @Override
     boolean shouldInitializeDatastore() {
@@ -56,29 +56,28 @@ class MongoDbGormAutoConfigureWithGeoSpacialSpec extends AutoStartedMongoSpec {
     }
 
     void setup() {
-        AutoConfigurationPackages.register(context, "org.grails.datastore.gorm.mongodb.boot.autoconfigure")
+        AutoConfigurationPackages.register(context, 'org.grails.datastore.gorm.mongodb.boot.autoconfigure')
 
         this.context.register(TestConfiguration, MongoAutoConfiguration.class,
-                              PropertyPlaceholderAutoConfiguration.class);
+                              PropertyPlaceholderAutoConfiguration.class)
     }
 
     void 'Test that GORM is correctly configured'() {
 
-        given:"The context is refreshed"
+        given:'The context is refreshed'
             context.refresh()
 
-
-        when:"Geospacial data is saved"
+        when:'Geospacial data is saved'
             City city
             def location = Point.valueOf([-0.125487, 51.508515])
             City.withTransaction {
 
-                city = new City(name:"London", location: location)
-                city.save(flush:true)
+                city = new City(name: 'London', location: location)
+                city.save(flush: true)
                 city.discard()
 
                 city = City.get(city.id)
-                then:"GORM queries work"
+                then:'GORM queries work'
             }
         then:
             city != null
@@ -89,11 +88,13 @@ class MongoDbGormAutoConfigureWithGeoSpacialSpec extends AutoStartedMongoSpec {
     @Configuration
     @Import(MongoDbGormAutoConfiguration)
     static class TestConfiguration {
+
     }
 }
 
 @Entity
 class City {
+
     ObjectId id
     String name
     Point location

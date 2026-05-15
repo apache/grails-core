@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -40,26 +40,27 @@ import spock.lang.Specification
 /**
  * @author Graeme Rocher
  */
-class RestfulResourceMappingSpec extends Specification{
+class RestfulResourceMappingSpec extends Specification {
+
     def setup() {
         WebUtils.clearGrailsWebRequest()
     }
 
     @Issue('https://github.com/apache/grails-core/issues/9849')
-    void "Test conflicting UrlMappings related to a resource mappings"() {
-        given:"A URL mappings definition with a single resource"
+    void 'Test conflicting UrlMappings related to a resource mappings'() {
+        given:'A URL mappings definition with a single resource'
         def urlMappingsHolder = getUrlMappingsHolder {
-            "/api/worksheet"(resources:"worksheet")
-            "/api/work"(resources:"work")
+            '/api/worksheet'(resources: 'worksheet')
+            '/api/work'(resources: 'work')
         }
 
-        when:"The URLs are obtained"
+        when:'The URLs are obtained'
         def urlMappings = urlMappingsHolder.urlMappings
 
-        then:"There are correct of them in total"
+        then:'There are correct of them in total'
         urlMappings.size() == 16
 
-        expect:"That the appropriate URLs are matched for the appropriate HTTP methods"
+        expect:'That the appropriate URLs are matched for the appropriate HTTP methods'
         urlMappingsHolder.matchAll('/api/work', 'GET')
         urlMappingsHolder.matchAll('/api/work', 'GET')[0].controllerName == 'work'
 
@@ -77,8 +78,8 @@ class RestfulResourceMappingSpec extends Specification{
     }
 
     @Issue('https://github.com/apache/grails-core/issues/9877')
-    void "Test conflicting UrlMappings with default url mapping"() {
-        given:"A URL mappings definition with a single resource"
+    void 'Test conflicting UrlMappings with default url mapping'() {
+        given:'A URL mappings definition with a single resource'
         def urlMappingsHolder = getUrlMappingsHolder {
             "/$controller/$action?/$id?(.$format)?"{
                 constraints {
@@ -86,16 +87,16 @@ class RestfulResourceMappingSpec extends Specification{
                 }
             }
 
-            "/foo"(resources: 'foo')
+            '/foo'(resources: 'foo')
         }
 
-        when:"The URLs are obtained"
+        when:'The URLs are obtained'
         def urlMappings = urlMappingsHolder.urlMappings
 
-        then:"There are correct of them in total"
+        then:'There are correct of them in total'
         urlMappings.size() == 9
 
-        expect:"That the appropriate URLs are matched for the appropriate HTTP methods"
+        expect:'That the appropriate URLs are matched for the appropriate HTTP methods'
         urlMappingsHolder.matchAll('/foo', 'GET')
         urlMappingsHolder.matchAll('/foo', 'GET')[0].controllerName == 'foo'
 
@@ -103,67 +104,66 @@ class RestfulResourceMappingSpec extends Specification{
         urlMappingsHolder.matchAll('/fooWithAnythingAfterIt', 'GET')[0].parameters.controller == 'fooWithAnythingAfterIt'
     }
 
-    void "Test resource members"() {
+    void 'Test resource members'() {
         given:
         def urlMappingsHolder = getUrlMappingsHolder {
-            "/books"(resources: "book") {
-                get "/preview", action:"preview"
+            '/books'(resources: 'book') {
+                get '/preview', action: 'preview'
                 collection {
-                    get "/about", action:"about"
+                    get '/about', action: 'about'
                 }
             }
         }
 
         expect:
-        urlMappingsHolder.matchAll("/books/1/preview", HttpMethod.GET).iterator().next().actionName == 'preview'
-        urlMappingsHolder.matchAll("/books/about", HttpMethod.GET).iterator().next().actionName == 'about'
+        urlMappingsHolder.matchAll('/books/1/preview', HttpMethod.GET).iterator().next().actionName == 'preview'
+        urlMappingsHolder.matchAll('/books/about', HttpMethod.GET).iterator().next().actionName == 'about'
     }
 
-    void "Test using method name prefixes"() {
+    void 'Test using method name prefixes'() {
         given:
         def urlMappingsHolder = getUrlMappingsHolder {
-            get "/books", controller:"book"
-            get "/books/$id", controller:"book", action:'show'
-            post "/books", controller:"book", action:'save'
-            patch "/books", controller:"book", action:'update'
-            delete "/books", controller:"book", action:'delete'
+            get '/books', controller: 'book'
+            get "/books/$id', controller: 'book", action: 'show'
+            post '/books', controller: 'book', action: 'save'
+            patch '/books', controller: 'book', action: 'update'
+            delete '/books', controller: 'book', action: 'delete'
 
-
-            get "/moreBooks"(controller:"book")
-            post "/moreBooks"(controller:"book", action:'save') {
-
-            }
-            patch "/moreBooks"(controller:"book", action:'update') {
+            get '/moreBooks'(controller: 'book')
+            post '/moreBooks'(controller: 'book', action: 'save') {
 
             }
-            put "/moreBooks"(controller:"book", action:'update') {
+            patch '/moreBooks'(controller: 'book', action: 'update') {
 
             }
-            delete "/moreBooks"(controller:"book", action:'delete') {
+            put '/moreBooks'(controller: 'book', action: 'update') {
+
+            }
+            delete '/moreBooks'(controller: 'book', action: 'delete') {
 
             }
         }
 
         expect:
-        urlMappingsHolder.match("/books")
-        urlMappingsHolder.matchAll("/books/1", HttpMethod.GET).iterator().next().actionName == 'show'
-        urlMappingsHolder.matchAll("/books", HttpMethod.POST).iterator().next().actionName == 'save'
-        urlMappingsHolder.matchAll("/books", HttpMethod.PATCH).iterator().next().actionName == 'update'
-        urlMappingsHolder.matchAll("/books", HttpMethod.DELETE).iterator().next().actionName == 'delete'
+        urlMappingsHolder.match('/books')
+        urlMappingsHolder.matchAll('/books/1', HttpMethod.GET).iterator().next().actionName == 'show'
+        urlMappingsHolder.matchAll('/books', HttpMethod.POST).iterator().next().actionName == 'save'
+        urlMappingsHolder.matchAll('/books', HttpMethod.PATCH).iterator().next().actionName == 'update'
+        urlMappingsHolder.matchAll('/books', HttpMethod.DELETE).iterator().next().actionName == 'delete'
 
-        urlMappingsHolder.match("/moreBooks")
-        urlMappingsHolder.matchAll("/moreBooks", HttpMethod.POST).iterator().next().actionName == 'save'
-        urlMappingsHolder.matchAll("/moreBooks", HttpMethod.PUT).iterator().next().actionName == 'update'
-        urlMappingsHolder.matchAll("/moreBooks", HttpMethod.PATCH).iterator().next().actionName == 'update'
-        urlMappingsHolder.matchAll("/moreBooks", HttpMethod.DELETE).iterator().next().actionName == 'delete'
+        urlMappingsHolder.match('/moreBooks')
+        urlMappingsHolder.matchAll('/moreBooks', HttpMethod.POST).iterator().next().actionName == 'save'
+        urlMappingsHolder.matchAll('/moreBooks', HttpMethod.PUT).iterator().next().actionName == 'update'
+        urlMappingsHolder.matchAll('/moreBooks', HttpMethod.PATCH).iterator().next().actionName == 'update'
+        urlMappingsHolder.matchAll('/moreBooks', HttpMethod.DELETE).iterator().next().actionName == 'delete'
     }
 
     @Issue('GRAILS-11748')
     void 'Test params.action'() {
         given:
         def urlMappingsHolder = getUrlMappingsHolder {
-            "/books"(resources: "book")
-            "/owner"(resource: "person")
+            '/books'(resources: 'book')
+            '/owner'(resource: 'person')
         }
         
         when:
@@ -190,8 +190,8 @@ class RestfulResourceMappingSpec extends Specification{
     void 'Test mapping ordering problem'() {
         given:
         def urlMappingsHolder = getUrlMappingsHolder {
-            "/barbi"(resources: "barbi")
-            "/bar"(resources: "bar")
+            '/barbi'(resources: 'barbi')
+            '/bar'(resources: 'bar')
         }
         
         when:
@@ -206,14 +206,14 @@ class RestfulResourceMappingSpec extends Specification{
     void 'Test resources and namespaced controller'() {
         given: 'A set of mappings'
         def urlMappingsHolder = getUrlMappingsHolder {
-            "/a/parent"(resources: 'ParentA') {
-                "/child"(resources: 'ChildA')
+            '/a/parent'(resources: 'ParentA') {
+                '/child'(resources: 'ChildA')
             }
-            "/b/parent"(resources: 'ParentB', namespace: 'same') {
-                "/child"(resources: 'ChildB', namespace: 'same')
+            '/b/parent'(resources: 'ParentB', namespace: 'same') {
+                '/child'(resources: 'ChildB', namespace: 'same')
             }
-            "/c/parent"(resources: 'ParentC', namespace: 'uniqueParent') {
-                "/child"(resources: 'ChildC', namespace: 'uniqueChild')
+            '/c/parent'(resources: 'ParentC', namespace: 'uniqueParent') {
+                '/child'(resources: 'ChildC', namespace: 'uniqueChild')
             }
         }
 
@@ -241,14 +241,14 @@ class RestfulResourceMappingSpec extends Specification{
     void 'Test resources and plugin controllers'() {
         given: 'A set of mappings'
         def urlMappingsHolder = getUrlMappingsHolder {
-            "/a/parent"(resources: 'ParentA') {
-                "/child"(resources: 'ChildA')
+            '/a/parent'(resources: 'ParentA') {
+                '/child'(resources: 'ChildA')
             }
-            "/b/parent"(resources: 'ParentB', plugin: 'samePlugin') {
-                "/child"(resources: 'ChildB', plugin: 'samePlugin')
+            '/b/parent'(resources: 'ParentB', plugin: 'samePlugin') {
+                '/child'(resources: 'ChildB', plugin: 'samePlugin')
             }
-            "/c/parent"(resources: 'ParentC', plugin: 'uniqueParentPlugin') {
-                "/child"(resources: 'ChildC', plugin: 'uniqueChildPlugin')
+            '/c/parent'(resources: 'ParentC', plugin: 'uniqueParentPlugin') {
+                '/child'(resources: 'ChildC', plugin: 'uniqueChildPlugin')
             }
         }
 
@@ -276,11 +276,11 @@ class RestfulResourceMappingSpec extends Specification{
     void 'Test groups with variables'()  {
         given: 'A resource mapping with child mappings'
         def urlMappingsHolder = getUrlMappingsHolder {
-            group "/home", {
-                "/browse/town/$town"(controller: 'browser', action:[GET:"index"]) {
+            group '/home', {
+                "/browse/town/$town"(controller: 'browser', action: [GET:"index"]) {
                 }
 
-                "/browse/street/$street"(controller: 'browser', action:[GET:"index"]) {
+                "/browse/street/$street"(controller: 'browser', action: [GET:"index"]) {
                 }
             }
         }
@@ -304,18 +304,18 @@ class RestfulResourceMappingSpec extends Specification{
     void 'Test that grouped params with dynamic variables product the correct mappings'() {
         given: 'A resource mapping with child mappings'
             def urlMappingsHolder = getUrlMappingsHolder {
-                "/report"(controller: 'blah', action: 'report')
-                group "/foo", {
+                '/report'(controller: 'blah', action: 'report')
+                group '/foo', {
                     "/blah/$foo/$action?"(controller: 'blah')
                     "/$foo/$action?"(controller: 'blah')
                 }
                 "/$foo?"(controller: 'blah', action: 'index')
             }
 
-        when:"The URL mappings are obtained"
+        when:'The URL mappings are obtained'
             def urlMappings = urlMappingsHolder.urlMappings
 
-        then:"There are eight of them in total"
+        then:'There are eight of them in total'
             urlMappings.size() == 4
 
         expect:
@@ -337,12 +337,12 @@ class RestfulResourceMappingSpec extends Specification{
     void 'Test multiple nested mappings have correct constrained properties'() {
         given: 'A resource mapping with child mappings'
         def urlMappingsHolder = getUrlMappingsHolder {
-            "/books"(resources: "book") {
-                '/sellers'(resources:'seller') {
+            '/books'(resources: 'book') {
+                '/sellers'(resources: 'seller') {
                     '/locations'(resources: 'location')
                 }
-                '/authors'(resources:'author')
-                '/titles'(resources:'title')
+                '/authors'(resources: 'author')
+                '/titles'(resources: 'title')
             }
         }
         
@@ -415,21 +415,21 @@ class RestfulResourceMappingSpec extends Specification{
         locationsMappings.find { it.actionName == 'delete' }.constraints*.propertyName == ['bookId', 'sellerId', 'id', 'format']
     }
     
-    void "Test that URL mappings with resources 3 levels deep works"() {
-        given:"A resources definition with nested URL mappings"
+    void 'Test that URL mappings with resources 3 levels deep works'() {
+        given:'A resources definition with nested URL mappings'
         def urlMappingsHolder = getUrlMappingsHolder {
-            "/books"(resources: "book") {
-                '/authors'(resources:'author') {
-                    "/publisher"(resource:"publisher")
+            '/books'(resources: 'book') {
+                '/authors'(resources: 'author') {
+                    '/publisher'(resource: 'publisher')
                 }
 
             }
         }
 
-        when:"The URL mappings are obtained"
+        when:'The URL mappings are obtained'
             def urlMappings = urlMappingsHolder.urlMappings
 
-        then:"There are correct number of them in total"
+        then:'There are correct number of them in total'
             urlMappings.size() == 23
 
         expect:
@@ -437,24 +437,23 @@ class RestfulResourceMappingSpec extends Specification{
             urlMappingsHolder.matchAll('/books/1/authors/create', 'GET')[0].actionName == 'create'
             urlMappingsHolder.matchAll('/books/1/authors/create', 'GET')[0].httpMethod == 'GET'
 
-
     }
 
-    void "Test that URL mappings with resources 3 levels deep works using single syntax"() {
-        given: "A resources definition with nested URL mappings"
+    void 'Test that URL mappings with resources 3 levels deep works using single syntax'() {
+        given: 'A resources definition with nested URL mappings'
         def urlMappingsHolder = getUrlMappingsHolder {
-            "/books"(resources: "book") {
+            '/books'(resources: 'book') {
                 '/authors'(resources: 'author') {
-                    "/publisher"(single: "publisher")
+                    '/publisher'(single: 'publisher')
                 }
 
             }
         }
 
-        when: "The URL mappings are obtained"
+        when: 'The URL mappings are obtained'
         def urlMappings = urlMappingsHolder.urlMappings
 
-        then: "There are correct number of them in total"
+        then: 'There are correct number of them in total'
         urlMappings.size() == 23
 
         expect:
@@ -464,21 +463,21 @@ class RestfulResourceMappingSpec extends Specification{
 
     }
 
-    void "Test that normal URL mappings can be nested within resources"() {
-        given:"A resources definition with nested URL mappings"
+    void 'Test that normal URL mappings can be nested within resources'() {
+        given:'A resources definition with nested URL mappings'
             def urlMappingsHolder = getUrlMappingsHolder {
-                "/books"(resources: "book") {
-                    "/publisher"(controller:"publisher")
+                '/books'(resources: 'book') {
+                    '/publisher'(controller: 'publisher')
                 }
             }
 
-        when:"The URL mappings are obtained"
+        when:'The URL mappings are obtained'
             def urlMappings = urlMappingsHolder.urlMappings
 
-        then:"There are the correct number of them in total"
+        then:'There are the correct number of them in total'
             urlMappings.size() == 9
 
-        expect:"That the appropriate URLs are matched for the appropriate HTTP methods"
+        expect:'That the appropriate URLs are matched for the appropriate HTTP methods'
             urlMappingsHolder.allowedMethods('/books') == [HttpMethod.POST, HttpMethod.GET] as Set
             urlMappingsHolder.allowedMethods('/books/1') == [HttpMethod.GET, HttpMethod.DELETE, HttpMethod.PUT, HttpMethod.PATCH] as Set
             urlMappingsHolder.matchAll('/books', 'GET')
@@ -517,20 +516,20 @@ class RestfulResourceMappingSpec extends Specification{
 
     }
 
-    void "Test nested resource within another resource produce the correct URL mappings"() {
-        given:"A URL mappings definition with nested resources"
+    void 'Test nested resource within another resource produce the correct URL mappings'() {
+        given:'A URL mappings definition with nested resources'
         def urlMappingsHolder = getUrlMappingsHolder {
-            "/books"(resources: "book") {
-                "/authors"(resources:"author")
+            '/books'(resources: 'book') {
+                '/authors'(resources: 'author')
             }
         }
-        when:"The URLs are obtained"
+        when:'The URLs are obtained'
             def urlMappings = urlMappingsHolder.urlMappings
 
-        then:"There are the correct number of them in total"
+        then:'There are the correct number of them in total'
             urlMappings.size() == 16
 
-        expect:"That the appropriate URLs are matched for the appropriate HTTP methods"
+        expect:'That the appropriate URLs are matched for the appropriate HTTP methods'
             !urlMappingsHolder.matchAll('/author/create', 'GET')
             !urlMappingsHolder.matchAll('/author/edit', 'GET')
             !urlMappingsHolder.matchAll('/author', 'POST')
@@ -603,20 +602,20 @@ class RestfulResourceMappingSpec extends Specification{
             urlMappingsHolder.matchAll('/books/1/authors/1', 'GET')[0].httpMethod == 'GET'
     }
 
-    void "Test nested single resource within another resource produce the correct URL mappings"() {
-        given:"A URL mappings definition with nested resources"
+    void 'Test nested single resource within another resource produce the correct URL mappings'() {
+        given:'A URL mappings definition with nested resources'
             def urlMappingsHolder = getUrlMappingsHolder {
-                "/books"(resources: "book") {
-                    "/author"(resource:"author")
+                '/books'(resources: 'book') {
+                    '/author'(resource: 'author')
                 }
             }
-        when:"The URLs are obtained"
+        when:'The URLs are obtained'
             def urlMappings = urlMappingsHolder.urlMappings
 
-        then:"There are the correct number of them in total"
+        then:'There are the correct number of them in total'
             urlMappings.size() == 15
 
-        expect:"That the appropriate URLs are matched for the appropriate HTTP methods"
+        expect:'That the appropriate URLs are matched for the appropriate HTTP methods'
             !urlMappingsHolder.matchAll('/author/create', 'GET')
             !urlMappingsHolder.matchAll('/author/edit', 'GET')
             !urlMappingsHolder.matchAll('/author', 'POST')
@@ -694,20 +693,20 @@ class RestfulResourceMappingSpec extends Specification{
             urlMappingsHolder.matchAll('/books/1/author', 'GET')[0].httpMethod == 'GET'
     }
 
-    void "Test nested single resource within another resource produce the correct URL mappings using single syntax"() {
-        given: "A URL mappings definition with nested resources"
+    void 'Test nested single resource within another resource produce the correct URL mappings using single syntax'() {
+        given: 'A URL mappings definition with nested resources'
         def urlMappingsHolder = getUrlMappingsHolder {
-            "/books"(resources: "book") {
-                "/author"(single: "author")
+            '/books'(resources: 'book') {
+                '/author'(single: 'author')
             }
         }
-        when: "The URLs are obtained"
+        when: 'The URLs are obtained'
         def urlMappings = urlMappingsHolder.urlMappings
 
-        then: "There are the correct number of them in total"
+        then: 'There are the correct number of them in total'
         urlMappings.size() == 15
 
-        expect: "That the appropriate URLs are matched for the appropriate HTTP methods"
+        expect: 'That the appropriate URLs are matched for the appropriate HTTP methods'
         !urlMappingsHolder.matchAll('/author/create', 'GET')
         !urlMappingsHolder.matchAll('/author/edit', 'GET')
         !urlMappingsHolder.matchAll('/author', 'POST')
@@ -785,18 +784,18 @@ class RestfulResourceMappingSpec extends Specification{
         urlMappingsHolder.matchAll('/books/1/author', 'GET')[0].httpMethod == 'GET'
     }
 
-    void "Test multiple resources produce the correct URL mappings"() {
-        given:"A URL mappings definition with a single resources"
+    void 'Test multiple resources produce the correct URL mappings'() {
+        given:'A URL mappings definition with a single resources'
             def urlMappingsHolder = getUrlMappingsHolder {
-                "/books"(resources:"book")
+                '/books'(resources: 'book')
             }
-        when:"The URLs are obtained"
+        when:'The URLs are obtained'
             def urlMappings = urlMappingsHolder.urlMappings
 
-        then:"There are the correct number of them in total"
+        then:'There are the correct number of them in total'
             urlMappings.size() == 8
 
-        expect:"That the appropriate URLs are matched for the appropriate HTTP methods"
+        expect:'That the appropriate URLs are matched for the appropriate HTTP methods'
             urlMappingsHolder.matchAll('/books/create', 'GET')
             urlMappingsHolder.matchAll('/books/create', 'GET')[0].actionName == 'create'
             urlMappingsHolder.matchAll('/books/create', 'GET')[0].httpMethod == 'GET'
@@ -830,18 +829,18 @@ class RestfulResourceMappingSpec extends Specification{
             urlMappingsHolder.matchAll('/books', 'GET')[0].httpMethod == 'GET'
     }
 
-    void "Test multiple resources with excludes produce the correct URL mappings"() {
-        given:"A URL mappings definition with a single resources"
+    void 'Test multiple resources with excludes produce the correct URL mappings'() {
+        given:'A URL mappings definition with a single resources'
             def urlMappingsHolder = getUrlMappingsHolder {
-                "/books"(resources:"book", excludes:['delete'])
+                '/books'(resources: 'book', excludes: ['delete'])
             }
-        when:"The URLs are obtained"
+        when:'The URLs are obtained'
             def urlMappings = urlMappingsHolder.urlMappings
 
-        then:"There are the correct number of them in total"
+        then:'There are the correct number of them in total'
             urlMappings.size() == 7
 
-        expect:"That the appropriate URLs are matched for the appropriate HTTP methods"
+        expect:'That the appropriate URLs are matched for the appropriate HTTP methods'
 
             !urlMappingsHolder.matchAll('/books/1', 'DELETE')
             urlMappingsHolder.matchAll('/books/create', 'GET')
@@ -873,18 +872,18 @@ class RestfulResourceMappingSpec extends Specification{
             urlMappingsHolder.matchAll('/books', 'GET')[0].httpMethod == 'GET'
     }
 
-    void "Test multiple resources with includes produce the correct URL mappings"() {
-        given:"A URL mappings definition with a single resources"
+    void 'Test multiple resources with includes produce the correct URL mappings'() {
+        given:'A URL mappings definition with a single resources'
             def urlMappingsHolder = getUrlMappingsHolder {
-                "/books"(resources:"book", includes:['save', 'update', 'index'])
+                '/books'(resources: 'book', includes: ['save', 'update', 'index'])
             }
-        when:"The URLs are obtained"
+        when:'The URLs are obtained'
             def urlMappings = urlMappingsHolder.urlMappings
 
-        then:"There are seven of them in total"
+        then:'There are seven of them in total'
             urlMappings.size() == 3
 
-        expect:"That the appropriate URLs are matched for the appropriate HTTP methods"
+        expect:'That the appropriate URLs are matched for the appropriate HTTP methods'
 
             !urlMappingsHolder.matchAll('/books/1', 'DELETE')
             !urlMappingsHolder.matchAll('/books/create', 'GET')
@@ -903,21 +902,21 @@ class RestfulResourceMappingSpec extends Specification{
             urlMappingsHolder.matchAll('/books', 'GET')[0].httpMethod == 'GET'
     }
 
-    void "Test a single resource with single syntax within a namespace produces the correct URL mappings"() {
-        given: "A URL mappings definition with a single resource"
+    void 'Test a single resource with single syntax within a namespace produces the correct URL mappings'() {
+        given: 'A URL mappings definition with a single resource'
         def urlMappingsHolder = getUrlMappingsHolder {
-            group "/admin", {
-                "/book"(single: "book")
+            group '/admin', {
+                '/book'(single: 'book')
             }
         }
 
-        when: "The URLs are obtained"
+        when: 'The URLs are obtained'
         def urlMappings = urlMappingsHolder.urlMappings
 
-        then: "There are the correct number of them in total"
+        then: 'There are the correct number of them in total'
         urlMappings.size() == 7
 
-        expect: "That the appropriate URLs are matched for the appropriate HTTP methods"
+        expect: 'That the appropriate URLs are matched for the appropriate HTTP methods'
         urlMappingsHolder.matchAll('/admin/book/create', 'GET')
         urlMappingsHolder.matchAll('/admin/book/create', 'GET')[0].actionName == 'create'
         urlMappingsHolder.matchAll('/admin/book/create', 'GET')[0].httpMethod == 'GET'
@@ -956,22 +955,21 @@ class RestfulResourceMappingSpec extends Specification{
         urlMappingsHolder.matchAll('/admin/book', 'GET')[0].httpMethod == 'GET'
     }
 
-
-    void "Test a single resource within a namespace produces the correct URL mappings"() {
-        given:"A URL mappings definition with a single resource"
+    void 'Test a single resource within a namespace produces the correct URL mappings'() {
+        given:'A URL mappings definition with a single resource'
         def urlMappingsHolder = getUrlMappingsHolder {
-            group "/admin", {
-                "/book"(resource:"book")
+            group '/admin', {
+                '/book'(resource: 'book')
             }
         }
 
-        when:"The URLs are obtained"
+        when:'The URLs are obtained'
         def urlMappings = urlMappingsHolder.urlMappings
 
-        then:"There are the correct number of them in total"
+        then:'There are the correct number of them in total'
         urlMappings.size() == 7
 
-        expect:"That the appropriate URLs are matched for the appropriate HTTP methods"
+        expect:'That the appropriate URLs are matched for the appropriate HTTP methods'
         urlMappingsHolder.matchAll('/admin/book/create', 'GET')
         urlMappingsHolder.matchAll('/admin/book/create', 'GET')[0].actionName == 'create'
         urlMappingsHolder.matchAll('/admin/book/create', 'GET')[0].httpMethod == 'GET'
@@ -1010,19 +1008,19 @@ class RestfulResourceMappingSpec extends Specification{
         urlMappingsHolder.matchAll('/admin/book', 'GET')[0].httpMethod == 'GET'
     }
 
-    void "Test a single resource produces the correct URL mappings"() {
-        given:"A URL mappings definition with a single resource"
+    void 'Test a single resource produces the correct URL mappings'() {
+        given:'A URL mappings definition with a single resource'
             def urlMappingsHolder = getUrlMappingsHolder {
-                "/book"(resource:"book")
+                '/book'(resource: 'book')
             }
 
-        when:"The URLs are obtained"
+        when:'The URLs are obtained'
             def urlMappings = urlMappingsHolder.urlMappings
 
-        then:"There are the correct number of them in total"
+        then:'There are the correct number of them in total'
             urlMappings.size() == 7
 
-        expect:"That the appropriate URLs are matched for the appropriate HTTP methods"
+        expect:'That the appropriate URLs are matched for the appropriate HTTP methods'
             urlMappingsHolder.matchAll('/book/create', 'GET')
             urlMappingsHolder.matchAll('/book/create', 'GET')[0].actionName == 'create'
             urlMappingsHolder.matchAll('/book/create', 'GET')[0].httpMethod == 'GET'
@@ -1061,19 +1059,19 @@ class RestfulResourceMappingSpec extends Specification{
             urlMappingsHolder.matchAll('/book', 'GET')[0].httpMethod == 'GET'
     }
 
-    void "Test a single resource using single syntax with excludes produces the correct URL mappings"() {
-        given: "A URL mappings definition with a single resource"
+    void 'Test a single resource using single syntax with excludes produces the correct URL mappings'() {
+        given: 'A URL mappings definition with a single resource'
         def urlMappingsHolder = getUrlMappingsHolder {
-            "/book"(single: "book", excludes: "delete")
+            '/book'(single: 'book', excludes: 'delete')
         }
 
-        when: "The URLs are obtained"
+        when: 'The URLs are obtained'
         def urlMappings = urlMappingsHolder.urlMappings
 
-        then: "There are correct of them in total"
+        then: 'There are correct of them in total'
         urlMappings.size() == 6
 
-        expect: "That the appropriate URLs are matched for the appropriate HTTP methods"
+        expect: 'That the appropriate URLs are matched for the appropriate HTTP methods'
         !urlMappingsHolder.matchAll('/book', 'DELETE')
         urlMappingsHolder.matchAll('/book/create', 'GET')
         urlMappingsHolder.matchAll('/book/create', 'GET')[0].actionName == 'create'
@@ -1109,20 +1107,19 @@ class RestfulResourceMappingSpec extends Specification{
         urlMappingsHolder.matchAll('/book', 'GET')[0].httpMethod == 'GET'
     }
 
-
-    void "Test a single resource with excludes produces the correct URL mappings"() {
-        given:"A URL mappings definition with a single resource"
+    void 'Test a single resource with excludes produces the correct URL mappings'() {
+        given:'A URL mappings definition with a single resource'
         def urlMappingsHolder = getUrlMappingsHolder {
-            "/book"(resource:"book", excludes: "delete")
+            '/book'(resource: 'book', excludes: 'delete')
         }
 
-        when:"The URLs are obtained"
+        when:'The URLs are obtained'
             def urlMappings = urlMappingsHolder.urlMappings
 
-        then:"There are correct of them in total"
+        then:'There are correct of them in total'
             urlMappings.size() == 6
 
-        expect:"That the appropriate URLs are matched for the appropriate HTTP methods"
+        expect:'That the appropriate URLs are matched for the appropriate HTTP methods'
             !urlMappingsHolder.matchAll('/book', 'DELETE')
             urlMappingsHolder.matchAll('/book/create', 'GET')
             urlMappingsHolder.matchAll('/book/create', 'GET')[0].actionName == 'create'
@@ -1158,202 +1155,196 @@ class RestfulResourceMappingSpec extends Specification{
             urlMappingsHolder.matchAll('/book', 'GET')[0].httpMethod == 'GET'
     }
 
-    void "Test a single resource produces the correct links for reverse mapping"() {
-        given:"A link generator definition with a single resource"
+    void 'Test a single resource produces the correct links for reverse mapping'() {
+        given:'A link generator definition with a single resource'
             def linkGenerator = getLinkGenerator {
-                "/book"(resource:"book")
+                '/book'(resource: 'book')
             }
 
-        expect:"The generated links to be correct"
-            linkGenerator.link(controller:"book", action:"save", method:"POST") == "http://localhost/book"
-            linkGenerator.link(controller:"book", action:"show", method:"GET") == "http://localhost/book"
-            linkGenerator.link(resource:"book", action:"show", method:"GET") == "http://localhost/book"
-            linkGenerator.link(resource:Book, action:"show", method:"GET") == "http://localhost/book"
-            linkGenerator.link(controller:"book", action:"edit", method:"GET") == "http://localhost/book/edit"
-            linkGenerator.link(controller:"book", action:"delete", method:"DELETE") == "http://localhost/book"
-            linkGenerator.link(controller:"book", action:"update", method:"PUT") == "http://localhost/book"
-            linkGenerator.link(controller:"book", action:"patch", method:"PATCH") == "http://localhost/book"
-            linkGenerator.link(controller:"book", action:"create") == "http://localhost/book/create"
-            linkGenerator.link(controller:"book", action:"create", method:"GET") == "http://localhost/book/create"
+        expect:'The generated links to be correct'
+            linkGenerator.link(controller: 'book', action: 'save', method: 'POST') == 'http://localhost/book'
+            linkGenerator.link(controller: 'book', action: 'show', method: 'GET') == 'http://localhost/book'
+            linkGenerator.link(resource: 'book', action: 'show', method: 'GET') == 'http://localhost/book'
+            linkGenerator.link(resource: Book, action: 'show', method: 'GET') == 'http://localhost/book'
+            linkGenerator.link(controller: 'book', action: 'edit', method: 'GET') == 'http://localhost/book/edit'
+            linkGenerator.link(controller: 'book', action: 'delete', method: 'DELETE') == 'http://localhost/book'
+            linkGenerator.link(controller: 'book', action: 'update', method: 'PUT') == 'http://localhost/book'
+            linkGenerator.link(controller: 'book', action: 'patch', method: 'PATCH') == 'http://localhost/book'
+            linkGenerator.link(controller: 'book', action: 'create') == 'http://localhost/book/create'
+            linkGenerator.link(controller: 'book', action: 'create', method: 'GET') == 'http://localhost/book/create'
     }
 
-    void "Test a single resource using single syntax produces the correct links for reverse mapping"() {
-        given: "A link generator definition with a single resource"
+    void 'Test a single resource using single syntax produces the correct links for reverse mapping'() {
+        given: 'A link generator definition with a single resource'
         def linkGenerator = getLinkGenerator {
-            "/book"(single: "book")
+            '/book'(single: 'book')
         }
 
-        expect: "The generated links to be correct"
-        linkGenerator.link(controller: "book", action: "save", method: "POST") == "http://localhost/book"
-        linkGenerator.link(controller: "book", action: "show", method: "GET") == "http://localhost/book"
-        linkGenerator.link(controller: "book", action: "edit", method: "GET") == "http://localhost/book/edit"
-        linkGenerator.link(controller: "book", action: "delete", method: "DELETE") == "http://localhost/book"
-        linkGenerator.link(controller: "book", action: "update", method: "PUT") == "http://localhost/book"
-        linkGenerator.link(controller: "book", action: "patch", method: "PATCH") == "http://localhost/book"
-        linkGenerator.link(controller: "book", action: "create") == "http://localhost/book/create"
-        linkGenerator.link(controller: "book", action: "create", method: "GET") == "http://localhost/book/create"
+        expect: 'The generated links to be correct'
+        linkGenerator.link(controller: 'book', action: 'save', method: 'POST') == 'http://localhost/book'
+        linkGenerator.link(controller: 'book', action: 'show', method: 'GET') == 'http://localhost/book'
+        linkGenerator.link(controller: 'book', action: 'edit', method: 'GET') == 'http://localhost/book/edit'
+        linkGenerator.link(controller: 'book', action: 'delete', method: 'DELETE') == 'http://localhost/book'
+        linkGenerator.link(controller: 'book', action: 'update', method: 'PUT') == 'http://localhost/book'
+        linkGenerator.link(controller: 'book', action: 'patch', method: 'PATCH') == 'http://localhost/book'
+        linkGenerator.link(controller: 'book', action: 'create') == 'http://localhost/book/create'
+        linkGenerator.link(controller: 'book', action: 'create', method: 'GET') == 'http://localhost/book/create'
     }
 
-
-    void "Test a resource produces the correct links for reverse mapping"() {
-        given:"A link generator definition with a single resource"
+    void 'Test a resource produces the correct links for reverse mapping'() {
+        given:'A link generator definition with a single resource'
         def linkGenerator = getLinkGenerator {
-            "/books"(resources:"book")
+            '/books'(resources: 'book')
         }
 
-        expect:"The generated links to be correct"
-        linkGenerator.link(controller:"book", action:"show", id:1, method:"GET") == "http://localhost/books/1"
-            linkGenerator.link(controller:"book", action:"create", method:"GET") == "http://localhost/books/create"
-            linkGenerator.link(controller:"book", action:"save", method:"POST") == "http://localhost/books"
-            linkGenerator.link(controller:"book", action:"edit", id:1, method:"GET") == "http://localhost/books/1/edit"
-            linkGenerator.link(controller:"book", action:"delete", id:1, method:"DELETE") == "http://localhost/books/1"
-            linkGenerator.link(controller:"book", action:"update", id:1, method:"PUT") == "http://localhost/books/1"
-            linkGenerator.link(controller:"book", action:"patch", id:1, method:"PATCH") == "http://localhost/books/1"
+        expect:'The generated links to be correct'
+        linkGenerator.link(controller: 'book', action: 'show', id: 1, method: 'GET') == 'http://localhost/books/1'
+            linkGenerator.link(controller: 'book', action: 'create', method: 'GET') == 'http://localhost/books/create'
+            linkGenerator.link(controller: 'book', action: 'save', method: 'POST') == 'http://localhost/books'
+            linkGenerator.link(controller: 'book', action: 'edit', id: 1, method: 'GET') == 'http://localhost/books/1/edit'
+            linkGenerator.link(controller: 'book', action: 'delete', id: 1, method: 'DELETE') == 'http://localhost/books/1'
+            linkGenerator.link(controller: 'book', action: 'update', id: 1, method: 'PUT') == 'http://localhost/books/1'
+            linkGenerator.link(controller: 'book', action: 'patch', id: 1, method: 'PATCH') == 'http://localhost/books/1'
     }
 
-    void "Test it is possible to link to a single resource nested within another resource using single syntax"() {
-        given: "A link generator with nested resources"
+    void 'Test it is possible to link to a single resource nested within another resource using single syntax'() {
+        given: 'A link generator with nested resources'
         def linkGenerator = getLinkGenerator {
-            "/books"(resources: "book") {
-                "/author"(single: "author")
+            '/books'(resources: 'book') {
+                '/author'(single: 'author')
             }
         }
 
-        expect: "The generated links to be correct"
+        expect: 'The generated links to be correct'
 
-        linkGenerator.link(resource: "book/author", action: "create", bookId: 1) == "http://localhost/books/1/author/create"
-        linkGenerator.link(resource: "book/author", action: "save", bookId: 1) == "http://localhost/books/1/author"
-        linkGenerator.link(resource: "book/author", action: "show", bookId: 1) == "http://localhost/books/1/author"
-        linkGenerator.link(resource: "book/author", action: "edit", bookId: 1) == "http://localhost/books/1/author/edit"
-        linkGenerator.link(resource: "book/author", action: "delete", bookId: 1) == "http://localhost/books/1/author"
-        linkGenerator.link(resource: "book/author", action: "update", bookId: 1) == "http://localhost/books/1/author"
-        linkGenerator.link(resource: "book/author", action: "patch", bookId: 1) == "http://localhost/books/1/author"
+        linkGenerator.link(resource: 'book/author', action: 'create', bookId: 1) == 'http://localhost/books/1/author/create'
+        linkGenerator.link(resource: 'book/author', action: 'save', bookId: 1) == 'http://localhost/books/1/author'
+        linkGenerator.link(resource: 'book/author', action: 'show', bookId: 1) == 'http://localhost/books/1/author'
+        linkGenerator.link(resource: 'book/author', action: 'edit', bookId: 1) == 'http://localhost/books/1/author/edit'
+        linkGenerator.link(resource: 'book/author', action: 'delete', bookId: 1) == 'http://localhost/books/1/author'
+        linkGenerator.link(resource: 'book/author', action: 'update', bookId: 1) == 'http://localhost/books/1/author'
+        linkGenerator.link(resource: 'book/author', action: 'patch', bookId: 1) == 'http://localhost/books/1/author'
 
-        linkGenerator.link(controller: "author", action: "create", method: "GET", params: [bookId: 1]) == "http://localhost/books/1/author/create"
-        linkGenerator.link(controller: "author", action: "save", method: "POST", params: [bookId: 1]) == "http://localhost/books/1/author"
-        linkGenerator.link(controller: "author", action: "show", method: "GET", params: [bookId: 1]) == "http://localhost/books/1/author"
-        linkGenerator.link(controller: "author", action: "edit", method: "GET", params: [bookId: 1]) == "http://localhost/books/1/author/edit"
-        linkGenerator.link(controller: "author", action: "delete", method: "DELETE", params: [bookId: 1]) == "http://localhost/books/1/author"
-        linkGenerator.link(controller: "author", action: "update", method: "PUT", params: [bookId: 1]) == "http://localhost/books/1/author"
-        linkGenerator.link(controller: "author", action: "patch", method: "PATCH", params: [bookId: 1]) == "http://localhost/books/1/author"
+        linkGenerator.link(controller: 'author', action: 'create', method: 'GET', params: [bookId: 1]) == 'http://localhost/books/1/author/create'
+        linkGenerator.link(controller: 'author', action: 'save', method: 'POST', params: [bookId: 1]) == 'http://localhost/books/1/author'
+        linkGenerator.link(controller: 'author', action: 'show', method: 'GET', params: [bookId: 1]) == 'http://localhost/books/1/author'
+        linkGenerator.link(controller: 'author', action: 'edit', method: 'GET', params: [bookId: 1]) == 'http://localhost/books/1/author/edit'
+        linkGenerator.link(controller: 'author', action: 'delete', method: 'DELETE', params: [bookId: 1]) == 'http://localhost/books/1/author'
+        linkGenerator.link(controller: 'author', action: 'update', method: 'PUT', params: [bookId: 1]) == 'http://localhost/books/1/author'
+        linkGenerator.link(controller: 'author', action: 'patch', method: 'PATCH', params: [bookId: 1]) == 'http://localhost/books/1/author'
 
-        linkGenerator.link(controller: "book", action: "create", method: "GET") == "http://localhost/books/create"
-        linkGenerator.link(controller: "book", action: "save", method: "POST") == "http://localhost/books"
-        linkGenerator.link(controller: "book", action: "show", id: 1, method: "GET") == "http://localhost/books/1"
-        linkGenerator.link(controller: "book", action: "edit", id: 1, method: "GET") == "http://localhost/books/1/edit"
-        linkGenerator.link(controller: "book", action: "delete", id: 1, method: "DELETE") == "http://localhost/books/1"
-        linkGenerator.link(controller: "book", action: "update", id: 1, method: "PUT") == "http://localhost/books/1"
-        linkGenerator.link(controller: "book", action: "patch", id: 1, method: "PATCH") == "http://localhost/books/1"
+        linkGenerator.link(controller: 'book', action: 'create', method: 'GET') == 'http://localhost/books/create'
+        linkGenerator.link(controller: 'book', action: 'save', method: 'POST') == 'http://localhost/books'
+        linkGenerator.link(controller: 'book', action: 'show', id: 1, method: 'GET') == 'http://localhost/books/1'
+        linkGenerator.link(controller: 'book', action: 'edit', id: 1, method: 'GET') == 'http://localhost/books/1/edit'
+        linkGenerator.link(controller: 'book', action: 'delete', id: 1, method: 'DELETE') == 'http://localhost/books/1'
+        linkGenerator.link(controller: 'book', action: 'update', id: 1, method: 'PUT') == 'http://localhost/books/1'
+        linkGenerator.link(controller: 'book', action: 'patch', id: 1, method: 'PATCH') == 'http://localhost/books/1'
 
     }
 
-
-    void "Test it is possible to link to a single resource nested within another resource"() {
-        given:"A link generator with nested resources"
+    void 'Test it is possible to link to a single resource nested within another resource'() {
+        given:'A link generator with nested resources'
             def linkGenerator = getLinkGenerator {
-                "/books"(resources: "book") {
-                    "/author"(resource:"author")
+                '/books'(resources: 'book') {
+                    '/author'(resource: 'author')
                 }
             }
 
-        expect:"The generated links to be correct"
+        expect:'The generated links to be correct'
 
-            linkGenerator.link(resource:"book/author", action:"create", bookId:1) == "http://localhost/books/1/author/create"
-            linkGenerator.link(resource:"book/author", action:"save", bookId:1) == "http://localhost/books/1/author"
-            linkGenerator.link(resource:"book/author", action:"show", bookId:1) == "http://localhost/books/1/author"
-            linkGenerator.link(resource:"book/author", action:"edit", bookId:1) == "http://localhost/books/1/author/edit"
-            linkGenerator.link(resource:"book/author", action:"delete", bookId:1) == "http://localhost/books/1/author"
-            linkGenerator.link(resource:"book/author", action:"update", bookId:1) == "http://localhost/books/1/author"
-            linkGenerator.link(resource:"book/author", action:"patch", bookId:1) == "http://localhost/books/1/author"
+            linkGenerator.link(resource: 'book/author', action: 'create', bookId: 1) == 'http://localhost/books/1/author/create'
+            linkGenerator.link(resource: 'book/author', action: 'save', bookId: 1) == 'http://localhost/books/1/author'
+            linkGenerator.link(resource: 'book/author', action: 'show', bookId: 1) == 'http://localhost/books/1/author'
+            linkGenerator.link(resource: 'book/author', action: 'edit', bookId: 1) == 'http://localhost/books/1/author/edit'
+            linkGenerator.link(resource: 'book/author', action: 'delete', bookId: 1) == 'http://localhost/books/1/author'
+            linkGenerator.link(resource: 'book/author', action: 'update', bookId: 1) == 'http://localhost/books/1/author'
+            linkGenerator.link(resource: 'book/author', action: 'patch', bookId: 1) == 'http://localhost/books/1/author'
 
-            linkGenerator.link(controller:"author", action:"create", method:"GET", params:[bookId:1]) == "http://localhost/books/1/author/create"
-            linkGenerator.link(controller:"author", action:"save", method:"POST", params:[bookId:1]) == "http://localhost/books/1/author"
-            linkGenerator.link(controller:"author", action:"show", method:"GET", params:[bookId:1]) == "http://localhost/books/1/author"
-            linkGenerator.link(controller:"author", action:"edit", method:"GET", params:[bookId:1]) == "http://localhost/books/1/author/edit"
-            linkGenerator.link(controller:"author", action:"delete", method:"DELETE", params:[bookId:1]) == "http://localhost/books/1/author"
-            linkGenerator.link(controller:"author", action:"update", method:"PUT", params:[bookId:1]) == "http://localhost/books/1/author"
-            linkGenerator.link(controller:"author", action:"patch", method:"PATCH", params:[bookId:1]) == "http://localhost/books/1/author"
+            linkGenerator.link(controller: 'author', action: 'create', method: 'GET', params: [bookId:1]) == 'http://localhost/books/1/author/create'
+            linkGenerator.link(controller: 'author', action: 'save', method: 'POST', params: [bookId:1]) == 'http://localhost/books/1/author'
+            linkGenerator.link(controller: 'author', action: 'show', method: 'GET', params: [bookId:1]) == 'http://localhost/books/1/author'
+            linkGenerator.link(controller: 'author', action: 'edit', method: 'GET', params: [bookId:1]) == 'http://localhost/books/1/author/edit'
+            linkGenerator.link(controller: 'author', action: 'delete', method: 'DELETE', params: [bookId:1]) == 'http://localhost/books/1/author'
+            linkGenerator.link(controller: 'author', action: 'update', method: 'PUT', params: [bookId:1]) == 'http://localhost/books/1/author'
+            linkGenerator.link(controller: 'author', action: 'patch', method: 'PATCH', params: [bookId:1]) == 'http://localhost/books/1/author'
 
-            linkGenerator.link(controller:"book", action:"create", method:"GET") == "http://localhost/books/create"
-            linkGenerator.link(controller:"book", action:"save", method:"POST") == "http://localhost/books"
-            linkGenerator.link(controller:"book", action:"show", id:1, method:"GET") == "http://localhost/books/1"
-            linkGenerator.link(controller:"book", action:"edit", id:1, method:"GET") == "http://localhost/books/1/edit"
-            linkGenerator.link(controller:"book", action:"delete", id:1, method:"DELETE") == "http://localhost/books/1"
-            linkGenerator.link(controller:"book", action:"update", id:1, method:"PUT") == "http://localhost/books/1"
-            linkGenerator.link(controller:"book", action:"patch", id:1, method:"PATCH") == "http://localhost/books/1"
-
-    }
-
-
-    void "Test it is possible to link to a resource nested within another resource"() {
-        given:"A link generator with nested resources"
-        def linkGenerator = getLinkGenerator {
-            "/books"(resources: "book") {
-                "/authors"(resources:"author")
-            }
-        }
-
-        expect:"The generated links to be correct"
-
-        linkGenerator.link(resource:"book/author", action:"create", bookId:1) == "http://localhost/books/1/authors/create"
-        linkGenerator.link(resource:"book/author", action:"save", bookId:1) == "http://localhost/books/1/authors"
-        linkGenerator.link(resource:"book/author", action:"show", id:1,bookId:1) == "http://localhost/books/1/authors/1"
-        linkGenerator.link(resource:"book/author", action:"edit", id:1,bookId:1) == "http://localhost/books/1/authors/1/edit"
-        linkGenerator.link(resource:"book/author", action:"delete", id:1,bookId:1) == "http://localhost/books/1/authors/1"
-        linkGenerator.link(resource:"book/author", action:"update", id:1,bookId:1) == "http://localhost/books/1/authors/1"
-        linkGenerator.link(resource:"book/author", action:"patch", id:1,bookId:1) == "http://localhost/books/1/authors/1"
-
-        linkGenerator.link(controller:"author", action:"create", method:"GET", params:[bookId:1]) == "http://localhost/books/1/authors/create"
-        linkGenerator.link(controller:"author", action:"save", method:"POST", params:[bookId:1]) == "http://localhost/books/1/authors"
-        linkGenerator.link(controller:"author", action:"show", id:1,method:"GET", params:[bookId:1]) == "http://localhost/books/1/authors/1"
-        linkGenerator.link(controller:"author", action:"edit", id:1,method:"GET", params:[bookId:1]) == "http://localhost/books/1/authors/1/edit"
-        linkGenerator.link(controller:"author", action:"delete", id:1,method:"DELETE", params:[bookId:1]) == "http://localhost/books/1/authors/1"
-        linkGenerator.link(controller:"author", action:"update", id:1,method:"PUT", params:[bookId:1]) == "http://localhost/books/1/authors/1"
-        linkGenerator.link(controller:"author", action:"patch", id:1,method:"PATCH", params:[bookId:1]) == "http://localhost/books/1/authors/1"
-
-        linkGenerator.link(controller:"book", action:"create", method:"GET") == "http://localhost/books/create"
-        linkGenerator.link(controller:"book", action:"save", method:"POST") == "http://localhost/books"
-        linkGenerator.link(controller:"book", action:"show", id:1, method:"GET") == "http://localhost/books/1"
-        linkGenerator.link(controller:"book", action:"edit", id:1, method:"GET") == "http://localhost/books/1/edit"
-        linkGenerator.link(controller:"book", action:"delete", id:1, method:"DELETE") == "http://localhost/books/1"
-        linkGenerator.link(controller:"book", action:"update", id:1, method:"PUT") == "http://localhost/books/1"
-        linkGenerator.link(controller:"book", action:"patch", id:1, method:"PATCH") == "http://localhost/books/1"
+            linkGenerator.link(controller: 'book', action: 'create', method: 'GET') == 'http://localhost/books/create'
+            linkGenerator.link(controller: 'book', action: 'save', method: 'POST') == 'http://localhost/books'
+            linkGenerator.link(controller: 'book', action: 'show', id: 1, method: 'GET') == 'http://localhost/books/1'
+            linkGenerator.link(controller: 'book', action: 'edit', id: 1, method: 'GET') == 'http://localhost/books/1/edit'
+            linkGenerator.link(controller: 'book', action: 'delete', id: 1, method: 'DELETE') == 'http://localhost/books/1'
+            linkGenerator.link(controller: 'book', action: 'update', id: 1, method: 'PUT') == 'http://localhost/books/1'
+            linkGenerator.link(controller: 'book', action: 'patch', id: 1, method: 'PATCH') == 'http://localhost/books/1'
 
     }
 
-
-    void "Test it is possible to link to a regular URL mapping nested within another resource"() {
-        given:"A link generator with nested resources"
+    void 'Test it is possible to link to a resource nested within another resource'() {
+        given:'A link generator with nested resources'
         def linkGenerator = getLinkGenerator {
-            "/books"(resources: "book") {
-                "/publisher"(controller:"publisher")
+            '/books'(resources: 'book') {
+                '/authors'(resources: 'author')
             }
         }
 
-        expect:"The generated links to be correct"
+        expect:'The generated links to be correct'
 
-        linkGenerator.link(controller:"publisher", params:[bookId:1]) == "http://localhost/books/1/publisher"
-        linkGenerator.link(resource: Book, method:"GET") == "http://localhost/books"
-        linkGenerator.link(resource:"book/publisher", method:"GET", bookId:1) == "http://localhost/books/1/publisher"
-        linkGenerator.link(resource:"book/publisher", bookId:1) == "http://localhost/books/1/publisher"
+        linkGenerator.link(resource: 'book/author', action: 'create', bookId: 1) == 'http://localhost/books/1/authors/create'
+        linkGenerator.link(resource: 'book/author', action: 'save', bookId: 1) == 'http://localhost/books/1/authors'
+        linkGenerator.link(resource: 'book/author', action: 'show', id: 1,bookId: 1) == 'http://localhost/books/1/authors/1'
+        linkGenerator.link(resource: 'book/author', action: 'edit', id: 1,bookId: 1) == 'http://localhost/books/1/authors/1/edit'
+        linkGenerator.link(resource: 'book/author', action: 'delete', id: 1,bookId: 1) == 'http://localhost/books/1/authors/1'
+        linkGenerator.link(resource: 'book/author', action: 'update', id: 1,bookId: 1) == 'http://localhost/books/1/authors/1'
+        linkGenerator.link(resource: 'book/author', action: 'patch', id: 1,bookId: 1) == 'http://localhost/books/1/authors/1'
 
+        linkGenerator.link(controller: 'author', action: 'create', method: 'GET', params: [bookId:1]) == 'http://localhost/books/1/authors/create'
+        linkGenerator.link(controller: 'author', action: 'save', method: 'POST', params: [bookId:1]) == 'http://localhost/books/1/authors'
+        linkGenerator.link(controller: 'author', action: 'show', id: 1,method: 'GET', params: [bookId:1]) == 'http://localhost/books/1/authors/1'
+        linkGenerator.link(controller: 'author', action: 'edit', id: 1,method: 'GET', params: [bookId:1]) == 'http://localhost/books/1/authors/1/edit'
+        linkGenerator.link(controller: 'author', action: 'delete', id: 1,method: 'DELETE', params: [bookId:1]) == 'http://localhost/books/1/authors/1'
+        linkGenerator.link(controller: 'author', action: 'update', id: 1,method: 'PUT', params: [bookId:1]) == 'http://localhost/books/1/authors/1'
+        linkGenerator.link(controller: 'author', action: 'patch', id: 1,method: 'PATCH', params: [bookId:1]) == 'http://localhost/books/1/authors/1'
 
+        linkGenerator.link(controller: 'book', action: 'create', method: 'GET') == 'http://localhost/books/create'
+        linkGenerator.link(controller: 'book', action: 'save', method: 'POST') == 'http://localhost/books'
+        linkGenerator.link(controller: 'book', action: 'show', id: 1, method: 'GET') == 'http://localhost/books/1'
+        linkGenerator.link(controller: 'book', action: 'edit', id: 1, method: 'GET') == 'http://localhost/books/1/edit'
+        linkGenerator.link(controller: 'book', action: 'delete', id: 1, method: 'DELETE') == 'http://localhost/books/1'
+        linkGenerator.link(controller: 'book', action: 'update', id: 1, method: 'PUT') == 'http://localhost/books/1'
+        linkGenerator.link(controller: 'book', action: 'patch', id: 1, method: 'PATCH') == 'http://localhost/books/1'
 
-        linkGenerator.link(controller:"book", action:"create", method:"GET") == "http://localhost/books/create"
-        linkGenerator.link(controller:"book", action:"save", method:"POST") == "http://localhost/books"
-        linkGenerator.link(controller:"book", action:"show", id:1, method:"GET") == "http://localhost/books/1"
-        linkGenerator.link(controller:"book", action:"edit", id:1, method:"GET") == "http://localhost/books/1/edit"
-        linkGenerator.link(controller:"book", action:"delete", id:1, method:"DELETE") == "http://localhost/books/1"
-        linkGenerator.link(controller:"book", action:"update", id:1, method:"PUT") == "http://localhost/books/1"
-        linkGenerator.link(controller:"book", action:"patch", id:1, method:"PATCH") == "http://localhost/books/1"
+    }
+
+    void 'Test it is possible to link to a regular URL mapping nested within another resource'() {
+        given:'A link generator with nested resources'
+        def linkGenerator = getLinkGenerator {
+            '/books'(resources: 'book') {
+                '/publisher'(controller: 'publisher')
+            }
+        }
+
+        expect:'The generated links to be correct'
+
+        linkGenerator.link(controller: 'publisher', params: [bookId:1]) == 'http://localhost/books/1/publisher'
+        linkGenerator.link(resource: Book, method: 'GET') == 'http://localhost/books'
+        linkGenerator.link(resource: 'book/publisher', method: 'GET', bookId: 1) == 'http://localhost/books/1/publisher'
+        linkGenerator.link(resource: 'book/publisher', bookId: 1) == 'http://localhost/books/1/publisher'
+
+        linkGenerator.link(controller: 'book', action: 'create', method: 'GET') == 'http://localhost/books/create'
+        linkGenerator.link(controller: 'book', action: 'save', method: 'POST') == 'http://localhost/books'
+        linkGenerator.link(controller: 'book', action: 'show', id: 1, method: 'GET') == 'http://localhost/books/1'
+        linkGenerator.link(controller: 'book', action: 'edit', id: 1, method: 'GET') == 'http://localhost/books/1/edit'
+        linkGenerator.link(controller: 'book', action: 'delete', id: 1, method: 'DELETE') == 'http://localhost/books/1'
+        linkGenerator.link(controller: 'book', action: 'update', id: 1, method: 'PUT') == 'http://localhost/books/1'
+        linkGenerator.link(controller: 'book', action: 'patch', id: 1, method: 'PATCH') == 'http://localhost/books/1'
 
     }
 
     LinkGenerator getLinkGenerator(Closure mappings) {
-        def generator = new DefaultLinkGenerator("http://localhost", null)
+        def generator = new DefaultLinkGenerator('http://localhost', null)
         generator.grailsUrlConverter = new CamelCaseUrlConverter()
         generator.urlMappingsHolder = getUrlMappingsHolder mappings
-        return generator;
+        return generator
     }
     UrlMappingsHolder getUrlMappingsHolder(Closure mappings) {
         def ctx = new MockApplicationContext()

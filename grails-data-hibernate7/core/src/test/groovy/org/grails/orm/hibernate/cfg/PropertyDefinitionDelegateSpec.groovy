@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -22,7 +22,7 @@ import spock.lang.Specification
 
 class PropertyDefinitionDelegateSpec extends Specification {
 
-    def "test column method with multiple columns"() {
+    def 'test column method with multiple columns'() {
         given:
         def config = new PropertyConfig()
         def delegate = new PropertyDefinitionDelegate(config)
@@ -39,14 +39,14 @@ class PropertyDefinitionDelegateSpec extends Specification {
         config.columns[1].sqlType == 'integer'
     }
 
-    def "test re-evaluation of column method with multiple columns"() {
+    def 'test re-evaluation of column method with multiple columns'() {
         given:
         def config = new PropertyConfig()
         def delegate1 = new PropertyDefinitionDelegate(config)
         delegate1.column(name: 'col1', sqlType: 'varchar(255)')
         delegate1.column(name: 'col2', sqlType: 'integer')
 
-        when: "re-evaluating with a new delegate instance but same config"
+        when: 're-evaluating with a new delegate instance but same config'
         def delegate2 = new PropertyDefinitionDelegate(config)
         delegate2.column(name: 'new_col1', sqlType: 'text')
         delegate2.column(name: 'new_col2', sqlType: 'long')
@@ -59,7 +59,7 @@ class PropertyDefinitionDelegateSpec extends Specification {
         config.columns[1].sqlType == 'long'
     }
 
-    def "column without name throws DatastoreConfigurationException"() {
+    def 'column without name throws DatastoreConfigurationException'() {
         given:
         def config = new PropertyConfig()
         def delegate = new PropertyDefinitionDelegate(config)
@@ -71,7 +71,7 @@ class PropertyDefinitionDelegateSpec extends Specification {
         thrown(org.grails.datastore.mapping.model.DatastoreConfigurationException)
     }
 
-    def "column with all optional attributes sets them correctly"() {
+    def 'column with all optional attributes sets them correctly'() {
         given:
         def config = new PropertyConfig()
         def delegate = new PropertyDefinitionDelegate(config)
@@ -99,7 +99,7 @@ class PropertyDefinitionDelegateSpec extends Specification {
         col.scale == 2
     }
 
-    def "column with minimal args uses defaults for optional fields"() {
+    def 'column with minimal args uses defaults for optional fields'() {
         given:
         def config = new PropertyConfig()
         def delegate = new PropertyDefinitionDelegate(config)

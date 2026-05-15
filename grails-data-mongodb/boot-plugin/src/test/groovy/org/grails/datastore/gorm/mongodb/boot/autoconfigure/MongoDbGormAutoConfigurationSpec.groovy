@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -36,7 +36,7 @@ import spock.util.environment.RestoreSystemProperties
 @RestoreSystemProperties
 class MongoDbGormAutoConfigurationSpec extends AutoStartedMongoSpec {
 
-    protected AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+    protected AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()
 
     @Override
     boolean shouldInitializeDatastore() {
@@ -53,27 +53,29 @@ class MongoDbGormAutoConfigurationSpec extends AutoStartedMongoSpec {
     }
 
     void setup() {
-        AutoConfigurationPackages.register(context, "org.grails.datastore.gorm.mongodb.boot.autoconfigure")
+        AutoConfigurationPackages.register(context, 'org.grails.datastore.gorm.mongodb.boot.autoconfigure')
         this.context.register(TestConfiguration, MongoAutoConfiguration.class,
-                              PropertyPlaceholderAutoConfiguration.class);
+                              PropertyPlaceholderAutoConfiguration.class)
     }
 
     void 'Test that GORM is correctly configured'() {
-        when:"The context is refreshed"
+        when:'The context is refreshed'
             context.refresh()
 
-        then:"GORM queries work"
+        then:'GORM queries work'
             Person.count() != null
     }
 
     @Configuration
     @Import(MongoDbGormAutoConfiguration)
     static class TestConfiguration {
+
     }
 }
 
 @Entity
 class Person {
+
     String firstName
     String lastName
     Integer age = 18

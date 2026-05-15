@@ -4,14 +4,14 @@
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
+ * 'License'); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
  *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
@@ -43,6 +43,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import spock.lang.Specification
 
 class GrailsDataHibernate5TckManager extends GrailsDataTckManager {
+
     GrailsApplication grailsApplication
     HibernateDatastore hibernateDatastore
     org.hibernate.Session hibernateSession
@@ -65,20 +66,20 @@ class GrailsDataHibernate5TckManager extends GrailsDataTckManager {
         ConfigObject grailsConfig = new ConfigObject()
         boolean isTransactional = true
 
-        System.setProperty('hibernate5.gorm.suite', "true")
+        System.setProperty('hibernate5.gorm.suite', 'true')
         grailsApplication = new DefaultGrailsApplication(domainClasses as Class[], new GroovyClassLoader(GrailsDataHibernate5TckManager.getClassLoader()))
         if (grailsConfig) {
             grailsApplication.config.putAll(grailsConfig)
         }
 
-        grailsConfig.dataSource.dbCreate = "create-drop"
+        grailsConfig.dataSource.dbCreate = 'create-drop'
         hibernateDatastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(grailsConfig), domainClasses as Class[])
         transactionManager = hibernateDatastore.getTransactionManager()
         sessionFactory = hibernateDatastore.sessionFactory
         if (transactionStatus == null && isTransactional) {
             transactionStatus = transactionManager.getTransaction(new DefaultTransactionDefinition())
         } else if (isTransactional) {
-            throw new RuntimeException("new transaction started during active transaction")
+            throw new RuntimeException('new transaction started during active transaction')
         }
         if (!isTransactional) {
             hibernateSession = sessionFactory.openSession()
@@ -127,14 +128,14 @@ class GrailsDataHibernate5TckManager extends GrailsDataTckManager {
     @Override
     void setupMultiDataSource(Class... domainClasses) {
         Map config = [
-                'dataSource.url'           : "jdbc:h2:mem:tckDefaultDB;LOCK_TIMEOUT=10000",
+                'dataSource.url'           : 'jdbc:h2:mem:tckDefaultDB;LOCK_TIMEOUT=10000',
                 'dataSource.dbCreate'      : 'create-drop',
                 'dataSource.dialect'       : H2Dialect.name,
                 'dataSource.formatSql'     : 'true',
                 'hibernate.flush.mode'     : 'COMMIT',
                 'hibernate.cache.queries'  : 'true',
                 'hibernate.hbm2ddl.auto'   : 'create-drop',
-                'dataSources.secondary'    : [url: "jdbc:h2:mem:tckSecondaryDB;LOCK_TIMEOUT=10000"],
+                'dataSources.secondary'    : [url: 'jdbc:h2:mem:tckSecondaryDB;LOCK_TIMEOUT=10000'],
         ]
         multiDataSourceDatastore = new HibernateDatastore(
                 DatastoreUtils.createPropertyResolver(config), domainClasses
@@ -168,14 +169,14 @@ class GrailsDataHibernate5TckManager extends GrailsDataTckManager {
         Map config = [
                 'grails.gorm.multiTenancy.mode'            : MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR,
                 'grails.gorm.multiTenancy.tenantResolverClass': SystemPropertyTenantResolver,
-                'dataSource.url'                            : "jdbc:h2:mem:tckMtDefaultDB;LOCK_TIMEOUT=10000",
+                'dataSource.url'                            : 'jdbc:h2:mem:tckMtDefaultDB;LOCK_TIMEOUT=10000',
                 'dataSource.dbCreate'                       : 'create-drop',
                 'dataSource.dialect'                        : H2Dialect.name,
                 'dataSource.formatSql'                      : 'true',
                 'hibernate.flush.mode'                      : 'COMMIT',
                 'hibernate.cache.queries'                   : 'true',
                 'hibernate.hbm2ddl.auto'                    : 'create-drop',
-                'dataSources.secondary'                     : [url: "jdbc:h2:mem:tckMtSecondaryDB;LOCK_TIMEOUT=10000"],
+                'dataSources.secondary'                     : [url: 'jdbc:h2:mem:tckMtSecondaryDB;LOCK_TIMEOUT=10000'],
         ]
         multiTenantMultiDataSourceDatastore = new HibernateDatastore(
                 DatastoreUtils.createPropertyResolver(config), domainClasses

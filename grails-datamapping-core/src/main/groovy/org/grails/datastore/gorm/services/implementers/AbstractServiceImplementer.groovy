@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -31,23 +31,24 @@ import org.codehaus.groovy.transform.trait.Traits
 
 import grails.gorm.multitenancy.TenantService
 import grails.gorm.transactions.TransactionService
-import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.multitenancy.transform.TenantTransform
 import org.grails.datastore.gorm.services.ServiceImplementer
 import org.grails.datastore.gorm.transactions.transform.TransactionalTransform
-import org.grails.datastore.gorm.transform.AstMethodDispatchUtils
 import org.grails.datastore.gorm.transform.AstPropertyResolveUtils
 import org.grails.datastore.mapping.core.Ordered
 import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.reflect.AstUtils
-import org.grails.datastore.mapping.services.ServiceRegistry
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 
 import static org.codehaus.groovy.ast.ClassHelper.make
-import static org.codehaus.groovy.ast.tools.GeneralUtils.*
+import static org.codehaus.groovy.ast.tools.GeneralUtils.args
+import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.castX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.classX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.propX
 import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.callD
 import static org.grails.datastore.mapping.reflect.AstUtils.varThis
 
@@ -98,6 +99,7 @@ abstract class AbstractServiceImplementer implements PrefixedServiceImplementer,
      * @param impl the implementation method
      */
     protected void copyClassAnnotations(final MethodNode abstractMethod, final MethodNode impl) {
+
         List<AnnotationNode> annotations = abstractMethod.getAnnotations()
         for (AnnotationNode annotation in annotations) {
             if (annotation.getClassNode() != Traits.TRAIT_CLASSNODE) {
@@ -117,6 +119,7 @@ abstract class AbstractServiceImplementer implements PrefixedServiceImplementer,
      * @return True if it is
      */
     protected boolean isValidParameter(ClassNode domainClassNode, Parameter parameter, String parameterName) {
+
         if (GormProperties.IDENTITY.equals(parameterName)) {
             return true
         }

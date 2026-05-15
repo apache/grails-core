@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -31,6 +31,7 @@ import spock.lang.Specification
 class HibernateToManyCollectionPropertySpec extends Specification {
 
     static class TestPropertyMapping implements PropertyMapping<PropertyConfig> {
+
         private final GrailsHibernatePersistentEntity owner
         private final PropertyConfig mapping
 
@@ -47,6 +48,7 @@ class HibernateToManyCollectionPropertySpec extends Specification {
     }
 
     static class TestToManyCollectionProperty implements HibernateToManyCollectionProperty {
+
         private final GrailsHibernatePersistentEntity owner
         private final String name
         private final PropertyConfig mapping
@@ -126,28 +128,28 @@ class HibernateToManyCollectionPropertySpec extends Specification {
         PersistentProperty getInverseSide() { null }
     }
 
-    def "test getElementTypeName uses componentType when available"() {
+    def 'test getElementTypeName uses componentType when available'() {
         given:
-        def property = new TestToManyCollectionProperty(Mock(GrailsHibernatePersistentEntity), "tags", new PropertyConfig())
+        def property = new TestToManyCollectionProperty(Mock(GrailsHibernatePersistentEntity), 'tags', new PropertyConfig())
         property.setComponentType(String.class)
 
         expect:
         property.getElementTypeName() == String.class.name
     }
 
-    def "test getElementTypeName falls back to getTypeName when componentType is null"() {
+    def 'test getElementTypeName falls back to getTypeName when componentType is null'() {
         given:
-        def property = new TestToManyCollectionProperty(Mock(GrailsHibernatePersistentEntity), "tags", new PropertyConfig())
+        def property = new TestToManyCollectionProperty(Mock(GrailsHibernatePersistentEntity), 'tags', new PropertyConfig())
         property.setComponentType(null)
-        property.setTypeName("fallback_type")
+        property.setTypeName('fallback_type')
 
         expect:
-        property.getElementTypeName() == "fallback_type"
+        property.getElementTypeName() == 'fallback_type'
     }
 
-    def "test getElementTypeName falls back to STRING when typeName is null"() {
+    def 'test getElementTypeName falls back to STRING when typeName is null'() {
         given:
-        def property = new TestToManyCollectionProperty(Mock(GrailsHibernatePersistentEntity), "tags", new PropertyConfig())
+        def property = new TestToManyCollectionProperty(Mock(GrailsHibernatePersistentEntity), 'tags', new PropertyConfig())
         property.setComponentType(null)
         property.setTypeName(null)
 
@@ -155,9 +157,9 @@ class HibernateToManyCollectionPropertySpec extends Specification {
         property.getElementTypeName() == StandardBasicTypes.STRING.getName()
     }
 
-    def "test getElementTypeName falls back to STRING when typeName is Object"() {
+    def 'test getElementTypeName falls back to STRING when typeName is Object'() {
         given:
-        def property = new TestToManyCollectionProperty(Mock(GrailsHibernatePersistentEntity), "tags", new PropertyConfig())
+        def property = new TestToManyCollectionProperty(Mock(GrailsHibernatePersistentEntity), 'tags', new PropertyConfig())
         property.setComponentType(null)
         property.setTypeName(Object.class.name)
 
@@ -165,40 +167,40 @@ class HibernateToManyCollectionPropertySpec extends Specification {
         property.getElementTypeName() == StandardBasicTypes.STRING.getName()
     }
 
-    def "test getRole with path"() {
+    def 'test getRole with path'() {
         given:
         GrailsHibernatePersistentEntity owner = Mock(GrailsHibernatePersistentEntity) {
-            getName() >> "com.example.Book"
+            getName() >> 'com.example.Book'
         }
-        def property = new TestToManyCollectionProperty(owner, "tags", new PropertyConfig())
+        def property = new TestToManyCollectionProperty(owner, 'tags', new PropertyConfig())
 
         expect:
-        property.getRole("") == "com.example.Book.tags"
+        property.getRole('') == 'com.example.Book.tags'
     }
 
-    def "test getIndexColumnName fallback"() {
+    def 'test getIndexColumnName fallback'() {
         given:
-        def property = new TestToManyCollectionProperty(Mock(GrailsHibernatePersistentEntity), "tags", new PropertyConfig())
+        def property = new TestToManyCollectionProperty(Mock(GrailsHibernatePersistentEntity), 'tags', new PropertyConfig())
         PersistentEntityNamingStrategy namingStrategy = Mock(PersistentEntityNamingStrategy)
 
         when:
         String indexColumn = property.getIndexColumnName(namingStrategy)
 
         then:
-        1 * namingStrategy.resolveColumnName("tags") >> "tags_column"
-        indexColumn == "tags_column_idx"
+        1 * namingStrategy.resolveColumnName('tags') >> 'tags_column'
+        indexColumn == 'tags_column_idx'
     }
 
-    def "test getMapElementName fallback"() {
+    def 'test getMapElementName fallback'() {
         given:
-        def property = new TestToManyCollectionProperty(Mock(GrailsHibernatePersistentEntity), "tags", new PropertyConfig())
+        def property = new TestToManyCollectionProperty(Mock(GrailsHibernatePersistentEntity), 'tags', new PropertyConfig())
         PersistentEntityNamingStrategy namingStrategy = Mock(PersistentEntityNamingStrategy)
 
         when:
         String mapElement = property.getMapElementName(namingStrategy)
 
         then:
-        1 * namingStrategy.resolveColumnName("tags") >> "tags_column"
-        mapElement == "tags_column_elt"
+        1 * namingStrategy.resolveColumnName('tags') >> 'tags_column'
+        mapElement == 'tags_column_elt'
     }
 }

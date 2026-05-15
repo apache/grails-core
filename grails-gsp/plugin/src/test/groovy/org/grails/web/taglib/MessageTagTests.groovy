@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -26,48 +26,48 @@ class MessageTagTests extends AbstractGrailsTagTests {
 
     @Test
     void testMessageTagInTemplate() {
-        def template = '<g:message code="test.code" />'
-        messageSource.addMessage("test.code", new Locale("en"), "hello world!")
+        def template = '<g:message code='test.code' />'
+        messageSource.addMessage('test.code', new Locale('en'), 'hello world!')
 
         assertOutputEquals 'hello world!', template
     }
 
     @Test
     void testMessageTag() {
-        StringWriter sw = new StringWriter();
+        StringWriter sw = new StringWriter()
 
-        withTag("message", sw) { tag ->
+        withTag('message', sw) { tag ->
 
             // test when no message found it returns code
-            def attrs = [code:"test.code"]
+            def attrs = [code: 'test.code']
             def result=tag.call(attrs)
-            assertEquals "test.code", result
+            assertEquals 'test.code', result
 
             // now test that when there is a message it finds it
-            messageSource.addMessage("test.code", new Locale("en"), "hello world!")
+            messageSource.addMessage('test.code', new Locale('en'), 'hello world!')
             result = tag.call(attrs)
-            assertEquals "hello world!", result
+            assertEquals 'hello world!', result
 
             // now test with arguments
-            messageSource.addMessage("test.args", new Locale("en"), "hello {0}!")
-            attrs = [code:"test.args", args:["fred"]]
+            messageSource.addMessage('test.args', new Locale('en'), 'hello {0}!')
+            attrs = [code: 'test.args', args: ['fred']]
 
             result = tag.call(attrs)
 
-            assertEquals "hello fred!", result
+            assertEquals 'hello fred!', result
         }
     }
 
     @Test
     void testMessageTagWithCodec() {
-        StringWriter sw = new StringWriter();
+        StringWriter sw = new StringWriter()
 
-        withTag("message", sw) { tag ->
+        withTag('message', sw) { tag ->
 
-            def attrs = [code:"test.code", encodeAs:'HTML']
-            messageSource.addMessage("test.code", new Locale("en"), ">>&&")
+            def attrs = [code: 'test.code', encodeAs: 'HTML']
+            messageSource.addMessage('test.code', new Locale('en'), '>>&&')
             def result = tag.call(attrs)
-            assertEquals "&gt;&gt;&amp;&amp;", result
+            assertEquals '&gt;&gt;&amp;&amp;', result
         }
     }
 }

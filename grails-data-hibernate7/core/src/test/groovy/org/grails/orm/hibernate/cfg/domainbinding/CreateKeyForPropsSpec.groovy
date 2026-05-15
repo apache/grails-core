@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -31,7 +31,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.UniqueKeyForColumnsCreato
 
 class CreateKeyForPropsSpec extends Specification {
 
-    def "creates unique key when property is unique within group"() {
+    def 'creates unique key when property is unique within group'() {
         given:
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def uniqueKeyCreator = Mock(UniqueKeyForColumnsCreator)
@@ -45,21 +45,21 @@ class CreateKeyForPropsSpec extends Specification {
         def mappedForm = Mock(org.grails.orm.hibernate.cfg.PropertyConfig) {
             isUnique() >> true
             isUniqueWithinGroup() >> true
-            getUniquenessGroup() >> ["p1", "p2"]
+            getUniquenessGroup() >> ['p1', 'p2']
         }
         grailsProp.getMappedForm() >> mappedForm
 
         def otherProp1 = Mock(HibernatePersistentProperty)
         def otherProp2 = Mock(HibernatePersistentProperty)
-        owner.getHibernatePropertyByName("p1") >> otherProp1
-        owner.getHibernatePropertyByName("p2") >> otherProp2
+        owner.getHibernatePropertyByName('p1') >> otherProp1
+        owner.getHibernatePropertyByName('p2') >> otherProp2
 
-        String path = "some_path"
-        def table = new Table("t")
-        String baseColumnName = "base_col"
+        String path = 'some_path'
+        def table = new Table('t')
+        String baseColumnName = 'base_col'
 
-        columnNameFetcher.getColumnNameForPropertyAndPath(otherProp1, path, null) >> "col1"
-        columnNameFetcher.getColumnNameForPropertyAndPath(otherProp2, path, null) >> "col2"
+        columnNameFetcher.getColumnNameForPropertyAndPath(otherProp1, path, null) >> 'col1'
+        columnNameFetcher.getColumnNameForPropertyAndPath(otherProp2, path, null) >> 'col2'
 
         when:
         subject.createKeyForProps(grailsProp, path, table, baseColumnName)
@@ -69,15 +69,15 @@ class CreateKeyForPropsSpec extends Specification {
         1 * grailsProp.getHibernateOwner() >> owner
         1 * mappedForm.isUnique() >> true
         1 * mappedForm.isUniqueWithinGroup() >> true
-        1 * mappedForm.getUniquenessGroup() >> ["p1", "p2"]
-        1 * owner.getHibernatePropertyByName("p1") >> otherProp1
-        1 * owner.getHibernatePropertyByName("p2") >> otherProp2
+        1 * mappedForm.getUniquenessGroup() >> ['p1', 'p2']
+        1 * owner.getHibernatePropertyByName('p1') >> otherProp1
+        1 * owner.getHibernatePropertyByName('p2') >> otherProp2
         1 * columnNameFetcher.getColumnNameForPropertyAndPath(otherProp1, path, null)
         1 * columnNameFetcher.getColumnNameForPropertyAndPath(otherProp2, path, null)
         1 * uniqueKeyCreator.createUniqueKeyForColumns(table, _ as List)
     }
 
-    def "does nothing when property is not unique within group"() {
+    def 'does nothing when property is not unique within group'() {
         given:
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def uniqueKeyCreator = Mock(UniqueKeyForColumnsCreator)
@@ -89,12 +89,12 @@ class CreateKeyForPropsSpec extends Specification {
         def mappedForm = Mock(org.grails.orm.hibernate.cfg.PropertyConfig) {
             isUnique() >> false
             isUniqueWithinGroup() >> true
-            getUniquenessGroup() >> ["p1"]
+            getUniquenessGroup() >> ['p1']
         }
         grailsProp.getMappedForm() >> mappedForm
 
         when:
-        subject.createKeyForProps(grailsProp, null, new Table("t"), "base")
+        subject.createKeyForProps(grailsProp, null, new Table('t'), 'base')
 
         then:
         1 * grailsProp.getMappedForm() >> mappedForm
@@ -104,7 +104,7 @@ class CreateKeyForPropsSpec extends Specification {
         0 * columnNameFetcher._
     }
 
-    def "throws when uniqueness group references unknown property"() {
+    def 'throws when uniqueness group references unknown property'() {
         given:
         def columnNameFetcher = Mock(ColumnNameForPropertyAndPathFetcher)
         def uniqueKeyCreator = Mock(UniqueKeyForColumnsCreator)
@@ -117,14 +117,14 @@ class CreateKeyForPropsSpec extends Specification {
         def mappedForm = Mock(org.grails.orm.hibernate.cfg.PropertyConfig) {
             isUnique() >> true
             isUniqueWithinGroup() >> true
-            getUniquenessGroup() >> ["missingProp"]
+            getUniquenessGroup() >> ['missingProp']
         }
         grailsProp.getMappedForm() >> mappedForm
 
-        owner.getHibernatePropertyByName("missingProp") >> null
+        owner.getHibernatePropertyByName('missingProp') >> null
 
         when:
-        subject.createKeyForProps(grailsProp, null, new Table("t"), "base")
+        subject.createKeyForProps(grailsProp, null, new Table('t'), 'base')
 
         then:
         thrown(MappingException)
@@ -132,9 +132,9 @@ class CreateKeyForPropsSpec extends Specification {
         1 * grailsProp.getHibernateOwner() >> owner
         1 * mappedForm.isUnique() >> true
         1 * mappedForm.isUniqueWithinGroup() >> true
-        1 * mappedForm.getUniquenessGroup() >> ["missingProp"]
+        1 * mappedForm.getUniquenessGroup() >> ['missingProp']
         1 * owner.getJavaClass() >> CreateKeyForPropsSpec
-        1 * owner.getHibernatePropertyByName("missingProp")
+        1 * owner.getHibernatePropertyByName('missingProp')
         0 * uniqueKeyCreator._
         0 * columnNameFetcher._
     }

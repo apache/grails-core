@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -56,7 +56,7 @@ class SubclassMappingBinderSpec extends HibernateGormDatastoreSpec {
         )
     }
 
-    def "test createSubclassMapping for single table inheritance"() {
+    def 'test createSubclassMapping for single table inheritance'() {
         given:
         createPersistentEntity(SMBSSingleSuper)
         // Cast the created persistent entity to HibernatePersistentEntity
@@ -72,6 +72,7 @@ class SubclassMappingBinderSpec extends HibernateGormDatastoreSpec {
         then:
         subEntity != null
         1 * singleTableSubclassBinder.bindSubClass(subEntity, rootClass) >> {
+
             def s = new SingleTableSubclass(rootClass, metadataBuildingContext)
             s.setEntityName(subEntity.getName())
             s
@@ -81,7 +82,8 @@ class SubclassMappingBinderSpec extends HibernateGormDatastoreSpec {
         subClass.getEntityName() == SMBSSingleSub.name
     }
 
-    def "test createSubclassMapping for joined table inheritance"() {
+    def 'test createSubclassMapping for joined table inheritance'() {
+
         given:
         createPersistentEntity(SMBSJoinedSuper)
         // Cast the created persistent entity to HibernatePersistentEntity
@@ -97,6 +99,7 @@ class SubclassMappingBinderSpec extends HibernateGormDatastoreSpec {
         then:
         subEntity != null
         1 * joinedSubClassBinder.bindJoinedSubClass(subEntity, rootClass) >> {
+
             def s = new JoinedSubclass(rootClass, metadataBuildingContext)
             s.setEntityName(subEntity.getName())
             s
@@ -106,7 +109,8 @@ class SubclassMappingBinderSpec extends HibernateGormDatastoreSpec {
         subClass.getEntityName() == SMBSJoinedSub.name
     }
 
-    def "test createSubclassMapping for table per concrete class inheritance"() {
+    def 'test createSubclassMapping for table per concrete class inheritance'() {
+
         given:
         createPersistentEntity(SMBSUnionSuper)
         // Cast the created persistent entity to HibernatePersistentEntity
@@ -122,6 +126,7 @@ class SubclassMappingBinderSpec extends HibernateGormDatastoreSpec {
         then:
         subEntity != null
         1 * unionSubclassBinder.bindUnionSubclass(subEntity, rootClass) >> {
+
             def s = new UnionSubclass(rootClass, metadataBuildingContext)
             s.setEntityName(subEntity.getName())
             s
@@ -134,17 +139,20 @@ class SubclassMappingBinderSpec extends HibernateGormDatastoreSpec {
 
 @Entity
 class SMBSSingleSuper {
+
     Long id
     String name
 }
 
 @Entity
 class SMBSSingleSub extends SMBSSingleSuper {
+
     String subName
 }
 
 @Entity
 class SMBSJoinedSuper {
+
     Long id
     String name
     static mapping = {
@@ -154,11 +162,13 @@ class SMBSJoinedSuper {
 
 @Entity
 class SMBSJoinedSub extends SMBSJoinedSuper {
+
     String subName
 }
 
 @Entity
 class SMBSUnionSuper {
+
     Long id
     String name
     static mapping = {
@@ -169,5 +179,6 @@ class SMBSUnionSuper {
 
 @Entity
 class SMBSUnionSub extends SMBSUnionSuper {
+
     String subName
 }

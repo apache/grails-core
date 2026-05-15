@@ -3,13 +3,13 @@
  *  contributor license agreements.  See the NOTICE file distributed with
  *  this work for additional information regarding copyright ownership.
  *  The ASF licenses this file to You under the Apache License, Version 2.0
- *  (the "License"); you may not use this file except in compliance with
+ *  (the 'License'); you may not use this file except in compliance with
  *  the License.  You may obtain a copy of the License at
  *
  *      https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  distributed under the License is distributed on an 'AS IS' BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
@@ -57,10 +57,10 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
             // CommandLineParser below), NOT for Spring Boot's property override mechanism.
             //
             // Without this filtering, Spring Boot's SpringApplication.run() interprets
-            // --dataSource=analytics as a property override, setting dataSource="analytics"
+            // --dataSource=analytics as a property override, setting dataSource='analytics'
             // (a String) which corrupts GORM's datasource configuration (expects a Map).
             // This breaks Gradle dbm* tasks with --dataSource parameter:
-            //   ./gradlew dbmStatus -Pargs="--dataSource=analytics"
+            //   ./gradlew dbmStatus -Pargs='--dataSource=analytics'
             String[] springBootArgs = filterCommandOptions(args)
 
             ConfigurableApplicationContext ctx = null
@@ -123,6 +123,7 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
      * @param args The first argument is the Command name, the last argument is the Application class name
      */
     static void main(String[] args) {
+
         if (args.size() > 1) {
             Class applicationClass = null
             String className = args.last()

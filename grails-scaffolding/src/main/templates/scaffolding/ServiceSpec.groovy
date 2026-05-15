@@ -19,18 +19,18 @@ class ${className}ServiceSpec extends Specification {
         //${className} ${propertyName} = new ${className}(...).save(flush: true, failOnError: true)
         //new ${className}(...).save(flush: true, failOnError: true)
         //new ${className}(...).save(flush: true, failOnError: true)
-        assert false, "TODO: Provide a setupData() implementation for this generated test suite"
+        assert false, 'TODO: Provide a setupData() implementation for this generated test suite'
         //${propertyName}.id
     }
 
-    void "test get"() {
+    void 'test get'() {
         setupData()
 
         expect:
         ${propertyName}Service.get(1) != null
     }
 
-    void "test list"() {
+    void 'test list'() {
         setupData()
 
         when:
@@ -38,17 +38,17 @@ class ${className}ServiceSpec extends Specification {
 
         then:
         ${propertyName}List.size() == 2
-        assert false, "TODO: Verify the correct instances are returned"
+        assert false, 'TODO: Verify the correct instances are returned'
     }
 
-    void "test count"() {
+    void 'test count'() {
         setupData()
 
         expect:
         ${propertyName}Service.count() == 5
     }
 
-    void "test delete"() {
+    void 'test delete'() {
         Long ${propertyName}Id = setupData()
 
         expect:
@@ -62,9 +62,9 @@ class ${className}ServiceSpec extends Specification {
         ${propertyName}Service.count() == 4
     }
 
-    void "test save"() {
+    void 'test save'() {
         when:
-        assert false, "TODO: Provide a valid instance to save"
+        assert false, 'TODO: Provide a valid instance to save'
         ${className} ${propertyName} = new ${className}()
         ${propertyName}Service.save(${propertyName})
 

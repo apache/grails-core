@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -55,7 +55,7 @@ class UrlMappingTagLib implements TagLibrary {
     /**
      * Includes another controller/action within the current response.<br/>
      *
-     * &lt;g:include controller="foo" action="test"&gt;&lt;/g:include&gt;<br/>
+     * &lt;g:include controller='foo' action='test'&gt;&lt;/g:include&gt;<br/>
      *
      * @emptyTag
      *
@@ -107,8 +107,8 @@ class UrlMappingTagLib implements TagLibrary {
      * @attr controller the name of the controller to use in the link, if not specified the current controller will be linked
      * @attr id The id to use in the link
      * @attr params A map containing request parameters
-     * @attr prev The text to display for the previous link (defaults to "Previous" as defined by default.paginate.prev property in I18n messages.properties)
-     * @attr next The text to display for the next link (defaults to "Next" as defined by default.paginate.next property in I18n messages.properties)
+     * @attr prev The text to display for the previous link (defaults to 'Previous' as defined by default.paginate.prev property in I18n messages.properties)
+     * @attr next The text to display for the next link (defaults to 'Next' as defined by default.paginate.next property in I18n messages.properties)
      * @attr omitPrev Whether to not show the previous link (if set to true, the previous link will not be shown)
      * @attr omitNext Whether to not show the next link (if set to true, the next link will not be shown)
      * @attr omitFirst Whether to not show the first link (if set to true, the first link will not be shown)
@@ -216,7 +216,7 @@ class UrlMappingTagLib implements TagLibrary {
             }
             //show a gap if beginstep isn't immediately after firststep, and if were not omitting first or rev
             if (beginstep > firststep + 1 && (!attrs.boolean('omitFirst') || !attrs.boolean('omitPrev'))) {
-                writer << '<span class="step gap">..</span>'
+                writer << "<span class='step gap'>..</span>"
             }
 
             // display paginate steps
@@ -232,7 +232,7 @@ class UrlMappingTagLib implements TagLibrary {
 
             //show a gap if beginstep isn't immediately before firststep, and if were not omitting first or rev
             if (endstep + 1 < laststep && (!attrs.boolean('omitLast') || !attrs.boolean('omitNext'))) {
-                writer << '<span class="step gap">..</span>'
+                writer << "<span class='step gap'>..</span>"
             }
             // display laststep link when endstep is not laststep
             if (endstep < laststep && !attrs.boolean('omitLast')) {
@@ -259,11 +259,11 @@ class UrlMappingTagLib implements TagLibrary {
      *
      * Examples:<br/>
      *
-     * &lt;g:sortableColumn property="title" title="Title" /&gt;<br/>
-     * &lt;g:sortableColumn property="title" title="Title" style="width: 200px" /&gt;<br/>
-     * &lt;g:sortableColumn property="title" titleKey="book.title" /&gt;<br/>
-     * &lt;g:sortableColumn property="releaseDate" defaultOrder="desc" title="Release Date" /&gt;<br/>
-     * &lt;g:sortableColumn property="releaseDate" defaultOrder="desc" title="Release Date" titleKey="book.releaseDate" /&gt;<br/>
+     * &lt;g:sortableColumn property='title' title='Title' /&gt;<br/>
+     * &lt;g:sortableColumn property='title' title='Title' style='width: 200px' /&gt;<br/>
+     * &lt;g:sortableColumn property='title' titleKey='book.title' /&gt;<br/>
+     * &lt;g:sortableColumn property='releaseDate' defaultOrder='desc' title='Release Date' /&gt;<br/>
+     * &lt;g:sortableColumn property='releaseDate' defaultOrder='desc' title='Release Date' titleKey='book.releaseDate' /&gt;<br/>
      *
      * @emptyTag
      *
@@ -305,7 +305,7 @@ class UrlMappingTagLib implements TagLibrary {
         if (paramsAttr instanceof Map) linkParams.putAll(paramsAttr)
         linkParams.sort = property
 
-        // propagate "max" and "offset" standard params
+        // propagate 'max' and 'offset' standard params
         if (params.max) linkParams.max = params.max
         if (params.offset) linkParams.offset = params.offset
 

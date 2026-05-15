@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -29,13 +29,13 @@ class TagLibMethodMissingSpec extends AbstractGrailsEnvChangingSpec implements T
         mockArtefact(TagLibMethodMissingBTagLib)
     }
 
-    @Unroll("template #template / expected content: #expectedContent / env: #grailsEnv")
-    def "Test tag library method missing handling"(template, expectedContent, grailsEnv) {
+    @Unroll('template #template / expected content: #expectedContent / env: #grailsEnv')
+    def 'Test tag library method missing handling'(template, expectedContent, grailsEnv) {
         when:'We call a tag that invokes an existing tag in other TagLib'
             changeGrailsEnv(grailsEnv)
             def content = applyTemplate(template)
             def content2 = applyTemplate(template)
-        then:"The expected result is rendered and when we call it a second time the cached version is used so we test that too"
+        then:'The expected result is rendered and when we call it a second time the cached version is used so we test that too'
             content == expectedContent
             content == content2
         where:
@@ -44,16 +44,17 @@ class TagLibMethodMissingSpec extends AbstractGrailsEnvChangingSpec implements T
                 ['${a.zeroArguments()}', 'ab'],
                 ['a${g.renderErrors()}b', 'ab'],
                 ['a${renderErrors()}b', 'ab'],
-                ['<a:myLink/>', '<a href="/one/two"></a><a href="/foo/bar">Hello World</a>'],
-                ['<a:myLink2/>', '<a href="/one/two"></a><a href="/foo/bar">Hello World</a>'],
+                ['<a:myLink/>', '<a href='/one/two'></a><a href='/foo/bar'>Hello World</a>'],
+                ['<a:myLink2/>', '<a href='/one/two'></a><a href='/foo/bar'>Hello World</a>'],
                 ['<a:bodyTag>hello</a:bodyTag>', 'hellohellohellohello'],
-                ['hello ${other.printBody{"world"}}!', 'hello world!']
+                ['hello ${other.printBody {'world'}}!', 'hello world!']
             ])
     }
 }
-@Artefact("TagLibrary")
+@Artefact('TagLibrary')
 class TagLibMethodMissingTagLib {
-    static namespace = "a"
+
+    static namespace = 'a'
 
     def zeroArguments = { attrs, body ->
         out << 'a'
@@ -63,16 +64,16 @@ class TagLibMethodMissingTagLib {
     }
 
     def myLink = { attrs, body ->
-       out << g.link(controller:"one", action:"two")
-       out << g.link(controller: "foo", action:"bar") {
-           setLink(attrs, "World")
+       out << g.link(controller: 'one', action: 'two')
+       out << g.link(controller: 'foo', action: 'bar') {
+           setLink(attrs, 'World')
        }
     }
 
     def myLink2 = { attrs, body ->
-        out << link(controller:"one", action:"two")
-        out << link(controller: "foo", action:"bar") {
-            setLink(attrs, "World")
+        out << link(controller: 'one', action: 'two')
+        out << link(controller: 'foo', action: 'bar') {
+            setLink(attrs, 'World')
         }
     }
 
@@ -80,7 +81,7 @@ class TagLibMethodMissingTagLib {
         out << other.printBody(body)
         out << other.printBody([:], body() as String)
         out << other.printBody([:], body())
-        out << other.printBody{body()}
+        out << other.printBody {body()}
     }
 
     private setLink(attrs, name) {
@@ -88,9 +89,10 @@ class TagLibMethodMissingTagLib {
     }
 }
 
-@Artefact("TagLib")
+@Artefact('TagLib')
 class TagLibMethodMissingBTagLib {
-    static namespace = "other"
+
+    static namespace = 'other'
 
     Closure printBody = { attrs, body ->
         out << body()

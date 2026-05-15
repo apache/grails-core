@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -41,12 +41,12 @@ class TwoUnidirectionalHasManySpec extends HibernateGormDatastoreSpec {
 
     @Rollback
     @Issue('https://github.com/grails/grails-core/issues/10811')
-    void "test two undirectional one to many references"() {
+    void 'test two undirectional one to many references'() {
         when:
-        new EcmMask(name: "test")
-                .addToCreateUsers(new EcmUser(name: "Fred"))
-                .addToUpdateUsers(new EcmUser(name: "Bob"))
-                .save(flush:true, failOnError: true)
+        new EcmMask(name: 'test')
+                .addToCreateUsers(new EcmUser(name: 'Fred'))
+                .addToUpdateUsers(new EcmUser(name: 'Bob'))
+                .save(flush: true, failOnError: true)
 
         session.clear()
         EcmMask mask = EcmMask.first()
@@ -60,11 +60,11 @@ class TwoUnidirectionalHasManySpec extends HibernateGormDatastoreSpec {
     @Rollback
     @Issue('https://github.com/apache/grails-core/issues/10811')
     @PendingFeature(reason = 'JPA @OneToMany unidirectional mapping generates non-nullable join column in Hibernate 7')
-    void "test two JPA unidirectional one to many references"() {
+    void 'test two JPA unidirectional one to many references'() {
         when:
-        def jpa = new EcmMaskJpa(name: "test")
-        jpa.createdUsers.add(new JpaUser(name: "Fred"))
-        jpa.updatedUsers.add(new JpaUser(name: "Bob"))
+        def jpa = new EcmMaskJpa(name: 'test')
+        jpa.createdUsers.add(new JpaUser(name: 'Fred'))
+        jpa.updatedUsers.add(new JpaUser(name: 'Bob'))
         jpa.save(flush: true, failOnError: true)
         session.clear()
 
@@ -84,49 +84,27 @@ class EcmMask {
 
     String name
 
-    static hasMany = [createUsers:EcmUser, updateUsers:EcmUser]
+    static hasMany = [createUsers: EcmUser, updateUsers: EcmUser]
 
     static mappedBy = [createUsers: 'maskForCreated', updateUsers: 'maskForUpdated']
 
 }
 
-
-
 @Entity
-
-
 
 class EcmUser {
 
-
-
     String name
-
-
 
     EcmMask maskForCreated
 
-
-
     EcmMask maskForUpdated
-
-
-
-
-
-
 
     static constraints = {
 
-
-
         maskForCreated nullable: true
 
-
-
         maskForUpdated nullable: true
-
-
 
     }
 
@@ -139,6 +117,7 @@ class EcmUser {
 
 @JpaEntity
 class EcmMaskJpa {
+
     @Id
     @GeneratedValue
     Long id
@@ -153,6 +132,7 @@ class EcmMaskJpa {
 
 @JpaEntity
 class JpaUser {
+
     @Id
     @GeneratedValue
     Long id

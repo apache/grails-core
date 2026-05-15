@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -22,7 +22,7 @@ import spock.lang.Specification
 
 class GrailsPluginSorterSpec extends Specification {
 
-    def "sort handles empty list"() {
+    def 'sort handles empty list'() {
         when:
         def sorted = sortTestPlugins([])
 
@@ -30,7 +30,7 @@ class GrailsPluginSorterSpec extends Specification {
         sorted.isEmpty()
     }
 
-    def "sort handles single plugin with no dependencies"() {
+    def 'sort handles single plugin with no dependencies'() {
         given:
         def alpha = new TestPlugin('alpha')
 
@@ -41,7 +41,7 @@ class GrailsPluginSorterSpec extends Specification {
         sorted == [alpha]
     }
 
-    def "sort handles plugins with no dependencies preserving input order"() {
+    def 'sort handles plugins with no dependencies preserving input order'() {
         given:
         def alpha = new TestPlugin('alpha')
         def beta = new TestPlugin('beta')
@@ -55,7 +55,7 @@ class GrailsPluginSorterSpec extends Specification {
         sorted*.name as Set == ['alpha', 'beta', 'gamma'] as Set
     }
 
-    def "sort respects loadAfter declarations"() {
+    def 'sort respects loadAfter declarations'() {
         given:
         def alpha = new TestPlugin('alpha')
         def beta = new TestPlugin('beta', loadAfter: ['alpha'])
@@ -70,7 +70,7 @@ class GrailsPluginSorterSpec extends Specification {
         names.indexOf('beta') < names.indexOf('gamma')
     }
 
-    def "sort respects loadBefore declarations"() {
+    def 'sort respects loadBefore declarations'() {
         given:
         def alpha = new TestPlugin('alpha', loadBefore: ['gamma'])
         def beta = new TestPlugin('beta')
@@ -84,21 +84,21 @@ class GrailsPluginSorterSpec extends Specification {
         names.indexOf('alpha') < names.indexOf('gamma')
     }
 
-    def "sort does not use dependsOn for ordering (matches original DPM behavior)"() {
-        given: "beta declares dependsOn alpha, but no loadAfter"
+    def 'sort does not use dependsOn for ordering (matches original DPM behavior)'() {
+        given: 'beta declares dependsOn alpha, but no loadAfter'
         def alpha = new TestPlugin('alpha')
         def beta = new TestPlugin('beta')  // no loadAfter, no loadBefore
 
-        when: "sorted with beta before alpha in input"
+        when: 'sorted with beta before alpha in input'
         def sorted = sortTestPlugins([beta, alpha])
 
-        then: "order is preserved since dependsOn is NOT used for sort ordering"
+        then: 'order is preserved since dependsOn is NOT used for sort ordering'
         def names = sorted*.name
         // Without loadAfter/loadBefore, the DFS preserves input order
         names == ['beta', 'alpha']
     }
 
-    def "sort handles combined loadAfter and loadBefore"() {
+    def 'sort handles combined loadAfter and loadBefore'() {
         given:
         def alpha = new TestPlugin('alpha', loadBefore: ['beta'])
         def beta = new TestPlugin('beta')
@@ -113,7 +113,7 @@ class GrailsPluginSorterSpec extends Specification {
         names.indexOf('beta') < names.indexOf('gamma')
     }
 
-    def "sort ignores references to non-existent plugins"() {
+    def 'sort ignores references to non-existent plugins'() {
         given:
         def alpha = new TestPlugin('alpha', loadAfter: ['nonExistent'])
         def beta = new TestPlugin('beta', loadBefore: ['alsoNonExistent'])
@@ -126,8 +126,8 @@ class GrailsPluginSorterSpec extends Specification {
         sorted*.name as Set == ['alpha', 'beta'] as Set
     }
 
-    def "sort with external lookup function delegates correctly"() {
-        given: "A lookup function that resolves plugins by name from a map"
+    def 'sort with external lookup function delegates correctly'() {
+        given: 'A lookup function that resolves plugins by name from a map'
         def alpha = new TestPlugin('alpha')
         def beta = new TestPlugin('beta', loadAfter: ['alpha'])
         def plugins = [beta, alpha]
@@ -146,8 +146,8 @@ class GrailsPluginSorterSpec extends Specification {
         names.indexOf('alpha') < names.indexOf('beta')
     }
 
-    def "sort handles diamond dependency pattern"() {
-        given: "D depends on B and C, both of which depend on A"
+    def 'sort handles diamond dependency pattern'() {
+        given: 'D depends on B and C, both of which depend on A'
         def a = new TestPlugin('a')
         def b = new TestPlugin('b', loadAfter: ['a'])
         def c = new TestPlugin('c', loadAfter: ['a'])
@@ -164,8 +164,8 @@ class GrailsPluginSorterSpec extends Specification {
         names.indexOf('c') < names.indexOf('d')
     }
 
-    def "sort produces same order for GrailsPlugin-like and PluginInfo-like types"() {
-        given: "Two different representations of the same plugin graph"
+    def 'sort produces same order for GrailsPlugin-like and PluginInfo-like types'() {
+        given: 'Two different representations of the same plugin graph'
         def pluginA = new TestPlugin('alpha')
         def pluginB = new TestPlugin('beta', loadAfter: ['alpha'])
         def pluginC = new TestPlugin('gamma', loadAfter: ['beta'])
@@ -174,15 +174,15 @@ class GrailsPluginSorterSpec extends Specification {
         def infoB = new TestPluginInfo('beta', loadAfter: ['alpha'])
         def infoC = new TestPluginInfo('gamma', loadAfter: ['beta'])
 
-        when: "Both are sorted using the same GrailsPluginSorter"
+        when: 'Both are sorted using the same GrailsPluginSorter'
         def sortedPlugins = sortTestPlugins([pluginC, pluginA, pluginB])
         def sortedInfos = sortTestInfos([infoC, infoA, infoB])
 
-        then: "The resulting order is identical"
+        then: 'The resulting order is identical'
         sortedPlugins*.name == sortedInfos*.infoName
     }
 
-    def "sort handles loadBefore creating a dependency chain"() {
+    def 'sort handles loadBefore creating a dependency chain'() {
         given:
         def alpha = new TestPlugin('alpha', loadBefore: ['beta'])
         def beta = new TestPlugin('beta', loadBefore: ['gamma'])
@@ -197,7 +197,7 @@ class GrailsPluginSorterSpec extends Specification {
         names.indexOf('beta') < names.indexOf('gamma')
     }
 
-    def "sort with duplicate plugin names uses first occurrence"() {
+    def 'sort with duplicate plugin names uses first occurrence'() {
         given:
         def alpha1 = new TestPlugin('alpha')
         def alpha2 = new TestPlugin('alpha')
@@ -206,12 +206,12 @@ class GrailsPluginSorterSpec extends Specification {
         when:
         def sorted = sortTestPlugins([alpha1, alpha2, beta])
 
-        then: "Both alphas and beta are present"
+        then: 'Both alphas and beta are present'
         sorted.size() == 3
     }
 
-    def "sort handles loadAfter combined with loadBefore between same plugins"() {
-        given: "alpha loadBefore beta, beta also loadAfter alpha (redundant but valid)"
+    def 'sort handles loadAfter combined with loadBefore between same plugins'() {
+        given: 'alpha loadBefore beta, beta also loadAfter alpha (redundant but valid)'
         def alpha = new TestPlugin('alpha', loadBefore: ['beta'])
         def beta = new TestPlugin('beta', loadAfter: ['alpha'])
 
@@ -223,7 +223,7 @@ class GrailsPluginSorterSpec extends Specification {
         names.indexOf('alpha') < names.indexOf('beta')
     }
 
-    def "sort handles long chain via loadAfter"() {
+    def 'sort handles long chain via loadAfter'() {
         given:
         def a = new TestPlugin('a')
         def b = new TestPlugin('b', loadAfter: ['a'])
@@ -267,6 +267,7 @@ class GrailsPluginSorterSpec extends Specification {
      * Simulates GrailsPlugin-like behavior.
      */
     static class TestPlugin {
+
         final String name
         final List<String> loadAfter
         final List<String> loadBefore
@@ -286,6 +287,7 @@ class GrailsPluginSorterSpec extends Specification {
      * simulating PluginInfo-like behavior to prove the sorter is truly generic.
      */
     static class TestPluginInfo {
+
         final String infoName
         final List<String> loadAfter
         final List<String> loadBefore

@@ -4,21 +4,20 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
  */
 
 package org.grails.orm.hibernate.cfg.domainbinding
-
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToOneProperty
 import org.grails.orm.hibernate.cfg.ColumnConfig
@@ -38,7 +37,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalc
 
 class CompositeIdentifierToManyToOneBinderSpec extends Specification {
 
-    def "Test bindCompositeIdentifierToManyToOne with nested composite ID"() {
+    def 'Test bindCompositeIdentifierToManyToOne with nested composite ID'() {
         given:
         // 1. Stub all dependencies for the protected constructor
         def calculator = Stub(ForeignKeyColumnCountCalculator)
@@ -55,10 +54,10 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
         def association = Mock(HibernatePersistentProperty)
         def value = Mock(SimpleValue)
         def refDomainClass = Mock(GrailsHibernatePersistentEntity)
-        def path = "/test"
+        def path = '/test'
 
         // Use a real CompositeIdentity object to avoid final method mocking issues
-        def propertyNames = ["nestedEntity"] as String[]
+        def propertyNames = ['nestedEntity'] as String[]
         def compositeId = new HibernateCompositeIdentity()
         compositeId.setPropertyNames(propertyNames)
 
@@ -70,8 +69,8 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
         calculator.calculateForeignKeyColumnCount(refDomainClass, propertyNames) >> 2
 
         def nestedEntityProp = Mock(HibernateToOneProperty)
-        refDomainClass.getHibernatePropertyByName("nestedEntity") >> nestedEntityProp
-        nestedEntityProp.name >> "nestedEntity"
+        refDomainClass.getHibernatePropertyByName('nestedEntity') >> nestedEntityProp
+        nestedEntityProp.name >> 'nestedEntity'
 
         def nestedAssociatedEntity = Mock(GrailsHibernatePersistentEntity)
         nestedEntityProp.getHibernateAssociatedEntity() >> nestedAssociatedEntity
@@ -82,10 +81,10 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
         nestedAssociatedEntity.getCompositeIdentity() >> perArray
 
         // 4. Mock the behavior of the dependency methods
-        refDomainClass.getTableName(namingStrategy) >> "ref_table"
-        namingStrategy.resolveColumnName("nestedEntity") >> "nested_entity_col"
-        columnNameFetcher.getDefaultColumnName(nestedPartA) >> "part_a_col"
-        columnNameFetcher.getDefaultColumnName(nestedPartB) >> "part_b_col"
+        refDomainClass.getTableName(namingStrategy) >> 'ref_table'
+        namingStrategy.resolveColumnName('nestedEntity') >> 'nested_entity_col'
+        columnNameFetcher.getDefaultColumnName(nestedPartA) >> 'part_a_col'
+        columnNameFetcher.getDefaultColumnName(nestedPartB) >> 'part_b_col'
 
         // Make backticks remover pass through the values for simplicity
         backticksRemover.apply(_) >> { String s -> s }
@@ -97,14 +96,14 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
         // 5. Verify the final generated column names
         def finalColumns = propertyConfig.getColumns()
         finalColumns.size() == 2
-        finalColumns[0].getName() == "ref_table_nested_entity_col_part_a_col"
-        finalColumns[1].getName() == "ref_table_nested_entity_col_part_b_col"
+        finalColumns[0].getName() == 'ref_table_nested_entity_col_part_a_col'
+        finalColumns[1].getName() == 'ref_table_nested_entity_col_part_b_col'
 
         and: // 6. Verify the call to the simple value binder
         1 * simpleValueBinder.bindSimpleValue(_ as HibernatePersistentProperty, null, value, path)
     }
 
-    def "Test bindCompositeIdentifierToManyToOne when column count matches"() {
+    def 'Test bindCompositeIdentifierToManyToOne when column count matches'() {
         given:
         // 1. Use Mocks for dependencies that require interaction verification
         def calculator = Stub(ForeignKeyColumnCountCalculator)
@@ -120,11 +119,11 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
         def association = Mock(HibernatePersistentProperty)
         def value = Mock(SimpleValue)
         def compositeId = new HibernateCompositeIdentity()
-        compositeId.setPropertyNames(["prop1", "prop2"] as String[])
+        compositeId.setPropertyNames(['prop1', 'prop2'] as String[])
         def refDomainClass = Mock(GrailsHibernatePersistentEntity)
-        def path = "/test"
+        def path = '/test'
 
-        // 3. Set up the "match" condition
+        // 3. Set up the 'match' condition
         def propertyConfig = new PropertyConfig()
         propertyConfig.getColumns().add(new ColumnConfig())
         propertyConfig.getColumns().add(new ColumnConfig())

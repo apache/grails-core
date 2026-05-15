@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -48,7 +48,7 @@ import spock.lang.Specification
  *
  * @author Graeme Rocher
  */
-class VndErrorRenderingSpec extends Specification{
+class VndErrorRenderingSpec extends Specification {
 
     void setup() {
         // Clear the static mimeTypes cache to prevent test environment pollution
@@ -61,84 +61,81 @@ class VndErrorRenderingSpec extends Specification{
         RequestContextHolder.resetRequestAttributes()
     }
 
-    void "Test VND error rendering in XML" () {
-        given:"A registry with VND error registered"
+    void 'Test VND error rendering in XML' () {
+        given:'A registry with VND error registered'
             def registry = new DefaultRendererRegistry()
             final vndRenderer = new VndErrorXmlRenderer()
             final messageSource = new StaticMessageSource()
             final request = GrailsWebMockUtil.bindMockWebRequest()
             final response = request.response
-            messageSource.addMessage("title.invalid", request.locale, "Bad Title")
+            messageSource.addMessage('title.invalid', request.locale, 'Bad Title')
             vndRenderer.messageSource = messageSource
             vndRenderer.linkGenerator = getLinkGenerator {
-                "/books"(resources:"book")
+                '/books'(resources: 'book')
             }
             registry.addRenderer(vndRenderer)
 
-
-        when:"A renderer is looked up"
+        when:'A renderer is looked up'
             final book = new Book()
             book.id = 1
             def error = new BeanPropertyBindingResult(book, Book.name)
-            error.rejectValue("title", "title.invalid")
+            error.rejectValue('title', 'title.invalid')
             final renderer = registry.findContainerRenderer(MimeType.XML, Errors, book)
 
-        then:"It is a VND error renderer"
+        then:'It is a VND error renderer'
             renderer instanceof VndErrorXmlRenderer
 
-
-        when:"The renderer renders an error"
+        when:'The renderer renders an error'
             renderer.render(error, new ServletRenderContext(request))
 
-        then:"The response is correct"
+        then:'The response is correct'
             response.status == HttpStatus.UNPROCESSABLE_ENTITY.value()
             response.contentType == GrailsWebUtil.getContentType(VndErrorXmlRenderer.MIME_TYPE.name, GrailsWebUtil.DEFAULT_ENCODING)
-            response.contentAsString == '<?xml version="1.0" encoding="UTF-8"?><errors xml:lang="en"><error logref="book.title.invalid.1"><message>Bad Title</message><link rel="resource" href="http://localhost/books/1" /></error></errors>'
+            response.contentAsString == '<?xml version='1.0' encoding='UTF-8'?><errors xml:lang='en'><error logref='book.title.invalid.1'><message>Bad Title</message><link rel='resource' href='http://localhost/books/1' /></error></errors>'
 
     }
 
-    void "Test VND error rendering in JSON" () {
-        given:"A registry with VND error registered"
+    void 'Test VND error rendering in JSON' () {
+        given:'A registry with VND error registered'
             def registry = new DefaultRendererRegistry()
             final vndRenderer = new VndErrorJsonRenderer()
             final messageSource = new StaticMessageSource()
             final request = GrailsWebMockUtil.bindMockWebRequest()
             final response = request.response
-            messageSource.addMessage("title.invalid", request.locale, "Bad Title")
-            messageSource.addMessage("title.bad", request.locale, "Title Bad")
+            messageSource.addMessage('title.invalid', request.locale, 'Bad Title')
+            messageSource.addMessage('title.bad', request.locale, 'Title Bad')
             vndRenderer.messageSource = messageSource
             vndRenderer.linkGenerator = getLinkGenerator {
-                "/books"(resources:"book")
+                '/books'(resources: 'book')
             }
             registry.addRenderer(vndRenderer)
 
-        when:"A renderer is looked up"
+        when:'A renderer is looked up'
             final book = new Book()
             book.id = 1
             def error = new BeanPropertyBindingResult(book, Book.name)
-            error.rejectValue("title", "title.invalid")
-            error.rejectValue("title", "title.bad")
+            error.rejectValue('title', 'title.invalid')
+            error.rejectValue('title', 'title.bad')
             final renderer = registry.findContainerRenderer(MimeType.JSON, Errors, book)
 
-        then:"It is a VND error renderer"
+        then:'It is a VND error renderer'
             renderer instanceof VndErrorJsonRenderer
 
-
-        when:"The renderer renders an error"
+        when:'The renderer renders an error'
             renderer.render(error, new ServletRenderContext(request))
 
-        then:"The response is correct"
+        then:'The response is correct'
             response.status == HttpStatus.UNPROCESSABLE_ENTITY.value()
             response.contentType == GrailsWebUtil.getContentType(VndErrorJsonRenderer.MIME_TYPE.name, GrailsWebUtil.DEFAULT_ENCODING)
-            response.contentAsString == '[{"logref":"book.title.invalid.1","message":"Bad Title","path":"http://localhost/books/1","_links":{"resource":{"href":"http://localhost/books/1"}}},{"logref":"book.title.bad.1","message":"Title Bad","path":"http://localhost/books/1","_links":{"resource":{"href":"http://localhost/books/1"}}}]'
+            response.contentAsString == '[{'logref':'book.title.invalid.1','message': 'Bad Title','path': 'http://localhost/books/1','_links': {'resource':{'href':'http://localhost/books/1'}}},{'logref':'book.title.bad.1','message': 'Title Bad','path': 'http://localhost/books/1','_links': {'resource':{'href':'http://localhost/books/1'}}}]'
 
     }
 
     LinkGenerator getLinkGenerator(Closure mappings) {
-        def generator = new DefaultLinkGenerator("http://localhost", null)
+        def generator = new DefaultLinkGenerator('http://localhost', null)
         generator.grailsUrlConverter = new CamelCaseUrlConverter()
         generator.urlMappingsHolder = getUrlMappingsHolder mappings
-        return generator;
+        return generator
     }
     UrlMappingsHolder getUrlMappingsHolder(Closure mappings) {
         def ctx = new MockApplicationContext()
@@ -152,6 +149,7 @@ class VndErrorRenderingSpec extends Specification{
 
 @Entity
 class Book {
+
     Long id
     String title
 }

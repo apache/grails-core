@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -238,7 +238,7 @@ interface GormStaticOperations<D> {
     boolean exists(Serializable id)
 
     /**
-     * Lists objects in the datastore. eg. Book.list(max:10)
+     * Lists objects in the datastore. eg. Book.list(max: 10)
      *
      * @param params Any parameters such as offset, max etc.
      * @return A list of results
@@ -363,7 +363,7 @@ interface GormStaticOperations<D> {
     D last(Map queryParams)
 
     /**
-     * Finds all results matching all of the given conditions. Eg. Book.findAllWhere(author:"Stephen King", title:"The Stand")
+     * Finds all results matching all of the given conditions. Eg. Book.findAllWhere(author: 'Stephen King', title: 'The Stand')
      *
      * @param queryMap The map of conditions
      * @return A list of results
@@ -371,7 +371,7 @@ interface GormStaticOperations<D> {
     List<D> findAllWhere(Map queryMap)
 
     /**
-     * Finds all results matching all of the given conditions. Eg. Book.findAllWhere(author:"Stephen King", title:"The Stand")
+     * Finds all results matching all of the given conditions. Eg. Book.findAllWhere(author: 'Stephen King', title: 'The Stand')
      *
      * @param queryMap The map of conditions
      * @param args The Query arguments
@@ -399,7 +399,7 @@ interface GormStaticOperations<D> {
     D find(D example, Map args)
 
     /**
-     * Finds a single result matching all of the given conditions. Eg. Book.findWhere(author:"Stephen King", title:"The Stand")
+     * Finds a single result matching all of the given conditions. Eg. Book.findWhere(author: 'Stephen King', title: 'The Stand')
      *
      * @param queryMap The map of conditions
      * @return A single result
@@ -407,7 +407,7 @@ interface GormStaticOperations<D> {
     D findWhere(Map queryMap)
 
     /**
-     * Finds a single result matching all of the given conditions. Eg. Book.findWhere(author:"Stephen King", title:"The Stand")
+     * Finds a single result matching all of the given conditions. Eg. Book.findWhere(author: 'Stephen King', title: 'The Stand')
      *
      * @param queryMap The map of conditions
      * @param args The Query arguments
@@ -417,7 +417,7 @@ interface GormStaticOperations<D> {
     D findWhere(Map queryMap, Map args)
 
     /**
-     * Finds a single result matching all of the given conditions. Eg. Book.findWhere(author:"Stephen King", title:"The Stand").  If
+     * Finds a single result matching all of the given conditions. Eg. Book.findWhere(author: 'Stephen King', title: 'The Stand').  If
      * a matching persistent entity is not found a new entity is created and returned.
      *
      * @param queryMap The map of conditions
@@ -426,7 +426,7 @@ interface GormStaticOperations<D> {
     D findOrCreateWhere(Map queryMap)
 
     /**
-     * Finds a single result matching all of the given conditions. Eg. Book.findWhere(author:"Stephen King", title:"The Stand").  If
+     * Finds a single result matching all of the given conditions. Eg. Book.findWhere(author: 'Stephen King', title: 'The Stand').  If
      * a matching persistent entity is not found a new entity is created, saved and returned.
      *
      * @param queryMap The map of conditions

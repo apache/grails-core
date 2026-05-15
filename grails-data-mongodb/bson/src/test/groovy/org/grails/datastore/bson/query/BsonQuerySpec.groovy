@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -37,15 +37,15 @@ import spock.lang.Specification
  */
 class BsonQuerySpec extends Specification {
 
-    void "Test parse in query from BSON string"() {
-        when:"A bson query is parsed"
-        DetachedCriteria criteria = BsonQuery.parse(Person, new JsonReader('{"name":"Fred", "age": { "$in": [18, 25] }}'))
+    void 'Test parse in query from BSON string'() {
+        when:'A bson query is parsed'
+        DetachedCriteria criteria = BsonQuery.parse(Person, new JsonReader('{'name':'Fred', 'age': { "$in": [18, 25] }}'))
         Query.Conjunction criterion = criteria.criteria[0]
         def criteriaList = criterion.criteria
-        then:"It is a conjuction"
+        then:'It is a conjuction'
         criterion instanceof Query.Conjunction
 
-        and:"The criteria are correct"
+        and:'The criteria are correct'
         criteriaList[0] instanceof Query.Equals
         criteriaList[0].property == 'name'
         criteriaList[0].value == 'Fred'
@@ -56,16 +56,15 @@ class BsonQuerySpec extends Specification {
 
     }
 
-    void "Test parse a query from a BSON string"() {
-        when:"A bson query is parsed"
-        DetachedCriteria criteria = BsonQuery.parse(Person, new JsonReader('{"name":"Fred", "age": { "$gt": 18 }}'))
+    void 'Test parse a query from a BSON string'() {
+        when:'A bson query is parsed'
+        DetachedCriteria criteria = BsonQuery.parse(Person, new JsonReader('{'name':'Fred', 'age': { "$gt": 18 }}'))
         Query.Conjunction criterion = criteria.criteria[0]
         def criteriaList = criterion.criteria
-        then:"It is a conjuction"
+        then:'It is a conjuction'
         criterion instanceof Query.Conjunction
 
-
-        and:"The criteria are correct"
+        and:'The criteria are correct'
         criteriaList[0] instanceof Query.Equals
         criteriaList[0].property == 'name'
         criteriaList[0].value == 'Fred'
@@ -73,13 +72,12 @@ class BsonQuerySpec extends Specification {
         criteriaList[1].property == 'age'
         criteriaList[1].value == 18
 
-
-        when:"A bson or query is parsed"
-        criteria = BsonQuery.parse(Person, new JsonReader('{"$or":[{"name":"Fred"}, {"age": { "$gt": 18 }}]}'))
+        when:'A bson or query is parsed'
+        criteria = BsonQuery.parse(Person, new JsonReader('{"$or':[{'name':'Fred'}, {'age': { '$gt": 18 }}]}'))
         Query.Disjunction disjunction = criteria.criteria[0]
         criteriaList = disjunction.criteria
 
-        then:"The criteria are correct"
+        then:'The criteria are correct'
         criteriaList[0] instanceof Query.Equals
         criteriaList[0].property == 'name'
         criteriaList[0].value == 'Fred'
@@ -89,11 +87,11 @@ class BsonQuerySpec extends Specification {
 
     }
 
-    void "Test create a bson query from criteria"() {
+    void 'Test create a bson query from criteria'() {
 
-        when:"A BSON query is created"
+        when:'A BSON query is created'
 
-        def context = new KeyValueMappingContext("test")
+        def context = new KeyValueMappingContext('test')
         def entity = context.addPersistentEntity(Person)
         def codecRegistry = new TestCodecRegistry(context)
         def criteria = new DetachedCriteria(Person)
@@ -104,15 +102,16 @@ class BsonQuerySpec extends Specification {
         }
         Document query = BsonQuery.createBsonQuery(codecRegistry, entity, criteria.criteria)
 
-        then:"The document is correct"
+        then:'The document is correct'
         query != null
-        query.get("id") == 1
-        query.get('name') == "Fred"
+        query.get('id') == 1
+        query.get('name') == 'Fred'
         query.get('age') == [(BsonQuery.GT_OPERATOR):18]
 
     }
 
     static class TestCodecRegistry implements CodecRegistry {
+
         final MappingContext mappingContext
 
         TestCodecRegistry(MappingContext mappingContext) {

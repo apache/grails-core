@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -50,7 +50,7 @@ import org.grails.web.util.WebUtils
 
 /**
  * A custom mock HTTP servlet request that provides the extra properties
- * and methods normally injected by the "servlets" plugin.
+ * and methods normally injected by the 'servlets' plugin.
  */
 class GrailsMockHttpServletRequest extends MockHttpServletRequest implements MultipartHttpServletRequest {
 
@@ -156,7 +156,7 @@ class GrailsMockHttpServletRequest extends MockHttpServletRequest implements Mul
     }
 
     /**
-     * Implementation of the dynamic "forwardURI" property.
+     * Implementation of the dynamic 'forwardURI' property.
      */
     String getForwardURI() {
         def result = getAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE)
@@ -165,7 +165,7 @@ class GrailsMockHttpServletRequest extends MockHttpServletRequest implements Mul
     }
 
     /**
-     * Sets the "forwardURI" property for the request.
+     * Sets the 'forwardURI' property for the request.
      */
     void setForwardURI(String uri) {
         setAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, uri)
@@ -190,14 +190,14 @@ class GrailsMockHttpServletRequest extends MockHttpServletRequest implements Mul
     }
 
     /**
-     * Map-like access to request attributes, e.g. request["count"].
+     * Map-like access to request attributes, e.g. request['count'].
      */
     def getAt(String key) {
         return getAttribute(key)
     }
 
     /**
-     * Map-like setting of request attributes, e.g. request["count"] = 10.
+     * Map-like setting of request attributes, e.g. request['count'] = 10.
      */
     void putAt(String key, Object val) {
         setAttribute(key, val)
@@ -252,7 +252,7 @@ class GrailsMockHttpServletRequest extends MockHttpServletRequest implements Mul
     }
 
     /**
-     * Adds a "find()" method to the request that searches the request's
+     * Adds a 'find()' method to the request that searches the request's
      * attributes. Returns the first attribute for which the closure
      * returns <code>true</code>, just like the normal Groovy find() method.
      */

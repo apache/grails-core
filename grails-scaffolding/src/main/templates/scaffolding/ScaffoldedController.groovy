@@ -1,4 +1,4 @@
-<% if (namespace) { %><%=packageName ? "package ${packageName}.${namespace}" : "package ${namespace}"%>
+<% if (namespace) { %><%=packageName ? "package ${packageName}.${namespace}' : 'package ${namespace}"%>
 
 import ${packageName}.${className}<% } else { %><%=packageName ? "package ${packageName}" : ''%><% } %>
 

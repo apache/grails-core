@@ -4,14 +4,14 @@
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
+ * 'License'); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
  *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
@@ -27,7 +27,7 @@ class PagedResultSpecHibernate extends GrailsDataTckSpec {
         manager.addAllDomainClasses([Person])
     }
 
-    void "Test that a getTotalCount will return 0 on empty result from the list() method"() {
+    void 'Test that a getTotalCount will return 0 on empty result from the list() method'() {
         when: 'A query is executed that returns no results'
         def results = Person.list(max: 1)
 
@@ -36,7 +36,7 @@ class PagedResultSpecHibernate extends GrailsDataTckSpec {
         results.totalCount == 0
     }
 
-    void "Test that a paged result list is returned from the list() method with pagination params"() {
+    void 'Test that a paged result list is returned from the list() method with pagination params'() {
         given: 'Some people'
         createPeople()
 
@@ -51,7 +51,8 @@ class PagedResultSpecHibernate extends GrailsDataTckSpec {
         results.totalCount == 6
     }
 
-    void "Test that a paged result list is returned from the list() method with pagination and sorting params"() {
+    void 'Test that a paged result list is returned from the list() method with pagination and sorting params'() {
+
         given: 'Some people'
         createPeople()
 
@@ -66,7 +67,8 @@ class PagedResultSpecHibernate extends GrailsDataTckSpec {
         results.totalCount == 6
     }
 
-    void "Test that a getTotalCount will return 0 on empty result from the criteria"() {
+    void 'Test that a getTotalCount will return 0 on empty result from the criteria'() {
+
         given: 'Some people'
         createPeople()
 
@@ -80,7 +82,7 @@ class PagedResultSpecHibernate extends GrailsDataTckSpec {
         results.totalCount == 0
     }
 
-    void "Test that a paged result list is returned from the critera with pagination params"() {
+    void 'Test that a paged result list is returned from the critera with pagination params'() {
         given: 'Some people'
         createPeople()
 
@@ -97,7 +99,8 @@ class PagedResultSpecHibernate extends GrailsDataTckSpec {
         results.totalCount == 4
     }
 
-    void "Test that a paged result list is returned from the critera with pagination and sorting params"() {
+    void 'Test that a paged result list is returned from the critera with pagination and sorting params'() {
+
         given: 'Some people'
         createPeople()
 
@@ -115,6 +118,7 @@ class PagedResultSpecHibernate extends GrailsDataTckSpec {
     }
 
     protected void createPeople() {
+
         new Person(firstName: 'Homer', lastName: 'Simpson', age: 45).save()
         new Person(firstName: 'Marge', lastName: 'Simpson', age: 40).save()
         new Person(firstName: 'Bart', lastName: 'Simpson', age: 9).save()

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -27,7 +27,7 @@ import org.springframework.context.ApplicationContext
 
 class DatabaseCleanupContextSpec extends Specification {
 
-    def "constructor sets the cleaners list"() {
+    def 'constructor sets the cleaners list'() {
         given:
         def cleaner = createMockCleaner('h2')
         def cleaners = [cleaner]
@@ -40,7 +40,7 @@ class DatabaseCleanupContextSpec extends Specification {
         context.cleanersByType.get('h2').is(cleaner)
     }
 
-    def "applicationContext is null by default"() {
+    def 'applicationContext is null by default'() {
         given:
         def context = new DatabaseCleanupContext([createMockCleaner('h2')])
 
@@ -48,7 +48,7 @@ class DatabaseCleanupContextSpec extends Specification {
         context.applicationContext == null
     }
 
-    def "applicationContext can be set and retrieved"() {
+    def 'applicationContext can be set and retrieved'() {
         given:
         def context = new DatabaseCleanupContext([createMockCleaner('h2')])
         def appCtx = Mock(ApplicationContext)
@@ -60,7 +60,7 @@ class DatabaseCleanupContextSpec extends Specification {
         context.applicationContext.is(appCtx)
     }
 
-    def "performCleanup throws when applicationContext is null"() {
+    def 'performCleanup throws when applicationContext is null'() {
         given:
         def context = new DatabaseCleanupContext([createMockCleaner('h2')])
 
@@ -72,7 +72,7 @@ class DatabaseCleanupContextSpec extends Specification {
         ex.message.contains('ApplicationContext is not available')
     }
 
-    def "performCleanup throws when cleaners list is empty"() {
+    def 'performCleanup throws when cleaners list is empty'() {
         given:
         def context = new DatabaseCleanupContext([])
         context.applicationContext = Mock(ApplicationContext)
@@ -85,7 +85,7 @@ class DatabaseCleanupContextSpec extends Specification {
         ex.message.contains('no DatabaseCleaner implementations found')
     }
 
-    def "performCleanup with cleanAll calls matching cleaner for each DataSource bean"() {
+    def 'performCleanup with cleanAll calls matching cleaner for each DataSource bean'() {
         given:
         def stats1 = new DatabaseCleanupStats()
         stats1.tableRowCounts['BOOK'] = 5L
@@ -121,7 +121,7 @@ class DatabaseCleanupContextSpec extends Specification {
         result.any { it.tableRowCounts['AUTHOR'] == 3L }
     }
 
-    def "performCleanup filters by specified datasource names (auto-discover)"() {
+    def 'performCleanup filters by specified datasource names (auto-discover)'() {
         given:
         def stats = new DatabaseCleanupStats()
         stats.tableRowCounts['BOOK'] = 5L
@@ -151,7 +151,7 @@ class DatabaseCleanupContextSpec extends Specification {
         result.size() == 1
     }
 
-    def "performCleanup with explicit type uses type-based lookup"() {
+    def 'performCleanup with explicit type uses type-based lookup'() {
         given:
         def stats = new DatabaseCleanupStats()
         stats.tableRowCounts['BOOK'] = 5L
@@ -182,7 +182,7 @@ class DatabaseCleanupContextSpec extends Specification {
         result.size() == 1
     }
 
-    def "performCleanup throws when specified datasource name is not found"() {
+    def 'performCleanup throws when specified datasource name is not found'() {
         given:
         def appCtx = Mock(ApplicationContext) {
             getBeansOfType(DataSource) >> ['dataSource': Mock(DataSource)]
@@ -200,7 +200,7 @@ class DatabaseCleanupContextSpec extends Specification {
         ex.message.contains('was not found')
     }
 
-    def "performCleanup throws when no cleaner supports a datasource (cleanAll)"() {
+    def 'performCleanup throws when no cleaner supports a datasource (cleanAll)'() {
         given:
         def dataSource = Mock(DataSource)
         def cleaner = Mock(DatabaseCleaner) {
@@ -223,7 +223,7 @@ class DatabaseCleanupContextSpec extends Specification {
         ex.message.contains('dataSource')
     }
 
-    def "performCleanup throws when no cleaner supports a datasource (auto-discover entry)"() {
+    def 'performCleanup throws when no cleaner supports a datasource (auto-discover entry)'() {
         given:
         def dataSource = Mock(DataSource)
         def cleaner = Mock(DatabaseCleaner) {
@@ -246,7 +246,7 @@ class DatabaseCleanupContextSpec extends Specification {
         ex.message.contains('dataSource')
     }
 
-    def "performCleanup throws when explicit type has no matching cleaner"() {
+    def 'performCleanup throws when explicit type has no matching cleaner'() {
         given:
         def dataSource = Mock(DataSource)
         def cleaner = Mock(DatabaseCleaner) {
@@ -268,7 +268,7 @@ class DatabaseCleanupContextSpec extends Specification {
         ex.message.contains('dataSource')
     }
 
-    def "performCleanup handles empty DataSource map"() {
+    def 'performCleanup handles empty DataSource map'() {
         given:
         def cleaner = createMockCleaner('h2')
         def appCtx = Mock(ApplicationContext) {
@@ -285,7 +285,7 @@ class DatabaseCleanupContextSpec extends Specification {
         result.isEmpty()
     }
 
-    def "performCleanup with mixed entries uses correct cleaner for each"() {
+    def 'performCleanup with mixed entries uses correct cleaner for each'() {
         given:
         def h2Stats = new DatabaseCleanupStats()
         h2Stats.tableRowCounts['BOOK'] = 5L
@@ -323,7 +323,7 @@ class DatabaseCleanupContextSpec extends Specification {
         result.size() == 2
     }
 
-    def "performCleanup sets datasourceName on stats for cleanAll"() {
+    def 'performCleanup sets datasourceName on stats for cleanAll'() {
         given:
         def dataSource = Mock(DataSource)
         def cleaner = Mock(DatabaseCleaner) {
@@ -348,7 +348,7 @@ class DatabaseCleanupContextSpec extends Specification {
         result[0].datasourceName == 'myDataSource'
     }
 
-    def "performCleanup sets datasourceName on stats for specific entries"() {
+    def 'performCleanup sets datasourceName on stats for specific entries'() {
         given:
         def dataSource = Mock(DataSource)
         def cleaner = Mock(DatabaseCleaner) {
@@ -373,7 +373,7 @@ class DatabaseCleanupContextSpec extends Specification {
         result[0].datasourceName == 'dataSource'
     }
 
-    def "constructor throws IllegalStateException when cleaner returns null databaseType"() {
+    def 'constructor throws IllegalStateException when cleaner returns null databaseType'() {
         given:
         def cleaner = Mock(DatabaseCleaner) {
             databaseType() >> null
@@ -388,7 +388,7 @@ class DatabaseCleanupContextSpec extends Specification {
         ex.message.contains(cleaner.class.name)
     }
 
-    def "constructor throws IllegalStateException when cleaner returns empty databaseType"() {
+    def 'constructor throws IllegalStateException when cleaner returns empty databaseType'() {
         given:
         def cleaner = Mock(DatabaseCleaner) {
             databaseType() >> ''
@@ -402,7 +402,7 @@ class DatabaseCleanupContextSpec extends Specification {
         ex.message.contains('returned a null or empty databaseType()')
     }
 
-    def "constructor throws IllegalStateException when cleaner returns whitespace-only databaseType"() {
+    def 'constructor throws IllegalStateException when cleaner returns whitespace-only databaseType'() {
         given:
         def cleaner = Mock(DatabaseCleaner) {
             databaseType() >> '   '
@@ -416,7 +416,7 @@ class DatabaseCleanupContextSpec extends Specification {
         ex.message.contains('returned a null or empty databaseType()')
     }
 
-    def "constructor throws IllegalStateException when multiple cleaners declare same databaseType"() {
+    def 'constructor throws IllegalStateException when multiple cleaners declare same databaseType'() {
         given:
         def cleaner1 = Mock(DatabaseCleaner) {
             databaseType() >> 'h2'
@@ -436,7 +436,7 @@ class DatabaseCleanupContextSpec extends Specification {
         ex.message.contains(cleaner2.class.name)
     }
 
-    def "constructor successfully creates map with valid unique cleaners"() {
+    def 'constructor successfully creates map with valid unique cleaners'() {
         given:
         def h2Cleaner = Mock(DatabaseCleaner) {
             databaseType() >> 'h2'
@@ -458,7 +458,7 @@ class DatabaseCleanupContextSpec extends Specification {
         context.cleanersByType.get('mysql').is(mySqlCleaner)
     }
 
-    def "constructor returns unmodifiable map"() {
+    def 'constructor returns unmodifiable map'() {
         given:
         def cleaner = createMockCleaner('h2')
         def context = new DatabaseCleanupContext([cleaner])

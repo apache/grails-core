@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -23,7 +23,7 @@ import spock.lang.Specification
 
 class DatabaseCleanupStatsSpec extends Specification {
 
-    def "tableRowCounts defaults to empty map"() {
+    def 'tableRowCounts defaults to empty map'() {
         when:
         def stats = new DatabaseCleanupStats()
 
@@ -32,7 +32,7 @@ class DatabaseCleanupStatsSpec extends Specification {
         stats.tableRowCounts.isEmpty()
     }
 
-    def "tableRowCounts default value is 0L for unknown keys"() {
+    def 'tableRowCounts default value is 0L for unknown keys'() {
         given:
         def stats = new DatabaseCleanupStats()
 
@@ -43,7 +43,7 @@ class DatabaseCleanupStatsSpec extends Specification {
         count == 0L
     }
 
-    def "tableRowCounts accumulates row counts"() {
+    def 'tableRowCounts accumulates row counts'() {
         given:
         def stats = new DatabaseCleanupStats()
 
@@ -57,7 +57,7 @@ class DatabaseCleanupStatsSpec extends Specification {
         stats.tableRowCounts['AUTHOR'] == 3L
     }
 
-    def "datasourceName defaults to null"() {
+    def 'datasourceName defaults to null'() {
         when:
         def stats = new DatabaseCleanupStats()
 
@@ -65,7 +65,7 @@ class DatabaseCleanupStatsSpec extends Specification {
         stats.datasourceName == null
     }
 
-    def "datasourceName can be set"() {
+    def 'datasourceName can be set'() {
         given:
         def stats = new DatabaseCleanupStats()
 
@@ -76,12 +76,12 @@ class DatabaseCleanupStatsSpec extends Specification {
         stats.datasourceName == 'dataSource'
     }
 
-    def "isDebugEnabled returns false when system property is not set"() {
+    def 'isDebugEnabled returns false when system property is not set'() {
         expect:
         !DatabaseCleanupStats.debugEnabled
     }
 
-    def "isDebugEnabled returns true when system property is set"() {
+    def 'isDebugEnabled returns true when system property is set'() {
         setup:
         System.setProperty(DatabaseCleanupStats.DEBUG_PROPERTY, 'true')
 
@@ -92,7 +92,7 @@ class DatabaseCleanupStatsSpec extends Specification {
         System.clearProperty(DatabaseCleanupStats.DEBUG_PROPERTY)
     }
 
-    def "isDebugEnabled returns false for non-true values"() {
+    def 'isDebugEnabled returns false for non-true values'() {
         setup:
         System.setProperty(DatabaseCleanupStats.DEBUG_PROPERTY, 'yes')
 
@@ -103,7 +103,7 @@ class DatabaseCleanupStatsSpec extends Specification {
         System.clearProperty(DatabaseCleanupStats.DEBUG_PROPERTY)
     }
 
-    def "toFormattedReport includes datasource name when set"() {
+    def 'toFormattedReport includes datasource name when set'() {
         given:
         def stats = new DatabaseCleanupStats()
         stats.datasourceName = 'dataSource'
@@ -123,7 +123,7 @@ class DatabaseCleanupStatsSpec extends Specification {
         report.contains('3')
     }
 
-    def "toFormattedReport omits datasource name when null"() {
+    def 'toFormattedReport omits datasource name when null'() {
         given:
         def stats = new DatabaseCleanupStats()
         stats.tableRowCounts['BOOK'] += 2L
@@ -150,7 +150,7 @@ class DatabaseCleanupStatsSpec extends Specification {
         !report.contains('Table Name')
     }
 
-    def "toFormattedReport uses separator lines"() {
+    def 'toFormattedReport uses separator lines'() {
         given:
         def stats = new DatabaseCleanupStats()
         stats.datasourceName = 'dataSource'
@@ -165,7 +165,7 @@ class DatabaseCleanupStatsSpec extends Specification {
         lines.last() == '=========================================================='
     }
 
-    def "startTimeMillis defaults to 0L"() {
+    def 'startTimeMillis defaults to 0L'() {
         when:
         def stats = new DatabaseCleanupStats()
 
@@ -173,7 +173,7 @@ class DatabaseCleanupStatsSpec extends Specification {
         stats.startTimeMillis == 0L
     }
 
-    def "endTimeMillis defaults to 0L"() {
+    def 'endTimeMillis defaults to 0L'() {
         when:
         def stats = new DatabaseCleanupStats()
 
@@ -181,7 +181,7 @@ class DatabaseCleanupStatsSpec extends Specification {
         stats.endTimeMillis == 0L
     }
 
-    def "start() records current time"() {
+    def 'start() records current time'() {
         given:
         def stats = new DatabaseCleanupStats()
         def beforeStart = System.currentTimeMillis()
@@ -195,7 +195,7 @@ class DatabaseCleanupStatsSpec extends Specification {
         stats.startTimeMillis <= afterStart
     }
 
-    def "stop() records current time"() {
+    def 'stop() records current time'() {
         given:
         def stats = new DatabaseCleanupStats()
         def beforeStop = System.currentTimeMillis()
@@ -209,7 +209,7 @@ class DatabaseCleanupStatsSpec extends Specification {
         stats.endTimeMillis <= afterStop
     }
 
-    def "durationMillis returns 0 when times are not set"() {
+    def 'durationMillis returns 0 when times are not set'() {
         when:
         def stats = new DatabaseCleanupStats()
 
@@ -217,7 +217,7 @@ class DatabaseCleanupStatsSpec extends Specification {
         stats.durationMillis == 0L
     }
 
-    def "durationMillis calculates difference when both times are set"() {
+    def 'durationMillis calculates difference when both times are set'() {
         given:
         def stats = new DatabaseCleanupStats()
         stats.startTimeMillis = 1000L
@@ -230,7 +230,7 @@ class DatabaseCleanupStatsSpec extends Specification {
         duration == 500L
     }
 
-    def "toFormattedReport includes timing information when times are set"() {
+    def 'toFormattedReport includes timing information when times are set'() {
         given:
         def stats = new DatabaseCleanupStats()
         stats.datasourceName = 'dataSource'
@@ -248,7 +248,7 @@ class DatabaseCleanupStatsSpec extends Specification {
         report.contains('210 ms')  // Duration should be 210ms
     }
 
-    def "toFormattedReport omits timing when times are not set"() {
+    def 'toFormattedReport omits timing when times are not set'() {
         given:
         def stats = new DatabaseCleanupStats()
         stats.datasourceName = 'dataSource'
@@ -263,7 +263,7 @@ class DatabaseCleanupStatsSpec extends Specification {
         !report.contains('Duration:')
     }
 
-    def "toFormattedReport includes only start time if only startTimeMillis is set"() {
+    def 'toFormattedReport includes only start time if only startTimeMillis is set'() {
         given:
         def stats = new DatabaseCleanupStats()
         stats.datasourceName = 'dataSource'
@@ -279,7 +279,7 @@ class DatabaseCleanupStatsSpec extends Specification {
         !report.contains('Duration:')
     }
 
-    def "toFormattedReport includes only end time if only endTimeMillis is set"() {
+    def 'toFormattedReport includes only end time if only endTimeMillis is set'() {
         given:
         def stats = new DatabaseCleanupStats()
         stats.datasourceName = 'dataSource'

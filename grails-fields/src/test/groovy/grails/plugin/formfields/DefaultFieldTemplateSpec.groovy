@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -32,17 +32,17 @@ class DefaultFieldTemplateSpec extends Specification implements TagLibUnitTest<F
         model.label = 'label'
         model.property = 'property'
         model.required = false
-        model.widget = '<input name="property">'
-        views["/default/_wrapper.gsp"] = '''\
-<g:set var="classes" value="fieldcontain "/>
+        model.widget = '<input name='property'>'
+        views['/default/_wrapper.gsp'] = '''\
+<g:set var='classes' value='fieldcontain '/>
 <g:if test="${required}">
-    <g:set var="classes" value="${classes + 'required'}"/>
+    <g:set var='classes' value="${classes + 'required'}"/>
 </g:if>
 <g:if test="${invalid}">
-    <g:set var="classes" value="${classes + 'error'}"/>
+    <g:set var='classes' value="${classes + 'error'}"/>
 </g:if>
 <div class="${classes}">
-    <label for="${prefix}${property}">${label}<g:if test="${required}"><span class="required-indicator">*</span></g:if></label>
+    <label for="${prefix}${property}">${label}<g:if test="${required}'><span class='required-indicator">*</span></g:if></label>
     <%= widget %>
 </div>'''
     }
@@ -51,7 +51,7 @@ class DefaultFieldTemplateSpec extends Specification implements TagLibUnitTest<F
 		jerry(html).children()
 	}
 	
-	void "default rendering"() {
+	void 'default rendering'() {
 		when:
 		def output = tagLib.renderDefaultField(model)
 
@@ -68,7 +68,7 @@ class DefaultFieldTemplateSpec extends Specification implements TagLibUnitTest<F
 		label.next().is('input[name=property]')
 	}
 
-	void "container marked as invalid"() {
+	void 'container marked as invalid'() {
 		given:
 		model.invalid = true
 
@@ -79,7 +79,7 @@ class DefaultFieldTemplateSpec extends Specification implements TagLibUnitTest<F
 		$(output.toString()).hasClass('error')
 	}
 
-	void "container marked as required"() {
+	void 'container marked as required'() {
 		given:
 		model.required = true
 

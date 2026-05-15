@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -28,6 +28,7 @@ import spock.lang.Specification
 import spock.lang.Unroll
 
 class PaginationSpec extends Specification {
+
     DefaultJsonViewHelper jsonViewHelper
     LinkGenerator linkGenerator
 
@@ -39,7 +40,7 @@ class PaginationSpec extends Specification {
         jsonViewHelper = new DefaultJsonViewHelper(view)
     }
 
-    void "test Pagination links without anything to paginate"() {
+    void 'test Pagination links without anything to paginate'() {
         when:
             List<Link> links = jsonViewHelper.getPaginationLinks(Book, total, 10, 0, null, null)
 
@@ -50,8 +51,8 @@ class PaginationSpec extends Specification {
             total << [-1, -10, 0]
     }
 
-    @Unroll("getPaginationLinks(_, total:#total, max:#max, offset:#offset, sort:#sort, order#order) => #expectedLinks")
-    void "test Pagination Links"() {
+    @Unroll('getPaginationLinks(_, total: #total, max: #max, offset: #offset, sort: #sort, order#order) => #expectedLinks')
+    void 'test Pagination Links'() {
         when:
             List<Link> links = jsonViewHelper.getPaginationLinks(Book, total, max, offset, sort, order)
 
@@ -67,17 +68,17 @@ class PaginationSpec extends Specification {
             10    | 10  | 0      | null | null  | []
             11    | 10  | 0      | null | null  | ['first', 'next', 'last']
 
-            100   | 10  | 0      | null | null  | ["first", "next", "last"]
-            100   | 10  | 10     | null | null  | ["first", "prev", "next", "last"]
-            100   | 10  | 20     | null | null  | ["first", "prev", "next", "last"]
-            100   | 10  | 89     | null | null  | ["first", "prev", "next", "last"]
-            100   | 10  | 90     | null | null  | ["first", "prev", "last"]
-            100   | 10  | 99     | null | null  | ["first", "prev", "last"]
-            100   | 10  | 100    | null | null  | ["first", "prev", "last"]
+            100   | 10  | 0      | null | null  | ['first', 'next', 'last']
+            100   | 10  | 10     | null | null  | ['first', 'prev', 'next', 'last']
+            100   | 10  | 20     | null | null  | ['first', 'prev', 'next', 'last']
+            100   | 10  | 89     | null | null  | ['first', 'prev', 'next', 'last']
+            100   | 10  | 90     | null | null  | ['first', 'prev', 'last']
+            100   | 10  | 99     | null | null  | ['first', 'prev', 'last']
+            100   | 10  | 100    | null | null  | ['first', 'prev', 'last']
     }
 
-    @Unroll("getLastOffset(total:#total, max:#max) == #expectedOffset")
-    void "test last offests"() {
+    @Unroll('getLastOffset(total: #total, max: #max) == #expectedOffset')
+    void 'test last offests'() {
         when:
             Integer lastOffset = jsonViewHelper.getLastOffset(total, max)
 
@@ -98,8 +99,8 @@ class PaginationSpec extends Specification {
             101   | 5   | 100
     }
 
-    @Unroll("getPrevOffset(offset:#offset, max:#max) == #expectedOffset")
-    void "test prev offests"() {
+    @Unroll('getPrevOffset(offset: #offset, max: #max) == #expectedOffset')
+    void 'test prev offests'() {
         when:
             Integer prevOffset = jsonViewHelper.getPrevOffset(offset, max)
 
@@ -121,8 +122,8 @@ class PaginationSpec extends Specification {
             101    | 5   | 96
     }
 
-    @Unroll("getNextOffset(total:#total, offset:#offset, max:#max) == #expectedOffset")
-    void "test getNextOffset"() {
+    @Unroll('getNextOffset(total: #total, offset: #offset, max: #max) == #expectedOffset')
+    void 'test getNextOffset'() {
         when:
             Integer nextOffset = jsonViewHelper.getNextOffset(total, offset, max)
 

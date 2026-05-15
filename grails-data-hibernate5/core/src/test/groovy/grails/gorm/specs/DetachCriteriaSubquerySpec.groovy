@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -24,13 +24,14 @@ import grails.gorm.hibernate.HibernateEntity
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-@SuppressWarnings("GrMethodMayBeStatic")
+@SuppressWarnings('GrMethodMayBeStatic')
 class DetachCriteriaSubquerySpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
+
     void setupSpec() {
         manager.addAllDomainClasses([User, Group, GroupAssignment, Organisation])
     }
 
-    void "test detached associated criteria in subquery"() {
+    void 'test detached associated criteria in subquery'() {
 
         setup:
         User supVisor = createUser('supervisor@company.com')
@@ -61,15 +62,15 @@ class DetachCriteriaSubquerySpec extends GrailsDataTckSpec<GrailsDataHibernate5T
         result.size() == 1
     }
 
-    void "test executing detached criteria in sub-query multiple times"() {
+    void 'test executing detached criteria in sub-query multiple times'() {
 
         setup:
-        Organisation orgA = new Organisation(name: "A")
+        Organisation orgA = new Organisation(name: 'A')
         orgA.addToUsers(email: 'user1@a')
         orgA.addToUsers(email: 'user2@a')
         orgA.addToUsers(email: 'user3@a')
         orgA.save(flush: true)
-        Organisation orgB = new Organisation(name: "B")
+        Organisation orgB = new Organisation(name: 'B')
         orgB.addToUsers(email: 'user1@b')
         orgB.addToUsers(email: 'user2@b')
         orgB.save(flush: true)
@@ -85,7 +86,7 @@ class DetachCriteriaSubquerySpec extends GrailsDataTckSpec<GrailsDataHibernate5T
         result.size() == 5
     }
 
-    void "test that detached criteria subquery should create implicit alias instead of using this_"() {
+    void 'test that detached criteria subquery should create implicit alias instead of using this_'() {
 
         setup:
         User supVisor = createUser('supervisor@company.com')
@@ -117,7 +118,7 @@ class DetachCriteriaSubquerySpec extends GrailsDataTckSpec<GrailsDataHibernate5T
 
     private User createUser(String email) {
         User user = new User(email: email)
-        Organisation defaultOrg = Organisation.findOrCreateByName("default")
+        Organisation defaultOrg = Organisation.findOrCreateByName('default')
         defaultOrg.addToUsers(user)
         defaultOrg.save(flush: true)
         user
@@ -139,9 +140,9 @@ class DetachCriteriaSubquerySpec extends GrailsDataTckSpec<GrailsDataHibernate5T
 
 }
 
-
 @Entity
 class User implements HibernateEntity<User> {
+
     String email
     static belongsTo = [organisation: Organisation]
     static mapping = {
@@ -151,6 +152,7 @@ class User implements HibernateEntity<User> {
 
 @Entity
 class Group implements HibernateEntity<Group> {
+
     String name
     User supervisor
     static mapping = {
@@ -160,6 +162,7 @@ class Group implements HibernateEntity<Group> {
 
 @Entity
 class GroupAssignment implements HibernateEntity<GroupAssignment> {
+
     User user
     Group group
     static mapping = {
@@ -169,6 +172,7 @@ class GroupAssignment implements HibernateEntity<GroupAssignment> {
 
 @Entity
 class Organisation implements HibernateEntity<Organisation> {
+
     String name
     static hasMany = [users: User]
 }

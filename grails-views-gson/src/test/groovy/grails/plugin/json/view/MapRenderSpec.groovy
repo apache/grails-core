@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -121,14 +121,14 @@ class MapRenderSpec extends Specification implements JsonViewTest, DataTest {
         then: 'The result is correct'
         objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('''
             {
-                "player1": {
-                    "id": 1,
-                    "team": { "id": 1 },
-                    "name": "Cantona"
+                'player1': {
+                    'id': 1,
+                    'team': { 'id': 1 },
+                    'name': 'Cantona'
                 },
-                "player2": {
-                    "id": 2,
-                    "team": { "id": 1 }
+                'player2': {
+                    'id': 2,
+                    'team': { 'id': 1 }
                 }
             }
         ''')
@@ -157,8 +157,8 @@ class MapRenderSpec extends Specification implements JsonViewTest, DataTest {
         then: 'The result is correct'
         objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('''
             {
-                "player1": {
-                    "name": "Cantona"
+                'player1': {
+                    'name': 'Cantona'
                 }
             }
         ''')
@@ -188,15 +188,15 @@ class MapRenderSpec extends Specification implements JsonViewTest, DataTest {
         then: 'The result is correct'
         objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('''
             {
-                "player1": {
-                    "id": 1,
-                    "team": { "id": 1 },
-                    "name": "Cantona"
+                'player1': {
+                    'id': 1,
+                    'team': { 'id': 1 },
+                    'name': 'Cantona'
                 },
-                "player2": {
-                    "id": 2,
-                    "team": { "id": 1 },
-                    "name": "Giggs"
+                'player2': {
+                    'id': 2,
+                    'team': { 'id': 1 },
+                    'name': 'Giggs'
                 }
             }
         ''')
@@ -225,11 +225,11 @@ class MapRenderSpec extends Specification implements JsonViewTest, DataTest {
         then: 'The result is correct'
         objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('''
             {
-                "player1": {
-                    "name": "Cantona"
+                'player1': {
+                    'name': 'Cantona'
                 },
-                "player2": {
-                    "name": "Giggs"
+                'player2': {
+                    'name': 'Giggs'
                 }
             }
         ''')
@@ -260,8 +260,8 @@ class MapRenderSpec extends Specification implements JsonViewTest, DataTest {
         then: 'The result is correct'
         objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('''
             {
-                "player2": {
-                    "age": 33
+                'player2': {
+                    'age': 33
                 }
             }
         ''')
@@ -294,9 +294,9 @@ class MapRenderSpec extends Specification implements JsonViewTest, DataTest {
         then: 'The result is correct'
         objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('''
             {
-                "players": [
-                    { "age": 22 },
-                    { "age": 33 }
+                'players': [
+                    { 'age': 22 },
+                    { 'age': 33 }
                 ]
             }
         ''')
@@ -318,8 +318,8 @@ class MapRenderSpec extends Specification implements JsonViewTest, DataTest {
         then: 'The result is correct'
         objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('''
             {
-                "foo": "bar",
-                "bar": ["A", "B"]
+                'foo': 'bar',
+                'bar': ['A', 'B']
             }
         ''')
     }
@@ -341,11 +341,11 @@ class MapRenderSpec extends Specification implements JsonViewTest, DataTest {
         objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('''
             [
                 {
-                    "foo": "bar",
-                    "bar": ["A", "B"]
+                    'foo': 'bar',
+                    'bar': ['A', 'B']
                 },
                 {
-                    "x": "y"
+                    'x': 'y'
                 }
             ]
         ''')
@@ -365,7 +365,7 @@ class MapRenderSpec extends Specification implements JsonViewTest, DataTest {
         def renderResult = render(templateText, [map: [a: '1', b: '2', c: '3']])
 
         then: 'The result is correct'
-        objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('{ "a": "1","b": "2" }')
+        objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('{ 'a': '1','b': '2' }')
 
         when: 'A map is rendered'
         templateText = '''
@@ -378,10 +378,11 @@ class MapRenderSpec extends Specification implements JsonViewTest, DataTest {
         renderResult = render(templateText, [map: [a: '1', b: '2', c: '3', d: '4']])
 
         then: 'The result is correct'
-        objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('{ "a": "1", "d": "4" }')
+        objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('{ 'a': '1', 'd': '4' }')
     }
 
     static class PlayerCO implements Validateable {
+
         String name
         String teamName
 
@@ -393,6 +394,7 @@ class MapRenderSpec extends Specification implements JsonViewTest, DataTest {
     }
 
     static class TeamCO {
+
         String name
         List<String> errors
     }

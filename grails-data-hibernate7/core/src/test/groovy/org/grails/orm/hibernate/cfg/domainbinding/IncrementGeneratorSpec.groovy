@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -39,10 +39,10 @@ class IncrementGeneratorSpec extends HibernateGormDatastoreSpec {
     }
 
     @Rollback
-    void "test increment generator"() {
+    void 'test increment generator'() {
         when:
-        def entity1 = new EntityWithIncrement(name: "test1").save(flush: true)
-        def entity2 = new EntityWithIncrement(name: "test2").save(flush: true)
+        def entity1 = new EntityWithIncrement(name: 'test1').save(flush: true)
+        def entity2 = new EntityWithIncrement(name: 'test2').save(flush: true)
 
         then:
         entity1.id != null
@@ -61,67 +61,67 @@ class IncrementGeneratorSpec extends HibernateGormDatastoreSpec {
         persister.identifierGenerator as GrailsIncrementGenerator
     }
 
-    void "resolveColumnName returns propertyName when it contains no dot"() {
+    void 'resolveColumnName returns propertyName when it contains no dot'() {
         given:
         def gen = liveGenerator()
         def context = Mock(GeneratorCreationContext)
-        context.getProperty() >> Mock(Property) { getName() >> "myId" }
+        context.getProperty() >> Mock(Property) { getName() >> 'myId' }
 
         expect:
-        gen.resolveColumnName(context, null) == "myId"
+        gen.resolveColumnName(context, null) == 'myId'
     }
 
-    void "resolveColumnName falls back to mappedId name when propertyName contains a dot"() {
+    void 'resolveColumnName falls back to mappedId name when propertyName contains a dot'() {
         given:
         def gen = liveGenerator()
         def context = Mock(GeneratorCreationContext)
-        context.getProperty() >> Mock(Property) { getName() >> "composite.id" }
+        context.getProperty() >> Mock(Property) { getName() >> 'composite.id' }
 
         def mappedId = new HibernateSimpleIdentity()
-        mappedId.setName("pk")
+        mappedId.setName('pk')
 
         expect:
-        gen.resolveColumnName(context, mappedId) == "pk"
+        gen.resolveColumnName(context, mappedId) == 'pk'
     }
 
     void "resolveColumnName defaults to 'id' when both propertyName and mappedId name contain a dot"() {
         given:
         def gen = liveGenerator()
         def context = Mock(GeneratorCreationContext)
-        context.getProperty() >> Mock(Property) { getName() >> "a.b" }
+        context.getProperty() >> Mock(Property) { getName() >> 'a.b' }
 
         def mappedId = new HibernateSimpleIdentity()
-        mappedId.setName("x.y")
+        mappedId.setName('x.y')
 
         expect:
-        gen.resolveColumnName(context, mappedId) == "id"
+        gen.resolveColumnName(context, mappedId) == 'id'
     }
 
     void "resolveColumnName defaults to 'id' when propertyName has dot and mappedId is null"() {
         given:
         def gen = liveGenerator()
         def context = Mock(GeneratorCreationContext)
-        context.getProperty() >> Mock(Property) { getName() >> "a.b" }
+        context.getProperty() >> Mock(Property) { getName() >> 'a.b' }
 
         expect:
-        gen.resolveColumnName(context, null) == "id"
+        gen.resolveColumnName(context, null) == 'id'
     }
 
-    void "buildParams includes catalog and schema from mapping table config"() {
+    void 'buildParams includes catalog and schema from mapping table config'() {
         given:
         def gen = liveGenerator()
         def context = Mock(GeneratorCreationContext)
-        context.getProperty() >> Mock(Property) { getName() >> "id" }
+        context.getProperty() >> Mock(Property) { getName() >> 'id' }
 
         def tableConfig = new Table()
-        tableConfig.catalog = "myCatalog"
-        tableConfig.schema = "mySchema"
+        tableConfig.catalog = 'myCatalog'
+        tableConfig.schema = 'mySchema'
 
         def mapping = new Mapping()
         mapping.table = tableConfig
 
         def domainClass = Mock(GrailsHibernatePersistentEntity)
-        domainClass.getTableName(_ as PersistentEntityNamingStrategy) >> "my_table"
+        domainClass.getTableName(_ as PersistentEntityNamingStrategy) >> 'my_table'
         domainClass.getHibernateMappedForm() >> mapping
 
         when:
@@ -130,12 +130,13 @@ class IncrementGeneratorSpec extends HibernateGormDatastoreSpec {
         then:
         params.getProperty('catalog') == 'myCatalog'
         params.getProperty('schema') == 'mySchema'
-        params.getProperty(IncrementGenerator.TABLES) == "my_table"
+        params.getProperty(IncrementGenerator.TABLES) == 'my_table'
     }
 }
 
 @Entity
 class EntityWithIncrement {
+
     Long id
     String name
     static mapping = {

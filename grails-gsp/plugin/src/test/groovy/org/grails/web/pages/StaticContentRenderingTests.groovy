@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -32,28 +32,29 @@ class StaticContentRenderingTests extends AbstractGrailsTagTests {
     @Test
     void testExpressionSpaces() {
         def template = '${x} ${y}'
-        assertOutputEquals('1 2', template, [x:1, y:2])
+        assertOutputEquals('1 2', template, [x: 1, y: 2])
     }
 
     @Test
     void testExpressionVsScriptletOutput() {
         withConfig("grails.views.default.codec='HTML'") {
             def template = '${test}<%=test%>'
-            assertOutputEquals('&lt;html&gt;&lt;body&gt;hello&lt;/body&gt;&lt;/html&gt;<html><body>hello</body></html>', template, [test:"<html><body>hello</body></html>"])
+            assertOutputEquals('&lt;html&gt;&lt;body&gt;hello&lt;/body&gt;&lt;/html&gt;<html><body>hello</body></html>', template, [test: '<html><body>hello</body></html>'])
         }
     }
 
     @Test
     void testImports() {
-        def template = '<%@page import="java.text.SimpleDateFormat"%><% format = new SimpleDateFormat() %>${format.getClass()}'
+        def template = '<%@page import='java.text.SimpleDateFormat'%><% format = new SimpleDateFormat() %>${format.getClass()}'
         assertOutputEquals('class java.text.SimpleDateFormat', template)
     }
 
     @Test
     void testHtmlEscaping() {
+
         withConfig("grails.views.default.codec='HTML'") {
             def template = '${test}'
-            assertOutputEquals('&lt;html&gt;&lt;body&gt;hello&lt;/body&gt;&lt;/html&gt;', template, [test:"<html><body>hello</body></html>"])
+            assertOutputEquals('&lt;html&gt;&lt;body&gt;hello&lt;/body&gt;&lt;/html&gt;', template, [test: '<html><body>hello</body></html>'])
         }
     }
 
@@ -61,27 +62,27 @@ class StaticContentRenderingTests extends AbstractGrailsTagTests {
     void testHtmlEscapingLowerCase() {
         withConfig("grails.views.default.codec='html'") {
             def template = '${test}'
-            assertOutputEquals('&lt;html&gt;&lt;body&gt;hello&lt;/body&gt;&lt;/html&gt;', template, [test:"<html><body>hello</body></html>"])
+            assertOutputEquals('&lt;html&gt;&lt;body&gt;hello&lt;/body&gt;&lt;/html&gt;', template, [test: '<html><body>hello</body></html>'])
         }
     }
 
     @Test
     void testHtmlEscapingWithPageDirective() {
-        def template = '<%@page defaultCodec="HTML" %>${test}'
-        assertOutputEquals('&lt;html&gt;&lt;body&gt;hello&lt;/body&gt;&lt;/html&gt;', template, [test:"<html><body>hello</body></html>"])
+        def template = '<%@page defaultCodec='HTML' %>${test}'
+        assertOutputEquals('&lt;html&gt;&lt;body&gt;hello&lt;/body&gt;&lt;/html&gt;', template, [test: '<html><body>hello</body></html>'])
     }
 
     @Test
     void testNotHtmlEscaping() {
-        def template = '<%@ contentType="text/plain" defaultCodec="none" %>${test}'
-        assertOutputEquals('<html><body>hello</body></html>', template, [test:"<html><body>hello</body></html>"])
+        def template = '<%@ contentType='text/plain' defaultCodec='none' %>${test}'
+        assertOutputEquals('<html><body>hello</body></html>', template, [test: '<html><body>hello</body></html>'])
     }
 
     @Test
     void testDisabledHtmlEscaping() {
         withConfig("grails.views.default.codec='none'") {
             def template = '${test}'
-            assertOutputEquals('<html><body>hello</body></html>', template, [test: "<html><body>hello</body></html>"])
+            assertOutputEquals('<html><body>hello</body></html>', template, [test: '<html><body>hello</body></html>'])
         }
     }
 
@@ -89,7 +90,7 @@ class StaticContentRenderingTests extends AbstractGrailsTagTests {
     void testStaticContent() {
         def template = '<div><g:each in="${numbers}"><p>${it}</p></g:each></div>'
 
-        assertOutputEquals('<div><p>1</p><p>2</p><p>3</p></div>', template, [numbers:[1,2,3]])
+        assertOutputEquals('<div><p>1</p><p>2</p><p>3</p></div>', template, [numbers: [1,2,3]])
     }
 
     @Test
@@ -100,14 +101,14 @@ class StaticContentRenderingTests extends AbstractGrailsTagTests {
 </g:each>--%>
 </div>'''
 
-        assertOutputEquals('<div>\n</div>', template, [numbers:[1,2,3]])
+        assertOutputEquals('<div>\n</div>', template, [numbers: [1,2,3]])
     }
 
     @Test
     void testNamespacedXmlNoBody() {
         // GRAILS-10525
-        def template = '''<esi:include src="foo.html"/>'''
-        assertOutputEquals('<esi:include src="foo.html"/>', template, [:])
+        def template = '''<esi:include src='foo.html'/>'''
+        assertOutputEquals('<esi:include src='foo.html'/>', template, [:])
     }
 
     @Test

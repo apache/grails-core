@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -29,7 +29,7 @@ import spock.lang.Unroll
 
 class H2DatabaseCleanupHelperSpec extends Specification {
 
-    def "resolveSchemaName returns schema from Connection.getSchema()"() {
+    def 'resolveSchemaName returns schema from Connection.getSchema()'() {
         given:
         def connection = Mock(Connection) {
             getSchema() >> 'TESTDB'
@@ -48,7 +48,7 @@ class H2DatabaseCleanupHelperSpec extends Specification {
         1 * connection.close()
     }
 
-    def "resolveSchemaName falls back to URL parsing when Connection.getSchema() returns null"() {
+    def 'resolveSchemaName falls back to URL parsing when Connection.getSchema() returns null'() {
         given:
         def metaData = Mock(DatabaseMetaData) {
             getURL() >> 'jdbc:h2:mem:grailsDB'
@@ -71,7 +71,7 @@ class H2DatabaseCleanupHelperSpec extends Specification {
         1 * connection.close()
     }
 
-    def "resolveSchemaName returns null when connection fails"() {
+    def 'resolveSchemaName returns null when connection fails'() {
         given:
         def dataSource = Mock(DataSource) {
             getConnection() >> { throw new RuntimeException('Connection failed') }
@@ -84,7 +84,7 @@ class H2DatabaseCleanupHelperSpec extends Specification {
         schema == null
     }
 
-    def "resolveSchemaName returns null when both schema and URL are null"() {
+    def 'resolveSchemaName returns null when both schema and URL are null'() {
         given:
         def metaData = Mock(DatabaseMetaData) {
             getURL() >> null
@@ -124,13 +124,13 @@ class H2DatabaseCleanupHelperSpec extends Specification {
         null                                             || null
     }
 
-    def "extractSchemaFromUrl returns null for non-H2 JDBC URLs"() {
+    def 'extractSchemaFromUrl returns null for non-H2 JDBC URLs'() {
         expect:
         H2DatabaseCleanupHelper.extractSchemaFromUrl('jdbc:mysql://localhost:3306/mydb') == null
         H2DatabaseCleanupHelper.extractSchemaFromUrl('jdbc:postgresql://localhost/mydb') == null
     }
 
-    def "extractSchemaFromUrl returns null for empty H2 in-memory database name"() {
+    def 'extractSchemaFromUrl returns null for empty H2 in-memory database name'() {
         expect:
         H2DatabaseCleanupHelper.extractSchemaFromUrl('jdbc:h2:mem:') == null
     }

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -25,7 +25,6 @@ import org.springframework.context.MessageSource
 import org.springframework.validation.Errors
 
 import grails.gorm.DetachedCriteria
-import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.validation.constraints.AbstractConstraint
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
@@ -84,6 +83,7 @@ class UniqueConstraint extends AbstractConstraint {
         // Determine the GORM class that actually defines this field
         Class<?> constraintClass = constraintOwningClass
         if (!targetEntity.isRoot()) {
+
             def property = targetEntity.getPropertyByName(constraintPropertyName)
             while (property.isInherited() && targetEntity != null) {
                 targetEntity = mappingContext.getPersistentEntity(targetEntity.javaClass.superclass.name)
@@ -98,6 +98,7 @@ class UniqueConstraint extends AbstractConstraint {
         detachedCriteria = new DetachedCriteria(constraintClass)
 
         if (targetEntity == null) {
+
             throw new IllegalStateException("Cannot validate object [$target]. It is not a persistent entity")
         }
 

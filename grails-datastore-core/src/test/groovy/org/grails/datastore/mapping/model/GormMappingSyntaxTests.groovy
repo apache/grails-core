@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -22,7 +22,6 @@ import grails.gorm.annotation.Entity
 import org.grails.datastore.mapping.model.config.JpaMappingConfigurationStrategy
 
 import static org.junit.jupiter.api.Assertions.*
-
 
 import org.junit.jupiter.api.Test
 import org.grails.datastore.mapping.model.types.Association
@@ -78,7 +77,7 @@ class GormMappingSyntaxTests {
 
         def testEntity = context.getPersistentEntity(TestEntity.name)
 
-        def association = testEntity.getPropertyByName("second")
+        def association = testEntity.getPropertyByName('second')
 
         assert association != null
 
@@ -105,7 +104,7 @@ class GormMappingSyntaxTests {
 
         assert publisher != null
 
-        Association oneToMany = publisher.getPropertyByName("authors")
+        Association oneToMany = publisher.getPropertyByName('authors')
         assert oneToMany != null
         assert !oneToMany.bidirectional
         assert !oneToMany.owningSide
@@ -122,7 +121,7 @@ class GormMappingSyntaxTests {
         def book = context.getPersistentEntity(Book.name)
 
         assert book != null
-        Association authorAssociation = book.getPropertyByName("author")
+        Association authorAssociation = book.getPropertyByName('author')
 
         assert authorAssociation != null
         assert (authorAssociation instanceof ManyToOne)
@@ -132,7 +131,7 @@ class GormMappingSyntaxTests {
         Association inverse = authorAssociation.inverseSide
         assert inverse != null
 
-        assert "books" == inverse.name
+        assert 'books' == inverse.name
         assert Author == inverse.owner.javaClass
         assert inverse.inverseSide != null
         assert inverse.bidirectional
@@ -160,15 +159,15 @@ class GormMappingSyntaxTests {
 
         def user = context.getPersistentEntity(User.name)
 
-        Association foesAssociation = user.getPropertyByName("foes")
+        Association foesAssociation = user.getPropertyByName('foes')
         assert (foesAssociation instanceof OneToMany)
         assert !foesAssociation.isBidirectional()
 
-        Association friendsAssociation = user.getPropertyByName("friends")
+        Association friendsAssociation = user.getPropertyByName('friends')
         assert (friendsAssociation instanceof OneToMany)
         assert !friendsAssociation.isBidirectional()
 
-        Association bestBuddyAssociation = user.getPropertyByName("bestBuddy")
+        Association bestBuddyAssociation = user.getPropertyByName('bestBuddy')
         assert (bestBuddyAssociation instanceof OneToOne)
         assert !bestBuddyAssociation.isBidirectional()
 
@@ -180,30 +179,34 @@ class GormMappingSyntaxTests {
 
 @Entity
 class Book {
+
     Long id
     String title
     Author author
-    static belongsTo = [author:Author]
+    static belongsTo = [author: Author]
 }
 
 @Entity
 class Author {
+
     Long id
     String name
     Set books
     def shouldBeIgnored
-    static hasMany = [books:Book]
+    static hasMany = [books: Book]
 }
 
 @Entity
 class Publisher {
+
     Long id
     Set authors
-    static hasMany = [authors:Author]
+    static hasMany = [authors: Author]
 }
 
 @Entity
 class TestEntity {
+
     Long id
     Long version
     String name
@@ -211,12 +214,13 @@ class TestEntity {
 
     SecondEntity second
 
-    static hasOne = [second:SecondEntity]
+    static hasOne = [second: SecondEntity]
     static transients = ['bar']
 }
 
 @Entity
 class SecondEntity {
+
     Long id
     String name
     String bar
@@ -226,6 +230,7 @@ class SecondEntity {
 
 @Entity
 class EntityWithIndexedProperty {
+
     Long id
     Long version
     String name
@@ -237,6 +242,7 @@ class EntityWithIndexedProperty {
 
 @Entity
 class User {
+
     Long id
     Long version
     String name
@@ -246,6 +252,6 @@ class User {
     static hasMany = [ foes: User, friends: User]
 
     // prevent bidirectional associations here
-    static mappedBy = [ bestBuddy:null, foes:null, friends:null]
+    static mappedBy = [ bestBuddy: null, foes: null, friends: null]
 }
 

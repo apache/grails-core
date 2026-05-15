@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -41,7 +41,7 @@ class PropertyMarkupRendererSpec extends Specification {
         renderer = new PropertyMarkupRendererImpl()
     }
 
-    void "test renderListOutput"() {
+    void 'test renderListOutput'() {
         given:
         renderer.domainOutputRendererRegistry = Mock(DomainOutputRendererRegistry)
         DomainProperty property = Mock(DomainProperty)
@@ -55,7 +55,7 @@ class PropertyMarkupRendererSpec extends Specification {
         }
     }
 
-    void "test renderOutput"() {
+    void 'test renderOutput'() {
         given:
         renderer.domainOutputRendererRegistry = Mock(DomainOutputRendererRegistry)
         DomainProperty property = Mock(DomainProperty)
@@ -69,11 +69,11 @@ class PropertyMarkupRendererSpec extends Specification {
         }
     }
 
-    void "test renderInput"() {
+    void 'test renderInput'() {
         given:
         renderer.domainInputRendererRegistry = Mock(DomainInputRendererRegistry)
         DomainProperty property = Mock(DomainProperty) {
-            1 * getPathFromRoot() >> "city"
+            1 * getPathFromRoot() >> 'city'
             1 * isRequired() >> false
             1 * getConstrained() >> null
         }
@@ -83,14 +83,14 @@ class PropertyMarkupRendererSpec extends Specification {
 
         then:
         1 * renderer.domainInputRendererRegistry.get(property) >> Mock(DomainInputRenderer) {
-            1 * renderInput([name: "city", id: "city"], property)
+            1 * renderInput([name: 'city', id: 'city'], property)
         }
     }
 
-    void "test getStandardAttributes"() {
+    void 'test getStandardAttributes'() {
         given:
         DomainProperty property = Mock(DomainProperty) {
-            1 * getPathFromRoot() >> "city"
+            1 * getPathFromRoot() >> 'city'
             1 * isRequired() >> false
             1 * getConstrained() >> null
         }
@@ -99,13 +99,13 @@ class PropertyMarkupRendererSpec extends Specification {
         Map attrs = renderer.getStandardAttributes(property)
 
         then:
-        attrs == [name: "city", id: "city"]
+        attrs == [name: 'city', id: 'city']
     }
 
-    void "test getStandardAttributes required property"() {
+    void 'test getStandardAttributes required property'() {
         given:
         DomainProperty property = Mock(DomainProperty) {
-            1 * getPathFromRoot() >> "city"
+            1 * getPathFromRoot() >> 'city'
             1 * isRequired() >> true
             1 * getConstrained() >> null
         }
@@ -114,13 +114,13 @@ class PropertyMarkupRendererSpec extends Specification {
         Map attrs = renderer.getStandardAttributes(property)
 
         then:
-        attrs == [name: "city", id: "city", required: null]
+        attrs == [name: 'city', id: 'city', required: null]
     }
 
-    void "test getStandardAttributes readonly property"() {
+    void 'test getStandardAttributes readonly property'() {
         given:
         DomainProperty property = Mock(DomainProperty) {
-            1 * getPathFromRoot() >> "city"
+            1 * getPathFromRoot() >> 'city'
             1 * isRequired() >> false
             2 * getConstrained() >> Mock(Constrained) {
                 1 * isEditable() >> false
@@ -131,6 +131,6 @@ class PropertyMarkupRendererSpec extends Specification {
         Map attrs = renderer.getStandardAttributes(property)
 
         then:
-        attrs == [name: "city", id: "city", readonly: null]
+        attrs == [name: 'city', id: 'city', readonly: null]
     }
 }

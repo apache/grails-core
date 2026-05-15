@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -24,7 +24,7 @@ import spock.lang.Specification
 
 class DetachedCriteriaCloneSpec extends Specification {
 
-    void "clone preserves connectionName"() {
+    void 'clone preserves connectionName'() {
         given:
         def criteria = new DetachedCriteria(TestEntity)
         criteria.@connectionName = 'secondary'
@@ -36,7 +36,7 @@ class DetachedCriteriaCloneSpec extends Specification {
         cloned.@connectionName == 'secondary'
     }
 
-    void "clone preserves lazyQuery"() {
+    void 'clone preserves lazyQuery'() {
         given:
         def lazy = { -> }
         def criteria = new DetachedCriteria(TestEntity)
@@ -49,7 +49,7 @@ class DetachedCriteriaCloneSpec extends Specification {
         cloned.@lazyQuery.is(lazy)
     }
 
-    void "clone preserves associationCriteriaMap"() {
+    void 'clone preserves associationCriteriaMap'() {
         given:
         def criteria = new DetachedCriteria(TestEntity)
         def placeholder = 'marker'
@@ -63,7 +63,7 @@ class DetachedCriteriaCloneSpec extends Specification {
         cloned.@associationCriteriaMap['books'].is(placeholder)
     }
 
-    void "clone creates independent copy of associationCriteriaMap"() {
+    void 'clone creates independent copy of associationCriteriaMap'() {
         given:
         def criteria = new DetachedCriteria(TestEntity)
         criteria.@associationCriteriaMap['books'] = 'marker'
@@ -77,7 +77,7 @@ class DetachedCriteriaCloneSpec extends Specification {
         cloned.@associationCriteriaMap.size() == 2
     }
 
-    void "withConnection followed by max preserves connectionName"() {
+    void 'withConnection followed by max preserves connectionName'() {
         given:
         def criteria = new DetachedCriteria(TestEntity)
 
@@ -91,7 +91,7 @@ class DetachedCriteriaCloneSpec extends Specification {
         withMax.defaultMax == 10
     }
 
-    void "clone preserves default connectionName"() {
+    void 'clone preserves default connectionName'() {
         given:
         def criteria = new DetachedCriteria(TestEntity)
 
@@ -102,7 +102,7 @@ class DetachedCriteriaCloneSpec extends Specification {
         cloned.@connectionName == ConnectionSource.DEFAULT
     }
 
-    void "clone preserves existing fields"() {
+    void 'clone preserves existing fields'() {
         given:
         def criteria = new DetachedCriteria(TestEntity)
         criteria.@defaultMax = 50
@@ -118,6 +118,7 @@ class DetachedCriteriaCloneSpec extends Specification {
 }
 
 class TestEntity {
+
     Long id
     String name
 }

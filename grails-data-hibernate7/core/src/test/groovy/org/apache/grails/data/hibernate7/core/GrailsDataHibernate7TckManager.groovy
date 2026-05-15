@@ -4,14 +4,14 @@
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
+ * 'License'); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
  *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
@@ -44,6 +44,7 @@ import spock.lang.Specification
 import org.grails.datastore.gorm.GormRegistry
 
 class GrailsDataHibernate7TckManager extends GrailsDataTckManager {
+
     GrailsApplication grailsApplication
     HibernateDatastore hibernateDatastore
     org.hibernate.Session hibernateSession
@@ -63,7 +64,7 @@ class GrailsDataHibernate7TckManager extends GrailsDataTckManager {
         // Reset GormRegistry so each test gets fresh GormStaticApi instances.
         // Without this, registerEntity() skips re-creation (if (getStaticApi == null))
         // and the cached hibernateTemplate on the old instance points to a destroyed
-        // session factory, causing "Could not obtain current Hibernate Session".
+        // session factory, causing 'Could not obtain current Hibernate Session'.
         GormRegistry.reset()
         super.setup(spec)
         // cleanRegistry() removes MetaClass handlers installed by setupMultiDataSource().
@@ -78,11 +79,12 @@ class GrailsDataHibernate7TckManager extends GrailsDataTckManager {
 
     @Override
     Session createSession() {
-        System.setProperty('hibernate7.gorm.suite', "true")
+        System.setProperty('hibernate7.gorm.suite', 'true')
         grailsApplication = new DefaultGrailsApplication(domainClasses as Class[], new GroovyClassLoader(GrailsDataHibernate7TckManager.getClassLoader()))
-        grailsConfig.dataSource.dbCreate = "create-drop"
-        grailsConfig.hibernate.proxy_factory_class = "org.grails.orm.hibernate.proxy.ByteBuddyGroovyProxyFactory"
+        grailsConfig.dataSource.dbCreate = 'create-drop'
+        grailsConfig.hibernate.proxy_factory_class = 'org.grails.orm.hibernate.proxy.ByteBuddyGroovyProxyFactory'
         grailsConfig.'grails.gorm.default.mapping' = {
+
             id generator: 'identity'
         }
         if (grailsConfig) {
@@ -94,7 +96,7 @@ class GrailsDataHibernate7TckManager extends GrailsDataTckManager {
         if (transactionStatus == null && isTransactional) {
             transactionStatus = transactionManager.getTransaction(new DefaultTransactionDefinition())
         } else if (isTransactional) {
-            throw new RuntimeException("new transaction started during active transaction")
+            throw new RuntimeException('new transaction started during active transaction')
         }
         if (!isTransactional) {
             hibernateSession = sessionFactory.openSession()
@@ -146,7 +148,7 @@ class GrailsDataHibernate7TckManager extends GrailsDataTckManager {
     @Override
     void setupMultiDataSource(Class... domainClasses) {
         Map config = [
-                'dataSource.url'           : "jdbc:h2:mem:tckDefaultDB;LOCK_TIMEOUT=10000",
+                'dataSource.url'           : 'jdbc:h2:mem:tckDefaultDB;LOCK_TIMEOUT=10000',
                 'dataSource.dbCreate'      : 'create-drop',
                 'dataSource.dialect'       : H2Dialect.name,
                 'dataSource.formatSql'     : 'true',
@@ -157,7 +159,7 @@ class GrailsDataHibernate7TckManager extends GrailsDataTckManager {
                 'grails.gorm.default.mapping' : {
                     id generator: 'identity'
                 },
-                'dataSources.secondary'    : [url: "jdbc:h2:mem:tckSecondaryDB;LOCK_TIMEOUT=10000"],
+                'dataSources.secondary'    : [url: 'jdbc:h2:mem:tckSecondaryDB;LOCK_TIMEOUT=10000'],
         ]
         multiDataSourceDatastore = new HibernateDatastore(
                 DatastoreUtils.createPropertyResolver(config), domainClasses
@@ -206,7 +208,7 @@ class GrailsDataHibernate7TckManager extends GrailsDataTckManager {
         Map config = [
                 'grails.gorm.multiTenancy.mode'            : MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR,
                 'grails.gorm.multiTenancy.tenantResolverClass': SystemPropertyTenantResolver,
-                'dataSource.url'                            : "jdbc:h2:mem:tckMtDefaultDB;LOCK_TIMEOUT=10000",
+                'dataSource.url'                            : 'jdbc:h2:mem:tckMtDefaultDB;LOCK_TIMEOUT=10000',
                 'dataSource.dbCreate'                       : 'create-drop',
                 'dataSource.dialect'                        : H2Dialect.name,
                 'dataSource.formatSql'                      : 'true',
@@ -217,7 +219,7 @@ class GrailsDataHibernate7TckManager extends GrailsDataTckManager {
                 'grails.gorm.default.mapping'               : {
                     id generator: 'identity'
                 },
-                'dataSources.secondary'                     : [url: "jdbc:h2:mem:tckMtSecondaryDB;LOCK_TIMEOUT=10000"],
+                'dataSources.secondary'                     : [url: 'jdbc:h2:mem:tckMtSecondaryDB;LOCK_TIMEOUT=10000'],
         ]
         multiTenantMultiDataSourceDatastore = new HibernateDatastore(
                 DatastoreUtils.createPropertyResolver(config), domainClasses

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -58,24 +58,24 @@ class ExpandSpec extends Specification implements JsonViewTest, GrailsUnitTest {
         then: 'The result does not include the proxied association'
         objectMapper.readTree(result.jsonText) == objectMapper.readTree('''
             {
-                "team": { "id": 1 },
-                "name": "Cantona"
+                'team': { 'id': 1 },
+                'name': 'Cantona'
             }
         ''')
 
         when: 'The domain is rendered with expand parameters'
-        result = render(templateText, [player:player]) {
+        result = render(templateText, [player: player]) {
             params(expand: 'team')
         }
 
         then: 'The association is expanded'
         objectMapper.readTree(result.jsonText) == objectMapper.readTree('''
             {
-                "team": {
-                    "id": 1,
-                    "name": "Manchester United"
+                'team': {
+                    'id': 1,
+                    'name': 'Manchester United'
                 },
-                "name": "Cantona"
+                'name': 'Cantona'
             }
         ''')
     }
@@ -97,19 +97,19 @@ class ExpandSpec extends Specification implements JsonViewTest, GrailsUnitTest {
         '''
 
         when: 'The domain is rendered with expand parameters'
-        def result = render(templateText, [map: [player:player]]) {
+        def result = render(templateText, [map: [player: player]]) {
             params(expand: 'player.team')
         }
 
         then: 'The association is expanded'
         objectMapper.readTree(result.jsonText) == objectMapper.readTree('''
             {
-                "player": {
-                    "team": {
-                        "id": 1,
-                        "name": "Manchester United"
+                'player': {
+                    'team': {
+                        'id': 1,
+                        'name': 'Manchester United'
                     },
-                    "name": "Cantona"
+                    'name': 'Cantona'
                 }
             }
         ''')
@@ -138,14 +138,14 @@ class ExpandSpec extends Specification implements JsonViewTest, GrailsUnitTest {
         then: 'The result does not include the proxied association'
         objectMapper.readTree(result.jsonText) == objectMapper.readTree('''
             {
-                "_links": {
-                    "self": {
-                        "href": "http://localhost:8080/player",
-                        "hreflang": "en",
-                        "type": "application/hal+json"
+                '_links': {
+                    'self': {
+                        'href': 'http://localhost:8080/player',
+                        'hreflang': 'en',
+                        'type': 'application/hal+json'
                     }
                 },
-                "name": "Cantona"
+                'name': 'Cantona'
             }
         ''')
 
@@ -157,26 +157,26 @@ class ExpandSpec extends Specification implements JsonViewTest, GrailsUnitTest {
         then: 'The association is expanded'
         objectMapper.readTree(result.jsonText) == objectMapper.readTree('''
             {
-                "_embedded": {
-                    "team": {
-                        "_links": {
-                            "self": {
-                                "href": "http://localhost:8080/team/1",
-                                "hreflang": "en",
-                                "type": "application/hal+json"
+                '_embedded': {
+                    'team': {
+                        '_links': {
+                            'self': {
+                                'href': 'http://localhost:8080/team/1',
+                                'hreflang': 'en',
+                                'type': 'application/hal+json'
                             }
                         },
-                        "name": "Manchester United"
+                        'name': 'Manchester United'
                     }
                 },
-                "_links": {
-                    "self": {
-                        "href": "http://localhost:8080/player",
-                        "hreflang": "en",
-                        "type": "application/hal+json"
+                '_links': {
+                    'self': {
+                        'href': 'http://localhost:8080/player',
+                        'hreflang': 'en',
+                        'type': 'application/hal+json'
                     }
                 },
-                "name": "Cantona"
+                'name': 'Cantona'
             }
         ''')
     }
@@ -203,45 +203,45 @@ class ExpandSpec extends Specification implements JsonViewTest, GrailsUnitTest {
         then: 'The JSON relationships are in place'
         objectMapper.readTree(result.jsonText) == objectMapper.readTree('''
             {
-                "data": {
-                    "type": "player",
-                    "id": "3",
-                    "attributes": {
-                        "name": "Cantona"
+                'data': {
+                    'type': 'player',
+                    'id': '3',
+                    'attributes': {
+                        'name': 'Cantona'
                     },
-                    "relationships": {
-                        "team": {
-                            "links": {
-                                "self": "/team/9"
+                    'relationships': {
+                        'team': {
+                            'links': {
+                                'self': '/team/9'
                             },
-                            "data": {
-                                "type": "team",
-                                "id": "9"
+                            'data': {
+                                'type': 'team',
+                                'id': '9'
                             }
                         }
                     }
                 },
-                "links": {
-                    "self": "/player/3"
+                'links': {
+                    'self': '/player/3'
                 },
-                "included": [
+                'included': [
                     {
-                        "type":"team",
-                        "id": "9",
-                        "attributes": {
-                            "titles": null,
-                            "name": "Manchester United"
+                        'type':'team',
+                        'id': '9',
+                        'attributes': {
+                            'titles': null,
+                            'name': 'Manchester United'
                         },
-                        "relationships": {
-                            "players": {
-                                "data":[]
+                        'relationships': {
+                            'players': {
+                                'data':[]
                             },
-                            "captain": {
-                                "data":null
+                            'captain': {
+                                'data':null
                             }
                         },
-                        "links": {
-                            "self": "/team/9"
+                        'links': {
+                            'self': '/team/9'
                         }
                     }
                 ]

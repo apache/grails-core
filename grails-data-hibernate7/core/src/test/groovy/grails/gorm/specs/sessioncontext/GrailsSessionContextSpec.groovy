@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -48,7 +48,7 @@ class GrailsSessionContextSpec extends HibernateGormDatastoreSpec {
         }
     }
 
-    void "test GrailsSessionContext can be created with a SessionFactory"() {
+    void 'test GrailsSessionContext can be created with a SessionFactory'() {
         given:
         HibernateDatastore hibernateDatastore = manager.hibernateDatastore
         SessionFactoryImplementor sessionFactory = hibernateDatastore.sessionFactory as SessionFactoryImplementor
@@ -60,7 +60,7 @@ class GrailsSessionContextSpec extends HibernateGormDatastoreSpec {
         sessionContext != null
     }
 
-    void "test currentSession() returns session bound via TransactionSynchronizationManager"() {
+    void 'test currentSession() returns session bound via TransactionSynchronizationManager'() {
         given:
         SessionFactoryImplementor sessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
         GrailsSessionContext sessionContext = new GrailsSessionContext(sessionFactory)
@@ -78,7 +78,7 @@ class GrailsSessionContextSpec extends HibernateGormDatastoreSpec {
         if (session.isOpen()) session.close()
     }
 
-    void "test currentSession() throws when no session is bound and allowCreate is false"() {
+    void 'test currentSession() throws when no session is bound and allowCreate is false'() {
         given:
         SessionFactoryImplementor sessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
         GrailsSessionContext sessionContext = new GrailsSessionContext(sessionFactory)
@@ -90,7 +90,7 @@ class GrailsSessionContextSpec extends HibernateGormDatastoreSpec {
         thrown(org.hibernate.HibernateException)
     }
 
-    void "test currentSession() returns session when bound as plain Session resource"() {
+    void 'test currentSession() returns session when bound as plain Session resource'() {
         given:
         SessionFactoryImplementor sessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
         GrailsSessionContext sessionContext = new GrailsSessionContext(sessionFactory)
@@ -107,7 +107,7 @@ class GrailsSessionContextSpec extends HibernateGormDatastoreSpec {
         if (session.isOpen()) session.close()
     }
 
-    void "test initJta handles missing JtaPlatform"() {
+    void 'test initJta handles missing JtaPlatform'() {
         given:
         SessionFactoryImplementor sessionFactory = Mock(SessionFactoryImplementor)
         org.hibernate.service.spi.ServiceRegistryImplementor registry = Mock(org.hibernate.service.spi.ServiceRegistryImplementor)
@@ -123,7 +123,7 @@ class GrailsSessionContextSpec extends HibernateGormDatastoreSpec {
         sessionContext.jtaSessionContext == null
     }
 
-    void "test currentSession() switches to AUTO flush mode when sync is active"() {
+    void 'test currentSession() switches to AUTO flush mode when sync is active'() {
         given:
         SessionFactoryImplementor sessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
         GrailsSessionContext sessionContext = new GrailsSessionContext(sessionFactory)
@@ -143,7 +143,7 @@ class GrailsSessionContextSpec extends HibernateGormDatastoreSpec {
         if (session.isOpen()) session.close()
     }
 
-    void "test currentSession() creates a new session when allowCreate is true"() {
+    void 'test currentSession() creates a new session when allowCreate is true'() {
         given:
         SessionFactoryImplementor sessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
         GrailsSessionContext sessionContext = new GrailsSessionContext(sessionFactory)
@@ -160,7 +160,7 @@ class GrailsSessionContextSpec extends HibernateGormDatastoreSpec {
         if (session?.isOpen()) session.close()
     }
 
-    void "test currentSession() with active transaction and allowCreate"() {
+    void 'test currentSession() with active transaction and allowCreate'() {
         given:
         SessionFactoryImplementor sessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
         GrailsSessionContext sessionContext = new GrailsSessionContext(sessionFactory)
@@ -180,7 +180,7 @@ class GrailsSessionContextSpec extends HibernateGormDatastoreSpec {
         if (session?.isOpen()) session.close()
     }
 
-    void "test createSession() sets FlushMode MANUAL when transaction is read-only"() {
+    void 'test createSession() sets FlushMode MANUAL when transaction is read-only'() {
         given:
         SessionFactoryImplementor sessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
         GrailsSessionContext sessionContext = new GrailsSessionContext(sessionFactory)
@@ -201,7 +201,7 @@ class GrailsSessionContextSpec extends HibernateGormDatastoreSpec {
         TransactionSynchronizationManager.setCurrentTransactionReadOnly(false)
     }
 
-    void "test currentSession() with already-synchronized SessionHolder skips re-registration"() {
+    void 'test currentSession() with already-synchronized SessionHolder skips re-registration'() {
         given:
         SessionFactoryImplementor sessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
         GrailsSessionContext sessionContext = new GrailsSessionContext(sessionFactory)
@@ -223,7 +223,7 @@ class GrailsSessionContextSpec extends HibernateGormDatastoreSpec {
         if (session.isOpen()) session.close()
     }
 
-    void "test initJta sets jtaSessionContext when resolveJtaTransactionManager returns non-null"() {
+    void 'test initJta sets jtaSessionContext when resolveJtaTransactionManager returns non-null'() {
         given:
         SessionFactoryImplementor sessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
         def mockTm = Mock(TransactionManager)
@@ -243,7 +243,7 @@ class GrailsSessionContextSpec extends HibernateGormDatastoreSpec {
         sessionContext.jtaSessionContext == mockJtaContext
     }
 
-    void "test initJta leaves jtaSessionContext null when resolveJtaTransactionManager returns null"() {
+    void 'test initJta leaves jtaSessionContext null when resolveJtaTransactionManager returns null'() {
         given:
         SessionFactoryImplementor sessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
 
@@ -259,7 +259,7 @@ class GrailsSessionContextSpec extends HibernateGormDatastoreSpec {
         sessionContext.jtaSessionContext == null
     }
 
-    void "test currentSession() delegates to jtaSessionContext when set"() {
+    void 'test currentSession() delegates to jtaSessionContext when set'() {
         given:
         SessionFactoryImplementor sessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
         Session mockSession = sessionFactory.openSession()
@@ -284,7 +284,7 @@ class GrailsSessionContextSpec extends HibernateGormDatastoreSpec {
         if (mockSession.isOpen()) mockSession.close()
     }
 
-    void "test currentSession() registers SpringFlushSynchronization when jtaSessionContext is set and sync is active"() {
+    void 'test currentSession() registers SpringFlushSynchronization when jtaSessionContext is set and sync is active'() {
         given:
         SessionFactoryImplementor sessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
         Session mockSession = sessionFactory.openSession()
@@ -311,7 +311,7 @@ class GrailsSessionContextSpec extends HibernateGormDatastoreSpec {
         if (mockSession.isOpen()) mockSession.close()
     }
 
-    void "test registerJtaSynchronization registers sync with active JTA transaction via lookupJtaTransactionManager"() {
+    void 'test registerJtaSynchronization registers sync with active JTA transaction via lookupJtaTransactionManager'() {
         given:
         SessionFactoryImplementor sessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
         Session session = sessionFactory.openSession()
@@ -334,7 +334,7 @@ class GrailsSessionContextSpec extends HibernateGormDatastoreSpec {
         if (session.isOpen()) session.close()
     }
 
-    void "test registerJtaSynchronization uses existing SessionHolder when provided"() {
+    void 'test registerJtaSynchronization uses existing SessionHolder when provided'() {
         given:
         SessionFactoryImplementor sessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
         Session session = sessionFactory.openSession()
@@ -359,7 +359,7 @@ class GrailsSessionContextSpec extends HibernateGormDatastoreSpec {
         if (session.isOpen()) session.close()
     }
 
-    void "test registerJtaSynchronization skips when JTA transaction is not active"() {
+    void 'test registerJtaSynchronization skips when JTA transaction is not active'() {
         given:
         SessionFactoryImplementor sessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
         Session session = sessionFactory.openSession()
@@ -382,7 +382,7 @@ class GrailsSessionContextSpec extends HibernateGormDatastoreSpec {
         if (session.isOpen()) session.close()
     }
 
-    void "test lookupJtaTransactionManager returns null when no service binding"() {
+    void 'test lookupJtaTransactionManager returns null when no service binding'() {
         given:
         SessionFactoryImplementor sessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
         GrailsSessionContext sessionContext = new GrailsSessionContext(sessionFactory)
@@ -396,7 +396,7 @@ class GrailsSessionContextSpec extends HibernateGormDatastoreSpec {
 
     // ─── Additional edge cases for coverage ───────────────────────────────────
 
-    void "test resolveJtaTransactionManager returns non-null when platform exists"() {
+    void 'test resolveJtaTransactionManager returns non-null when platform exists'() {
         given:
         def mockTm = Mock(TransactionManager)
         def mockPlatform = Mock(org.hibernate.engine.transaction.jta.platform.spi.JtaPlatform) {
@@ -417,7 +417,7 @@ class GrailsSessionContextSpec extends HibernateGormDatastoreSpec {
         result == mockTm
     }
 
-    void "test registerJtaSynchronization handles null transaction"() {
+    void 'test registerJtaSynchronization handles null transaction'() {
         given:
         def mockTm = Mock(TransactionManager) {
             getTransaction() >> null
@@ -439,10 +439,10 @@ class GrailsSessionContextSpec extends HibernateGormDatastoreSpec {
         session.close()
     }
 
-    void "test registerJtaSynchronization wraps exceptions"() {
+    void 'test registerJtaSynchronization wraps exceptions'() {
         given:
         def mockTm = Mock(TransactionManager) {
-            getTransaction() >> { throw new RuntimeException("fail") }
+            getTransaction() >> { throw new RuntimeException('fail') }
         }
         SessionFactoryImplementor mockSessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
         def sessionContext = new GrailsSessionContext(mockSessionFactory) {

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -32,7 +32,7 @@ import org.springframework.test.context.TestContext
 
 class DatabaseCleanupInterceptorSpec extends Specification {
 
-    def "interceptCleanupMethod proceeds and performs cleanup when classLevelCleanup is true"() {
+    def 'interceptCleanupMethod proceeds and performs cleanup when classLevelCleanup is true'() {
         given:
         def dataSource = Mock(DataSource)
         def appCtx = Mock(ApplicationContext) {
@@ -64,7 +64,7 @@ class DatabaseCleanupInterceptorSpec extends Specification {
         1 * invocation.proceed()
     }
 
-    def "interceptCleanupMethod skips cleanup when classLevelCleanup is false and method is not annotated"() {
+    def 'interceptCleanupMethod skips cleanup when classLevelCleanup is false and method is not annotated'() {
         given:
         def cleaner = Mock(DatabaseCleaner) {
             databaseType() >> 'h2'
@@ -97,7 +97,7 @@ class DatabaseCleanupInterceptorSpec extends Specification {
         0 * cleaner.cleanup(_, _)
     }
 
-    def "interceptCleanupMethod performs cleanup when classLevelCleanup is false but method is annotated"() {
+    def 'interceptCleanupMethod performs cleanup when classLevelCleanup is false but method is annotated'() {
         given:
         def dataSource = Mock(DataSource)
         def appCtx = Mock(ApplicationContext) {
@@ -139,7 +139,7 @@ class DatabaseCleanupInterceptorSpec extends Specification {
         1 * cleaner.cleanup(appCtx, dataSource) >> new DatabaseCleanupStats()
     }
 
-    def "interceptCleanupMethod uses method-level datasource names for method-level annotation"() {
+    def 'interceptCleanupMethod uses method-level datasource names for method-level annotation'() {
         given:
         def dataSource1 = Mock(DataSource)
         def dataSource2 = Mock(DataSource)
@@ -183,7 +183,7 @@ class DatabaseCleanupInterceptorSpec extends Specification {
         0 * cleaner.cleanup(appCtx, dataSource2)
     }
 
-    def "interceptCleanupMethod uses method-level explicit type mapping"() {
+    def 'interceptCleanupMethod uses method-level explicit type mapping'() {
         given:
         def dataSource = Mock(DataSource)
         def appCtx = Mock(ApplicationContext) {
@@ -227,7 +227,7 @@ class DatabaseCleanupInterceptorSpec extends Specification {
         0 * pgCleaner.cleanup(_, _)
     }
 
-    def "interceptSetupMethod resolves ApplicationContext via TestContextHolderListener"() {
+    def 'interceptSetupMethod resolves ApplicationContext via TestContextHolderListener'() {
         given:
         def dataSource = Mock(DataSource)
         def appCtx = Mock(ApplicationContext) {
@@ -269,7 +269,7 @@ class DatabaseCleanupInterceptorSpec extends Specification {
         TestContextHolderListener.CURRENT.remove()
     }
 
-    def "interceptSetupMethod throws when ApplicationContext cannot be resolved"() {
+    def 'interceptSetupMethod throws when ApplicationContext cannot be resolved'() {
         given:
         def cleaner = Mock(DatabaseCleaner) {
             databaseType() >> 'h2'
@@ -301,7 +301,7 @@ class DatabaseCleanupInterceptorSpec extends Specification {
         1 * invocation.proceed()
     }
 
-    def "interceptCleanupMethod clears ThreadLocal after cleanup"() {
+    def 'interceptCleanupMethod clears ThreadLocal after cleanup'() {
         given:
         def dataSource = Mock(DataSource)
         def appCtx = Mock(ApplicationContext) {
@@ -340,7 +340,7 @@ class DatabaseCleanupInterceptorSpec extends Specification {
         TestContextHolderListener.CURRENT.get() == null
     }
 
-      def "interceptCleanupMethod prints formatted stats when debug property is set"() {
+      def 'interceptCleanupMethod prints formatted stats when debug property is set'() {
         given:
         System.setProperty(DatabaseCleanupStats.DEBUG_PROPERTY, 'true')
 
@@ -398,7 +398,7 @@ class DatabaseCleanupInterceptorSpec extends Specification {
         System.clearProperty(DatabaseCleanupStats.DEBUG_PROPERTY)
     }
 
-    def "interceptCleanupMethod does not print stats when debug property is not set"() {
+    def 'interceptCleanupMethod does not print stats when debug property is not set'() {
         given:
         // Ensure the property is not set
         System.clearProperty(DatabaseCleanupStats.DEBUG_PROPERTY)
@@ -447,7 +447,7 @@ class DatabaseCleanupInterceptorSpec extends Specification {
         System.out = originalOut
     }
 
-    def "cleanup still runs even if test method fails"() {
+    def 'cleanup still runs even if test method fails'() {
         given:
         def dataSource = Mock(DataSource)
         def appCtx = Mock(ApplicationContext) {
@@ -485,7 +485,7 @@ class DatabaseCleanupInterceptorSpec extends Specification {
         ex.is(testFailure)
     }
 
-    def "interceptCleanupMethod skips cleanup when cleanupAfterSpec is true"() {
+    def 'interceptCleanupMethod skips cleanup when cleanupAfterSpec is true'() {
         given:
         def dataSource = Mock(DataSource)
         def appCtx = Mock(ApplicationContext) {
@@ -525,7 +525,7 @@ class DatabaseCleanupInterceptorSpec extends Specification {
         0 * cleaner.cleanup(_, _)
     }
 
-    def "interceptCleanupMethod still runs cleanup for method-level annotation even when cleanupAfterSpec is true"() {
+    def 'interceptCleanupMethod still runs cleanup for method-level annotation even when cleanupAfterSpec is true'() {
         given:
         def dataSource = Mock(DataSource)
         def appCtx = Mock(ApplicationContext) {
@@ -569,7 +569,7 @@ class DatabaseCleanupInterceptorSpec extends Specification {
         1 * cleaner.cleanup(appCtx, dataSource) >> new DatabaseCleanupStats()
     }
 
-    def "interceptCleanupSpecMethod performs cleanup when cleanupAfterSpec is true"() {
+    def 'interceptCleanupSpecMethod performs cleanup when cleanupAfterSpec is true'() {
         given:
         def dataSource = Mock(DataSource)
         def appCtx = Mock(ApplicationContext) {
@@ -604,7 +604,7 @@ class DatabaseCleanupInterceptorSpec extends Specification {
         1 * cleaner.cleanup(appCtx, dataSource) >> new DatabaseCleanupStats()
     }
 
-    def "interceptCleanupSpecMethod clears ThreadLocal after cleanup"() {
+    def 'interceptCleanupSpecMethod clears ThreadLocal after cleanup'() {
         given:
         def dataSource = Mock(DataSource)
         def appCtx = Mock(ApplicationContext) {
@@ -650,28 +650,34 @@ class DatabaseCleanupInterceptorSpec extends Specification {
     // --- Helper classes ---
 
     static class InstanceWithAppCtx {
+
         ApplicationContext applicationContext
     }
 
     static class InstanceWithNoContext {
+
         String name = 'test'
     }
 
     static class NonAnnotatedTestClass {
+
         void someTest() {}
     }
 
     static class AnnotatedMethodTestClass {
+
         @DatabaseCleanup
         void annotatedTest() {}
     }
 
     static class AnnotatedMethodWithDatasource {
+
         @DatabaseCleanup(['dataSource'])
         void annotatedTest() {}
     }
 
     static class AnnotatedMethodWithExplicitType {
+
         @DatabaseCleanup(['dataSource:h2'])
         void annotatedTest() {}
     }

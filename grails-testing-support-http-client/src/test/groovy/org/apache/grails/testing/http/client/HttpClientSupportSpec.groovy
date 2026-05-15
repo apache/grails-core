@@ -4,14 +4,14 @@
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
+ * 'License'); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
  *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
@@ -366,7 +366,7 @@ class HttpClientSupportSpec extends Specification {
         def testClient = new TestClient(server.httpUrl)
 
         when:
-        def response = testClient.httpPost('/products', 'X-Req': '1', '{"name":"Widget"}', 'application/json', client)
+        def response = testClient.httpPost('/products', 'X-Req': '1', '{'name':'Widget'}', 'application/json', client)
 
         then:
         response.assertEquals(200, 'hello')
@@ -817,17 +817,17 @@ class HttpClientSupportSpec extends Specification {
         def customClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build()
 
         when:
-        def postString = testClient.httpPostJson('/json/post-string', '{"name":"PostString"}')
+        def postString = testClient.httpPostJson('/json/post-string', '{'name':'PostString'}')
         def postDefault = testClient.httpPostJson('/json/post-default', [name: 'PostDefault'])
         def postClient = testClient.httpPostJson('/json/post-client', [name: 'PostClient'], customClient)
         def postHeader = testClient.httpPostJson('/json/post-header', 'X-Req': 'P1', [name: 'PostHeader'])
         def postHeaderClient = testClient.httpPostJson('/json/post-header-client', 'X-Req': 'P2', [name: 'PostHeaderClient'], customClient)
-        def putString = testClient.httpPutJson('/json/put-string', '{"name":"PutString"}')
+        def putString = testClient.httpPutJson('/json/put-string', '{'name':'PutString'}')
         def putDefault = testClient.httpPutJson('/json/put-default', [name: 'PutDefault'])
         def putClient = testClient.httpPutJson('/json/put-client', [name: 'PutClient'], customClient)
         def putHeader = testClient.httpPutJson('/json/put-header', 'X-Req': 'P3', [name: 'PutHeader'])
         def putHeaderClient = testClient.httpPutJson('/json/put-header-client', 'X-Req': 'P4', [name: 'PutHeaderClient'], customClient)
-        def patchString = testClient.httpPatchJson('/json/patch-string', '{"name":"PatchString"}')
+        def patchString = testClient.httpPatchJson('/json/patch-string', '{'name':'PatchString'}')
         def patchDefault = testClient.httpPatchJson('/json/patch-default', [name: 'PatchDefault'])
         def patchClient = testClient.httpPatchJson('/json/patch-client', [name: 'PatchClient'], customClient)
         def patchHeader = testClient.httpPatchJson('/json/patch-header', 'X-Req': 'P5', [name: 'PatchHeader'])

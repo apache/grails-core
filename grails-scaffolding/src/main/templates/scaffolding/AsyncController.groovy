@@ -5,14 +5,14 @@ import org.springframework.transaction.TransactionStatus
 
 class ${className}Controller {
 
-    static allowedMethods = [save: "POST", update: "PUT", delete: "DELETE"]
+    static allowedMethods = [save: 'POST', update: 'PUT', delete: 'DELETE']
 
     def index(Integer max) {
         params.max = Math.min(max ?: 10, 100)
         ${className}.async.task {
             [${propertyName}List: list(params), count: count() ]
         }.then { result ->
-            respond result.${propertyName}List, model:[${propertyName}Count: result.count]
+            respond result.${propertyName}List, model: [${propertyName}Count: result.count]
         }
     }
 
@@ -36,7 +36,7 @@ class ${className}Controller {
 
             if (${propertyName}.hasErrors()) {
                 status.setRollbackOnly()
-                respond ${propertyName}.errors, view:'create' // STATUS CODE 422
+                respond ${propertyName}.errors, view: 'create' // STATUS CODE 422
                 return
             }
 
@@ -67,9 +67,9 @@ class ${className}Controller {
             }
 
             ${propertyName}.properties = params
-            if (!${propertyName}.save(flush:true)) {
+            if (!${propertyName}.save(flush: true)) {
                 status.setRollbackOnly()
-                respond ${propertyName}.errors, view:'edit' // STATUS CODE 422
+                respond ${propertyName}.errors, view: 'edit' // STATUS CODE 422
                 return
             }
 
@@ -97,7 +97,7 @@ class ${className}Controller {
             request.withFormat {
                 form multipartForm {
                     flash.message = message(code: 'default.deleted.message', args: [message(code: '${className}.label', default: '${className}'), ${propertyName}.id])
-                    redirect action:"index", method:"GET"
+                    redirect action:'index', method: 'GET'
                 }
                 '*'{ render status: NO_CONTENT }
             }
@@ -108,7 +108,7 @@ class ${className}Controller {
         request.withFormat {
             form multipartForm {
                 flash.message = message(code: 'default.not.found.message', args: [message(code: '${propertyName}.label', default: '${className}'), params.id])
-                redirect action: "index", method: "GET"
+                redirect action: 'index', method: 'GET'
             }
             '*'{ render status: NOT_FOUND }
         }

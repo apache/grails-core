@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -20,35 +20,35 @@
 package grails.config
 
 import org.grails.config.NavigableMap
-import spock.lang.Issue;
+import spock.lang.Issue
 import spock.lang.Specification
 
 class ConfigMapSpec extends Specification {
 
-    def "should support merging ConfigObject maps"() {
+    def 'should support merging ConfigObject maps'() {
         given:
         NavigableMap configMap = new NavigableMap()
         def config = new ConfigSlurper().parse('''
 foo {
-    bar = "good"
+    bar = 'good'
 }
 test.another = true
 ''')
 
-        when:"a config object is merged"
+        when:'a config object is merged'
         configMap.merge(config)
 
-        then:"The merge is correct"
+        then:'The merge is correct'
         configMap.size() == 4
         configMap['test'] instanceof NavigableMap
         configMap['test.another']  == true
     }
 
-    def "should support merge correctly"() {
+    def 'should support merge correctly'() {
         given:
         NavigableMap configMap = new NavigableMap()
         when:
-        configMap.merge(['foo.bar':'good1', bar:[foo:'good2']], true)
+        configMap.merge(['foo.bar': 'good1', bar: [foo:'good2']], true)
         then:
         configMap.foo.bar == 'good1'
         configMap.getProperty('foo.bar') == 'good1'
@@ -56,10 +56,10 @@ test.another = true
         configMap.getProperty('bar.foo') == 'good2'
 
         when:
-        configMap.merge(['foo.two':'good3', bar:[two:'good4']], true)
-        configMap.merge(['grails.codegen.defaultPackage':"test"])
-        configMap.merge([grails:[codegen:[defaultPackage:"test"]]])
-        configMap.merge(['grails.codegen':[defaultPackage:"test"]], true)
+        configMap.merge(['foo.two': 'good3', bar: [two:'good4']], true)
+        configMap.merge(['grails.codegen.defaultPackage': 'test'])
+        configMap.merge([grails: [codegen:[defaultPackage: 'test']]])
+        configMap.merge(['grails.codegen': [defaultPackage:'test']], true)
 
         then:
         configMap.size() == 9
@@ -77,7 +77,7 @@ test.another = true
         configMap.getProperty('bar.two') == 'good4'
 
     }
-    def "should support flattening keys - map syntax"() {
+    def 'should support flattening keys - map syntax'() {
         given:
         NavigableMap configMap = new NavigableMap()
         when:
@@ -85,7 +85,7 @@ test.another = true
         then:
         configMap.toFlatConfig() == ['a.b.c': 1, 'a.b.d': 2]
     }
-    def "should support flattening keys - dot syntax"() {
+    def 'should support flattening keys - dot syntax'() {
         given:
         NavigableMap configMap = new NavigableMap()
         when:
@@ -96,7 +96,7 @@ test.another = true
     }
 
     @Issue('#9146')
-    def "should support hashCode() - map syntax"() {
+    def 'should support hashCode() - map syntax'() {
         given:
         NavigableMap configMap = new NavigableMap()
         when:
@@ -106,7 +106,7 @@ test.another = true
     }
 
     @Issue('#9146')
-    def "should support hashCode() - dot syntax"() {
+    def 'should support hashCode() - dot syntax'() {
         given:
         NavigableMap configMap = new NavigableMap()
         when:
@@ -116,7 +116,7 @@ test.another = true
         configMap.hashCode() == configMap.hashCode()
     }
 
-    def "should support flattening list values - map syntax"() {
+    def 'should support flattening list values - map syntax'() {
         given:
         NavigableMap configMap = new NavigableMap()
         when:
@@ -130,7 +130,7 @@ test.another = true
                  'a.b.d': 2]
     }
 
-    def "should support flattening list values - dot syntax"() {
+    def 'should support flattening list values - dot syntax'() {
         given:
         NavigableMap configMap = new NavigableMap()
         when:
@@ -145,7 +145,7 @@ test.another = true
                  'a.b.d': 2]
     }
     
-    def "should support flattening to properties - map syntax"() {
+    def 'should support flattening to properties - map syntax'() {
         given:
         NavigableMap configMap = new NavigableMap()
         when:
@@ -159,7 +159,7 @@ test.another = true
                  'a.b.d': '2']
     }
 
-    def "should support flattening to properties - dot syntax"() {
+    def 'should support flattening to properties - dot syntax'() {
         given:
         NavigableMap configMap = new NavigableMap()
         when:
@@ -174,7 +174,7 @@ test.another = true
                  'a.b.d': '2']
     }
     
-    def "should support cloning - map syntax"() {
+    def 'should support cloning - map syntax'() {
         given:
         NavigableMap configMap = new NavigableMap()
         configMap.a = [b: [c: [1, 2, 3], d: 2]]
@@ -191,7 +191,7 @@ test.another = true
         cloned == configMap
     }
 
-    def "should support cloning - dot syntax"() {
+    def 'should support cloning - dot syntax'() {
         given:
         NavigableMap configMap = new NavigableMap()
         configMap.a.b.c = [1, 2, 3]

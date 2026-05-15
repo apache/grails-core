@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -23,26 +23,26 @@ import spock.lang.Unroll
 
 class FieldDefinitionSpec extends Specification {
 
-    def "should parse simple field specification"() {
+    def 'should parse simple field specification'() {
         when:
-        def field = FieldDefinition.parse("title")
+        def field = FieldDefinition.parse('title')
 
         then:
-        field.name == "title"
-        field.type == "String"  // default type
+        field.name == 'title'
+        field.type == 'String'  // default type
         field.accessModifier == null  // must be set separately
     }
 
-    def "should parse field specification with type"() {
+    def 'should parse field specification with type'() {
         when:
-        def field = FieldDefinition.parse("count:Integer")
+        def field = FieldDefinition.parse('count:Integer')
 
         then:
-        field.name == "count"
-        field.type == "Integer"
+        field.name == 'count'
+        field.type == 'Integer'
     }
 
-    def "should throw exception for null field spec"() {
+    def 'should throw exception for null field spec'() {
         when:
         FieldDefinition.parse(null)
 
@@ -50,15 +50,15 @@ class FieldDefinitionSpec extends Specification {
         thrown(IllegalArgumentException)
     }
 
-    def "should throw exception for empty field spec"() {
+    def 'should throw exception for empty field spec'() {
         when:
-        FieldDefinition.parse("")
+        FieldDefinition.parse('')
 
         then:
         thrown(IllegalArgumentException)
     }
 
-    def "should require access modifier"() {
+    def 'should require access modifier'() {
         given:
         def field = new FieldDefinition(name: 'title', type: 'String')
 
@@ -70,7 +70,7 @@ class FieldDefinitionSpec extends Specification {
         e.message.contains('Access modifier is required')
     }
 
-    def "should validate with access modifier"() {
+    def 'should validate with access modifier'() {
         given:
         def field = new FieldDefinition(
             name: 'title',
@@ -86,7 +86,7 @@ class FieldDefinitionSpec extends Specification {
     }
 
     @Unroll
-    def "should generate declaration with #modifier access"() {
+    def 'should generate declaration with #modifier access'() {
         given:
         def field = new FieldDefinition(
             name: 'title',
@@ -104,7 +104,7 @@ class FieldDefinitionSpec extends Specification {
         FieldDefinition.AccessModifier.PUBLIC    | 'public String title'
     }
 
-    def "should use builder pattern with access modifier"() {
+    def 'should use builder pattern with access modifier'() {
         when:
         def field = FieldDefinition.builder()
             .name('title')
@@ -123,7 +123,7 @@ class FieldDefinitionSpec extends Specification {
         field.toDeclaration() == 'private String title'
     }
 
-    def "should generate constraint line"() {
+    def 'should generate constraint line'() {
         given:
         def field = new FieldDefinition(
             name: 'title',
@@ -138,7 +138,7 @@ class FieldDefinitionSpec extends Specification {
         field.toConstraintLine() == 'title nullable: false, blank: false, maxSize: 255'
     }
 
-    def "should generate Jakarta annotations"() {
+    def 'should generate Jakarta annotations'() {
         given:
         def field = new FieldDefinition(
             name: 'title',
@@ -153,7 +153,7 @@ class FieldDefinitionSpec extends Specification {
         field.toAnnotations() == ['@NotNull', '@NotBlank', '@Size(max = 255)']
     }
 
-    def "AccessModifier toString should return keyword"() {
+    def 'AccessModifier toString should return keyword'() {
         expect:
         FieldDefinition.AccessModifier.PRIVATE.toString() == 'private'
         FieldDefinition.AccessModifier.PROTECTED.toString() == 'protected'

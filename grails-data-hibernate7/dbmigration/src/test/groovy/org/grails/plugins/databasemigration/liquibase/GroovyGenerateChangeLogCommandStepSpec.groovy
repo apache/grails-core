@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -43,18 +43,18 @@ class GroovyGenerateChangeLogCommandStepSpec extends Specification {
     DiffToChangeLog diffToChangeLog = Mock()
     DiffCommandStep diffCommandStep = Mock()
 
-    def "defineCommandNames returns correct name"() {
+    def 'defineCommandNames returns correct name'() {
         expect:
         step.defineCommandNames() == [['groovyGenerateChangeLog'] as String[]] as String[][]
     }
 
-    def "run executes generateChangelog and prints groovy changelog"() {
+    def 'run executes generateChangelog and prints groovy changelog'() {
         given:
         resultsBuilder.getCommandScope() >> commandScope
         commandScope.getArgumentValue(GenerateChangelogCommandStep.CHANGELOG_FILE_ARG) >> null
         commandScope.getArgumentValue(ReferenceDbUrlConnectionCommandStep.REFERENCE_DATABASE_ARG) >> database
-        commandScope.getArgumentValue(GenerateChangelogCommandStep.AUTHOR_ARG) >> "author"
-        commandScope.getArgumentValue(GenerateChangelogCommandStep.CONTEXT_ARG) >> "context"
+        commandScope.getArgumentValue(GenerateChangelogCommandStep.AUTHOR_ARG) >> 'author'
+        commandScope.getArgumentValue(GenerateChangelogCommandStep.CONTEXT_ARG) >> 'context'
         
         resultsBuilder.getResult(DiffOutputControlCommandStep.DIFF_OUTPUT_CONTROL.getName()) >> diffOutputControl
         
@@ -73,8 +73,8 @@ class GroovyGenerateChangeLogCommandStepSpec extends Specification {
         then:
         1 * diffCommandStep.createDiffResult(resultsBuilder) >> diffResult
         
-        1 * diffToChangeLog.setChangeSetAuthor("author")
-        1 * diffToChangeLog.setChangeSetContext("context")
+        1 * diffToChangeLog.setChangeSetAuthor('author')
+        1 * diffToChangeLog.setChangeSetContext('context')
         1 * diffToChangeLog.setChangeSetPath(null)
 
         1 * database.setObjectQuotingStrategy(ObjectQuotingStrategy.QUOTE_ALL_OBJECTS)
@@ -84,7 +84,7 @@ class GroovyGenerateChangeLogCommandStepSpec extends Specification {
         1 * database.setObjectQuotingStrategy(ObjectQuotingStrategy.LEGACY)
     }
 
-    def "run executes generateChangelog and prints to file if specified"() {
+    def 'run executes generateChangelog and prints to file if specified'() {
         given:
         resultsBuilder.getCommandScope() >> commandScope
         commandScope.getArgumentValue(GenerateChangelogCommandStep.CHANGELOG_FILE_ARG) >> 'changelog.groovy'

@@ -1,13 +1,13 @@
 /* Copyright (C) 2017-2025 the original author or authors.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
+ * Licensed under the Apache License, Version 2.0 (the 'License')
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
+ * distributed under the License is distributed on an 'AS IS' BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -23,7 +23,6 @@ import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.FieldNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.Parameter
-import org.codehaus.groovy.ast.VariableScope
 import org.codehaus.groovy.ast.expr.ClassExpression
 import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.Expression
@@ -52,19 +51,14 @@ import org.apache.grails.common.compiler.GroovyTransformOrder
 import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.multitenancy.transform.TenantTransform
 import org.grails.datastore.gorm.transform.AbstractDatastoreMethodDecoratingTransformation
-import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
-import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.transactions.CustomizableRollbackTransactionAttribute
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 
 import static org.apache.groovy.ast.tools.AnnotatedNodeUtils.markAsGenerated
-import static org.codehaus.groovy.ast.ClassHelper.CLASS_Type
-import static org.codehaus.groovy.ast.ClassHelper.STRING_TYPE
 import static org.codehaus.groovy.ast.ClassHelper.VOID_TYPE
 import static org.codehaus.groovy.ast.ClassHelper.make
 import static org.codehaus.groovy.ast.tools.GeneralUtils.args
 import static org.codehaus.groovy.ast.tools.GeneralUtils.assignS
-import static org.codehaus.groovy.ast.tools.GeneralUtils.block
 import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.castX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.classX
@@ -79,16 +73,12 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.propX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
 import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
-import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.callD
-import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.callThisD
 import static org.grails.datastore.mapping.reflect.AstUtils.ZERO_ARGUMENTS
 import static org.grails.datastore.mapping.reflect.AstUtils.ZERO_PARAMETERS
-import static org.grails.datastore.mapping.reflect.AstUtils.buildGetPropertyExpression
 import static org.grails.datastore.mapping.reflect.AstUtils.copyParameters
 import static org.grails.datastore.mapping.reflect.AstUtils.findAnnotation
 import static org.grails.datastore.mapping.reflect.AstUtils.hasOrInheritsProperty
 import static org.grails.datastore.mapping.reflect.AstUtils.implementsInterface
-import static org.grails.datastore.mapping.reflect.AstUtils.isSubclassOf
 import static org.grails.datastore.mapping.reflect.AstUtils.nonGeneric
 import static org.grails.datastore.mapping.reflect.AstUtils.varThis
 
@@ -102,8 +92,9 @@ import static org.grails.datastore.mapping.reflect.AstUtils.varThis
  * <pre>
  * {@code @Transactional}
  * class MyService {
+
  *      void saveBook(String title) {
- *           new Book(title:title).save()
+ *           new Book(title: title).save()
  *      }
  * }
  * </pre>
@@ -112,12 +103,13 @@ import static org.grails.datastore.mapping.reflect.AstUtils.varThis
  *
  * <pre>
  * class MyService {
+
  *      {@code @Autowired}
  *      PlatformTransactionManager transactionManager
  *
  *      void saveBook(String title) {
  *           transactionManager.execute { TransactionStatus status ->
- *                new Book(title:title).save()
+ *                new Book(title: title).save()
  *           }
  *      }
  * }
@@ -234,6 +226,7 @@ class TransactionalTransform extends AbstractDatastoreMethodDecoratingTransforma
         // weaveTransactionManagerAware() skips field creation, so assigning it here would cause
         // MissingPropertyException at runtime.
         if (declaringClassNode.getDeclaredField(transactionManagerFieldName) != null) {
+
             VariableExpression transactionManagerPropertyExpr = varX(transactionManagerFieldName)
             Statement assignConditional = ifS(notNullX(datastoreVar),
                     assignS(transactionManagerPropertyExpr, callX(castX(make(TransactionCapableDatastore), datastoreVar), GET_TRANSACTION_MANAGER_METHOD)))

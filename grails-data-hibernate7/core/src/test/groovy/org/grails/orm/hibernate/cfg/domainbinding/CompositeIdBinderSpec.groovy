@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -49,12 +49,12 @@ class CompositeIdBinderSpec extends HibernateGormDatastoreSpec {
         )
     }
 
-    def "should bind composite id using parts from HibernateCompositeIdentityProperty"() {
+    def 'should bind composite id using parts from HibernateCompositeIdentityProperty'() {
         given:
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def rootClass = new RootClass(metadataBuildingContext)
-        rootClass.setEntityName("MyEntity")
-        rootClass.setTable(new Table("my_entity"))
+        rootClass.setEntityName('MyEntity')
+        rootClass.setTable(new Table('my_entity'))
 
         def prop1 = Mock(HibernatePersistentProperty)
         def prop2 = Mock(HibernatePersistentProperty)
@@ -62,7 +62,7 @@ class CompositeIdBinderSpec extends HibernateGormDatastoreSpec {
             getParts() >> ([prop1, prop2] as HibernatePersistentProperty[])
         }
         def domainClass = Mock(HibernatePersistentEntity) {
-            getName() >> "MyEntity"
+            getName() >> 'MyEntity'
             getRootClass() >> rootClass
             getIdentityProperty() >> compositeIdentityProperty
         }
@@ -73,17 +73,17 @@ class CompositeIdBinderSpec extends HibernateGormDatastoreSpec {
         then:
         rootClass.getIdentifier() instanceof Component
         rootClass.hasEmbeddedIdentifier()
-        2 * grailsPropertyBinder.bindProperty(_ as HibernatePersistentProperty, null, "") >> Mock(Value)
+        2 * grailsPropertyBinder.bindProperty(_ as HibernatePersistentProperty, null, '') >> Mock(Value)
         2 * componentUpdater.updateComponent(_ as Component, null, _ as HibernatePersistentProperty, _ as Value)
     }
 
-    def "should throw MappingException when entity does not have composite identity"() {
+    def 'should throw MappingException when entity does not have composite identity'() {
         given:
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def rootClass = new RootClass(metadataBuildingContext)
-        rootClass.setEntityName("MyEntity")
+        rootClass.setEntityName('MyEntity')
         def domainClass = Mock(HibernatePersistentEntity) {
-            getName() >> "MyEntity"
+            getName() >> 'MyEntity'
             getRootClass() >> rootClass
             getIdentityProperty() >> Mock(HibernateIdentityProperty)
         }

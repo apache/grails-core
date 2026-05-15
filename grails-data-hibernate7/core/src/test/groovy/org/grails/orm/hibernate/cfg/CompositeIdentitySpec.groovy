@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -26,7 +26,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentP
 
 class CompositeIdentitySpec extends Specification {
 
-    def "test getHibernateProperties with property names"() {
+    def 'test getHibernateProperties with property names'() {
         given:
         def domainClass = Mock(GrailsHibernatePersistentEntity)
         def prop1 = Mock(HibernatePersistentProperty)
@@ -37,14 +37,14 @@ class CompositeIdentitySpec extends Specification {
         def properties = compositeIdentity.getHibernateProperties(domainClass)
 
         then:
-        1 * domainClass.getHibernatePropertyByName("prop1") >> prop1
-        1 * domainClass.getHibernatePropertyByName("prop2") >> prop2
+        1 * domainClass.getHibernatePropertyByName('prop1') >> prop1
+        1 * domainClass.getHibernatePropertyByName('prop2') >> prop2
         properties.length == 2
         properties[0] == prop1
         properties[1] == prop2
     }
 
-    def "test getHibernateProperties with fallback to domain class"() {
+    def 'test getHibernateProperties with fallback to domain class'() {
         given:
         def domainClass = Mock(GrailsHibernatePersistentEntity)
         def prop1 = Mock(HibernatePersistentProperty)
@@ -60,7 +60,7 @@ class CompositeIdentitySpec extends Specification {
         properties[0] == prop1
     }
 
-    def "test getHibernateProperties throws exception if no properties found"() {
+    def 'test getHibernateProperties throws exception if no properties found'() {
         given:
         def domainClass = Mock(GrailsHibernatePersistentEntity)
         def compositeIdentity = new HibernateCompositeIdentity()
@@ -73,7 +73,7 @@ class CompositeIdentitySpec extends Specification {
         thrown(MappingException)
     }
 
-    def "test getHibernateProperties throws exception if a property is invalid"() {
+    def 'test getHibernateProperties throws exception if a property is invalid'() {
         given:
         def domainClass = Mock(GrailsHibernatePersistentEntity)
         def compositeIdentity = new HibernateCompositeIdentity(propertyNames: ['invalid'] as String[])
@@ -82,11 +82,11 @@ class CompositeIdentitySpec extends Specification {
         compositeIdentity.getHibernateProperties(domainClass)
 
         then:
-        1 * domainClass.getHibernatePropertyByName("invalid") >> null
+        1 * domainClass.getHibernatePropertyByName('invalid') >> null
         thrown(MappingException)
     }
 
-    def "test getPropertyNames"() {
+    def 'test getPropertyNames'() {
         given:
         def propertyNames = ['prop1', 'prop2'] as String[]
         def compositeIdentity = new HibernateCompositeIdentity(propertyNames: propertyNames)
@@ -95,7 +95,7 @@ class CompositeIdentitySpec extends Specification {
         compositeIdentity.getPropertyNames() == propertyNames
     }
 
-    def "naturalId closure configures NaturalId and returns this"() {
+    def 'naturalId closure configures NaturalId and returns this'() {
         given:
         def compositeIdentity = new HibernateCompositeIdentity(propertyNames: ['firstName', 'lastName'] as String[])
 
@@ -108,7 +108,7 @@ class CompositeIdentitySpec extends Specification {
         compositeIdentity.natural.mutable
     }
 
-    def "naturalId closure sets propertyNames on NaturalId"() {
+    def 'naturalId closure sets propertyNames on NaturalId'() {
         given:
         def compositeIdentity = new HibernateCompositeIdentity(propertyNames: ['code'] as String[])
 
@@ -119,7 +119,8 @@ class CompositeIdentitySpec extends Specification {
         compositeIdentity.natural.propertyNames == ['code']
     }
 
-    def "getHibernateProperties throws exception when domain class returns empty composite array"() {
+    def 'getHibernateProperties throws exception when domain class returns empty composite array'() {
+
         given:
         def domainClass = Mock(GrailsHibernatePersistentEntity)
         def compositeIdentity = new HibernateCompositeIdentity()

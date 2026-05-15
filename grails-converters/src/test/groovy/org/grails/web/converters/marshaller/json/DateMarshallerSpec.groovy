@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -27,7 +27,7 @@ import org.grails.web.json.JSONWriter
 
 class DateMarshallerSpec extends Specification {
 
-    void "supports returns true for Date instances"() {
+    void 'supports returns true for Date instances'() {
         given:
         def marshaller = new DateMarshaller()
 
@@ -35,7 +35,7 @@ class DateMarshallerSpec extends Specification {
         marshaller.supports(new Date())
     }
 
-    void "supports returns false for non-Date instances"() {
+    void 'supports returns false for non-Date instances'() {
         given:
         def marshaller = new DateMarshaller()
 
@@ -45,7 +45,7 @@ class DateMarshallerSpec extends Specification {
         !marshaller.supports(null)
     }
 
-    void "default formatter produces ISO-8601 UTC format with Z suffix"() {
+    void 'default formatter produces ISO-8601 UTC format with Z suffix'() {
         given:
         def marshaller = new DateMarshaller()
         def date = new Date(1718461845123L)
@@ -54,10 +54,10 @@ class DateMarshallerSpec extends Specification {
         def result = marshalToString(marshaller, date)
 
         then:
-        result == '["2024-06-15T14:30:45.123Z"]'
+        result == '['2024-06-15T14:30:45.123Z']'
     }
 
-    void "default formatter omits fractional seconds when millis are zero (ISO_INSTANT)"() {
+    void 'default formatter omits fractional seconds when millis are zero (ISO_INSTANT)'() {
         given:
         def marshaller = new DateMarshaller()
         // 2024-01-01T00:00:00.000 UTC
@@ -66,11 +66,11 @@ class DateMarshallerSpec extends Specification {
         when:
         def result = marshalToString(marshaller, date)
 
-        then: "ISO_INSTANT drops the fraction entirely on whole-second instants"
-        result == '["2024-01-01T00:00:00Z"]'
+        then: 'ISO_INSTANT drops the fraction entirely on whole-second instants'
+        result == '['2024-01-01T00:00:00Z']'
     }
 
-    void "default formatter pads sub-100 milliseconds to three digits"() {
+    void 'default formatter pads sub-100 milliseconds to three digits'() {
         given:
         def marshaller = new DateMarshaller()
         // 5 milliseconds past epoch second
@@ -80,10 +80,10 @@ class DateMarshallerSpec extends Specification {
         def result = marshalToString(marshaller, date)
 
         then:
-        result == '["2024-01-01T00:00:00.005Z"]'
+        result == '['2024-01-01T00:00:00.005Z']'
     }
 
-    void "legacy formatter is used when provided"() {
+    void 'legacy formatter is used when provided'() {
         given:
         def customFormat = new SimpleDateFormat('dd/MM/yyyy')
         customFormat.setTimeZone(TimeZone.getTimeZone('UTC'))
@@ -94,7 +94,7 @@ class DateMarshallerSpec extends Specification {
         def result = marshalToString(marshaller, date)
 
         then:
-        result == '["15/06/2024"]'
+        result == '['15/06/2024']'
     }
 
     private static String marshalToString(DateMarshaller marshaller, Date date) {

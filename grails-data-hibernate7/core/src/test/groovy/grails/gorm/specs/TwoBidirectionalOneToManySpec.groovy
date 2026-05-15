@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -35,15 +35,15 @@ class TwoBidirectionalOneToManySpec extends Specification {
     @Shared PlatformTransactionManager transactionManager = datastore.transactionManager
 
     @Rollback
-    void "test an entity with 2 bidirectional one-to-many mappings"() {
-        when:"A new entity is created is created"
-        Room r = new Room(name:"Test")
+    void 'test an entity with 2 bidirectional one-to-many mappings'() {
+        when:'A new entity is created is created'
+        Room r = new Room(name: 'Test')
                 .addToPointx(new PointX())
                 .addToPointy(new PointY())
 
-        r.save(flush:true)
+        r.save(flush: true)
 
-        then:"The entity was saved"
+        then:'The entity was saved'
         !r.errors.hasErrors()
         Room.count == 1
         PointX.count == 1
@@ -52,14 +52,14 @@ class TwoBidirectionalOneToManySpec extends Specification {
     }
 
     @Rollback
-    void "test an entity with 1 one directional one-to-many mappings"() {
-        when:"A new entity is created is created"
-        Room r = new Room(name:"Test")
+    void 'test an entity with 1 one directional one-to-many mappings'() {
+        when:'A new entity is created is created'
+        Room r = new Room(name: 'Test')
                 .addToPointz(new PointZ())
 
-        r.save(flush:true)
+        r.save(flush: true)
 
-        then:"The entity was saved"
+        then:'The entity was saved'
         !r.errors.hasErrors()
         Room.count == 1
 
@@ -69,14 +69,16 @@ class TwoBidirectionalOneToManySpec extends Specification {
 
 @Entity
 class Room {
-    static hasMany = [pointx:PointX,pointy:PointY, pointz:PointZ]
+
+    static hasMany = [pointx: PointX,pointy: PointY, pointz: PointZ]
 
     String name
 }
 
 @Entity
 class PointX {
-    static belongsTo = [destiny:Room]
+
+    static belongsTo = [destiny: Room]
     Room destiny
     static constraints = {
         destiny nullable:true
@@ -85,7 +87,8 @@ class PointX {
 
 @Entity
 class PointY {
-    static  belongsTo = [destiny:Room]
+
+    static  belongsTo = [destiny: Room]
     Room destiny
     static constraints = {
         destiny nullable:true
@@ -94,6 +97,7 @@ class PointY {
 
 @Entity
 class PointZ {
+
     Room destiny
     static constraints = {
         destiny nullable:true

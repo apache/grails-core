@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -50,11 +50,13 @@ import org.grails.databinding.xml.GPathResultMap
  *
  <pre>
  class Person {
+
      String firstName
      Address homeAddress
  }
 
  class Address {
+
      String city
      String state
  }
@@ -182,7 +184,7 @@ class SimpleDataBinder implements DataBinder {
      * @param source The data binding source
      * @param filter Only properties beginning with filter will be included in the
      * data binding.  For example, if filter is &quot;person&quot; and the binding
-     * source contains data for properties &quot;person.name&quot; and &quot;author.name&quot;
+     * source contains data for properties &quot;person.name&quot; and &quot;author.name&quot
      * the value of &quot;person.name&quot; will be bound to obj.name.  The value of
      * &quot;author.name&quot; will be ignored.
      * @param whiteList A list of property names to be included during this
@@ -202,7 +204,7 @@ class SimpleDataBinder implements DataBinder {
      * @param source The data binding source
      * @param filter Only properties beginning with filter will be included in the
      * data binding.  For example, if filter is &quot;person&quot; and the binding
-     * source contains data for properties &quot;person.name&quot; and &quot;author.name&quot;
+     * source contains data for properties &quot;person.name&quot; and &quot;author.name&quot
      * the value of &quot;person.name&quot; will be bound to obj.name.  The value of
      * &quot;author.name&quot; will be ignored.
      * @param whiteList A list of property names to be included during this

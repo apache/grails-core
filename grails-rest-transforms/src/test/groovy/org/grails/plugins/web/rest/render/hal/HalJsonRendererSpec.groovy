@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -105,41 +105,41 @@ class HalJsonRendererSpec extends Specification {
     }
 
     @Issue('GRAILS-10372')
-    void "Test that the HAL renderer renders JSON values correctly for domains"() {
-        given:"A HAL renderer"
+    void 'Test that the HAL renderer renders JSON values correctly for domains'() {
+        given:'A HAL renderer'
             HalJsonRenderer renderer = getRenderer()
             renderer.prettyPrint = true
 
-        when:"A domain object is rendered"
+        when:'A domain object is rendered'
             def webRequest = boundMimeTypeRequest()
-            (webRequest.request as MockHttpServletRequest).addHeader("ACCEPT", "application/hal+json")
-            webRequest.request.setAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, "/product/Macbook")
+            (webRequest.request as MockHttpServletRequest).addHeader('ACCEPT', 'application/hal+json')
+            webRequest.request.setAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, '/product/Macbook')
             def response = webRequest.response as MockHttpServletResponse
             def renderContext = new ServletRenderContext(webRequest)
-            def product = new Product(name: "MacBook", numberInStock: 10, category: new Category(name: 'Laptops'))
+            def product = new Product(name: 'MacBook', numberInStock: 10, category: new Category(name: 'Laptops'))
             renderer.render(product, renderContext)
 
-        then:"The resulting HAL is correct"
+        then:'The resulting HAL is correct'
             response.contentType == GrailsWebUtil.getContentType(HalJsonRenderer.MIME_TYPE.name, GrailsWebUtil.DEFAULT_ENCODING)
             jsonEquals(response.contentAsString, '''{
-            "_links": {
-                "self": {
-                    "href": "http://localhost/products",
-                    "hreflang": "en",
-                    "type": "application/hal+json"
+            '_links': {
+                'self': {
+                    'href': 'http://localhost/products',
+                    'hreflang': 'en',
+                    'type': 'application/hal+json'
                 }
             },
-            "numberInStock": 10,
-            "name": "MacBook",
-            "_embedded": {
-                "category": {
-                    "_links": {
-                        "self": {
-                            "href": "http://localhost/category/index",
-                            "hreflang": "en"
+            'numberInStock': 10,
+            'name': 'MacBook',
+            '_embedded': {
+                'category': {
+                    '_links': {
+                        'self': {
+                            'href': 'http://localhost/category/index',
+                            'hreflang': 'en'
                         }
                     },
-                    "name": "Laptops"
+                    'name': 'Laptops'
                 }
             }
         }''')
@@ -147,77 +147,77 @@ class HalJsonRendererSpec extends Specification {
     }
 
     @Issue('GRAILS-10499')
-    void "Test that the HAL rendered renders JSON values correctly for collection" () {
-        given: "A HAL Collection renderer"
+    void 'Test that the HAL rendered renders JSON values correctly for collection' () {
+        given: 'A HAL Collection renderer'
             HalJsonCollectionRenderer renderer = getCollectionRenderer()
             renderer.prettyPrint = true
 
-        when: "A collection of domian objects is rendered"
+        when: 'A collection of domian objects is rendered'
             def webRequest = boundMimeTypeRequest()
-            (webRequest.request as MockHttpServletRequest).addHeader("ACCEPT", "application/hal+json")
-            webRequest.request.setAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, "/product/Macbook")
+            (webRequest.request as MockHttpServletRequest).addHeader('ACCEPT', 'application/hal+json')
+            webRequest.request.setAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, '/product/Macbook')
             def response = webRequest.response as MockHttpServletResponse
             def renderContext = new ServletRenderContext(webRequest)
             def products = [
-                new Product(name: "MacBook", numberInStock: 10, category:  new Category(name: 'Laptops')),
-                new Product(name: "iMac", numberInStock: 42, category:  new Category(name: 'Desktops'))
+                new Product(name: 'MacBook', numberInStock: 10, category:  new Category(name: 'Laptops')),
+                new Product(name: 'iMac', numberInStock: 42, category:  new Category(name: 'Desktops'))
             ]
             renderer.render(products, renderContext)
 
-        then:"The resulting HAL is correct"
+        then:'The resulting HAL is correct'
             response.contentType == GrailsWebUtil.getContentType(HalJsonRenderer.MIME_TYPE.name,
                     GrailsWebUtil.DEFAULT_ENCODING)
             jsonEquals(response.contentAsString, '''{
-            "_links": {
-                "self": {
-                    "href": "http://localhost/product/Macbook",
-                    "hreflang": "en",
-                    "type": "application/hal+json"
+            '_links': {
+                'self': {
+                    'href': 'http://localhost/product/Macbook',
+                    'hreflang': 'en',
+                    'type': 'application/hal+json'
                 }
             },
-            "_embedded": {
-                "product": [
+            '_embedded': {
+                'product': [
                     {
-                        "_links": {
-                            "self": {
-                                "href": "http://localhost/products",
-                                "hreflang": "en",
-                                "type": "application/hal+json"
+                        '_links': {
+                            'self': {
+                                'href': 'http://localhost/products',
+                                'hreflang': 'en',
+                                'type': 'application/hal+json'
                             }
                         },
-                        "numberInStock": 10,
-                        "name": "MacBook",
-                        "_embedded": {
-                            "category": {
-                                "_links": {
-                                    "self": {
-                                        "href": "http://localhost/category/index",
-                                        "hreflang": "en"
+                        'numberInStock': 10,
+                        'name': 'MacBook',
+                        '_embedded': {
+                            'category': {
+                                '_links': {
+                                    'self': {
+                                        'href': 'http://localhost/category/index',
+                                        'hreflang': 'en'
                                     }
                                 },
-                                "name": "Laptops"
+                                'name': 'Laptops'
                             }
                         }
                     },
                     {
-                        "_links": {
-                            "self": {
-                                "href": "http://localhost/products",
-                                "hreflang": "en",
-                                "type": "application/hal+json"
+                        '_links': {
+                            'self': {
+                                'href': 'http://localhost/products',
+                                'hreflang': 'en',
+                                'type': 'application/hal+json'
                             }
                         },
-                        "numberInStock": 42,
-                        "name": "iMac",
-                        "_embedded": {
-                            "category": {
-                                "_links": {
-                                    "self": {
-                                        "href": "http://localhost/category/index",
-                                        "hreflang": "en"
+                        'numberInStock': 42,
+                        'name': 'iMac',
+                        '_embedded': {
+                            'category': {
+                                '_links': {
+                                    'self': {
+                                        'href': 'http://localhost/category/index',
+                                        'hreflang': 'en'
                                     }
                                 },
-                                "name": "Desktops"
+                                'name': 'Desktops'
                             }
                         }
                     }
@@ -228,78 +228,78 @@ class HalJsonRendererSpec extends Specification {
     }
     
     @Issue('GRAILS-10533')
-    void "Test customizing the embedded name for a rendered collection of domain objects" () {
-        given: "A HAL Collection renderer with a custom embedded name"
+    void 'Test customizing the embedded name for a rendered collection of domain objects' () {
+        given: 'A HAL Collection renderer with a custom embedded name'
             HalJsonCollectionRenderer renderer = getCollectionRenderer()
             renderer.prettyPrint = true
             renderer.collectionName = 'schtuff'
 
-        when: "A collection of domian objects is rendered"
+        when: 'A collection of domian objects is rendered'
             def webRequest = boundMimeTypeRequest()
-            (webRequest.request as MockHttpServletRequest).addHeader("ACCEPT", "application/hal+json")
-            webRequest.request.setAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, "/product/Macbook")
+            (webRequest.request as MockHttpServletRequest).addHeader('ACCEPT', 'application/hal+json')
+            webRequest.request.setAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, '/product/Macbook')
             def response = webRequest.response as MockHttpServletResponse
             def renderContext = new ServletRenderContext(webRequest)
             def products = [
-                new Product(name: "MacBook", numberInStock: 10, category:  new Category(name: 'Laptops')),
-                new Product(name: "iMac", numberInStock: 42, category:  new Category(name: 'Desktops'))
+                new Product(name: 'MacBook', numberInStock: 10, category:  new Category(name: 'Laptops')),
+                new Product(name: 'iMac', numberInStock: 42, category:  new Category(name: 'Desktops'))
             ]
             renderer.render(products, renderContext)
 
-        then:"The resulting HAL is correct"
+        then:'The resulting HAL is correct'
             response.contentType == GrailsWebUtil.getContentType(HalJsonRenderer.MIME_TYPE.name,
                     GrailsWebUtil.DEFAULT_ENCODING)
             jsonEquals(response.contentAsString, '''{
-            "_links": {
-                "self": {
-                    "href": "http://localhost/product/Macbook",
-                    "hreflang": "en",
-                    "type": "application/hal+json"
+            '_links': {
+                'self': {
+                    'href': 'http://localhost/product/Macbook',
+                    'hreflang': 'en',
+                    'type': 'application/hal+json'
                 }
             },
-            "_embedded": {
-                "schtuff": [
+            '_embedded': {
+                'schtuff': [
                     {
-                        "_links": {
-                            "self": {
-                                "href": "http://localhost/products",
-                                "hreflang": "en",
-                                "type": "application/hal+json"
+                        '_links': {
+                            'self': {
+                                'href': 'http://localhost/products',
+                                'hreflang': 'en',
+                                'type': 'application/hal+json'
                             }
                         },
-                        "numberInStock": 10,
-                        "name": "MacBook",
-                        "_embedded": {
-                            "category": {
-                                "_links": {
-                                    "self": {
-                                        "href": "http://localhost/category/index",
-                                        "hreflang": "en"
+                        'numberInStock': 10,
+                        'name': 'MacBook',
+                        '_embedded': {
+                            'category': {
+                                '_links': {
+                                    'self': {
+                                        'href': 'http://localhost/category/index',
+                                        'hreflang': 'en'
                                     }
                                 },
-                                "name": "Laptops"
+                                'name': 'Laptops'
                             }
                         }
                     },
                     {
-                        "_links": {
-                            "self": {
-                                "href": "http://localhost/products",
-                                "hreflang": "en",
-                                "type": "application/hal+json"
+                        '_links': {
+                            'self': {
+                                'href': 'http://localhost/products',
+                                'hreflang': 'en',
+                                'type': 'application/hal+json'
                             }
                         },
-                        "numberInStock": 42,
-                        "name": "iMac",
-                        "_embedded": {
-                            "category": {
-                                "_links": {
-                                    "self": {
-                                        "href": "http://localhost/category/index",
-                                        "hreflang": "en"
+                        'numberInStock': 42,
+                        'name': 'iMac',
+                        '_embedded': {
+                            'category': {
+                                '_links': {
+                                    'self': {
+                                        'href': 'http://localhost/category/index',
+                                        'hreflang': 'en'
                                     }
                                 },
-                                "name": "Desktops"
+                                'name': 'Desktops'
                             }
                         }
                     }
@@ -310,95 +310,95 @@ class HalJsonRendererSpec extends Specification {
     }
 
     @Issue('GRAILS-10372')
-    void "Test that the HAL renderer renders JSON values correctly for simple POGOs"() {
-        given:"A HAL renderer"
+    void 'Test that the HAL renderer renders JSON values correctly for simple POGOs'() {
+        given:'A HAL renderer'
             HalJsonRenderer renderer = getRenderer()
             renderer.prettyPrint = true
 
-            when:"A domain object is rendered"
+            when:'A domain object is rendered'
             def webRequest = boundMimeTypeRequest()
-            (webRequest.request as MockHttpServletRequest).addHeader("ACCEPT", "application/hal+json")
-            webRequest.request.setAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, "/product/Macbook")
+            (webRequest.request as MockHttpServletRequest).addHeader('ACCEPT', 'application/hal+json')
+            webRequest.request.setAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, '/product/Macbook')
             def response = webRequest.response as MockHttpServletResponse
             def renderContext = new ServletRenderContext(webRequest)
-            def product = new SimpleProduct(name: "MacBook", numberInStock: 10, category: new SimpleCategory(name: 'Laptops'))
+            def product = new SimpleProduct(name: 'MacBook', numberInStock: 10, category: new SimpleCategory(name: 'Laptops'))
             renderer.render(product, renderContext)
 
-        then:"The resulting HAL is correct"
+        then:'The resulting HAL is correct'
             response.contentType == GrailsWebUtil.getContentType(HalJsonRenderer.MIME_TYPE.name, GrailsWebUtil.DEFAULT_ENCODING)
             jsonEquals(response.contentAsString, '''{
-            "_links": {
-                "self": {
-                    "href": "http://localhost/product/Macbook",
-                    "hreflang": "en",
-                    "type": "application/hal+json"
+            '_links': {
+                'self': {
+                    'href': 'http://localhost/product/Macbook',
+                    'hreflang': 'en',
+                    'type': 'application/hal+json'
                 }
             },
-            "category": {
-                "name": "Laptops"
+            'category': {
+                'name': 'Laptops'
             },
-            "name": "MacBook",
-            "numberInStock": 10
+            'name': 'MacBook',
+            'numberInStock': 10
         }''')
 
     }
     
     @Issue('GRAILS-10512')
-    void "Test that the HAL renderer renders JSON values correctly for a collection of simple POGOs"() {
-        given:"A HAL renderer"
+    void 'Test that the HAL renderer renders JSON values correctly for a collection of simple POGOs'() {
+        given:'A HAL renderer'
             HalJsonRenderer renderer = getRenderer()
             renderer.prettyPrint = true
  
-            when:"A collection of POGO is rendered"
+            when:'A collection of POGO is rendered'
             def webRequest = boundMimeTypeRequest()
-            (webRequest.request as MockHttpServletRequest).addHeader("ACCEPT", "application/hal+json")
-            webRequest.request.setAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, "/product/Macbook")
+            (webRequest.request as MockHttpServletRequest).addHeader('ACCEPT', 'application/hal+json')
+            webRequest.request.setAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, '/product/Macbook')
             def response = webRequest.response as MockHttpServletResponse
             def renderContext = new ServletRenderContext(webRequest)
             def products = [
-                new SimpleProduct(name: "MacBook", numberInStock: 10, category: new SimpleCategory(name: 'Laptops')),
-                new SimpleProduct(name: "iMac", numberInStock: 8, category: new SimpleCategory(name: 'Desktops'))
+                new SimpleProduct(name: 'MacBook', numberInStock: 10, category: new SimpleCategory(name: 'Laptops')),
+                new SimpleProduct(name: 'iMac', numberInStock: 8, category: new SimpleCategory(name: 'Desktops'))
             ]
             renderer.render(products, renderContext)
  
-        then:"The resulting HAL is correct"
+        then:'The resulting HAL is correct'
             response.contentType == GrailsWebUtil.getContentType(HalJsonRenderer.MIME_TYPE.name, GrailsWebUtil.DEFAULT_ENCODING)
             jsonEquals(response.contentAsString, '''{
-            "_links": {
-                "self": {
-                    "href": "http://localhost/product/Macbook",
-                    "hreflang": "en",
-                    "type": "application/hal+json"
+            '_links': {
+                'self': {
+                    'href': 'http://localhost/product/Macbook',
+                    'hreflang': 'en',
+                    'type': 'application/hal+json'
                 }
             },
-            "_embedded": [
+            '_embedded': [
                 {
-                    "_links": {
-                        "self": {
-                            "href": "http://localhost/product/Macbook",
-                            "hreflang": "en",
-                            "type": "application/hal+json"
+                    '_links': {
+                        'self': {
+                            'href': 'http://localhost/product/Macbook',
+                            'hreflang': 'en',
+                            'type': 'application/hal+json'
                         }
                     },
-                    "category": {
-                        "name": "Laptops"
+                    'category': {
+                        'name': 'Laptops'
                     },
-                    "name": "MacBook",
-                    "numberInStock": 10
+                    'name': 'MacBook',
+                    'numberInStock': 10
                 },
                 {
-                    "_links": {
-                        "self": {
-                            "href": "http://localhost/product/Macbook",
-                            "hreflang": "en",
-                            "type": "application/hal+json"
+                    '_links': {
+                        'self': {
+                            'href': 'http://localhost/product/Macbook',
+                            'hreflang': 'en',
+                            'type': 'application/hal+json'
                         }
                     },
-                    "category": {
-                        "name": "Desktops"
+                    'category': {
+                        'name': 'Desktops'
                     },
-                    "name": "iMac",
-                    "numberInStock": 8
+                    'name': 'iMac',
+                    'numberInStock': 8
                 }
             ]
         }''')
@@ -406,21 +406,21 @@ class HalJsonRendererSpec extends Specification {
     }
 
     @Issue('GRAILS-10520')
-    void "Test that HAL renders JSON correctly for eagerly loaded domain objects"(){
-        given: "A HAL Renderer"
+    void 'Test that HAL renders JSON correctly for eagerly loaded domain objects'() {
+        given: 'A HAL Renderer'
         def renderer = getEmployeeRenderer()
-        and: "Eagerly loaded domain objects"
-        def employee = new Employee(name:'employee1', projects: [new Project(name: 'project1')])
+        and: 'Eagerly loaded domain objects'
+        def employee = new Employee(name: 'employee1', projects: [new Project(name: 'project1')])
 
-        when: "I render eagerly loaded domain object"
+        when: 'I render eagerly loaded domain object'
         def webRequest = boundMimeTypeRequest()
-        (webRequest.request as MockHttpServletRequest).addHeader("ACCEPT", "application/hal+json")
+        (webRequest.request as MockHttpServletRequest).addHeader('ACCEPT', 'application/hal+json')
         def renderContext = new ServletRenderContext(webRequest)
-        webRequest.request.setAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, "/employees/employee1")
+        webRequest.request.setAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, '/employees/employee1')
         renderer.render(employee,renderContext)
         def response = webRequest.response as MockHttpServletResponse
 
-        then: "The resulting HAL is correct"
+        then: 'The resulting HAL is correct'
         response.contentType == GrailsWebUtil.getContentType(HalJsonRenderer.MIME_TYPE.name,
                 GrailsWebUtil.DEFAULT_ENCODING)
         /*
@@ -428,106 +428,105 @@ class HalJsonRendererSpec extends Specification {
             Links are not rendered correctly. This seems to be an existing bug in link generation and all other
             tests have same problem. For now, the assertion below is using manipulated links for expected value.
          */
-        jsonEquals(response.contentAsString, '{"_links":{"self":{"href":"http://localhost/employees","hreflang":"en","type":"application/hal+json"}},"name":"employee1","_embedded":{"projects":[{"_links":{"self":{"href":"http://localhost/project/index","hreflang":"en"}},"name":"project1","_embedded":{"employees":[]}}]}}')
-
+        jsonEquals(response.contentAsString, '{'_links':{'self':{'href':'http://localhost/employees','hreflang': 'en','type': 'application/hal+json'}},'name': 'employee1','_embedded': {'projects':[{'_links':{'self':{'href':'http://localhost/project/index','hreflang': 'en'}},'name': 'project1','_embedded': {'employees':[]}}]}}')
 
     }
 
     @Issue('GRAILS-10499')
     @NotYetImplemented
-    void "Test that the HAL rendered renders JSON values correctly for collections with repeated elements" () {
-        given: "A HAL Collection renderer"
+    void 'Test that the HAL rendered renders JSON values correctly for collections with repeated elements' () {
+        given: 'A HAL Collection renderer'
         HalJsonCollectionRenderer renderer = getCollectionRenderer()
         renderer.prettyPrint = true
 
-        when: "A collection of domian objects is rendered"
+        when: 'A collection of domian objects is rendered'
         def webRequest = boundMimeTypeRequest()
-        (webRequest.request as MockHttpServletRequest).addHeader("ACCEPT", "application/hal+json")
-        webRequest.request.setAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, "/product/Macbook")
+        (webRequest.request as MockHttpServletRequest).addHeader('ACCEPT', 'application/hal+json')
+        webRequest.request.setAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, '/product/Macbook')
         def response = webRequest.response as MockHttpServletRequest
         def renderContext = new ServletRenderContext(webRequest)
         def products = [
-            new Product(name: "MacBook", numberInStock: 10, category:  new Category(name: 'Laptops')),
-            new Product(name: "iMac", numberInStock: 42, category:  new Category(name: 'Desktops')),
-            new Product(name: "MacBook", numberInStock: 10, category:  new Category(name: 'Laptops'))
+            new Product(name: 'MacBook', numberInStock: 10, category:  new Category(name: 'Laptops')),
+            new Product(name: 'iMac', numberInStock: 42, category:  new Category(name: 'Desktops')),
+            new Product(name: 'MacBook', numberInStock: 10, category:  new Category(name: 'Laptops'))
         ]
         renderer.render(products, renderContext)
 
-        then:"The resulting HAL is correct"
+        then:'The resulting HAL is correct'
         response.contentType == GrailsWebUtil.getContentType(HalJsonRenderer.MIME_TYPE.name, GrailsWebUtil.DEFAULT_ENCODING)
         jsonEquals(response.contentAsString, '''{
-          "_links": {
-            "self": {
-              "href": "http://localhost/product/Macbook",
-              "hreflang": "en",
-              "type": "application/hal+json"
+          '_links': {
+            'self': {
+              'href': 'http://localhost/product/Macbook',
+              'hreflang': 'en',
+              'type': 'application/hal+json'
             }
           },
-          "_embedded": {
-            "product": [
+          '_embedded': {
+            'product': [
               {
-                "_links": {
-                  "self": {
-                    "href": "http://localhost/products",
-                    "hreflang": "en",
-                    "type": "application/hal+json"
+                '_links': {
+                  'self': {
+                    'href': 'http://localhost/products',
+                    'hreflang': 'en',
+                    'type': 'application/hal+json'
                   }
                 },
-                "name": "MacBook",
-                "numberInStock": 10,
-                "_embedded": {
-                  "category": {
-                    "_links": {
-                      "self": {
-                        "href": "http://localhost/category/index",
-                        "hreflang": "en"
+                'name': 'MacBook',
+                'numberInStock': 10,
+                '_embedded': {
+                  'category': {
+                    '_links': {
+                      'self': {
+                        'href': 'http://localhost/category/index',
+                        'hreflang': 'en'
                       }
                     },
-                    "name": "Laptops"
+                    'name': 'Laptops'
                   }
                 }
               },
               {
-                "_links": {
-                  "self": {
-                    "href": "http://localhost/products",
-                    "hreflang": "en",
-                    "type": "application/hal+json"
+                '_links': {
+                  'self': {
+                    'href': 'http://localhost/products',
+                    'hreflang': 'en',
+                    'type': 'application/hal+json'
                   }
                 },
-                "name": "iMac",
-                "numberInStock": 42,
-                "_embedded": {
-                  "category": {
-                    "_links": {
-                      "self": {
-                        "href": "http://localhost/category/index",
-                        "hreflang": "en"
+                'name': 'iMac',
+                'numberInStock': 42,
+                '_embedded': {
+                  'category': {
+                    '_links': {
+                      'self': {
+                        'href': 'http://localhost/category/index',
+                        'hreflang': 'en'
                       }
                     },
-                    "name": "Desktops"
+                    'name': 'Desktops'
                   }
                 }
               },
               {
-                "_links": {
-                  "self": {
-                    "href": "http://localhost/products",
-                    "hreflang": "en",
-                    "type": "application/hal+json"
+                '_links': {
+                  'self': {
+                    'href': 'http://localhost/products',
+                    'hreflang': 'en',
+                    'type': 'application/hal+json'
                   }
                 },
-                "name": "MacBook",
-                "numberInStock": 10,
-                "_embedded": {
-                  "category": {
-                    "_links": {
-                      "self": {
-                        "href": "http://localhost/category/index",
-                        "hreflang": "en"
+                'name': 'MacBook',
+                'numberInStock': 10,
+                '_embedded': {
+                  'category': {
+                    '_links': {
+                      'self': {
+                        'href': 'http://localhost/category/index',
+                        'hreflang': 'en'
                       }
                     },
-                    "name": "Laptops"
+                    'name': 'Laptops'
                   }
                 }
               }
@@ -539,91 +538,91 @@ class HalJsonRendererSpec extends Specification {
 
     @Issue('GRAILS-10499')
     @NotYetImplemented
-    void "Test that the HAL rendered renders JSON values correctly for collections with elided elements" () {
-        given: "A HAL Collection renderer"
+    void 'Test that the HAL rendered renders JSON values correctly for collections with elided elements' () {
+        given: 'A HAL Collection renderer'
         HalJsonCollectionRenderer renderer = getCollectionRenderer()
         renderer.prettyPrint = true
 
-        when: "A collection of domian objects is rendered"
+        when: 'A collection of domian objects is rendered'
         def webRequest = boundMimeTypeRequest()
-        (webRequest.request as MockHttpServletRequest).addHeader("ACCEPT", "application/hal+json")
-        webRequest.request.setAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, "/product/Macbook")
+        (webRequest.request as MockHttpServletRequest).addHeader('ACCEPT', 'application/hal+json')
+        webRequest.request.setAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, '/product/Macbook')
         def response = webRequest.response as MockHttpServletResponse
         def renderContext = new ServletRenderContext(webRequest)
         def products = [
-            new Product(name: "MacBook", numberInStock: 10, category:  new Category(name: 'Laptops')),
-            new Product(name: "iMac", numberInStock: 42, category:  new Category(name: 'Desktops')),
-            new Product(name: "MacBook", numberInStock: 10, category:  new Category(name: 'Laptops'))
+            new Product(name: 'MacBook', numberInStock: 10, category:  new Category(name: 'Laptops')),
+            new Product(name: 'iMac', numberInStock: 42, category:  new Category(name: 'Desktops')),
+            new Product(name: 'MacBook', numberInStock: 10, category:  new Category(name: 'Laptops'))
         ]
         renderer.render(products, renderContext)
 
-        then:"The resulting HAL is correct"
+        then:'The resulting HAL is correct'
         response.contentType == GrailsWebUtil.getContentType(HalJsonRenderer.MIME_TYPE.name,
             GrailsWebUtil.DEFAULT_ENCODING)
         objectMapper.readTree(response.contentAsString) == objectMapper.readTree('''{
-          "_links": {
-            "self": {
-              "href": "http://localhost/product/Macbook",
-              "hreflang": "en",
-              "type": "application/hal+json"
+          '_links': {
+            'self': {
+              'href': 'http://localhost/product/Macbook',
+              'hreflang': 'en',
+              'type': 'application/hal+json'
             }
           },
-          "_embedded": {
-            "product": [
+          '_embedded': {
+            'product': [
               {
-                "_links": {
-                  "self": {
-                    "href": "http://localhost/products",
-                    "hreflang": "en",
-                    "type": "application/hal+json"
+                '_links': {
+                  'self': {
+                    'href': 'http://localhost/products',
+                    'hreflang': 'en',
+                    'type': 'application/hal+json'
                   }
                 },
-                "name": "MacBook",
-                "numberInStock": 10,
-                "_embedded": {
-                  "category": {
-                    "_links": {
-                      "self": {
-                        "href": "http://localhost/category/index",
-                        "hreflang": "en"
+                'name': 'MacBook',
+                'numberInStock': 10,
+                '_embedded': {
+                  'category': {
+                    '_links': {
+                      'self': {
+                        'href': 'http://localhost/category/index',
+                        'hreflang': 'en'
                       }
                     },
-                    "name": "Laptops"
+                    'name': 'Laptops'
                   }
                 }
               },
               {
-                "_links": {
-                  "self": {
-                    "href": "http://localhost/products",
-                    "hreflang": "en",
-                    "type": "application/hal+json"
+                '_links': {
+                  'self': {
+                    'href': 'http://localhost/products',
+                    'hreflang': 'en',
+                    'type': 'application/hal+json'
                   }
                 },
-                "name": "iMac",
-                "numberInStock": 42,
-                "_embedded": {
-                  "category": {
-                    "_links": {
-                      "self": {
-                        "href": "http://localhost/category/index",
-                        "hreflang": "en"
+                'name': 'iMac',
+                'numberInStock': 42,
+                '_embedded': {
+                  'category': {
+                    '_links': {
+                      'self': {
+                        'href': 'http://localhost/category/index',
+                        'hreflang': 'en'
                       }
                     },
-                    "name": "Desktops"
+                    'name': 'Desktops'
                   }
                 }
               },
               {
-                "_links": {
-                  "self": {
-                    "href": "http://localhost/products",
-                    "hreflang": "en",
-                    "type": "application/hal+json"
+                '_links': {
+                  'self': {
+                    'href': 'http://localhost/products',
+                    'hreflang': 'en',
+                    'type': 'application/hal+json'
                   }
                 },
-                "name": "MacBook",
-                "numberInStock": 10
+                'name': 'MacBook',
+                'numberInStock': 10
               }
             ]
           }
@@ -638,8 +637,8 @@ class HalJsonRendererSpec extends Specification {
 
         when: 'A non domain is rendered'
         def webRequest = boundMimeTypeRequest()
-        (webRequest.request as MockHttpServletRequest).addHeader("ACCEPT", "application/hal+json")
-        webRequest.request.setAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, "/moment/theFuture")
+        (webRequest.request as MockHttpServletRequest).addHeader('ACCEPT', 'application/hal+json')
+        webRequest.request.setAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, '/moment/theFuture')
         def response = webRequest.response as MockHttpServletResponse
         def renderContext = new ServletRenderContext(webRequest)
         def moment = new Moment(type: Moment.Category.FUTURE)
@@ -647,19 +646,19 @@ class HalJsonRendererSpec extends Specification {
 
         then: 'The resulting HAL is correct'
         response.contentType == GrailsWebUtil.getContentType(HalJsonRenderer.MIME_TYPE.name, GrailsWebUtil.DEFAULT_ENCODING)
-        jsonEquals(response.contentAsString, '{"_links":{"self":{"href":"http://localhost/moment/theFuture","hreflang":"en","type":"application/hal+json"}},"type":"FUTURE"}')
+        jsonEquals(response.contentAsString, '{'_links':{'self':{'href':'http://localhost/moment/theFuture','hreflang': 'en','type': 'application/hal+json'}},'type': 'FUTURE'}')
     }
 
     @Issue('GRAILS-10372 GRAILS-10781')
-    void "Test that the HAL renderer renders mixed fields (dates, enums) successfully for domains"() {
-        given:"A HAL renderer"
+    void 'Test that the HAL renderer renders mixed fields (dates, enums) successfully for domains'() {
+        given:'A HAL renderer'
         HalJsonRenderer renderer = getEventRenderer()
         renderer.prettyPrint = true
 
-        when:"A domain object is rendered"
+        when:'A domain object is rendered'
         def webRequest = boundMimeTypeRequest()
-        (webRequest.request as MockHttpServletRequest).addHeader("ACCEPT", "application/hal+json")
-        webRequest.request.setAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, "/event/Lollapalooza")
+        (webRequest.request as MockHttpServletRequest).addHeader('ACCEPT', 'application/hal+json')
+        webRequest.request.setAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, '/event/Lollapalooza')
         def response = webRequest.response as MockHttpServletResponse
         def renderContext = new ServletRenderContext(webRequest)
         def cal = Calendar.instance
@@ -673,30 +672,30 @@ class HalJsonRendererSpec extends Specification {
             set SECOND, 30
             setTimeZone TimeZone.getTimeZone('GMT-5:00')
         }
-        def event = new Event(name: "Lollapalooza", date: cal.time, state: Event.State.OPEN)
+        def event = new Event(name: 'Lollapalooza', date: cal.time, state: Event.State.OPEN)
 
         renderer.render(event, renderContext)
 
-        then:"The resulting HAL is correct"
+        then:'The resulting HAL is correct'
         response.contentType == GrailsWebUtil.getContentType(HalJsonRenderer.MIME_TYPE.name, GrailsWebUtil.DEFAULT_ENCODING)
         jsonEquals(response.contentAsString, '''{
-            "_links": {
-                "self": {
-                    "href": "http://localhost/events",
-                    "hreflang": "en",
-                    "type": "application/hal+json"
+            '_links': {
+                'self': {
+                    'href': 'http://localhost/events',
+                    'hreflang': 'en',
+                    'type': 'application/hal+json'
                 }
             },
-            "date": "2013-11-08T21:12:30+0000",
-            "name": "Lollapalooza",
-            "state": "OPEN"
+            'date': '2013-11-08T21:12:30+0000',
+            'name': 'Lollapalooza',
+            'state': 'OPEN'
         }''')
     }
 
     @Issue('https://github.com/apache/grails-core/issues/5671')
     @Ignore // fails in github vs locally due to time zone issues
-    void "Test that the HAL renderer allows for different date converters"() {
-        given:"A HAL renderer"
+    void 'Test that the HAL renderer allows for different date converters'() {
+        given:'A HAL renderer'
         HalJsonRenderer renderer = getEventRenderer()
         renderer.prettyPrint = true
         renderer.dateToStringConverter = new Converter<Date, String>() {
@@ -709,58 +708,57 @@ class HalJsonRendererSpec extends Specification {
             }
         }
 
-        when:"A domain object is rendered"
+        when:'A domain object is rendered'
         def webRequest = boundMimeTypeRequest()
-        webRequest.request.setAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, "/event/Lollapalooza")
-        (webRequest.request as MockHttpServletRequest).addHeader("ACCEPT", "application/hal+json")
+        webRequest.request.setAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, '/event/Lollapalooza')
+        (webRequest.request as MockHttpServletRequest).addHeader('ACCEPT', 'application/hal+json')
         def response = webRequest.response as MockHttpServletResponse
         def renderContext = new ServletRenderContext(webRequest)
         Calendar calendar = Calendar.getInstance()
         calendar.set(2013, 10, 8, 13, 12, 30)
-        def event = new Event(name: "Lollapalooza", date: calendar.getTime(), state: Event.State.OPEN)
+        def event = new Event(name: 'Lollapalooza', date: calendar.getTime(), state: Event.State.OPEN)
 
         renderer.render(event, renderContext)
 
-        then:"The resulting HAL is correct"
+        then:'The resulting HAL is correct'
         response.contentType == GrailsWebUtil.getContentType(HalJsonRenderer.MIME_TYPE.name, GrailsWebUtil.DEFAULT_ENCODING)
         jsonEquals(response.contentAsString, '''{
-          "_links": {
-            "self": {
-              "href": "http://localhost/events",
-              "hreflang": "en",
-              "type": "application/hal+json"
+          '_links': {
+            'self': {
+              'href': 'http://localhost/events',
+              'hreflang': 'en',
+              'type': 'application/hal+json'
             }
           },
-          "date": "2013-11-08T18:12:30+0000",
-          "name": "Lollapalooza",
-          "state": "OPEN"
+          'date': '2013-11-08T18:12:30+0000',
+          'name': 'Lollapalooza',
+          'state': 'OPEN'
         }''')
 
     }
 
-
     @Issue('GRAILS-11100')
-    void "Test that the HAL renderer ignores null values for embedded single ended domain objects" () {
-        given:"A HAL renderer"
+    void 'Test that the HAL renderer ignores null values for embedded single ended domain objects' () {
+        given:'A HAL renderer'
         HalJsonRenderer renderer = getRenderer()
         renderer.prettyPrint = false
 
-        when:"A domain object is rendered"
+        when:'A domain object is rendered'
         def webRequest = boundMimeTypeRequest()
-        webRequest.request.setAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, "/product/Macbook")
-        (webRequest.request as MockHttpServletRequest).addHeader("ACCEPT", "application/hal+json")
+        webRequest.request.setAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, '/product/Macbook')
+        (webRequest.request as MockHttpServletRequest).addHeader('ACCEPT', 'application/hal+json')
         def response = webRequest.response as MockHttpServletResponse
         def renderContext = new ServletRenderContext(webRequest)
-        def product = new Product(name: "MacBook", numberInStock: 10, category: null)
+        def product = new Product(name: 'MacBook', numberInStock: 10, category: null)
         renderer.render(product, renderContext)
 
-        then:"The resulting HAL is correct"
+        then:'The resulting HAL is correct'
         response.contentType == GrailsWebUtil.getContentType(HalJsonRenderer.MIME_TYPE.name, GrailsWebUtil.DEFAULT_ENCODING)
-        jsonEquals(response.contentAsString, '{"_links":{"self":{"href":"http://localhost/products","hreflang":"en","type":"application/hal+json"}},"numberInStock":10,"name":"MacBook","_embedded":{}}')
+        jsonEquals(response.contentAsString, '{'_links':{'self':{'href':'http://localhost/products','hreflang': 'en','type': 'application/hal+json'}},'numberInStock': 10,'name': 'MacBook','_embedded': {}}')
     }
 
     @Issue('https://github.com/apache/grails-core/issues/10293')
-    void "Test that the HAL renderer renders JSON values correctly for collections with a many-to-one association" () {
+    void 'Test that the HAL renderer renders JSON values correctly for collections with a many-to-one association' () {
         given:
         HalJsonCollectionRenderer renderer = getMemberCollectionRenderer()
         renderer.proxyHandler = new MockHibernateProxyHandler()
@@ -768,8 +766,8 @@ class HalJsonRendererSpec extends Specification {
         and:
         def team = new Team(name: 'Test Team')
         def members = [
-            new Member(name: "One", team: team),
-            new Member(name: "Two", team: team)
+            new Member(name: 'One', team: team),
+            new Member(name: 'Two', team: team)
         ]
 
         and:
@@ -785,42 +783,42 @@ class HalJsonRendererSpec extends Specification {
 
         and:
         jsonEquals(response.contentAsString, '''{
-            "_links": {
-                "self": {
-                    "href": "http://localhost/members/",
-                    "hreflang": "en",
-                    "type": "application/hal+json"
+            '_links': {
+                'self': {
+                    'href': 'http://localhost/members/',
+                    'hreflang': 'en',
+                    'type': 'application/hal+json'
                 }
             },
-            "_embedded": {
-                "member": [
+            '_embedded': {
+                'member': [
                     {
-                        "_links": {
-                            "self": {
-                                "href": "http://localhost/members",
-                                "hreflang": "en",
-                                "type": "application/hal+json"
+                        '_links': {
+                            'self': {
+                                'href': 'http://localhost/members',
+                                'hreflang': 'en',
+                                'type': 'application/hal+json'
                             },
-                            "team": {
-                                "href": "http://localhost/teams",
-                                "hreflang": "en"
+                            'team': {
+                                'href': 'http://localhost/teams',
+                                'hreflang': 'en'
                             }
                         },
-                        "name": "One"
+                        'name': 'One'
                     },
                     {
-                        "_links": {
-                            "self": {
-                                "href": "http://localhost/members",
-                                "hreflang": "en",
-                                "type": "application/hal+json"
+                        '_links': {
+                            'self': {
+                                'href': 'http://localhost/members',
+                                'hreflang': 'en',
+                                'type': 'application/hal+json'
                             },
-                            "team": {
-                                "href": "http://localhost/teams",
-                                "hreflang": "en"
+                            'team': {
+                                'href': 'http://localhost/teams',
+                                'hreflang': 'en'
                             }
                         },
-                        "name": "Two"
+                        'name': 'Two'
                     }
                 ]
             }
@@ -829,8 +827,8 @@ class HalJsonRendererSpec extends Specification {
 
     protected configureMembersWebRequest() {
         def webRequest = boundMimeTypeRequest()
-        (webRequest.request as MockHttpServletRequest).addHeader("ACCEPT", "application/hal+json")
-        webRequest.request.setAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, "/members/")
+        (webRequest.request as MockHttpServletRequest).addHeader('ACCEPT', 'application/hal+json')
+        webRequest.request.setAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, '/members/')
         webRequest
     }
 
@@ -839,7 +837,7 @@ class HalJsonRendererSpec extends Specification {
         renderer.mappingContext = mappingContext
         renderer.messageSource = new StaticMessageSource()
         renderer.linkGenerator = getLinkGenerator {
-            "/products"(resources: "product")
+            '/products'(resources: 'product')
         }
         renderer
     }
@@ -849,8 +847,8 @@ class HalJsonRendererSpec extends Specification {
         renderer.mappingContext = mappingContext
         renderer.messageSource = new StaticMessageSource()
         renderer.linkGenerator = getLinkGenerator {
-            "/members"(resources: "member")
-            "/teams"(resources: "team")
+            '/members'(resources: 'member')
+            '/teams'(resources: 'team')
         }
         renderer.prettyPrint = true
         renderer
@@ -861,7 +859,7 @@ class HalJsonRendererSpec extends Specification {
         renderer.mappingContext = mappingContext
         renderer.messageSource = new StaticMessageSource()
         renderer.linkGenerator = getLinkGenerator {
-            "/products"(resources: "product")
+            '/products'(resources: 'product')
         }
         renderer
     }
@@ -871,7 +869,7 @@ class HalJsonRendererSpec extends Specification {
         renderer.mappingContext = mappingContext
         renderer.messageSource = new StaticMessageSource()
         renderer.linkGenerator = getLinkGenerator {
-            "/employees"(resources: "employee")
+            '/employees'(resources: 'employee')
         }
         renderer.prettyPrint = false
         renderer
@@ -882,7 +880,7 @@ class HalJsonRendererSpec extends Specification {
         renderer.mappingContext = mappingContext
         renderer.messageSource = new StaticMessageSource()
         renderer.linkGenerator = getLinkGenerator {
-            "/events"(resources: "event")
+            '/events'(resources: 'event')
         }
         renderer
     }
@@ -892,13 +890,13 @@ class HalJsonRendererSpec extends Specification {
         renderer.mappingContext = mappingContextForSpecialEvent
         renderer.messageSource = new StaticMessageSource()
         renderer.linkGenerator = getLinkGenerator {
-            "/specialEvents"(resources: "specialEvent")
+            '/specialEvents'(resources: 'specialEvent')
         }
         renderer
     }
 
     MappingContext getMappingContextForSpecialEvent() {
-        final context = new KeyValueMappingContext("")
+        final context = new KeyValueMappingContext('')
         def specialEventEntity = context.addPersistentEntity(SpecialEvent)
         // To make 'specialType' appear as a persistentProperty on SpecialEvent we need to fake it here
         def pp = new AbstractPersistentProperty(specialEventEntity, context, 'specialType', SpecialType) {
@@ -913,7 +911,7 @@ class HalJsonRendererSpec extends Specification {
     }
 
     MappingContext getMappingContext() {
-        final context = new KeyValueMappingContext("")
+        final context = new KeyValueMappingContext('')
         context.addPersistentEntity(Product)
         context.addPersistentEntity(Category)
         context.addPersistentEntity(Event)
@@ -924,10 +922,10 @@ class HalJsonRendererSpec extends Specification {
         return context
     }
     LinkGenerator getLinkGenerator(Closure mappings) {
-        def generator = new DefaultLinkGenerator("http://localhost", null)
+        def generator = new DefaultLinkGenerator('http://localhost', null)
         generator.grailsUrlConverter = new CamelCaseUrlConverter()
         generator.urlMappingsHolder = getUrlMappingsHolder mappings
-        return generator;
+        return generator
     }
     UrlMappingsHolder getUrlMappingsHolder(Closure mappings) {
         def ctx = new MockApplicationContext()
@@ -943,7 +941,7 @@ class HalJsonRendererSpec extends Specification {
         servletContext.setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, ctx)
         def application = new DefaultGrailsApplication()
         application.config = testConfig
-        ctx.beanFactory.registerSingleton("mimeUtility", new DefaultMimeUtility(buildMimeTypes(application)))
+        ctx.beanFactory.registerSingleton('mimeUtility', new DefaultMimeUtility(buildMimeTypes(application)))
 
         ctx.beanFactory.registerSingleton(GrailsApplication.APPLICATION_ID, application)
         ctx.refresh()
@@ -975,8 +973,7 @@ grails.mime.types = [
         def config = s.parse(String.valueOf(applicationConfigText))
 
         def propertySources = new MutablePropertySources()
-        propertySources.addLast(new MapPropertySource("grails", config))
-
+        propertySources.addLast(new MapPropertySource('grails', config))
 
         return new PropertySourcesConfig(propertySources)
     }
@@ -1058,6 +1055,7 @@ class Event {
 
 @Entity
 class SpecialEvent {
+
     String name
     SpecialType specialType
 }
@@ -1111,19 +1109,23 @@ class Member {
 }
 
 class Moment {
+
     Category type
     enum Category { PAST, PRESENT, FUTURE }
 }
 
 class SimpleProduct {
+
     String name
     Integer numberInStock
     SimpleCategory category
 }
 
 class SimpleCategory {
+
     String name
 }
 
 class SpecialType {
+
 }

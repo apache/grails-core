@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -38,67 +38,67 @@ class BeforeUpdatePropertyPersistenceSpec extends MongoDatastoreSpec {
     }
 
     @Issue('GRAILS-15139')
-    void "Test that properties set in beforeUpdate are persisted"() {
-        given: "A user is created"
-        def user = new UserWithBeforeUpdate(name: "Fred")
+    void 'Test that properties set in beforeUpdate are persisted'() {
+        given: 'A user is created'
+        def user = new UserWithBeforeUpdate(name: 'Fred')
         def saved = user.save(flush: true)
 
-        expect: "The user was saved successfully"
+        expect: 'The user was saved successfully'
         saved != null
         user.id != null
         user.errors.allErrors.size() == 0
 
-        when: "The session is cleared and user is retrieved"
+        when: 'The session is cleared and user is retrieved'
         manager.session.clear()
         user = UserWithBeforeUpdate.get(user.id)
 
-        then: "beforeInsert was called and random was set"
+        then: 'beforeInsert was called and random was set'
         user != null
-        user.name == "Fred"
-        user.random == "Not Updated"
+        user.name == 'Fred'
+        user.random == 'Not Updated'
 
         when: "The user's name is updated (but random is not explicitly modified)"
         def previousRandom = user.random
-        user.name = "Bob"
+        user.name = 'Bob'
         user.save(flush: true)
         manager.session.clear()
         user = UserWithBeforeUpdate.get(user.id)
 
-        then: "beforeUpdate was called and random was changed and persisted"
+        then: 'beforeUpdate was called and random was changed and persisted'
         user != null
-        user.name == "Bob"
+        user.name == 'Bob'
         user.random != previousRandom
-        user.random != "Not Updated"
+        user.random != 'Not Updated'
         user.random.length() == 5 // UUID substring [0..4]
     }
 
-    void "Test that beforeUpdate is called even when no properties are explicitly modified"() {
-        given: "A user is created"
-        def user = new UserWithBeforeUpdate(name: "Fred")
+    void 'Test that beforeUpdate is called even when no properties are explicitly modified'() {
+        given: 'A user is created'
+        def user = new UserWithBeforeUpdate(name: 'Fred')
         user.save(flush: true)
         manager.session.clear()
         user = UserWithBeforeUpdate.get(user.id)
         def previousRandom = user.random
 
-        when: "The user is saved without any explicit property changes"
+        when: 'The user is saved without any explicit property changes'
         user.save(flush: true)
         manager.session.clear()
         user = UserWithBeforeUpdate.get(user.id)
 
-        then: "beforeUpdate was called and random was updated"
+        then: 'beforeUpdate was called and random was updated'
         user != null
         user.random != previousRandom
-        user.random != "Not Updated"
+        user.random != 'Not Updated'
         user.random.length() == 5
     }
 
-    void "Test that multiple updates continue to trigger beforeUpdate"() {
-        given: "A user is created"
-        def user = new UserWithBeforeUpdate(name: "Fred")
+    void 'Test that multiple updates continue to trigger beforeUpdate'() {
+        given: 'A user is created'
+        def user = new UserWithBeforeUpdate(name: 'Fred')
         user.save(flush: true)
         manager.session.clear()
 
-        when: "The user is updated multiple times"
+        when: 'The user is updated multiple times'
         def randomValues = []
         3.times {
             user = UserWithBeforeUpdate.get(user.id)
@@ -109,29 +109,29 @@ class BeforeUpdatePropertyPersistenceSpec extends MongoDatastoreSpec {
         }
         user = UserWithBeforeUpdate.get(user.id)
 
-        then: "Each update generated a new random value"
+        then: 'Each update generated a new random value'
         randomValues.size() == 3
-        randomValues[0] == "Not Updated" // from beforeInsert
-        randomValues[1] != "Not Updated" // first update
+        randomValues[0] == 'Not Updated' // from beforeInsert
+        randomValues[1] != 'Not Updated' // first update
         randomValues[2] != randomValues[1] // second update
         user.random != randomValues[2] // third update
         user.random.length() == 5
     }
 
     @Issue('GRAILS-15120')
-    void "Test that properties set in beforeUpdate with AutoTimestamp are persisted"() {
-        given: "A user with auto timestamp is created"
-        def user = new UserWithBeforeUpdateAndAutoTimestamp(name: "Fred")
+    void 'Test that properties set in beforeUpdate with AutoTimestamp are persisted'() {
+        given: 'A user with auto timestamp is created'
+        def user = new UserWithBeforeUpdateAndAutoTimestamp(name: 'Fred')
         user.save(flush: true)
         manager.session.clear()
 
-        when: "The user is retrieved"
+        when: 'The user is retrieved'
         user = UserWithBeforeUpdateAndAutoTimestamp.get(user.id)
 
-        then: "beforeInsert was called and random was set"
+        then: 'beforeInsert was called and random was set'
         user != null
-        user.name == "Fred"
-        user.random == "Not Updated"
+        user.name == 'Fred'
+        user.random == 'Not Updated'
         user.dateCreated != null
         user.lastUpdated != null
         user.modified != null
@@ -141,16 +141,16 @@ class BeforeUpdatePropertyPersistenceSpec extends MongoDatastoreSpec {
         def previousRandom = user.random
         def previousLastUpdated = user.lastUpdated
         def previousModified = user.modified
-        user.name = "Bob"
+        user.name = 'Bob'
         user.save(flush: true)
         manager.session.clear()
         user = UserWithBeforeUpdateAndAutoTimestamp.get(user.id)
 
-        then: "beforeUpdate was called, random was changed, and lastUpdated was updated"
+        then: 'beforeUpdate was called, random was changed, and lastUpdated was updated'
         user != null
-        user.name == "Bob"
+        user.name == 'Bob'
         user.random != previousRandom
-        user.random != "Not Updated"
+        user.random != 'Not Updated'
         user.random.length() == 5
         user.lastUpdated > previousLastUpdated
         user.modified > previousModified
@@ -169,7 +169,7 @@ class UserWithBeforeUpdate {
     }
 
     def beforeInsert() {
-        random = "Not Updated"
+        random = 'Not Updated'
     }
 
     def beforeUpdate() {
@@ -193,7 +193,7 @@ class UserWithBeforeUpdateAndAutoTimestamp {
     }
 
     def beforeInsert() {
-        random = "Not Updated"
+        random = 'Not Updated'
     }
 
     def beforeUpdate() {

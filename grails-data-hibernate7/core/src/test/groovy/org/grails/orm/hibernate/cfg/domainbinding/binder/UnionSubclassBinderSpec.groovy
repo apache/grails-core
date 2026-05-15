@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -41,7 +41,8 @@ class UnionSubclassBinderSpec extends HibernateGormDatastoreSpec {
         binder = new UnionSubclassBinder(buildingContext, namingStrategy, classBinder, buildingContext.getMetadataCollector())
     }
 
-    void "test bind union subclass with real entities"() {
+    void 'test bind union subclass with real entities'() {
+
         given:
         def buildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def mappings = buildingContext.getMetadataCollector()
@@ -53,8 +54,8 @@ class UnionSubclassBinderSpec extends HibernateGormDatastoreSpec {
         // Setup Hibernate RootClass
         def rootClass = new RootClass(buildingContext)
         rootClass.setEntityName(UnionSubClassRoot.name)
-        def rootTable = new Table("US_ROOT_TABLE")
-        rootTable.setName("US_ROOT_TABLE")
+        def rootTable = new Table('US_ROOT_TABLE')
+        rootTable.setName('US_ROOT_TABLE')
         rootClass.setTable(rootTable)
         
         // Setup UnionSubclass
@@ -68,18 +69,20 @@ class UnionSubclassBinderSpec extends HibernateGormDatastoreSpec {
         unionSubclass != null
         unionSubclass.getEntityName() == UnionSubClassSub.name
         unionSubclass.getTable() != null
-        unionSubclass.getTable().getName() != "US_ROOT_TABLE"
+        unionSubclass.getTable().getName() != 'US_ROOT_TABLE'
         unionSubclass.getClassName() == UnionSubClassSub.name
     }
 }
 
 @Entity
 class UnionSubClassRoot {
+
     Long id
 }
 
 @Entity
 class UnionSubClassSub extends UnionSubClassRoot {
+
     String name
     static mapping = {
         tablePerHierarchy false

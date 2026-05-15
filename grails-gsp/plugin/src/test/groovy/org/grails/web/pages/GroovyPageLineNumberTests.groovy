@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -33,31 +33,31 @@ class GroovyPageLineNumberTests extends Specification implements TagLibUnitTest<
     def testSpanningMultipleLines() {
         when:
         def template = '''
- <a href="${createLink(action:'listActivity', controller:'activity',
-        params:[sort:params.sort?params.sort:'',
-        order:params.order?params.order:'asc', offset:params.offset?params.offset:0])}"">Click me</a>
+ <a href="${createLink(action: 'listActivity', controller: 'activity',
+        params: [sort:params.sort?params.sort:'',
+        order: params.order?params.order:'asc', offset: params.offset?params.offset:0])}''>Click me</a>
 '''
         String output = applyTemplate(template).trim()
 
         then:
 
-        output == '<a href="/activity/listActivity?sort=&amp;order=asc&amp;offset=0"">Click me</a>'
+        output == '<a href="/activity/listActivity?sort=&amp;order=asc&amp;offset=0''>Click me</a>'
     }
 
     def testExpressionWithQuotes() {
         when:
         def template = '${foo + \' \' + bar}'
-        String output = applyTemplate(template, [foo:"one", bar:"two"])
+        String output = applyTemplate(template, [foo: 'one', bar: 'two'])
 
         then:
-        output == "one two"
+        output == 'one two'
 
         when:
-        template = '<g:resource dir="${foo}" file="${foo + \' \' + bar}" />'
-        output = applyTemplate(template, [foo:"one", bar:"two"])
+        template = '<g:resource dir="${foo}' file='${foo + \' \' + bar}" />'
+        output = applyTemplate(template, [foo: 'one', bar: 'two'])
 
         then:
-        output == "/static/one/one two"
+        output == '/static/one/one two'
     }
 
     def testLineNumberDataInsideTagAttribute() {
@@ -67,7 +67,7 @@ class GroovyPageLineNumberTests extends Specification implements TagLibUnitTest<
 
 <p />
 
-<g:set var="foo" value="${foo.bar.path}" />
+<g:set var='foo' value="${foo.bar.path}" />
 
 <p />
 '''
@@ -76,7 +76,6 @@ class GroovyPageLineNumberTests extends Specification implements TagLibUnitTest<
 
         then:
         thrown GroovyPagesException
-
 
 /*
             def cause = e.cause
@@ -107,7 +106,6 @@ ${foo.bar.path}
         //thrown GroovyPagesException
         GroovyPagesException e = thrown()
 
-
             def cause = e.cause
             while (cause != cause.cause && cause.cause) {
                 cause = cause.cause
@@ -120,18 +118,18 @@ ${foo.bar.path}
     def testEachWithQuestionMarkAtEnd() {
         when:
         def template = '<g:each in="${list?}">${it}</g:each>'
-        String output = applyTemplate(template, [list:[1,2,3]])
+        String output = applyTemplate(template, [list: [1,2,3]])
         then:
-        output == "123"
+        output == '123'
     }
 
     def testStringWithQuestionMark() {
         when:
-        def template = '${"hello?"}'
+        def template = '${'hello?'}'
         String output = applyTemplate(template)
 
         then:
-        output == "hello?"
+        output == 'hello?'
     }
 
     def testComplexPage() {
@@ -140,20 +138,20 @@ ${foo.bar.path}
 <html>
     <head>
         <title>Welcome to Grails</title>
-        <meta name="layout" content="main" />
+        <meta name='layout' content='main' />
     </head>
     <body>
-        <h1 style="margin-left:20px;">Welcome to Grails</h1>
+        <h1 style='margin-left:20px;'>Welcome to Grails</h1>
         ${foo.bar.suck}
-        <p style="margin-left:20px;width:80%">Congratulations, you have successfully started your first Grails application! At the moment
+        <p style='margin-left:20px;width:80%'>Congratulations, you have successfully started your first Grails application! At the moment
         this is the default page, feel free to modify it to either redirect to a controller or display whatever
         content you may choose. Below is a list of controllers that are currently deployed in this application,
         click on each to execute its default action:</p>
-        <div class="dialog" style="margin-left:20px;width:60%;">
+        <div class='dialog' style='margin-left:20px;width:60%;'>
             <ul>
 
-              <g:each var="c" in="${grailsApplication.controllerClasses}">
-                    <li class="controller"><g:link controller="${c.logicalPropertyName}">${c.fullName}</g:link></li>
+              <g:each var='c' in="${grailsApplication.controllerClasses}">
+                    <li class='controller'><g:link controller="${c.logicalPropertyName}">${c.fullName}</g:link></li>
               </g:each>
             </ul>
 

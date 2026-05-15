@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -35,9 +35,9 @@ import spock.lang.Specification
  */
 class LinkGeneratorWithFormatSpec extends Specification {
 
-    def baseUrl = "https://myserver.com/foo"
+    def baseUrl = 'https://myserver.com/foo'
     def context = null
-    def path = "welcome"
+    def path = 'welcome'
 
     def mappings = {
         "/$controller/$action?/$id?(.$format)?"{
@@ -53,14 +53,13 @@ class LinkGeneratorWithFormatSpec extends Specification {
     }
 
     @Issue('https://github.com/apache/grails-core/issues/589')
-    void "Test that a link containing the format parameter generates correctly"() {
+    void 'Test that a link containing the format parameter generates correctly'() {
         when:
             def theLink =
-                    generator.link(controller:"one", action:"two", params:[format:'json'])
+                    generator.link(controller: 'one', action: 'two', params: [format:'json'])
         then:
             theLink  == 'https://myserver.com/foo/one/two.json'
     }
-
 
     protected getGenerator() {
         def generator = new DefaultLinkGenerator(baseUrl, context)

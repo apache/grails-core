@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -97,6 +97,7 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
     }
 
     private static class TenantBoundHibernateTemplate implements IHibernateTemplate {
+
         private final IHibernateTemplate delegate
         private final Serializable tenantId
         private final org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore datastore
@@ -658,7 +659,7 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     Integer executeUpdate(CharSequence query, Map params, Map args) {
-        throw new UnsupportedOperationException("This operation is not supported by this API implementation.")
+        throw new UnsupportedOperationException('This operation is not supported by this API implementation.')
     }
 
     @Override

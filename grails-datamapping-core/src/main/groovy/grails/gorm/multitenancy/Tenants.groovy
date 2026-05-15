@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -47,6 +47,7 @@ class Tenants {
     static DatastoreLocator datastoreLocator = new DatastoreLocator()
 
     static class DatastoreLocator {
+
         Datastore getDatastore() {
             GormRegistry.instance.apiResolver.findSingleDatastore()
         }
@@ -143,7 +144,7 @@ class Tenants {
 
     /**
      * Execute the given closure without any tenant id. In Multi tenancy mode SINGLE this will execute against the default data source. If multi tenancy mode
-     * MULTI this will execute without including the "tenantId" on any query. Use with caution.
+     * MULTI this will execute without including the 'tenantId' on any query. Use with caution.
      *
      * @param callable The closure
      * @return The result of the closure
@@ -184,6 +185,7 @@ class Tenants {
      * @return The result of the closure
      */
     static <T> T withCurrent(Class<? extends Datastore> datastoreClass, Closure<T> callable) {
+
         Datastore datastore = datastoreLocator.getDatastore(datastoreClass)
         if (datastore instanceof MultiTenantCapableDatastore) {
             MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore) datastore
@@ -290,14 +292,14 @@ class Tenants {
      * @return The result of the closure
      */
     static <T> T withId(MultiTenantCapableDatastore multiTenantCapableDatastore, Serializable tenantId, Closure<T> callable) {
-        log.debug("Tenants.withId called for datastore {} with tenantId {}", multiTenantCapableDatastore, tenantId)
+        log.debug('Tenants.withId called for datastore {} with tenantId {}', multiTenantCapableDatastore, tenantId)
         return CurrentTenantHolder.withTenant(multiTenantCapableDatastore, tenantId) {
             if (multiTenantCapableDatastore.getMultiTenancyMode().isSharedConnection()) {
                 def i = callable.parameterTypes.length
                 if (i == 2) {
                     return multiTenantCapableDatastore.withSession { session ->
                         def result = callable.call(tenantId, session)
-                        log.debug("Result from shared connection with 2 args: {}", result)
+                        log.debug('Result from shared connection with 2 args: {}', result)
                         return result
                     }
                 }
@@ -305,11 +307,11 @@ class Tenants {
                     switch (i) {
                         case 0:
                             def result = callable.call()
-                            log.debug("Result from shared connection with 0 args: {}", result)
+                            log.debug('Result from shared connection with 0 args: {}', result)
                             return result
                         case 1:
                             def result = callable.call(tenantId)
-                            log.debug("Result from shared connection with 1 arg: {}", result)
+                            log.debug('Result from shared connection with 1 arg: {}', result)
                             return result
                         default:
                             throw new IllegalArgumentException('Provided closure accepts too many arguments')
@@ -318,20 +320,20 @@ class Tenants {
             }
             else {
                 return multiTenantCapableDatastore.withNewSession(tenantId) { session ->
-                    log.debug("Inside withNewSession for tenantId {}", tenantId)
+                    log.debug('Inside withNewSession for tenantId {}', tenantId)
                     def i = callable.parameterTypes.length
                     switch (i) {
                         case 0:
                             def result = callable.call()
-                            log.debug("Result from new session with 0 args: {}", result)
+                            log.debug('Result from new session with 0 args: {}', result)
                             return result
                         case 1:
                             def result = callable.call(tenantId)
-                            log.debug("Result from new session with 1 arg: {}", result)
+                            log.debug('Result from new session with 1 arg: {}', result)
                             return result
                         case 2:
                             def result = callable.call(tenantId, session)
-                            log.debug("Result from new session with 2 args: {}", result)
+                            log.debug('Result from new session with 2 args: {}', result)
                             return result
                         default:
                             throw new IllegalArgumentException('Provided closure accepts too many arguments')

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -32,12 +32,12 @@ import spock.lang.Specification
  */
 class HibernateConnectionSourceFactorySpec extends Specification {
 
-    void "Test hibernate connection factory"() {
-        when:"A factory is used to create a session factory"
+    void 'Test hibernate connection factory'() {
+        when:'A factory is used to create a session factory'
 
         HibernateConnectionSourceFactory factory = new HibernateConnectionSourceFactory(Foo)
         Map config = [
-                'dataSource.url':"jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
+                'dataSource.url': 'jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000',
                 'dataSource.dbCreate': 'update',
                 'dataSource.dialect': H2Dialect.name,
                 'dataSource.formatSql': 'true',
@@ -47,20 +47,21 @@ class HibernateConnectionSourceFactorySpec extends Specification {
         ]
         def connectionSource = factory.create(ConnectionSource.DEFAULT, DatastoreUtils.createPropertyResolver(config))
 
-        then:"The session factory is created"
+        then:'The session factory is created'
         connectionSource.source instanceof SessionFactory
         connectionSource.source.getMetamodel().entity(Foo.name)
         connectionSource.source.openSession().createCriteria(Foo).list().size() == 0
 
-        when:"The connection source is closed"
+        when:'The connection source is closed'
         connectionSource.close()
 
-        then:"The session factory is closed"
+        then:'The session factory is closed'
         connectionSource.source.isClosed()
     }
 }
 
 @Entity
 class Foo {
+
     String name
 }

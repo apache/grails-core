@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -41,13 +41,12 @@ class DomainRendererRegistererSpec extends Specification {
         new DomainRendererRegisterer(domainInputRendererRegistry: domainInputRendererRegistry, domainOutputRendererRegistry: domainOutputRendererRegistry).registerRenderers()
     }
 
-
-    void "test the InList renderer is returned for String"() {
+    void 'test the InList renderer is returned for String'() {
         given:
         DomainProperty domainProperty = Stub(DomainProperty) {
             getType() >> String
             getConstrained() >> Stub(Constrained) {
-                getInList() >> ["foo"]
+                getInList() >> ['foo']
             }
         }
 
@@ -55,12 +54,12 @@ class DomainRendererRegistererSpec extends Specification {
         domainInputRendererRegistry.get(domainProperty) instanceof InListInputRenderer
     }
 
-    void "test the Textarea renderer is returned"() {
+    void 'test the Textarea renderer is returned'() {
         given:
         DomainProperty domainProperty = Stub(DomainProperty) {
             getType() >> String
             getConstrained() >> Stub(Constrained) {
-                getWidget() >> "textarea"
+                getWidget() >> 'textarea'
             }
         }
 
@@ -68,7 +67,7 @@ class DomainRendererRegistererSpec extends Specification {
         domainInputRendererRegistry.get(domainProperty) instanceof TextareaInputRenderer
     }
 
-    void "test the String renderer is returned"() {
+    void 'test the String renderer is returned'() {
         given:
         DomainProperty domainProperty = Stub(DomainProperty) {
             getType() >> String
@@ -79,7 +78,7 @@ class DomainRendererRegistererSpec extends Specification {
         domainInputRendererRegistry.get(domainProperty) instanceof StringInputRenderer
     }
 
-    void "test the Boolean renderer is returned"() {
+    void 'test the Boolean renderer is returned'() {
         given:
         DomainProperty domainProperty = Stub(DomainProperty) {
             getType() >> Boolean
@@ -89,7 +88,7 @@ class DomainRendererRegistererSpec extends Specification {
         domainInputRendererRegistry.get(domainProperty) instanceof BooleanInputRenderer
     }
 
-    void "test the InList renderer is returned for Number"() {
+    void 'test the InList renderer is returned for Number'() {
         given:
         DomainProperty domainProperty = Stub(DomainProperty) {
             getType() >> Long
@@ -102,7 +101,7 @@ class DomainRendererRegistererSpec extends Specification {
         domainInputRendererRegistry.get(domainProperty) instanceof InListInputRenderer
     }
 
-    void "test the Number renderer is returned"() {
+    void 'test the Number renderer is returned'() {
         given:
         DomainProperty domainProperty = Stub(DomainProperty) {
             getType() >> Long
@@ -112,7 +111,7 @@ class DomainRendererRegistererSpec extends Specification {
         domainInputRendererRegistry.get(domainProperty) instanceof NumberInputRenderer
     }
 
-    void "test the URL renderer is returned"() {
+    void 'test the URL renderer is returned'() {
         given:
         DomainProperty domainProperty = Stub(DomainProperty) {
             getType() >> URL
@@ -122,9 +121,9 @@ class DomainRendererRegistererSpec extends Specification {
         domainInputRendererRegistry.get(domainProperty) instanceof UrlInputRenderer
     }
 
-    enum Fruit {APPLE,ORANGE,BANANA,PEAR};
+    enum Fruit {APPLE,ORANGE,BANANA,PEAR}
 
-    void "test the Enum renderer is returned"() {
+    void 'test the Enum renderer is returned'() {
         given:
         DomainProperty domainProperty = Stub(DomainProperty) {
             getType() >> Fruit
@@ -134,7 +133,7 @@ class DomainRendererRegistererSpec extends Specification {
         domainInputRendererRegistry.get(domainProperty) instanceof EnumInputRenderer
     }
 
-    void "test the Date renderer is returned"() {
+    void 'test the Date renderer is returned'() {
         given:
         DomainProperty domainProperty = Stub(DomainProperty) {
             getType() >> Calendar
@@ -144,7 +143,7 @@ class DomainRendererRegistererSpec extends Specification {
         domainInputRendererRegistry.get(domainProperty) instanceof DateInputRenderer
     }
 
-    void "test the Time renderer is returned"() {
+    void 'test the Time renderer is returned'() {
         given:
         DomainProperty domainProperty = Stub(DomainProperty) {
             getType() >> Time
@@ -154,8 +153,7 @@ class DomainRendererRegistererSpec extends Specification {
         domainInputRendererRegistry.get(domainProperty) instanceof TimeInputRenderer
     }
 
-
-    void "test the File renderer is returned"() {
+    void 'test the File renderer is returned'() {
         given:
         DomainProperty domainProperty = Stub(DomainProperty) {
             getType() >> byte[]
@@ -165,7 +163,7 @@ class DomainRendererRegistererSpec extends Specification {
         domainInputRendererRegistry.get(domainProperty) instanceof FileInputRenderer
     }
 
-    void "test the TimeZone renderer is returned"() {
+    void 'test the TimeZone renderer is returned'() {
         given:
         DomainProperty domainProperty = Stub(DomainProperty) {
             getType() >> TimeZone
@@ -175,7 +173,7 @@ class DomainRendererRegistererSpec extends Specification {
         domainInputRendererRegistry.get(domainProperty) instanceof TimeZoneInputRenderer
     }
 
-    void "test the Currency renderer is returned"() {
+    void 'test the Currency renderer is returned'() {
         given:
         DomainProperty domainProperty = Stub(DomainProperty) {
             getType() >> Currency
@@ -185,7 +183,7 @@ class DomainRendererRegistererSpec extends Specification {
         domainInputRendererRegistry.get(domainProperty) instanceof CurrencyInputRenderer
     }
 
-    void "test the Locale renderer is returned"() {
+    void 'test the Locale renderer is returned'() {
         given:
         DomainProperty domainProperty = Stub(DomainProperty) {
             getType() >> Locale
@@ -195,12 +193,12 @@ class DomainRendererRegistererSpec extends Specification {
         domainInputRendererRegistry.get(domainProperty) instanceof LocaleInputRenderer
     }
 
-    void "test the Default renderer is returned"() {
+    void 'test the Default renderer is returned'() {
         given:
         DomainProperty domainProperty = Stub(DomainProperty) {
             getType() >> Specification
             getConstrained() >> Stub(Constrained) {
-                getWidget() >> ""
+                getWidget() >> ''
             }
         }
 
@@ -208,7 +206,7 @@ class DomainRendererRegistererSpec extends Specification {
         domainInputRendererRegistry.get(domainProperty) instanceof DefaultInputRenderer
     }
 
-    void "test the BiDirectionalToMany renderer is returned"() {
+    void 'test the BiDirectionalToMany renderer is returned'() {
         given:
         DomainProperty domainProperty = Stub(DomainProperty) {
             getPersistentProperty() >> Stub(OneToMany) {
@@ -221,7 +219,7 @@ class DomainRendererRegistererSpec extends Specification {
         domainInputRendererRegistry.get(domainProperty) instanceof BidirectionalToManyInputRenderer
     }
 
-    void "test the Association renderer is returned"() {
+    void 'test the Association renderer is returned'() {
         given:
         DomainProperty domainProperty = Stub(DomainProperty) {
             getType() >> Set

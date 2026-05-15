@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -30,15 +30,15 @@ import org.hibernate.mapping.Value
 
 class NaturalIdSpec extends HibernateGormDatastoreSpec {
 
-    void "test createUniqueKey with a single property"() {
+    void 'test createUniqueKey with a single property'() {
         given:
-        def naturalId = new NaturalId(propertyNames: ["id1"], mutable: true)
+        def naturalId = new NaturalId(propertyNames: ['id1'], mutable: true)
         def property = new Property()
-        property.name = "id1"
+        property.name = 'id1'
         def value = Mock(Value)
         property.value = value
-        def column = new Column("id1")
-        def table = new Table("test_table")
+        def column = new Column('id1')
+        def table = new Table('test_table')
         def rootClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
         rootClass.addProperty(property)
         rootClass.table = table
@@ -57,22 +57,22 @@ class NaturalIdSpec extends HibernateGormDatastoreSpec {
         property.isUpdateable()
     }
 
-    void "test createUniqueKey with composite property"() {
+    void 'test createUniqueKey with composite property'() {
         given:
-        def naturalId = new NaturalId(propertyNames: ["id1", "id2"], mutable: false)
+        def naturalId = new NaturalId(propertyNames: ['id1', 'id2'], mutable: false)
         def property1 = new Property()
-        property1.name = "id1"
+        property1.name = 'id1'
         def value1 = Mock(Value)
         property1.value = value1
-        def column1 = new Column("id1")
+        def column1 = new Column('id1')
         
         def property2 = new Property()
-        property2.name = "id2"
+        property2.name = 'id2'
         def value2 = Mock(Value)
         property2.value = value2
-        def column2 = new Column("id2")
+        def column2 = new Column('id2')
         
-        def table = new Table("test_table")
+        def table = new Table('test_table')
         def rootClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
         rootClass.addProperty(property1)
         rootClass.addProperty(property2)
@@ -96,10 +96,10 @@ class NaturalIdSpec extends HibernateGormDatastoreSpec {
         !property2.isUpdateable()
     }
 
-    void "test createUniqueKey with empty property names"() {
+    void 'test createUniqueKey with empty property names'() {
         given:
         def naturalId = new NaturalId(propertyNames: [], mutable: false)
-        def table = new Table("test_table")
+        def table = new Table('test_table')
         def rootClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
         rootClass.table = table
 

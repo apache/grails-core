@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -34,19 +34,19 @@ class MutationQueryDelegateSpec extends HibernateGormDatastoreSpec {
     }
 
     void setup() {
-        new MutationQueryDelegateTestBook(title: "Book One",   pages: 100).save(flush: true, failOnError: true)
-        new MutationQueryDelegateTestBook(title: "Book Two",   pages: 200).save(flush: true, failOnError: true)
-        new MutationQueryDelegateTestBook(title: "Book Three", pages: 300).save(flush: true, failOnError: true)
+        new MutationQueryDelegateTestBook(title: 'Book One',   pages: 100).save(flush: true, failOnError: true)
+        new MutationQueryDelegateTestBook(title: 'Book Two',   pages: 200).save(flush: true, failOnError: true)
+        new MutationQueryDelegateTestBook(title: 'Book Three', pages: 300).save(flush: true, failOnError: true)
     }
 
     private MutationQuery buildMutationQuery(String hql) {
         sessionFactory.currentSession.createMutationQuery(hql)
     }
 
-    void "constructor wraps MutationQuery"() {
+    void 'constructor wraps MutationQuery'() {
         given:
         MutationQuery mq = buildMutationQuery(
-            "UPDATE MutationQueryDelegateTestBook SET title = :title WHERE title = :old"
+            'UPDATE MutationQueryDelegateTestBook SET title = :title WHERE title = :old'
         )
 
         when:
@@ -56,10 +56,10 @@ class MutationQueryDelegateSpec extends HibernateGormDatastoreSpec {
         delegate != null
     }
 
-    void "setTimeout delegates to MutationQuery"() {
+    void 'setTimeout delegates to MutationQuery'() {
         given:
         MutationQuery mq = buildMutationQuery(
-            "UPDATE MutationQueryDelegateTestBook SET pages = 0 WHERE pages > 0"
+            'UPDATE MutationQueryDelegateTestBook SET pages = 0 WHERE pages > 0'
         )
         MutationQueryDelegate delegate = new MutationQueryDelegate(mq)
 
@@ -70,10 +70,10 @@ class MutationQueryDelegateSpec extends HibernateGormDatastoreSpec {
         noExceptionThrown()
     }
 
-    void "setQueryFlushMode delegates to MutationQuery"() {
+    void 'setQueryFlushMode delegates to MutationQuery'() {
         given:
         MutationQuery mq = buildMutationQuery(
-            "UPDATE MutationQueryDelegateTestBook SET pages = 0 WHERE pages > 0"
+            'UPDATE MutationQueryDelegateTestBook SET pages = 0 WHERE pages > 0'
         )
         MutationQueryDelegate delegate = new MutationQueryDelegate(mq)
 
@@ -84,14 +84,14 @@ class MutationQueryDelegateSpec extends HibernateGormDatastoreSpec {
         noExceptionThrown()
     }
 
-    void "setParameter by name delegates and executeUpdate returns row count"() {
+    void 'setParameter by name delegates and executeUpdate returns row count'() {
         given:
         MutationQuery mq = buildMutationQuery(
-            "UPDATE MutationQueryDelegateTestBook SET pages = :newPages WHERE title = :title"
+            'UPDATE MutationQueryDelegateTestBook SET pages = :newPages WHERE title = :title'
         )
         MutationQueryDelegate delegate = new MutationQueryDelegate(mq)
-        delegate.setParameter("newPages", 999)
-        delegate.setParameter("title", "Book One")
+        delegate.setParameter('newPages', 999)
+        delegate.setParameter('title', 'Book One')
 
         when:
         int count = delegate.executeUpdate()
@@ -100,14 +100,14 @@ class MutationQueryDelegateSpec extends HibernateGormDatastoreSpec {
         count == 1
     }
 
-    void "setParameter by name with type delegates and executeUpdate returns row count"() {
+    void 'setParameter by name with type delegates and executeUpdate returns row count'() {
         given:
         MutationQuery mq = buildMutationQuery(
-            "UPDATE MutationQueryDelegateTestBook SET pages = :newPages WHERE title = :title"
+            'UPDATE MutationQueryDelegateTestBook SET pages = :newPages WHERE title = :title'
         )
         MutationQueryDelegate delegate = new MutationQueryDelegate(mq)
-        delegate.setParameter("newPages", Integer.valueOf(42), Integer.class)
-        delegate.setParameter("title", "Book Two", String.class)
+        delegate.setParameter('newPages', Integer.valueOf(42), Integer.class)
+        delegate.setParameter('title', 'Book Two', String.class)
 
         when:
         int count = delegate.executeUpdate()
@@ -116,49 +116,49 @@ class MutationQueryDelegateSpec extends HibernateGormDatastoreSpec {
         count == 1
     }
 
-    void "setParameter by int position delegates and executeUpdate returns row count"() {
+    void 'setParameter by int position delegates and executeUpdate returns row count'() {
         given:
         MutationQuery mq = buildMutationQuery(
-            "UPDATE MutationQueryDelegateTestBook SET pages = ?1 WHERE title = ?2"
+            'UPDATE MutationQueryDelegateTestBook SET pages = ?1 WHERE title = ?2'
         )
         MutationQueryDelegate delegate = new MutationQueryDelegate(mq)
-        Method setParamInt = MutationQueryDelegate.class.getDeclaredMethod("setParameter", int.class, Object.class)
+        Method setParamInt = MutationQueryDelegate.class.getDeclaredMethod('setParameter', int.class, Object.class)
         setParamInt.setAccessible(true)
 
         when:
         setParamInt.invoke(delegate, 1, (Object) 77)
-        setParamInt.invoke(delegate, 2, (Object) "Book Three")
+        setParamInt.invoke(delegate, 2, (Object) 'Book Three')
         int count = delegate.executeUpdate()
 
         then:
         count == 1
     }
 
-    void "setParameter by int position with type delegates and executeUpdate returns row count"() {
+    void 'setParameter by int position with type delegates and executeUpdate returns row count'() {
         given:
         MutationQuery mq = buildMutationQuery(
-            "UPDATE MutationQueryDelegateTestBook SET pages = ?1 WHERE title = ?2"
+            'UPDATE MutationQueryDelegateTestBook SET pages = ?1 WHERE title = ?2'
         )
         MutationQueryDelegate delegate = new MutationQueryDelegate(mq)
-        Method setParamIntTyped = MutationQueryDelegate.class.getDeclaredMethod("setParameter", int.class, Object.class, Class.class)
+        Method setParamIntTyped = MutationQueryDelegate.class.getDeclaredMethod('setParameter', int.class, Object.class, Class.class)
         setParamIntTyped.setAccessible(true)
 
         when:
         setParamIntTyped.invoke(delegate, 1, (Object) Integer.valueOf(88), (Object) Integer.class)
-        setParamIntTyped.invoke(delegate, 2, (Object) "Book One", (Object) String.class)
+        setParamIntTyped.invoke(delegate, 2, (Object) 'Book One', (Object) String.class)
         int count = delegate.executeUpdate()
 
         then:
         count == 1
     }
 
-    void "setParameterList with Collection delegates as parameter value and executes DELETE"() {
+    void 'setParameterList with Collection delegates as parameter value and executes DELETE'() {
         given:
         MutationQuery mq = buildMutationQuery(
-            "DELETE FROM MutationQueryDelegateTestBook WHERE title IN (:titles)"
+            'DELETE FROM MutationQueryDelegateTestBook WHERE title IN (:titles)'
         )
         MutationQueryDelegate delegate = new MutationQueryDelegate(mq)
-        delegate.setParameterList("titles", (Collection<?>) ["Book One", "Book Two"])
+        delegate.setParameterList('titles', (Collection<?>) ['Book One', 'Book Two'])
 
         when:
         int count = delegate.executeUpdate()
@@ -167,41 +167,41 @@ class MutationQueryDelegateSpec extends HibernateGormDatastoreSpec {
         count == 2
     }
 
-    void "setParameterList with Object array delegates to setParameter via reflection"() {
+    void 'setParameterList with Object array delegates to setParameter via reflection'() {
         given:
         MutationQuery mq = buildMutationQuery(
-            "DELETE FROM MutationQueryDelegateTestBook WHERE title IN (:titles)"
+            'DELETE FROM MutationQueryDelegateTestBook WHERE title IN (:titles)'
         )
         MutationQueryDelegate delegate = new MutationQueryDelegate(mq)
-        Method setParamList = MutationQueryDelegate.class.getDeclaredMethod("setParameterList", String.class, Object[].class)
+        Method setParamList = MutationQueryDelegate.class.getDeclaredMethod('setParameterList', String.class, Object[].class)
         setParamList.setAccessible(true)
 
         when:
-        setParamList.invoke(delegate, "titles", (Object) (["Book Two", "Book Three"] as Object[]))
+        setParamList.invoke(delegate, 'titles', (Object) (['Book Two', 'Book Three'] as Object[]))
 
         then:
         InvocationTargetException ex = thrown(InvocationTargetException)
         ex.cause instanceof QueryArgumentException
     }
 
-    void "setParameterList with Object array directly delegates to mutationQuery setParameter"() {
+    void 'setParameterList with Object array directly delegates to mutationQuery setParameter'() {
         given:
         MutationQuery mq = buildMutationQuery(
-            "DELETE FROM MutationQueryDelegateTestBook WHERE title IN (:titles)"
+            'DELETE FROM MutationQueryDelegateTestBook WHERE title IN (:titles)'
         )
         MutationQueryDelegate delegate = new MutationQueryDelegate(mq)
 
         when:
-        delegate.setParameterList("titles", ["Book One", "Book Two"] as Object[])
+        delegate.setParameterList('titles', ['Book One', 'Book Two'] as Object[])
 
         then:
         thrown(org.hibernate.query.QueryArgumentException)
     }
 
-    void "list throws UnsupportedOperationException"() {
+    void 'list throws UnsupportedOperationException'() {
         given:
         MutationQuery mq = buildMutationQuery(
-            "UPDATE MutationQueryDelegateTestBook SET pages = 0 WHERE pages > 0"
+            'UPDATE MutationQueryDelegateTestBook SET pages = 0 WHERE pages > 0'
         )
         MutationQueryDelegate delegate = new MutationQueryDelegate(mq)
 
@@ -212,9 +212,9 @@ class MutationQueryDelegateSpec extends HibernateGormDatastoreSpec {
         thrown(UnsupportedOperationException)
     }
 
-    void "select-only methods are no-ops"() {
+    void 'select-only methods are no-ops'() {
         given:
-        MutationQuery mq = buildMutationQuery("UPDATE MutationQueryDelegateTestBook SET pages = 0")
+        MutationQuery mq = buildMutationQuery('UPDATE MutationQueryDelegateTestBook SET pages = 0')
         HqlQueryDelegate delegate = new MutationQueryDelegate(mq)
 
         when:
@@ -229,22 +229,22 @@ class MutationQueryDelegateSpec extends HibernateGormDatastoreSpec {
         noExceptionThrown()
     }
 
-    void "setHint delegates to MutationQuery"() {
+    void 'setHint delegates to MutationQuery'() {
         given:
-        MutationQuery mq = buildMutationQuery("UPDATE MutationQueryDelegateTestBook SET pages = 0")
+        MutationQuery mq = buildMutationQuery('UPDATE MutationQueryDelegateTestBook SET pages = 0')
         MutationQueryDelegate delegate = new MutationQueryDelegate(mq)
 
         when:
-        delegate.setHint("org.hibernate.comment", "my comment")
+        delegate.setHint('org.hibernate.comment', 'my comment')
 
         then:
         noExceptionThrown()
     }
 
-    void "selectQuery returns null for mutation queries"() {
+    void 'selectQuery returns null for mutation queries'() {
         given:
         MutationQuery mq = buildMutationQuery(
-            "UPDATE MutationQueryDelegateTestBook SET pages = 0 WHERE pages > 0"
+            'UPDATE MutationQueryDelegateTestBook SET pages = 0 WHERE pages > 0'
         )
         MutationQueryDelegate delegate = new MutationQueryDelegate(mq)
 
@@ -255,6 +255,7 @@ class MutationQueryDelegateSpec extends HibernateGormDatastoreSpec {
 
 @Entity
 class MutationQueryDelegateTestBook {
+
     String title
     Integer pages
 

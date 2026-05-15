@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -28,7 +28,7 @@ import grails.converters.XML
 
 class DateMarshallerSpec extends Specification {
 
-    void "supports returns true for Date instances"() {
+    void 'supports returns true for Date instances'() {
         given:
         def marshaller = new DateMarshaller()
 
@@ -36,7 +36,7 @@ class DateMarshallerSpec extends Specification {
         marshaller.supports(new Date())
     }
 
-    void "supports returns false for non-Date instances"() {
+    void 'supports returns false for non-Date instances'() {
         given:
         def marshaller = new DateMarshaller()
 
@@ -48,13 +48,13 @@ class DateMarshallerSpec extends Specification {
         }
     }
 
-    void "default formatter produces ISO_OFFSET_DATE_TIME in system zone"() {
+    void 'default formatter produces ISO_OFFSET_DATE_TIME in system zone'() {
         given:
         def marshaller = new DateMarshaller()
         def date = new Date(1718461845123L)
         def xml = Mock(XML)
 
-        and: "expected output computed independently using the same formatter"
+        and: 'expected output computed independently using the same formatter'
         def expected = DateTimeFormatter.ISO_OFFSET_DATE_TIME
                 .withZone(ZoneId.systemDefault())
                 .format(date.toInstant())
@@ -66,7 +66,7 @@ class DateMarshallerSpec extends Specification {
         1 * xml.chars(expected)
     }
 
-    void "default formatter output matches ISO 8601 offset date-time pattern"() {
+    void 'default formatter output matches ISO 8601 offset date-time pattern'() {
         given:
         def marshaller = new DateMarshaller()
         def date = new Date(1718461845123L)
@@ -75,11 +75,11 @@ class DateMarshallerSpec extends Specification {
         when:
         marshaller.marshalObject(date, xml)
 
-        then: "matches yyyy-MM-ddTHH:mm:ss(.fraction)?(Z|+HH:MM)"
+        then: 'matches yyyy-MM-ddTHH:mm:ss(.fraction)?(Z|+HH:MM)'
         1 * xml.chars({ String s -> s ==~ /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})/ })
     }
 
-    void "legacy formatter is used when provided"() {
+    void 'legacy formatter is used when provided'() {
         given:
         def customFormat = new SimpleDateFormat('dd/MM/yyyy').tap {
             timeZone = TimeZone.getTimeZone('UTC')

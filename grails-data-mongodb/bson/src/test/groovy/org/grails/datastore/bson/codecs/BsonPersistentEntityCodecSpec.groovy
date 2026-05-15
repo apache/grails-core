@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -40,20 +40,20 @@ import java.text.SimpleDateFormat
  */
 class BsonPersistentEntityCodecSpec extends Specification {
 
-    void "test marshall entity to JSON"() {
-        given:"A mapping context"
-        MappingContext mappingContext = new KeyValueMappingContext("test")
+    void 'test marshall entity to JSON'() {
+        given:'A mapping context'
+        MappingContext mappingContext = new KeyValueMappingContext('test')
         PersistentEntity entity = mappingContext.addPersistentEntity(Person)
 
         CodecRegistry codecRegistry = CodecRegistries.fromProviders(new CodecExtensions())
 
-        when:"An entity is is marshaled"
+        when:'An entity is is marshaled'
 
         BsonPersistentEntityCodec codec = new BsonPersistentEntityCodec(codecRegistry, entity)
 
         def sw = new StringWriter()
         def format = new SimpleDateFormat('yyyy/MM/dd')
-        TimeZone UTC = TimeZone.getTimeZone("UTC");
+        TimeZone UTC = TimeZone.getTimeZone('UTC')
         format.setTimeZone(UTC)
 
         def date = format.parse('1973/07/09')
@@ -66,18 +66,18 @@ class BsonPersistentEntityCodecSpec extends Specification {
         )
 
         def json = new JsonSlurper().parseText(sw.toString())
-        then:"The result is encoded JSON"
+        then:'The result is encoded JSON'
         json.age == 12
-        json.dateOfBirth == "1973-07-09T00:00+0000"
-        json.name == "Fred"
+        json.dateOfBirth == '1973-07-09T00:00+0000'
+        json.name == 'Fred'
 
     }
 
-    void "Test read entity from JSON"() {
-        given:"A mapping context"
-        MappingContext mappingContext = new KeyValueMappingContext("test")
+    void 'Test read entity from JSON'() {
+        given:'A mapping context'
+        MappingContext mappingContext = new KeyValueMappingContext('test')
         def format = new SimpleDateFormat(JsonWriter.ISO_8601)
-        TimeZone UTC = TimeZone.getTimeZone("UTC");
+        TimeZone UTC = TimeZone.getTimeZone('UTC')
         format.setTimeZone(UTC)
         mappingContext.converterRegistry.addConverter(new Converter<String, Date>() {
             @Override
@@ -90,26 +90,25 @@ class BsonPersistentEntityCodecSpec extends Specification {
 
         CodecRegistry codecRegistry = CodecRegistries.fromProviders(new CodecExtensions())
 
-        when:"An entity is is marshaled"
+        when:'An entity is is marshaled'
 
         BsonPersistentEntityCodec codec = new BsonPersistentEntityCodec(codecRegistry, entity)
 
-        Person person = codec.decode(new JsonReader('{"age":12,"dateOfBirth":"1973-07-09T00:00+0000","name":"Fred"}'))
+        Person person = codec.decode(new JsonReader('{'age':12,'dateOfBirth': '1973-07-09T00:00+0000','name': 'Fred'}'))
 
-
-        then:"The result is encoded JSON"
+        then:'The result is encoded JSON'
         person != null
-        person.name == "Fred"
-        format.format(person.dateOfBirth) == "1973-07-09T00:00+0000"
+        person.name == 'Fred'
+        format.format(person.dateOfBirth) == '1973-07-09T00:00+0000'
         person.age == 12
 
     }
 
-    void "Test read entity from JSON with null values"() {
-        given:"A mapping context"
-        MappingContext mappingContext = new KeyValueMappingContext("test")
+    void 'Test read entity from JSON with null values'() {
+        given:'A mapping context'
+        MappingContext mappingContext = new KeyValueMappingContext('test')
         def format = new SimpleDateFormat(JsonWriter.ISO_8601)
-        TimeZone UTC = TimeZone.getTimeZone("UTC");
+        TimeZone UTC = TimeZone.getTimeZone('UTC')
         format.setTimeZone(UTC)
         mappingContext.converterRegistry.addConverter(new Converter<String, Date>() {
             @Override
@@ -122,27 +121,25 @@ class BsonPersistentEntityCodecSpec extends Specification {
 
         CodecRegistry codecRegistry = CodecRegistries.fromProviders(new CodecExtensions())
 
-        when:"An entity is is marshaled"
+        when:'An entity is is marshaled'
 
         BsonPersistentEntityCodec codec = new BsonPersistentEntityCodec(codecRegistry, entity)
 
-        Person person = codec.decode(new JsonReader('{"age":12,"dateOfBirth":null,"name":"Fred"}'))
+        Person person = codec.decode(new JsonReader('{'age':12,'dateOfBirth': null,'name': 'Fred'}'))
 
-
-        then:"The result is encoded JSON"
+        then:'The result is encoded JSON'
         person != null
-        person.name == "Fred"
+        person.name == 'Fred'
         person.dateOfBirth == null
         person.age == 12
 
     }
 
-
-    void "Test read entity from JSON with regex values"() {
-        given:"A mapping context"
-        MappingContext mappingContext = new KeyValueMappingContext("test")
+    void 'Test read entity from JSON with regex values'() {
+        given:'A mapping context'
+        MappingContext mappingContext = new KeyValueMappingContext('test')
         def format = new SimpleDateFormat(JsonWriter.ISO_8601)
-        TimeZone UTC = TimeZone.getTimeZone("UTC");
+        TimeZone UTC = TimeZone.getTimeZone('UTC')
         format.setTimeZone(UTC)
         mappingContext.converterRegistry.addConverter(new Converter<String, Date>() {
             @Override
@@ -155,20 +152,18 @@ class BsonPersistentEntityCodecSpec extends Specification {
 
         CodecRegistry codecRegistry = CodecRegistries.fromProviders(new CodecExtensions())
 
-        when:"An entity is is marshaled"
+        when:'An entity is is marshaled'
 
         BsonPersistentEntityCodec codec = new BsonPersistentEntityCodec(codecRegistry, entity)
 
-        Person person = codec.decode(new JsonReader('{"age":12,"dateOfBirth":null,"name":"Fred", pattern:/\\sfoo+/}'))
+        Person person = codec.decode(new JsonReader('{'age':12,'dateOfBirth': null,'name': 'Fred', pattern:/\\sfoo+/}'))
 
-
-        then:"The result is encoded JSON"
+        then:'The result is encoded JSON'
         person != null
-        person.name == "Fred"
+        person.name == 'Fred'
         person.dateOfBirth == null
         person.age == 12
         person.pattern == /\sfoo+/
     }
 }
-
 

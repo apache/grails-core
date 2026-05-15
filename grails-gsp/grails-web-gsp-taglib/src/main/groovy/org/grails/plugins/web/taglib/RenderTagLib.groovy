@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -58,13 +58,13 @@ class RenderTagLib implements TagLibrary {
     /**
      * Renders a template inside views for collections, models and beans. Examples:<br/>
      *
-     * &lt;g:render template="atemplate" collection="${users}" /&gt;<br/>
-     * &lt;g:render template="atemplate" model="[user:user,company:company]" /&gt;<br/>
-     * &lt;g:render template="atemplate" bean="${user}" /&gt;<br/>
+     * &lt;g:render template='atemplate' collection="${users}" /&gt;<br/>
+     * &lt;g:render template='atemplate' model='[user: user,company: company]' /&gt;<br/>
+     * &lt;g:render template='atemplate' bean="${user}" /&gt;<br/>
      *
      * @attr template REQUIRED The name of the template to apply
      * @attr optional if true, this tag will be ignored when the template does not exist.
-     * @attr contextPath the context path to use (relative to the application context path). Defaults to "" or path to the plugin for a plugin view or template.
+     * @attr contextPath the context path to use (relative to the application context path). Defaults to '' or path to the plugin for a plugin view or template.
      * @attr bean The bean to apply the template against
      * @attr model The model to apply the template against as a java.util.Map
      * @attr collection A collection of model objects to apply the template to

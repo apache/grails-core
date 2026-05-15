@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -84,7 +84,7 @@ class ValidateableTraitAdHocSpec extends Specification {
         'Kirk' * 10 | 32       | false         | 'maxSize.exceeded' | 'max.exceeded'
     }
 
-    void 'Test that "fieldsToValidate" can be used with ad-hoc constraints'() {
+    void 'Test that 'fieldsToValidate' can be used with ad-hoc constraints'() {
         given:
         def person = new PersonAdHocValidateable(name: nameValue, age: ageValue)
 
@@ -179,7 +179,7 @@ class ValidateableTraitAdHocSpec extends Specification {
         ''        | -1       | false         | 'blank'       | 'min.notmet'
     }
 
-    void 'Test that "beforeValidator" is called with ad-hoc constraints'() {
+    void 'Test that 'beforeValidator' is called with ad-hoc constraints'() {
         given:
         def person = new PersonAdHocValidateable(name: 'Kirk', age: 32)
 
@@ -193,7 +193,7 @@ class ValidateableTraitAdHocSpec extends Specification {
         person.name == 'KIRK'
     }
 
-    void 'Test that pre-declared is ignored when "inherit:false" is specified'() {
+    void 'Test that pre-declared is ignored when 'inherit:false' is specified'() {
         given:
         def person = new PersonAdHocValidateable(name: nameValue, age: ageValue)
 
@@ -221,7 +221,7 @@ class ValidateableTraitAdHocSpec extends Specification {
         [inherit: false] | {}                     | null        | null     | false         | 'nullable'         | 'nullable' // default 'nullable:false' is applied to ad-hoc constraints
     }
 
-    void 'Test that errors are not cleared for each call when "clearErrors:false" is specified'() {
+    void 'Test that errors are not cleared for each call when 'clearErrors:false' is specified'() {
         given:
         def person = new PersonAdHocValidateable(name: '', age: -1)
 
@@ -251,7 +251,7 @@ class ValidateableTraitAdHocSpec extends Specification {
         [clearErrors: false] | { name blank: true; age min: -9 } | false         | 'blank'       | 'min.notmet'
     }
 
-    void "Test that default and shared constraints can be applied from configuration"() {
+    void 'Test that default and shared constraints can be applied from configuration'() {
         given:
         GenericApplicationContext applicationContext = new GenericApplicationContext()
         applicationContext.refresh()
@@ -260,7 +260,7 @@ class ValidateableTraitAdHocSpec extends Specification {
             myShared max: 20
         }
         applicationContext.beanFactory.registerSingleton(
-                "constraintEvaluator",
+                'constraintEvaluator',
                 new DefaultConstraintEvaluator(defaultConstraints)
         )
 
@@ -343,6 +343,7 @@ class ValidateableTraitAdHocSpec extends Specification {
 }
 
 class PersonAdHocValidateable implements Validateable {
+
     String name
     Integer age
 
@@ -362,11 +363,12 @@ class PersonAdHocValidateable implements Validateable {
 }
 
 class PersonAdHocSharedConstraintsValidateable implements Validateable {
+
     String name
     Integer age
 
     static constraints = {
         name blank: false
-        age min: 0, shared: "myShared"
+        age min: 0, shared: 'myShared'
     }
 }

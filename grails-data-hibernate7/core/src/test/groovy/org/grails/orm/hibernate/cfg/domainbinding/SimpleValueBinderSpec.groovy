@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -38,6 +38,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder
 class SimpleValueBinderSpec extends Specification {
 
     abstract static class TestTenantId extends TenantId<PropertyConfig> implements HibernatePersistentProperty {
+
         TestTenantId(PersistentEntity owner, MappingContext context, String name, Class type) {
             super(owner, context, name, type)
         }
@@ -49,7 +50,7 @@ class SimpleValueBinderSpec extends Specification {
 
     def binder = new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment)
 
-    def "sets type from provider when present and applies type params"() {
+    def 'sets type from provider when present and applies type params'() {
         given:
         def prop = Mock(HibernatePersistentProperty)
         def owner = Mock(GrailsHibernatePersistentEntity)
@@ -68,7 +69,7 @@ class SimpleValueBinderSpec extends Specification {
         owner.getHibernateMappedForm() >> mapping
         _ * prop.getHibernateMappedForm() >> pc
         _ * owner.getHibernateMappedForm() >> mapping
-        prop.getTypeName() >> "custom.Type"
+        prop.getTypeName() >> 'custom.Type'
         pc.getTypeParams() >> props
         pc.isDerived() >> false
         pc.getColumns() >> null
@@ -76,16 +77,16 @@ class SimpleValueBinderSpec extends Specification {
         prop.isNullable() >> true
 
         when:
-        binder.bindSimpleValue(prop, null, sv, "p")
+        binder.bindSimpleValue(prop, null, sv, 'p')
 
         then:
-        _ * prop.getTypeName(sv) >> "custom.Type"
+        _ * prop.getTypeName(sv) >> 'custom.Type'
         _ * prop.getTypeParameters(sv) >> props
-        _ * sv.setTypeName("custom.Type")
+        _ * sv.setTypeName('custom.Type')
         _ * sv.setTypeParameters({ it.getProperty('p1') == 'v1' })
     }
 
-    def "falls back to property type when provider returns null"() {
+    def 'falls back to property type when provider returns null'() {
         given:
         def prop = Mock(HibernatePersistentProperty)
         def owner = Mock(GrailsHibernatePersistentEntity)
@@ -117,7 +118,7 @@ class SimpleValueBinderSpec extends Specification {
         _ * sv.setTypeName(Integer.name)
     }
 
-    def "derived property adds no columns but adds formula, except TenantId"() {
+    def 'derived property adds no columns but adds formula, except TenantId'() {
         given:
         def prop = Mock(HibernatePersistentProperty)
         def tenantProp = Mock(TestTenantId)
@@ -166,13 +167,13 @@ class SimpleValueBinderSpec extends Specification {
         0 * sv2.addFormula(_)
     }
 
-    def "applies generator and maps sequence param to SequenceStyleGenerator.SEQUENCE_PARAM"() {
+    def 'applies generator and maps sequence param to SequenceStyleGenerator.SEQUENCE_PARAM'() {
         given:
         def prop = Mock(HibernatePersistentProperty)
         def owner = Mock(GrailsHibernatePersistentEntity)
         def mapping = Mock(Mapping)
         def pc = Mock(PropertyConfig)
-        def table = new org.hibernate.mapping.Table("test_table")
+        def table = new org.hibernate.mapping.Table('test_table')
         def mappings = Mock(org.hibernate.boot.spi.InFlightMetadataCollector)
         metadataBuildingContext.getMetadataCollector() >> mappings
         def genProps = new Properties(); genProps.setProperty('sequence','seq_name'); genProps.setProperty('foo','bar')
@@ -201,7 +202,7 @@ class SimpleValueBinderSpec extends Specification {
         result.getCustomIdGeneratorCreator() != null
     }
 
-    def "binds for each provided column config and adds to table and simple value"() {
+    def 'binds for each provided column config and adds to table and simple value'() {
         given:
         def prop = Mock(HibernatePersistentProperty)
         def parent = Mock(HibernatePersistentProperty)
@@ -237,13 +238,13 @@ class SimpleValueBinderSpec extends Specification {
         2 * sv.addColumn(_ as Column)
     }
 
-    def "bindSimpleValue creates and returns BasicValue"() {
+    def 'bindSimpleValue creates and returns BasicValue'() {
         given:
         def prop = Mock(HibernatePersistentProperty)
         def owner = Mock(GrailsHibernatePersistentEntity)
         def mapping = Mock(Mapping)
         def pc = Mock(PropertyConfig)
-        def table = new org.hibernate.mapping.Table("test_table")
+        def table = new org.hibernate.mapping.Table('test_table')
         def mappings = Mock(org.hibernate.boot.spi.InFlightMetadataCollector)
         metadataBuildingContext.getMetadataCollector() >> mappings
 
@@ -264,7 +265,7 @@ class SimpleValueBinderSpec extends Specification {
         namingStrategy.resolveColumnName(_) >> 'test_column'
 
         when:
-        def result = binder.bindBasicValue(prop, null, "path")
+        def result = binder.bindBasicValue(prop, null, 'path')
 
         then:
         result instanceof org.hibernate.mapping.BasicValue

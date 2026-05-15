@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -35,235 +35,235 @@ class ExtraAttributesSpec extends AbstractFormFieldsTagLibSpec implements TagLib
 	def setup() {
 		mockFormFieldsTemplateService.findTemplate(_, 'wrapper', null, null) >> [path: '/_fields/default/wrapper']
 		mockFormFieldsTemplateService.findTemplate(_, 'displayWrapper', null, null) >> [path: '/_fields/default/displayWrapper']
-        mockFormFieldsTemplateService.getTemplateFor('wrapper') >> "wrapper"
-        mockFormFieldsTemplateService.getTemplateFor('widget') >> "widget"
-        mockFormFieldsTemplateService.getTemplateFor('displayWrapper') >> "displayWrapper"
-        mockFormFieldsTemplateService.getTemplateFor('displayWidget') >> "displayWidget"
+        mockFormFieldsTemplateService.getTemplateFor('wrapper') >> 'wrapper'
+        mockFormFieldsTemplateService.getTemplateFor('widget') >> 'widget'
+        mockFormFieldsTemplateService.getTemplateFor('displayWrapper') >> 'displayWrapper'
+        mockFormFieldsTemplateService.getTemplateFor('displayWidget') >> 'displayWidget'
         mockFormFieldsTemplateService.getWidgetPrefix() >> 'input-'
 		tagLib.formFieldsTemplateService = mockFormFieldsTemplateService
 	}
 
     void 'arbitrary attributes can be passed to the field template model for backward compatibility'() {
         given:
-        views["/_fields/default/_wrapper.gsp"] = '${foo}'
+        views['/_fields/default/_wrapper.gsp'] = '${foo}'
 
         expect:
-        applyTemplate('<f:field bean="personInstance" property="name" foo="bar"/>', [personInstance: personInstance]) == 'bar'
+        applyTemplate('<f:field bean='personInstance' property='name' foo='bar'/>', [personInstance: personInstance]) == 'bar'
     }
 
-    void 'arbitrary attributes are be passed to the field template model in "attrs"'() {
+    void 'arbitrary attributes are be passed to the field template model in 'attrs''() {
         given:
-        views["/_fields/default/_wrapper.gsp"] = '${attrs.foo}'
+        views['/_fields/default/_wrapper.gsp'] = '${attrs.foo}'
 
         expect:
-        applyTemplate('<f:field bean="personInstance" property="name" foo="bar"/>', [personInstance: personInstance]) == 'bar'
+        applyTemplate('<f:field bean='personInstance' property='name' foo='bar'/>', [personInstance: personInstance]) == 'bar'
     }
 
     void 'arbitrary attributes on f:field are not passed to the widget template'() {
         given:
-        views["/_fields/default/_wrapper.gsp"] = '${widget}'
-        views["/_fields/person/name/_widget.gsp"] = '<span>${foo}${attrs?.foo}</span>'
+        views['/_fields/default/_wrapper.gsp'] = '${widget}'
+        views['/_fields/person/name/_widget.gsp'] = '<span>${foo}${attrs?.foo}</span>'
 
 		and:
 		mockFormFieldsTemplateService.findTemplate(_, 'widget', null, null) >> [path: '/_fields/person/name/widget']
 
         expect:
-        applyTemplate('<f:field bean="personInstance" property="name" foo="bar"/>', [personInstance: personInstance]) == '<span></span>'
+        applyTemplate('<f:field bean='personInstance' property='name' foo='bar'/>', [personInstance: personInstance]) == '<span></span>'
     }
 
     void 'arbitrary attributes on f:display are not passed to the widget template'() {
         given:
-        views["/_fields/default/_displayWrapper.gsp"] = '${widget}'
-        views["/_fields/person/name/_displayWidget.gsp"] = '<span>${foo}${attrs?.foo}</span>'
+        views['/_fields/default/_displayWrapper.gsp'] = '${widget}'
+        views['/_fields/person/name/_displayWidget.gsp'] = '<span>${foo}${attrs?.foo}</span>'
 
 		and:
 		mockFormFieldsTemplateService.findTemplate(_, 'displayWidget', null, null) >> [path: '/_fields/person/name/displayWidget']
 
         expect:
-        applyTemplate('<f:display bean="personInstance" property="name" foo="bar"/>', [personInstance: personInstance]) == '<span></span>'
+        applyTemplate('<f:display bean='personInstance' property='name' foo='bar'/>', [personInstance: personInstance]) == '<span></span>'
     }
 
     void 'arbitrary attributes prefixed with widget- are not passed to the widget template (if it is configured as the prefix)'() {
         given:
         mockFormFieldsTemplateService.getWidgetPrefix() >> 'widget-'
-        views["/_fields/default/_wrapper.gsp"] = '<foo>${foo}</foo>'
+        views['/_fields/default/_wrapper.gsp'] = '<foo>${foo}</foo>'
 
         expect:
-        applyTemplate('<f:field bean="personInstance" property="name" widget-foo="bar" />', [personInstance: personInstance]) == '<foo></foo>'
+        applyTemplate('<f:field bean='personInstance' property='name' widget-foo='bar' />', [personInstance: personInstance]) == '<foo></foo>'
     }
 
-    void 'arbitrary attributes prefixed with widget- are passed to the wrapper template if it is configured with another prefix ("input-" in this case, see setup)'() {
+    void 'arbitrary attributes prefixed with widget- are passed to the wrapper template if it is configured with another prefix ('input-' in this case, see setup)'() {
         given:
-        views["/_fields/default/_wrapper.gsp"] = '<foo>${attrs["widget-foo"]}</foo>'
+        views['/_fields/default/_wrapper.gsp'] = '<foo>${attrs['widget-foo']}</foo>'
 
         and:
         mockFormFieldsTemplateService.findTemplate(_, 'wrapper', null, null) >> [path: '/_fields/default/wrapper']
 
         expect:
-        applyTemplate('<f:field bean="personInstance" property="name" widget-foo="bar" />', [personInstance: personInstance]) == '<foo>bar</foo>'
+        applyTemplate('<f:field bean='personInstance' property='name' widget-foo='bar' />', [personInstance: personInstance]) == '<foo>bar</foo>'
     }
 
     void 'arbitrary attributes on f:field are not passed to the default widget'() {
         given:
-        views["/_fields/default/_wrapper.gsp"] = '${widget}'
+        views['/_fields/default/_wrapper.gsp'] = '${widget}'
 
         expect:
-        applyTemplate('<f:field bean="personInstance" property="name" foo="bar"/>', [personInstance: personInstance]) == '<input type="text" name="name" value="Bart Simpson" required="" id="name" />'
+        applyTemplate('<f:field bean='personInstance' property='name' foo='bar'/>', [personInstance: personInstance]) == '<input type='text' name='name' value='Bart Simpson' required='' id='name' />'
     }
 
     void 'arbitrary attributes on f:display are not passed to the default widget'() {
         given:
-        views["/_fields/default/_displayWrapper.gsp"] = '${widget}'
-        views["/_fields/default/_displayWidget.gsp"] = '${foo}'
+        views['/_fields/default/_displayWrapper.gsp'] = '${widget}'
+        views['/_fields/default/_displayWidget.gsp'] = '${foo}'
 
         and:
         mockFormFieldsTemplateService.findTemplate(_, 'displayWidget', null, null) >> [path: '/_fields/default/displayWidget']
 
         expect:
-        applyTemplate('<f:display bean="personInstance" property="name" foo="bar"/>', [personInstance: personInstance]) == ''
+        applyTemplate('<f:display bean='personInstance' property='name' foo='bar'/>', [personInstance: personInstance]) == ''
     }
 
     void 'arbitrary attributes can be passed to the display template model for backward compatibility'() {
         given:
-        views["/_fields/default/_displayWrapper.gsp"] = '${foo}'
+        views['/_fields/default/_displayWrapper.gsp'] = '${foo}'
 
         and:
         mockFormFieldsTemplateService.findTemplate(_, 'displayWrapper', null, null) >> [path: '/_fields/default/displayWrapper']
 
         expect:
-        applyTemplate('<f:display bean="personInstance" property="name" foo="bar"/>', [personInstance: personInstance]) == 'bar'
+        applyTemplate('<f:display bean='personInstance' property='name' foo='bar'/>', [personInstance: personInstance]) == 'bar'
     }
 
-    void 'arbitrary attributes are be passed to the display template model in "attrs"'() {
+    void 'arbitrary attributes are be passed to the display template model in 'attrs''() {
         given:
-        views["/_fields/default/_displayWrapper.gsp"] = '${attrs.foo}'
+        views['/_fields/default/_displayWrapper.gsp'] = '${attrs.foo}'
 
         and:
         mockFormFieldsTemplateService.findTemplate(_, 'displayWrapper', null, null) >> [path: '/_fields/default/displayWrapper']
 
         expect:
-        applyTemplate('<f:display bean="personInstance" property="name" foo="bar"/>', [personInstance: personInstance]) == 'bar'
+        applyTemplate('<f:display bean='personInstance' property='name' foo='bar'/>', [personInstance: personInstance]) == 'bar'
     }
 
 	void 'arbitrary attributes on f:widget are passed to the input template'() {
 		given:
-		views["/_fields/person/name/_widget.gsp"] = '${foo}'
+		views['/_fields/person/name/_widget.gsp'] = '${foo}'
 
 		and:
 		mockFormFieldsTemplateService.findTemplate(_, 'widget', null, null) >> [path: '/_fields/person/name/widget']
 
 		expect:
-		applyTemplate('<f:widget bean="personInstance" property="name" foo="bar"/>', [personInstance: personInstance]) == 'bar'
+		applyTemplate('<f:widget bean='personInstance' property='name' foo='bar'/>', [personInstance: personInstance]) == 'bar'
 	}
 
 	void 'arbitrary attributes on f:displayWidget are passed to the displayWidget template'() {
 		given:
-		views["/_fields/person/name/_displayWidget.gsp"] = '${foo}'
+		views['/_fields/person/name/_displayWidget.gsp'] = '${foo}'
 
 		and:
 		mockFormFieldsTemplateService.findTemplate(_, 'displayWidget', null, null) >> [path: '/_fields/person/name/displayWidget']
 
 		expect:
-		applyTemplate('<f:displayWidget bean="personInstance" property="name" foo="bar"/>', [personInstance: personInstance]) == 'bar'
+		applyTemplate('<f:displayWidget bean='personInstance' property='name' foo='bar'/>', [personInstance: personInstance]) == 'bar'
 	}
 
 	void 'arbitrary attributes on f:widget are passed to the default input'() {
 		expect:
-		applyTemplate('<f:widget bean="personInstance" property="name" foo="bar"/>', [personInstance: personInstance]) == '<input type="text" foo="bar" name="name" value="Bart Simpson" required="" id="name" />'
+		applyTemplate('<f:widget bean='personInstance' property='name' foo='bar'/>', [personInstance: personInstance]) == '<input type='text' foo='bar' name='name' value='Bart Simpson' required='' id='name' />'
 	}
 
-	@Issue("https://github.com/grails/fields/pull/49")
+	@Issue('https://github.com/grails/fields/pull/49')
     void 'arbitrary attributes prefixed with input- are not passed to the field template'() {
         given:
-        views["/_fields/default/_wrapper.gsp"] = '<foo>${foo}</foo>'
+        views['/_fields/default/_wrapper.gsp'] = '<foo>${foo}</foo>'
 
         expect:
-        applyTemplate('<f:field bean="personInstance" property="name" input-foo="bar" />', [personInstance: personInstance]) == '<foo></foo>'
+        applyTemplate('<f:field bean='personInstance' property='name' input-foo='bar' />', [personInstance: personInstance]) == '<foo></foo>'
     }
 
     void 'arbitrary attributes prefixed with input- are not passed to the display template'() {
         given:
-        views["/_fields/default/_displayWrapper.gsp"] = '<foo>${foo}</foo>'
+        views['/_fields/default/_displayWrapper.gsp'] = '<foo>${foo}</foo>'
 
         expect:
-        applyTemplate('<f:display bean="personInstance" property="name" input-foo="bar" />', [personInstance: personInstance]) == '<foo></foo>'
+        applyTemplate('<f:display bean='personInstance' property='name' input-foo='bar' />', [personInstance: personInstance]) == '<foo></foo>'
     }
 
     void 'arbitrary attributes prefixed with widget- are not passed to the display template (if it is configured as the prefix)'() {
         given:
         mockFormFieldsTemplateService.getWidgetPrefix() >> 'widget-'
-        views["/_fields/default/_displayWrapper.gsp"] = '<foo>${foo}</foo>'
+        views['/_fields/default/_displayWrapper.gsp'] = '<foo>${foo}</foo>'
 
         expect:
-        applyTemplate('<f:display bean="personInstance" property="name" widget-foo="bar" />', [personInstance: personInstance]) == '<foo></foo>'
+        applyTemplate('<f:display bean='personInstance' property='name' widget-foo='bar' />', [personInstance: personInstance]) == '<foo></foo>'
     }
 
-    void 'arbitrary attributes prefixed with widget- are passed to the display template if it is configured with another prefix ("input-" in this case, see setup)'() {
+    void 'arbitrary attributes prefixed with widget- are passed to the display template if it is configured with another prefix ('input-' in this case, see setup)'() {
         given:
-        views["/_fields/default/_displayWrapper.gsp"] = '<foo>${attrs["widget-foo"]}</foo>'
+        views['/_fields/default/_displayWrapper.gsp'] = '<foo>${attrs['widget-foo']}</foo>'
 
         and:
         mockFormFieldsTemplateService.findTemplate(_, 'displayWrapper', null, null) >> [path: '/_fields/default/displayWrapper']
 
         expect:
-        applyTemplate('<f:display bean="personInstance" property="name" widget-foo="bar" />', [personInstance: personInstance]) == '<foo>bar</foo>'
+        applyTemplate('<f:display bean='personInstance' property='name' widget-foo='bar' />', [personInstance: personInstance]) == '<foo>bar</foo>'
     }
 
     void 'arbitrary attributes prefixed with input- on f:field are added to the widget template model for backward compatibility'() {
         given:
-        views["/_fields/default/_wrapper.gsp"] = '${widget}'
-        views["/_fields/person/name/_widget.gsp"] = '<span>${foo}</span>'
+        views['/_fields/default/_wrapper.gsp'] = '${widget}'
+        views['/_fields/person/name/_widget.gsp'] = '<span>${foo}</span>'
 
 		and:
 		mockFormFieldsTemplateService.findTemplate(_, 'widget', null, null) >> [path: '/_fields/person/name/widget']
 
         expect:
-        applyTemplate('<f:field bean="personInstance" property="name" input-foo="bar"/>', [personInstance: personInstance]) == '<span>bar</span>'
+        applyTemplate('<f:field bean='personInstance' property='name' input-foo='bar'/>', [personInstance: personInstance]) == '<span>bar</span>'
     }
 
     void 'arbitrary attributes prefixed with input- on f:display are added to the display widget template model for backward compatibility'() {
         given:
-        views["/_fields/default/_displayWrapper.gsp"] = '${widget}'
-        views["/_fields/person/name/_displayWidget.gsp"] = '<span>${foo}</span>'
+        views['/_fields/default/_displayWrapper.gsp'] = '${widget}'
+        views['/_fields/person/name/_displayWidget.gsp'] = '<span>${foo}</span>'
 
 		and:
 		mockFormFieldsTemplateService.findTemplate(_, 'displayWidget', null, null) >> [path: '/_fields/person/name/displayWidget']
 
         expect:
-        applyTemplate('<f:display bean="personInstance" property="name" input-foo="bar"/>', [personInstance: personInstance]) == '<span>bar</span>'
+        applyTemplate('<f:display bean='personInstance' property='name' input-foo='bar'/>', [personInstance: personInstance]) == '<span>bar</span>'
     }
 
     void 'arbitrary attributes prefixed with input- on f:field are passed to the input template as attrs'() {
         given:
-        views["/_fields/default/_wrapper.gsp"] = '${widget}'
-        views["/_fields/person/name/_widget.gsp"] = '<span>${attrs.foo}</span>'
+        views['/_fields/default/_wrapper.gsp'] = '${widget}'
+        views['/_fields/person/name/_widget.gsp'] = '<span>${attrs.foo}</span>'
 
 		and:
 		mockFormFieldsTemplateService.findTemplate(_, 'widget', null, null) >> [path: '/_fields/person/name/widget']
 
         expect:
-        applyTemplate('<f:field bean="personInstance" property="name" input-foo="bar"/>', [personInstance: personInstance]) == '<span>bar</span>'
+        applyTemplate('<f:field bean='personInstance' property='name' input-foo='bar'/>', [personInstance: personInstance]) == '<span>bar</span>'
     }
 
     void 'arbitrary attributes prefixed with input- on f:display are passed to the widget template as attrs'() {
         given:
-        views["/_fields/default/_displayWrapper.gsp"] = '${widget}'
-        views["/_fields/person/name/_displayWidget.gsp"] = '<span>${attrs.foo}</span>'
+        views['/_fields/default/_displayWrapper.gsp'] = '${widget}'
+        views['/_fields/person/name/_displayWidget.gsp'] = '<span>${attrs.foo}</span>'
 
 		and:
 		mockFormFieldsTemplateService.findTemplate(_, 'displayWidget', null, null) >> [path: '/_fields/person/name/displayWidget']
 
         expect:
-        applyTemplate('<f:display bean="personInstance" property="name" input-foo="bar"/>', [personInstance: personInstance]) == '<span>bar</span>'
+        applyTemplate('<f:display bean='personInstance' property='name' input-foo='bar'/>', [personInstance: personInstance]) == '<span>bar</span>'
     }
 
-	@Issue("https://github.com/grails/fields/pull/49")
+	@Issue('https://github.com/grails/fields/pull/49')
     void 'arbitrary attributes prefixed with input- on f:field are passed to the default input'() {
         given:
-        views["/_fields/default/_wrapper.gsp"] = '${widget}'
+        views['/_fields/default/_wrapper.gsp'] = '${widget}'
 
         expect:
-        applyTemplate('<f:field bean="personInstance" property="name" input-foo="bar"/>', [personInstance: personInstance]) == '<input type="text" foo="bar" name="name" value="Bart Simpson" required="" id="name" />'
+        applyTemplate('<f:field bean='personInstance' property='name' input-foo='bar'/>', [personInstance: personInstance]) == '<input type='text' foo='bar' name='name' value='Bart Simpson' required='' id='name' />'
     }
 
 }

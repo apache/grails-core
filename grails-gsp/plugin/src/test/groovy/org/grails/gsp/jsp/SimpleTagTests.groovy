@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -61,10 +61,10 @@ class SimpleTagTests {
         JspTag jspTag = new JspTagImpl(BodySimpleTagSupport)
         def sw = new StringWriter()
         jspTag.doTag(sw, [:]) {
-            "testbody"
+            'testbody'
         }
 
-        assertEquals "bodySimpleTagSupport:testbody", sw.toString().trim()
+        assertEquals 'bodySimpleTagSupport:testbody', sw.toString().trim()
     }
 
     @Test
@@ -78,22 +78,24 @@ class SimpleTagTests {
         def sw = new StringWriter()
         jspTag.doTag(sw, [:])
 
-        assertEquals "extendsSimpleTagSupport:output", sw.toString().trim()
+        assertEquals 'extendsSimpleTagSupport:output', sw.toString().trim()
     }
 }
 
 class ExtendsSimpleTagSupport extends SimpleTagSupport {
+
     @Override
     void doTag() throws JspException, IOException {
-        getJspContext().getOut().println("extendsSimpleTagSupport:output");
+        getJspContext().getOut().println('extendsSimpleTagSupport:output')
     }
 }
 
 class BodySimpleTagSupport extends SimpleTagSupport {
+
     @Override
     void doTag() throws JspException, IOException {
         JspWriter out = getJspContext().getOut()
-        out.print("bodySimpleTagSupport:");
+        out.print('bodySimpleTagSupport:')
         super.getJspBody().invoke(out)
     }
 }

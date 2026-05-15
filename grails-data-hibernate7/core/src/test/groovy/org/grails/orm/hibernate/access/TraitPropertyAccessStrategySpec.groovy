@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -41,11 +41,12 @@ trait HasFlag {
 }
 
 trait HasComputed {
-    String getComputed() { "foo" }
+    String getComputed() { 'foo' }
 }
 
 /** Plain Groovy class — no trait involvement. */
 class PlainPerson {
+
     String plain
 }
 
@@ -63,7 +64,7 @@ class ComputedEntity implements HasComputed {}
 
 /** Computed read-write property via trait methods (no backing field). */
 trait HasComputedRW {
-    String getComputedRW() { "rw" }
+    String getComputedRW() { 'rw' }
     void setComputedRW(String v) { }
 }
 
@@ -77,19 +78,20 @@ class TraitPropertyAccessStrategySpec extends Specification {
 
     // ─── getTraitFieldName ────────────────────────────────────────────────────
 
-    void "getTraitFieldName encodes dots as underscores with double-underscore separator"() {
+    void 'getTraitFieldName encodes dots as underscores with double-underscore separator'() {
         expect:
         strategy.getTraitFieldName(HasName, 'name') ==
             'org_grails_orm_hibernate_access_HasName__name'
     }
 
-    void "getTraitFieldName encodes different trait class correctly"() {
+    void 'getTraitFieldName encodes different trait class correctly'() {
+
         expect:
         strategy.getTraitFieldName(HasActive, 'active') ==
             'org_grails_orm_hibernate_access_HasActive__active'
     }
 
-    void "getTraitFieldName replaces every dot in the package name"() {
+    void 'getTraitFieldName replaces every dot in the package name'() {
         given:
         def fieldName = strategy.getTraitFieldName(HasName, 'name')
 
@@ -101,7 +103,7 @@ class TraitPropertyAccessStrategySpec extends Specification {
 
     // ─── buildPropertyAccess: String trait property ───────────────────────────
 
-    void "buildPropertyAccess returns non-null PropertyAccess for String trait property"() {
+    void 'buildPropertyAccess returns non-null PropertyAccess for String trait property'() {
         when:
         def access = strategy.buildPropertyAccess(NamedEntity, 'name')
 
@@ -111,7 +113,7 @@ class TraitPropertyAccessStrategySpec extends Specification {
         access.setter != null
     }
 
-    void "PropertyAccess.getPropertyAccessStrategy returns the originating strategy"() {
+    void 'PropertyAccess.getPropertyAccessStrategy returns the originating strategy'() {
         given:
         def access = strategy.buildPropertyAccess(NamedEntity, 'name')
 
@@ -119,7 +121,7 @@ class TraitPropertyAccessStrategySpec extends Specification {
         access.propertyAccessStrategy.is(strategy)
     }
 
-    void "getter and setter for String trait property are field-based"() {
+    void 'getter and setter for String trait property are field-based'() {
         given:
         def access = strategy.buildPropertyAccess(NamedEntity, 'name')
 
@@ -128,7 +130,7 @@ class TraitPropertyAccessStrategySpec extends Specification {
         access.setter instanceof SetterFieldImpl
     }
 
-    void "getter.getReturnTypeClass returns String for String trait property"() {
+    void 'getter.getReturnTypeClass returns String for String trait property'() {
         given:
         def access = strategy.buildPropertyAccess(NamedEntity, 'name')
 
@@ -136,7 +138,7 @@ class TraitPropertyAccessStrategySpec extends Specification {
         access.getter.returnTypeClass == String
     }
 
-    void "getter.getMember returns the backing trait Field for String property"() {
+    void 'getter.getMember returns the backing trait Field for String property'() {
         given:
         def access = strategy.buildPropertyAccess(NamedEntity, 'name')
 
@@ -148,7 +150,7 @@ class TraitPropertyAccessStrategySpec extends Specification {
 
     // ─── buildPropertyAccess: primitive boolean trait property ───────────────
 
-    void "buildPropertyAccess resolves primitive boolean trait property via isXxx getter"() {
+    void 'buildPropertyAccess resolves primitive boolean trait property via isXxx getter'() {
         when:
         def access = strategy.buildPropertyAccess(ActiveEntity, 'active')
 
@@ -158,7 +160,7 @@ class TraitPropertyAccessStrategySpec extends Specification {
         access.setter instanceof SetterFieldImpl
     }
 
-    void "getter.getReturnTypeClass returns boolean for boolean trait property"() {
+    void 'getter.getReturnTypeClass returns boolean for boolean trait property'() {
         given:
         def access = strategy.buildPropertyAccess(ActiveEntity, 'active')
 
@@ -166,7 +168,7 @@ class TraitPropertyAccessStrategySpec extends Specification {
         access.getter.returnTypeClass == boolean
     }
 
-    void "getter.getMember returns the backing trait Field for boolean property"() {
+    void 'getter.getMember returns the backing trait Field for boolean property'() {
         given:
         def access = strategy.buildPropertyAccess(ActiveEntity, 'active')
 
@@ -177,7 +179,7 @@ class TraitPropertyAccessStrategySpec extends Specification {
 
     // ─── buildPropertyAccess: boxed Boolean trait property ───────────────────
 
-    void "buildPropertyAccess resolves boxed Boolean trait property via isXxx getter"() {
+    void 'buildPropertyAccess resolves boxed Boolean trait property via isXxx getter'() {
         when:
         def access = strategy.buildPropertyAccess(FlaggedEntity, 'flag')
 
@@ -187,7 +189,7 @@ class TraitPropertyAccessStrategySpec extends Specification {
         access.setter instanceof SetterFieldImpl
     }
 
-    void "getter.getMember returns the backing trait Field for Boolean property"() {
+    void 'getter.getMember returns the backing trait Field for Boolean property'() {
         given:
         def access = strategy.buildPropertyAccess(FlaggedEntity, 'flag')
 
@@ -198,7 +200,7 @@ class TraitPropertyAccessStrategySpec extends Specification {
 
     // ─── buildPropertyAccess: error paths ────────────────────────────────────
 
-    void "buildPropertyAccess throws IllegalStateException for non-trait property"() {
+    void 'buildPropertyAccess throws IllegalStateException for non-trait property'() {
         when:
         strategy.buildPropertyAccess(PlainPerson, 'plain')
 
@@ -209,7 +211,7 @@ class TraitPropertyAccessStrategySpec extends Specification {
         e.message.contains('not provided by a trait')
     }
 
-    void "buildPropertyAccess throws IllegalStateException for non-existent property"() {
+    void 'buildPropertyAccess throws IllegalStateException for non-existent property'() {
         when:
         strategy.buildPropertyAccess(NamedEntity, 'nonExistent')
 
@@ -219,7 +221,8 @@ class TraitPropertyAccessStrategySpec extends Specification {
         e.message.contains('not provided by a trait')
     }
 
-    void "buildPropertyAccess error message includes class name"() {
+    void 'buildPropertyAccess error message includes class name'() {
+
         when:
         strategy.buildPropertyAccess(NamedEntity, 'missing')
 
@@ -230,7 +233,7 @@ class TraitPropertyAccessStrategySpec extends Specification {
 
     // ─── 3-arg overload ───────────────────────────────────────────────────────
 
-    void "3-arg buildPropertyAccess delegates to 2-arg version"() {
+    void '3-arg buildPropertyAccess delegates to 2-arg version'() {
         given:
         def access2 = strategy.buildPropertyAccess(NamedEntity, 'name')
         def access3 = strategy.buildPropertyAccess(NamedEntity, 'name', true)
@@ -242,7 +245,8 @@ class TraitPropertyAccessStrategySpec extends Specification {
     }
 
     @Unroll
-    void "3-arg overload with setterRequired=#req still resolves correctly"() {
+    void '3-arg overload with setterRequired=#req still resolves correctly'() {
+
         when:
         def access = strategy.buildPropertyAccess(NamedEntity, 'name', req)
 
@@ -255,7 +259,8 @@ class TraitPropertyAccessStrategySpec extends Specification {
 
     // ─── multiple independent buildPropertyAccess calls ───────────────────────
 
-    void "two buildPropertyAccess calls for same class return independent instances"() {
+    void 'two buildPropertyAccess calls for same class return independent instances'() {
+
         given:
         def access1 = strategy.buildPropertyAccess(NamedEntity, 'name')
         def access2 = strategy.buildPropertyAccess(NamedEntity, 'name')
@@ -265,7 +270,7 @@ class TraitPropertyAccessStrategySpec extends Specification {
         access1.getter.returnTypeClass == access2.getter.returnTypeClass
     }
 
-    void "buildPropertyAccess works on two different trait-implementing classes"() {
+    void 'buildPropertyAccess works on two different trait-implementing classes'() {
         given:
         def nameAccess   = strategy.buildPropertyAccess(NamedEntity, 'name')
         def activeAccess = strategy.buildPropertyAccess(ActiveEntity, 'active')
@@ -277,7 +282,7 @@ class TraitPropertyAccessStrategySpec extends Specification {
 
     // ─── Read-only property (no field, no setter) ───────────────────────────
 
-    void "buildPropertyAccess for computed property returns method-based getter and no setter if not required"() {
+    void 'buildPropertyAccess for computed property returns method-based getter and no setter if not required'() {
         when:
         def access = strategy.buildPropertyAccess(ComputedEntity, 'computed', false)
 
@@ -287,7 +292,7 @@ class TraitPropertyAccessStrategySpec extends Specification {
         access.setter == null
     }
 
-    void "buildPropertyAccess for computed property throws MappingException if setter is required"() {
+    void 'buildPropertyAccess for computed property throws MappingException if setter is required'() {
         when:
         strategy.buildPropertyAccess(ComputedEntity, 'computed', true)
 
@@ -295,7 +300,7 @@ class TraitPropertyAccessStrategySpec extends Specification {
         thrown(MappingException)
     }
 
-    void "buildPropertyAccess for computed read-write property creates method-based getter and setter"() {
+    void 'buildPropertyAccess for computed read-write property creates method-based getter and setter'() {
         when:
         def access = strategy.buildPropertyAccess(ComputedRWEntity, 'computedRW', false)
 
@@ -305,8 +310,8 @@ class TraitPropertyAccessStrategySpec extends Specification {
         access.setter instanceof SetterMethodImpl
     }
 
-    void "buildPropertyAccess throws IllegalStateException if readMethod has no trait annotations"() {
-        when: "using a method that looks like a getter but is not from a trait"
+    void 'buildPropertyAccess throws IllegalStateException if readMethod has no trait annotations'() {
+        when: 'using a method that looks like a getter but is not from a trait'
         strategy.buildPropertyAccess(NoTraitAnnotationEntity, 'notATraitProp')
 
         then:
@@ -314,8 +319,8 @@ class TraitPropertyAccessStrategySpec extends Specification {
         e.message.contains('not provided by a trait')
     }
 
-    void "buildPropertyAccess ignores isXxx if return type is not boolean"() {
-        when: "calling for a property where isXxx returns String"
+    void 'buildPropertyAccess ignores isXxx if return type is not boolean'() {
+        when: 'calling for a property where isXxx returns String'
         strategy.buildPropertyAccess(InvalidBooleanEntity, 'fakeBoolean')
 
         then:
@@ -324,10 +329,12 @@ class TraitPropertyAccessStrategySpec extends Specification {
 }
 
 class NoTraitAnnotationEntity {
-    String getNotATraitProp() { "foo" }
+
+    String getNotATraitProp() { 'foo' }
 }
 
 class InvalidBooleanEntity {
-    String isFakeBoolean() { "not a boolean" }
+
+    String isFakeBoolean() { 'not a boolean' }
 }
 

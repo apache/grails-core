@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -67,17 +67,15 @@ class CascadeBehaviorPersisterSpec extends Specification {
 
     // --- Unidirectional `hasMany` Persistence Tests ---
 
-
-
     @Rollback
-    void "test two unidirectional one to many cascade persists children"() {
-        when: "A new owner is saved after adding a child"
-        new Owner_Two_Uni_P(name: "Owner")
-                .addToFunnyChildren(new ChildPersister(title: "Funny Child"))
-                .addToSillyChildren(new ChildPersister(title: "Silly Child"))
+    void 'test two unidirectional one to many cascade persists children'() {
+        when: 'A new owner is saved after adding a child'
+        new Owner_Two_Uni_P(name: 'Owner')
+                .addToFunnyChildren(new ChildPersister(title: 'Funny Child'))
+                .addToSillyChildren(new ChildPersister(title: 'Silly Child'))
                 .save(flush: true)
         Owner_Two_Uni_P owner = Owner_Two_Uni_P.first()
-        then: "The owner is saved without errors and both owner and child exist"
+        then: 'The owner is saved without errors and both owner and child exist'
 
         owner.funnyChildren.size() == 1
         owner.sillyChildren.size() == 1
@@ -85,12 +83,12 @@ class CascadeBehaviorPersisterSpec extends Specification {
 
     @Rollback
     void "test unidirectional 'all' cascade persists child"() {
-        when: "A new owner is saved after adding a child"
-        def owner = new Owner_All_Uni_P(name: "Owner")
-        owner.addToChildren(new ChildPersister(title: "Child"))
+        when: 'A new owner is saved after adding a child'
+        def owner = new Owner_All_Uni_P(name: 'Owner')
+        owner.addToChildren(new ChildPersister(title: 'Child'))
         owner.save(flush: true)
 
-        then: "The owner is saved without errors and both owner and child exist"
+        then: 'The owner is saved without errors and both owner and child exist'
         if (owner.hasErrors()) {
             println "Errors saving owner: ${owner.errors}"
         }
@@ -101,12 +99,12 @@ class CascadeBehaviorPersisterSpec extends Specification {
 
     @Rollback
     void "test unidirectional 'persist,merge' cascade persists child"() {
-        when: "A new owner is saved after adding a child"
-        def owner = new Owner_SaveUpdate_Uni_P(name: "Owner")
-        owner.addToChildren(new ChildPersister(title: "Child"))
+        when: 'A new owner is saved after adding a child'
+        def owner = new Owner_SaveUpdate_Uni_P(name: 'Owner')
+        owner.addToChildren(new ChildPersister(title: 'Child'))
         owner.save(flush: true)
 
-        then: "The owner is saved without errors and both owner and child exist"
+        then: 'The owner is saved without errors and both owner and child exist'
         if (owner.hasErrors()) {
             println "Errors saving owner: ${owner.errors}"
         }
@@ -117,12 +115,12 @@ class CascadeBehaviorPersisterSpec extends Specification {
 
     @Rollback
     void "test unidirectional 'persist' cascade persists child"() {
-        when: "A new owner is saved after adding a child"
-        def owner = new Owner_Persist_Uni_P(name: "Owner")
-        owner.addToChildren(new ChildPersister(title: "Child"))
+        when: 'A new owner is saved after adding a child'
+        def owner = new Owner_Persist_Uni_P(name: 'Owner')
+        owner.addToChildren(new ChildPersister(title: 'Child'))
         owner.save(flush: true)
 
-        then: "The owner is saved without errors and both owner and child exist"
+        then: 'The owner is saved without errors and both owner and child exist'
         if (owner.hasErrors()) {
             println "Errors saving owner: ${owner.errors}"
         }
@@ -131,17 +129,16 @@ class CascadeBehaviorPersisterSpec extends Specification {
         ChildPersister.count() == 1
     }
 
-
     // --- Bidirectional `hasMany` Persistence Tests ---
 
     @Rollback
     void "test bidirectional 'all' cascade persists child"() {
-        when: "A new owner is saved after adding a child"
-        def owner = new Owner_All_Bi_P(name: "Owner")
-        owner.addToChildren(new Child_BT_All_P(title: "Child"))
+        when: 'A new owner is saved after adding a child'
+        def owner = new Owner_All_Bi_P(name: 'Owner')
+        owner.addToChildren(new Child_BT_All_P(title: 'Child'))
         owner.save(flush: true)
 
-        then: "The owner is saved without errors and both owner and child exist"
+        then: 'The owner is saved without errors and both owner and child exist'
         if (owner.hasErrors()) {
             println "Errors saving owner: ${owner.errors}"
         }
@@ -152,12 +149,12 @@ class CascadeBehaviorPersisterSpec extends Specification {
 
     @Rollback
     void "test bidirectional 'persist,merge' cascade persists child"() {
-        when: "A new owner is saved after adding a child"
-        def owner = new Owner_SaveUpdate_Bi_P(name: "Owner")
-        owner.addToChildren(new Child_BT_SaveUpdate_P(title: "Child"))
+        when: 'A new owner is saved after adding a child'
+        def owner = new Owner_SaveUpdate_Bi_P(name: 'Owner')
+        owner.addToChildren(new Child_BT_SaveUpdate_P(title: 'Child'))
         owner.save(flush: true)
 
-        then: "The owner is saved without errors and both owner and child exist"
+        then: 'The owner is saved without errors and both owner and child exist'
         if (owner.hasErrors()) {
             println "Errors saving owner: ${owner.errors}"
         }
@@ -168,12 +165,12 @@ class CascadeBehaviorPersisterSpec extends Specification {
 
     @Rollback
     void "test bidirectional 'persist' cascade persists child"() {
-        when: "A new owner is saved after adding a child"
-        def owner = new Owner_Persist_Bi_P(name: "Owner")
-        owner.addToChildren(new Child_BT_Persist_P(title: "Child"))
+        when: 'A new owner is saved after adding a child'
+        def owner = new Owner_Persist_Bi_P(name: 'Owner')
+        owner.addToChildren(new Child_BT_Persist_P(title: 'Child'))
         owner.save(flush: true)
 
-        then: "The owner is saved without errors and both owner and child exist"
+        then: 'The owner is saved without errors and both owner and child exist'
         if (owner.hasErrors()) {
             println "Errors saving owner: ${owner.errors}"
         }
@@ -182,26 +179,22 @@ class CascadeBehaviorPersisterSpec extends Specification {
         Child_BT_Persist_P.count() == 1
     }
 
-
     @Rollback
-    void "test unidirectional default cascade persists child"() {
-        when: "A new owner is saved after adding a child"
-        def owner = new Owner_Default_Uni_P(name: "Owner")
-        owner.addToChildren(new ChildPersister(title: "Child"))
+    void 'test unidirectional default cascade persists child'() {
+        when: 'A new owner is saved after adding a child'
+        def owner = new Owner_Default_Uni_P(name: 'Owner')
+        owner.addToChildren(new ChildPersister(title: 'Child'))
         owner.save(flush: true)
         if (owner.hasErrors()) {
             println "Errors saving owner: ${owner.errors}"
         }
 
-
-
-
-        then: "The owner is saved without errors and both owner and child exist"
+        then: 'The owner is saved without errors and both owner and child exist'
 
         !owner.errors.hasErrors()
         Owner_Default_Uni_P.count() == 1
         ChildPersister.count() == 1
-        def owner2 = Owner_Default_Uni_P.findByName("Owner")
+        def owner2 = Owner_Default_Uni_P.findByName('Owner')
         owner2.children.size() == 1
 
     }
@@ -210,12 +203,12 @@ class CascadeBehaviorPersisterSpec extends Specification {
 
     @Rollback
     void "test 'all-delete-orphan' cascade persists child"() {
-        when: "A new owner is saved after adding a child"
-        def owner = new Owner_Orphan_P(name: "Owner")
-        owner.addToChildren(new Child_Orphan_P(title: "Child"))
+        when: 'A new owner is saved after adding a child'
+        def owner = new Owner_Orphan_P(name: 'Owner')
+        owner.addToChildren(new Child_Orphan_P(title: 'Child'))
         owner.save(flush: true)
 
-        then: "The owner is saved without errors and both owner and child exist"
+        then: 'The owner is saved without errors and both owner and child exist'
         if (owner.hasErrors()) {
             println "Errors saving owner: ${owner.errors}"
         }
@@ -227,15 +220,15 @@ class CascadeBehaviorPersisterSpec extends Specification {
     // --- Map Association Persistence Tests ---
 
     @Rollback
-    void "test map with belongsTo cascade persists child"() {
-        when: "A new owner with a map entry is saved"
-        def owner = new MapParentP_All(name: "Owner")
-        def child = new MapChildP_All(childValue: "bar")
+    void 'test map with belongsTo cascade persists child'() {
+        when: 'A new owner with a map entry is saved'
+        def owner = new MapParentP_All(name: 'Owner')
+        def child = new MapChildP_All(childValue: 'bar')
         owner.settings = [foo: child]
         child.parent = owner
         owner.save(flush: true)
 
-        then: "The owner and child are saved"
+        then: 'The owner and child are saved'
         if (owner.hasErrors()) {
             println "Errors saving owner: ${owner.errors}"
         }
@@ -246,12 +239,12 @@ class CascadeBehaviorPersisterSpec extends Specification {
 
     @Rollback
     void "test map without belongsTo 'persist,merge' cascade persists child"() {
-        when: "A new owner with a map entry is saved"
-        def owner = new MapParentP_SaveUpdate(name: "Owner")
-        owner.settings = [foo: new MapChildP_SaveUpdate(childValue: "bar")]
+        when: 'A new owner with a map entry is saved'
+        def owner = new MapParentP_SaveUpdate(name: 'Owner')
+        owner.settings = [foo: new MapChildP_SaveUpdate(childValue: 'bar')]
         owner.save(flush: true)
 
-        then: "The owner and child are saved"
+        then: 'The owner and child are saved'
         if (owner.hasErrors()) {
             println "Errors saving owner: ${owner.errors}"
         }
@@ -263,64 +256,68 @@ class CascadeBehaviorPersisterSpec extends Specification {
     // --- Composite ID Persistence Test ---
 
     @Rollback
-    void "test composite id with hasMany cascade persists child"() {
-        when: "A parent with a composite ID child is saved"
-        def parent = new CompositeIdParentP(name: "Parent")
-        def child = new CompositeIdManyToOneP(name: "Child")
+    void 'test composite id with hasMany cascade persists child'() {
+        when: 'A parent with a composite ID child is saved'
+        def parent = new CompositeIdParentP(name: 'Parent')
+        def child = new CompositeIdManyToOneP(name: 'Child')
         parent.addToChildren(child)
         parent.save(flush: true)
 
-        then: "The parent and child are saved"
+        then: 'The parent and child are saved'
         if (parent.hasErrors()) {
             println "Errors saving parent: ${parent.errors}"
         }
         !parent.errors.hasErrors()
         CompositeIdParentP.count() == 1
         CompositeIdManyToOneP.count() == 1
-        def savedChild = CompositeIdManyToOneP.findByName("Child")
+        def savedChild = CompositeIdManyToOneP.findByName('Child')
         savedChild.parent.id == parent.id
     }
 
     // --- Embedded Association Persistence Test ---
 
     @Rollback
-    void "test embedded association persists embedded object"() {
-        when: "A new owner with an embedded object is saved"
-        def owner = new OwnerWithEmbeddedP(name: "Owner", address: new EmbeddedP(street: "123 Main St", city: "Anytown"))
+    void 'test embedded association persists embedded object'() {
+        when: 'A new owner with an embedded object is saved'
+        def owner = new OwnerWithEmbeddedP(name: 'Owner', address: new EmbeddedP(street: '123 Main St', city: 'Anytown'))
         owner.save(flush: true)
 
-        then: "The owner is saved without errors and the embedded properties are persisted"
+        then: 'The owner is saved without errors and the embedded properties are persisted'
         if (owner.hasErrors()) {
             println "Errors saving owner: ${owner.errors}"
         }
         !owner.errors.hasErrors()
         OwnerWithEmbeddedP.count() == 1
-        def savedOwner = OwnerWithEmbeddedP.findByName("Owner")
-        savedOwner.address.street == "123 Main St"
-        savedOwner.address.city == "Anytown"
+        def savedOwner = OwnerWithEmbeddedP.findByName('Owner')
+        savedOwner.address.street == '123 Main St'
+        savedOwner.address.city == 'Anytown'
     }
 }
 
 // --- Domain Classes for Unidirectional One-to-Many Tests ---
 @Entity
 class ChildPersister {
+
     String title
 }
 
 @Entity
 class Owner_Default_Uni_P {
+
     String name
     static hasMany = [children: ChildPersister]
 }
 
 @Entity
 class Owner_Two_Uni_P {
+
     String name
     static hasMany = [funnyChildren: ChildPersister, sillyChildren: ChildPersister]
 }
 
 @Entity
 class Owner_All_Uni_P {
+
     String name
     static hasMany = [children: ChildPersister]
     static mapping = { children cascade: 'all' }
@@ -328,6 +325,7 @@ class Owner_All_Uni_P {
 
 @Entity
 class Owner_SaveUpdate_Uni_P {
+
     String name
     static hasMany = [children: ChildPersister]
     static mapping = { children cascade: 'persist,merge' }
@@ -335,6 +333,7 @@ class Owner_SaveUpdate_Uni_P {
 
 @Entity
 class Owner_Merge_Uni_P {
+
     String name
     static hasMany = [children: ChildPersister]
     static mapping = { children cascade: 'merge' }
@@ -342,6 +341,7 @@ class Owner_Merge_Uni_P {
 
 @Entity
 class Owner_Delete_Uni_P {
+
     String name
     static hasMany = [children: ChildPersister]
     static mapping = { children cascade: 'delete' }
@@ -349,6 +349,7 @@ class Owner_Delete_Uni_P {
 
 @Entity
 class Owner_Lock_Uni_P {
+
     String name
     static hasMany = [children: ChildPersister]
     static mapping = { children cascade: 'lock' }
@@ -356,6 +357,7 @@ class Owner_Lock_Uni_P {
 
 @Entity
 class Owner_Replicate_Uni_P {
+
     String name
     static hasMany = [children: ChildPersister]
     static mapping = { children cascade: 'replicate' }
@@ -363,6 +365,7 @@ class Owner_Replicate_Uni_P {
 
 @Entity
 class Owner_Evict_Uni_P {
+
     String name
     static hasMany = [children: ChildPersister]
     static mapping = { children cascade: 'evict' }
@@ -370,15 +373,16 @@ class Owner_Evict_Uni_P {
 
 @Entity
 class Owner_Persist_Uni_P {
+
     String name
     static hasMany = [children: ChildPersister]
     static mapping = { children cascade: 'persist' }
 }
 
-
 // --- Domain Classes for Bidirectional One-to-Many Tests ---
 @Entity
 class Owner_Default_Bi_P {
+
     String name
     Set<Child_BT_Default_P> children
     static hasMany = [children: Child_BT_Default_P]
@@ -386,12 +390,14 @@ class Owner_Default_Bi_P {
 
 @Entity
 class Child_BT_Default_P {
+
     String title
     static belongsTo = [owner: Owner_Default_Bi_P]
 }
 
 @Entity
 class Owner_All_Bi_P {
+
     String name
     Set<Child_BT_All_P> children
     static hasMany = [children: Child_BT_All_P]
@@ -400,12 +406,14 @@ class Owner_All_Bi_P {
 
 @Entity
 class Child_BT_All_P {
+
     String title
     static belongsTo = [owner: Owner_All_Bi_P]
 }
 
 @Entity
 class Owner_SaveUpdate_Bi_P {
+
     String name
     Set<Child_BT_SaveUpdate_P> children
     static hasMany = [children: Child_BT_SaveUpdate_P]
@@ -414,12 +422,14 @@ class Owner_SaveUpdate_Bi_P {
 
 @Entity
 class Child_BT_SaveUpdate_P {
+
     String title
     static belongsTo = [owner: Owner_SaveUpdate_Bi_P]
 }
 
 @Entity
 class Owner_Persist_Bi_P {
+
     String name
     Set<Child_BT_Persist_P> children
     static hasMany = [children: Child_BT_Persist_P]
@@ -428,6 +438,7 @@ class Owner_Persist_Bi_P {
 
 @Entity
 class Child_BT_Persist_P {
+
     String title
     static belongsTo = [owner: Owner_Persist_Bi_P]
 }
@@ -435,6 +446,7 @@ class Child_BT_Persist_P {
 // Bidirectional classes for non-persisting cascades need nullable back-references to avoid validation errors
 @Entity
 class Owner_Merge_Bi_P {
+
     String name
     Set<Child_BT_Merge_P> children
     static hasMany = [children: Child_BT_Merge_P]
@@ -443,6 +455,7 @@ class Owner_Merge_Bi_P {
 
 @Entity
 class Child_BT_Merge_P {
+
     String title
     static belongsTo = [owner: Owner_Merge_Bi_P]
     static constraints = { owner nullable: true }
@@ -450,6 +463,7 @@ class Child_BT_Merge_P {
 
 @Entity
 class Owner_Delete_Bi_P {
+
     String name
     Set<Child_BT_Delete_P> children
     static hasMany = [children: Child_BT_Delete_P]
@@ -458,6 +472,7 @@ class Owner_Delete_Bi_P {
 
 @Entity
 class Child_BT_Delete_P {
+
     String title
     static belongsTo = [owner: Owner_Delete_Bi_P]
     static constraints = { owner nullable: true }
@@ -465,6 +480,7 @@ class Child_BT_Delete_P {
 
 @Entity
 class Owner_Lock_Bi_P {
+
     String name
     Set<Child_BT_Lock_P> children
     static hasMany = [children: Child_BT_Lock_P]
@@ -473,6 +489,7 @@ class Owner_Lock_Bi_P {
 
 @Entity
 class Child_BT_Lock_P {
+
     String title
     static belongsTo = [owner: Owner_Lock_Bi_P]
     static constraints = { owner nullable: true }
@@ -480,6 +497,7 @@ class Child_BT_Lock_P {
 
 @Entity
 class Owner_Replicate_Bi_P {
+
     String name
     Set<Child_BT_Replicate_P> children
     static hasMany = [children: Child_BT_Replicate_P]
@@ -488,6 +506,7 @@ class Owner_Replicate_Bi_P {
 
 @Entity
 class Child_BT_Replicate_P {
+
     String title
     static belongsTo = [owner: Owner_Replicate_Bi_P]
     static constraints = { owner nullable: true }
@@ -495,6 +514,7 @@ class Child_BT_Replicate_P {
 
 @Entity
 class Owner_Evict_Bi_P {
+
     String name
     Set<Child_BT_Evict_P> children
     static hasMany = [children: Child_BT_Evict_P]
@@ -503,6 +523,7 @@ class Owner_Evict_Bi_P {
 
 @Entity
 class Child_BT_Evict_P {
+
     String title
     static belongsTo = [owner: Owner_Evict_Bi_P]
     static constraints = { owner nullable: true }
@@ -511,6 +532,7 @@ class Child_BT_Evict_P {
 // --- Domain Classes for Orphan Removal Test ---
 @Entity
 class Owner_Orphan_P {
+
     String name
     Set<Child_Orphan_P> children
     static hasMany = [children: Child_Orphan_P]
@@ -519,6 +541,7 @@ class Owner_Orphan_P {
 
 @Entity
 class Child_Orphan_P {
+
     String title
     static belongsTo = [owner: Owner_Orphan_P]
 }
@@ -526,6 +549,7 @@ class Child_Orphan_P {
 // --- Domain Classes for Map Association Tests ---
 @Entity
 class MapParentP_All {
+
     String name
     static hasMany = [settings: MapChildP_All]
     Map<String, MapChildP_All> settings
@@ -533,12 +557,14 @@ class MapParentP_All {
 
 @Entity
 class MapChildP_All {
+
     String childValue
     static belongsTo = [parent: MapParentP_All]
 }
 
 @Entity
 class MapParentP_SaveUpdate {
+
     String name
     static hasMany = [settings: MapChildP_SaveUpdate]
     Map<String, MapChildP_SaveUpdate> settings
@@ -547,12 +573,14 @@ class MapParentP_SaveUpdate {
 
 @Entity
 class MapChildP_SaveUpdate {
+
     String childValue
 }
 
 // --- Domain Classes for Composite ID Test ---
 @Entity
 class CompositeIdParentP implements Serializable {
+
     Long id
     String name
     static hasMany = [children: CompositeIdManyToOneP]
@@ -560,6 +588,7 @@ class CompositeIdParentP implements Serializable {
 
 @Entity
 class CompositeIdManyToOneP implements Serializable {
+
     String name
     CompositeIdParentP parent
 
@@ -573,6 +602,7 @@ class CompositeIdManyToOneP implements Serializable {
 // --- Domain Classes for Embedded Association Test ---
 @Entity
 class OwnerWithEmbeddedP {
+
     String name
     EmbeddedP address
 
@@ -580,6 +610,7 @@ class OwnerWithEmbeddedP {
 }
 
 class EmbeddedP {
+
     String street
     String city
 }

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -55,9 +55,9 @@ class HibernateUpdateFromListenerSpec extends Specification {
     }
 
     @Rollback
-    void "test the changes made from the listener are saved"() {
+    void 'test the changes made from the listener are saved'() {
         when:
-        Person danny = new Person(name: "Danny", occupation: "manager").save()
+        Person danny = new Person(name: 'Danny', occupation: 'manager').save()
 
         then:
         new PollingConditions().eventually {listener.isExecuted && Person.count()}
@@ -69,7 +69,7 @@ class HibernateUpdateFromListenerSpec extends Specification {
 
         then:
         danny.occupation
-        danny.occupation.endsWith("listener")
+        danny.occupation.endsWith('listener')
     }
 
     static class PersonSaveOrUpdatePersistentEventListener extends AbstractPersistenceEventListener {
@@ -84,9 +84,9 @@ class HibernateUpdateFromListenerSpec extends Specification {
         protected void onPersistenceEvent(AbstractPersistenceEvent event) {
             if (event.entityObject instanceof Person) {
                 Person person = (Person) event.entityObject
-                person.occupation = person.occupation + " listener"
+                person.occupation = person.occupation + ' listener'
                 if (event.getEntityAccess() != null) {
-                    event.getEntityAccess().setProperty("occupation", person.occupation)
+                    event.getEntityAccess().setProperty('occupation', person.occupation)
                 }
             }
             isExecuted = true

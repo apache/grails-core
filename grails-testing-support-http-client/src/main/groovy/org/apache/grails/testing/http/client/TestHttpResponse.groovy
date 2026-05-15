@@ -4,14 +4,14 @@
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
+ * 'License'); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
  *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
@@ -164,7 +164,7 @@ class TestHttpResponse implements HttpResponse {
     /**
      * Asserts response status and optional exact header values.
      *
-     * @param headers expected headers to validate;
+     * @param headers expected headers to validate
      *        ignored when empty and treated as a subset match when provided,
      *        meaning additional response headers are ignored
      * @param status expected HTTP status
@@ -274,7 +274,7 @@ class TestHttpResponse implements HttpResponse {
     /**
      * Asserts exact values for the provided header names.
      *
-     * @param expected expected header values keyed by header name;
+     * @param expected expected header values keyed by header name
      *        only these entries are checked and extra response headers are ignored
      * @return same response for fluent chaining
      */
@@ -286,7 +286,7 @@ class TestHttpResponse implements HttpResponse {
     /**
      * Asserts status and exact values for the provided header names.
      *
-     * @param expected expected header values keyed by header name;
+     * @param expected expected header values keyed by header name
      *        only these entries are checked and extra response headers are ignored
      * @param status expected HTTP status
      * @return same response for fluent chaining
@@ -300,7 +300,7 @@ class TestHttpResponse implements HttpResponse {
     /**
      * Asserts case-insensitive header-name/value equality for all expected entries.
      *
-     * @param expected expected headers to validate;
+     * @param expected expected headers to validate
      *        only these entries are checked and extra response headers are ignored
      * @return same response for fluent chaining
      */
@@ -312,7 +312,7 @@ class TestHttpResponse implements HttpResponse {
     /**
      * Asserts status and case-insensitive header-name/value equality.
      *
-     * @param expected expected headers to validate;
+     * @param expected expected headers to validate
      *        only these entries are checked and extra response headers are ignored
      * @param status expected HTTP status
      * @return same response for fluent chaining
@@ -365,7 +365,7 @@ class TestHttpResponse implements HttpResponse {
      *
      * <p>Uses structural comparison (for example, object key order does not matter).</p>
      *
-     * @param headers expected headers to validate;
+     * @param headers expected headers to validate
      *        ignored when empty and treated as a subset match when provided,
      *        meaning additional response headers are ignored
      * @param json expected JSON-compatible object tree
@@ -380,7 +380,7 @@ class TestHttpResponse implements HttpResponse {
     /**
      * Asserts response JSON tree equality against a JSON document string.
      *
-     * @param headers expected headers to validate;
+     * @param headers expected headers to validate
      *        ignored when empty and treated as a subset match when provided,
      *        meaning additional response headers are ignored
      * @param json expected JSON document text
@@ -472,7 +472,7 @@ class TestHttpResponse implements HttpResponse {
      *
      * <p>For objects, expected keys must exist; for arrays, expected elements are matched by index.</p>
      *
-     * @param headers expected headers to validate;
+     * @param headers expected headers to validate
      *        ignored when empty and treated as a subset match when provided,
      *        meaning additional response headers are ignored
      * @param json expected JSON-compatible subset
@@ -487,7 +487,7 @@ class TestHttpResponse implements HttpResponse {
     /**
      * Asserts response JSON contains the expected subset expressed as JSON text.
      *
-     * @param headers expected headers to validate;
+     * @param headers expected headers to validate
      *        ignored when empty and treated as a subset match when provided,
      *        meaning additional response headers are ignored
      * @param json expected subset encoded as JSON text
@@ -556,7 +556,7 @@ class TestHttpResponse implements HttpResponse {
     /**
      * Asserts exact response body equality.
      *
-     * @param headers expected headers to validate;
+     * @param headers expected headers to validate
      *        ignored when empty and treated as a subset match when provided,
      *        meaning additional response headers are ignored
      * @param body expected response body
@@ -585,7 +585,7 @@ class TestHttpResponse implements HttpResponse {
     /**
      * Asserts that the response body contains {@code body} as a substring.
      *
-     * @param headers expected headers to validate;
+     * @param headers expected headers to validate
      *        ignored when empty and treated as a subset match when provided,
      *        meaning additional response headers are ignored
      * @param body substring expected to be present in the response body
@@ -613,7 +613,7 @@ class TestHttpResponse implements HttpResponse {
     /**
      * Asserts that the response body contains a regex match using {@link java.util.regex.Matcher#find()}.
      *
-     * @param headers expected headers to validate;
+     * @param headers expected headers to validate
      *        ignored when empty and treated as a subset match when provided,
      *        meaning additional response headers are ignored
      * @param pattern pattern that must be found somewhere in the response body
@@ -641,7 +641,7 @@ class TestHttpResponse implements HttpResponse {
     /**
      * Asserts that the entire response body matches the regex using {@link java.util.regex.Matcher#matches()}.
      *
-     * @param headers expected headers to validate;
+     * @param headers expected headers to validate
      *        ignored when empty and treated as a subset match when provided,
      *        meaning additional response headers are ignored
      * @param pattern pattern that must match the full response body
@@ -669,7 +669,7 @@ class TestHttpResponse implements HttpResponse {
     /**
      * Asserts that the full response body does not equal {@code body}.
      *
-     * @param headers expected headers to validate;
+     * @param headers expected headers to validate
      *        ignored when empty and treated as a subset match when provided,
      *        meaning additional response headers are ignored
      * @param body unexpected full response body
@@ -697,7 +697,7 @@ class TestHttpResponse implements HttpResponse {
     /**
      * Asserts that the response body does not contain {@code text} as a substring.
      *
-     * @param headers expected headers to validate;
+     * @param headers expected headers to validate
      *        ignored when empty and treated as a subset match when provided,
      *        meaning additional response headers are ignored
      * @param text unexpected substring
@@ -725,7 +725,7 @@ class TestHttpResponse implements HttpResponse {
     /**
      * Asserts that the response body does not contain a regex match using {@code find()}.
      *
-     * @param headers expected headers to validate;
+     * @param headers expected headers to validate
      *        ignored when empty and treated as a subset match when provided,
      *        meaning additional response headers are ignored
      * @param pattern pattern that must not be found anywhere in the response body
@@ -753,7 +753,7 @@ class TestHttpResponse implements HttpResponse {
     /**
      * Asserts that the response body does not fully match the regex using {@code matches()}.
      *
-     * @param headers expected headers to validate;
+     * @param headers expected headers to validate
      *        ignored when empty and treated as a subset match when provided,
      *        meaning additional response headers are ignored
      * @param pattern pattern that must not match the full response body
@@ -916,7 +916,7 @@ class TestHttpResponse implements HttpResponse {
         unexpectedHeaders.each { String name, String unexpected ->
             def actual = r.headers().firstValue(name).orElse(null)
             if (actual == unexpected) {
-                throw new AssertionFailedError("Header should not match for '$name'", "not $unexpected", actual)
+                throw new AssertionFailedError("Header should not match for '$name'', 'not $unexpected", actual)
             }
         }
     }

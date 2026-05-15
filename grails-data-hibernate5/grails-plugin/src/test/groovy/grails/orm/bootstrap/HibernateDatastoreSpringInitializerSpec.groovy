@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -28,64 +28,64 @@ import spock.lang.Specification
 /**
  * Created by graemerocher on 29/01/14.
  */
-class HibernateDatastoreSpringInitializerSpec extends Specification{
+class HibernateDatastoreSpringInitializerSpec extends Specification {
 
-    void "Test configure multiple data sources"() {
-        given:"An initializer instance"
+    void 'Test configure multiple data sources'() {
+        given:'An initializer instance'
         Map config = [
-                'dataSource.url':"jdbc:h2:mem:people;LOCK_TIMEOUT=10000",
+                'dataSource.url': 'jdbc:h2:mem:people;LOCK_TIMEOUT=10000',
                 'dataSource.dialect': H2Dialect.name,
                 'dataSource.formatSql': 'true',
                 'hibernate.flush.mode': 'COMMIT',
                 'hibernate.cache.queries': 'true',
                 'hibernate.hbm2ddl.auto': 'create',
-                'dataSources.books.url':"jdbc:h2:mem:books;LOCK_TIMEOUT=10000",
-                'dataSources.moreBooks.url':"jdbc:h2:mem:moreBooks;LOCK_TIMEOUT=10000"
+                'dataSources.books.url': 'jdbc:h2:mem:books;LOCK_TIMEOUT=10000',
+                'dataSources.moreBooks.url': 'jdbc:h2:mem:moreBooks;LOCK_TIMEOUT=10000'
         ]
         def datastoreInitializer = new HibernateDatastoreSpringInitializer(config, Person, Book, Author)
 
-        when:"the application is configured"
+        when:'the application is configured'
         def applicationContext = datastoreInitializer.configure()
         println applicationContext.getBeanDefinitionNames()
 
-        then:"Each session factory has the correct number of persistent entities"
+        then:'Each session factory has the correct number of persistent entities'
         applicationContext.getBeansOfType(PlatformTransactionManager).size() == 3
-        applicationContext.getBean("sessionFactory", SessionFactory).metamodel.entities.size() == 2
-        applicationContext.getBean("sessionFactory", SessionFactory).metamodel.entity(Person.name)
-        applicationContext.getBean("sessionFactory", SessionFactory).metamodel.entity(Author.name)
-        applicationContext.getBean("sessionFactory_books", SessionFactory).metamodel.entities.size() == 2
-        applicationContext.getBean("sessionFactory_books", SessionFactory).metamodel.entity(Book.name)
-        applicationContext.getBean("sessionFactory_books", SessionFactory).metamodel.entity(Author.name)
-        applicationContext.getBean("sessionFactory_moreBooks", SessionFactory).metamodel.entities.size() == 2
-        applicationContext.getBean("sessionFactory_moreBooks", SessionFactory).metamodel.entity(Book.name)
-        applicationContext.getBean("sessionFactory_moreBooks", SessionFactory).metamodel.entity(Author.name)
+        applicationContext.getBean('sessionFactory', SessionFactory).metamodel.entities.size() == 2
+        applicationContext.getBean('sessionFactory', SessionFactory).metamodel.entity(Person.name)
+        applicationContext.getBean('sessionFactory', SessionFactory).metamodel.entity(Author.name)
+        applicationContext.getBean('sessionFactory_books', SessionFactory).metamodel.entities.size() == 2
+        applicationContext.getBean('sessionFactory_books', SessionFactory).metamodel.entity(Book.name)
+        applicationContext.getBean('sessionFactory_books', SessionFactory).metamodel.entity(Author.name)
+        applicationContext.getBean('sessionFactory_moreBooks', SessionFactory).metamodel.entities.size() == 2
+        applicationContext.getBean('sessionFactory_moreBooks', SessionFactory).metamodel.entity(Book.name)
+        applicationContext.getBean('sessionFactory_moreBooks', SessionFactory).metamodel.entity(Author.name)
 
-        and:"Each domain has the correct data source(s)"
+        and:'Each domain has the correct data source(s)'
         Person.withNewSession { Person.count() == 0 }
         Person.withNewSession {  Session s ->
-            assert s.connection().metaData.getURL() == "jdbc:h2:mem:people"
+            assert s.connection().metaData.getURL() == 'jdbc:h2:mem:people'
             return true
         }
         Book.withNewSession { Book.count() == 0 }
         Book.withNewSession { Session s ->
-            assert s.connection().metaData.getURL() == "jdbc:h2:mem:books"
+            assert s.connection().metaData.getURL() == 'jdbc:h2:mem:books'
             return true
         }
         Book.moreBooks.withNewSession { Session s ->
-            assert s.connection().metaData.getURL() == "jdbc:h2:mem:moreBooks"
+            assert s.connection().metaData.getURL() == 'jdbc:h2:mem:moreBooks'
             return true
         }
         Author.withNewSession { Author.count() == 0 }
         Author.withNewSession { Session s ->
-            assert s.connection().metaData.getURL() == "jdbc:h2:mem:people"
+            assert s.connection().metaData.getURL() == 'jdbc:h2:mem:people'
             return true
         }
         Author.books.withNewSession { Session s ->
-            assert s.connection().metaData.getURL() == "jdbc:h2:mem:books"
+            assert s.connection().metaData.getURL() == 'jdbc:h2:mem:books'
             return true
         }
         Author.moreBooks.withNewSession { Session s ->
-            assert s.connection().metaData.getURL() == "jdbc:h2:mem:moreBooks"
+            assert s.connection().metaData.getURL() == 'jdbc:h2:mem:moreBooks'
             return true
         }
 
@@ -93,6 +93,7 @@ class HibernateDatastoreSpringInitializerSpec extends Specification{
 }
 @Entity
 class Person {
+
     Long id
     Long version
     String name
@@ -104,6 +105,7 @@ class Person {
 
 @Entity
 class Book {
+
     Long id
     Long version
     String name
@@ -118,6 +120,7 @@ class Book {
 
 @Entity
 class Author {
+
     Long id
     Long version
     String name

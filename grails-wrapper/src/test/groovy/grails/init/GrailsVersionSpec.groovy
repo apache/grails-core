@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -30,7 +30,7 @@ class GrailsVersionSpec extends Specification {
     @TempDir
     Path tempDir
 
-    def "allowed release types - specified valid"() {
+    def 'allowed release types - specified valid'() {
         given:
         GrailsWrapper mockVersion = Mock(GrailsWrapper)
 
@@ -50,7 +50,7 @@ class GrailsVersionSpec extends Specification {
         0 * mockVersion._
     }
 
-    def "allowed release types - specified invalid"() {
+    def 'allowed release types - specified invalid'() {
         given:
         GrailsWrapper mockVersion = Mock(GrailsWrapper)
 
@@ -68,7 +68,7 @@ class GrailsVersionSpec extends Specification {
         0 * mockVersion._
     }
 
-    def "allowed release types - with preferred version defined and allowed types override"() {
+    def 'allowed release types - with preferred version defined and allowed types override'() {
         given:
         GrailsWrapper mockVersion = Mock(GrailsWrapper)
 
@@ -91,7 +91,7 @@ class GrailsVersionSpec extends Specification {
         0 * mockVersion._
     }
 
-    def "allowed release types - with preferred version defined and no types override"() {
+    def 'allowed release types - with preferred version defined and no types override'() {
         given:
         GrailsWrapper mockVersion = Mock(GrailsWrapper)
 
@@ -114,7 +114,7 @@ class GrailsVersionSpec extends Specification {
         0 * mockVersion._
     }
 
-    def "allowed release types - no preferred version - development"() {
+    def 'allowed release types - no preferred version - development'() {
         given:
         GrailsWrapper mockVersion = Mock(GrailsWrapper) {
             1 * getVersion() >> '7.0.0-SNAPSHOT'
@@ -133,7 +133,7 @@ class GrailsVersionSpec extends Specification {
         allowedTypes == [GrailsReleaseType.RELEASE, GrailsReleaseType.RC, GrailsReleaseType.MILESTONE, GrailsReleaseType.SNAPSHOT] as LinkedHashSet
     }
 
-    def "allowed release types - no preferred version - non-development for non-release"() {
+    def 'allowed release types - no preferred version - non-development for non-release'() {
         given:
         GrailsWrapper mockVersion = Mock(GrailsWrapper) {
             1 * getVersion() >> '7.0.0-RC2'
@@ -152,7 +152,7 @@ class GrailsVersionSpec extends Specification {
         allowedTypes == [GrailsReleaseType.RELEASE, GrailsReleaseType.RC] as LinkedHashSet
     }
 
-    def "allowed release types - no preferred version - non-development for release"() {
+    def 'allowed release types - no preferred version - non-development for release'() {
         given:
         GrailsWrapper mockVersion = Mock(GrailsWrapper) {
             1 * getVersion() >> '7.0.0'
@@ -171,7 +171,7 @@ class GrailsVersionSpec extends Specification {
         allowedTypes == [GrailsReleaseType.RELEASE] as LinkedHashSet
     }
 
-    def "preferred version - gradle.properties with grailsVersion wins over env var"() {
+    def 'preferred version - gradle.properties with grailsVersion wins over env var'() {
         given:
         File gradleProperties = tempDir.resolve('gradle.properties').toFile()
         gradleProperties.text = 'grailsVersion=7.0.11-SNAPSHOT'
@@ -186,7 +186,7 @@ class GrailsVersionSpec extends Specification {
         resolved == new GrailsVersion('7.0.11-SNAPSHOT')
     }
 
-    def "preferred version - env var used when gradle.properties is missing"() {
+    def 'preferred version - env var used when gradle.properties is missing'() {
         given:
         File missing = tempDir.resolve('does-not-exist.properties').toFile()
 
@@ -200,7 +200,7 @@ class GrailsVersionSpec extends Specification {
         resolved == new GrailsVersion('7.0.11-SNAPSHOT')
     }
 
-    def "preferred version - env var used when gradle.properties has no grailsVersion key"() {
+    def 'preferred version - env var used when gradle.properties has no grailsVersion key'() {
         given:
         File gradleProperties = tempDir.resolve('gradle.properties').toFile()
         gradleProperties.text = 'projectVersion=7.0.11-SNAPSHOT'
@@ -215,7 +215,7 @@ class GrailsVersionSpec extends Specification {
         resolved == new GrailsVersion('7.0.11-SNAPSHOT')
     }
 
-    def "preferred version - env var trimmed and whitespace-only treated as unset"() {
+    def 'preferred version - env var trimmed and whitespace-only treated as unset'() {
         given:
         File missing = tempDir.resolve('does-not-exist.properties').toFile()
 
@@ -229,7 +229,7 @@ class GrailsVersionSpec extends Specification {
         resolved == null
     }
 
-    def "preferred version - returns null when neither gradle.properties nor env var is set"() {
+    def 'preferred version - returns null when neither gradle.properties nor env var is set'() {
         given:
         File missing = tempDir.resolve('does-not-exist.properties').toFile()
 
@@ -244,7 +244,7 @@ class GrailsVersionSpec extends Specification {
     }
 
     @Unroll
-    def "grails version #version"(String version, String major, String minor, String patch, GrailsReleaseType releaseType, Integer candidate) {
+    def 'grails version #version'(String version, String major, String minor, String patch, GrailsReleaseType releaseType, Integer candidate) {
         when:
         GrailsVersion grailsVersion = new GrailsVersion(version)
 
@@ -267,7 +267,7 @@ class GrailsVersionSpec extends Specification {
         '7.0.0-M2'       | '7'   | '0'   | '0'   | GrailsReleaseType.MILESTONE | 2
     }
 
-    def "comparison checks"() {
+    def 'comparison checks'() {
         expect:
         new GrailsVersion('7.0.0') > new GrailsVersion('7.0.1')
         new GrailsVersion('7.0.1') < new GrailsVersion('7.0.0')
@@ -283,7 +283,7 @@ class GrailsVersionSpec extends Specification {
         new GrailsVersion('7.0.0-M1') < new GrailsVersion('7.0.0-SNAPSHOT')
     }
 
-    def "sorted"() {
+    def 'sorted'() {
         expect:
         [
                 new GrailsVersion('8.0.0'),

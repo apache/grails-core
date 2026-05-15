@@ -3,13 +3,13 @@
  *  contributor license agreements.  See the NOTICE file distributed with
  *  this work for additional information regarding copyright ownership.
  *  The ASF licenses this file to You under the Apache License, Version 2.0
- *  (the "License"); you may not use this file except in compliance with
+ *  (the 'License'); you may not use this file except in compliance with
  *  the License.  You may obtain a copy of the License at
  *
  *      https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  distributed under the License is distributed on an 'AS IS' BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
@@ -54,7 +54,7 @@ class GrailsApplicationContextCommandRunnerSpec extends Specification {
         'script runner with --option'            | ['myscript.groovy', '--someOption=value']                | ['myscript.groovy']
     }
 
-    def "filterCommandOptions preserves argument order"() {
+    def 'filterCommandOptions preserves argument order'() {
         given:
         String[] input = ['first', 'second', '--removed', 'third'] as String[]
 
@@ -65,7 +65,7 @@ class GrailsApplicationContextCommandRunnerSpec extends Specification {
         result == ['first', 'second', 'third'] as String[]
     }
 
-    def "filterCommandOptions returns new array instance"() {
+    def 'filterCommandOptions returns new array instance'() {
         given:
         String[] input = ['dbm-status'] as String[]
 
@@ -77,7 +77,7 @@ class GrailsApplicationContextCommandRunnerSpec extends Specification {
         result == input
     }
 
-    def "filterCommandOptions handles typical Gradle dbm task args"() {
+    def 'filterCommandOptions handles typical Gradle dbm task args'() {
         given: 'args as they arrive from ApplicationContextCommandTask via GrailsGradlePlugin'
         // configureApplicationCommands() passes: [commandName, ...userArgs, applicationClassName]
         // main() extracts: commandName = args[0], appClass = args.last()
@@ -92,7 +92,7 @@ class GrailsApplicationContextCommandRunnerSpec extends Specification {
         springBootArgs.length == 1
     }
 
-    def "filterCommandOptions prevents dataSource property corruption"() {
+    def 'filterCommandOptions prevents dataSource property corruption'() {
         given: 'the problematic args that caused the original bug'
         String[] args = ['dbm-gorm-diff', '--dataSource=analytics', '--contexts=production'] as String[]
 
@@ -104,7 +104,7 @@ class GrailsApplicationContextCommandRunnerSpec extends Specification {
         filtered == ['dbm-gorm-diff'] as String[]
     }
 
-    def "filterCommandOptions handles null elements in args"() {
+    def 'filterCommandOptions handles null elements in args'() {
         given:
         String[] input = ['dbm-status', null, '--dataSource=analytics'] as String[]
 
@@ -116,7 +116,7 @@ class GrailsApplicationContextCommandRunnerSpec extends Specification {
         result == ['dbm-status'] as String[]
     }
 
-    def "filterCommandOptions protects all known Grails ecosystem command options"() {
+    def 'filterCommandOptions protects all known Grails ecosystem command options'() {
         expect: 'every known --option from Grails plugins is filtered'
         GrailsApplicationContextCommandRunner.filterCommandOptions(input as String[]) == expected as String[]
 

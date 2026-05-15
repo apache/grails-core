@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -32,7 +32,7 @@ import jakarta.servlet.http.HttpServletResponse
 class RedirectNonAbsoluteURISpec extends AbstractUrlMappingsSpec {
 
     @Issue('10879')
-    void 'An "absolute=true" redirect generates an absolute URL in Location header'() {
+    void 'An 'absolute=true' redirect generates an absolute URL in Location header'() {
         given:
         def linkGenerator = getLinkGenerator {
             "/$controller/$action?/$id?"()
@@ -53,7 +53,7 @@ class RedirectNonAbsoluteURISpec extends AbstractUrlMappingsSpec {
     }
 
     @Issue('10879')
-    void 'An "absolute=false" redirect generates an non-absolute URL in Location header'() {
+    void 'An 'absolute=false' redirect generates an non-absolute URL in Location header'() {
         given:
         def linkGenerator = getLinkGenerator {
             "/$controller/$action?/$id?"()
@@ -74,7 +74,7 @@ class RedirectNonAbsoluteURISpec extends AbstractUrlMappingsSpec {
     }
 
     @Issue('10879')
-    void 'A redirect without "absolute" parameter generates an absolute URL in Location header by default'() {
+    void 'A redirect without 'absolute' parameter generates an absolute URL in Location header by default'() {
         given:
         def linkGenerator = getLinkGenerator {
             "/$controller/$action?/$id?"()
@@ -95,7 +95,7 @@ class RedirectNonAbsoluteURISpec extends AbstractUrlMappingsSpec {
     }
 
     @Issue('11673')
-    void 'An "absolute=false" redirect includes context-path in Location header'() {
+    void 'An 'absolute=false' redirect includes context-path in Location header'() {
         given:
         def linkGenerator = getLinkGeneratorWithContextPath {
             "/$controller/$action?/$id?"()
@@ -116,7 +116,7 @@ class RedirectNonAbsoluteURISpec extends AbstractUrlMappingsSpec {
     }
 
     @Issue('15132')
-    void 'An "absolute=false" redirect not added context-path with url params'() {
+    void 'An 'absolute=false' redirect not added context-path with url params'() {
         given:
         def linkGenerator = getLinkGeneratorWithContextPath {
             "/$controller/$action?/$id?"()
@@ -126,8 +126,8 @@ class RedirectNonAbsoluteURISpec extends AbstractUrlMappingsSpec {
         HttpServletResponse response = Mock(HttpServletResponse)
 
         when: 'redirecting with absolute=false where context-path is set'
-        String url = linkGenerator.link(controller:"test", action: "foo")
-        responseRedirector.redirect(request, response, [url:url, absolute: false])
+        String url = linkGenerator.link(controller: 'test', action: 'foo')
+        responseRedirector.redirect(request, response, [url: url, absolute: false])
 
         then: 'the partial URL includes context-path'
         1 * response.setHeader(HttpHeaders.LOCATION, "${CONTEXT_PATH}/test/foo")

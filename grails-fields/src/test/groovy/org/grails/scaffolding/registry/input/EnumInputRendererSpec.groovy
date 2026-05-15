@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -34,7 +34,7 @@ class EnumInputRendererSpec extends ClosureCaptureSpecification {
         renderer = new EnumInputRenderer()
     }
 
-    void "test supports"() {
+    void 'test supports'() {
         given:
         DomainProperty property
 
@@ -47,7 +47,7 @@ class EnumInputRendererSpec extends ClosureCaptureSpecification {
         renderer.supports(property)
     }
 
-    void "test render"() {
+    void 'test render'() {
         given:
         DomainProperty property
         ClosureCapture closureCapture
@@ -59,14 +59,14 @@ class EnumInputRendererSpec extends ClosureCaptureSpecification {
         closureCapture = getClosureCapture(renderer.renderInput([:], property))
 
         then:
-        closureCapture.calls[0].name == "select"
+        closureCapture.calls[0].name == 'select'
         closureCapture.calls[0].args[0] == [:]
-        closureCapture.calls[0][0].name == "option"
-        closureCapture.calls[0][0].args[0] == "APPLE"
-        closureCapture.calls[0][0].args[1] == [value: "APPLE"]
-        closureCapture.calls[0][1].name == "option"
-        closureCapture.calls[0][1].args[0] == "ORANGE"
-        closureCapture.calls[0][1].args[1] == [value: "ORANGE"]
+        closureCapture.calls[0][0].name == 'option'
+        closureCapture.calls[0][0].args[0] == 'APPLE'
+        closureCapture.calls[0][0].args[1] == [value: 'APPLE']
+        closureCapture.calls[0][1].name == 'option'
+        closureCapture.calls[0][1].args[0] == 'ORANGE'
+        closureCapture.calls[0][1].args[1] == [value: 'ORANGE']
 
         when:
         property = Mock(DomainProperty) {
@@ -75,20 +75,20 @@ class EnumInputRendererSpec extends ClosureCaptureSpecification {
         closureCapture = getClosureCapture(renderer.renderInput([:], property))
 
         then:
-        closureCapture.calls[0].name == "select"
+        closureCapture.calls[0].name == 'select'
         closureCapture.calls[0].args[0] == [:]
-        closureCapture.calls[0][0].name == "option"
-        closureCapture.calls[0][0].args[0] == "Alfa Romeo"
-        closureCapture.calls[0][0].args[1] == [value: "ALFA_ROMEO"]
-        closureCapture.calls[0][1].name == "option"
-        closureCapture.calls[0][1].args[0] == "Subaru"
-        closureCapture.calls[0][1].args[1] == [value: "SUBARU"]
+        closureCapture.calls[0][0].name == 'option'
+        closureCapture.calls[0][0].args[0] == 'Alfa Romeo'
+        closureCapture.calls[0][0].args[1] == [value: 'ALFA_ROMEO']
+        closureCapture.calls[0][1].name == 'option'
+        closureCapture.calls[0][1].args[0] == 'Subaru'
+        closureCapture.calls[0][1].args[1] == [value: 'SUBARU']
     }
 
     enum Fruit { APPLE, ORANGE }
     enum Car {
-        ALFA_ROMEO("Alfa Romeo"),
-        SUBARU("Subaru")
+        ALFA_ROMEO('Alfa Romeo'),
+        SUBARU('Subaru')
 
         private String val
         Car(String val) {

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
+ *  'License'); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -76,8 +76,8 @@ class PlainObjectPropertyAccessorSpec extends BuildsAccessorFactory {
 		propertyAccessor.value == bean.listOfStrings[1]
 		propertyAccessor.rootBeanType == TestBean
 		propertyAccessor.beanType == TestBean
-		propertyAccessor.pathFromRoot == "listOfStrings[1]"
-		propertyAccessor.propertyName == "listOfStrings"
+		propertyAccessor.pathFromRoot == 'listOfStrings[1]'
+		propertyAccessor.propertyName == 'listOfStrings'
 		propertyAccessor.propertyType == String
 	}
 
@@ -91,8 +91,8 @@ class PlainObjectPropertyAccessorSpec extends BuildsAccessorFactory {
 
 		expect:
 		propertyAccessor.value == null
-		propertyAccessor.pathFromRoot == "listOfStrings[1]"
-		propertyAccessor.propertyName == "listOfStrings"
+		propertyAccessor.pathFromRoot == 'listOfStrings[1]'
+		propertyAccessor.propertyName == 'listOfStrings'
 		propertyAccessor.propertyType == String
 	}
 
@@ -106,8 +106,8 @@ class PlainObjectPropertyAccessorSpec extends BuildsAccessorFactory {
 
 		expect:
 		propertyAccessor.value == null
-		propertyAccessor.pathFromRoot == "untypedList[1]"
-		propertyAccessor.propertyName == "untypedList"
+		propertyAccessor.pathFromRoot == 'untypedList[1]'
+		propertyAccessor.propertyName == 'untypedList'
 		propertyAccessor.propertyType == Object
 	}
 
@@ -124,8 +124,8 @@ class PlainObjectPropertyAccessorSpec extends BuildsAccessorFactory {
 		propertyAccessor.value == bean.mapOfDates['today']
 		propertyAccessor.rootBeanType == TestBean
 		propertyAccessor.beanType == TestBean
-		propertyAccessor.pathFromRoot == "mapOfDates[today]"
-		propertyAccessor.propertyName == "mapOfDates"
+		propertyAccessor.pathFromRoot == 'mapOfDates[today]'
+		propertyAccessor.propertyName == 'mapOfDates'
 		propertyAccessor.propertyType == Date
 	}
 
@@ -140,8 +140,8 @@ class PlainObjectPropertyAccessorSpec extends BuildsAccessorFactory {
 
 		expect:
 		propertyAccessor.value == null
-		propertyAccessor.pathFromRoot == "mapOfDates[today]"
-		propertyAccessor.propertyName == "mapOfDates"
+		propertyAccessor.pathFromRoot == 'mapOfDates[today]'
+		propertyAccessor.propertyName == 'mapOfDates'
 		propertyAccessor.propertyType == Date
 	}
 
@@ -156,8 +156,8 @@ class PlainObjectPropertyAccessorSpec extends BuildsAccessorFactory {
 
 		expect:
 		propertyAccessor.value == null
-		propertyAccessor.pathFromRoot == "untypedMap[today]"
-		propertyAccessor.propertyName == "untypedMap"
+		propertyAccessor.pathFromRoot == 'untypedMap[today]'
+		propertyAccessor.propertyName == 'untypedMap'
 		propertyAccessor.propertyType == Object
 	}
 
@@ -188,8 +188,8 @@ class PlainObjectPropertyAccessorSpec extends BuildsAccessorFactory {
 		propertyAccessor.value == bean.person.name
 		propertyAccessor.rootBeanType == TestBean
 		propertyAccessor.beanType == Person
-		propertyAccessor.pathFromRoot == "person.name"
-		propertyAccessor.propertyName == "name"
+		propertyAccessor.pathFromRoot == 'person.name'
+		propertyAccessor.propertyName == 'name'
 		propertyAccessor.propertyType == String
 	}
 
@@ -204,12 +204,13 @@ class PlainObjectPropertyAccessorSpec extends BuildsAccessorFactory {
 		propertyAccessor.value == null
 		propertyAccessor.rootBeanType == TestBean
 		propertyAccessor.beanType == Person
-		propertyAccessor.pathFromRoot == "person.name"
-		propertyAccessor.propertyName == "name"
+		propertyAccessor.pathFromRoot == 'person.name'
+		propertyAccessor.propertyName == 'name'
 		propertyAccessor.propertyType == String
 	}
 
 	void 'if a nested property is a domain class then it is handled as one'() {
+
 		given:
 		TestBean bean = new TestBean()
 		bean.person = new Person(name: 'Bart Simpson')
@@ -225,6 +226,7 @@ class PlainObjectPropertyAccessorSpec extends BuildsAccessorFactory {
 }
 
 class TestBean {
+
 	String stringProperty
 	List<String> listOfStrings
 	List untypedList
