@@ -63,7 +63,7 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         PropertyBinder pbh = new PropertyBinder()
         SimpleIdBinder sib = new SimpleIdBinder(mbc, new BasicValueCreator(mbc, je, ns), svb, pbh)
         IdentityBinder ib = new IdentityBinder(sib, cib)
-        VersionBinder vb = new VersionBinder(mbc, svb, pbh, BasicValue: :new)
+        VersionBinder vb = new VersionBinder(mbc, svb, pbh, BasicValue.&new)
 
         ClassBinder clb = new ClassBinder(collector)
         ClassPropertiesBinder clpb = new ClassPropertiesBinder(pb, pfvc)

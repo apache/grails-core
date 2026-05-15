@@ -112,10 +112,10 @@ class ColumnConfigSpec extends Specification {
         'invalid_format'                           | [column: 'invalid_format']
         '[]'                                       | [:]
         '  '                                       | [:]
-        'column:item_idx, type: integer'            | [column: 'item_idx', type: 'integer']
+        'column: item_idx, type: integer'           | [column: 'item_idx', type: 'integer']
         '[column: item_idx, type: integer]'          | [column: 'item_idx', type: 'integer']
-        "column:'item_idx', type: 'integer'"        | [column: 'item_idx', type: 'integer']
-        'column:'item_idx', type: 'integer''        | [column: 'item_idx', type: 'integer']
+        "column: 'item_idx', type: 'integer'"       | [column: 'item_idx', type: 'integer']
+        'column: \'item_idx\', type: \'integer\''   | [column: 'item_idx', type: 'integer']
         '  column : item_idx ,  type : integer  '  | [column: 'item_idx', type: 'integer']
     }
 

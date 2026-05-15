@@ -525,7 +525,7 @@ class HibernateConnectionSourceFactorySpec extends HibernateGormDatastoreSpec {
         given:
         def factory = new HibernateConnectionSourceFactory(Foo)
         def config = h2Config() + [
-            ("${Settings.SETTING_DATASOURCES}.${Settings.SETTING_DATASOURCE}.url'.toString()): 'jdbc:h2:mem:qualifiedDB",
+            ("${Settings.SETTING_DATASOURCES}.${Settings.SETTING_DATASOURCE}.url".toString()): 'jdbc:h2:mem:qualifiedDB',
         ]
         def resolver = DatastoreUtils.createPropertyResolver(config)
 

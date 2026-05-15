@@ -46,7 +46,7 @@ class VersionBinderSpec extends HibernateGormDatastoreSpec {
         simpleValueBinder = new SimpleValueBinder(metadataBuildingContext, binder.getNamingStrategy(), binder.getJdbcEnvironment())
         propertyBinder = new PropertyBinder()
         
-        versionBinder = new VersionBinder(metadataBuildingContext, simpleValueBinder, propertyBinder, BasicValue: :new)
+        versionBinder = new VersionBinder(metadataBuildingContext, simpleValueBinder, propertyBinder, BasicValue.&new)
     }
 
     def 'should bind version property correctly'() {

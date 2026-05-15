@@ -52,7 +52,7 @@ class RootPersistentClassCommonValuesBinderSpec extends HibernateGormDatastoreSp
         def simpleIdBinder = new SimpleIdBinder(metadataBuildingContext, new BasicValueCreator(metadataBuildingContext, jdbcEnvironment, namingStrategy), simpleValueBinder, propertyBinder)
         def compositeIdBinder = new CompositeIdBinder(metadataBuildingContext, null, null)
         identityBinder = new IdentityBinder(simpleIdBinder, compositeIdBinder)
-        versionBinder = new VersionBinder(metadataBuildingContext, simpleValueBinder, propertyBinder, BasicValue: :new)
+        versionBinder = new VersionBinder(metadataBuildingContext, simpleValueBinder, propertyBinder, BasicValue.&new)
         classBinder = new ClassBinder(getCollector())
         classPropertiesBinder = Mock(ClassPropertiesBinder)
 

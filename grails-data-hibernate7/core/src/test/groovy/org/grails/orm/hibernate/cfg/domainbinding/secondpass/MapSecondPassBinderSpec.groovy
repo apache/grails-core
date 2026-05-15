@@ -133,7 +133,7 @@ class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         PropertyBinder propertyBinderHelper = new PropertyBinder()
         SimpleIdBinder simpleIdBinder = new SimpleIdBinder(metadataBuildingContext, new BasicValueCreator(metadataBuildingContext, jdbcEnvironment, namingStrategy), simpleValueBinder, propertyBinderHelper)
         IdentityBinder identityBinder = new IdentityBinder(simpleIdBinder, compositeIdBinder)
-        VersionBinder versionBinder = new VersionBinder(metadataBuildingContext, simpleValueBinder, propertyBinderHelper, BasicValue: :new)
+        VersionBinder versionBinder = new VersionBinder(metadataBuildingContext, simpleValueBinder, propertyBinderHelper, BasicValue.&new)
 
         ClassBinder classBinder = new ClassBinder(getCollector())
         ClassPropertiesBinder classPropertiesBinder = new ClassPropertiesBinder(propertyBinder, propertyFromValueCreator)

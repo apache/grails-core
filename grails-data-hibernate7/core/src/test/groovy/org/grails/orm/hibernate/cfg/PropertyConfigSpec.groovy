@@ -591,8 +591,8 @@ class PropertyConfigSpec extends Specification {
         pc.lazy = true
 
         expect:
-        pc.toString().contains('type:String')
-        pc.toString().contains('lazy:true')
+        pc.toString().contains('type: String')
+        pc.toString().contains('lazy: true')
     }
 
     // ─── clone with typeParams ────────────────────────────────────────────────

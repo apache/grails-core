@@ -335,7 +335,7 @@ class DataServiceSpec extends Specification {
         then:
         infos.size() == 2
         infos.first().name == 'Carrot'
-        result == '{'name':'Pumpkin'}'
+        result == '{"name":"Pumpkin"}'
         info != null
         info.name == 'Pumpkin'
         productService.searchProductInfoByName('Pump%') != null
