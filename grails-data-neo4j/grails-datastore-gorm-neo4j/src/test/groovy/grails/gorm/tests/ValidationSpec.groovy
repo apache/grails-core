@@ -38,7 +38,7 @@ class ValidationSpec extends GormDatastoreSpec {
     def setup() {
         for(cls in domainClasses) {
             setupValidator(cls)
-            GormRegistry.instance.apiResolver.findValidationApi(cls).validator = null
+            GormRegistry.instance.findValidationApi(cls).validator = null
         }
     }
 

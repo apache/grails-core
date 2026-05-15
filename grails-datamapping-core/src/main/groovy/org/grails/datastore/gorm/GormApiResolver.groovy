@@ -31,9 +31,7 @@ import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.reflect.NameUtils
-import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 import org.springframework.transaction.support.TransactionSynchronizationManager
-import org.springframework.transaction.PlatformTransactionManager
 
 /**
  * Instance-based resolver for GORM APIs and datastores.
@@ -45,21 +43,17 @@ class GormApiResolver {
 
     private final GormRegistry registry
     private final GormEnhancerRegistry stateRegistry = GormEnhancerRegistry.getInstance()
+    private final PreferredDatastoreSelector preferredDatastoreSelector
+    private final QualifiedDatastoreSelector qualifiedDatastoreSelector
+    private final ActiveSessionDatastoreSelector activeSessionDatastoreSelector
+    private final DefaultDatastoreSelector defaultDatastoreSelector
 
     GormApiResolver(GormRegistry registry) {
         this.registry = registry
-    }
-
-    <D> GormStaticApi<D> findStaticApi(Class<D> entity, String qualifier = null) {
-        return registry.getStaticApiRegistry().findStaticApi(entity, qualifier)
-    }
-
-    <D> GormInstanceApi<D> findInstanceApi(Class<D> entity, String qualifier = null) {
-        return registry.getInstanceApiRegistry().findInstanceApi(entity, qualifier)
-    }
-
-    <D> GormValidationApi<D> findValidationApi(Class<D> entity, String qualifier = null) {
-        return registry.getValidationApiRegistry().findValidationApi(entity, qualifier)
+        this.preferredDatastoreSelector = new PreferredDatastoreSelector()
+        this.qualifiedDatastoreSelector = new QualifiedDatastoreSelector()
+        this.activeSessionDatastoreSelector = new ActiveSessionDatastoreSelector()
+        this.defaultDatastoreSelector = new DefaultDatastoreSelector()
     }
 
     @CompileDynamic
@@ -71,135 +65,21 @@ class GormApiResolver {
 
         String className = entity != null ? NameUtils.getClassName(entity) : null
 
-        Datastore preferred = stateRegistry.getPreferredDatastore()
-        if (preferred != null) {
-            if (qualifier != null) {
-                if (preferred instanceof MultipleConnectionSourceCapableDatastore) {
-                    try {
-                        Datastore ds = ((MultipleConnectionSourceCapableDatastore) preferred).getDatastoreForConnection(qualifier)
-                        if (ds != null) {
-                            return ds
-                        }
-                    } catch (Throwable e) {
-                        // ignore
-                    }
-                }
-                if (ConnectionSource.DEFAULT.equals(qualifier)) {
-                    return preferred
-                }
-            } else {
-                if (className == null || preferred.mappingContext.getPersistentEntity(className) != null) {
-                    if (preferred instanceof MultiTenantCapableDatastore) {
-                        MultiTenantCapableDatastore mtds = (MultiTenantCapableDatastore) preferred
-                        try {
-                            Serializable tid = CurrentTenantHolder.get()
-                            if (tid == null && entity != null && MultiTenant.isAssignableFrom(entity)) {
-                                tid = mtds.tenantResolver.resolveTenantIdentifier()
-                            }
-
-                            if (ConnectionSource.DEFAULT.equals(tid)) {
-                                return preferred
-                            }
-
-                            if (tid != null && !ConnectionSource.DEFAULT.equals(tid.toString())) {
-                                stateRegistry.setResolvingDatastoreDepth(depth + 1)
-                                try {
-                                    return findDatastore(entity, tid.toString())
-                                } finally {
-                                    stateRegistry.setResolvingDatastoreDepth(depth)
-                                }
-                            }
-                        } catch (Throwable e) {
-                            if (entity != null && MultiTenant.isAssignableFrom(entity) && e instanceof TenantNotFoundException) {
-                                throw e
-                            }
-                        }
-                    }
-                    return preferred
-                }
-            }
+        Datastore selected = preferredDatastoreSelector.select(registry, stateRegistry, entity, qualifier, className, depth, this)
+        if (selected != null) {
+            return selected
         }
 
         if (qualifier != null && !ConnectionSource.DEFAULT.equals(qualifier)) {
-            Object resource = TransactionSynchronizationManager.getResource(qualifier)
-            if (resource instanceof Datastore) {
-                return (Datastore) resource
-            }
-
-            Datastore ds = registry.getDatastore(className, qualifier)
-            if (ds != null) return ds
-
-            Datastore defaultDs = registry.getDatastore(className, ConnectionSource.DEFAULT)
-            if (defaultDs instanceof MultipleConnectionSourceCapableDatastore) {
-                try {
-                    stateRegistry.setResolvingDatastoreDepth(depth + 1)
-                    ds = ((MultipleConnectionSourceCapableDatastore) defaultDs).getDatastoreForConnection(qualifier)
-                    if (ds != null && ds != defaultDs) return ds
-                } catch (Throwable e) {
-                    // ignore
-                } finally {
-                    stateRegistry.setResolvingDatastoreDepth(depth)
-                }
-            }
-            if (defaultDs instanceof MultiTenantCapableDatastore) {
-                try {
-                    stateRegistry.setResolvingDatastoreDepth(depth + 1)
-                    ds = ((MultiTenantCapableDatastore) defaultDs).getDatastoreForTenantId(qualifier)
-                    if (ds != null && ds != defaultDs) return ds
-                } catch (Throwable e) {
-                    // ignore
-                } finally {
-                    stateRegistry.setResolvingDatastoreDepth(depth)
-                }
-            }
-            return defaultDs
+            return qualifiedDatastoreSelector.select(registry, stateRegistry, className, qualifier, depth)
         }
 
-        for (Datastore registeredDs in registry.allDatastores) {
-            if (TransactionSynchronizationManager.hasResource(registeredDs) || registeredDs.hasCurrentSession()) {
-                if (className != null) {
-                    if (registry.getDatastore(className, ConnectionSource.DEFAULT) == registeredDs) {
-                        return registeredDs
-                    } else if (registeredDs.getMappingContext().getPersistentEntity(className) != null) {
-                        return registeredDs
-                    }
-                } else if (registry.allDatastores.size() == 1) {
-                    return registeredDs
-                }
-            }
+        selected = activeSessionDatastoreSelector.select(registry, className)
+        if (selected != null) {
+            return selected
         }
 
-        Datastore defaultDs = registry.getDatastore(className, ConnectionSource.DEFAULT)
-        if (defaultDs instanceof MultiTenantCapableDatastore) {
-            MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore) defaultDs
-            boolean isDatabaseMode = multiTenantCapableDatastore.getMultiTenancyMode() ==
-                    MultiTenancySettings.MultiTenancyMode.DATABASE
-            try {
-                Serializable currentTenantId = CurrentTenantHolder.get()
-                if (currentTenantId == null && entity != null && MultiTenant.isAssignableFrom(entity)) {
-                    currentTenantId = multiTenantCapableDatastore.tenantResolver.resolveTenantIdentifier()
-                }
-
-                if (ConnectionSource.DEFAULT.equals(currentTenantId)) {
-                    return defaultDs
-                }
-
-                if (currentTenantId != null && !ConnectionSource.DEFAULT.equals(currentTenantId.toString())) {
-                    stateRegistry.setResolvingDatastoreDepth(depth + 1)
-                    try {
-                        return findDatastore(entity, currentTenantId.toString())
-                    } finally {
-                        stateRegistry.setResolvingDatastoreDepth(depth)
-                    }
-                }
-            } catch (Throwable e) {
-                if (entity != null && MultiTenant.isAssignableFrom(entity) && e instanceof TenantNotFoundException) {
-                    if (isDatabaseMode || multiTenantCapableDatastore.getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
-                        throw e
-                    }
-                }
-            }
-        }
+        Datastore defaultDs = defaultDatastoreSelector.select(registry, stateRegistry, entity, className, depth, this)
 
         if (defaultDs == null) {
             defaultDs = registry.getDatastore(null, ConnectionSource.DEFAULT)
@@ -242,30 +122,6 @@ class GormApiResolver {
         return allDatastores.first()
     }
 
-    PlatformTransactionManager findSingleTransactionManager() {
-        Datastore ds = findSingleDatastore()
-        if (ds instanceof TransactionCapableDatastore) {
-            return ((TransactionCapableDatastore) ds).transactionManager
-        }
-        return null
-    }
-
-    PlatformTransactionManager findSingleTransactionManager(String connectionName) {
-        Datastore ds = findDatastore(null, connectionName)
-        if (ds instanceof TransactionCapableDatastore) {
-            return ((TransactionCapableDatastore) ds).transactionManager
-        }
-        return null
-    }
-
-    PlatformTransactionManager findTransactionManager(Class entity, String qualifier = null) {
-        Datastore ds = findDatastore(entity, qualifier)
-        if (ds instanceof TransactionCapableDatastore) {
-            return ((TransactionCapableDatastore) ds).transactionManager
-        }
-        return null
-    }
-
     PersistentEntity findEntity(Class entity, String qualifier = null) {
         String resolvedQualifier = qualifier ?: findTenantId(entity)
         return findDatastore(entity, resolvedQualifier)?.mappingContext?.getPersistentEntity(entity.name)
@@ -291,4 +147,169 @@ class GormApiResolver {
         return new IllegalStateException("No GORM implementation configured for class [${entity.name}]. Ensure GORM has been initialized correctly")
     }
 
+}
+
+@CompileStatic
+class PreferredDatastoreSelector {
+
+    @CompileDynamic
+    Datastore select(GormRegistry registry, GormEnhancerRegistry stateRegistry, Class entity, String qualifier, String className, int depth, GormApiResolver resolver) {
+        Datastore preferred = stateRegistry.getPreferredDatastore()
+        if (preferred == null) {
+            return null
+        }
+        if (qualifier != null) {
+            if (preferred instanceof MultipleConnectionSourceCapableDatastore) {
+                try {
+                    Datastore ds = ((MultipleConnectionSourceCapableDatastore) preferred).getDatastoreForConnection(qualifier)
+                    if (ds != null) {
+                        return ds
+                    }
+                } catch (Throwable e) {
+                    // ignore
+                }
+            }
+            if (ConnectionSource.DEFAULT.equals(qualifier)) {
+                return preferred
+            }
+            return null
+        }
+
+        if (className != null && preferred.mappingContext.getPersistentEntity(className) == null) {
+            return null
+        }
+        if (preferred instanceof MultiTenantCapableDatastore) {
+            MultiTenantCapableDatastore mtds = (MultiTenantCapableDatastore) preferred
+            try {
+                Serializable tid = CurrentTenantHolder.get()
+                if (tid == null && entity != null && MultiTenant.isAssignableFrom(entity)) {
+                    tid = mtds.tenantResolver.resolveTenantIdentifier()
+                }
+                if (ConnectionSource.DEFAULT.equals(tid)) {
+                    return preferred
+                }
+                if (tid != null && !ConnectionSource.DEFAULT.equals(tid.toString())) {
+                    stateRegistry.setResolvingDatastoreDepth(depth + 1)
+                    try {
+                        return resolver.findDatastore(entity, tid.toString())
+                    } finally {
+                        stateRegistry.setResolvingDatastoreDepth(depth)
+                    }
+                }
+            } catch (Throwable e) {
+                if (entity != null && MultiTenant.isAssignableFrom(entity) && e instanceof TenantNotFoundException) {
+                    throw e
+                }
+            }
+        }
+        return preferred
+    }
+}
+
+@CompileStatic
+class QualifiedDatastoreSelector {
+
+    @CompileDynamic
+    Datastore select(GormRegistry registry, GormEnhancerRegistry stateRegistry, String className, String qualifier, int depth) {
+        Object resource = TransactionSynchronizationManager.getResource(qualifier)
+        if (resource instanceof Datastore) {
+            return (Datastore) resource
+        }
+
+        Datastore ds = registry.getDatastore(className, qualifier)
+        if (ds != null) {
+            return ds
+        }
+
+        Datastore defaultDs = registry.getDatastore(className, ConnectionSource.DEFAULT)
+        if (defaultDs instanceof MultipleConnectionSourceCapableDatastore) {
+            try {
+                stateRegistry.setResolvingDatastoreDepth(depth + 1)
+                ds = ((MultipleConnectionSourceCapableDatastore) defaultDs).getDatastoreForConnection(qualifier)
+                if (ds != null && ds != defaultDs) {
+                    return ds
+                }
+            } catch (Throwable e) {
+                // ignore
+            } finally {
+                stateRegistry.setResolvingDatastoreDepth(depth)
+            }
+        }
+        if (defaultDs instanceof MultiTenantCapableDatastore) {
+            try {
+                stateRegistry.setResolvingDatastoreDepth(depth + 1)
+                ds = ((MultiTenantCapableDatastore) defaultDs).getDatastoreForTenantId(qualifier)
+                if (ds != null && ds != defaultDs) {
+                    return ds
+                }
+            } catch (Throwable e) {
+                // ignore
+            } finally {
+                stateRegistry.setResolvingDatastoreDepth(depth)
+            }
+        }
+        return defaultDs
+    }
+}
+
+@CompileStatic
+class ActiveSessionDatastoreSelector {
+
+    @CompileDynamic
+    Datastore select(GormRegistry registry, String className) {
+        for (Datastore registeredDs in registry.allDatastores) {
+            if (TransactionSynchronizationManager.hasResource(registeredDs) || registeredDs.hasCurrentSession()) {
+                if (className != null) {
+                    if (registry.getDatastore(className, ConnectionSource.DEFAULT) == registeredDs) {
+                        return registeredDs
+                    } else if (registeredDs.getMappingContext().getPersistentEntity(className) != null) {
+                        return registeredDs
+                    }
+                } else if (registry.allDatastores.size() == 1) {
+                    return registeredDs
+                }
+            }
+        }
+        return null
+    }
+}
+
+@CompileStatic
+class DefaultDatastoreSelector {
+
+    @CompileDynamic
+    Datastore select(GormRegistry registry, GormEnhancerRegistry stateRegistry, Class entity, String className, int depth, GormApiResolver resolver) {
+        Datastore defaultDs = registry.getDatastore(className, ConnectionSource.DEFAULT)
+        if (defaultDs instanceof MultiTenantCapableDatastore) {
+            MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore) defaultDs
+            boolean isDatabaseMode = multiTenantCapableDatastore.getMultiTenancyMode() ==
+                    MultiTenancySettings.MultiTenancyMode.DATABASE
+            try {
+                Serializable currentTenantId = CurrentTenantHolder.get()
+                if (currentTenantId == null && entity != null && MultiTenant.isAssignableFrom(entity)) {
+                    currentTenantId = multiTenantCapableDatastore.tenantResolver.resolveTenantIdentifier()
+                }
+
+                if (ConnectionSource.DEFAULT.equals(currentTenantId)) {
+                    return defaultDs
+                }
+
+                if (currentTenantId != null && !ConnectionSource.DEFAULT.equals(currentTenantId.toString())) {
+                    stateRegistry.setResolvingDatastoreDepth(depth + 1)
+                    try {
+                        return resolver.findDatastore(entity, currentTenantId.toString())
+                    } finally {
+                        stateRegistry.setResolvingDatastoreDepth(depth)
+                    }
+                }
+            } catch (Throwable e) {
+                if (entity != null && MultiTenant.isAssignableFrom(entity) && e instanceof TenantNotFoundException) {
+                    if (isDatabaseMode || multiTenantCapableDatastore.getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
+                        throw e
+                    }
+                }
+            }
+        }
+        return defaultDs
+    }
 }

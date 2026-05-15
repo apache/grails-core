@@ -99,3 +99,59 @@ When adding new work items to this file:
 - Record the **change** under section 1 with module + behavior impact.
 - Record follow-up work under section 2 with a short **goal** and concrete next actions.
 - Avoid adding pass/fail snapshots here; keep this file architectural and optimization-focused.
+
+---
+
+## 4) Failing Tests from 0_build_grails.txt
+**Note**: The following pass/fail snapshot was explicitly requested.
+
+### Failing Integration/Compilation Tasks
+- `:grails-test-examples-gorm:compileGroovy`
+- `:grails-test-examples-app3:integrationTest`
+- `:grails-test-examples-app1:integrationTest`
+- `:grails-test-examples-exploded:integrationTest`
+- `:grails-test-examples-datasources:integrationTest`
+- `:grails-test-examples-hibernate5-grails-data-service-multi-datasource:integrationTest`
+- `:grails-test-examples-hibernate5-grails-data-service:integrationTest`
+- `:grails-test-examples-hibernate5-grails-database-per-tenant:integrationTest`
+- `:grails-test-examples-hibernate5-grails-multiple-datasources:integrationTest`
+- `:grails-test-examples-hibernate5-grails-multitenant-multi-datasource:integrationTest`
+- `:grails-test-examples-hibernate5-grails-partitioned-multi-tenancy:integrationTest`
+- `:grails-test-examples-hibernate5-grails-schema-per-tenant:integrationTest`
+- `:grails-test-examples-hibernate5-issue450:integrationTest`
+- `:grails-test-examples-hibernate7-grails-data-service-multi-datasource:integrationTest`
+- `:grails-test-examples-hibernate7-grails-database-per-tenant:integrationTest`
+- `:grails-test-examples-hibernate7-grails-multiple-datasources:integrationTest`
+- `:grails-test-examples-hibernate7-grails-multitenant-multi-datasource:integrationTest`
+- `:grails-test-examples-hibernate7-grails-partitioned-multi-tenancy:integrationTest`
+- `:grails-test-examples-hibernate7-grails-schema-per-tenant:integrationTest`
+- `:grails-test-examples-hibernate7-issue450:integrationTest`
+- `:grails-test-examples-mongodb-test-data-service:integrationTest`
+- `:grails-test-examples-plugins-exploded:integrationTest`
+- `:grails-test-examples-mongodb-hibernate5:integrationTest`
+- `:grails-test-examples-views-functional-tests:integrationTest`
+- `:grails-test-examples-scaffolding-fields:integrationTest`
+
+### Modules with Failed Tests
+- `grails-data-hibernate5`
+- `grails-data-hibernate5-core`
+- `grails-data-hibernate5-dbmigration`
+- `grails-data-hibernate7`
+- `grails-data-hibernate7-core`
+- `grails-data-hibernate7-dbmigration`
+- `grails-data-mongodb-core`
+- `grails-data-simple`
+- `grails-datamapping-core`
+- `grails-datamapping-core-test`
+- `grails-fields`
+- `grails-test-examples-app1`
+- `grails-test-examples-demo33`
+- `grails-test-examples-hibernate5-grails-database-per-tenant`
+- `grails-test-examples-hibernate5-grails-hibernate-groovy-proxy`
+- `grails-test-examples-hibernate5-grails-partitioned-multi-tenancy`
+- `grails-test-examples-hibernate5-grails-schema-per-tenant`
+- `grails-test-examples-hibernate7-grails-database-per-tenant`
+- `grails-test-examples-hibernate7-grails-partitioned-multi-tenancy`
+- `grails-test-examples-hibernate7-grails-schema-per-tenant`
+- `grails-test-suite-uber`
+- `grails-views-gson`

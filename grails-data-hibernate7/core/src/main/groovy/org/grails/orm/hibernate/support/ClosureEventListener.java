@@ -259,7 +259,7 @@ public class ClosureEventListener
             if (hibernateDatastore != null) {
                 qualifier = hibernateDatastore.getConnectionSources().getDefaultConnectionSource().getName();
             }
-            org.grails.datastore.gorm.GormValidationApi validationApi = org.grails.datastore.gorm.GormRegistry.getInstance().getApiResolver().findValidationApi(entity.getClass(), qualifier);
+            org.grails.datastore.gorm.GormValidationApi validationApi = org.grails.datastore.gorm.GormRegistry.getInstance().findValidationApi(entity.getClass(), qualifier);
             
             if (validationApi != null && !validationApi.validate(entity, validateParams)) {
                 if (failOnErrorEnabled) {

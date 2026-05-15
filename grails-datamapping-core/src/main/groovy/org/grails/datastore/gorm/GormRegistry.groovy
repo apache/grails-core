@@ -18,13 +18,14 @@
  */
 package org.grails.datastore.gorm
 
-import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 import org.grails.datastore.gorm.finders.FinderMethod
+import org.springframework.transaction.PlatformTransactionManager
 
 import java.util.concurrent.ConcurrentHashMap
 
@@ -128,6 +129,31 @@ class GormRegistry {
 
     <D> GormValidationApi<D> findValidationApi(Class<D> entity, String qualifier = null) {
         return validationApiRegistry.findValidationApi(entity, qualifier)
+    }
+
+    // Package-private helpers for AST transforms
+    PlatformTransactionManager findSingleTransactionManager() {
+        Datastore datastore = apiResolver.findSingleDatastore()
+        if (datastore instanceof TransactionCapableDatastore) {
+            return ((TransactionCapableDatastore) datastore).transactionManager
+        }
+        return null
+    }
+
+    PlatformTransactionManager findSingleTransactionManager(String connectionName) {
+        Datastore datastore = apiResolver.findDatastore(null, connectionName)
+        if (datastore instanceof TransactionCapableDatastore) {
+            return ((TransactionCapableDatastore) datastore).transactionManager
+        }
+        return null
+    }
+
+    PlatformTransactionManager findTransactionManager(Class entity, String qualifier = null) {
+        Datastore datastore = apiResolver.findDatastore(entity, qualifier)
+        if (datastore instanceof TransactionCapableDatastore) {
+            return ((TransactionCapableDatastore) datastore).transactionManager
+        }
+        return null
     }
 
     GormStaticApi getStaticApi(String className) {

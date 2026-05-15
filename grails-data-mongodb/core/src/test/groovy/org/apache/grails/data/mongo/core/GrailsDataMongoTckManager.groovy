@@ -147,7 +147,7 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
                         }
                     }
             for (cls in domainClasses) {
-                GormRegistry.instance.apiResolver.findValidationApi(cls).validator = null
+                GormRegistry.instance.findValidationApi(cls).validator = null
             }
         }
         finally {

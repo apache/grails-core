@@ -410,14 +410,14 @@ graph LR
   :grails-views-gson --> :grails-testing-support-core
   :grails-views-gson --> :grails-testing-support-datamapping
   :grails-views-gson --> :grails-data-hibernate5-core
-  :grails-data-test-report --> :grails-datastore-async
-  :grails-data-test-report --> :grails-datastore-core
-  :grails-data-test-report --> :grails-datamapping-core
-  :grails-data-test-report --> :grails-datamapping-async
-  :grails-data-test-report --> :grails-datamapping-support
-  :grails-data-test-report --> :grails-datamapping-core-test
-  :grails-data-test-report --> :grails-datamapping-validation
-  :grails-data-test-report --> :grails-datastore-web
+  :grails-test-report --> :grails-datastore-async
+  :grails-test-report --> :grails-datastore-core
+  :grails-test-report --> :grails-datamapping-core
+  :grails-test-report --> :grails-datamapping-async
+  :grails-test-report --> :grails-datamapping-support
+  :grails-test-report --> :grails-datamapping-core-test
+  :grails-test-report --> :grails-datamapping-validation
+  :grails-test-report --> :grails-datastore-web
   :grails-test-examples-scaffolding --> :grails-bom
   :grails-test-examples-hibernate7-grails-hibernate-groovy-proxy --> :grails-hibernate7-bom
   :grails-test-examples-exploded --> :grails-bom

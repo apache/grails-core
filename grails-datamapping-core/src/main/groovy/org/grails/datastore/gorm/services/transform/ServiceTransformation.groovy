@@ -608,7 +608,7 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
         def transactionManagerClassNode = ClassHelper.make(PlatformTransactionManager)
         def transactionCapableDatastore = ClassHelper.make(TransactionCapableDatastore)
         def multipleConnectionDatastore = ClassHelper.make(MultipleConnectionSourceCapableDatastore)
-        def apiResolverExpr = callX(callX(classX(GormRegistry), 'getInstance'), 'getApiResolver')
+        def registryExpr = callX(classX(GormRegistry), 'getInstance')
 
         // getDatastore() call (method from Service trait or overridden on impl)
         def datastoreVar = callX(varX('this'), 'getDatastore')
@@ -623,9 +623,9 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
                 castX(transactionCapableDatastore, datastoreForConnection),
                 'transactionManager'
         )
-        // GormRegistry.getInstance().getApiResolver().findSingleTransactionManager(connectionName)
+        // GormRegistry.getInstance().findSingleTransactionManager(connectionName)
         def fallbackTxManager = callX(
-                apiResolverExpr,
+                registryExpr,
                 'findSingleTransactionManager',
                 args(connectionExpr)
         )
@@ -655,7 +655,7 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
 
         def transactionManagerClassNode = ClassHelper.make(PlatformTransactionManager)
         def transactionCapableDatastore = ClassHelper.make(TransactionCapableDatastore)
-        def apiResolverExpr = callX(callX(classX(GormRegistry), 'getInstance'), 'getApiResolver')
+        def registryExpr = callX(classX(GormRegistry), 'getInstance')
 
         // getDatastore() call (method from Service trait or overridden on impl)
         def datastoreVar = callX(varX('this'), 'getDatastore')
@@ -664,9 +664,9 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
                 castX(transactionCapableDatastore, datastoreVar),
                 'transactionManager'
         )
-        // GormRegistry.getInstance().getApiResolver().findSingleTransactionManager()
+        // GormRegistry.getInstance().findSingleTransactionManager()
         def fallbackTxManager = callX(
-                apiResolverExpr,
+                registryExpr,
                 'findSingleTransactionManager'
         )
 

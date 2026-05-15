@@ -20,15 +20,24 @@ package org.grails.datastore.gorm
 
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.springframework.transaction.support.TransactionSynchronizationManager
 import spock.lang.Specification
 
 class GormApiResolverSpec extends Specification {
+    private final GormEnhancerRegistry stateRegistry = GormEnhancerRegistry.instance
 
     void setup() {
         GormRegistry.reset()
+        stateRegistry.clearPreferredDatastore()
+        stateRegistry.clearResolvingDatastoreDepth()
     }
 
     void cleanup() {
+        if (TransactionSynchronizationManager.hasResource('secondary')) {
+            TransactionSynchronizationManager.unbindResource('secondary')
+        }
+        stateRegistry.clearPreferredDatastore()
+        stateRegistry.clearResolvingDatastoreDepth()
         GormRegistry.reset()
     }
 
@@ -65,5 +74,80 @@ class GormApiResolverSpec extends Specification {
 
         expect:
         resolver.findDatastore(null, 'secondary').is(secondaryDatastore)
+    }
+
+    void 'resolver returns transaction-bound datastore for explicit qualifier'() {
+        given:
+        GormRegistry registry = GormRegistry.instance
+        GormApiResolver resolver = registry.apiResolver
+        Datastore boundDatastore = Mock(Datastore)
+        TransactionSynchronizationManager.bindResource('secondary', boundDatastore)
+
+        expect:
+        resolver.findDatastore(null, 'secondary').is(boundDatastore)
+    }
+
+    void 'resolver honors preferred datastore for default qualifier'() {
+        given:
+        GormRegistry registry = GormRegistry.instance
+        GormApiResolver resolver = registry.apiResolver
+        Datastore preferredDatastore = Mock(Datastore)
+        stateRegistry.setPreferredDatastore(preferredDatastore)
+
+        expect:
+        resolver.findDatastore(TestEntity, ConnectionSource.DEFAULT).is(preferredDatastore)
+    }
+
+    void 'resolver falls through preferred path to explicit qualifier resolution'() {
+        given:
+        GormRegistry registry = GormRegistry.instance
+        GormApiResolver resolver = registry.apiResolver
+        Datastore preferredDatastore = Mock(Datastore)
+        Datastore secondaryDatastore = Mock(Datastore)
+        stateRegistry.setPreferredDatastore(preferredDatastore)
+        registry.registerDatastore('secondary', secondaryDatastore)
+
+        expect:
+        resolver.findDatastore(null, 'secondary').is(secondaryDatastore)
+    }
+
+    void 'resolver returns default datastore when recursion depth guard is exceeded'() {
+        given:
+        GormRegistry registry = GormRegistry.instance
+        GormApiResolver resolver = registry.apiResolver
+        Datastore defaultDatastore = Mock(Datastore)
+        registry.registerDatastore(ConnectionSource.DEFAULT, defaultDatastore)
+        stateRegistry.setResolvingDatastoreDepth(6)
+
+        expect:
+        resolver.findDatastore(TestEntity, null).is(defaultDatastore)
+    }
+
+    void 'resolver can resolve an active session datastore without a qualifier registration'() {
+        given:
+        GormRegistry registry = GormRegistry.instance
+        GormApiResolver resolver = registry.apiResolver
+        Datastore activeDatastore = Mock(Datastore) {
+            hasCurrentSession() >> true
+        }
+        registry.registerDatastoreByType(activeDatastore)
+
+        expect:
+        resolver.findDatastore(null, null).is(activeDatastore)
+    }
+
+    void 'resolver fails when datastore type is missing'() {
+        given:
+        GormApiResolver resolver = GormRegistry.instance.apiResolver
+
+        when:
+        resolver.findDatastoreByType(Datastore)
+
+        then:
+        IllegalStateException e = thrown()
+        e.message.contains('No GORM implementation configured for type')
+    }
+
+    private static class TestEntity {
     }
 }
