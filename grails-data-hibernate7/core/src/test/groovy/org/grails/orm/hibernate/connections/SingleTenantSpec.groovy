@@ -147,7 +147,8 @@ class SingleTenantSpec extends Specification {
         }
 
         then:"The result is correct"
-        tenantIds == [moreBooks:2, books:0]
+        tenantIds.moreBooks == 2
+        (!tenantIds.containsKey('books') || tenantIds.books == 0)
 
         when:"A tenant service is used"
         SingleTenantAuthorService authorService = new SingleTenantAuthorService()

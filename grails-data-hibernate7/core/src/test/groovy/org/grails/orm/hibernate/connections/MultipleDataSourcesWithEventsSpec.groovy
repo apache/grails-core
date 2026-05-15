@@ -87,10 +87,10 @@ class MultipleDataSourcesWithEventsSpec extends HibernateGormDatastoreSpec {
 
         when: "An entity is saved that uses only a secondary datasource"
         SecondaryBook book3 = new SecondaryBook(name: "test3")
-        SecondaryBook.withTransaction {
-            book3.save(flush: true)
-            book3.discard()
-            book3 = SecondaryBook.get(book3.id)
+        SecondaryBook.books.withTransaction {
+            book3.books.save(flush: true)
+            book3.books.discard()
+            book3 = SecondaryBook.books.get(book3.id)
         }
 
         then: "The events were triggered"

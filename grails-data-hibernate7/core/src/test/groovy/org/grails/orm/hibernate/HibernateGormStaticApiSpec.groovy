@@ -23,6 +23,7 @@ package org.grails.orm.hibernate
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.entities.Club
+import org.grails.datastore.gorm.GormRegistry
 
 class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
 
@@ -32,8 +33,7 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
 
     void "Test that HibernateGormStaticApi uses the shared template from the datastore"() {
         given:
-        def enhancer = manager.hibernateDatastore.gormEnhancer
-        def api = enhancer.getStaticApi(HibernateGormStaticApiEntity)
+        def api = GormRegistry.instance.findStaticApi(HibernateGormStaticApiEntity)
 
         expect:
         api.hibernateTemplate.is(manager.hibernateDatastore.getHibernateTemplate())
@@ -886,4 +886,3 @@ class HibernateGormStaticApiEntity {
 class HibernateGormStaticApiMultiTenantEntity implements grails.gorm.MultiTenant<HibernateGormStaticApiMultiTenantEntity> {
     String name
 }
-
