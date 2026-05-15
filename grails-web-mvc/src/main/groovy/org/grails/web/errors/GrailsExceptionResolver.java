@@ -79,6 +79,10 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
     protected GrailsApplication grailsApplication;
     protected StackTraceFilterer stackFilterer;
     protected AuditorAwareLookup auditorAwareLookup;
+    private volatile boolean logFlagsResolved;
+    private boolean logFullStackTrace;
+    private boolean logAuditor;
+    private boolean logRemoteAddr;
 
     /* (non-Javadoc)
      * @see org.springframework.web.servlet.handler.SimpleMappingExceptionResolver#resolveException(jakarta.servlet.http.HttpServletRequest, jakarta.servlet.http.HttpServletResponse, java.lang.Object, java.lang.Exception)
@@ -280,18 +284,42 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
     }
 
     protected boolean shouldLogFullStackTrace() {
-        Config config = grailsApplication != null ? grailsApplication.getConfig() : null;
-        return config != null && config.getProperty(Settings.SETTING_LOG_FULL_STACKTRACE, Boolean.class, false);
+        resolveLogFlags();
+        return logFullStackTrace;
     }
 
     protected boolean shouldLogAuditor() {
-        Config config = grailsApplication != null ? grailsApplication.getConfig() : null;
-        return config != null && config.getProperty(Settings.SETTING_LOG_AUDITOR, Boolean.class, true);
+        resolveLogFlags();
+        return logAuditor;
     }
 
     protected boolean shouldLogRemoteAddr() {
-        Config config = grailsApplication != null ? grailsApplication.getConfig() : null;
-        return config != null && config.getProperty(Settings.SETTING_LOG_REMOTE_ADDR, Boolean.class, false);
+        resolveLogFlags();
+        return logRemoteAddr;
+    }
+
+    /**
+     * Resolves the three {@code shouldLog*} flags from the application config once, on first use.
+     * Config values do not change at runtime, so each {@link Config#getProperty} lookup is paid once
+     * rather than per resolved exception. Subclasses that override the {@code shouldLog*} predicates
+     * never reach this method.
+     */
+    private void resolveLogFlags() {
+        if (logFlagsResolved) {
+            return;
+        }
+        synchronized (this) {
+            if (logFlagsResolved) {
+                return;
+            }
+            Config config = grailsApplication != null ? grailsApplication.getConfig() : null;
+            if (config != null) {
+                logFullStackTrace = config.getProperty(Settings.SETTING_LOG_FULL_STACKTRACE, Boolean.class, false);
+                logAuditor = config.getProperty(Settings.SETTING_LOG_AUDITOR, Boolean.class, false);
+                logRemoteAddr = config.getProperty(Settings.SETTING_LOG_REMOTE_ADDR, Boolean.class, false);
+            }
+            logFlagsResolved = true;
+        }
     }
 
     /**

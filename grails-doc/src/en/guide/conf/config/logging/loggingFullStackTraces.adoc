@@ -161,15 +161,15 @@ username string or a numeric id, depending on the type parameter chosen for the 
 is registered, or if it returns `Optional.empty()` for the current request (for example, an unauthenticated
 request), no `user:` entry is emitted.
 
-Enabled by default. To keep user identifiers out of exception logs — for example to satisfy a PII separation
-policy, or because downstream alerting keys off the legacy headline format — set:
+Disabled by default to avoid writing user identifiers (which may be PII — usernames, email addresses, numeric
+ids) into exception logs without an explicit decision. To opt in, set:
 
 [source, yaml]
 .grails-app/conf/application.yml
 ----
 grails:
     exceptionresolver:
-        logAuditor: false
+        logAuditor: true
 ----
 
 ===== Remote Client Address

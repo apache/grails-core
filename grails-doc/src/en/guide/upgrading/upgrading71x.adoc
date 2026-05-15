@@ -811,20 +811,21 @@ the address reflects the real client.
 ====== Impact
 
 Any log parser, alert rule, or log-aggregation query that matches on the exact exception headline format will
-need to tolerate the optional ` (ip: <value>, user: <value>)` suffix. Auditor logging is enabled by default
-when an `AuditorAware` bean is registered; remote-address logging is opt-in. Toggle each independently:
+need to tolerate the optional ` (ip: <value>, user: <value>)` suffix. Both entries are opt-in — the auditor
+entry is gated to avoid writing user identifiers (typically PII) into exception logs without an explicit
+decision, and the remote-address entry is gated for the same reason. Toggle each independently:
 
 [source, yaml]
 .grails-app/conf/application.yml
 ----
 grails:
     exceptionresolver:
-        logAuditor: false       # drop ' user: <value>'
+        logAuditor: true        # add ' user: <value>' when an AuditorAware bean is registered
         logRemoteAddr: true     # add ' ip: <value>'
 ----
 
-When neither applies to a given request — no `AuditorAware` bean registered and the IP suffix not enabled — the
-headline collapses to its pre-7.1 form. See the Logging Full Stack Traces section of the user guide for details.
+With both disabled — the default — the headline matches its pre-7.1 form. See the Logging Full Stack Traces
+section of the user guide for details.
 
 ===== 2.13 StackTrace Logger Side-Effect Emission
 

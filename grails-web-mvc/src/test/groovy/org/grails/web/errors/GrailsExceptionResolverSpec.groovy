@@ -96,9 +96,10 @@ class GrailsExceptionResolverSpec extends Specification {
     void "getRequestLogMessage appends auditor when logAuditor is enabled and the lookup returns a value"() {
         given:
             def config = Mock(Config)
-            config.getProperty('grails.exceptionresolver.logAuditor', Boolean, true) >> true
+            config.getProperty('grails.exceptionresolver.logAuditor', Boolean, false) >> true
             config.getProperty('grails.exceptionresolver.logRemoteAddr', Boolean, false) >> false
             config.getProperty('grails.exceptionresolver.logFullStackTraceOnFilter', Boolean, true) >> false
+            config.getProperty('grails.exceptionresolver.logFullStackTrace', Boolean, false) >> false
             config.getProperty('grails.exceptionresolver.logRequestParameters', Boolean, _) >> false
             def grailsApp = Mock(GrailsApplication)
             grailsApp.getConfig() >> config
@@ -120,9 +121,10 @@ class GrailsExceptionResolverSpec extends Specification {
     void "getRequestLogMessage omits auditor when logAuditor is disabled"() {
         given:
             def config = Mock(Config)
-            config.getProperty('grails.exceptionresolver.logAuditor', Boolean, true) >> false
+            config.getProperty('grails.exceptionresolver.logAuditor', Boolean, false) >> false
             config.getProperty('grails.exceptionresolver.logRemoteAddr', Boolean, false) >> false
             config.getProperty('grails.exceptionresolver.logFullStackTraceOnFilter', Boolean, true) >> false
+            config.getProperty('grails.exceptionresolver.logFullStackTrace', Boolean, false) >> false
             config.getProperty('grails.exceptionresolver.logRequestParameters', Boolean, _) >> false
             def grailsApp = Mock(GrailsApplication)
             grailsApp.getConfig() >> config
@@ -144,9 +146,10 @@ class GrailsExceptionResolverSpec extends Specification {
     void "getRequestLogMessage omits auditor when logAuditor is enabled but auditor is absent"() {
         given:
             def config = Mock(Config)
-            config.getProperty('grails.exceptionresolver.logAuditor', Boolean, true) >> true
+            config.getProperty('grails.exceptionresolver.logAuditor', Boolean, false) >> true
             config.getProperty('grails.exceptionresolver.logRemoteAddr', Boolean, false) >> false
             config.getProperty('grails.exceptionresolver.logFullStackTraceOnFilter', Boolean, true) >> false
+            config.getProperty('grails.exceptionresolver.logFullStackTrace', Boolean, false) >> false
             config.getProperty('grails.exceptionresolver.logRequestParameters', Boolean, _) >> false
             def grailsApp = Mock(GrailsApplication)
             grailsApp.getConfig() >> config
@@ -168,9 +171,10 @@ class GrailsExceptionResolverSpec extends Specification {
     void "getRequestLogMessage appends remote address when logRemoteAddr is enabled"() {
         given:
             def config = Mock(Config)
-            config.getProperty('grails.exceptionresolver.logAuditor', Boolean, true) >> false
+            config.getProperty('grails.exceptionresolver.logAuditor', Boolean, false) >> false
             config.getProperty('grails.exceptionresolver.logRemoteAddr', Boolean, false) >> true
             config.getProperty('grails.exceptionresolver.logFullStackTraceOnFilter', Boolean, true) >> false
+            config.getProperty('grails.exceptionresolver.logFullStackTrace', Boolean, false) >> false
             config.getProperty('grails.exceptionresolver.logRequestParameters', Boolean, _) >> false
             def grailsApp = Mock(GrailsApplication)
             grailsApp.getConfig() >> config
@@ -190,9 +194,10 @@ class GrailsExceptionResolverSpec extends Specification {
     void "getRequestLogMessage combines remote address and auditor into a single clause when both are enabled"() {
         given:
             def config = Mock(Config)
-            config.getProperty('grails.exceptionresolver.logAuditor', Boolean, true) >> true
+            config.getProperty('grails.exceptionresolver.logAuditor', Boolean, false) >> true
             config.getProperty('grails.exceptionresolver.logRemoteAddr', Boolean, false) >> true
             config.getProperty('grails.exceptionresolver.logFullStackTraceOnFilter', Boolean, true) >> false
+            config.getProperty('grails.exceptionresolver.logFullStackTrace', Boolean, false) >> false
             config.getProperty('grails.exceptionresolver.logRequestParameters', Boolean, _) >> false
             def grailsApp = Mock(GrailsApplication)
             grailsApp.getConfig() >> config
@@ -215,9 +220,10 @@ class GrailsExceptionResolverSpec extends Specification {
     void "subclasses can override resolveRemoteAddr to supply a custom IP extraction"() {
         given:
             def config = Mock(Config)
-            config.getProperty('grails.exceptionresolver.logAuditor', Boolean, true) >> false
+            config.getProperty('grails.exceptionresolver.logAuditor', Boolean, false) >> false
             config.getProperty('grails.exceptionresolver.logRemoteAddr', Boolean, false) >> true
             config.getProperty('grails.exceptionresolver.logFullStackTraceOnFilter', Boolean, true) >> false
+            config.getProperty('grails.exceptionresolver.logFullStackTrace', Boolean, false) >> false
             config.getProperty('grails.exceptionresolver.logRequestParameters', Boolean, _) >> false
             def grailsApp = Mock(GrailsApplication)
             grailsApp.getConfig() >> config
@@ -257,7 +263,7 @@ class GrailsExceptionResolverSpec extends Specification {
             def config = Mock(Config)
             config.getProperty('grails.exceptionresolver.logFullStackTrace', Boolean, false) >> true
             config.getProperty('grails.exceptionresolver.logFullStackTraceOnFilter', Boolean, true) >> false
-            config.getProperty('grails.exceptionresolver.logAuditor', Boolean, true) >> false
+            config.getProperty('grails.exceptionresolver.logAuditor', Boolean, false) >> false
             config.getProperty('grails.exceptionresolver.logRemoteAddr', Boolean, false) >> false
             config.getProperty('grails.exceptionresolver.logFullStackTraceOnFilter', Boolean, true) >> false
             config.getProperty('grails.exceptionresolver.logRequestParameters', Boolean, _) >> false
