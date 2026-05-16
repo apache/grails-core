@@ -61,7 +61,7 @@ class CalendarMarshallerSpec extends Specification {
         def result = marshalToString(marshaller, calendar)
 
         then:
-        result == '['2024-06-15T14:30:45.123Z']'
+        result == '["2024-06-15T14:30:45.123Z"]'
     }
 
     void 'default formatter converts non-UTC calendar to UTC'() {

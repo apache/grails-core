@@ -38,7 +38,7 @@ class NavigableMapSpringProfilesSpec extends Specification {
         config.getProperty('hello.message') == 'Default hello!'
     }
 
-    void 'test spring profiles configuration for 'sample' profile'() {
+    void 'test spring profiles configuration for sample profile'() {
         given:
         System.setProperty('spring.profiles.active', 'sample')
 
@@ -51,7 +51,7 @@ class NavigableMapSpringProfilesSpec extends Specification {
         config.getProperty('hello.message') == 'Hello from SAMPLE profile!'
     }
 
-    void 'test spring profiles configuration for 'demo' profile'() {
+    void 'test spring profiles configuration for demo profile'() {
         given:
         System.setProperty('spring.profiles.active', 'demo')
 
