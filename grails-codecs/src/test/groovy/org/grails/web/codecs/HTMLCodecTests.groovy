@@ -58,7 +58,7 @@ class HTMLCodecTests {
     void testEncodeXml() {
         def encoder = getEncoderXml()
         assertEquals('&lt;tag&gt;', encoder.encode('<tag>'))
-        assertEquals('&quot;quoted&quot;', encoder.encode('quoted'))
+        assertEquals('&quot;quoted&quot;', encoder.encode('"quoted"'))
         assertEquals('Hitchiker&#39;s Guide', encoder.encode("Hitchiker's Guide"))
         assertEquals("Vidéo", encoder.encode('Vidéo'))
     }
@@ -67,7 +67,7 @@ class HTMLCodecTests {
     void testEncodeHtml() {
         def encoder = getEncoderHtml()
         assertEquals('&lt;tag&gt;', encoder.encode('<tag>'))
-        assertEquals('&quot;quoted&quot;', encoder.encode('quoted'))
+        assertEquals('&quot;quoted&quot;', encoder.encode('"quoted"'))
         assertEquals('Hitchiker&#39;s Guide', encoder.encode("Hitchiker's Guide"))
         assertEquals('Vid&eacute;o', encoder.encode("Vid\u00E9o"))
     }
@@ -76,6 +76,6 @@ class HTMLCodecTests {
     void testDecode() {
         def decoder = getDecoder()
         assertEquals('<tag>', decoder.decode('&lt;tag&gt;'))
-        assertEquals(''quoted'', decoder.decode('&quot;quoted&quot;'))
+        assertEquals('"quoted"', decoder.decode('&quot;quoted&quot;'))
     }
 }
