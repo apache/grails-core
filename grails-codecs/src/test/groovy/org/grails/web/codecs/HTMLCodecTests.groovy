@@ -58,16 +58,16 @@ class HTMLCodecTests {
     void testEncodeXml() {
         def encoder = getEncoderXml()
         assertEquals('&lt;tag&gt;', encoder.encode('<tag>'))
-        assertEquals('&quot;quoted&quot;', encoder.encode(''quoted''))
+        assertEquals('&quot;quoted&quot;', encoder.encode('quoted'))
         assertEquals('Hitchiker&#39;s Guide', encoder.encode("Hitchiker's Guide"))
-        assertEquals("Vid\u00E9o', encoder.encode('Vid\u00E9o"))
+        assertEquals("Vidéo", encoder.encode('Vidéo'))
     }
 
     @Test
     void testEncodeHtml() {
         def encoder = getEncoderHtml()
         assertEquals('&lt;tag&gt;', encoder.encode('<tag>'))
-        assertEquals('&quot;quoted&quot;', encoder.encode(''quoted''))
+        assertEquals('&quot;quoted&quot;', encoder.encode('quoted'))
         assertEquals('Hitchiker&#39;s Guide', encoder.encode("Hitchiker's Guide"))
         assertEquals('Vid&eacute;o', encoder.encode("Vid\u00E9o"))
     }
