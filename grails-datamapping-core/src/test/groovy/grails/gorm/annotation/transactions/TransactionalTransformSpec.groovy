@@ -794,7 +794,7 @@ new BookService()
     }
 
     TestTransactionManager getPlatformTransactionManager() {
-        def dataSource = new DriverManagerDataSource("jdbc:h2:mem:${TransactionalTransformSpec.name};LOCK_TIMEOUT=10000', 'sa", '')
+        def dataSource = new DriverManagerDataSource("jdbc:h2:mem:${TransactionalTransformSpec.name};LOCK_TIMEOUT=10000", 'sa', '')
 
         // this may not be necessary...
         dataSource.driverClassName = 'org.h2.Driver'

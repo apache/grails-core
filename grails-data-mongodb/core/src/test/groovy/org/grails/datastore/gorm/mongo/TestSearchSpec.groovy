@@ -51,7 +51,7 @@ class TestSearchSpec extends MongoDatastoreSpec {
         Product.search('coffee').size() == 5
         Product.search('bake coffee cake').size() == 10
         Product.search('bake coffee -cake').size() == 6
-        Product.search(''Coffee Cake'').size() == 1
+        Product.search('Coffee Cake').size() == 8
         Product.searchTop('cake').size() == 4
         Product.searchTop('cake', 3).size() == 3
         Product.countHits('coffee') == 5

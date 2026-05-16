@@ -80,7 +80,7 @@ class DefaultSchemaHandlerSpec extends Specification {
         handler.useSchema(conn, 'myschema')
 
         then:
-        executedSql == ["SET SCHEMA 'myschema'"]
+        executedSql == ["SET SCHEMA \"myschema\""]
     }
 
     void 'useSchema wraps injection payload inside quotes so it cannot break out'() {
@@ -95,7 +95,7 @@ class DefaultSchemaHandlerSpec extends Specification {
         handler.useSchema(conn, 'public; DROP TABLE users--')
 
         then: 'dangerous payload is contained inside the identifier quotes'
-        executedSql == ["SET SCHEMA 'public; DROP TABLE users--'"]
+        executedSql == ["SET SCHEMA \"public; DROP TABLE users--\""]
     }
 
     void 'useSchema strips embedded quote chars before wrapping to prevent identifier breakout'() {
@@ -110,7 +110,7 @@ class DefaultSchemaHandlerSpec extends Specification {
         handler.useSchema(conn, 'bad"; DROP TABLE users; --')
 
         then: 'embedded quote is removed — breakout is impossible'
-        executedSql == ["SET SCHEMA 'bad; DROP TABLE users; --'"]
+        executedSql == ["SET SCHEMA \"bad; DROP TABLE users; --\""]
     }
 
     // -------------------------------------------------------------------------
@@ -129,7 +129,7 @@ class DefaultSchemaHandlerSpec extends Specification {
         handler.createSchema(conn, 'tenant_42')
 
         then:
-        executedSql == ["CREATE SCHEMA 'tenant_42'"]
+        executedSql == ["CREATE SCHEMA \"tenant_42\""]
     }
 
     void 'createSchema wraps injection payload inside quotes'() {
@@ -144,7 +144,7 @@ class DefaultSchemaHandlerSpec extends Specification {
         handler.createSchema(conn, 'tenant; DROP TABLE users--')
 
         then:
-        executedSql == ["CREATE SCHEMA 'tenant; DROP TABLE users--'"]
+        executedSql == ["CREATE SCHEMA \"tenant; DROP TABLE users--\""]
     }
 
     // -------------------------------------------------------------------------
@@ -163,7 +163,7 @@ class DefaultSchemaHandlerSpec extends Specification {
         handler.useDefaultSchema(conn)
 
         then:
-        executedSql == ["SET SCHEMA 'PUBLIC'"]
+        executedSql == ["SET SCHEMA \"PUBLIC\""]
     }
 
     // -------------------------------------------------------------------------
