@@ -107,14 +107,9 @@ When adding new work items to this file:
 
 
 ### Modules with Failed Tests
-- `grails-data-hibernate5`
-- `grails-data-hibernate5-core`
 - `grails-data-hibernate5-dbmigration`
-- `grails-data-hibernate7`
-- `grails-data-hibernate7-core`
 - `grails-data-hibernate7-dbmigration`
 - `grails-data-simple`
-- `grails-datamapping-core`
 - `grails-datamapping-core-test`
 - `grails-fields`
 - `grails-test-examples-app1`

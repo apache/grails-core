@@ -52,7 +52,6 @@ class DirtyCheckingAfterListenerSpec extends GrailsDataTckSpec {
         }
     }
 
-    @PendingFeatureIf({ !Boolean.getBoolean('hibernate5.gorm.suite') && !Boolean.getBoolean('mongodb.gorm.suite') && !Boolean.getBoolean('core.gorm.suite') })
     void 'test state change from listener update the object'() {
 
         when:

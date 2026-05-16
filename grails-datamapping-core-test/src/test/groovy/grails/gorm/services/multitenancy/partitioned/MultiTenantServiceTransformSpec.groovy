@@ -82,7 +82,7 @@ class Foo implements MultiTenant<Foo> {
         Class impl = service.classLoader.loadClass("\$IFooServiceImplementation")
         def Foo = service.classLoader.loadClass('Foo')
         datastore.mappingContext.addPersistentEntity(Foo)
-        new org.grails.datastore.gorm.GormEnhancer(datastore, datastore.transactionManager)
+        new org.grails.datastore.gorm.GormEnhancer(datastore, datastore.transactionManager, new org.grails.datastore.mapping.core.connections.ConnectionSourceSettings())
         def fooService = impl.newInstance()
         fooService.datastore = datastore
         def foo = Foo.newInstance(title: "test", tenantId: 11l)
