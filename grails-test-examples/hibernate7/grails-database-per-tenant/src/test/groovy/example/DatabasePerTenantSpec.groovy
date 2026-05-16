@@ -79,6 +79,8 @@ class DatabasePerTenantSpec extends HibernateSpec {
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "moreBooks")
 
         AnotherBookService bookService = new AnotherBookService()
+        bookService.setTargetDatastore(hibernateDatastore)
+        bookService.setTransactionManager(transactionManager)
 
         then:
         bookService.countBooks() == 0
