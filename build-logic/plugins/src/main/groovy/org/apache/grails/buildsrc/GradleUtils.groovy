@@ -22,6 +22,7 @@ package org.apache.grails.buildsrc
 import groovy.transform.CompileStatic
 import org.gradle.api.Project
 import org.gradle.api.file.Directory
+import org.gradle.api.provider.Provider
 
 @CompileStatic
 class GradleUtils {
@@ -35,6 +36,12 @@ class GradleUtils {
     static Directory findAsfRootDir(Directory currentDirectory) {
         def asfFile = currentDirectory.file('.asf.yaml').asFile
         asfFile.exists() ? currentDirectory : findAsfRootDir(currentDirectory.dir('../'))
+    }
+
+    static Provider<Boolean> booleanProvider(Project project, String name, boolean defaultValue = false) {
+        project.providers.gradleProperty(name)
+                .map { Boolean.parseBoolean(it as String) }
+                .orElse(defaultValue)
     }
 
     static <T> T lookupProperty(Project project, String name, T defaultValue = null) {

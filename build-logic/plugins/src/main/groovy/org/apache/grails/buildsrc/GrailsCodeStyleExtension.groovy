@@ -37,12 +37,6 @@ class GrailsCodeStyleExtension {
     final DirectoryProperty checkstyleDirectory
 
     /**
-     * Defaults to project.rootProject.buildDir/codestyle/pmd.
-     * Directory for PMD configuration files (e.g. pmd.xml).
-     */
-    final DirectoryProperty pmdDirectory
-
-    /**
      * Defaults to project.rootProject.buildDir/codestyle/codenarc.
      * Default codenarc files will be written here and used from this location.
      */
@@ -58,9 +52,6 @@ class GrailsCodeStyleExtension {
     GrailsCodeStyleExtension(ObjectFactory objects, Project project) {
         checkstyleDirectory = objects.directoryProperty().convention(
                 project.rootProject.layout.buildDirectory.dir('codestyle/checkstyle')
-        )
-        pmdDirectory = objects.directoryProperty().convention(
-                project.rootProject.layout.buildDirectory.dir('codestyle/pmd')
         )
         codenarcDirectory = objects.directoryProperty().convention(
                 project.rootProject.layout.buildDirectory.dir('codestyle/codenarc')

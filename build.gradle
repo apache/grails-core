@@ -16,7 +16,7 @@
  */
 
 plugins {
-    id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-violation-aggregation'
 }
 
 import java.time.Instant
