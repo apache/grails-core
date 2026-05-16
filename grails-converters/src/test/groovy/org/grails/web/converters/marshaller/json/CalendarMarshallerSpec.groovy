@@ -75,7 +75,7 @@ class CalendarMarshallerSpec extends Specification {
         def result = marshalToString(marshaller, calendar)
 
         then: 'output is always UTC regardless of calendar timezone'
-        result == '['2024-06-15T14:30:45.123Z']'
+        result == '["2024-06-15T14:30:45.123Z"]'
     }
 
     void 'default formatter pads sub-100 milliseconds to three digits'() {
