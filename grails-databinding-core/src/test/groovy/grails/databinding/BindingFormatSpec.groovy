@@ -60,7 +60,7 @@ class BindingFormatSpec extends Specification {
 		error.rejectedValue == '1969/11/15'
 		error.propertyName == 'birthDate'
 		error.cause instanceof ParseException
-		error.cause.message == 'Unparseable date: '1969/11/15''
+		error.cause.message == "Unparseable date: \"1969/11/15\""
 	}
 }
 

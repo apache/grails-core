@@ -216,7 +216,7 @@ class SimpleDataBinderSpec extends Specification {
         obj.formattedUtilDate == null
         bindingErrors.size() == 1
         bindingErrors[0].rejectedValue == 'BAD'
-        bindingErrors[0].cause.message == 'Unparseable date: 'BAD''
+        bindingErrors[0].cause.message == "Unparseable date: \"BAD\""
     }
 
     void 'Test binding string to date'() {
