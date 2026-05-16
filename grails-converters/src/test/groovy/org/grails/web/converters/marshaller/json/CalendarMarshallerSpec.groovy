@@ -89,7 +89,7 @@ class CalendarMarshallerSpec extends Specification {
         def result = marshalToString(marshaller, calendar)
 
         then:
-        result == '['2024-01-01T00:00:00.005Z']'
+        result == '["2024-01-01T00:00:00.005Z"]'
     }
 
     void 'legacy formatter is used when provided'() {
@@ -106,7 +106,7 @@ class CalendarMarshallerSpec extends Specification {
         def result = marshalToString(marshaller, calendar)
 
         then:
-        result == '['15/06/2024']'
+        result == '["15/06/2024"]'
     }
 
     private static String marshalToString(CalendarMarshaller marshaller, Calendar calendar) {

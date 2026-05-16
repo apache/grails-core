@@ -56,7 +56,7 @@ class StaticPropertySpec extends Specification {
 
         then:
         def jsonString = new JSON(bean).toString()
-        jsonString == '{'aProperty':'testing'}'
+        jsonString == "{'aProperty':'testing'}"
     }
 }
 

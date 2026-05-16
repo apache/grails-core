@@ -39,7 +39,7 @@ class JSONEncoderSpec extends Specification {
         writerCharArrays.toString() == result
         where:
         input | result
-        "I contain a TAB \u000B' | 'I contain a TAB \\u000B"
+        "I contain a TAB \u000B" | 'I contain a TAB \\u000B'
         "I contain a \"Quote\"!" | 'I contain a \\"Quote\\"!'
         "\"Quote\"" | '\\"Quote\\"'
         "\"Quote\"-" | '\\"Quote\\"-'

@@ -48,6 +48,6 @@ class ValidationErrorsMarshallerSpec extends Specification {
             marshaller.marshalObject(errors, json)
 
         then:
-            assert stringWriter.toString() == '{'errors':[{'object':'test','message': 'Error happening on test object.'}]}'
+            assert stringWriter.toString() == "{'errors':[{'object':'test','message': 'Error happening on test object.'}]}"
     }
 }

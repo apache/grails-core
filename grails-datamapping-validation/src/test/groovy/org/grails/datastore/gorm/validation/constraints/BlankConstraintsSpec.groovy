@@ -37,7 +37,7 @@ class BlankConstraintsSpec extends Specification {
 
     @Unroll
     @Issue('grails/grails-core#10846')
-    void 'hasErrors() should return #shouldTriggerError for input [\\'#inputValue\\']'() {
+    void "hasErrors() should return #shouldTriggerError for input ['#inputValue']"() {
         setup:
         Errors errors = new ValidationErrors(obj)
         constraint.validate(obj, inputValue, errors)
