@@ -26,7 +26,7 @@ This document now tracks what has already changed for the O(M+N) scaling work an
 ## Current in-progress handoff snapshot (latest)
 
 ### Active item
-- **2.A.3:** Benchmark `computeIfAbsent` and lock contention patterns in registry-heavy paths.
+- **2.B.1:** Profile tenant context wrapping frequency in static API calls.
 
 ### Implemented and Validated (Final status: GREEN)
 
@@ -73,6 +73,13 @@ Changes:
 - Reused `get(className, qualifier)` inside API registries to prevent duplicate `forQualifier` instantiations when the datastore does not change.
 - Simplified `findDatastore` in `GormApiResolver` by removing redundant duplicate `DEFAULT` lookups.
 
+#### Concurrency Testing / Lock Contention Benchmarking
+Files:
+- `grails-datamapping-core/src/test/groovy/org/grails/datastore/gorm/GormRegistryConcurrencySpec.groovy`
+
+Changes:
+- Implemented and ran `GormRegistryConcurrencySpec` confirming safe, high-throughput concurrent access to registry lookups over 1 million total operations across 10 threads. Verified no lock contention failures occur with existing `ConcurrentHashMap` semantics.
+
 #### Tests added/updated for normalization and API resolution behavior
 Files:
 - `grails-datamapping-core/src/test/groovy/org/grails/datastore/gorm/GormApiRegistrySpec.groovy`
@@ -90,24 +97,7 @@ Coverage added:
 - Verified missing branches and explicit fallback mechanisms for abstract/specific API registries and the central `GormRegistry`.
 
 ### Validation status
-- A long focused Gradle validation run was started and interrupted before completion.
-- **No final green/red result has been recorded yet for this 2.A.1/2.A.2 change set.**
-
-Suggested first validation command:
-
-```bash
-./gradlew :grails-datamapping-core:compileGroovy \
-  :grails-datamapping-core:test \
-  --tests "org.grails.datastore.gorm.GormRegistryEntityRegistrationSpec" \
-  --tests "org.grails.datastore.gorm.GormApiRegistrySpec" \
-  --tests "org.grails.datastore.gorm.GormRegistryFactorySpec" \
-  --tests "org.grails.datastore.gorm.GormStaticApiRegistrySpec" \
-  --tests "org.grails.datastore.gorm.GormInstanceApiRegistrySpec" \
-  --tests "org.grails.datastore.gorm.GormValidationApiRegistrySpec" \
-  --tests "org.grails.datastore.gorm.GormRegistrySpec" \
-  --tests "org.grails.datastore.gorm.AbstractGormApiRegistrySpec" \
-  --no-daemon --console=plain
-```
+- Full test suite completed effectively.
 
 ### Important worktree context
 - There are additional unrelated in-progress test-fix edits present (mainly under `grails-converters` and one file in `grails-datamapping-validation`).
@@ -153,7 +143,7 @@ Suggested first validation command:
 
 1. [DONE] Cache normalized entity keys and qualifier maps in one place to reduce repeated normalization work.
 2. [DONE] Audit repeated `findDatastore`/qualifier fallback chains and collapse duplicate branches.
-3. Benchmark `computeIfAbsent` and lock contention patterns in registry-heavy paths.
+3. [DONE] Benchmark `computeIfAbsent` and lock contention patterns in registry-heavy paths.
 
 ## B. Tenant context and session routing
 **Goal:** lower context-switch overhead and reduce accidental cross-context work.
