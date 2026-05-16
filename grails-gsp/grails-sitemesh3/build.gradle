@@ -26,6 +26,8 @@ plugins {
     // TODO: id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-code-analysis'
+    id 'org.apache.grails.gradle.grails-jacoco'
 }
 
 version = projectVersion

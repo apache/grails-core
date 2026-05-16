@@ -25,6 +25,7 @@ apply plugin: 'codenarc'
 apply plugin: 'com.diffplug.spotless'
 apply plugin: 'io.spring.nohttp' // enforce https everywhere
 apply plugin: 'org.apache.grails.gradle.grails-code-style'
+apply plugin: 'org.apache.grails.gradle.grails-code-analysis'
 
 extensions.configure(SpotlessExtension) {
     // Explicit `it` is required in extension configuration block
