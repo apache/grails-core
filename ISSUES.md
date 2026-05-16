@@ -23,6 +23,76 @@ This document now tracks what has already changed for the O(M+N) scaling work an
 
 ---
 
+## Current in-progress handoff snapshot (latest)
+
+### Active item
+- **2.A.1:** Cache normalized entity keys and qualifier maps in one place.
+- SQL todo: `cache-normalization-2a1` is `done`.
+
+### Implemented and Validated (Final status: GREEN)
+
+#### `GormRegistry` normalization boundary + caches
+File: `grails-datamapping-core/src/main/groovy/org/grails/datastore/gorm/GormRegistry.groovy`
+- Added caches:
+  - `normalizedEntityKeysByClass`
+  - `normalizedEntityKeysByName`
+  - `normalizedQualifiers`
+- Added helper methods:
+  - `normalizeEntityKey(Class)`
+  - `normalizeEntityKey(String)`
+  - `normalizeQualifier(String)`
+- Wired normalized access into:
+  - `getStaticApi/getInstanceApi/getValidationApi`
+  - `getDatastore`
+  - `registerApi`
+  - `registerDatastore`
+  - `registerDatastoreByQualifier`
+  - `registerEntityDatastore`
+  - `registerEntityDatastores`
+- Added cache cleanup in `GormRegistry.reset()`.
+
+#### API registries normalized key/qualifier usage
+Files:
+- `grails-datamapping-core/src/main/groovy/org/grails/datastore/gorm/AbstractGormApiRegistry.groovy`
+- `grails-datamapping-core/src/main/groovy/org/grails/datastore/gorm/GormStaticApiRegistry.groovy`
+- `grails-datamapping-core/src/main/groovy/org/grails/datastore/gorm/GormInstanceApiRegistry.groovy`
+- `grails-datamapping-core/src/main/groovy/org/grails/datastore/gorm/GormValidationApiRegistry.groovy`
+
+Changes:
+- Normalize class keys in `register/get/containsKey`.
+- Normalize qualifier before non-default checks and `forQualifier(...)`.
+
+#### Tests added/updated for normalization behavior
+Files:
+- `grails-datamapping-core/src/test/groovy/org/grails/datastore/gorm/GormApiRegistrySpec.groovy`
+- `grails-datamapping-core/src/test/groovy/org/grails/datastore/gorm/GormRegistryEntityRegistrationSpec.groovy`
+
+Coverage added:
+- `ConnectionSource.OLD_DEFAULT` + blank qualifiers normalize to `default`.
+- Entity keys with surrounding whitespace resolve correctly.
+- API registry retrieval works with normalized aliases.
+
+### Validation status
+- A long focused Gradle validation run was started and interrupted before completion.
+- **No final green/red result has been recorded yet for this 2.A.1 change set.**
+
+Suggested first validation command:
+
+```bash
+./gradlew :grails-datamapping-core:compileGroovy \
+  :grails-datamapping-core:test \
+  --tests "org.grails.datastore.gorm.GormRegistryEntityRegistrationSpec" \
+  --tests "org.grails.datastore.gorm.GormApiRegistrySpec" \
+  --tests "org.grails.datastore.gorm.GormRegistryFactorySpec" \
+  --no-daemon --console=plain
+```
+
+### Important worktree context
+- There are additional unrelated in-progress test-fix edits present (mainly under `grails-converters` and one file in `grails-datamapping-validation`).
+- Do not revert unrelated changes during continuation unless explicitly requested.
+
+---
+
 ## 1) Core changes implemented
 
 ### Shared-registry architecture (O(M+N))
@@ -59,7 +129,7 @@ This document now tracks what has already changed for the O(M+N) scaling work an
 ## A. Registry/API hot-path efficiency
 **Goal:** reduce repeated lookup overhead under high tenant/entity counts.
 
-1. Cache normalized entity keys and qualifier maps in one place to reduce repeated normalization work.
+1. [DONE] Cache normalized entity keys and qualifier maps in one place to reduce repeated normalization work.
 2. Audit repeated `findDatastore`/qualifier fallback chains and collapse duplicate branches.
 3. Benchmark `computeIfAbsent` and lock contention patterns in registry-heavy paths.
 

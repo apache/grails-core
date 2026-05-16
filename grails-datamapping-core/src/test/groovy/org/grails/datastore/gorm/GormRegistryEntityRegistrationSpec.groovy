@@ -155,4 +155,31 @@ class GormRegistryEntityRegistrationSpec extends Specification {
         registry.getDatastore(className, 'secondary') == datastore
         registry.getDatastore(className, 'reporting') == datastore
     }
+
+    void 'registry normalizes default qualifier aliases when registering datastores'() {
+        given:
+        GormRegistry registry = GormRegistry.instance
+        Datastore datastore = Mock(Datastore)
+
+        when:
+        registry.registerDatastore(ConnectionSource.OLD_DEFAULT, datastore)
+
+        then:
+        registry.getDatastore(null, ConnectionSource.DEFAULT) == datastore
+        registry.getDatastore(null, ConnectionSource.OLD_DEFAULT) == datastore
+        registry.getDatastore(null, '   ') == datastore
+    }
+
+    void 'registry normalizes entity keys for entity-specific datastore lookups'() {
+        given:
+        GormRegistry registry = GormRegistry.instance
+        Datastore datastore = Mock(Datastore)
+
+        when:
+        registry.registerEntityDatastore(" ${RegistryBook.name} ", ConnectionSource.OLD_DEFAULT, datastore)
+
+        then:
+        registry.getDatastore(RegistryBook.name, ConnectionSource.DEFAULT) == datastore
+        registry.getDatastore(" ${RegistryBook.name} ", ConnectionSource.OLD_DEFAULT) == datastore
+    }
 }

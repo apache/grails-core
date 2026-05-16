@@ -21,7 +21,6 @@ package org.grails.datastore.gorm
 import groovy.transform.CompileStatic
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
-import org.grails.datastore.mapping.reflect.NameUtils
 
 import java.util.concurrent.ConcurrentHashMap
 
@@ -36,28 +35,31 @@ abstract class AbstractGormApiRegistry<T extends AbstractDatastoreApi> {
     }
 
     void register(String className, T api) {
-        if (className != null && api != null) {
-            apis.put(className, api)
+        String normalizedClassName = registry.normalizeEntityKey(className)
+        if (normalizedClassName != null && api != null) {
+            apis.put(normalizedClassName, api)
         }
     }
 
     T get(String className) {
-        return apis.get(className)
+        return apis.get(registry.normalizeEntityKey(className))
     }
 
     T get(String className, String qualifier) {
-        T api = apis.get(className)
-        if (api != null && qualifier != null && qualifier != ConnectionSource.DEFAULT) {
-            Datastore ds = registry.getDatastore(className, qualifier)
+        String normalizedClassName = registry.normalizeEntityKey(className)
+        String normalizedQualifier = registry.normalizeQualifier(qualifier)
+        T api = apis.get(normalizedClassName)
+        if (api != null && normalizedQualifier != null && !ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
+            Datastore ds = registry.getDatastore(normalizedClassName, normalizedQualifier)
             if (ds != null && ds != api.getDatastore()) {
-                return qualify(api, qualifier)
+                return qualify(api, normalizedQualifier)
             }
         }
         return api
     }
 
     boolean containsKey(String className) {
-        return apis.containsKey(className)
+        return apis.containsKey(registry.normalizeEntityKey(className))
     }
 
     int size() {
@@ -73,7 +75,7 @@ abstract class AbstractGormApiRegistry<T extends AbstractDatastoreApi> {
     }
 
     protected String className(Class entity) {
-        return NameUtils.getClassName(entity)
+        return registry.normalizeEntityKeyFromClass(entity)
     }
 
     protected IllegalStateException stateException(Class entity) {

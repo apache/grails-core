@@ -62,6 +62,75 @@ class GormValidationApiRegistrySpec extends Specification {
         !apiRegistry.findValidationApi(ApiRegistryEntity, 'secondary').is(api)
     }
 
+    void 'findValidationApi throws exception when api is not found'() {
+        given:
+        def registry = GormRegistry.instance
+        def apiRegistry = registry.validationApiRegistry
+
+        when:
+        apiRegistry.findValidationApi(ApiRegistryEntity)
+
+        then:
+        def e = thrown(IllegalStateException)
+        e.message == "No GORM implementation configured for class [${ApiRegistryEntity.name}]. Ensure GORM has been initialized correctly"
+    }
+
+    void 'findValidationApi returns exact api when qualifier is null or default'() {
+        given:
+        def registry = GormRegistry.instance
+        def apiRegistry = registry.validationApiRegistry
+        def context = Stub(MappingContext) {
+            getMappingFactory() >> null
+        }
+        def defaultDatastore = Stub(Datastore) {
+            getMappingContext() >> context
+        }
+        def resolver = Stub(DatastoreResolver) {
+            resolve() >> defaultDatastore
+        }
+        def api = new GormValidationApi(ApiRegistryEntity, context, resolver, registry)
+        apiRegistry.register(ApiRegistryEntity.name, api)
+        registry.registerDatastore(ConnectionSource.DEFAULT, defaultDatastore)
+        registry.registerEntityDatastore(ApiRegistryEntity.name, ConnectionSource.DEFAULT, defaultDatastore)
+
+        expect:
+        apiRegistry.findValidationApi(ApiRegistryEntity).is(api)
+        apiRegistry.findValidationApi(ApiRegistryEntity, null).is(api)
+        apiRegistry.findValidationApi(ApiRegistryEntity, ConnectionSource.DEFAULT).is(api)
+    }
+
+    void 'qualify returns api for qualifier'() {
+        given:
+        def registry = GormRegistry.instance
+        def apiRegistry = registry.validationApiRegistry
+        def context = Stub(MappingContext) {
+            getMappingFactory() >> null
+        }
+        def defaultDatastore = Stub(Datastore) {
+            getMappingContext() >> context
+        }
+        def secondaryDatastore = Stub(Datastore) {
+            getMappingContext() >> context
+        }
+        def resolver = Stub(DatastoreResolver) {
+            resolve() >> defaultDatastore
+        }
+        def api = new GormValidationApi(ApiRegistryEntity, context, resolver, registry)
+        apiRegistry.register(ApiRegistryEntity.name, api)
+        registry.registerDatastore(ConnectionSource.DEFAULT, defaultDatastore)
+        registry.registerDatastore('secondary', secondaryDatastore)
+        registry.registerEntityDatastore(ApiRegistryEntity.name, ConnectionSource.DEFAULT, defaultDatastore)
+        registry.registerEntityDatastore(ApiRegistryEntity.name, 'secondary', secondaryDatastore)
+
+        when:
+        def qualifiedApi = apiRegistry.qualify(api, 'secondary')
+
+        then:
+        qualifiedApi != null
+        !qualifiedApi.is(api)
+        qualifiedApi instanceof GormValidationApi
+    }
+
     static class ApiRegistryEntity {
 
     }

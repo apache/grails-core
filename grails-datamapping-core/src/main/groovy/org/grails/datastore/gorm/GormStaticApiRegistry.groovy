@@ -40,8 +40,9 @@ class GormStaticApiRegistry extends AbstractGormApiRegistry<GormStaticApi> {
             throw stateException(entity)
         }
 
-        if (qualifier != null && qualifier != ConnectionSource.DEFAULT) {
-            return api.forQualifier(qualifier)
+        String normalizedQualifier = registry.normalizeQualifier(qualifier)
+        if (!ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
+            return api.forQualifier(normalizedQualifier)
         }
         return (GormStaticApi<D>) api
     }

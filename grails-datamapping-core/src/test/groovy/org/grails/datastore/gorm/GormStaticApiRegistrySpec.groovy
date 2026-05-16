@@ -62,6 +62,75 @@ class GormStaticApiRegistrySpec extends Specification {
         !apiRegistry.findStaticApi(ApiRegistryEntity, 'secondary').is(api)
     }
 
+    void 'findStaticApi throws exception when api is not found'() {
+        given:
+        def registry = GormRegistry.instance
+        def apiRegistry = registry.staticApiRegistry
+
+        when:
+        apiRegistry.findStaticApi(ApiRegistryEntity)
+
+        then:
+        def e = thrown(IllegalStateException)
+        e.message == "No GORM implementation configured for class [${ApiRegistryEntity.name}]. Ensure GORM has been initialized correctly"
+    }
+
+    void 'findStaticApi returns exact api when qualifier is null or default'() {
+        given:
+        def registry = GormRegistry.instance
+        def apiRegistry = registry.staticApiRegistry
+        def context = Stub(MappingContext) {
+            getMappingFactory() >> null
+        }
+        def defaultDatastore = Stub(Datastore) {
+            getMappingContext() >> context
+        }
+        def resolver = Stub(DatastoreResolver) {
+            resolve() >> defaultDatastore
+        }
+        def api = new GormStaticApi(ApiRegistryEntity, context, [], resolver, ConnectionSource.DEFAULT, registry)
+        apiRegistry.register(ApiRegistryEntity.name, api)
+        registry.registerDatastore(ConnectionSource.DEFAULT, defaultDatastore)
+        registry.registerEntityDatastore(ApiRegistryEntity.name, ConnectionSource.DEFAULT, defaultDatastore)
+
+        expect:
+        apiRegistry.findStaticApi(ApiRegistryEntity).is(api)
+        apiRegistry.findStaticApi(ApiRegistryEntity, null).is(api)
+        apiRegistry.findStaticApi(ApiRegistryEntity, ConnectionSource.DEFAULT).is(api)
+    }
+
+    void 'qualify returns api for qualifier'() {
+        given:
+        def registry = GormRegistry.instance
+        def apiRegistry = registry.staticApiRegistry
+        def context = Stub(MappingContext) {
+            getMappingFactory() >> null
+        }
+        def defaultDatastore = Stub(Datastore) {
+            getMappingContext() >> context
+        }
+        def secondaryDatastore = Stub(Datastore) {
+            getMappingContext() >> context
+        }
+        def resolver = Stub(DatastoreResolver) {
+            resolve() >> defaultDatastore
+        }
+        def api = new GormStaticApi(ApiRegistryEntity, context, [], resolver, ConnectionSource.DEFAULT, registry)
+        apiRegistry.register(ApiRegistryEntity.name, api)
+        registry.registerDatastore(ConnectionSource.DEFAULT, defaultDatastore)
+        registry.registerDatastore('secondary', secondaryDatastore)
+        registry.registerEntityDatastore(ApiRegistryEntity.name, ConnectionSource.DEFAULT, defaultDatastore)
+        registry.registerEntityDatastore(ApiRegistryEntity.name, 'secondary', secondaryDatastore)
+
+        when:
+        def qualifiedApi = apiRegistry.qualify(api, 'secondary')
+
+        then:
+        qualifiedApi != null
+        !qualifiedApi.is(api)
+        qualifiedApi instanceof GormStaticApi
+    }
+
     static class ApiRegistryEntity {
 
     }

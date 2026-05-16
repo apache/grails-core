@@ -107,6 +107,23 @@ class GormApiRegistrySpec extends Specification {
         apiRegistry.get(ApiRegistryEntity.name, 'secondary') instanceof GormValidationApi
     }
 
+    void 'api registries normalize entity key and default qualifier aliases'() {
+        given:
+        def registry = GormRegistry.instance
+        def apiRegistry = registry.staticApiRegistry
+        def (mappingContext, datastore, datastoreResolver) = createContext()
+        def api = new GormStaticApi(ApiRegistryEntity, mappingContext, [], datastoreResolver, ConnectionSource.DEFAULT, registry)
+
+        when:
+        apiRegistry.register(" ${ApiRegistryEntity.name} ", api)
+        registry.registerDatastore(ConnectionSource.OLD_DEFAULT, datastore)
+        registry.registerEntityDatastore(" ${ApiRegistryEntity.name} ", ConnectionSource.OLD_DEFAULT, datastore)
+
+        then:
+        apiRegistry.containsKey(ApiRegistryEntity.name)
+        apiRegistry.get(ApiRegistryEntity.name, ConnectionSource.OLD_DEFAULT).is(api)
+    }
+
     private List createContext() {
         MappingContext mappingContext = Stub(MappingContext) {
             getMappingFactory() >> null
