@@ -35,14 +35,9 @@ class GormValidationApiRegistry extends AbstractGormApiRegistry<GormValidationAp
 
     <D> GormValidationApi<D> findValidationApi(Class<D> entity, String qualifier = null) {
         String className = className(entity)
-        GormValidationApi api = get(className)
+        GormValidationApi api = get(className, qualifier)
         if (api == null) {
             throw stateException(entity)
-        }
-
-        String normalizedQualifier = registry.normalizeQualifier(qualifier)
-        if (!ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
-            return api.forQualifier(normalizedQualifier)
         }
         return (GormValidationApi<D>) api
     }

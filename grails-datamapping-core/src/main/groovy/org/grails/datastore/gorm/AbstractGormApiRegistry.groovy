@@ -49,9 +49,9 @@ abstract class AbstractGormApiRegistry<T extends AbstractDatastoreApi> {
         String normalizedClassName = registry.normalizeEntityKey(className)
         String normalizedQualifier = registry.normalizeQualifier(qualifier)
         T api = apis.get(normalizedClassName)
-        if (api != null && normalizedQualifier != null && !ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
+        if (api != null && !ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
             Datastore ds = registry.getDatastore(normalizedClassName, normalizedQualifier)
-            if (ds != null && ds != api.getDatastore()) {
+            if (ds == null || ds != api.getDatastore()) {
                 return qualify(api, normalizedQualifier)
             }
         }

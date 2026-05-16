@@ -81,9 +81,6 @@ class GormApiResolver {
 
         Datastore defaultDs = defaultDatastoreSelector.select(registry, stateRegistry, entity, className, depth, this)
 
-        if (defaultDs == null) {
-            defaultDs = registry.getDatastore(null, ConnectionSource.DEFAULT)
-        }
         if (defaultDs == null && entity != null) {
             throw stateException(entity)
         }

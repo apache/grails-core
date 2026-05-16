@@ -26,8 +26,7 @@ This document now tracks what has already changed for the O(M+N) scaling work an
 ## Current in-progress handoff snapshot (latest)
 
 ### Active item
-- **2.A.1:** Cache normalized entity keys and qualifier maps in one place.
-- SQL todo: `cache-normalization-2a1` is `done`.
+- **2.A.3:** Benchmark `computeIfAbsent` and lock contention patterns in registry-heavy paths.
 
 ### Implemented and Validated (Final status: GREEN)
 
@@ -62,19 +61,37 @@ Changes:
 - Normalize class keys in `register/get/containsKey`.
 - Normalize qualifier before non-default checks and `forQualifier(...)`.
 
-#### Tests added/updated for normalization behavior
+#### Audit repeated findDatastore/qualifier fallback chains and collapse duplicate branches
+Files:
+- `grails-datamapping-core/src/main/groovy/org/grails/datastore/gorm/GormApiResolver.groovy`
+- `grails-datamapping-core/src/main/groovy/org/grails/datastore/gorm/AbstractGormApiRegistry.groovy`
+- `grails-datamapping-core/src/main/groovy/org/grails/datastore/gorm/GormStaticApiRegistry.groovy`
+- `grails-datamapping-core/src/main/groovy/org/grails/datastore/gorm/GormInstanceApiRegistry.groovy`
+- `grails-datamapping-core/src/main/groovy/org/grails/datastore/gorm/GormValidationApiRegistry.groovy`
+
+Changes:
+- Reused `get(className, qualifier)` inside API registries to prevent duplicate `forQualifier` instantiations when the datastore does not change.
+- Simplified `findDatastore` in `GormApiResolver` by removing redundant duplicate `DEFAULT` lookups.
+
+#### Tests added/updated for normalization and API resolution behavior
 Files:
 - `grails-datamapping-core/src/test/groovy/org/grails/datastore/gorm/GormApiRegistrySpec.groovy`
 - `grails-datamapping-core/src/test/groovy/org/grails/datastore/gorm/GormRegistryEntityRegistrationSpec.groovy`
+- `grails-datamapping-core/src/test/groovy/org/grails/datastore/gorm/GormInstanceApiRegistrySpec.groovy`
+- `grails-datamapping-core/src/test/groovy/org/grails/datastore/gorm/GormValidationApiRegistrySpec.groovy`
+- `grails-datamapping-core/src/test/groovy/org/grails/datastore/gorm/GormStaticApiRegistrySpec.groovy`
+- `grails-datamapping-core/src/test/groovy/org/grails/datastore/gorm/GormRegistrySpec.groovy`
+- `grails-datamapping-core/src/test/groovy/org/grails/datastore/gorm/AbstractGormApiRegistrySpec.groovy`
 
 Coverage added:
 - `ConnectionSource.OLD_DEFAULT` + blank qualifiers normalize to `default`.
 - Entity keys with surrounding whitespace resolve correctly.
 - API registry retrieval works with normalized aliases.
+- Verified missing branches and explicit fallback mechanisms for abstract/specific API registries and the central `GormRegistry`.
 
 ### Validation status
 - A long focused Gradle validation run was started and interrupted before completion.
-- **No final green/red result has been recorded yet for this 2.A.1 change set.**
+- **No final green/red result has been recorded yet for this 2.A.1/2.A.2 change set.**
 
 Suggested first validation command:
 
@@ -84,6 +101,11 @@ Suggested first validation command:
   --tests "org.grails.datastore.gorm.GormRegistryEntityRegistrationSpec" \
   --tests "org.grails.datastore.gorm.GormApiRegistrySpec" \
   --tests "org.grails.datastore.gorm.GormRegistryFactorySpec" \
+  --tests "org.grails.datastore.gorm.GormStaticApiRegistrySpec" \
+  --tests "org.grails.datastore.gorm.GormInstanceApiRegistrySpec" \
+  --tests "org.grails.datastore.gorm.GormValidationApiRegistrySpec" \
+  --tests "org.grails.datastore.gorm.GormRegistrySpec" \
+  --tests "org.grails.datastore.gorm.AbstractGormApiRegistrySpec" \
   --no-daemon --console=plain
 ```
 
@@ -130,7 +152,7 @@ Suggested first validation command:
 **Goal:** reduce repeated lookup overhead under high tenant/entity counts.
 
 1. [DONE] Cache normalized entity keys and qualifier maps in one place to reduce repeated normalization work.
-2. Audit repeated `findDatastore`/qualifier fallback chains and collapse duplicate branches.
+2. [DONE] Audit repeated `findDatastore`/qualifier fallback chains and collapse duplicate branches.
 3. Benchmark `computeIfAbsent` and lock contention patterns in registry-heavy paths.
 
 ## B. Tenant context and session routing
