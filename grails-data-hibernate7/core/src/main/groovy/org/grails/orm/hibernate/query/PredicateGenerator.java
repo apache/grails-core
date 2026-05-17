@@ -78,6 +78,7 @@ public class PredicateGenerator {
      */
     @FunctionalInterface
     public interface CriterionHandler {
+
         Predicate handle(
             AbstractQuery<?> criteriaQuery,
             From<?, ?> root,
@@ -104,7 +105,9 @@ public class PredicateGenerator {
      * </pre>
      */
     public interface CriterionHandlerProvider {
+
         Class<? extends Query.Criterion> criterionType();
+
         CriterionHandler criterionHandler();
     }
 
@@ -151,16 +154,16 @@ public class PredicateGenerator {
     }
 
     public Predicate[] getPredicates(
-            AbstractQuery<?> criteriaQuery,
-            From<?, ?> root,
-            List<? extends Query.QueryElement> criteria,
-            JpaQueryContext fromsByProvider,
-            GrailsHibernatePersistentEntity entity) {
+        AbstractQuery<?> criteriaQuery,
+        From<?, ?> root,
+        List<? extends Query.QueryElement> criteria,
+        JpaQueryContext fromsByProvider,
+        GrailsHibernatePersistentEntity entity) {
         return criteria.stream()
-                .map(c -> handleCriterion(criteriaQuery, root, fromsByProvider, entity, c))
-                .filter(Objects::nonNull)
-                .toList()
-                .toArray(new Predicate[0]);
+            .map(c -> handleCriterion(criteriaQuery, root, fromsByProvider, entity, c))
+            .filter(Objects::nonNull)
+            .toList()
+            .toArray(new Predicate[0]);
     }
 
     private boolean isCollectionPath(Expression<?> expression) {
@@ -171,11 +174,11 @@ public class PredicateGenerator {
     }
 
     public Predicate handleCriterion(
-            AbstractQuery<?> criteriaQuery,
-            From<?, ?> root,
-            JpaQueryContext fromsByProvider,
-            GrailsHibernatePersistentEntity entity,
-            Query.QueryElement criterion) {
+        AbstractQuery<?> criteriaQuery,
+        From<?, ?> root,
+        JpaQueryContext fromsByProvider,
+        GrailsHibernatePersistentEntity entity,
+        Query.QueryElement criterion) {
 
         loadServiceProviders();
 
@@ -208,10 +211,10 @@ public class PredicateGenerator {
             return handlePropertyNameCriterion(fromsByProvider, c);
         } else if (criterion instanceof Query.Exists c) {
             return handleExists(
-                    criteriaQuery, fromsByProvider, c);
+                criteriaQuery, fromsByProvider, c);
         } else if (criterion instanceof Query.NotExists c) {
             return criteriaBuilder.not(handleExists(
-                    criteriaQuery, fromsByProvider, new Query.Exists(c.getSubquery())));
+                criteriaQuery, fromsByProvider, new Query.Exists(c.getSubquery())));
         } else if (criterion instanceof HibernateAlias) {
             return null; // Metadata only, handled by JpaQueryContext
         }
@@ -273,11 +276,11 @@ public class PredicateGenerator {
     }
 
     private Predicate handleJunction(
-            AbstractQuery<?> criteriaQuery,
-            From<?, ?> root_,
-            JpaQueryContext fromsByProvider,
-            GrailsHibernatePersistentEntity entity,
-            Query.Junction junction) {
+        AbstractQuery<?> criteriaQuery,
+        From<?, ?> root_,
+        JpaQueryContext fromsByProvider,
+        GrailsHibernatePersistentEntity entity,
+        Query.Junction junction) {
         List<Query.Criterion> criteriaList = junction.getCriteria();
         Predicate[] predicates = getPredicates(criteriaQuery, root_, criteriaList, fromsByProvider, entity);
         if (junction instanceof Query.Conjunction) {
@@ -294,9 +297,9 @@ public class PredicateGenerator {
     }
 
     private Predicate handleAssociationCriteria(
-            AbstractQuery<?> criteriaQuery,
-            JpaQueryContext fromsByProvider,
-            DetachedAssociationCriteria<?> associationCriteria) {
+        AbstractQuery<?> criteriaQuery,
+        JpaQueryContext fromsByProvider,
+        DetachedAssociationCriteria<?> associationCriteria) {
         String associationName = associationCriteria.getAssociationPath();
         From<?, ?> associationRoot = fromsByProvider.getFrom(associationName);
         if (associationRoot == null) {
@@ -309,19 +312,19 @@ public class PredicateGenerator {
                 fromsByProvider.addFrom(associationName, associationRoot);
             }
         }
-        
+
         // Create a nested context for this association
         JpaQueryContext nestedContext = new JpaQueryContext(fromsByProvider, null, associationRoot);
-        
+
         GrailsHibernatePersistentEntity associatedEntity = (GrailsHibernatePersistentEntity) associationCriteria.getAssociation().getAssociatedEntity();
         List<Query.Criterion> criteriaList = associationCriteria.getCriteria();
         return criteriaBuilder.and(getPredicates(criteriaQuery, associationRoot, criteriaList, nestedContext, associatedEntity));
     }
 
     private Predicate handleHibernateAssociationQuery(
-            AbstractQuery<?> criteriaQuery,
-            JpaQueryContext fromsByProvider,
-            HibernateAssociationQuery associationQuery) {
+        AbstractQuery<?> criteriaQuery,
+        JpaQueryContext fromsByProvider,
+        HibernateAssociationQuery associationQuery) {
         String associationName = associationQuery.associationPath;
         From<?, ?> associationRoot = fromsByProvider.getFrom(associationName);
         if (associationRoot == null) {
@@ -333,7 +336,7 @@ public class PredicateGenerator {
                 fromsByProvider.addFrom(associationName, associationRoot);
             }
         }
-        
+
         // Create a nested context for this association
         JpaQueryContext nestedContext = new JpaQueryContext(fromsByProvider, null, associationRoot);
 
@@ -344,11 +347,11 @@ public class PredicateGenerator {
 
     @SuppressWarnings("unchecked")
     private Predicate handlePropertyCriterion(
-            AbstractQuery<?> criteriaQuery,
-            From<?, ?> root,
-            JpaQueryContext fromsByProvider,
-            GrailsHibernatePersistentEntity entity,
-            Query.PropertyCriterion pc) {
+        AbstractQuery<?> criteriaQuery,
+        From<?, ?> root,
+        JpaQueryContext fromsByProvider,
+        GrailsHibernatePersistentEntity entity,
+        Query.PropertyCriterion pc) {
         String propertyName = pc.getProperty();
         Expression<?> propertyPath = fromsByProvider.getFullyQualifiedExpression(propertyName);
         if (propertyPath == null) {
@@ -401,8 +404,8 @@ public class PredicateGenerator {
 
             Collection<?> collection = value instanceof Collection ? (Collection<?>) value : Collections.singletonList(value);
             List<Object> converted = collection.stream()
-                    .map(v -> convertValue(entity, propertyName, v, propertyPath))
-                    .collect(Collectors.toList());
+                .map(v -> convertValue(entity, propertyName, v, propertyPath))
+                .collect(Collectors.toList());
 
             if (isCollectionPath(propertyPath)) {
                 // For collection properties, we use "member of" for each value joined with OR
@@ -410,8 +413,8 @@ public class PredicateGenerator {
                     return criteriaBuilder.disjunction(); // Always false for empty IN on collection
                 }
                 Predicate[] memberOfPredicates = converted.stream()
-                        .map(v -> criteriaBuilder.isMember((Object) v, (Expression) propertyPath))
-                        .toArray(Predicate[]::new);
+                    .map(v -> criteriaBuilder.isMember((Object) v, (Expression) propertyPath))
+                    .toArray(Predicate[]::new);
                 return criteriaBuilder.or(memberOfPredicates);
             }
 
@@ -493,7 +496,7 @@ public class PredicateGenerator {
             Subquery<?> subquery = criteriaQuery.subquery(expectedType);
             var creator = new JpaCriteriaQueryCreator(new Query.ProjectionList(), criteriaBuilder, (GrailsHibernatePersistentEntity) qc.getPersistentEntity(), (DetachedCriteria) qc, conversionService);
             creator.setParentContext(fromsByProvider);
-            
+
             if (qc.getProjections().isEmpty() && propertyPath != null) {
                 String propertyName = pc.getProperty();
                 if (propertyName.contains(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)) {
@@ -504,7 +507,7 @@ public class PredicateGenerator {
                     qc.getProjections().add(Projections.property(propertyName));
                 }
             }
-            
+
             creator.populateSubquery((JpaSubQuery) subquery);
             return criteriaBuilder.equal(propertyPath, subquery);
         } else {
@@ -514,11 +517,11 @@ public class PredicateGenerator {
 
     @SuppressWarnings("unchecked")
     private Predicate handleNotEquals(
-            AbstractQuery<?> criteriaQuery,
-            Query.PropertyCriterion pc,
-            Expression<?> propertyPath,
-            JpaQueryContext fromsByProvider,
-            GrailsHibernatePersistentEntity entity) {
+        AbstractQuery<?> criteriaQuery,
+        Query.PropertyCriterion pc,
+        Expression<?> propertyPath,
+        JpaQueryContext fromsByProvider,
+        GrailsHibernatePersistentEntity entity) {
         Object value = pc.getValue();
         if (value == null) {
             return criteriaBuilder.isNotNull(propertyPath);
@@ -544,15 +547,15 @@ public class PredicateGenerator {
             return criteriaBuilder.or(criteriaBuilder.notEqual(propertyPath, subquery), criteriaBuilder.isNull(propertyPath));
         }
         return criteriaBuilder.or(
-                criteriaBuilder.notEqual(propertyPath, convertComparisonValue(entity, pc.getProperty(), value, fromsByProvider, propertyPath)),
-                criteriaBuilder.isNull(propertyPath));
+            criteriaBuilder.notEqual(propertyPath, convertComparisonValue(entity, pc.getProperty(), value, fromsByProvider, propertyPath)),
+            criteriaBuilder.isNull(propertyPath));
     }
 
     @SuppressWarnings("unchecked")
     private Predicate handleExists(
-            AbstractQuery<?> criteriaQuery,
-            JpaQueryContext fromsByProvider,
-            Query.Exists exists) {
+        AbstractQuery<?> criteriaQuery,
+        JpaQueryContext fromsByProvider,
+        Query.Exists exists) {
         QueryableCriteria subqueryCriteria = exists.getSubquery();
         GrailsHibernatePersistentEntity subqueryEntity = (GrailsHibernatePersistentEntity) subqueryCriteria.getPersistentEntity();
         Subquery<?> subquery = criteriaQuery.subquery(subqueryEntity.getJavaClass());
@@ -575,14 +578,14 @@ public class PredicateGenerator {
                 targetType = prop.getType();
             }
         }
-        
+
         if (targetType != null && Collection.class.isAssignableFrom(targetType) && entity != null) {
             HibernatePersistentProperty prop = (HibernatePersistentProperty) entity.getPropertyByName(propertyName);
             if (prop instanceof HibernateToManyProperty toMany) {
                 targetType = toMany.getComponentType();
             }
         }
-        
+
         if (targetType != null && conversionService.canConvert(value.getClass(), targetType)) {
             if (!Collection.class.isAssignableFrom(targetType) || Collection.class.isAssignableFrom(value.getClass())) {
                 return conversionService.convert(value, targetType);
@@ -596,7 +599,7 @@ public class PredicateGenerator {
         if (value instanceof PropertyArithmetic pa) {
             Expression<Number> left = (Expression<Number>) context.getFullyQualifiedExpression(pa.propertyName());
             Expression<Number> right = (Expression<Number>) criteriaBuilder.literal(pa.operand());
-            
+
             return switch (pa.operator()) {
                 case MULTIPLY -> criteriaBuilder.prod(left, right);
                 case DIVIDE -> criteriaBuilder.quot(left, right);
@@ -612,7 +615,7 @@ public class PredicateGenerator {
     }
 
     public Predicate generate(
-            AbstractQuery<?> cq, From<?, ?> root, List<Query.Criterion> criteriaList, JpaQueryContext tablesByName, GrailsHibernatePersistentEntity entity) {
+        AbstractQuery<?> cq, From<?, ?> root, List<Query.Criterion> criteriaList, JpaQueryContext tablesByName, GrailsHibernatePersistentEntity entity) {
         Predicate[] predicates = getPredicates(cq, root, criteriaList, tablesByName, entity);
         return criteriaBuilder.and(predicates);
     }
