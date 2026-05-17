@@ -58,7 +58,6 @@ import org.gradle.api.tasks.SourceSetOutput
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.compile.GroovyCompile
-import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.testing.Test
 import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.language.jvm.tasks.ProcessResources
@@ -190,8 +189,6 @@ class GrailsGradlePlugin implements Plugin<Project> {
 
     private void configureGroovyCompiler(Project project) {
         project.tasks.withType(GroovyCompile).configureEach { GroovyCompile c ->
-            c.groovyOptions.parameters = true
-
             // Use a task-specific config file to avoid overlapping outputs when multiple
             // GroovyCompile tasks exist in the same project (e.g. compileGroovy, compileTestGroovy).
             Provider<RegularFile> groovyCompilerConfigFile = project.layout.buildDirectory.file("grailsGroovyCompilerConfig-${c.name}.groovy")
@@ -233,12 +230,6 @@ class GrailsGradlePlugin implements Plugin<Project> {
             }
         }
 
-        project.tasks.withType(JavaCompile).configureEach { JavaCompile c ->
-            if (!c.options.compilerArgs.contains('-parameters')) {
-                c.options.compilerArgs.add('-parameters')
-            }
-        }
-
         // Configure indy and log status after evaluation so user's grails { } block has been applied
         GrailsExtension grailsExtension = project.extensions.findByType(GrailsExtension)
         project.afterEvaluate {
@@ -249,6 +240,7 @@ class GrailsGradlePlugin implements Plugin<Project> {
                 c.groovyOptions.optimizationOptions.indy = indyEnabled
 
                 if (preserveParameterNames != null) {
+                    project.logger.info("Grails: Configuring Groovy compilation to preserve parameter names: {}", preserveParameterNames)
                     c.groovyOptions.parameters = preserveParameterNames
                 }
             }

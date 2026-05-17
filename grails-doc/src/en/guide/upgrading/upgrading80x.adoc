@@ -677,7 +677,35 @@ class MyTagLibSpec extends Specification implements TagLibUnitTest<MyTagLib> {
 }
 ----
 
-==== 21. Known Plugin Incompatibilities
+==== 21. Grails Gradle Extension Preserves Parameter Names By Default
+
+In Grails 8, the Grails Gradle extension defaults `preserveParameterNames` to `true`.
+This configures Groovy compilation to retain method and constructor parameter names in generated class files.
+
+This behavior supports framework features that bind by parameter name, including method-based TagLib handlers annotated with `@grails.gsp.Tag`:
+
+[source,groovy]
+----
+import grails.gsp.Tag
+
+class DemoTagLib {
+    @Tag
+    def greeting(String name) {
+        out << "Hello, ${name}!"
+    }
+}
+----
+
+If you need the previous Groovy compiler behavior, disable it in `build.gradle`:
+
+[source,groovy]
+----
+grails {
+    preserveParameterNames = false
+}
+----
+
+==== 22. Known Plugin Incompatibilities
 
 Some third-party plugins have not yet been updated for Spring Boot 4 / Spring Framework 7 compatibility.
 The following are known blockers at this time:
@@ -690,7 +718,7 @@ Applications using `grails-sitemesh3` should remain on the `grails-layout` plugi
 
 Check the https://github.com/apache/grails-core/issues[Grails issue tracker] for the latest status of plugin compatibility.
 
-===== 22. Custom JSON View Converters
+===== 23. Custom JSON View Converters
 
 JSON views now use Groovy's `groovy.json.JsonGenerator` implementation instead of the previous Grails-specific
 JSON generator infrastructure.
