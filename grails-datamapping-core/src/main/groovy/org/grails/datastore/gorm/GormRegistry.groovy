@@ -234,7 +234,7 @@ class GormRegistry {
     /**
      * Internal method to avoid ambiguity.
      */
-    private Datastore getDatastoreByString(String className, String qualifier) {
+    Datastore getDatastoreByString(String className, String qualifier) {
         return getDatastoreDirect(className != null ? normalizeEntityKey(className) : null, normalizeQualifier(qualifier))
     }
 
@@ -249,14 +249,7 @@ class GormRegistry {
      * Finds a datastore for a specific entity class and qualifier.
      */
     Datastore getDatastore(Class entityClass, String qualifier) {
-        return getDatastoreByString(normalizeEntityKey(entityClass), qualifier)
-    }
-
-    /**
-     * Finds a datastore for an entity and qualifier.
-     */
-    Datastore getDatastore(String className, String qualifier) {
-        return getDatastoreByString(className, qualifier)
+        return getDatastoreByString(entityClass != null ? normalizeEntityKey(entityClass) : (String) null, qualifier)
     }
 
     /**
@@ -293,6 +286,15 @@ class GormRegistry {
      */
     void registerDatastore(Datastore datastore) {
         initializeDatastore(datastore)
+    }
+
+    /**
+     * Registers a datastore by its type.
+     */
+    void registerDatastoreByType(Datastore datastore) {
+        if (datastore == null) return
+        datastoresByType.put(datastore.getClass(), datastore)
+        allDatastores.add(datastore)
     }
 
     /**

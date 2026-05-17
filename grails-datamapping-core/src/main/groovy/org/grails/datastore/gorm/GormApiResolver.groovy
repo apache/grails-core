@@ -126,7 +126,7 @@ class GormApiResolver {
 
     private String findTenantId(Class entity) {
         if (entity != null && MultiTenant.isAssignableFrom(entity)) {
-            Datastore defaultDatastore = registry.getDatastore(entity.name, ConnectionSource.DEFAULT)
+            Datastore defaultDatastore = registry.getDatastoreByString(entity.name, ConnectionSource.DEFAULT)
             if (defaultDatastore instanceof MultiTenantCapableDatastore) {
                 MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore) defaultDatastore
                 try {
@@ -213,12 +213,12 @@ class QualifiedDatastoreSelector {
             return (Datastore) resource
         }
 
-        Datastore ds = registry.getDatastore(className, qualifier)
+        Datastore ds = registry.getDatastoreByString(className, qualifier)
         if (ds != null) {
             return ds
         }
 
-        Datastore defaultDs = registry.getDatastore(className, ConnectionSource.DEFAULT)
+        Datastore defaultDs = registry.getDatastoreByString(className, ConnectionSource.DEFAULT)
         if (defaultDs instanceof MultipleConnectionSourceCapableDatastore) {
             try {
                 stateRegistry.setResolvingDatastoreDepth(depth + 1)
