@@ -23,7 +23,7 @@ import grails.gorm.DetachedCriteria
 import grails.gorm.transactions.ReadOnly
 
 /**
- * Demonstrates the two Groovy extension modules via {@link grails.gorm.DetachedCriteria}.
+ * Demonstrates the two Groovy extension modules via GORM criteria builders.
  *
  * <ul>
  *   <li>{@code CriteriaBuilderExtensions.eqIf}: conditional equality added to
@@ -50,15 +50,15 @@ class ProductSearchService {
     }
 
     /**
-     * Uses an explicit detached criteria with {@code numberLike} to match products
+     * Uses an explicit Hibernate criteria builder with {@code numberLike} to match products
      * by a price string pattern (e.g. {@code '4%'} matches 4.99 and 49.99).
      *
      * On H2 falls back to {@code cast(col as varchar) like ?}; on Oracle/PostgreSQL uses
      * {@code trim(to_char(trunc(...))) like ?}.
      */
     List<Product> findByPriceLike(String pricePattern) {
-        new DetachedCriteria(Product).build {
+        Product.createCriteria().list {
             numberLike 'price', pricePattern
-        }.list() as List<Product>
+        } as List<Product>
     }
 }
