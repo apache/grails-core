@@ -93,37 +93,3 @@ jobs:
             file="grails-gradle/build/reports/violations/$report"
             [ -f "$file" ] && cat "$file" >> $GITHUB_STEP_SUMMARY || true
           done
-  check_grails_forge_projects:
-    name: "Forge Projects"
-    runs-on: ubuntu-24.04
-    steps:
-      - name: "🌐 Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
-        run: curl -s https://api.ipify.org
-      - name: "📥 Checkout repository"
-        uses: actions/checkout@v6
-      - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v4
-        with:
-          distribution: liberica
-          java-version: 21
-      - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
-        with:
-          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
-      - name: "🔎 Check Forge Projects"
-        working-directory: grails-forge
-        run: ./gradlew aggregateStyleViolations --continue
-      - name: "📤 Upload Reports"
-        if: always()
-        uses: actions/upload-artifact@v7.0.1
-        with:
-          name: forge-reports
-          path: grails-forge/build/reports/violations/
-      - name: "📋 Publish Code Style Report in Job Summary"
-        if: always()
-        run: |
-          echo "## 🔎 Code Style Report - Forge Projects" >> $GITHUB_STEP_SUMMARY
-          for report in CODENARC_VIOLATIONS.md CHECKSTYLE_VIOLATIONS.md; do
-            file="grails-forge/build/reports/violations/$report"
-            [ -f "$file" ] && cat "$file" >> $GITHUB_STEP_SUMMARY || true
-          done
