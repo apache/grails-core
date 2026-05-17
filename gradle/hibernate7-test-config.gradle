@@ -51,7 +51,6 @@ tasks.withType(Test).configureEach {
         exceptionFormat = 'full'
         showCauses = true
         showStackTraces = true
-        showStandardStreams = true
 
         // set options for log level DEBUG and INFO
         debug {
