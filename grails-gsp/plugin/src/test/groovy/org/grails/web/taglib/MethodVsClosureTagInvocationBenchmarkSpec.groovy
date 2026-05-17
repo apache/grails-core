@@ -19,6 +19,7 @@
 package org.grails.web.taglib
 
 import grails.artefact.Artefact
+import grails.gsp.Tag
 import grails.testing.web.taglib.TagLibUnitTest
 import spock.lang.Specification
 
@@ -74,6 +75,7 @@ class MethodVsClosureBenchmarkTagLib {
         out << attrs.value
     }
 
+    @Tag
     def methodTag(String value) {
         out << value
     }
