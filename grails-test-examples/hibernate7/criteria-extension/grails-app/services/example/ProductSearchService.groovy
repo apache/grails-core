@@ -27,9 +27,10 @@ import grails.gorm.transactions.ReadOnly
  *
  * <ul>
  *   <li>{@code CriteriaBuilderExtensions.eqIf}: conditional equality added to
- *       {@link grails.gorm.CriteriaBuilder}. Called inside {@code DetachedCriteria.build}.</li>
+ *       {@link org.grails.datastore.mapping.query.api.Criteria}. Called inside
+ *       {@code DetachedCriteria.build}.</li>
  *   <li>{@code HibernateCriteriaBuilderExtensions.numberLike}: number-to-string LIKE added to
- *       {@link org.grails.orm.hibernate.query.AbstractHibernateCriteriaBuilder}.
+ *       {@link org.grails.datastore.gorm.query.criteria.AbstractDetachedCriteria}.
  *       Called inside a detached criteria builder closure.</li>
  * </ul>
  */

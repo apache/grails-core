@@ -21,7 +21,11 @@ package org.grails.orm.hibernate.query;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.ServiceLoader;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import jakarta.persistence.criteria.AbstractQuery;
@@ -55,6 +59,88 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyPrope
  * @since 7.0.0
  */
 public class PredicateGenerator {
+
+    /**
+     * Extension point for user-defined criterion handlers. Register a handler for a custom
+     * {@link Query.Criterion} subclass to have it converted to a JPA {@link Predicate} during
+     * query execution. Registered handlers are checked first, before any built-in criterion
+     * handling, so a handler can also override built-in behavior.
+     *
+     * <p>Example registration (e.g., in {@code BootStrap.groovy}):
+     * <pre>
+     *     PredicateGenerator.registerCriterionHandler(MyCustomCriterion) { query, root, cb, criterion -&gt;
+     *         def c = criterion as MyCustomCriterion
+     *         cb.like(cb.cast(root.get(c.property), String), c.value)
+     *     }
+     * </pre>
+     *
+     * @param <C> the specific criterion type
+     */
+    @FunctionalInterface
+    public interface CriterionHandler {
+        Predicate handle(
+            AbstractQuery<?> criteriaQuery,
+            From<?, ?> root,
+            HibernateCriteriaBuilder criteriaBuilder,
+            Query.Criterion criterion
+        );
+    }
+
+    /**
+     * SPI for contributing a {@link CriterionHandler} via {@link ServiceLoader}.
+     *
+     * <p>Create an implementation and register it in
+     * {@code META-INF/services/org.grails.orm.hibernate.query.PredicateGenerator$CriterionHandlerProvider}
+     * so that it is discovered automatically on first query execution — no BootStrap registration needed.
+     *
+     * <pre>
+     *     // Example implementation (Groovy)
+     *     class MyHandlerProvider implements PredicateGenerator.CriterionHandlerProvider {
+     *         Class&lt;? extends Query.Criterion&gt; criterionType() { MyCriterion }
+     *         PredicateGenerator.CriterionHandler criterionHandler() {
+     *             { query, root, cb, criterion -&gt; ... } as PredicateGenerator.CriterionHandler
+     *         }
+     *     }
+     * </pre>
+     */
+    public interface CriterionHandlerProvider {
+        Class<? extends Query.Criterion> criterionType();
+        CriterionHandler criterionHandler();
+    }
+
+    public static final Map<Class<? extends Query.Criterion>, CriterionHandler> CUSTOM_HANDLERS =
+        new ConcurrentHashMap<>();
+
+    private static final AtomicBoolean SERVICE_LOADERS_INITIALIZED = new AtomicBoolean(false);
+
+    private static void loadServiceProviders() {
+        if (SERVICE_LOADERS_INITIALIZED.compareAndSet(false, true)) {
+            ServiceLoader.load(CriterionHandlerProvider.class,
+                    Thread.currentThread().getContextClassLoader())
+                .forEach(p -> CUSTOM_HANDLERS.putIfAbsent(p.criterionType(), p.criterionHandler()));
+        }
+    }
+
+    /**
+     * Registers a {@link CriterionHandler} for the given criterion type. The handler is called
+     * before any built-in criterion logic when a criterion of exactly that type is encountered.
+     * Programmatic registration takes precedence over {@link ServiceLoader}-discovered handlers.
+     *
+     * @param type    the exact criterion class to handle
+     * @param handler the handler that converts the criterion to a JPA {@link Predicate}
+     */
+    public static void registerCriterionHandler(Class<? extends Query.Criterion> type, CriterionHandler handler) {
+        CUSTOM_HANDLERS.put(type, handler);
+    }
+
+    /**
+     * Removes all registered custom criterion handlers and resets the ServiceLoader flag.
+     * Useful for test cleanup.
+     */
+    public static void clearCustomCriterionHandlers() {
+        CUSTOM_HANDLERS.clear();
+        SERVICE_LOADERS_INITIALIZED.set(false);
+    }
 
     private final HibernateCriteriaBuilder criteriaBuilder;
     private final ConversionService conversionService;
@@ -90,6 +176,15 @@ public class PredicateGenerator {
             JpaQueryContext fromsByProvider,
             GrailsHibernatePersistentEntity entity,
             Query.QueryElement criterion) {
+
+        loadServiceProviders();
+
+        if (criterion instanceof Query.Criterion c) {
+            CriterionHandler customHandler = CUSTOM_HANDLERS.get(c.getClass());
+            if (customHandler != null) {
+                return customHandler.handle(criteriaQuery, root, criteriaBuilder, c);
+            }
+        }
 
         if (criterion instanceof Query.Junction junction) {
             return handleJunction(criteriaQuery, root, fromsByProvider, entity, junction);
