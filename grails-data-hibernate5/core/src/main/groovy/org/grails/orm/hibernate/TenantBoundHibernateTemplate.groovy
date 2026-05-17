@@ -19,6 +19,7 @@
 package org.grails.orm.hibernate
 
 import groovy.transform.CompileStatic
+import org.hibernate.Criteria
 import org.hibernate.LockMode
 import org.hibernate.SessionFactory
 import org.hibernate.query.Query
@@ -47,16 +48,9 @@ class TenantBoundHibernateTemplate implements IHibernateTemplate {
     }
 
     @Override
-    void persist(Object o) {
-        Tenants.withId(datastore, tenantId) {
-            delegate.persist(o)
-        }
-    }
-
-    @Override
-    Object merge(Object o) {
-        return Tenants.withId(datastore, tenantId) {
-            delegate.merge(o)
+    Serializable save(Object o) {
+        return (Serializable) Tenants.withId(datastore, tenantId) {
+            delegate.save(o)
         }
     }
 
@@ -95,13 +89,13 @@ class TenantBoundHibernateTemplate implements IHibernateTemplate {
     }
 
     @Override
-    int getFlushMode() {
-        delegate.getFlushMode()
+    void setFlushMode(int mode) {
+        delegate.setFlushMode(mode)
     }
 
     @Override
-    void setFlushMode(int mode) {
-        delegate.setFlushMode(mode)
+    int getFlushMode() {
+        delegate.getFlushMode()
     }
 
     @Override
@@ -112,8 +106,13 @@ class TenantBoundHibernateTemplate implements IHibernateTemplate {
     }
 
     @Override
-    void applySettings(Query<?> query) {
+    void applySettings(Query query) {
         delegate.applySettings(query)
+    }
+
+    @Override
+    void applySettings(Criteria criteria) {
+        delegate.applySettings(criteria)
     }
 
     @Override
@@ -138,9 +137,16 @@ class TenantBoundHibernateTemplate implements IHibernateTemplate {
     }
 
     @Override
-    void remove(Object o) {
+    <T> T lock(Class<T> type, Serializable key, LockMode mode) {
+        return (T) Tenants.withId(datastore, tenantId) {
+            delegate.lock(type, key, mode)
+        }
+    }
+
+    @Override
+    void delete(Object o) {
         Tenants.withId(datastore, tenantId) {
-            delegate.remove(o)
+            delegate.delete(o)
         }
     }
 
@@ -150,22 +156,29 @@ class TenantBoundHibernateTemplate implements IHibernateTemplate {
     }
 
     @Override
+    <T> T execute(GrailsHibernateTemplate.HibernateCallback<T> action) {
+        return (T) Tenants.withId(datastore, tenantId) {
+            delegate.execute(action)
+        }
+    }
+
+    @Override
     <T> T execute(Closure<T> callable) {
-        return Tenants.withId(datastore, tenantId) {
+        return (T) Tenants.withId(datastore, tenantId) {
             delegate.execute(callable)
         }
     }
 
     @Override
     <T> T executeWithNewSession(Closure<T> callable) {
-        return Tenants.withId(datastore, tenantId) {
+        return (T) Tenants.withId(datastore, tenantId) {
             delegate.executeWithNewSession(callable)
         }
     }
 
     @Override
     <T1> T1 executeWithExistingOrCreateNewSession(SessionFactory sessionFactory, Closure<T1> callable) {
-        return Tenants.withId(datastore, tenantId) {
+        return (T1) Tenants.withId(datastore, tenantId) {
             delegate.executeWithExistingOrCreateNewSession(sessionFactory, callable)
         }
     }

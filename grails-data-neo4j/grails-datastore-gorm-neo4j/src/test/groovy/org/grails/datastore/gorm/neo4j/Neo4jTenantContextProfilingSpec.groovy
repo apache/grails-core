@@ -16,7 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.datastore.gorm.mongo.api
+package org.grails.datastore.gorm.neo4j
 
 import grails.gorm.MultiTenant
 import grails.gorm.multitenancy.Tenants
@@ -27,10 +27,10 @@ import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.model.MappingContext
-import org.bson.Document
+import org.grails.datastore.gorm.neo4j.api.Neo4jGormStaticApi
 import spock.lang.Specification
 
-class MongoTenantContextProfilingSpec extends Specification {
+class Neo4jTenantContextProfilingSpec extends Specification {
 
     void setup() {
         GormRegistry.instance.reset()
@@ -40,7 +40,7 @@ class MongoTenantContextProfilingSpec extends Specification {
         GormRegistry.instance.reset()
     }
 
-    void "profile mongo tenant wrapping overhead"() {
+    void "profile neo4j tenant wrapping overhead"() {
         given:
         def mappingContext = Stub(MappingContext)
         def datastore = Stub(MultiTenantCapableDatastore) {
@@ -52,14 +52,7 @@ class MongoTenantContextProfilingSpec extends Specification {
         def registry = GormRegistry.instance
         registry.registerDatastore("default", datastore)
         
-        def persistentEntity = Stub(org.grails.datastore.mapping.model.PersistentEntity) {
-            isMultiTenant() >> true
-            getTenantId() >> Stub(org.grails.datastore.mapping.model.PersistentProperty) {
-                getName() >> "tenantId"
-            }
-        }
-        
-        def staticApi = new DummyMongoStaticApi(TenantEntity, mappingContext, datastore, persistentEntity)
+        def staticApi = new DummyNeo4jStaticApi(TenantEntity, datastore)
         def ops = new TenantDelegatingGormOperations<TenantEntity>((Datastore) datastore, "tenant1", staticApi)
         def qualifiedApi = staticApi.forQualifier("tenant1")
         
@@ -88,28 +81,10 @@ class MongoTenantContextProfilingSpec extends Specification {
         }
         long endBlock = System.currentTimeMillis()
 
-        and: "Calling internal wrapping logic directly (wrapped vs pre-bound)"
-        def filter = new Document()
-        long startInternalWrapped = System.currentTimeMillis()
-        Tenants.withId((MultiTenantCapableDatastore) datastore, "tenant1") {
-            for (int i = 0; i < iterations; i++) {
-                staticApi.wrapFilterWithMultiTenancy(filter)
-            }
-        }
-        long endInternalWrapped = System.currentTimeMillis()
-
-        long startInternalPrebound = System.currentTimeMillis()
-        for (int i = 0; i < iterations; i++) {
-            qualifiedApi.wrapFilterWithMultiTenancy(filter)
-        }
-        long endInternalPrebound = System.currentTimeMillis()
-
         then:
-        println "Mongo Single block wrapped operations: ${endBlock - startBlock} ms"
-        println "Mongo Qualified API operations: ${endQualified - startQualified} ms"
-        println "Mongo Per-method wrapped operations: ${endWrapped - startWrapped} ms"
-        println "Mongo Internal wrapFilter (wrapped): ${endInternalWrapped - startInternalWrapped} ms"
-        println "Mongo Internal wrapFilter (pre-bound): ${endInternalPrebound - startInternalPrebound} ms"
+        println "Neo4j Single block wrapped operations: ${endBlock - startBlock} ms"
+        println "Neo4j Qualified API operations: ${endQualified - startQualified} ms"
+        println "Neo4j Per-method wrapped operations: ${endWrapped - startWrapped} ms"
         
         true
     }
@@ -118,14 +93,11 @@ class MongoTenantContextProfilingSpec extends Specification {
         Long id
     }
 
-    static class DummyMongoStaticApi extends MongoStaticApi<TenantEntity> {
-        private final org.grails.datastore.mapping.model.PersistentEntity persistentEntityStub
-
-        DummyMongoStaticApi(Class<TenantEntity> persistentClass, MappingContext mappingContext, MultiTenantCapableDatastore datastore, org.grails.datastore.mapping.model.PersistentEntity persistentEntityStub, String qualifier = "default") {
-            super(persistentClass, mappingContext, [], new org.grails.datastore.gorm.DatastoreResolver() {
+    static class DummyNeo4jStaticApi extends Neo4jGormStaticApi<TenantEntity> {
+        DummyNeo4jStaticApi(Class<TenantEntity> persistentClass, MultiTenantCapableDatastore datastore) {
+            super(persistentClass, (Neo4jDatastore) datastore, [], new org.grails.datastore.gorm.DatastoreResolver() {
                 @Override org.grails.datastore.mapping.core.Datastore resolve() { return (Datastore) datastore }
-            }, qualifier)
-            this.persistentEntityStub = persistentEntityStub
+            })
         }
 
         @Override
@@ -135,17 +107,7 @@ class MongoTenantContextProfilingSpec extends Specification {
 
         @Override
         org.grails.datastore.gorm.GormStaticApi<TenantEntity> forQualifier(String qualifier) {
-            return new DummyMongoStaticApi(persistentClass, mappingContext, (MultiTenantCapableDatastore)datastore, persistentEntityStub, qualifier)
-        }
-
-        @Override
-        public org.bson.conversions.Bson wrapFilterWithMultiTenancy(org.bson.conversions.Bson filter) {
-            return super.wrapFilterWithMultiTenancy(filter)
-        }
-
-        @Override
-        org.grails.datastore.mapping.model.PersistentEntity getGormPersistentEntity() {
-            return persistentEntityStub
+            return this
         }
     }
 }

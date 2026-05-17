@@ -104,12 +104,13 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         return this.@qualifier
     }
 
-    protected GrailsHibernateTemplate getHibernateTemplate() {
-        if (this.hibernateTemplate == null) {
-            HibernateDatastore datastore = getHibernateDatastore()
-            this.hibernateTemplate = (GrailsHibernateTemplate) datastore.getHibernateTemplate()
+    protected IHibernateTemplate getHibernateTemplate() {
+        IHibernateTemplate template = (IHibernateTemplate) getHibernateDatastore().getHibernateTemplate()
+        String connectionName = getHibernateDatastore().connectionSources.defaultConnectionSource.name
+        if (qualifier != null && !connectionName.equals(qualifier) && !org.grails.datastore.mapping.core.connections.ConnectionSource.DEFAULT.equals(qualifier) && getHibernateDatastore().getMultiTenancyMode() == org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
+            return new TenantBoundHibernateTemplate(template, (Serializable)qualifier, getHibernateDatastore())
         }
-        return hibernateTemplate
+        return template
     }
 
     @Override

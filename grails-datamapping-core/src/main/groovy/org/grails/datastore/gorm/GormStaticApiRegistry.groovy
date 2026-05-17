@@ -19,7 +19,9 @@
 package org.grails.datastore.gorm
 
 import groovy.transform.CompileStatic
+import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.model.MappingContext
 
 @CompileStatic
 class GormStaticApiRegistry extends AbstractGormApiRegistry<GormStaticApi> {
@@ -30,7 +32,14 @@ class GormStaticApiRegistry extends AbstractGormApiRegistry<GormStaticApi> {
 
     @Override
     protected GormStaticApi qualify(GormStaticApi api, String qualifier) {
-        return api.forQualifier(qualifier)
+        Class persistentClass = api.persistentClass
+        Datastore datastore = registry.getDatastore(persistentClass, qualifier)
+        if (datastore == null) {
+            return api
+        }
+        MappingContext mappingContext = datastore.mappingContext
+        DatastoreResolver resolver = registry.createClassDatastoreResolver(persistentClass, qualifier)
+        return registry.getApiFactory(datastore).createStaticApi(persistentClass, mappingContext, resolver, qualifier, registry)
     }
 
     <D> GormStaticApi<D> findStaticApi(Class<D> entity, String qualifier = null) {

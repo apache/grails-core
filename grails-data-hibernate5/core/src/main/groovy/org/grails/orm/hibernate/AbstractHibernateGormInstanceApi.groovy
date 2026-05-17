@@ -97,7 +97,12 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     }
 
     protected IHibernateTemplate getHibernateTemplate() {
-        return (IHibernateTemplate) getHibernateDatastore().getHibernateTemplate()
+        IHibernateTemplate template = (IHibernateTemplate) getHibernateDatastore().getHibernateTemplate()
+        String connectionName = getHibernateDatastore().connectionSources.defaultConnectionSource.name
+        if (qualifier != null && !connectionName.equals(qualifier) && !org.grails.datastore.mapping.core.connections.ConnectionSource.DEFAULT.equals(qualifier) && getHibernateDatastore().getMultiTenancyMode() == org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
+            return new TenantBoundHibernateTemplate(template, (Serializable)qualifier, getHibernateDatastore())
+        }
+        return template
     }
 
     protected ProxyHandler getProxyHandler() {

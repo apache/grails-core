@@ -93,48 +93,12 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     }
 
     @Override
-    protected <T1> T1 execute(SessionCallback<T1> callback) {
-        Datastore ds = getDatastore()
-        if (ds == null) {
-            throw new IllegalStateException('Cannot execute session callback with null datastore')
+    protected <T1> T1 executeQualified(String qualifier, SessionCallback<T1> callback) {
+        GormStaticApi<D> qualifiedApi = registry.findStaticApi(persistentClass, qualifier)
+        if (qualifiedApi != null && qualifiedApi != this) {
+            return qualifiedApi.execute(callback)
         }
-        if (qualifier != null && !ConnectionSource.DEFAULT.equals(qualifier) && ds instanceof MultiTenantCapableDatastore && ((MultiTenantCapableDatastore)ds).getMultiTenancyMode() == org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
-            String connectionName = ConnectionSource.DEFAULT
-            if (ds instanceof org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore) {
-                connectionName = ((org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore) ds).connectionSources.defaultConnectionSource.name
-            }
-            if (!connectionName.equals(qualifier)) {
-                return Tenants.withId((MultiTenantCapableDatastore)ds, (Serializable)qualifier) {
-                    DatastoreUtils.execute(ds, callback)
-                }
-            }
-        }
-        return DatastoreUtils.execute(ds, callback)
-    }
-
-    @Override
-    protected void execute(org.grails.datastore.mapping.core.VoidSessionCallback callback) {
-        Datastore ds = getDatastore()
-        if (ds == null) {
-            throw new IllegalStateException('Cannot execute session callback with null datastore')
-        }
-        if (qualifier != null && !ConnectionSource.DEFAULT.equals(qualifier) && ds instanceof MultiTenantCapableDatastore && ((MultiTenantCapableDatastore)ds).getMultiTenancyMode() == org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
-            String connectionName = ConnectionSource.DEFAULT
-            if (ds instanceof org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore) {
-                connectionName = ((org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore) ds).connectionSources.defaultConnectionSource.name
-            }
-            if (!connectionName.equals(qualifier)) {
-                Tenants.withId((MultiTenantCapableDatastore)ds, (Serializable)qualifier) {
-                    DatastoreUtils.execute(ds, callback)
-                }
-            }
-            else {
-                DatastoreUtils.execute(ds, callback)
-            }
-        }
-        else {
-            DatastoreUtils.execute(ds, callback)
-        }
+        return DatastoreUtils.execute(getDatastore(), callback)
     }
 
     @Override
@@ -172,7 +136,9 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
         Object[] argsArray = (args instanceof Object[]) ? (Object[]) args : ([args] as Object[])
         for (FinderMethod fm : finders) {
             if (fm.isMethodMatch(name)) {
-                return fm.invoke(persistentClass, name, argsArray)
+                return execute({ Session session ->
+                    fm.invoke(persistentClass, name, argsArray)
+                } as SessionCallback)
             }
         }
         throw new MissingMethodException(name, persistentClass, argsArray)
@@ -183,7 +149,9 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
         for (FinderMethod fm : finders) {
             if (fm.isMethodMatch(name)) {
                 return { Object... args ->
-                    methodMissing(name, args)
+                    execute({ Session session ->
+                        fm.invoke(persistentClass, name, args)
+                    } as SessionCallback)
                 }
             }
         }

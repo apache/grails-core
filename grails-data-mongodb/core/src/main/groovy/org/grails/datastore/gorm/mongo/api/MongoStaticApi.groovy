@@ -59,6 +59,7 @@ import org.grails.datastore.mapping.mongo.MongoCodecSession
 import org.grails.datastore.mapping.mongo.MongoDatastore
 import org.grails.datastore.mapping.mongo.query.MongoQuery
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
+import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 
 /**
@@ -331,11 +332,17 @@ class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D
     }
 
     protected Bson wrapFilterWithMultiTenancy(Bson filter) {
-        MongoDatastore mongoDatastore = (MongoDatastore) datastore
+        MultiTenantCapableDatastore mongoDatastore = (MultiTenantCapableDatastore) datastore
         PersistentEntity persistentEntity = getGormPersistentEntity()
         if (mongoDatastore.multiTenancyMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR && persistentEntity.isMultiTenant()) {
+            Serializable tenantId
+            if (qualifier != null && qualifier != ConnectionSource.DEFAULT) {
+                tenantId = qualifier
+            } else {
+                tenantId = Tenants.currentId((Class<Datastore>) datastore.getClass())
+            }
             filter = Filters.and(
-                    Filters.eq(MappingUtils.getTargetKey(persistentEntity.tenantId), Tenants.currentId((Class<Datastore>) datastore.getClass())),
+                    Filters.eq(MappingUtils.getTargetKey(persistentEntity.tenantId), tenantId),
                     filter
             )
         }
@@ -344,11 +351,17 @@ class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D
 
     private List<Bson> preparePipeline(List pipeline) {
         List<Bson> newPipeline = new ArrayList<Bson>()
-        MongoDatastore mongoDatastore = (MongoDatastore) datastore
+        MultiTenantCapableDatastore mongoDatastore = (MultiTenantCapableDatastore) datastore
         PersistentEntity persistentEntity = getGormPersistentEntity()
         if (mongoDatastore.multiTenancyMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR && persistentEntity.isMultiTenant()) {
+            Serializable tenantId
+            if (qualifier != null && qualifier != ConnectionSource.DEFAULT) {
+                tenantId = qualifier
+            } else {
+                tenantId = Tenants.currentId((Class<Datastore>) datastore.getClass())
+            }
             newPipeline.add(
-                    Aggregates.match(Filters.eq(MappingUtils.getTargetKey(persistentEntity.tenantId), Tenants.currentId((Class<Datastore>) datastore.getClass())))
+                    Aggregates.match(Filters.eq(MappingUtils.getTargetKey(persistentEntity.tenantId), tenantId))
             )
         }
         for (o in pipeline) {

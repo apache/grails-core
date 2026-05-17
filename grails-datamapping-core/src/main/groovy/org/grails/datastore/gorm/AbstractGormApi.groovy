@@ -27,8 +27,20 @@ import groovy.transform.CompileStatic
 
 import org.grails.datastore.gorm.utils.ReflectionUtils
 import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
+
+import org.grails.datastore.mapping.core.DatastoreUtils
+import org.grails.datastore.mapping.core.SessionCallback
+import org.grails.datastore.mapping.core.VoidSessionCallback
+import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
+import org.grails.datastore.mapping.core.connections.ConnectionSources
+import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
+import grails.gorm.multitenancy.CurrentTenantHolder
+import grails.gorm.multitenancy.Tenants
+import grails.gorm.MultiTenant
 
 /**
  * Abstract base class for GORM API objects
@@ -48,17 +60,79 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
     private static final Map<Class, List<Method>> EXTENDED_METHODS_CACHE = new ConcurrentHashMap<>()
 
     protected Class<D> persistentClass
+    protected final GormRegistry registry
+    protected final String qualifier
+    protected MappingContext mappingContext
     private List<Method> methods
     private List<Method> extendedMethods
 
     AbstractGormApi(Class<D> persistentClass, Datastore datastore) {
+        this(persistentClass, datastore, (GormRegistry) null)
+    }
+
+    AbstractGormApi(Class<D> persistentClass, Datastore datastore, GormRegistry registry) {
         super(datastore)
         this.persistentClass = persistentClass
+        this.registry = registry ?: GormRegistry.instance
+        this.qualifier = ConnectionSource.DEFAULT
+        this.mappingContext = datastore?.mappingContext
     }
 
     AbstractGormApi(Class<D> persistentClass, MappingContext mappingContext, DatastoreResolver datastoreResolver) {
+        this(persistentClass, mappingContext, datastoreResolver, (String) null, (GormRegistry) null)
+    }
+
+    AbstractGormApi(Class<D> persistentClass, MappingContext mappingContext, DatastoreResolver datastoreResolver, String qualifier, GormRegistry registry) {
         super(datastoreResolver)
         this.persistentClass = persistentClass
+        this.registry = registry ?: GormRegistry.instance
+        this.qualifier = qualifier ?: ConnectionSource.DEFAULT
+        this.mappingContext = mappingContext
+    }
+
+    @Override
+    protected <T1> T1 execute(SessionCallback<T1> callback) {
+        Datastore ds = getDatastore()
+        if (ds == null) {
+            throw new IllegalStateException('Cannot execute session callback with null datastore')
+        }
+
+        // Optimization: if no qualifier specified, check if a tenant is already bound
+        if (qualifier == null || ConnectionSource.DEFAULT.equals(qualifier)) {
+            if (ds instanceof MultiTenantCapableDatastore) {
+                Serializable tenantId = CurrentTenantHolder.get((MultiTenantCapableDatastore) ds)
+                if (tenantId != null) {
+                    // Try to use a pre-qualified API to skip redundant wrapping
+                    String tenantStr = tenantId.toString()
+                    return executeQualified(tenantStr, callback)
+                }
+            }
+        } else if (ds instanceof MultiTenantCapableDatastore && ((MultiTenantCapableDatastore)ds).getMultiTenancyMode() == org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
+            String connectionName = ConnectionSource.DEFAULT
+            if (ds instanceof ConnectionSourcesProvider) {
+                connectionName = ((ConnectionSourcesProvider) ds).getConnectionSources().getDefaultConnectionSource().getName()
+            }
+            if (!connectionName.equals(qualifier)) {
+                return Tenants.withId((MultiTenantCapableDatastore)ds, (Serializable)qualifier) {
+                    DatastoreUtils.execute(ds, callback)
+                }
+            }
+        }
+
+        return DatastoreUtils.execute(ds, callback)
+    }
+
+    protected abstract <T1> T1 executeQualified(String qualifier, SessionCallback<T1> callback)
+
+    @Override
+    protected void execute(VoidSessionCallback callback) {
+        execute(new SessionCallback<Object>() {
+            @Override
+            Object doInSession(Session session) {
+                callback.doInSession(session)
+                return null
+            }
+        })
     }
 
     /**

@@ -19,7 +19,9 @@
 package org.grails.datastore.gorm
 
 import groovy.transform.CompileStatic
+import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.model.MappingContext
 
 @CompileStatic
 class GormValidationApiRegistry extends AbstractGormApiRegistry<GormValidationApi> {
@@ -30,7 +32,14 @@ class GormValidationApiRegistry extends AbstractGormApiRegistry<GormValidationAp
 
     @Override
     protected GormValidationApi qualify(GormValidationApi api, String qualifier) {
-        return api.forQualifier(qualifier)
+        Class persistentClass = api.persistentClass
+        Datastore datastore = registry.getDatastore(persistentClass, qualifier)
+        if (datastore == null) {
+            return api
+        }
+        MappingContext mappingContext = datastore.mappingContext
+        DatastoreResolver resolver = registry.createClassDatastoreResolver(persistentClass, qualifier)
+        return registry.getApiFactory(datastore).createValidationApi(persistentClass, mappingContext, resolver, registry)
     }
 
     <D> GormValidationApi<D> findValidationApi(Class<D> entity, String qualifier = null) {

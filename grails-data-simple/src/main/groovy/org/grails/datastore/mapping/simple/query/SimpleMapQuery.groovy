@@ -79,9 +79,10 @@ class SimpleMapQuery extends Query {
             if (entity.isMultiTenant()) {
                 def currentTenantId = Tenants.currentId(datastoreInstance)
                 if (currentTenantId != null) {
+                    def tenantIdString = currentTenantId.toString()
                     entityMap = entityMap.findAll { entry ->
                         def entryTenantId = entry.value.get('tenantId')
-                        return entryTenantId == null || entryTenantId.toString() == currentTenantId.toString()
+                        return entryTenantId == null || entryTenantId.toString() == tenantIdString
                     }
                 }
             }
@@ -295,9 +296,10 @@ class SimpleMapQuery extends Query {
             if (entity.isMultiTenant()) {
                 def currentTenantId = Tenants.currentId(datastoreInstance)
                 if (currentTenantId != null) {
+                    def tenantIdString = currentTenantId.toString()
                     entityMap = entityMap.findAll { entry ->
                         def entryTenantId = entry.value.get('tenantId')
-                        return entryTenantId == null || entryTenantId.toString() == currentTenantId.toString()
+                        return entryTenantId == null || entryTenantId.toString() == tenantIdString
                     }
                 }
             }

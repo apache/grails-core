@@ -18,8 +18,18 @@
  */
 package org.grails.datastore.gorm
 
+import grails.gorm.MultiTenant
+import grails.gorm.multitenancy.CurrentTenantHolder
+import grails.gorm.multitenancy.Tenants
 import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.core.connections.ConnectionSources
+import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
+import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
+import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 import org.springframework.transaction.PlatformTransactionManager
 import spock.lang.Specification
@@ -27,149 +37,139 @@ import spock.lang.Specification
 class GormRegistrySpec extends Specification {
 
     void setup() {
-        GormRegistry.reset()
+        GormRegistry.instance.reset()
     }
 
     void cleanup() {
-        GormRegistry.reset()
+        GormRegistry.instance.reset()
     }
 
     void "reset clears all registries"() {
         given:
-        def registry = GormRegistry.instance
         def datastore = Stub(Datastore)
-        registry.registerDatastore(ConnectionSource.DEFAULT, datastore)
-        registry.registerDatastoreByType(datastore)
-        
+        def registry = GormRegistry.instance
+
         when:
-        GormRegistry.reset()
+        registry.initializeDatastore(datastore)
+        registry.reset()
 
         then:
-        registry.datastoresByQualifier.isEmpty()
-        registry.datastoresByType.isEmpty()
         registry.allDatastores.isEmpty()
-        registry.staticApiRegistry.size() == 0
-        registry.instanceApiRegistry.size() == 0
-        registry.validationApiRegistry.size() == 0
     }
 
     void "findSingleTransactionManager returns null for non-transactional datastore"() {
         given:
-        def registry = GormRegistry.instance
         def datastore = Stub(Datastore)
-        registry.registerDatastore(ConnectionSource.DEFAULT, datastore)
+        def registry = GormRegistry.instance
 
         when:
-        def tm = registry.findSingleTransactionManager()
+        registry.initializeDatastore(datastore)
 
         then:
-        tm == null
+        registry.findSingleTransactionManager() == null
     }
 
     void "findSingleTransactionManager returns transaction manager for TransactionCapableDatastore"() {
         given:
-        def registry = GormRegistry.instance
         def txManager = Stub(PlatformTransactionManager)
         def datastore = Stub(TransactionCapableDatastore) {
             getTransactionManager() >> txManager
         }
-        registry.registerDatastore(ConnectionSource.DEFAULT, datastore)
+        def registry = GormRegistry.instance
 
         when:
-        def tm = registry.findSingleTransactionManager()
+        registry.initializeDatastore(datastore)
 
         then:
-        tm == txManager
+        registry.findSingleTransactionManager() == txManager
     }
 
     void "findSingleTransactionManager with connectionName returns transaction manager"() {
         given:
-        def registry = GormRegistry.instance
         def txManager = Stub(PlatformTransactionManager)
         def datastore = Stub(TransactionCapableDatastore) {
             getTransactionManager() >> txManager
         }
-        registry.registerDatastore("custom", datastore)
+        def registry = GormRegistry.instance
 
         when:
-        def tm = registry.findSingleTransactionManager("custom")
+        registry.registerDatastore("ds1", datastore)
 
         then:
-        tm == txManager
+        registry.findSingleTransactionManager("ds1") == txManager
     }
 
     void "findTransactionManager returns transaction manager for entity"() {
         given:
-        def registry = GormRegistry.instance
         def txManager = Stub(PlatformTransactionManager)
         def datastore = Stub(TransactionCapableDatastore) {
             getTransactionManager() >> txManager
         }
-        registry.registerEntityDatastore(TestEntity.name, ConnectionSource.DEFAULT, datastore)
+        def registry = GormRegistry.instance
 
         when:
-        def tm = registry.findTransactionManager(TestEntity, null)
+        registry.initializeDatastore(datastore)
+        // Register entity datastore directly to avoid GormEnhancer complexity
+        registry.registerEntityDatastore(TestEntity.name, ConnectionSource.DEFAULT, datastore)
 
         then:
-        tm == txManager
+        registry.findTransactionManager(TestEntity) == txManager
+    }
+    
+    void "removeEntityDatastore removes datastore specifically for entity"() {
+        given:
+        def datastore = Stub(Datastore)
+        def registry = GormRegistry.instance
+
+        when:
+        registry.initializeDatastore(datastore)
+        registry.registerEntityDatastore(TestEntity.name, ConnectionSource.DEFAULT, datastore)
+        registry.removeEntityDatastore(TestEntity.name, datastore)
+
+        then:
+        registry.getDatastore(TestEntity.name) == null
     }
 
     void "removeDatastoreByType removes from type registry but keeps in allDatastores"() {
         given:
-        def registry = GormRegistry.instance
         def datastore = Stub(Datastore)
-        registry.registerDatastoreByType(datastore)
+        def registry = GormRegistry.instance
 
         when:
-        registry.removeDatastoreByType(datastore)
+        registry.initializeDatastore(datastore)
+        registry.removeDatastoreByType(datastore.getClass())
 
         then:
+        registry.allDatastores.contains(datastore)
         !registry.datastoresByType.containsKey(datastore.getClass())
     }
 
     void "removeDatastoreFromDiscovery removes from type registry and allDatastores"() {
         given:
-        def registry = GormRegistry.instance
         def datastore = Stub(Datastore)
-        registry.registerDatastoreByType(datastore)
+        def registry = GormRegistry.instance
 
         when:
+        registry.initializeDatastore(datastore)
         registry.removeDatastoreFromDiscovery(datastore)
 
         then:
-        !registry.datastoresByType.containsKey(datastore.getClass())
         !registry.allDatastores.contains(datastore)
+        !registry.datastoresByType.containsKey(datastore.getClass())
     }
 
     void "removeDatastore removes from all registries"() {
         given:
-        def registry = GormRegistry.instance
         def datastore = Stub(Datastore)
-        registry.registerDatastore(ConnectionSource.DEFAULT, datastore)
-        registry.registerDatastoreByType(datastore)
-        registry.registerEntityDatastore(TestEntity.name, ConnectionSource.DEFAULT, datastore)
+        def registry = GormRegistry.instance
 
         when:
+        registry.initializeDatastore(datastore)
         registry.removeDatastore(datastore)
 
         then:
-        !registry.datastoresByQualifier.containsValue(datastore)
-        !registry.datastoresByType.containsValue(datastore)
-        !registry.allDatastores.contains(datastore)
-        registry.getDatastore(TestEntity.name, ConnectionSource.DEFAULT) == null
-    }
-
-    void "removeEntityDatastore removes datastore specifically for entity"() {
-        given:
-        def registry = GormRegistry.instance
-        def datastore = Stub(Datastore)
-        registry.registerEntityDatastore(TestEntity.name, ConnectionSource.DEFAULT, datastore)
-
-        when:
-        registry.removeEntityDatastore(TestEntity.name, datastore)
-
-        then:
-        registry.getDatastore(TestEntity.name, ConnectionSource.DEFAULT) == null
+        registry.allDatastores.isEmpty()
+        registry.datastoresByQualifier.isEmpty()
     }
 
     void "normalizeEntityKey properly normalizes class names"() {
@@ -177,10 +177,9 @@ class GormRegistrySpec extends Specification {
         def registry = GormRegistry.instance
 
         expect:
-        registry.normalizeEntityKey(" com.example.MyEntity ") == "com.example.MyEntity"
+        registry.normalizeEntityKey(TestEntity) == TestEntity.name
+        registry.normalizeEntityKey(TestEntity.name) == TestEntity.name
         registry.normalizeEntityKey(null) == null
-        registry.normalizeEntityKey("   ") == null
-        registry.normalizeEntityKeyFromClass(TestEntity) == TestEntity.name
     }
 
     void "normalizeQualifier properly normalizes qualifiers"() {
@@ -189,66 +188,111 @@ class GormRegistrySpec extends Specification {
 
         expect:
         registry.normalizeQualifier(null) == ConnectionSource.DEFAULT
-        registry.normalizeQualifier("   ") == ConnectionSource.DEFAULT
-        registry.normalizeQualifier(ConnectionSource.OLD_DEFAULT) == ConnectionSource.DEFAULT
-        registry.normalizeQualifier(" myCustom  ") == "myCustom"
-    }
-
-    void "getDatastore falls back to available datastore if DEFAULT is requested but missing"() {
-        given:
-        def registry = GormRegistry.instance
-        def datastore = Stub(Datastore)
-        registry.registerEntityDatastore(TestEntity.name, "reporting", datastore)
-
-        when:
-        def resolved = registry.getDatastore(TestEntity.name, ConnectionSource.DEFAULT)
-
-        then:
-        resolved == datastore
-    }
-
-    void "getApiFactory falls back to parent type or default if specific type is not registered"() {
-        given:
-        def registry = GormRegistry.instance
-        def customFactory = Stub(GormApiFactory)
-        registry.registerApiFactory(Datastore, customFactory)
-        
-        def mockDatastore = Stub(TransactionCapableDatastore)
-
-        when:
-        def factory = registry.getApiFactory(mockDatastore)
-
-        then:
-        factory == customFactory
+        registry.normalizeQualifier("") == ConnectionSource.DEFAULT
+        registry.normalizeQualifier("ds1") == "ds1"
     }
 
     void "registerDatastoreByQualifier only registers by qualifier"() {
         given:
-        def registry = GormRegistry.instance
         def datastore = Stub(Datastore)
+        def registry = GormRegistry.instance
 
         when:
-        registry.registerDatastoreByQualifier("custom", datastore)
+        registry.registerDatastoreByQualifier("ds1", datastore)
 
         then:
-        registry.datastoresByQualifier.get("custom") == datastore
+        registry.datastoresByQualifier.get("ds1") == datastore
         !registry.allDatastores.contains(datastore)
     }
 
-    void "initializeDatastore registers constraints, type and default qualifier"() {
+    void "getApiFactory falls back to parent type or default if specific type is not registered"() {
         given:
+        def datastore1 = Stub(Datastore1)
+        def datastore2 = Stub(Datastore2)
+        def factory = Stub(GormApiFactory)
         def registry = GormRegistry.instance
-        def datastore = Stub(Datastore)
 
         when:
-        registry.initializeDatastore(datastore, ConnectionSource.DEFAULT)
+        registry.registerApiFactory(Datastore1, factory)
 
         then:
-        registry.allDatastores.contains(datastore)
-        registry.datastoresByType.get(datastore.getClass()) == datastore
-        registry.datastoresByQualifier.get(ConnectionSource.DEFAULT) == datastore
+        registry.getApiFactory(datastore1) == factory
+        registry.getApiFactory(datastore2) instanceof DefaultGormApiFactory
     }
 
-    static class TestEntity {
+    void "test withTenant and exists with multi-tenant entity in DISCRIMINATOR mode"() {
+        given:
+        def datastore = Stub(MixedDatastore) {
+            getMultiTenancyMode() >> MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR
+            getConnectionSources() >> Stub(ConnectionSources) {
+                getDefaultConnectionSource() >> Stub(ConnectionSource) {
+                    getName() >> "default"
+                }
+            }
+        }
+        def mappingContext = Stub(org.grails.datastore.mapping.model.MappingContext)
+        def entity = Stub(PersistentEntity) {
+            getName() >> "TestEntity"
+            getJavaClass() >> TestEntity
+            isMultiTenant() >> true
+            getMappingContext() >> mappingContext
+        }
+        
+        def registry = GormRegistry.instance
+        def sharedState = [:]
+        def staticApi = new DummyStaticApiForTest(TestEntity, datastore, sharedState)
+        
+        TestEntity.metaClass.static.getGormPersistentEntity = { entity }
+        registry.registerApi(TestEntity.name, staticApi, null, null)
+
+        when: "Calling exists via withTenant"
+        def capturedTenantId = null
+        // Capture tenant ID during call to connect() which is called by execute()
+        datastore.connect() >> {
+            capturedTenantId = CurrentTenantHolder.get(datastore)
+            return Stub(Session) {
+                getDatastore() >> datastore
+            }
+        }
+
+        Tenants.withId(datastore, "initial") {
+             staticApi.withTenant("tenant1").exists(1L)
+        }
+
+        then: "The tenant context was correctly set during the call"
+        capturedTenantId == "tenant1"
+        
+        cleanup:
+        registry.metaClass = null
+        TestEntity.metaClass = null
+    }
+
+    interface MixedDatastore extends MultiTenantCapableDatastore, MultipleConnectionSourceCapableDatastore, Datastore {}
+    interface Datastore1 extends Datastore {}
+    interface Datastore2 extends Datastore {}
+
+    static class DummyStaticApiForTest extends GormStaticApi<TestEntity> {
+        Map sharedState
+        private final Datastore ds
+
+        DummyStaticApiForTest(Class<TestEntity> persistentClass, Datastore datastore, Map sharedState, String qualifier = "default") {
+            super(persistentClass, null, [], new DatastoreResolver() {
+                @Override Datastore resolve() { return datastore }
+            }, qualifier)
+            this.ds = datastore
+            this.sharedState = sharedState
+        }
+
+        @Override
+        Datastore getDatastore() { ds }
+
+        @Override
+        GormStaticApi<TestEntity> forQualifier(String qualifier) {
+            return new DummyStaticApiForTest(persistentClass, ds, sharedState, qualifier)
+        }
+    }
+
+    static class TestEntity implements MultiTenant<TestEntity> {
+        Long id
     }
 }

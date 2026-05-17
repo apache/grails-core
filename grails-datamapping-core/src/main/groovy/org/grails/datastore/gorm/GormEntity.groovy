@@ -38,6 +38,11 @@ import org.grails.datastore.mapping.model.types.OneToMany
 import org.grails.datastore.mapping.model.types.ToOne
 import org.grails.datastore.mapping.query.api.BuildableCriteria
 import org.grails.datastore.mapping.query.api.Criteria
+import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
+import grails.gorm.multitenancy.CurrentTenantHolder
+import grails.gorm.multitenancy.Tenants
+import grails.gorm.MultiTenant
 import org.grails.datastore.mapping.reflect.EntityReflector
 
 /**
@@ -1477,12 +1482,14 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     }
 
     @Generated
-    private GormInstanceApi<D> currentGormInstanceApi() {
-        (GormInstanceApi<D>) GormRegistry.instance.findInstanceApi((Class<D>) getClass())
+    GormInstanceApi<D> currentGormInstanceApi() {
+        Class<D> cls = (Class<D>) getClass()
+        GormRegistry.instance.resolveInstanceApi(cls)
     }
 
     @Generated
-    private static GormStaticApi<D> currentGormStaticApi() {
-        return (GormStaticApi<D>) GormRegistry.instance.findStaticApi((Class<D>) this)
+    static GormStaticApi<D> currentGormStaticApi() {
+        Class<D> cls = (Class<D>) this
+        GormRegistry.instance.resolveStaticApi(cls)
     }
 }

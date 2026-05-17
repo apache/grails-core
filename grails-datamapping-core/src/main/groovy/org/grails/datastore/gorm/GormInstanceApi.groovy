@@ -97,6 +97,15 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
         return null
     }
 
+    @Override
+    protected <T1> T1 executeQualified(String qualifier, SessionCallback<T1> callback) {
+        GormInstanceApi<D> qualifiedApi = registry.findInstanceApi(persistentClass, qualifier)
+        if (qualifiedApi != null && qualifiedApi != this) {
+            return (T1) qualifiedApi.execute(callback)
+        }
+        return DatastoreUtils.execute(getDatastore(), callback)
+    }
+
     GormInstanceApi<D> forQualifier(String qualifier) {
         DatastoreResolver resolver = new DatastoreResolver() {
             @Override Datastore resolve() { registry.apiResolver.findDatastore(persistentClass, qualifier) }

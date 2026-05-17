@@ -18,12 +18,17 @@
  */
 package org.grails.datastore.gorm
 
+import groovy.transform.CompileDynamic
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
+import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
+import grails.gorm.multitenancy.CurrentTenantHolder
+import grails.gorm.MultiTenant
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.mapping.reflect.NameUtils
 import org.springframework.transaction.PlatformTransactionManager
@@ -50,20 +55,14 @@ class GormRegistry {
     private final GormStaticApiRegistry staticApiRegistry = new GormStaticApiRegistry(this)
     private final GormInstanceApiRegistry instanceApiRegistry = new GormInstanceApiRegistry(this)
     private final GormValidationApiRegistry validationApiRegistry = new GormValidationApiRegistry(this)
-    
-    // O(N) storage for Datastores (indexed by Qualifier)
+
     private final Map<String, Datastore> datastoresByQualifier = new ConcurrentHashMap<>()
-    
-    // Entity-specific overrides (for complex multi-datasource setups)
     private final Map<String, Map<String, Datastore>> entityDatastores = new ConcurrentHashMap<>()
     private final Map<Class, String> normalizedEntityKeysByClass = new ConcurrentHashMap<>()
     private final Map<String, String> normalizedEntityKeysByName = new ConcurrentHashMap<>()
     private final Map<String, String> normalizedQualifiers = new ConcurrentHashMap<>()
-
     private final Map<Class, Datastore> datastoresByType = new ConcurrentHashMap<>()
-    private final Map<Class<? extends Datastore>, GormApiFactory> apiFactoriesByDatastoreType = new ConcurrentHashMap<>()
-    
-    // Set of all active datastore instances
+    private final Map<Class, GormApiFactory> apiFactoriesByDatastoreType = new ConcurrentHashMap<>()
     private final Set<Datastore> allDatastores = Collections.newSetFromMap(new ConcurrentHashMap<Datastore, Boolean>())
 
     static GormRegistry getInstance() {
@@ -71,153 +70,189 @@ class GormRegistry {
     }
 
     /**
-     * Resets the global registry to a clean state.
+     * Resets the registry.
      */
     static void reset() {
-        // Clear MetaClasses to prevent stale GORM methods
-        def classNames = new HashSet<String>()
-        classNames.addAll(instance.staticApiRegistry.keySet())
-        classNames.addAll(instance.instanceApiRegistry.keySet())
-        classNames.addAll(instance.validationApiRegistry.keySet())
-        
-        for (className in classNames) {
-            try {
-                Class cls = Class.forName(className, false, Thread.currentThread().contextClassLoader)
-                if (cls != null) {
-                    GroovySystem.metaClassRegistry.removeMetaClass(cls)
-                }
-            } catch (Throwable e) {
-                // ignore
-            }
-        }
+        instance.resetInstance()
+    }
 
-        instance.staticApiRegistry.clear()
-        instance.instanceApiRegistry.clear()
-        instance.validationApiRegistry.clear()
-        instance.datastoresByQualifier.clear()
-        instance.entityDatastores.clear()
-        instance.normalizedEntityKeysByClass.clear()
-        instance.normalizedEntityKeysByName.clear()
-        instance.normalizedQualifiers.clear()
-        instance.datastoresByType.clear()
-        instance.allDatastores.clear()
-        instance.apiFactoriesByDatastoreType.clear()
+    private void resetInstance() {
+        staticApiRegistry.clear()
+        instanceApiRegistry.clear()
+        validationApiRegistry.clear()
+        datastoresByQualifier.clear()
+        entityDatastores.clear()
+        normalizedEntityKeysByClass.clear()
+        normalizedEntityKeysByName.clear()
+        normalizedQualifiers.clear()
+        datastoresByType.clear()
+        apiFactoriesByDatastoreType.clear()
+        allDatastores.clear()
+    }
+
+    @Deprecated
+    static <D> GormStaticApi<D> findStaticApi(Class<D> entity) {
+        instance.resolveStaticApi(entity, (String) null)
+    }
+
+    /**
+     * @deprecated Use {@code GormRegistry.getInstance().findStaticApi(entity, qualifier)}.
+     */
+    @Deprecated
+    static <D> GormStaticApi<D> findStaticApi(Class<D> entity, String qualifier) {
+        instance.resolveStaticApi(entity, qualifier)
+    }
+
+    /**
+     * @deprecated Use {@code GormRegistry.getInstance().findInstanceApi(entity, qualifier)}.
+     */
+    @Deprecated
+    static <D> GormInstanceApi<D> findInstanceApi(Class<D> entity) {
+        instance.resolveInstanceApi(entity, (String) null)
+    }
+
+    /**
+     * @deprecated Use {@code GormRegistry.getInstance().findInstanceApi(entity, qualifier)}.
+     */
+    @Deprecated
+    static <D> GormInstanceApi<D> findInstanceApi(Class<D> entity, String qualifier) {
+        instance.resolveInstanceApi(entity, qualifier)
+    }
+
+    /**
+     * @deprecated Use {@code GormRegistry.getInstance().findValidationApi(entity, qualifier)}.
+     */
+    @Deprecated
+    static <D> GormValidationApi<D> findValidationApi(Class<D> entity) {
+        instance.resolveValidationApi(entity, (String) null)
+    }
+
+    /**
+     * @deprecated Use {@code GormRegistry.getInstance().findValidationApi(entity, qualifier)}.
+     */
+    @Deprecated
+    static <D> GormValidationApi<D> findValidationApi(Class<D> entity, String qualifier) {
+        instance.resolveValidationApi(entity, qualifier)
+    }
+
+    /**
+     * @deprecated Use {@code GormRegistry.getInstance().getApiResolver().findDatastore(entity, qualifier)}.
+     */
+    @Deprecated
+    static Datastore findDatastore(Class entity) {
+        instance.apiResolver.findDatastore(entity, (String) null)
+    }
+
+    /**
+     * @deprecated Use {@code GormRegistry.getInstance().getApiResolver().findDatastore(entity, qualifier)}.
+     */
+    @Deprecated
+    static Datastore findDatastore(Class entity, String qualifier) {
+        instance.apiResolver.findDatastore(entity, qualifier)
     }
 
     GormApiResolver getApiResolver() {
         return apiResolver
     }
 
-    GormApiFactory getDefaultApiFactory() {
-        return defaultApiFactory
-    }
-
-    void registerApiFactory(Class<? extends Datastore> datastoreType, GormApiFactory apiFactory) {
-        if (datastoreType != null && apiFactory != null) {
-            apiFactoriesByDatastoreType.put(datastoreType, apiFactory)
-        }
+    void registerApiFactory(Class datastoreType, GormApiFactory factory) {
+        apiFactoriesByDatastoreType.put(datastoreType, factory)
     }
 
     GormApiFactory getApiFactory(Datastore datastore) {
-        if (datastore == null) {
+        GormApiFactory factory = apiFactoriesByDatastoreType.get(datastore.getClass())
+        if (factory == null) {
+            for (entry in apiFactoriesByDatastoreType) {
+                if (entry.key.isInstance(datastore)) {
+                    return entry.value
+                }
+            }
             return defaultApiFactory
         }
-        Class<? extends Datastore> datastoreType = datastore.getClass()
-        GormApiFactory factory = apiFactoriesByDatastoreType.get(datastoreType)
-        if (factory != null) {
-            return factory
-        }
-
-        Class<?> current = datastoreType
-        while (current != null && Datastore.isAssignableFrom(current)) {
-            GormApiFactory inheritedFactory = apiFactoriesByDatastoreType.get((Class<? extends Datastore>) current)
-            if (inheritedFactory != null) {
-                apiFactoriesByDatastoreType.put(datastoreType, inheritedFactory)
-                return inheritedFactory
-            }
-            current = current.getSuperclass()
-        }
-
-        for (entry in apiFactoriesByDatastoreType.entrySet()) {
-            if (entry.key.isAssignableFrom(datastoreType)) {
-                apiFactoriesByDatastoreType.put(datastoreType, entry.value)
-                return entry.value
-            }
-        }
-
-        return defaultApiFactory
+        return factory
     }
 
-    <D> GormStaticApi<D> findStaticApi(Class<D> entity, String qualifier = null) {
-        return staticApiRegistry.findStaticApi(entity, qualifier)
-    }
-
-    <D> GormInstanceApi<D> findInstanceApi(Class<D> entity, String qualifier = null) {
-        return instanceApiRegistry.findInstanceApi(entity, qualifier)
-    }
-
-    <D> GormValidationApi<D> findValidationApi(Class<D> entity, String qualifier = null) {
-        return validationApiRegistry.findValidationApi(entity, qualifier)
-    }
-
-    // Package-private helpers for AST transforms
+    /**
+     * Finds a single transaction manager if only one datastore is registered.
+     */
     PlatformTransactionManager findSingleTransactionManager() {
-        Datastore datastore = apiResolver.findSingleDatastore()
-        if (datastore instanceof TransactionCapableDatastore) {
-            return ((TransactionCapableDatastore) datastore).transactionManager
+        return findSingleTransactionManager(ConnectionSource.DEFAULT)
+    }
+
+    /**
+     * Finds a single transaction manager for a specific qualifier.
+     */
+    PlatformTransactionManager findSingleTransactionManager(String qualifier) {
+        Datastore ds = datastoresByQualifier.get(normalizeQualifier(qualifier))
+        if (ds instanceof TransactionCapableDatastore) {
+            return ((TransactionCapableDatastore) ds).transactionManager
         }
         return null
     }
 
-    PlatformTransactionManager findSingleTransactionManager(String connectionName) {
-        Datastore datastore = apiResolver.findDatastore(null, connectionName)
-        if (datastore instanceof TransactionCapableDatastore) {
-            return ((TransactionCapableDatastore) datastore).transactionManager
+    /**
+     * Finds a transaction manager for a specific entity class.
+     */
+    PlatformTransactionManager findTransactionManager(Class entityClass) {
+        Datastore ds = getDatastore(entityClass)
+        if (ds instanceof TransactionCapableDatastore) {
+            return ((TransactionCapableDatastore) ds).transactionManager
         }
         return null
     }
 
-    PlatformTransactionManager findTransactionManager(Class entity, String qualifier = null) {
-        Datastore datastore = apiResolver.findDatastore(entity, qualifier)
-        if (datastore instanceof TransactionCapableDatastore) {
-            return ((TransactionCapableDatastore) datastore).transactionManager
+    /**
+     * Finds a datastore for a specific qualifier (connection name).
+     */
+    Datastore getDatastore(String qualifier) {
+        return getDatastoreByString((String) null, qualifier)
+    }
+
+    /**
+     * Internal method to avoid ambiguity.
+     */
+    private Datastore getDatastoreByString(String className, String qualifier) {
+        String normalizedQualifier = normalizeQualifier(qualifier)
+        String normalizedClassName = className != null ? normalizeEntityKey(className) : null
+
+        if (normalizedClassName != null) {
+            Map<String, Datastore> mappedDatastores = entityDatastores.get(normalizedClassName)
+            if (mappedDatastores != null) {
+                Datastore ds = mappedDatastores.get(normalizedQualifier)
+                if (ds != null) {
+                    return ds
+                }
+            }
         }
-        return null
+
+        Datastore ds = datastoresByQualifier.get(normalizedQualifier)
+        if (ds == null && ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
+            if (allDatastores.size() == 1) {
+                return allDatastores.iterator().next()
+            }
+        }
+        return ds
     }
 
-    GormStaticApi getStaticApi(String className) {
-        return staticApiRegistry.get(normalizeEntityKey(className))
+    /**
+     * Finds a datastore for a specific entity class.
+     */
+    Datastore getDatastore(Class entityClass) {
+        return getDatastore(entityClass, ConnectionSource.DEFAULT)
     }
 
-    GormInstanceApi getInstanceApi(String className) {
-        return instanceApiRegistry.get(normalizeEntityKey(className))
-    }
-
-    GormValidationApi getValidationApi(String className) {
-        return validationApiRegistry.get(normalizeEntityKey(className))
+    /**
+     * Finds a datastore for a specific entity class and qualifier.
+     */
+    Datastore getDatastore(Class entityClass, String qualifier) {
+        return getDatastoreByString(normalizeEntityKey(entityClass), qualifier)
     }
 
     /**
      * Finds a datastore for an entity and qualifier.
      */
     Datastore getDatastore(String className, String qualifier) {
-        String normalizedQualifier = normalizeQualifier(qualifier)
-        String normalizedClassName = normalizeEntityKey(className)
-
-        if (normalizedClassName != null) {
-            Map<String, Datastore> mappedDatastores = entityDatastores.get(normalizedClassName)
-            if (mappedDatastores != null) {
-                Datastore ds = mappedDatastores.get(normalizedQualifier)
-                if (ds != null) return ds
-                
-                // If requested qualifier not found, return the first one available for this entity
-                if (ConnectionSource.DEFAULT.equals(normalizedQualifier) && !mappedDatastores.isEmpty()) {
-                    return mappedDatastores.values().iterator().next()
-                }
-            }
-        }
-        
-        return datastoresByQualifier.get(normalizedQualifier)
+        return getDatastoreByString(className, qualifier)
     }
 
     /**
@@ -241,6 +276,22 @@ class GormRegistry {
     }
 
     /**
+     * Initializes a datastore, registering its type and default qualifier.
+     */
+    void initializeDatastore(Datastore datastore) {
+        if (datastore == null) return
+        registerDatastore(ConnectionSource.DEFAULT, datastore)
+        datastoresByType.put(datastore.getClass(), datastore)
+    }
+
+    /**
+     * Registers a datastore.
+     */
+    void registerDatastore(Datastore datastore) {
+        initializeDatastore(datastore)
+    }
+
+    /**
      * Registers a datastore by qualifier only, without adding it to the global type-based discovery.
      */
     void registerDatastoreByQualifier(String qualifier, Datastore datastore) {
@@ -249,30 +300,14 @@ class GormRegistry {
         }
     }
 
-    /**
-     * Registers an entity-specific datastore override.
-     */
-    void registerEntityDatastore(String className, String qualifier, Datastore datastore) {
-        if (datastore != null) {
-            String normalizedClassName = normalizeEntityKey(className)
-            if (normalizedClassName == null) {
-                return
-            }
-            String normalizedQualifier = normalizeQualifier(qualifier)
-            getInternalMap(entityDatastores, normalizedClassName).put(normalizedQualifier, datastore)
-        }
-    }
-
-    void registerDatastoreByType(Datastore datastore) {
-        if (datastore == null) return
-        datastoresByType.put(datastore.getClass(), datastore)
-        allDatastores.add(datastore)
+    void removeDatastoreByType(Class datastoreType) {
+        if (datastoreType == null) return
+        datastoresByType.remove(datastoreType)
     }
 
     void removeDatastoreByType(Datastore datastore) {
         if (datastore == null) return
-        datastoresByType.remove(datastore.getClass())
-        // Don't remove from allDatastores here, as it might still be registered by qualifier
+        removeDatastoreByType(datastore.getClass())
     }
 
     /**
@@ -281,25 +316,23 @@ class GormRegistry {
      */
     void removeDatastoreFromDiscovery(Datastore datastore) {
         if (datastore == null) return
-        System.err.println "REMOVING datastore from discovery: ${datastore}"
         allDatastores.remove(datastore)
         datastoresByType.remove(datastore.getClass())
     }
 
     /**
-     * Removes all occurrences of a datastore from the global and entity-specific maps.
+     * Completely removes a datastore from the registry.
      */
     void removeDatastore(Datastore datastore) {
         if (datastore == null) return
-
         allDatastores.remove(datastore)
         datastoresByType.remove(datastore.getClass())
-        
+
         Iterator<Map.Entry<String, Datastore>> it = datastoresByQualifier.entrySet().iterator()
         while (it.hasNext()) {
             if (it.next().value == datastore) it.remove()
         }
-        
+
         for (entityMap in entityDatastores.values()) {
             Iterator<Map.Entry<String, Datastore>> eit = entityMap.entrySet().iterator()
             while (eit.hasNext()) {
@@ -331,6 +364,110 @@ class GormRegistry {
         return staticApiRegistry
     }
 
+    GormStaticApi getStaticApi(Class entityClass) {
+        return staticApiRegistry.get(normalizeEntityKey(entityClass))
+    }
+
+    GormInstanceApi getInstanceApi(Class entityClass) {
+        return instanceApiRegistry.get(normalizeEntityKey(entityClass))
+    }
+
+    GormValidationApi getValidationApi(Class entityClass) {
+        return validationApiRegistry.get(normalizeEntityKey(entityClass))
+    }
+
+    GormStaticApi getStaticApi(Class entityClass, String qualifier) {
+        return staticApiRegistry.get(normalizeEntityKey(entityClass), normalizeQualifier(qualifier))
+    }
+
+    GormInstanceApi getInstanceApi(Class entityClass, String qualifier) {
+        return instanceApiRegistry.get(normalizeEntityKey(entityClass), normalizeQualifier(qualifier))
+    }
+
+    GormValidationApi getValidationApi(Class entityClass, String qualifier) {
+        return validationApiRegistry.get(normalizeEntityKey(entityClass), normalizeQualifier(qualifier))
+    }
+
+    GormStaticApi resolveStaticApi(Class entityClass) {
+        return resolveStaticApi(entityClass, (String) null)
+    }
+
+    GormStaticApi resolveStaticApi(Class entityClass, String qualifier) {
+        String normalizedClassName = normalizeEntityKey(entityClass)
+        String normalizedQualifier = normalizeQualifier(qualifier)
+        
+        if (ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
+            if (MultiTenant.isAssignableFrom(entityClass)) {
+                Datastore ds = getDatastoreByString(normalizedClassName, normalizedQualifier)
+                if (ds instanceof MultiTenantCapableDatastore) {
+                    Serializable tenantId = CurrentTenantHolder.get((MultiTenantCapableDatastore) ds)
+                    if (tenantId != null) {
+                        return staticApiRegistry.get(normalizedClassName, tenantId.toString())
+                    }
+                }
+            }
+        }
+        
+        return staticApiRegistry.get(normalizedClassName, normalizedQualifier)
+    }
+
+    GormInstanceApi resolveInstanceApi(Class entityClass) {
+        return resolveInstanceApi(entityClass, (String) null)
+    }
+
+    GormInstanceApi resolveInstanceApi(Class entityClass, String qualifier) {
+        String normalizedClassName = normalizeEntityKey(entityClass)
+        String normalizedQualifier = normalizeQualifier(qualifier)
+
+        if (ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
+            if (MultiTenant.isAssignableFrom(entityClass)) {
+                Datastore ds = getDatastoreByString(normalizedClassName, normalizedQualifier)
+                if (ds instanceof MultiTenantCapableDatastore) {
+                    Serializable tenantId = CurrentTenantHolder.get((MultiTenantCapableDatastore) ds)
+                    if (tenantId != null) {
+                        return instanceApiRegistry.get(normalizedClassName, tenantId.toString())
+                    }
+                }
+            }
+        }
+        
+        return instanceApiRegistry.get(normalizedClassName, normalizedQualifier)
+    }
+
+    GormValidationApi resolveValidationApi(Class entityClass) {
+        return resolveValidationApi(entityClass, (String) null)
+    }
+
+    GormValidationApi resolveValidationApi(Class entityClass, String qualifier) {
+        String normalizedClassName = normalizeEntityKey(entityClass)
+        String normalizedQualifier = normalizeQualifier(qualifier)
+
+        if (ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
+            if (MultiTenant.isAssignableFrom(entityClass)) {
+                Datastore ds = getDatastoreByString(normalizedClassName, normalizedQualifier)
+                if (ds instanceof MultiTenantCapableDatastore) {
+                    Serializable tenantId = CurrentTenantHolder.get((MultiTenantCapableDatastore) ds)
+                    if (tenantId != null) {
+                        return validationApiRegistry.get(normalizedClassName, tenantId.toString())
+                    }
+                }
+            }
+        }
+        
+        return validationApiRegistry.get(normalizedClassName, normalizedQualifier)
+    }
+
+    GormStaticApi getStaticApi(String className) {
+        return staticApiRegistry.get(normalizeEntityKey(className))
+    }
+
+    GormInstanceApi getInstanceApi(String className) {
+        return instanceApiRegistry.get(normalizeEntityKey(className))
+    }
+
+    GormValidationApi getValidationApi(String className) {
+        return validationApiRegistry.get(normalizeEntityKey(className))
+    }
     GormInstanceApiRegistry getInstanceApiRegistry() {
         return instanceApiRegistry
     }
@@ -339,57 +476,56 @@ class GormRegistry {
         return validationApiRegistry
     }
 
-    Map<Class, Datastore> getDatastoresByType() {
-        return datastoresByType
-    }
-
     Set<Datastore> getAllDatastores() {
         return allDatastores
     }
 
-    private <T> Map<String, T> getInternalMap(Map<String, Map<String, T>> rootMap, String key) {
-        Map<String, T> map = rootMap.get(key)
+    Map<Class, Datastore> getDatastoresByType() {
+        return datastoresByType
+    }
+
+    private Map<String, Datastore> getInternalMap(Map<String, Map<String, Datastore>> rootMap, String key) {
+        Map<String, Datastore> map = rootMap.get(key)
         if (map == null) {
-            map = new ConcurrentHashMap<String, T>()
-            Map<String, T> existing = rootMap.putIfAbsent(key, map)
-            if (existing != null) {
-                map = existing
+            map = new ConcurrentHashMap<String, Datastore>()
+            Map<String, Datastore> prior = rootMap.putIfAbsent(key, map)
+            if (prior != null) {
+                return prior
             }
         }
         return map
     }
 
-    String normalizeEntityKeyFromClass(Class entityClass) {
-        if (entityClass == null) {
+    String normalizeEntityKey(Object entityKey) {
+        if (entityKey == null) {
             return null
         }
-        String existing = normalizedEntityKeysByClass.get(entityClass)
-        if (existing != null) {
-            return existing
+        if (entityKey instanceof Class) {
+            Class entityClass = (Class) entityKey
+            String existing = normalizedEntityKeysByClass.get(entityClass)
+            if (existing != null) {
+                return existing
+            }
+            String computed = NameUtils.getClassName(entityClass)
+            String normalized = normalizeEntityKey(computed)
+            if (normalized == null) {
+                return null
+            }
+            String prior = normalizedEntityKeysByClass.putIfAbsent(entityClass, normalized)
+            return prior != null ? prior : normalized
+        } else {
+            String className = entityKey.toString()
+            String existing = normalizedEntityKeysByName.get(className)
+            if (existing != null) {
+                return existing
+            }
+            String normalized = className.trim()
+            if (normalized.isEmpty()) {
+                return null
+            }
+            String prior = normalizedEntityKeysByName.putIfAbsent(className, normalized)
+            return prior != null ? prior : normalized
         }
-        String computed = NameUtils.getClassName(entityClass)
-        String normalized = normalizeEntityKey(computed)
-        if (normalized == null) {
-            return null
-        }
-        String prior = normalizedEntityKeysByClass.putIfAbsent(entityClass, normalized)
-        return prior != null ? prior : normalized
-    }
-
-    String normalizeEntityKey(String className) {
-        if (className == null) {
-            return null
-        }
-        String existing = normalizedEntityKeysByName.get(className)
-        if (existing != null) {
-            return existing
-        }
-        String normalized = className.trim()
-        if (normalized.isEmpty()) {
-            return null
-        }
-        String prior = normalizedEntityKeysByName.putIfAbsent(className, normalized)
-        return prior != null ? prior : normalized
     }
 
     String normalizeQualifier(String qualifier) {
@@ -426,8 +562,8 @@ class GormRegistry {
      * Handles entity-specific datastore mappings for multi-tenant and multi-datasource scenarios.
      *
      * @param className The entity class name
-     * @param datastore The root datastore
-     * @param connectionSourceNames The list of connection source names
+     * @param datastore The datastore to register
+     * @param connectionSourceNames The connection source names to register the datastore for
      * @param entity The persistent entity (for entity-specific qualifier resolution)
      */
     void registerEntityDatastores(String className, Object datastore, List<String> connectionSourceNames, Object entity) {
@@ -439,67 +575,89 @@ class GormRegistry {
         }
         
         // Register datastores for each connection source
-        for (String qualifier in connectionSourceNames) {
+        for (String connectionSourceName in connectionSourceNames) {
+            registerEntityDatastore(normalizedClassName, connectionSourceName, (Datastore) datastore)
+        }
+    }
+
+    /**
+     * Registers an entity-specific datastore override.
+     */
+    void registerEntityDatastore(String className, String qualifier, Datastore datastore) {
+        if (datastore != null) {
+            String normalizedClassName = normalizeEntityKey(className)
+            if (normalizedClassName == null) {
+                return
+            }
             String normalizedQualifier = normalizeQualifier(qualifier)
-            Object dsToRegister = datastore
-            
-            // Get datastore for this specific connection source if supported
-            if (datastore instanceof org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore) {
-                try {
-                    dsToRegister = ((org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore) datastore).getDatastoreForConnection(normalizedQualifier)
-                } catch (Throwable e) {
-                    // ignore and use root datastore
-                }
-            }
-
-            // Skip non-default qualifiers for multi-tenant datastores
-            if (datastore instanceof org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore && 
-                !ConnectionSource.DEFAULT.equals(normalizedQualifier) && 
-                dsToRegister == datastore) {
-                continue
-            }
-
-            registerDatastore(normalizedQualifier, (Datastore) dsToRegister)
-            registerEntityDatastore(normalizedClassName, normalizedQualifier, (Datastore) dsToRegister)
+            getInternalMap(entityDatastores, normalizedClassName).put(normalizedQualifier, datastore)
         }
+    }
 
-        // Determine what to register under DEFAULT for entity-specific qualifiers
-        // If the entity declares explicit qualifiers that do NOT include DEFAULT (e.g. connections 'test1','test2'),
-        // then the first declared qualifier is the entity's primary connection
-        List<String> entityQualifiers = org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport.getConnectionSourceNames((org.grails.datastore.mapping.model.PersistentEntity) entity)
-        boolean entityDeclaresDefault = entityQualifiers.contains(ConnectionSource.DEFAULT) ||
-                entityQualifiers.contains(ConnectionSource.ALL)
-        
-        if (!entityDeclaresDefault && !entityQualifiers.isEmpty()) {
-            String primaryQualifier = entityQualifiers.get(0)
-            Object primaryDs = datastore
-            if (datastore instanceof org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore) {
-                try {
-                    primaryDs = ((org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore) datastore).getDatastoreForConnection(primaryQualifier)
-                } catch (Throwable e) {
-                    // fall back to root datastore
-                }
+    /**
+     * Creates dynamic finders for the default datastore
+     *
+     * @return List of finder methods
+     */
+    List<FinderMethod> createDynamicFinders(Datastore targetDatastore) {
+        createDynamicFinders(new DatastoreResolver() {
+            @Override
+            Datastore resolve() {
+                targetDatastore
             }
-            registerEntityDatastore(normalizedClassName, ConnectionSource.DEFAULT, (Datastore) primaryDs)
-        } else {
-            registerEntityDatastore(normalizedClassName, ConnectionSource.DEFAULT, (Datastore) datastore)
-        }
+        }, targetDatastore.getMappingContext())
+    }
 
-        // Register entity-specific non-default qualifiers so they can be resolved later
-        for (String entityQualifier in entityQualifiers) {
-            String normalizedEntityQualifier = normalizeQualifier(entityQualifier)
-            if (!ConnectionSource.DEFAULT.equals(normalizedEntityQualifier) && !ConnectionSource.ALL.equals(entityQualifier)) {
-                Object dsForQualifier = datastore
-                if (datastore instanceof org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore) {
-                    try {
-                        dsForQualifier = ((org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore) datastore).getDatastoreForConnection(normalizedEntityQualifier)
-                    } catch (Throwable e) {
-                        // fall back to main datastore if the qualifier isn't available
-                    }
-                }
-                registerEntityDatastore(normalizedClassName, normalizedEntityQualifier, (Datastore) dsForQualifier)
+    /**
+     * Creates dynamic finders using the given resolver and mapping context
+     *
+     * @param resolver The datastore resolver
+     * @param mappingContext The mapping context
+     * @return List of finder methods
+     */
+    List<FinderMethod> createDynamicFinders(DatastoreResolver resolver, MappingContext mappingContext) {
+        // Implementation provided by GormEnhancer or specialized factories
+        return []
+    }
+
+    /**
+     * Create a DatastoreResolver for a class and optional qualifier.
+     */
+    DatastoreResolver createClassDatastoreResolver(Class cls, String qualifier = ConnectionSource.DEFAULT) {
+        return new DatastoreResolver() {
+            @Override
+            Datastore resolve() {
+                getDatastore(cls.name, qualifier)
             }
         }
+    }
+
+    /**
+     * Create a GormStaticApi instance
+     */
+    GormStaticApi createStaticApi(Class cls, Datastore datastore, DatastoreResolver resolver, String qualifier) {
+        return getApiFactory(datastore).createStaticApi(cls, datastore.mappingContext, resolver, qualifier, this)
+    }
+
+    /**
+     * Create a GormInstanceApi instance
+     */
+    GormInstanceApi createInstanceApi(Class cls, Datastore datastore, DatastoreResolver resolver, boolean failOnError, boolean markDirty) {
+        return getApiFactory(datastore).createInstanceApi(cls, datastore.mappingContext, resolver, this, failOnError, markDirty)
+    }
+
+    /**
+     * Create a GormValidationApi instance
+     */
+    GormValidationApi createValidationApi(Class cls, Datastore datastore, DatastoreResolver resolver) {
+        return getApiFactory(datastore).createValidationApi(cls, datastore.mappingContext, resolver, this)
+    }
+
+    /**
+     * Register API objects for a persistent entity
+     */
+    void registerEntityApis(Class cls, GormStaticApi staticApi, GormInstanceApi instanceApi, GormValidationApi validationApi) {
+        registerEntityApis(cls.name, staticApi, instanceApi, validationApi)
     }
 
     /**
@@ -508,6 +666,7 @@ class GormRegistry {
      *
      * @param datastore The datastore containing the entities
      */
+    @CompileDynamic
     void registerConstraints(Object datastore) {
         if (datastore == null) return
         
@@ -541,9 +700,6 @@ class GormRegistry {
         // Register constraints
         registerConstraints(datastore)
         
-        // Register datastore by type
-        registerDatastoreByType((Datastore) datastore)
-        
         // Register datastore with default qualifier
         registerDatastore(defaultQualifier, (Datastore) datastore)
     }
@@ -556,174 +712,31 @@ class GormRegistry {
      * @param enhancer The GormEnhancer that provides API creation
      */
     void registerEntity(PersistentEntity persistentEntity, GormEnhancer enhancer) {
-        assert persistentEntity != null, 'PersistentEntity is required'
-        assert enhancer != null, 'GormEnhancer is required'
+        if (persistentEntity == null) return
 
         String className = persistentEntity.name
 
-        // Register API singletons via registry
-        if (getStaticApi(className) == null ||
-            getInstanceApi(className) == null ||
-            getValidationApi(className) == null) {
-            final Class cls = persistentEntity.javaClass
-            DatastoreResolver resolver = createClassDatastoreResolver(cls)
+        if (enhancer != null) {
+            // Register API singletons via registry
+            if (getStaticApi(className) == null ||
+                getInstanceApi(className) == null ||
+                getValidationApi(className) == null) {
+                final Class cls = persistentEntity.javaClass
+                DatastoreResolver resolver = createClassDatastoreResolver(cls)
+                Datastore datastore = enhancer.datastore
+
+                GormStaticApi staticApi = createStaticApi(cls, datastore, resolver, ConnectionSource.DEFAULT)
+                GormInstanceApi instanceApi = createInstanceApi(cls, datastore, resolver, enhancer.failOnError, enhancer.markDirty)
+                GormValidationApi validationApi = createValidationApi(cls, datastore, resolver)
+
+                registerEntityApis(className, staticApi, instanceApi, validationApi)
+            }
+
+            // Register datastore mappings
             Datastore datastore = enhancer.datastore
-
-            GormStaticApi staticApi = createStaticApi(cls, datastore, resolver, ConnectionSource.DEFAULT)
-            GormInstanceApi instanceApi = createInstanceApi(cls, datastore, resolver, enhancer.failOnError, enhancer.markDirty)
-            GormValidationApi validationApi = createValidationApi(cls, datastore, resolver)
-
-            registerEntityApis(className, staticApi, instanceApi, validationApi)
-        }
-
-        // Register datastore mappings
-        Datastore datastore = enhancer.datastore
-        List<String> connectionSourceNames = enhancer.getConnectionSourceNames()
-        registerEntityDatastores(className, datastore, connectionSourceNames, persistentEntity)
-    }
-
-    /**
-     * Creates dynamic finders for the default datastore
-     *
-     * @return List of finder methods
-     */
-    List<FinderMethod> createDynamicFinders(Datastore targetDatastore) {
-        createDynamicFinders(new DatastoreResolver() {
-            @Override
-            Datastore resolve() {
-                targetDatastore
-            }
-        }, targetDatastore.getMappingContext())
-    }
-
-    /**
-     * Creates dynamic finders for the given resolver and mapping context
-     *
-     * @param datastoreResolver The datastore resolver
-     * @param mappingContext The mapping context
-     * @return List of finder methods
-     */
-    List<FinderMethod> createDynamicFinders(DatastoreResolver datastoreResolver, MappingContext mappingContext) {
-        return defaultApiFactory.createDynamicFinders(datastoreResolver, mappingContext)
-    }
-
-    /**
-     * Create a GormStaticApi for the given class and datastore
-     *
-     * @param cls The domain class
-     * @param datastore The datastore
-     * @param resolver The datastore resolver
-     * @param qualifier The connection qualifier
-     * @return The GormStaticApi instance
-     */
-    <D> GormStaticApi<D> createStaticApi(Class<D> cls, Datastore datastore, DatastoreResolver resolver, String qualifier) {
-
-        GormApiFactory apiFactory = getApiFactory(datastore)
-        return apiFactory.createStaticApi(cls, datastore.getMappingContext(), resolver, qualifier, this)
-    }
-
-    /**
-     * Create a GormInstanceApi for the given class and datastore
-     *
-     * @param cls The domain class
-     * @param datastore The datastore
-     * @param resolver The datastore resolver
-     * @param failOnError Whether to fail on error
-     * @param markDirty Whether to mark entities as dirty
-     * @return The GormInstanceApi instance
-     */
-    <D> GormInstanceApi<D> createInstanceApi(Class<D> cls, Datastore datastore, DatastoreResolver resolver, boolean failOnError, boolean markDirty) {
-
-        GormApiFactory apiFactory = getApiFactory(datastore)
-        return apiFactory.createInstanceApi(cls, datastore.getMappingContext(), resolver, this, failOnError, markDirty)
-    }
-
-    /**
-     * Create a GormValidationApi for the given class and datastore
-     *
-     * @param cls The domain class
-     * @param datastore The datastore
-     * @param resolver The datastore resolver
-     * @return The GormValidationApi instance
-     */
-    <D> GormValidationApi<D> createValidationApi(Class<D> cls, Datastore datastore, DatastoreResolver resolver) {
-
-        GormApiFactory apiFactory = getApiFactory(datastore)
-        return apiFactory.createValidationApi(cls, datastore.getMappingContext(), resolver, this)
-    }
-
-    /**
-     * Create a DatastoreResolver for the given class
-     *
-     * @param cls The class to resolve datastore for
-     * @return A DatastoreResolver instance
-     */
-    DatastoreResolver createClassDatastoreResolver(Class cls) {
-
-        new DatastoreResolver() {
-            @Override
-            Datastore resolve() {
-                apiResolver.findDatastore(cls, null)
-            }
+            List<String> connectionSourceNames = enhancer.getConnectionSourceNames()
+            registerEntityDatastores(className, datastore, connectionSourceNames, persistentEntity)
         }
     }
 
-    /**
-     * Create the default DatastoreResolver
-     *
-     * @return A DatastoreResolver instance
-     */
-    DatastoreResolver createDefaultDatastoreResolver() {
-        new DatastoreResolver() {
-            @Override
-            Datastore resolve() {
-                apiResolver.findDatastore(null, null)
-            }
-        }
-    }
-
-    /**
-     * Get or create a GormStaticApi for the given class with the specified resolver and qualifier
-     * Subclasses can override to provide custom API implementations
-     *
-     * @param cls The domain class
-     * @param datastore The datastore instance
-     * @param resolver The datastore resolver
-     * @param qualifier The connection qualifier
-     * @return The GormStaticApi instance
-     */
-    <D> GormStaticApi<D> getStaticApi(Class<D> cls, Datastore datastore, DatastoreResolver resolver, String qualifier) {
-
-        return createStaticApi(cls, datastore, resolver, qualifier)
-    }
-
-    /**
-     * Get or create a GormInstanceApi for the given class with the specified resolver
-     * Subclasses can override to provide custom API implementations
-     *
-     * @param cls The domain class
-     * @param datastore The datastore instance
-     * @param resolver The datastore resolver
-     * @param failOnError Whether to fail on error
-     * @param markDirty Whether to mark entities as dirty
-     * @return The GormInstanceApi instance
-     */
-    <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, Datastore datastore, DatastoreResolver resolver, boolean failOnError, boolean markDirty) {
-
-        return createInstanceApi(cls, datastore, resolver, failOnError, markDirty)
-    }
-
-    /**
-     * Get or create a GormValidationApi for the given class with the specified resolver
-     * Subclasses can override to provide custom API implementations
-     *
-     * @param cls The domain class
-     * @param datastore The datastore instance
-     * @param resolver The datastore resolver
-     * @return The GormValidationApi instance
-     */
-    <D> GormValidationApi<D> getValidationApi(Class<D> cls, Datastore datastore, DatastoreResolver resolver) {
-
-        return createValidationApi(cls, datastore, resolver)
-    }
 }

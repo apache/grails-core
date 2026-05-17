@@ -131,7 +131,18 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
     protected IHibernateTemplate getHibernateTemplate() {
         if (this.hibernateTemplate == null) {
-            return (IHibernateTemplate) getHibernateDatastore().getHibernateTemplate()
+            HibernateDatastore datastore = getHibernateDatastore()
+            IHibernateTemplate template = (IHibernateTemplate) datastore.getHibernateTemplate()
+            if (qualifier != null && !org.grails.datastore.mapping.core.connections.ConnectionSource.DEFAULT.equals(qualifier) && datastore.getMultiTenancyMode() == org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
+                String connectionName = datastore.connectionSources.defaultConnectionSource.name
+                if (!connectionName.equals(qualifier)) {
+                    this.hibernateTemplate = new TenantBoundHibernateTemplate(template, (Serializable)qualifier, datastore)
+                } else {
+                    this.hibernateTemplate = template
+                }
+            } else {
+                this.hibernateTemplate = template
+            }
         }
         return hibernateTemplate
     }

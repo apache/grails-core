@@ -52,6 +52,7 @@ public class JpaCriteriaQueryCreator<T> {
     private final DetachedCriteria<?> detachedCriteria;
     private final ConversionService conversionService;
     private final HibernateQuery hibernateQuery;
+    private final PredicateGenerator predicateGenerator;
     private JpaQueryContext parentContext;
 
     public JpaCriteriaQueryCreator(
@@ -76,6 +77,7 @@ public class JpaCriteriaQueryCreator<T> {
         this.detachedCriteria = detachedCriteria;
         this.conversionService = conversionService;
         this.hibernateQuery = hibernateQuery;
+        this.predicateGenerator = new PredicateGenerator(criteriaBuilder, conversionService);
     }
 
     public void setParentContext(JpaQueryContext parentContext) {
@@ -253,7 +255,6 @@ public class JpaCriteriaQueryCreator<T> {
         List<Query.Criterion> criteriaList = detachedCriteria.getCriteria();
         if (!criteriaList.isEmpty()) {
             discoverAliases(criteriaList, context);
-            var predicateGenerator = new PredicateGenerator(criteriaBuilder, conversionService);
             var predicate = predicateGenerator.generate(cq, root, criteriaList, context, entity);
             if (predicate != null) {
                 cq.where(predicate);

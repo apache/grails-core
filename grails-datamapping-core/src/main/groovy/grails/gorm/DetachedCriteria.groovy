@@ -742,7 +742,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
 
     private withPopulatedQuery(Map args, Closure additionalCriteria, Closure callable)  {
 
-        GormStaticApi staticApi = persistentEntity.isMultiTenant() ? GormRegistry.instance.findStaticApi(targetClass) : GormRegistry.instance.findStaticApi(targetClass, connectionName)
+        GormStaticApi staticApi = GormRegistry.instance.findStaticApi(targetClass, connectionName)
         staticApi.withDatastoreSession { Session session ->
             applyLazyCriteria()
             Query query

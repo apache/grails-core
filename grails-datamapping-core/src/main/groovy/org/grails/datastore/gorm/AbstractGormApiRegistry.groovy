@@ -75,7 +75,7 @@ abstract class AbstractGormApiRegistry<T extends AbstractDatastoreApi> {
     }
 
     protected String className(Class entity) {
-        return registry.normalizeEntityKeyFromClass(entity)
+        return registry.normalizeEntityKey(entity)
     }
 
     protected IllegalStateException stateException(Class entity) {

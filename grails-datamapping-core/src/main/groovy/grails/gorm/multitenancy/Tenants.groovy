@@ -207,9 +207,7 @@ class Tenants {
         Datastore datastore = datastoreLocator.getDatastore()
         if (datastore instanceof MultiTenantCapableDatastore) {
             MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore) datastore
-            return CurrentTenantHolder.withTenant(datastore.getClass(), tenantId) {
-                return withId(multiTenantCapableDatastore, tenantId, callable)
-            }
+            return withId(multiTenantCapableDatastore, tenantId, callable)
         }
         else {
             throw new UnsupportedOperationException('Datastore implementation does not support multi-tenancy')
@@ -226,9 +224,7 @@ class Tenants {
         Datastore datastore = datastoreLocator.getDatastoreForDomain(domainClass)
         if (datastore instanceof MultiTenantCapableDatastore) {
             MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore) datastore
-            return CurrentTenantHolder.withTenant(datastore.getClass(), tenantId) {
-                return withId(multiTenantCapableDatastore, tenantId, callable)
-            }
+            return withId(multiTenantCapableDatastore, tenantId, callable)
         }
         else {
             throw new UnsupportedOperationException('Datastore implementation does not support multi-tenancy')
