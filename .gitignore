@@ -65,6 +65,7 @@ tmp/
 !etc/bin
 etc/bin/results
 .vscode/
+.repowise/
 /scratch/
 /local.properties
 local-tasks.gradle

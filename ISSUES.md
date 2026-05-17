@@ -148,7 +148,7 @@ Coverage added:
 ## B. Tenant context and session routing
 **Goal:** lower context-switch overhead and reduce accidental cross-context work.
 
-1. Profile tenant context wrapping frequency in static API calls.
+1. [DONE] Profile tenant context wrapping frequency in static API calls.
 2. Identify places where tenant/session context can be propagated once instead of re-resolved.
 3. Add targeted perf specs for DISCRIMINATOR and SCHEMA mode query loops.
 
