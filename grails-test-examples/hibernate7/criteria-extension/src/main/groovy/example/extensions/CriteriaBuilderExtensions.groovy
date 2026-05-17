@@ -20,7 +20,7 @@
 package example.extensions
 
 import groovy.transform.CompileStatic
-import grails.gorm.CriteriaBuilder
+import org.grails.datastore.mapping.query.api.Criteria
 
 /**
  * Groovy extension module methods added to CriteriaBuilder.
@@ -40,7 +40,7 @@ class CriteriaBuilderExtensions {
      * @param value     the candidate value; null or blank strings are ignored
      * @param trim      whether to trim String values before the null check (default true)
      */
-    static void eqIf(CriteriaBuilder self, String attribute, Object value, boolean trim = true) {
+    static void eqIf(Criteria self, String attribute, Object value, boolean trim = true) {
         Object sanitized = sanitize(value, trim)
         if (sanitized != null) {
             self.eq attribute, sanitized
