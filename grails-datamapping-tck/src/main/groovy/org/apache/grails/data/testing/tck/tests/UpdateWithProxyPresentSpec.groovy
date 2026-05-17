@@ -18,8 +18,6 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import spock.lang.IgnoreIf
-
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.Child
 import org.apache.grails.data.testing.tck.domains.Parent
@@ -30,7 +28,6 @@ import org.apache.grails.data.testing.tck.domains.PetType
 /**
  * @author graemerocher
  */
-@IgnoreIf({ System.getProperty('hibernate7.gorm.suite') == 'true' })
 class UpdateWithProxyPresentSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
