@@ -25,7 +25,6 @@ import java.time.format.DateTimeFormatter
 plugins {
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
-    id 'org.apache.grails.gradle.grails-violation-aggregation'
 }
 
 ext {
