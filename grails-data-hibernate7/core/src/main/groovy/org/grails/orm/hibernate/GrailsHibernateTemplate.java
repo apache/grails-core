@@ -463,13 +463,11 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
     }
 
     @Override
-    @Deprecated(since = "7.0", forRemoval = true)
     public <T> T get(final Class<T> entityClass, final Serializable id) throws DataAccessException {
         return doExecute(session -> session.find(entityClass, id), true);
     }
 
     @Override
-    @Deprecated(since = "7.0", forRemoval = true)
     public <T> T get(final Class<T> entityClass, final Serializable id, final LockMode mode) {
         return lock(entityClass, id, mode);
     }
