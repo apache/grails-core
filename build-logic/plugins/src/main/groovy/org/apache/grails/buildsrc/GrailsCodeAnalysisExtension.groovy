@@ -36,7 +36,7 @@ class GrailsCodeAnalysisExtension {
     final DirectoryProperty pmdDirectory
 
     /**
-     * Defaults to rootProject.buildDir/reports/codestyle.
+     * Defaults to rootProject.buildDir/reports/codeanalysis.
      * PMD and SpotBugs XML reports will be written here.
      */
     final DirectoryProperty reportsDirectory
@@ -47,7 +47,7 @@ class GrailsCodeAnalysisExtension {
                 project.rootProject.layout.buildDirectory.dir('codeanalysis/pmd')
         )
         reportsDirectory = objects.directoryProperty().convention(
-                project.rootProject.layout.buildDirectory.dir('reports/codestyle')
+                project.rootProject.layout.buildDirectory.dir('reports/codeanalysis')
         )
     }
 }
