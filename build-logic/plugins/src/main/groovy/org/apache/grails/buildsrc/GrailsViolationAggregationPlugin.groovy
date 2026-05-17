@@ -72,9 +72,10 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
 
         Provider<Directory> violationsDir = project.layout.buildDirectory.dir('reports/violations')
         Provider<Directory> styleXmlDir = project.layout.buildDirectory.dir('reports/codestyle')
+        Provider<Directory> analysisXmlDir = project.layout.buildDirectory.dir('reports/codeanalysis')
 
         TaskProvider<Task> styleTask = registerStyleAggregation(project, styleXmlDir, violationsDir)
-        TaskProvider<Task> analysisTask = registerAnalysisAggregation(project, styleXmlDir, violationsDir)
+        TaskProvider<Task> analysisTask = registerAnalysisAggregation(project, analysisXmlDir, violationsDir)
         registerJacocoAggregation(project, violationsDir)
 
         project.tasks.register('aggregateViolations') { Task task ->
@@ -94,7 +95,6 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
         TaskProvider<Task> aggregateTask = root.tasks.register('aggregateStyleViolations') { Task task ->
             task.group = 'verification'
             task.description = 'Aggregates CodeNarc and Checkstyle violation reports into build/reports/violations/'
-            task.inputs.dir(styleXmlDir).optional(true)
             task.outputs.file(root.file('build/reports/violations/CODENARC_VIOLATIONS.md'))
             task.outputs.file(root.file('build/reports/violations/CHECKSTYLE_VIOLATIONS.md'))
             task.doLast {
@@ -117,7 +117,7 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
         aggregateTask
     }
 
-    private static TaskProvider<Task> registerAnalysisAggregation(Project root, Provider<Directory> styleXmlDir, Provider<Directory> violationsDir) {
+    private static TaskProvider<Task> registerAnalysisAggregation(Project root, Provider<Directory> analysisXmlDir, Provider<Directory> violationsDir) {
         Provider<Boolean> checkAnalysisTests = GradleUtils.booleanProvider(root, GrailsCodeAnalysisPlugin.TEST_ANALYSIS_PROPERTY)
         Provider<Boolean> pmdEnabled = GradleUtils.booleanProvider(root, GrailsCodeAnalysisPlugin.PMD_ENABLED_PROPERTY)
         Provider<Boolean> spotbugsEnabled = GradleUtils.booleanProvider(root, GrailsCodeAnalysisPlugin.SPOTBUGS_ENABLED_PROPERTY)
@@ -125,11 +125,10 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
         TaskProvider<Task> aggregateTask = root.tasks.register('aggregateAnalysisViolations') { Task task ->
             task.group = 'verification'
             task.description = 'Aggregates PMD and SpotBugs violation reports into build/reports/violations/'
-            task.inputs.dir(styleXmlDir).optional(true)
             task.outputs.file(root.file('build/reports/violations/PMD_VIOLATIONS.md'))
             task.outputs.file(root.file('build/reports/violations/SPOTBUGS_VIOLATIONS.md'))
             task.doLast {
-                parseAnalysisViolations(styleXmlDir.get(), violationsDir.get(),
+                parseAnalysisViolations(analysisXmlDir.get(), violationsDir.get(),
                     checkAnalysisTests.get(), pmdEnabled.get(), spotbugsEnabled.get())
             }
         }
@@ -298,7 +297,7 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
     }
 
     @CompileDynamic
-    private static void parseAnalysisViolations(Directory styleXmlDir, Directory violationsDir,
+    private static void parseAnalysisViolations(Directory analysisXmlDir, Directory violationsDir,
             boolean checkAnalysisTests, boolean pmdEnabled, boolean spotbugsEnabled) {
         def slurper = new XmlSlurper()
         slurper.setFeature('http://apache.org/xml/features/nonvalidating/load-external-dtd', false)
@@ -349,7 +348,7 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
 
         // PMD
         def pmdViolations = []
-        def pmdDir = styleXmlDir.dir('pmd').asFile
+        def pmdDir = analysisXmlDir.dir('pmd').asFile
         if (pmdDir.exists() && pmdEnabled) {
             pmdDir.eachFileMatch(~/.*\.xml/) { file ->
                 if (file.size() == 0 || (!checkAnalysisTests && isTestFile(file.name))) {
@@ -379,7 +378,7 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
 
         // SpotBugs
         def spotbugsViolations = []
-        def spotbugsDir = styleXmlDir.dir('spotbugs').asFile
+        def spotbugsDir = analysisXmlDir.dir('spotbugs').asFile
         if (spotbugsDir.exists() && spotbugsEnabled) {
             spotbugsDir.eachFileMatch(~/.*\.xml/) { file ->
                 if (file.size() == 0 || (!checkAnalysisTests && isTestFile(file.name))) {

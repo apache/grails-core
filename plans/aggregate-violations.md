@@ -39,11 +39,13 @@ Three convention plugins divide the responsibility:
 ## Report Directories
 
 ```
-build/reports/codestyle/          ← XML inputs (written by subprojects)
+build/reports/codestyle/          ← XML inputs (written by subprojects, code style only)
 ├── checkstyle/
 │   └── <module>-checkstyleMain.xml
-├── codenarc/
-│   └── <module>-codenarcMain.xml
+└── codenarc/
+    └── <module>-codenarcMain.xml
+
+build/reports/codeanalysis/       ← XML inputs (written by subprojects, analysis only)
 ├── pmd/                          (only when PMD enabled)
 │   └── <module>-pmdMain.xml
 └── spotbugs/                     (only when SpotBugs enabled)
