@@ -254,16 +254,41 @@ class ActiveSessionDatastoreSelector {
 
     @CompileDynamic
     Datastore select(GormRegistry registry, String className) {
-        for (Datastore registeredDs in registry.allDatastores) {
-            if (TransactionSynchronizationManager.hasResource(registeredDs) || registeredDs.hasCurrentSession()) {
-                if (className != null) {
-                    if (registry.getDatastore(className, ConnectionSource.DEFAULT) == registeredDs) {
-                        return registeredDs
-                    } else if (registeredDs.getMappingContext().getPersistentEntity(className) != null) {
+        // Optimization: Use TransactionSynchronizationManager.getResourceMap() to only check datastores with active sessions in the current thread.
+        // This avoids O(M) iteration over all registered datastores (which can be thousands in multi-tenancy).
+        Map resourceMap = TransactionSynchronizationManager.getResourceMap()
+        if (resourceMap != null && !resourceMap.isEmpty()) {
+            for (Object key : resourceMap.keySet()) {
+                if (key instanceof Datastore) {
+                    Datastore ds = (Datastore) key
+                    if (className != null) {
+                        if (registry.getDatastore(className, ConnectionSource.DEFAULT) == ds) {
+                            return ds
+                        } else if (ds.getMappingContext().getPersistentEntity(className) != null) {
+                            return ds
+                        }
+                    } else {
+                        return ds
+                    }
+                }
+            }
+        }
+        
+        // Fallback: If no datastore found in TransactionSynchronizationManager, 
+        // we might still have a non-transactional session bound to a ThreadLocalSessionResolver.
+        // For performance, we only do the full iteration if allDatastores is small.
+        if (registry.allDatastores.size() <= 10) {
+            for (Datastore registeredDs in registry.allDatastores) {
+                if (registeredDs.hasCurrentSession()) {
+                    if (className != null) {
+                        if (registry.getDatastore(className, ConnectionSource.DEFAULT) == registeredDs) {
+                            return registeredDs
+                        } else if (registeredDs.getMappingContext().getPersistentEntity(className) != null) {
+                            return registeredDs
+                        }
+                    } else if (registry.allDatastores.size() == 1) {
                         return registeredDs
                     }
-                } else if (registry.allDatastores.size() == 1) {
-                    return registeredDs
                 }
             }
         }

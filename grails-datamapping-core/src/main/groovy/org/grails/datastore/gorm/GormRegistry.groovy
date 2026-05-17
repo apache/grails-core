@@ -209,12 +209,9 @@ class GormRegistry {
     }
 
     /**
-     * Internal method to avoid ambiguity.
+     * Internal method to avoid redundant normalization.
      */
-    private Datastore getDatastoreByString(String className, String qualifier) {
-        String normalizedQualifier = normalizeQualifier(qualifier)
-        String normalizedClassName = className != null ? normalizeEntityKey(className) : null
-
+    Datastore getDatastoreDirect(String normalizedClassName, String normalizedQualifier) {
         if (normalizedClassName != null) {
             Map<String, Datastore> mappedDatastores = entityDatastores.get(normalizedClassName)
             if (mappedDatastores != null) {
@@ -232,6 +229,13 @@ class GormRegistry {
             }
         }
         return ds
+    }
+
+    /**
+     * Internal method to avoid ambiguity.
+     */
+    private Datastore getDatastoreByString(String className, String qualifier) {
+        return getDatastoreDirect(className != null ? normalizeEntityKey(className) : null, normalizeQualifier(qualifier))
     }
 
     /**
@@ -398,17 +402,17 @@ class GormRegistry {
         
         if (ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
             if (MultiTenant.isAssignableFrom(entityClass)) {
-                Datastore ds = getDatastoreByString(normalizedClassName, normalizedQualifier)
+                Datastore ds = getDatastoreDirect(normalizedClassName, normalizedQualifier)
                 if (ds instanceof MultiTenantCapableDatastore) {
                     Serializable tenantId = CurrentTenantHolder.get((MultiTenantCapableDatastore) ds)
                     if (tenantId != null) {
-                        return staticApiRegistry.get(normalizedClassName, tenantId.toString())
+                        return staticApiRegistry.getDirect(normalizedClassName, tenantId.toString())
                     }
                 }
             }
         }
         
-        return staticApiRegistry.get(normalizedClassName, normalizedQualifier)
+        return staticApiRegistry.getDirect(normalizedClassName, normalizedQualifier)
     }
 
     GormInstanceApi resolveInstanceApi(Class entityClass) {
@@ -421,17 +425,17 @@ class GormRegistry {
 
         if (ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
             if (MultiTenant.isAssignableFrom(entityClass)) {
-                Datastore ds = getDatastoreByString(normalizedClassName, normalizedQualifier)
+                Datastore ds = getDatastoreDirect(normalizedClassName, normalizedQualifier)
                 if (ds instanceof MultiTenantCapableDatastore) {
                     Serializable tenantId = CurrentTenantHolder.get((MultiTenantCapableDatastore) ds)
                     if (tenantId != null) {
-                        return instanceApiRegistry.get(normalizedClassName, tenantId.toString())
+                        return instanceApiRegistry.getDirect(normalizedClassName, tenantId.toString())
                     }
                 }
             }
         }
         
-        return instanceApiRegistry.get(normalizedClassName, normalizedQualifier)
+        return instanceApiRegistry.getDirect(normalizedClassName, normalizedQualifier)
     }
 
     GormValidationApi resolveValidationApi(Class entityClass) {
@@ -444,29 +448,41 @@ class GormRegistry {
 
         if (ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
             if (MultiTenant.isAssignableFrom(entityClass)) {
-                Datastore ds = getDatastoreByString(normalizedClassName, normalizedQualifier)
+                Datastore ds = getDatastoreDirect(normalizedClassName, normalizedQualifier)
                 if (ds instanceof MultiTenantCapableDatastore) {
                     Serializable tenantId = CurrentTenantHolder.get((MultiTenantCapableDatastore) ds)
                     if (tenantId != null) {
-                        return validationApiRegistry.get(normalizedClassName, tenantId.toString())
+                        return validationApiRegistry.getDirect(normalizedClassName, tenantId.toString())
                     }
                 }
             }
         }
         
-        return validationApiRegistry.get(normalizedClassName, normalizedQualifier)
+        return validationApiRegistry.getDirect(normalizedClassName, normalizedQualifier)
     }
 
     GormStaticApi getStaticApi(String className) {
         return staticApiRegistry.get(normalizeEntityKey(className))
     }
 
+    GormStaticApi getStaticApi(String className, String qualifier) {
+        return staticApiRegistry.get(normalizeEntityKey(className), normalizeQualifier(qualifier))
+    }
+
     GormInstanceApi getInstanceApi(String className) {
         return instanceApiRegistry.get(normalizeEntityKey(className))
     }
 
+    GormInstanceApi getInstanceApi(String className, String qualifier) {
+        return instanceApiRegistry.get(normalizeEntityKey(className), normalizeQualifier(qualifier))
+    }
+
     GormValidationApi getValidationApi(String className) {
         return validationApiRegistry.get(normalizeEntityKey(className))
+    }
+
+    GormValidationApi getValidationApi(String className, String qualifier) {
+        return validationApiRegistry.get(normalizeEntityKey(className), normalizeQualifier(qualifier))
     }
     GormInstanceApiRegistry getInstanceApiRegistry() {
         return instanceApiRegistry
@@ -624,10 +640,12 @@ class GormRegistry {
      * Create a DatastoreResolver for a class and optional qualifier.
      */
     DatastoreResolver createClassDatastoreResolver(Class cls, String qualifier = ConnectionSource.DEFAULT) {
+        String normalizedClassName = normalizeEntityKey(cls)
+        String normalizedQualifier = normalizeQualifier(qualifier)
         return new DatastoreResolver() {
             @Override
             Datastore resolve() {
-                getDatastore(cls.name, qualifier)
+                getDatastoreDirect(normalizedClassName, normalizedQualifier)
             }
         }
     }

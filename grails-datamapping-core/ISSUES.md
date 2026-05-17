@@ -45,15 +45,19 @@ Files:
 - `src/main/groovy/org/grails/datastore/gorm/GormValidationApiRegistry.groovy`
 
 Changes:
-- Reused `get(className, qualifier)` inside API registries to prevent duplicate `forQualifier` instantiations when the datastore does not change.
-- Simplified `findDatastore` in `GormApiResolver` by removing redundant duplicate `DEFAULT` lookups.
+- [DONE] Reused `get(className, qualifier)` inside API registries to prevent duplicate `forQualifier` instantiations when the datastore does not change.
+- [DONE] Implemented `qualifiedApis` cache in `AbstractGormApiRegistry` to eliminate O(M+N) allocation churn.
+- [DONE] Simplified `findDatastore` in `GormApiResolver` by removing redundant duplicate `DEFAULT` lookups.
+- [DONE] Optimized `ActiveSessionDatastoreSelector` to use `TransactionSynchronizationManager.getResourceMap()`, reducing fallback lookup from O(M) to O(1) active datastores.
 
 ### Concurrency Testing / Lock Contention Benchmarking
 Files:
 - `src/test/groovy/org/grails/datastore/gorm/GormRegistryConcurrencySpec.groovy`
+- `src/test/groovy/org/grails/datastore/gorm/GormRegistryScalabilitySpec.groovy`
 
 Changes:
 - Implemented and ran `GormRegistryConcurrencySpec` confirming safe, high-throughput concurrent access to registry lookups over 1 million total operations across 10 threads. Verified no lock contention failures occur with existing `ConcurrentHashMap` semantics.
+- Added `GormRegistryScalabilitySpec` to verify O(M+N) memory guarantee and O(1) API retrieval performance.
 
 ### Tests added/updated for normalization and API resolution behavior
 Files:
@@ -78,8 +82,12 @@ Coverage added:
 - [DONE] Cache normalized entity keys and qualifier maps in one place.
 - [DONE] Audit repeated `findDatastore`/qualifier fallback chains and collapse duplicate branches.
 - [DONE] Benchmark `computeIfAbsent` and lock contention patterns in registry-heavy paths.
+- [DONE] Implement API instance caching in registries.
+- [DONE] Optimize `ActiveSessionDatastoreSelector` for multi-tenant scale.
 
 ### Tenant context and session routing
 **Goal:** lower context-switch overhead and reduce accidental cross-context work.
 - [DONE] Profile tenant context wrapping frequency in static API calls.
-- Identify places where tenant/session context can be propagated once instead of re-resolved.
+- [DONE] Identify places where tenant/session context can be propagated once instead of re-resolved.
+  - Refactored `GormInstanceApi.save` and `GormRegistry.createClassDatastoreResolver` to propagate context.
+  - Refactored `SimpleMapQuery` to avoid redundant `Tenants.currentId()` calls.

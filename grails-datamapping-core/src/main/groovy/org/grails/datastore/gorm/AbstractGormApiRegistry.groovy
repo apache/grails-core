@@ -28,6 +28,7 @@ import java.util.concurrent.ConcurrentHashMap
 abstract class AbstractGormApiRegistry<T extends AbstractDatastoreApi> {
 
     private final Map<String, T> apis = new ConcurrentHashMap<>()
+    private final Map<String, Map<String, T>> qualifiedApis = new ConcurrentHashMap<>()
     protected final GormRegistry registry
 
     AbstractGormApiRegistry(GormRegistry registry) {
@@ -46,15 +47,32 @@ abstract class AbstractGormApiRegistry<T extends AbstractDatastoreApi> {
     }
 
     T get(String className, String qualifier) {
-        String normalizedClassName = registry.normalizeEntityKey(className)
-        String normalizedQualifier = registry.normalizeQualifier(qualifier)
-        T api = apis.get(normalizedClassName)
-        if (api != null && !ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
-            Datastore ds = registry.getDatastore(normalizedClassName, normalizedQualifier)
-            if (ds == null || ds != api.getDatastore()) {
-                return qualify(api, normalizedQualifier)
+        return getDirect(registry.normalizeEntityKey(className), registry.normalizeQualifier(qualifier))
+    }
+
+    T getDirect(String normalizedClassName, String normalizedQualifier) {
+        if (ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
+            return apis.get(normalizedClassName)
+        }
+
+        Map<String, T> classQualifiedApis = qualifiedApis.computeIfAbsent(normalizedClassName, { new ConcurrentHashMap<String, T>() })
+        T api = classQualifiedApis.get(normalizedQualifier)
+        
+        if (api == null) {
+            T defaultApi = apis.get(normalizedClassName)
+            if (defaultApi != null) {
+                Datastore ds = registry.getDatastoreDirect(normalizedClassName, normalizedQualifier)
+                if (ds != null && ds != defaultApi.getDatastore()) {
+                    api = qualify(defaultApi, normalizedQualifier)
+                    if (api != null) {
+                        classQualifiedApis.put(normalizedQualifier, api)
+                    }
+                } else {
+                    return defaultApi
+                }
             }
         }
+        
         return api
     }
 
@@ -72,6 +90,7 @@ abstract class AbstractGormApiRegistry<T extends AbstractDatastoreApi> {
 
     void clear() {
         apis.clear()
+        qualifiedApis.clear()
     }
 
     protected String className(Class entity) {
