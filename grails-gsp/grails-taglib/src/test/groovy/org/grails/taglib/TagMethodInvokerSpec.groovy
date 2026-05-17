@@ -19,6 +19,7 @@
 package org.grails.taglib
 
 import grails.gsp.NotATag
+import grails.gsp.Tag
 import spock.lang.Specification
 
 class TagMethodInvokerSpec extends Specification {
@@ -67,6 +68,21 @@ class TagMethodInvokerSpec extends Specification {
         then:
         names.contains('publicTag')
         !names.contains('helperMethod')
+    }
+
+    void "public helper methods are not exposed as tags by default"() {
+        when:
+        Collection<String> names = TagMethodInvoker.getInvokableTagMethodNames(HelperMethodTagLib)
+
+        then:
+        names.contains('greet')
+        !names.contains('formatDate')
+        !names.contains('buildInternalUrl')
+    }
+
+    void "inherited helper methods are not exposed as tags"() {
+        expect:
+        !TagMethodInvoker.getInvokableTagMethodNames(ChildTagLib).contains('sharedUtility')
     }
 
     void "closure tag is resolved from declared field"() {
@@ -154,13 +170,30 @@ class TagMethodInvokerSpec extends Specification {
         TagMethodInvoker.invokeTagMethod(tagLib, 'render', [name: 'Ada'], null) == 'name:Ada'
         TagMethodInvoker.invokeTagMethod(tagLib, 'render', [count: 7], null) == 'count:7'
     }
+
+    void "closure parameter must use canonical body name"() {
+        given:
+        def tagLib = new BodyParameterTagLib()
+        Closure body = { -> 'BODY' }
+
+        expect:
+        TagMethodInvoker.invokeTagMethod(tagLib, 'canonical', [:], body) == 'canonical BODY'
+
+        when:
+        TagMethodInvoker.invokeTagMethod(tagLib, 'renamed', [:], body)
+
+        then:
+        thrown(MissingMethodException)
+    }
 }
 
 class ErrorThrowingTagLib {
+    @Tag
     def boom() {
         throw new AssertionError((Object) 'boom!')
     }
 
+    @Tag
     def kapow() {
         throw new IllegalStateException('kapow!')
     }
@@ -176,6 +209,7 @@ class ObjectOverrideTagLib {
     @Override
     boolean equals(Object other) { other instanceof ObjectOverrideTagLib }
 
+    @Tag
     def realTag() { 'tag' }
 }
 
@@ -184,14 +218,33 @@ class LifecycleTagLib {
 
     void onApplicationEvent(Object event) {}
 
+    @Tag
     def realTag() { 'tag' }
 }
 
 class OptedOutTagLib {
+    @Tag
     def publicTag() { 'tag' }
 
     @NotATag
     def helperMethod(Date when) { when?.toString() }
+}
+
+class HelperMethodTagLib {
+    @Tag
+    def greet(String name) { "hello ${name}" }
+
+    def formatDate(Date when) { when?.toString() ?: '' }
+
+    def buildInternalUrl(String path) { "/internal${path}" }
+}
+
+abstract class AbstractBaseTagLib {
+    def sharedUtility(String value) { value.toUpperCase() }
+}
+
+class ChildTagLib extends AbstractBaseTagLib {
+    def realTag(Map attrs) { 'child tag' }
 }
 
 class ClosureTagLib {
@@ -211,13 +264,23 @@ class StaticClosureTagLib {
 }
 
 class TypedParamTagLib {
+    @Tag
     def greet(String name) { "hello ${name}" }
 
+    @Tag
     def pageNumber(int page) { "page ${page}" }
 }
 
 class SameArityOverloadsTagLib {
+    @Tag
     def render(String name) { "name:${name}" }
 
+    @Tag
     def render(int count) { "count:${count}" }
+}
+
+class BodyParameterTagLib {
+    def canonical(Closure body) { "canonical ${body.call()}" }
+
+    def renamed(Closure renderer) { "renamed ${renderer.call()}" }
 }

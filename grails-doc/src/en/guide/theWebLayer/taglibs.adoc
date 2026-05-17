@@ -28,11 +28,12 @@ class SimpleTagLib {
 }
 ----
 
-Now create tags using methods. You can access tag attributes through the implicit `attrs` map and body through the implicit `body` closure:
+Now create tags using methods. Methods with the conventional `Map attrs`, `Closure body`, and `Map attrs, Closure body` signatures are discovered as tags automatically. Other method tags should be annotated with `@Tag`; they can access tag attributes through the implicit `attrs` map and body through the implicit `body` closure:
 
 [source,groovy]
 ----
 class SimpleTagLib {
+    @Tag
     def simple() {
         // ...
 
@@ -53,11 +54,12 @@ class SimpleTagLib {
 }
 ----
 
-For method-based tags, named attributes can also bind directly to method signature arguments:
+For method-based tags, named attributes can also bind directly to method signature arguments when the method is explicitly marked with `@Tag`:
 
 [source,groovy]
 ----
 class SimpleTagLib {
+    @Tag
     def greeting(String name) {
         out << "Hello, ${name}!"
     }
@@ -79,11 +81,14 @@ def field(Map attrs) {
     // existing validation + rendering path
 }
 
+@Tag
 def field(String type, Map attrs) {
     attrs.type = type
     field(attrs)
 }
 ----
+
+Without `@Tag`, Grails discovers method tags only for the conventional tag signatures `def tag(Map attrs)`, `def tag(Closure body)`, and `def tag(Map attrs, Closure body)`. This prevents ordinary helper methods from being exposed as tags accidentally.
 
 As demonstrated above there is an implicit `out` variable that refers to the output `Writer` which you can use to append content to the response. Then you can reference the tag inside your GSP; no imports are necessary:
 

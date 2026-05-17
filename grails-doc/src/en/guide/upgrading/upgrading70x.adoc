@@ -965,23 +965,28 @@ Grails 8 introduces method-based tag handler syntax as the recommended way to de
 class DemoTagLib {
     static namespace = 'demo'
 
+    @Tag
     def greet() {
         out << "Hello, ${attrs.name}!"
     }
 
+    @Tag
     def greeting(String name) {
         out << "Hello, ${name}!"
     }
 }
 ----
 
-To exclude a public method from being exposed as a tag (for example, a helper that must remain public to satisfy an interface), annotate it with `@grails.gsp.NotATag`:
+Method tags with the conventional signatures `def tag(Map attrs)`, `def tag(Closure body)`, and `def tag(Map attrs, Closure body)` are discovered automatically. Zero-argument method tags and method tags that bind named attributes directly to method parameters must use `@grails.gsp.Tag`; this avoids exposing ordinary public helper methods as tags.
+
+To exclude a conventional public method from being exposed as a tag (for example, a helper that must remain public to satisfy an interface), annotate it with `@grails.gsp.NotATag`:
 
 [source,groovy]
 ----
 import grails.gsp.NotATag
 
 class DemoTagLib {
+    @Tag
     def greet() {
         out << "Hello, ${attrs.name}!"
     }

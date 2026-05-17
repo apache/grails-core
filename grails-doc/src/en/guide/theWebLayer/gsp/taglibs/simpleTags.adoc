@@ -33,10 +33,11 @@ The above uses Java's `SimpleDateFormat` class to format a date and then write i
 <g:dateFormat format="dd-MM-yyyy" date="${new Date()}" />
 ----
 
-With method-based tags, attributes may also bind directly to method parameters by name:
+With method-based tags, attributes may also bind directly to method parameters by name when the method is explicitly marked with `@Tag`:
 
 [source,groovy]
 ----
+@Tag
 def dateFormat(String format, Date date) {
     out << new java.text.SimpleDateFormat(format).format(date)
 }

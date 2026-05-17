@@ -18,26 +18,47 @@
  */
 package functionaltests
 import grails.compiler.GrailsCompileStatic
+import grails.gsp.Tag
 
 @GrailsCompileStatic
 class MethodTagLib {
 
+    @Tag
     def implicitTag() {
         Map tagAttrs = (Map) propertyMissing('attrs')
         out << "${tagAttrs.blah} - implicit"
     }
 
+    @Tag
     def typedTag(String blah) {
         out << "${blah} - typed"
     }
 
+    @Tag
     def multiTypedTag(String first, String second) {
         out << "${first}-${second}"
     }
 
+    def attrsMapTag(Map attrs) {
+        out << "attrs-${attrs.blah}"
+    }
+
+    def closureBodyTag(Closure body) {
+        out << "closure-${body.call()}"
+    }
+
+    @Tag
     def bodyTag() {
         Closure tagBody = (Closure) propertyMissing('body')
         out << "before-${tagBody?.call()}-after"
+    }
+
+    def formatDate(Date date) {
+        date?.toString() ?: ''
+    }
+
+    def buildInternalUrl(String path) {
+        "/internal${path}"
     }
 
     Closure legacyTag = { Map attrs ->

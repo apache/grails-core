@@ -19,6 +19,8 @@
 <g:implicitTag blah="duh" />
 <g:typedTag blah="duh2" />
 <g:multiTypedTag first="hello" second="world" />
+<g:attrsMapTag blah="duh3" />
+<g:closureBodyTag>xyz</g:closureBodyTag>
 <g:bodyTag>abc</g:bodyTag>
 <g:legacyTag blah="legacy" />
 <shared:fromMethod one="1" />

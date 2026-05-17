@@ -37,6 +37,7 @@ import groovy.lang.GroovyObject;
 import groovy.lang.MissingMethodException;
 
 import grails.gsp.NotATag;
+import grails.gsp.Tag;
 
 public final class TagMethodInvoker {
 
@@ -100,7 +101,7 @@ public final class TagMethodInvoker {
         @Override
         protected Map<String, List<Method>> computeValue(Class<?> type) {
             Map<String, List<Method>> methodsByName = new HashMap<>();
-            for (Method method : getCandidateMethods(type)) {
+            for (Method method : type.getDeclaredMethods()) {
                 if (isTagMethodCandidate(method)) {
                     methodsByName.computeIfAbsent(method.getName(), ignored -> new ArrayList<>()).add(method);
                 }
@@ -143,7 +144,7 @@ public final class TagMethodInvoker {
             return Collections.emptyList();
         }
         List<String> names = new ArrayList<>();
-        for (Method method : getCandidateMethods(tagLibClass)) {
+        for (Method method : tagLibClass.getDeclaredMethods()) {
             if (isTagMethodCandidate(method)) {
                 names.add(method.getName());
             }
@@ -191,6 +192,9 @@ public final class TagMethodInvoker {
         if (method.isAnnotationPresent(NotATag.class)) {
             return false;
         }
+        if (method.isAnnotationPresent(Tag.class)) {
+            return true;
+        }
         String name = method.getName();
         if (name.startsWith("get") && method.getParameterCount() == 0) {
             return false;
@@ -212,23 +216,29 @@ public final class TagMethodInvoker {
         if (OBJECT_METHOD_SIGNATURES.contains(signature) || GROOVY_OBJECT_METHOD_SIGNATURES.contains(signature)) {
             return false;
         }
-        return true;
+        return hasConventionalTagSignature(method);
     }
 
-    private static Collection<Method> getCandidateMethods(Class<?> type) {
-        List<Method> methods = new ArrayList<>();
-        Set<String> seenSignatures = new HashSet<>();
-        Class<?> current = type;
-        while (current != null && current != Object.class && current != GroovyObject.class) {
-            for (Method method : current.getDeclaredMethods()) {
-                String signature = signature(method);
-                if (seenSignatures.add(signature)) {
-                    methods.add(method);
-                }
-            }
-            current = current.getSuperclass();
+    private static boolean hasConventionalTagSignature(Method method) {
+        Parameter[] parameters = method.getParameters();
+        if (parameters.length == 1) {
+            return isAttrsParameter(parameters[0]) || isBodyParameter(parameters[0]);
         }
-        return methods;
+        return parameters.length == 2 && isAttrsParameter(parameters[0]) && isBodyParameter(parameters[1]);
+    }
+
+    private static boolean isAttrsParameter(Parameter parameter) {
+        if (!Map.class.isAssignableFrom(parameter.getType())) {
+            return false;
+        }
+        return "attrs".equals(parameter.getName()) || !parameter.isNamePresent();
+    }
+
+    private static boolean isBodyParameter(Parameter parameter) {
+        if (!Closure.class.isAssignableFrom(parameter.getType())) {
+            return false;
+        }
+        return "body".equals(parameter.getName()) || !parameter.isNamePresent();
     }
 
     private static String signature(Method method) {
@@ -249,11 +259,11 @@ public final class TagMethodInvoker {
         for (int i = 0; i < parameters.length; i++) {
             String parameterName = parameters[i].getName();
             Class<?> parameterType = parameters[i].getType();
-            if (Map.class.isAssignableFrom(parameterType) && "attrs".equals(parameterName)) {
+            if (isAttrsParameter(parameters[i])) {
                 args[i] = attrs;
                 continue;
             }
-            if (Closure.class.isAssignableFrom(parameterType)) {
+            if (isBodyParameter(parameters[i])) {
                 args[i] = body != null ? body : TagOutput.EMPTY_BODY_CLOSURE;
                 continue;
             }

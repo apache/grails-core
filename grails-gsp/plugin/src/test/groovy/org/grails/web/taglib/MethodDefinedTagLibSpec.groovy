@@ -20,6 +20,7 @@ package org.grails.web.taglib
 
 import grails.artefact.Artefact
 import grails.compiler.GrailsCompileStatic
+import grails.gsp.Tag
 import grails.testing.web.taglib.TagLibUnitTest
 import org.grails.taglib.GrailsTagException
 import spock.lang.Specification
@@ -35,10 +36,19 @@ class MethodDefinedTagLibSpec extends Specification implements TagLibUnitTest<Me
         applyTemplate('<g:methodTag blah="duh" />') == 'duh - is this'
     }
 
+    void "zero-arg method tags require explicit annotation"() {
+        when:
+        applyTemplate('<g:unannotatedZeroArg/>')
+
+        then:
+        thrown(GrailsTagException)
+    }
+
     void "method tag can bind named attribute to typed argument"() {
         expect:
         applyTemplate('<g:typedTag blah="duh" />') == 'duh - typed'
     }
+
     void "method tag can bind multiple named attributes to multiple typed arguments"() {
         expect:
         applyTemplate('<g:multiTypedTag first="hello" second="world" />') == 'hello-world'
@@ -115,15 +125,18 @@ class MethodDefinedTagLibSpec extends Specification implements TagLibUnitTest<Me
 @GrailsCompileStatic
 @Artefact('TagLib')
 class StaticMethodTagLib {
+    @Tag
     def staticImplicitTag() {
         Map tagAttrs = (Map) propertyMissing('attrs')
         out << "${tagAttrs.blah} - static implicit"
     }
 
+    @Tag
     def staticTypedTag(String blah) {
         out << "${blah} - static typed"
     }
 
+    @Tag
     def staticBodyTag() {
         Closure tagBody = (Closure) propertyMissing('body')
         out << "before-${tagBody?.call()}-after"
@@ -136,21 +149,31 @@ class MethodTagLib {
         'real-shared'
     }
 
+    @Tag
     def methodTag() {
         out << "${attrs.blah} - is this"
     }
 
+    def unannotatedZeroArg() {
+        out << 'not a tag'
+    }
+
+    @Tag
     def typedTag(String blah) {
         out << "${blah} - typed"
     }
+
+    @Tag
     def multiTypedTag(String first, String second) {
         out << "${first}-${second}"
     }
 
+    @Tag
     def mismatchedArgTag(String name) {
         out << name
     }
 
+    @Tag
     def mapValueTag(Map config) {
         out << "${config.k}"
     }
@@ -167,10 +190,12 @@ class MethodTagLib {
         out << 'protected'
     }
 
+    @Tag
     def bodyTag() {
         out << "before-${body()}-after"
     }
 
+    @Tag
     def readSharedProperty() {
         out << shared
     }
@@ -188,6 +213,7 @@ class MethodTagLib {
 class SharedNsMethodTagLib {
     static namespace = 'shared'
 
+    @Tag
     def fromMethod(String one) {
         out << "method-${one}"
     }

@@ -16,15 +16,19 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package functionaltests
+package grails.gsp;
 
-import grails.gsp.Tag
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-class SharedNsMethodTagLib {
-    static namespace = 'shared'
-
-    @Tag
-    def fromMethod(String one) {
-        out << "method-${one}"
-    }
+/**
+ * Marks a public TagLib method as an invokable GSP tag.
+ *
+ * @since 8.0
+ */
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
+public @interface Tag {
 }

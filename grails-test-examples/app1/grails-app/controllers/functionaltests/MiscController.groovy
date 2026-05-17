@@ -19,6 +19,7 @@
 
 package functionaltests
 
+import org.grails.core.artefact.gsp.TagLibArtefactHandler
 import org.springframework.beans.factory.annotation.*
 import org.example.MyBean
 
@@ -45,6 +46,11 @@ class MiscController {
 
     def tagMethods() {
         render(view: 'tagMethods')
+    }
+
+    def tagMethodNames() {
+        def tagLibClass = grailsApplication.getArtefact(TagLibArtefactHandler.TYPE, MethodTagLib.name)
+        render(tagLibClass.tagNames.sort().join(','))
     }
 
     def interceptedByInterceptor() {

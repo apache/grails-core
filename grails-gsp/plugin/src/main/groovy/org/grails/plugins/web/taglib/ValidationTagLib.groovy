@@ -35,6 +35,7 @@ import org.springframework.context.support.DefaultMessageSourceResolvable
 import org.springframework.validation.Errors
 
 import grails.artefact.TagLibrary
+import grails.gsp.Tag
 import grails.gsp.TagLib
 import org.grails.encoder.CodecLookup
 import org.grails.encoder.Encoder
@@ -465,6 +466,7 @@ class ValidationTagLib implements TagLibrary {
      * formatted according to the current user's locale during the
      * conversion to a string.
      */
+    @Tag
     def formatValue(value, String propertyPath = null, Boolean tagSyntaxCall = false) {
         def webRequest = GrailsWebRequest.lookup()
         PropertyEditorRegistry registry = webRequest.getPropertyEditorRegistry()

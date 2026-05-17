@@ -21,6 +21,8 @@ package org.grails.taglib
 
 import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
+import org.apache.commons.logging.Log
+import org.apache.commons.logging.LogFactory
 import org.codehaus.groovy.reflection.CachedMethod
 import org.codehaus.groovy.runtime.metaclass.MethodSelectionException
 
@@ -31,6 +33,8 @@ import grails.util.GrailsClassUtils
 import org.grails.taglib.encoder.OutputContextLookupHelper
 
 class TagLibraryMetaUtils {
+
+    private static final Log LOG = LogFactory.getLog(TagLibraryMetaUtils)
 
     // used for testing (GroovyPageUnitTestMixin.mockTagLib) and "nonEnhancedTagLibClasses" in GroovyPagesGrailsPlugin
     private final static Object[] EMPTY_OBJECT_ARRAY = new Object[0]
@@ -100,33 +104,48 @@ class TagLibraryMetaUtils {
     static registerMethodMissingForTags(MetaClass metaClass, TagLibraryLookup gspTagLibraryLookup, String namespace, String name, boolean addAll = true, boolean overrideMethods = true) {
         GroovyObject mc = (GroovyObject) metaClass
 
-        if (overrideMethods || !doesMethodExist(metaClass, name, [Map, Closure] as Class[])) {
+        if (shouldRegisterTagDispatcher(metaClass, namespace, name, [Map, Closure] as Class[], overrideMethods)) {
             mc.setProperty(name) { Map attrs, Closure body ->
                 captureTagOutputForMethodCall(gspTagLibraryLookup, namespace, name, attrs, body)
             }
         }
-        if (overrideMethods || !doesMethodExist(metaClass, name, [Map, CharSequence] as Class[])) {
+        if (shouldRegisterTagDispatcher(metaClass, namespace, name, [Map, CharSequence] as Class[], overrideMethods)) {
             mc.setProperty(name) { Map attrs, CharSequence body ->
                 captureTagOutputForMethodCall(gspTagLibraryLookup, namespace, name, attrs, new TagOutput.ConstantClosure(body))
             }
         }
-        if (overrideMethods || !doesMethodExist(metaClass, name, [Map] as Class[])) {
+        if (shouldRegisterTagDispatcher(metaClass, namespace, name, [Map] as Class[], overrideMethods)) {
             mc.setProperty(name) { Map attrs ->
                 captureTagOutputForMethodCall(gspTagLibraryLookup, namespace, name, attrs, null)
             }
         }
         if (addAll) {
-            if (overrideMethods || !doesMethodExist(metaClass, name, [Closure] as Class[])) {
+            if (shouldRegisterTagDispatcher(metaClass, namespace, name, [Closure] as Class[], overrideMethods)) {
                 mc.setProperty(name) { Closure body ->
                     captureTagOutputForMethodCall(gspTagLibraryLookup, namespace, name, [:], body)
                 }
             }
-            if (overrideMethods || !doesMethodExist(metaClass, name, [] as Class[])) {
+            if (shouldRegisterTagDispatcher(metaClass, namespace, name, [] as Class[], overrideMethods)) {
                 mc.setProperty(name) { ->
                     captureTagOutputForMethodCall(gspTagLibraryLookup, namespace, name, [:], null)
                 }
             }
         }
+    }
+
+    @CompileStatic
+    private static boolean shouldRegisterTagDispatcher(MetaClass metaClass, String namespace, String name, Class[] parameterTypes, boolean overrideMethods) {
+        boolean methodExists = doesMethodExist(metaClass, name, parameterTypes)
+        if (!methodExists) {
+            return true
+        }
+        if (overrideMethods) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Registering tag dispatcher ${namespace}:${name} over existing method ${metaClass.theClass.name}.${name}(${parameterTypes*.simpleName.join(', ')})")
+            }
+            return true
+        }
+        return false
     }
 
     @CompileStatic

@@ -16,15 +16,19 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package functionaltests
+package org.grails.gradle.plugin.core
 
-import grails.gsp.Tag
+class GrailsGradlePluginParameterMetadataSpec extends GradleSpecification {
 
-class SharedNsMethodTagLib {
-    static namespace = 'shared'
+    def 'Grails application plugin preserves method parameter names for tag method binding'() {
+        given:
+        setupTestResourceProject('parameter-metadata')
 
-    @Tag
-    def fromMethod(String one) {
-        out << "method-${one}"
+        when:
+        def result = executeTask('inspectParameterMetadata')
+
+        then:
+        result.output.contains('GROOVY_PARAMETERS=true')
+        result.output.contains('JAVA_PARAMETERS=true')
     }
 }
