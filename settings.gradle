@@ -309,81 +309,18 @@ include 'grails-data-hibernate5-spring-boot'
 findProject(':grails-data-hibernate5-spring-boot').projectDir = new File(settingsDir, 'grails-data-hibernate5/boot-plugin')
 
 // functional tests - Hibernate5 examples
-include 'grails-test-examples-hibernate5-grails-hibernate'
-project(':grails-test-examples-hibernate5-grails-hibernate').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/grails-hibernate')
-
-include 'grails-test-examples-hibernate5-grails-multiple-datasources'
-project(':grails-test-examples-hibernate5-grails-multiple-datasources').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/grails-multiple-datasources')
-
-include 'grails-test-examples-hibernate5-grails-database-per-tenant'
-project(':grails-test-examples-hibernate5-grails-database-per-tenant').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/grails-database-per-tenant')
-
-include 'grails-test-examples-hibernate5-grails-schema-per-tenant'
-project(':grails-test-examples-hibernate5-grails-schema-per-tenant').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/grails-schema-per-tenant')
-
-include 'grails-test-examples-hibernate5-grails-partitioned-multi-tenancy'
-project(':grails-test-examples-hibernate5-grails-partitioned-multi-tenancy').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/grails-partitioned-multi-tenancy')
-include 'grails-test-examples-hibernate5-grails-multitenant-multi-datasource'
-project(':grails-test-examples-hibernate5-grails-multitenant-multi-datasource').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/grails-multitenant-multi-datasource')
-
-include 'grails-test-examples-hibernate5-standalone-hibernate'
-project(':grails-test-examples-hibernate5-standalone-hibernate').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/standalone-hibernate')
-
-include 'grails-test-examples-hibernate5-spring-boot-hibernate'
-project(':grails-test-examples-hibernate5-spring-boot-hibernate').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/spring-boot-hibernate')
-
-include 'grails-test-examples-hibernate5-grails-data-service'
-project(':grails-test-examples-hibernate5-grails-data-service').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/grails-data-service')
-
-include 'grails-test-examples-hibernate5-grails-data-service-multi-datasource'
-project(':grails-test-examples-hibernate5-grails-data-service-multi-datasource').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/grails-data-service-multi-datasource')
-
-include 'grails-test-examples-hibernate5-grails-hibernate-groovy-proxy'
-project(':grails-test-examples-hibernate5-grails-hibernate-groovy-proxy').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/grails-hibernate-groovy-proxy')
-
-include 'grails-test-examples-hibernate5-issue450'
-project(':grails-test-examples-hibernate5-issue450').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/issue450')
-
-include 'grails-test-examples-hibernate5-grails-multitenant-multi-datasource'
-project(':grails-test-examples-hibernate5-grails-multitenant-multi-datasource').projectDir = new File(settingsDir, 'grails-test-examples/hibernate5/grails-multitenant-multi-datasource')
-
+file('grails-test-examples/hibernate5').listFiles({ it.directory } as FileFilter).each {
+    def projectName = "grails-test-examples-hibernate5-${it.name}"
+    include(projectName)
+    project(":${projectName}").projectDir = it
+}
 
 // functional tests - Hibernate7 examples
-include 'grails-test-examples-hibernate7-grails-hibernate'
-project(':grails-test-examples-hibernate7-grails-hibernate').projectDir = new File(settingsDir, 'grails-test-examples/hibernate7/grails-hibernate')
-
-include 'grails-test-examples-hibernate7-grails-multiple-datasources'
-project(':grails-test-examples-hibernate7-grails-multiple-datasources').projectDir = new File(settingsDir, 'grails-test-examples/hibernate7/grails-multiple-datasources')
-
-include 'grails-test-examples-hibernate7-grails-database-per-tenant'
-project(':grails-test-examples-hibernate7-grails-database-per-tenant').projectDir = new File(settingsDir, 'grails-test-examples/hibernate7/grails-database-per-tenant')
-
-include 'grails-test-examples-hibernate7-grails-schema-per-tenant'
-project(':grails-test-examples-hibernate7-grails-schema-per-tenant').projectDir = new File(settingsDir, 'grails-test-examples/hibernate7/grails-schema-per-tenant')
-
-include 'grails-test-examples-hibernate7-grails-partitioned-multi-tenancy'
-project(':grails-test-examples-hibernate7-grails-partitioned-multi-tenancy').projectDir = new File(settingsDir, 'grails-test-examples/hibernate7/grails-partitioned-multi-tenancy')
-
-include 'grails-test-examples-hibernate7-standalone-hibernate'
-project(':grails-test-examples-hibernate7-standalone-hibernate').projectDir = new File(settingsDir, 'grails-test-examples/hibernate7/standalone-hibernate')
-
-include 'grails-test-examples-hibernate7-spring-boot-hibernate'
-project(':grails-test-examples-hibernate7-spring-boot-hibernate').projectDir = new File(settingsDir, 'grails-test-examples/hibernate7/spring-boot-hibernate')
-
-include 'grails-test-examples-hibernate7-grails-data-service'
-project(':grails-test-examples-hibernate7-grails-data-service').projectDir = new File(settingsDir, 'grails-test-examples/hibernate7/grails-data-service')
-
-include 'grails-test-examples-hibernate7-grails-data-service-multi-datasource'
-project(':grails-test-examples-hibernate7-grails-data-service-multi-datasource').projectDir = new File(settingsDir, 'grails-test-examples/hibernate7/grails-data-service-multi-datasource')
-
-include 'grails-test-examples-hibernate7-grails-multitenant-multi-datasource'
-project(':grails-test-examples-hibernate7-grails-multitenant-multi-datasource').projectDir = new File(settingsDir, 'grails-test-examples/hibernate7/grails-multitenant-multi-datasource')
-
-include 'grails-test-examples-hibernate7-grails-hibernate-groovy-proxy'
-project(':grails-test-examples-hibernate7-grails-hibernate-groovy-proxy').projectDir = new File(settingsDir, 'grails-test-examples/hibernate7/grails-hibernate-groovy-proxy')
-
-include 'grails-test-examples-hibernate7-issue450'
-project(':grails-test-examples-hibernate7-issue450').projectDir = new File(settingsDir, 'grails-test-examples/hibernate7/issue450')
+file('grails-test-examples/hibernate7').listFiles({ it.directory } as FileFilter).each {
+    def projectName = "grails-test-examples-hibernate7-${it.name}"
+    include(projectName)
+    project(":${projectName}").projectDir = it
+}
 
 // Mongodb
 // core
