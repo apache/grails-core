@@ -76,7 +76,6 @@ export GRADLE_OPTS="-Xms2G -Xmx5G"
 | **hibernate-developer** | `.agents/skills/hibernate-developer/SKILL.md` | Hibernate 7 mapping, binders, generators |
 | **violation-fixer** | `.agents/skills/violation-fixer/SKILL.md` | Fix style/analysis violations (CodeNarc, Checkstyle, PMD, SpotBugs) |
 | **test-fixer** | `.agents/skills/test-fixer/SKILL.md` | Aggregate and fix test failures |
-| **codebase-memory** | `.agents/skills/codebase-memory/SKILL.md` | Setup codebase-memory-mcp locally |
 
 ## Technology Stack
 
