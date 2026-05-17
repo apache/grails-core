@@ -21,7 +21,7 @@ As demonstrated in the previous example it is easy to write simple tags that hav
 
 [source,groovy]
 ----
-def dateFormat() {
+def dateFormat(Map attrs) {
     out << new java.text.SimpleDateFormat(attrs.format).format(attrs.date)
 }
 ----
@@ -37,6 +37,8 @@ With method-based tags, attributes may also bind directly to method parameters b
 
 [source,groovy]
 ----
+import grails.gsp.Tag
+
 @Tag
 def dateFormat(String format, Date date) {
     out << new java.text.SimpleDateFormat(format).format(date)
@@ -47,7 +49,7 @@ With simple tags sometimes you need to write HTML mark-up to the response. One a
 
 [source,groovy]
 ----
-def formatBook() {
+def formatBook(Map attrs) {
     out << "<div id=\"${attrs.book.id}\">"
     out << "Title : ${attrs.book.title}"
     out << "</div>"
@@ -58,7 +60,7 @@ Although this approach may be tempting it is not very clean. A better approach w
 
 [source,groovy]
 ----
-def formatBook() {
+def formatBook(Map attrs) {
     out << render(template: "bookTemplate", model: [book: attrs.book])
 }
 ----

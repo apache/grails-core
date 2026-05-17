@@ -38,7 +38,7 @@ class ObjectReturningTagLib {
     static namespace = "cms"
     static returnObjectForTags = ['content']
 
-    def content() {
+    def content(Map attrs) {
         CmsContent.findByCode(attrs.code)?.content
     }
 }

@@ -28,27 +28,25 @@ class SimpleTagLib {
 }
 ----
 
-Now create tags using methods. Methods with the conventional `Map attrs`, `Closure body`, and `Map attrs, Closure body` signatures are discovered as tags automatically. Other method tags should be annotated with `@Tag`; they can access tag attributes through the implicit `attrs` map and body through the implicit `body` closure:
+Now create tags using methods. Methods with the conventional `Map attrs`, `Closure body`, and `Map attrs, Closure body` signatures are discovered as tags automatically:
 
 [source,groovy]
 ----
 class SimpleTagLib {
-    @Tag
-    def simple() {
-        // ...
-
+    def simple(Map attrs) {
+        out << attrs.name
     }
 }
 ----
 
 Closure field-style tags are still supported for backward compatibility, but method-based tags are the recommended syntax.
 
-The implicit `attrs` property is a `Map` of the tag attributes, while `body()` returns the tag body content when invoked:
+The `attrs` parameter is a `Map` of the tag attributes, while the `body` parameter is the tag body closure:
 
 [source,groovy]
 ----
 class SimpleTagLib {
-    def emoticon() {
+    def emoticon(Map attrs, Closure body) {
        out << body() << (attrs.happy == 'true' ? " :-)" : " :-(")
     }
 }
@@ -58,6 +56,8 @@ For method-based tags, named attributes can also bind directly to method signatu
 
 [source,groovy]
 ----
+import grails.gsp.Tag
+
 class SimpleTagLib {
     @Tag
     def greeting(String name) {
@@ -77,6 +77,8 @@ For tags with strict validation/error handling, you can keep a `Map attrs` handl
 
 [source,groovy]
 ----
+import grails.gsp.Tag
+
 def field(Map attrs) {
     // existing validation + rendering path
 }
@@ -88,7 +90,23 @@ def field(String type, Map attrs) {
 }
 ----
 
-Without `@Tag`, Grails discovers method tags only for the conventional tag signatures `def tag(Map attrs)`, `def tag(Closure body)`, and `def tag(Map attrs, Closure body)`. This prevents ordinary helper methods from being exposed as tags accidentally.
+Without `@Tag`, Grails discovers method tags only for the conventional tag signatures `def tag(Map attrs)`, `def tag(Closure body)`, and `def tag(Map attrs, Closure body)`. Zero-argument method tags and typed-parameter method tags must use `@Tag`. This prevents ordinary helper methods from being exposed as tags accidentally.
+
+If a conventional public method should not be exposed as a tag, annotate it with `@NotATag`:
+
+[source,groovy]
+----
+import grails.gsp.NotATag
+
+class SimpleTagLib {
+    @NotATag
+    def helper(Map attrs) {
+        // not a tag
+    }
+}
+----
+
+Grails applications generated with the Grails Gradle plugins preserve Java and Groovy method parameter names by default. If you compile tag libraries outside the Grails Gradle plugins, enable Java `-parameters` and Groovy `groovyOptions.parameters = true` so `@Tag` methods can bind attributes by parameter name.
 
 As demonstrated above there is an implicit `out` variable that refers to the output `Writer` which you can use to append content to the response. Then you can reference the tag inside your GSP; no imports are necessary:
 
@@ -111,7 +129,7 @@ class SimpleTagLib {
      * @attr happy whether to show a happy emoticon ('true') or
      * a sad emoticon ('false')
      */
-    def emoticon() {
+    def emoticon(Map attrs, Closure body) {
        out << body() << (attrs.happy == 'true' ? " :-)" : " :-(")
     }
 }
@@ -129,7 +147,7 @@ class SimpleTagLib {
      * @attr name REQUIRED the field name
      * @attr value the field value
      */
-    def passwordField() {
+    def passwordField(Map attrs) {
         attrs.type = "password"
         attrs.tagName = "passwordField"
         fieldImpl(out, attrs)

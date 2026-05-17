@@ -24,8 +24,8 @@ By default, tags are added to the default Grails namespace and are used with the
 class SimpleTagLib {
     static namespace = "my"
 
-    def example() {
-        //...
+    def example(Map attrs) {
+        out << attrs.name
     }
 }
 ----
