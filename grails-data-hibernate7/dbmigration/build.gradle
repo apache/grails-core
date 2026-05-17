@@ -101,14 +101,19 @@ dependencies {
         exclude group: 'org.liquibase', module: 'liquibase-commercial'
     }
     enversRuntime("org.hibernate.orm:hibernate-envers")
+
+    // Liquibase uses JUL for logging -> redirect it to SLF4J to reliably capture its output
+    testRuntimeOnly 'org.slf4j:jul-to-slf4j'
+    testRuntimeOnly 'org.slf4j:slf4j-simple'
+}
+
+tasks.named('test', Test) {
+    systemProperty("java.util.logging.config.file", "src/test/resources/logging.properties")
+    classpath += configurations.enversRuntime
 }
 
 tasks.named('jar', Jar) {
     exclude('testapp/**/**')
-}
-
-tasks.named('test', Test) {
-    classpath += configurations.enversRuntime
 }
 
 apply {
@@ -116,4 +121,3 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
 }
-

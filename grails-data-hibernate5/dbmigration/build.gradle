@@ -76,6 +76,14 @@ dependencies {
     testImplementation project(':grails-testing-support-datamapping')
     testImplementation project(':grails-testing-support-web')
     testImplementation 'com.h2database:h2'
+
+    // Liquibase uses JUL for logging -> redirect it to SLF4J to reliably capture its output
+    testRuntimeOnly 'org.slf4j:jul-to-slf4j'
+    testRuntimeOnly 'org.slf4j:slf4j-simple'
+}
+
+tasks.named('test', Test) {
+    systemProperty("java.util.logging.config.file", "src/test/resources/logging.properties")
 }
 
 tasks.named('jar', Jar) {
