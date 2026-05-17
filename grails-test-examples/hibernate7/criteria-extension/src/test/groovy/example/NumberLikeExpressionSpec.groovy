@@ -54,11 +54,11 @@ class NumberLikeExpressionSpec extends Specification {
 
         where:
         value       || expectedSql
-        '100'       || "trim(to_char(trunc(price_col,0), '999999999999999999999999990')) like ?"
-        '99.9'      || "trim(to_char(trunc(price_col,1), '999999999999999999999999990.9')) like ?"
-        '99.99'     || "trim(to_char(trunc(price_col,2), '999999999999999999999999990.99')) like ?"
-        '1%'        || "trim(to_char(trunc(price_col,0), '999999999999999999999999990')) like ?"
-        '9.9%'      || "trim(to_char(trunc(price_col,1), '999999999999999999999999990.9')) like ?"
+        '100'       || 'cast(price_col as varchar) like ?'
+        '99.9'      || 'cast(price_col as varchar) like ?'
+        '99.99'     || 'cast(price_col as varchar) like ?'
+        '1%'        || 'cast(price_col as varchar) like ?'
+        '9.9%'      || 'cast(price_col as varchar) like ?'
     }
 
     void "toSqlString strips commas from value in constructor"() {
@@ -70,7 +70,7 @@ class NumberLikeExpressionSpec extends Specification {
         String sql = expr.toSqlString(criteria, criteriaQuery)
 
         then:
-        sql == "trim(to_char(trunc(price_col,2), '999999999999999999999999990.99')) like ?"
+        sql == 'cast(price_col as varchar) like ?'
     }
 
     void "toSqlString throws HibernateException for multi-column properties"() {
