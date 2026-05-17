@@ -150,17 +150,15 @@ Coverage added:
 
 1. [DONE] Profile tenant context wrapping frequency in static API calls.
 2. Identify places where tenant/session context can be propagated once instead of re-resolved.
-3. Add targeted perf specs for DISCRIMINATOR and SCHEMA mode query loops.
+2. [DONE] Identify places where tenant/session context can be propagated once instead of re-resolved.
+   * Strategy (MongoDB/Neo4j): Pre-resolve `tenantId` at the entry point of query preparation (e.g., `preparePipeline`) and propagate the ID into filters/aggregators to eliminate redundant `Tenants.currentId()` calls.
 
-## C. Query builder/runtime allocation pressure
-**Goal:** reduce temporary object churn in frequently executed query paths.
+## D. O(M+N) migration side effects
+**Goal:** Address performance regressions introduced during the Hibernate 7 and multi-datastore migration.
 
-1. Review HQL/criteria builder allocation patterns in H5/H7 and SimpleMap query implementations.
-2. Reuse immutable query metadata where safe.
-3. Add microbenchmarks for common `list/find/count` paths with multi-tenant datasets.
-
-## D. Transform pipeline cost
-**Goal:** reduce compile-time overhead from service/transaction transforms.
+1. Implement O(M+N) migration cleanup for `grails-data-neo4j`.
+   * Reference: Use `HibernateTenantContextProfilingSpec` and other cross-DB performance specs as benchmarks for verification.
+2. [DONE] Refactor `JpaCriteriaQueryCreator` to inject `PredicateGenerator` (eliminated redundant object churn).
 
 1. Measure transform execution hotspots after recent refactors.
 2. Consolidate duplicated transform helper logic.
