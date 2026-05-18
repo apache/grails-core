@@ -102,10 +102,16 @@ class GrailsJacocoPlugin implements Plugin<Project> {
         }
 
         // Add source and class directories once the Java plugin is confirmed present.
-        project.plugins.withType(JavaPlugin) {
-            aggregateTask.configure { JacocoReport task ->
-                task.sourceDirectories.from(project.sourceSets.main.allSource.srcDirs)
-                task.classDirectories.from(project.sourceSets.main.output.classesDirs)
+        // Hibernate 7 variant subprojects compile identical class names to their Hibernate 5
+        // counterparts; including both causes JaCoCo to throw "Can't add different class with
+        // same name". Exec data from H7 test runs is still included above so their coverage
+        // is attributed to the H5 class definitions.
+        if (!project.path.contains('hibernate7')) {
+            project.plugins.withType(JavaPlugin) {
+                aggregateTask.configure { JacocoReport task ->
+                    task.sourceDirectories.from(project.sourceSets.main.allSource.srcDirs)
+                    task.classDirectories.from(project.sourceSets.main.output.classesDirs)
+                }
             }
         }
     }
