@@ -220,6 +220,13 @@ class PropertyConfig extends Property {
      */
     JoinTable joinTable = new JoinTable()
 
+    /**
+     * Allows Java code and tests to set the join table.
+     */
+    void setJoinTable(JoinTable jt) {
+        this.joinTable = jt
+    }
+
     ColumnConfig getJoinTableColumnConfig() {
         return this.joinTable?.column
     }
@@ -254,7 +261,11 @@ class PropertyConfig extends Property {
         DataBinder dataBinder = new DataBinder(joinTable)
         dataBinder.bind(new MutablePropertyValues(joinTableDef))
         if (joinTableDef.key) {
-            joinTable.key(joinTableDef.key.toString())
+            if (joinTableDef.key instanceof Collection || joinTableDef.key.getClass().isArray()) {
+                joinTable.keys(joinTableDef.key as List)
+            } else {
+                joinTable.key(joinTableDef.key.toString())
+            }
         }
         if (joinTableDef.column) {
             joinTable.column(joinTableDef.column.toString())
@@ -495,7 +506,7 @@ class PropertyConfig extends Property {
     }
 
     boolean hasJoinKeyMapping() {
-        joinTable?.key != null
+        joinTable?.keys
     }
 
 }

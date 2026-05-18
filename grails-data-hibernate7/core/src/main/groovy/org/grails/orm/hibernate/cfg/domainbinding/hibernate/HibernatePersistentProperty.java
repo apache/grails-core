@@ -198,7 +198,10 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
     default String getColumnName(ColumnConfig cc) {
         return Optional.of(this)
                 .filter(HibernatePersistentProperty::isJoinKeyMapped)
-                .map(p -> p.getMappedForm().getJoinTable().getKey().getName())
+                .map(p -> {
+                    java.util.List<ColumnConfig> keys = p.getMappedForm().getJoinTable().getKeys();
+                    return keys == null || keys.isEmpty() ? null : keys.get(0).getName();
+                })
                 .orElseGet(
                         () -> Optional.ofNullable(cc).map(ColumnConfig::getName).orElseGet(this::getMappedColumnName));
     }

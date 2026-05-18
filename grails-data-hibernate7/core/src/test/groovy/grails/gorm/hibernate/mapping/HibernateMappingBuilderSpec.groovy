@@ -384,7 +384,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m1.getPropertyConfig('things').joinTable != null
         m2.getPropertyConfig('things').joinTable.name == 'foo'
         m3.getPropertyConfig('things').joinTable.name == 'foo'
-        m3.getPropertyConfig('things').joinTable.key.name == 'foo_id'
+        m3.getPropertyConfig('things').joinTable.keys[0].name == 'foo_id'
         m3.getPropertyConfig('things').joinTable.column.name == 'bar_id'
     }
 

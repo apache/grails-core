@@ -51,9 +51,24 @@ import groovy.transform.builder.SimpleStrategy
 class JoinTable extends Table {
 
     /**
-     * The foreign key column
+     * The foreign key columns (composite key support)
      */
-    ColumnConfig key
+    List<ColumnConfig> keys = []
+
+    void setKeys(List<ColumnConfig> keys) {
+        this.keys = keys
+    }
+
+    /**
+     * Configures the keys
+     * @param names The key names
+     * @return This join table config
+     */
+    JoinTable keys(List names) {
+        this.keys = (List<ColumnConfig>) names.collect { it instanceof ColumnConfig ? it : new ColumnConfig(name: it.toString()) }
+        return this
+    }
+
     /**
      * The child id column
      */
@@ -65,7 +80,7 @@ class JoinTable extends Table {
      * @return This join table config
      */
     JoinTable key(@DelegatesTo(ColumnConfig) Closure columnConfig) {
-        key = ColumnConfig.configureNew(columnConfig)
+        keys = [ColumnConfig.configureNew(columnConfig)]
         return this
     }
     /**
@@ -84,7 +99,7 @@ class JoinTable extends Table {
      * @return This join table config
      */
     JoinTable key(String columnName) {
-        key = new ColumnConfig(name: columnName)
+        keys = [new ColumnConfig(name: columnName)]
         return this
     }
 
