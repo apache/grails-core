@@ -16,25 +16,25 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.compiler
+package demo
 
-import groovy.transform.AnnotationCollector
-import groovy.transform.CompileStatic
+import grails.compiler.GrailsCompileStatic
 
 /**
- *
- * @since 2.4
- *
+ * Demonstrates that a controller annotated with {@code @GrailsCompileStatic} can
+ * invoke tag library methods — both in the default namespace (direct call) and via
+ * a namespace dispatcher property — without compile errors.
  */
-@AnnotationCollector
-@CompileStatic(extensions = [
-        'org.grails.compiler.ControllerTagLibTypeCheckingExtension',
-        'org.grails.compiler.DomainMappingTypeCheckingExtension',
-        'org.grails.compiler.DynamicFinderTypeCheckingExtension',
-        'org.grails.compiler.HttpServletRequestTypeCheckingExtension',
-        'org.grails.compiler.NamedQueryTypeCheckingExtension',
-        'org.grails.compiler.RelationshipManagementMethodTypeCheckingExtension',
-        'org.grails.compiler.ValidateableTypeCheckingExtension',
-        'org.grails.compiler.WhereQueryTypeCheckingExtension',
-])
-@interface GrailsCompileStatic {}
+@GrailsCompileStatic
+class CompileStaticController {
+
+    def invokeDefaultNamespaceTag() {
+        // link() is a core tag in the default 'g' namespace; invoked directly on this
+        response.writer << link(controller: 'demo', action: 'clearDatabase')
+    }
+
+    def invokeNamespacedTag() {
+        // one.sayHello() accesses the 'one' namespace dispatcher, then invokes the tag
+        response.writer << one.sayHello()
+    }
+}

@@ -36,3 +36,28 @@ The Grails Gradle extension now defaults `preserveParameterNames` to `true`, so 
 
 Tag library unit tests also clean up and rebuild TagLib metadata automatically between features.
 Tests that use `TagLibUnitTest` no longer need to manage `purgeTagLibMetaClass`, and specs that mock additional tag libraries continue to work across feature methods.
+
+==== @GrailsCompileStatic on Controllers That Use Tag Libraries
+
+Controllers annotated with `@GrailsCompileStatic` can now invoke tag library methods without compile-time errors.
+
+Both calling patterns are supported out of the box:
+
+[source,groovy]
+----
+import grails.compiler.GrailsCompileStatic
+
+@GrailsCompileStatic
+class BookController {
+
+    def index() {
+        // Direct call in the default namespace
+        response.writer << link(controller: 'book', action: 'list')
+
+        // Namespaced call via a dispatcher property
+        response.writer << my.customTag(attr: 'value')
+    }
+}
+----
+
+The new `ControllerTagLibTypeCheckingExtension` (bundled with `@GrailsCompileStatic`) recognises controller classes by convention and marks tag dispatch points as permissible dynamic calls, while leaving the rest of the controller fully type-checked.
