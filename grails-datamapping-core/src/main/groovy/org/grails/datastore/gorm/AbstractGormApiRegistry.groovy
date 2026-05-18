@@ -21,6 +21,9 @@ package org.grails.datastore.gorm
 import groovy.transform.CompileStatic
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
+import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
+import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 
 import java.util.concurrent.ConcurrentHashMap
 
@@ -39,6 +42,7 @@ abstract class AbstractGormApiRegistry<T extends AbstractDatastoreApi> {
         String normalizedClassName = registry.normalizeEntityKey(className)
         if (normalizedClassName != null && api != null) {
             apis.put(normalizedClassName, api)
+            qualifiedApis.remove(normalizedClassName)
         }
     }
 
@@ -62,6 +66,22 @@ abstract class AbstractGormApiRegistry<T extends AbstractDatastoreApi> {
             T defaultApi = apis.get(normalizedClassName)
             if (defaultApi != null) {
                 Datastore ds = registry.getDatastoreDirect(normalizedClassName, normalizedQualifier)
+                if (ds == null && defaultApi.getDatastore() instanceof MultipleConnectionSourceCapableDatastore) {
+                    Datastore defaultDatastore = defaultApi.getDatastore()
+                    boolean canResolveConnection = true
+                    if (defaultDatastore instanceof MultiTenantCapableDatastore) {
+                        MultiTenancySettings.MultiTenancyMode mode = ((MultiTenantCapableDatastore) defaultDatastore).getMultiTenancyMode()
+                        if (mode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR ||
+                                mode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
+                            canResolveConnection = false
+                        }
+                    }
+                    if (canResolveConnection) {
+                        ds = ((MultipleConnectionSourceCapableDatastore) defaultDatastore).getDatastoreForConnection(normalizedQualifier)
+                    } else {
+                        ds = defaultDatastore
+                    }
+                }
                 if (ds != null && ds != defaultApi.getDatastore()) {
                     api = qualify(defaultApi, normalizedQualifier)
                     if (api != null) {

@@ -23,10 +23,12 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
+import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import grails.gorm.multitenancy.CurrentTenantHolder
 import grails.gorm.MultiTenant
 import org.grails.datastore.gorm.finders.FinderMethod
@@ -658,10 +660,44 @@ class GormRegistry {
         if (normalizedClassName == null) {
             return
         }
-        
-        // Register datastores for each connection source
-        for (String connectionSourceName in connectionSourceNames) {
-            registerEntityDatastore(normalizedClassName, connectionSourceName, (Datastore) datastore)
+
+        Datastore defaultDatastore = (Datastore) datastore
+        List<String> qualifiers = connectionSourceNames ?: Collections.singletonList(ConnectionSource.DEFAULT)
+        boolean multiTenantEntity = entity instanceof PersistentEntity && ((PersistentEntity) entity).isMultiTenant()
+        MultiTenancySettings.MultiTenancyMode multiTenancyMode = defaultDatastore instanceof MultiTenantCapableDatastore ?
+                ((MultiTenantCapableDatastore) defaultDatastore).getMultiTenancyMode() : null
+
+        entityDatastores.remove(normalizedClassName)
+
+        Datastore primaryDatastore = defaultDatastore
+
+        // Register datastores for each connection source, resolving connection-specific datastores when available.
+        for (String connectionSourceName in qualifiers) {
+            String normalizedQualifier = normalizeQualifier(connectionSourceName)
+            Datastore qualifierDatastore = defaultDatastore
+            if (defaultDatastore instanceof MultipleConnectionSourceCapableDatastore &&
+                    !ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
+                boolean canUseConnectionDatastore = !(multiTenantEntity &&
+                        (multiTenancyMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR ||
+                                multiTenancyMode == MultiTenancySettings.MultiTenancyMode.SCHEMA))
+                if (canUseConnectionDatastore) {
+                    Datastore resolvedDatastore = ((MultipleConnectionSourceCapableDatastore) defaultDatastore)
+                            .getDatastoreForConnection(normalizedQualifier)
+                    if (resolvedDatastore != null) {
+                        qualifierDatastore = resolvedDatastore
+                    }
+                }
+            }
+            if (!ConnectionSource.DEFAULT.equals(normalizedQualifier) && primaryDatastore == defaultDatastore) {
+                primaryDatastore = qualifierDatastore
+            }
+            registerDatastoreByQualifier(normalizedQualifier, qualifierDatastore)
+            registerEntityDatastore(normalizedClassName, normalizedQualifier, qualifierDatastore)
+        }
+
+        // If the entity does not explicitly include DEFAULT, route DEFAULT to the first explicit connection.
+        if (!qualifiers.collect { normalizeQualifier(it) }.contains(ConnectionSource.DEFAULT)) {
+            registerEntityDatastore(normalizedClassName, ConnectionSource.DEFAULT, primaryDatastore)
         }
     }
 
@@ -714,7 +750,7 @@ class GormRegistry {
         return new DatastoreResolver() {
             @Override
             Datastore resolve() {
-                getDatastoreDirect(normalizedClassName, normalizedQualifier)
+                apiResolver.findDatastore(cls, normalizedQualifier)
             }
         }
     }
@@ -788,7 +824,9 @@ class GormRegistry {
         registerConstraints(datastore)
         
         // Register datastore with default qualifier
-        registerDatastore(defaultQualifier, (Datastore) datastore)
+        Datastore typedDatastore = (Datastore) datastore
+        registerDatastore(defaultQualifier, typedDatastore)
+        datastoresByType.put(typedDatastore.getClass(), typedDatastore)
     }
 
     /**
@@ -804,25 +842,21 @@ class GormRegistry {
         String className = persistentEntity.name
 
         if (enhancer != null) {
-            // Register API singletons via registry
-            if (getStaticApi(className) == null ||
-                getInstanceApi(className) == null ||
-                getValidationApi(className) == null) {
-                final Class cls = persistentEntity.javaClass
-                DatastoreResolver resolver = createClassDatastoreResolver(cls)
-                Datastore datastore = enhancer.datastore
+            // Always (re)register API singletons so classloader or datastore changes do not leave stale API instances.
+            final Class cls = persistentEntity.javaClass
+            DatastoreResolver resolver = createClassDatastoreResolver(cls)
+            Datastore datastore = enhancer.datastore
 
-                GormStaticApi staticApi = createStaticApi(cls, datastore, resolver, ConnectionSource.DEFAULT)
-                GormInstanceApi instanceApi = createInstanceApi(cls, datastore, resolver, enhancer.failOnError, enhancer.markDirty)
-                GormValidationApi validationApi = createValidationApi(cls, datastore, resolver)
+            GormStaticApi staticApi = createStaticApi(cls, datastore, resolver, ConnectionSource.DEFAULT)
+            GormInstanceApi instanceApi = createInstanceApi(cls, datastore, resolver, enhancer.failOnError, enhancer.markDirty)
+            GormValidationApi validationApi = createValidationApi(cls, datastore, resolver)
 
-                registerEntityApis(className, staticApi, instanceApi, validationApi)
-            }
+            registerEntityApis(className, staticApi, instanceApi, validationApi)
 
             // Register datastore mappings
-            Datastore datastore = enhancer.datastore
+            Datastore datastoreForMappings = enhancer.datastore
             List<String> qualifiers = enhancer.allQualifiers(datastore, persistentEntity)
-            registerEntityDatastores(className, datastore, qualifiers, persistentEntity)
+            registerEntityDatastores(className, datastoreForMappings, qualifiers, persistentEntity)
         }
     }
 

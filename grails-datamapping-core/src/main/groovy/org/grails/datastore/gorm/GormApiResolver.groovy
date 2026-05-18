@@ -90,6 +90,14 @@ class GormApiResolver {
     Datastore findDatastoreByType(Class<? extends Datastore> datastoreType) {
         Datastore datastore = registry.datastoresByType.get(datastoreType)
         if (datastore == null) {
+            for (entry in registry.datastoresByType.entrySet()) {
+                if (datastoreType.isAssignableFrom(entry.key)) {
+                    datastore = entry.value
+                    break
+                }
+            }
+        }
+        if (datastore == null) {
             throw new IllegalStateException("No GORM implementation configured for type [$datastoreType]. Ensure GORM has been initialized correctly")
         }
         return datastore
@@ -220,6 +228,13 @@ class QualifiedDatastoreSelector {
 
         Datastore defaultDs = registry.getDatastoreByString(className, ConnectionSource.DEFAULT)
         if (defaultDs instanceof MultipleConnectionSourceCapableDatastore) {
+            if (defaultDs instanceof MultiTenantCapableDatastore) {
+                MultiTenancySettings.MultiTenancyMode mode = ((MultiTenantCapableDatastore) defaultDs).getMultiTenancyMode()
+                if (mode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR ||
+                        mode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
+                    return defaultDs
+                }
+            }
             try {
                 stateRegistry.setResolvingDatastoreDepth(depth + 1)
                 ds = ((MultipleConnectionSourceCapableDatastore) defaultDs).getDatastoreForConnection(qualifier)
@@ -261,6 +276,9 @@ class ActiveSessionDatastoreSelector {
             for (Object key : resourceMap.keySet()) {
                 if (key instanceof Datastore) {
                     Datastore ds = (Datastore) key
+                    if (!ds.hasCurrentSession()) {
+                        continue
+                    }
                     if (className != null) {
                         if (registry.getDatastore(className, ConnectionSource.DEFAULT) == ds) {
                             return ds
@@ -301,7 +319,7 @@ class DefaultDatastoreSelector {
 
     @CompileDynamic
     Datastore select(GormRegistry registry, GormEnhancerRegistry stateRegistry, Class entity, String className, int depth, GormApiResolver resolver) {
-        Datastore defaultDs = registry.getDatastore(className, ConnectionSource.DEFAULT)
+        Datastore defaultDs = registry.getDatastoreByString(className, ConnectionSource.DEFAULT)
         if (defaultDs instanceof MultiTenantCapableDatastore) {
             MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore) defaultDs
             boolean isDatabaseMode = multiTenantCapableDatastore.getMultiTenancyMode() ==

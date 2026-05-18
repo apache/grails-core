@@ -145,8 +145,9 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
         for (FinderMethod fm : finders) {
             if (fm.isMethodMatch(name)) {
                 return { Object... args ->
+                    Object[] finderArgs = args == null ? ([null] as Object[]) : args
                     execute({ Session session ->
-                        fm.invoke(persistentClass, name, args)
+                        fm.invoke(persistentClass, name, finderArgs)
                     } as SessionCallback)
                 }
             }

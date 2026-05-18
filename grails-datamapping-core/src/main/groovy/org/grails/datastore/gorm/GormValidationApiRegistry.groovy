@@ -33,7 +33,7 @@ class GormValidationApiRegistry extends AbstractGormApiRegistry<GormValidationAp
     @Override
     protected GormValidationApi qualify(GormValidationApi api, String qualifier) {
         Class persistentClass = api.persistentClass
-        Datastore datastore = registry.getDatastore(persistentClass, qualifier)
+        Datastore datastore = registry.apiResolver.findDatastore(persistentClass, qualifier)
         if (datastore == null) {
             return api
         }

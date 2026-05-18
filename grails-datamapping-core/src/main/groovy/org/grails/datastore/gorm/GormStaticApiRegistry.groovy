@@ -33,7 +33,7 @@ class GormStaticApiRegistry extends AbstractGormApiRegistry<GormStaticApi> {
     @Override
     protected GormStaticApi qualify(GormStaticApi api, String qualifier) {
         Class persistentClass = api.persistentClass
-        Datastore datastore = registry.getDatastore(persistentClass, qualifier)
+        Datastore datastore = registry.apiResolver.findDatastore(persistentClass, qualifier)
         if (datastore == null) {
             return api
         }
