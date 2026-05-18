@@ -226,7 +226,7 @@ class GormEnhancerAllQualifiersSpec extends Specification {
 
         then:
         injectedRegistry.getDatastore(entity.name, ConnectionSource.DEFAULT) != null
-        injectedRegistry.findStaticApi(NonMultiTenantDefaultEntity) != null
+        injectedRegistry.resolveStaticApi(NonMultiTenantDefaultEntity) != null
         GormRegistry.instance.getDatastore(entity.name, ConnectionSource.DEFAULT) == null
     }
 

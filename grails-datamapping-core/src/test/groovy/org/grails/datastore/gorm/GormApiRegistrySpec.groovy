@@ -125,9 +125,7 @@ class GormApiRegistrySpec extends Specification {
     }
 
     private List createContext() {
-        MappingContext mappingContext = Stub(MappingContext) {
-            getMappingFactory() >> null
-        }
+        MappingContext mappingContext = Stub(MappingContext)
         Datastore datastore = Stub(Datastore) {
             getMappingContext() >> mappingContext
         }

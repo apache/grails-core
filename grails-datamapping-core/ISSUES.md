@@ -75,19 +75,29 @@ Coverage added:
 - API registry retrieval works with normalized aliases.
 - Verified missing branches and explicit fallback mechanisms for abstract/specific API registries and the central `GormRegistry`.
 
-## Potential Optimization Opportunities
+## Current State (Core regressions resolved)
 
-### Registry/API hot-path efficiency
-**Goal:** reduce repeated lookup overhead under high tenant/entity counts.
-- [DONE] Cache normalized entity keys and qualifier maps in one place.
-- [DONE] Audit repeated `findDatastore`/qualifier fallback chains and collapse duplicate branches.
-- [DONE] Benchmark `computeIfAbsent` and lock contention patterns in registry-heavy paths.
-- [DONE] Implement API instance caching in registries.
-- [DONE] Optimize `ActiveSessionDatastoreSelector` for multi-tenant scale.
+### Recently fixed in `grails-datamapping-core`
+- `GormEnhancerAllQualifiersSpec`
+  - `registerEntity adds static api under default and secondary for MultiTenant entity`
+  - `registerEntity adds static api under default and secondary for non-default datasource`
+  - `registerEntity can resolve through injected registry without touching global singleton`
+- `GormInstanceApiSpec`
+  - `save validate false preserves preexisting skipValidation state`
+  - `save validate false skips validation during persist and restores flag`
+- `GormRegistryEntityRegistrationSpec`
+  - `registry normalizes default qualifier aliases when registering datastores`
+- `GormRegistrySpec`
+  - `test withTenant and exists with multi-tenant entity in DISCRIMINATOR mode`
+- `TransactionalTransformSpec`
+  - `Test transactional transform when applied to inheritance`
 
-### Tenant context and session routing
-**Goal:** lower context-switch overhead and reduce accidental cross-context work.
-- [DONE] Profile tenant context wrapping frequency in static API calls.
-- [DONE] Identify places where tenant/session context can be propagated once instead of re-resolved.
-  - Refactored `GormInstanceApi.save` and `GormRegistry.createClassDatastoreResolver` to propagate context.
-  - Refactored `SimpleMapQuery` to avoid redundant `Tenants.currentId()` calls.
+### Code-level fixes applied
+- `GormRegistry.registerEntity(...)` now registers entity datastores using `enhancer.allQualifiers(...)`, restoring correct qualifier expansion/preservation behavior for entity registration.
+- `GormStaticApi` now propagates qualifier/registry through `AbstractGormApi` constructor state, fixing tenant qualifier handling in `withTenant(...).exists(...)` execution paths.
+- `GormRegistry.findSingleTransactionManager(...)` now throws `IllegalStateException("No GORM implementations configured. Ensure GORM has been initialized correctly")` when no datastore is available, restoring expected transactional transform behavior.
+- Specs were adjusted to align with normalized/instance registry APIs (`resolveValidationApi`, `resolveStaticApi`) and unambiguous overloaded datastore lookups.
+
+### Next Steps
+1. Keep `grails-datamapping-core` green while validating downstream `grails-data-hibernate7` optimization follow-ups.
+2. Re-apply and validate `JpaCriteriaQueryCreator` optimizations in `grails-data-hibernate7` once cross-module verification is complete.

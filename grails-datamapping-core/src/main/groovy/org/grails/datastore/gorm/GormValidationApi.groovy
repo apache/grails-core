@@ -45,6 +45,11 @@ import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.datastore.mapping.validation.ValidationErrors
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 
+import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
+import grails.gorm.multitenancy.Tenants
+import grails.gorm.multitenancy.CurrentTenantHolder
+import grails.gorm.MultiTenant
+
 /**
  * Methods used for validating GORM instances.
  *

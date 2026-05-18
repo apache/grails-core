@@ -36,6 +36,11 @@ import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import org.grails.datastore.gorm.schemaless.DynamicAttributes
 
+import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
+import grails.gorm.multitenancy.Tenants
+import grails.gorm.MultiTenant
+import org.grails.datastore.mapping.core.DatastoreUtils
+
 /**
  * GORM instance API implementation.
  *
@@ -57,17 +62,8 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
     GormInstanceApi(Class<D> persistentClass, Datastore datastore, GormRegistry registry) {
         super(persistentClass, datastore)
         this.registry = registry ?: GormEnhancer.getRegistry()
-        if (datastore != null) {
-            def mappingFactory = datastore.getMappingContext().getMappingFactory()
-            try {
-                def defaultSettings = mappingFactory.getClass().getMethod('getDefaultSettings').invoke(mappingFactory)
-                this.failOnError = (boolean) defaultSettings.getClass().getMethod('isFailOnError').invoke(defaultSettings)
-                this.markDirty = (boolean) defaultSettings.getClass().getMethod('isMarkDirty').invoke(defaultSettings)
-            } catch (Throwable e) {
-                this.failOnError = false
-                this.markDirty = true
-            }
-        }
+        this.failOnError = false
+        this.markDirty = true
     }
 
     GormInstanceApi(Class<D> persistentClass, MappingContext mappingContext, DatastoreResolver datastoreResolver) {
@@ -77,15 +73,8 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
     GormInstanceApi(Class<D> persistentClass, MappingContext mappingContext, DatastoreResolver datastoreResolver, GormRegistry registry) {
         super(persistentClass, mappingContext, datastoreResolver)
         this.registry = registry ?: GormEnhancer.getRegistry()
-        def mappingFactory = mappingContext.getMappingFactory()
-        try {
-            def defaultSettings = mappingFactory.getClass().getMethod('getDefaultSettings').invoke(mappingFactory)
-            this.failOnError = (boolean) defaultSettings.getClass().getMethod('isFailOnError').invoke(defaultSettings)
-            this.markDirty = (boolean) defaultSettings.getClass().getMethod('isMarkDirty').invoke(defaultSettings)
-        } catch (Throwable e) {
-            this.failOnError = false
-            this.markDirty = true
-        }
+        this.failOnError = false
+        this.markDirty = true
     }
 
     @Override

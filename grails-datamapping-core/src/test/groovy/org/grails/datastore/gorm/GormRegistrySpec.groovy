@@ -239,8 +239,11 @@ class GormRegistrySpec extends Specification {
         }
         
         def registry = GormRegistry.instance
-        def sharedState = [:]
-        def staticApi = new DummyStaticApiForTest(TestEntity, datastore, sharedState)
+        registry.registerDatastore("default", datastore)
+        
+        def staticApi = new GormStaticApi(TestEntity, mappingContext, [], new DatastoreResolver() {
+            @Override Datastore resolve() { return datastore }
+        }, ConnectionSource.DEFAULT, registry)
         
         TestEntity.metaClass.static.getGormPersistentEntity = { entity }
         registry.registerApi(TestEntity.name, staticApi, null, null)

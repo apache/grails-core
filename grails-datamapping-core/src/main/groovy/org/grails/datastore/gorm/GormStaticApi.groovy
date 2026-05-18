@@ -61,8 +61,6 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     private static final TransactionTemplateFactory DEFAULT_TRANSACTION_TEMPLATE_FACTORY = new DefaultTransactionTemplateFactory()
 
     protected final List<FinderMethod> finders
-    protected final String qualifier
-    protected final GormRegistry registry
 
     GormStaticApi(Class<D> persistentClass, MappingContext mappingContext, List<FinderMethod> finders) {
         this(persistentClass, mappingContext, finders, null, ConnectionSource.DEFAULT, null)
@@ -77,10 +75,8 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     }
 
     GormStaticApi(Class<D> persistentClass, MappingContext mappingContext, List<FinderMethod> finders, DatastoreResolver resolver, String qualifier, GormRegistry registry) {
-        super(persistentClass, mappingContext, resolver)
+        super(persistentClass, mappingContext, resolver, qualifier, registry)
         this.finders = finders
-        this.qualifier = qualifier ?: ConnectionSource.DEFAULT
-        this.registry = registry ?: GormEnhancer.getRegistry()
     }
 
     @Override
@@ -96,7 +92,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     protected <T1> T1 executeQualified(String qualifier, SessionCallback<T1> callback) {
         GormStaticApi<D> qualifiedApi = registry.findStaticApi(persistentClass, qualifier)
         if (qualifiedApi != null && qualifiedApi != this) {
-            return qualifiedApi.execute(callback)
+            return (T1) qualifiedApi.execute(callback)
         }
         return DatastoreUtils.execute(getDatastore(), callback)
     }

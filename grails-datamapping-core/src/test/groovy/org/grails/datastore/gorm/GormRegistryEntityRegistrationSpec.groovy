@@ -165,9 +165,9 @@ class GormRegistryEntityRegistrationSpec extends Specification {
         registry.registerDatastore(ConnectionSource.OLD_DEFAULT, datastore)
 
         then:
-        registry.getDatastore(null, ConnectionSource.DEFAULT) == datastore
-        registry.getDatastore(null, ConnectionSource.OLD_DEFAULT) == datastore
-        registry.getDatastore(null, '   ') == datastore
+        registry.getDatastore((String) null, ConnectionSource.DEFAULT) == datastore
+        registry.getDatastore((String) null, ConnectionSource.OLD_DEFAULT) == datastore
+        registry.getDatastore((String) null, '   ') == datastore
     }
 
     void 'registry normalizes entity keys for entity-specific datastore lookups'() {

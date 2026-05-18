@@ -97,29 +97,38 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
             throw new IllegalStateException('Cannot execute session callback with null datastore')
         }
 
-        // Optimization: if no qualifier specified, check if a tenant is already bound
-        if (qualifier == null || ConnectionSource.DEFAULT.equals(qualifier)) {
-            if (ds instanceof MultiTenantCapableDatastore) {
-                Serializable tenantId = CurrentTenantHolder.get((MultiTenantCapableDatastore) ds)
-                if (tenantId != null) {
-                    // Try to use a pre-qualified API to skip redundant wrapping
-                    String tenantStr = tenantId.toString()
-                    return executeQualified(tenantStr, callback)
-                }
-            }
-        } else if (ds instanceof MultiTenantCapableDatastore && ((MultiTenantCapableDatastore)ds).getMultiTenancyMode() == org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
-            String connectionName = ConnectionSource.DEFAULT
-            if (ds instanceof ConnectionSourcesProvider) {
-                connectionName = ((ConnectionSourcesProvider) ds).getConnectionSources().getDefaultConnectionSource().getName()
-            }
-            if (!connectionName.equals(qualifier)) {
-                return Tenants.withId((MultiTenantCapableDatastore)ds, (Serializable)qualifier) {
+        String currentQualifier = getQualifier()
+        boolean isMultiTenantCapable = ds instanceof MultiTenantCapableDatastore
+        boolean isMultiTenantEntity = MultiTenant.class.isAssignableFrom(persistentClass)
+
+        // Check if we have a non-default qualifier
+        if (currentQualifier != null && !ConnectionSource.DEFAULT.equals(currentQualifier) && !ConnectionSource.OLD_DEFAULT.equalsIgnoreCase(currentQualifier)) {
+            if (isMultiTenantEntity && isMultiTenantCapable) {
+                // If it's a multi-tenant entity and we have a qualifier, bind it as the tenant ID
+                return (T1) Tenants.withId((MultiTenantCapableDatastore)ds, (Serializable)currentQualifier) {
                     DatastoreUtils.execute(ds, callback)
                 }
+            }
+            return executeQualified(currentQualifier, callback)
+        }
+
+        // DEFAULT qualifier path: check if a tenant is already bound
+        if (isMultiTenantCapable) {
+            Serializable tenantId = CurrentTenantHolder.get((MultiTenantCapableDatastore) ds)
+            if (tenantId != null) {
+                // If a tenant is already bound, use executeQualified to delegate to a potentially specialized API
+                return executeQualified(tenantId.toString(), callback)
             }
         }
 
         return DatastoreUtils.execute(ds, callback)
+    }
+
+    /**
+     * @return The qualifier for this API instance
+     */
+    String getQualifier() {
+        return this.qualifier
     }
 
     protected abstract <T1> T1 executeQualified(String qualifier, SessionCallback<T1> callback)
