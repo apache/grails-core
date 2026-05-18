@@ -20,11 +20,14 @@
 // tag::basic_declaration[]
 package demo
 
+import grails.gsp.Tag
+
 class FirstTagLib {
     static defaultEncodeAs = [taglib:'html']
 
     static namespace = 'one'
 
+    @Tag
     def sayHello() {
         out << 'BEFORE '
 
@@ -35,4 +38,3 @@ class FirstTagLib {
     }
 }
 // end::basic_declaration[]
-
