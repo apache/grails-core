@@ -16,30 +16,26 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package demo
+package page.register
 
-import geb.Page
+import geb.module.TextInput
 
-class LoginPage extends Page {
+import page.LifecyclePage
 
-    boolean loaded = false
+class ForgotPasswordPage extends LifecyclePage {
 
-    static url = 'login/auth'
-    static at = { title == 'Login' }
-    static content = {
-        loginButton { $('#submit', 0) }
-        usernameInputField { $('#username', 0) }
-        passwordInputField { $('#password', 0) }
-    }
+	static url = 'register/forgotPassword'
+	static at = { title == 'Forgot Password' }
+	static content = {
+		username { $(name: 'username').module(TextInput) }
+		submitBtn { $('a', id: 'submit') }
+	}
 
-    void login(String username, String password) {
-        usernameInputField << username
-        passwordInputField << password
-        loginButton.click()
-    }
-
-    @Override
-    void onLoad(Page previousPage) {
-        loaded = true
-    }
+	def <T extends LifecyclePage> T submitForgotPassword(String username = null, Class<T> expectedPageType) {
+		if (username != null) this.username.text = username
+		submitBtn.click()
+		T page = browser.at(expectedPageType)
+		waitFor { page.loaded }
+		page
+	}
 }

@@ -16,30 +16,23 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package demo
+package page.registrationCode
 
-import geb.Page
+import geb.module.TextInput
+import page.SearchPage
 
-class LoginPage extends Page {
+class RegistrationCodeSearchPage extends SearchPage {
 
-    boolean loaded = false
+	static url = 'registrationCode/search'
+	static typeName = { 'Registration Code' }
+	static at = { title == 'Registration Code Search' }
+	static content = {
+		token { $(name: 'token').module(TextInput) }
+		username { $('#username').module(TextInput) }
+	}
 
-    static url = 'login/auth'
-    static at = { title == 'Login' }
-    static content = {
-        loginButton { $('#submit', 0) }
-        usernameInputField { $('#username', 0) }
-        passwordInputField { $('#password', 0) }
-    }
-
-    void login(String username, String password) {
-        usernameInputField << username
-        passwordInputField << password
-        loginButton.click()
-    }
-
-    @Override
-    void onLoad(Page previousPage) {
-        loaded = true
-    }
+	RegistrationCodeSearchPage search(RegistrationCodeForm formData = null) {
+		formData?.applyTo(this)
+		submit(RegistrationCodeSearchPage)
+	}
 }

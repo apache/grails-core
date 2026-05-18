@@ -16,30 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package demo
+package page.aclObjectIdentity
 
-import geb.Page
+import geb.module.Select
+import geb.module.TextInput
+import page.SearchPage
 
-class LoginPage extends Page {
+class AclObjectIdentitySearchPage extends SearchPage {
 
-    boolean loaded = false
+	static url = 'aclObjectIdentity/search'
+	static typeName = { 'AclObjectIdentity' }
+	static content = {
+		aclClass { $(name: 'aclClass.id').module(Select) }
+		objectId { $(name: 'objectId').module(TextInput) }
+		ownerId { $(name: 'owner.id').module(Select) }
+	}
 
-    static url = 'login/auth'
-    static at = { title == 'Login' }
-    static content = {
-        loginButton { $('#submit', 0) }
-        usernameInputField { $('#username', 0) }
-        passwordInputField { $('#password', 0) }
-    }
-
-    void login(String username, String password) {
-        usernameInputField << username
-        passwordInputField << password
-        loginButton.click()
-    }
-
-    @Override
-    void onLoad(Page previousPage) {
-        loaded = true
-    }
+	AclObjectIdentitySearchPage search(AclObjectIdentityForm formData = null) {
+		formData?.applyTo(this)
+		submit(AclObjectIdentitySearchPage)
+	}
 }

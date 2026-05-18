@@ -16,30 +16,46 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package demo
+package simple.spec
 
-import geb.Page
+import spec.SecurityUISpec
 
-class LoginPage extends Page {
+import grails.testing.mixin.integration.Integration
 
-    boolean loaded = false
+@Integration
+class DefaultMenuSpec extends SecurityUISpec {
 
-    static url = 'login/auth'
-    static at = { title == 'Login' }
-    static content = {
-        loginButton { $('#submit', 0) }
-        usernameInputField { $('#username', 0) }
-        passwordInputField { $('#password', 0) }
-    }
+	void testIndex() {
+		when:
+		go('')
 
-    void login(String username, String password) {
-        usernameInputField << username
-        passwordInputField << password
-        loginButton.click()
-    }
+		then:
+		with(pageSource) {
+			contains('Spring Security Management Console')
 
-    @Override
-    void onLoad(Page previousPage) {
-        loaded = true
-    }
+			contains('Users')
+
+			contains('Roles')
+
+			contains('Requestmaps')
+
+			contains('Registration Code')
+
+			contains('Configuration')
+			contains('Mappings')
+			contains('Current Authentication')
+			contains('User Cache')
+			contains('Filter Chains')
+			contains('Logout Handlers')
+			contains('Voters')
+			contains('Authentication Providers')
+
+			!contains('Persistent Logins')
+
+			!contains('ACL')
+			!contains('SID')
+			!contains('OID')
+			!contains('Entry')
+		}
+	}
 }

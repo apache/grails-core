@@ -16,30 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package demo
+package page.aclObjectIdentity
+
+import groovy.transform.Immutable
 
 import geb.Page
+import geb.module.Select
+import geb.module.TextInput
 
-class LoginPage extends Page {
+@Immutable
+class AclObjectIdentityForm {
 
-    boolean loaded = false
+    String aclClass
+    String objectId
+    String ownerId
 
-    static url = 'login/auth'
-    static at = { title == 'Login' }
-    static content = {
-        loginButton { $('#submit', 0) }
-        usernameInputField { $('#username', 0) }
-        passwordInputField { $('#password', 0) }
-    }
-
-    void login(String username, String password) {
-        usernameInputField << username
-        passwordInputField << password
-        loginButton.click()
-    }
-
-    @Override
-    void onLoad(Page previousPage) {
-        loaded = true
+    <P extends Page> void applyTo(P page) {
+        if (aclClass != null) page.$(name: 'aclClass.id').module(Select).selected = aclClass
+        if (objectId != null) page.$(name: 'objectId').module(TextInput).text = objectId
+        if (ownerId != null) page.$(name: 'owner.id').module(Select).selected = ownerId
     }
 }

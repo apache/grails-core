@@ -16,30 +16,29 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package demo
+package page.aclEntry
 
-import geb.Page
+import geb.module.Checkbox
+import geb.module.Select
+import geb.module.TextInput
+import page.EditPage
 
-class LoginPage extends Page {
+class AclEntryEditPage extends EditPage {
 
-    boolean loaded = false
+	static url = 'aclEntry/edit'
+	static typeName = { 'AclEntry' }
+	static content = {
+		aclObjectIdentityId { $(name: 'aclObjectIdentity.id').module(TextInput) }
+		aceOrder { $(name: 'aceOrder').module(TextInput) }
+		mask { $(name: 'mask').module(TextInput) }
+		sid { $(name: 'sid.id').module(Select) }
+		auditFailure { $(name: 'auditFailure').module(Checkbox) }
+		auditSuccess { $(name: 'auditSuccess').module(Checkbox) }
+		granting { $(name: 'granting').module(Checkbox) }
+	}
 
-    static url = 'login/auth'
-    static at = { title == 'Login' }
-    static content = {
-        loginButton { $('#submit', 0) }
-        usernameInputField { $('#username', 0) }
-        passwordInputField { $('#password', 0) }
-    }
-
-    void login(String username, String password) {
-        usernameInputField << username
-        passwordInputField << password
-        loginButton.click()
-    }
-
-    @Override
-    void onLoad(Page previousPage) {
-        loaded = true
-    }
+	def <T extends EditPage> T submitEdit(AclEntryForm formData = null, Class<T> expectedPageType) {
+		formData?.applyTo(this)
+		super.submitEdit(expectedPageType)
+	}
 }

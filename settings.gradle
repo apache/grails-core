@@ -118,10 +118,12 @@ include 'ui-plugin'
 include 'ui-docs'
 include 'ui-examples-extended'
 include 'ui-examples-simple'
+include 'ui-examples-common'
 project(':ui-plugin').projectDir = new File(settingsDir, 'plugin-ui/plugin')
 project(':ui-docs').projectDir = new File(settingsDir, 'plugin-ui/docs')
 project(':ui-examples-extended').projectDir = new File(settingsDir, 'plugin-ui/examples/extended')
 project(':ui-examples-simple').projectDir = new File(settingsDir, 'plugin-ui/examples/simple')
+project(':ui-examples-common').projectDir = new File(settingsDir, 'plugin-ui/examples/common')
 
 include 'docs'
 project(':docs').projectDir = new File(settingsDir, 'docs')

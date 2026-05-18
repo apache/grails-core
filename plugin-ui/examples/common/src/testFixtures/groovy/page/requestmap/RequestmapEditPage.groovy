@@ -16,30 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package demo
+package page.requestmap
 
-import geb.Page
+import geb.module.TextInput
+import page.EditPage
+import page.LifecyclePage
 
-class LoginPage extends Page {
+class RequestmapEditPage extends EditPage {
 
-    boolean loaded = false
+	static url = 'requestmap/edit'
+	static typeName = { 'Requestmap' }
+	static content = {
+		requestmapId { $('input', type: 'hidden', name: 'id', 0).value() }
+		configAttribute { $(name: 'configAttribute').module(TextInput) }
+		urlPattern { $(name: 'url').module(TextInput) }
+	}
 
-    static url = 'login/auth'
-    static at = { title == 'Login' }
-    static content = {
-        loginButton { $('#submit', 0) }
-        usernameInputField { $('#username', 0) }
-        passwordInputField { $('#password', 0) }
-    }
-
-    void login(String username, String password) {
-        usernameInputField << username
-        passwordInputField << password
-        loginButton.click()
-    }
-
-    @Override
-    void onLoad(Page previousPage) {
-        loaded = true
-    }
+	def <T extends LifecyclePage> T submitEdit(RequestmapForm formData = null, Class<T> expectedPageType) {
+		formData?.applyTo(this)
+		super.submitEdit(expectedPageType)
+	}
 }

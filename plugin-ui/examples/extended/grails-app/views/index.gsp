@@ -19,6 +19,7 @@
 <html>
 	<head>
 		<meta name='layout' content='springSecurityUI'/>
+		<s2ui:title messageCode='spring.security.ui.defaultTitle'/>
 	</head>
 	<body>
 	</body>

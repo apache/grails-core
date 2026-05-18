@@ -16,30 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package demo
+package page.requestmap
 
-import geb.Page
+import geb.module.TextInput
+import page.SearchPage
 
-class LoginPage extends Page {
+class RequestmapSearchPage extends SearchPage {
 
-    boolean loaded = false
+	static url = 'requestmap/search'
+	static typeName = { 'Requestmap' }
+	static at = { title == 'Requestmap Search' }
+	static content = {
+		configAttribute { $(name: 'configAttribute').module(TextInput) }
+		urlPattern { $(name: 'url').module(TextInput) }
+	}
 
-    static url = 'login/auth'
-    static at = { title == 'Login' }
-    static content = {
-        loginButton { $('#submit', 0) }
-        usernameInputField { $('#username', 0) }
-        passwordInputField { $('#password', 0) }
-    }
-
-    void login(String username, String password) {
-        usernameInputField << username
-        passwordInputField << password
-        loginButton.click()
-    }
-
-    @Override
-    void onLoad(Page previousPage) {
-        loaded = true
-    }
+	RequestmapSearchPage search(RequestmapForm formData = null) {
+		formData?.applyTo(this)
+		submit(RequestmapSearchPage)
+	}
 }
+

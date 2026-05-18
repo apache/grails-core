@@ -16,30 +16,21 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package demo
+package page.registrationCode
+
+import groovy.transform.Immutable
 
 import geb.Page
+import geb.module.TextInput
 
-class LoginPage extends Page {
+@Immutable
+class RegistrationCodeForm {
 
-    boolean loaded = false
+    String token
+    String username
 
-    static url = 'login/auth'
-    static at = { title == 'Login' }
-    static content = {
-        loginButton { $('#submit', 0) }
-        usernameInputField { $('#username', 0) }
-        passwordInputField { $('#password', 0) }
-    }
-
-    void login(String username, String password) {
-        usernameInputField << username
-        passwordInputField << password
-        loginButton.click()
-    }
-
-    @Override
-    void onLoad(Page previousPage) {
-        loaded = true
+    <P extends Page> void applyTo(P page) {
+        if (token != null) page.$(name: 'token').module(TextInput).text = token
+        if (username != null) page.$('#username').module(TextInput).text = username
     }
 }

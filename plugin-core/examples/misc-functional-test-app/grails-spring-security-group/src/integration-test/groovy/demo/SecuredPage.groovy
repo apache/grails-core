@@ -16,11 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package demo
 
 import geb.Page
 
 class SecuredPage extends Page {
+
     static url = 'secured'
 }

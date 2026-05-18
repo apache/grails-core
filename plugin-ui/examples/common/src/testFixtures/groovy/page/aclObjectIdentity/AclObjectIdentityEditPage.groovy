@@ -16,30 +16,22 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package demo
+package page.aclObjectIdentity
 
-import geb.Page
+import geb.module.TextInput
+import page.EditPage
+import page.LifecyclePage
 
-class LoginPage extends Page {
+class AclObjectIdentityEditPage extends EditPage {
 
-    boolean loaded = false
+	static url = 'aclObjectIdentity/edit'
+	static typeName = { 'AclObjectIdentity' }
+	static content = {
+		objectId { $(name: 'objectId').module(TextInput) }
+	}
 
-    static url = 'login/auth'
-    static at = { title == 'Login' }
-    static content = {
-        loginButton { $('#submit', 0) }
-        usernameInputField { $('#username', 0) }
-        passwordInputField { $('#password', 0) }
-    }
-
-    void login(String username, String password) {
-        usernameInputField << username
-        passwordInputField << password
-        loginButton.click()
-    }
-
-    @Override
-    void onLoad(Page previousPage) {
-        loaded = true
-    }
+	def <T extends LifecyclePage> T submitEdit(AclObjectIdentityForm formData = null, Class<T> expectedPageType) {
+		formData?.applyTo(this)
+		super.submitEdit(expectedPageType)
+	}
 }

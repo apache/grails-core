@@ -16,30 +16,23 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package demo
 
-import geb.Page
+package page.aclClass
 
-class LoginPage extends Page {
+import geb.module.TextInput
+import page.EditPage
+import page.LifecyclePage
 
-    boolean loaded = false
+class AclClassEditPage extends EditPage {
 
-    static url = 'login/auth'
-    static at = { title == 'Login' }
-    static content = {
-        loginButton { $('#submit', 0) }
-        usernameInputField { $('#username', 0) }
-        passwordInputField { $('#password', 0) }
-    }
+	static url = 'aclClass/edit'
+	static typeName = { 'AclClass' }
+	static content = {
+		className { $(name: 'className').module(TextInput) }
+	}
 
-    void login(String username, String password) {
-        usernameInputField << username
-        passwordInputField << password
-        loginButton.click()
-    }
-
-    @Override
-    void onLoad(Page previousPage) {
-        loaded = true
-    }
+	def <T extends LifecyclePage> T submitEdit(String name = null, Class<? extends T> expectedPageType) {
+		if (name != null) className.text = name
+		super.submitEdit(expectedPageType)
+	}
 }

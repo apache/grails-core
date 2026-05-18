@@ -16,30 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package demo
+package page
 
-import geb.Page
+class HomePage extends LifecyclePage {
 
-class LoginPage extends Page {
-
-    boolean loaded = false
-
-    static url = 'login/auth'
-    static at = { title == 'Login' }
-    static content = {
-        loginButton { $('#submit', 0) }
-        usernameInputField { $('#username', 0) }
-        passwordInputField { $('#password', 0) }
-    }
-
-    void login(String username, String password) {
-        usernameInputField << username
-        passwordInputField << password
-        loginButton.click()
-    }
-
-    @Override
-    void onLoad(Page previousPage) {
-        loaded = true
+    static url = ''
+    static at = {
+        title == 'Spring Security Management Console'
     }
 }

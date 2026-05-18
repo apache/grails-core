@@ -16,30 +16,34 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package demo
+package spec
 
-import geb.Page
+import geb.driver.CachingDriverFactory
+import page.HomePage
 
-class LoginPage extends Page {
+import grails.plugin.geb.ContainerGebSpec
+import grails.plugin.springsecurity.SpringSecurityUtils
 
-    boolean loaded = false
+abstract class SecurityUISpec extends ContainerGebSpec {
 
-    static url = 'login/auth'
-    static at = { title == 'Login' }
-    static content = {
-        loginButton { $('#submit', 0) }
-        usernameInputField { $('#username', 0) }
-        passwordInputField { $('#password', 0) }
-    }
+	void setup() {
+		logout()
+	}
 
-    void login(String username, String password) {
-        usernameInputField << username
-        passwordInputField << password
-        loginButton.click()
-    }
+	void cleanup() {
+		CachingDriverFactory.clearCache()
+	}
 
-    @Override
-    void onLoad(Page previousPage) {
-        loaded = true
-    }
+	HomePage logout() {
+		go(SpringSecurityUtils.securityConfig.logout.filterProcessesUrl as String)
+		clearCookies()
+		def page = to(HomePage)
+		waitFor { page.loaded }
+		page
+	}
+
+	protected boolean assertContentContainsOne(String expected1, String expected2) {
+		assert pageSource.contains(expected1) || pageSource.contains(expected2)
+		true
+	}
 }

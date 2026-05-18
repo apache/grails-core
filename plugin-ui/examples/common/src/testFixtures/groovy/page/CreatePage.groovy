@@ -16,30 +16,23 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package demo
+package page
 
-import geb.Page
+abstract class CreatePage extends LifecyclePage {
 
-class LoginPage extends Page {
+	static at = {
+		title == "Create ${typeName()}"
+	}
+	static content = {
+		submitBtn { $('a', id: 'create') }
+	}
 
-    boolean loaded = false
+	boolean assertNotUnique() {
+		driver.pageSource.contains('must be unique')
+	}
 
-    static url = 'login/auth'
-    static at = { title == 'Login' }
-    static content = {
-        loginButton { $('#submit', 0) }
-        usernameInputField { $('#username', 0) }
-        passwordInputField { $('#password', 0) }
-    }
-
-    void login(String username, String password) {
-        usernameInputField << username
-        passwordInputField << password
-        loginButton.click()
-    }
-
-    @Override
-    void onLoad(Page previousPage) {
-        loaded = true
-    }
+	<T extends LifecyclePage> T submitCreate(Class<T> expectedPageType) {
+		submitBtn.click()
+		waitForPage(expectedPageType)
+	}
 }

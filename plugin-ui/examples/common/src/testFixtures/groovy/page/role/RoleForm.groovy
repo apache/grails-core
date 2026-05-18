@@ -16,30 +16,19 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package demo
+package page.role
 
-import geb.Page
+import groovy.transform.Immutable
 
-class LoginPage extends Page {
+import geb.module.TextInput
+import page.LifecyclePage
 
-    boolean loaded = false
+@Immutable
+class RoleForm {
 
-    static url = 'login/auth'
-    static at = { title == 'Login' }
-    static content = {
-        loginButton { $('#submit', 0) }
-        usernameInputField { $('#username', 0) }
-        passwordInputField { $('#password', 0) }
-    }
+    String authority
 
-    void login(String username, String password) {
-        usernameInputField << username
-        passwordInputField << password
-        loginButton.click()
-    }
-
-    @Override
-    void onLoad(Page previousPage) {
-        loaded = true
-    }
+     <P extends LifecyclePage> void applyTo(P page) {
+        if (authority != null) page.$(name: 'authority').module(TextInput).text = authority
+     }
 }

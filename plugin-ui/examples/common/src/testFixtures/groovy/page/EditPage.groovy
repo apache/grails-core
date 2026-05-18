@@ -16,30 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package demo
+package page
 
-import geb.Page
+abstract class EditPage extends LifecyclePage {
 
-class LoginPage extends Page {
+	static at = {
+		title == "Edit ${typeName()}"
+	}
+	static content = {
+		submitBtn { $('a', id: 'update') }
+	}
 
-    boolean loaded = false
+	def <T extends LifecyclePage> T submitDelete(Class<T> expectedPageType) {
+		js.exec('document.forms.deleteForm.submit()')
+		waitForPage(expectedPageType)
+	}
 
-    static url = 'login/auth'
-    static at = { title == 'Login' }
-    static content = {
-        loginButton { $('#submit', 0) }
-        usernameInputField { $('#username', 0) }
-        passwordInputField { $('#password', 0) }
-    }
-
-    void login(String username, String password) {
-        usernameInputField << username
-        passwordInputField << password
-        loginButton.click()
-    }
-
-    @Override
-    void onLoad(Page previousPage) {
-        loaded = true
-    }
+	<T extends LifecyclePage> T submitEdit(Class<T> expectedPageType) {
+		submitBtn.click()
+		waitForPage(expectedPageType)
+	}
 }

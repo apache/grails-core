@@ -16,30 +16,39 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package demo
+package page.persistentLogin
 
-import geb.Page
+import groovy.transform.Immutable
 
-class LoginPage extends Page {
+import geb.module.TextInput
+import page.SearchPage
 
-    boolean loaded = false
+class PersistentLoginSearchPage extends SearchPage {
 
-    static url = 'login/auth'
-    static at = { title == 'Login' }
-    static content = {
-        loginButton { $('#submit', 0) }
-        usernameInputField { $('#username', 0) }
-        passwordInputField { $('#password', 0) }
-    }
+	static url = 'persistentLogin/search'
+	static typeName = { 'PersistentLogin' }
+	static content = {
+		series { $(name: 'series').module(TextInput) }
+		token { $(name: 'token').module(TextInput) }
+		username { $('#username').module(TextInput) }
+	}
 
-    void login(String username, String password) {
-        usernameInputField << username
-        passwordInputField << password
-        loginButton.click()
-    }
+	PersistentLoginSearchPage search(Form formData = null) {
+		formData?.applyTo(this)
+		submit(PersistentLoginSearchPage)
+	}
 
-    @Override
-    void onLoad(Page previousPage) {
-        loaded = true
-    }
+	@Immutable
+	static class Form {
+
+		String series
+		String token
+		String username
+
+		void applyTo(PersistentLoginSearchPage page) {
+			if (series) page.series.text = series
+			if (token) page.token.text = token
+			if (username) page.username.text = username
+		}
+	}
 }

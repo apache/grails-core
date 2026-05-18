@@ -16,30 +16,22 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package demo
 
-import geb.Page
+package page.aclClass
 
-class LoginPage extends Page {
+import geb.module.TextInput
+import page.SearchPage
 
-    boolean loaded = false
+class AclClassSearchPage extends SearchPage {
 
-    static url = 'login/auth'
-    static at = { title == 'Login' }
-    static content = {
-        loginButton { $('#submit', 0) }
-        usernameInputField { $('#username', 0) }
-        passwordInputField { $('#password', 0) }
-    }
+	static url = 'aclClass/search'
+	static typeName = { 'AclClass' }
+	static content = {
+		className { $(name: 'className').module(TextInput) }
+	}
 
-    void login(String username, String password) {
-        usernameInputField << username
-        passwordInputField << password
-        loginButton.click()
-    }
-
-    @Override
-    void onLoad(Page previousPage) {
-        loaded = true
-    }
+	AclClassSearchPage search(String name = null) {
+		if (name != null) className.text = name
+		submit(AclClassSearchPage)
+	}
 }

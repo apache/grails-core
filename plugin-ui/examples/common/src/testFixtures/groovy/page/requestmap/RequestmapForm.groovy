@@ -16,30 +16,21 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package demo
+package page.requestmap
+
+import groovy.transform.Immutable
 
 import geb.Page
+import geb.module.TextInput
 
-class LoginPage extends Page {
+@Immutable
+class RequestmapForm {
 
-    boolean loaded = false
+    String configAttribute
+    String urlPattern
 
-    static url = 'login/auth'
-    static at = { title == 'Login' }
-    static content = {
-        loginButton { $('#submit', 0) }
-        usernameInputField { $('#username', 0) }
-        passwordInputField { $('#password', 0) }
-    }
-
-    void login(String username, String password) {
-        usernameInputField << username
-        passwordInputField << password
-        loginButton.click()
-    }
-
-    @Override
-    void onLoad(Page previousPage) {
-        loaded = true
+    <P extends Page> void applyTo(P page) {
+        if (configAttribute != null) page.$(name: 'configAttribute').module(TextInput).text = configAttribute
+        if (urlPattern != null) page.$(name: 'url').module(TextInput).text = urlPattern
     }
 }

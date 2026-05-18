@@ -16,30 +16,29 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package demo
+package page.aclSid
+
+import groovy.transform.Immutable
 
 import geb.Page
+import geb.module.Checkbox
+import geb.module.TextInput
 
-class LoginPage extends Page {
+@Immutable
+class AclSidForm {
 
-    boolean loaded = false
+    String sid
+    Boolean principal
 
-    static url = 'login/auth'
-    static at = { title == 'Login' }
-    static content = {
-        loginButton { $('#submit', 0) }
-        usernameInputField { $('#username', 0) }
-        passwordInputField { $('#password', 0) }
-    }
-
-    void login(String username, String password) {
-        usernameInputField << username
-        passwordInputField << password
-        loginButton.click()
-    }
-
-    @Override
-    void onLoad(Page previousPage) {
-        loaded = true
+    <P extends Page> void applyTo(P page) {
+        if (sid != null) page.$(name: 'sid').module(TextInput).text = sid
+        if (principal != null) {
+            def checkbox = page.$(name: 'principal').module(Checkbox)
+            if (principal) {
+                checkbox.check()
+            } else {
+                checkbox.uncheck()
+            }
+        }
     }
 }

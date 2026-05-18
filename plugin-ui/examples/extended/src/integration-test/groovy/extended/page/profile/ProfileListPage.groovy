@@ -16,30 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package demo
+package extended.page.profile
 
-import geb.Page
+import page.LifecyclePage
 
-class LoginPage extends Page {
+class ProfileListPage extends LifecyclePage {
 
-    boolean loaded = false
+	static url = 'profile'
+	static at = { title == 'Profile List' }
+	static content = {
+		profileEditLink { String username ->
+			$('a', text: "User(username:$username)").parent().parent().children().first().children('a')
+		}
+	}
 
-    static url = 'login/auth'
-    static at = { title == 'Login' }
-    static content = {
-        loginButton { $('#submit', 0) }
-        usernameInputField { $('#username', 0) }
-        passwordInputField { $('#password', 0) }
-    }
-
-    void login(String username, String password) {
-        usernameInputField << username
-        passwordInputField << password
-        loginButton.click()
-    }
-
-    @Override
-    void onLoad(Page previousPage) {
-        loaded = true
-    }
+	ProfileEditPage editProfile(String username) {
+		profileEditLink(username).click()
+		def page = browser.at(ProfileEditPage)
+		waitFor { page.loaded }
+		page
+	}
 }
