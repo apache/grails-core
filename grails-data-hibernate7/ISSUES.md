@@ -19,3 +19,4 @@ Hibernate 7 integration in GORM 8 introduces a modern persistence baseline. The 
 
 ## Potential Optimization Opportunities
 - Further tracing of JpaCriteria query construction to identify remaining minor allocation hotspots.
+- **PredicateGenerator LHS caching:** The left-hand-side (LHS) elements generated for each field of a Root element are stable and can be cached per entity type. Caching these can reduce repeated construction overhead in high-churn query scenarios.
