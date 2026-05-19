@@ -117,7 +117,7 @@ class InListQuerySpec extends MongoDatastoreSpec {
 
         when: 'Querying a property in a given immutable list of GStrings'
         results = PetType.withCriteria {
-            inList 'name', ["${'Tyrannosaur'}', '${'Saurapod'}"].asImmutable()
+            inList 'name', ["${'Tyrannosaur'}", "${'Saurapod'}"].asImmutable()
             order 'name'
         }
 

@@ -46,7 +46,7 @@ class MongoGormApiFactory extends DefaultGormApiFactory {
                                           String qualifier,
                                           GormRegistry registry) {
         List<FinderMethod> finders = createDynamicFinders(resolver, mappingContext)
-        return new MongoStaticApi<D>(persistentClass, mappingContext, finders, resolver, qualifier)
+        return new MongoStaticApi<D>(persistentClass, mappingContext, finders, resolver, qualifier, registry)
     }
 
     @Override

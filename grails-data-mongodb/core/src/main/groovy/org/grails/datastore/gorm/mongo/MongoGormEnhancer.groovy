@@ -43,6 +43,8 @@ class MongoGormEnhancer extends GormEnhancer {
 
     MongoGormEnhancer(MongoDatastore datastore, PlatformTransactionManager transactionManager, MongoConnectionSourceSettings settings) {
         super(datastore, transactionManager, settings)
+        // GormRegistry.reset() clears registered API factories, so ensure Mongo factory is restored per enhancer instance.
+        GormRegistry.getInstance().registerApiFactory(MongoDatastore, new MongoGormApiFactory())
         registerMongoMethodExpressions()
     }
 

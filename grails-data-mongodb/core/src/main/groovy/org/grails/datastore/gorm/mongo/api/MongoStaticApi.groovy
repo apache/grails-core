@@ -44,6 +44,7 @@ import grails.gorm.multitenancy.Tenants
 import grails.mongodb.api.MongoAllOperations
 import org.grails.datastore.gorm.AbstractGormApi
 import org.grails.datastore.gorm.GormStaticApi
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.gorm.mongo.MongoCriteriaBuilder
@@ -72,16 +73,20 @@ import org.grails.datastore.mapping.core.connections.ConnectionSource
 class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D> {
 
     MongoStaticApi(Class<D> persistentClass, Datastore datastore, List<FinderMethod> finders, PlatformTransactionManager transactionManager) {
-        super(persistentClass, datastore.mappingContext, finders, new AbstractGormApi.ConstantDatastoreResolver(datastore), ConnectionSource.DEFAULT)
+        super(persistentClass, datastore.mappingContext, finders, new AbstractGormApi.ConstantDatastoreResolver(datastore), ConnectionSource.DEFAULT, null)
     }
 
     MongoStaticApi(Class<D> persistentClass, org.grails.datastore.mapping.model.MappingContext mappingContext, List<FinderMethod> finders, org.grails.datastore.gorm.DatastoreResolver datastoreResolver, String qualifier) {
-        super(persistentClass, mappingContext, finders, datastoreResolver, qualifier)
+        this(persistentClass, mappingContext, finders, datastoreResolver, qualifier, null)
+    }
+
+    MongoStaticApi(Class<D> persistentClass, org.grails.datastore.mapping.model.MappingContext mappingContext, List<FinderMethod> finders, org.grails.datastore.gorm.DatastoreResolver datastoreResolver, String qualifier, GormRegistry registry) {
+        super(persistentClass, mappingContext, finders, datastoreResolver, qualifier, registry)
     }
 
     @Override
     protected GormStaticApi<D> createStaticApi(Class<D> persistentClass, org.grails.datastore.mapping.model.MappingContext mappingContext, List<FinderMethod> finders, org.grails.datastore.gorm.DatastoreResolver resolver, String qualifier) {
-        new MongoStaticApi<D>(persistentClass, mappingContext, finders, resolver, qualifier)
+        new MongoStaticApi<D>(persistentClass, mappingContext, finders, resolver, qualifier, registry)
     }
 
     @Override

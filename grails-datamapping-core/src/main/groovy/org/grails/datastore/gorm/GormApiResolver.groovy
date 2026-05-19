@@ -280,7 +280,7 @@ class ActiveSessionDatastoreSelector {
                         continue
                     }
                     if (className != null) {
-                        if (registry.getDatastore(className, ConnectionSource.DEFAULT) == ds) {
+                        if (registry.getDatastoreByString(className, ConnectionSource.DEFAULT) == ds) {
                             return ds
                         } else if (ds.getMappingContext().getPersistentEntity(className) != null) {
                             return ds
@@ -299,7 +299,7 @@ class ActiveSessionDatastoreSelector {
             for (Datastore registeredDs in registry.allDatastores) {
                 if (registeredDs.hasCurrentSession()) {
                     if (className != null) {
-                        if (registry.getDatastore(className, ConnectionSource.DEFAULT) == registeredDs) {
+                        if (registry.getDatastoreByString(className, ConnectionSource.DEFAULT) == registeredDs) {
                             return registeredDs
                         } else if (registeredDs.getMappingContext().getPersistentEntity(className) != null) {
                             return registeredDs
