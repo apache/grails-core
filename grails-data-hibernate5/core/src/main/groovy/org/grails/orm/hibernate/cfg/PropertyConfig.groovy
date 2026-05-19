@@ -232,7 +232,11 @@ class PropertyConfig extends Property {
         DataBinder dataBinder = new DataBinder(joinTable)
         dataBinder.bind(new MutablePropertyValues(joinTableDef))
         if (joinTableDef.key) {
-            joinTable.key(joinTableDef.key.toString())
+            if (joinTableDef.key instanceof Collection || joinTableDef.key.getClass().isArray()) {
+                joinTable.keys(joinTableDef.key as List)
+            } else {
+                joinTable.key(joinTableDef.key.toString())
+            }
         }
         if (joinTableDef.column) {
             joinTable.column(joinTableDef.column.toString())
@@ -471,5 +475,9 @@ class PropertyConfig extends Property {
             newColumns.add(c.clone())
         }
         return pc
+    }
+
+    boolean hasJoinKeyMapping() {
+        joinTable?.keys
     }
 }

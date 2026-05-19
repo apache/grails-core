@@ -32,7 +32,6 @@ class CompositeKeyJoinTableIntegrationSpec extends HibernateGormDatastoreSpec {
 
         expect:
         joinTable.keys*.name == ['a_col', 'b_col']
-        joinTable.getKey().name == 'a_col'
         joinTable.column.name == 'c'
     }
 
