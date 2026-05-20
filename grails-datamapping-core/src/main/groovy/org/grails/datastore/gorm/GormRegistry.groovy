@@ -19,7 +19,6 @@
 package org.grails.datastore.gorm
 
 import groovy.transform.CompileDynamic
-import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
@@ -187,7 +186,7 @@ class GormRegistry {
     PlatformTransactionManager findSingleTransactionManager(String qualifier) {
         Datastore ds = getDatastoreByString((String) null, qualifier)
         if (ds == null) {
-            throw new IllegalStateException("No GORM implementations configured. Ensure GORM has been initialized correctly")
+            throw new IllegalStateException('No GORM implementations configured. Ensure GORM has been initialized correctly')
         }
         if (ds instanceof TransactionCapableDatastore) {
             return ((TransactionCapableDatastore) ds).transactionManager
@@ -201,7 +200,7 @@ class GormRegistry {
     PlatformTransactionManager findTransactionManager(Class entityClass, String qualifier) {
         Datastore ds = getDatastore(entityClass, qualifier)
         if (ds == null) {
-            throw new IllegalStateException("No GORM implementations configured. Ensure GORM has been initialized correctly")
+            throw new IllegalStateException('No GORM implementations configured. Ensure GORM has been initialized correctly')
         }
         if (ds instanceof TransactionCapableDatastore) {
             return ((TransactionCapableDatastore) ds).transactionManager
@@ -424,7 +423,7 @@ class GormRegistry {
         String normalizedClassName = normalizeEntityKey(entityClass)
         String normalizedQualifier = normalizeQualifier(qualifier)
 
-        if (MultiTenant.class.isAssignableFrom(entityClass)) {
+        if (MultiTenant.isAssignableFrom(entityClass)) {
             // Priority 1: Explicit qualifier that doesn't match default is likely a tenant ID
             if (!ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
                 GormStaticApi api = staticApiRegistry.getDirect(normalizedClassName, normalizedQualifier)
@@ -460,7 +459,7 @@ class GormRegistry {
         String normalizedClassName = normalizeEntityKey(entityClass)
         String normalizedQualifier = normalizeQualifier(qualifier)
 
-        if (MultiTenant.class.isAssignableFrom(entityClass)) {
+        if (MultiTenant.isAssignableFrom(entityClass)) {
             if (!ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
                 GormInstanceApi api = instanceApiRegistry.getDirect(normalizedClassName, normalizedQualifier)
                 if (api != null) return api
@@ -492,7 +491,7 @@ class GormRegistry {
         String normalizedClassName = normalizeEntityKey(entityClass)
         String normalizedQualifier = normalizeQualifier(qualifier)
 
-        if (MultiTenant.class.isAssignableFrom(entityClass)) {
+        if (MultiTenant.isAssignableFrom(entityClass)) {
             if (!ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
                 GormValidationApi api = validationApiRegistry.getDirect(normalizedClassName, normalizedQualifier)
                 if (api != null) return api

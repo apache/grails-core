@@ -36,9 +36,6 @@ import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import org.grails.datastore.gorm.schemaless.DynamicAttributes
 
-import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
-import grails.gorm.multitenancy.Tenants
-import grails.gorm.MultiTenant
 import org.grails.datastore.mapping.core.DatastoreUtils
 
 /**

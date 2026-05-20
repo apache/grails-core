@@ -20,7 +20,6 @@ package org.grails.datastore.gorm
 
 import groovy.transform.CompileStatic
 import org.grails.datastore.mapping.core.Datastore
-import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.model.MappingContext
 
 @CompileStatic

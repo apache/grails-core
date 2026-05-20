@@ -29,7 +29,6 @@ import org.grails.datastore.mapping.engine.event.PreUpdateEvent
 import org.springframework.context.ApplicationEvent
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.ConfigurableApplicationContext
-import spock.lang.PendingFeatureIf
 import spock.util.concurrent.PollingConditions
 
 class DirtyCheckingAfterListenerSpec extends GrailsDataTckSpec {

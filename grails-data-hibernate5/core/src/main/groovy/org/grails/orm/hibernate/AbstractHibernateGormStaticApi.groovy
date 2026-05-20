@@ -96,7 +96,6 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
         return template
     }
 
-
     protected ConversionService getConversionService() {
         getHibernateDatastore().mappingContext.conversionService
     }

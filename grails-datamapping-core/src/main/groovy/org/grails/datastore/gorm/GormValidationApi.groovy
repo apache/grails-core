@@ -36,7 +36,6 @@ import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.SessionCallback
-import org.grails.datastore.mapping.core.VoidSessionCallback
 import org.grails.datastore.mapping.engine.event.ValidationEvent
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
@@ -44,11 +43,6 @@ import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.datastore.mapping.validation.ValidationErrors
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
-
-import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
-import grails.gorm.multitenancy.Tenants
-import grails.gorm.multitenancy.CurrentTenantHolder
-import grails.gorm.MultiTenant
 
 /**
  * Methods used for validating GORM instances.

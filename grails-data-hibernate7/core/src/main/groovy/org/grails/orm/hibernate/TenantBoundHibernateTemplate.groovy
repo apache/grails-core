@@ -24,8 +24,6 @@ import org.hibernate.SessionFactory
 import org.hibernate.query.Query
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import grails.gorm.multitenancy.Tenants
-import java.io.Serializable
-import java.util.Collection
 
 /**
  * A {@link IHibernateTemplate} implementation that binds a tenant id for the duration of the execution

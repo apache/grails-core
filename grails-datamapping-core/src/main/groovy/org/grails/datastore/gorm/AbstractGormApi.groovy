@@ -35,8 +35,6 @@ import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.SessionCallback
 import org.grails.datastore.mapping.core.VoidSessionCallback
 import org.grails.datastore.mapping.core.connections.ConnectionSource
-import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
-import org.grails.datastore.mapping.core.connections.ConnectionSources
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import grails.gorm.multitenancy.CurrentTenantHolder
 import grails.gorm.multitenancy.Tenants
@@ -99,7 +97,7 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
 
         String currentQualifier = getQualifier()
         boolean isMultiTenantCapable = ds instanceof MultiTenantCapableDatastore
-        boolean isMultiTenantEntity = MultiTenant.class.isAssignableFrom(persistentClass)
+        boolean isMultiTenantEntity = MultiTenant.isAssignableFrom(persistentClass)
 
         // Check if we have a non-default qualifier
         if (currentQualifier != null && !ConnectionSource.DEFAULT.equals(currentQualifier) && !ConnectionSource.OLD_DEFAULT.equalsIgnoreCase(currentQualifier)) {
