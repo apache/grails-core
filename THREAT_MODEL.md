@@ -275,7 +275,7 @@ Not applicable - Apache Grails is a single-process web framework with no consens
 - **Compromised plugin / JAR on the application classpath.** Plugins run with full privileges by design. *(inferred)*
 - **Compromised build environment.** Out of model per §3.
 - **Co-tenant attacker on the same JVM (e.g., another application in a shared servlet container).** The framework does not assume process-level isolation between deployed applications. The model assumes one application per JVM. *(inferred)*
-- **Attacker who controls a Grails plugin or `grails-forge` profile downloaded by a developer running the CLI.** This is the supply-chain surface around `MavenProfileRepository`; see §11. The framework does not verify profile JAR signatures beyond what Maven Resolver provides. *(inferred)*
+- **Attacker who controls a Grails plugin or `grails` profile downloaded by a developer running the CLI.** This is the supply-chain surface around `MavenProfileRepository`; see §11. The framework does not verify profile JAR signatures beyond what Maven Resolver provides. *(inferred)*
 - **Attacker with the ability to make a developer execute the `GrailsShell` or `GroovyConsole`.** Out of scope - these are unrestricted code-execution tools by design. *(inferred)*
 - **Side-channel observers** (timing, cache, micro-architectural). *(inferred)*
 
