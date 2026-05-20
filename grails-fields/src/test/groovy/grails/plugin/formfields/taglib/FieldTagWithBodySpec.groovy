@@ -51,7 +51,7 @@ class FieldTagWithBodySpec extends AbstractFormFieldsTagLibSpec implements TagLi
         views['/_fields/default/_wrapper.gsp'] = '${widget}'
 
         expect:
-        applyTemplate('<f:field bean='personInstance' property='name'>BODY</f:field>', [personInstance: personInstance]) == 'BODY'
+        applyTemplate('<f:field bean="personInstance" property="name">BODY</f:field>', [personInstance: personInstance]) == 'BODY'
     }
 
     void 'the model is passed to a tag body if there is one'() {
@@ -59,7 +59,7 @@ class FieldTagWithBodySpec extends AbstractFormFieldsTagLibSpec implements TagLi
         views['/_fields/default/_wrapper.gsp'] = '${widget}'
 
         expect:
-        applyTemplate('<f:field bean='personInstance' property='name'>bean: ${bean.getClass().simpleName}, property: ${property}, type: ${type.simpleName}, label: ${label}, value: ${value}</f:field>', [personInstance: personInstance]) == 'bean: Person, property: name, type: String, label: Name, value: Bart Simpson'
+        applyTemplate('<f:field bean="personInstance" property="name">bean: ${bean.getClass().simpleName}, property: ${property}, type: ${type.simpleName}, label: ${label}, value: ${value}</f:field>', [personInstance: personInstance]) == 'bean: Person, property: name, type: String, label: Name, value: Bart Simpson'
     }
 
 	@Issue('https://github.com/grails/fields/pull/49')
@@ -68,15 +68,15 @@ class FieldTagWithBodySpec extends AbstractFormFieldsTagLibSpec implements TagLi
         views['/_fields/default/_wrapper.gsp'] = '${widget}'
 
         expect:
-        applyTemplate('<f:field bean='personInstance' property='name' input-foo='bar'>${foo}</f:field>', [personInstance: personInstance]) == 'bar'
+        applyTemplate('<f:field bean="personInstance" property="name" input-foo="bar">${foo}</f:field>', [personInstance: personInstance]) == 'bar'
     }
 
-    void 'extra attributes prefixed with input- are passed to the tag body grouped as 'attrs''() {
+    void 'extra attributes prefixed with input- are passed to the tag body grouped as "attrs"'() {
         given:
         views['/_fields/default/_wrapper.gsp'] = '${widget}'
 
         expect:
-        applyTemplate('<f:field bean='personInstance' property='name' input-foo='bar'>${attrs.foo}</f:field>', [personInstance: personInstance]) == 'bar'
+        applyTemplate('<f:field bean="personInstance" property="name" input-foo="bar">${attrs.foo}</f:field>', [personInstance: personInstance]) == 'bar'
     }
 
     @Issue('https://github.com/grails/fields/issues/323')
@@ -92,7 +92,7 @@ class FieldTagWithBodySpec extends AbstractFormFieldsTagLibSpec implements TagLi
         }
 
         when:
-        def result = applyTemplate('<f:field bean='personInstance' property='name' encodeAs='raw'>${errors[0]}</f:field>', [personInstance: person])
+        def result = applyTemplate('<f:field bean="personInstance" property="name" encodeAs='raw'>${errors[0]}</f:field>', [personInstance: person])
 
         then:
         result == 'custom error with special chars &amp; &lt; &gt; &#39; &quot;'
@@ -113,7 +113,7 @@ class FieldTagWithBodySpec extends AbstractFormFieldsTagLibSpec implements TagLi
         }
 
         when:
-        def result = applyTemplate('<f:field bean='personInstance' property='name' encodeAs='raw'>${errors[0]}</f:field>', [personInstance: person])
+        def result = applyTemplate('<f:field bean="personInstance" property="name" encodeAs='raw'>${errors[0]}</f:field>', [personInstance: person])
 
         then:
         result == '<div>Name is invalid</div>'

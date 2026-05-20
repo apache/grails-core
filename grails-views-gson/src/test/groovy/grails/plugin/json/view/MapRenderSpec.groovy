@@ -365,8 +365,7 @@ class MapRenderSpec extends Specification implements JsonViewTest, DataTest {
         def renderResult = render(templateText, [map: [a: '1', b: '2', c: '3']])
 
         then: 'The result is correct'
-        objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('{ 'a': '1','b': '2' }')
-
+        objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('{"a": "1","b": "2"}')
         when: 'A map is rendered'
         templateText = '''
             model {
@@ -378,7 +377,7 @@ class MapRenderSpec extends Specification implements JsonViewTest, DataTest {
         renderResult = render(templateText, [map: [a: '1', b: '2', c: '3', d: '4']])
 
         then: 'The result is correct'
-        objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('{ 'a': '1', 'd': '4' }')
+        objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('{"a": "1", "d": "4"}')
     }
 
     static class PlayerCO implements Validateable {

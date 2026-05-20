@@ -46,7 +46,7 @@ class TemplateModelSpec extends AbstractFormFieldsTagLibSpec implements TagLibUn
 		views['/_fields/default/_wrapper.gsp'] = '${bean.getClass().simpleName}.${property}'
 
 		expect:
-		applyTemplate('<f:field bean='personInstance' property='name'/>', [personInstance: personInstance]) == 'Person.name'
+		applyTemplate('<f:field bean="personInstance" property="name"/>', [personInstance: personInstance]) == 'Person.name'
 	}
 
 	void 'constraints are passed to template'() {
@@ -54,7 +54,7 @@ class TemplateModelSpec extends AbstractFormFieldsTagLibSpec implements TagLibUn
 		views['/_fields/default/_wrapper.gsp'] = 'nullable=${constraints.nullable}, blank=${constraints.blank}'
 
 		expect:
-		applyTemplate('<f:field bean='personInstance' property='name'/>', [personInstance: personInstance]) == 'nullable=false, blank=false'
+		applyTemplate('<f:field bean="personInstance" property="name"/>', [personInstance: personInstance]) == 'nullable=false, blank=false'
 	}
 
 	void 'label is resolved by convention and passed to template'() {
@@ -65,7 +65,7 @@ class TemplateModelSpec extends AbstractFormFieldsTagLibSpec implements TagLibUn
 		messageSource.addMessage('person.name.label', request.locale, 'Name of person')
 
 		expect:
-		applyTemplate('<f:field bean='personInstance' property='name'/>', [personInstance: personInstance]) == '<label>Name of person</label>'
+		applyTemplate('<f:field bean="personInstance" property="name"/>', [personInstance: personInstance]) == '<label>Name of person</label>'
 	}
 
 	@Issue('https://github.com/grails/fields/issues/38')
@@ -78,7 +78,7 @@ class TemplateModelSpec extends AbstractFormFieldsTagLibSpec implements TagLibUn
 		messageSource.addMessage('address.city.label', request.locale, 'Label for property type')
 
 		expect:
-		applyTemplate('<f:field bean='personInstance' property='address.city'/>', [personInstance: personInstance]) == '<label>Label for property path</label>'
+		applyTemplate('<f:field bean="personInstance" property="address.city"/>', [personInstance: personInstance]) == '<label>Label for property type</label>'
 	}
 
     @Issue('https://github.com/grails/fields/issues/76')
@@ -90,7 +90,7 @@ class TemplateModelSpec extends AbstractFormFieldsTagLibSpec implements TagLibUn
 		messageSource.addMessage('address.city.label', request.locale, 'Label for property type')
 
 		expect:
-		applyTemplate('<f:field bean='personInstance' property='address.city'/>', [personInstance: personInstance]) == '<label>Label for property type</label>'
+		applyTemplate('<f:field bean="personInstance" property="address.city"/>', [personInstance: personInstance]) == '<label>Label for property type</label>'
 	}
 
     @Issue('https://github.com/grails/fields/issues/76')
@@ -103,7 +103,7 @@ class TemplateModelSpec extends AbstractFormFieldsTagLibSpec implements TagLibUn
 		messageSource.addMessage('address.city.label', request.locale, 'Label for property type')
 
 		expect:
-		applyTemplate('<f:field bean='personInstance' property='address.city'/>', [personInstance: personInstance]) == '<label>City</label>'
+		applyTemplate('<f:field bean="personInstance" property="address.city"/>', [personInstance: personInstance]) == '<label>City</label>'
 	}
 
 	void 'label is defaulted to natural property name'() {
@@ -111,8 +111,8 @@ class TemplateModelSpec extends AbstractFormFieldsTagLibSpec implements TagLibUn
 		views['/_fields/default/_wrapper.gsp'] = '<label>${label}</label>'
 
 		expect:
-		applyTemplate('<f:field bean='personInstance' property='name'/>', [personInstance: personInstance]) == '<label>Name</label>'
-		applyTemplate('<f:field bean='personInstance' property='dateOfBirth'/>', [personInstance: personInstance]) == '<label>Date Of Birth</label>'
+		applyTemplate('<f:field bean="personInstance" property="name"/>', [personInstance: personInstance]) == '<label>Name</label>'
+		applyTemplate('<f:field bean="personInstance" property="dateOfBirth"/>', [personInstance: personInstance]) == '<label>Date Of Birth</label>'
 	}
 
 	void 'label can be overridden by label attribute'() {
@@ -120,7 +120,7 @@ class TemplateModelSpec extends AbstractFormFieldsTagLibSpec implements TagLibUn
 		views['/_fields/default/_wrapper.gsp'] = '<label>${label}</label>'
 
 		expect:
-		applyTemplate('<f:field bean='personInstance' property='name' label='Name of person'/>', [personInstance: personInstance]) == '<label>Name of person</label>'
+		applyTemplate('<f:field bean="personInstance" property="name" label="Name of person"/>', [personInstance: personInstance]) == '<label>Name of person</label>'
 	}
 
 	void 'label can be overridden by label key attribute'() {
@@ -131,7 +131,7 @@ class TemplateModelSpec extends AbstractFormFieldsTagLibSpec implements TagLibUn
 		messageSource.addMessage('custom.name.label', request.locale, 'Name of person')
 
 		expect:
-		applyTemplate('<f:field bean='personInstance' property='name' label='custom.name.label'/>', [personInstance: personInstance]) == '<label>Name of person</label>'
+		applyTemplate('<f:field bean="personInstance" property="name" label="custom.name.label"/>', [personInstance: personInstance]) == '<label>Name of person</label>'
 	}
 
 	void 'value is defaulted to property value'() {
@@ -139,7 +139,7 @@ class TemplateModelSpec extends AbstractFormFieldsTagLibSpec implements TagLibUn
 		views['/_fields/default/_wrapper.gsp'] = '<g:formatDate date="${value}' format='yyyy-MM-dd"/>'
 
 		expect:
-		applyTemplate('<f:field bean='personInstance' property='dateOfBirth'/>', [personInstance: personInstance]) == '1987-04-19'
+		applyTemplate('<f:field bean="personInstance" property="dateOfBirth"/>', [personInstance: personInstance]) == '1987-04-19'
 	}
 	
 	@Issue('https://github.com/grails/fields/issues/55')
@@ -151,7 +151,7 @@ class TemplateModelSpec extends AbstractFormFieldsTagLibSpec implements TagLibUn
 		def employee = new Employee(name: 'Monica Lewinsky', jobTitle: 'Intern', salary: 0)
 
 		expect:
-		applyTemplate('<f:field bean='personInstance' property='salary' default='50000'/>', [personInstance: employee]) == '<span>0</span>'
+		applyTemplate('<f:field bean="personInstance" property="salary" default="50000"/>', [personInstance: employee]) == '<span>0</span>'
 	}
 
 	void 'value is overridden by value attribute'() {
@@ -159,7 +159,7 @@ class TemplateModelSpec extends AbstractFormFieldsTagLibSpec implements TagLibUn
 		views['/_fields/default/_wrapper.gsp'] = '${value}'
 
 		expect:
-		applyTemplate('<f:field bean='personInstance' property='name' value='Bartholomew J. Simpson'/>', [personInstance: personInstance]) == 'Bartholomew J. Simpson'
+		applyTemplate('<f:field bean="personInstance" property="name" value="Bartholomew J. Simpson"/>', [personInstance: personInstance]) == 'Bartholomew J. Simpson'
 	}
 
 	@Issue('https://github.com/grails/fields/issues/46')
@@ -168,7 +168,7 @@ class TemplateModelSpec extends AbstractFormFieldsTagLibSpec implements TagLibUn
 		views['/_fields/default/_wrapper.gsp'] = '<em>${value}</em>'
 
 		expect:
-		applyTemplate('<f:field bean='personInstance' property='name' value="${value}"/>', [personInstance: personInstance, value: value]) == '<em></em>'
+		applyTemplate('<f:field bean="personInstance" property="name" value="${value}"/>', [personInstance: personInstance, value: value]) == '<em></em>'
 		
 		where:
 		value << [null, '']
@@ -182,7 +182,7 @@ class TemplateModelSpec extends AbstractFormFieldsTagLibSpec implements TagLibUn
 		personInstance.name = value
 
 		expect:
-		applyTemplate('<f:field bean='personInstance' property='name' default='A. N. Other'/>', [personInstance: personInstance]) == 'A. N. Other'
+		applyTemplate('<f:field bean="personInstance" property="name" default="A. N. Other"/>', [personInstance: personInstance]) == 'A. N. Other'
 		
 		where:
 		value << [null, '']
@@ -193,7 +193,7 @@ class TemplateModelSpec extends AbstractFormFieldsTagLibSpec implements TagLibUn
 		views['/_fields/default/_wrapper.gsp'] = '${value}'
 
 		expect:
-		applyTemplate('<f:field bean='personInstance' property='name' default='A. N. Other'/>', [personInstance: personInstance]) == 'Bart Simpson'
+		applyTemplate('<f:field bean="personInstance" property="name" default="A. N. Other"/>', [personInstance: personInstance]) == 'Bart Simpson'
 	}
 
 	@Issue('https://github.com/grails/fields/issues/46')
@@ -202,7 +202,7 @@ class TemplateModelSpec extends AbstractFormFieldsTagLibSpec implements TagLibUn
 		views['/_fields/default/_wrapper.gsp'] = '${value}'
 
 		expect:
-		applyTemplate('<f:field bean='personInstance' property='name' value='Bartholomew J. Simpson' default='A. N. Other'/>', [personInstance: personInstance]) == 'Bartholomew J. Simpson'
+		applyTemplate('<f:field bean="personInstance" property="name" value="Bartholomew J. Simpson" default="A. N. Other"/>', [personInstance: personInstance]) == 'Bartholomew J. Simpson'
 	}
 
 	@Issue('https://github.com/grails/fields/issues/46')
@@ -211,7 +211,7 @@ class TemplateModelSpec extends AbstractFormFieldsTagLibSpec implements TagLibUn
 		views['/_fields/default/_wrapper.gsp'] = '${value}'
 
 		expect:
-		applyTemplate('<f:field bean='personInstance' property='name' value="${value}' default='A. N. Other"/>', [personInstance: personInstance, value: value]) == 'A. N. Other'
+		applyTemplate('<f:field bean="personInstance" property="name" value="${value}" default="A. N. Other"/>', [personInstance: personInstance, value: value]) == 'A. N. Other'
 
 		where:
 		value << [null, '']
@@ -222,7 +222,7 @@ class TemplateModelSpec extends AbstractFormFieldsTagLibSpec implements TagLibUn
 		views['/_fields/default/_wrapper.gsp'] = '<g:each var='error' in="${errors}"><em>${error}</em></g:each>'
 
 		expect:
-		applyTemplate('<f:field bean='personInstance' property='name'/>', [personInstance: personInstance]) == ''
+		applyTemplate('<f:field bean="personInstance" property="name"/>', [personInstance: personInstance]) == ''
 	}
 
 	void 'errors passed to template is a collection of strings'() {
@@ -234,7 +234,7 @@ class TemplateModelSpec extends AbstractFormFieldsTagLibSpec implements TagLibUn
 		personInstance.errors.rejectValue('name', 'nullable')
 
 		when:
-		def renderedErrors = applyTemplate('<f:field bean='personInstance' property='name'/>', [personInstance: personInstance])
+		def renderedErrors = applyTemplate('<f:field bean="personInstance" property="name"/>', [personInstance: personInstance])
 
 		then:
 		renderedErrors == '<em>blank</em><em>nullable</em>' || renderedErrors == '<em>blank.grails.plugin.formfields.mock.Person.name</em><em>nullable.grails.plugin.formfields.mock.Person.name</em>'
@@ -245,7 +245,7 @@ class TemplateModelSpec extends AbstractFormFieldsTagLibSpec implements TagLibUn
 		views['/_fields/default/_wrapper.gsp'] = 'required=${required}'
 
 		expect:
-		applyTemplate('<f:field bean='personInstance' property='name'/>', [personInstance: personInstance]) == 'required=true'
+		applyTemplate('<f:field bean="personInstance" property="name"/>', [personInstance: personInstance]) == 'required=true'
 	}
 
 	void 'required flag can be forced with attribute'() {
@@ -253,7 +253,7 @@ class TemplateModelSpec extends AbstractFormFieldsTagLibSpec implements TagLibUn
 		views['/_fields/default/_wrapper.gsp'] = 'required=${required}'
 
 		expect:
-		applyTemplate('<f:field bean='personInstance' property='minor' required='true'/>', [personInstance: personInstance]) == 'required=true'
+		applyTemplate('<f:field bean="personInstance" property="minor" required="true"/>', [personInstance: personInstance]) == 'required=true'
 	}
 
 	void 'required flag can be forced off with attribute'() {
@@ -261,7 +261,7 @@ class TemplateModelSpec extends AbstractFormFieldsTagLibSpec implements TagLibUn
 		views['/_fields/default/_wrapper.gsp'] = 'required=${required}'
 
 		expect:
-		applyTemplate('<f:field bean='personInstance' property='name' required='false'/>', [personInstance: personInstance]) == 'required=false'
+		applyTemplate('<f:field bean="personInstance" property="name" required="false"/>', [personInstance: personInstance]) == 'required=false'
 	}
 
 	void 'invalid flag is passed to template if bean has errors'() {
@@ -272,7 +272,7 @@ class TemplateModelSpec extends AbstractFormFieldsTagLibSpec implements TagLibUn
 		personInstance.errors.rejectValue('name', 'blank')
 
 		expect:
-		applyTemplate('<f:field bean='personInstance' property='name'/>', [personInstance: personInstance]) == 'invalid=true'
+		applyTemplate('<f:field bean="personInstance" property="name"/>', [personInstance: personInstance]) == 'invalid=true'
 	}
 
 	void 'invalid flag is not passed to template if bean has no errors'() {
@@ -280,7 +280,7 @@ class TemplateModelSpec extends AbstractFormFieldsTagLibSpec implements TagLibUn
 		views['/_fields/default/_wrapper.gsp'] = 'invalid=${invalid}'
 
 		expect:
-		applyTemplate('<f:field bean='personInstance' property='name'/>', [personInstance: personInstance]) == 'invalid=false'
+		applyTemplate('<f:field bean="personInstance" property="name"/>', [personInstance: personInstance]) == 'invalid=false'
 	}
 
 	void 'invalid flag can be overridden with attribute'() {
@@ -288,7 +288,7 @@ class TemplateModelSpec extends AbstractFormFieldsTagLibSpec implements TagLibUn
 		views['/_fields/default/_wrapper.gsp'] = 'invalid=${invalid}'
 
 		expect:
-		applyTemplate('<f:field bean='personInstance' property='name' invalid='true'/>', [personInstance: personInstance]) == 'invalid=true'
+		applyTemplate('<f:field bean="personInstance" property="name" invalid="true"/>', [personInstance: personInstance]) == 'invalid=true'
 	}
 
 	void 'rendered input is passed to template'() {
@@ -296,7 +296,7 @@ class TemplateModelSpec extends AbstractFormFieldsTagLibSpec implements TagLibUn
 		views['/_fields/default/_wrapper.gsp'] = '${widget}'
 
 		expect:
-		applyTemplate('<f:field bean='personInstance' property='name'/>', [personInstance: personInstance]) == '<input type='text' name='name' value='Bart Simpson' required='' id='name' />'
+		applyTemplate('<f:field bean="personInstance" property="name"/>', [personInstance: personInstance]) == "<input type='text' name='name' value='Bart Simpson' required='' id='name' />"
 	}
 
     @Issue('https://github.com/grails/fields/issues/80')
@@ -306,7 +306,7 @@ class TemplateModelSpec extends AbstractFormFieldsTagLibSpec implements TagLibUn
 	    def personWithBoolean = { personInstance.grailsDeveloper = it ; personInstance }
 
 		expect:
-		output == applyTemplate('<f:field bean='personInstance' property='grailsDeveloper'/>', [personInstance: personWithBoolean(value)])
+		output == applyTemplate('<f:field bean="personInstance" property="grailsDeveloper"/>', [personInstance: personWithBoolean(value)])
         
         where:
         value | output
@@ -322,7 +322,7 @@ class TemplateModelSpec extends AbstractFormFieldsTagLibSpec implements TagLibUn
 	    def personWith_boolean = { personInstance.minor = it ; personInstance }
 
 		expect:
-		output == applyTemplate('<f:field bean='personInstance' property='minor'/>', [personInstance: personWith_boolean(value)])
+		output == applyTemplate('<f:field bean="personInstance" property="minor"/>', [personInstance: personWith_boolean(value)])
         
         where:
         value | output

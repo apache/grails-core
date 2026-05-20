@@ -26,20 +26,20 @@ class LinkRenderingTagLib2Tests extends Specification implements UrlMappingsUnit
 
     def testLinkWithOnlyId() {
         when:
-        def template = '<g:link id='competition'>Enter</g:link>'
+        def template = '''<g:link id='competition'>Enter</g:link>'''
         String output = applyTemplate(template)
 
         then:
-        output == '<a href='/competition'>Enter</a>'
+        output == "<a href='/competition'>Enter</a>"
     }
 
     def testLinkWithOnlyIdAndAction() {
         when:
-        def template = '<g:link id='competition' controller='content' action='view'>Enter</g:link>'
+        def template = '''<g:link id='competition' controller='content' action='view'>Enter</g:link>'''
         String output = applyTemplate(template)
 
         then:
-        output == '<a href='/competition'>Enter</a>'
+        output == "<a href='/competition'>Enter</a>"
     }
 
 }

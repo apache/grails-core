@@ -24,8 +24,8 @@ class OverlappingUrlMappingsMatchingSpec extends AbstractUrlMappingsSpec {
     void 'Test that when there are 2 overlapping mappings the most specific is matched'() {
         given:'A url mappings holder with overlapping mappings'
             def urlMappingsHolder = getUrlMappingsHolder {
-                "/books/$bookId/authors/create'(controller: 'author', action: 'create")
-                "/books/$bookId/authors/$id(.$format)?'(controller: 'author", action: 'show')
+                "/books/$bookId/authors/create"(controller: 'author', action: 'create')
+                "/books/$bookId/authors/$id(.$format)?"(controller: 'author', action: 'show')
             }
 
         when:'A URL is matched that overlaps'

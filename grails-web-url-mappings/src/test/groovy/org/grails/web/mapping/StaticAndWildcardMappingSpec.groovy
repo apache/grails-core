@@ -31,8 +31,8 @@ class StaticAndWildcardMappingSpec extends AbstractUrlMappingsSpec {
   void 'Test the correct link is generated for mapping with static and and Wildcard parts in one token'() {
     given:'A link generator with a dynamic URL mapping'
     def linkGenerator = getLinkGenerator {
-      "/list/type/${type}_filter'(controller: 'index', action: 'index")
-      "/list/type/$type'(controller: 'index', action: 'index")
+      "/list/type/${type}_filter"(controller: 'index', action: 'index')
+      "/list/type/$type"(controller: 'index', action: 'index')
       '/list/type1'(controller: 'index', action: 'index')
     }
 

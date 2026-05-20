@@ -174,7 +174,7 @@ class GroupedUrlMappingSpec extends AbstractUrlMappingsSpec {
             group '/group1', {
                 '/'(controller: 'test1', action: 'index')
                 '/secondLevel1'(controller: 'test1SecondLevel', action: 'index')
-                "/$id'(controller: 'test1', action: 'id") {
+                "/$id"(controller: 'test1', action: 'id') {
                     constraints {
                         id(matches: /\d+/)
                     }
@@ -183,7 +183,7 @@ class GroupedUrlMappingSpec extends AbstractUrlMappingsSpec {
             group '/group2', {
                 '/'(controller: 'test2', action: 'index')
                 '/secondLevel2'(controller: 'test2SecondLevel', action: 'index')
-                "/$id'(controller: 'test2', action: 'id") {
+                "/$id"(controller: 'test2', action: 'id') {
                     constraints {
                         id(matches: /\d+/)
                     }

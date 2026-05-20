@@ -32,7 +32,7 @@ class DbmRollbackToDateCommandSpec extends ApplicationContextDatabaseMigrationCo
         command.changeLogFile << CHANGE_LOG_CONTENT
 
         new DbmUpdateCommand(applicationContext: applicationContext).handle(getExecutionContext())
-        sql.executeUpdate('UPDATE PUBLIC.DATABASECHANGELOG SET DATEEXECUTED = \'2015-01-02 12:00:00\' WHERE ID = \'1\'')
+        sql.executeUpdate("UPDATE PUBLIC.DATABASECHANGELOG SET DATEEXECUTED = '2015-01-02 12:00:00' WHERE ID = '1'")
 
         def tables = sql.rows('SELECT table_name FROM information_schema.tables WHERE table_class = \'org.h2.mvstore.db.MVTable\'').collect { it.table_name.toLowerCase() }
         assert tables as Set == ['book', 'author', 'databasechangeloglock', 'databasechangelog'] as Set
@@ -56,7 +56,7 @@ class DbmRollbackToDateCommandSpec extends ApplicationContextDatabaseMigrationCo
 
         then:
             def e = thrown(DatabaseMigrationException)
-            e.message == 'Date must be specified as two strings with the format 'yyyy-MM-dd HH:mm:ss' or as one strings with the format 'yyyy-MM-dd''
+            e.message == "Date must be specified as two strings with the format 'yyyy-MM-dd HH:mm:ss' or as one strings with the format 'yyyy-MM-dd'"
     }
 
     def 'an error occurs if the date parameter is invalid format'() {

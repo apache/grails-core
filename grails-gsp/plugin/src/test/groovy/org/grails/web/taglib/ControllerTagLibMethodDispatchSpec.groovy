@@ -38,7 +38,7 @@ class ControllerTagLibMethodDispatchSpec extends Specification implements Contro
         controller.foo()
         
         then:
-        '<a href='/test/foo'></a>hello! bar' == response.contentAsString
+        "<a href='/test/foo'></a>hello! bar" == response.contentAsString
     }
 }
 

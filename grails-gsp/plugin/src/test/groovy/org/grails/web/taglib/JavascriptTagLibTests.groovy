@@ -57,40 +57,40 @@ class TestUrlMappings {
 
     @Test
     void testJavascriptIncludeWithPluginAttribute() {
-        def template = '<g:javascript src='foo.js' plugin='controllers' />'
+        def template = '''<g:javascript src='foo.js' plugin='controllers' />'''
         def grailsVersion = GrailsUtil.getGrailsVersion()
         assertOutputContains "<script src=\"/plugins/controllers-$grailsVersion/js/foo.js\" type=\"text/javascript\"></script>", template
     }
 
     @Test
     void testJavascriptInclude() {
-        def template = '<g:javascript src='foo.js' />'
-        assertOutputContains '<script src='/js/foo.js' type='text/javascript'></script>', template
+        def template = '''<g:javascript src='foo.js' />'''
+        assertOutputContains "<script src='/js/foo.js' type='text/javascript'></script>", template
     }
 
     @Test
     void testJavascriptIncludeWithPlugin() {
-        def template = '<g:javascript src='foo.js' />'
+        def template = '''<g:javascript src='foo.js' />'''
         request.setAttribute(GrailsApplicationAttributes.PAGE_SCOPE, new GroovyPageBinding('/plugin/one'))
-        assertOutputContains '<script src='/plugin/one/js/foo.js' type='text/javascript'></script>', template
+        assertOutputContains "<script src='/plugin/one/js/foo.js' type='text/javascript'></script>", template
     }
 
     @Test
     void testJavascriptIncludeWithContextPathSpecified() {
-        def template = '<g:javascript src='foo.js' />'
+        def template = '''<g:javascript src='foo.js' />'''
 
         request.setAttribute(GrailsApplicationAttributes.PAGE_SCOPE, new GroovyPageBinding('/plugin/one'))
-        assertOutputContains '<script src='/plugin/one/js/foo.js' type='text/javascript'></script>', template
+        assertOutputContains "<script src='/plugin/one/js/foo.js' type='text/javascript'></script>" , template
 
-        template = '<g:javascript src='foo.js' contextPath='/foo' />'
-        assertOutputContains '<script src='/foo/js/foo.js' type='text/javascript'></script>', template
+        template = '''<g:javascript src='foo.js' contextPath='/foo' />'''
+        assertOutputContains "<script src='/foo/js/foo.js' type='text/javascript'></script>" , template
     }
 
     @Test
     void testJavascriptIncludeWithPluginNoLeadingSlash() {
-        def template = '<g:javascript src='foo.js' />'
+        def template = '''<g:javascript src='foo.js' />'''
         request.setAttribute(GrailsApplicationAttributes.PAGE_SCOPE, new GroovyPageBinding('plugin/one'))
-        assertOutputContains '<script src='/plugin/one/js/foo.js' type='text/javascript'></script>' + EOL, template
+        assertOutputContains "<script src='/plugin/one/js/foo.js' type='text/javascript'></script>" + EOL, template
     }
 
     @Test
@@ -197,31 +197,31 @@ class TestUrlMappings {
     @Test
     void testJavascriptExpressionCodec() {
         def template = '''<g:javascript>var value='${'<>'}';</g:javascript>'''
-        assertOutputEquals('''<script type='text/javascript'>\r\nvar value='\\u003c\\u003e';\r\n</script>\r\n''', template)
+        assertOutputEquals('''<script type='text/javascript'>\r\nvar value='\\u003c\\u003e';\r\n</script>\r\n''' , template)
     }
 
     @Test
     void testJavascriptExpressionNoCodec() {
         def template = '''<g:javascript encodeAs='none'>var value='${'<>'}';</g:javascript>'''
-        assertOutputEquals('''<script type='text/javascript'>\r\nvar value='<>';\r\n</script>\r\n''', template)
+        assertOutputEquals('''<script type='text/javascript'>\r\nvar value='<>';\r\n</script>\r\n''' , template)
     }
 
     @Test
     void testJavascriptExpressionRawCodec() {
         def template = '''<g:javascript encodeAs='raw'>var value='${'<>'}';</g:javascript>'''
-        assertOutputEquals('''<script type='text/javascript'>\r\nvar value='<>';\r\n</script>\r\n''', template)
+        assertOutputEquals('''<script type='text/javascript'>\r\nvar value='<>';\r\n</script>\r\n''' , template)
     }
 
     @Test
     void testJavascriptExpressionEncodeAsRaw() {
         def template = '''<g:javascript>var value='${'<>'.encodeAsRaw()}';</g:javascript>'''
-        assertOutputEquals('''<script type='text/javascript'>\r\nvar value='<>';\r\n</script>\r\n''', template)
+        assertOutputEquals('''<script type='text/javascript'>\r\nvar value='<>';\r\n</script>\r\n''' , template)
     }
 
     @Test
     void testJavascriptExpressionRaw() {
         def template = '''<g:javascript>var value='${raw('<>')}';</g:javascript>'''
-        assertOutputEquals('''<script type='text/javascript'>\r\nvar value='<>';\r\n</script>\r\n''', template)
+        assertOutputEquals('''<script type='text/javascript'>\r\nvar value='<>';\r\n</script>\r\n''' , template)
     }
 
     // GRAILS-10985
@@ -229,7 +229,7 @@ class TestUrlMappings {
     void testJavascriptExpressionRawAndEscaped() {
         withConfig("grails.views.default.codec='HTML'") {
             def template = '''<g:javascript>var value='${raw('<>'.intern())}${'<>'.intern()}';</g:javascript>'''
-            assertOutputEquals('''<script type='text/javascript'>\r\nvar value='<>\\u003c\\u003e';\r\n</script>\r\n''', template)
+            assertOutputEquals('''<script type='text/javascript'>\r\nvar value='<>\\u003c\\u003e';\r\n</script>\r\n''' , template)
         }
     }
 
@@ -237,7 +237,7 @@ class TestUrlMappings {
     void testJavascriptExpressionNoneDefaultCodecLegacySettings() {
         withConfig("grails.views.default.codec='none'") {
             def template = '''<g:javascript>var value='${'<>'}';</g:javascript>'''
-            assertOutputEquals('''<script type='text/javascript'>\r\nvar value='<>';\r\n</script>\r\n''', template)
+            assertOutputEquals('''<script type='text/javascript'>\r\nvar value='<>';\r\n</script>\r\n''' , template)
         }
     }
 
@@ -258,7 +258,7 @@ grails {
 }
 ''') {
             def template = '''<g:javascript>var value='${'<>'}';</g:javascript>'''
-            assertOutputEquals('''<script type='text/javascript'>\r\nvar value='<>';\r\n</script>\r\n''', template)
+            assertOutputEquals('''<script type='text/javascript'>\r\nvar value='<>';\r\n</script>\r\n''' , template)
         }
     }
 
@@ -279,7 +279,7 @@ grails {
 }
 ''') {
             def template = '''<g:javascript>var value='${'<>'}';</g:javascript>'''
-            assertOutputEquals('''<script type='text/javascript'>\r\nvar value='\\u003c\\u003e';\r\n</script>\r\n''', template)
+            assertOutputEquals('''<script type='text/javascript'>\r\nvar value='\\u003c\\u003e';\r\n</script>\r\n''' , template)
         }
     }
 }

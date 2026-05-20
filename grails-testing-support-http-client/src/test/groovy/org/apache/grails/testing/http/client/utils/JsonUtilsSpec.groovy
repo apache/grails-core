@@ -70,7 +70,7 @@ class JsonUtilsSpec extends Specification {
 
         expect:
         JsonUtils.verifyJsonTree(response, [a: 1, b: 2, nested: [c: 3, d: 4]])
-        JsonUtils.verifyJsonTree(response, '{'nested':{'c':3,'d': 4},'a': 1,'b': 2}')
+        JsonUtils.verifyJsonTree(response, '{"nested":{"c":3,"d": 4},"a": 1,"b": 2}')
     }
 
     void 'verifyJsonTree accepts lax json only when configured'() {
@@ -129,7 +129,7 @@ class JsonUtilsSpec extends Specification {
         def response = mockResponse('{'b':2,'a': 1}')
 
         when:
-        JsonUtils.verifyJsonTree(response, '{'a':1,'b': 3}')
+        JsonUtils.verifyJsonTree(response, '{"a":1,"b": 3}')
 
         then:
         def error = thrown(AssertionFailedError)

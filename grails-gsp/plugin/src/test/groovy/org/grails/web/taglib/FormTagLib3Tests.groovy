@@ -58,7 +58,7 @@ class FormTagLib3Tests extends AbstractGrailsTagTests {
             tag.call(attributes)
 
         }
-        assertEquals '<input type='hidden' name='testField' value='1' id='testField' />', sw.toString()
+        assertEquals "<input type='hidden' name='testField' value='1' id='testField' />", sw.toString()
     }
 
     @Test
@@ -88,14 +88,14 @@ class FormTagLib3Tests extends AbstractGrailsTagTests {
 
     @Test
     void testRadioUsesExpressionForDisable() {
-        def template = '<g:set var='flag' value="${true}'/><g:radio disabled='${flag}' name='foo' value='bar" />'
-        assertOutputContains('disabled='disabled'', template)
-        template = '<g:set var='flag' value="${false}'/><g:radio disabled='${flag}' name='foo' value='bar" />'
-        assertOutputContains('<input type='radio' name='foo' value='bar'', template)
-        template = '<g:radio disabled='true' name='foo' value='bar' />'
-        assertOutputContains('disabled='disabled'', template)
-        template = '<g:radio disabled='false' name='foo' value='bar' />'
-        assertOutputContains('<input type='radio' name='foo' value='bar'', template)
+        def template = '''<g:set var='flag' value='\${true}'/><g:radio disabled='\${flag}' name='foo' value='bar' />'''
+        assertOutputContains("disabled='disabled'", template)
+        template = '''<g:set var='flag' value='\${false}'/><g:radio disabled='\${flag}' name='foo' value='bar' />'''
+        assertOutputContains("<input type='radio' name='foo' value='bar'", template)
+        template = '''<g:radio disabled='true' name='foo' value='bar' />'''
+        assertOutputContains("disabled='disabled'", template)
+        template = '''<g:radio disabled='false' name='foo' value='bar' />'''
+        assertOutputContains("<input type='radio' name='foo' value='bar'", template)
     }
 
     @Test
@@ -216,47 +216,47 @@ Radio 3 <input type='radio' name='myGroup' value='3' />
 
     @Test
     void testCheckboxTag() {
-        def template = '<g:checkBox name='foo' value="${test}"/>'
-        assertOutputEquals('<input type='hidden' name='_foo' /><input type='checkbox' name='foo' checked='checked' value='hello' id='foo'  />', template, [test: 'hello'])
+        def template = '''<g:checkBox name='foo' value='\${test}'/>'''
+        assertOutputEquals("<input type='hidden' name='_foo' /><input type='checkbox' name='foo' checked='checked' value='hello' id='foo'  />", template, [test: 'hello'])
 
-        template = '<g:checkBox name='foo' value="${test}' checked='false"/>'
-        assertOutputEquals('<input type='hidden' name='_foo' /><input type='checkbox' name='foo' value='hello' id='foo'  />', template, [test: 'hello'])
+        template = '''<g:checkBox name='foo' value='\${test}' checked='false'/>'''
+        assertOutputEquals("<input type='hidden' name='_foo' /><input type='checkbox' name='foo' value='hello' id='foo'  />", template, [test: 'hello'])
 
-        template = '<g:checkBox name='foo' value="${test}' checked='${false}"/>'
-        assertOutputEquals('<input type='hidden' name='_foo' /><input type='checkbox' name='foo' value='hello' id='foo'  />', template, [test: 'hello'])
+        template = '''<g:checkBox name='foo' value='\${test}' checked='\${false}'/>'''
+        assertOutputEquals("<input type='hidden' name='_foo' /><input type='checkbox' name='foo' value='hello' id='foo'  />", template, [test: 'hello'])
 
-        template = '<g:checkBox name='foo' value="${test}' checked='${true}"/>'
-        assertOutputEquals('<input type='hidden' name='_foo' /><input type='checkbox' name='foo' checked='checked' value='hello' id='foo'  />', template, [test: 'hello'])
+        template = '''<g:checkBox name='foo' value='\${test}' checked='\${true}'/>'''
+        assertOutputEquals("<input type='hidden' name='_foo' /><input type='checkbox' name='foo' checked='checked' value='hello' id='foo'  />", template, [test: 'hello'])
 
-        template = '<g:checkBox name='foo' value="${test}' checked='true"/>'
-        assertOutputEquals('<input type='hidden' name='_foo' /><input type='checkbox' name='foo' checked='checked' value='hello' id='foo'  />', template, [test: 'hello'])
+        template = '''<g:checkBox name='foo' value='\${test}' checked='true'/>'''
+        assertOutputEquals("<input type='hidden' name='_foo' /><input type='checkbox' name='foo' checked='checked' value='hello' id='foo'  />", template, [test: 'hello'])
 
-        template = '<g:checkBox name='foo.' value="${test}' checked='true"/>'
-        assertOutputEquals('<input type='hidden' name='foo._' /><input type='checkbox' name='foo.' checked='checked' value='hello' id='foo.'  />', template, [test: 'hello'])
+        template = '''<g:checkBox name='foo.' value='\${test}' checked='true'/>'''
+        assertOutputEquals("<input type='hidden' name='foo._' /><input type='checkbox' name='foo.' checked='checked' value='hello' id='foo.'  />", template, [test: 'hello'])
         
-        template = '<g:checkBox name='foo.bar' value="${test}' checked='${true}"/>'
-        assertOutputEquals('<input type='hidden' name='foo._bar' /><input type='checkbox' name='foo.bar' checked='checked' value='hello' id='foo.bar'  />', template, [test: 'hello'])
+        template = '''<g:checkBox name='foo.bar' value='\${test}' checked='\${true}'/>'''
+        assertOutputEquals("<input type='hidden' name='foo._bar' /><input type='checkbox' name='foo.bar' checked='checked' value='hello' id='foo.bar'  />", template, [test: 'hello'])
 
-        template = '<g:checkBox name='foo.bar' value="${test}' checked='${null}"/>'
-        assertOutputEquals('<input type='hidden' name='foo._bar' /><input type='checkbox' name='foo.bar' value='hello' id='foo.bar'  />', template, [test: 'hello'])
+        template = '''<g:checkBox name='foo.bar' value='\${test}' checked='\${null}'/>'''
+        assertOutputEquals("<input type='hidden' name='foo._bar' /><input type='checkbox' name='foo.bar' value='hello' id='foo.bar'  />", template, [test: 'hello'])
 
-        template = '<g:checkBox name='foo.bar.bing.bang' value="${test}' checked='${null}"/>'
-        assertOutputEquals('<input type='hidden' name='foo.bar.bing._bang' /><input type='checkbox' name='foo.bar.bing.bang' value='hello' id='foo.bar.bing.bang'  />', template, [test: 'hello'])
+        template = '''<g:checkBox name='foo.bar.bing.bang' value='\${test}' checked='\${null}'/>'''
+        assertOutputEquals("<input type='hidden' name='foo.bar.bing._bang' /><input type='checkbox' name='foo.bar.bing.bang' value='hello' id='foo.bar.bing.bang'  />", template, [test: 'hello'])
 
-        template = '<g:checkBox name='foo' value="${test}' form='myForm"/>'
-        assertOutputEquals('<input type='hidden' name='_foo' form='myForm' /><input type='checkbox' name='foo' checked='checked' value='hello' form='myForm' id='foo'  />', template, [test: 'hello'])
+        template = '''<g:checkBox name='foo' value='\${test}' form='myForm'/>'''
+        assertOutputEquals("<input type='hidden' name='_foo' form='myForm' /><input type='checkbox' name='foo' checked='checked' value='hello' form='myForm' id='foo'  />", template, [test: 'hello'])
     }
 
     @Test
     void testCheckBoxUsesExpressionForDisable() {
-        def template = '<g:set var='flag' value="${true}'/><g:checkBox disabled='${flag}' name='foo"/>'
-        assertOutputContains('disabled='disabled'', template)
-        template = '<g:set var='flag' value="${false}'/><g:checkBox disabled='${flag}' name='foo"/>'
-        assertOutputContains('<input type='checkbox' name='foo' id='foo'', template)
-        template = '<g:checkBox disabled='true' name='foo'/>'
-        assertOutputContains('disabled='disabled'', template)
-        template = '<g:checkBox disabled='false' name='foo'/>'
-        assertOutputContains('<input type='checkbox' name='foo' id='foo'', template)
+        def template = '''<g:set var='flag' value='\${true}'/><g:checkBox disabled='\${flag}' name='foo'/>'''
+        assertOutputContains("disabled='disabled'", template)
+        template = '''<g:set var='flag' value='\${false}'/><g:checkBox disabled='\${flag}' name='foo'/>'''
+        assertOutputContains("<input type='checkbox' name='foo' id='foo'", template)
+        template = '''<g:checkBox disabled='true' name='foo'/>'''
+        assertOutputContains("disabled='disabled'", template)
+        template = '''<g:checkBox disabled='false' name='foo'/>'''
+        assertOutputContains("<input type='checkbox' name='foo' id='foo'", template)
     }
 
     @Test
@@ -270,7 +270,7 @@ Radio 3 <input type='radio' name='myGroup' value='3' />
 
     @Test
     void testCheckedOverridesValue() {
-        def template = '<g:checkBox name='foo' value="${value}' checked='${checked}" />'
+        def template = '''<g:checkBox name='foo' value="${value}' checked='${checked}" />'''
         assertOutputEquals '<input type='hidden' name='_foo' /><input type='checkbox' name='foo' checked='checked' value='0' id='foo'  />', template, [value: 0, checked: true]
         assertOutputEquals '<input type='hidden' name='_foo' /><input type='checkbox' name='foo' checked='checked' value='1' id='foo'  />', template, [value: 1, checked: true]
         assertOutputEquals '<input type='hidden' name='_foo' /><input type='checkbox' name='foo' value='0' id='foo'  />', template, [value: 0, checked: false]
@@ -418,7 +418,7 @@ Radio 3 <input type='radio' name='myGroup' value='3' />
             tag([name: 'mySelectTag', from: []])
         }
 
-        assertTrue sw.toString().startsWith('<select name='mySelectTag' id='mySelectTag' >')
+        assertTrue sw.toString().startsWith("<select name='mySelectTag' id='mySelectTag' >")
     }
 
     @Test
@@ -461,7 +461,7 @@ Radio 3 <input type='radio' name='myGroup' value='3' />
 
         println sw.toString()
 
-        assertTrue sw.toString().startsWith('<select name='mySelectTag' id='mySelectTag' >')
+        assertTrue sw.toString().startsWith("<select name='mySelectTag' id='mySelectTag' >")
     }
 
     @Test
@@ -495,7 +495,7 @@ Radio 3 <input type='radio' name='myGroup' value='3' />
         def now = Calendar.instance
         def currentYear = now.get(Calendar.YEAR)
 
-        def template = '<g:datePicker relativeYears='[5..-2]'/>'
+        def template = '''<g:datePicker relativeYears='[5..-2]'/>'''
         def result = applyTemplate(template)
 
         assertEquals(-1, result.indexOf("""<option value="${currentYear - 4}">${currentYear - 4}</option>"""))
@@ -532,7 +532,7 @@ Radio 3 <input type='radio' name='myGroup' value='3' />
         def now = Calendar.instance
         def currentYear = now.get(Calendar.YEAR)
 
-        def template = '<g:datePicker relativeYears='[-2..5]'/>'
+        def template = '''<g:datePicker relativeYears='[-2..5]'/>'''
         def result = applyTemplate(template)
 
         assertEquals(-1, result.indexOf("""<option value="${currentYear - 4}">${currentYear - 4}</option>"""))
@@ -548,7 +548,7 @@ Radio 3 <input type='radio' name='myGroup' value='3' />
         assertEquals(-1, result.indexOf("""<option value="${currentYear + 6}">${currentYear + 6}</option>"""))
         assertEquals(-1, result.indexOf("""<option value="${currentYear + 7}">${currentYear + 7}</option>"""))
 
-        template = '<g:datePicker relativeYears="${-2..5}"/>'
+        template = '''<g:datePicker relativeYears="${-2..5}"/>'''
         result = applyTemplate(template)
 
         assertEquals(-1, result.indexOf("""<option value="${currentYear - 4}">${currentYear - 4}</option>"""))
@@ -567,13 +567,13 @@ Radio 3 <input type='radio' name='myGroup' value='3' />
 
     @Test
     void testDatePickerAriaLabel() {
-        def template = '<g:datePicker name='myDate' value="${new Date()}"/>'
+        def template = '''<g:datePicker name='myDate' value="${new Date()}"/>'''
         def result = applyTemplate(template)
 
-        assertTrue result.contains('<select name='myDate_year' id='myDate_year' aria-labelledby='myDate myDate_year'')
-        assertTrue result.contains('<select name='myDate_month' id='myDate_month' aria-labelledby='myDate myDate_month'')
-        assertTrue result.contains('<select name='myDate_day' id='myDate_day' aria-labelledby='myDate myDate_day'')
-        assertTrue result.contains('<select name='myDate_hour' id='myDate_hour' aria-labelledby='myDate myDate_hour'')
-        assertTrue result.contains('<select name='myDate_minute' id='myDate_minute' aria-labelledby='myDate myDate_minute'')
+        assertTrue result.contains("<select name='myDate_year' id='myDate_year' aria-labelledby='myDate myDate_year'")
+        assertTrue result.contains("<select name='myDate_month' id='myDate_month' aria-labelledby='myDate myDate_month'")
+        assertTrue result.contains("<select name='myDate_day' id='myDate_day' aria-labelledby='myDate myDate_day'")
+        assertTrue result.contains("<select name='myDate_hour' id='myDate_hour' aria-labelledby='myDate myDate_hour'")
+        assertTrue result.contains("<select name='myDate_minute' id='myDate_minute' aria-labelledby='myDate myDate_minute'")
     }
 }

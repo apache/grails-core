@@ -92,8 +92,8 @@ class FormTagLibTests extends Specification implements TagLibUnitTest<FormTagLib
 
     def testFormNoNamespace() {
         expect:
-        applyTemplate('<g:form controller='books'></g:form>') ==
-                '<form action='/books' method='post' ><input type='hidden' name='requestDataValueProcessorHiddenName' value='hiddenValue' />\n</form>'
+        applyTemplate('''<g:form controller='books'></g:form>''') ==
+                "<form action='/books' method='post' ><input type='hidden' name='requestDataValueProcessorHiddenName' value='hiddenValue' />\n</form>"
     }
 
     def testFormTagWithAlternativeMethod() {
@@ -101,14 +101,14 @@ class FormTagLibTests extends Specification implements TagLibUnitTest<FormTagLib
         unRegisterRequestDataValueProcessor()
 
         expect:
-        applyTemplate('<g:form url='/foo/bar' method='delete'></g:form>') ==
-                '<form action='/foo/bar' method='post' ><input type='hidden' name='_method' value='DELETE' id='_method' /></form>'
+        applyTemplate('''<g:form url='/foo/bar' method='delete'></g:form>''') ==
+                "<form action='/foo/bar' method='post' ><input type='hidden' name='_method' value='DELETE' id='_method' /></form>"
     }
 
     def testFormTagWithAlternativeMethodAndRequestDataValueProcessor() {
         expect:
-        applyTemplate('<g:form url='/foo/bar' method='delete'></g:form>') ==
-                '<form action='/foo/bar' method='post' ><input type='hidden' name='_method' value='DELETE_PROCESSED_' id='_method' /><input type='hidden' name='requestDataValueProcessorHiddenName' value='hiddenValue' />\n</form>'
+        applyTemplate('''<g:form url='/foo/bar' method='delete'></g:form>''') ==
+                "<form action='/foo/bar' method='post' ><input type='hidden' name='_method' value='DELETE_PROCESSED_' id='_method' /><input type='hidden' name='requestDataValueProcessorHiddenName' value='hiddenValue' />\n</form>"
     }
 
     @Issue('https://github.com/apache/grails-core/issues/6653')
@@ -117,12 +117,12 @@ class FormTagLibTests extends Specification implements TagLibUnitTest<FormTagLib
         unRegisterRequestDataValueProcessor()
 
         expect:
-        applyTemplate('<g:hiddenField name='index' value="${0}" />').contains('value="0"')
+        applyTemplate('''<g:hiddenField name='index' value='\${0}' />''').contains('value="0"')
     }
 
     def testHiddenFieldWithZeroValueAndRequestDataValueProcessor() {
         expect:
-        applyTemplate('<g:hiddenField name='index' value="${0}" />').contains('value="0_PROCESSED_"')
+        applyTemplate('''<g:hiddenField name='index' value='\${0}' />''').contains('value="0_PROCESSED_"')
     }
 
     def testFormTagWithStringURL() {
@@ -130,14 +130,14 @@ class FormTagLibTests extends Specification implements TagLibUnitTest<FormTagLib
         unRegisterRequestDataValueProcessor()
 
         expect:
-        applyTemplate('<g:form url='/foo/bar'></g:form>') ==
-                '<form action='/foo/bar' method='post' ></form>'
+        applyTemplate('''<g:form url='/foo/bar'></g:form>''') ==
+                "<form action='/foo/bar' method='post' ></form>"
     }
 
     def testFormTagWithStringURLAndRequestDataValueProcessor() {
         expect:
-        applyTemplate('<g:form url='/foo/bar'></g:form>') ==
-                '<form action='/foo/bar' method='post' ><input type='hidden' name='requestDataValueProcessorHiddenName' value='hiddenValue' />\n</form>'
+        applyTemplate('''<g:form url='/foo/bar'></g:form>''') ==
+                "<form action='/foo/bar' method='post' ><input type='hidden' name='requestDataValueProcessorHiddenName' value='hiddenValue' />\n</form>"
     }
 
     def testFormTagWithTrueUseToken() {
@@ -145,62 +145,62 @@ class FormTagLibTests extends Specification implements TagLibUnitTest<FormTagLib
         unRegisterRequestDataValueProcessor()
 
         when:
-        String output = applyTemplate('<g:form url='/foo/bar' useToken='true'></g:form>')
+        String output = applyTemplate('''<g:form url='/foo/bar' useToken='true'></g:form>''')
 
         then:
-        output.contains('<form action='/foo/bar' method='post' >')
-        output.contains('<input type='hidden' name='SYNCHRONIZER_TOKEN' value="')
-        output.contains('<input type='hidden' name='SYNCHRONIZER_URI' value="')
+        output.contains("<form action='/foo/bar' method='post' >")
+        output.contains("<input type='hidden' name='SYNCHRONIZER_TOKEN' value=\"")
+        output.contains("<input type='hidden' name='SYNCHRONIZER_URI' value=\"")
 
         when:
-        output = applyTemplate('<g:form url='/foo/bar' useToken="${2 * 3 == 6}"></g:form>')
+        output = applyTemplate('''<g:form url='/foo/bar' useToken="\${2 * 3 == 6}"></g:form>''')
 
         then:
-        output.contains('<form action='/foo/bar' method='post' >')
-        output.contains('<input type='hidden' name='SYNCHRONIZER_TOKEN' value="')
-        output.contains('<input type='hidden' name='SYNCHRONIZER_URI' value="')
+        output.contains("<form action='/foo/bar' method='post' >")
+        output.contains("<input type='hidden' name='SYNCHRONIZER_TOKEN' value=\"")
+        output.contains("<input type='hidden' name='SYNCHRONIZER_URI' value=\"")
     }
 
     def testFormTagWithTrueUseTokenAndRequestDataValueProcessor() {
         when:
-        String output = applyTemplate('<g:form url='/foo/bar' useToken='true'></g:form>')
+        String output = applyTemplate('''<g:form url='/foo/bar' useToken='true'></g:form>''')
 
         then:
-        output.contains('<form action='/foo/bar' method='post' >')
-        output.contains('<input type='hidden' name='SYNCHRONIZER_TOKEN' value="')
-        output.contains('<input type='hidden' name='SYNCHRONIZER_URI' value="')
+        output.contains("<form action='/foo/bar' method='post' >")
+        output.contains("<input type='hidden' name='SYNCHRONIZER_TOKEN' value=\"")
+        output.contains("<input type='hidden' name='SYNCHRONIZER_URI' value=\"")
 
         when:
-        output = applyTemplate('<g:form url='/foo/bar' useToken="${2 * 3 == 6}"></g:form>')
+        output = applyTemplate('''<g:form url='/foo/bar' useToken="\${2 * 3 == 6}"></g:form>''')
 
         then:
-        output.contains('<form action='/foo/bar' method='post' >')
-        output.contains('<input type='hidden' name='SYNCHRONIZER_TOKEN' value="')
-        output.contains('<input type='hidden' name='SYNCHRONIZER_URI' value="')
+        output.contains("<form action='/foo/bar' method='post' >")
+        output.contains("<input type='hidden' name='SYNCHRONIZER_TOKEN' value=\"")
+        output.contains("<input type='hidden' name='SYNCHRONIZER_URI' value=\"")
     }
 
     def testFormTagWithNonTrueUseToken() {
         when:
-        String output = applyTemplate('<g:form url='/foo/bar' useToken='false'></g:form>')
+        String output = applyTemplate('''<g:form url='/foo/bar' useToken='false'></g:form>''')
 
         then:
-        output.contains('<form action='/foo/bar' method='post' >')
+        output.contains("<form action='/foo/bar' method='post' >")
         !output.contains('SYNCHRONIZER_TOKEN')
         !output.contains('SYNCHRONIZER_URI')
 
         when:
-        output = applyTemplate('<g:form url='/foo/bar' useToken='someNonTrueValue'></g:form>')
+        output = applyTemplate('''<g:form url='/foo/bar' useToken='someNonTrueValue'></g:form>''')
 
         then:
-        output.contains('<form action='/foo/bar' method='post' >')
+        output.contains("<form action='/foo/bar' method='post' >")
         !output.contains('SYNCHRONIZER_TOKEN')
         !output.contains('SYNCHRONIZER_URI')
 
         when:
-        output = applyTemplate('<g:form url='/foo/bar' useToken="${42 * 2112 == 3}"></g:form>')
+        output = applyTemplate('''<g:form url='/foo/bar' useToken="\${42 * 2112 == 3}"></g:form>''')
 
         then:
-        output.contains('<form action='/foo/bar' method='post' >')
+        output.contains("<form action='/foo/bar' method='post' >")
         !output.contains('SYNCHRONIZER_TOKEN')
         !output.contains('SYNCHRONIZER_URI')
     }
@@ -215,10 +215,10 @@ class FormTagLibTests extends Specification implements TagLibUnitTest<FormTagLib
 
         where:
         template | model || expectedOutput
-        '<g:textField name='testField' value='1' />' | [value: '1'] ||
-                '<input type='text' name='testField' value='1' id='testField' />'
-        '<g:textField name='testField' value="${value}" />' | [value: /foo > " & < '/] ||
-                '<input type='text' name='testField' value='foo &gt; &quot; &amp; &lt; &#39;' id='testField' />'
+        "<g:textField name='testField' value='1' />" | [value: '1'] ||
+                "<input type='text' name='testField' value='1' id='testField' />"
+        "<g:textField name='testField' value='\${value}' />" | [value: /foo > " & < '/] ||
+                "<input type='text' name='testField' value='foo &gt; &quot; &amp; &lt; &#39;' id='testField' />"
     }
 
     @Rollup
@@ -228,10 +228,10 @@ class FormTagLibTests extends Specification implements TagLibUnitTest<FormTagLib
 
         where:
         template | model || expectedOutput
-        '<g:textField name='testField' value='1' />' | [:] ||
-                '<input type='text' name='testField' value='1_PROCESSED_' id='testField' />'
-        '<g:textField name='testField' value="${value}" />' | [value:/foo > " & < '/] ||
-                '<input type='text' name='testField' value='foo &gt; &quot; &amp; &lt; &#39;_PROCESSED_' id='testField' />'
+        "<g:textField name='testField' value='1' />" | [:] ||
+                "<input type='text' name='testField' value='1_PROCESSED_' id='testField' />"
+        "<g:textField name='testField' value='\${value}' />" | [value:/foo > " & < '/] ||
+                "<input type='text' name='testField' value='foo &gt; &quot; &amp; &lt; &#39;_PROCESSED_' id='testField' />"
     }
 
     @Rollup
@@ -244,10 +244,10 @@ class FormTagLibTests extends Specification implements TagLibUnitTest<FormTagLib
 
         where:
         template || expectedOutput
-        '<g:textField name='testField' value='1' disabled='false' checked='false' readonly='false' bogus='false' />' ||
-                '<input type='text' name='testField' value='1' bogus='false' id='testField' />'
-        '<g:textField name='testField' value='1' disabled='true' checked='true' readonly='true' required='true' bogus='true' />' ||
-                '<input type='text' name='testField' value='1' bogus='true' disabled='disabled' checked='checked' readonly='readonly' required='required' id='testField' />'
+        "<g:textField name='testField' value='1' disabled='false' checked='false' readonly='false' bogus='false' />" ||
+                "<input type='text' name='testField' value='1' bogus='false' id='testField' />"
+        "<g:textField name='testField' value='1' disabled='true' checked='true' readonly='true' required='true' bogus='true' />" ||
+                "<input type='text' name='testField' value='1' bogus='true' disabled='disabled' checked='checked' readonly='readonly' required='required' id='testField' />"
     }
 
     def testTextAreaWithBody() {
@@ -255,14 +255,14 @@ class FormTagLibTests extends Specification implements TagLibUnitTest<FormTagLib
         unRegisterRequestDataValueProcessor()
 
         expect:
-        applyTemplate('<g:textArea name='test'>This is content</g:textArea>') ==
-                '<textarea name='test' id='test' >This is content</textarea>'
+        applyTemplate('''<g:textArea name='test'>This is content</g:textArea>''') ==
+                "<textarea name='test' id='test' >This is content</textarea>"
     }
 
     def testTextAreaWithBodyAndRequestDataValueProcessor() {
         expect:
-        applyTemplate('<g:textArea name='test'>This is content</g:textArea>') ==
-                '<textarea name='test' id='test' >This is content_PROCESSED_</textarea>'
+        applyTemplate('''<g:textArea name='test'>This is content</g:textArea>''') ==
+                "<textarea name='test' id='test' >This is content_PROCESSED_</textarea>"
     }
 
     def testPasswordTag() {
@@ -270,14 +270,14 @@ class FormTagLibTests extends Specification implements TagLibUnitTest<FormTagLib
         unRegisterRequestDataValueProcessor()
 
         expect:
-        applyTemplate('<g:passwordField name='myPassword' value='foo'/>') ==
-                '<input type='password' name='myPassword' value='foo' id='myPassword' />'
+        applyTemplate('''<g:passwordField name='myPassword' value='foo'/>''') ==
+                "<input type='password' name='myPassword' value='foo' id='myPassword' />"
     }
 
     def testPasswordTagWithRequestDataValueProcessor() {
         expect:
-        applyTemplate('<g:passwordField name='myPassword' value='foo'/>') ==
-                '<input type='password' name='myPassword' value='foo_PROCESSED_' id='myPassword' />'
+        applyTemplate('''<g:passwordField name='myPassword' value='foo'/>''') ==
+                "<input type='password' name='myPassword' value='foo_PROCESSED_' id='myPassword' />"
     }
 
     def testFormWithURL() {
@@ -294,7 +294,7 @@ class FormTagLibTests extends Specification implements TagLibUnitTest<FormTagLib
                         id: 'formElementId'
                 ]),
                 null
-        ).toString() == '<form action='/con/action' method='post' id='formElementId' ></form>'
+        ).toString() == "<form action='/con/action' method='post' id='formElementId' ></form>"
     }
 
     def testFormWithURLAndRequestDataValueProcessor() {
@@ -308,7 +308,7 @@ class FormTagLibTests extends Specification implements TagLibUnitTest<FormTagLib
                         id: 'formElementId'
                 ]),
                 null
-        ).toString() == '<form action='/con/action' method='post' id='formElementId' ><input type='hidden' name='requestDataValueProcessorHiddenName' value='hiddenValue' />\n</form>'
+        ).toString() == "<form action='/con/action' method='post' id='formElementId' ><input type='hidden' name='requestDataValueProcessorHiddenName' value='hiddenValue' />\n</form>"
     }
 
     def testFormActionSubmitWithController() {
@@ -318,7 +318,7 @@ class FormTagLibTests extends Specification implements TagLibUnitTest<FormTagLib
                 id: 'formElementId',
                 value: 'Submit'
         ]).toString() ==
-                '<input type='submit' formaction='/books' value='Submit' id='formElementId' />'
+                "<input type='submit' formaction='/books' value='Submit' id='formElementId' />"
     }
 
     def testFormActionSubmitWithControllerAndAction() {
@@ -329,7 +329,7 @@ class FormTagLibTests extends Specification implements TagLibUnitTest<FormTagLib
                 id: 'formElementId',
                 value: 'Submit'
         ]).toString() ==
-                '<input type='submit' formaction='/con/act' value='Submit' id='formElementId' />'
+                "<input type='submit' formaction='/con/act' value='Submit' id='formElementId' />"
     }
 
     def testFormActionSubmitWithURLAndNoParams() {
@@ -345,7 +345,7 @@ class FormTagLibTests extends Specification implements TagLibUnitTest<FormTagLib
                 id: 'formElementId',
                 value: 'Submit'
         ])).toString() ==
-                '<input type='submit' formaction='/con/action' id='formElementId' value='Submit' />'
+                "<input type='submit' formaction='/con/action' id='formElementId' value='Submit' />"
     }
 
     def testFormActionSubmitWithAURLAndRequestDataValueProcessor() {
@@ -361,7 +361,7 @@ class FormTagLibTests extends Specification implements TagLibUnitTest<FormTagLib
                 id: 'formElementId',
                 value: 'My Button'
         ])).toString() ==
-                '<input type='submit' formaction='/con/action' id='formElementId' value='My Button' />'
+                "<input type='submit' formaction='/con/action' id='formElementId' value='My Button' />"
     }
 
     def testFormActionSubmitWithAURLAndWithoutRequestDataValueProcessor() {
@@ -380,7 +380,7 @@ class FormTagLibTests extends Specification implements TagLibUnitTest<FormTagLib
                 id: 'formElementId',
                 value: 'My Button'
         ])).toString() ==
-                '<input type='submit' formaction='/con/action?requestDataValueProcessorParamName=paramValue' id='formElementId' value='My Button' />'
+                "<input type='submit' formaction='/con/action?requestDataValueProcessorParamName=paramValue' id='formElementId' value='My Button' />"
     }
 
     def testActionSubmitImageWithoutAction() {
@@ -392,16 +392,16 @@ class FormTagLibTests extends Specification implements TagLibUnitTest<FormTagLib
                 src: 'edit.gif',
                 value: 'Edit'
         ])).toString() ==
-                '<input type='image' name='_action_Edit' value='Edit' src='edit.gif' />'
+                "<input type='image' name='_action_Edit' value='Edit' src='edit.gif' />"
     }
-
-    def testActionSubmitImageWithoutActionAndWithRequestDataValueProcessor() {
-        expect:
-        tagLib.actionSubmitImage(new TreeMap([
-                src: 'edit.gif', value: 'Edit'
-        ])).toString() ==
-                '<input type='image' name='_action_Edit' value='Edit_PROCESSED_' src='edit.gif?requestDataValueProcessorParamName=paramValue' />'
-    }
+def testActionSubmitImageWithoutActionAndWithRequestDataValueProcessor() {
+    expect:
+    tagLib.actionSubmitImage(new TreeMap([
+            src: 'edit.gif',
+            value: 'Edit'
+    ])).toString() ==
+            "<input type='image' name='_action_Edit' value='Edit' src='edit.gif?requestDataValueProcessorParamName=paramValue' />"
+}
 
     def testActionSubmitImageWithAction() {
         given:
@@ -409,11 +409,11 @@ class FormTagLibTests extends Specification implements TagLibUnitTest<FormTagLib
 
         expect:
         tagLib.actionSubmitImage(new TreeMap([
-                src: 'edit.gif',
                 action: 'Edit',
+                src: 'edit.gif',
                 value: 'Some label for editing'
         ])).toString() ==
-                '<input type='image' name='_action_Edit' value='Some label for editing' src='edit.gif' />'
+                "<input type='image' name='_action_Edit' value='Some label for editing' src='edit.gif' />"
     }
 
     def testActionSubmitImageWithAdditionalAttributes() {
@@ -427,7 +427,7 @@ class FormTagLibTests extends Specification implements TagLibUnitTest<FormTagLib
                 value: 'Some label for editing',
                 style: 'border-line: 0px;'
         ])).toString() ==
-                '<input type='image' name='_action_Edit' value='Some label for editing' src='edit.gif' style='border-line: 0px;' />'
+                "<input type='image' name='_action_Edit' value='Some label for editing' src='edit.gif' style='border-line: 0px;' />"
     }
 
     def testHtmlEscapingTextAreaTag() {
@@ -436,7 +436,7 @@ class FormTagLibTests extends Specification implements TagLibUnitTest<FormTagLib
 
         expect:
         tagLib.textArea([name: 'testField', value: '<b>some text</b>'], null) ==
-                '<textarea name='testField' id='testField' >&lt;b&gt;some text&lt;/b&gt;</textarea>'
+                "<textarea name='testField' id='testField' >&lt;b&gt;some text&lt;/b&gt;</textarea>"
     }
 
     def testTextAreaTag() {
@@ -445,7 +445,7 @@ class FormTagLibTests extends Specification implements TagLibUnitTest<FormTagLib
 
         expect:
         tagLib.textArea([name: 'testField', value: '1'], null).toString() ==
-                '<textarea name='testField' id='testField' >1</textarea>'
+                "<textarea name='testField' id='testField' >1</textarea>"
     }
 
     @Rollup
@@ -459,8 +459,8 @@ class FormTagLibTests extends Specification implements TagLibUnitTest<FormTagLib
 
         where:
         attributes  || expectedOutput
-        [name: 'A'] || '<input type='text' name='A' value='' id='A' />'
-        [name: 'B'] || '<input type='text' name='B' value='' id='B' />'
+        [name: 'A'] || "<input type='text' name='A' value='' id='A' />"
+        [name: 'B'] || "<input type='text' name='B' value='' id='B' />"
     }
 
     def testFieldImplDoesNotApplyAttributesFromPreviousInvocation() {
@@ -477,7 +477,7 @@ class FormTagLibTests extends Specification implements TagLibUnitTest<FormTagLib
 
         then:
         tagLib.fieldImpl(out, attrs)
-         '<input type='text' name='A' value='' id='A' />' == out.toString()
+         "<input type='text' name='A' value='' id='A' />" == out.toString()
 
         when:
         out = new FastStringWriter()
@@ -487,7 +487,7 @@ class FormTagLibTests extends Specification implements TagLibUnitTest<FormTagLib
         tagLib.fieldImpl out, attrs
 
         then:
-         '<input type='text' name='B' value='' id='B' />' == out.toString()
+         "<input type='text' name='B' value='' id='B' />" == out.toString()
     }
 
     @Rollup
@@ -501,20 +501,20 @@ class FormTagLibTests extends Specification implements TagLibUnitTest<FormTagLib
 
         where:
         attribute              || expectedOutput
-        [readonly: 'true']     || '<input type='text' name='myfield' value='1' readonly='readonly' id='myfield' />'
-        [readonly: 'false']    || '<input type='text' name='myfield' value='1' id='myfield' />'
-        [readonly: true]       || '<input type='text' name='myfield' value='1' readonly='readonly' id='myfield' />'
-        [readonly: false]      || '<input type='text' name='myfield' value='1' id='myfield' />'
-        [readonly: 'readonly'] || '<input type='text' name='myfield' value='1' readonly='readonly' id='myfield' />'
-        [readonly: 'foo bar']  || '<input type='text' name='myfield' value='1' readonly='foo bar' id='myfield' />'
-        [readonly: null]       || '<input type='text' name='myfield' value='1' id='myfield' />'
-        [disabled: 'true']     || '<input type='text' name='myfield' value='1' disabled='disabled' id='myfield' />'
-        [disabled: 'false']    || '<input type='text' name='myfield' value='1' id='myfield' />'
-        [disabled: true]       || '<input type='text' name='myfield' value='1' disabled='disabled' id='myfield' />'
-        [disabled: false]      || '<input type='text' name='myfield' value='1' id='myfield' />'
-        [disabled: 'disabled'] || '<input type='text' name='myfield' value='1' disabled='disabled' id='myfield' />'
-        [disabled: 'foo bar']  || '<input type='text' name='myfield' value='1' disabled='foo bar' id='myfield' />'
-        [disabled: null]       || '<input type='text' name='myfield' value='1' id='myfield' />'
+        [readonly: 'true']     || "<input type='text' name='myfield' value='1' readonly='readonly' id='myfield' />"
+        [readonly: 'false']    || "<input type='text' name='myfield' value='1' id='myfield' />"
+        [readonly: true]       || "<input type='text' name='myfield' value='1' readonly='readonly' id='myfield' />"
+        [readonly: false]      || "<input type='text' name='myfield' value='1' id='myfield' />"
+        [readonly: 'readonly'] || "<input type='text' name='myfield' value='1' readonly='readonly' id='myfield' />"
+        [readonly: 'foo bar']  || "<input type='text' name='myfield' value='1' readonly='foo bar' id='myfield' />"
+        [readonly: null]       || "<input type='text' name='myfield' value='1' id='myfield' />"
+        [disabled: 'true']     || "<input type='text' name='myfield' value='1' disabled='disabled' id='myfield' />"
+        [disabled: 'false']    || "<input type='text' name='myfield' value='1' id='myfield' />"
+        [disabled: true]       || "<input type='text' name='myfield' value='1' disabled='disabled' id='myfield' />"
+        [disabled: false]      || "<input type='text' name='myfield' value='1' id='myfield' />"
+        [disabled: 'disabled'] || "<input type='text' name='myfield' value='1' disabled='disabled' id='myfield' />"
+        [disabled: 'foo bar']  || "<input type='text' name='myfield' value='1' disabled='foo bar' id='myfield' />"
+        [disabled: null]       || "<input type='text' name='myfield' value='1' id='myfield' />"
     }
 
     private void unRegisterRequestDataValueProcessor() {

@@ -108,13 +108,13 @@ class StaticContentRenderingTests extends AbstractGrailsTagTests {
     void testNamespacedXmlNoBody() {
         // GRAILS-10525
         def template = '''<esi:include src='foo.html'/>'''
-        assertOutputEquals('<esi:include src='foo.html'/>', template, [:])
+        assertOutputEquals("<esi:include src='foo.html'/>", template, [:])
     }
 
     @Test
     void testNamespacedXmlWithBody() {
         def template = '''<xhtml:p>body</xhtml:p>'''
-        assertOutputEquals('<xhtml:p>body</xhtml:p>', template, [:])
+        assertOutputEquals("<xhtml:p>body</xhtml:p>", template, [:])
     }
 
 }

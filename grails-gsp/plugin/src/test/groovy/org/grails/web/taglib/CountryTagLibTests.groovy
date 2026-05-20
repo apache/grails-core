@@ -28,7 +28,7 @@ class CountryTagLibTests extends Specification implements TagLibUnitTest<FormTag
 
     def testFullCountryListWithSelection() {
         when:
-        def template = '<g:countrySelect name='foo' value='gbr' />'
+        def template = '''<g:countrySelect name='foo' value='gbr' />'''
 
         def result = applyTemplate(template, [:])
 
@@ -43,7 +43,7 @@ class CountryTagLibTests extends Specification implements TagLibUnitTest<FormTag
 
     def testReducedCountryListWithSelection() {
         when:
-        def template = '<g:countrySelect name='foo' value='usa' from="[\'gbr\', \'usa\', \'deu\']"/>'
+        def template = '''<g:countrySelect name='foo' value='usa' from="['gbr', 'usa', 'deu']"/>'''
         def result = applyTemplate(template, [:])
 
         then:
@@ -81,7 +81,7 @@ class CountryTagLibTests extends Specification implements TagLibUnitTest<FormTag
     def testDefault() {
 
         when:
-        def template = '<g:countrySelect name='foo' default='deu' from="[\'gbr\', \'usa\', \'deu\']"/>'
+        def template = '''<g:countrySelect name='foo' default='deu' from="['gbr', 'usa', 'deu']"/>'''
         def result = applyTemplate(template, [:])
 
         then:
@@ -96,7 +96,7 @@ class CountryTagLibTests extends Specification implements TagLibUnitTest<FormTag
 
     def testCountryDisplay() {
         when:
-        def template = '<g:country code='deu'/>'
+        def template = '''<g:country code='deu'/>'''
         String output = applyTemplate(template)
 
         then:

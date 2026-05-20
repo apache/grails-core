@@ -24,7 +24,7 @@ class UrlMappingsWithOptionalExtensionSpec extends AbstractUrlMappingsSpec {
     void 'Test that URL mappings can be specified with an optional extension'() {
         given:'A URL mapping with an optional extension'
             def urlMappingsHolder = getUrlMappingsHolder {
-                "/book/list(.$format)'(controller: 'book")
+                "/book/list(.$format)"(controller: 'book')
             }
 
         expect:'URLs with and without the format specified match'
@@ -96,7 +96,7 @@ class UrlMappingsWithOptionalExtensionSpec extends AbstractUrlMappingsSpec {
     void 'Test that URL mappings with optional extensions generate the correct links'() {
         given:'A URL mapping with an optional extension'
             def linkGenerator = getLinkGenerator {
-                "/book/list(.$format)?'(controller: 'book")
+                "/book/list(.$format)?"(controller: 'book')
             }
 
         expect:'URLs with and without the format specified match'

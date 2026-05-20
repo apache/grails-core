@@ -115,7 +115,7 @@ class TableSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<F
 		def mixedPersonList = [new Employee(name: 'Homer Simpson', salary: 1)] + personList
 
 		when:
-		def output = applyTemplate('<f:table collection='collection' maxProperties='7' domainClass='grails.plugin.formfields.mock.Person'/>', [collection: mixedPersonList])
+		def output = applyTemplate('<f:table collection="collection" maxProperties="7" domainClass="grails.plugin.formfields.mock.Person"/>', [collection: mixedPersonList])
 		def table = XML.parse(output)
 
 		then:
@@ -140,7 +140,7 @@ class TableSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<F
 	void 'table tag renders columns for properties until maxProperties is reached, ordered by the domain class constraints'() {
 
 		when:
-		def output = applyTemplate('<f:table collection='collection' maxProperties='5'/>', [collection: personList])
+		def output = applyTemplate('<f:table collection="collection" maxProperties="5"/>', [collection: personList])
 		def table = XML.parse(output)
 
 		then:
@@ -150,7 +150,7 @@ class TableSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<F
 
 	void 'table tag allows to specify the order'() {
 		when:
-		def output = applyTemplate('<f:table collection='collection' order='name,gender'/>', [collection: personList])
+		def output = applyTemplate('<f:table collection="collection" order="name,gender"/>', [collection: personList])
 		def table = XML.parse(output)
 
 		then:
@@ -296,7 +296,7 @@ class TableSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<F
 	void 'table renders different template when template is set'() {
 
 		when:
-		def output = applyTemplate('<f:table collection='collection' template='alternativeTable'/>', [collection: personList])
+		def output = applyTemplate('<f:table collection="collection" template="alternativeTable"/>', [collection: personList])
 		def table = XML.parse(output)
 
         then:
@@ -320,6 +320,6 @@ class TableSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<F
 		views['/templates/_fields/_table.gsp'] = '<table>${foo}</table>'
 
 		expect:
-		applyTemplate('<f:table collection='personList' foo='bar'/>', [personList: personList]) == '<table>bar</table>'
+		applyTemplate('<f:table collection="personList" foo="bar"/>', [personList: personList]) == '<table>bar</table>'
 	}
 }

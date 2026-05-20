@@ -103,7 +103,7 @@ class AllTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<
         views['/_fields/default/_wrapper.gsp'] = '${widget}'
 
         when:
-        def output = applyTemplate('<f:all bean='personInstance' except='password, minor'/>', [personInstance: personInstance])
+        def output = applyTemplate("<f:all bean='personInstance' except='password, minor'/>", [personInstance: personInstance])
 
         then:
         !output.contains('password')
@@ -117,7 +117,7 @@ class AllTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<
         views['/_fields/default/_wrapper.gsp'] = '${widget}'
 
         when:
-        def output = applyTemplate('<f:all bean='personInstance' order='name, minor, gender'/>', [personInstance: personInstance])
+        def output = applyTemplate("<f:all bean='personInstance' order='name, minor, gender'/>", [personInstance: personInstance])
 
         then:
         output == '|name||minor||gender|'
@@ -131,7 +131,7 @@ class AllTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<
         views['/_fields/default/_wrapper.gsp'] = '${widget}'
 
         when:
-        def output = applyTemplate('<f:all bean='personInstance' except='minor, password' order='name, minor, gender'/>', [personInstance: personInstance])
+        def output = applyTemplate("<f:all bean='personInstance' except='minor, password' order='name, minor, gender'/>", [personInstance: personInstance])
 
         then:
         output == '|name||gender|'
@@ -147,7 +147,7 @@ class AllTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<
         views['/_fields/_themes/test/default/_wrapper.gsp'] = 'theme-${widget}'
 
         when:
-        def output = applyTemplate('<f:all bean='personInstance' theme='test'/>', [personInstance: personInstance])
+        def output = applyTemplate("<f:all bean='personInstance' theme='test'/>", [personInstance: personInstance])
 
         then:
         output =~ /\btheme-name\b/

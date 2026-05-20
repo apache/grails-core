@@ -38,7 +38,7 @@ class RenderTagLibTests extends Specification implements UrlMappingsUnitTest<Ren
     // test for GRAILS-5376
     void testPaginateTag() {
         when:
-        def template = '<g:paginate controller='book' total='' offset='' />'
+        def template = '''<g:paginate controller='book' total='' offset='' />'''
         applyTemplate template
 
         then:
@@ -47,14 +47,14 @@ class RenderTagLibTests extends Specification implements UrlMappingsUnitTest<Ren
 
     void testPaginateOmissionAttributes() {
         when:
-        def template = '<g:paginate next='Forward' prev='Backward' max='5' total='20' offset='10' controller='book' action='list'/>'
+        def template = '''<g:paginate next='Forward' prev='Backward' max='5' total='20' offset='10' controller='book' action='list'/>'''
         def result = applyTemplate template
 
         then:
-        result == '<a href='/book/list?offset=5&amp;max=5' class='prevLink'>Backward</a><a href='/book/list?offset=0&amp;max=5' class='step'>1</a><a href='/book/list?offset=5&amp;max=5' class='step'>2</a><span class='currentStep'>3</span><a href='/book/list?offset=15&amp;max=5' class='step'>4</a><a href='/book/list?offset=15&amp;max=5' class='nextLink'>Forward</a>'
+        result == "<a href='/book/list?offset=5&amp;max=5' class='prevLink'>Backward</a><a href='/book/list?offset=0&amp;max=5' class='step'>1</a><a href='/book/list?offset=5&amp;max=5' class='step'>2</a><span class='currentStep'>3</span><a href='/book/list?offset=15&amp;max=5' class='step'>4</a><a href='/book/list?offset=15&amp;max=5' class='nextLink'>Forward</a>"
 
         when:
-        template = '<g:paginate next='Forward' prev='Backward' max='5' total='20' offset='10' controller='book' action='list' omitPrev='true'/>'
+        template = '''<g:paginate next='Forward' prev='Backward' max='5' total='20' offset='10' controller='book' action='list' omitPrev='true'/>'''
         result = applyTemplate template
 
         then:
@@ -62,7 +62,7 @@ class RenderTagLibTests extends Specification implements UrlMappingsUnitTest<Ren
         result.contains('Forward')
 
         when:
-        template = '<g:paginate next='Forward' prev='Backward' max='5' total='20' offset='10' controller='book' action='list' omitPrev='false'/>'
+        template = '''<g:paginate next='Forward' prev='Backward' max='5' total='20' offset='10' controller='book' action='list' omitPrev='false'/>'''
         result = applyTemplate template
 
         then:
@@ -70,7 +70,7 @@ class RenderTagLibTests extends Specification implements UrlMappingsUnitTest<Ren
         result.contains('Forward')
 
         when:
-        template = '<g:paginate next='Forward' prev='Backward' max='5' total='20' offset='10' controller='book' action='list' omitNext='true'/>'
+        template = '''<g:paginate next='Forward' prev='Backward' max='5' total='20' offset='10' controller='book' action='list' omitNext='true'/>'''
         result = applyTemplate template
 
         then:
@@ -78,7 +78,7 @@ class RenderTagLibTests extends Specification implements UrlMappingsUnitTest<Ren
         !result.contains('Forward')
 
         when:
-        template = '<g:paginate next='Forward' prev='Backward' max='5' total='20' offset='10' controller='book' action='list' omitNext='false'/>'
+        template = '''<g:paginate next='Forward' prev='Backward' max='5' total='20' offset='10' controller='book' action='list' omitNext='false'/>'''
         result = applyTemplate template
 
         then:
@@ -86,72 +86,72 @@ class RenderTagLibTests extends Specification implements UrlMappingsUnitTest<Ren
         result.contains('Forward')
 
         when:
-        template = '<g:paginate  max='2' total='20' offset='10' maxsteps='3' controller='book' action='list' omitPrev='true' omitNext='true' omitFirst='true' />'
+        template = '''<g:paginate  max='2' total='20' offset='10' maxsteps='3' controller='book' action='list' omitPrev='true' omitNext='true' omitFirst='true' />'''
         result = applyTemplate template
 
         then:
-        !result.contains('<a href='/book/list?offset=0&amp;max=2' class='step'>1</a>')
-        result.contains('<a href='/book/list?offset=18&amp;max=2' class='step'>10</a>')
+        !result.contains("<a href='/book/list?offset=0&amp;max=2' class='step'>1</a>")
+        result.contains("<a href='/book/list?offset=18&amp;max=2' class='step'>10</a>")
 
         when:
-        template = '<g:paginate  max='2' total='20' offset='2' maxsteps='3' controller='book' action='list' omitPrev='true' omitNext='true' omitFirst='true' />'
+        template = '''<g:paginate  max='2' total='20' offset='2' maxsteps='3' controller='book' action='list' omitPrev='true' omitNext='true' omitFirst='true' />'''
         result = applyTemplate template
 
         then:
-        result.contains('<a href='/book/list?offset=0&amp;max=2' class='step'>1</a>')
+        result.contains("<a href='/book/list?offset=0&amp;max=2' class='step'>1</a>")
 
         when:
-        template = '<g:paginate  max='2' total='20' offset='10' maxsteps='3' controller='book' action='list' omitPrev='true' omitNext='true' omitFirst='false' />'
+        template = '''<g:paginate  max='2' total='20' offset='10' maxsteps='3' controller='book' action='list' omitPrev='true' omitNext='true' omitFirst='false' />'''
         result = applyTemplate template
 
         then:
-        result.contains('<a href='/book/list?offset=0&amp;max=2' class='step'>1</a>')
+        result.contains("<a href='/book/list?offset=0&amp;max=2' class='step'>1</a>")
 
         when:
-        template = '<g:paginate  max='2' total='20' offset='10' maxsteps='3' controller='book' action='list' omitPrev='true' omitNext='true' omitLast='true' />'
+        template = '''<g:paginate  max='2' total='20' offset='10' maxsteps='3' controller='book' action='list' omitPrev='true' omitNext='true' omitLast='true' />'''
         result = applyTemplate template
 
         then:
-        result.contains('<a href='/book/list?offset=0&amp;max=2' class='step'>1</a>')
-        !result.contains('<a href='/book/list?offset=18&amp;max=2' class='step'>10</a>')
+        result.contains("<a href='/book/list?offset=0&amp;max=2' class='step'>1</a>")
+        !result.contains("<a href='/book/list?offset=18&amp;max=2' class='step'>10</a>")
 
         when:
-        template = '<g:paginate  max='2' total='20' offset='16' maxsteps='3' controller='book' action='list' omitPrev='true' omitNext='true' omitLast='true' />'
+        template = '''<g:paginate  max='2' total='20' offset='16' maxsteps='3' controller='book' action='list' omitPrev='true' omitNext='true' omitLast='true' />'''
         result = applyTemplate template
 
         then:
-        result.contains('<a href='/book/list?offset=18&amp;max=2' class='step'>10</a>')
+        result.contains("<a href='/book/list?offset=18&amp;max=2' class='step'>10</a>")
 
         when:
-        template = '<g:paginate  max='2' total='20' offset='10' maxsteps='3' controller='book' action='list' omitPrev='true' omitNext='true' omitLast='false' />'
+        template = '''<g:paginate  max='2' total='20' offset='10' maxsteps='3' controller='book' action='list' omitPrev='true' omitNext='true' omitLast='false' />'''
         result = applyTemplate template
 
         then:
-        result.contains('<a href='/book/list?offset=18&amp;max=2' class='step'>10</a>')
+        result.contains("<a href='/book/list?offset=18&amp;max=2' class='step'>10</a>")
     }
 
     void testPaginateGap() {
         when:
-        def template = '<g:paginate  max='2' total='20' offset='10' maxsteps='3' controller='book' action='list' />'
+        def template = '''<g:paginate  max='2' total='20' offset='10' maxsteps='3' controller='book' action='list' />'''
         def result = applyTemplate template
 
         then:
-        result.contains('<a href='/book/list?offset=0&amp;max=2' class='step'>1</a><span class='step gap'>..</span><a href='/book/list?offset=8&amp;max=2' class='step'>5</a>')
-        result.contains('<a href='/book/list?offset=12&amp;max=2' class='step'>7</a><span class='step gap'>..</span><a href='/book/list?offset=18&amp;max=2' class='step'>10</a>')
+        result.contains("<a href='/book/list?offset=0&amp;max=2' class='step'>1</a><span class='step gap'>..</span><a href='/book/list?offset=8&amp;max=2' class='step'>5</a>")
+        result.contains("<a href='/book/list?offset=12&amp;max=2' class='step'>7</a><span class='step gap'>..</span><a href='/book/list?offset=18&amp;max=2' class='step'>10</a>")
 
         when:
-        template = '<g:paginate  max='2' total='20' offset='4' maxsteps='3' controller='book' action='list' />'
+        template = '''<g:paginate  max='2' total='20' offset='4' maxsteps='3' controller='book' action='list' />'''
         result = applyTemplate template
 
         then:
-        result.contains('<a href='/book/list?offset=0&amp;max=2' class='step'>1</a><a href='/book/list?offset=2&amp;max=2' class='step'>2</a>')
+        result.contains("<a href='/book/list?offset=0&amp;max=2' class='step'>1</a><a href='/book/list?offset=2&amp;max=2' class='step'>2</a>")
 
         when:
-        template = '<g:paginate  max='2' total='20' offset='14' maxsteps='3' controller='book' action='list' />'
+        template = '''<g:paginate  max='2' total='20' offset='14' maxsteps='3' controller='book' action='list' />'''
         result = applyTemplate template
 
         then:
-        result.contains('<a href='/book/list?offset=16&amp;max=2' class='step'>9</a><a href='/book/list?offset=18&amp;max=2' class='step'>10</a>')
+        result.contains("<a href='/book/list?offset=16&amp;max=2' class='step'>9</a><a href='/book/list?offset=18&amp;max=2' class='step'>10</a>")
     }
 
     protected void onInit() {
@@ -203,73 +203,73 @@ class RenderTagLibTests extends Specification implements UrlMappingsUnitTest<Ren
 
     void testPaginateMappingAndAction() {
         when:
-        def template = '<g:paginate next='Forward' prev='Back' maxsteps='8' max='10' id='1' mapping='claimTab' total='12' action='documents'/>'
+        def template = '''<g:paginate next='Forward' prev='Back' maxsteps='8' max='10' id='1' mapping='claimTab' total='12' action='documents'/>'''
         def result = applyTemplate template
 
         then:
-        result == '<span class='currentStep'>1</span><a href='/claim/1/documents?offset=10&amp;max=10' class='step'>2</a><a href='/claim/1/documents?offset=10&amp;max=10' class='nextLink'>Forward</a>'
+        result == "<span class='currentStep'>1</span><a href='/claim/1/documents?offset=10&amp;max=10' class='step'>2</a><a href='/claim/1/documents?offset=10&amp;max=10' class='nextLink'>Forward</a>"
     }
 
     void testPaginateNamespace() {
-        def template = '<g:paginate next='Forward' prev='Back' maxsteps='8' max='10' id='1' total='12' namespace='users' controller='admin' action='index'/>'
-        assertOutputEquals('<span class='currentStep'>1</span><a href='/userAdmin/1?offset=10&amp;max=10' class='step'>2</a><a href='/userAdmin/1?offset=10&amp;max=10' class='nextLink'>Forward</a>', template)
+        def template = '''<g:paginate next='Forward' prev='Back' maxsteps='8' max='10' id='1' total='12' namespace='users' controller='admin' action='index'/>'''
+        assertOutputEquals("<span class='currentStep'>1</span><a href='/userAdmin/1?offset=10&amp;max=10' class='step'>2</a><a href='/userAdmin/1?offset=10&amp;max=10' class='nextLink'>Forward</a>", template)
 
-        template = '<g:paginate next='Forward' prev='Back' maxsteps='8' max='10' id='1' total='12' namespace='reports' controller='admin' action='index'/>'
-        assertOutputEquals('<span class='currentStep'>1</span><a href='/reportAdmin/1?offset=10&amp;max=10' class='step'>2</a><a href='/reportAdmin/1?offset=10&amp;max=10' class='nextLink'>Forward</a>', template)
+        template = '''<g:paginate next='Forward' prev='Back' maxsteps='8' max='10' id='1' total='12' namespace='reports' controller='admin' action='index'/>'''
+        assertOutputEquals("<span class='currentStep'>1</span><a href='/reportAdmin/1?offset=10&amp;max=10' class='step'>2</a><a href='/reportAdmin/1?offset=10&amp;max=10' class='nextLink'>Forward</a>", template)
     }
 
     void testSortableColumnNamespaceNull() {
         webRequest.controllerName = 'MockController'
 
-        def template = '<g:sortableColumn property='id' title='ID' id='1' />'
-        assertOutputEquals('<th id='1' class='sortable' ><a href='/custompath/mockcontroller/list?sort=id&amp;order=asc'>ID</a></th>', template)
+        def template = '''<g:sortableColumn property='id' title='ID' id='1' />'''
+        assertOutputEquals("<th id='1' class='sortable' ><a href='/custompath/mockcontroller/list?sort=id&amp;order=asc'>ID</a></th>", template)
     }
 
     void testSortableColumnNamespaceNullWithIndexAction() {
         webRequest.controllerName = 'MockController'
         webRequest.actionName = 'index'
 
-        def template = '<g:sortableColumn property='id' title='ID' id='1' />'
-        assertOutputEquals('<th id='1' class='sortable' ><a href='/custompath/mockcontroller/index?sort=id&amp;order=asc'>ID</a></th>', template)
+        def template = '''<g:sortableColumn property='id' title='ID' id='1' />'''
+        assertOutputEquals("<th id='1' class='sortable' ><a href='/custompath/mockcontroller/index?sort=id&amp;order=asc'>ID</a></th>", template)
     }
 
     void testSortableColumnWithCustomNamespace() {
         webRequest.controllerName = 'MockController'
 
-        def template = '<g:sortableColumn property='id' title='ID' id='1' namespace='custom'/>'
-        assertOutputEquals('<th id='1' class='sortable' ><a href='/custompathCustomNamespace/mockcontroller/list?sort=id&amp;order=asc'>ID</a></th>', template)
+        def template = '''<g:sortableColumn property='id' title='ID' id='1' namespace='custom'/>'''
+        assertOutputEquals("<th id='1' class='sortable' ><a href='/custompathCustomNamespace/mockcontroller/list?sort=id&amp;order=asc'>ID</a></th>", template)
     }
 
     void testSortableColumnWithCustomNamespaceFromRequest() {
         webRequest.controllerName = 'MockController'
         webRequest.controllerNamespace = 'custom'
 
-        def template = '<g:sortableColumn property='id' title='ID' id='1' />'
-        assertOutputEquals('<th id='1' class='sortable' ><a href='/custompathCustomNamespace/mockcontroller/list?sort=id&amp;order=asc'>ID</a></th>', template)
+        def template = '''<g:sortableColumn property='id' title='ID' id='1' />'''
+        assertOutputEquals("<th id='1' class='sortable' ><a href='/custompathCustomNamespace/mockcontroller/list?sort=id&amp;order=asc'>ID</a></th>", template)
     }
 
     void testTemplateNamespace() {
         def resourceLoader = new MockStringResourceLoader()
-        resourceLoader.registerMockResource('/table/_tableRow.gsp', '<tr><td class='prop'>${label}</td><td class='value'>${value}</td></tr>')
+        resourceLoader.registerMockResource('/table/_tableRow.gsp', "<tr><td class='prop'>\${label}</td><td class='value'>\${value}</td></tr>")
         appCtx.groovyPagesTemplateEngine.groovyPageLocator.addResourceLoader(resourceLoader)
 
         webRequest.controllerName = 'table'
 
-        def template = '<tmpl:tableRow label='one' value='two' encodeAs='raw' />'
+        def template = "<tmpl:tableRow label='one' value='two' encodeAs='raw' />"
 
-        assertOutputEquals('<tr><td class='prop'>one</td><td class='value'>two</td></tr>', template)
+        assertOutputEquals("<tr><td class='prop'>one</td><td class='value'>two</td></tr>", template)
 
         // now test method call
 
-        template = '${tmpl.tableRow(label: 'one', value: 'two', encodeAs: 'raw')}'
+        template = "${tmpl.tableRow(label: 'one', value: 'two', encodeAs: 'raw')}"
 
-        assertOutputEquals('<tr><td class='prop'>one</td><td class='value'>two</td></tr>', template)
+        assertOutputEquals("<tr><td class='prop'>one</td><td class='value'>two</td></tr>", template)
         // execute twice to make sure methodMissing works
-        assertOutputEquals('<tr><td class='prop'>one</td><td class='value'>two</td></tr>', template)
+        assertOutputEquals("<tr><td class='prop'>one</td><td class='value'>two</td></tr>", template)
     }
 
     void testRenderWithNonExistantTemplate() {
-        def template = '<g:render template='bad' />'
+        def template = '''<g:render template='bad' />'''
 
         try {
             applyTemplate(template)
@@ -284,7 +284,7 @@ class RenderTagLibTests extends Specification implements UrlMappingsUnitTest<Ren
         resourceLoader.registerMockResource('/amazon/book/_book.gsp', 'content ${foo}: ${body()}')
         appCtx.groovyPagesTemplateEngine.groovyPageLocator.addResourceLoader(resourceLoader)
 
-        def template = '<g:render contextPath='/amazon' template='/book/book' model="[foo: \'bar\']">hello</g:render>'
+        def template = '''<g:render contextPath='/amazon' template='/book/book' model='[foo: 'bar']'>hello</g:render>'''
 
         assertOutputEquals('content bar: hello', template)
 
@@ -292,17 +292,17 @@ class RenderTagLibTests extends Specification implements UrlMappingsUnitTest<Ren
         resourceLoader.registerMockResource("/plugins/controllers-${GrailsUtil.grailsVersion}/foo/book/_book.gsp".toString(), 'plugin foo ${foo}: ${body()}')
         resourceLoader.registerMockResource("/plugins/controllers-${GrailsUtil.grailsVersion}/foo/book/_two.gsp".toString(), 'plugin foo ${foo}: ${body()}')
 
-        template = '<g:render plugin='controllers' template='/foo/book/book' model="[foo: \'bar\']">hello</g:render>'
+        template = '''<g:render plugin='controllers' template='/foo/book/book' model='[foo: 'bar']'>hello</g:render>'''
         assertOutputEquals('plugin foo bar: hello', template)
 
-        template = '<g:render contextPath='' template='/foo/book/book' model="[foo: \'bar\']">hello</g:render>'
+        template = '''<g:render contextPath='' template='/foo/book/book' model='[foo: 'bar']'>hello</g:render>'''
 
         assertOutputEquals('foo bar: hello', template)
 
         request.setAttribute(GrailsApplicationAttributes.PAGE_SCOPE, new GroovyPageBinding("/plugins/controllers-${GrailsUtil.grailsVersion}"))
         // application template should be able to override plugin template
         assertOutputEquals('foo bar: hello', template)
-        template = '<g:render contextPath='' template='/foo/book/two' model="[foo: \'bar\']">hello</g:render>'
+        template = '''<g:render contextPath='' template='/foo/book/two' model='[foo: 'bar']'>hello</g:render>'''
 
         request.removeAttribute GrailsApplicationAttributes.PAGE_SCOPE
     }
@@ -312,7 +312,7 @@ class RenderTagLibTests extends Specification implements UrlMappingsUnitTest<Ren
         resourceLoader.registerMockResource('/book/_book.gsp', 'content ${foo}: ${body()}')
         appCtx.groovyPagesTemplateEngine.groovyPageLocator.addResourceLoader(resourceLoader)
 
-        def template = '<g:render template='/book/book' model="[foo: \'bar\']">hello</g:render>'
+        def template = '''<g:render template='/book/book' model='[foo: 'bar']'>hello</g:render>'''
         assertOutputEquals('content bar: hello', template)
     }
 
@@ -322,7 +322,7 @@ class RenderTagLibTests extends Specification implements UrlMappingsUnitTest<Ren
         resourceLoader.registerMockResource('/book/_book.gsp', '[book = ${string} it=${it} foo=${foo}]')
         appCtx.groovyPagesTemplateEngine.groovyPageLocator.addResourceLoader(resourceLoader)
 
-        def template = '<g:render template='/book/book' collection="${books}' model='[foo: \'bar\']" />'
+        def template = '''<g:render template='/book/book' collection="${books}' model='[foo: 'bar']" />'''
 
         assertOutputEquals('[book = The Stand it=The Stand foo=bar][book = The Shining it=The Shining foo=bar]', template, [books: ['The Stand', 'The Shining']])
     }
@@ -468,7 +468,7 @@ class RenderTagLibTests extends Specification implements UrlMappingsUnitTest<Ren
             tag.call(attrs)
 
         }
-        checkTagOutput(sw.toString(), 'other sortable', 'asc', 'Title', ' style='width: 200px;'')
+        checkTagOutput(sw.toString(), 'other sortable', 'asc', 'Title', " style='width: 200px;'")
     }
 
     void testSortableColumnTagSorted() {
@@ -629,7 +629,7 @@ class RenderTagLibTests extends Specification implements UrlMappingsUnitTest<Ren
         request.setAttribute('someattribute', '2')
         assertEquals g.render(template: '/test', model: [name: 'world']), '[hello world] 2'
         request.setAttribute('someattribute', '3')
-        def template = '<g:render template='/test' model="[name: \'world\']" />'
+        def template = '''<g:render template='/test' model='[name: 'world']' />'''
         assertOutputEquals('[hello world] 3', template)
     }
 
@@ -643,7 +643,7 @@ class RenderTagLibTests extends Specification implements UrlMappingsUnitTest<Ren
         webRequest.params.someparam = '1'
         assertEquals g.render(template: '/test', model: [name: 'world']), '[hello world] 1'
         webRequest.params.someparam = '2'
-        def template = '<g:render template='/test' model="[name: \'world\']" />'
+        def template = '''<g:render template='/test' model='[name: 'world']' />'''
         assertOutputEquals('[hello world] 2', template)
     }
 
@@ -654,7 +654,7 @@ class RenderTagLibTests extends Specification implements UrlMappingsUnitTest<Ren
         appCtx.groovyPagesTemplateEngine.groovyPageLocator.addResourceLoader(resourceLoader)
 
         webRequest.params.someparam = '1'
-        def template = '<g:render template='/test' model="[name: \'world\']" />'
+        def template = '''<g:render template='/test' model='[name: 'world']' />'''
         assertOutputEquals('[hello world] 1', template)
     }
 
@@ -665,7 +665,7 @@ class RenderTagLibTests extends Specification implements UrlMappingsUnitTest<Ren
         appCtx.groovyPagesTemplateEngine.groovyPageLocator.addResourceLoader(resourceLoader)
 
         webRequest.params.someparam = '1'
-        def template = '<g:render template='/test' model="[name: \'world\']" />'
+        def template = '''<g:render template='/test' model='[name: 'world']' />'''
         assertOutputEquals('[hello world] 1', template)
 
         def g = appCtx.gspTagLibraryLookup.lookupNamespaceDispatcher('g')

@@ -29,22 +29,22 @@ class JavaScriptCodecTests {
 
     @Test
     void testEncode() {
-        assertEquals('\\u0022\\u0022', codec.encode(''''))
-        assertEquals("\\u0027\\u0027', codec.encode('''"))
+        assertEquals('\\u0022\\u0022', codec.encode('""'))
+        assertEquals('\\u0027\\u0027', codec.encode("''"))
         assertEquals('\\u005c', codec.encode('\\'))
     }
 
     @Test
     void testEncodeNewlines() {
         // CRLF should be collapsed to LF
-        assertEquals("\\n', codec.encode('\r\n"))
+        assertEquals('\\n', codec.encode('\r\n'))
 
         // All other combinations should pass through (although \r is encoded as \n)
-        assertEquals("\\n', codec.encode('\r"))
-        assertEquals("\\n', codec.encode('\n"))
-        assertEquals("\\n\\n', codec.encode('\r\r"))
-        assertEquals("\\n\\n', codec.encode('\n\n"))
-        assertEquals("\\n\\n', codec.encode('\n\r"))
+        assertEquals('\\n', codec.encode('\r'))
+        assertEquals('\\n', codec.encode('\n'))
+        assertEquals('\\n\\n', codec.encode('\r\r'))
+        assertEquals('\\n\\n', codec.encode('\n\n'))
+        assertEquals('\\n\\n', codec.encode('\n\r'))
     }
 
     @Test

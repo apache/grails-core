@@ -74,7 +74,7 @@ class DbmRollbackToDateSqlCommandSpec extends ApplicationContextDatabaseMigratio
 
         then:
             def e = thrown(DatabaseMigrationException)
-            e.message == 'Date must be specified as two strings with the format 'yyyy-MM-dd HH:mm:ss' or as one strings with the format 'yyyy-MM-dd''
+            e.message == "Date must be specified as two strings with the format 'yyyy-MM-dd HH:mm:ss' or as one strings with the format 'yyyy-MM-dd'"
     }
 
     def 'an error occurs if the date parameter is invalid format'() {

@@ -35,7 +35,7 @@ class BasicCodecLookupSpec extends Specification {
             encoder != null
             decoder != null
             encoder.encode('<1>Hello;') == "\\u0026lt\\u003b1\\u0026gt\\u003bHello\\u003b"
-            decoder.decode("\\u0026lt\\u003b1\\u0026gt\\u003bHello\\u003b') == '<1>Hello;"
+            decoder.decode("\\u0026lt\\u003b1\\u0026gt\\u003bHello\\u003b") == "<1>Hello;"
     }    
 
 }

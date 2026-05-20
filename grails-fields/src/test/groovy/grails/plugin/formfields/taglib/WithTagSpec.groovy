@@ -49,12 +49,12 @@ class WithTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest
 		views['/_fields/default/_wrapper.gsp'] = '${property} '
 
 		expect:
-		applyTemplate('<f:with bean='personInstance'><f:field property='name'/></f:with>', [personInstance: personInstance]) == 'name '
+		applyTemplate('<f:with bean="personInstance"><f:field property="name"/></f:with>', [personInstance: personInstance]) == 'name '
 	}
 
 	void 'scoped bean attribute does not linger around after f:with tag'() {
 		expect:
-		applyTemplate('<f:with bean='personInstance'>${pageScope.getVariable('f:with:stack')}</f:with>${pageScope.getVariable('f:with:stack')}', [personInstance: personInstance]) == 'Bart Simpson'
+		applyTemplate('<f:with bean="personInstance">${pageScope.getVariable("f:with:stack")}</f:with>${pageScope.getVariable("f:with:stack")}', [personInstance: personInstance]) == 'Bart Simpson'
 	}
 
     void 'scoped beans can be nested'() {
@@ -62,7 +62,7 @@ class WithTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest
         views['/_fields/default/_wrapper.gsp'] = '${value} '
 
         expect:
-        applyTemplate('<f:with bean='productInstance'><f:field property='netPrice'/><f:with bean='personInstance'><f:field property='name'/></f:with></f:with>', [personInstance: personInstance, productInstance: productInstance]) == '12.33 Bart Simpson '
+        applyTemplate('<f:with bean="productInstance"><f:field property="netPrice"/><f:with bean="personInstance"><f:field property="name"/></f:with></f:with>', [personInstance: personInstance, productInstance: productInstance]) == '12.33 Bart Simpson '
     }
 
     void 'embedded attributes work if in scope from f:with'() {
@@ -70,7 +70,7 @@ class WithTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest
         views['/_fields/default/_wrapper.gsp'] = '${property} '
 
         when:
-        def output = applyTemplate('<f:with bean='personInstance'><f:field property='address'/></f:with>', [personInstance: personInstance])
+        def output = applyTemplate('<f:with bean="personInstance"><f:field property="address"/></f:with>', [personInstance: personInstance])
 
         then:
         output.contains('address.city address.country address.street')

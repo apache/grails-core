@@ -82,24 +82,13 @@ class AttributesOfWithAndAllTagsArePropagatedSpec extends AbstractFormFieldsTagL
 
 	void 'An attribute of the <f:all> tag is present on inner fields tag'() {
 		expect:
-		applyTemplate(
-				'<f:all bean='productInstance' attribute='cool'/>',
-				[productInstance: productInstance]
-		) == '<wrapper attr='cool'><widget>name</widget></wrapper>' +
-				'<wrapper attr='cool'><widget>netPrice</widget></wrapper>' +
-				'<wrapper attr='cool'><widget>taxRate</widget></wrapper>'
+		applyTemplate('''<f:all bean='productInstance' attribute='cool'/>''', [productInstance: productInstance]) == "<wrapper attr='cool'><widget>name</widget></wrapper>" + "<wrapper attr='cool'><widget>netPrice</widget></wrapper>" + "<wrapper attr='cool'><widget>taxRate</widget></wrapper>"
 	}
 
 	@Ignore('It is not possible to use the <f:all> tag for printing displays instead of fields')
 	void 'An attribute of the <f:displayAll> tag is present on inner displays tag'() {
 		expect:
-		applyTemplate(
-				'<f:displayAll bean='productInstance' wrapper='cool'/>',
-				[productInstance: productInstance]
-		) == '<displayWrapper attr='cool'><displayWidget>name</displayWidget></displayWrapper>' +
-				'<displayWrapper attr='cool'><displayWidget>netPrice</displayWidget></displayWrapper>' +
-				'<displayWrapper attr='cool'><displayWidget>taxRate</displayWidget></displayWrapper>' +
-				'<displayWrapper attr='cool'><displayWidget>tax</displayWidget></displayWrapper>'
+		applyTemplate('''<f:displayAll bean='productInstance' wrapper='cool'/>''', [productInstance: productInstance]) == "<displayWrapper attr='cool'><displayWidget>name</displayWidget></displayWrapper>" + "<displayWrapper attr='cool'><displayWidget>netPrice</displayWidget></displayWrapper>" + "<displayWrapper attr='cool'><displayWidget>taxRate</displayWidget></displayWrapper>" + "<displayWrapper attr='cool'><displayWidget>tax</displayWidget></displayWrapper>"
 	}
 
 	//Test Override of attributes
@@ -129,19 +118,19 @@ class AttributesOfWithAndAllTagsArePropagatedSpec extends AbstractFormFieldsTagL
 	void 'Test cascade of <f:with> tags'() {
 		expect:
 		applyTemplate(
-				'<f:with bean='productInstance' attribute='general-attr'>' +
-						'<f:field property='name'/>' +
-						'<f:field property='netPrice'/>' +
-						'<f:with bean='productInstance' attribute='override-attr'>' +
-						'<f:field property='taxRate'/>' +
-						'</f:with>' +
-						'<f:display property='tax'/>' +
-						'</f:with>',
+				'''<f:with bean='productInstance' attribute='general-attr'>''' +
+						'''<f:field property='name'/>''' +
+						'''<f:field property='netPrice'/>''' +
+						'''<f:with bean='productInstance' attribute='override-attr'>''' +
+						'''<f:field property='taxRate'/>''' +
+						'''</f:with>''' +
+						'''<f:display property='tax'/>''' +
+						'''</f:with>''',
 				[productInstance: productInstance]
-		) == '<wrapper attr='general-attr'><widget>name</widget></wrapper>' +
-				'<wrapper attr='general-attr'><widget>netPrice</widget></wrapper>' +
-				'<wrapper attr='override-attr'><widget>taxRate</widget></wrapper>' +
-				'<displayWrapper attr='general-attr'><displayWidget>tax</displayWidget></displayWrapper>'
+		) == '''<wrapper attr='general-attr'><widget>name</widget></wrapper>''' +
+				'''<wrapper attr='general-attr'><widget>netPrice</widget></wrapper>''' +
+				'''<wrapper attr='override-attr'><widget>taxRate</widget></wrapper>''' +
+				'''<displayWrapper attr='general-attr'><displayWidget>tax</displayWidget></displayWrapper>'''
 	}
 
 	void "An attribute of the <f:with> tag (prefixed with 'widget-') is present on an inner <f:widget> tag"() {

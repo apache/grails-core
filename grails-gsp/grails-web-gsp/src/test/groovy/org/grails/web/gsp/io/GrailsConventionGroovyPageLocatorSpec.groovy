@@ -128,7 +128,7 @@ class GrailsConventionGroovyPageLocatorSpec extends Specification {
 
     void 'Test find view with controller instance and view name from plugin'() {
         given: 'a valid path to a plugin view'
-        resourceLoader.resources["/grails-app/views/plugins/core-${GrailsUtil.grailsVersion}/grails-app/views/bar.gsp'] = new ByteArrayResource('contents".bytes)
+        resourceLoader.resources['/grails-app/views/plugins/core-${GrailsUtil.grailsVersion}/grails-app/views/bar.gsp'] = new ByteArrayResource('contents'.bytes)
         when: 'The controller from a plugin and view name is specified'
         def source = pageLocator.findView(new PluginController(), 'bar')
         then: 'the script source is found'

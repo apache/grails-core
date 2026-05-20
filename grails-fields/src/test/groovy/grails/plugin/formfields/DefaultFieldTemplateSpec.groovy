@@ -32,7 +32,7 @@ class DefaultFieldTemplateSpec extends Specification implements TagLibUnitTest<F
         model.label = 'label'
         model.property = 'property'
         model.required = false
-        model.widget = '<input name='property'>'
+        model.widget = "<input name='property'>"
         views['/default/_wrapper.gsp'] = '''\
 <g:set var='classes' value='fieldcontain '/>
 <g:if test="${required}">

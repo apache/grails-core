@@ -26,11 +26,11 @@ class RootUrlMappingTests extends Specification implements UrlMappingsUnitTest<S
 
     def testMappingToController() {
         when:
-        def template = '<g:link controller='store'>Show the time !</g:link>'
+        def template = '''<g:link controller='store'>Show the time !</g:link>'''
         String output = applyTemplate(template)
 
         then:
-        output == '<a href='/'>Show the time !</a>'
+        output == "<a href='/'>Show the time !</a>"
     }
 
 }

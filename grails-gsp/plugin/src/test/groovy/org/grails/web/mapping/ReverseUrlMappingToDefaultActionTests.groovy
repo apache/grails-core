@@ -42,7 +42,7 @@ class ReverseUrlMappingToDefaultActionTests extends Specification implements Url
         String output = applyTemplate(template)
 
         then:
-        output == '<a href='/about/index'>click</a>'
+        output == "<a href='/about/index'>click</a>"
     }
 }
 

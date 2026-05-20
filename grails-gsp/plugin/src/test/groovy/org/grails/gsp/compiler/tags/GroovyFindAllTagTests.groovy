@@ -55,7 +55,7 @@ class GroovyFindAllTagTests {
 
     @Test
     void testDoStartWithNoInAttribute() {
-        tag.attributes = [''expr'': ' someExpression ']
+        tag.attributes = ['expr': ' someExpression ']
         assertThrows(GrailsTagException) {
             tag.doStartTag()
         }
@@ -63,7 +63,7 @@ class GroovyFindAllTagTests {
 
     @Test
     void testDoStartWithNoExprAttribute() {
-        tag.attributes = [''in'': ' someExpression ']
+        tag.attributes = ['in': ' someExpression ']
         assertThrows(GrailsTagException) {
             tag.doStartTag()
         }
@@ -71,7 +71,7 @@ class GroovyFindAllTagTests {
 
     @Test
     void testDoStartTag() {
-        tag.attributes = [''expr'': " \${it.age > 19}", '"in"': "myObj"]
+        tag.attributes = ['expr': " \${it.age > 19}", 'in': "myObj"]
         tag.doStartTag()
 
         assertEquals('for( '+tag.getForeachRenamedIt()+" in evaluate('myObj.findAll {it.age > 19}', 1, it) { return myObj.findAll {it.age > 19} } ) {"+System.getProperty('line.separator')+ 'changeItVariable(' + tag.getForeachRenamedIt() + ')' + System.getProperty('line.separator'), sw.toString())

@@ -57,7 +57,7 @@ class NamespacedTagLibMethodTests extends Specification implements TagLibUnitTes
         String output = mockResponse.contentAsString
 
         then:
-        output == '<a href='/hello'>good</a>'
+        output == "<a href='/hello'>good</a>"
 
     }
 
@@ -70,7 +70,7 @@ class NamespacedTagLibMethodTests extends Specification implements TagLibUnitTes
         output == 'errors'
     }
 
-    def testInvokeTagNoArguments() {
+    def testInvokeNamespacedTagLibFromAnother() {
         when:
         def template = '<two:hello/>'
         def taglib = grailsApplication.getArtefact(TagLibArtefactHandler.TYPE,'SecondTagLib')
@@ -78,8 +78,8 @@ class NamespacedTagLibMethodTests extends Specification implements TagLibUnitTes
         String output = applyTemplate(template)
 
         then:
-        output == '<a href='/foo/bar'>hello</a>'
-        output == '<a href='/foo/bar'>hello</a>'
+        output == "<a href='/foo/bar'>hello</a>"
+        output == "<a href='/foo/bar'>hello</a>"
     }
 
     def testInvokeTagWithNamespace() {

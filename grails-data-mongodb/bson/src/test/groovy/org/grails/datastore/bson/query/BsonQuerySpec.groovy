@@ -39,7 +39,7 @@ class BsonQuerySpec extends Specification {
 
     void 'Test parse in query from BSON string'() {
         when:'A bson query is parsed'
-        DetachedCriteria criteria = BsonQuery.parse(Person, new JsonReader('{'name':'Fred', 'age': { "$in": [18, 25] }}'))
+        DetachedCriteria criteria = BsonQuery.parse(Person, new JsonReader('{"name":"Fred", "age": { "$in": [18, 25] }}'))
         Query.Conjunction criterion = criteria.criteria[0]
         def criteriaList = criterion.criteria
         then:'It is a conjuction'
@@ -58,7 +58,7 @@ class BsonQuerySpec extends Specification {
 
     void 'Test parse a query from a BSON string'() {
         when:'A bson query is parsed'
-        DetachedCriteria criteria = BsonQuery.parse(Person, new JsonReader('{'name':'Fred', 'age': { "$gt": 18 }}'))
+        DetachedCriteria criteria = BsonQuery.parse(Person, new JsonReader('{"name":"Fred", "age": { "$gt": 18 }}'))
         Query.Conjunction criterion = criteria.criteria[0]
         def criteriaList = criterion.criteria
         then:'It is a conjuction'
@@ -73,7 +73,7 @@ class BsonQuerySpec extends Specification {
         criteriaList[1].value == 18
 
         when:'A bson or query is parsed'
-        criteria = BsonQuery.parse(Person, new JsonReader('{"$or':[{'name':'Fred'}, {'age': { '$gt": 18 }}]}'))
+        criteria = BsonQuery.parse(Person, new JsonReader('{"$or": [{"name": "Fred"}, {"age": {"$gt": 18}}]}'))
         Query.Disjunction disjunction = criteria.criteria[0]
         criteriaList = disjunction.criteria
 

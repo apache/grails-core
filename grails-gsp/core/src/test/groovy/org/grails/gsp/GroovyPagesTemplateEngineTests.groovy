@@ -401,7 +401,7 @@ hello
 
         gpte.afterPropertiesSet()
 
-        def src = '''<div id='${map["${id}_postfix"]}'/>'''
+        def src = ''"<div id='${map["${id}_postfix"]}'/>"''
 
         def t = gpte.createTemplate(src, 'testGRAILS8199')
 

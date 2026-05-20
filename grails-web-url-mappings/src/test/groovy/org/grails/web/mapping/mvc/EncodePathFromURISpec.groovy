@@ -38,7 +38,7 @@ class EncodePathFromURISpec extends AbstractUrlMappingsSpec {
         def grailsApplication = new DefaultGrailsApplication(BarController)
         grailsApplication.initialise()
         def holder = getUrlMappingsHolder {
-            "/bar/$id'(controller: 'bar', action: 'bar")
+            "/bar/$id"(controller: 'bar', action: 'bar')
         }
 
         holder = new GrailsControllerUrlMappings(grailsApplication, holder)

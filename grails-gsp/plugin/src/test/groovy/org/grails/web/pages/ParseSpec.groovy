@@ -66,7 +66,7 @@ public static final String TAGLIB_CODEC = 'none'
         String expected = makeImports() +
                 '\n' +
                 'class myTest1 extends org.grails.gsp.GroovyPage {\n' +
-                'public String getGroovyPageFileName() { 'myTest1' }\n' +
+                'public String getGroovyPageFileName() { "myTest1" }\n' +
                 'public Object run() {\n' +
                 'Writer out = getOut()\n' +
                 'Writer expressionOut = getExpressionOut()\n' +
@@ -86,7 +86,7 @@ public static final String TAGLIB_CODEC = 'none'
         String expected = makeImports() +
                 '\n' +
                 'class myTest2 extends org.grails.gsp.GroovyPage {\n' +
-                'public String getGroovyPageFileName() { 'myTest2' }\n' +
+                'public String getGroovyPageFileName() { "myTest2" }\n' +
                 'public Object run() {\n' +
                 'Writer out = getOut()\n' +
                 "Writer expressionOut = getExpressionOut()\n" +
@@ -95,7 +95,7 @@ public static final String TAGLIB_CODEC = 'none'
                 '}\n' + GSP_FOOTER
 
         when:
-        String output = parseCode('myTest2', '<g:message code='testing ['/>').generatedGsp
+        String output = parseCode('myTest2', "<g:message code='testing ['/>").generatedGsp
 
         then:
         trimAndRemoveCR(expected) == trimAndRemoveCR(output)
@@ -119,7 +119,7 @@ public static final String TAGLIB_CODEC = 'none'
         String expected = makeImports() +
                 '\n' +
                 'class myTest4 extends org.grails.gsp.GroovyPage {\n' +
-                'public String getGroovyPageFileName() { 'myTest4' }\n' +
+                'public String getGroovyPageFileName() { "myTest4" }\n' +
                 'public Object run() {\n' +
                 'Writer out = getOut()\n' +
                 'Writer expressionOut = getExpressionOut()\n' +
@@ -129,7 +129,7 @@ public static final String TAGLIB_CODEC = 'none'
         // Sanity check the string loaded OK as unicode - it won't look right if you output it, default stdout is not UTF-8
         // on many OSes
         Assertions.assertEquals(src.indexOf('?'), -1)
-        def config =new ConfigSlurper().parse('grails.views.gsp.encoding = 'UTF-8'')
+        def config =new ConfigSlurper().parse("grails.views.gsp.encoding = 'UTF-8'")
         buildMockRequest(config)
 
         when:
@@ -154,7 +154,7 @@ public static final String TAGLIB_CODEC = 'none'
         String expected = makeImports() +
                 '\n' +
                 'class myTest5 extends org.grails.gsp.GroovyPage {\n' +
-                'public String getGroovyPageFileName() { 'myTest5' }\n' +
+                'public String getGroovyPageFileName() { "myTest5" }\n' +
                 'public Object run() {\n' +
                 'Writer out = getOut()\n' +
                 'Writer expressionOut = getExpressionOut()\n' +
@@ -186,7 +186,7 @@ public static final String TAGLIB_CODEC = 'none'
         String expected = makeImports() +
                 '\n' +
                 'class myTest7 extends org.grails.gsp.GroovyPage {\n' +
-                'public String getGroovyPageFileName() { 'myTest7' }\n' +
+                'public String getGroovyPageFileName() { "myTest7" }\n' +
                 'public Object run() {\n' +
                 'Writer out = getOut()\n' +
                 'Writer expressionOut = getExpressionOut()\n' +
@@ -215,7 +215,7 @@ public static final String TAGLIB_CODEC = 'none'
         String expected = makeImports() +
                 '\n' +
                 'class GRAILS5598 extends org.grails.gsp.GroovyPage {\n' +
-                'public String getGroovyPageFileName() { 'GRAILS5598' }\n' +
+                'public String getGroovyPageFileName() { "GRAILS5598" }\n' +
                 'public Object run() {\n' +
                 'Writer out = getOut()\n' +
                 'Writer expressionOut = getExpressionOut()\n' +
@@ -236,7 +236,7 @@ public static final String TAGLIB_CODEC = 'none'
         String expected = makeImports() +
                 '\n' +
                 'class GRAILS_LAYOUT_PREPROCESS_TEST extends org.grails.gsp.GroovyPage {\n' +
-                'public String getGroovyPageFileName() { 'GRAILS_LAYOUT_PREPROCESS_TEST' }\n' +
+                'public String getGroovyPageFileName() { "GRAILS_LAYOUT_PREPROCESS_TEST" }\n' +
                 'public Object run() {\n' +
                 'Writer out = getOut()\n' +
                 'Writer expressionOut = getExpressionOut()\n' +
@@ -244,7 +244,7 @@ public static final String TAGLIB_CODEC = 'none'
                 '}\n' + GSP_FOOTER
 
         when:
-        def result = parseCode('GRAILS_LAYOUT_PREPROCESS_TEST', '<%@page grailsLayoutPreprocess='false'%>\n<body>text</body>')
+        def result = parseCode('GRAILS_LAYOUT_PREPROCESS_TEST', '<%@page grailsLayoutPreprocess="false"%>\n<body>text</body>')
 
         then:
         trimAndRemoveCR(expected) == trimAndRemoveCR(result.generatedGsp)
@@ -256,7 +256,7 @@ public static final String TAGLIB_CODEC = 'none'
         String expected = makeImports() +
                 '\n' +
                 'class GRAILS5605 extends org.grails.gsp.GroovyPage {\n' +
-                'public String getGroovyPageFileName() { 'GRAILS5605' }\n' +
+                'public String getGroovyPageFileName() { "GRAILS5605" }\n' +
                 'public Object run() {\n' +
                 'Writer out = getOut()\n' +
                 'Writer expressionOut = getExpressionOut()\n' +
@@ -288,7 +288,7 @@ public static final String TAGLIB_CODEC = 'none'
 
     void 'parse with JSP declaration block containing method throws error'() {
         when:
-        parseCode('declTest2', '<html><%! String hello() { return 'hi'; } %></html>')
+        parseCode('declTest2', "<html><%! String hello() { return 'hi'; } %></html>")
 
         then:
         def e = thrown(GrailsTagException)

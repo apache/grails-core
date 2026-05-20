@@ -428,7 +428,7 @@ class HalJsonRendererSpec extends Specification {
             Links are not rendered correctly. This seems to be an existing bug in link generation and all other
             tests have same problem. For now, the assertion below is using manipulated links for expected value.
          */
-        jsonEquals(response.contentAsString, '{'_links':{'self':{'href':'http://localhost/employees','hreflang': 'en','type': 'application/hal+json'}},'name': 'employee1','_embedded': {'projects':[{'_links':{'self':{'href':'http://localhost/project/index','hreflang': 'en'}},'name': 'project1','_embedded': {'employees':[]}}]}}')
+        jsonEquals(response.contentAsString, '{"_links":{"self":{"href":"http://localhost/employees","hreflang": "en","type": "application/hal+json"}},"name": "employee1","_embedded": {"projects":[{"_links":{"self":{"href":"http://localhost/project/index","hreflang": "en"}},"name": "project1","_embedded": {"employees":[]}}]}}')
 
     }
 
@@ -646,7 +646,7 @@ class HalJsonRendererSpec extends Specification {
 
         then: 'The resulting HAL is correct'
         response.contentType == GrailsWebUtil.getContentType(HalJsonRenderer.MIME_TYPE.name, GrailsWebUtil.DEFAULT_ENCODING)
-        jsonEquals(response.contentAsString, '{'_links':{'self':{'href':'http://localhost/moment/theFuture','hreflang': 'en','type': 'application/hal+json'}},'type': 'FUTURE'}')
+        jsonEquals(response.contentAsString, '{"_links":{"self":{"href":"http://localhost/moment/theFuture","hreflang": "en","type": "application/hal+json"}},"type": "FUTURE"}')
     }
 
     @Issue('GRAILS-10372 GRAILS-10781')
@@ -754,7 +754,7 @@ class HalJsonRendererSpec extends Specification {
 
         then:'The resulting HAL is correct'
         response.contentType == GrailsWebUtil.getContentType(HalJsonRenderer.MIME_TYPE.name, GrailsWebUtil.DEFAULT_ENCODING)
-        jsonEquals(response.contentAsString, '{'_links':{'self':{'href':'http://localhost/products','hreflang': 'en','type': 'application/hal+json'}},'numberInStock': 10,'name': 'MacBook','_embedded': {}}')
+        jsonEquals(response.contentAsString, '{"_links":{"self":{"href":"http://localhost/products","hreflang": "en","type": "application/hal+json"}},"numberInStock": 10,"name": "MacBook","_embedded": {}}')
     }
 
     @Issue('https://github.com/apache/grails-core/issues/10293')

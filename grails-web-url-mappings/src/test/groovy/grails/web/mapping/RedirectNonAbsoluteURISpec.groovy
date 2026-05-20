@@ -32,7 +32,7 @@ import jakarta.servlet.http.HttpServletResponse
 class RedirectNonAbsoluteURISpec extends AbstractUrlMappingsSpec {
 
     @Issue('10879')
-    void 'An 'absolute=true' redirect generates an absolute URL in Location header'() {
+    void 'An "absolute=true" redirect generates an absolute URL in Location header'() {
         given:
         def linkGenerator = getLinkGenerator {
             "/$controller/$action?/$id?"()
@@ -53,7 +53,7 @@ class RedirectNonAbsoluteURISpec extends AbstractUrlMappingsSpec {
     }
 
     @Issue('10879')
-    void 'An 'absolute=false' redirect generates an non-absolute URL in Location header'() {
+    void 'An "absolute=false" redirect generates an non-absolute URL in Location header'() {
         given:
         def linkGenerator = getLinkGenerator {
             "/$controller/$action?/$id?"()
@@ -74,7 +74,7 @@ class RedirectNonAbsoluteURISpec extends AbstractUrlMappingsSpec {
     }
 
     @Issue('10879')
-    void 'A redirect without 'absolute' parameter generates an absolute URL in Location header by default'() {
+    void 'A redirect without "absolute" parameter generates an absolute URL in Location header by default'() {
         given:
         def linkGenerator = getLinkGenerator {
             "/$controller/$action?/$id?"()
@@ -95,7 +95,7 @@ class RedirectNonAbsoluteURISpec extends AbstractUrlMappingsSpec {
     }
 
     @Issue('11673')
-    void 'An 'absolute=false' redirect includes context-path in Location header'() {
+    void 'An "absolute=false" redirect includes context-path in Location header'() {
         given:
         def linkGenerator = getLinkGeneratorWithContextPath {
             "/$controller/$action?/$id?"()
@@ -116,7 +116,7 @@ class RedirectNonAbsoluteURISpec extends AbstractUrlMappingsSpec {
     }
 
     @Issue('15132')
-    void 'An 'absolute=false' redirect not added context-path with url params'() {
+    void 'An "absolute=false" redirect not added context-path with url params'() {
         given:
         def linkGenerator = getLinkGeneratorWithContextPath {
             "/$controller/$action?/$id?"()

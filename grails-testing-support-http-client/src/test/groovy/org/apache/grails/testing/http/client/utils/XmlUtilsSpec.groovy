@@ -53,17 +53,17 @@ class XmlUtilsSpec extends Specification {
 
         where:
         doubleQ | expEmptyEle | omitEmptyAttr | omitNullAttr | spaceInEmptyEle || expectedXml
-        true    | false       | false         | false        | true            || '<product a='a' b='' c=''><empty /></product>'
-        true    | false       | false         | false        | false           || '<product a='a' b='' c=''><empty/></product>'
-        true    | true        | false         | false        | false           || '<product a='a' b='' c=''><empty></empty></product>'
+        true    | false       | false         | false        | true            || "<product a='a' b='' c=''><empty /></product>"
+        true    | false       | false         | false        | false           || "<product a='a' b='' c=''><empty/></product>"
+        true    | true        | false         | false        | false           || "<product a='a' b='' c=''><empty></empty></product>"
         false   | false       | true          | false        | false           || "<product a='a' c=''><empty/></product>"
-        true    | false       | false         | true         | true            || '<product a='a' b=''><empty /></product>'
+        true    | false       | false         | true         | true            || "<product a='a' b=''><empty /></product>"
         false   | true        | true          | true         | false           || "<product a='a'><empty></empty></product>"
     }
 
     void 'toXml optionally prepends doctype declaration'() {
         given:
-        def format = new XmlUtils.Format(doctype: '<!DOCTYPE product SYSTEM 'product.dtd'>')
+        def format = new XmlUtils.Format(doctype: "<!DOCTYPE product SYSTEM 'product.dtd'>")
 
         when:
         def xml = XmlUtils.toXml(format) {
@@ -73,14 +73,14 @@ class XmlUtilsSpec extends Specification {
         }
 
         then:
-        xml == '<!DOCTYPE product SYSTEM 'product.dtd'><product><id>1</id></product>'
+        xml == "<!DOCTYPE product SYSTEM 'product.dtd'><product><id>1</id></product>"
     }
 
     void 'toXml can include declaration before doctype'() {
         given:
         def format = new XmlUtils.Format(
                 omitDeclaration: false,
-                doctype: '<!DOCTYPE product SYSTEM 'product.dtd'>'
+                doctype: "<!DOCTYPE product SYSTEM 'product.dtd'>"
         )
 
         when:
@@ -120,7 +120,7 @@ class XmlUtilsSpec extends Specification {
         def format = new XmlUtils.Format(
                 omitDeclaration: false,
                 prettyPrint: true,
-                doctype: '<!DOCTYPE product SYSTEM 'product.dtd'>',
+                doctype: "<!DOCTYPE product SYSTEM 'product.dtd'>",
                 lineSeparator: '|'
         )
 
@@ -132,7 +132,7 @@ class XmlUtilsSpec extends Specification {
         }
 
         then:
-        xml == '<?xml version='1.0' encoding='UTF-8'?>|<!DOCTYPE product SYSTEM 'product.dtd'>|<product>| <id>1</id>|</product>'
+        xml == '<?xml version="1.0" encoding="UTF-8"?>|<!DOCTYPE product SYSTEM \'product.dtd\'>|<product>| <id>1</id>|</product>'
     }
 
     void 'toXml uses custom indentation when pretty printing'() {
@@ -165,8 +165,8 @@ class XmlUtilsSpec extends Specification {
 
         where:
         escapeAttr || expectedXml
-        true       || '<product code='A&amp;B&lt;C' />'
-        false      || '<product code='A&B<C' />'
+        true       || "<product code='A&amp;B&lt;C' />"
+        false      || "<product code='A&B<C' />"
     }
 
     void 'toXml honors direct delegate formatting overrides over passed format values'() {
@@ -182,7 +182,7 @@ class XmlUtilsSpec extends Specification {
         }
 
         then:
-        xml == '<product keep='yes'><name>Widget</name></product>'
+        xml == '<product keep="yes"><name>Widget</name></product>'
     }
 
     void 'toXml honors direct delegate escapeAttributes override over passed format value'() {
@@ -196,12 +196,12 @@ class XmlUtilsSpec extends Specification {
         }
 
         then:
-        xml == '<product code='A&B<C' />'
+        xml == "<product code='A&B<C' />"
     }
 
     void 'toXml preserves dsl xml declaration when format omits declaration'() {
         given:
-        def format = new XmlUtils.Format(omitDeclaration: true, doctype: '<!DOCTYPE product SYSTEM 'product.dtd'>')
+        def format = new XmlUtils.Format(omitDeclaration: true, doctype: "<!DOCTYPE product SYSTEM 'product.dtd'>")
 
         when:
         def xml = XmlUtils.toXml(format) {
@@ -212,7 +212,7 @@ class XmlUtilsSpec extends Specification {
         }
 
         then:
-        xml == '<?xml version='1.1' encoding='UTF-16'?><!DOCTYPE product SYSTEM 'product.dtd'><product><id>1</id></product>'
+        xml == '<?xml version="1.1" encoding="UTF-16"?><!DOCTYPE product SYSTEM \'product.dtd\'><product><id>1</id></product>'
     }
     
     void 'toXml builds expected XML using markup DSL'() {
@@ -250,7 +250,7 @@ class XmlUtilsSpec extends Specification {
         }
 
         then:
-        xml == '<product name='Widget'><empty/></product>'
+        xml == '<product name="Widget"><empty/></product>'
     }
 
     void 'toXml keeps empty and null attributes by default'() {

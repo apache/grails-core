@@ -55,7 +55,7 @@ class GroovyPageRenderingTests extends Specification implements TagLibUnitTest<A
 
     def testForeach() {
         when:
-        def template='<g:each in="${toplist}'><g:each var='t' in='${it.sublist}">${t}</g:each></g:each>'
+        def template = "<g:each in='${toplist}'><g:each var='t' in='${it.sublist}'>${t}</g:each></g:each>"
         def result = applyTemplate(template, [toplist: [[sublist: ['a','b']],[sublist: ['c','d']]]])
 
         then:
@@ -64,7 +64,7 @@ class GroovyPageRenderingTests extends Specification implements TagLibUnitTest<A
 
     def testForeachInTagbody() {
         when:
-        def template='<g:set var='p'><g:each in="${toplist}'><g:each var='t' in='${it.sublist}">${t}</g:each></g:each></g:set>${p}'
+        def template = "<g:set var='p'><g:each in='${toplist}'><g:each var='t' in='${it.sublist}'>${t}</g:each></g:each></g:set>${p}"
         def result = applyTemplate(template, [toplist: [[sublist: ['a','b']],[sublist: ['c','d']]]])
 
         then:
@@ -73,7 +73,7 @@ class GroovyPageRenderingTests extends Specification implements TagLibUnitTest<A
 
     def testForeachIteratingMap() {
         when:
-        def template='<g:each var='k,v' in='[a: 1,b: 2,c: 3]'>${k}=${v},</g:each>'
+        def template = "<g:each var='k,v' in='[a: 1,b: 2,c: 3]'>${k}=${v},</g:each>"
         def result = applyTemplate(template, [:])
 
         then:
@@ -82,8 +82,8 @@ class GroovyPageRenderingTests extends Specification implements TagLibUnitTest<A
 
     def testForeachRenaming() {
         when:
-        def template='<g:each in="${list}'><g:each in='${list}">.</g:each></g:each>'
-        def result=applyTemplate(template, [list: 1..10])
+        def template = "<g:each in='${list}'><g:each in='${list}'>.</g:each></g:each>"
+        def result = applyTemplate(template, [list: 1..10])
 
         then:
         result == '.' * 100
@@ -91,11 +91,11 @@ class GroovyPageRenderingTests extends Specification implements TagLibUnitTest<A
 
     def testForeachGRAILS8089() {
         when:
-        def template='''<g:each in="${mockGrailsApplication.domainClasses.findAll {it.clazz=='we' && (it.clazz != 'no')}.sort({a,b->a.fullName.compareTo(b.fullName)})}'><option value='${it.fullName}'><g:message code='content.item.name.${it.fullName}' encodeAs='HTML"/></option></g:each>'''
-        def result=applyTemplate(template, [mockGrailsApplication: [domainClasses: [[fullName: 'MyClass2', clazz: 'we'], [fullName: 'MyClass1', clazz: 'we'], [fullName: 'MyClass3', clazz: 'no']] ]])
+        def template = '''<g:each in="${mockGrailsApplication.domainClasses.findAll {it.clazz=='we' && (it.clazz != 'no')}.sort({a,b->a.fullName.compareTo(b.fullName)})}"><option value='${it.fullName}'><g:message code='content.item.name.${it.fullName}' encodeAs='HTML'/></option></g:each>'''
+        def result = applyTemplate(template, [mockGrailsApplication: [domainClasses: [[fullName: 'MyClass2', clazz: 'we'], [fullName: 'MyClass1', clazz: 'we'], [fullName: 'MyClass3', clazz: 'no']] ]])
 
         then:
-        result == '<option value='MyClass1'>content.item.name.MyClass1</option><option value='MyClass2'>content.item.name.MyClass2</option>'
+        result == "<option value='MyClass1'>content.item.name.MyClass1</option><option value='MyClass2'>content.item.name.MyClass2</option>"
     }
 
     def testNestedExpression() {

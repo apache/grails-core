@@ -113,7 +113,7 @@ class GroovyPageWithJSPTagsTests extends Specification implements TagLibUnitTest
         def output = applyTemplate(template)
 
         then:
-        output.contains('<img src='test'/>')
+        output.contains("<img src='test'/>")
     }
 
     void testDynamicAttributes() {

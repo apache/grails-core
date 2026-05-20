@@ -84,8 +84,7 @@ class ValidateableTraitAdHocSpec extends Specification {
         'Kirk' * 10 | 32       | false         | 'maxSize.exceeded' | 'max.exceeded'
     }
 
-    void 'Test that 'fieldsToValidate' can be used with ad-hoc constraints'() {
-        given:
+    void 'Test that "fieldsToValidate" can be used with ad-hoc constraints'() {        given:
         def person = new PersonAdHocValidateable(name: nameValue, age: ageValue)
 
         when:
@@ -179,8 +178,7 @@ class ValidateableTraitAdHocSpec extends Specification {
         ''        | -1       | false         | 'blank'       | 'min.notmet'
     }
 
-    void 'Test that 'beforeValidator' is called with ad-hoc constraints'() {
-        given:
+    void 'Test that "beforeValidator" is called with ad-hoc constraints'() {        given:
         def person = new PersonAdHocValidateable(name: 'Kirk', age: 32)
 
         expect:
@@ -193,7 +191,7 @@ class ValidateableTraitAdHocSpec extends Specification {
         person.name == 'KIRK'
     }
 
-    void 'Test that pre-declared is ignored when 'inherit:false' is specified'() {
+    void 'Test that pre-declared is ignored when "inherit:false" is specified'() {
         given:
         def person = new PersonAdHocValidateable(name: nameValue, age: ageValue)
 
@@ -221,7 +219,7 @@ class ValidateableTraitAdHocSpec extends Specification {
         [inherit: false] | {}                     | null        | null     | false         | 'nullable'         | 'nullable' // default 'nullable:false' is applied to ad-hoc constraints
     }
 
-    void 'Test that errors are not cleared for each call when 'clearErrors:false' is specified'() {
+    void 'Test that errors are not cleared for each call when "clearErrors:false" is specified'() {
         given:
         def person = new PersonAdHocValidateable(name: '', age: -1)
 

@@ -59,15 +59,14 @@ json g.render(object)
         def renderResult = render(OBJECT_VIEW, [object: pogo])
 
         then:'The result is correct'
-        renderResult.jsonText == '{'list':[{'foo':'bar','bar': ['A','B']},{'x':'y'}]}'
-    }
+        renderResult.jsonText == '{"list":[{"foo":"bar","bar": ["A","B"]},{"x":"y"}]}'    }
     void 'Test render a pogo with list of simple types'() {
         when:
         def pogo = new GenericListClass(list: [[foo: 'bar', bar: new GenericListClass(list: ['A','B'])], [x: 'y']])
         def renderResult = render(OBJECT_VIEW, [object: pogo])
 
         then:'The result is correct'
-        renderResult.jsonText == '{'list':[{'foo':'bar','bar': {'list':['A','B']}},{'x':'y'}]}'
+        renderResult.jsonText == '{"list":[{"foo":"bar","bar": {"list":["A","B"]}},{"x":"y"}]}'
     }
 
     void 'Test render a pogo with list of pogos'() {
@@ -76,7 +75,7 @@ json g.render(object)
         def renderResult = render(OBJECT_VIEW, [object: pogo])
 
         then:'The result is correct'
-        renderResult.jsonText == '{'list':[{'name':'A'},{'name':'B'}]}'
+        renderResult.jsonText == '{"list":[{"name":"A"},{"name":"B"}]}'
     }
 
     void 'Test render a pogo with a map'() {
@@ -85,7 +84,7 @@ json g.render(object)
         def renderResult = render(OBJECT_VIEW, [object: pogo])
 
         then:'The result is correct'
-        renderResult.jsonText == '{'map':{'foo':'bar','bar': ['A','B']}}'
+        renderResult.jsonText == '{"map":{"foo":"bar","bar": ["A","B"]}}'
     }
 
     void 'Test render a pogo with a map that has a pogo'() {
@@ -94,7 +93,7 @@ json g.render(object)
         def renderResult = render(OBJECT_VIEW, [object: pogo])
 
         then:'The result is correct'
-        renderResult.jsonText == '{'map':{'foo':'bar','bar': {'list':['A','B']}}}'
+        renderResult.jsonText == '{"map":{"foo":"bar","bar": {"list":["A","B"]}}}'
     }
 
 }

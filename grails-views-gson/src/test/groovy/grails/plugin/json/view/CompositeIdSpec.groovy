@@ -50,8 +50,7 @@ json g.render(simple)
 ''', [simple: simple])
 
         then:'The result is correct'
-        result.jsonText == '{'first':'x','second': 'y','age': 99}'
-    }
+        result.jsonText == '{"first":"x","second": "y","age": 99}'    }
 
     void 'Test render domain object with a complex composite id'() {
         given:
@@ -73,8 +72,7 @@ json g.render(domain)
 ''', [domain: domain])
 
         then:'The result is correct'
-        result.jsonText == '{'first':{'id':1},'second': {'id':2},'age': 99}'
-
+        result.jsonText == '{"first":{"id":1},"second": {"id":2},"age": 99}'
         when: 'The template expands on an id property'
         result = render('''
 import grails.plugin.json.view.*
@@ -86,7 +84,7 @@ json g.render(domain, [expand: ['first']])
 ''', [domain: domain])
 
         then:'The result is correct'
-        result.jsonText == '{'first':{'id':1,'firstName': 'x'},'second': {'id':2},'age': 99}'
+        result.jsonText == '{"first":{"id":1,"firstName": "x"},"second": {"id":2},"age": 99}'
 
         when: 'The template expands on an id property and excludes'
         result = render('''
@@ -99,7 +97,7 @@ json g.render(domain, [expand: ['first'], excludes: ['first.id']])
 ''', [domain: domain])
 
         then:'The result is correct'
-        result.jsonText == '{'first':{'firstName':'x'},'second': {'id':2},'age': 99}'
+        result.jsonText == '{"first":{"firstName":"x"},"second": {"id":2},"age": 99}'
 
         when: 'The template sets deep to true'
         result = render('''
@@ -112,7 +110,7 @@ json g.render(domain, [deep: true])
 ''', [domain: domain])
 
         then:'The result is correct'
-        result.jsonText == '{'first':{'id':1,'firstName': 'x'},'second': {'id':2,'secondName': 'y'},'age': 99}'
+        result.jsonText == '{"first":{"id":1,"firstName": "x"},"second": {"id":2,"secondName": "y"},"age": 99}'
     }
 
     void 'Test render domain object with a mixed composite id'() {
@@ -133,7 +131,7 @@ json g.render(domain)
 ''', [domain: domain])
 
         then:'The result is correct'
-        result.jsonText == '{'first':{'id':1},'second': 'y','age': 99}'
+        result.jsonText == '{"first":{"id":1},"second": "y","age": 99}'
 
         when: 'The template expands on an id property'
         result = render('''
@@ -146,7 +144,7 @@ json g.render(domain, [expand: ['first']])
 ''', [domain: domain])
 
         then:'The result is correct'
-        result.jsonText == '{'first':{'id':1,'firstName': 'x'},'second': 'y','age': 99}'
+        result.jsonText == '{"first":{"id":1,"firstName": "x"},"second": "y","age": 99}'
 
         when: 'The template expands on an id property and excludes'
         result = render('''
@@ -159,7 +157,7 @@ json g.render(domain, [expand: ['first'], excludes: ['second']])
 ''', [domain: domain])
 
         then:'The result is correct'
-        result.jsonText == '{'first':{'id':1,'firstName': 'x'},'age': 99}'
+        result.jsonText == '{"first":{"id":1,"firstName": "x"},"age": 99}'
 
         when: 'The template sets deep to true'
         result = render('''
@@ -172,7 +170,7 @@ json g.render(domain, [deep: true])
 ''', [domain: domain])
 
         then:'The result is correct'
-        result.jsonText == '{'first':{'id':1,'firstName': 'x'},'second': 'y','age': 99}'
+        result.jsonText == '{"first":{"id":1,"firstName": "x"},"second": "y","age": 99}'
     }
 
 }

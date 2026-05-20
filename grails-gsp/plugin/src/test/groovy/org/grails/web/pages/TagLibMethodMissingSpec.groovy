@@ -39,15 +39,15 @@ class TagLibMethodMissingSpec extends AbstractGrailsEnvChangingSpec implements T
             content == expectedContent
             content == content2
         where:
-            [template, expectedContent, grailsEnv] <<  createCombinationsForGrailsEnvs([
+            [template, expectedContent, grailsEnv] << createCombinationsForGrailsEnvs([
                 ['<a:zeroArguments />', 'ab'],
                 ['${a.zeroArguments()}', 'ab'],
                 ['a${g.renderErrors()}b', 'ab'],
                 ['a${renderErrors()}b', 'ab'],
-                ['<a:myLink/>', '<a href='/one/two'></a><a href='/foo/bar'>Hello World</a>'],
-                ['<a:myLink2/>', '<a href='/one/two'></a><a href='/foo/bar'>Hello World</a>'],
+                ['<a:myLink/>', "<a href='/one/two'></a><a href='/foo/bar'>Hello World</a>"],
+                ['<a:myLink2/>', "<a href='/one/two'></a><a href='/foo/bar'>Hello World</a>"],
                 ['<a:bodyTag>hello</a:bodyTag>', 'hellohellohellohello'],
-                ['hello ${other.printBody {'world'}}!', 'hello world!']
+                ["hello \${other.printBody {'world'}}!", 'hello world!']
             ])
     }
 }

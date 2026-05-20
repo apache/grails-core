@@ -51,14 +51,14 @@ class DisplayTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitT
 			def result = applyTemplate('<f:display bean='personInstance' />', [personInstance: personInstance])
 
 		then:'The result is a list'
-			result.contains '<ol class='property-list person'>'
+			result.contains "<ol class='property-list person'>"
 			result.contains '<span id='gender-label' class='property-label'>Gender</span>'
 			result.contains '<div class='property-value' aria-labelledby='gender-label'>Male</div>'
 	}
 
 	void 'display tag allows to specify order'() {
 		when:'A list is rendered'
-		def result = applyTemplate('<f:display bean='personInstance' order='salutation,name,gender'/>', [personInstance: personInstance])
+		def result = applyTemplate("<f:display bean='personInstance' order='salutation,name,gender'/>", [personInstance: personInstance])
 		def ol = XML.parse(result)
 
 		then:
@@ -68,7 +68,7 @@ class DisplayTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitT
 
 	void 'display tag allows to specify the except'() {
 		when:
-		def result = applyTemplate('<f:display bean='personInstance' except='salutation,grailsDeveloper,picture,anotherPicture,password,dateOfBirth,emails'/>', [personInstance: personInstance])
+		def result = applyTemplate("<f:display bean='personInstance' except='salutation,grailsDeveloper,picture,anotherPicture,password,dateOfBirth,emails'/>", [personInstance: personInstance])
 		def ol = XML.parse(result)
 
 		then:
@@ -78,12 +78,12 @@ class DisplayTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitT
 
 	void 'renders value using g:fieldValue if no template is present'() {
 		expect:
-		applyTemplate('<f:display bean='personInstance' property='name'/>', [personInstance: personInstance]) == personInstance.name
+		applyTemplate("<f:display bean='personInstance' property='name'/>", [personInstance: personInstance]) == personInstance.name
 	}
 
 	void 'renders value that is an association but not to a grom entity'() {
 		expect:
-		applyTemplate('<f:display bean='personInstance' property='emails'/>', [personInstance: personInstance]) == personInstance.emails.toString()
+		applyTemplate("<f:display bean='personInstance' property='emails'/>", [personInstance: personInstance]) == personInstance.emails.toString()
 	}
 
 	void 'renders boolean values using g:formatBoolean'() {
@@ -91,12 +91,12 @@ class DisplayTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitT
 		messageSource.addMessage('default.boolean.true', request.locale, 'Yes')
 
 		expect:
-		applyTemplate('<f:display bean='personInstance' property='minor'/>', [personInstance: personInstance]) == 'Yes'
+		applyTemplate("<f:display bean='personInstance' property='minor'/>", [personInstance: personInstance]) == 'Yes'
 	}
 
 	void 'renders date values using g:formatDate'() {
 		expect:
-		applyTemplate('<f:display bean='personInstance' property='dateOfBirth'/>', [personInstance: personInstance]) == applyTemplate('<g:formatDate date="${personInstance.dateOfBirth}' type='DATETIME"/>', [personInstance: personInstance])
+		applyTemplate("<f:display bean='personInstance' property='dateOfBirth'/>", [personInstance: personInstance]) == applyTemplate("<g:formatDate date='\${personInstance.dateOfBirth}' type='DATETIME'/>", [personInstance: personInstance])
 	}
 
 	void 'displays using template if one is present'() {
@@ -107,7 +107,7 @@ class DisplayTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitT
 		mockFormFieldsTemplateService.findTemplate(_, 'displayWrapper', _, null) >> [path: '/_fields/default/displayWrapper']
 
 		expect:
-		applyTemplate('<f:display bean='personInstance' property='name'/>', [personInstance: personInstance]) == '<dt>Name</dt><dd>Bart Simpson</dd>'
+		applyTemplate("<f:display bean='personInstance' property='name'/>", [personInstance: personInstance]) == '<dt>Name</dt><dd>Bart Simpson</dd>'
 	}
 
 	void 'supports theme for templates'() {
@@ -118,7 +118,7 @@ class DisplayTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitT
 		mockFormFieldsTemplateService.findTemplate(_, 'displayWrapper', _, 'test') >> [path: '/_fields/_themes/test/default/displayWrapper']
 
 		expect:
-		applyTemplate('<f:display bean='personInstance' property='name' theme='test'/>',
+		applyTemplate("<f:display bean='personInstance' property='name' theme='test'/>",
 				[personInstance: personInstance]) == '<theme>Name-Bart Simpson</theme>'
 	}
 
@@ -136,14 +136,14 @@ class DisplayTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitT
 		mockFormFieldsTemplateService.findTemplate(_, 'displayWidget-custom',_, 'test') >> [path: '/_fields/_themes/test/default/display-custom']
 
 		expect: "'default' displayStyle uses 'display' template"
-		applyTemplate('<f:display bean='personInstance' property='name' displayStyle='default'/>', [personInstance: personInstance]) == '<dt>Name</dt><dd>Bart Simpson</dd>'
+		applyTemplate("<f:display bean='personInstance' property='name' displayStyle='default'/>", [personInstance: personInstance]) == '<dt>Name</dt><dd>Bart Simpson</dd>'
 
 		and: "'custom' displayStyle uses 'display-custom' template"
-		applyTemplate('<f:display bean='personInstance' property='name' displayStyle='custom'/>', [personInstance: personInstance]) == 'Custom: Bart Simpson'
+		applyTemplate("<f:display bean='personInstance' property='name' displayStyle='custom'/>", [personInstance: personInstance]) == 'Custom: Bart Simpson'
 
 		and: 'supports theme'
-		applyTemplate('<f:display bean='personInstance' property='name' displayStyle='default' theme='test'/>', [personInstance: personInstance]) == 'theme Bart Simpson</dd>'
-		applyTemplate('<f:display bean='personInstance' property='name' displayStyle='custom' theme='test'/>', [personInstance: personInstance]) == 'theme Custom: Bart Simpson'
+		applyTemplate("<f:display bean='personInstance' property='name' displayStyle='default' theme='test'/>", [personInstance: personInstance]) == 'theme Bart Simpson</dd>'
+		applyTemplate("<f:display bean='personInstance' property='name' displayStyle='custom' theme='test'/>", [personInstance: personInstance]) == 'theme Custom: Bart Simpson'
 	}
 
 	@Issue('https://github.com/grails/fields/issues/88')
@@ -155,7 +155,7 @@ class DisplayTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitT
 		mockFormFieldsTemplateService.findTemplate(_, 'displayWrapper', null, null) >> [path: '/_fields/default/displayWrapper']
 
 		expect:
-		applyTemplate('<f:display bean='personInstance' property='name'>${value.reverse()}</f:display>', [personInstance: personInstance]) == '<dt>Name</dt><dd>nospmiS traB</dd>'
+		applyTemplate("<f:display bean='personInstance' property='name'>\${value.reverse()}</f:display>", [personInstance: personInstance]) == '<dt>Name</dt><dd>nospmiS traB</dd>'
 	}
 
 	@Issue('https://github.com/grails/fields/issues/192')
@@ -167,7 +167,7 @@ class DisplayTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitT
 		mockFormFieldsTemplateService.findTemplate(_, 'displayWrapper', null, null) >> [path: '/_fields/default/displayWrapper']
 
 		expect:
-		applyTemplate('<f:display bean='personInstance' property='gender'>${value.name()}</f:display>', [personInstance: personInstance]) == '<dt>Gender</dt><dd>Male</dd>'
+		applyTemplate("<f:display bean='personInstance' property='gender'>\${value.name()}</f:display>", [personInstance: personInstance]) == '<dt>Gender</dt><dd>Male</dd>'
 	}
 
     @Issue('https://github.com/grails/fields/issues/135')
@@ -180,27 +180,27 @@ class DisplayTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitT
 
         expect:
         def expectedDisplayedPrice = productInstance.netPrice.round(1)
-        applyTemplate('<f:display bean='productInstance' property='netPrice'>${g.formatNumber(number: value, maxFractionDigits: 1)}</f:display>',
+        applyTemplate("<f:display bean='productInstance' property='netPrice'>\${g.formatNumber(number: value, maxFractionDigits: 1)}</f:display>",
                 [productInstance: productInstance]) == "<dt>Net Price</dt><dd>$expectedDisplayedPrice</dd>"
     }
 
     void 'can nest f:display inside f:with'() {
         expect:
-        applyTemplate('<f:with bean='personInstance'><f:display property='name'/></f:with>', [personInstance: personInstance]) == personInstance.name
+        applyTemplate("<f:with bean='personInstance'><f:display property='name'/></f:with>", [personInstance: personInstance]) == personInstance.name
     }
 
     @Issue('https://github.com/grails/fields/issues/160')
     void 'renders transients using g:fieldValue'() {
         expect:
-        applyTemplate('<f:display bean='personInstance' property='transientText'/>', [personInstance: personInstance]) == personInstance.transientText
+        applyTemplate("<f:display bean='personInstance' property='transientText'/>", [personInstance: personInstance]) == personInstance.transientText
     }
 
 	void 'renders all embedded components properties'() {
 		when: 'display an embedded address'
-		def result= applyTemplate('<f:display bean='personInstance' property='address'/>', [personInstance: personInstance])
+		def result= applyTemplate("<f:display bean='personInstance' property='address'/>", [personInstance: personInstance])
 
 		then: 'the result contains all embedded address properties'
-		result.contains('<ol class='property-list address'>')
+		result.contains("<ol class='property-list address'>")
 		result.contains('<span id='street-label' class='property-label'>Street</span>')
 		result.contains('<div class='property-value' aria-labelledby='street-label'>94 Evergreen Terrace</div>')
 		result.contains('<div class='property-value' aria-labelledby='city-label'>Springfield</div>')
@@ -217,7 +217,7 @@ class DisplayTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitT
 		def result = applyTemplate('<f:display bean='author'/>', [author: author])
 
 		then:
-		result.contains('<div class='property-value' aria-labelledby='books-label'><ul><li><a href='/book/show'>book 1</a></li><li><a href='/book/show'>book 2</a></li></ul></div>')
+		result.contains("<div class='property-value' aria-labelledby='books-label'><ul><li><a href='/book/show'>book 1</a></li><li><a href='/book/show'>book 2</a></li></ul></div>")
 	}
 
 	void 'renders one-side associations as a link'() {
@@ -226,10 +226,10 @@ class DisplayTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitT
 		new Author(name: 'Bart Simpson').addToBooks(book)
 
 		when:
-		def result = applyTemplate('<f:display bean='book'/>', [book: book])
+		def result = applyTemplate("<f:display bean='book'/>", [book: book])
 
 		then:
-		result.contains('<div class='property-value' aria-labelledby='author-label'><a href='/author/show'>Bart Simpson</a></div>')
+		result.contains("<div class='property-value' aria-labelledby='author-label'><a href='/author/show'>Bart Simpson</a></div>")
 	}
 
     void 'render field template with the input inside of it'() {
@@ -242,7 +242,7 @@ class DisplayTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitT
         mockFormFieldsTemplateService.findTemplate(_, 'widget', null, null) >> [path: '/_fields/default/widget']
 
         expect:
-        applyTemplate('<f:field bean='personInstance' property='name'/>', [personInstance: personInstance]) == '<dt>Name</dt><dd>nospmiS traB</dd>'
+        applyTemplate("<f:field bean='personInstance' property='name'/>", [personInstance: personInstance]) == '<dt>Name</dt><dd>nospmiS traB</dd>'
     }
 
     void 'render field template with the templates attribute'() {
@@ -255,7 +255,7 @@ class DisplayTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitT
         mockFormFieldsTemplateService.findTemplate(_, 'widget', 'widget', null) >> [path: '/_fields/widget/widget']
 
         expect:
-        applyTemplate('<f:field bean='personInstance' property='name' templates='widget'/>', [personInstance: personInstance]) == '<dt>WIDGET:</dt><dd>nospmiS traB</dd>'
+        applyTemplate("<f:field bean='personInstance' property='name' templates='widget'/>", [personInstance: personInstance]) == '<dt>WIDGET:</dt><dd>nospmiS traB</dd>'
     }
 
 	void 'render field template with the templates and theme attribute'() {
@@ -268,7 +268,7 @@ class DisplayTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitT
 		mockFormFieldsTemplateService.findTemplate(_, 'widget', 'widget', 'test') >> [path: '/_fields/_themes/test/widget/widget']
 
 		expect:
-		applyTemplate('<f:field bean='personInstance' property='name' templates='widget' theme='test'/>',
+		applyTemplate("<f:field bean='personInstance' property='name' templates='widget' theme='test'/>",
 				[personInstance: personInstance]) == '<dt>theme:</dt><dd>theme nospmiS traB</dd>'
 	}
 
@@ -282,7 +282,7 @@ class DisplayTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitT
         mockFormFieldsTemplateService.findTemplate(_, 'widget', null, null) >> [path: '/_fields/default/widget']
 
         expect:
-        applyTemplate('<f:field bean='personInstance' property='name' wrapper='widget'/>', [personInstance: personInstance]) == '<dt>WIDGET:</dt><dd>Bart Simpson</dd>'
+        applyTemplate("<f:field bean='personInstance' property='name' wrapper='widget'/>", [personInstance: personInstance]) == '<dt>WIDGET:</dt><dd>Bart Simpson</dd>'
     }
 
     void 'render field template with the widget attribute'() {
@@ -295,7 +295,7 @@ class DisplayTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitT
         mockFormFieldsTemplateService.findTemplate(_, 'widget', 'widget', null) >> [path: '/_fields/widget/widget']
 
         expect:
-        applyTemplate('<f:field bean='personInstance' property='name' widget='widget'/>', [personInstance: personInstance]) == '<dt>Name</dt><dd>nospmiS traB</dd>'
+        applyTemplate("<f:field bean='personInstance' property='name' widget='widget'/>", [personInstance: personInstance]) == '<dt>Name</dt><dd>nospmiS traB</dd>'
     }
 
 	void 'render field template with the widget and theme attribute'() {
@@ -308,7 +308,7 @@ class DisplayTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitT
 		mockFormFieldsTemplateService.findTemplate(_, 'widget', 'widget', 'test') >> [path: '/_fields/_themes/test/widget/widget']
 
 		expect:
-		applyTemplate('<f:field bean='personInstance' property='name' widget='widget' theme='test'/>',
+		applyTemplate("<f:field bean='personInstance' property='name' widget='widget' theme='test'/>",
 				[personInstance: personInstance]) == 'theme <dt>Name</dt><dd>theme nospmiS traB</dd>'
 	}
 
@@ -322,7 +322,7 @@ class DisplayTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitT
         mockFormFieldsTemplateService.findTemplate(_, 'displayWidget', null, null) >> [path: '/_fields/default/displayWidget']
 
         expect:
-        applyTemplate('<f:display bean='personInstance' property='name'/>', [personInstance: personInstance]) == '<dt>Name</dt><dd>nospmiS traB</dd>'
+        applyTemplate("<f:display bean='personInstance' property='name'/>", [personInstance: personInstance]) == '<dt>Name</dt><dd>nospmiS traB</dd>'
     }
 
     void 'render display template with the templates attribute'() {
@@ -335,7 +335,7 @@ class DisplayTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitT
         mockFormFieldsTemplateService.findTemplate(_, 'displayWidget', 'widget', null) >> [path: '/_fields/widget/displayWidget']
 
         expect:
-        applyTemplate('<f:display bean='personInstance' property='name' templates='widget'/>', [personInstance: personInstance]) == '<dt>WIDGET:</dt><dd>nospmiS traB</dd>'
+        applyTemplate("<f:display bean='personInstance' property='name' templates='widget'/>", [personInstance: personInstance]) == '<dt>WIDGET:</dt><dd>nospmiS traB</dd>'
     }
 
     void 'render display template with the field attribute'() {
@@ -348,7 +348,7 @@ class DisplayTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitT
         mockFormFieldsTemplateService.findTemplate(_, 'displayWidget', null, null) >> [path: '/_fields/default/displayWidget']
 
         expect:
-        applyTemplate('<f:display bean='personInstance' property='name' wrapper='widget'/>', [personInstance: personInstance]) == '<dt>WIDGET:</dt><dd>Bart Simpson</dd>'
+        applyTemplate("<f:display bean='personInstance' property='name' wrapper='widget'/>", [personInstance: personInstance]) == '<dt>WIDGET:</dt><dd>Bart Simpson</dd>'
     }
 
     void 'render display template with the widget attribute'() {
@@ -361,12 +361,12 @@ class DisplayTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitT
         mockFormFieldsTemplateService.findTemplate(_, 'displayWidget', 'widget', null) >> [path: '/_fields/widget/displayWidget']
 
         expect:
-        applyTemplate('<f:display bean='personInstance' property='name' widget='widget'/>', [personInstance: personInstance]) == '<dt>Name</dt><dd>nospmiS traB</dd>'
+        applyTemplate("<f:display bean='personInstance' property='name' widget='widget'/>", [personInstance: personInstance]) == '<dt>Name</dt><dd>nospmiS traB</dd>'
     }
 
     void 'f:display escapes one property to avoid XSS atacks'() {
         expect:
-        applyTemplate('<f:display bean='productInstance' property='name'/>', [productInstance: productInstance]) == '&lt;script&gt;alert(&#39;XSS&#39;);&lt;/script&gt;'
+        applyTemplate("<f:display bean='productInstance' property='name'/>", [productInstance: productInstance]) == '&lt;script&gt;alert(&#39;XSS&#39;);&lt;/script&gt;'
     }
 
     void 'f:display escapes values when rendering all properties to avoid XSS atacks'() {

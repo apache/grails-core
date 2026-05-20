@@ -49,18 +49,18 @@ class FormTagLibWithConfigSpec extends Specification implements TagLibUnitTest<F
     def testTextFieldTagWithNonBooleanAttributesAndConfig() {
         when:
 
-        def template = '<g:textField name='testField' value='1' disabled='false' checked='false' readonly='false' required='false' bogus='false' />'
+        def template = '''<g:textField name='testField' value='1' disabled='false' checked='false' readonly='false' required='false' bogus='false' />'''
         String output = applyTemplate(template)
 
         then:
-        assert output == '<input type='text' name='testField' value='1' id='testField' />'
+        assert output == "<input type='text' name='testField' value='1' id='testField' />"
 
         when:
-        template = '<g:textField name='testField' value='1' disabled='true' checked='true' readonly='true' required='true' bogus='true' />'
+        template = '''<g:textField name='testField' value='1' disabled='true' checked='true' readonly='true' required='true' bogus='true' />'''
         output = applyTemplate(template)
 
         then:
-        assert output == '<input type='text' name='testField' value='1' disabled='disabled' checked='checked' readonly='readonly' required='required' bogus='bogus' id='testField' />'
+        assert output == "<input type='text' name='testField' value='1' disabled='disabled' checked='checked' readonly='readonly' required='required' bogus='bogus' id='testField' />"
 
     }
 

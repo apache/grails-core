@@ -79,17 +79,17 @@ abstract class BookDataService {
     // Custom @Query (HQL) queries
     // ==========================================
 
-    @Query("from ${Book b} where b.title like $pattern order by b.title")
+    @Query("from Book b where b.title like :pattern order by b.title")
     abstract List<Book> searchByTitleHql(String pattern)
 
-    @Query("select count(b) from ${Book b} where b.author is not null")
+    @Query("select count(b) from Book b where b.author is not null")
     abstract Number countBooksWithAuthor()
 
-    @Query("select distinct b.title from ${Book b}")
+    @Query("select distinct b.title from Book b")
     abstract List<String> findAllDistinctTitles()
 
     // Update operations with @Query
-    @Query("update ${Book b} set b.inStock = $inStock where b.id = $id")
+    @Query("update Book b set b.inStock = :inStock where b.id = :id")
     abstract Number updateStockStatus(Serializable id, Boolean inStock)
 
     // Delete with @Where
@@ -97,13 +97,13 @@ abstract class BookDataService {
     abstract Number deleteByTitle(String titleToDelete)
 
     // Projection queries
-    @Query("select b.title, b.price from ${Book b} where b.price is not null")
+    @Query("select b.title, b.price from Book b where b.price is not null")
     abstract List<Object[]> findTitlesAndPrices()
 
-    @Query("select avg(b.price) from ${Book b} where b.price is not null")
+    @Query("select avg(b.price) from Book b where b.price is not null")
     abstract BigDecimal findAveragePrice()
 
-    @Query("select max(b.pageCount) from ${Book b}")
+    @Query("select max(b.pageCount) from Book b")
     abstract Integer findMaxPageCount()
 
     // ==========================================

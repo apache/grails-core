@@ -91,7 +91,7 @@ class VndErrorRenderingSpec extends Specification {
         then:'The response is correct'
             response.status == HttpStatus.UNPROCESSABLE_ENTITY.value()
             response.contentType == GrailsWebUtil.getContentType(VndErrorXmlRenderer.MIME_TYPE.name, GrailsWebUtil.DEFAULT_ENCODING)
-            response.contentAsString == '<?xml version='1.0' encoding='UTF-8'?><errors xml:lang='en'><error logref='book.title.invalid.1'><message>Bad Title</message><link rel='resource' href='http://localhost/books/1' /></error></errors>'
+            response.contentAsString == '<?xml version="1.0" encoding="UTF-8"?><errors xml:lang="en"><error logref="book.title.invalid.1"><message>Bad Title</message><link rel="resource" href="http://localhost/books/1" /></error></errors>'
 
     }
 
@@ -127,7 +127,7 @@ class VndErrorRenderingSpec extends Specification {
         then:'The response is correct'
             response.status == HttpStatus.UNPROCESSABLE_ENTITY.value()
             response.contentType == GrailsWebUtil.getContentType(VndErrorJsonRenderer.MIME_TYPE.name, GrailsWebUtil.DEFAULT_ENCODING)
-            response.contentAsString == '[{'logref':'book.title.invalid.1','message': 'Bad Title','path': 'http://localhost/books/1','_links': {'resource':{'href':'http://localhost/books/1'}}},{'logref':'book.title.bad.1','message': 'Title Bad','path': 'http://localhost/books/1','_links': {'resource':{'href':'http://localhost/books/1'}}}]'
+            response.contentAsString == '[{"logref":"book.title.invalid.1","message": "Bad Title","path": "http://localhost/books/1","_links": {"resource":{"href":"http://localhost/books/1"}}},{"logref":"book.title.bad.1","message": "Title Bad","path": "http://localhost/books/1","_links": {"resource":{"href":"http://localhost/books/1"}}}]'
 
     }
 

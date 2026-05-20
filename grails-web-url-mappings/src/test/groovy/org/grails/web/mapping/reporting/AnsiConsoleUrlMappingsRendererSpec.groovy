@@ -89,7 +89,7 @@ Controller: publisher
         renderer.isAnsiEnabled = false
         def urlMappingsHolder = getUrlMappingsHolder {
             "/$controller/$action?/$id?(.$format)?"()
-            "/images/$name**.jpg'(controller: 'image")
+            "/images/$name**.jpg"(controller: 'image')
             '/foo'(resources: 'foo')
             '500'(controller: 'errors')
             '/'(view: '/index')

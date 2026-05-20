@@ -94,7 +94,7 @@ class BsonPersistentEntityCodecSpec extends Specification {
 
         BsonPersistentEntityCodec codec = new BsonPersistentEntityCodec(codecRegistry, entity)
 
-        Person person = codec.decode(new JsonReader('{'age':12,'dateOfBirth': '1973-07-09T00:00+0000','name': 'Fred'}'))
+        Person person = codec.decode(new JsonReader('{"age":12,"dateOfBirth": "1973-07-09T00:00+0000","name": "Fred"}'))
 
         then:'The result is encoded JSON'
         person != null
@@ -125,7 +125,7 @@ class BsonPersistentEntityCodecSpec extends Specification {
 
         BsonPersistentEntityCodec codec = new BsonPersistentEntityCodec(codecRegistry, entity)
 
-        Person person = codec.decode(new JsonReader('{'age':12,'dateOfBirth': null,'name': 'Fred'}'))
+        Person person = codec.decode(new JsonReader('{"age":12,"dateOfBirth": null,"name": "Fred"}'))
 
         then:'The result is encoded JSON'
         person != null
@@ -156,7 +156,7 @@ class BsonPersistentEntityCodecSpec extends Specification {
 
         BsonPersistentEntityCodec codec = new BsonPersistentEntityCodec(codecRegistry, entity)
 
-        Person person = codec.decode(new JsonReader('{'age':12,'dateOfBirth': null,'name': 'Fred', pattern:/\\sfoo+/}'))
+        Person person = codec.decode(new JsonReader('{"age":12,"dateOfBirth": null,"name": "Fred", "pattern": "\\\\sfoo+"}'))
 
         then:'The result is encoded JSON'
         person != null

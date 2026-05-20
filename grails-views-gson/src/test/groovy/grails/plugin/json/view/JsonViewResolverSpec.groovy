@@ -43,7 +43,7 @@ class JsonViewResolverSpec extends Specification {
 
         then:'The page response header is set'
 //        response.contentType == 'application/json'
-        response.contentAsString == '{'name':'Joe','age': 25,'child': {'name':'Fred','age': 4},'children': [{'name':'Fred','age': 1},{'name':'Fred','age': 2},{'name':'Fred','age': 3}],'child2': {'name':'Fred','age': 6},'children2': [{'name':'Fred','age': 1},{'name':'Fred','age': 2},{'name':'Fred','age': 3}]}'
+        response.contentAsString == '{"name":"Joe","age": 25,"child": {"name":"Fred","age": 4},"children": [{"name":"Fred","age": 1},{"name":"Fred","age": 2},{"name":"Fred","age": 3}],"child2": {"name":"Fred","age": 6},"children2": [{"name":"Fred","age": 1},{"name":"Fred","age": 2},{"name":"Fred","age": 3}]}'
     }
 
     void 'Test create links using LinkGenerator'() {
@@ -63,7 +63,7 @@ class JsonViewResolverSpec extends Specification {
 
         then:'The page response header is set'
         response.contentType == 'application/json;charset=UTF-8'
-        response.contentAsString == '{'person':{'name':'bob','homepage': 'http://foo.com/person'}}'
+        response.contentAsString == '{"person":{"name":"bob","homepage": "http://foo.com/person"}}'
     }
 
     void 'Test that a resolved JSON view can configure the page response'() {

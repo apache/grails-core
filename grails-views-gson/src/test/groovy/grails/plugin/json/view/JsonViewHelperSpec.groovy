@@ -598,7 +598,7 @@ class JsonViewHelperSpec extends Specification implements JsonViewTest, GrailsUn
                 new Test(title: 'The Stand', author: new TestAuthor(name: 'Stephen King')), [excludes: ['author']]
         )
         then: 'The result is correct'
-        objectMapper.readTree(result.toString()) == objectMapper.readTree('{'title':'The Stand'}')
+        objectMapper.readTree(result.toString()) == objectMapper.readTree('{"title":"The Stand"}')
     }
 
     void 'Test render object method with plain object'() {
@@ -619,7 +619,7 @@ class JsonViewHelperSpec extends Specification implements JsonViewTest, GrailsUn
         when: 'We render an object'
         result = viewHelper.render(new Test2(title: 'The Stand', author: 'Stephen King'), [excludes: ['author']])
         then: 'The result is correct'
-        objectMapper.readTree(result.toString()) == objectMapper.readTree('{'title':'The Stand'}')
+        objectMapper.readTree(result.toString()) == objectMapper.readTree('{"title":"The Stand"}')
     }
 
     void 'Test render collection as null produces empty list'() {

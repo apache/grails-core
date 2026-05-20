@@ -48,7 +48,7 @@ class IterableRenderSpec extends Specification implements JsonViewUnitTest {
         ''', [players: players])
 
         then: 'The result is an array'
-        renderResult.jsonText == '[{'name':'Cantona'}]'
+        renderResult.jsonText == '[{"name":"Cantona"}]'
     }
 
     void 'Test render a collection type with HAL'() {

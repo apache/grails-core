@@ -26,7 +26,7 @@ class ElvisAndClosureGroovyPageTests extends AbstractGrailsTagTests {
     @Test
     void testElvisOperaturUsedWithClosure() {
 
-        def template = '<g:set var='finder' value="${myList.find { it == \'a\' } ?: \'default\'}"/>${finder}'
+        def template = '''<g:set var='finder' value="\${myList.find { it == 'a' } ?: 'default'}"/>\${finder}'''
 
         def content = applyTemplate(template, [myList: ['b','d','a', 'c']])
 

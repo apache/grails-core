@@ -45,26 +45,26 @@ class CoreTagsTests extends AbstractGrailsTagTests {
 
     @Test
     void testUnlessWithTestCondition() {
-        def template = '<g:unless test="${cond}">body text</g:unless>'
+        def template = '''<g:unless test="${cond}">body text</g:unless>'''
         assertOutputEquals 'body text', template, [cond: false], {it.toString().trim()}
         assertOutputEquals '', template, [cond: true], {it.toString().trim()}
     }
 
     @Test
     void testUnlessWithEnvCondition() {
-        def template = '<g:unless env='production'>body text</g:unless>'
+        def template = '''<g:unless env='production'>body text</g:unless>'''
         assertOutputEquals 'body text', template, [:], {it.toString().trim()}
-        template = '<g:unless env='development'>body text</g:unless>'
+        template = '''<g:unless env='development'>body text</g:unless>'''
         assertOutputEquals '', template, [:], {it.toString().trim()}
     }
 
     @Test
     void testUnlessWithEnvAndTestConditions() {
-        def template = '<g:unless env='production' test="${cond}">body text</g:unless>'
+        def template = '''<g:unless env='production' test="${cond}">body text</g:unless>'''
         assertOutputEquals 'body text', template, [cond: false], {it.toString().trim()}
         assertOutputEquals 'body text', template, [cond: true], {it.toString().trim()}
 
-        template = '<g:unless env='development' test="${cond}">body text</g:unless>'
+        template = '''<g:unless env='development' test="${cond}">body text</g:unless>'''
         assertOutputEquals 'body text', template, [cond: false], {it.toString().trim()}
         assertOutputEquals '', template, [cond: true], {it.toString().trim()}
     }
@@ -119,7 +119,7 @@ bar
     @Test
     void testIfWithoutEnvAndTestAttributes() {
         assertThrows(GrailsTagException, {
-            applyTemplate('<g:if>foo</g:if>')
+            applyTemplate('''<g:if>foo</g:if>''')
         })
     }
 

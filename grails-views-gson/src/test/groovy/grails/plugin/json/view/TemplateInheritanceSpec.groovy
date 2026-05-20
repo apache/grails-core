@@ -32,7 +32,7 @@ class TemplateInheritanceSpec extends Specification implements JsonViewTest {
 
         def result = render(template: 'child2', model: [player: new Player(name: 'Cantona')])
         then:
-        result.jsonText == '{'_links':{'self':{'href':'http://localhost:8080/player','hreflang': 'en','type': 'application/hal+json'}},'foo': 'bar','name': 'Cantona'}'
+        result.jsonText == '{"_links":{"self":{"href":"http://localhost:8080/player","hreflang": "en","type": "application/hal+json"}},"foo": "bar","name": "Cantona"}'
     }
 
     void 'test extending another template that uses g.render(..)'() {
@@ -42,7 +42,7 @@ class TemplateInheritanceSpec extends Specification implements JsonViewTest {
         player.id = 1L
         def result = render(template: 'child3', model: [player: player])
         then:
-        result.jsonText == '{'id':1,'name': 'Cantona'}'
+        result.jsonText == '{"id":1,"name": "Cantona"}'
     }
 
     void 'test extending another template and rendering a JSON block'() {
@@ -50,7 +50,7 @@ class TemplateInheritanceSpec extends Specification implements JsonViewTest {
 
         def result = render(template: 'child4', model: [player: new Player(name: 'Cantona')])
         then:
-        result.jsonText == '{'_links':{'self':{'href':'http://localhost:8080/player','hreflang': 'en','type': 'application/hal+json'}},'foo': 'bar','name': 'Cantona'}'
+        result.jsonText == '{"_links":{"self":{"href":"http://localhost:8080/player","hreflang": "en","type": "application/hal+json"}},"foo": "bar","name": "Cantona"}'
     }
 
     void 'test circular rendering is handled'() {
@@ -59,7 +59,7 @@ class TemplateInheritanceSpec extends Specification implements JsonViewTest {
 
         then:
         notThrown(StackOverflowError)
-        result.jsonText == '{'name':'Cantona'}'
+        result.jsonText == '{"name":"Cantona"}'
     }
 
     void 'test extending multiple templates'() {
@@ -67,7 +67,7 @@ class TemplateInheritanceSpec extends Specification implements JsonViewTest {
 
         def result = render(template: 'child2MultipleParents', model: [player: new Player(name: 'Cantona')])
         then:
-        result.jsonText == '{'_links':{'self':{'href':'http://localhost:8080/player','hreflang': 'en','type': 'application/hal+json'}},'foo': 'bar','bar': 'foo','name': 'Cantona'}'
+        result.jsonText == '{"_links":{"self":{"href":"http://localhost:8080/player","hreflang": "en","type": "application/hal+json"}},"foo": "bar","name": "Cantona"}'
     }
 
     void 'test extending multiple templates that uses g.render(..)'() {
@@ -77,7 +77,7 @@ class TemplateInheritanceSpec extends Specification implements JsonViewTest {
         player.id = 1L
         def result = render(template: 'child3MultipleParents', model: [player: player])
         then:
-        result.jsonText == '{'id':1,'bar': 'foo','name': 'Cantona'}'
+        result.jsonText == '{"id":1,"bar": "foo","name": "Cantona"}'
     }
 
     void 'test extending multiple templates and rendering a JSON block'() {
@@ -85,7 +85,7 @@ class TemplateInheritanceSpec extends Specification implements JsonViewTest {
 
         def result = render(template: 'child4MultipleParents', model: [player: new Player(name: 'Cantona')])
         then:
-        result.jsonText == '{'_links':{'self':{'href':'http://localhost:8080/player','hreflang': 'en','type': 'application/hal+json'}},'foo': 'bar','bar': 'foo','name': 'Cantona'}'
+        result.jsonText == '{"_links":{"self":{"href":"http://localhost:8080/player","hreflang": "en","type": "application/hal+json"}},"foo": "bar","name": "Cantona"}'
     }
 
 }

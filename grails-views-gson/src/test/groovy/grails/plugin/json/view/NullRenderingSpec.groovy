@@ -65,8 +65,7 @@ class NullRenderingSpec extends Specification implements JsonViewTest {
         def renderResult = render(templateText, [player: new Player()])
 
         then: 'No fields are rendered because they are null'
-        objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('{ 'team': null, 'name': null}')
-    }
+        objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('{"team": null, "name": null}')    }
 
     void 'test rendering nulls with a map'() {
         given:
@@ -83,7 +82,7 @@ class NullRenderingSpec extends Specification implements JsonViewTest {
         def renderResult = render(templateText, [map: [foo: null, bar: null]])
 
         then: 'Maps with nulls are rendered by default'
-        objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('{'foo': null,'bar': null}')
+        objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('{"foo": null,"bar": null}')
     }
 
     void 'test rendering nulls with a pogo'() {
@@ -119,6 +118,6 @@ class NullRenderingSpec extends Specification implements JsonViewTest {
         def renderResult = render(templateText, [obj: new Child2()])
 
         then:
-        objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('{'name': null, 'parent': null}')
+        objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('{"name": null, "parent": null}')
     }
 }

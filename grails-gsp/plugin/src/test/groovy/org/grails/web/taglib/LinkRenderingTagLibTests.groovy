@@ -26,84 +26,84 @@ class LinkRenderingTagLibTests extends Specification implements UrlMappingsUnitT
 
     def testMappingsWhichSpecifyAPlugin() {
         when:
-        def template = '<g:link controller='first' action='index' plugin='firstUtil'>click</g:link>'
+        def template = '''<g:link controller='first' action='index' plugin='firstUtil'>click</g:link>'''
         String output = applyTemplate(template)
 
         then:
-        output == '<a href='/pluginOneFirstController'>click</a>'
+        output == "<a href='/pluginOneFirstController'>click</a>"
 
         when:
-        template = '<g:link controller='first' action='index' plugin='secondUtil'>click</g:link>'
+        template = '''<g:link controller='first' action='index' plugin='secondUtil'>click</g:link>'''
         output = applyTemplate(template)
 
         then:
-        output == '<a href='/pluginTwoFirstController'>click</a>'
+        output == "<a href='/pluginTwoFirstController'>click</a>"
 
         when:
-        template = '<g:link controller='first' action='index' plugin='thirdUtil'>click</g:link>'
+        template = '''<g:link controller='first' action='index' plugin='thirdUtil'>click</g:link>'''
         output = applyTemplate(template)
 
         then:
-        output == '<a href='/pluginThreeFirstController'>click</a>'
+        output == "<a href='/pluginThreeFirstController'>click</a>"
 
         when:
-        template = '<g:link controller='first' action='index' plugin='firstUtil' params='[num: 42]' >click</g:link>'
+        template = '''<g:link controller='first' action='index' plugin='firstUtil' params='[num: 42]' >click</g:link>'''
         output = applyTemplate(template)
 
         then:
-        output == '<a href='/pluginOneFirstController?num=42'>click</a>'
+        output == "<a href='/pluginOneFirstController?num=42'>click</a>"
 
         when:
-        template = '<g:link controller='first' action='index' plugin='secondUtil' params='[num: 42]' >click</g:link>'
+        template = '''<g:link controller='first' action='index' plugin='secondUtil' params='[num: 42]' >click</g:link>'''
         output = applyTemplate(template)
 
         then:
-        output == '<a href='/pluginTwoFirstController/42'>click</a>'
+        output == "<a href='/pluginTwoFirstController/42'>click</a>"
 
         when:
-        template = '<g:link controller='first' action='index' plugin='thirdUtil' params='[num: 42]' >click</g:link>'
+        template = '''<g:link controller='first' action='index' plugin='thirdUtil' params='[num: 42]' >click</g:link>'''
         output = applyTemplate(template)
 
         then:
-        output == '<a href='/pluginThreeFirstController?num=42'>click</a>'
+        output == "<a href='/pluginThreeFirstController?num=42'>click</a>"
 
         when:
-        template = '<g:createLink controller='first' action='index' plugin='firstUtil' />'
+        template = '''<g:createLink controller='first' action='index' plugin='firstUtil' />'''
         output = applyTemplate(template)
 
         then:
         output == '/pluginOneFirstController'
 
         when:
-        template = '<g:createLink controller='first' action='index' plugin='secondUtil' />'
+        template = '''<g:createLink controller='first' action='index' plugin='secondUtil' />'''
         output = applyTemplate(template)
 
         then:
         output == '/pluginTwoFirstController'
 
         when:
-        template = '<g:createLink controller='first' action='index' plugin='thirdUtil' />'
+        template = '''<g:createLink controller='first' action='index' plugin='thirdUtil' />'''
         output = applyTemplate(template)
 
         then:
         output == '/pluginThreeFirstController'
 
         when:
-        template = '<g:createLink controller='first' action='index' plugin='firstUtil' params='[num: 42]' />'
+        template = '''<g:createLink controller='first' action='index' plugin='firstUtil' params='[num: 42]' />'''
         output = applyTemplate(template)
 
         then:
         output == '/pluginOneFirstController?num=42'
 
         when:
-        template = '<g:createLink controller='first' action='index' plugin='secondUtil' params='[num: 42]' />'
+        template = '''<g:createLink controller='first' action='index' plugin='secondUtil' params='[num: 42]' />'''
         output = applyTemplate(template)
 
         then:
         output == '/pluginTwoFirstController/42'
 
         when:
-        template = '<g:createLink controller='first' action='index' plugin='thirdUtil' params='[num: 42]' />'
+        template = '''<g:createLink controller='first' action='index' plugin='thirdUtil' params='[num: 42]' />'''
         output = applyTemplate(template)
 
         then:
@@ -119,56 +119,56 @@ class LinkRenderingTagLibTests extends Specification implements UrlMappingsUnitT
         String output = applyTemplate(template, [x: '7', x: '4'])
 
         then:
-        output == '<a href='/demo' class='B'>demo</a>'
+        output == "<a href='/demo' class='B'>demo</a>"
 
         when:
         template = '''<g:link controller='demo' class="${(y == '5' && x == '4') ? 'A' : 'B'}" >demo</g:link>'''
         output = applyTemplate(template, [x: '4', y: '5'])
 
         then:
-        output == '<a href='/demo' class='A'>demo</a>'
+        output == "<a href='/demo' class='A'>demo</a>"
 
         when:
         template = '''<g:link controller='demo' class='${(y == '5' && x == '5') ? 'A' : 'B'}' >demo</g:link>'''
         output = applyTemplate(template,  [y: '0', x: '5'])
 
         then:
-        output == '<a href='/demo' class='B'>demo</a>'
+        output == "<a href='/demo' class='B'>demo</a>"
 
         when:
         template = '''<g:link controller='demo' class='${(y == '5' && x == '5') ? 'A' : 'B'}' >demo</g:link>'''
         output = applyTemplate(template, [y: '5', x: '5'])
 
         then:
-        output == '<a href='/demo' class='A'>demo</a>'
+        output == "<a href='/demo' class='A'>demo</a>"
 
         when:
         template = '''<g:link controller='demo' class="${(someVar == 'abcd')}" >demos</g:link>'''
         output = applyTemplate(template, [someVar: 'some value'])
 
         then:
-        output == '<a href='/demo' class='false'>demos</a>'
+        output == "<a href='/demo' class='false'>demos</a>"
 
         when:
         template = '''<g:link controller='demo' class="${(someVar == 'abcd')}" >demos</g:link>'''
         output = applyTemplate(template, [someVar: 'abcd'])
 
         then:
-        output == '<a href='/demo' class='true'>demos</a>'
+        output == "<a href='/demo' class='true'>demos</a>"
 
         when:
         template = '''<g:link controller='demo' class="${(someVar == 'abcd' )}" >demos</g:link>'''
         output = applyTemplate(template,[someVar: 'some value'])
 
         then:
-        output == '<a href='/demo' class='false'>demos</a>'
+        output == "<a href='/demo' class='false'>demos</a>"
 
         when:
         template = '''<g:link controller='demo' class="${(someVar == 'abcd' )}" >demos</g:link>'''
         output = applyTemplate(template,[someVar: 'abcd'])
 
         then:
-        output == '<a href='/demo' class='true'>demos</a>'
+        output == "<a href='/demo' class='true'>demos</a>"
     }
 
 //    void testOverlappingReverseMappings() {
@@ -190,27 +190,27 @@ class LinkRenderingTagLibTests extends Specification implements UrlMappingsUnitT
 
     def testLinkWithControllerAndId() {
         when:
-        def template = '<g:link controller='book' id='10'>${name}</g:link>'
+        def template = '''<g:link controller='book' id='10'>${name}</g:link>'''
         String output = applyTemplate(template,[name: 'Groovy in Action'])
 
         then:
-        output == '<a href='/book?id=10'>Groovy in Action</a>'
+        output == "<a href='/book?id=10'>Groovy in Action</a>"
     }
 
     def testRenderLinkWithReverseMapping() {
         when:
-        def template = '<g:link controller='survey'>${name}</g:link>'
+        def template = '''<g:link controller='survey'>${name}</g:link>'''
         String output = applyTemplate(template,[name: 'Food I Like'])
 
         then:
-        output == '<a href='/surveys'>Food I Like</a>'
+        output == "<a href='/surveys'>Food I Like</a>"
 
         when:
-        template = '<g:link controller='test' action='index' id='MacBook'>${name}</g:link>'
+        template = '''<g:link controller='test' action='index' id='MacBook'>${name}</g:link>'''
         output = applyTemplate(template, [name: 'MacBook'])
 
         then:
-        output == '<a href='/products/MacBook'>MacBook</a>'
+        output == "<a href='/products/MacBook'>MacBook</a>"
     }
 
     def testUrlMapper() {
@@ -223,42 +223,42 @@ class LinkRenderingTagLibTests extends Specification implements UrlMappingsUnitT
 
     def testRenderLink() {
         when:
-        def template = '<g:link controller='foo' action='list'>${name}</g:link>'
+        def template = '''<g:link controller='foo' action='list'>${name}</g:link>'''
         String output = applyTemplate(template, [name: 'bar'])
         then:
-        output == '<a href='/foo/list'>bar</a>'
+        output == "<a href='/foo/list'>bar</a>"
     }
 
     def testRenderForm() {
         when:
-        def template = '<g:form controller='foo' action='list'>${name}</g:form>'
+        def template = '''<g:form controller='foo' action='list'>${name}</g:form>'''
         String output = applyTemplate(template,[name: 'bar'])
 
         then:
-        output == '<form action='/foo/list' method='post' >bar</form>'
+        output == "<form action='/foo/list' method='post' >bar</form>"
 
         when:
-        template = '<g:form controller='foo'>${name}</g:form>'
+        template = '''<g:form controller='foo'>${name}</g:form>'''
         output = applyTemplate(template,[name: 'bar'])
 
         then:
-        output == '<form action='/foo' method='post' >bar</form>'
+        output == "<form action='/foo' method='post' >bar</form>"
     }
 
     def testRenderFormWithUrlAttribute() {
         when:
-        def template = '<g:form url="[controller: \'stuff\',action: \'list\']">${name}</g:form>'
-        String output = applyTemplate(template,[name: 'bar'])
+        def template = '''<g:form url="[controller: 'stuff',action: 'list']">${name}</g:form>'''
+        def output = applyTemplate(template, [name: 'fred'])
 
         then:
-        output == '<form action='/stuff/list' method='post' >bar</form>'
+        output == '<form action="/stuff/list" method="post" >fred</form>'
 
         when:
-        template = '<g:form url="[controller: \'stuff\',action: \'show\', id: 11]' id='myForm">${name}</g:form>'
+        template = '''<g:form url="[controller: 'stuff',action: 'show', id: 11]" id="myForm">${name}</g:form>'''
         output = applyTemplate(template,[name: 'bar'])
 
         then:
-        output == '<form action='/stuff/show/11' method='post' id='myForm' >bar</form>'
+        output == "<form action='/stuff/show/11' method='post' id='myForm' >bar</form>"
     }
 
 //    void testRenderFormWithUrlAttributeAndReverseMapping() {
@@ -341,7 +341,7 @@ class LinkRenderingTestUrlMappings {
             controller = 'searchable'
         }
 
-        "/dummy/$action/$name/$id'(controller: 'test2")
+        "/dummy/$action/$name/$id"(controller: 'test2')
 
         '/pluginOneFirstController' {
             controller = 'first'

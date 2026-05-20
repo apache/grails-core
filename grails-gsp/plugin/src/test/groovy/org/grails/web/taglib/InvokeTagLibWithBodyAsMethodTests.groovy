@@ -80,7 +80,7 @@ class TestTagLib {
     }
     Closure testWithClosureAndGStringReturn = { attrs, body ->
         def foo = 'bar'
-        out << 'one' << test(foo: 'bar') { "$foo' } << 'four"
+        out << 'one' << test(foo: 'bar') { "$foo" } << 'four'
     }
 
     Closure testWithClosureAndStringReturn = { attrs, body ->
@@ -90,7 +90,7 @@ class TestTagLib {
 
     Closure testWithGStringBody = { attrs, body ->
         def foo = 'bar'
-        out << 'one' << test(foo: 'bar', "$foo') << 'four"
+        out << 'one' << test(foo: 'bar', "$foo") << 'four'
     }
 
     Closure testWithStringBody = { attrs, body ->

@@ -44,7 +44,7 @@ json jsonapi.render(players, [associations: false])
         }
 
         then: 'The result is an array'
-        renderResult.jsonText == '{'data':[{'type':'player','id': '1','attributes': {'name':'Cantona'}}],'links': {'self':'/foo'}}'
+        renderResult.jsonText == '{"data":[{"type":"player","id": "1","attributes": {"name":"Cantona"}}],"links": {"self":"/foo"}}'
 
     }
 }

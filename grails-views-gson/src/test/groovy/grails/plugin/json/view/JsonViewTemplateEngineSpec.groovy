@@ -47,7 +47,7 @@ json {
         def writer = new StringWriter()
         template.make().writeTo(writer)
         then:'The output is correct'
-        writer.toString() == '{'name':'bar'}'
+        writer.toString() == '{"name":"bar"}'
     }
 
     void 'Test static compilation with collections'() {
@@ -65,7 +65,7 @@ json urls, { URL url ->
         def writer = new StringWriter()
         template.make(urls: [new URL('http://foo.com')]).writeTo(writer)
         then:'The output is correct'
-        writer.toString() == '[{'protocol':'http'}]'
+        writer.toString() == '[{"protocol":"http"}]'
     }
 
     void 'Test render with includes'() {
@@ -82,7 +82,7 @@ json g.render(book, [includes: ['title']])
         def writer = new StringWriter()
         template.make(book: new Book(title: 'The Stand')).writeTo(writer)
         then:'The output is correct'
-        writer.toString() == '{'title':'The Stand'}'
+        writer.toString() == '{"title":"The Stand"}'
     }
 
     void 'Test HAL JSON view template'() {
@@ -160,7 +160,7 @@ json.site {
         template.make(url: new URL('http://foo.com')).writeTo(writer)
 
         then:'The output is correct'
-        writer.toString() == '{'site':{'protocol':'http'}}'
+        writer.toString() == '{"site":{"protocol":"http"}}'
 
         when:'A template is compiled with a compilation error'
         template = templateEngine.createTemplate('''
@@ -191,7 +191,7 @@ json.person {
         template.make().writeTo(writer)
 
         then:'The output is correct'
-        writer.toString() == '{'person':{'name':'bob'}}'
+        writer.toString() == '{"person":{"name":"bob"}}'
     }
 
     void 'Test pretty print a JSON view template'() {
@@ -230,7 +230,7 @@ json.person {
         template.make().writeTo(writer)
 
         then:'The output is correct'
-        writer.toString() == '{'person':{'name':'bob'}}'
+        writer.toString() == '{"person":{"name":"bob"}}'
 
     }
 }

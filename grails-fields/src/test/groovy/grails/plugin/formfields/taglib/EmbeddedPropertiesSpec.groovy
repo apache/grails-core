@@ -49,7 +49,7 @@ class EmbeddedPropertiesSpec extends AbstractFormFieldsTagLibSpec implements Tag
         views['/_fields/default/_wrapper.gsp'] = '${property} '
 
         when:
-        def output = applyTemplate('<f:field bean='personInstance' property='address'/>', [personInstance: personInstance])
+        def output = applyTemplate("<f:field bean='personInstance' property='address'/>", [personInstance: personInstance])
 
         then:
         output.contains('address.city address.country address.street')
@@ -60,7 +60,7 @@ class EmbeddedPropertiesSpec extends AbstractFormFieldsTagLibSpec implements Tag
         views['/_fields/default/_wrapper.gsp'] = '${property} '
 
         expect:
-        applyTemplate('<f:field bean='personInstance' property='address'/>', [personInstance: personInstance]) == '<fieldset class='embedded address'><legend>Address</legend>address.city address.country address.street </fieldset>'
+        applyTemplate("<f:field bean='personInstance' property='address'/>", [personInstance: personInstance]) == "<fieldset class='embedded address'><legend>Address</legend>address.city address.country address.street </fieldset>"
     }
 
     void 'embedded property label is resolved from message bundle'() {
@@ -71,7 +71,7 @@ class EmbeddedPropertiesSpec extends AbstractFormFieldsTagLibSpec implements Tag
         messageSource.addMessage('person.address.label', request.locale, 'Address of person')
 
         when:
-        def output = applyTemplate('<f:field bean='personInstance' property='address'/>', [personInstance: personInstance])
+        def output = applyTemplate("<f:field bean='personInstance' property='address'/>", [personInstance: personInstance])
 
         then:
         output.contains('<legend>Address of person</legend>')

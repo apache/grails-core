@@ -30,7 +30,7 @@ class InvokeTagWithCustomBodyClosureSpec extends AbstractGrailsEnvChangingSpec i
             def content = applyTemplate('<a:myLink />')
             def content2 = applyTemplate('<a:myLink />')
         then:'The expected result is rendered and when we call it a second time the cached version is used so we test that too'
-            content == '<a href='/one/two'></a><a href='/foo/bar'>Hello World</a>'
+            content == "<a href='/one/two'></a><a href='/foo/bar'>Hello World</a>"
             content == content2
         where:
             grailsEnv << AbstractGrailsEnvChangingSpec.grailsEnvs
@@ -41,7 +41,7 @@ class InvokeTagWithCustomBodyClosureSpec extends AbstractGrailsEnvChangingSpec i
             def content = applyTemplate("<a:myLink foo='bar'/><a:myLink/>")
 
         then:
-            content == '<a href='/one/two'></a><a href='/foo/bar'>Hello World</a><a href='/one/two'></a><a href='/foo/bar'>Hello World</a>'
+            content == "<a href='/one/two'></a><a href='/foo/bar'>Hello World</a><a href='/one/two'></a><a href='/foo/bar'>Hello World</a>"
     }
 }
 

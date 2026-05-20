@@ -29,7 +29,8 @@ class FormatTagLibSpec extends Specification implements TagLibUnitTest<FormatTag
     void testFormatCurrency() {
         given:
         BigDecimal number = '3.12325678' as BigDecimal
-        "3,12${new String([160] as char[])}€" == applyTemplate('<g:formatNumber type="currency' number='${number}' locale='fi_FI" />', [number: number])
+        expect:
+        "3,12${new String([160] as char[])}€" == applyTemplate("<g:formatNumber type='currency' number='\${number}' locale='fi_FI' />", [number: number])
     }
 
     @IgnoreIf({ jvm.isJava8() })
@@ -38,6 +39,6 @@ class FormatTagLibSpec extends Specification implements TagLibUnitTest<FormatTag
         BigDecimal number = '3.12325678' as BigDecimal
 
         expect:
-        "3,12${new String([160] as char[])}\$" == applyTemplate('<g:formatNumber type="currency' currencyCode='USD' number='${number}' locale='fi_FI" />',  [number: number])
+        "3,12${new String([160] as char[])}\$" == applyTemplate("<g:formatNumber type='currency' currencyCode='USD' number='\${number}' locale='fi_FI' />",  [number: number])
     }
 }

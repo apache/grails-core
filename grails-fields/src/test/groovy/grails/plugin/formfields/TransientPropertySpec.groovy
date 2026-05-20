@@ -46,7 +46,7 @@ class TransientPropertySpec extends AbstractFormFieldsTagLibSpec implements TagL
         views['/_fields/default/_wrapper.gsp'] = '${value}'
 
         when:
-        def output = applyTemplate('<f:field bean='userInstance' property='confirmPassword'/>', [userInstance: userInstance])
+        def output = applyTemplate("<f:field bean='userInstance' property='confirmPassword'/>", [userInstance: userInstance])
 
         then:
         output == userInstance.confirmPassword

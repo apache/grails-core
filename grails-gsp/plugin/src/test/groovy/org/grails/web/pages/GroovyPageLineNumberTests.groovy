@@ -35,25 +35,25 @@ class GroovyPageLineNumberTests extends Specification implements TagLibUnitTest<
         def template = '''
  <a href="${createLink(action: 'listActivity', controller: 'activity',
         params: [sort:params.sort?params.sort:'',
-        order: params.order?params.order:'asc', offset: params.offset?params.offset:0])}''>Click me</a>
+        order: params.order?params.order:'asc', offset: params.offset?params.offset:0])}">Click me</a>
 '''
         String output = applyTemplate(template).trim()
 
         then:
 
-        output == '<a href="/activity/listActivity?sort=&amp;order=asc&amp;offset=0''>Click me</a>'
+        output == '<a href="/activity/listActivity?sort=&amp;order=asc&amp;offset=0">Click me</a>'
     }
 
     def testExpressionWithQuotes() {
         when:
-        def template = '${foo + \' \' + bar}'
+        def template = "${foo + ' ' + bar}"
         String output = applyTemplate(template, [foo: 'one', bar: 'two'])
 
         then:
         output == 'one two'
 
         when:
-        template = '<g:resource dir="${foo}' file='${foo + \' \' + bar}" />'
+        template = '''<g:resource dir='${foo}' file='${foo + " " + bar}' />'''
         output = applyTemplate(template, [foo: 'one', bar: 'two'])
 
         then:
@@ -117,7 +117,7 @@ ${foo.bar.path}
 
     def testEachWithQuestionMarkAtEnd() {
         when:
-        def template = '<g:each in="${list?}">${it}</g:each>'
+        def template = '''<g:each in="${list?}">${it}</g:each>'''
         String output = applyTemplate(template, [list: [1,2,3]])
         then:
         output == '123'
@@ -125,7 +125,7 @@ ${foo.bar.path}
 
     def testStringWithQuestionMark() {
         when:
-        def template = '${'hello?'}'
+        def template = '${"hello?"}'
         String output = applyTemplate(template)
 
         then:

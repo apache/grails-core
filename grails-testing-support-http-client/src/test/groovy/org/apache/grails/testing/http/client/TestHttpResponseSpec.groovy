@@ -188,7 +188,7 @@ class TestHttpResponseSpec extends Specification {
 
     void 'json, jsonList and xml parse response body'() {
         given:
-        def jsonResponse = mockResponse(200, '{'a':1,'b': 'two'}')
+        def jsonResponse = mockResponse(200, '{"a":1,"b": "two"}')
         def listResponse = mockResponse(200, '[1,2,3]')
         def xmlResponse = mockResponse(200, '<root><item>value</item></root>')
 
@@ -281,7 +281,7 @@ class TestHttpResponseSpec extends Specification {
 
     void 'json accessors throw ClassCastException for mismatched JSON shapes'() {
         given:
-        def objectResponse = mockResponse(200, '{'a':1}')
+        def objectResponse = mockResponse(200, '{"a":1}')
         def listResponse = mockResponse(200, '[1,2,3]')
 
         when:
@@ -419,15 +419,15 @@ class TestHttpResponseSpec extends Specification {
 
     void 'expectJsonContains overloads validate subset for status and headers'() {
         given:
-        def response = mockResponse(200, '{'first':'first','second': null,'n': 1}', ['X-Env': ['dev']])
+        def response = mockResponse(200, '{"first":"first","second": null,"n": 1}', ['X-Env': ['dev']])
 
         expect:
         response.assertJsonContains(200, [first: 'first']).is(response)
         response.assertJsonContains(200, [first: 'first', second: null]).is(response)
         response.assertJsonContains('X-Env': 'dev', [second: null]).is(response)
         response.assertJsonContains(['X-Env': 'dev'], 200, [n: 1]).is(response)
-        response.assertJsonContains('{'first':'first'}').is(response)
-        response.assertJsonContains(200, '{'second':null}').is(response)
+        response.assertJsonContains('{"first":"first"}').is(response)
+        response.assertJsonContains(200, '{"second":null}').is(response)
 
         when:
         response.assertJsonContains(200, [missing: true])

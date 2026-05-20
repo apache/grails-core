@@ -55,7 +55,7 @@ class ValidationTagLibSpec extends Specification implements TagLibUnitTest<Valid
         b.hasErrors()
 
         when:
-        def template = '<g:fieldError bean="${book}' field='title" />'
+        def template = '''<g:fieldError bean="${book}' field='title" />'''
         webRequest.currentRequest.addPreferredLocale(Locale.US)
         def result = applyTemplate( template, [book: b] )
 
@@ -84,7 +84,7 @@ class ValidationTagLibSpec extends Specification implements TagLibUnitTest<Valid
             b.hasErrors()
 
         when:
-            def template = '<g:fieldError bean="${book}' field='title" />'
+            def template = '''<g:fieldError bean="${book}' field='title" />'''
             webRequest.currentRequest.addPreferredLocale(Locale.US)
             def result = applyTemplate( template, [book: b] )
 
@@ -107,7 +107,7 @@ class ValidationTagLibSpec extends Specification implements TagLibUnitTest<Valid
             b.hasErrors()
 
         when:
-            def template = '<g:fieldError bean="${book}' field='title" />'
+            def template = '''<g:fieldError bean="${book}' field='title" />'''
             webRequest.currentRequest.addPreferredLocale(Locale.US)
             def result = applyTemplate( template, [book: b] )
 
@@ -157,17 +157,17 @@ class ValidationTagLibSpec extends Specification implements TagLibUnitTest<Valid
         applicationContext.groovyPagesTemplateEngine.groovyPageLocator.addResourceLoader(resourceLoader)
 
         expect:
-        applyTemplate('<g:render template='/sometemplate' model='[book: book]' />', [book: b]) == expected
-        applyTemplate(template + '<g:render template='/sometemplate' model='[book: book]' />', [book: b]) == expected + expected
-        applyTemplate(htmlCodecDirective + template + '<g:render template='/sometemplate' model='[book: book]' />', [book: b]) == expected + expected
-        applyTemplate('<g:render template='/sometemplate' model='[book: book]' />' + template, [book: b]) == expected + expected
-        applyTemplate(htmlCodecDirective + '<g:render template='/sometemplate' model='[book: book]' />' + template, [book: b])== expected + expected
+        applyTemplate("<g:render template='/sometemplate' model='[book: book]' />", [book: b]) == expected
+        applyTemplate(template + "<g:render template='/sometemplate' model='[book: book]' />", [book: b]) == expected + expected
+        applyTemplate(htmlCodecDirective + template + "<g:render template='/sometemplate' model='[book: book]' />", [book: b]) == expected + expected
+        applyTemplate("<g:render template='/sometemplate' model='[book: book]' />" + template, [book: b]) == expected + expected
+        applyTemplate(htmlCodecDirective + "<g:render template='/sometemplate' model='[book: book]' />" + template, [book: b])== expected + expected
 
-        applyTemplate('<g:render template='/sometemplate_nocodec' model='[book: book]' />', [book: b]) == expected
-        applyTemplate(template + '<g:render template='/sometemplate_nocodec' model='[book: book]' />', [book: b]) == expected + expected
-        applyTemplate(htmlCodecDirective + template + '<g:render template='/sometemplate_nocodec' model='[book: book]' />', [book: b])== expected + expected
-        applyTemplate('<g:render template='/sometemplate_nocodec' model='[book: book]' />' + template, [book: b])== expected + expected
-        applyTemplate(htmlCodecDirective + '<g:render template='/sometemplate_nocodec' model='[book: book]' />' + template, [book: b]) == expected + expected
+        applyTemplate("<g:render template='/sometemplate_nocodec' model='[book: book]' />", [book: b]) == expected
+        applyTemplate(template + "<g:render template='/sometemplate_nocodec' model='[book: book]' />", [book: b]) == expected + expected
+        applyTemplate(htmlCodecDirective + template + "<g:render template='/sometemplate_nocodec' model='[book: book]' />", [book: b])== expected + expected
+        applyTemplate("<g:render template='/sometemplate_nocodec' model='[book: book]' />" + template, [book: b])== expected + expected
+        applyTemplate(htmlCodecDirective + "<g:render template='/sometemplate_nocodec' model='[book: book]' />" + template, [book: b]) == expected + expected
     }
 
     void testFieldValueTag() {
@@ -222,7 +222,7 @@ class ValidationTagLibSpec extends Specification implements TagLibUnitTest<Valid
     void testFieldValueTagWithDecimalNumber() {
         given:
         def b = new ValidationTagLibBook()
-        def template = '<g:fieldValue bean="${book}' field='usPrice" />'
+        def template = '''<g:fieldValue bean="${book}' field='usPrice" />'''
 
         b.publisherURL = new URL('http://google.com')
         b.usPrice = 1045.99
@@ -273,7 +273,7 @@ class ValidationTagLibSpec extends Specification implements TagLibUnitTest<Valid
         webRequest.currentRequest.addPreferredLocale(Locale.US)
 
         then:
-        applyTemplate(template, [book: b]) == '<input type='text' name='usPrice' value='1,045.99' id='usPrice' />'
+        applyTemplate(template, [book: b]) == "<input type='text' name='usPrice' value='1,045.99' id='usPrice' />"
 
         when:
         webRequest.currentRequest.removeAttribute(GrailsApplicationAttributes.PROPERTY_REGISTRY)
@@ -281,7 +281,7 @@ class ValidationTagLibSpec extends Specification implements TagLibUnitTest<Valid
         webRequest.currentRequest.addPreferredLocale(Locale.FRENCH)
 
         then:
-        applyTemplate(template, [book: b]) == '<input type='text' name='usPrice' value='1&nbsp;045,99' id='usPrice' />'
+        applyTemplate(template, [book: b]) == "<input type='text' name='usPrice' value='1&nbsp;045,99' id='usPrice' />"
     }
 
     void testHasErrorsTag() {
@@ -305,14 +305,14 @@ class ValidationTagLibSpec extends Specification implements TagLibUnitTest<Valid
         then:
         b.hasErrors()
 
-        applyTemplate('''<g:hasErrors bean="${book}' field='releaseDate">success</g:hasErrors>''', [book: b]) == "success"
-        applyTemplate('''<g:hasErrors model='[book: book]' field='releaseDate'>success</g:hasErrors>''', [book: b]) == 'success'
+        applyTemplate('''<g:hasErrors bean="${book}" field="releaseDate">success</g:hasErrors>''', [book: b]) == "success"
+        applyTemplate('''<g:hasErrors model='[book: book]' field='releaseDate'>success</g:hasErrors>''', [book: b]) == "success"
         applyTemplate('''${hasErrors(bean: book, field: 'releaseDate') { 'success' }}''', [book: b]) == 'success'
         applyTemplate('''${hasErrors(model: [book: book], field: 'releaseDate') { 'success' }}''', [book: b]) == 'success'
         applyTemplate('''${g.hasErrors(bean: book, field: 'releaseDate') { 'success' }}''', [book: b]) == 'success'
         applyTemplate('''${g.hasErrors(model: [book: book], field: 'releaseDate') { 'success' }}''', [book: b]) == 'success'
-        applyTemplate('''<g:hasErrors bean="${book}' field='title">success</g:hasErrors>''', [book: b]) == ''
-        applyTemplate('''<g:hasErrors model='[book: book]' field='title'>success</g:hasErrors>''', [book: b]) == ''
+        applyTemplate('''<g:hasErrors bean="${book}" field="title">success</g:hasErrors>''', [book: b]) == ""
+        applyTemplate('''<g:hasErrors model='[book: book]' field='title'>success</g:hasErrors>''', [book: b]) == ""
 
         when:
         b.clearErrors()
@@ -442,7 +442,7 @@ class ValidationTagLibSpec extends Specification implements TagLibUnitTest<Valid
 
         given:
         def error = new FieldError('foo', 'bar',1, false, ['my.error.code'] as String[], null, 'This is default')
-        def template = '<g:message error="${error}" />'
+        def template = '''<g:message error="${error}" />'''
 
         expect:
         applyTemplate(template, [error: error]) == 'This is default'
@@ -453,7 +453,7 @@ class ValidationTagLibSpec extends Specification implements TagLibUnitTest<Valid
         messageSource.addMessage('welcome.message', Locale.ENGLISH, 'Hello!')
         messageSource.addMessage('welcome.message', Locale.ITALIAN, 'Ciao!')
 
-        def template = '<g:message code='welcome.message' />'
+        def template = '''<g:message code='welcome.message' />'''
 
         expect:
         applyTemplate(template, [:]) == 'Hello!'
@@ -464,7 +464,7 @@ class ValidationTagLibSpec extends Specification implements TagLibUnitTest<Valid
 
         messageSource.addMessage('test.blank.message', Locale.ENGLISH, '')
 
-        def template = '<g:message code='test.blank.message' />'
+        def template = '''<g:message code='test.blank.message' />'''
 
         assertOutputEquals('', template, [:])
     }
@@ -476,13 +476,13 @@ class ValidationTagLibSpec extends Specification implements TagLibUnitTest<Valid
                 getDefaultMessage: {-> 'The Default Message' }
         ] as MessageSourceResolvable
 
-        def template = '<g:message message="${message}" />'
+        def template = '''<g:message message="${message}" />'''
 
         assertOutputEquals('The Default Message', template, [message: resolvable])
     }
 
     void testDefaultMessageAttributeWithAnEmptyStringValue() {
-        def template  = '<g:message code='my.message.code' default=''/>'
+        def template  = '''<g:message code='my.message.code' default=''/>'''
         assertOutputEquals '', template
     }
 
@@ -491,7 +491,7 @@ class ValidationTagLibSpec extends Specification implements TagLibUnitTest<Valid
         def person = ga.getDomainClass('ValidationTagLibPerson').newInstance()
         person.properties = [title: Title.MR, name: 'Al Coholic']
 
-        def template = '<g:fieldValue bean="${person}' field='title" />'
+        def template = '''<g:fieldValue bean="${person}" field="title" />'''
 
         assertOutputEquals 'Mr', template, [person: person]
     }
@@ -505,13 +505,13 @@ class ValidationTagLibSpec extends Specification implements TagLibUnitTest<Valid
         messageSource.addMessage('Title.MR', locale, 'Mnr')
 
         webRequest.currentRequest.addPreferredLocale(locale)
-        def template = '<g:fieldValue bean="${person}' field='title" />'
+        def template = '''<g:fieldValue bean="${person}" field="title" />'''
 
         assertOutputEquals 'Mnr', template, [person: person]
     }
 
     void testFieldValueTagForNonDomainInstance() {
-        def template = '''<g:fieldValue bean="${book}' field='myUrl" />'''
+        def template = '''<g:fieldValue bean="${book}" field="myUrl" />'''
 
         def myBook = gcl.parseClass('''
             import grails.persistence.*
@@ -529,7 +529,7 @@ class ValidationTagLibSpec extends Specification implements TagLibUnitTest<Valid
     }
 
     void testFieldValueTagForNonDomainInstanceWithNestedField() {
-        def template = '''<g:fieldValue bean="${book}' field='myUrl.publisherUrl" />'''
+        def template = '''<g:fieldValue bean="${book}" field="myUrl.publisherUrl" />'''
 
         // gcl.loadClass('MyClass', true)
         def myUrl = gcl.parseClass('''
@@ -569,7 +569,7 @@ class ValidationTagLibSpec extends Specification implements TagLibUnitTest<Valid
         personDomain.properties = [firstName: 'firstName1', lastName: 'lastName1', phoneUsInternational: phoneUsInternationalDomain]
         assertFalse personDomain.hasErrors()
 
-        def template = '''<g:fieldValue bean="${person}' field='phoneUsInternational" />'''
+        def template = '''<g:fieldValue bean="${person}" field="phoneUsInternational" />'''
         assertOutputEquals('+1(123)123-1234', template, [person: personDomain])
     }
 
@@ -588,10 +588,10 @@ class ValidationTagLibSpec extends Specification implements TagLibUnitTest<Valid
         personDomain.properties = [firstName: 'firstName1', lastName: 'lastName1', phoneUs: phoneUsDomain, otherPhoneUs: phoneUsDomain]
         assertFalse personDomain.hasErrors()
 
-        def template = '''<g:fieldValue bean="${person}' field='phoneUs" />'''
+        def template = '''<g:fieldValue bean="${person}" field="phoneUs" />'''
         assertOutputEquals('(123)123-1234', template, [person: personDomain])
 
-        def otherTemplate = '''<g:fieldValue bean="${person}' field='otherPhoneUs" />'''
+        def otherTemplate = '''<g:fieldValue bean="${person}" field="otherPhoneUs" />'''
         assertOutputEquals('123-123-1234', otherTemplate, [person: personDomain])
     }
 
@@ -614,7 +614,7 @@ class ValidationTagLibSpec extends Specification implements TagLibUnitTest<Valid
         person.lastName = 'lastName1'
         person.phoneUsInternational = phoneUsInternational
 
-        def template = '''<g:fieldValue bean="${person}' field='phoneUsInternational" />'''
+        def template = '''<g:fieldValue bean="${person}" field="phoneUsInternational" />'''
         assertOutputEquals('+1(123)123-1234', template, [person: person])
     }
 
@@ -637,10 +637,10 @@ class ValidationTagLibSpec extends Specification implements TagLibUnitTest<Valid
         person.phoneUs = phoneUs
         person.otherPhoneUs = phoneUs
 
-        def template = '''<g:fieldValue bean="${person}' field='phoneUs" />'''
+        def template = '''<g:fieldValue bean="${person}" field="phoneUs" />'''
         assertOutputEquals('(123)123-1234', template, [person: person])
 
-        def otherTemplate = '''<g:fieldValue bean="${person}' field='otherPhoneUs" />'''
+        def otherTemplate = '''<g:fieldValue bean="${person}" field="otherPhoneUs" />'''
         assertOutputEquals('123-123-1234', otherTemplate, [person: person])
     }
 }

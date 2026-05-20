@@ -63,7 +63,7 @@ class JsonRendererSpec extends Specification {
             renderer.render(new Album(title: 'Undertow', isbn: '38047301'), new ServletRenderContext(webRequest, [includes: ['title']]))
 
         then:'Only included properties are rendered'
-            webRequest.response.contentAsString == '{'title':'Undertow'}'
+            webRequest.response.contentAsString == '{"title":"Undertow"}'
 
     }
     void 'Test including properties with JsonRenderer'() {
@@ -77,7 +77,7 @@ class JsonRendererSpec extends Specification {
             renderer.render(new Album(title: 'Undertow', isbn: '38047301'), new ServletRenderContext(webRequest))
 
         then:'Only included properties are rendered'
-            webRequest.response.contentAsString == '{'title':'Undertow'}'
+            webRequest.response.contentAsString == '{"title":"Undertow"}'
 
     }
 
@@ -92,7 +92,7 @@ class JsonRendererSpec extends Specification {
             renderer.render(new Album(title: 'Undertow', isbn: '38047301'), new ServletRenderContext(webRequest))
 
         then:'Only included properties are rendered'
-            webRequest.response.contentAsString == '{'title':'Undertow'}'
+            webRequest.response.contentAsString == '{"title":"Undertow"}'
 
     }
 
@@ -120,7 +120,7 @@ class JsonRendererSpec extends Specification {
         renderer.render(new Song(title: 'Undertow'), new ServletRenderContext(webRequest))
 
         then:'Only included properties are rendered'
-        webRequest.response.contentAsString == '{'title':'Undertow'}'
+        webRequest.response.contentAsString == '{"title":"Undertow"}'
 
     }
 
@@ -149,7 +149,7 @@ class JsonRendererSpec extends Specification {
         renderer.render(new Song(title: 'Undertow'), new ServletRenderContext(webRequest))
 
         then:'Only included properties are rendered'
-        webRequest.response.contentAsString == '{'class':'org.grails.plugins.web.rest.render.json.Song','title': 'Undertow'}'
+        webRequest.response.contentAsString == '{"class":"org.grails.plugins.web.rest.render.json.Song","title": "Undertow"}'
 
     }
 }
