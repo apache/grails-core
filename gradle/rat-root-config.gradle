@@ -41,6 +41,9 @@ tasks.named('rat') {
             'src/*', // exclude build artifacts
             '**/.sdkmanrc', // tool selection files aren't code
             '.github/**', // github configuration isn't shipped in the source distro
+            '.venv/**', '.agents/**', '.claude/**', '.gemini/**', '.mcp/**', '.openclaw/**', 'scratch/**', 'state/**', 'trajectories/**',
+            '0_build_grails.txt', 'AGENTS.md', 'pyproject.toml', 'uv.lock', 'rlm_bridge.py',
+            '.cursorrules', // IDE configuration
             '**/.gitignore', // git configuration isn't code
             '**/.gitkeep', // git configuration isn't code
             '**/.classpath', // Eclipse generated files
@@ -134,6 +137,8 @@ tasks.named('rat') {
             'node_modules/**', // exclude node_modules
             '**/*.log', // exclude log files
             'local-tasks.gradle', // exclude local helper scripts
+            'local.properties', // local development properties
+            'local-init.gradle', // local initialization script
     ] + rootProject.subprojects.collect{"${rootProject.projectDir.relativePath(it.layout.buildDirectory.get().asFile).toString()}/**/*" }
     // logger.lifecycle("Excludes for RAT task: ${allExcludes.join(', \n')}")
     excludes = allExcludes
