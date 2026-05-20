@@ -233,10 +233,17 @@ class GrailsGradlePlugin implements Plugin<Project> {
         // Configure indy and log status after evaluation so user's grails { } block has been applied
         GrailsExtension grailsExtension = project.extensions.findByType(GrailsExtension)
         project.afterEvaluate {
-            boolean indyEnabled = grailsExtension?.indy?.getOrElse(false) ?: false
+            boolean indyEnabled = grailsExtension.indy.getOrElse(false)
+            Boolean preserveParameterNames = grailsExtension.preserveParameterNames.getOrNull()
+
             project.tasks.withType(GroovyCompile).configureEach { GroovyCompile c ->
                 c.groovyOptions.optimizationOptions.indy = indyEnabled
+
+                if (preserveParameterNames != null) {
+                    c.groovyOptions.parameters = preserveParameterNames
+                }
             }
+
             if (!indyEnabled) {
                 project.logger.info('Grails: Groovy invokedynamic (indy) is disabled to improve performance (see issue #15293).')
                 project.logger.info('        To enable invokedynamic: grails { indy = true } in build.gradle')
@@ -519,7 +526,7 @@ ${importStatements}
 
     protected GrailsExtension registerGrailsExtension(Project project) {
         if (project.extensions.findByName('grails') == null) {
-            project.extensions.add('grails', new GrailsExtension(project))
+            project.extensions.create('grails', GrailsExtension, project)
         }
     }
 
