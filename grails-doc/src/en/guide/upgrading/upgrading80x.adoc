@@ -705,6 +705,23 @@ grails {
 }
 ----
 
+NOTE: This Gradle extension property controls Groovy compilation only (`groovyOptions.parameters`). Java parameter-name preservation is enabled by the Spring Boot Gradle plugin, which adds `-parameters` to every `JavaCompile` task by default since Spring Boot 3.2. Grails 8 applications inherit this through the Spring Boot Gradle plugin and require no additional configuration for Java sources.
+
+If you compile TagLib classes outside the Grails Gradle plugin (for example, in a standalone Groovy module, a plain Spring Boot application that does not apply `org.springframework.boot`, or a build that disables the Spring Boot plugin's compiler configuration), enable parameter-name preservation explicitly so `@grails.gsp.Tag` methods can bind attributes by parameter name:
+
+[source,groovy]
+----
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs.add('-parameters')
+}
+
+tasks.withType(GroovyCompile).configureEach {
+    groovyOptions.parameters = true
+}
+----
+
+Without these flags, `Parameter.getName()` returns synthetic names such as `arg0`, the attribute lookup misses, and the call surfaces as `MissingMethodException` at runtime. The `@Tag`-annotated method itself produces no compile-time warning, because preservation is a property of the build, not of the source file.
+
 ==== 22. Known Plugin Incompatibilities
 
 Some third-party plugins have not yet been updated for Spring Boot 4 / Spring Framework 7 compatibility.
