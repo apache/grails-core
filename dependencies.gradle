@@ -80,7 +80,7 @@ ext {
             'geb-spock.version'             : '8.0.1',
             'graphql-java.version'          : '24.3',
             'graphql-java-extended-scalars.version': '24.0',
-            'groovy.version'                : '5.0.6',
+            'groovy.version'                : '5.0.7-SNAPSHOT',
             'hibernate-groovy-proxy.version': '1.1',
             'jakarta-servlet-api.version'   : '6.1.0',
             'jakarta-validation.version'    : '3.1.1',
