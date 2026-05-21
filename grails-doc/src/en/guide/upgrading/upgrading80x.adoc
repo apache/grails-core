@@ -677,7 +677,99 @@ class MyTagLibSpec extends Specification implements TagLibUnitTest<MyTagLib> {
 }
 ----
 
-==== 21. Grails Gradle Extension Preserves Parameter Names By Default
+==== 21. Method-based TagLib Handlers
+
+Grails 8 introduces method-based tag handler syntax as the recommended way to define tags. Closure-based handlers are still supported for backward compatibility.
+
+[source,groovy]
+----
+import grails.gsp.Tag
+
+class DemoTagLib {
+    static namespace = 'demo'
+
+    def greet(Map attrs) {
+        out << "Hello, ${attrs.name}!"
+    }
+
+    @Tag
+    def greeting(String name) {
+        out << "Hello, ${name}!"
+    }
+}
+----
+
+Method tags with the conventional signatures `def tag(Map attrs)`, `def tag(Closure body)`, and `def tag(Map attrs, Closure body)` are discovered automatically. Zero-argument method tags and method tags that bind named attributes directly to method parameters must use `@grails.gsp.Tag`; this avoids exposing ordinary public helper methods as tags.
+
+Grails Gradle application builds preserve Java and Groovy method parameter names by default (see §21.3 below). If you compile TagLib classes outside those plugins, enable Java `-parameters` and Groovy `groovyOptions.parameters = true` so `@Tag` methods can bind attributes by parameter name.
+
+To exclude a conventional public method from being exposed as a tag (for example, a helper that must remain public to satisfy an interface), annotate it with `@grails.gsp.NotATag`:
+
+[source,groovy]
+----
+import grails.gsp.NotATag
+
+class DemoTagLib {
+    def greet(Map attrs) {
+        out << "Hello, ${attrs.name}!"
+    }
+
+    @NotATag
+    def helper(Map attrs) { /* ... */ }
+}
+----
+
+The compile-time deprecation warning emitted for closure-based tag fields can be silenced by setting the system property `grails.taglib.warnDeprecatedClosures=false`.
+
+===== 21.1 Behavior change: tag method registration
+
+In Grails 7, the metaclass tag dispatchers registered for the taglib's own namespace did not override existing methods. Because method-based tags are now real methods on the TagLib class, those dispatchers must override methods of the same name so that function-style invocation (for example `tagLib.myTag(attrs)`) returns captured tag output rather than writing directly to `out`.
+
+If a TagLib intentionally defines a method that shares a name with a default-namespace tag in another TagLib, the locally defined method will be shadowed by the tag dispatcher. Rename the helper method or move it behind a different namespace if the previous behavior is required.
+
+This shadowing is not reported at runtime by default. To audit which TagLib methods are being overridden by tag dispatchers, enable `DEBUG` logging for `org.grails.taglib.TagLibraryMetaUtils` in `logback.xml` (or `logback-spring.xml`):
+
+[source,xml]
+----
+<logger name="org.grails.taglib.TagLibraryMetaUtils" level="DEBUG"/>
+----
+
+Each override is logged as `Registering tag dispatcher <namespace>:<tagName> over existing method <Class>.<method>(<paramTypes>)`. Inspect the output after application startup; any entry whose `<Class>` is one of your own TagLibs identifies a method that has been replaced by the dispatcher.
+
+===== 21.2 Behavior change: parameter-name binding for `Map` and `Closure` parameters
+
+Method-based tag handlers bind attributes to method parameters by parameter name. Two reserved names participate in this resolution:
+
+- A `Map`-typed parameter named `attrs` receives the full attributes map.
+- A `Closure`-typed parameter named `body` receives the tag body.
+
+In earlier iterations of the method-based handler implementation, a `Closure`-typed parameter was bound to the body regardless of its parameter name, while a `Map`-typed parameter required the literal name `attrs`. That asymmetry has been removed. Both reserved names are now applied consistently: a `Closure` parameter named anything other than `body` is treated as a normal named attribute (and must be supplied by name), just as a `Map` parameter named anything other than `attrs` is.
+
+If you have method-based tag handlers whose `Closure` parameter uses a name other than `body`, rename the parameter so the body binds as expected:
+
+[source,groovy]
+----
+import grails.gsp.Tag
+
+class DemoTagLib {
+
+    // Will NOT receive the tag body; `renderer` is treated as a named attribute.
+    @Tag
+    def before(Closure renderer) {
+        out << renderer.call()
+    }
+
+    // Receives the tag body.
+    @Tag
+    def after(Closure body) {
+        out << body.call()
+    }
+}
+----
+
+If parameter names are not preserved at compile time (see §21.3 below for the `preserveParameterNames` Gradle extension property), the first `Map` parameter is bound to `attrs` and the first `Closure` parameter is bound to `body` regardless of declared names, matching the behavior of closure-based tag handlers.
+
+===== 21.3 Grails Gradle Extension Preserves Parameter Names By Default
 
 In Grails 8, the Grails Gradle extension defaults `preserveParameterNames` to `true`.
 This configures Groovy compilation to retain method and constructor parameter names in generated class files.
