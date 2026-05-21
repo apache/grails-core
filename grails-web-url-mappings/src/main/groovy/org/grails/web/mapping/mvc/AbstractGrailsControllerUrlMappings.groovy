@@ -230,20 +230,32 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
             // else: wildcard-captured values didn't match a registered controller/action — skip
         }
         // When wildcard validation is enabled, promote validated wildcard matches
-        // (e.g., $action? resolving to a real action) only when they have strictly fewer
-        // non-routing URL captures — meaning they matched a more specific URL pattern.
+        // (e.g., $action? resolving to a real action) only when they are strictly more specific.
+        // Specificity is determined first by literal URL token count (more literals = more specific),
+        // then by non-routing param count (fewer free captures = more specific).
+        // A route with more literal path segments always beats one with fewer, regardless of
+        // whether either has wildcard captures ($action/$controller/$namespace).
         // Same wildcard status: preserve URL matcher's original order (stable sort).
         // When validation is disabled, preserve original URL matcher order entirely.
         if (validateWildcardMappings) {
             matches.sort(true) { a, b ->
                 if (a.hasWildcardCaptures() == b.hasWildcardCaptures()) return 0
-                int diff = nonRoutingParamCount(a) - nonRoutingParamCount(b)
-                if (a.hasWildcardCaptures() && diff < 0) return -1
-                if (b.hasWildcardCaptures() && diff < 0) return 1
+                // Primary: more literal URL tokens wins
+                int literalDiff = literalTokenCount(b) - literalTokenCount(a)
+                if (literalDiff != 0) return literalDiff
+                // Secondary: fewer non-routing captures wins (promotes more specific wildcard routes)
+                int paramDiff = nonRoutingParamCount(a) - nonRoutingParamCount(b)
+                if (a.hasWildcardCaptures() && paramDiff < 0) return -1
+                if (b.hasWildcardCaptures() && paramDiff < 0) return 1
                 0  // preserve original order
             }
         }
         matches as UrlMappingInfo[]
+    }
+
+    private static int literalTokenCount(UrlMappingInfo info) {
+        String[] tokens = info.urlData?.tokens
+        tokens == null ? 0 : (int) tokens.count { String t -> !t.contains('*') }
     }
 
     private static int nonRoutingParamCount(UrlMappingInfo info) {

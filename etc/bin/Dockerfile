@@ -38,6 +38,15 @@ ADD --chown=groovy gradlew /home/groovy/scripts
 ADD --chown=groovy KEYS /home/groovy/scripts
 ADD --chown=groovy gradle/wrapper/gradle-wrapper.jar /home/groovy/scripts/gradle/wrapper
 ADD --chown=groovy gradle/wrapper/gradle-wrapper.properties /home/groovy/scripts/gradle/wrapper
+
+# Defensive line-ending normalization. The repository's .gitattributes pins
+# shell scripts, gradlew, KEYS, and the Dockerfile to LF on every platform, but
+# committers with a pre-existing local checkout under core.autocrlf=true may
+# still feed CRLF into the build context. Linux refuses scripts with bash\r
+# shebangs and verify-keys.sh would fail the byte-for-byte SVN comparison.
+# Strip CRs from any text file that must be LF on Linux.
+RUN find /home/groovy/scripts -type f \( -name '*.sh' -o -name 'gradlew' -o -name 'KEYS' -o -name '*.properties' \) -exec sed -i 's/\r$//' {} \;
+
 ENV PATH="/home/groovy/scripts:/home/groovy/scripts/etc/bin:$PATH"
 ENV CI=true
 ENV LANG=C.UTF-8

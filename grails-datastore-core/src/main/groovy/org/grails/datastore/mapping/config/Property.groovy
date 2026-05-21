@@ -80,6 +80,20 @@ class Property implements Cloneable {
      */
     String generator
     /**
+     * Override the storage type used to persist this property independent of its declared Java type.
+     *
+     * <p>The primary use case is on identifiers: a domain may declare {@code String id} for
+     * ergonomic reasons (clean JSON, no native-type dance in controllers) while the underlying
+     * document stores {@code _id} as a native type such as {@code ObjectId}. Backends that
+     * support this (currently MongoDB GORM) coerce between the declared Groovy type and the
+     * native storage type on write, read, and query.
+     *
+     * <p>A {@code null} value means "use the declared Java type" (default / current behavior).
+     *
+     * @return The native storage class, or {@code null} to use the declared property type.
+     */
+    Class<?> storedAs
+    /**
      * @return The maximum size
      */
     Number maxSize = null
