@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -39,7 +39,6 @@ class PluginDiscoverySpec extends Specification {
      }
 
     def 'returns no plugin descriptors when the class loader has no grails-plugin.xml resources'() {
-
         given: 'a class loader with no Grails plugin descriptors'
         def emptyClassLoader = new URLClassLoader([] as URL[], (ClassLoader) null)
 
@@ -51,7 +50,6 @@ class PluginDiscoverySpec extends Specification {
     }
 
      def 'captures provided class names from plugin descriptor resource elements'() {
-
          given: 'a grails-plugin.xml with both type and resource elements'
          def pluginXml = '''
              <plugin name='test'>
@@ -100,7 +98,6 @@ class PluginDiscoverySpec extends Specification {
     }
 
      def 'extracts plugin class names from descriptor type elements'() {
-
          given: 'a grails-plugin.xml with known <type> elements'
          def xml = '''
              <plugin name='test'>
@@ -124,7 +121,6 @@ class PluginDiscoverySpec extends Specification {
      }
 
     def 'returns no plugin class names when the class loader has no grails-plugin.xml resources'() {
-
         given: 'a class loader with no Grails plugin descriptors'
         def emptyClassLoader = new URLClassLoader([] as URL[], (ClassLoader) null)
 
@@ -137,7 +133,6 @@ class PluginDiscoverySpec extends Specification {
 
     @Unroll
     def "derives logical plugin name '#expectedName' from plugin class #pluginClass.simpleName"() {
-
         expect: 'the logical plugin name matches the Grails naming convention'
         PluginUtils.getLogicalPluginName(pluginClass) == expectedName
 
@@ -241,7 +236,6 @@ class PluginDiscoverySpec extends Specification {
     }
 
     def 'parses plugin and provided class names from type and resource elements'() {
-
         given: 'plugin XML containing both type and resource elements'
         def xml = '''
             <plugin name='test'>
@@ -264,9 +258,8 @@ class PluginDiscoverySpec extends Specification {
     }
 
     def 'returns no plugin or provided classes when plugin XML has no matching elements'() {
-
         given: 'plugin XML without type or resource elements'
-        def xml = '<plugin name='empty'></plugin>'
+        def xml = '<plugin name="empty"></plugin>'
         def handler = new PluginXmlHandler()
         def parser = SpringIOUtils.newSAXParser()
 
@@ -279,7 +272,6 @@ class PluginDiscoverySpec extends Specification {
     }
 
     def 'trims surrounding whitespace from plugin class names in XML elements'() {
-
         given: 'plugin XML with whitespace around the type element content'
         def xml = '''
             <plugin name='test'>
@@ -300,7 +292,6 @@ class PluginDiscoverySpec extends Specification {
     }
 
     def 'exposes the expected plugin utility constants'() {
-
         expect: 'the plugin utility constants keep their documented values'
         with(PluginUtils) {
             PLUGIN_XML_PATTERN == 'META-INF/grails-plugin.xml'
@@ -314,16 +305,13 @@ class PluginDiscoverySpec extends Specification {
 // Test fixture plugin classes for GrailsPluginDiscoverySpec
 
 class DiscoveryTestCoreGrailsPlugin {
-
     def version = '1.0'
 }
 
 class DiscoveryTestSimpleGrailsPlugin {
-
     def version = '1.0'
 }
 
 class DiscoveryTestABCGrailsPlugin {
-
     def version = '1.0'
 }

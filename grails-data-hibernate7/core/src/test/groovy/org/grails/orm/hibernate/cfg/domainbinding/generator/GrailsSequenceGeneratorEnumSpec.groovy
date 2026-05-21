@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -45,7 +45,7 @@ import spock.lang.Unroll
 @Requires({ isDockerAvailable() })
 class GrailsSequenceGeneratorEnumSpec extends HibernateGormDatastoreSpec {
 
-    @Shared PostgreSQLContainer postgres = new PostgreSQLContainer('postgres:16')
+    @Shared PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:16")
 
     @Override
     void setupSpec() {
@@ -71,14 +71,14 @@ class GrailsSequenceGeneratorEnumSpec extends HibernateGormDatastoreSpec {
         // Use the real PostgreSQL database from the running datastore so DDL type
         // registries (needed by TableGenerator.registerExportables) are correct.
         def db = datastore.metadata.database
-        def table = new org.hibernate.mapping.Table('grails_sequence_generator_enum_spec_entity')
-        def column = new Column('id')
+        def table = new org.hibernate.mapping.Table("grails_sequence_generator_enum_spec_entity")
+        def column = new Column("id")
         def value = Mock(Value) {
             getColumns() >> [column]
             getTable()   >> table
         }
         def property = Mock(Property) {
-            getName() >> 'id'
+            getName() >> "id"
             getValue() >> value
         }
         def type = Mock(Type) {
@@ -94,17 +94,17 @@ class GrailsSequenceGeneratorEnumSpec extends HibernateGormDatastoreSpec {
     }
 
     @Unroll
-    def 'should dispatch #strategyName to #expectedClass'() {
+    def "should dispatch #strategyName to #expectedClass"() {
         given:
         def context = buildContext()
         def mappedId = Mock(HibernateSimpleIdentity) {
             // Explicit sequence name avoids the implicit-name path that requires TABLE property
-            getProperties() >> { def p = new Properties(); p.put(SequenceStyleGenerator.SEQUENCE_PARAM, 'test_seq'); p }
+            getProperties() >> { def p = new Properties(); p.put(SequenceStyleGenerator.SEQUENCE_PARAM, "test_seq"); p }
         }
         def domainClass = Mock(GrailsHibernatePersistentEntity) {
             getMappedForm() >> null
             getJavaClass()  >> GrailsSequenceGeneratorEnumSpecEntity
-            getTableName(_ as PersistentEntityNamingStrategy) >> 'grails_sequence_generator_enum_spec_entity'
+            getTableName(_ as PersistentEntityNamingStrategy) >> "grails_sequence_generator_enum_spec_entity"
         }
         def jdbcEnvironment = serviceRegistry.requireService(JdbcEnvironment)
         def namingStrategy = Mock(PersistentEntityNamingStrategy)
@@ -117,29 +117,28 @@ class GrailsSequenceGeneratorEnumSpec extends HibernateGormDatastoreSpec {
 
         where:
         strategyName        | expectedClass
-        'identity'          | GrailsIdentityGenerator
-        'sequence'          | GrailsSequenceStyleGenerator
-        'sequence-identity' | GrailsSequenceStyleGenerator
-        'increment'         | GrailsIncrementGenerator
-        'uuid'              | UuidGenerator
-        'uuid2'             | UuidGenerator
-        'assigned'          | Assigned
-        'table'             | GrailsTableGenerator
-        'enhanced-table'    | GrailsTableGenerator
-        'hilo'              | GrailsSequenceStyleGenerator
-        'native'            | GrailsNativeGenerator
-        'unknown'           | GrailsNativeGenerator
+        "identity"          | GrailsIdentityGenerator
+        "sequence"          | GrailsSequenceStyleGenerator
+        "sequence-identity" | GrailsSequenceStyleGenerator
+        "increment"         | GrailsIncrementGenerator
+        "uuid"              | UuidGenerator
+        "uuid2"             | UuidGenerator
+        "assigned"          | Assigned
+        "table"             | GrailsTableGenerator
+        "enhanced-table"    | GrailsTableGenerator
+        "hilo"              | GrailsSequenceStyleGenerator
+        "native"            | GrailsNativeGenerator
+        "unknown"           | GrailsNativeGenerator
     }
 
-    def 'fromName should return correct enum'() {
+    def "fromName should return correct enum"() {
         expect:
-        GrailsSequenceGeneratorEnum.fromName('identity').get() == GrailsSequenceGeneratorEnum.IDENTITY
-        GrailsSequenceGeneratorEnum.fromName('nonexistent').isEmpty()
+        GrailsSequenceGeneratorEnum.fromName("identity").get() == GrailsSequenceGeneratorEnum.IDENTITY
+        GrailsSequenceGeneratorEnum.fromName("nonexistent").isEmpty()
     }
 }
 
 @Entity
 class GrailsSequenceGeneratorEnumSpecEntity implements HibernateEntity<GrailsSequenceGeneratorEnumSpecEntity> {
-
     String name
 }

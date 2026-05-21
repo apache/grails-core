@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -30,8 +30,8 @@ import spock.lang.Specification
 
 class ScaffoldingViewResolverSpec extends Specification {
 
-    static final String TEST_NAMESPACE = 'admin'
-    static final String TEST_VIEW_NAME = '/event/index'
+    static final String TEST_NAMESPACE = "admin"
+    static final String TEST_VIEW_NAME = "/event/index"
 
     ScaffoldingViewResolver resolver
     GrailsConventionGroovyPageLocator mockPageLocator
@@ -80,12 +80,12 @@ class ScaffoldingViewResolverSpec extends Specification {
         return view
     }
 
-    void 'test enableNamespaceViewDefaults defaults to false'() {
+    void "test enableNamespaceViewDefaults defaults to false"() {
         expect:
         !resolver.enableNamespaceViewDefaults
     }
 
-    void 'test scaffold value cache stores null values for non-scaffold controllers'() {
+    void "test scaffold value cache stores null values for non-scaffold controllers"() {
         given:
         setupScaffoldController(String)
 
@@ -98,7 +98,7 @@ class ScaffoldingViewResolverSpec extends Specification {
         resolver.scaffoldValueCache.get(String) == ScaffoldingViewResolver.NULL_SCAFFOLD_VALUE
     }
 
-    void 'test scaffold value cache returns cached value'() {
+    void "test scaffold value cache returns cached value"() {
         given:
         setupScaffoldController(String)
         def cachedValue = String
@@ -112,7 +112,7 @@ class ScaffoldingViewResolverSpec extends Specification {
         0 * mockControllerClass.getPropertyValue(_) // Uses cache
     }
 
-    void 'test scaffold value cache handles annotation'() {
+    void "test scaffold value cache handles annotation"() {
         given:
         setupScaffoldController(TestScaffoldController)
 
@@ -124,9 +124,9 @@ class ScaffoldingViewResolverSpec extends Specification {
         resolver.scaffoldValueCache.containsKey(TestScaffoldController)
     }
 
-    void 'test clearCache clears both view and scaffold caches'() {
+    void "test clearCache clears both view and scaffold caches"() {
         given:
-        resolver.generatedViewCache.put('test', Mock(GroovyPageView))
+        resolver.generatedViewCache.put("test", Mock(GroovyPageView))
         resolver.scaffoldValueCache.put(String, String)
 
         when:
@@ -137,7 +137,7 @@ class ScaffoldingViewResolverSpec extends Specification {
         resolver.scaffoldValueCache.isEmpty()
     }
 
-    void 'test buildCacheKey includes view name'() {
+    void "test buildCacheKey includes view name"() {
         given:
         mockPageLocator.resolveViewFormat(TEST_VIEW_NAME) >> TEST_VIEW_NAME
 
@@ -149,7 +149,7 @@ class ScaffoldingViewResolverSpec extends Specification {
         cacheKey.contains(TEST_VIEW_NAME)
     }
 
-    void 'test namespace controller without scaffold annotation returns null scaffold value'() {
+    void "test namespace controller without scaffold annotation returns null scaffold value"() {
         given:
         resolver.enableNamespaceViewDefaults = true
         setupScaffoldController(String)
@@ -159,7 +159,7 @@ class ScaffoldingViewResolverSpec extends Specification {
         resolver.getScaffoldValue(mockControllerClass) == null
     }
 
-    void 'test tryGenerateScaffoldedView returns null for non-scaffold controller'() {
+    void "test tryGenerateScaffoldedView returns null for non-scaffold controller"() {
         given:
         setupScaffoldController(String)
 
@@ -172,9 +172,9 @@ class ScaffoldingViewResolverSpec extends Specification {
         result == null
     }
 
-    void 'test tryGenerateScaffoldedView uses generated view cache'() {
+    void "test tryGenerateScaffoldedView uses generated view cache"() {
         given:
-        def cacheKey = 'test-cache-key'
+        def cacheKey = "test-cache-key"
         def cachedView = Mock(GroovyPageView)
         resolver.generatedViewCache.put(cacheKey, cachedView)
 
@@ -182,7 +182,7 @@ class ScaffoldingViewResolverSpec extends Specification {
         resolver.generatedViewCache.get(cacheKey) == cachedView
     }
 
-    void 'test tryGenerateScaffoldedView returns null when resource does not exist'() {
+    void "test tryGenerateScaffoldedView returns null when resource does not exist"() {
         given:
         setupScaffoldController(TestScaffoldController, TestDomain)
         mockPageLocator.resolveViewFormat(TEST_VIEW_NAME) >> TEST_VIEW_NAME
@@ -198,7 +198,7 @@ class ScaffoldingViewResolverSpec extends Specification {
         result == null
     }
 
-    void 'test RestfulServiceController annotation without AST transformation returns null'() {
+    void "test RestfulServiceController annotation without AST transformation returns null"() {
         given:
         setupScaffoldController(TestRestfulServiceScaffoldController)
 
@@ -215,7 +215,7 @@ class ScaffoldingViewResolverSpec extends Specification {
         resolver.scaffoldValueCache.containsKey(TestRestfulServiceScaffoldController)
     }
 
-    void 'test Scaffold annotation with domain attribute works correctly'() {
+    void "test Scaffold annotation with domain attribute works correctly"() {
         given:
         setupScaffoldController(TestScaffoldController, TestDomain)
 
@@ -230,10 +230,10 @@ class ScaffoldingViewResolverSpec extends Specification {
         resolver.scaffoldValueCache.containsKey(TestScaffoldController)
     }
 
-    void 'test namespace view URL detection identifies namespace-specific views'() {
+    void "test namespace view URL detection identifies namespace-specific views"() {
         given:
         def namespaceView = mockViewWithUrl("/grails-app/views/${TEST_NAMESPACE}/event/index.gsp")
-        def nonNamespaceView = mockViewWithUrl('/grails-app/views/event/index.gsp')
+        def nonNamespaceView = mockViewWithUrl("/grails-app/views/event/index.gsp")
         setupNamespaceController()
 
         expect:
@@ -243,18 +243,18 @@ class ScaffoldingViewResolverSpec extends Specification {
         !nonNamespaceView.url.contains("/${TEST_NAMESPACE}/")
     }
 
-    void 'test cache prevents repeated reflection for non-scaffold controllers'() {
+    void "test cache prevents repeated reflection for non-scaffold controllers"() {
         given:
         setupScaffoldController(String) // Non-scaffold controller
 
-        when: 'First call performs reflection'
+        when: "First call performs reflection"
         def result1 = resolver.getScaffoldValue(mockControllerClass)
 
         then:
         result1 == null
         resolver.scaffoldValueCache.get(String) == ScaffoldingViewResolver.NULL_SCAFFOLD_VALUE
 
-        when: 'Second call uses cache'
+        when: "Second call uses cache"
         def result2 = resolver.getScaffoldValue(mockControllerClass)
 
         then:

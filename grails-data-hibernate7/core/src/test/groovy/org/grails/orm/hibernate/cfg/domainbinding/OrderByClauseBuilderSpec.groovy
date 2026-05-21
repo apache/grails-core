@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -44,123 +44,121 @@ class OrderByClauseBuilderSpec extends HibernateGormDatastoreSpec {
 
     def setup() {
         def ctx = getGrailsDomainBinder().getMetadataBuildingContext()
-        def table = new Table('test', 'order_entity')
+        def table = new Table("test", "order_entity")
 
         entityClass = new RootClass(ctx)
-        entityClass.setEntityName('OrderEntity')
+        entityClass.setEntityName("OrderEntity")
         entityClass.setTable(table)
-        entityClass.setIdentifier(basicValue(ctx, table, 'id'))
-        entityClass.addProperty(simpleProperty(ctx, table, 'name',  'name'))
-        entityClass.addProperty(simpleProperty(ctx, table, 'age',   'age'))
-        entityClass.addProperty(simpleProperty(ctx, table, 'other', 'other_column'))
+        entityClass.setIdentifier(basicValue(ctx, table, "id"))
+        entityClass.addProperty(simpleProperty(ctx, table, "name",  "name"))
+        entityClass.addProperty(simpleProperty(ctx, table, "age",   "age"))
+        entityClass.addProperty(simpleProperty(ctx, table, "other", "other_column"))
 
-        def compTable = new Table('test', 'comp_entity')
+        def compTable = new Table("test", "comp_entity")
         componentEntityClass = new RootClass(ctx)
-        componentEntityClass.setEntityName('CompEntity')
+        componentEntityClass.setEntityName("CompEntity")
         componentEntityClass.setTable(compTable)
-        componentEntityClass.setIdentifier(basicValue(ctx, compTable, 'id'))
+        componentEntityClass.setIdentifier(basicValue(ctx, compTable, "id"))
 
         def comp = new Component(ctx, compTable, componentEntityClass)
-        comp.addProperty(simpleProperty(ctx, compTable, 'c1', 'comp_c1'))
-        comp.addProperty(simpleProperty(ctx, compTable, 'c2', 'comp_c2'))
+        comp.addProperty(simpleProperty(ctx, compTable, "c1", "comp_c1"))
+        comp.addProperty(simpleProperty(ctx, compTable, "c2", "comp_c2"))
         def compProp = new Property()
-        compProp.setName('comp')
+        compProp.setName("comp")
         compProp.setValue(comp)
         componentEntityClass.addProperty(compProp)
     }
 
-    void 'null hqlOrderBy returns null'() {
+    void "null hqlOrderBy returns null"() {
         expect:
-        builder.buildOrderByClause(null, entityClass, 'role', 'asc') == null
+        builder.buildOrderByClause(null, entityClass, "role", "asc") == null
     }
 
-    void 'empty hqlOrderBy returns identifier column with asc'() {
+    void "empty hqlOrderBy returns identifier column with asc"() {
         expect:
-        builder.buildOrderByClause('', entityClass, 'role', 'asc') == 'id asc'
+        builder.buildOrderByClause("", entityClass, "role", "asc") == "id asc"
     }
 
     @Unroll
     void "single property '#hql' with defaultOrder '#defaultOrder' returns '#expected'"() {
         expect:
-        builder.buildOrderByClause(hql, entityClass, 'role', defaultOrder) == expected
+        builder.buildOrderByClause(hql, entityClass, "role", defaultOrder) == expected
 
         where:
         hql          | defaultOrder | expected
-        'name'       | 'asc'        | 'name asc'
-        'name'       | 'desc'       | 'name desc'
-        'name asc'   | 'desc'       | 'name asc'
-        'name desc'  | 'asc'        | 'name desc'
-        'name ASC'   | 'desc'       | 'name asc'
-        'name DESC'  | 'asc'        | 'name desc'
+        "name"       | "asc"        | "name asc"
+        "name"       | "desc"       | "name desc"
+        "name asc"   | "desc"       | "name asc"
+        "name desc"  | "asc"        | "name desc"
+        "name ASC"   | "desc"       | "name asc"
+        "name DESC"  | "asc"        | "name desc"
     }
 
-    void 'custom column name is used in order clause'() {
+    void "custom column name is used in order clause"() {
         expect:
-        builder.buildOrderByClause('other', entityClass, 'role', 'asc') == 'other_column asc'
+        builder.buildOrderByClause("other", entityClass, "role", "asc") == "other_column asc"
     }
 
-    void 'multiple properties with mixed directions'() {
+    void "multiple properties with mixed directions"() {
         expect:
-        builder.buildOrderByClause('name, age desc', entityClass, 'role', 'asc') == 'name asc, age desc'
+        builder.buildOrderByClause("name, age desc", entityClass, "role", "asc") == "name asc, age desc"
     }
 
-    void 'component property expands to all its columns'() {
+    void "component property expands to all its columns"() {
         expect:
-        builder.buildOrderByClause('comp', componentEntityClass, 'role', 'asc') == 'comp_c1 asc, comp_c2 asc'
+        builder.buildOrderByClause("comp", componentEntityClass, "role", "asc") == "comp_c1 asc, comp_c2 asc"
     }
 
-    void 'non-existent property throws DatastoreConfigurationException'() {
+    void "non-existent property throws DatastoreConfigurationException"() {
         when:
-        builder.buildOrderByClause('nonExistent', entityClass, 'role', 'asc')
+        builder.buildOrderByClause("nonExistent", entityClass, "role", "asc")
 
         then:
         def ex = thrown(DatastoreConfigurationException)
-        ex.message.contains('OrderEntity.nonExistent')
+        ex.message.contains("OrderEntity.nonExistent")
     }
 
-    void 'double direction token throws DatastoreConfigurationException'() {
+    void "double direction token throws DatastoreConfigurationException"() {
         when:
-        builder.buildOrderByClause('name asc desc', entityClass, 'role', 'asc')
+        builder.buildOrderByClause("name asc desc", entityClass, "role", "asc")
 
         then:
         thrown(DatastoreConfigurationException)
     }
 
-    void 'inherited property from parent in joined subclass receives table prefix'() {
-
+    void "inherited property from parent in joined subclass receives table prefix"() {
         given:
         def ctx  = getGrailsDomainBinder().getMetadataBuildingContext()
-        def subTable = new Table('test', 'sub_entity')
+        def subTable = new Table("test", "sub_entity")
         def sub = new JoinedSubclass(entityClass, ctx)
-        sub.setEntityName('SubEntity')
+        sub.setEntityName("SubEntity")
         sub.setTable(subTable)
-        sub.addProperty(simpleProperty(ctx, subTable, 'extra', 'extra_col'))
+        sub.addProperty(simpleProperty(ctx, subTable, "extra", "extra_col"))
 
-        expect: 'property from root table gets no prefix when sorting on root class'
-        builder.buildOrderByClause('name', entityClass, 'role', 'asc') == 'name asc'
+        expect: "property from root table gets no prefix when sorting on root class"
+        builder.buildOrderByClause("name", entityClass, "role", "asc") == "name asc"
 
-        and: 'property from root table gets its table prefix when sorting on the subclass'
-        builder.buildOrderByClause('name', sub, 'role', 'asc') == 'order_entity.name asc'
+        and: "property from root table gets its table prefix when sorting on the subclass"
+        builder.buildOrderByClause("name", sub, "role", "asc") == "order_entity.name asc"
 
-        and: 'property from subclass table gets no prefix when sorting on the subclass'
-        builder.buildOrderByClause('extra', sub, 'role', 'asc') == 'extra_col asc'
+        and: "property from subclass table gets no prefix when sorting on the subclass"
+        builder.buildOrderByClause("extra", sub, "role", "asc") == "extra_col asc"
     }
 
-    void 'single-table subclass property is sorted without table prefix'() {
-
+    void "single-table subclass property is sorted without table prefix"() {
         given:
         def ctx  = getGrailsDomainBinder().getMetadataBuildingContext()
-        entityClass.setClassName('org.grails.orm.hibernate.cfg.domainbinding.ParentEntity')
+        entityClass.setClassName("org.grails.orm.hibernate.cfg.domainbinding.ParentEntity")
         def sub = new SingleTableSubclass(entityClass, ctx)
-        sub.setEntityName('ChildEntity')
-        sub.setClassName('org.grails.orm.hibernate.cfg.domainbinding.ChildEntity')
-        sub.addProperty(simpleProperty(ctx, entityClass.getTable(), 'childProp', 'child_prop'))
+        sub.setEntityName("ChildEntity")
+        sub.setClassName("org.grails.orm.hibernate.cfg.domainbinding.ChildEntity")
+        sub.addProperty(simpleProperty(ctx, entityClass.getTable(), "childProp", "child_prop"))
 
-        expect: 'parent property has no prefix on the subclass'
-        builder.buildOrderByClause('name', sub, 'role', 'asc') == 'name asc'
+        expect: "parent property has no prefix on the subclass"
+        builder.buildOrderByClause("name", sub, "role", "asc") == "name asc"
 
-        and: 'subclass-own property has no prefix'
-        builder.buildOrderByClause('childProp', sub, 'role', 'asc') == 'child_prop asc'
+        and: "subclass-own property has no prefix"
+        builder.buildOrderByClause("childProp", sub, "role", "asc") == "child_prop asc"
     }
 
     // ---- helpers --------------------------------------------------------

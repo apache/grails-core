@@ -74,6 +74,7 @@ import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.reflect.ClassUtils;
 import org.grails.datastore.mapping.reflect.EntityReflector;
+import org.grails.datastore.mapping.validation.ValidationException;
 import org.grails.orm.hibernate.HibernateGormValidationApi;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 

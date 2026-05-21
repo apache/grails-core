@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -42,13 +42,13 @@ class ByteBuddyGroovyInterceptorSpec extends HibernateGormDatastoreSpec {
 
     def setup() {
         Location.withTransaction {
-            savedId = new Location(name: 'Springfield', code: 'SP1').save(flush: true).id
+            savedId = new Location(name: "Springfield", code: "SP1").save(flush: true).id
         }
         manager.session.clear()
         manager.hibernateSession.clear()
     }
 
-    void 'ident() on uninitialized proxy returns identifier without initialization'() {
+    void "ident() on uninitialized proxy returns identifier without initialization"() {
         given:
         def proxy = manager.hibernateSession.getReference(Location, savedId)
 
@@ -58,7 +58,7 @@ class ByteBuddyGroovyInterceptorSpec extends HibernateGormDatastoreSpec {
         !Hibernate.isInitialized(proxy)
     }
 
-    void 'toString() on uninitialized proxy returns entityName:id without initialization'() {
+    void "toString() on uninitialized proxy returns entityName:id without initialization"() {
         given:
         def proxy = manager.hibernateSession.getReference(Location, savedId)
 
@@ -70,7 +70,7 @@ class ByteBuddyGroovyInterceptorSpec extends HibernateGormDatastoreSpec {
         s.contains(savedId.toString())
     }
 
-    void 'isDirty() on uninitialized proxy returns false without initialization'() {
+    void "isDirty() on uninitialized proxy returns false without initialization"() {
         given:
         def proxy = manager.hibernateSession.getReference(Location, savedId)
 
@@ -80,8 +80,7 @@ class ByteBuddyGroovyInterceptorSpec extends HibernateGormDatastoreSpec {
         !Hibernate.isInitialized(proxy)
     }
 
-    void 'metaClass on uninitialized proxy returns metaclass without initialization'() {
-
+    void "metaClass on uninitialized proxy returns metaclass without initialization"() {
         given:
         def proxy = manager.hibernateSession.getReference(Location, savedId)
 
@@ -93,7 +92,7 @@ class ByteBuddyGroovyInterceptorSpec extends HibernateGormDatastoreSpec {
         mc != null
     }
 
-    void 'accessing a regular property initializes the proxy and returns the value'() {
+    void "accessing a regular property initializes the proxy and returns the value"() {
         given:
         def proxy = manager.hibernateSession.getReference(Location, savedId) as Location
 
@@ -102,10 +101,10 @@ class ByteBuddyGroovyInterceptorSpec extends HibernateGormDatastoreSpec {
 
         then:
         Hibernate.isInitialized(proxy)
-        name == 'Springfield'
+        name == "Springfield"
     }
 
-    void 'getProperty via Groovy on initialized proxy delegates via reflection'() {
+    void "getProperty via Groovy on initialized proxy delegates via reflection"() {
         given:
         def proxy = manager.hibernateSession.getReference(Location, savedId) as Location
         proxy.name // initialize
@@ -115,10 +114,10 @@ class ByteBuddyGroovyInterceptorSpec extends HibernateGormDatastoreSpec {
 
         then:
         Hibernate.isInitialized(proxy)
-        result == 'Springfield'
+        result == "Springfield"
     }
 
-    void 'invokeMethod via Groovy on initialized proxy delegates via reflection'() {
+    void "invokeMethod via Groovy on initialized proxy delegates via reflection"() {
         given:
         def proxy = manager.hibernateSession.getReference(Location, savedId) as Location
         proxy.name // initialize
@@ -128,10 +127,10 @@ class ByteBuddyGroovyInterceptorSpec extends HibernateGormDatastoreSpec {
 
         then:
         Hibernate.isInitialized(proxy)
-        result == 'Springfield - SP1'
+        result == "Springfield - SP1"
     }
 
-    void 'id property on uninitialized proxy returns identifier without initialization'() {
+    void "id property on uninitialized proxy returns identifier without initialization"() {
         given:
         def proxy = manager.hibernateSession.getReference(Location, savedId) as Location
 
@@ -141,18 +140,18 @@ class ByteBuddyGroovyInterceptorSpec extends HibernateGormDatastoreSpec {
         !Hibernate.isInitialized(proxy)
     }
 
-    void 'getIdentifier() on uninitialized proxy returns identifier without initialization'() {
+    void "getIdentifier() on uninitialized proxy returns identifier without initialization"() {
         given:
         def proxy = manager.hibernateSession.getReference(Location, savedId)
 
         expect:
         !Hibernate.isInitialized(proxy)
-        // This should trigger the 'getIdentifier' branch in the interceptor
+        // This should trigger the "getIdentifier" branch in the interceptor
         proxy.getIdentifier() == savedId
         !Hibernate.isInitialized(proxy)
     }
 
-    void 'setProperty on uninitialized proxy initializes the proxy'() {
+    void "setProperty on uninitialized proxy initializes the proxy"() {
         given:
         def proxy = manager.hibernateSession.getReference(Location, savedId) as Location
 
@@ -164,7 +163,7 @@ class ByteBuddyGroovyInterceptorSpec extends HibernateGormDatastoreSpec {
         proxy.name == 'New Name'
     }
 
-    void 'setMetaClass on uninitialized proxy initializes the proxy'() {
+    void "setMetaClass on uninitialized proxy initializes the proxy"() {
         given:
         def proxy = manager.hibernateSession.getReference(Location, savedId) as Location
 
@@ -175,7 +174,7 @@ class ByteBuddyGroovyInterceptorSpec extends HibernateGormDatastoreSpec {
         Hibernate.isInitialized(proxy)
     }
 
-    void 'Groovy method throwing exception is handled'() {
+    void "Groovy method throwing exception is handled"() {
         given:
         def proxy = manager.hibernateSession.getReference(Location, savedId) as Location
 
@@ -189,7 +188,6 @@ class ByteBuddyGroovyInterceptorSpec extends HibernateGormDatastoreSpec {
 
 @Entity
 class Location implements Serializable {
-
     Long id
     String name
     String code
@@ -203,6 +201,6 @@ class Location implements Serializable {
     }
 
     void throwError() {
-        throw new RuntimeException('error')
+        throw new RuntimeException("error")
     }
 }

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -31,9 +31,9 @@ import java.beans.PropertyDescriptor
 
 class GormMappingConfigurationStrategySpec extends Specification {
 
-    void 'test isPersistentEntity'() {
+    void "test isPersistentEntity"() {
         given:
-        def strategy = new GormMappingConfigurationStrategy(new GormKeyValueMappingFactory('test'))
+        def strategy = new GormMappingConfigurationStrategy(new GormKeyValueMappingFactory("test"))
 
         expect:
         strategy.isPersistentEntity(AnnotatedEntity)
@@ -44,20 +44,19 @@ class GormMappingConfigurationStrategySpec extends Specification {
         !strategy.isPersistentEntity(Closure)
     }
 
-    void 'test getAssociationMap subclass overrides parent'() {
-
+    void "test getAssociationMap subclass overrides parent"() {
         ClassPropertyFetcher cpf = ClassPropertyFetcher.forClass(B)
-        def strategy = new GormMappingConfigurationStrategy(new GormKeyValueMappingFactory('test'))
+        def strategy = new GormMappingConfigurationStrategy(new GormKeyValueMappingFactory("test"))
 
         when:
         Map associations = strategy.getAssociationMap(cpf)
 
         then:
         associations.size() == 1
-        associations.get('foo') == Integer
+        associations.get("foo") == Integer
     }
 
-    void 'test getIdentity'() {
+    void "test getIdentity"() {
         given:
         def mappingFactory = Mock(MappingFactory)
         def strategy = new GormMappingConfigurationStrategy(mappingFactory)
@@ -79,7 +78,7 @@ class GormMappingConfigurationStrategySpec extends Specification {
         1 * mappingFactory.createIdentity(entity, context, _)
     }
 
-    void 'test getCompositeIdentity'() {
+    void "test getCompositeIdentity"() {
         given:
         def mappingFactory = Mock(MappingFactory)
         def strategy = new GormMappingConfigurationStrategy(mappingFactory)
@@ -103,7 +102,7 @@ class GormMappingConfigurationStrategySpec extends Specification {
         2 * mappingFactory.createIdentity(entity, context, _)
     }
 
-    void 'test getPersistentProperties with basic properties and transients'() {
+    void "test getPersistentProperties with basic properties and transients"() {
         given:
         def mappingFactory = Mock(MappingFactory)
         def strategy = new GormMappingConfigurationStrategy(mappingFactory)
@@ -114,7 +113,7 @@ class GormMappingConfigurationStrategySpec extends Specification {
         mappingFactory.isSimpleType(String) >> true
         mappingFactory.isSimpleType(Integer) >> true
         mappingFactory.createPropertyDescriptor(_, _) >> { Class cls, mp ->
-            new PropertyDescriptor(mp.name, cls, "get${mp.name.capitalize()}', 'set${mp.name.capitalize()}")
+            new PropertyDescriptor(mp.name, cls, "get${mp.name.capitalize()}", "set${mp.name.capitalize()}")
         }
 
         when:
@@ -127,7 +126,7 @@ class GormMappingConfigurationStrategySpec extends Specification {
         0 * mappingFactory.createSimple(entity, context, { it.name == 'transientProp' })
     }
 
-    void 'test getIdentity returns null when no identity is present'() {
+    void "test getIdentity returns null when no identity is present"() {
         given:
         def mappingFactory = Mock(MappingFactory)
         def strategy = new GormMappingConfigurationStrategy(mappingFactory)
@@ -149,7 +148,7 @@ class GormMappingConfigurationStrategySpec extends Specification {
         result == null
     }
 
-    void 'test getCompositeIdentity returns empty array when no identity is present'() {
+    void "test getCompositeIdentity returns empty array when no identity is present"() {
         given:
         def mappingFactory = Mock(MappingFactory)
         def strategy = new GormMappingConfigurationStrategy(mappingFactory)
@@ -171,7 +170,7 @@ class GormMappingConfigurationStrategySpec extends Specification {
         result.length == 0
     }
 
-    void 'test getOwningEntities'() {
+    void "test getOwningEntities"() {
         given:
         def strategy = new GormMappingConfigurationStrategy(Mock(MappingFactory))
 
@@ -195,27 +194,22 @@ class NotAnEntity {}
 enum EnumEntity { FIRST }
 
 class A {
-
     static hasMany = [foo: String]
 }
 class B extends A {
-
     static hasMany = [foo: Integer]
 }
 
 class SimpleIdEntity {
-
     Long id
 }
 
 class CompositeIdEntity {
-
     Long id1
     Long id2
 }
 
 class PropertyEntity {
-
     String name
     Integer age
     String transientProp
@@ -224,7 +218,6 @@ class PropertyEntity {
 
 class ParentEntity {}
 class ChildEntity {
-
     static belongsTo = [parent: ParentEntity]
 }
 

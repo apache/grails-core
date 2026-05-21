@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -33,20 +33,20 @@ class JsonApiDataBindingSourceCreatorSpec extends Specification {
     @Shared
     JsonApiDataBindingSourceCreator creator = new JsonApiDataBindingSourceCreator()
 
-    void 'test create single relationship'() {
+    void "test create single relationship"() {
         given:
         String json = '''{
-            'data': {
-                'type': 'photos',
-                'attributes': {
-                    'title': 'Ember Hamster',
-                    'src': 'https://example.com/images/productivity.png'
+            "data": {
+                "type": "photos",
+                "attributes": {
+                    "title": "Ember Hamster",
+                    "src": "https://example.com/images/productivity.png"
                 },
-                'relationships': {
-                    'photographer': {
-                        'data': {
-                            'type': 'people',
-                            'id': '9'
+                "relationships": {
+                    "photographer": {
+                        "data": {
+                            "type": "people",
+                            "id": "9"
                         }
                     }
                 }
@@ -58,32 +58,32 @@ class JsonApiDataBindingSourceCreatorSpec extends Specification {
         DataBindingSource source = creator.createDataBindingSource(null, null, inputStream)
 
         then:
-        source.containsProperty('data')
-        source.getPropertyValue('title') == 'Ember Hamster'
-        source.getPropertyValue('src') == 'https://example.com/images/productivity.png'
-        source.getPropertyValue('photographer') == '9'
+        source.containsProperty("data")
+        source.getPropertyValue("title") == "Ember Hamster"
+        source.getPropertyValue("src") == "https://example.com/images/productivity.png"
+        source.getPropertyValue("photographer") == "9"
 
     }
 
-    void 'test create list of relationships'() {
+    void "test create list of relationships"() {
         given:
         String json = '''{
-            'data': {
-                'type': 'photos',
-                'attributes': {
-                    'title': 'Ember Hamster',
-                    'src': 'https://example.com/images/productivity.png'
+            "data": {
+                "type": "photos",
+                "attributes": {
+                    "title": "Ember Hamster",
+                    "src": "https://example.com/images/productivity.png"
                 },
-                'relationships': {
-                    'photographer': {
-                        'data': [
+                "relationships": {
+                    "photographer": {
+                        "data": [
                             {
-                                'type': 'people',
-                                'id': '9'
+                                "type": "people",
+                                "id": "9"
                             },
                             {
-                                'type': 'people',
-                                'id': '10'
+                                "type": "people",
+                                "id": "10"
                             }
                         ]
                     }
@@ -96,23 +96,23 @@ class JsonApiDataBindingSourceCreatorSpec extends Specification {
         DataBindingSource source = creator.createDataBindingSource(null, null, inputStream)
 
         then:
-        source.containsProperty('data')
-        source.getPropertyValue('title') == 'Ember Hamster'
-        source.getPropertyValue('src') == 'https://example.com/images/productivity.png'
-        source.getPropertyValue('photographer') == ['9', '10']
+        source.containsProperty("data")
+        source.getPropertyValue("title") == "Ember Hamster"
+        source.getPropertyValue("src") == "https://example.com/images/productivity.png"
+        source.getPropertyValue("photographer") == ["9", "10"]
 
     }
 
-    void 'test create no relationships - with key'() {
+    void "test create no relationships - with key"() {
         given:
         String json = '''{
-            'data': {
-                'type': 'photos',
-                'attributes': {
-                    'title': 'Ember Hamster',
-                    'src': 'https://example.com/images/productivity.png'
+            "data": {
+                "type": "photos",
+                "attributes": {
+                    "title": "Ember Hamster",
+                    "src": "https://example.com/images/productivity.png"
                 },
-                'relationships': {
+                "relationships": {
                 }
             }
         }'''
@@ -122,19 +122,19 @@ class JsonApiDataBindingSourceCreatorSpec extends Specification {
         DataBindingSource source = creator.createDataBindingSource(null, null, inputStream)
 
         then:
-        source.containsProperty('data')
-        source.getPropertyValue('title') == 'Ember Hamster'
-        source.getPropertyValue('src') == 'https://example.com/images/productivity.png'
+        source.containsProperty("data")
+        source.getPropertyValue("title") == "Ember Hamster"
+        source.getPropertyValue("src") == "https://example.com/images/productivity.png"
     }
 
-    void 'test create no relationships - without key'() {
+    void "test create no relationships - without key"() {
         given:
         String json = '''{
-            'data': {
-                'type': 'photos',
-                'attributes': {
-                    'title': 'Ember Hamster',
-                    'src': 'https://example.com/images/productivity.png'
+            "data": {
+                "type": "photos",
+                "attributes": {
+                    "title": "Ember Hamster",
+                    "src": "https://example.com/images/productivity.png"
                 }
             }
         }'''
@@ -144,19 +144,19 @@ class JsonApiDataBindingSourceCreatorSpec extends Specification {
         DataBindingSource source = creator.createDataBindingSource(null, null, inputStream)
 
         then:
-        source.containsProperty('data')
-        source.getPropertyValue('title') == 'Ember Hamster'
-        source.getPropertyValue('src') == 'https://example.com/images/productivity.png'
+        source.containsProperty("data")
+        source.getPropertyValue("title") == "Ember Hamster"
+        source.getPropertyValue("src") == "https://example.com/images/productivity.png"
     }
 
-    void 'test create no attributes - with key'() {
+    void "test create no attributes - with key"() {
         given:
         String json = '''{
-            'data': {
-                'type': 'photos',
-                'attributes': {
+            "data": {
+                "type": "photos",
+                "attributes": {
                 },
-                'relationships': {
+                "relationships": {
                 }
             }
         }'''
@@ -166,14 +166,14 @@ class JsonApiDataBindingSourceCreatorSpec extends Specification {
         DataBindingSource source = creator.createDataBindingSource(null, null, inputStream)
 
         then:
-        source.containsProperty('data')
+        source.containsProperty("data")
     }
 
-    void 'test create no attributes - without key'() {
+    void "test create no attributes - without key"() {
         given:
         String json = '''{
-            'data': {
-                'type': 'photos'
+            "data": {
+                "type": "photos"
             }
         }'''
 
@@ -182,15 +182,15 @@ class JsonApiDataBindingSourceCreatorSpec extends Specification {
         DataBindingSource source = creator.createDataBindingSource(null, null, inputStream)
 
         then:
-        source.containsProperty('data')
+        source.containsProperty("data")
     }
 
-    void 'test create data id'() {
+    void "test create data id"() {
         given:
         String json = '''{
-            'data': {
-                'type': 'photos',
-                'id': 'foo'
+            "data": {
+                "type": "photos",
+                "id": "foo"
             }
         }'''
 
@@ -199,7 +199,7 @@ class JsonApiDataBindingSourceCreatorSpec extends Specification {
         DataBindingSource source = creator.createDataBindingSource(null, null, inputStream)
 
         then:
-        source.containsProperty('data')
-        source.getPropertyValue('id') == 'foo'
+        source.containsProperty("data")
+        source.getPropertyValue("id") == "foo"
     }
 }

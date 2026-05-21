@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -29,12 +29,12 @@ import jakarta.persistence.GenerationType
 
 class GrailsNativeGeneratorSpec extends Specification {
 
-    def 'should return currentValue if not null (assigned identifier)'() {
+    def "should return currentValue if not null (assigned identifier)"() {
         given:
         def context = Mock(GeneratorCreationContext)
         def session = Mock(SharedSessionContractImplementor)
         def entity = new Object()
-        def currentValue = 'assigned-id'
+        def currentValue = "assigned-id"
         def eventType = EventType.INSERT
         
         def generator = new GrailsNativeGenerator(context)
@@ -46,7 +46,7 @@ class GrailsNativeGeneratorSpec extends Specification {
         result == currentValue
     }
 
-    def 'should return null if generation type is IDENTITY'() {
+    def "should return null if generation type is IDENTITY"() {
         given:
         def context = Mock(GeneratorCreationContext)
         def database = Mock(org.hibernate.boot.model.relational.Database)
@@ -68,7 +68,7 @@ class GrailsNativeGeneratorSpec extends Specification {
         result == null
     }
 
-    def 'should throw HibernateException if SequenceStyleGenerator is not initialized'() {
+    def "should throw HibernateException if SequenceStyleGenerator is not initialized"() {
         given:
         def context = Mock(GeneratorCreationContext)
         def database = Mock(org.hibernate.boot.model.relational.Database)
@@ -87,7 +87,7 @@ class GrailsNativeGeneratorSpec extends Specification {
         // Since we are using Spy and getDelegate is not easily overridable if private
         // but our implementation uses reflection. In the test, we'll mock the field.
         
-        java.lang.reflect.Field field = org.hibernate.id.NativeGenerator.class.getDeclaredField('dialectNativeGenerator')
+        java.lang.reflect.Field field = org.hibernate.id.NativeGenerator.class.getDeclaredField("dialectNativeGenerator")
         field.setAccessible(true)
         field.set(generator, ssg)
 
@@ -99,10 +99,10 @@ class GrailsNativeGeneratorSpec extends Specification {
 
         then:
         def e = thrown(org.hibernate.HibernateException)
-        e.message.contains('was not properly initialized')
+        e.message.contains("was not properly initialized")
     }
 
-    def 'should proceed past non-SequenceStyleGenerator delegate without exception'() {
+    def "should proceed past non-SequenceStyleGenerator delegate without exception"() {
         given:
         def context = Mock(GeneratorCreationContext)
         def database = Mock(org.hibernate.boot.model.relational.Database)
@@ -116,7 +116,7 @@ class GrailsNativeGeneratorSpec extends Specification {
         @Subject
         def generator = Spy(GrailsNativeGenerator, constructorArgs: [context])
 
-        java.lang.reflect.Field field = org.hibernate.id.NativeGenerator.class.getDeclaredField('dialectNativeGenerator')
+        java.lang.reflect.Field field = org.hibernate.id.NativeGenerator.class.getDeclaredField("dialectNativeGenerator")
         field.setAccessible(true)
         // A Generator that is NOT a SequenceStyleGenerator — instanceof branch returns false
         def nonSsgDelegate = Mock(org.hibernate.generator.Generator)

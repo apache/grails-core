@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -45,7 +45,7 @@ class LogCascadeMappingSpec extends Specification {
     LogCascadeMapping loggerHelper = new LogCascadeMapping(log)
 
     @Unroll
-    def 'should log correctly for association type #typeDescription when debug is enabled'() {
+    def "should log correctly for association type #typeDescription when debug is enabled"() {
         given:
         log.isDebugEnabled() >> true
         
@@ -54,9 +54,9 @@ class LogCascadeMappingSpec extends Specification {
         def associatedEntity = Mock(PersistentEntity)
         
         association.getOwner() >> owner
-        association.getName() >> 'testProperty'
+        association.getName() >> "testProperty"
         association.getAssociatedEntity() >> associatedEntity
-        owner.getName() >> 'OwnerClass'
+        owner.getName() >> "OwnerClass"
         associatedEntity.getJavaClass() >> TargetClass
         
         def cascadeBehavior = CascadeBehavior.ALL
@@ -65,18 +65,18 @@ class LogCascadeMappingSpec extends Specification {
         loggerHelper.logCascadeMapping(association, cascadeBehavior)
 
         then:
-        1 * log.debug('Mapping cascade strategy for {} property {}.{} referencing type [{}] -> [CASCADE: {}]',
-                typeDescription, 'OwnerClass', 'testProperty', TargetClass.name, cascadeBehavior)
+        1 * log.debug("Mapping cascade strategy for {} property {}.{} referencing type [{}] -> [CASCADE: {}]",
+                typeDescription, "OwnerClass", "testProperty", TargetClass.name, cascadeBehavior)
 
         where:
         associationClass             | typeDescription
-        HibernateManyToManyProperty  | 'many-to-many'
-        HibernateOneToManyProperty   | 'one-to-many'
-        HibernateOneToOneProperty    | 'one-to-one'
-        HibernateManyToOneProperty   | 'many-to-one'
+        HibernateManyToManyProperty  | "many-to-many"
+        HibernateOneToManyProperty   | "one-to-many"
+        HibernateOneToOneProperty    | "one-to-one"
+        HibernateManyToOneProperty   | "many-to-one"
     }
 
-    def 'should log unknown for unrecognized association type'() {
+    def "should log unknown for unrecognized association type"() {
         given:
         log.isDebugEnabled() >> true
         def association = Mock(Association)
@@ -84,9 +84,9 @@ class LogCascadeMappingSpec extends Specification {
         def associatedEntity = Mock(PersistentEntity)
         
         association.getOwner() >> owner
-        association.getName() >> 'testProperty'
+        association.getName() >> "testProperty"
         association.getAssociatedEntity() >> associatedEntity
-        owner.getName() >> 'OwnerClass'
+        owner.getName() >> "OwnerClass"
         associatedEntity.getJavaClass() >> TargetClass
         
         def cascadeBehavior = CascadeBehavior.ALL
@@ -95,11 +95,11 @@ class LogCascadeMappingSpec extends Specification {
         loggerHelper.logCascadeMapping(association, cascadeBehavior)
 
         then:
-        1 * log.debug('Mapping cascade strategy for {} property {}.{} referencing type [{}] -> [CASCADE: {}]',
-                'unknown', 'OwnerClass', 'testProperty', TargetClass.name, cascadeBehavior)
+        1 * log.debug("Mapping cascade strategy for {} property {}.{} referencing type [{}] -> [CASCADE: {}]",
+                "unknown", "OwnerClass", "testProperty", TargetClass.name, cascadeBehavior)
     }
 
-    def 'should not log if debug is disabled'() {
+    def "should not log if debug is disabled"() {
         given:
         log.isDebugEnabled() >> false
         def association = Mock(Association)

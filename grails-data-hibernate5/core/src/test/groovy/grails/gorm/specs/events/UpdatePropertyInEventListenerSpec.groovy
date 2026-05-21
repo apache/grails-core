@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -43,48 +43,47 @@ class UpdatePropertyInEventListenerSpec extends Specification {
     @Shared PlatformTransactionManager transactionManager = hibernateDatastore.transactionManager
 
     @Rollback
-    void 'Test that using an listener does not produce an extra update'() {
+    void "Test that using an listener does not produce an extra update"() {
         given:
         ((ConfigurableApplicationEventPublisher)hibernateDatastore.applicationEventPublisher).addApplicationListener(
                 new PasswordEncodingListener(hibernateDatastore)
         )
         Session session = hibernateDatastore.sessionFactory.currentSession
 
-        when:'A user is inserted'
-        User user = new User(username: 'foo', password: 'bar')
-        user.save(flush: true)
+        when:"A user is inserted"
+        User user = new User(username: "foo", password: "bar")
+        user.save(flush:true)
 
-        then:'The password is only encoded once and no update is issued'
-        user.password == 'xxxxxxxx0'
+        then:"The password is only encoded once and no update is issued"
+        user.password == "xxxxxxxx0"
 
-        when:'A user is found'
+        when:"A user is found"
         session.clear()
-        user = User.findByUsername('foo')
+        user = User.findByUsername("foo")
         session.flush()
 
-        then:'The password is not encoded again'
-        user.password == 'xxxxxxxx0'
+        then:"The password is not encoded again"
+        user.password == "xxxxxxxx0"
 
-        when:'The user is updated'
-        user.password = 'blah'
-        user.save(flush: true)
+        when:"The user is updated"
+        user.password = "blah"
+        user.save(flush:true)
 
-        then:'The password is encoded again'
-        user.password == 'xxxxxxxx1'
+        then:"The password is encoded again"
+        user.password == "xxxxxxxx1"
 
-        when:'A user is found'
+        when:"A user is found"
         session.clear()
-        user = User.findByUsername('foo')
+        user = User.findByUsername("foo")
         session.flush()
 
-        then:'The password is not encoded again'
-        user.password == 'xxxxxxxx1'
+        then:"The password is not encoded again"
+        user.password == "xxxxxxxx1"
     }
 }
 
 @Entity
 class User {
-
     String username
     String password
 
@@ -104,7 +103,7 @@ class PasswordEncodingListener extends AbstractPersistenceEventListener {
 
     @Override
     protected void onPersistenceEvent(AbstractPersistenceEvent event) {
-        event.getEntityAccess().setProperty('password', "xxxxxxxx${i++}".toString())
+        event.getEntityAccess().setProperty("password", "xxxxxxxx${i++}".toString())
     }
 
     @Override

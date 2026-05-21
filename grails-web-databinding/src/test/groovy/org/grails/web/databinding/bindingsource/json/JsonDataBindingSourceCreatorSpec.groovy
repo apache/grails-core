@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -30,9 +30,9 @@ class JsonDataBindingSourceCreatorSpec extends Specification {
     void 'Test JSON parsing'() {
         given:
         def json = '''{
-  'category': {'name':'laptop', 'shouldBeNull': null, 'shouldBeTrue': true, 'shouldBeFalse': false, 'someNumber': 42},
-  'name': 'MacBook',
-  'languages' : [ {'name': 'Groovy', 'company': 'GoPivotal'}, {'name': 'Java', 'company': 'Oracle'}]
+  "category": {"name":"laptop", "shouldBeNull": null, "shouldBeTrue": true, "shouldBeFalse": false, "someNumber": 42},
+  "name": "MacBook",
+  "languages" : [ {"name": "Groovy", "company": "GoPivotal"}, {"name": "Java", "company": "Oracle"}]
 }'''
 
         def inputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))
@@ -68,12 +68,13 @@ class JsonDataBindingSourceCreatorSpec extends Specification {
 
     void 'Test malformed JSON parsing'() {
         given:
-        def json = '''{'mapData': {'name':"Jeff {{{'''
+        def json = '''{"mapData": {"name":"Jeff{{{'''
 
         def inputStream = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))
 
+
         when:
-        def bindingSource = new JsonDataBindingSourceCreator().createBindingSource(inputStream, 'UTF-8')
+        def bindingSource = new JsonDataBindingSourceCreator().createBindingSource(inputStream, "UTF-8")
 
         then:
         thrown JsonException

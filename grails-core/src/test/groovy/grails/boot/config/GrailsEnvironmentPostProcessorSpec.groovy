@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -44,7 +44,7 @@ class GrailsEnvironmentPostProcessorSpec extends Specification {
         Environment.reset()
     }
 
-    def 'postProcessEnvironment loads plugin configurations when discovery bean is available'() {
+    def "postProcessEnvironment loads plugin configurations when discovery bean is available"() {
         given:
         def bootstrapContext = Mock(ConfigurableBootstrapContext)
         def discovery = Mock(PluginDiscovery)
@@ -62,7 +62,7 @@ class GrailsEnvironmentPostProcessorSpec extends Specification {
         noExceptionThrown()
     }
 
-    def 'postProcessEnvironment errors on missing discovery bean'() {
+    def "postProcessEnvironment errors on missing discovery bean"() {
         given:
         def bootstrapContext = Mock(ConfigurableBootstrapContext)
         bootstrapContext.get(PluginDiscovery.class) >> null
@@ -78,7 +78,7 @@ class GrailsEnvironmentPostProcessorSpec extends Specification {
         thrown(GrailsConfigurationException)
     }
 
-    def 'order value is set appropriately for early loading'() {
+    def "order value is set appropriately for early loading"() {
         given:
         def bootstrapContext = Mock(ConfigurableBootstrapContext)
         bootstrapContext.get(PluginDiscovery.class) >> null
@@ -89,7 +89,7 @@ class GrailsEnvironmentPostProcessorSpec extends Specification {
         processor.order < 0  // Should run early (HIGHEST_PRECEDENCE + 15 is still negative)
     }
 
-    def 'postProcessEnvironment handles IOException from yml configuration gracefully'() {
+    def "postProcessEnvironment handles IOException from yml configuration gracefully"() {
         given:
         def ymlResource = Mock(Resource)
         ymlResource.exists() >> true
@@ -114,8 +114,8 @@ class GrailsEnvironmentPostProcessorSpec extends Specification {
         noExceptionThrown()
     }
 
-    def 'postProcessEnvironment handles groovy configuration failure gracefully'() {
-        given: 'a plugin with a groovy config resource that fails to load'
+    def "postProcessEnvironment handles groovy configuration failure gracefully"() {
+        given: "a plugin with a groovy config resource that fails to load"
         // GroovyConfigPropertySourceLoader wraps all failures in GrailsConfigurationException
         // (a RuntimeException), which escapes the per-plugin catch(IOException) and is caught
         // by the outer catch(Exception) in postProcessEnvironment
@@ -142,8 +142,8 @@ class GrailsEnvironmentPostProcessorSpec extends Specification {
         noExceptionThrown()
     }
 
-    def 'postProcessEnvironment handles yml IOException then groovy RuntimeException gracefully'() {
-        given: 'two plugins where yml fails with IOException and groovy fails with GrailsConfigurationException'
+    def "postProcessEnvironment handles yml IOException then groovy RuntimeException gracefully"() {
+        given: "two plugins where yml fails with IOException and groovy fails with GrailsConfigurationException"
         // loadPluginConfigurations iterates in reverse order, so [groovyPlugin, ymlPlugin]
         // becomes [ymlPlugin, groovyPlugin] after reversal. The yml IOException is caught
         // per-plugin and processing continues. The groovy GrailsConfigurationException (RuntimeException)
@@ -180,8 +180,8 @@ class GrailsEnvironmentPostProcessorSpec extends Specification {
         noExceptionThrown()
     }
 
-    def 'postProcessEnvironment does not add property sources when both yml and groovy configurations fail'() {
-        given: 'two plugins where both configurations fail to load'
+    def "postProcessEnvironment does not add property sources when both yml and groovy configurations fail"() {
+        given: "two plugins where both configurations fail to load"
         // The reversed iteration processes ymlPlugin first (IOException caught per-plugin),
         // then groovyPlugin (GrailsConfigurationException caught by outer handler).
         // Neither should add property sources.
@@ -217,8 +217,8 @@ class GrailsEnvironmentPostProcessorSpec extends Specification {
         environment.propertySources.size() == initialSourceCount
     }
 
-    def 'postProcessEnvironment groovy failure aborts remaining plugin config loading'() {
-        given: 'groovy plugin is processed first and its RuntimeException aborts the loop'
+    def "postProcessEnvironment groovy failure aborts remaining plugin config loading"() {
+        given: "groovy plugin is processed first and its RuntimeException aborts the loop"
         // When [ymlPlugin, groovyPlugin] is passed, the reversed list is [groovyPlugin, ymlPlugin].
         // The groovy GrailsConfigurationException (RuntimeException) escapes the inner
         // catch(IOException), so the yml plugin is never reached. The outer catch(Exception)
@@ -276,18 +276,15 @@ class GrailsEnvironmentPostProcessorSpec extends Specification {
 
 // Test fixture plugin classes (minimal, no GrailsApplication dependency)
 class CoreTestGrailsPlugin {
-
     def version = '1.0'
     def loadAfter = []
     def loadBefore = []
 }
 
 class SimpleGrailsPlugin {
-
     def version = '1.0'
 }
 
 class ABCGrailsPlugin {
-
     def version = '1.0'
 }

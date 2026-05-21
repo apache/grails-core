@@ -4,20 +4,21 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
  */
 
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass
+
 
 import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.HibernateEntity
@@ -82,17 +83,17 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         return property
     }
 
-    def 'bindCollectionSecondPass succeeds for Basic String collection'() {
-        given: 'An entity with a basic String collection'
-        def property = createTestHibernateToManyProperty(CSPBHTMPOrder, 'items') as HibernateToManyProperty
+    def "bindCollectionSecondPass succeeds for Basic String collection"() {
+        given: "An entity with a basic String collection"
+        def property = createTestHibernateToManyProperty(CSPBHTMPOrder, "items") as HibernateToManyProperty
 
-        and: 'We trigger the first pass mapping'
+        and: "We trigger the first pass mapping"
         hibernateFirstPass()
 
-        expect: 'The Hibernate collection object is now initialized'
+        expect: "The Hibernate collection object is now initialized"
         property.getCollection() != null
 
-        when: 'Binding second pass'
+        when: "Binding second pass"
         binder.bindCollectionSecondPass(property)
 
         then:
@@ -100,14 +101,14 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         !(property instanceof HibernateToManyEntityProperty)
     }
 
-    def 'bindCollectionSecondPass succeeds for Unidirectional One-to-Many'() {
-        given: 'An entity with a unidirectional one-to-many collection'
-        def property = createTestHibernateToManyProperty(CSPBUniOwner, 'items') as HibernateOneToManyProperty
+    def "bindCollectionSecondPass succeeds for Unidirectional One-to-Many"() {
+        given: "An entity with a unidirectional one-to-many collection"
+        def property = createTestHibernateToManyProperty(CSPBUniOwner, "items") as HibernateOneToManyProperty
         
-        and: 'Hibernate RootClasses'
+        and: "Hibernate RootClasses"
         hibernateFirstPass()
 
-        when: 'Binding second pass'
+        when: "Binding second pass"
         binder.bindCollectionSecondPass(property)
 
         then:
@@ -116,15 +117,15 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         property.getCollection() != null
     }
 
-    def 'bindCollectionSecondPass succeeds for Bidirectional Many-to-Many'() {
-        given: 'Entities with a bidirectional many-to-many collection'
+    def "bindCollectionSecondPass succeeds for Bidirectional Many-to-Many"() {
+        given: "Entities with a bidirectional many-to-many collection"
         createPersistentEntity(CSPBManyToManyB)
-        def property = createTestHibernateToManyProperty(CSPBManyToManyA, 'others') as HibernateManyToManyProperty
+        def property = createTestHibernateToManyProperty(CSPBManyToManyA, "others") as HibernateManyToManyProperty
         
-        and: 'Hibernate RootClasses'
+        and: "Hibernate RootClasses"
         hibernateFirstPass()
 
-        when: 'Binding second pass'
+        when: "Binding second pass"
         binder.bindCollectionSecondPass(property)
 
         then:
@@ -135,14 +136,14 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         property.getCollection().getElement() instanceof ManyToOne
     }
 
-    def 'bindCollectionSecondPass handles orderBy configuration'() {
-        given: 'An entity with orderBy in mapping (bidirectional to allow sort)'
-        def property = createTestHibernateToManyProperty(CSPBOrderOwner, 'items') as HibernateToManyProperty
+    def "bindCollectionSecondPass handles orderBy configuration"() {
+        given: "An entity with orderBy in mapping (bidirectional to allow sort)"
+        def property = createTestHibernateToManyProperty(CSPBOrderOwner, "items") as HibernateToManyProperty
         
-        and: 'Hibernate RootClasses'
+        and: "Hibernate RootClasses"
         hibernateFirstPass()
 
-        when: 'Binding second pass'
+        when: "Binding second pass"
         binder.bindCollectionSecondPass(property)
 
         then:
@@ -151,14 +152,14 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         property.getCollection().getOrderBy() != null
     }
 
-    def 'bindCollectionSecondPass succeeds for Embedded Collection'() {
-        given: 'An entity with a collection handled as an embedded collection (e.g. Basic collection)'
-        def property = createTestHibernateToManyProperty(CSPBHTMPOrder, 'items') as HibernateToManyProperty
+    def "bindCollectionSecondPass succeeds for Embedded Collection"() {
+        given: "An entity with a collection handled as an embedded collection (e.g. Basic collection)"
+        def property = createTestHibernateToManyProperty(CSPBHTMPOrder, "items") as HibernateToManyProperty
         
-        and: 'Hibernate RootClasses'
+        and: "Hibernate RootClasses"
         hibernateFirstPass()
 
-        when: 'Binding second pass'
+        when: "Binding second pass"
         binder.bindCollectionSecondPass(property)
 
         then:
@@ -167,14 +168,14 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         property.getCollection() != null
     }
 
-    def 'bindCollectionSecondPass succeeds for Bidirectional One-to-Many Map'() {
-        given: 'An entity with a bidirectional one-to-many map'
-        def property = createTestHibernateToManyProperty(CSPBMapOwner, 'items') as HibernateToManyProperty
+    def "bindCollectionSecondPass succeeds for Bidirectional One-to-Many Map"() {
+        given: "An entity with a bidirectional one-to-many map"
+        def property = createTestHibernateToManyProperty(CSPBMapOwner, "items") as HibernateToManyProperty
         
-        and: 'Hibernate RootClasses'
+        and: "Hibernate RootClasses"
         hibernateFirstPass()
 
-        when: 'Binding second pass'
+        when: "Binding second pass"
         binder.bindCollectionSecondPass(property)
 
         then:
@@ -184,14 +185,14 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         1 * mockBidirectionalMapElementBinder.bind(property)
     }
 
-    def 'HibernateCollectionProperty getAssociatedClass returns PersistentClass or throws MappingException'() {
-        given: 'A collection property that implements HibernateCollectionProperty'
-        def property = createTestHibernateToManyProperty(CSPBUniOwner, 'items') as HibernateToManyEntityProperty
+    def "HibernateCollectionProperty getAssociatedClass returns PersistentClass or throws MappingException"() {
+        given: "A collection property that implements HibernateCollectionProperty"
+        def property = createTestHibernateToManyProperty(CSPBUniOwner, "items") as HibernateToManyEntityProperty
         
         expect:
         property instanceof HibernateToManyEntityProperty
 
-        when: 'Persistent class is present (after first pass)'
+        when: "Persistent class is present (after first pass)"
         hibernateFirstPass()
         def associatedClass = property.getAssociatedClass()
 
@@ -199,30 +200,29 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         associatedClass != null
         associatedClass.entityName == CSPBUniItem.name
 
-        when: 'Associated entity is present but PersistentClass is missing'
+        when: "Associated entity is present but PersistentClass is missing"
         property.getHibernateAssociatedEntity().setPersistentClass(null)
         property.getAssociatedClass()
 
         then:
         def ex = thrown(org.hibernate.MappingException)
-        ex.message.contains('items')
-        ex.message.contains('has no associated class')
+        ex.message.contains("items")
+        ex.message.contains("has no associated class")
     }
 
-    def 'bindCollectionSecondPass skips element binding for embedded collection when componentBinder is null'() {
-
-        given: 'An embedded collection property with componentBinder not set on the binder'
+    def "bindCollectionSecondPass skips element binding for embedded collection when componentBinder is null"() {
+        given: "An embedded collection property with componentBinder not set on the binder"
         def mbc = getGrailsDomainBinder().getMetadataBuildingContext()
         def ownerClass = new org.hibernate.mapping.RootClass(mbc)
-        ownerClass.setEntityName('EmbeddedOwner')
-        def ownerTable = new org.hibernate.mapping.Table('test', 'embedded_owner')
+        ownerClass.setEntityName("EmbeddedOwner")
+        def ownerTable = new org.hibernate.mapping.Table("test", "embedded_owner")
         ownerClass.setTable(ownerTable)
         def idValue = new org.hibernate.mapping.BasicValue(mbc, ownerTable)
-        idValue.setTypeName('long')
-        idValue.addColumn(new org.hibernate.mapping.Column('id'))
+        idValue.setTypeName("long")
+        idValue.addColumn(new org.hibernate.mapping.Column("id"))
         ownerClass.setIdentifier(idValue)
         def bag = new org.hibernate.mapping.Bag(mbc, ownerClass)
-        bag.setCollectionTable(new org.hibernate.mapping.Table('test', 'embedded_owner_dims'))
+        bag.setCollectionTable(new org.hibernate.mapping.Table("test", "embedded_owner_dims"))
 
         def embeddedProperty = Mock(org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedCollectionProperty)
         embeddedProperty.getCollection() >> bag
@@ -238,38 +238,38 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         embeddedProperty.getOwner() >> ownerEntity
         embeddedProperty.getHibernateOwner() >> ownerEntity
 
-        when: 'second pass is run without a componentBinder'
+        when: "second pass is run without a componentBinder"
         binder.bindCollectionSecondPass(embeddedProperty)
 
-        then: 'no exception — the element binding is skipped gracefully'
+        then: "no exception — the element binding is skipped gracefully"
         noExceptionThrown()
         bag.element == null
     }
 
-    def 'setComponentBinder wires ComponentBinder into the binder'() {
+    def "setComponentBinder wires ComponentBinder into the binder"() {
         given:
         def mockComponentBinder = Mock(org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder)
 
         when:
         binder.setComponentBinder(mockComponentBinder)
 
-        then: 'no exception thrown — the setter is available'
+        then: "no exception thrown — the setter is available"
         noExceptionThrown()
     }
 
-    def 'bindCollectionSecondPass calls componentBinder when set for embedded collection'() {
+    def "bindCollectionSecondPass calls componentBinder when set for embedded collection"() {
         given:
         def mbc = getGrailsDomainBinder().getMetadataBuildingContext()
         def ownerClass = new org.hibernate.mapping.RootClass(mbc)
-        ownerClass.setEntityName('EmbeddedOwner2')
-        def ownerTable = new org.hibernate.mapping.Table('test', 'embedded_owner2')
+        ownerClass.setEntityName("EmbeddedOwner2")
+        def ownerTable = new org.hibernate.mapping.Table("test", "embedded_owner2")
         ownerClass.setTable(ownerTable)
         def idValue = new org.hibernate.mapping.BasicValue(mbc, ownerTable)
-        idValue.setTypeName('long')
-        idValue.addColumn(new org.hibernate.mapping.Column('id'))
+        idValue.setTypeName("long")
+        idValue.addColumn(new org.hibernate.mapping.Column("id"))
         ownerClass.setIdentifier(idValue)
         def bag = new org.hibernate.mapping.Bag(mbc, ownerClass)
-        bag.setCollectionTable(new org.hibernate.mapping.Table('test', 'embedded_owner2_dims'))
+        bag.setCollectionTable(new org.hibernate.mapping.Table("test", "embedded_owner2_dims"))
 
         def mockComponent = Mock(org.hibernate.mapping.Component)
         def mockComponentBinder = Mock(org.grails.orm.hibernate.cfg.domainbinding.binder.ComponentBinder)
@@ -301,7 +301,6 @@ class CollectionSecondPassBinderSpec extends HibernateGormDatastoreSpec {
 
 @Entity
 class CSPBTestEntityWithMany implements HibernateEntity<CSPBTestEntityWithMany> {
-
     Long id
     String name
     static hasMany = [items: CSPBAssociatedItem]
@@ -309,7 +308,6 @@ class CSPBTestEntityWithMany implements HibernateEntity<CSPBTestEntityWithMany> 
 
 @Entity
 class CSPBAssociatedItem implements HibernateEntity<CSPBAssociatedItem> {
-
     Long id
     String value
     CSPBTestEntityWithMany parent
@@ -318,7 +316,6 @@ class CSPBAssociatedItem implements HibernateEntity<CSPBAssociatedItem> {
 
 @Entity
 class CSPBHTMPOrder implements HibernateEntity<CSPBHTMPOrder> {
-
     Long id
     List<String> items = []
     static hasMany = [items: String]
@@ -326,28 +323,24 @@ class CSPBHTMPOrder implements HibernateEntity<CSPBHTMPOrder> {
 
 @Entity
 class CSPBUniOwner implements HibernateEntity<CSPBUniOwner> {
-
     Long id
     static hasMany = [items: CSPBUniItem]
 }
 
 @Entity
 class CSPBUniItem implements HibernateEntity<CSPBUniItem> {
-
     Long id
     String name
 }
 
 @Entity
 class CSPBManyToManyA implements HibernateEntity<CSPBManyToManyA> {
-
     Long id
     static hasMany = [others: CSPBManyToManyB]
 }
 
 @Entity
 class CSPBManyToManyB implements HibernateEntity<CSPBManyToManyB> {
-
     Long id
     static hasMany = [owners: CSPBManyToManyA]
     static belongsTo = CSPBManyToManyA
@@ -355,17 +348,15 @@ class CSPBManyToManyB implements HibernateEntity<CSPBManyToManyB> {
 
 @Entity
 class CSPBOrderOwner implements HibernateEntity<CSPBOrderOwner> {
-
     Long id
     static hasMany = [items: CSPBOrderItem]
     static mapping = {
-        items joinTable: [name: 'ordered_items'], sort: 'name', order: 'desc'
+        items joinTable: [name: "ordered_items"], sort: "name", order: "desc"
     }
 }
 
 @Entity
 class CSPBOrderItem implements HibernateEntity<CSPBOrderItem> {
-
     Long id
     String name
     CSPBOrderOwner owner
@@ -374,13 +365,11 @@ class CSPBOrderItem implements HibernateEntity<CSPBOrderItem> {
 
 @Entity
 class CSPBBidiOwner implements HibernateEntity<CSPBBidiOwner> {
-
     Long id
     static hasMany = [items: CSPBBidiItem]
 }
 @Entity
 class CSPBBidiItem implements HibernateEntity<CSPBBidiItem> {
-
     Long id
     CSPBBidiOwner owner
     static belongsTo = [owner: CSPBBidiOwner]
@@ -388,7 +377,6 @@ class CSPBBidiItem implements HibernateEntity<CSPBBidiItem> {
 
 @Entity
 class CSPBMapOwner implements HibernateEntity<CSPBMapOwner> {
-
     Long id
     Map<String, CSPBMapItem> items
     static hasMany = [items: CSPBMapItem]
@@ -396,7 +384,6 @@ class CSPBMapOwner implements HibernateEntity<CSPBMapOwner> {
 
 @Entity
 class CSPBMapItem implements HibernateEntity<CSPBMapItem> {
-
     Long id
     CSPBMapOwner owner
     static belongsTo = [owner: CSPBMapOwner]

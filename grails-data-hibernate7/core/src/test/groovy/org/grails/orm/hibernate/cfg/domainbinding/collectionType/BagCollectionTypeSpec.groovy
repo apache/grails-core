@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -31,7 +31,7 @@ import spock.lang.Subject
 
 class BagCollectionTypeSpec extends HibernateGormDatastoreSpec {
 
-    def 'should create a Bag and delegate to binder'() {
+    def "should create a Bag and delegate to binder"() {
         given:
         def binder = Mock(GrailsDomainBinder)
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
@@ -42,7 +42,7 @@ class BagCollectionTypeSpec extends HibernateGormDatastoreSpec {
         
         def property = Mock(HibernateToManyProperty)
         def owner = new RootClass(metadataBuildingContext)
-        def table = new Table('test_table')
+        def table = new Table("test_table")
         owner.setTable(table)
         
         def domainClass = Mock(GrailsHibernatePersistentEntity)
@@ -50,8 +50,8 @@ class BagCollectionTypeSpec extends HibernateGormDatastoreSpec {
         domainClass.getMappedForm() >> null
         
         def mappings = Mock(InFlightMetadataCollector)
-        def path = 'testPath'
-        def sessionFactoryBeanName = 'sessionFactory'
+        def path = "testPath"
+        def sessionFactoryBeanName = "sessionFactory"
 
         when:
         def result = collectionType.create(property, owner)

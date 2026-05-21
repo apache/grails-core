@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -42,15 +42,16 @@ class TwoUnidirectionalHasManySpec extends Specification {
 
     @Shared @AutoCleanup HibernateDatastore datastore = new HibernateDatastore(getClass().getPackage())
 
+
     @Rollback
     @Issue('https://github.com/apache/grails-core/issues/10811')
     @Ignore
-    void 'test two undirectional one to many references'() {
+    void "test two undirectional one to many references"() {
         when:
-        new EcmMask(name: 'test')
-                .addToCreateUsers(name: 'Fred')
-                .addToUpdateUsers(name: 'Bob')
-                .save(flush: true).discard()
+        new EcmMask(name: "test")
+                .addToCreateUsers(name: "Fred")
+                .addToUpdateUsers(name:"Bob")
+                .save(flush:true).discard()
 
         EcmMask mask = EcmMask.first()
 
@@ -64,14 +65,14 @@ class TwoUnidirectionalHasManySpec extends Specification {
     @Rollback
     @Issue('https://github.com/apache/grails-core/issues/10811')
     @Ignore
-    void 'test two JPA undirectional one to many references'() {
+    void "test two JPA undirectional one to many references"() {
 
         when:
-        def jpa = new EcmMaskJpa(name: 'test')
-        jpa.createdUsers.add(new User2(name: 'Fred'))
-        jpa.updatedUsers.add(new User2(name: 'Bob'))
+        def jpa = new EcmMaskJpa(name: "test")
+        jpa.createdUsers.add(new User2(name: "Fred"))
+        jpa.updatedUsers.add(new User2(name: "Bob"))
 
-        jpa.save(flush: true).discard()
+        jpa.save(flush:true).discard()
 
         EcmMaskJpa mask = EcmMaskJpa.first()
 
@@ -86,7 +87,6 @@ class TwoUnidirectionalHasManySpec extends Specification {
 
 @JpaEntity
 class EcmMaskJpa {
-
     @Id
     @GeneratedValue
     Long id
@@ -102,7 +102,6 @@ class EcmMaskJpa {
 
 @JpaEntity
 class User2 {
-
     @Id
     @GeneratedValue
     Long id
@@ -111,23 +110,21 @@ class User2 {
 
 @Entity
 class EcmMask {
-
     String name
-    static hasMany = [createUsers: User,updateUsers: User]
+    static hasMany = [createUsers:User,updateUsers:User]
 
     static mapping = MappingBuilder.orm {
 //        property('createUsers') {
-//            joinTable { name'created_users' }
+//            joinTable { name"created_users" }
 //        }
 //        property('updateUsers') {
-//            joinTable { name 'updated_users' }
+//            joinTable { name "updated_users" }
 //        }
     }
 }
 
 @Entity
 class User {
-
     String name
 
     static mapping = {

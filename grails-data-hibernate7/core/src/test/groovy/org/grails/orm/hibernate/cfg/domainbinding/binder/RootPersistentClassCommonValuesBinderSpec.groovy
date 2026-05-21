@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -52,7 +52,7 @@ class RootPersistentClassCommonValuesBinderSpec extends HibernateGormDatastoreSp
         def simpleIdBinder = new SimpleIdBinder(metadataBuildingContext, new BasicValueCreator(metadataBuildingContext, jdbcEnvironment, namingStrategy), simpleValueBinder, propertyBinder)
         def compositeIdBinder = new CompositeIdBinder(metadataBuildingContext, null, null)
         identityBinder = new IdentityBinder(simpleIdBinder, compositeIdBinder)
-        versionBinder = new VersionBinder(metadataBuildingContext, simpleValueBinder, propertyBinder, BasicValue.&new)
+        versionBinder = new VersionBinder(metadataBuildingContext, simpleValueBinder, propertyBinder, BasicValue::new)
         classBinder = new ClassBinder(getCollector())
         classPropertiesBinder = Mock(ClassPropertiesBinder)
 
@@ -67,7 +67,7 @@ class RootPersistentClassCommonValuesBinderSpec extends HibernateGormDatastoreSp
         )
     }
 
-    void 'test bindRootPersistentClassCommonValues binds properties correctly'() {
+    void "test bindRootPersistentClassCommonValues binds properties correctly"() {
         given:
         def entity = createPersistentEntity(TestEntity) as HibernatePersistentEntity
 
@@ -79,10 +79,10 @@ class RootPersistentClassCommonValuesBinderSpec extends HibernateGormDatastoreSp
         rootClass != null
         rootClass.getEntityName() == TestEntity.name
         rootClass.isAbstract() == false
-        rootClass.getTable().getName() == namingStrategy.resolveTableName('TestEntity')
+        rootClass.getTable().getName() == namingStrategy.resolveTableName("TestEntity")
     }
 
-    void 'test bindRootPersistentClassCommonValues for abstract entity'() {
+    void "test bindRootPersistentClassCommonValues for abstract entity"() {
         given:
         def entity = createPersistentEntity(AbstractTestEntity) as HibernatePersistentEntity
 
@@ -94,7 +94,7 @@ class RootPersistentClassCommonValuesBinderSpec extends HibernateGormDatastoreSp
         rootClass.isAbstract() == true
     }
 
-    void 'test bindRoot with caching enabled'() {
+    void "test bindRoot with caching enabled"() {
         given:
         def entity = createPersistentEntity(CachedEntity) as HibernatePersistentEntity
 
@@ -103,12 +103,12 @@ class RootPersistentClassCommonValuesBinderSpec extends HibernateGormDatastoreSp
 
         then:
         rootClass.isCached()
-        rootClass.getCacheConcurrencyStrategy() == 'read-write'
+        rootClass.getCacheConcurrencyStrategy() == "read-write"
         rootClass.isMutable() == true
         rootClass.isLazyPropertiesCacheable() == true
     }
 
-    void 'test bindRoot with read-only caching'() {
+    void "test bindRoot with read-only caching"() {
         given:
         def entity = createPersistentEntity(ReadOnlyCachedEntity) as HibernatePersistentEntity
 
@@ -117,11 +117,11 @@ class RootPersistentClassCommonValuesBinderSpec extends HibernateGormDatastoreSp
 
         then:
         rootClass.isCached()
-        rootClass.getCacheConcurrencyStrategy() == 'read-only'
+        rootClass.getCacheConcurrencyStrategy() == "read-only"
         rootClass.isMutable() == false
     }
 
-    void 'test bindRoot with non-lazy cache include'() {
+    void "test bindRoot with non-lazy cache include"() {
         given:
         def entity = createPersistentEntity(NonLazyCachedEntity) as HibernatePersistentEntity
 
@@ -136,7 +136,6 @@ class RootPersistentClassCommonValuesBinderSpec extends HibernateGormDatastoreSp
 
 @Entity
 class TestEntity {
-
     Long id
     Long version
     String name
@@ -144,7 +143,6 @@ class TestEntity {
 
 @Entity
 abstract class AbstractTestEntity {
-
     Long id
     Long version
     String name
@@ -152,7 +150,6 @@ abstract class AbstractTestEntity {
 
 @Entity
 class CachedEntity {
-
     Long id
     static mapping = {
         cache true
@@ -161,7 +158,6 @@ class CachedEntity {
 
 @Entity
 class ReadOnlyCachedEntity {
-
     Long id
     static mapping = {
         cache usage: 'read-only'
@@ -170,7 +166,6 @@ class ReadOnlyCachedEntity {
 
 @Entity
 class NonLazyCachedEntity {
-
     Long id
     static mapping = {
         cache include: 'non-lazy'

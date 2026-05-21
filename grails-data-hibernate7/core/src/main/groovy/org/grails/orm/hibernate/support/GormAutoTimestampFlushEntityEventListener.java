@@ -85,8 +85,8 @@ public class GormAutoTimestampFlushEntityEventListener implements FlushEntityEve
         }
 
         // Respect autoTimestamp = false mappings
-        if (persistentEntity.getMapping().getMappedForm() != null &&
-                !persistentEntity.getMapping().getMappedForm().isAutoTimestamp()) {
+        if (persistentEntity.getMapping().getMappedForm() != null
+                && !persistentEntity.getMapping().getMappedForm().isAutoTimestamp()) {
             return;
         }
 

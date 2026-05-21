@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -36,14 +36,14 @@ class GormDatabaseSpec extends Specification {
 
     protected Metadata createRealMetadata() {
         def serviceRegistry = new StandardServiceRegistryBuilder()
-                .applySetting('hibernate.dialect', H2Dialect.class.getName())
+                .applySetting("hibernate.dialect", H2Dialect.class.getName())
                 .build()
         return new MetadataBuilderImpl(
                 new MetadataSources(serviceRegistry)
         ).build()
     }
 
-    def 'test GormDatabase initialization and properties'() {
+    def "test GormDatabase initialization and properties"() {
         given:
         def dialect = new H2Dialect()
         Metadata metadata = createRealMetadata()
@@ -65,7 +65,7 @@ class GormDatabaseSpec extends Specification {
         !gormDb.isCorrectDatabaseImplementation(Mock(DatabaseConnection))
     }
 
-    def 'test GormDatabase connection and snapshot'() {
+    def "test GormDatabase connection and snapshot"() {
         given:
         def dialect = new H2Dialect()
         Metadata metadata = createRealMetadata()
@@ -79,10 +79,10 @@ class GormDatabaseSpec extends Specification {
         gormDb.getDatabaseConnection() instanceof JdbcConnection
         gormDb.getDatabaseConnection().getURL() == 'hibernate:gorm'
 
-        when: 'creating a snapshot for the database'
+        when: "creating a snapshot for the database"
         def snapshot = new JdbcDatabaseSnapshot([] as DatabaseObject[], gormDb)
 
-        then: 'it returns a DatabaseSnapshot'
+        then: "it returns a DatabaseSnapshot"
         snapshot instanceof DatabaseSnapshot
         snapshot.database == gormDb
     }

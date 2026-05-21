@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -187,7 +187,7 @@ class ValidateableTraitSpec extends Specification {
         when:
         def constraints = MyNullableValidateable.getConstraintsMap()
 
-        then: 'not including 'name' because there is no constraints by user'
+        then: 'not including "name" because there is no constraints by user'
         constraints.size() == 3
         constraints.containsKey 'town'
         constraints.containsKey 'age'
@@ -206,7 +206,6 @@ class ValidateableTraitSpec extends Specification {
 
     @Issue('GRAILS-11625')
     void 'Test that properties defined in a class with overridden defaultNullable which are not explicitly constrained are not accessed during validation'() {
-
         given: 'an instance of a class with overridden defaultNullable returning true'
         def obj = new MyNullableValidateable(town: 'St. Louis', age: 18)
 
@@ -215,7 +214,6 @@ class ValidateableTraitSpec extends Specification {
     }
 
     void 'Ensure class without any constraints can be validated'() {
-
         given:
         NoConstraintsValidateable obj = new NoConstraintsValidateable()
 
@@ -250,7 +248,7 @@ class ValidateableTraitSpec extends Specification {
         constraints.town
     }
 
-    void 'Test that default and shared constraints can be applied from configuration'() {
+    void "Test that default and shared constraints can be applied from configuration"() {
         given:
         GenericApplicationContext applicationContext = new GenericApplicationContext()
         applicationContext.refresh()
@@ -259,7 +257,7 @@ class ValidateableTraitSpec extends Specification {
             myShared matches: /MY_SHARED/, maxSize: 10
         }
         applicationContext.beanFactory.registerSingleton(
-                'constraintEvaluator',
+                "constraintEvaluator",
                 new DefaultConstraintEvaluator(defaultConstraints)
         )
 
@@ -279,7 +277,7 @@ class ValidateableTraitSpec extends Specification {
         constraints.name.hasAppliedConstraint 'nullable'
         constraints.town.hasAppliedConstraint 'nullable'
 
-        and: 'default constraints '*''
+        and: 'default constraints "*"'
         constraints.name.hasAppliedConstraint 'blank'
         constraints.town.hasAppliedConstraint 'blank'
 
@@ -292,7 +290,6 @@ class ValidateableTraitSpec extends Specification {
     }
 
     void 'Ensure properties of super class is inherited'() {
-
         when:
         Map constraints = new SubClassValidateable().getConstraintsMap()
 
@@ -307,7 +304,6 @@ class ValidateableTraitSpec extends Specification {
     }
 
     void 'Ensure properties of super class can be validated'() {
-
         given:
         def validateable = new SubClassValidateable()
 
@@ -321,7 +317,6 @@ class ValidateableTraitSpec extends Specification {
 
     @Issue('apache/grails-core#9774')
     void 'test a Java class which references a Groovy class marked with @Validateable'() {
-
         given:
         def obj = new SomeJavaClass()
 
@@ -338,8 +333,8 @@ class ValidateableTraitSpec extends Specification {
         obj.someValidateable.validate(['name'])
     }
 
-    void 'test that all Validateable trait methods are marked as Generated'() {
-        expect: 'all Validateable methods are marked as Generated on implementation class'
+    void "test that all Validateable trait methods are marked as Generated"() {
+        expect: "all Validateable methods are marked as Generated on implementation class"
         Validateable.getMethods().each { Method traitMethod ->
             assert TestGeneratedAnnotations.class.getMethod(traitMethod.name, traitMethod.parameterTypes).isAnnotationPresent(Generated)
         }
@@ -347,7 +342,6 @@ class ValidateableTraitSpec extends Specification {
 }
 
 class MyValidateable implements Validateable {
-
     String name
     Integer age
     String town
@@ -396,7 +390,6 @@ class MyNullableValidateable implements Validateable {
 }
 
 class NoConstraintsValidateable implements Validateable {
-
     static constraints = {
 
     }
@@ -425,18 +418,16 @@ class ValidateableGetters implements Validateable {
 }
 
 class SharedConstraintsValidateable implements Validateable {
-
     String name
     String town
 
     static constraints = {
         name matches: /[A-Z].*/
-        town shared: 'myShared', inList: ['St. Louis']
+        town shared: "myShared", inList: ['St. Louis']
     }
 }
 
 class SuperClassValidateable {
-
     String superName
 
     static constraints = {
@@ -445,7 +436,6 @@ class SuperClassValidateable {
 }
 
 class SubClassValidateable extends SuperClassValidateable implements Validateable {
-
     String subName
 
     static constraints = {

@@ -4,19 +4,20 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
  */
 package org.grails.web.taglib
+
 
 import org.junit.jupiter.api.Test
 import org.w3c.dom.Document
@@ -35,13 +36,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows
 class FormTagLib2Tests extends AbstractGrailsTagTests {
 
     /** The name used for the datePicker tags created in the test cases. */
-    private static final String DATE_PICKER_TAG_NAME = 'testDatePicker'
-    private static final def SELECT_TAG_NAME = 'testSelect'
+    private static final String DATE_PICKER_TAG_NAME = "testDatePicker"
+    private static final def SELECT_TAG_NAME = "testSelect"
 
-    private static final Collection DATE_PRECISIONS_INCLUDING_MINUTE = ['minute', null].asImmutable()
-    private static final Collection DATE_PRECISIONS_INCLUDING_HOUR = ['hour', 'minute', null].asImmutable()
-    private static final Collection DATE_PRECISIONS_INCLUDING_DAY = ['day', 'hour', 'minute', null].asImmutable()
-    private static final Collection DATE_PRECISIONS_INCLUDING_MONTH = ['month', 'day', 'hour', 'minute', null].asImmutable()
+    private static final Collection DATE_PRECISIONS_INCLUDING_MINUTE = ["minute", null].asImmutable()
+    private static final Collection DATE_PRECISIONS_INCLUDING_HOUR = ["hour", "minute", null].asImmutable()
+    private static final Collection DATE_PRECISIONS_INCLUDING_DAY = ["day", "hour", "minute", null].asImmutable()
+    private static final Collection DATE_PRECISIONS_INCLUDING_MONTH = ["month", "day", "hour", "minute", null].asImmutable()
 
     @Test
     void testDatePickerTagWithDefaultDateAndPrecision() {
@@ -50,27 +51,27 @@ class FormTagLib2Tests extends AbstractGrailsTagTests {
 
     @Test
     void testDatePickerTagWithYearPrecision() {
-        testDatePickerTag(null, 'year')
+        testDatePickerTag(null, "year")
     }
 
     @Test
     void testDatePickerTagWithMonthPrecision() {
-        testDatePickerTag(null, 'month')
+        testDatePickerTag(null, "month")
     }
 
     @Test
     void testDatePickerTagWithDayPrecision() {
-        testDatePickerTag(null, 'day')
+        testDatePickerTag(null, "day")
     }
 
     @Test
     void testDatePickerTagWithHourPrecision() {
-        testDatePickerTag(null, 'hour')
+        testDatePickerTag(null, "hour")
     }
 
     @Test
     void testDatePickerTagWithMinutePrecision() {
-        testDatePickerTag(null, 'minute')
+        testDatePickerTag(null, "minute")
     }
 
     @Test
@@ -118,11 +119,11 @@ class FormTagLib2Tests extends AbstractGrailsTagTests {
         Document document = getDatePickerOutput(null, 'day', defaultDate.getTime())
         assertNotNull(document)
 
-        assertSelectFieldPresentWithSelectedValue(document, DATE_PICKER_TAG_NAME + '_year',
+        assertSelectFieldPresentWithSelectedValue(document, DATE_PICKER_TAG_NAME + "_year",
                 defaultDate.get(Calendar.YEAR).toString())
-        assertSelectFieldPresentWithSelectedValue(document, DATE_PICKER_TAG_NAME + '_month',
+        assertSelectFieldPresentWithSelectedValue(document, DATE_PICKER_TAG_NAME + "_month",
                 (defaultDate.get(Calendar.MONTH) + 1).toString())
-        assertSelectFieldPresentWithSelectedValue(document, DATE_PICKER_TAG_NAME + '_day',
+        assertSelectFieldPresentWithSelectedValue(document, DATE_PICKER_TAG_NAME + "_day",
                 defaultDate.get(Calendar.DAY_OF_MONTH).toString())
     }
 
@@ -138,12 +139,12 @@ class FormTagLib2Tests extends AbstractGrailsTagTests {
 
     @Test
     void testDatePickerTagWithCustomDateAndPrecision() {
-        testDatePickerTag(new Date(0), 'day')
+        testDatePickerTag(new Date(0), "day")
     }
 
     @Test
     void testDatePickerTagWithNoneValues() {
-        Document document = getDatePickerOutput('none', 'day', null)
+        Document document = getDatePickerOutput("none", "day", null)
         assertNotNull(document)
 
         // validate presence and structure of hidden date picker form field
@@ -164,13 +165,13 @@ class FormTagLib2Tests extends AbstractGrailsTagTests {
                 document,
                 "//select[@name='" + DATE_PICKER_TAG_NAME + "_year' and @id='" + DATE_PICKER_TAG_NAME + "_year']")
 
-        assertSelectFieldPresentWithSelectedValue(document, DATE_PICKER_TAG_NAME + '_year', '')
-        assertSelectFieldPresentWithSelectedValue(document, DATE_PICKER_TAG_NAME + '_month', '')
-        assertSelectFieldPresentWithSelectedValue(document, DATE_PICKER_TAG_NAME + '_day', '')
+        assertSelectFieldPresentWithSelectedValue(document, DATE_PICKER_TAG_NAME + "_year", '')
+        assertSelectFieldPresentWithSelectedValue(document, DATE_PICKER_TAG_NAME + "_month", '')
+        assertSelectFieldPresentWithSelectedValue(document, DATE_PICKER_TAG_NAME + "_day", '')
     }
 
     private void testDatePickerTag(Object date, String precision) {
-        // Capture 'now' upfront to prevent test pollution at minute/hour/day boundaries.
+        // Capture "now" upfront to prevent test pollution at minute/hour/day boundaries.
         Calendar calendar = new GregorianCalendar()
         Date xdefault = null
         if (date == null) {
@@ -238,11 +239,11 @@ class FormTagLib2Tests extends AbstractGrailsTagTests {
     }
 
     private void validateSelectedYearValue(Document document, Calendar calendar) {
-        assertSelectFieldPresentWithSelectedValue(document, DATE_PICKER_TAG_NAME + '_year', Integer.toString(calendar.get(Calendar.YEAR)))
+        assertSelectFieldPresentWithSelectedValue(document, DATE_PICKER_TAG_NAME + "_year", Integer.toString(calendar.get(Calendar.YEAR)))
     }
 
     private void validateSelectedMonthValue(Document document, Calendar calendar, String precision) {
-        final String FIELD_NAME = DATE_PICKER_TAG_NAME + '_month'
+        final String FIELD_NAME = DATE_PICKER_TAG_NAME + "_month"
 
         String expectedMonthValue = Integer.toString(1); // January
 
@@ -256,7 +257,7 @@ class FormTagLib2Tests extends AbstractGrailsTagTests {
     }
 
     private void validateSelectedDayValue(Document document, Calendar calendar, String precision) {
-        final String FIELD_NAME = DATE_PICKER_TAG_NAME + '_day'
+        final String FIELD_NAME = DATE_PICKER_TAG_NAME + "_day"
 
         String expectedDayValue = Integer.toString(1); // 1st day of the month
         if (DATE_PRECISIONS_INCLUDING_DAY.contains(precision)) {
@@ -269,12 +270,12 @@ class FormTagLib2Tests extends AbstractGrailsTagTests {
     }
 
     private void validateSelectedHourValue(Document document, Calendar calendar, String precision) {
-        final String FIELD_NAME = DATE_PICKER_TAG_NAME + '_hour'
+        final String FIELD_NAME = DATE_PICKER_TAG_NAME + "_hour"
 
-        String expectedHourValue = '00'
+        String expectedHourValue = "00"
         if (DATE_PRECISIONS_INCLUDING_HOUR.contains(precision)) {
             int rawHourValue = calendar.get(Calendar.HOUR_OF_DAY)
-            expectedHourValue = (rawHourValue < 10) ? ('0' + rawHourValue) : Integer.toString(rawHourValue)
+            expectedHourValue = (rawHourValue < 10) ? ("0" + rawHourValue) : Integer.toString(rawHourValue)
             assertSelectFieldPresentWithSelectedValue(document, FIELD_NAME, expectedHourValue)
         }
         else {
@@ -288,12 +289,12 @@ class FormTagLib2Tests extends AbstractGrailsTagTests {
             return
         }
 
-        final String FIELD_NAME = DATE_PICKER_TAG_NAME + '_minute'
+        final String FIELD_NAME = DATE_PICKER_TAG_NAME + "_minute"
 
-        String expectedMinuteValue = '00'
+        String expectedMinuteValue = "00"
         if (DATE_PRECISIONS_INCLUDING_MINUTE.contains(precision)) {
             int rawMinuteValue = calendar.get(Calendar.MINUTE)
-            expectedMinuteValue = (rawMinuteValue < 10) ? ('0' + rawMinuteValue) : Integer.toString(rawMinuteValue)
+            expectedMinuteValue = (rawMinuteValue < 10) ? ("0" + rawMinuteValue) : Integer.toString(rawMinuteValue)
             assertSelectFieldPresentWithSelectedValue(document, FIELD_NAME, expectedMinuteValue)
         }
         else {
@@ -335,12 +336,12 @@ class FormTagLib2Tests extends AbstractGrailsTagTests {
         StringWriter sw = new StringWriter()
         PrintWriter pw = new PrintWriter(sw)
 
-        withTag('datePicker', pw) {tag ->
+        withTag("datePicker", pw) {tag ->
 
             assertNotNull(tag)
 
             Map attrs = new HashMap()
-            attrs.put('name', DATE_PICKER_TAG_NAME)
+            attrs.put("name", DATE_PICKER_TAG_NAME)
 
             if (value != null) {
                 attrs.value = value
@@ -357,7 +358,7 @@ class FormTagLib2Tests extends AbstractGrailsTagTests {
             attrs.noSelection = ['': 'Please choose']
             tag.call(attrs)
         }
-        String enclosed = '<test>' + sw.toString() + '</test>'
+        String enclosed = "<test>" + sw.toString() + "</test>"
         return parseText(enclosed)
     }
 }

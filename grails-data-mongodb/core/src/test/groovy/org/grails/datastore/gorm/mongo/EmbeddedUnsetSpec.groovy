@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -31,18 +31,18 @@ class EmbeddedUnsetSpec extends MongoDatastoreSpec {
     }
 
     @Issue('https://github.com/apache/grails-data-mapping/issues/718')
-    void 'Test unset value from embedded collection'() {
+    void "Test unset value from embedded collection"() {
         given:
-        EmbeddedPetOwner o = new EmbeddedPetOwner(name: 'bob', pets: [new EmbeddedPet(name: 'fido')])
+        EmbeddedPetOwner o = new EmbeddedPetOwner(name: "bob", pets: [new EmbeddedPet(name: "fido")])
         o.save(flush: true)
 
         manager.session.clear()
 
         when:
-        EmbeddedPetOwner o2 = EmbeddedPetOwner.findByName('bob')
+        EmbeddedPetOwner o2 = EmbeddedPetOwner.findByName("bob")
 
         then:
-        o2.pets[0].name == 'fido'
+        o2.pets[0].name == "fido"
 
         when:
         o2.pets[0].name = null
@@ -56,7 +56,7 @@ class EmbeddedUnsetSpec extends MongoDatastoreSpec {
         manager.session.clear()
 
         when:
-        EmbeddedPetOwner o3 = EmbeddedPetOwner.findByName('bob')
+        EmbeddedPetOwner o3 = EmbeddedPetOwner.findByName("bob")
         then:
         o3.pets[0].name == null
     }
@@ -64,7 +64,6 @@ class EmbeddedUnsetSpec extends MongoDatastoreSpec {
 
 @Entity
 class EmbeddedPetOwner {
-
     String name
 
     List<EmbeddedPet> pets
@@ -73,7 +72,6 @@ class EmbeddedPetOwner {
 
 @Entity
 class EmbeddedPet {
-
     String name
     static constraints = {
         name nullable: true

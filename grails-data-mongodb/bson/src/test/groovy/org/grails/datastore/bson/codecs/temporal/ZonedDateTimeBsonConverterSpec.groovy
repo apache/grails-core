@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -32,14 +32,14 @@ class ZonedDateTimeBsonConverterSpec extends Specification implements ZonedDateT
     ZonedDateTime zonedDateTime
 
     void setupSpec() {
-        TimeZone.default = TimeZone.getTimeZone('America/Los_Angeles')
+        TimeZone.default = TimeZone.getTimeZone("America/Los_Angeles")
         LocalTime localTime = LocalTime.of(6,5,4,3)
         LocalDate localDate = LocalDate.of(1941, 1, 5)
         LocalDateTime localDateTime = LocalDateTime.of(localDate, localTime)
         zonedDateTime = ZonedDateTime.of(localDateTime, ZoneOffset.ofHours(-6))
     }
 
-    void 'test read'() {
+    void "test read"() {
         given:
         BsonReader bsonReader = Mock(BsonReader) {
             1 * readDateTime() >> -914759696000
@@ -58,7 +58,7 @@ class ZonedDateTimeBsonConverterSpec extends Specification implements ZonedDateT
         converted.dayOfMonth == 5
     }
 
-    void 'test write'() {
+    void "test write"() {
         given:
         BsonWriter bsonWriter = Mock(BsonWriter)
 
@@ -69,7 +69,7 @@ class ZonedDateTimeBsonConverterSpec extends Specification implements ZonedDateT
         1 * bsonWriter.writeDateTime(-914759696000)
     }
 
-    void 'test bson type'() {
+    void "test bson type"() {
         expect:
         bsonType() == BsonType.DATE_TIME
     }

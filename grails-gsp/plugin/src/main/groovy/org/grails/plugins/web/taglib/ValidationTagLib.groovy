@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -57,7 +57,7 @@ class ValidationTagLib implements TagLibrary {
     /**
      * Renders an error message for the given bean and field.<br/>
      *
-     * eg. &lt;g:fieldError bean="${book}' field='title" /&gt
+     * eg. &lt;g:fieldError bean="${book}" field="title" /&gt;
      *
      * @attr bean REQUIRED The bean to check for errors
      * @attr field REQUIRED The field of the bean or model reference to check
@@ -82,7 +82,7 @@ class ValidationTagLib implements TagLibrary {
     /**
      * Obtains the value of a field either from the original errors.<br/>
      *
-     * eg. &lt;g:fieldValue bean="${book}' field='title" /&gt
+     * eg. &lt;g:fieldValue bean="${book}" field="title" /&gt;
      *
      * @emptyTag
      *
@@ -241,7 +241,7 @@ class ValidationTagLib implements TagLibrary {
     }
 
     /**
-     * Loops through each error and renders it using one of the supported mechanisms (defaults to 'list' if unsupported).
+     * Loops through each error and renders it using one of the supported mechanisms (defaults to "list" if unsupported).
      *
      * @emptyTag
      *
@@ -413,7 +413,7 @@ class ValidationTagLib implements TagLibrary {
             }
         }
 
-        out << "<script type='text/javascript'>\n"
+        out << '<script type="text/javascript">\n'
         fieldValidations.each { k, v ->
             def validateType = k
             if (validateType) {
@@ -434,7 +434,7 @@ class ValidationTagLib implements TagLibrary {
                     for (constraint in v) {
                         out << "this.${constraint.propertyName} = new Array("
                         out << "document.forms['${form}'].elements['${constraint.propertyName}']," // the field
-                        out << "'Test message'" // TODO: Resolve the actual message
+                        out << '"Test message"' // TODO: Resolve the actual message
                         switch (vt) {
                             case 'mask': out << ",function() { return '${constraint.regex}'; }"; break
                             case 'intRange': out << ",function() { if (arguments[0]=='min') return ${constraint.range.from}; else return ${constraint.range.to} }"; break

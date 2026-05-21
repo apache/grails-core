@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -38,10 +38,10 @@ class FieldTagWithBodySpec extends AbstractFormFieldsTagLibSpec implements TagLi
 
 	def setup() {
 		mockFormFieldsTemplateService.findTemplate(_, 'wrapper', null, null) >> [path: '/_fields/default/wrapper']
-        mockFormFieldsTemplateService.getTemplateFor('wrapper') >> 'wrapper'
-        mockFormFieldsTemplateService.getTemplateFor('widget') >> 'widget'
-        mockFormFieldsTemplateService.getTemplateFor('displayWrapper') >> 'displayWrapper'
-        mockFormFieldsTemplateService.getTemplateFor('displayWidget') >> 'displayWidget'
+        mockFormFieldsTemplateService.getTemplateFor('wrapper') >> "wrapper"
+        mockFormFieldsTemplateService.getTemplateFor('widget') >> "widget"
+        mockFormFieldsTemplateService.getTemplateFor('displayWrapper') >> "displayWrapper"
+        mockFormFieldsTemplateService.getTemplateFor('displayWidget') >> "displayWidget"
         mockFormFieldsTemplateService.getWidgetPrefix() >> 'input-'
 		tagLib.formFieldsTemplateService = mockFormFieldsTemplateService
 	}
@@ -62,7 +62,7 @@ class FieldTagWithBodySpec extends AbstractFormFieldsTagLibSpec implements TagLi
         applyTemplate('<f:field bean="personInstance" property="name">bean: ${bean.getClass().simpleName}, property: ${property}, type: ${type.simpleName}, label: ${label}, value: ${value}</f:field>', [personInstance: personInstance]) == 'bean: Person, property: name, type: String, label: Name, value: Bart Simpson'
     }
 
-	@Issue('https://github.com/grails/fields/pull/49')
+	@Issue("https://github.com/grails/fields/pull/49")
     void 'extra attributes prefixed with input- are passed to the tag body for backward compatibility'() {
         given:
         views['/_fields/default/_wrapper.gsp'] = '${widget}'
@@ -79,7 +79,7 @@ class FieldTagWithBodySpec extends AbstractFormFieldsTagLibSpec implements TagLi
         applyTemplate('<f:field bean="personInstance" property="name" input-foo="bar">${attrs.foo}</f:field>', [personInstance: personInstance]) == 'bar'
     }
 
-    @Issue('https://github.com/grails/fields/issues/323')
+    @Issue("https://github.com/grails/fields/issues/323")
     void 'validation defaultMessage strings are escaped'() {
         given:
         views['/_fields/default/_wrapper.gsp'] = '${widget}'
@@ -92,7 +92,7 @@ class FieldTagWithBodySpec extends AbstractFormFieldsTagLibSpec implements TagLi
         }
 
         when:
-        def result = applyTemplate('<f:field bean="personInstance" property="name" encodeAs='raw'>${errors[0]}</f:field>', [personInstance: person])
+        def result = applyTemplate('<f:field bean="personInstance" property="name" encodeAs="raw">${errors[0]}</f:field>', [personInstance: person])
 
         then:
         result == 'custom error with special chars &amp; &lt; &gt; &#39; &quot;'
@@ -113,7 +113,7 @@ class FieldTagWithBodySpec extends AbstractFormFieldsTagLibSpec implements TagLi
         }
 
         when:
-        def result = applyTemplate('<f:field bean="personInstance" property="name" encodeAs='raw'>${errors[0]}</f:field>', [personInstance: person])
+        def result = applyTemplate('<f:field bean="personInstance" property="name" encodeAs="raw">${errors[0]}</f:field>', [personInstance: person])
 
         then:
         result == '<div>Name is invalid</div>'

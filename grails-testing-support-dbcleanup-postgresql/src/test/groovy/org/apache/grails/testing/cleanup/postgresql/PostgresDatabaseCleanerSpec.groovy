@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -41,7 +41,7 @@ class PostgresDatabaseCleanerSpec extends Specification {
         cleaner.databaseType() == 'postgresql'
     }
 
-    def 'supports returns true for PostgreSQL datasource'() {
+    def "supports returns true for PostgreSQL datasource"() {
         given:
         def cleaner = new PostgresDatabaseCleaner()
         def postgresDataSource = Mock(javax.sql.DataSource) {
@@ -56,7 +56,7 @@ class PostgresDatabaseCleanerSpec extends Specification {
         cleaner.supports(postgresDataSource)
     }
 
-    def 'supports returns true for PostgreSQL datasource with port'() {
+    def "supports returns true for PostgreSQL datasource with port"() {
         given:
         def cleaner = new PostgresDatabaseCleaner()
         def postgresDataSource = Mock(javax.sql.DataSource) {
@@ -71,7 +71,7 @@ class PostgresDatabaseCleanerSpec extends Specification {
         cleaner.supports(postgresDataSource)
     }
 
-    def 'supports returns false for non-PostgreSQL datasource'() {
+    def "supports returns false for non-PostgreSQL datasource"() {
         given:
         def cleaner = new PostgresDatabaseCleaner()
         def mysqlDataSource = Mock(javax.sql.DataSource) {
@@ -86,7 +86,7 @@ class PostgresDatabaseCleanerSpec extends Specification {
         !cleaner.supports(mysqlDataSource)
     }
 
-    def 'supports returns false when connection fails'() {
+    def "supports returns false when connection fails"() {
         given:
         def cleaner = new PostgresDatabaseCleaner()
         def badDataSource = Mock(javax.sql.DataSource) {
@@ -97,7 +97,7 @@ class PostgresDatabaseCleanerSpec extends Specification {
         !cleaner.supports(badDataSource)
     }
 
-    def 'cleanup errors when schema cannot be resolved'() {
+    def "cleanup errors when schema cannot be resolved"() {
         given:
         def applicationContext = Stub(ApplicationContext)
         def cleaner = new PostgresDatabaseCleaner()

@@ -1,14 +1,14 @@
 /*
  * Copyright 2026 the original author or authors.
  *
- * Licensed under the Apache License, Version 2.0 (the 'License')
+ * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an 'AS IS' BASIS,
+ * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -35,8 +35,8 @@ import groovy.transform.CompileStatic
 
 class SimpleMapQuerySpec extends Specification {
 
-    def 'test getBackingMap in DISCRIMINATOR mode'() {
-        given: 'A datastore in DISCRIMINATOR mode'
+    def "test getBackingMap in DISCRIMINATOR mode"() {
+        given: "A datastore in DISCRIMINATOR mode"
         Map config = [
             'grails.gorm.multiTenancy.mode': MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR
         ]
@@ -52,26 +52,26 @@ class SimpleMapQuerySpec extends Specification {
         }
         SimpleMapSession session = (SimpleMapSession) datastore.connect()
 
-        when: 'We get the backing map from the session'
+        when: "We get the backing map from the session"
         def backingMap = session.getBackingMap()
 
-        then: 'It should be the global ConcurrentHashMap, not a ScopedMap'
+        then: "It should be the global ConcurrentHashMap, not a ScopedMap"
         backingMap.getClass().simpleName == 'ConcurrentHashMap'
 
-        when: 'We are inside a withTenant block'
-        def mapInsideTenant = Tenants.withId('tenant2') {
+        when: "We are inside a withTenant block"
+        def mapInsideTenant = Tenants.withId("tenant2") {
             session.getBackingMap()
         }
 
-        then: 'It should still be the global ConcurrentHashMap in DISCRIMINATOR mode'
+        then: "It should still be the global ConcurrentHashMap in DISCRIMINATOR mode"
         mapInsideTenant.getClass().simpleName == 'ConcurrentHashMap'
         
         cleanup:
         datastore.close()
     }
 
-    def 'test query isolation in DISCRIMINATOR mode'() {
-        given: 'A datastore in DISCRIMINATOR mode'
+    def "test query isolation in DISCRIMINATOR mode"() {
+        given: "A datastore in DISCRIMINATOR mode"
         Map config = [
             'grails.gorm.multiTenancy.mode': MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR
         ]
@@ -99,32 +99,32 @@ class SimpleMapQuerySpec extends Specification {
             registerEntity(pe)
         }
 
-        when: 'We save entities for different tenants'
-        Tenants.withId('T1') {
-            new TestEntity(name: 'Book1').save(flush: true)
+        when: "We save entities for different tenants"
+        Tenants.withId("T1") {
+            new TestEntity(name: "Book1").save(flush:true)
         }
-        Tenants.withId('T2') {
-            new TestEntity(name: 'Book2').save(flush: true)
-            new TestEntity(name: 'Book3').save(flush: true)
+        Tenants.withId("T2") {
+            new TestEntity(name: "Book2").save(flush:true)
+            new TestEntity(name: "Book3").save(flush:true)
         }
 
-        then: 'Global count is 3'
+        then: "Global count is 3"
         datastore.sharedState.inmemoryData[TestEntity.name].size() == 3
         
-        when: 'We query for T1'
-        int countT1 = (int)Tenants.withId('T1') {
+        when: "We query for T1"
+        int countT1 = (int)Tenants.withId("T1") {
             TestEntity.count()
         }
 
-        then: 'We only see 1 result'
+        then: "We only see 1 result"
         countT1 == 1
 
-        when: 'We query for T2'
-        int countT2 = (int)Tenants.withId('T2') {
+        when: "We query for T2"
+        int countT2 = (int)Tenants.withId("T2") {
             TestEntity.count()
         }
 
-        then: 'We see 2 results'
+        then: "We see 2 results"
         countT2 == 2
 
         cleanup:
@@ -135,7 +135,6 @@ class SimpleMapQuerySpec extends Specification {
 
 @Entity
 class TestEntity implements GormEntity<TestEntity>, MultiTenant<TestEntity> {
-
     Long id
     Long version
     String name

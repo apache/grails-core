@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -29,22 +29,21 @@ import spock.lang.Ignore
  * Created by graemerocher on 22/04/16.
  */
 class EmbeddedSetAssignedIdSpec extends MongoDatastoreSpec {
-
     void setupSpec() {
         manager.addAllDomainClasses([Itemized, LineItem, SubItem, JobItem])
     }
 
-    void 'Test saved nested embedded association graph'() {
-        when:'an object graph is created with nested items'
-        new Itemized(name: 'i1')
+    void "Test saved nested embedded association graph"() {
+        when:"an object graph is created with nested items"
+        new Itemized(name: "i1")
                 .addToLineItems(new JobItem(teamSize: 10)
-                                        .addToSubItems(name: 's1'))
-                .save(flush: true)
+                                        .addToSubItems(name: "s1"))
+                .save(flush:true)
 
         manager.session.clear()
         Itemized i = Itemized.first()
 
-        then:'The object graph is correct'
+        then:"The object graph is correct"
 
         i.name == 'i1'
         i.lineItems.size() == 1
@@ -54,20 +53,20 @@ class EmbeddedSetAssignedIdSpec extends MongoDatastoreSpec {
         i.lineItems.first().subItems.first().name == 's1'
     }
 
-    void 'Test update nested embedded association graph'() {
-        when:'an object graph is created with nested items'
-        new Itemized(name: 'i1').save(flush: true)
+    void "Test update nested embedded association graph"() {
+        when:"an object graph is created with nested items"
+        new Itemized(name: "i1").save(flush:true)
         manager.session.clear()
 
         Itemized i = Itemized.first()
         i.addToLineItems(new JobItem(teamSize: 10)
-         .addToSubItems(name: 's1'))
-         .save(flush: true)
+         .addToSubItems(name: "s1"))
+         .save(flush:true)
 
         manager.session.clear()
         i = Itemized.first()
 
-        then:'The object graph is correct'
+        then:"The object graph is correct"
 
         i.name == 'i1'
         i.lineItems.size() == 1
@@ -77,20 +76,20 @@ class EmbeddedSetAssignedIdSpec extends MongoDatastoreSpec {
         i.lineItems.first().subItems.first().name == 's1'
     }
 
-    void 'Test update nested embedded association graph with assigned id'() {
-        when:'an object graph is created with nested items'
-        new Itemized(name: 'i1').save(flush: true)
+    void "Test update nested embedded association graph with assigned id"() {
+        when:"an object graph is created with nested items"
+        new Itemized(name: "i1").save(flush:true)
         manager.session.clear()
 
         Itemized i = Itemized.first()
         i.addToLineItems(new JobItem(id: new ObjectId(), teamSize: 10)
-                .addToSubItems(name: 's1'))
-                .save(flush: true)
+                .addToSubItems(name: "s1"))
+                .save(flush:true)
 
         manager.session.clear()
         i = Itemized.first()
 
-        then:'The object graph is correct'
+        then:"The object graph is correct"
 
         i.name == 'i1'
         i.lineItems.size() == 1
@@ -101,21 +100,22 @@ class EmbeddedSetAssignedIdSpec extends MongoDatastoreSpec {
         i.lineItems.first().subItems.first().name == 's1'
     }
 
-    void 'Test update nested embedded association graph with assigned id using direct collection modification'() {
-        when:'an object graph is created with nested items'
-        new Itemized(name: 'i1').save(flush: true)
+    void "Test update nested embedded association graph with assigned id using direct collection modification"() {
+        when:"an object graph is created with nested items"
+        new Itemized(name: "i1").save(flush:true)
         manager.session.clear()
 
         Itemized i = Itemized.first()
         i.lineItems.add(new JobItem(id: new ObjectId(), teamSize: 10)
-                            .addToSubItems(name: 's1'))
+                            .addToSubItems(name: "s1"))
 
-        i.save(flush: true)
+
+        i.save(flush:true)
 
         manager.session.clear()
         i = Itemized.first()
 
-        then:'The object graph is correct'
+        then:"The object graph is correct"
 
         i.name == 'i1'
         i.lineItems.size() == 1
@@ -126,21 +126,22 @@ class EmbeddedSetAssignedIdSpec extends MongoDatastoreSpec {
         i.lineItems.first().subItems.first().name == 's1'
     }
 
-    void 'Test update nested embedded association graph with assigned id by assigning a new collection'() {
-        when:'an object graph is created with nested items'
-        new Itemized(name: 'i1').save(flush: true)
+    void "Test update nested embedded association graph with assigned id by assigning a new collection"() {
+        when:"an object graph is created with nested items"
+        new Itemized(name: "i1").save(flush:true)
         manager.session.clear()
 
         Itemized i = Itemized.first()
         i.lineItems = [ new JobItem(id: new ObjectId(), teamSize: 10)
-                                        .addToSubItems(name: 's1') ]
+                                        .addToSubItems(name: "s1") ]
 
-        i.save(flush: true)
+
+        i.save(flush:true)
 
         manager.session.clear()
         i = Itemized.first()
 
-        then:'The object graph is correct'
+        then:"The object graph is correct"
 
         i.name == 'i1'
         i.lineItems.size() == 1
@@ -152,21 +153,22 @@ class EmbeddedSetAssignedIdSpec extends MongoDatastoreSpec {
     }
 
     @Ignore
-    void 'Test update nested embedded association graph using a custom method defined on the domain instance'() {
-        when:'an object graph is created with nested items'
-        new Itemized(name: 'i1').save(flush: true)
+    void "Test update nested embedded association graph using a custom method defined on the domain instance"() {
+        when:"an object graph is created with nested items"
+        new Itemized(name: "i1").save(flush:true)
         manager.session.clear()
 
         Itemized i = Itemized.first()
         i.addLineItem( new JobItem(id: new ObjectId(), teamSize: 10)
-                                .addToSubItems(name: 's1') )
+                                .addToSubItems(name: "s1") )
 
-        i.save(flush: true)
+
+        i.save(flush:true)
 
         manager.session.clear()
         i = Itemized.first()
 
-        then:'The object graph is correct'
+        then:"The object graph is correct"
 
         i.name == 'i1'
         i.lineItems.size() == 1
@@ -220,6 +222,7 @@ class JobItem extends LineItem {
     static constraints = {
     }
 }
+
 
 @Entity
 class SubItem {

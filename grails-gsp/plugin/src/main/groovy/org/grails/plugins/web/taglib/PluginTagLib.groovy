@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -38,7 +38,7 @@ class PluginTagLib implements TagLibrary {
     /**
      * Gets the path to a particular plugin.<br/>
      *
-     * eg. &lt;plugin:path name='myPlugin' /&gt
+     * eg. &lt;plugin:path name="myPlugin" /&gt;
      *
      * @attr name REQUIRED the plugin name
      */
@@ -49,7 +49,7 @@ class PluginTagLib implements TagLibrary {
     /**
      * Checks whether a particular plugin exists and executes the body if it does.<br/>
      *
-     * eg. &lt;plugin:isAvailable name='hibernate'&gt;print me&lt;/plugin:isAvailable&gt
+     * eg. &lt;plugin:isAvailable name="hibernate"&gt;print me&lt;/plugin:isAvailable&gt;
      *
      * @attr name REQUIRED the plugin name
      * @attr version the plugin version
@@ -63,7 +63,7 @@ class PluginTagLib implements TagLibrary {
     /**
      * Checks whether a particular plugin does not exist and executes the body if it does.<br/>
      *
-     * eg. &lt;plugin:isNotAvailable name='hibernate'&gt;print me&lt;/plugin:isNotAvailable&gt
+     * eg. &lt;plugin:isNotAvailable name="hibernate"&gt;print me&lt;/plugin:isNotAvailable&gt;
      *
      * @attr name REQUIRED the plugin name
      * @attr version the plugin version

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -44,7 +44,7 @@ class HibernateMappingBuilderSpec extends Specification {
     // table / catalog / schema / comment
     // -------------------------------------------------------------------------
 
-    def 'table with name only'() {
+    def "table with name only"() {
         when:
         Mapping m = evaluate { table 'myTable' }
 
@@ -52,7 +52,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.tableName == 'myTable'
     }
 
-    def 'table with catalog and schema'() {
+    def "table with catalog and schema"() {
         when:
         Mapping m = evaluate { table name: 'table', catalog: 'CRM', schema: 'dbo' }
 
@@ -62,7 +62,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.table.catalog == 'CRM'
     }
 
-    def 'table comment is stored'() {
+    def "table comment is stored"() {
         when:
         Mapping m = evaluate { comment 'wahoo' }
 
@@ -74,15 +74,15 @@ class HibernateMappingBuilderSpec extends Specification {
     // version / autoTimestamp
     // -------------------------------------------------------------------------
 
-    def 'version column can be changed'() {
+    def "version column can be changed"() {
         when:
         Mapping m = evaluate { version 'v_number' }
 
         then:
-        m.getPropertyConfig('version').column == 'v_number'
+        m.getPropertyConfig("version").column == 'v_number'
     }
 
-    def 'versioning can be disabled'() {
+    def "versioning can be disabled"() {
         when:
         Mapping m = evaluate { version false }
 
@@ -90,7 +90,7 @@ class HibernateMappingBuilderSpec extends Specification {
         !m.versioned
     }
 
-    def 'autoTimestamp can be disabled'() {
+    def "autoTimestamp can be disabled"() {
         when:
         Mapping m = evaluate { autoTimestamp false }
 
@@ -102,7 +102,7 @@ class HibernateMappingBuilderSpec extends Specification {
     // discriminator
     // -------------------------------------------------------------------------
 
-    def 'discriminator value only'() {
+    def "discriminator value only"() {
         when:
         Mapping m = evaluate { discriminator 'one' }
 
@@ -111,7 +111,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.discriminator.column == null
     }
 
-    def 'discriminator with column name'() {
+    def "discriminator with column name"() {
         when:
         Mapping m = evaluate { discriminator value: 'one', column: 'type' }
 
@@ -120,7 +120,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.discriminator.column.name == 'type'
     }
 
-    def 'discriminator with column map'() {
+    def "discriminator with column map"() {
         when:
         Mapping m = evaluate { discriminator value: 'one', column: [name: 'type', sqlType: 'integer'] }
 
@@ -130,7 +130,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.discriminator.column.sqlType == 'integer'
     }
 
-    def 'discriminator with formula and other settings'() {
+    def "discriminator with formula and other settings"() {
         when:
         Mapping m = evaluate {
             discriminator value: '1', formula: "case when CLASS_TYPE in ('a', 'b', 'c') then 0 else 1 end", type: 'integer', insert: false
@@ -147,7 +147,7 @@ class HibernateMappingBuilderSpec extends Specification {
     // inheritance
     // -------------------------------------------------------------------------
 
-    def 'tablePerHierarchy false disables it'() {
+    def "tablePerHierarchy false disables it"() {
         when:
         Mapping m = evaluate { tablePerHierarchy false }
 
@@ -155,8 +155,7 @@ class HibernateMappingBuilderSpec extends Specification {
         !m.tablePerHierarchy
     }
 
-    def 'tablePerSubclass true disables tablePerHierarchy'() {
-
+    def "tablePerSubclass true disables tablePerHierarchy"() {
         when:
         Mapping m = evaluate { tablePerSubclass true }
 
@@ -164,8 +163,7 @@ class HibernateMappingBuilderSpec extends Specification {
         !m.tablePerHierarchy
     }
 
-    def 'tablePerConcreteClass true enables it and disables tablePerHierarchy'() {
-
+    def "tablePerConcreteClass true enables it and disables tablePerHierarchy"() {
         when:
         Mapping m = evaluate { tablePerConcreteClass true }
 
@@ -178,7 +176,7 @@ class HibernateMappingBuilderSpec extends Specification {
     // cache settings
     // -------------------------------------------------------------------------
 
-    def 'default cache strategy'() {
+    def "default cache strategy"() {
         when:
         Mapping m = evaluate { cache true }
 
@@ -187,7 +185,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.cache.include.toString() == 'all'
     }
 
-    def 'custom cache strategy'() {
+    def "custom cache strategy"() {
         when:
         Mapping m = evaluate { cache usage: 'read-only', include: 'non-lazy' }
 
@@ -196,7 +194,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.cache.include.toString() == 'non-lazy'
     }
 
-    def 'custom cache strategy with usage string only'() {
+    def "custom cache strategy with usage string only"() {
         when:
         Mapping m = evaluate { cache 'read-only' }
 
@@ -205,7 +203,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.cache.include.toString() == 'all'
     }
 
-    def 'invalid cache values are ignored and defaults used'() {
+    def "invalid cache values are ignored and defaults used"() {
         when:
         Mapping m = evaluate { cache usage: 'rubbish', include: 'more-rubbish' }
 
@@ -218,7 +216,7 @@ class HibernateMappingBuilderSpec extends Specification {
     // identity / id
     // -------------------------------------------------------------------------
 
-    def 'identity column mapping'() {
+    def "identity column mapping"() {
         when:
         Mapping m = evaluate { id column: 'foo_id', type: Integer }
 
@@ -226,14 +224,14 @@ class HibernateMappingBuilderSpec extends Specification {
         m.identity.type == Long // Default remains Long? No, wait.
         // In HibernateMappingBuilderTests:
         // assertEquals Long, mapping.identity.type
-        // assertEquals 'foo_id', mapping.getPropertyConfig('id').column
-        // assertEquals Integer, mapping.getPropertyConfig('id').type
-        m.getPropertyConfig('id').column == 'foo_id'
-        m.getPropertyConfig('id').type == Integer
+        // assertEquals 'foo_id', mapping.getPropertyConfig("id").column
+        // assertEquals Integer, mapping.getPropertyConfig("id").type
+        m.getPropertyConfig("id").column == 'foo_id'
+        m.getPropertyConfig("id").type == Integer
         m.identity.generator == 'native'
     }
 
-    def 'default id strategy'() {
+    def "default id strategy"() {
         when:
         Mapping m = evaluate { }
 
@@ -243,7 +241,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.identity.generator == 'native'
     }
 
-    def 'hilo id strategy'() {
+    def "hilo id strategy"() {
         when:
         Mapping m = evaluate { id generator: 'hilo', params: [table: 'hi_value', column: 'next_value', max_lo: 100] }
 
@@ -253,7 +251,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.identity.params.table == 'hi_value'
     }
 
-    def 'composite id strategy'() {
+    def "composite id strategy"() {
         when:
         Mapping m = evaluate { id composite: ['one', 'two'], compositeClass: HibernateMappingBuilder }
 
@@ -263,7 +261,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.identity.compositeClass == HibernateMappingBuilder
     }
 
-    def 'natural id mapping'() {
+    def "natural id mapping"() {
         expect:
         evaluate { id natural: 'one' }.identity.natural.propertyNames == ['one']
         evaluate { id natural: ['one', 'two'] }.identity.natural.propertyNames == ['one', 'two']
@@ -274,13 +272,13 @@ class HibernateMappingBuilderSpec extends Specification {
     // other root settings
     // -------------------------------------------------------------------------
 
-    def 'autoImport defaults to true and can be disabled'() {
+    def "autoImport defaults to true and can be disabled"() {
         expect:
         evaluate { }.autoImport
         !evaluate { autoImport false }.autoImport
     }
 
-    def 'dynamicUpdate and dynamicInsert'() {
+    def "dynamicUpdate and dynamicInsert"() {
         when:
         Mapping m = evaluate {
             dynamicUpdate true
@@ -299,7 +297,7 @@ class HibernateMappingBuilderSpec extends Specification {
         !m.dynamicInsert
     }
 
-    def 'batchSize config'() {
+    def "batchSize config"() {
         when:
         Mapping m = evaluate {
             batchSize 10
@@ -311,21 +309,19 @@ class HibernateMappingBuilderSpec extends Specification {
         m.getPropertyConfig('things').batchSize == 15
     }
 
-    def 'class sort order'() {
-
+    def "class sort order"() {
         when:
         Mapping m = evaluate {
-            sort 'name'
-            order 'desc'
+            sort "name"
+            order "desc"
         }
 
         then:
-        m.sort.name == 'name'
-        m.sort.direction == 'desc'
+        m.sort.name == "name"
+        m.sort.direction == "desc"
     }
 
-    def 'class sort order via map'() {
-
+    def "class sort order via map"() {
         when:
         Mapping m = evaluate {
             sort name: 'desc'
@@ -335,13 +331,13 @@ class HibernateMappingBuilderSpec extends Specification {
         m.sort.namesAndDirections == [name: 'desc']
     }
 
-    def 'property ignoreNotFound is stored'() {
+    def "property ignoreNotFound is stored"() {
         expect:
-        evaluate { foos ignoreNotFound: true }.getPropertyConfig('foos').ignoreNotFound
-        !evaluate { foos ignoreNotFound: false }.getPropertyConfig('foos').ignoreNotFound
+        evaluate { foos ignoreNotFound: true }.getPropertyConfig("foos").ignoreNotFound
+        !evaluate { foos ignoreNotFound: false }.getPropertyConfig("foos").ignoreNotFound
     }
 
-    def 'property association sort order'() {
+    def "property association sort order"() {
         when:
         Mapping m = evaluate {
             columns {
@@ -353,32 +349,32 @@ class HibernateMappingBuilderSpec extends Specification {
         m.getPropertyConfig('things').sort == 'name'
     }
 
-    def 'property lazy settings'() {
+    def "property lazy settings"() {
         expect:
         evaluate { things column: 'foo' }.getPropertyConfig('things').getLazy() == null
         !evaluate { things lazy: false }.getPropertyConfig('things').lazy
     }
 
-    def 'property cascades'() {
+    def "property cascades"() {
         expect:
         evaluate { things cascade: 'persist,merge' }.getPropertyConfig('things').cascade == 'persist,merge'
         evaluate { columns { things cascade: 'all' } }.getPropertyConfig('things').cascade == 'all'
     }
 
-    def 'property fetch modes'() {
+    def "property fetch modes"() {
         expect:
         evaluate { things fetch: 'join' }.getPropertyConfig('things').fetchMode == FetchMode.JOIN
         evaluate { things fetch: 'select' }.getPropertyConfig('things').fetchMode == FetchMode.SELECT
         evaluate { things column: 'foo' }.getPropertyConfig('things').fetchMode == FetchMode.DEFAULT
     }
 
-    def 'property enumType'() {
+    def "property enumType"() {
         expect:
         evaluate { things column: 'foo' }.getPropertyConfig('things').enumType == 'default'
         evaluate { things enumType: 'ordinal' }.getPropertyConfig('things').enumType == 'ordinal'
     }
 
-    def 'property joinTable mapping'() {
+    def "property joinTable mapping"() {
         when:
         Mapping m1 = evaluate { things joinTable: true }
         Mapping m2 = evaluate { things joinTable: 'foo' }
@@ -392,7 +388,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m3.getPropertyConfig('things').joinTable.column.name == 'bar_id'
     }
 
-    def 'property custom association caching'() {
+    def "property custom association caching"() {
         when:
         Mapping m1 = evaluate { firstName cache: [usage: 'read-only', include: 'non-lazy'] }
         Mapping m2 = evaluate { firstName cache: 'read-only' }
@@ -406,7 +402,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m3.getPropertyConfig('firstName').cache.include.toString() == 'all'
     }
 
-    def 'simple column mappings'() {
+    def "simple column mappings"() {
         when:
         Mapping m = evaluate {
             firstName column: 'First_Name'
@@ -418,7 +414,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.getPropertyConfig('lastName').column == 'Last_Name'
     }
 
-    def 'complex column mappings'() {
+    def "complex column mappings"() {
         when:
         Mapping m = evaluate {
             firstName column: 'First_Name',
@@ -440,30 +436,30 @@ class HibernateMappingBuilderSpec extends Specification {
         m.columns.firstName.sqlType == 'text'
     }
 
-    def 'property with multiple columns'() {
+    def "property with multiple columns"() {
         when:
         Mapping m = evaluate {
             amount type: MyUserType, {
-                column name: 'value'
-                column name: 'currency', sqlType: 'char', length: 3
+                column name: "value"
+                column name: "currency", sqlType: "char", length: 3
             }
         }
 
         then:
         m.columns.amount.columns.size() == 2
-        m.columns.amount.columns[0].name == 'value'
-        m.columns.amount.columns[1].name == 'currency'
-        m.columns.amount.columns[1].sqlType == 'char'
+        m.columns.amount.columns[0].name == "value"
+        m.columns.amount.columns[1].name == "currency"
+        m.columns.amount.columns[1].sqlType == "char"
         m.columns.amount.columns[1].length == 3
     }
 
-    def 'disallowed multi-column property access'() {
+    def "disallowed multi-column property access"() {
         given:
         def b = builder()
         b.evaluate {
             amount type: MyUserType, {
-                column name: 'value'
-                column name: 'currency'
+                column name: "value"
+                column name: "currency"
             }
         }
 
@@ -474,19 +470,19 @@ class HibernateMappingBuilderSpec extends Specification {
         thrown(Throwable)
     }
 
-    def 'property with user type and params'() {
+    def "property with user type and params"() {
         when:
         Mapping m = evaluate {
-            amount type: MyUserType, params: [param1: 'amountParam1', param2: 65]
+            amount type: MyUserType, params: [param1: "amountParam1", param2: 65]
         }
 
         then:
         m.getPropertyConfig('amount').type == MyUserType
-        m.getPropertyConfig('amount').typeParams.param1 == 'amountParam1'
+        m.getPropertyConfig('amount').typeParams.param1 == "amountParam1"
         m.getPropertyConfig('amount').typeParams.param2 == 65
     }
 
-    def 'property insertable and updatable'() {
+    def "property insertable and updatable"() {
         when:
         Mapping m = evaluate {
             firstName insertable: true, updatable: true
@@ -504,13 +500,13 @@ class HibernateMappingBuilderSpec extends Specification {
     // autowire / tenantId
     // -------------------------------------------------------------------------
 
-    def 'autowire stores the value on the mapping'() {
+    def "autowire stores the value on the mapping"() {
         expect:
         evaluate { autowire true }.autowire
         !evaluate { autowire false }.autowire
     }
 
-    def 'tenantId stores the property name'() {
+    def "tenantId stores the property name"() {
         expect:
         evaluate { tenantId 'tenantId' }.getPropertyConfig('tenantId') != null
     }
@@ -519,7 +515,7 @@ class HibernateMappingBuilderSpec extends Specification {
     // cache(String, Map)
     // -------------------------------------------------------------------------
 
-    def 'cache(String, Map) sets usage and include'() {
+    def "cache(String, Map) sets usage and include"() {
         when:
         Mapping m = evaluate { cache 'read-write', [include: 'all'] }
 
@@ -528,7 +524,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.cache.include.toString() == 'all'
     }
 
-    def 'cache(String) with invalid usage still creates a CacheConfig with the default usage'() {
+    def "cache(String) with invalid usage still creates a CacheConfig with the default usage"() {
         when:
         Mapping m = evaluate { cache 'INVALID_USAGE' }
 
@@ -537,7 +533,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.cache.usage.toString() == 'read-write'  // default preserved; INVALID_USAGE rejected
     }
 
-    def 'cache(Map) with invalid include still creates a CacheConfig with the default include'() {
+    def "cache(Map) with invalid include still creates a CacheConfig with the default include"() {
         when:
         Mapping m = evaluate { cache usage: 'read-only', include: 'INVALID_INCLUDE' }
 
@@ -551,7 +547,7 @@ class HibernateMappingBuilderSpec extends Specification {
     // hibernateCustomUserType
     // -------------------------------------------------------------------------
 
-    def 'hibernateCustomUserType registers a user type when args are valid'() {
+    def "hibernateCustomUserType registers a user type when args are valid"() {
         when:
         Mapping m = evaluate { 'user-type'(type: 'myType', 'class': String) }
 
@@ -559,8 +555,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.userTypes[String] == 'myType'
     }
 
-    def 'hibernateCustomUserType is a no-op when class is not a Class'() {
-
+    def "hibernateCustomUserType is a no-op when class is not a Class"() {
         when:
         Mapping m = evaluate { 'user-type'(type: 'myType', 'class': 'notAClass') }
 
@@ -568,7 +563,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.userTypes.isEmpty()
     }
 
-    def 'hibernateCustomUserType is a no-op when type is absent'() {
+    def "hibernateCustomUserType is a no-op when type is absent"() {
         when:
         Mapping m = evaluate { 'user-type'('class': String) }
 
@@ -580,7 +575,7 @@ class HibernateMappingBuilderSpec extends Specification {
     // includes() null-safety
     // -------------------------------------------------------------------------
 
-    def 'includes() with null closure does not throw'() {
+    def "includes() with null closure does not throw"() {
         when:
         evaluate { includes(null) }
 
@@ -592,7 +587,7 @@ class HibernateMappingBuilderSpec extends Specification {
     // sort / order null guards
     // -------------------------------------------------------------------------
 
-    def 'sort(null) is a no-op'() {
+    def "sort(null) is a no-op"() {
         when:
         Mapping m = evaluate { sort((String) null) }
 
@@ -600,7 +595,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.sort.name == null
     }
 
-    def 'order with invalid direction is a no-op'() {
+    def "order with invalid direction is a no-op"() {
         when:
         Mapping m = evaluate { order 'invalid' }
 
@@ -608,7 +603,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.sort.direction == null
     }
 
-    def 'batchSize(null) is a no-op and leaves batchSize as null'() {
+    def "batchSize(null) is a no-op and leaves batchSize as null"() {
         when:
         Mapping m = evaluate { batchSize null }
 
@@ -620,7 +615,7 @@ class HibernateMappingBuilderSpec extends Specification {
     // evaluate with context argument
     // -------------------------------------------------------------------------
 
-    def 'evaluate passes context to the closure'() {
+    def "evaluate passes context to the closure"() {
         given:
         def b = builder()
         Object captured = null
@@ -636,7 +631,7 @@ class HibernateMappingBuilderSpec extends Specification {
     // property(Map, String) — the 2-arg typed method
     // -------------------------------------------------------------------------
 
-    def 'property(Map, String) registers the property config'() {
+    def "property(Map, String) registers the property config"() {
         when:
         Mapping m = evaluate { property([nullable: true, column: 'my_col'], 'myProp') }
 
@@ -650,7 +645,7 @@ class HibernateMappingBuilderSpec extends Specification {
     // handlePropertyInternal — uncovered branches
     // -------------------------------------------------------------------------
 
-    def 'property with accessType stores it'() {
+    def "property with accessType stores it"() {
         when:
         Mapping m = evaluate { myProp accessType: AccessType.FIELD }
 
@@ -658,7 +653,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.getPropertyConfig('myProp').accessType == AccessType.FIELD
     }
 
-    def 'property updatable is honoured'() {
+    def "property updatable is honoured"() {
         when:
         Mapping m = evaluate { myProp updatable: false }
 
@@ -666,7 +661,7 @@ class HibernateMappingBuilderSpec extends Specification {
         !m.getPropertyConfig('myProp').updatable
     }
 
-    def 'property params map is converted to Properties'() {
+    def "property params map is converted to Properties"() {
         when:
         Mapping m = evaluate { myProp params: [scale: '4', precision: '10'] }
 
@@ -675,7 +670,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.getPropertyConfig('myProp').typeParams['scale'] == '4'
     }
 
-    def 'property unique as String creates a named unique constraint'() {
+    def "property unique as String creates a named unique constraint"() {
         when:
         Mapping m = evaluate { myProp unique: 'myGroup' }
 
@@ -683,7 +678,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.getPropertyConfig('myProp').isUniqueWithinGroup()
     }
 
-    def 'property unique as List creates a composite unique constraint'() {
+    def "property unique as List creates a composite unique constraint"() {
         when:
         Mapping m = evaluate { myProp unique: ['a', 'b'] }
 
@@ -691,7 +686,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.getPropertyConfig('myProp').isUniqueWithinGroup()
     }
 
-    def 'property size as IntRange stores minSize and maxSize'() {
+    def "property size as IntRange stores minSize and maxSize"() {
         when:
         Mapping m = evaluate { myProp size: (1..10) }
 
@@ -700,7 +695,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.getPropertyConfig('myProp').maxSize == 10
     }
 
-    def 'property range as ObjectRange stores min and max'() {
+    def "property range as ObjectRange stores min and max"() {
         when:
         // ObjectRange is used for non-primitive ranges; 'a'..'e' produces one
         Mapping m = evaluate { myProp range: ('a'..'e') }
@@ -710,7 +705,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.getPropertyConfig('myProp').max == 'e'
     }
 
-    def 'property inList stores the list'() {
+    def "property inList stores the list"() {
         when:
         Mapping m = evaluate { myProp inList: ['A', 'B', 'C'] }
 
@@ -718,7 +713,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.getPropertyConfig('myProp').inList == ['A', 'B', 'C']
     }
 
-    def 'property fetch with join string sets JOIN fetch mode'() {
+    def "property fetch with join string sets JOIN fetch mode"() {
         when:
         Mapping m = evaluate { myProp fetch: 'join' }
 
@@ -726,7 +721,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.getPropertyConfig('myProp').getFetchMode() == FetchMode.JOIN
     }
 
-    def 'property fetch with unknown string falls back to SELECT'() {
+    def "property fetch with unknown string falls back to SELECT"() {
         when:
         Mapping m = evaluate { myProp fetch: 'eager' }
 
@@ -734,7 +729,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.getPropertyConfig('myProp').getFetchMode() == FetchMode.SELECT
     }
 
-    def 'property with sub-closure delegates to PropertyDefinitionDelegate'() {
+    def "property with sub-closure delegates to PropertyDefinitionDelegate"() {
         when:
         Mapping m = evaluate {
             myProp {
@@ -746,7 +741,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.getPropertyConfig('myProp').columns[0].name == 'col_one'
     }
 
-    def 'property indexColumn map is applied'() {
+    def "property indexColumn map is applied"() {
         when:
         Mapping m = evaluate {
             myProp indexColumn: [name: 'idx', type: 'integer', length: 10]
@@ -759,7 +754,7 @@ class HibernateMappingBuilderSpec extends Specification {
         ic.columns[0].length == 10
     }
 
-    def 'property cache as boolean true enables caching'() {
+    def "property cache as boolean true enables caching"() {
         when:
         Mapping m = evaluate { myProp cache: true }
 
@@ -767,7 +762,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.getPropertyConfig('myProp').cache instanceof CacheConfig
     }
 
-    def 'property cache as boolean false is a no-op'() {
+    def "property cache as boolean false is a no-op"() {
         when:
         Mapping m = evaluate { myProp cache: false }
 
@@ -775,7 +770,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.getPropertyConfig('myProp').cache == null
     }
 
-    def 'property cache as Map sets usage and include'() {
+    def "property cache as Map sets usage and include"() {
         when:
         Mapping m = evaluate { myProp cache: [usage: 'read-only', include: 'all'] }
 
@@ -784,7 +779,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.getPropertyConfig('myProp').cache.include.toString() == 'all'
     }
 
-    def 'property column sqlType is set'() {
+    def "property column sqlType is set"() {
         when:
         Mapping m = evaluate { myProp sqlType: 'text' }
 
@@ -792,7 +787,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.getPropertyConfig('myProp').sqlType == 'text'
     }
 
-    def 'property column read/write formulas are set'() {
+    def "property column read/write formulas are set"() {
         when:
         Mapping m = evaluate { myProp read: 'lower(col)', write: 'upper(?)' }
 
@@ -801,7 +796,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.getPropertyConfig('myProp').columns[0].write == 'upper(?)'
     }
 
-    def 'property column defaultValue and comment are set'() {
+    def "property column defaultValue and comment are set"() {
         when:
         Mapping m = evaluate { myProp defaultValue: 'N/A', comment: 'a test column' }
 
@@ -814,11 +809,10 @@ class HibernateMappingBuilderSpec extends Specification {
     // methodMissing — filtering branches
     // -------------------------------------------------------------------------
 
-    def 'methodMissing skips properties in methodMissingExcludes via importFrom'() {
+    def "methodMissing skips properties in methodMissingExcludes via importFrom"() {
         given: "a class whose constraints closure maps 'foos' and 'bars'"
         def cl = new GroovyClassLoader().parseClass('''
             class ImportSource {
-
                 static constraints = {
                     foos(lazy: false)
                     bars(lazy: true)
@@ -826,19 +820,18 @@ class HibernateMappingBuilderSpec extends Specification {
             }
         ''')
 
-        when: 'importFrom with exclude:[bars]'
+        when: "importFrom with exclude:[bars]"
         Mapping m = evaluate { importFrom(cl, [exclude: ['bars']]) }
 
-        then: 'foos is mapped, bars is not'
+        then: "foos is mapped, bars is not"
         m.getPropertyConfig('foos') != null
         m.getPropertyConfig('bars') == null
     }
 
-    def 'methodMissing skips properties not in methodMissingIncludes via importFrom'() {
+    def "methodMissing skips properties not in methodMissingIncludes via importFrom"() {
         given:
         def cl = new GroovyClassLoader().parseClass('''
             class ImportSource2 {
-
                 static constraints = {
                     foos(lazy: false)
                     bars(lazy: true)
@@ -846,16 +839,16 @@ class HibernateMappingBuilderSpec extends Specification {
             }
         ''')
 
-        when: 'importFrom with include:[bars]'
+        when: "importFrom with include:[bars]"
         Mapping m = evaluate { importFrom(cl, [include: ['bars']]) }
 
-        then: 'bars is mapped, foos is not'
+        then: "bars is mapped, foos is not"
         m.getPropertyConfig('bars') != null
         m.getPropertyConfig('foos') == null
     }
 
-    def 'methodMissing with no matching args signature is silently ignored'() {
-        when: 'call with a plain String arg (no Map, no Closure)'
+    def "methodMissing with no matching args signature is silently ignored"() {
+        when: "call with a plain String arg (no Map, no Closure)"
         Mapping m = evaluate { myProp 'justAString' }
 
         then:
@@ -863,11 +856,11 @@ class HibernateMappingBuilderSpec extends Specification {
         m.getPropertyConfig('myProp') == null
     }
 
-    void 'handlePropertyInternal handles shared constraints'() {
+    void "handlePropertyInternal handles shared constraints"() {
         given:
         def m = new Mapping()
         m.columns['common'] = new PropertyConfig(batchSize: 100)
-        def builder = new HibernateMappingBuilder(m, 'Foo', { common shared: true })
+        def builder = new HibernateMappingBuilder(m, "Foo", { common shared: true })
 
         when:
         builder.evaluate {
@@ -879,7 +872,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.columns['myProp'].ignoreNotFound == true
     }
 
-    void 'handlePropertyInternal handles updateable deprecated property'() {
+    void "handlePropertyInternal handles updateable deprecated property"() {
         when:
         Mapping m = evaluate { myProp updateable: false }
 
@@ -887,7 +880,7 @@ class HibernateMappingBuilderSpec extends Specification {
         !m.getPropertyConfig('myProp').updatable
     }
 
-    void 'id(Map) handles params conversion'() {
+    void "id(Map) handles params conversion"() {
         when:
         Mapping m = evaluate { id generator: 'seq', params: [a: 1, b: '2'] }
 

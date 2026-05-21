@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -59,7 +59,7 @@ class ControllerActionTransformerSpec extends Specification {
         servletContext.setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, appCtx)
     }
 
-    void 'Test that a closure action has changed to method'() {
+    void "Test that a closure action has changed to method"() {
 
         when:
             def cls = gcl.parseClass('''
@@ -75,10 +75,10 @@ class ControllerActionTransformerSpec extends Specification {
 
         then:
           controller
-          controller.getClass().getMethod('action', [] as Class[]) != null
+          controller.getClass().getMethod("action", [] as Class[]) != null
 
         and: 'its not marked as Generated'
-            controller.getClass().getMethod('action', [] as Class[]).isAnnotationPresent(Generated)
+            controller.getClass().getMethod("action", [] as Class[]).isAnnotationPresent(Generated)
     }
 
     void 'Test that user applied annotations are applied to generated action methods'() {
@@ -86,11 +86,10 @@ class ControllerActionTransformerSpec extends Specification {
         def cls = gcl.parseClass('''
         @grails.artefact.Artefact('Controller')
         class SomeController {
-
             @Deprecated
-            def action1() {}
+            def action1(){}
             @Deprecated
-            def action2(String paramName) {}
+            def action2(String paramName){}
 }
 ''')
 
@@ -121,7 +120,6 @@ class ControllerActionTransformerSpec extends Specification {
         def controllerClass = gcl.parseClass('''
             @grails.artefact.Artefact('Controller')
             abstract class SomeController {
-
                 def someAction() {}
                 abstract someAbstractMethod()
             }
@@ -144,7 +142,6 @@ class ControllerActionTransformerSpec extends Specification {
             def superControllerClass = gcl.parseClass('''
             @grails.artefact.Artefact('Controller')
             class SuperController {
-
                 def methodAction() {
                     [ actionInvoked: 'SuperController.methodAction' ]
                 }
@@ -156,7 +153,6 @@ class ControllerActionTransformerSpec extends Specification {
             def superController = superControllerClass.newInstance()
             def subControllerClass = gcl.parseClass('''
             class SubController extends SuperController {
-
                 def methodAction() {
                     [ actionInvoked: 'SubController.methodAction' ]
                 }
@@ -201,11 +197,13 @@ class ControllerActionTransformerSpec extends Specification {
             42 == model.paramValue
     }
 
-    void 'test controller with trait action with command params'() {
+
+    void "test controller with trait action with command params"() {
         given:
         def cls = gcl.parseClass('''
             @grails.artefact.Artefact('Controller')
             class TestTraitActionToController implements ShowMethod {
+
 
             }
             class MyCommandWithArg implements grails.validation.Validateable {
@@ -229,7 +227,8 @@ class ControllerActionTransformerSpec extends Specification {
         valid
     }
 
-    void 'Test command object gets Validateable injected'() {
+
+    void "Test command object gets Validateable injected"() {
 
         when:
         def cls = gcl.parseClass('''
@@ -240,13 +239,12 @@ class ControllerActionTransformerSpec extends Specification {
                 }
 
                 def $test() {
-                    new MyCommand(name: 'Sally')
+                    new MyCommand(name: "Sally")
                 }
 
             }
 
             class MyCommand {
-
                 String name
             }
             ''')
@@ -259,24 +257,22 @@ class ControllerActionTransformerSpec extends Specification {
         myCommand.validate()
     }
 
-    void 'Test command object injected constructor will be marked as Generated'() {
+    void "Test command object injected constructor will be marked as Generated"() {
 
         when:
         def cls = gcl.parseClass('''
             @grails.artefact.Artefact('Controller')
             class TestMyCommandObjController {
-
                 def action(MyCommand myCommand) {
                 }
 
                 def $test() {
-                    new MyCommand(name: 'Sally')
+                    new MyCommand(name: "Sally")
                 }
 
             }
 
             class MyCommand {
-
                 String name
             }
             ''')
@@ -289,14 +285,13 @@ class ControllerActionTransformerSpec extends Specification {
         }
     }
 
-    @Ignore('This is flaky test')
-    void 'Test Controller Action transformer marks its new methods as Generated'() {
+    @Ignore("This is flaky test")
+    void "Test Controller Action transformer marks its new methods as Generated"() {
 
         when:
         def cls = gcl.parseClass('''
             @grails.artefact.Artefact('Controller')
             class MyCommandObjTestController {
-
                 def action(MyCommand myCommand) {
                 }
                 
@@ -304,12 +299,11 @@ class ControllerActionTransformerSpec extends Specification {
                 }
                 
                 def $test() {
-                    new MyCommand(name: 'Sally')
+                    new MyCommand(name: "Sally")
                 }
             }
 
             class MyCommand {
-
                 String name
             }
             ''')
@@ -335,4 +329,5 @@ class ControllerActionTransformerSpec extends Specification {
         System.properties[BuildSettings.CONVERT_CLOSURES_KEY] = 'false'
     }
 }
+
 

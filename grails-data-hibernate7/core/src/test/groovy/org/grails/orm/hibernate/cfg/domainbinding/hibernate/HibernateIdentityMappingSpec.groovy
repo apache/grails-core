@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -36,7 +36,7 @@ class HibernateIdentityMappingSpec extends Specification {
         mapping.getIdentifierName() == ['id'] as String[]
     }
 
-    void 'getIdentifierName returns custom name for HibernateSimpleIdentity with name set'() {
+    void "getIdentifierName returns custom name for HibernateSimpleIdentity with name set"() {
         given:
         def identity = new HibernateSimpleIdentity()
         identity.name = 'myId'
@@ -46,7 +46,7 @@ class HibernateIdentityMappingSpec extends Specification {
         mapping.getIdentifierName() == ['myId'] as String[]
     }
 
-    void 'getIdentifierName returns property names for HibernateCompositeIdentity'() {
+    void "getIdentifierName returns property names for HibernateCompositeIdentity"() {
         given:
         def identity = new HibernateCompositeIdentity()
         identity.propertyNames = ['firstName', 'lastName'] as String[]
@@ -64,7 +64,7 @@ class HibernateIdentityMappingSpec extends Specification {
         mapping.getIdentifierName() == ['id'] as String[]
     }
 
-    void 'getGenerator returns the configured generator'() {
+    void "getGenerator returns the configured generator"() {
         given:
         def mapping = new HibernateIdentityMapping(new HibernateSimpleIdentity(), ValueGenerator.SEQUENCE, Mock(ClassMapping))
 
@@ -72,7 +72,7 @@ class HibernateIdentityMappingSpec extends Specification {
         mapping.getGenerator() == ValueGenerator.SEQUENCE
     }
 
-    void 'getClassMapping returns the configured classMapping'() {
+    void "getClassMapping returns the configured classMapping"() {
         given:
         def classMapping = Mock(ClassMapping)
         def mapping = new HibernateIdentityMapping(new HibernateSimpleIdentity(), ValueGenerator.IDENTITY, classMapping)
@@ -81,7 +81,7 @@ class HibernateIdentityMappingSpec extends Specification {
         mapping.getClassMapping() == classMapping
     }
 
-    void 'getMappedForm returns the identity object'() {
+    void "getMappedForm returns the identity object"() {
         given:
         def identity = new HibernateSimpleIdentity()
         def mapping = new HibernateIdentityMapping(identity, ValueGenerator.IDENTITY, Mock(ClassMapping))

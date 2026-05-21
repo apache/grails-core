@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -53,7 +53,7 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate5T
 
     void setupSpec() {
         manager.grailsConfig = [
-                'dataSource.url'               : 'jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000',
+                'dataSource.url'               : "jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
                 'dataSource.dbCreate'          : 'create-drop',
                 'dataSource.formatSql'         : 'true',
                 'dataSource.logSql'            : 'true',
@@ -105,16 +105,16 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate5T
                 .getParentServiceRegistry()
                 .getParentServiceRegistry() as BootstrapServiceRegistry
         def serviceRegistry = new StandardServiceRegistryBuilder(bootstrapServiceRegistry)
-                .applySetting('hibernate.dialect', H2Dialect.class.getName())
-                .applySetting('jakarta.persistence.jdbc.url', 'jdbc:h2:mem:test;DB_CLOSE_DELAY=-1')
-                .applySetting('jakarta.persistence.jdbc.driver', 'org.h2.Driver')
+                .applySetting("hibernate.dialect", H2Dialect.class.getName())
+                .applySetting("jakarta.persistence.jdbc.url", "jdbc:h2:mem:test;DB_CLOSE_DELAY=-1")
+                .applySetting("jakarta.persistence.jdbc.driver", "org.h2.Driver")
                 .build()
         def options = new MetadataBuilderImpl(
                 new MetadataSources(serviceRegistry)
         ).getMetadataBuildingOptions()
         new InFlightMetadataCollectorImpl(
                 new BootstrapContextImpl( serviceRegistry, options)
-                , options)
+                , options);
     }
 
     protected HibernateMappingContext getMappingContext() {
@@ -142,6 +142,7 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate5T
     protected HibernateDatastore getDatastore() {
         manager.hibernateDatastore
     }
+
 
     protected AbstractHibernateSession getSession() {
         datastore.connect() as AbstractHibernateSession

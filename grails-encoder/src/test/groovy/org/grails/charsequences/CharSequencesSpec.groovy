@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -21,8 +21,7 @@ package org.grails.charsequences
 import spock.lang.Specification
 
 class CharSequencesSpec extends Specification {
-
-    def 'should support writing String instance to writer'() {
+    def "should support writing String instance to writer"() {
         given:
             StringWriter writer=new StringWriter()
         when:
@@ -33,7 +32,7 @@ class CharSequencesSpec extends Specification {
             input << ['Hello world','','1','12','123']
     }
 
-    def 'should support writing StringBuilder instance to writer'() {
+    def "should support writing StringBuilder instance to writer"() {
         given:
             StringWriter writer=new StringWriter()
         when:
@@ -46,7 +45,7 @@ class CharSequencesSpec extends Specification {
             input << ['Hello world','','1','12','123']
     }
 
-    def 'should support writing StringBuffer instance to writer'() {
+    def "should support writing StringBuffer instance to writer"() {
         given:
             StringWriter writer=new StringWriter()
         when:
@@ -59,7 +58,7 @@ class CharSequencesSpec extends Specification {
             input << ['Hello world','','1','12','123']
     }
     
-    def 'should support writing CharArrayAccessible instance to writer'() {
+    def "should support writing CharArrayAccessible instance to writer"() {
         given:
             StringWriter writer=new StringWriter()
         when:
@@ -71,7 +70,7 @@ class CharSequencesSpec extends Specification {
             input << ['Hello world','','1','12','123']
     }
     
-    def 'should support writing CharSequence instance to writer'() {
+    def "should support writing CharSequence instance to writer"() {
         given:
             StringWriter writer=new StringWriter()
         when:
@@ -84,7 +83,6 @@ class CharSequencesSpec extends Specification {
     }
     
     class CustomCharSequence implements CharSequence {
-
         String source
         
         CustomCharSequence(String source) {
@@ -94,17 +92,17 @@ class CharSequencesSpec extends Specification {
         
         @Override
         public int length() {
-            return source.length()
+            return source.length();
         }
 
         @Override
         public char charAt(int index) {
-            return source.charAt(index)
+            return source.charAt(index);
         }
 
         @Override
         public CharSequence subSequence(int start, int end) {
-            return source.subSequence(start, end)
+            return source.subSequence(start, end);
         }
     }
 }

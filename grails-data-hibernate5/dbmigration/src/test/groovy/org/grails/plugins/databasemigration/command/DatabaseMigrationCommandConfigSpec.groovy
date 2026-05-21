@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -29,7 +29,7 @@ class DatabaseMigrationCommandConfigSpec extends Specification implements Databa
         config.remove('dataSources')
     }
 
-    void 'test getDataSourceConfig with single dataSource'() {
+    void "test getDataSourceConfig with single dataSource"() {
 
         when:
         config.dataSource = [
@@ -51,12 +51,12 @@ class DatabaseMigrationCommandConfigSpec extends Specification implements Databa
 
     }
 
-    void 'test getDataSourceConfig with no dataSource config'() {
+    void "test getDataSourceConfig with no dataSource config"() {
         expect:
         getDataSourceConfig(config) == null
     }
 
-    void 'test getDataSourceConfig should return config when default is defined in dataSources'() {
+    void "test getDataSourceConfig should return config when default is defined in dataSources"() {
         when:
         config.dataSources = [
                 dataSource: [
@@ -79,7 +79,7 @@ class DatabaseMigrationCommandConfigSpec extends Specification implements Databa
 
     }
 
-    void 'test getDataSourceConfig should return config when both dataSource and dataSources exists'() {
+    void "test getDataSourceConfig should return config when both dataSource and dataSources exists"() {
         when:
         config.dataSource = [
                 'dbCreate'       : '',

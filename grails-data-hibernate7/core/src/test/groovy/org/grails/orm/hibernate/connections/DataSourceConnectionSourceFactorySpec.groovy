@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -29,24 +29,24 @@ import spock.lang.Specification
  */
 class DataSourceConnectionSourceFactorySpec extends Specification {
 
-    void 'test datasource connection source factory'() {
+    void "test datasource connection source factory"() {
         when:
         DataSourceConnectionSourceFactory factory = new DataSourceConnectionSourceFactory()
         Map config = [
-                'dataSource.url': 'jdbc:h2:mem:dsConnDsFactorySpecDb;LOCK_TIMEOUT=10000',
+                'dataSource.url':"jdbc:h2:mem:dsConnDsFactorySpecDb;LOCK_TIMEOUT=10000",
                 'dataSource.dbCreate': 'update',
                 'dataSource.properties.dbProperties': [useSSL: false]
         ]
         def connectionSource = factory.create(ConnectionSource.DEFAULT, DatastoreUtils.createPropertyResolver(config))
 
-        then:'The connection source is correct'
+        then:"The connection source is correct"
         connectionSource.name == ConnectionSource.DEFAULT
         connectionSource.source
 
-        when:'The schema names are resolved'
+        when:"The schema names are resolved"
         def schemaNames = new DefaultSchemaHandler().resolveSchemaNames(connectionSource.source)
 
-        then:'They are correct'
+        then:"They are correct"
         schemaNames == ['INFORMATION_SCHEMA', 'PUBLIC']
     }
 }

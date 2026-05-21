@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -40,13 +40,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue
 class HibernateMappingBuilderTests {
 
 //    void testWildcardApplyToAllProperties() {
-//        def builder = new HibernateMappingBuilder('Foo')
+//        def builder = new HibernateMappingBuilder("Foo")
 //        def mapping = builder.evaluate {
-//            '*'(column: 'foo')
-//            '*-1'(column: 'foo')
-//            '1-1'(column: 'foo')
-//            '1-*'(column: 'foo')
-//            '*-*'(column: 'foo')
+//            '*'(column:"foo")
+//            '*-1'(column:"foo")
+//            '1-1'(column:"foo")
+//            '1-*'(column:"foo")
+//            '*-*'(column:"foo")
 //            one cache:true
 //            two ignoreNoteFound:false
 //        }
@@ -57,41 +57,41 @@ class HibernateMappingBuilderTests {
         def callable = {
             foos lazy:false
         }
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             includes callable
             foos ignoreNotFound:true
         }
 
-        def pc = mapping.getPropertyConfig('foos')
-        assert pc.ignoreNotFound : 'should have ignoreNotFound enabled'
-        assert !pc.lazy : 'should not be lazy'
+        def pc = mapping.getPropertyConfig("foos")
+        assert pc.ignoreNotFound : "should have ignoreNotFound enabled"
+        assert !pc.lazy : "should not be lazy"
     }
 
     @Test
     void testIgnoreNotFound() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             foos ignoreNotFound:true
         }
 
-        assertTrue mapping.getPropertyConfig('foos').ignoreNotFound, 'ignore not found should have been true'
+        assertTrue mapping.getPropertyConfig("foos").ignoreNotFound, "ignore not found should have been true"
 
         mapping = builder.evaluate {
             foos ignoreNotFound:false
         }
-        assertFalse mapping.getPropertyConfig('foos').ignoreNotFound, 'ignore not found should have been false'
+        assertFalse mapping.getPropertyConfig("foos").ignoreNotFound, "ignore not found should have been false"
 
         mapping = builder.evaluate { // default
             foos lazy:false
         }
-        assertFalse mapping.getPropertyConfig('foos').ignoreNotFound, 'ignore not found should have been false'
+        assertFalse mapping.getPropertyConfig("foos").ignoreNotFound, "ignore not found should have been false"
     }
 
     @Test
     void testNaturalId() {
 
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             id natural: 'one'
         }
@@ -105,7 +105,7 @@ class HibernateMappingBuilderTests {
         assertEquals(['one','two'], mapping.identity.natural.propertyNames)
 
         mapping = builder.evaluate {
-            id natural: [properties: ['one','two'], mutable: true]
+            id natural: [properties:['one','two'], mutable:true]
         }
 
         assertEquals(['one','two'], mapping.identity.natural.propertyNames)
@@ -114,64 +114,64 @@ class HibernateMappingBuilderTests {
 
     @Test
     void testDiscriminator() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             discriminator 'one'
         }
 
-        assertEquals 'one', mapping.discriminator.value
+        assertEquals "one", mapping.discriminator.value
         assertNull mapping.discriminator.column
 
         mapping = builder.evaluate {
-            discriminator value:'one', column: 'type'
+            discriminator value:'one', column:'type'
         }
 
-        assertEquals 'one', mapping.discriminator.value
-        assertEquals 'type', mapping.discriminator.column.name
+        assertEquals "one", mapping.discriminator.value
+        assertEquals "type", mapping.discriminator.column.name
 
         mapping = builder.evaluate {
-            discriminator value:'one', column: [name:'type', sqlType: 'integer']
+            discriminator value:'one', column:[name:'type', sqlType:'integer']
         }
 
-        assertEquals 'one', mapping.discriminator.value
-        assertEquals 'type', mapping.discriminator.column.name
-        assertEquals 'integer', mapping.discriminator.column.sqlType
+        assertEquals "one", mapping.discriminator.value
+        assertEquals "type", mapping.discriminator.column.name
+        assertEquals "integer", mapping.discriminator.column.sqlType
     }
 
     @Test
     void testDiscriminatorMap() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
-            discriminator value:'1', formula: "case when CLASS_TYPE in ('a', 'b', 'c') then 0 else 1 end",type: 'integer',insert: false
+            discriminator value:'1', formula:"case when CLASS_TYPE in ('a', 'b', 'c') then 0 else 1 end",type:'integer',insert:false
         }
 
-        assertEquals '1', mapping.discriminator.value
+        assertEquals "1", mapping.discriminator.value
         assertNull mapping.discriminator.column
 
         assertEquals "case when CLASS_TYPE in ('a', 'b', 'c') then 0 else 1 end", mapping.discriminator.formula
-        assertEquals 'integer', mapping.discriminator.type
+        assertEquals "integer", mapping.discriminator.type
         assertFalse mapping.discriminator.insertable
     }
 
     @Test
     void testAutoImport() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate { }
 
-        assertTrue mapping.autoImport, 'default auto-import should be true'
+        assertTrue mapping.autoImport, "default auto-import should be true"
 
         mapping = builder.evaluate {
             autoImport false
         }
 
-        assertFalse mapping.autoImport, 'auto-import should be false'
+        assertFalse mapping.autoImport, "auto-import should be false"
     }
 
     @Test
     void testTableWithCatalogueAndSchema() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
-            table name:'table', catalog: 'CRM', schema: 'dbo'
+            table name:"table", catalog:"CRM", schema:"dbo"
         }
 
         assertEquals 'table',mapping.table.name
@@ -182,20 +182,20 @@ class HibernateMappingBuilderTests {
     @Test
     void testIndexColumn() {
 
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
-            things indexColumn:[name: 'chapter_number', type: 'string', length: 3]
+            things indexColumn:[name:"chapter_number", type:"string", length:3]
         }
 
-        PropertyConfig pc = mapping.getPropertyConfig('things')
-        assertEquals 'chapter_number',pc.indexColumn.column
-        assertEquals 'string',pc.indexColumn.type
+        PropertyConfig pc = mapping.getPropertyConfig("things")
+        assertEquals "chapter_number",pc.indexColumn.column
+        assertEquals "string",pc.indexColumn.type
         assertEquals 3, pc.indexColumn.length
     }
 
     @Test
     void testDynamicUpdate() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             dynamicUpdate true
             dynamicInsert true
@@ -204,7 +204,7 @@ class HibernateMappingBuilderTests {
         assertTrue mapping.dynamicUpdate
         assertTrue mapping.dynamicInsert
 
-        builder = new HibernateMappingBuilder('Foo')
+        builder = new HibernateMappingBuilder("Foo")
         mapping = builder.evaluate {}
 
         assertFalse mapping.dynamicUpdate
@@ -213,7 +213,7 @@ class HibernateMappingBuilderTests {
 
     @Test
     void testBatchSizeConfig() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             batchSize 10
             things batchSize:15
@@ -225,27 +225,27 @@ class HibernateMappingBuilderTests {
 
     @Test
     void testChangeVersionColumn() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             version 'v_number'
         }
 
-        assertEquals 'v_number', mapping.getPropertyConfig('version').column
+        assertEquals 'v_number', mapping.getPropertyConfig("version").column
     }
 
     @Test
     void testClassSortOrder() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
-            sort 'name'
-            order 'desc'
+            sort "name"
+            order "desc"
             columns {
                 things sort:'name'
             }
         }
 
-        assertEquals 'name', mapping.sort.name
-        assertEquals 'desc', mapping.sort.direction
+        assertEquals "name", mapping.sort.name
+        assertEquals "desc", mapping.sort.direction
         assertEquals 'name',mapping.getPropertyConfig('things').sort
 
         mapping = builder.evaluate {
@@ -256,14 +256,14 @@ class HibernateMappingBuilderTests {
             }
         }
 
-        assertEquals 'name', mapping.sort.name
-        assertEquals 'desc', mapping.sort.direction
+        assertEquals "name", mapping.sort.name
+        assertEquals "desc", mapping.sort.direction
         assertEquals 'name',mapping.getPropertyConfig('things').sort
     }
 
     @Test
     void testAssociationSortOrder() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             columns {
                 things sort:'name'
@@ -275,14 +275,14 @@ class HibernateMappingBuilderTests {
 
     @Test
     void testLazy() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             columns {
                 things cascade:'save-update'
             }
         }
 
-        assertNull mapping.getPropertyConfig('things').getLazy(), 'should have been lazy'
+        assertNull mapping.getPropertyConfig('things').getLazy(), "should have been lazy"
 
         mapping = builder.evaluate {
             columns {
@@ -295,7 +295,7 @@ class HibernateMappingBuilderTests {
 
     @Test
     void testCascades() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             columns {
                 things cascade:'save-update'
@@ -307,7 +307,7 @@ class HibernateMappingBuilderTests {
 
     @Test
     void testFetchModes() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             columns {
                 things fetch:'join'
@@ -323,7 +323,7 @@ class HibernateMappingBuilderTests {
 
     @Test
     void testEnumType() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             columns {
                 things column:'foo'
@@ -343,7 +343,7 @@ class HibernateMappingBuilderTests {
 
     @Test
     void testCascadesWithColumnsBlock() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             things cascade:'save-update'
         }
@@ -352,7 +352,7 @@ class HibernateMappingBuilderTests {
 
     @Test
     void testJoinTableMapping() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             columns {
                 things joinTable:true
@@ -369,24 +369,24 @@ class HibernateMappingBuilderTests {
 
         PropertyConfig property = mapping.getPropertyConfig('things')
         assert property?.joinTable
-        assertEquals 'foo', property.joinTable.name
+        assertEquals "foo", property.joinTable.name
 
         mapping = builder.evaluate {
             columns {
-                things joinTable:[name: 'foo', key: 'foo_id', column: 'bar_id']
+                things joinTable:[name:'foo', key:'foo_id', column:'bar_id']
             }
         }
 
         property = mapping.getPropertyConfig('things')
         assert property?.joinTable
-        assertEquals 'foo', property.joinTable.name
-        assertEquals 'foo_id', property.joinTable.key.name
-        assertEquals 'bar_id', property.joinTable.column.name
+        assertEquals "foo", property.joinTable.name
+        assertEquals "foo_id", property.joinTable.keys[0].name
+        assertEquals "bar_id", property.joinTable.column.name
     }
 
     @Test
     void testJoinTableMappingWithoutColumnsBlock() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             things joinTable:true
         }
@@ -399,22 +399,22 @@ class HibernateMappingBuilderTests {
 
         PropertyConfig property = mapping.getPropertyConfig('things')
         assert property?.joinTable
-        assertEquals 'foo', property.joinTable.name
+        assertEquals "foo", property.joinTable.name
 
         mapping = builder.evaluate {
-            things joinTable:[name: 'foo', key: 'foo_id', column: 'bar_id']
+            things joinTable:[name:'foo', key:'foo_id', column:'bar_id']
         }
 
         property = mapping.getPropertyConfig('things')
         assert property?.joinTable
-        assertEquals 'foo', property.joinTable.name
-        assertEquals 'foo_id', property.joinTable.key.name
-        assertEquals 'bar_id', property.joinTable.column.name
+        assertEquals "foo", property.joinTable.name
+        assertEquals "foo_id", property.joinTable.keys[0].name
+        assertEquals "bar_id", property.joinTable.column.name
     }
 
     @Test
     void testCustomInheritanceStrategy() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             table 'myTable'
             tablePerHierarchy false
@@ -432,8 +432,7 @@ class HibernateMappingBuilderTests {
 
     @Test
     void testAutoTimeStamp() {
-
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             table 'myTable'
             autoTimestamp false
@@ -444,11 +443,11 @@ class HibernateMappingBuilderTests {
 
     @Test
     void testCustomAssociationCachingConfig1() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             table 'myTable'
             columns {
-                firstName cache:[usage: 'read-only', include: 'non-lazy']
+                firstName cache:[usage:'read-only', include:'non-lazy']
             }
         }
 
@@ -459,10 +458,10 @@ class HibernateMappingBuilderTests {
 
     @Test
     void testCustomAssociationCachingConfig1WithoutColumnsBlock() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             table 'myTable'
-            firstName cache:[usage: 'read-only', include: 'non-lazy']
+            firstName cache:[usage:'read-only', include:'non-lazy']
         }
 
         def cc = mapping.getPropertyConfig('firstName')
@@ -472,7 +471,7 @@ class HibernateMappingBuilderTests {
 
     @Test
     void testCustomAssociationCachingConfig2() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             table 'myTable'
 
@@ -487,7 +486,7 @@ class HibernateMappingBuilderTests {
 
     @Test
     void testCustomAssociationCachingConfig2WithoutColumnsBlock() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             table 'myTable'
             firstName cache:'read-only'
@@ -499,7 +498,7 @@ class HibernateMappingBuilderTests {
 
     @Test
     void testAssociationCachingConfig() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             table 'myTable'
 
@@ -515,7 +514,7 @@ class HibernateMappingBuilderTests {
 
     @Test
     void testAssociationCachingConfigWithoutColumnsBlock() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             table 'myTable'
             firstName cache:true
@@ -528,7 +527,7 @@ class HibernateMappingBuilderTests {
 
     @Test
     void testEvaluateTableName() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             table 'myTable'
         }
@@ -538,7 +537,7 @@ class HibernateMappingBuilderTests {
 
     @Test
     void testDefaultCacheStrategy() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             table 'myTable'
             cache true
@@ -550,10 +549,10 @@ class HibernateMappingBuilderTests {
 
     @Test
     void testCustomCacheStrategy() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             table 'myTable'
-            cache usage:'read-only', include: 'non-lazy'
+            cache usage:'read-only', include:'non-lazy'
         }
 
         assertEquals 'read-only', mapping.cache.usage
@@ -562,7 +561,7 @@ class HibernateMappingBuilderTests {
 
     @Test
     void testCustomCacheStrategy2() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             table 'myTable'
             cache 'read-only'
@@ -574,10 +573,10 @@ class HibernateMappingBuilderTests {
 
     @Test
     void testInvalidCacheValues() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             table 'myTable'
-            cache usage:'rubbish', include: 'more-rubbish'
+            cache usage:'rubbish', include:'more-rubbish'
         }
 
         // should be ignored and logged to console
@@ -587,7 +586,7 @@ class HibernateMappingBuilderTests {
 
     @Test
     void testEvaluateVersioning() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             table 'myTable'
             version false
@@ -599,22 +598,22 @@ class HibernateMappingBuilderTests {
 
     @Test
     void testIdentityColumnMapping() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             table 'myTable'
             version false
-            id column:'foo_id', type: Integer
+            id column:'foo_id', type:Integer
         }
 
         assertEquals Long, mapping.identity.type
-        assertEquals 'foo_id', mapping.getPropertyConfig('id').column
-        assertEquals Integer, mapping.getPropertyConfig('id').type
+        assertEquals 'foo_id', mapping.getPropertyConfig("id").column
+        assertEquals Integer, mapping.getPropertyConfig("id").type
         assertEquals 'native', mapping.identity.generator
     }
 
     @Test
     void testDefaultIdStrategy() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             table 'myTable'
             version false
@@ -627,11 +626,11 @@ class HibernateMappingBuilderTests {
 
     @Test
     void testHiloIdStrategy() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             table 'myTable'
             version false
-            id generator:'hilo', params: [table:'hi_value',column: 'next_value',max_lo: 100]
+            id generator:'hilo', params:[table:'hi_value',column:'next_value',max_lo:100]
         }
 
         assertEquals Long, mapping.identity.type
@@ -642,22 +641,22 @@ class HibernateMappingBuilderTests {
 
     @Test
     void testCompositeIdStrategy() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             table 'myTable'
             version false
-            id composite:['one','two'], compositeClass: HibernateMappingBuilder
+            id composite:['one','two'], compositeClass:HibernateMappingBuilder
         }
 
         assert mapping.identity instanceof CompositeIdentity
-        assertEquals 'one', mapping.identity.propertyNames[0]
-        assertEquals 'two', mapping.identity.propertyNames[1]
+        assertEquals "one", mapping.identity.propertyNames[0]
+        assertEquals "two", mapping.identity.propertyNames[1]
         assertEquals HibernateMappingBuilder, mapping.identity.compositeClass
     }
 
     @Test
     void testSimpleColumnMappingsWithoutColumnsBlock() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             table 'myTable'
             version false
@@ -665,13 +664,13 @@ class HibernateMappingBuilderTests {
             lastName column:'Last_Name'
         }
 
-        assertEquals 'First_Name',mapping.getPropertyConfig('firstName').column
-        assertEquals 'Last_Name',mapping.getPropertyConfig('lastName').column
+        assertEquals "First_Name",mapping.getPropertyConfig('firstName').column
+        assertEquals "Last_Name",mapping.getPropertyConfig('lastName').column
     }
 
     @Test
     void testSimpleColumnMappings() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             table 'myTable'
             version false
@@ -681,80 +680,80 @@ class HibernateMappingBuilderTests {
             }
         }
 
-        assertEquals 'First_Name',mapping.getPropertyConfig('firstName').column
-        assertEquals 'Last_Name',mapping.getPropertyConfig('lastName').column
+        assertEquals "First_Name",mapping.getPropertyConfig('firstName').column
+        assertEquals "Last_Name",mapping.getPropertyConfig('lastName').column
     }
 
     @Test
     void testComplexColumnMappings() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             table 'myTable'
             version false
             columns {
                 firstName  column:'First_Name',
-                        lazy: true,
-                        unique: true,
+                        lazy:true,
+                        unique:true,
                         type: java.sql.Clob,
-                        length: 255,
-                        index: 'foo',
+                        length:255,
+                        index:'foo',
                         sqlType: 'text'
 
                 lastName column:'Last_Name'
             }
         }
 
-        assertEquals 'First_Name',mapping.columns.firstName.column
+        assertEquals "First_Name",mapping.columns.firstName.column
         assertTrue mapping.columns.firstName.lazy
         assertTrue mapping.columns.firstName.unique
         assertEquals java.sql.Clob,mapping.columns.firstName.type
         assertEquals 255,mapping.columns.firstName.length
         assertEquals 'foo',mapping.columns.firstName.getIndexName()
-        assertEquals 'text',mapping.columns.firstName.sqlType
-        assertEquals 'Last_Name',mapping.columns.lastName.column
+        assertEquals "text",mapping.columns.firstName.sqlType
+        assertEquals "Last_Name",mapping.columns.lastName.column
     }
 
     @Test
     void testComplexColumnMappingsWithoutColumnsBlock() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             table 'myTable'
             version false
             firstName  column:'First_Name',
-                    lazy: true,
-                    unique: true,
+                    lazy:true,
+                    unique:true,
                     type: java.sql.Clob,
-                    length: 255,
-                    index: 'foo',
+                    length:255,
+                    index:'foo',
                     sqlType: 'text'
 
             lastName column:'Last_Name'
         }
 
-        assertEquals 'First_Name',mapping.columns.firstName.column
+        assertEquals "First_Name",mapping.columns.firstName.column
         assertTrue mapping.columns.firstName.lazy
         assertTrue mapping.columns.firstName.unique
         assertEquals java.sql.Clob,mapping.columns.firstName.type
         assertEquals 255,mapping.columns.firstName.length
         assertEquals 'foo',mapping.columns.firstName.getIndexName()
-        assertEquals 'text',mapping.columns.firstName.sqlType
-        assertEquals 'Last_Name',mapping.columns.lastName.column
+        assertEquals "text",mapping.columns.firstName.sqlType
+        assertEquals "Last_Name",mapping.columns.lastName.column
     }
 
     @Test
     void testPropertyWithMultipleColumns() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             amount type: MyUserType, {
-                column name: 'value'
-                column name: 'currency', sqlType: 'char', length: 3
+                column name: "value"
+                column name: "currency", sqlType: "char", length: 3
             }
         }
 
         assertEquals 2, mapping.columns.amount.columns.size()
-        assertEquals 'value', mapping.columns.amount.columns[0].name
-        assertEquals 'currency', mapping.columns.amount.columns[1].name
-        assertEquals 'char', mapping.columns.amount.columns[1].sqlType
+        assertEquals "value", mapping.columns.amount.columns[0].name
+        assertEquals "currency", mapping.columns.amount.columns[1].name
+        assertEquals "char", mapping.columns.amount.columns[1].sqlType
         assertEquals 3, mapping.columns.amount.columns[1].length
 
         assertThrows Throwable, { mapping.columns.amount.column }
@@ -763,11 +762,11 @@ class HibernateMappingBuilderTests {
 
     @Test
     void testConstrainedPropertyWithMultipleColumns() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         builder.evaluate {
             amount type: MyUserType, {
-                column name: 'value'
-                column name: 'currency', sqlType: 'char', length: 3
+                column name: "value"
+                column name: "currency", sqlType: "char", length: 3
             }
         }
         def mapping = builder.evaluate {
@@ -775,9 +774,9 @@ class HibernateMappingBuilderTests {
         }
 
         assertEquals 2, mapping.columns.amount.columns.size()
-        assertEquals 'value', mapping.columns.amount.columns[0].name
-        assertEquals 'currency', mapping.columns.amount.columns[1].name
-        assertEquals 'char', mapping.columns.amount.columns[1].sqlType
+        assertEquals "value", mapping.columns.amount.columns[0].name
+        assertEquals "currency", mapping.columns.amount.columns[1].name
+        assertEquals "char", mapping.columns.amount.columns[1].sqlType
         assertEquals 3, mapping.columns.amount.columns[1].length
 
         assertThrows Throwable, { mapping.columns.amount.column }
@@ -786,23 +785,23 @@ class HibernateMappingBuilderTests {
 
     @Test
     void testDisallowedConstrainedPropertyWithMultipleColumns() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         builder.evaluate {
             amount type: MyUserType, {
-                column name: 'value'
-                column name: 'currency', sqlType: 'char', length: 3
+                column name: "value"
+                column name: "currency", sqlType: "char", length: 3
             }
         }
         assertThrows(Throwable, {
             builder.evaluate {
                 amount scale: 2
             }
-        }, 'Cannot treat multi-column property as a single-column property')
+        }, "Cannot treat multi-column property as a single-column property")
     }
 
     @Test
     void testPropertyWithUserTypeAndNoParams() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             amount type: MyUserType
         }
@@ -813,23 +812,23 @@ class HibernateMappingBuilderTests {
 
     @Test
     void testPropertyWithUserTypeAndTypeParams() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
-            amount type: MyUserType, params : [ param1 : 'amountParam1', param2 : 65 ]
-            value type: MyUserType, params : [ param1 : 'valueParam1', param2 : 21 ]
+            amount type: MyUserType, params : [ param1 : "amountParam1", param2 : 65 ]
+            value type: MyUserType, params : [ param1 : "valueParam1", param2 : 21 ]
         }
 
         assertEquals MyUserType, mapping.getPropertyConfig('amount').type
-        assertEquals 'amountParam1', mapping.getPropertyConfig('amount').typeParams.param1
+        assertEquals "amountParam1", mapping.getPropertyConfig('amount').typeParams.param1
         assertEquals 65, mapping.getPropertyConfig('amount').typeParams.param2
         assertEquals MyUserType, mapping.getPropertyConfig('value').type
-        assertEquals 'valueParam1', mapping.getPropertyConfig('value').typeParams.param1
+        assertEquals "valueParam1", mapping.getPropertyConfig('value').typeParams.param1
         assertEquals 21, mapping.getPropertyConfig('value').typeParams.param2
     }
 
     @Test
     void testInsertablePropertyConfig() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             firstName insertable:true
             lastName insertable:false
@@ -840,7 +839,7 @@ class HibernateMappingBuilderTests {
 
     @Test
     void testUpdateablePropertyConfig() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             firstName updateable:true
             lastName updateable:false
@@ -851,7 +850,7 @@ class HibernateMappingBuilderTests {
 
     @Test
     void testUpdatablePropertyConfig() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             firstName updatable: true
             lastName updatable: false
@@ -862,7 +861,7 @@ class HibernateMappingBuilderTests {
 
     @Test
     void testDefaultValue() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             comment 'wahoo'
             name comment: 'bar'
@@ -874,7 +873,7 @@ class HibernateMappingBuilderTests {
 
     @Test
     void testColumnComment() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             comment 'wahoo'
             name comment: 'bar'
@@ -886,7 +885,7 @@ class HibernateMappingBuilderTests {
 
     @Test
     void testTableComment() {
-        def builder = new HibernateMappingBuilder('Foo')
+        def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             comment 'wahoo'
             name comment: 'bar'

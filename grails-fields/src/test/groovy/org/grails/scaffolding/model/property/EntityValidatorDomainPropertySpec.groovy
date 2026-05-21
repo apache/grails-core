@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -52,16 +52,16 @@ class EntityValidatorDomainPropertySpec extends Specification implements MocksDo
     Embedded props
 
     void setup() {
-        mappingContext = new KeyValueMappingContext('test')
+        mappingContext = new KeyValueMappingContext("test")
         domainClass = mockDomainClassEntityValidator(mappingContext, ScaffoldedDomain)
-        address = domainClass.getPropertyByName('address')
-        props = (Embedded)domainClass.getPropertyByName('props')
-        name = props.associatedEntity.getPropertyByName('name')
-        foos = domainClass.getPropertyByName('foos')
+        address = domainClass.getPropertyByName("address")
+        props = (Embedded)domainClass.getPropertyByName("props")
+        name = props.associatedEntity.getPropertyByName("name")
+        foos = domainClass.getPropertyByName("foos")
     }
 
     @Unroll
-    void 'test isRequired #propertyName is required: #expected'() {
+    void "test isRequired #propertyName is required: #expected"() {
         given:
         DomainProperty property
 
@@ -75,22 +75,21 @@ class EntityValidatorDomainPropertySpec extends Specification implements MocksDo
 
         where:
         propertyName    | convertEmpty | trimStrings | expected
-        'testRequired1' | true         | true        | true
-        'testRequired1' | false        | true        | true
-        'testRequired1' | true         | false       | true
-        'testRequired2' | true         | true        | false
-        'testRequired2' | false        | true        | false
-        'testRequired2' | true         | false       | false
-        'testRequired3' | true         | true        | false
-        'testRequired3' | false        | true        | false
-        'testRequired3' | true         | false       | false
-        'testRequired4' | true         | true        | true
-        'testRequired4' | false        | true        | false
-        'testRequired4' | true         | false       | false
+        "testRequired1" | true         | true        | true
+        "testRequired1" | false        | true        | true
+        "testRequired1" | true         | false       | true
+        "testRequired2" | true         | true        | false
+        "testRequired2" | false        | true        | false
+        "testRequired2" | true         | false       | false
+        "testRequired3" | true         | true        | false
+        "testRequired3" | false        | true        | false
+        "testRequired3" | true         | false       | false
+        "testRequired4" | true         | true        | true
+        "testRequired4" | false        | true        | false
+        "testRequired4" | true         | false       | false
     }
 
     class ScaffoldedDomain {
-
         Long id
         Long version
         String address
@@ -113,9 +112,10 @@ class EntityValidatorDomainPropertySpec extends Specification implements MocksDo
         }
     }
 
-    class EmbeddedClass {
 
+    class EmbeddedClass {
         String name
     }
+
 
 }

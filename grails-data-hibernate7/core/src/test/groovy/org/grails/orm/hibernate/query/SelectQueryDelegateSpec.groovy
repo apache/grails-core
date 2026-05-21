@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -32,9 +32,9 @@ class SelectQueryDelegateSpec extends HibernateGormDatastoreSpec {
     }
 
     void setup() {
-        new SelectQueryDelegateTestBook(title: 'Alpha', pages: 100).save(flush: true, failOnError: true)
-        new SelectQueryDelegateTestBook(title: 'Beta',  pages: 200).save(flush: true, failOnError: true)
-        new SelectQueryDelegateTestBook(title: 'Gamma', pages: 300).save(flush: true, failOnError: true)
+        new SelectQueryDelegateTestBook(title: "Alpha", pages: 100).save(flush: true, failOnError: true)
+        new SelectQueryDelegateTestBook(title: "Beta",  pages: 200).save(flush: true, failOnError: true)
+        new SelectQueryDelegateTestBook(title: "Gamma", pages: 300).save(flush: true, failOnError: true)
     }
 
     private SelectQueryDelegate buildDelegate(String hql) {
@@ -42,18 +42,18 @@ class SelectQueryDelegateSpec extends HibernateGormDatastoreSpec {
         new SelectQueryDelegate(query)
     }
 
-    void 'constructor wraps a SELECT query'() {
+    void "constructor wraps a SELECT query"() {
         given:
-        def delegate = buildDelegate('FROM SelectQueryDelegateTestBook')
+        def delegate = buildDelegate("FROM SelectQueryDelegateTestBook")
 
         expect:
         delegate != null
         delegate.selectQuery() != null
     }
 
-    void 'list() returns all results'() {
+    void "list() returns all results"() {
         given:
-        def delegate = buildDelegate('FROM SelectQueryDelegateTestBook ORDER BY title')
+        def delegate = buildDelegate("FROM SelectQueryDelegateTestBook ORDER BY title")
 
         when:
         def results = delegate.list()
@@ -62,9 +62,9 @@ class SelectQueryDelegateSpec extends HibernateGormDatastoreSpec {
         results.size() == 3
     }
 
-    void 'setMaxResults limits results'() {
+    void "setMaxResults limits results"() {
         given:
-        def delegate = buildDelegate('FROM SelectQueryDelegateTestBook ORDER BY title')
+        def delegate = buildDelegate("FROM SelectQueryDelegateTestBook ORDER BY title")
 
         when:
         delegate.setMaxResults(2)
@@ -74,9 +74,9 @@ class SelectQueryDelegateSpec extends HibernateGormDatastoreSpec {
         results.size() == 2
     }
 
-    void 'setFirstResult offsets results'() {
+    void "setFirstResult offsets results"() {
         given:
-        def delegate = buildDelegate('FROM SelectQueryDelegateTestBook ORDER BY title')
+        def delegate = buildDelegate("FROM SelectQueryDelegateTestBook ORDER BY title")
 
         when:
         delegate.setFirstResult(2)
@@ -86,48 +86,48 @@ class SelectQueryDelegateSpec extends HibernateGormDatastoreSpec {
         results.size() == 1
     }
 
-    void 'setParameter by name filters results'() {
+    void "setParameter by name filters results"() {
         given:
-        def delegate = buildDelegate('FROM SelectQueryDelegateTestBook WHERE title = :title')
+        def delegate = buildDelegate("FROM SelectQueryDelegateTestBook WHERE title = :title")
 
         when:
-        delegate.setParameter('title', 'Alpha')
+        delegate.setParameter("title", "Alpha")
         def results = delegate.list()
 
         then:
         results.size() == 1
     }
 
-    void 'setParameter by name with type filters results'() {
+    void "setParameter by name with type filters results"() {
         given:
-        def delegate = buildDelegate('FROM SelectQueryDelegateTestBook WHERE pages = :p')
+        def delegate = buildDelegate("FROM SelectQueryDelegateTestBook WHERE pages = :p")
 
         when:
-        delegate.setParameter('p', Integer.valueOf(200), Integer.class)
+        delegate.setParameter("p", Integer.valueOf(200), Integer.class)
         def results = delegate.list()
 
         then:
         results.size() == 1
     }
 
-    void 'setParameter by position filters results'() {
+    void "setParameter by position filters results"() {
         given:
-        def delegate = buildDelegate('FROM SelectQueryDelegateTestBook WHERE title = ?1')
-        Method m = SelectQueryDelegate.getDeclaredMethod('setParameter', int.class, Object.class)
+        def delegate = buildDelegate("FROM SelectQueryDelegateTestBook WHERE title = ?1")
+        Method m = SelectQueryDelegate.getDeclaredMethod("setParameter", int.class, Object.class)
         m.accessible = true
 
         when:
-        m.invoke(delegate, 1, 'Beta')
+        m.invoke(delegate, 1, "Beta")
         def results = delegate.list()
 
         then:
         results.size() == 1
     }
 
-    void 'setParameter by position with type filters results'() {
+    void "setParameter by position with type filters results"() {
         given:
-        def delegate = buildDelegate('FROM SelectQueryDelegateTestBook WHERE pages = ?1')
-        Method m = SelectQueryDelegate.getDeclaredMethod('setParameter', int.class, Object.class, Class.class)
+        def delegate = buildDelegate("FROM SelectQueryDelegateTestBook WHERE pages = ?1")
+        Method m = SelectQueryDelegate.getDeclaredMethod("setParameter", int.class, Object.class, Class.class)
         m.accessible = true
 
         when:
@@ -138,35 +138,35 @@ class SelectQueryDelegateSpec extends HibernateGormDatastoreSpec {
         results.size() == 1
     }
 
-    void 'setParameterList(Collection) filters with IN clause'() {
+    void "setParameterList(Collection) filters with IN clause"() {
         given:
-        def delegate = buildDelegate('FROM SelectQueryDelegateTestBook WHERE title IN (:titles)')
+        def delegate = buildDelegate("FROM SelectQueryDelegateTestBook WHERE title IN (:titles)")
 
         when:
-        delegate.setParameterList('titles', ['Alpha', 'Beta'] as Collection)
+        delegate.setParameterList("titles", ["Alpha", "Beta"] as Collection)
         def results = delegate.list()
 
         then:
         results.size() == 2
     }
 
-    void 'setParameterList(array) filters with IN clause'() {
+    void "setParameterList(array) filters with IN clause"() {
         given:
-        def delegate = buildDelegate('FROM SelectQueryDelegateTestBook WHERE title IN (:titles)')
-        Method m = SelectQueryDelegate.getDeclaredMethod('setParameterList', String.class, Object[].class)
+        def delegate = buildDelegate("FROM SelectQueryDelegateTestBook WHERE title IN (:titles)")
+        Method m = SelectQueryDelegate.getDeclaredMethod("setParameterList", String.class, Object[].class)
         m.accessible = true
 
         when:
-        m.invoke(delegate, 'titles', (Object) (['Alpha', 'Gamma'] as Object[]))
+        m.invoke(delegate, "titles", (Object) (["Alpha", "Gamma"] as Object[]))
         def results = delegate.list()
 
         then:
         results.size() == 2
     }
 
-    void 'setTimeout does not throw'() {
+    void "setTimeout does not throw"() {
         given:
-        def delegate = buildDelegate('FROM SelectQueryDelegateTestBook')
+        def delegate = buildDelegate("FROM SelectQueryDelegateTestBook")
 
         when:
         delegate.setTimeout(30)
@@ -175,9 +175,9 @@ class SelectQueryDelegateSpec extends HibernateGormDatastoreSpec {
         noExceptionThrown()
     }
 
-    void 'setQueryFlushMode does not throw'() {
+    void "setQueryFlushMode does not throw"() {
         given:
-        def delegate = buildDelegate('FROM SelectQueryDelegateTestBook')
+        def delegate = buildDelegate("FROM SelectQueryDelegateTestBook")
 
         when:
         delegate.setQueryFlushMode(QueryFlushMode.NO_FLUSH)
@@ -186,9 +186,9 @@ class SelectQueryDelegateSpec extends HibernateGormDatastoreSpec {
         noExceptionThrown()
     }
 
-    void 'setCacheable does not throw'() {
+    void "setCacheable does not throw"() {
         given:
-        def delegate = buildDelegate('FROM SelectQueryDelegateTestBook')
+        def delegate = buildDelegate("FROM SelectQueryDelegateTestBook")
 
         when:
         delegate.setCacheable(true)
@@ -197,9 +197,9 @@ class SelectQueryDelegateSpec extends HibernateGormDatastoreSpec {
         noExceptionThrown()
     }
 
-    void 'setFetchSize does not throw'() {
+    void "setFetchSize does not throw"() {
         given:
-        def delegate = buildDelegate('FROM SelectQueryDelegateTestBook')
+        def delegate = buildDelegate("FROM SelectQueryDelegateTestBook")
 
         when:
         delegate.setFetchSize(10)
@@ -208,9 +208,9 @@ class SelectQueryDelegateSpec extends HibernateGormDatastoreSpec {
         noExceptionThrown()
     }
 
-    void 'setReadOnly does not throw'() {
+    void "setReadOnly does not throw"() {
         given:
-        def delegate = buildDelegate('FROM SelectQueryDelegateTestBook')
+        def delegate = buildDelegate("FROM SelectQueryDelegateTestBook")
 
         when:
         delegate.setReadOnly(true)
@@ -219,9 +219,9 @@ class SelectQueryDelegateSpec extends HibernateGormDatastoreSpec {
         noExceptionThrown()
     }
 
-    void 'setLockMode does not throw'() {
+    void "setLockMode does not throw"() {
         given:
-        def delegate = buildDelegate('FROM SelectQueryDelegateTestBook')
+        def delegate = buildDelegate("FROM SelectQueryDelegateTestBook")
 
         when:
         delegate.setLockMode(LockModeType.READ)
@@ -230,20 +230,20 @@ class SelectQueryDelegateSpec extends HibernateGormDatastoreSpec {
         noExceptionThrown()
     }
 
-    void 'setHint does not throw'() {
+    void "setHint does not throw"() {
         given:
-        def delegate = buildDelegate('FROM SelectQueryDelegateTestBook')
+        def delegate = buildDelegate("FROM SelectQueryDelegateTestBook")
 
         when:
-        delegate.setHint('org.hibernate.readOnly', true)
+        delegate.setHint("org.hibernate.readOnly", true)
 
         then:
         noExceptionThrown()
     }
 
-    void 'executeUpdate throws UnsupportedOperationException'() {
+    void "executeUpdate throws UnsupportedOperationException"() {
         given:
-        def delegate = buildDelegate('FROM SelectQueryDelegateTestBook')
+        def delegate = buildDelegate("FROM SelectQueryDelegateTestBook")
 
         when:
         delegate.executeUpdate()
@@ -255,7 +255,6 @@ class SelectQueryDelegateSpec extends HibernateGormDatastoreSpec {
 
 @Entity
 class SelectQueryDelegateTestBook {
-
     String title
     Integer pages
 

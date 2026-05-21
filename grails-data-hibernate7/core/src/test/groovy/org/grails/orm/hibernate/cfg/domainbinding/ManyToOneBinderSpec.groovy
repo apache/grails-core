@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -54,11 +54,11 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
     }
 
     @Unroll
-    def 'Test bindManyToOne (ManyToOneProperty) orchestration for #scenario'() {
+    def "Test bindManyToOne (ManyToOneProperty) orchestration for #scenario"() {
         given:
         def association = Mock(HibernateManyToOneProperty)
         def table = Mock(Table)
-        def path = '/test'
+        def path = "/test"
         def (mapping, refDomainClass) = mockEntity(hasCompositeId)
 
         association.getHibernateAssociatedEntity() >> refDomainClass
@@ -77,16 +77,16 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
 
         where:
         scenario                 | hasCompositeId | compositeBinderCalls | simpleValueBinderCalls
-        'a composite identifier' | true           | 1                    | 0
-        'a simple identifier'    | false          | 0                    | 1
+        "a composite identifier" | true           | 1                    | 0
+        "a simple identifier"    | false          | 0                    | 1
     }
 
-    def 'Test bindManyToOne (ManyToManyProperty) with circular logic'() {
+    def "Test bindManyToOne (ManyToManyProperty) with circular logic"() {
         given:
         def property = Mock(HibernateManyToManyProperty)
         def otherSide = Mock(HibernateManyToManyProperty)
         def table = Mock(Table)
-        def collectionTable = new Table('coll_table')
+        def collectionTable = new Table("coll_table")
 
         // FIX: Provide real objects for the Map constructor
         PersistentClass ownerClass = new RootClass(metadataBuildingContext)
@@ -104,31 +104,31 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
 
         otherSide.getHibernateOwner() >> ownerEntity
         otherSide.getOwner() >> ownerEntity
-        ownerEntity.getName() >> 'OwnerEntity'
+        ownerEntity.getName() >> "OwnerEntity"
 
         otherSide.isCircular() >> true
-        otherSide.getName() >> 'circularProp'
+        otherSide.getName() >> "circularProp"
         otherSide.getMappedForm() >> propertyConfig
         otherSide.getHibernateMappedForm() >> propertyConfig
-        mapping.getColumns().put('circularProp', propertyConfig)
+        mapping.getColumns().put("circularProp", propertyConfig)
 
-        namingStrategy.resolveColumnName('circularProp') >> 'circular_prop'
+        namingStrategy.resolveColumnName("circularProp") >> "circular_prop"
 
         when:
-        def result = binder.bindManyToOne(property, '/test')
+        def result = binder.bindManyToOne(property, "/test")
 
         then:
         result instanceof ManyToOne
-        result.getReferencedEntityName() == 'OwnerEntity'
+        result.getReferencedEntityName() == "OwnerEntity"
         result.getTable() == collectionTable
         1 * manyToOneValuesBinder.bindManyToOneValues(otherSide, _ as ManyToOne)
-        1 * simpleValueBinder.bindSimpleValue(otherSide, null, _ as ManyToOne, '/test')
+        1 * simpleValueBinder.bindSimpleValue(otherSide, null, _ as ManyToOne, "/test")
 
-        mapping.getColumns().get('circularProp') == propertyConfig
-        1 * propertyConfig.setJoinTable({ it.key.name == 'circular_prop_id' })
+        mapping.getColumns().get("circularProp") == propertyConfig
+        1 * propertyConfig.setJoinTable({ it.keys && it.keys[0].name == "circular_prop_id" })
     }
 
-    def 'Test bindManyToOne (OneToOneProperty)'() {
+    def "Test bindManyToOne (OneToOneProperty)"() {
         given:
         def property = Mock(HibernateOneToOneProperty)
         def table = Mock(Table)
@@ -141,15 +141,15 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         property.getHibernateMappedForm() >> propertyConfig
 
         when:
-        def result = binder.bindManyToOne(property, '/test/path')
+        def result = binder.bindManyToOne(property, "/test/path")
 
         then:
         result instanceof ManyToOne
         1 * manyToOneValuesBinder.bindManyToOneValues(property, _ as ManyToOne)
-        1 * simpleValueBinder.bindSimpleValue(property, null, _ as ManyToOne, '/test/path')
+        1 * simpleValueBinder.bindSimpleValue(property, null, _ as ManyToOne, "/test/path")
     }
 
-    def '3-arg constructor creates a valid ManyToOneBinder with default sub-binders'() {
+    def "3-arg constructor creates a valid ManyToOneBinder with default sub-binders"() {
         given:
         def jdbcEnvironment = getGrailsDomainBinder().getJdbcEnvironment()
         def ns = Mock(PersistentEntityNamingStrategy)
@@ -159,11 +159,11 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         threArgBinder != null
     }
 
-    def 'prepareCircularManyToMany populates columns when property name absent from columns map'() {
+    def "prepareCircularManyToMany populates columns when property name absent from columns map"() {
         given:
         def property = Mock(HibernateManyToManyProperty)
         def otherSide = Mock(HibernateManyToManyProperty)
-        def collectionTable = new Table('coll_table')
+        def collectionTable = new Table("coll_table")
 
         PersistentClass ownerClass = new RootClass(metadataBuildingContext)
         def realCollection = new HibernateMap(metadataBuildingContext, ownerClass)
@@ -180,24 +180,24 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
 
         otherSide.getHibernateOwner() >> ownerEntity
         otherSide.getOwner() >> ownerEntity
-        ownerEntity.getName() >> 'OwnerEntity'
+        ownerEntity.getName() >> "OwnerEntity"
         ownerEntity.getHibernateMappedForm() >> mapping  // default method not auto-executed by Spock Mock
 
         otherSide.isCircular() >> true
-        otherSide.getName() >> 'newProp'
+        otherSide.getName() >> "newProp"
         otherSide.getMappedForm() >> propertyConfig
         otherSide.getHibernateMappedForm() >> propertyConfig
-        // columns map does NOT contain 'newProp' → should add it at L120
+        // columns map does NOT contain "newProp" → should add it at L120
 
-        namingStrategy.resolveColumnName('newProp') >> 'new_prop'
+        namingStrategy.resolveColumnName("newProp") >> "new_prop"
 
         when:
-        def result = binder.bindManyToOne(property, '/test')
+        def result = binder.bindManyToOne(property, "/test")
 
         then:
         result instanceof ManyToOne
-        mapping.getColumns().containsKey('newProp')
-        1 * propertyConfig.setJoinTable({ it.key.name == 'new_prop_id' })
+        mapping.getColumns().containsKey("newProp")
+        1 * propertyConfig.setJoinTable({ it.keys && it.keys[0].name == "new_prop_id" })
     }
 
     private List mockEntity(boolean composite) {

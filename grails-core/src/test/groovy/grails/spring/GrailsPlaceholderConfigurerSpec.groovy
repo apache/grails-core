@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -33,10 +33,10 @@ class GrailsPlaceholderConfigurerSpec extends Specification {
         Holders.setConfig(null)
     }
 
-    void 'Test that property placeholder configuration works for simple properties in map syntax'() {
-        when:'A bean is defined with a placeholder'
+    void "Test that property placeholder configuration works for simple properties in map syntax"() {
+        when:"A bean is defined with a placeholder"
             def application = new DefaultGrailsApplication()
-            application.config.foo = [bar: 'test']
+            application.config.foo = [bar: "test"]
             def bb = new BeanBuilder()
             bb.beans {
                 addBeanFactoryPostProcessor(new GrailsPlaceholderConfigurer('${', application.config.toProperties()))
@@ -46,15 +46,15 @@ class GrailsPlaceholderConfigurerSpec extends Specification {
             }
             def applicationContext = bb.createApplicationContext()
             def bean = applicationContext.getBean(TestBean)
-        then:'The placeholder is replaced'
-            bean.name == 'test'
+        then:"The placeholder is replaced"
+            bean.name == "test"
 
     }
 
-    void 'Test that property placeholder configuration works for simple properties in dot syntax'() {
-        when:'A bean is defined with a placeholder'
+    void "Test that property placeholder configuration works for simple properties in dot syntax"() {
+        when:"A bean is defined with a placeholder"
         def application = new DefaultGrailsApplication()
-        application.config.foo.bar='test'
+        application.config.foo.bar="test"
         def bb = new BeanBuilder()
         bb.beans {
             addBeanFactoryPostProcessor(new GrailsPlaceholderConfigurer('${', application.config.toProperties()))
@@ -64,16 +64,16 @@ class GrailsPlaceholderConfigurerSpec extends Specification {
         }
         def applicationContext = bb.createApplicationContext()
         def bean = applicationContext.getBean(TestBean)
-        then:'The placeholder is replaced'
-        bean.name == 'test'
+        then:"The placeholder is replaced"
+        bean.name == "test"
 
     }
 
     @Issue('GRAILS-9490')
     void "Test that property placeholder configuration doesn't throw an error if invalid placeholders are configured"() {
-        when:'A bean is defined with a placeholder'
+        when:"A bean is defined with a placeholder"
         def application = new DefaultGrailsApplication()
-        application.config.bar = [foo: 'test']
+        application.config.bar = [foo: "test"]
         application.config.more = [stuff: 'another ${place.holder}']
         def bb = new BeanBuilder()
         bb.beans {
@@ -84,15 +84,15 @@ class GrailsPlaceholderConfigurerSpec extends Specification {
         }
         def applicationContext = bb.createApplicationContext()
         def bean = applicationContext.getBean(TestBean)
-        then:'The placeholder is replaced'
+        then:"The placeholder is replaced"
         bean.name == '${foo.bar}'
 
     }
 
-    void 'Test that property placeholder configuration works for simple properties with a custom placeholder prefix'() {
-        when:'A bean is defined with a placeholder'
+    void "Test that property placeholder configuration works for simple properties with a custom placeholder prefix"() {
+        when:"A bean is defined with a placeholder"
         def application = new DefaultGrailsApplication()
-        application.config.foo = [bar: 'test']
+        application.config.foo = [bar: "test"]
         application.config['grails.spring.placeholder.prefix']='£{'
         application.setConfig(application.config)
         def bb = new BeanBuilder()
@@ -104,12 +104,11 @@ class GrailsPlaceholderConfigurerSpec extends Specification {
         }
         def applicationContext = bb.createApplicationContext()
         def bean = applicationContext.getBean(TestBean)
-        then:'The placeholder is replaced'
-        bean.name == 'test'
+        then:"The placeholder is replaced"
+        bean.name == "test"
 
     }
 }
 class TestBean {
-
     String name
 }

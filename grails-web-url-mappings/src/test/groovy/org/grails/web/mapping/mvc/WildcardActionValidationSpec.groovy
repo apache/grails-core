@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -155,7 +155,7 @@ class WildcardActionValidationSpec extends AbstractUrlMappingsSpec {
     void 'prefers literal path mappings over wildcard controller matches'() {
         when: 'a literal path mapping and a wildcard controller mapping can both match the request'
         def mappingInfo = evaluateRequestFor('/community', {
-            '/community'(controller: 'topic', action: 'home')
+            "/community"(controller: 'topic', action: 'home')
             "/$controller/$action?"()
         }, TopicController, CommunityController)
 
@@ -169,7 +169,7 @@ class WildcardActionValidationSpec extends AbstractUrlMappingsSpec {
     void 'prefers explicit method-specific mappings over wildcard optional action matches'() {
         when: 'an explicit POST mapping and a wildcard optional action mapping can both match the request'
         def mappingInfo = evaluateRequestFor(requestURI: '/invites', method: 'POST', {
-            post '/invites'(controller: 'invite', action: 'create')
+            post "/invites"(controller: 'invite', action: 'create')
             "/invites/$action?"(controller: 'invite')
         }, InviteController)
 
@@ -184,7 +184,7 @@ class WildcardActionValidationSpec extends AbstractUrlMappingsSpec {
         when: 'an explicit POST mapping and a wildcard optional action mapping are inside a group with a URL variable'
         def mappingInfo = evaluateRequestFor(requestURI: '/users/john/invites', method: 'POST', {
             group "/users/$username", {
-                post '/invites'(controller: 'invite', action: 'create')
+                post "/invites"(controller: 'invite', action: 'create')
                 "/invites/$action?"(controller: 'invite')
             }
         }, InviteController)
@@ -200,7 +200,7 @@ class WildcardActionValidationSpec extends AbstractUrlMappingsSpec {
         when: 'a GET request matches both a POST-only mapping and a wildcard optional action mapping inside a group'
         def mappingInfo = evaluateRequestFor(requestURI: '/users/john/invites', method: 'GET', {
             group "/users/$username", {
-                post '/invites'(controller: 'invite', action: 'create')
+                post "/invites"(controller: 'invite', action: 'create')
                 "/invites/$action?"(controller: 'invite')
             }
         }, InviteController)
@@ -215,8 +215,8 @@ class WildcardActionValidationSpec extends AbstractUrlMappingsSpec {
     void 'literal group path beats parameterized catch-all even with same controller'() {
         when: 'a group with a literal sub-path and a $username catch-all both match, mapping to the same controller'
         def mappingInfo = evaluateRequestFor('/users/gallery', {
-            group '/users', {
-                group '/gallery', controller: 'topic', {
+            group "/users", {
+                group "/gallery", controller: 'topic', {
                     "/$action?"()
                 }
             }
@@ -235,7 +235,7 @@ class WildcardActionValidationSpec extends AbstractUrlMappingsSpec {
         def urlConverter = new HyphenatedUrlConverter()
         def mappingsHolder = createUrlMappingsHolder(urlConverter, {
             group "/users/$username", {
-                group '/members', controller: 'member', {
+                group "/members", controller: 'member', {
                     "/$action?"()
                     "/$memberId"(action: 'remove')
                 }
@@ -261,8 +261,8 @@ class WildcardActionValidationSpec extends AbstractUrlMappingsSpec {
     void 'wildcard controller match beats parameterized catch-all for different controllers'() {
         when: 'a wildcard $controller match (feed) and a $username catch-all (topic.home) both match'
         def mappingInfo = evaluateRequestFor('/users/feed', {
-            '/users'(controller: 'topic', action: 'home')
-            group '/users', {
+            "/users"(controller: 'topic', action: 'home')
+            group "/users", {
                 "/$controller/$action?"()
             }
             "/users/$username"(controller: 'topic', action: 'home')

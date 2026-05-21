@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -30,7 +30,7 @@ class HibernateDetachedCriteriaSpec extends HibernateGormDatastoreSpec {
     }
 
     @Unroll
-    def 'propertyMissing returns PropertyReference for boxed numeric property #propertyName'() {
+    def "propertyMissing returns PropertyReference for boxed numeric property #propertyName"() {
         when:
         def criteria = new HibernateDetachedCriteria(HDCProduct)
         def result = criteria.propertyMissing(propertyName)
@@ -44,7 +44,7 @@ class HibernateDetachedCriteriaSpec extends HibernateGormDatastoreSpec {
     }
 
     @Unroll
-    def 'propertyMissing returns PropertyReference for primitive numeric property #propertyName'() {
+    def "propertyMissing returns PropertyReference for primitive numeric property #propertyName"() {
         when:
         def criteria = new HibernateDetachedCriteria(HDCProduct)
         def result = criteria.propertyMissing(propertyName)
@@ -57,20 +57,20 @@ class HibernateDetachedCriteriaSpec extends HibernateGormDatastoreSpec {
         propertyName << ['primitiveInt', 'primitiveLong', 'primitiveDouble', 'primitiveFloat', 'primitiveShort', 'primitiveByte']
     }
 
-    def 'propertyMissing delegates to super for non-numeric property (returns property criterion)'() {
+    def "propertyMissing delegates to super for non-numeric property (returns property criterion)"() {
         when:
         def criteria = new HibernateDetachedCriteria(HDCProduct)
-        def result = criteria.propertyMissing('name')
+        def result = criteria.propertyMissing("name")
 
         then:
         noExceptionThrown()
         !(result instanceof PropertyReference)
     }
 
-    def 'propertyMissing delegates to super for unknown property (throws MissingPropertyException)'() {
+    def "propertyMissing delegates to super for unknown property (throws MissingPropertyException)"() {
         when:
         def criteria = new HibernateDetachedCriteria(HDCProduct)
-        criteria.propertyMissing('nonExistent')
+        criteria.propertyMissing("nonExistent")
 
         then:
         thrown(MissingPropertyException)
@@ -79,7 +79,6 @@ class HibernateDetachedCriteriaSpec extends HibernateGormDatastoreSpec {
 
 @Entity
 class HDCProduct {
-
     Long id
 
     // Boxed numeric types

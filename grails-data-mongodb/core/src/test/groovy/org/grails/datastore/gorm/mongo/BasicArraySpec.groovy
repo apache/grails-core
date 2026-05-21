@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -30,43 +30,42 @@ import org.bson.types.ObjectId
  * @author Graeme Rocher
  */
 class BasicArraySpec extends MongoDatastoreSpec {
-
     void setupSpec() {
         manager.addAllDomainClasses([Data])
     }
 
-    void 'Test that arrays are saved correctly'() {
-        when: 'An entity with an array is saved'
-        Data data = new Data(str: 'foo', strArray: ['foo', 'bar'] as String[]).save(flush: true, validate: false)
+    void "Test that arrays are saved correctly"() {
+        when: "An entity with an array is saved"
+        Data data = new Data(str: "foo", strArray: ["foo", "bar"] as String[]).save(flush: true, validate: false)
         manager.session.clear()
-        data = Data.findByStr('foo')
+        data = Data.findByStr("foo")
 
-        then: 'The array is saved correct'
-        data.str == 'foo'
-        data.strArray[0] == 'foo'
+        then: "The array is saved correct"
+        data.str == "foo"
+        data.strArray[0] == "foo"
         data.strArray[1] == 'bar'
     }
 
-    void 'Test that arrays of convertible properties are saved correctly'() {
-        when: 'An entity with an array is saved'
-        Data data = new Data(str: 'bar', locArray: [Locale.US, Locale.CANADA_FRENCH] as Locale[]).save(flush: true, validate: false)
+    void "Test that arrays of convertible properties are saved correctly"() {
+        when: "An entity with an array is saved"
+        Data data = new Data(str: "bar", locArray: [Locale.US, Locale.CANADA_FRENCH] as Locale[]).save(flush: true, validate: false)
         manager.session.clear()
-        data = Data.findByStr('bar')
+        data = Data.findByStr("bar")
 
-        then: 'The array is saved correct'
-        data.str == 'bar'
+        then: "The array is saved correct"
+        data.str == "bar"
         data.locArray[0] == Locale.US
         data.locArray[1] == Locale.CANADA_FRENCH
     }
 
-    void 'Test that byte arrays are saved as binary'() {
-        when: 'An entity with an array is saved'
-        Data data = new Data(str: 'baz', byteArray: 'hello'.bytes).save(flush: true, validate: false)
+    void "Test that byte arrays are saved as binary"() {
+        when: "An entity with an array is saved"
+        Data data = new Data(str: "baz", byteArray: 'hello'.bytes).save(flush: true, validate: false)
         manager.session.clear()
-        data = Data.findByStr('baz')
+        data = Data.findByStr("baz")
 
-        then: 'The array is saved correct'
-        data.str == 'baz'
+        then: "The array is saved correct"
+        data.str == "baz"
         data.byteArray == 'hello'.bytes
     }
 }
@@ -82,6 +81,6 @@ class Data {
 
     @Override
     String toString() {
-        "Data {id=$id, str='$str', strArray=${(strArray == null ? null : Arrays.asList(strArray))}, locArray=${(locArray == null ? null : Arrays.asList(locArray))}}"
+        "Data{id=$id, str='$str', strArray=${(strArray == null ? null : Arrays.asList(strArray))}, locArray=${(locArray == null ? null : Arrays.asList(locArray))}}"
     }
 }

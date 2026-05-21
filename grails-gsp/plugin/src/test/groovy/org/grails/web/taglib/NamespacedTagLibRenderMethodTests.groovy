@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -30,16 +30,17 @@ import spock.lang.Specification
  */
 class NamespacedTagLibRenderMethodTests extends Specification implements TagLibUnitTest<WithNamespaceTagLib> {
 
+
     def setupSpec() {
         mockTagLibs(NormalTagLib, WithNamespaceTagLib)
     }
     def testInvokeNamespacedTagLib() {
         when:
         def resourceLoader = new MockStringResourceLoader()
-        resourceLoader.registerMockResource('/bug1/_t1n.gsp', '''START TAG1|${ns1.tag2()}|STOP TAG1''')
-        resourceLoader.registerMockResource('/bug1/_t2n.gsp', 'START TAG2|STOP TAG2')
-        grailsApplication.getMainContext().getBean('groovyPagesTemplateEngine').resourceLoader = resourceLoader
-        webRequest.controllerName = 'foo'
+        resourceLoader.registerMockResource("/bug1/_t1n.gsp", '''START TAG1|${ns1.tag2()}|STOP TAG1''')
+        resourceLoader.registerMockResource("/bug1/_t2n.gsp", 'START TAG2|STOP TAG2')
+        grailsApplication.getMainContext().getBean("groovyPagesTemplateEngine").resourceLoader = resourceLoader
+        webRequest.controllerName = "foo"
 
         def template = '''<pre>START|${ns1.tag1()}|STOP</pre>'''
         String output = applyTemplate(template)
@@ -51,10 +52,10 @@ class NamespacedTagLibRenderMethodTests extends Specification implements TagLibU
     def testInvokeNormalTagLib() {
         when:
         def resourceLoader = new MockStringResourceLoader()
-        resourceLoader.registerMockResource('/bug1/_t1.gsp', 'START TAG1|${tag2()}|STOP TAG1')
-        resourceLoader.registerMockResource('/bug1/_t2.gsp', 'START TAG2|STOP TAG2')
-        grailsApplication.getMainContext().getBean('groovyPagesTemplateEngine').resourceLoader = resourceLoader
-        webRequest.controllerName = 'foo'
+        resourceLoader.registerMockResource("/bug1/_t1.gsp", 'START TAG1|${tag2()}|STOP TAG1')
+        resourceLoader.registerMockResource("/bug1/_t2.gsp", 'START TAG2|STOP TAG2')
+        grailsApplication.getMainContext().getBean("groovyPagesTemplateEngine").resourceLoader = resourceLoader
+        webRequest.controllerName = "foo"
 
         def template = '''<pre>START|${tag1()}|STOP</pre>'''
         String output = applyTemplate(template)
@@ -64,16 +65,17 @@ class NamespacedTagLibRenderMethodTests extends Specification implements TagLibU
     }
 }
 
+
 @Artefact('TagLib')
 class WithNamespaceTagLib {
 
-    static namespace = 'ns1'
+    static namespace = "ns1"
 
     Closure tag1 = { attrs, body ->
-        out << render(template: '/bug1/t1n')
+        out << render(template: "/bug1/t1n")
     }
     Closure tag2 = { attrs, body ->
-        out << render(template: '/bug1/t2n')
+        out << render(template: "/bug1/t2n")
     }
 
 }
@@ -82,10 +84,10 @@ class WithNamespaceTagLib {
 class NormalTagLib {
 
     Closure tag1 = { attrs, body ->
-        out << render(template: '/bug1/t1')
+        out << render(template: "/bug1/t1")
     }
     Closure tag2 = { attrs, body ->
-        out << render(template: '/bug1/t2')
+        out << render(template: "/bug1/t2")
     }
 
 }

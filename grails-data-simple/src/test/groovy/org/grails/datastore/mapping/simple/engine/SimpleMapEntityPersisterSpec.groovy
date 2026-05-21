@@ -9,14 +9,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The AS licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -36,32 +36,32 @@ class SimpleMapEntityPersisterSpec extends Specification {
 
     @Shared @AutoCleanup SimpleMapDatastore datastore = new SimpleMapDatastore(TestEntity, Author, Book)
 
-    def 'test multi-tenancy logical isolation'() {
-        given: 'A datastore in DISCRIMINATOR mode'
+    def "test multi-tenancy logical isolation"() {
+        given: "A datastore in DISCRIMINATOR mode"
         SimpleMapDatastore mtDatastore = new SimpleMapDatastore(
-                ['grails.gorm.multiTenancy.mode': MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR],
+                ["grails.gorm.multiTenancy.mode": MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR],
                 TestEntity
         )
         def session = mtDatastore.connect()
         def persister = session.getPersister(TestEntity)
         
-        when: 'We save in tenant 1'
+        when: "We save in tenant 1"
         def id1
-        Tenants.withId(mtDatastore, '1') {
-            def entity1 = new TestEntity(name: 'tenant1')
+        Tenants.withId(mtDatastore, "1") {
+            def entity1 = new TestEntity(name: "tenant1")
             id1 = persister.persist(entity1)
             session.flush()
         }
 
-        then: 'It is stored in tenant 1'
+        then: "It is stored in tenant 1"
         id1 != null
-        Tenants.withId(mtDatastore, '1') {
+        Tenants.withId(mtDatastore, "1") {
             persister.retrieveEntry(persister.persistentEntity, persister.entityFamily, id1) != null
         }
 
-        when: 'We check tenant 2'
-        then: 'It is not there'
-        Tenants.withId(mtDatastore, '2') {
+        when: "We check tenant 2"
+        then: "It is not there"
+        Tenants.withId(mtDatastore, "2") {
             persister.retrieveEntry(persister.persistentEntity, persister.entityFamily, id1) == null
         }
 
@@ -69,11 +69,11 @@ class SimpleMapEntityPersisterSpec extends Specification {
         session.disconnect()
     }
 
-    def 'test store and retrieve entry'() {
+    def "test store and retrieve entry"() {
         given:
         def session = datastore.connect()
         def persister = session.getPersister(TestEntity)
-        def entity = new TestEntity(name: 'test')
+        def entity = new TestEntity(name: "test")
 
         when:
         def id = persister.persist(entity)
@@ -84,54 +84,54 @@ class SimpleMapEntityPersisterSpec extends Specification {
         then:
         id != null
         entry != null
-        entry.name == 'test'
+        entry.name == "test"
         
         cleanup:
         session.disconnect()
     }
 
-    def 'test property indexing'() {
+    def "test property indexing"() {
         given:
         def session = datastore.connect()
         def persister = session.getPersister(TestEntity)
-        def entity = new TestEntity(name: 'indexed')
+        def entity = new TestEntity(name: "indexed")
 
-        when: 'entity is persisted'
+        when: "entity is persisted"
         persister.persist(entity)
         session.flush()
-        def prop = persister.persistentEntity.getPropertyByName('name')
+        def prop = persister.persistentEntity.getPropertyByName("name")
         def indexer = persister.getPropertyIndexer(prop)
-        def indexedIds = indexer.query('indexed')
+        def indexedIds = indexer.query("indexed")
 
-        then: 'index is created'
+        then: "index is created"
         indexedIds == [entity.id]
 
-        when: 'entity is updated'
-        entity.name = 'updated'
+        when: "entity is updated"
+        entity.name = "updated"
         persister.persist(entity)
         session.flush()
         
-        then: 'index is updated'
-        indexer.query('indexed') == []
-        indexer.query('updated') == [entity.id]
+        then: "index is updated"
+        indexer.query("indexed") == []
+        indexer.query("updated") == [entity.id]
         
-        when: 'entity is deleted'
+        when: "entity is deleted"
         persister.delete(entity)
         session.flush()
         
-        then: 'index is cleared'
-        indexer.query('updated') == []
+        then: "index is cleared"
+        indexer.query("updated") == []
 
         cleanup:
         session.disconnect()
     }
 
-    def 'test many-to-many association indexing'() {
+    def "test many-to-many association indexing"() {
         given:
         def session = datastore.connect()
-        def author = new Author(name: 'Stephen King')
-        def book1 = new Book(title: 'The Stand')
-        def book2 = new Book(title: 'The Shining')
+        def author = new Author(name: "Stephen King")
+        def book1 = new Book(title: "The Stand")
+        def book2 = new Book(title: "The Shining")
         
         author.books = [book1, book2] as Set
         book1.authors = [author] as Set
@@ -163,7 +163,6 @@ class SimpleMapEntityPersisterSpec extends Specification {
 
 @Entity
 class TestEntity implements grails.gorm.MultiTenant<TestEntity> {
-
     Long id
     String name
     String tenantId
@@ -175,7 +174,6 @@ class TestEntity implements grails.gorm.MultiTenant<TestEntity> {
 
 @Entity
 class Author {
-
     Long id
     String name
     Set books
@@ -184,7 +182,6 @@ class Author {
 
 @Entity
 class Book {
-
     Long id
     String title
     Set authors

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -30,7 +30,7 @@ class PropertyConfigSpec extends Specification {
 
     // ─── column(String) ──────────────────────────────────────────────────────
 
-    void 'column(String) adds a new ColumnConfig with the given name'() {
+    void "column(String) adds a new ColumnConfig with the given name"() {
         given:
         PropertyConfig pc = new PropertyConfig()
 
@@ -42,7 +42,7 @@ class PropertyConfigSpec extends Specification {
         pc.columns[0].name == 'my_col'
     }
 
-    void 'column(String) adds a second ColumnConfig when called twice normally'() {
+    void "column(String) adds a second ColumnConfig when called twice normally"() {
         given:
         PropertyConfig pc = new PropertyConfig()
 
@@ -54,7 +54,7 @@ class PropertyConfigSpec extends Specification {
         pc.columns.size() == 2
     }
 
-    void 'column(String) replaces name in-place when firstColumnIsColumnCopy is true'() {
+    void "column(String) replaces name in-place when firstColumnIsColumnCopy is true"() {
         given:
         PropertyConfig pc = new PropertyConfig()
         pc.column('original')
@@ -71,7 +71,7 @@ class PropertyConfigSpec extends Specification {
 
     // ─── column(Map) ─────────────────────────────────────────────────────────
 
-    void 'column(Map) adds a ColumnConfig with the given name'() {
+    void "column(Map) adds a ColumnConfig with the given name"() {
         given:
         PropertyConfig pc = new PropertyConfig()
 
@@ -83,7 +83,7 @@ class PropertyConfigSpec extends Specification {
         pc.columns[0].name == 'map_col'
     }
 
-    void 'column(Map) configures existing column in-place when firstColumnIsColumnCopy is true'() {
+    void "column(Map) configures existing column in-place when firstColumnIsColumnCopy is true"() {
         given:
         PropertyConfig pc = new PropertyConfig()
         pc.column('original')
@@ -100,7 +100,7 @@ class PropertyConfigSpec extends Specification {
 
     // ─── column(Closure) ─────────────────────────────────────────────────────
 
-    void 'column(Closure) adds a ColumnConfig configured by the closure'() {
+    void "column(Closure) adds a ColumnConfig configured by the closure"() {
         given:
         PropertyConfig pc = new PropertyConfig()
 
@@ -114,12 +114,21 @@ class PropertyConfigSpec extends Specification {
 
     // ─── getColumn / single-column shortcuts ─────────────────────────────────
 
-    void 'getColumn returns null when no columns are configured'() {
+    void "getColumn returns null when no columns are configured"() {
         expect:
         new PropertyConfig().column == null
     }
 
-    void 'getColumn returns the column name when one column is configured'() {
+    void "columns supports multiple ColumnConfig for composite keys"() {
+        given:
+        PropertyConfig pc = new PropertyConfig()
+        pc.columns = [new ColumnConfig(name: 'a_col'), new ColumnConfig(name: 'b_col')]
+
+        expect:
+        pc.columns*.name == ['a_col', 'b_col']
+    }
+
+    void "getColumn returns the column name when one column is configured"() {
         given:
         PropertyConfig pc = new PropertyConfig()
         pc.column('the_col')
@@ -128,7 +137,7 @@ class PropertyConfigSpec extends Specification {
         pc.column == 'the_col'
     }
 
-    void 'getColumn throws when multiple columns are configured'() {
+    void "getColumn throws when multiple columns are configured"() {
         given:
         PropertyConfig pc = new PropertyConfig()
         pc.columns << new ColumnConfig(name: 'a')
@@ -141,12 +150,12 @@ class PropertyConfigSpec extends Specification {
         thrown(RuntimeException)
     }
 
-    void 'getSqlType returns null when no columns are configured'() {
+    void "getSqlType returns null when no columns are configured"() {
         expect:
         new PropertyConfig().sqlType == null
     }
 
-    void 'getIndexName returns null when no columns are configured'() {
+    void "getIndexName returns null when no columns are configured"() {
         expect:
         new PropertyConfig().indexName == null
     }
@@ -156,19 +165,19 @@ class PropertyConfigSpec extends Specification {
         new PropertyConfig().enumType == 'default'
     }
 
-    void 'getLength returns -1 when no columns are configured'() {
+    void "getLength returns -1 when no columns are configured"() {
         expect:
         new PropertyConfig().length == -1
     }
 
-    void 'getPrecision returns -1 when no columns are configured'() {
+    void "getPrecision returns -1 when no columns are configured"() {
         expect:
         new PropertyConfig().precision == -1
     }
 
     // ─── setUnique / isUnique ────────────────────────────────────────────────
 
-    void 'setUnique propagates to the single column when one column exists'() {
+    void "setUnique propagates to the single column when one column exists"() {
         given:
         PropertyConfig pc = new PropertyConfig()
         pc.column('u_col')
@@ -181,7 +190,7 @@ class PropertyConfigSpec extends Specification {
         pc.unique
     }
 
-    void 'isUnique delegates to super when no columns exist'() {
+    void "isUnique delegates to super when no columns exist"() {
         given:
         PropertyConfig pc = new PropertyConfig()
         pc.setUnique(true)
@@ -190,7 +199,7 @@ class PropertyConfigSpec extends Specification {
         pc.unique
     }
 
-    void 'isUnique delegates to super when multiple columns exist'() {
+    void "isUnique delegates to super when multiple columns exist"() {
         given:
         PropertyConfig pc = new PropertyConfig()
         pc.columns << new ColumnConfig(name: 'a')
@@ -203,7 +212,7 @@ class PropertyConfigSpec extends Specification {
 
     // ─── FetchMode ───────────────────────────────────────────────────────────
 
-    void 'setFetch(JOIN) maps to EAGER strategy'() {
+    void "setFetch(JOIN) maps to EAGER strategy"() {
         given:
         PropertyConfig pc = new PropertyConfig()
 
@@ -214,7 +223,7 @@ class PropertyConfigSpec extends Specification {
         pc.fetchMode == FetchMode.JOIN
     }
 
-    void 'setFetch(SELECT) maps to LAZY strategy'() {
+    void "setFetch(SELECT) maps to LAZY strategy"() {
         given:
         PropertyConfig pc = new PropertyConfig()
 
@@ -225,14 +234,14 @@ class PropertyConfigSpec extends Specification {
         pc.fetchMode == FetchMode.SELECT
     }
 
-    void 'getFetchMode returns DEFAULT when no strategy is set'() {
+    void "getFetchMode returns DEFAULT when no strategy is set"() {
         expect:
         new PropertyConfig().fetchMode == FetchMode.DEFAULT
     }
 
     // ─── cache ───────────────────────────────────────────────────────────────
 
-    void 'cache(Closure) creates and configures a CacheConfig'() {
+    void "cache(Closure) creates and configures a CacheConfig"() {
         given:
         PropertyConfig pc = new PropertyConfig()
 
@@ -244,7 +253,7 @@ class PropertyConfigSpec extends Specification {
         pc.cache.usage.toString() == 'read-only'
     }
 
-    void 'cache(Map) creates and configures a CacheConfig'() {
+    void "cache(Map) creates and configures a CacheConfig"() {
         given:
         PropertyConfig pc = new PropertyConfig()
 
@@ -258,7 +267,7 @@ class PropertyConfigSpec extends Specification {
 
     // ─── joinTable ───────────────────────────────────────────────────────────
 
-    void 'joinTable(String) sets the join table name'() {
+    void "joinTable(String) sets the join table name"() {
         given:
         PropertyConfig pc = new PropertyConfig()
 
@@ -269,7 +278,7 @@ class PropertyConfigSpec extends Specification {
         pc.joinTable.name == 'book_authors'
     }
 
-    void 'joinTable(Closure) configures the JoinTable'() {
+    void "joinTable(Closure) configures the JoinTable"() {
         given:
         PropertyConfig pc = new PropertyConfig()
 
@@ -280,7 +289,7 @@ class PropertyConfigSpec extends Specification {
         pc.joinTable.name == 'jt_table'
     }
 
-    void 'joinTable(Map) sets table name and key column via map'() {
+    void "joinTable(Map) sets table name and key column via map"() {
         given:
         PropertyConfig pc = new PropertyConfig()
 
@@ -289,16 +298,16 @@ class PropertyConfigSpec extends Specification {
 
         then:
         pc.joinTable.name == 'book_tag'
-        pc.joinTable.key?.name == 'book_id'
+        pc.joinTable.keys && pc.joinTable.keys[0].name == 'book_id'
         pc.joinTable.column?.name == 'tag_id'
     }
 
-    void 'hasJoinKeyMapping returns false when no join table key is set'() {
+    void "hasJoinKeyMapping returns false when no join table key is set"() {
         expect:
         !new PropertyConfig().hasJoinKeyMapping()
     }
 
-    void 'hasJoinKeyMapping returns true when a join table key is set'() {
+    void "hasJoinKeyMapping returns true when a join table key is set"() {
         given:
         PropertyConfig pc = new PropertyConfig()
         pc.joinTable { key 'author_id' }
@@ -309,7 +318,7 @@ class PropertyConfigSpec extends Specification {
 
     // ─── indexColumn ─────────────────────────────────────────────────────────
 
-    void 'indexColumn(Closure) creates and configures the index column PropertyConfig'() {
+    void "indexColumn(Closure) creates and configures the index column PropertyConfig"() {
         given:
         PropertyConfig pc = new PropertyConfig()
 
@@ -323,7 +332,7 @@ class PropertyConfigSpec extends Specification {
 
     // ─── scale ───────────────────────────────────────────────────────────────
 
-    void 'setScale sets scale on the existing column'() {
+    void "setScale sets scale on the existing column"() {
         given:
         PropertyConfig pc = new PropertyConfig()
         pc.column('s_col')
@@ -336,7 +345,7 @@ class PropertyConfigSpec extends Specification {
         pc.columns[0].scale == 4
     }
 
-    void 'setScale delegates to super when no columns are configured'() {
+    void "setScale delegates to super when no columns are configured"() {
         given:
         PropertyConfig pc = new PropertyConfig()
 
@@ -349,12 +358,12 @@ class PropertyConfigSpec extends Specification {
 
     // ─── checkHasSingleColumn (protected, same-package access) ───────────────
 
-    void 'checkHasSingleColumn passes silently for zero columns'() {
+    void "checkHasSingleColumn passes silently for zero columns"() {
         expect:
         new PropertyConfig().checkHasSingleColumn()
     }
 
-    void 'checkHasSingleColumn passes silently for exactly one column'() {
+    void "checkHasSingleColumn passes silently for exactly one column"() {
         given:
         PropertyConfig pc = new PropertyConfig()
         pc.column('one')
@@ -363,7 +372,7 @@ class PropertyConfigSpec extends Specification {
         pc.checkHasSingleColumn()
     }
 
-    void 'checkHasSingleColumn throws for two or more columns'() {
+    void "checkHasSingleColumn throws for two or more columns"() {
         given:
         PropertyConfig pc = new PropertyConfig()
         pc.columns << new ColumnConfig(name: 'x')
@@ -378,7 +387,7 @@ class PropertyConfigSpec extends Specification {
 
     // ─── clone ───────────────────────────────────────────────────────────────
 
-    void 'clone produces an independent deep copy of columns'() {
+    void "clone produces an independent deep copy of columns"() {
         given:
         PropertyConfig pc = new PropertyConfig()
         pc.column('orig')
@@ -391,7 +400,7 @@ class PropertyConfigSpec extends Specification {
         pc.columns[0].name == 'orig'
     }
 
-    void 'clone copies cache independently'() {
+    void "clone copies cache independently"() {
         given:
         PropertyConfig pc = new PropertyConfig()
         pc.cache { usage = 'read-only' }
@@ -404,7 +413,7 @@ class PropertyConfigSpec extends Specification {
         pc.cache.usage.toString() == 'read-only'
     }
 
-    void 'clone copies indexColumn independently'() {
+    void "clone copies indexColumn independently"() {
         given:
         PropertyConfig pc = new PropertyConfig()
         pc.indexColumn { column('idx') }
@@ -419,7 +428,7 @@ class PropertyConfigSpec extends Specification {
 
     // ─── static factories ─────────────────────────────────────────────────────
 
-    void 'configureNew(Closure) creates a PropertyConfig configured by the closure'() {
+    void "configureNew(Closure) creates a PropertyConfig configured by the closure"() {
         when:
         PropertyConfig pc = PropertyConfig.configureNew { type = 'string' }
 
@@ -428,7 +437,7 @@ class PropertyConfigSpec extends Specification {
         pc.type == 'string'
     }
 
-    void 'configureNew(Map) creates a PropertyConfig from a map'() {
+    void "configureNew(Map) creates a PropertyConfig from a map"() {
         when:
         PropertyConfig pc = PropertyConfig.configureNew([column: 'map_col'])
 
@@ -437,7 +446,7 @@ class PropertyConfigSpec extends Specification {
         pc.column == 'map_col'
     }
 
-    void 'configureExisting(Map) updates an existing PropertyConfig'() {
+    void "configureExisting(Map) updates an existing PropertyConfig"() {
         given:
         PropertyConfig pc = new PropertyConfig()
 
@@ -449,7 +458,7 @@ class PropertyConfigSpec extends Specification {
         result.column == 'updated_col'
     }
 
-    void 'configureExisting(Closure) delegates the closure to the PropertyConfig'() {
+    void "configureExisting(Closure) delegates the closure to the PropertyConfig"() {
         given:
         PropertyConfig pc = new PropertyConfig()
 
@@ -463,7 +472,7 @@ class PropertyConfigSpec extends Specification {
 
     // ─── deprecated updateable ───────────────────────────────────────────────
 
-    void 'getUpdateable delegates to updatable'() {
+    void "getUpdateable delegates to updatable"() {
         given:
         PropertyConfig pc = new PropertyConfig()
 
@@ -474,7 +483,7 @@ class PropertyConfigSpec extends Specification {
         !pc.updateable
     }
 
-    void 'setUpdateable delegates to updatable'() {
+    void "setUpdateable delegates to updatable"() {
         given:
         PropertyConfig pc = new PropertyConfig()
 
@@ -487,7 +496,7 @@ class PropertyConfigSpec extends Specification {
 
     // ─── column(Closure) with firstColumnIsColumnCopy ────────────────────────
 
-    void 'column(Closure) reuses existing column in-place when firstColumnIsColumnCopy is true'() {
+    void "column(Closure) reuses existing column in-place when firstColumnIsColumnCopy is true"() {
         given:
         PropertyConfig pc = new PropertyConfig()
         def existing = new ColumnConfig(name: 'orig')
@@ -505,7 +514,7 @@ class PropertyConfigSpec extends Specification {
 
     // ─── getJoinTableColumnConfig ─────────────────────────────────────────────
 
-    void 'getJoinTableColumnConfig returns joinTable column when joinTable is set'() {
+    void "getJoinTableColumnConfig returns joinTable column when joinTable is set"() {
         given:
         PropertyConfig pc = new PropertyConfig()
         pc.joinTable { name = 'jt'; column { name = 'jt_col' } }
@@ -515,14 +524,14 @@ class PropertyConfigSpec extends Specification {
         pc.getJoinTableColumnConfig().name == 'jt_col'
     }
 
-    void 'getJoinTableColumnConfig returns null when no joinTable'() {
+    void "getJoinTableColumnConfig returns null when no joinTable"() {
         expect:
         new PropertyConfig().getJoinTableColumnConfig() == null
     }
 
     // ─── configureExisting(PropertyConfig, Map) with existing columns ─────────
 
-    void 'configureExisting(Map) reuses first existing column when columns are present'() {
+    void "configureExisting(Map) reuses first existing column when columns are present"() {
         given:
         PropertyConfig pc = new PropertyConfig()
         pc.column('existing_col')
@@ -537,7 +546,7 @@ class PropertyConfigSpec extends Specification {
 
     // ─── column-delegate getters when columns are non-empty ──────────────────
 
-    void 'getEnumType returns column enumType when columns are present'() {
+    void "getEnumType returns column enumType when columns are present"() {
         given:
         PropertyConfig pc = new PropertyConfig()
         pc.column { enumType = 'ordinal' }
@@ -546,7 +555,7 @@ class PropertyConfigSpec extends Specification {
         pc.getEnumType() == 'ordinal'
     }
 
-    void 'getSqlType returns column sqlType when columns are present'() {
+    void "getSqlType returns column sqlType when columns are present"() {
         given:
         PropertyConfig pc = new PropertyConfig()
         pc.column { sqlType = 'varchar(100)' }
@@ -555,7 +564,7 @@ class PropertyConfigSpec extends Specification {
         pc.getSqlType() == 'varchar(100)'
     }
 
-    void 'getIndexName returns column index as string when columns are present'() {
+    void "getIndexName returns column index as string when columns are present"() {
         given:
         PropertyConfig pc = new PropertyConfig()
         pc.column { index = 'idx_name' }
@@ -564,7 +573,7 @@ class PropertyConfigSpec extends Specification {
         pc.getIndexName() == 'idx_name'
     }
 
-    void 'getLength returns column length when columns are present'() {
+    void "getLength returns column length when columns are present"() {
         given:
         PropertyConfig pc = new PropertyConfig()
         pc.column { length = 42 }
@@ -573,7 +582,7 @@ class PropertyConfigSpec extends Specification {
         pc.getLength() == 42
     }
 
-    void 'getPrecision returns column precision when columns are present'() {
+    void "getPrecision returns column precision when columns are present"() {
         given:
         PropertyConfig pc = new PropertyConfig()
         pc.column { precision = 10 }
@@ -584,20 +593,20 @@ class PropertyConfigSpec extends Specification {
 
     // ─── toString ─────────────────────────────────────────────────────────────
 
-    void 'toString includes type lazy columns insertable and updatable'() {
+    void "toString includes type lazy columns insertable and updatable"() {
         given:
         PropertyConfig pc = new PropertyConfig()
         pc.type = 'String'
         pc.lazy = true
 
         expect:
-        pc.toString().contains('type: String')
-        pc.toString().contains('lazy: true')
+        pc.toString().contains('type:String')
+        pc.toString().contains('lazy:true')
     }
 
     // ─── clone with typeParams ────────────────────────────────────────────────
 
-    void 'clone copies typeParams independently when typeParams is set'() {
+    void "clone copies typeParams independently when typeParams is set"() {
         given:
         PropertyConfig pc = new PropertyConfig()
         pc.typeParams = new Properties()

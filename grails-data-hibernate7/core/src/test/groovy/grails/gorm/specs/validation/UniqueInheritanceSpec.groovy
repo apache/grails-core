@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -31,7 +31,7 @@ class UniqueInheritanceSpec extends Specification {
 
     @Shared @AutoCleanup HibernateDatastore hibernateDatastore = new HibernateDatastore(Item, ConcreteProduct, Product, Book)
 
-    void 'unique constraint works directly'() {
+    void "unique constraint works directly"() {
         setup:
         Product i = new ConcreteProduct(name: '123')
         i.save(flush: true)
@@ -46,7 +46,7 @@ class UniqueInheritanceSpec extends Specification {
         !i.hasErrors()
     }
 
-    void 'unique constraint works on cascade'() {
+    void "unique constraint works on cascade"() {
         setup:
         Item i = new Item(product: new ConcreteProduct(name: '123'))
         i.save(flush: true)
@@ -62,11 +62,11 @@ class UniqueInheritanceSpec extends Specification {
     }
 
     @Issue('https://github.com/grails/gorm-hibernate5/issues/32')
-    void 'test save multiple book instances with unique constraint applied'() {
+    void "test save multiple book instances with unique constraint applied"() {
         when:
-        def book1=new Book(title: 'one')
+        def book1=new Book(title: "one")
         book1.save()
-        def book2=new Book(title: 'one')
+        def book2=new Book(title: "one")
         book2.save()
 
         then:
@@ -76,16 +76,14 @@ class UniqueInheritanceSpec extends Specification {
 
 @Entity
 class Book {
-
     String title
     static constraints = {
-        title (nullable: false,size: 0..200, unique: true, blank: false)
+        title (nullable: false,size: 0..200, unique: true, blank:false)
     }
 }
 
 @Entity
 class Item {
-
     Product product
 }
 
@@ -96,7 +94,6 @@ class ConcreteProduct extends Product {
 
 @Entity
 abstract class Product {
-
     String name
 
     static constraints = {

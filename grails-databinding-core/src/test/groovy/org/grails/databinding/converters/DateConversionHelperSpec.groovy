@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -32,7 +32,7 @@ class DateConversionHelperSpec extends Specification {
     void 'Test parsing dates'() {
         given:
         Calendar calendar = getInstance()
-        DateConversionHelper helper = new DateConversionHelper(formatStrings: ['yyyy-MM-dd HH:mm:ss.S',"yyyy-MM-dd'T'HH:mm:ss'Z'",'yyyy-MM-dd HH:mm:ss.S z',"yyyy-MM-dd'T'HH:mm:ss.SSSX"])
+        DateConversionHelper helper = new DateConversionHelper(formatStrings: ['yyyy-MM-dd HH:mm:ss.S',"yyyy-MM-dd'T'HH:mm:ss'Z'","yyyy-MM-dd HH:mm:ss.S z","yyyy-MM-dd'T'HH:mm:ss.SSSX"])
 
         when:
         Date date = helper.convert '2013-04-15 21:26:31.973'
@@ -60,7 +60,7 @@ class DateConversionHelperSpec extends Specification {
 
         when:
         date = helper.convert '2012-06-12T09:24:22.222Z'
-        calendar = getInstance(TimeZone.getTimeZone('UTC'))
+        calendar = getInstance(TimeZone.getTimeZone("UTC"))
         calendar.setTime(date)
 
         then:
@@ -130,13 +130,13 @@ class DateConversionHelperSpec extends Specification {
         def helper = new FormattedDateValueConverter()
 
         when:
-        def date = helper.convert '', 'yyMMdd'
+        def date = helper.convert '', "yyMMdd"
 
         then:
         date == null
     }
 
-    @Issue('https://github.com/apache/grails-core/issues/10387')
+    @Issue("https://github.com/apache/grails-core/issues/10387")
     void 'Test lenient date'() {
         given:
         DateConversionHelper helper = new DateConversionHelper(formatStrings: ['yyyy-MM-dd'])

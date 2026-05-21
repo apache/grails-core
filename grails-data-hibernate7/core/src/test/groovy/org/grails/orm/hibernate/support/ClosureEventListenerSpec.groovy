@@ -4,14 +4,14 @@
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * 'License'); you may not use this file except in compliance
+ * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
  *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
@@ -49,21 +49,21 @@ class ClosureEventListenerSpec extends HibernateGormDatastoreSpec {
     // -------------------------------------------------------------------------
 
     @Rollback
-    void 'beforeInsert is called before a new entity is persisted'() {
+    void "beforeInsert is called before a new entity is persisted"() {
         when:
-        new EventBook(title: 'Groovy in Action').save(flush: true, failOnError: true)
+        new EventBook(title: "Groovy in Action").save(flush: true, failOnError: true)
 
         then:
         'beforeInsert' in EventBook.callLog
     }
 
     @Rollback
-    void 'beforeInsert returning false vetoes the insert'() {
+    void "beforeInsert returning false vetoes the insert"() {
         given:
         EventBook.vetoInsert = true
 
         when:
-        new EventBook(title: 'Vetoed Book').save(flush: true)
+        new EventBook(title: "Vetoed Book").save(flush: true)
 
         then:
         thrown(HibernateSystemException)
@@ -77,9 +77,9 @@ class ClosureEventListenerSpec extends HibernateGormDatastoreSpec {
     // -------------------------------------------------------------------------
 
     @Rollback
-    void 'afterInsert is called after a new entity is persisted'() {
+    void "afterInsert is called after a new entity is persisted"() {
         when:
-        new EventBook(title: 'Clean Code').save(flush: true, failOnError: true)
+        new EventBook(title: "Clean Code").save(flush: true, failOnError: true)
 
         then:
         'afterInsert' in EventBook.callLog
@@ -90,13 +90,13 @@ class ClosureEventListenerSpec extends HibernateGormDatastoreSpec {
     // -------------------------------------------------------------------------
 
     @Rollback
-    void 'beforeUpdate is called before an existing entity is updated'() {
+    void "beforeUpdate is called before an existing entity is updated"() {
         given:
-        def book = new EventBook(title: 'Original Title').save(flush: true, failOnError: true)
+        def book = new EventBook(title: "Original Title").save(flush: true, failOnError: true)
         EventBook.callLog.clear()
 
         when:
-        book.title = 'Updated Title'
+        book.title = "Updated Title"
         book.save(flush: true, failOnError: true)
 
         then:
@@ -104,13 +104,13 @@ class ClosureEventListenerSpec extends HibernateGormDatastoreSpec {
     }
 
     @Rollback
-    void 'afterUpdate is called after an existing entity is updated'() {
+    void "afterUpdate is called after an existing entity is updated"() {
         given:
-        def book = new EventBook(title: 'First Edition').save(flush: true, failOnError: true)
+        def book = new EventBook(title: "First Edition").save(flush: true, failOnError: true)
         EventBook.callLog.clear()
 
         when:
-        book.title = 'Second Edition'
+        book.title = "Second Edition"
         book.save(flush: true, failOnError: true)
 
         then:
@@ -122,9 +122,9 @@ class ClosureEventListenerSpec extends HibernateGormDatastoreSpec {
     // -------------------------------------------------------------------------
 
     @Rollback
-    void 'beforeDelete is called before an entity is deleted'() {
+    void "beforeDelete is called before an entity is deleted"() {
         given:
-        def book = new EventBook(title: 'Ephemeral Book').save(flush: true, failOnError: true)
+        def book = new EventBook(title: "Ephemeral Book").save(flush: true, failOnError: true)
         EventBook.callLog.clear()
 
         when:
@@ -135,9 +135,9 @@ class ClosureEventListenerSpec extends HibernateGormDatastoreSpec {
     }
 
     @Rollback
-    void 'afterDelete is called after an entity is deleted'() {
+    void "afterDelete is called after an entity is deleted"() {
         given:
-        def book = new EventBook(title: 'Gone Book').save(flush: true, failOnError: true)
+        def book = new EventBook(title: "Gone Book").save(flush: true, failOnError: true)
         EventBook.callLog.clear()
 
         when:
@@ -148,9 +148,9 @@ class ClosureEventListenerSpec extends HibernateGormDatastoreSpec {
     }
 
     @Rollback
-    void 'beforeDelete returning false vetoes the delete'() {
+    void "beforeDelete returning false vetoes the delete"() {
         given:
-        def book = new EventBook(title: 'Protected Book').save(flush: true, failOnError: true)
+        def book = new EventBook(title: "Protected Book").save(flush: true, failOnError: true)
         Long id = book.id
         EventBook.vetoDelete = true
 
@@ -169,9 +169,9 @@ class ClosureEventListenerSpec extends HibernateGormDatastoreSpec {
     // -------------------------------------------------------------------------
 
     @Rollback
-    void 'onLoad is called when an entity is loaded from the database'() {
+    void "onLoad is called when an entity is loaded from the database"() {
         given:
-        def book = new EventBook(title: 'Loaded Book').save(flush: true, failOnError: true)
+        def book = new EventBook(title: "Loaded Book").save(flush: true, failOnError: true)
         session.clear()
         EventBook.callLog.clear()
 
@@ -183,9 +183,9 @@ class ClosureEventListenerSpec extends HibernateGormDatastoreSpec {
     }
 
     @Rollback
-    void 'afterLoad is called after an entity is loaded from the database'() {
+    void "afterLoad is called after an entity is loaded from the database"() {
         given:
-        def book = new EventBook(title: 'After Load Book').save(flush: true, failOnError: true)
+        def book = new EventBook(title: "After Load Book").save(flush: true, failOnError: true)
         session.clear()
         EventBook.callLog.clear()
 
@@ -201,9 +201,9 @@ class ClosureEventListenerSpec extends HibernateGormDatastoreSpec {
     // -------------------------------------------------------------------------
 
     @Rollback
-    void 'beforeValidate is called before validation runs'() {
+    void "beforeValidate is called before validation runs"() {
         when:
-        new EventBook(title: 'Validated').save(flush: true, failOnError: true)
+        new EventBook(title: "Validated").save(flush: true, failOnError: true)
 
         then:
         'beforeValidate' in EventBook.callLog
@@ -213,7 +213,7 @@ class ClosureEventListenerSpec extends HibernateGormDatastoreSpec {
     // failOnError — validation failure throws ValidationException
     // -------------------------------------------------------------------------
 
-    void 'validation failure with failOnError throws ValidationException'() {
+    void "validation failure with failOnError throws ValidationException"() {
         when:
         ValidatedBook.withTransaction {
             new ValidatedBook(title: null).save(flush: true, failOnError: true)
@@ -223,7 +223,7 @@ class ClosureEventListenerSpec extends HibernateGormDatastoreSpec {
         thrown(ValidationException)
     }
 
-    void 'validation failure without failOnError returns null'() {
+    void "validation failure without failOnError returns null"() {
         when:
         def book = ValidatedBook.withTransaction {
             new ValidatedBook(title: null).save(flush: true)
@@ -238,39 +238,39 @@ class ClosureEventListenerSpec extends HibernateGormDatastoreSpec {
     // -------------------------------------------------------------------------
 
     @Rollback
-    void 'property mutation in beforeInsert is reflected in the persisted state'() {
+    void "property mutation in beforeInsert is reflected in the persisted state"() {
         when:
-        def book = new MutatingBook(title: 'raw title').save(flush: true, failOnError: true)
+        def book = new MutatingBook(title: "raw title").save(flush: true, failOnError: true)
         session.clear()
         def reloaded = MutatingBook.get(book.id)
 
         then:
-        reloaded.title == 'RAW TITLE'
+        reloaded.title == "RAW TITLE"
     }
 
     @Rollback
-    void 'property mutation in beforeUpdate is reflected in the persisted state'() {
+    void "property mutation in beforeUpdate is reflected in the persisted state"() {
         given:
-        def book = new MutatingBook(title: 'first').save(flush: true, failOnError: true)
+        def book = new MutatingBook(title: "first").save(flush: true, failOnError: true)
         session.clear()
 
         when:
         def loaded = MutatingBook.get(book.id)
-        loaded.title = 'second'
+        loaded.title = "second"
         loaded.save(flush: true, failOnError: true)
         session.clear()
         def reloaded = MutatingBook.get(book.id)
 
         then:
-        reloaded.title == 'SECOND'
+        reloaded.title == "SECOND"
     }
 
     // ─── Additional edge cases for coverage ───────────────────────────────────
 
     @Rollback
-    void 'beforeLoad is called if onLoad is missing'() {
+    void "beforeLoad is called if onLoad is missing"() {
         given:
-        def book = new LegacyLoadBook(name: 'Legacy').save(flush: true)
+        def book = new LegacyLoadBook(name: "Legacy").save(flush: true)
         session.clear()
         LegacyLoadBook.beforeLoadCalled = false
 
@@ -281,19 +281,19 @@ class ClosureEventListenerSpec extends HibernateGormDatastoreSpec {
         LegacyLoadBook.beforeLoadCalled
     }
 
-    void 'failOnError is enabled if package is in failOnErrorPackages'() {
+    void "failOnError is enabled if package is in failOnErrorPackages"() {
         given:
         def persistentEntity = manager.hibernateDatastore.mappingContext.getPersistentEntity(ValidatedBook.name) as GrailsHibernatePersistentEntity
-        def listener = new ClosureEventListener(manager.hibernateDatastore, persistentEntity, false, ['org.grails.orm.hibernate.support'])
+        def listener = new ClosureEventListener(manager.hibernateDatastore, persistentEntity, false, ["org.grails.orm.hibernate.support"])
 
         expect:
         listener.failOnErrorEnabled
     }
 
     @Rollback
-    void 'onPreDelete returns false if no listener present'() {
+    void "onPreDelete returns false if no listener present"() {
         given:
-        def book = new NoEventBook(name: 'NoEvent').save(flush: true)
+        def book = new NoEventBook(name: "NoEvent").save(flush: true)
         
         when:
         book.delete(flush: true)
@@ -401,7 +401,6 @@ class MutatingBook implements HibernateEntity<MutatingBook> {
 
 @Entity
 class LegacyLoadBook implements HibernateEntity<LegacyLoadBook> {
-
     Long id
     String name
     static boolean beforeLoadCalled = false
@@ -417,7 +416,6 @@ class LegacyLoadBook implements HibernateEntity<LegacyLoadBook> {
 
 @Entity
 class NoEventBook implements HibernateEntity<NoEventBook> {
-
     Long id
     String name
     static mapping = {

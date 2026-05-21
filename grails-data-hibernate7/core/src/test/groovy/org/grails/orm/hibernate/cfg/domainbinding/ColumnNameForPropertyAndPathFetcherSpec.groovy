@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -33,7 +33,7 @@ class ColumnNameForPropertyAndPathFetcherSpec extends Specification {
 
     def backticksRemover = new BackticksRemover()
 
-    def 'when grailsProp returns a column name then it is used'() {
+    def "when grailsProp returns a column name then it is used"() {
         given:
         def namingStrategy = Mock(PersistentEntityNamingStrategy)
         def defaultColumnFetcher = Mock(DefaultColumnNameFetcher)
@@ -46,13 +46,13 @@ class ColumnNameForPropertyAndPathFetcherSpec extends Specification {
         def grailsProp = Mock(HibernatePersistentProperty)
         def cc = Mock(ColumnConfig)
 
-        grailsProp.getColumnName(cc) >> 'explicit_col'
+        grailsProp.getColumnName(cc) >> "explicit_col"
 
         when:
-        def result = fetcher.getColumnNameForPropertyAndPath(grailsProp, 'somePath', cc)
+        def result = fetcher.getColumnNameForPropertyAndPath(grailsProp, "somePath", cc)
 
         then:
-        result == 'explicit_col'
+        result == "explicit_col"
     }
 
     @Unroll
@@ -80,11 +80,11 @@ class ColumnNameForPropertyAndPathFetcherSpec extends Specification {
 
         where:
         path              | resolvedPath       | defaultCol           || expected
-        '`order`'        | '`order`'          | '`customer_id`'      || 'order_customer_id'
-        'invoice'        | 'invoice'          | 'line_item_id'       || 'invoice_line_item_id'
+        "`order`"        | "`order`"          | "`customer_id`"      || "order_customer_id"
+        "invoice"        | "invoice"          | "line_item_id"       || "invoice_line_item_id"
     }
 
-    def 'when grailsProp returns null and path is empty falls back to default column name only'() {
+    def "when grailsProp returns null and path is empty falls back to default column name only"() {
         given:
         def namingStrategy = Mock(PersistentEntityNamingStrategy)
         def defaultColumnFetcher = Mock(DefaultColumnNameFetcher)
@@ -97,12 +97,12 @@ class ColumnNameForPropertyAndPathFetcherSpec extends Specification {
         def grailsProp = Mock(HibernatePersistentProperty)
 
         grailsProp.getColumnName(null) >> null
-        defaultColumnFetcher.getDefaultColumnName(grailsProp) >> 'only_default'
+        defaultColumnFetcher.getDefaultColumnName(grailsProp) >> "only_default"
 
         when:
         def result = fetcher.getColumnNameForPropertyAndPath(grailsProp, null, null)
 
         then:
-        result == 'only_default'
+        result == "only_default"
     }
 }

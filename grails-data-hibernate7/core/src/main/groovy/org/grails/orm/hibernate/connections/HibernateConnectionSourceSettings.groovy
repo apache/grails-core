@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -130,7 +130,7 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
 
         /**
          * Set the locations of multiple Hibernate XML config files, for example as
-         * classpath resources 'classpath:hibernate.cfg.xml,classpath: extension.cfg.xml'.
+         * classpath resources "classpath:hibernate.cfg.xml,classpath:extension.cfg.xml".
          * <p>Note: Can be omitted when all necessary properties and mapping
          * resources are specified locally via this bean.
          * @see org.hibernate.cfg.Configuration#configure(java.net.URL)
@@ -140,9 +140,9 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
 
         /**
          * Set locations of Hibernate mapping files, for example as classpath
-         * resource 'classpath:example.hbm.xml'. Supports any resource location
+         * resource "classpath:example.hbm.xml". Supports any resource location
          * via Spring's resource abstraction, for example relative paths like
-         * 'WEB-INF/mappings/example.hbm.xml' when running in an application context.
+         * "WEB-INF/mappings/example.hbm.xml" when running in an application context.
          * <p>Can be used to add to mappings from a Hibernate XML config file,
          * or to specify all mappings locally.
          * @see org.hibernate.cfg.Configuration#addInputStream
@@ -151,7 +151,7 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
 
         /**
          * Set locations of cacheable Hibernate mapping files, for example as web app
-         * resource '/WEB-INF/mapping/example.hbm.xml'. Supports any resource location
+         * resource "/WEB-INF/mapping/example.hbm.xml". Supports any resource location
          * via Spring's resource abstraction, as long as the resource can be resolved
          * in the file system.
          * <p>Can be used to add to mappings from a Hibernate XML config file,
@@ -162,7 +162,7 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
 
         /**
          * Set locations of jar files that contain Hibernate mapping resources,
-         * like 'WEB-INF/lib/example.hbm.jar'.
+         * like "WEB-INF/lib/example.hbm.jar".
          * <p>Can be used to add to mappings from a Hibernate XML config file,
          * or to specify all mappings locally.
          * @see org.hibernate.cfg.Configuration#addJar(java.io.File)
@@ -171,7 +171,7 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
 
         /**
          * Set locations of directories that contain Hibernate mapping resources,
-         * like 'WEB-INF/mappings'.
+         * like "WEB-INF/mappings".
          * <p>Can be used to add to mappings from a Hibernate XML config file,
          * or to specify all mappings locally.
          * @see org.hibernate.cfg.Configuration#addDirectory(java.io.File)
@@ -214,8 +214,8 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
                 return [
 //                    'save': eventTriggeringInterceptor,
 //                    'save-update': eventTriggeringInterceptor,
-//                        'merge': eventTriggeringInterceptor,
-//                        'persist': eventTriggeringInterceptor,
+//                        "merge": eventTriggeringInterceptor,
+//                        "persist": eventTriggeringInterceptor,
                     'pre-load': eventTriggeringInterceptor,
                     'post-load': eventTriggeringInterceptor,
                     'pre-insert': eventTriggeringInterceptor,

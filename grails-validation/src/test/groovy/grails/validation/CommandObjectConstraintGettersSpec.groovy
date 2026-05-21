@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -110,6 +110,7 @@ class CommandObjectConstraintGettersSpec extends Specification {
         constrainedProperties.containsKey('book')
     }
 
+
     void 'ensure only public non-static properties with getter are constrained properties'() {
         MethodPropertiesCommand command = new MethodPropertiesCommand()
 
@@ -123,6 +124,7 @@ class CommandObjectConstraintGettersSpec extends Specification {
         command.errors['getterOnly']?.code == 'nullable'
         command.errors.getErrorCount() == 2
     }
+
 
     void 'ensure constrained method properties are only public ones with both getter and setter'() {
         when: 'constrained properties map is get'
@@ -151,7 +153,6 @@ class CommandObjectConstraintGettersSpec extends Specification {
     }
 
     void 'ensure inherited constrained properties are only public ones'() {
-
         when: 'constrained properties map is get on child class'
         Map constrainedProperties = InheritedPropertiesCommand.getConstraintsMap()
 
@@ -162,6 +163,7 @@ class CommandObjectConstraintGettersSpec extends Specification {
         constrainedProperties.containsKey('string')
         constrainedProperties.containsKey('book')
     }
+
 
     void 'ensure only public non-static inherited properties with getter are constrained properties'() {
         InheritedMethodPropertiesCommand command = new InheritedMethodPropertiesCommand()
@@ -175,6 +177,7 @@ class CommandObjectConstraintGettersSpec extends Specification {
         command.errors['getterOnly']?.code == 'nullable'
         command.errors.getErrorCount() == 2
     }
+
 
     void 'ensure constrained inherited method properties are only public ones with getter'() {
         when: 'constrained properties map is get from child class'
@@ -214,6 +217,7 @@ class CommandObjectConstraintGettersSpec extends Specification {
         constrainedProperties.containsKey('book')
     }
 
+
     void 'ensure only public non-static properties from trait with getter are constrained properties'() {
         TraitMethodPropertiesCommand command = new TraitMethodPropertiesCommand()
         when: 'empty command with simple properties is validated'
@@ -226,6 +230,7 @@ class CommandObjectConstraintGettersSpec extends Specification {
         command.errors['getterOnly']?.code == 'nullable'
         command.errors.getErrorCount() == 2
     }
+
 
     void 'ensure constrained method properties from trait are only public ones with getter'() {
         when: 'constrained properties map is get'
@@ -252,6 +257,7 @@ class CommandObjectConstraintGettersSpec extends Specification {
         command.errors['getterOnly']?.code == 'nullable'
         command.errors.getErrorCount() == 2
     }
+
 
     void 'ensure constrained bool method properties are only public ones with getter'() {
         when: 'constrained properties map is get'
@@ -292,6 +298,7 @@ class CommandObjectConstraintGettersSpec extends Specification {
 
     // BOOL COMMAND OBJECT WITH TRAIT
 
+
     void 'ensure only public non-static bool properties from trait with getter are constrained properties'() {
         TraitBoolMethodPropertiesCommand command = new TraitBoolMethodPropertiesCommand()
         when: 'empty command with simple properties is validated'
@@ -321,7 +328,6 @@ class CommandObjectConstraintGettersSpec extends Specification {
  * Command with properties only
  */
 class SimplePropertiesCommand implements Validateable {
-
     List list
     Map map
     String string
@@ -634,4 +640,5 @@ class TraitBoolMethodPropertiesCommand implements BoolMethodPropertiesTrait, Val
  * Helper class
  */
 class Book {}
+
 

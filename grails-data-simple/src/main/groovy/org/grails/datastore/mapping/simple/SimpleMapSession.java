@@ -14,22 +14,24 @@
  */
 package org.grails.datastore.mapping.simple;
 
+import org.grails.datastore.mapping.core.AbstractSession;
+import org.grails.datastore.mapping.core.Datastore;
+import org.grails.datastore.mapping.core.connections.ConnectionSource;
+import org.grails.datastore.mapping.engine.EntityPersister;
+import org.grails.datastore.mapping.model.MappingContext;
+import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
+import grails.gorm.multitenancy.Tenants;
+import org.grails.datastore.mapping.simple.engine.SimpleMapEntityPersister;
+import org.grails.datastore.mapping.transactions.Transaction;
+import org.springframework.context.ApplicationEventPublisher;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
-
-import org.springframework.context.ApplicationEventPublisher;
-
-import org.grails.datastore.mapping.core.AbstractSession;
-import org.grails.datastore.mapping.core.Datastore;
-import org.grails.datastore.mapping.engine.EntityPersister;
-import org.grails.datastore.mapping.model.MappingContext;
-import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.simple.engine.SimpleMapEntityPersister;
-import org.grails.datastore.mapping.transactions.Transaction;
 
 /**
  * A {@link org.grails.datastore.mapping.core.Session} implementation that backs onto an in-memory map.

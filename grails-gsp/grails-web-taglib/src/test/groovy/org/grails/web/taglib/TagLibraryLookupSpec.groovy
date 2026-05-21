@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -38,10 +38,11 @@ import spock.util.mop.ConfineMetaClassChanges
  */
 class TagLibraryLookupSpec extends Specification {
 
+
     @Issue('GRAILS-11396')
     @ConfineMetaClassChanges([NamespacedTagDispatcher, OneTagLib, TwoTagLib])
-    void 'Test that TagLibraryLookup correctly registers namespace dispatchers'() {
-        given:'A lookup instance'
+    void "Test that TagLibraryLookup correctly registers namespace dispatchers"() {
+        given:"A lookup instance"
             def lookup = new TagLibraryLookup()
 
             def application = new DefaultGrailsApplication([OneTagLib, TwoTagLib] as Class[], TagLibraryLookup.class.classLoader)
@@ -50,7 +51,7 @@ class TagLibraryLookupSpec extends Specification {
 
             applicationContext.defaultListableBeanFactory.registerSingleton(OneTagLib.name, new OneTagLib(tagLibraryLookup: lookup))
             applicationContext.defaultListableBeanFactory.registerSingleton(TwoTagLib.name, new TwoTagLib(tagLibraryLookup: lookup))
-            applicationContext.defaultListableBeanFactory.registerSingleton('gspTagLibraryLookup', lookup)
+            applicationContext.defaultListableBeanFactory.registerSingleton("gspTagLibraryLookup", lookup)
             // instanceTagLibraryApi(TagLibraryApi, pluginManager)
             applicationContext.refresh()
 
@@ -62,29 +63,28 @@ class TagLibraryLookupSpec extends Specification {
             context.setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, applicationContext)
             RequestContextHolder.setRequestAttributes(new GrailsWebRequest(new MockHttpServletRequest(), new MockHttpServletResponse(), context, applicationContext))
 
-        when:'We lookup a namespace'
-            def result = lookup.lookupNamespaceDispatcher('g').methodMissing('foo', [test: 'me'])
+        when:"We lookup a namespace"
+            def result = lookup.lookupNamespaceDispatcher("g").methodMissing("foo", [test:"me"])
 
-        then:'the result is correct'
-            result.toString() == 'good'
+        then:"the result is correct"
+            result.toString() == "good"
 
-        cleanup:'cleanup request context'
+
+        cleanup:"cleanup request context"
             RequestContextHolder.resetRequestAttributes()
 
     }
 }
 @TagLib
 class OneTagLib {
-
     def foo = { attrs ->
         out << two.foo(attrs)
     }
 }
 @TagLib
 class TwoTagLib {
-
-    static namespace = 'two'
+    static namespace = "two"
     def foo = { attrs ->
-        out << 'good'
+        out << "good"
     }
 }

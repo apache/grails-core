@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -36,15 +36,15 @@ class OptimisticLockingWithExceptionSpec extends MongoDatastoreSpec {
     }
 
     @Issue('GPMONGODB-256')
-    void 'Test that when an optimistic locking exception is thrown the flush mode is set to commit'() {
-        when: 'An optimistic locking session is thrown'
+    void "Test that when an optimistic locking exception is thrown the flush mode is set to commit"() {
+        when: "An optimistic locking session is thrown"
         Counter c = new Counter(counter: 0).save(flush: true)
         manager.session.clear()
 
-        then: 'The version is 1'
+        then: "The version is 1"
         c.version == 0
 
-        when: 'The object is concurrently updated'
+        when: "The object is concurrently updated"
         c = Counter.get(c.id)
         Thread.start {
             Counter.withNewSession {
@@ -56,7 +56,7 @@ class OptimisticLockingWithExceptionSpec extends MongoDatastoreSpec {
         c.counter = 2
         c.save(flush: true)
 
-        then: 'An optimistic locking exception was thrown'
+        then: "An optimistic locking exception was thrown"
         thrown(OptimisticLockingException)
         manager.session.flushMode == FlushModeType.COMMIT
     }
@@ -64,7 +64,6 @@ class OptimisticLockingWithExceptionSpec extends MongoDatastoreSpec {
 
 @Entity
 class Counter {
-
     Long id
     Long version
     Date lastUpdated

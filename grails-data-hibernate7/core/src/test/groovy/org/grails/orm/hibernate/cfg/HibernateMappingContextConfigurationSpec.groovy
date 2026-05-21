@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -40,16 +40,16 @@ import javax.sql.DataSource
 
 class HibernateMappingContextConfigurationSpec extends Specification {
 
-    def 'test HibernateMappingContextConfiguration defaults'() {
-        given: 'A new configuration'
+    def "test HibernateMappingContextConfiguration defaults"() {
+        given: "A new configuration"
         def config = new HibernateMappingContextConfiguration()
 
-        expect: 'it has expected default values'
+        expect: "it has expected default values"
         config.getNamingStrategyProvider() != null
         config.dataSourceName == 'default'
     }
 
-    def 'setBytecodeProvider stores the provider and getGrailsBytecodeProvider returns it'() {
+    def "setBytecodeProvider stores the provider and getGrailsBytecodeProvider returns it"() {
         given:
         def config = new HibernateMappingContextConfiguration()
         def provider = new GrailsBytecodeProvider()
@@ -61,7 +61,7 @@ class HibernateMappingContextConfigurationSpec extends Specification {
         config.getGrailsBytecodeProvider().is(provider)
     }
 
-    def 'getGrailsBytecodeProvider creates a new GrailsBytecodeProvider when bytecodeProvider is null'() {
+    def "getGrailsBytecodeProvider creates a new GrailsBytecodeProvider when bytecodeProvider is null"() {
         given:
         def config = new HibernateMappingContextConfiguration()
 
@@ -69,7 +69,7 @@ class HibernateMappingContextConfigurationSpec extends Specification {
         config.getGrailsBytecodeProvider() instanceof GrailsBytecodeProvider
     }
 
-    def 'setNamingStrategyProvider updates the naming strategy provider'() {
+    def "setNamingStrategyProvider updates the naming strategy provider"() {
         given:
         def config = new HibernateMappingContextConfiguration()
         def provider = new NamingStrategyProvider()
@@ -81,7 +81,7 @@ class HibernateMappingContextConfigurationSpec extends Specification {
         config.getNamingStrategyProvider().is(provider)
     }
 
-    def 'getMappingCacheHolder returns null when no HibernateMappingContext is set'() {
+    def "getMappingCacheHolder returns null when no HibernateMappingContext is set"() {
         given:
         def config = new HibernateMappingContextConfiguration()
 
@@ -89,7 +89,7 @@ class HibernateMappingContextConfigurationSpec extends Specification {
         config.getMappingCacheHolder() == null
     }
 
-    def 'getMappingCacheHolder delegates to the HibernateMappingContext when set'() {
+    def "getMappingCacheHolder delegates to the HibernateMappingContext when set"() {
         given:
         def config = new HibernateMappingContextConfiguration()
         def ctx = new HibernateMappingContext()
@@ -100,7 +100,7 @@ class HibernateMappingContextConfigurationSpec extends Specification {
         config.getMappingCacheHolder().is(ctx.getMappingCacheHolder())
     }
 
-    def 'setHibernateMappingContext stores the context'() {
+    def "setHibernateMappingContext stores the context"() {
         given:
         def config = new HibernateMappingContextConfiguration()
         def ctx = new HibernateMappingContext()
@@ -112,32 +112,32 @@ class HibernateMappingContextConfigurationSpec extends Specification {
         config.getMappingCacheHolder() != null
     }
 
-    def 'setSessionFactoryBeanName updates the bean name'() {
+    def "setSessionFactoryBeanName updates the bean name"() {
         given:
         def config = new HibernateMappingContextConfiguration()
 
         when:
-        config.setSessionFactoryBeanName('mySessionFactory')
+        config.setSessionFactoryBeanName("mySessionFactory")
 
         then:
-        config.sessionFactoryBeanName == 'mySessionFactory'
+        config.sessionFactoryBeanName == "mySessionFactory"
     }
 
-    def 'setDataSourceName updates the data source name'() {
+    def "setDataSourceName updates the data source name"() {
         given:
         def config = new HibernateMappingContextConfiguration()
 
         when:
-        config.setDataSourceName('secondary')
+        config.setDataSourceName("secondary")
 
         then:
-        config.dataSourceName == 'secondary'
+        config.dataSourceName == "secondary"
     }
 
-    def 'setEventListeners stores the listener map'() {
+    def "setEventListeners stores the listener map"() {
         given:
         def config = new HibernateMappingContextConfiguration()
-        def listeners = [save: 'mySaveListener']
+        def listeners = [save: "mySaveListener"]
 
         when:
         config.setEventListeners(listeners)
@@ -146,7 +146,7 @@ class HibernateMappingContextConfigurationSpec extends Specification {
         config.eventListeners == listeners
     }
 
-    def 'setHibernateEventListeners stores the HibernateEventListeners instance'() {
+    def "setHibernateEventListeners stores the HibernateEventListeners instance"() {
         given:
         def config = new HibernateMappingContextConfiguration()
         def hel = new HibernateEventListeners()
@@ -158,7 +158,7 @@ class HibernateMappingContextConfigurationSpec extends Specification {
         config.hibernateEventListeners.is(hel)
     }
 
-    def 'getServiceRegistry returns null before buildSessionFactory is called'() {
+    def "getServiceRegistry returns null before buildSessionFactory is called"() {
         given:
         def config = new HibernateMappingContextConfiguration()
 
@@ -166,8 +166,7 @@ class HibernateMappingContextConfigurationSpec extends Specification {
         config.getServiceRegistry() == null
     }
 
-    def 'addAnnotatedClass adds a class to additionalClasses'() {
-
+    def "addAnnotatedClass adds a class to additionalClasses"() {
         given:
         def config = new HibernateMappingContextConfiguration()
 
@@ -178,7 +177,7 @@ class HibernateMappingContextConfigurationSpec extends Specification {
         noExceptionThrown()
     }
 
-    def 'addAnnotatedClasses adds multiple classes in batch'() {
+    def "addAnnotatedClasses adds multiple classes in batch"() {
         given:
         def config = new HibernateMappingContextConfiguration()
 
@@ -189,18 +188,18 @@ class HibernateMappingContextConfigurationSpec extends Specification {
         noExceptionThrown()
     }
 
-    def 'addPackages adds multiple packages in batch'() {
+    def "addPackages adds multiple packages in batch"() {
         given:
         def config = new HibernateMappingContextConfiguration()
 
         when:
-        def result = config.addPackages('java.lang', 'java.util')
+        def result = config.addPackages("java.lang", "java.util")
 
         then:
         result.is(config)
     }
 
-    def 'setApplicationContext with null uses PathMatchingResourcePatternResolver'() {
+    def "setApplicationContext with null uses PathMatchingResourcePatternResolver"() {
         given:
         def config = new HibernateMappingContextConfiguration()
 
@@ -211,11 +210,11 @@ class HibernateMappingContextConfigurationSpec extends Specification {
         noExceptionThrown()
     }
 
-    def 'setApplicationContext without datasource bean sets session context properties'() {
+    def "setApplicationContext without datasource bean sets session context properties"() {
         given:
         def config = new HibernateMappingContextConfiguration()
         ApplicationContext appCtx = Stub(ApplicationContext) {
-            containsBean('dataSource') >> false
+            containsBean("dataSource") >> false
             getClassLoader() >> null
         }
 
@@ -223,22 +222,22 @@ class HibernateMappingContextConfigurationSpec extends Specification {
         config.setApplicationContext(appCtx)
 
         then:
-        config.getProperties().containsKey('hibernate.current_session_context_class')
-        config.getProperties().containsKey('hibernate.bytecode.allow_enhancement_as_proxy')
-        config.getProperties().containsKey('hibernate.bytecode.enhancement_metadata_cache')
-        config.getProperties().containsKey('hibernate.enhancer.enableLazyInitialization')
-        config.getProperties().containsKey('hibernate.enhancer.enableDirtyTracking')
-        config.getProperties().containsKey('hibernate.enhancer.enableAssociationManagement')
+        config.getProperties().containsKey("hibernate.current_session_context_class")
+        config.getProperties().containsKey("hibernate.bytecode.allow_enhancement_as_proxy")
+        config.getProperties().containsKey("hibernate.bytecode.enhancement_metadata_cache")
+        config.getProperties().containsKey("hibernate.enhancer.enableLazyInitialization")
+        config.getProperties().containsKey("hibernate.enhancer.enableDirtyTracking")
+        config.getProperties().containsKey("hibernate.enhancer.enableAssociationManagement")
         !config.getProperties().containsKey(JdbcSettings.JAKARTA_NON_JTA_DATASOURCE)
     }
 
-    def 'setApplicationContext with datasource bean injects the datasource into properties'() {
+    def "setApplicationContext with datasource bean injects the datasource into properties"() {
         given:
         def config = new HibernateMappingContextConfiguration()
         DataSource ds = Stub(DataSource)
         ApplicationContext appCtx = Stub(ApplicationContext) {
-            containsBean('dataSource') >> true
-            getBean('dataSource') >> ds
+            containsBean("dataSource") >> true
+            getBean("dataSource") >> ds
             getClassLoader() >> null
         }
 
@@ -249,12 +248,12 @@ class HibernateMappingContextConfigurationSpec extends Specification {
         config.getProperties().get(JdbcSettings.JAKARTA_NON_JTA_DATASOURCE).is(ds)
     }
 
-    def 'setApplicationContext with classLoader sets classloaders property'() {
+    def "setApplicationContext with classLoader sets classloaders property"() {
         given:
         def config = new HibernateMappingContextConfiguration()
         ClassLoader cl = new URLClassLoader([] as URL[], Thread.currentThread().contextClassLoader)
         ApplicationContext appCtx = Stub(ApplicationContext) {
-            containsBean('dataSource') >> false
+            containsBean("dataSource") >> false
             getClassLoader() >> cl
         }
 
@@ -265,15 +264,15 @@ class HibernateMappingContextConfigurationSpec extends Specification {
         config.getProperties().get(AvailableSettings.CLASSLOADERS).is(cl)
     }
 
-    def 'setApplicationContext when datasource property already set does not overwrite it'() {
+    def "setApplicationContext when datasource property already set does not overwrite it"() {
         given:
         def config = new HibernateMappingContextConfiguration()
         DataSource existingDs = Stub(DataSource)
         config.getProperties().put(JdbcSettings.JAKARTA_NON_JTA_DATASOURCE, existingDs)
         DataSource anotherDs = Stub(DataSource)
         ApplicationContext appCtx = Stub(ApplicationContext) {
-            containsBean('dataSource') >> true
-            getBean('dataSource') >> anotherDs
+            containsBean("dataSource") >> true
+            getBean("dataSource") >> anotherDs
             getClassLoader() >> null
         }
 
@@ -284,14 +283,14 @@ class HibernateMappingContextConfigurationSpec extends Specification {
         config.getProperties().get(JdbcSettings.JAKARTA_NON_JTA_DATASOURCE).is(existingDs)
     }
 
-    def 'setApplicationContext with non-default dataSourceName uses correct bean name'() {
+    def "setApplicationContext with non-default dataSourceName uses correct bean name"() {
         given:
         def config = new HibernateMappingContextConfiguration()
-        config.setDataSourceName('secondary')
+        config.setDataSourceName("secondary")
         DataSource ds = Stub(DataSource)
         ApplicationContext appCtx = Stub(ApplicationContext) {
-            containsBean('dataSource_secondary') >> true
-            getBean('dataSource_secondary') >> ds
+            containsBean("dataSource_secondary") >> true
+            getBean("dataSource_secondary") >> ds
             getClassLoader() >> null
         }
 
@@ -302,12 +301,12 @@ class HibernateMappingContextConfigurationSpec extends Specification {
         config.getProperties().get(JdbcSettings.JAKARTA_NON_JTA_DATASOURCE).is(ds)
     }
 
-    def 'setDataSourceConnectionSource sets dataSourceName, DataSource, and classLoader'() {
+    def "setDataSourceConnectionSource sets dataSourceName, DataSource, and classLoader"() {
         given:
         def config = new HibernateMappingContextConfiguration()
         DataSource ds = Stub(DataSource)
         ConnectionSource<DataSource, DataSourceSettings> connSrc = Stub(ConnectionSource) {
-            getName() >> 'secondary'
+            getName() >> "secondary"
             getSource() >> ds
         }
 
@@ -315,13 +314,13 @@ class HibernateMappingContextConfigurationSpec extends Specification {
         config.setDataSourceConnectionSource(connSrc)
 
         then:
-        config.dataSourceName == 'secondary'
+        config.dataSourceName == "secondary"
         config.getProperties().get(JdbcSettings.JAKARTA_NON_JTA_DATASOURCE).is(ds)
-        config.getProperties().containsKey('hibernate.current_session_context_class')
+        config.getProperties().containsKey("hibernate.current_session_context_class")
         config.getProperties().containsKey(AvailableSettings.CLASSLOADERS)
     }
 
-    def 'createBootstrapServiceRegistryBuilder returns a non-null builder'() {
+    def "createBootstrapServiceRegistryBuilder returns a non-null builder"() {
         given:
         def config = new HibernateMappingContextConfiguration()
 
@@ -332,7 +331,7 @@ class HibernateMappingContextConfigurationSpec extends Specification {
         builder instanceof BootstrapServiceRegistryBuilder
     }
 
-    def 'createStandardServiceRegistryBuilder returns a non-null builder'() {
+    def "createStandardServiceRegistryBuilder returns a non-null builder"() {
         given:
         def config = new HibernateMappingContextConfiguration()
         BootstrapServiceRegistry bsr = new BootstrapServiceRegistryBuilder().build()
@@ -347,12 +346,12 @@ class HibernateMappingContextConfigurationSpec extends Specification {
         bsr.close()
     }
 
-    def 'matchesFilter returns false for a non-annotated class'() {
+    def "matchesFilter returns false for a non-annotated class"() {
         given:
         def config = new HibernateMappingContextConfiguration()
         def resolver = new PathMatchingResourcePatternResolver()
         def readerFactory = new CachingMetadataReaderFactory(resolver)
-        def resources = resolver.getResources('classpath:org/grails/orm/hibernate/cfg/NamingStrategyProvider.class')
+        def resources = resolver.getResources("classpath:org/grails/orm/hibernate/cfg/NamingStrategyProvider.class")
 
         when:
         boolean matched = false
@@ -368,12 +367,12 @@ class HibernateMappingContextConfigurationSpec extends Specification {
         !matched
     }
 
-    def 'matchesFilter returns true for an @jakarta.persistence.Entity annotated class'() {
+    def "matchesFilter returns true for an @jakarta.persistence.Entity annotated class"() {
         given:
         def config = new HibernateMappingContextConfiguration()
         def resolver = new PathMatchingResourcePatternResolver()
         def readerFactory = new CachingMetadataReaderFactory(resolver)
-        def resources = resolver.getResources('classpath*:org/grails/orm/hibernate/cfg/CfgJpaTestEntity.class')
+        def resources = resolver.getResources("classpath*:org/grails/orm/hibernate/cfg/CfgJpaTestEntity.class")
 
         when:
         boolean matched = false
@@ -389,23 +388,23 @@ class HibernateMappingContextConfigurationSpec extends Specification {
         matched
     }
 
-    def 'scanPackages on a package with no annotated classes throws no exception'() {
+    def "scanPackages on a package with no annotated classes throws no exception"() {
         given:
         def config = new HibernateMappingContextConfiguration()
 
         when:
-        config.scanPackages('java.io')
+        config.scanPackages("java.io")
 
         then:
         noExceptionThrown()
     }
 
-    def 'scanPackages discovers @Entity annotated domain classes and calls addAnnotatedClasses'() {
+    def "scanPackages discovers @Entity annotated domain classes and calls addAnnotatedClasses"() {
         given:
         def config = new HibernateMappingContextConfiguration()
 
         when:
-        config.scanPackages('org.grails.orm.hibernate.cfg')
+        config.scanPackages("org.grails.orm.hibernate.cfg")
 
         then:
         noExceptionThrown()
@@ -413,13 +412,13 @@ class HibernateMappingContextConfigurationSpec extends Specification {
 
     // ─── Additional edge cases for coverage ───────────────────────────────────
 
-    def 'setDataSourceConnectionSource handles RestartClassLoader name'() {
+    def "setDataSourceConnectionSource handles RestartClassLoader name"() {
         given:
         def config = new HibernateMappingContextConfiguration()
         def ds = Stub(DataSource)
         
-        // Create a class with simple name 'RestartClassLoader'
-        def clClass = new GroovyClassLoader().parseClass('class RestartClassLoader extends ClassLoader {}')
+        // Create a class with simple name "RestartClassLoader"
+        def clClass = new GroovyClassLoader().parseClass("class RestartClassLoader extends ClassLoader {}")
         def clInstance = clClass.getDeclaredConstructor().newInstance()
         def originalCl = Thread.currentThread().getContextClassLoader()
         
@@ -427,7 +426,7 @@ class HibernateMappingContextConfigurationSpec extends Specification {
         Thread.currentThread().setContextClassLoader(clInstance)
         config.setDataSourceConnectionSource(Stub(ConnectionSource) {
             getSource() >> ds
-            getName() >> 'default'
+            getName() >> "default"
         })
 
         then:
@@ -437,7 +436,7 @@ class HibernateMappingContextConfigurationSpec extends Specification {
         Thread.currentThread().setContextClassLoader(originalCl)
     }
 
-    def 'buildSessionFactory handles classloader object when it is a ClassLoader'() {
+    def "buildSessionFactory handles classloader object when it is a ClassLoader"() {
         given:
         def config = new HibernateMappingContextConfiguration()
         def cl = new URLClassLoader([] as URL[])
@@ -455,18 +454,18 @@ class HibernateMappingContextConfigurationIntegrationSpec extends HibernateGormD
         manager.addAllDomainClasses([HmccTestBook, HmccTestAuthor])
     }
 
-    def 'buildSessionFactory produces a working session factory via HibernateDatastore'() {
+    def "buildSessionFactory produces a working session factory via HibernateDatastore"() {
         expect:
         sessionFactory != null
         !sessionFactory.isClosed()
     }
 
-    def 'getServiceRegistry is non-null after the session factory is built'() {
+    def "getServiceRegistry is non-null after the session factory is built"() {
         expect:
         datastore.sessionFactory != null
     }
 
-    def 'HibernateDatastore mappingContext is a HibernateMappingContext with registered entities'() {
+    def "HibernateDatastore mappingContext is a HibernateMappingContext with registered entities"() {
         when:
         def ctx = mappingContext
 
@@ -476,7 +475,7 @@ class HibernateMappingContextConfigurationIntegrationSpec extends HibernateGormD
         ctx.getPersistentEntity(HmccTestAuthor.name) != null
     }
 
-    def 'HibernateMappingContextConfiguration addAnnotatedClasses is used by buildSessionFactory'() {
+    def "HibernateMappingContextConfiguration addAnnotatedClasses is used by buildSessionFactory"() {
         when:
         def entities = mappingContext.persistentEntities
 
@@ -487,7 +486,6 @@ class HibernateMappingContextConfigurationIntegrationSpec extends HibernateGormD
 
 @Entity
 class HmccTestBook implements HibernateEntity<HmccTestBook> {
-
     String title
     HmccTestAuthor author
     static belongsTo = [author: HmccTestAuthor]
@@ -495,14 +493,12 @@ class HmccTestBook implements HibernateEntity<HmccTestBook> {
 
 @Entity
 class HmccTestAuthor implements HibernateEntity<HmccTestAuthor> {
-
     String name
     static hasMany = [books: HmccTestBook]
 }
 
 @jakarta.persistence.Entity
 class CfgJpaTestEntity {
-
     @jakarta.persistence.Id
     Long id
     String name

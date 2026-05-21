@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -20,7 +20,7 @@ package org.grails.web.databinding.bindingsource
 
 import groovy.xml.XmlSlurper
 import org.grails.databinding.xml.GPathResultMap
-import org.grails.web.databinding.bindingsource.HalGPathResultMap
+import org.grails.web.databinding.bindingsource.HalGPathResultMap;
 
 import spock.lang.Specification
 
@@ -31,12 +31,12 @@ class HalGPathResultMapSpec extends Specification {
         def xml = new XmlSlurper().parseText('''
 <person>
    <name>John Doe</name>
-   <resource rel='locations'>
-      <resource rel='location'>
+   <resource rel="locations">
+      <resource rel="location">
          <shippingAddress>foo</shippingAddress>
          <billingAddress>bar</billingAddress>
       </resource>
-      <resource rel='location'>
+      <resource rel="location">
          <shippingAddress>foo2</shippingAddress>
          <billingAddress>bar2</billingAddress>
       </resource>
@@ -67,18 +67,18 @@ class HalGPathResultMapSpec extends Specification {
         def xml = new XmlSlurper().parseText('''
 <sports>
     <country>USA</country>
-    <resource rel='baseball'>
+    <resource rel="baseball">
         <team>Cardinals</team>
         <team>Cubs</team>
-        <resource rel='equipment'>
-            <resource rel='bats'>
+        <resource rel="equipment">
+            <resource rel="bats">
                 <material>wood</material>
                 <manufacturer>Easton</manufacturer>
                 <manufacturer>Louisville Slugger</manufacturer>
             </resource>
         </resource>
     </resource>
-    <resource rel='hockey'>
+    <resource rel="hockey">
         <team>Blues</team>
         <team>Blackhawks</team>
     </resource>

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -33,15 +33,15 @@ class GroovyChangeLogSpec extends ApplicationContextDatabaseMigrationCommandSpec
 
     def setup() {
         calledBlocks = []
-        Locale.setDefault(new Locale('en', 'US'))
+        Locale.setDefault(new Locale("en", "US"))
     }
 
-    def 'updates a database with Groovy Change'() {
+    def "updates a database with Groovy Change"() {
         given:
         def command = createCommand(DbmUpdateCommand)
         command.changeLogFile << """
 databaseChangeLog = {
-    changeSet(author: 'John Smith', id: '1') {
+    changeSet(author: "John Smith", id: "1") {
         grailsChange {
             init { ${GroovyChangeLogSpec.name}.calledBlocks << 'init' }
             validate { ${GroovyChangeLogSpec.name}.calledBlocks << 'validate' }
@@ -61,12 +61,13 @@ databaseChangeLog = {
         output.toString().contains('confirmation message')
     }
 
-    def 'outputs a warning message by calling the warn method'() {
+
+    def "outputs a warning message by calling the warn method"() {
         given:
         def command = createCommand(DbmUpdateCommand)
         command.changeLogFile << """
 databaseChangeLog = {
-    changeSet(author: 'John Smith', id: '2') {
+    changeSet(author: "John Smith", id: "2") {
         grailsChange {
             validate {
                 ${GroovyChangeLogSpec.name}.calledBlocks << 'validate'
@@ -87,12 +88,12 @@ databaseChangeLog = {
         calledBlocks == ['validate', 'change']
     }
 
-    def 'stops processing by calling the error method'() {
+    def "stops processing by calling the error method"() {
         given:
         DbmUpdateCommand command = (DbmUpdateCommand) createCommand(DbmUpdateCommand)
         command.changeLogFile << """
 databaseChangeLog = {
-    changeSet(author: 'John Smith', id: '1') {
+    changeSet(author: "John Smith", id: "1") {
         grailsChange {
             validate {
                 ${GroovyChangeLogSpec.name}.calledBlocks << 'validate'
@@ -112,20 +113,21 @@ databaseChangeLog = {
         def e = thrown(CommandExecutionException)
 
         e.message.contains('1 changes have validation failures')
-        e.message.contains('error message, changelog.groovy: :1::John Smith')
+        e.message.contains('error message, changelog.groovy::1::John Smith')
         calledBlocks == ['validate']
     }
 
-    def 'can use bind variables in the change block'() {
+
+    def "can use bind variables in the change block"() {
         given:
         def command = createCommand(DbmUpdateCommand)
         command.changeLogFile << """
 databaseChangeLog = {
-    changeSet(author: 'John Smith', id: '4') {
+    changeSet(author: "John Smith", id: "4") {
         grailsChange {
             change {
                 assert changeSet.id == '4'
-                assert resourceAccessor.toString().startsWith('CompositeResourceAccessor {')
+                assert resourceAccessor.toString().startsWith('CompositeResourceAccessor{')
                 assert ctx.hashCode() == ${applicationContext.hashCode()}
                 assert application.hashCode() == ${applicationContext.getBean(GrailsApplication).hashCode()}
                 ${GroovyChangeLogSpec.name}.calledBlocks << 'change'
@@ -141,7 +143,8 @@ databaseChangeLog = {
         calledBlocks == ['change']
     }
 
-    def 'executes sql statements in the change block'() {
+
+    def "executes sql statements in the change block"() {
         given:
         def command = createCommand(DbmUpdateCommand)
         command.changeLogFile << """
@@ -149,7 +152,7 @@ import groovy.sql.Sql
 import liquibase.statement.core.InsertStatement
 
 databaseChangeLog = {
-    changeSet(author: 'John Smith', id: '5') {
+    changeSet(author: "John Smith", id: "5") {
         grailsChange {
             change {
                 new Sql(database.connection.underlyingConnection).executeUpdate('CREATE TABLE book (id INT)')
@@ -170,14 +173,15 @@ databaseChangeLog = {
         sql.rows('SELECT id FROM book').collect { it.id } as Set == [1, 2, 3, 4, 5] as Set
     }
 
-    def 'rolls back a database with Groovy Change'() {
+
+    def "rolls back a database with Groovy Change"() {
         given:
         def command = createCommand(DbmRollbackCommand)
         command.changeLogFile << """
 databaseChangeLog = {
-    changeSet(author: 'John Smith', id: '6') {
+    changeSet(author: "John Smith", id: "6") {
     }
-    changeSet(author: 'John Smith', id: '7') {
+    changeSet(author: "John Smith", id: "7") {
         grailsChange {
             init { ${GroovyChangeLogSpec.name}.calledBlocks << 'init' }
             validate { ${GroovyChangeLogSpec.name}.calledBlocks << 'validate' }
@@ -201,18 +205,19 @@ databaseChangeLog = {
         calledBlocks == ['init', 'change', 'rollback', 'rollback']
     }
 
-    def 'can use bind variables in the rollback block'() {
+
+    def "can use bind variables in the rollback block"() {
         given:
         def command = createCommand(DbmRollbackCommand)
         command.changeLogFile << """
 databaseChangeLog = {
-    changeSet(author: 'John Smith', id: '8') {
+    changeSet(author: "John Smith", id: "8") {
     }
-    changeSet(author: 'John Smith', id: '9') {
+    changeSet(author: "John Smith", id: "9") {
         grailsChange {
             rollback {
                 assert changeSet.id == '9'
-                assert resourceAccessor.toString().startsWith('CompositeResourceAccessor {')
+                assert resourceAccessor.toString().startsWith('CompositeResourceAccessor{')
                 assert ctx.hashCode() == ${applicationContext.hashCode()}
                 assert application.hashCode() == ${applicationContext.getBean(GrailsApplication).hashCode()}
                 ${GroovyChangeLogSpec.name}.calledBlocks << 'rollback'

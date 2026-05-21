@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -50,7 +50,7 @@ class GormColumnSnapshotGeneratorSpec extends Specification {
 
     protected MetadataBuildingContext createMetadataBuildingContext() {
         def serviceRegistry = new StandardServiceRegistryBuilder()
-                .applySetting('hibernate.dialect', H2Dialect.class.getName())
+                .applySetting("hibernate.dialect", H2Dialect.class.getName())
                 .build()
         MetadataBuildingOptions options = new MetadataBuilderImpl(
                 new MetadataSources(serviceRegistry)
@@ -68,17 +68,17 @@ class GormColumnSnapshotGeneratorSpec extends Specification {
         return buildingContext
     }
 
-    def 'test getPriority'() {
+    def "test getPriority"() {
         expect:
         generator.getPriority(Column, Mock(GormDatabase)) == 110
         generator.getPriority(Table, Mock(GormDatabase)) == -1
         generator.getPriority(Column, Mock(Database)) == -1
     }
 
-    def 'snapshot delegates to chain first'() {
+    def "snapshot delegates to chain first"() {
         given:
         Column example = new Column()
-        Column resultFromChain = new Column(name: 'test')
+        Column resultFromChain = new Column(name: "test")
         SnapshotGeneratorChain chain = Mock()
         DatabaseSnapshot snapshot = Mock()
 
@@ -90,7 +90,7 @@ class GormColumnSnapshotGeneratorSpec extends Specification {
         result == resultFromChain
     }
 
-    def 'applyGormPropertySettings sets nullable false if property is not nullable'() {
+    def "applyGormPropertySettings sets nullable false if property is not nullable"() {
         given:
         Column column = new Column()
         PersistentProperty prop = Mock()
@@ -103,7 +103,7 @@ class GormColumnSnapshotGeneratorSpec extends Specification {
         !column.isNullable()
     }
 
-    def 'applyGormPropertySettings does not change nullable if property is nullable'() {
+    def "applyGormPropertySettings does not change nullable if property is nullable"() {
         given:
         Column column = new Column()
         column.setNullable(true)
@@ -117,7 +117,7 @@ class GormColumnSnapshotGeneratorSpec extends Specification {
         column.isNullable()
     }
 
-    def 'applyGormIdentitySettings sets non-nullable and auto-increment for identity strategy'() {
+    def "applyGormIdentitySettings sets non-nullable and auto-increment for identity strategy"() {
         given:
         Column column = new Column()
         GrailsHibernatePersistentEntity gpe = Mock()
@@ -132,49 +132,49 @@ class GormColumnSnapshotGeneratorSpec extends Specification {
         1 * gpe.getMappedForm() >> mapping
         1 * mapping.getIdentity() >> identity
         1 * mapping.isTablePerConcreteClass() >> false
-        1 * identity.determineGeneratorName(false) >> 'identity'
+        1 * identity.determineGeneratorName(false) >> "identity"
         column.getAutoIncrementInformation() != null
     }
 
-    def 'test findPersistentClass'() {
+    def "test findPersistentClass"() {
         given:
         Metadata metadata = Mock()
         MetadataBuildingContext buildingContext = createMetadataBuildingContext()
         RootClass pc1 = new RootClass(buildingContext)
-        HibernateTable table1 = new HibernateTable('hibernate', 'TEST_TABLE')
+        HibernateTable table1 = new HibernateTable("hibernate", "TEST_TABLE")
         pc1.setTable(table1)
         
         when:
-        PersistentClass result = generator.findPersistentClass(metadata, 'test_table')
+        PersistentClass result = generator.findPersistentClass(metadata, "test_table")
 
         then:
         1 * metadata.getEntityBindings() >> [pc1]
         result == pc1
     }
 
-    def 'test isIdentifier'() {
+    def "test isIdentifier"() {
         given:
         MetadataBuildingContext buildingContext = createMetadataBuildingContext()
         RootClass pc = new RootClass(buildingContext)
-        HibernateTable hTable = new HibernateTable('hibernate', 'test')
+        HibernateTable hTable = new HibernateTable("hibernate", "test")
         pc.setTable(hTable)
         BasicValue identifier = new BasicValue(buildingContext, hTable)
-        org.hibernate.mapping.Column hibernateColumn = new org.hibernate.mapping.Column('id')
+        org.hibernate.mapping.Column hibernateColumn = new org.hibernate.mapping.Column("id")
         identifier.addColumn(hibernateColumn)
         pc.setIdentifier(identifier)
 
         expect:
-        generator.isIdentifier(pc, 'id')
-        !generator.isIdentifier(pc, 'other')
+        generator.isIdentifier(pc, "id")
+        !generator.isIdentifier(pc, "other")
     }
 
-    def 'snapshot applies GORM settings for identifier'() {
+    def "snapshot applies GORM settings for identifier"() {
         given:
-        Column example = new Column(name: 'id')
-        Table table = new Table(name: 'test_table')
+        Column example = new Column(name: "id")
+        Table table = new Table(name: "test_table")
         example.setRelation(table)
         
-        Column chainResult = new Column(name: 'id')
+        Column chainResult = new Column(name: "id")
         chainResult.setRelation(table)
         chainResult.setNullable(true)
 
@@ -188,12 +188,12 @@ class GormColumnSnapshotGeneratorSpec extends Specification {
         
         // Hibernate objects
         RootClass pc = new RootClass(buildingContext)
-        pc.setEntityName('TestEntity')
-        pc.setClassName('com.example.TestEntity')
-        HibernateTable hTable = new HibernateTable('hibernate', 'test_table')
+        pc.setEntityName("TestEntity")
+        pc.setClassName("com.example.TestEntity")
+        HibernateTable hTable = new HibernateTable("hibernate", "test_table")
         pc.setTable(hTable)
         BasicValue identifier = new BasicValue(buildingContext, hTable)
-        identifier.addColumn(new org.hibernate.mapping.Column('id'))
+        identifier.addColumn(new org.hibernate.mapping.Column("id"))
         pc.setIdentifier(identifier)
 
         // GORM mocks
@@ -212,10 +212,10 @@ class GormColumnSnapshotGeneratorSpec extends Specification {
         datastore.mappingContext >> mappingContext
         
         metadata.getEntityBindings() >> [pc]
-        mappingContext.getPersistentEntity('com.example.TestEntity') >> gpe
+        mappingContext.getPersistentEntity("com.example.TestEntity") >> gpe
         gpe.getMappedForm() >> gormMapping
         gormMapping.getIdentity() >> gormIdentity
-        gormIdentity.determineGeneratorName(_) >> 'identity'
+        gormIdentity.determineGeneratorName(_) >> "identity"
 
         !result.isNullable()
         result.getAutoIncrementInformation() != null

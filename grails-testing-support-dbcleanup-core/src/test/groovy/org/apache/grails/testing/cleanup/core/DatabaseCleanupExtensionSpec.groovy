@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -29,7 +29,7 @@ import org.spockframework.runtime.model.SpecInfo
 
 class DatabaseCleanupExtensionSpec extends Specification {
 
-    def 'start() does not fail when no DatabaseCleaner is on the classpath'() {
+    def "start() does not fail when no DatabaseCleaner is on the classpath"() {
         given:
         def extension = new DatabaseCleanupExtension()
 
@@ -40,7 +40,7 @@ class DatabaseCleanupExtensionSpec extends Specification {
         noExceptionThrown()
     }
 
-    def 'visitSpec is a no-op when no cleaner was found during start()'() {
+    def "visitSpec is a no-op when no cleaner was found during start()"() {
         given:
         def extension = new DatabaseCleanupExtension()
         extension.start()
@@ -56,7 +56,7 @@ class DatabaseCleanupExtensionSpec extends Specification {
         0 * spec.addCleanupSpecInterceptor(_)
     }
 
-    def 'visitSpec throws when @DatabaseCleanup is present without @SpringBootTest'() {
+    def "visitSpec throws when @DatabaseCleanup is present without @SpringBootTest"() {
         given:
         def extension = createExtensionWithCleaner()
 
@@ -76,7 +76,7 @@ class DatabaseCleanupExtensionSpec extends Specification {
         ex.message.contains('NonIntegrationSpec')
     }
 
-    def 'visitSpec throws when method-level @DatabaseCleanup is present without @SpringBootTest'() {
+    def "visitSpec throws when method-level @DatabaseCleanup is present without @SpringBootTest"() {
         given:
         def extension = createExtensionWithCleaner()
 
@@ -106,7 +106,7 @@ class DatabaseCleanupExtensionSpec extends Specification {
         ex.message.contains('MethodAnnotatedNonIntegrationSpec')
     }
 
-    def 'visitSpec throws when @SpringBootTest has MOCK webEnvironment with @DatabaseCleanup'() {
+    def "visitSpec throws when @SpringBootTest has MOCK webEnvironment with @DatabaseCleanup"() {
         given:
         def extension = createExtensionWithCleaner()
 
@@ -127,7 +127,7 @@ class DatabaseCleanupExtensionSpec extends Specification {
         ex.message.contains('MockWebEnvironmentSpec')
     }
 
-    def 'visitSpec silently skips spec without @SpringBootTest or @DatabaseCleanup'() {
+    def "visitSpec silently skips spec without @SpringBootTest or @DatabaseCleanup"() {
         given:
         def extension = createExtensionWithCleaner()
 
@@ -156,8 +156,7 @@ class DatabaseCleanupExtensionSpec extends Specification {
         0 * spec.addCleanupSpecInterceptor(_)
     }
 
-    def 'visitSpec registers interceptors when cleaner is available and class is annotated with @SpringBootTest having an application context'() {
-
+    def "visitSpec registers interceptors when cleaner is available and class is annotated with @SpringBootTest having an application context"() {
         given:
         def extension = createExtensionWithCleaner()
 
@@ -177,7 +176,7 @@ class DatabaseCleanupExtensionSpec extends Specification {
         0 * spec.addCleanupSpecInterceptor(_)
     }
 
-    def 'visitSpec registers cleanup interceptor for method-level annotation'() {
+    def "visitSpec registers cleanup interceptor for method-level annotation"() {
         given:
         def extension = createExtensionWithCleaner()
 
@@ -208,7 +207,7 @@ class DatabaseCleanupExtensionSpec extends Specification {
         0 * spec.addCleanupSpecInterceptor(_)
     }
 
-    def 'visitSpec registers cleanupSpec interceptor when cleanupAfterSpec is true'() {
+    def "visitSpec registers cleanupSpec interceptor when cleanupAfterSpec is true"() {
         given:
         def extension = createExtensionWithCleaner()
 
@@ -228,7 +227,7 @@ class DatabaseCleanupExtensionSpec extends Specification {
         1 * spec.addCleanupSpecInterceptor(_ as DatabaseCleanupInterceptor)
     }
 
-    def 'visitSpec throws when method-level @DatabaseCleanup has cleanupAfterSpec = true'() {
+    def "visitSpec throws when method-level @DatabaseCleanup has cleanupAfterSpec = true"() {
         given:
         def extension = createExtensionWithCleaner()
 
@@ -261,7 +260,7 @@ class DatabaseCleanupExtensionSpec extends Specification {
         ex.message.contains('class-level')
     }
 
-    def 'visitSpec skips spec with no annotations at all'() {
+    def "visitSpec skips spec with no annotations at all"() {
         given:
         def extension = createExtensionWithCleaner()
 
@@ -290,7 +289,7 @@ class DatabaseCleanupExtensionSpec extends Specification {
         0 * spec.addCleanupSpecInterceptor(_)
     }
 
-    def 'start() throws when a cleaner returns null databaseType'() {
+    def "start() throws when a cleaner returns null databaseType"() {
         given:
         def cleaner = Mock(DatabaseCleaner) {
             databaseType() >> null
@@ -309,7 +308,7 @@ class DatabaseCleanupExtensionSpec extends Specification {
         ex.message.contains('null or empty databaseType')
     }
 
-    def 'start() throws when a cleaner returns empty databaseType'() {
+    def "start() throws when a cleaner returns empty databaseType"() {
         given:
         def cleaner = Mock(DatabaseCleaner) {
             databaseType() >> '  '
@@ -327,7 +326,7 @@ class DatabaseCleanupExtensionSpec extends Specification {
         ex.message.contains('null or empty databaseType')
     }
 
-    def 'visitSpec does not validate non-feature methods by default'() {
+    def "visitSpec does not validate non-feature methods by default"() {
         given:
         System.clearProperty(DatabaseCleanupExtension.VALIDATE_PROPERTY)
         def extension = createExtensionWithCleaner()
@@ -357,7 +356,7 @@ class DatabaseCleanupExtensionSpec extends Specification {
         noExceptionThrown()
     }
 
-    def 'visitSpec throws when @DatabaseCleanup is on a non-feature method and validation is enabled'() {
+    def "visitSpec throws when @DatabaseCleanup is on a non-feature method and validation is enabled"() {
         given:
         System.setProperty(DatabaseCleanupExtension.VALIDATE_PROPERTY, 'true')
         def extension = createExtensionWithCleaner()
@@ -366,7 +365,6 @@ class DatabaseCleanupExtensionSpec extends Specification {
         // The class also has a setup() method annotated with @DatabaseCleanup which is invalid
         def featureMethod = SpecWithAnnotatedSetup.getDeclaredMethod('featureMethod')
         def methodInfo = Mock(MethodInfo) {
-
             isAnnotationPresent(DatabaseCleanup) >> false
             getReflection() >> featureMethod
             getName() >> 'featureMethod'
@@ -419,20 +417,17 @@ class DatabaseCleanupExtensionSpec extends Specification {
     static class AnnotatedClassSpec {}
 
     static class NonAnnotatedSpec {
-
         void unannotatedMethod() {}
     }
 
     @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
     static class MethodAnnotatedSpec {
-
         @DatabaseCleanup
         void annotatedMethod() {}
     }
 
     @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
     static class SpecWithAnnotatedSetup {
-
         @DatabaseCleanup
         void setup() {}
 
@@ -445,7 +440,6 @@ class DatabaseCleanupExtensionSpec extends Specification {
 
     @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
     static class MethodAnnotatedWithCleanupAfterSpec {
-
         @DatabaseCleanup(cleanupAfterSpec = true)
         void annotatedMethod() {}
     }

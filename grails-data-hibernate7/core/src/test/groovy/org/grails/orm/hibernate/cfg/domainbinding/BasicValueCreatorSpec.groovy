@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -52,13 +52,13 @@ class BasicValueCreatorSpec extends HibernateGormDatastoreSpec {
         jdbcEnvironment = Mock(JdbcEnvironment)
         namingStrategy = Mock(PersistentEntityNamingStrategy)
         grailsSequenceWrapper = Mock(GrailsSequenceWrapper)
-        table = new Table('test_table')
+        table = new Table("test_table")
         basicValue = new BasicValue(metadataBuildingContext, table)
         creator = new BasicValueCreator(metadataBuildingContext, jdbcEnvironment, namingStrategy, grailsSequenceWrapper)
     }
 
     @Unroll
-    def 'should create BasicValue using factory for #generatorName (useSequence: #useSequence)'() {
+    def "should create BasicValue using factory for #generatorName (useSequence: #useSequence)"() {
         given:
         HibernateSimpleIdentity mappedId = new HibernateSimpleIdentity()
         mappedId.setGenerator(generatorName)
@@ -94,7 +94,7 @@ class BasicValueCreatorSpec extends HibernateGormDatastoreSpec {
         GrailsSequenceGeneratorEnum.HILO.toString()              | false
     }
 
-    def 'should default to native generator when identity has no custom generator'() {
+    def "should default to native generator when identity has no custom generator"() {
         given:
         HibernateSimpleIdentity defaultIdentity = new HibernateSimpleIdentity()
         def mockGenerator = Mock(Generator)
@@ -116,7 +116,7 @@ class BasicValueCreatorSpec extends HibernateGormDatastoreSpec {
         generator == mockGenerator
     }
 
-    def 'should default to sequence-identity when identity has no custom generator and useSequence is true'() {
+    def "should default to sequence-identity when identity has no custom generator and useSequence is true"() {
         given:
         HibernateSimpleIdentity defaultIdentity = new HibernateSimpleIdentity()
         def mockGenerator = Mock(Generator)
@@ -138,7 +138,7 @@ class BasicValueCreatorSpec extends HibernateGormDatastoreSpec {
         generator == mockGenerator
     }
 
-    def 'should use sequence-identity when generator is native and useSequence is true'() {
+    def "should use sequence-identity when generator is native and useSequence is true"() {
         given:
         HibernateSimpleIdentity mappedId = new HibernateSimpleIdentity()
         mappedId.setGenerator(GrailsSequenceGeneratorEnum.NATIVE.toString())
@@ -161,14 +161,14 @@ class BasicValueCreatorSpec extends HibernateGormDatastoreSpec {
         generator == mockGenerator
     }
 
-    def 'should pass mappedId to factory'() {
+    def "should pass mappedId to factory"() {
         given:
         HibernateSimpleIdentity mappedId = new HibernateSimpleIdentity()
-        mappedId.setGenerator('custom')
+        mappedId.setGenerator("custom")
         def identityProperty = Mock(HibernateSimpleIdentityProperty)
         def domainClass = Mock(HibernatePersistentEntity)
         domainClass.getHibernateIdentity() >> mappedId
-        identityProperty.getGeneratorName() >> 'custom'
+        identityProperty.getGeneratorName() >> "custom"
         identityProperty.getHibernateOwner() >> domainClass
         identityProperty.getTable() >> table
         def context = Mock(GeneratorCreationContext)
@@ -179,6 +179,6 @@ class BasicValueCreatorSpec extends HibernateGormDatastoreSpec {
         generatorCreator.createGenerator(context)
 
         then:
-        1 * grailsSequenceWrapper.getGenerator('custom', _, mappedId, domainClass, jdbcEnvironment, namingStrategy) >> Mock(Generator)
+        1 * grailsSequenceWrapper.getGenerator("custom", _, mappedId, domainClass, jdbcEnvironment, namingStrategy) >> Mock(Generator)
     }
 }

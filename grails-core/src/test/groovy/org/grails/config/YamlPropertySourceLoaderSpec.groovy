@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -33,16 +33,16 @@ class YamlPropertySourceLoaderSpec extends Specification {
         Environment.reset()
     }
 
-    def 'ensure the config for environment is merged with single environment block'() {
-        given: 'A PropertySourcesConfig instance'
+    def "ensure the config for environment is merged with single environment block"() {
+        given: "A PropertySourcesConfig instance"
         def propertySource = new YamlPropertySourceLoader()
-        Resource resource = new FileSystemResource(getClass().getClassLoader().getResource('foo-plugin-environments.yml').getFile())
+        Resource resource = new FileSystemResource(getClass().getClassLoader().getResource("foo-plugin-environments.yml").getFile())
 
         when:
-        def yamlPropertiesSource = propertySource.load('foo-plugin-environments.yml', resource, Arrays.asList('dataSource', 'hibernate'))
+        def yamlPropertiesSource = propertySource.load('foo-plugin-environments.yml', resource, Arrays.asList("dataSource", "hibernate"))
         def config = new PropertySourcesConfig(yamlPropertiesSource.first())
 
-        then: 'The config to be accessible with the merged env values'
+        then: "The config to be accessible with the merged env values"
         config.one == 2
         config.two == 3
         config.three.four == 45
@@ -59,16 +59,16 @@ class YamlPropertySourceLoaderSpec extends Specification {
         !config.get('dataSource')
     }
 
-    def 'ensure the config for environment is merged with single environment block with parseFlatMap false'() {
-        given: 'A PropertySourcesConfig instance'
+    def "ensure the config for environment is merged with single environment block with parseFlatMap false"() {
+        given: "A PropertySourcesConfig instance"
         def propertySource = new YamlPropertySourceLoader()
-        Resource resource = new FileSystemResource(getClass().getClassLoader().getResource('foo-plugin-environments.yml').getFile())
+        Resource resource = new FileSystemResource(getClass().getClassLoader().getResource("foo-plugin-environments.yml").getFile())
 
         when:
-        def yamlPropertiesSource = propertySource.load('foo-plugin-environments.yml', resource, Arrays.asList('dataSource', 'hibernate'))
+        def yamlPropertiesSource = propertySource.load('foo-plugin-environments.yml', resource, Arrays.asList("dataSource", "hibernate"))
         def config = new PropertySourcesConfig(yamlPropertiesSource.first())
 
-        then: 'These will not be navigable due to false parseFlatKeys'
+        then: "These will not be navigable due to false parseFlatKeys"
         config.one == 2
         config.two == 3
         !config.four.five
@@ -83,16 +83,16 @@ class YamlPropertySourceLoaderSpec extends Specification {
         !config.get('dataSource')
     }
 
-    def 'ensure the config for environment is merged with multiple environment block'() {
-        given: 'A PropertySourcesConfig instance'
+    def "ensure the config for environment is merged with multiple environment block"() {
+        given: "A PropertySourcesConfig instance"
         def propertySource = new YamlPropertySourceLoader()
-        Resource resource = new FileSystemResource(getClass().getClassLoader().getResource('foo-plugin-multiple-environments.yml').getFile())
+        Resource resource = new FileSystemResource(getClass().getClassLoader().getResource("foo-plugin-multiple-environments.yml").getFile())
 
         when:
-        def yamlPropertiesSource = propertySource.load('foo-plugin-multiple-environments.yml', resource, Arrays.asList('dataSource', 'hibernate'))
+        def yamlPropertiesSource = propertySource.load('foo-plugin-multiple-environments.yml', resource, Arrays.asList("dataSource", "hibernate"))
         def config = new PropertySourcesConfig(yamlPropertiesSource.first())
 
-        then: 'The config to be accessible with the merged env values'
+        then: "The config to be accessible with the merged env values"
         config.one == -2
         config.two == 3
         config.three.four == 45

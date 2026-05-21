@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -28,49 +28,48 @@ import spock.lang.Stepwise
 
 @Stepwise
 class JUnitAnnotationSpec extends Specification {
-
     @Shared
     static List<String> methodOrder = []
 
     void setupSpec() {
-        methodOrder << 'setupSpec'
+        methodOrder << "setupSpec"
     }
 
     void setup() {
-        methodOrder << 'setup'
+        methodOrder << "setup"
     }
 
     void cleanup() {
-        methodOrder << 'cleanup'
+        methodOrder << "cleanup"
     }
 
     void cleanupSpec() {
-        methodOrder << 'cleanupSpec'
+        methodOrder << "cleanupSpec"
     }
 
     @BeforeEach
     void beforeEach() {
-        methodOrder << 'beforeEach'
+        methodOrder << "beforeEach"
     }
 
     @AfterEach
     void afterEach() {
-        methodOrder << 'afterEach'
+        methodOrder << "afterEach"
     }
 
     @BeforeAll
     static void beforeAll() {
-        methodOrder << 'beforeAll'
+        methodOrder << "beforeAll"
     }
 
     @AfterAll
     static void afterAll() {
-        methodOrder << 'afterAll'
-        assert methodOrder == ['beforeAll', 'setupSpec', 'beforeEach', 'setup', 'cleanup', 'afterEach', 'cleanupSpec', 'afterAll']
+        methodOrder << "afterAll"
+        assert methodOrder == ["beforeAll", "setupSpec", "beforeEach", "setup", "cleanup", "afterEach", "cleanupSpec", "afterAll"]
     }
 
     void 'junit 5 annotated methods are called in correct order prior to this test'() {
         expect:
-        methodOrder == ['beforeAll', 'setupSpec', 'beforeEach', 'setup']
+        methodOrder == ["beforeAll", "setupSpec", "beforeEach", "setup"]
     }
 }

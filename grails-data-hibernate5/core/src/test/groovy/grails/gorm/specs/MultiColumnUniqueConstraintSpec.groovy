@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -26,19 +26,18 @@ import spock.lang.Issue
 
 @Issue('https://github.com/apache/grails-data-mapping/issues/617')
 class MultiColumnUniqueConstraintSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
-
     void setupSpec() {
         manager.addAllDomainClasses([DomainOne, Task1, TaskLink])
     }
 
-    void 'test generated unique constraints'() {
+    void "test generated unique constraints"() {
         expect:
         new DomainOne(controller: 'project', action: 'update').save(flush: true)
         new DomainOne(controller: 'project', action: 'delete').save(flush: true)
         new DomainOne(controller: 'projectTask', action: 'update').save(flush: true)
     }
 
-    void 'test generated unique constraints violation'() {
+    void "test generated unique constraints violation"() {
         when:
         new DomainOne(controller: 'project', action: 'update').save(flush: true)
         new DomainOne(controller: 'project', action: 'update').save(flush: true, validate: false)
@@ -47,7 +46,7 @@ class MultiColumnUniqueConstraintSpec extends GrailsDataTckSpec<GrailsDataHibern
         thrown DataIntegrityViolationException
     }
 
-    void 'test generated unique constraints for related domains'() {
+    void "test generated unique constraints for related domains"() {
         given: 'two existing tasks'
         Task1 task1 = new Task1(name: 'task1').save(flush: true, failOnError: true)
         Task1 task2 = new Task1(name: 'task2').save(flush: true, failOnError: true)
@@ -79,9 +78,9 @@ class DomainOne {
     }
 }
 
+
 @Entity
 class Task1 {
-
     String name
 }
 

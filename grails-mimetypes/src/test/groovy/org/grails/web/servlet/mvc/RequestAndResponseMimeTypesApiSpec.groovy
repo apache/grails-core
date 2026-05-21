@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -45,8 +45,7 @@ import spock.lang.Unroll
 /**
  * Tests for mime type resolution
  */
-class RequestAndResponseMimeTypesApiSpec extends Specification {
-
+class RequestAndResponseMimeTypesApiSpec extends Specification{
     def responseMimeTypesApiInstance
     def application
 
@@ -69,16 +68,16 @@ class RequestAndResponseMimeTypesApiSpec extends Specification {
         HttpServletResponseExtension.@mimeTypes = null
     }
 
-    void 'Test format property is valid for CONTENT_TYPE header only'() {
+    void "Test format property is valid for CONTENT_TYPE header only"() {
         when: "The request CONTENT_TYPE header is 'text/xml'"
             final webRequest = boundMimeTypeRequest()
             def request = webRequest.currentRequest
             def response = webRequest.currentResponse
-            request.contentType = 'text/xml'
+            request.contentType = "text/xml"
 
         then: "The request format should be 'xml'"
-            request.getFormat() == 'xml'
-            request.getFormat() == 'xml' // call twice to test cached value
+            request.getFormat() == "xml"
+            request.getFormat() == "xml" // call twice to test cached value
             request.format == 'xml'
             response.format == 'all'
     }
@@ -87,61 +86,61 @@ class RequestAndResponseMimeTypesApiSpec extends Specification {
         def servletContext = new MockServletContext()
         def ctx = new GenericWebApplicationContext(servletContext)
         servletContext.setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, ctx)
-        ctx.beanFactory.registerSingleton('mimeUtility', new DefaultMimeUtility(buildMimeTypes()))
+        ctx.beanFactory.registerSingleton("mimeUtility", new DefaultMimeUtility(buildMimeTypes()))
         ctx.beanFactory.registerSingleton(GrailsApplication.APPLICATION_ID, application)
         ctx.refresh()
         GrailsWebMockUtil.bindMockWebRequest(ctx)
     }
 
-    void 'Test format property is valid for CONTENT_TYPE and Accept header'() {
+    void "Test format property is valid for CONTENT_TYPE and Accept header"() {
         when: "The request CONTENT_TYPE header is 'text/xml'"
             final webRequest = boundMimeTypeRequest()
             MockHttpServletRequest request = webRequest.currentRequest
             def response = webRequest.currentResponse
-            request.contentType = 'text/xml'
+            request.contentType = "text/xml"
             request.addHeader('Accept', 'text/json')
 
         then: "The request format should be 'xml'"
-            request.getFormat() == 'xml'
-            request.getFormat() == 'xml' // call twice to test cached value
+            request.getFormat() == "xml"
+            request.getFormat() == "xml" // call twice to test cached value
             request.format == 'xml'
             response.format == 'json'
     }
 
-    void 'Test format property is valid for XHR and Accept header with User-Agent'() {
+    void "Test format property is valid for XHR and Accept header with User-Agent"() {
         when: "The request CONTENT_TYPE header is 'text/xml'"
             final webRequest = boundMimeTypeRequest()
             MockHttpServletRequest request = webRequest.currentRequest
             def response = webRequest.currentResponse
-            request.contentType = 'application/json'
+            request.contentType = "application/json"
             request.addHeader('Accept', 'text/json')
             request.addHeader('X-Requested-With', 'XMLHttpRequest')
             request.addHeader('User-Agent', 'Webkit')
 
         then: "The request format should be 'json'"
-            request.getFormat() == 'json'
-            request.getFormat() == 'json' // call twice to test cached value
+            request.getFormat() == "json"
+            request.getFormat() == "json" // call twice to test cached value
             request.format == 'json'
             response.format == 'json'
     }
 
-    void 'Test format property is ignored for non-XHR and Accept header with User-Agent'() {
+    void "Test format property is ignored for non-XHR and Accept header with User-Agent"() {
         when: "The request CONTENT_TYPE header is 'text/xml'"
             final webRequest = boundMimeTypeRequest()
             MockHttpServletRequest request = webRequest.currentRequest
             def response = webRequest.currentResponse
-            request.contentType = 'application/json'
+            request.contentType = "application/json"
             request.addHeader('Accept', 'text/json')
             request.addHeader('User-Agent', 'Webkit')
 
         then: "The request format should be 'json'"
-            request.getFormat() == 'json'
-            request.getFormat() == 'json' // call twice to test cached value
+            request.getFormat() == "json"
+            request.getFormat() == "json" // call twice to test cached value
             request.format == 'json'
             response.format == 'all'
     }
 
-   void 'Test format property is valid for Accept header only'() {
+   void "Test format property is valid for Accept header only"() {
         when: "The request CONTENT_TYPE header is 'text/xml'"
             final webRequest = boundMimeTypeRequest()
             MockHttpServletRequest request = webRequest.currentRequest
@@ -149,22 +148,22 @@ class RequestAndResponseMimeTypesApiSpec extends Specification {
             request.addHeader('Accept', 'text/json')
 
         then: "The request format should be 'xml'"
-            request.getFormat() == 'all'
-            request.getFormat() == 'all' // call twice to test cached value
+            request.getFormat() == "all"
+            request.getFormat() == "all" // call twice to test cached value
             request.format == 'all'
             response.format == 'json'
     }
 
-    void 'Test withFormat method with CONTENT_TYPE header only'() {
+    void "Test withFormat method with CONTENT_TYPE header only"() {
         when: "The request CONTENT_TYPE header is 'text/xml' and withFormat is used"
             final webRequest = boundMimeTypeRequest()
             def request = webRequest.currentRequest
             def response = webRequest.currentResponse
 
-            request.contentType = 'text/xml'
+            request.contentType = "text/xml"
             def requestResult = request.withFormat {
-                html { 'got html'}
-                xml { 'got xml'}
+                html { "got html"}
+                xml { "got xml"}
             }
 
             def responseResult = response.withFormat {
@@ -178,17 +177,17 @@ class RequestAndResponseMimeTypesApiSpec extends Specification {
 
     }
 
-    void 'Test withFormat method with Accept header only'() {
+    void "Test withFormat method with Accept header only"() {
         when: "The request Accept header is 'text/xml' and withFormat is used"
             def webRequest = boundMimeTypeRequest()
             def request = webRequest.currentRequest
             def response = webRequest.currentResponse
 
-            request.addHeader('Accept', 'text/xml')
+            request.addHeader('Accept', "text/xml")
 
             def requestResult = request.withFormat {
-                html { 'got html'}
-                xml { 'got xml'}
+                html { "got html"}
+                xml { "got xml"}
 
             }
 
@@ -201,11 +200,11 @@ class RequestAndResponseMimeTypesApiSpec extends Specification {
             requestResult == 'got html'
             responseResult == 'got xml'
 
-        when:'The Accept header is JSON and there is a catch-all'
+        when:"The Accept header is JSON and there is a catch-all"
             webRequest = boundMimeTypeRequest()
             request = webRequest.currentRequest
             response = webRequest.currentResponse
-            request.addHeader('Accept', 'application/json')
+            request.addHeader('Accept', "application/json")
             responseResult = response.withFormat {
                 html { 'got html' }
                 xml { 'got xml' }
@@ -216,8 +215,8 @@ class RequestAndResponseMimeTypesApiSpec extends Specification {
 
     }
     
-    @Issue('GRAILS-10973')
-    void 'request.withFormat should choose wildcard choice when format == all'() {
+    @Issue("GRAILS-10973")
+    void "request.withFormat should choose wildcard choice when format == all"() {
         when:
             final webRequest = boundMimeTypeRequest()
             def request = webRequest.currentRequest
@@ -233,8 +232,8 @@ class RequestAndResponseMimeTypesApiSpec extends Specification {
             requestResult == 'got everything'
     }
 
-    void 'Test withFormat returns first block if no format provided'() {
-        when: 'No Accept header, URI extension or format param'
+    void "Test withFormat returns first block if no format provided"() {
+        when: "No Accept header, URI extension or format param"
         final webRequest = boundMimeTypeRequest()
         def request = webRequest.currentRequest
         def response = webRequest.currentResponse
@@ -244,11 +243,11 @@ class RequestAndResponseMimeTypesApiSpec extends Specification {
             xml { 'got xml' }
         }
 
-        then: 'The first withFormat block should be returned'
+        then: "The first withFormat block should be returned"
         responseResult == 'got json'
     }
 
-    void 'Test withFormat method when Accept header contains the all (*/*) and non-matching formats'() {
+    void "Test withFormat method when Accept header contains the all (*/*) and non-matching formats"() {
         setup: "The request Acept header is 'application/xml, text/csv, */*' and withFormat is used"
             final webRequest = boundMimeTypeRequest()
             def request = webRequest.currentRequest
@@ -273,7 +272,7 @@ class RequestAndResponseMimeTypesApiSpec extends Specification {
     }
 
     @Unroll
-    void 'Test withFormat method when Accept header and User-Agent #userAgent #additionalConfig #acceptHeader'() {
+    void "Test withFormat method when Accept header and User-Agent #userAgent #additionalConfig #acceptHeader"() {
         setup:
             def config = getTestConfig()
             if(additionalConfig) {
@@ -346,7 +345,8 @@ grails.mime.types = [
         def config = s.parse(String.valueOf(applicationConfigText))
 
         def propertySources = new MutablePropertySources()
-        propertySources.addLast(new MapPropertySource('grails', config))
+        propertySources.addLast(new MapPropertySource("grails", config))
+
 
         return new PropertySourcesConfig(propertySources)
     }

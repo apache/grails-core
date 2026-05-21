@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -82,10 +82,10 @@ class RenderGrailsLayoutTagLib implements RequestConstants, TagLibrary, GrailsAp
     /**
      * Apply a layout to a particular block of text or to the given view or template.<br/>
      *
-     * &lt;g:applyLayout name='myLayout'&gt;some text&lt;/g:applyLayout&gt;<br/>
-     * &lt;g:applyLayout name='myLayout' template='mytemplate' /&gt;<br/>
-     * &lt;g:applyLayout name='myLayout' url='http://www.google.com' /&gt;<br/>
-     * &lt;g:applyLayout name='myLayout' action='myAction' controller='myController'&gt;<br/>
+     * &lt;g:applyLayout name="myLayout"&gt;some text&lt;/g:applyLayout&gt;<br/>
+     * &lt;g:applyLayout name="myLayout" template="mytemplate" /&gt;<br/>
+     * &lt;g:applyLayout name="myLayout" url="http://www.google.com" /&gt;<br/>
+     * &lt;g:applyLayout name="myLayout" action="myAction" controller="myController"&gt;<br/>
      *
      * @attr name The name of the layout
      * @attr template Optional. The template to apply the layout to
@@ -214,13 +214,13 @@ class RenderGrailsLayoutTagLib implements RequestConstants, TagLibrary, GrailsAp
     /**
      * Used to retrieve a property of the decorated page.<br/>
      *
-     * &lt;g:pageProperty default='defaultValue' name='body.onload' /&gt;<br/>
+     * &lt;g:pageProperty default="defaultValue" name="body.onload" /&gt;<br/>
      *
      * @emptyTag
      *
      * @attr REQUIRED name the property name
      * @attr default the default value to use if the property is null
-     * @attr writeEntireProperty if true, writes the property in the form 'foo = 'bar'', otherwise renders 'bar'
+     * @attr writeEntireProperty if true, writes the property in the form 'foo = "bar"', otherwise renders 'bar'
      */
     Closure pageProperty = { Map attrs ->
         if (!attrs.name) {
@@ -260,11 +260,11 @@ class RenderGrailsLayoutTagLib implements RequestConstants, TagLibrary, GrailsAp
     /**
      * Invokes the body of this tag if the page property exists:<br/>
      *
-     * &lt;g:ifPageProperty name='meta.index'&gt;body to invoke&lt;/g:ifPageProperty&gt;<br/>
+     * &lt;g:ifPageProperty name="meta.index"&gt;body to invoke&lt;/g:ifPageProperty&gt;<br/>
      *
      * or it equals a certain value:<br/>
      *
-     * &lt;g:ifPageProperty name='meta.index' equals='blah'&gt;body to invoke&lt;/g:ifPageProperty&gt
+     * &lt;g:ifPageProperty name="meta.index" equals="blah"&gt;body to invoke&lt;/g:ifPageProperty&gt;
      *
      * @attr name REQUIRED the property name
      * @attr equals optional value to test against
@@ -311,7 +311,7 @@ class RenderGrailsLayoutTagLib implements RequestConstants, TagLibrary, GrailsAp
     /**
      * Used in layouts to render the page title from the SiteMesh page.<br/>
      *
-     * &lt;g:layoutTitle default='The Default title' /&gt
+     * &lt;g:layoutTitle default="The Default title" /&gt;
      *
      * @emptyTag
      *
@@ -326,7 +326,7 @@ class RenderGrailsLayoutTagLib implements RequestConstants, TagLibrary, GrailsAp
     /**
      * Used in layouts to render the body of a SiteMesh layout.<br/>
      *
-     * &lt;g:layoutBody /&gt
+     * &lt;g:layoutBody /&gt;
      *
      * @emptyTag
      */
@@ -337,7 +337,7 @@ class RenderGrailsLayoutTagLib implements RequestConstants, TagLibrary, GrailsAp
     /**
      * Used in layouts to render the head of a SiteMesh layout.<br/>
      *
-     * &lt;g:layoutHead /&gt
+     * &lt;g:layoutHead /&gt;
      *
      * @emptyTag
      */

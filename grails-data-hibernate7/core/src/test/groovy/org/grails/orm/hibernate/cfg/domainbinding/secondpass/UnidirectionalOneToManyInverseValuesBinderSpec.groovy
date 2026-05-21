@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -36,15 +36,15 @@ class UnidirectionalOneToManyInverseValuesBinderSpec extends HibernateGormDatast
         binder = new UnidirectionalOneToManyInverseValuesBinder(getGrailsDomainBinder().metadataBuildingContext)
     }
 
-    void 'test bindUnidirectionalOneToManyInverseValues'() {
+    void "test bindUnidirectionalOneToManyInverseValues"() {
         given:
         createPersistentEntity(UOTMBook)
         PersistentEntity authorEntity = createPersistentEntity(UOTMAuthor)
-        HibernateToManyProperty property = (HibernateToManyProperty) authorEntity.getPropertyByName('books')
+        HibernateToManyProperty property = (HibernateToManyProperty) authorEntity.getPropertyByName("books")
 
         def owner = new org.hibernate.mapping.RootClass(getGrailsDomainBinder().metadataBuildingContext)
         org.hibernate.mapping.Collection collection = new org.hibernate.mapping.Set(getGrailsDomainBinder().metadataBuildingContext, owner)
-        collection.setCollectionTable(new org.hibernate.mapping.Table('UOTM_BOOKS'))
+        collection.setCollectionTable(new org.hibernate.mapping.Table("UOTM_BOOKS"))
 
         property.setCollection(collection)
 
@@ -57,15 +57,15 @@ class UnidirectionalOneToManyInverseValuesBinderSpec extends HibernateGormDatast
         manyToOne.getReferencedEntityName() == UOTMBook.name
     }
 
-    void 'test bindUnidirectionalOneToManyInverseValues with custom config'() {
+    void "test bindUnidirectionalOneToManyInverseValues with custom config"() {
         given:
         createPersistentEntity(UOTMBook)
         PersistentEntity authorEntity = createPersistentEntity(UOTMAuthorCustom)
-        HibernateToManyProperty property = (HibernateToManyProperty) authorEntity.getPropertyByName('books')
+        HibernateToManyProperty property = (HibernateToManyProperty) authorEntity.getPropertyByName("books")
 
         def owner = new org.hibernate.mapping.RootClass(getGrailsDomainBinder().metadataBuildingContext)
         org.hibernate.mapping.Collection collection = new org.hibernate.mapping.Set(getGrailsDomainBinder().metadataBuildingContext, owner)
-        collection.setCollectionTable(new org.hibernate.mapping.Table('UOTM_BOOKS_CUSTOM'))
+        collection.setCollectionTable(new org.hibernate.mapping.Table("UOTM_BOOKS_CUSTOM"))
 
         property.setCollection(collection)
 
@@ -81,14 +81,12 @@ class UnidirectionalOneToManyInverseValuesBinderSpec extends HibernateGormDatast
 
 @Entity
 class UOTMBook {
-
     Long id
     String title
 }
 
 @Entity
 class UOTMAuthor {
-
     Long id
     String name
     Set<UOTMBook> books
@@ -97,7 +95,6 @@ class UOTMAuthor {
 
 @Entity
 class UOTMAuthorCustom {
-
     Long id
     String name
     Set<UOTMBook> books

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -36,7 +36,7 @@ class GroovyPagesTemplateEngineTests {
 
     @Test
     void testCommentAtEndOfTemplate() {
-        System.setProperty('grails.env', 'development')
+        System.setProperty("grails.env", "development")
         assert GrailsUtil.isDevelopmentEnv()
 
         def gpte = new GroovyPagesTemplateEngine()
@@ -44,9 +44,9 @@ class GroovyPagesTemplateEngineTests {
 
         // It is important that the template ends with the comment. Whitespace or anything else after
         // the comment will not trigger the problem.  See GRAILS-1737
-        def pageSource = '<html><body></body></html><%-- should not be in the output --%>'
+        def pageSource = "<html><body></body></html><%-- should not be in the output --%>"
 
-        def t = gpte.createTemplate(pageSource, 'comment_test')
+        def t = gpte.createTemplate(pageSource, "comment_test")
         def w = t.make()
         w.showSource = true
 
@@ -55,19 +55,19 @@ class GroovyPagesTemplateEngineTests {
 
         w.writeTo(pw)
 
-        assertTrue(sw.toString().indexOf('should not be in the output') == -1)
+        assertTrue(sw.toString().indexOf("should not be in the output") == -1)
     }
 
     @Test
     void testShowSourceParameter() {
         try {
-            System.setProperty('grails.env', 'development')
+            System.setProperty("grails.env", "development")
             assert GrailsUtil.isDevelopmentEnv()
 
             def gpte = new GroovyPagesTemplateEngine()
             gpte.afterPropertiesSet()
 
-            def t = gpte.createTemplate("<%='hello'%>", 'hello_test')
+            def t = gpte.createTemplate("<%='hello'%>", "hello_test")
             def w = t.make()
             w.showSource = true
 
@@ -80,23 +80,23 @@ class GroovyPagesTemplateEngineTests {
 
         }
         finally {
-            System.setProperty('grails.env', '')
+            System.setProperty("grails.env", "")
         }
     }
 
     @Test
     void testEstablishNameForResource() {
-        def res = new UrlResource('https://grails.apache.org/some.path/foo.gsp')
+        def res = new UrlResource("https://grails.apache.org/some.path/foo.gsp")
 
         def gpte = new GroovyPagesTemplateEngine()
         gpte.afterPropertiesSet()
 
-        assertEquals 'some_path_foo_gsp', gpte.establishPageName(res, null)
+        assertEquals "some_path_foo_gsp", gpte.establishPageName(res, null)
     }
 
     @Test
     void testCreateTemplateFromCurrentRequest2() {
-        def uri1 = '/another'
+        def uri1 = "/another"
 
         def rl = new MockStringResourceLoader()
         rl.registerMockResource(uri1, "<%='success 2'%>")
@@ -114,13 +114,13 @@ class GroovyPagesTemplateEngineTests {
 
         w.writeTo(pw)
 
-        assertEquals 'success 2', sw.toString()
+        assertEquals "success 2", sw.toString()
     }
 
     @Test
     void testCreateTemplateFromCurrentRequest1() {
-        def uri1 = '/somedir/myview'
-        def uri2 = '/another'
+        def uri1 = "/somedir/myview"
+        def uri2 = "/another"
 
         def rl = new MockStringResourceLoader()
         rl.registerMockResource(uri1, "<%='success 1'%>")
@@ -139,7 +139,7 @@ class GroovyPagesTemplateEngineTests {
 
         w.writeTo(pw)
 
-        assertEquals 'success 1', sw.toString()
+        assertEquals "success 1", sw.toString()
     }
 
     @Test
@@ -155,7 +155,7 @@ class GroovyPagesTemplateEngineTests {
 
         w.writeTo(pw)
 
-        assertEquals 'hello', sw.toString()
+        assertEquals "hello", sw.toString()
     }
 
     @Test
@@ -164,7 +164,7 @@ class GroovyPagesTemplateEngineTests {
         gpte.afterPropertiesSet()
 
         def src = '''<g:actionSubmit onclick="return confirm('${message}')"/>'''
-        def t = gpte.createTemplate(src, 'hello_test')
+        def t = gpte.createTemplate(src, "hello_test")
 
         def w = t.make(message: 'Are You Sure')
 
@@ -179,7 +179,7 @@ class GroovyPagesTemplateEngineTests {
     private GrailsApplication createMockGrailsApplication(Config config = null) {
         if (config == null) {
             config = new PropertySourcesConfig()
-            config.put(GroovyPageParser.CONFIG_PROPERTY_GSP_KEEPGENERATED_DIR, System.getProperty('java.io.tmpdir'))
+            config.put(GroovyPageParser.CONFIG_PROPERTY_GSP_KEEPGENERATED_DIR, System.getProperty("java.io.tmpdir"))
         }
         [getMainContext: { ->  null},  getConfig: { ->  config} , getFlatConfig: { -> config.flatten() } , getArtefacts: { String artefactType -> [] as GrailsClass[] }, getArtefactByLogicalPropertyName: { String type, String logicalName ->  null} ] as GrailsApplication
     }
@@ -192,7 +192,7 @@ class GroovyPagesTemplateEngineTests {
         gpte.afterPropertiesSet()
 
         def src = '${people.collect {it.firstName}}'
-        def t = gpte.createTemplate(src, 'hello_test')
+        def t = gpte.createTemplate(src, "hello_test")
 
         def people = [[firstName: 'Peter', lastName: 'Gabriel'], [firstName: 'Phil', lastName: 'Collins']]
         def w = t.make(people: people)
@@ -202,13 +202,13 @@ class GroovyPagesTemplateEngineTests {
 
         w.writeTo(pw)
 
-        assertEquals '[Peter, Phil]', sw.toString()
+        assertEquals "[Peter, Phil]", sw.toString()
 
         src = '''
-        <g:if env='production'>
+        <g:if env="production">
         </g:if>
 
-        <script type='text/javascript'>
+        <script type="text/javascript">
         try {
         <g:if test="${title == 'Selling England By The Pound'}">
         ${bandName}
@@ -217,8 +217,8 @@ class GroovyPagesTemplateEngineTests {
         </script>
 '''
 
-        gpte.createTemplate(src, 'hello_test2')
-        t = gpte.createTemplate(src, 'hello_test2')
+        gpte.createTemplate(src, "hello_test2")
+        t = gpte.createTemplate(src, "hello_test2")
         w = t.make(bandName: 'Genesis', title: 'Selling England By The Pound')
 
         sw = new StringWriter()
@@ -229,7 +229,7 @@ class GroovyPagesTemplateEngineTests {
         def expected = '''
         
 
-        <script type='text/javascript'>
+        <script type="text/javascript">
         try {
         
         Genesis
@@ -246,7 +246,7 @@ class GroovyPagesTemplateEngineTests {
         gpte.afterPropertiesSet()
 
         def src = '${people.collect {it.firstName.toUpperCase()}}'
-        def t = gpte.createTemplate(src, 'hello_test')
+        def t = gpte.createTemplate(src, "hello_test")
 
         def people = [[firstName: 'Peter', lastName: 'Gabriel'], [firstName: 'Phil', lastName: 'Collins']]
         def w = t.make(people: people)
@@ -256,7 +256,7 @@ class GroovyPagesTemplateEngineTests {
 
         w.writeTo(pw)
 
-        assertEquals '[PETER, PHIL]', sw.toString()
+        assertEquals "[PETER, PHIL]", sw.toString()
     }
 
     @Test
@@ -265,7 +265,7 @@ class GroovyPagesTemplateEngineTests {
         gpte.afterPropertiesSet()
 
         def src = '${people.collect {it.lastName[0]}}'
-        def t = gpte.createTemplate(src, 'hello_test')
+        def t = gpte.createTemplate(src, "hello_test")
 
         def people = [[firstName: 'Peter', lastName: 'Gabriel'], [firstName: 'Phil', lastName: 'Collins']]
         def w = t.make(people: people)
@@ -275,7 +275,7 @@ class GroovyPagesTemplateEngineTests {
 
         w.writeTo(pw)
 
-        assertEquals '[G, C]', sw.toString()
+        assertEquals "[G, C]", sw.toString()
     }
 
     @Test
@@ -285,7 +285,7 @@ class GroovyPagesTemplateEngineTests {
 
         def src = '''<g:if test="${var=='1' || var=='2'}">hello</g:if>'''
 
-        def t = gpte.createTemplate(src, 'if_test')
+        def t = gpte.createTemplate(src, "if_test")
 
         def w = t.make(var: '1')
 
@@ -294,7 +294,7 @@ class GroovyPagesTemplateEngineTests {
 
         w.writeTo(pw)
 
-        assertEquals 'hello', sw.toString()
+        assertEquals "hello", sw.toString()
     }
 
     @Test
@@ -308,7 +308,7 @@ end.""":''}
 <g:if test="${var=='1' || var=='2'}">hello</g:if>
 '''
 
-        def t = gpte.createTemplate(src, 'test_multiline_str')
+        def t = gpte.createTemplate(src, "test_multiline_str")
 
         def w = t.make(var: '1')
 
@@ -337,7 +337,7 @@ end.\'\'\':''}
 <g:if test="${var=='1' || var=='2'}">hello</g:if>
 '''
 
-        def t = gpte.createTemplate(src, 'test_multiline_str')
+        def t = gpte.createTemplate(src, "test_multiline_str")
 
         def w = t.make(var: '1')
 
@@ -361,9 +361,9 @@ hello
         gpte.grailsApplication = createMockGrailsApplication()
         gpte.afterPropertiesSet()
 
-        def src = '''@{page defaultCodec='HTML'}%{if(var=='1') { out.print('hello') } else { out.print('not_ok') } }%'''
+        def src = '''@{page defaultCodec="HTML"}%{if(var=='1') { out.print('hello') } else { out.print('not_ok') } }%'''
 
-        def t = gpte.createTemplate(src, 'gscript_test')
+        def t = gpte.createTemplate(src, "gscript_test")
 
         def w = t.make(var: '1')
 
@@ -372,7 +372,7 @@ hello
 
         w.writeTo(pw)
 
-        assertEquals 'hello', sw.toString()
+        assertEquals "hello", sw.toString()
     }
 
     @Test
@@ -381,9 +381,9 @@ hello
 
         gpte.afterPropertiesSet()
 
-        def src = '''<g:if test='[pwd: "${actionName}-xx"]'>ok</g:if>'''
+        def src = '''<g:if test='[pwd:"${actionName}-xx"]'>ok</g:if>'''
 
-        def t = gpte.createTemplate(src, 'testGRAILS8218')
+        def t = gpte.createTemplate(src, "testGRAILS8218")
 
         def w = t.make(actionName: 'hello')
 
@@ -392,7 +392,7 @@ hello
 
         w.writeTo(pw)
 
-        assertEquals 'ok', sw.toString()
+        assertEquals "ok", sw.toString()
     }
 
     @Test
@@ -401,11 +401,11 @@ hello
 
         gpte.afterPropertiesSet()
 
-        def src = ''"<div id='${map["${id}_postfix"]}'/>"''
+        def src = '''<div id='${map["${id}_postfix"]}'/>'''
 
-        def t = gpte.createTemplate(src, 'testGRAILS8199')
+        def t = gpte.createTemplate(src, "testGRAILS8199")
 
-        def w = t.make(id: 'id', map: [id_postfix:'hello'])
+        def w = t.make(id: 'id', map:[id_postfix:'hello'])
 
         def sw = new StringWriter()
         def pw = new PrintWriter(sw)
@@ -420,22 +420,22 @@ hello
         def gpte = new GroovyPagesTemplateEngine()
         gpte.afterPropertiesSet()
 
-        def src = '''<g:if test="${var=='1' || var=='2' || var=='}' || var=='{' || var=='"' || var=="\\"" || var=='' || var=='' }">hello</g:if>'''
+        def src = '''<g:if test="${var=="1" || var=="2" || var=='}' || var=="{" || var=='"' || var=="\\"" || var=='' || var=="" }">hello</g:if>'''
 
-        def t = gpte.createTemplate(src, 'if_test')
+        def t = gpte.createTemplate(src, "if_test")
 
         def w = t.make(var: '1')
         def sw = new StringWriter()
         def pw = new PrintWriter(sw)
         w.writeTo(pw)
 
-        assertEquals 'hello', sw.toString()
+        assertEquals "hello", sw.toString()
 
         w = t.make(var: '"')
         sw = new StringWriter()
         pw = new PrintWriter(sw)
         w.writeTo(pw)
-        assertEquals 'hello', sw.toString()
+        assertEquals "hello", sw.toString()
     }
 
     @Test
@@ -443,15 +443,15 @@ hello
         def gpte = new GroovyPagesTemplateEngine()
         gpte.afterPropertiesSet()
 
-        def t = gpte.createTemplate('Hello ${foo}', 'hello_test')
-        def w = t.make(foo: 'World')
+        def t = gpte.createTemplate('Hello ${foo}', "hello_test")
+        def w = t.make(foo:"World")
 
         def sw = new StringWriter()
         def pw = new PrintWriter(sw)
 
         w.writeTo(pw)
 
-        assertEquals 'Hello World', sw.toString()
+        assertEquals "Hello World", sw.toString()
     }
 
     @Test
@@ -468,15 +468,15 @@ never
 <% } else { %>
   
 <% } %>
-''', 'hello_test')
-        def w = t.make(foo: 'World')
+''', "hello_test")
+        def w = t.make(foo:"World")
 
         def sw = new StringWriter()
         def pw = new PrintWriter(sw)
 
         w.writeTo(pw)
 
-        assertEquals 'Hello World', sw.toString().trim()
+        assertEquals "Hello World", sw.toString().trim()
     }
 
     @Test
@@ -493,15 +493,15 @@ never
 %{ } else { }%
   
 %{ } }%
-''', 'hello_test')
-        def w = t.make(foo: 'World')
+''', "hello_test")
+        def w = t.make(foo:"World")
 
         def sw = new StringWriter()
         def pw = new PrintWriter(sw)
 
         w.writeTo(pw)
 
-        assertEquals 'Hello World', sw.toString().trim()
+        assertEquals "Hello World", sw.toString().trim()
     }
 
     @Test
@@ -509,7 +509,7 @@ never
         def gpte = new GroovyPagesTemplateEngine()
         gpte.afterPropertiesSet()
 
-        def t = gpte.createTemplate("<%='hello'%>", 'hello_test')
+        def t = gpte.createTemplate("<%='hello'%>", "hello_test")
         def w = t.make()
 
         def sw = new StringWriter()
@@ -517,26 +517,26 @@ never
 
         w.writeTo(pw)
 
-        assertEquals 'hello', sw.toString()
+        assertEquals "hello", sw.toString()
     }
 
     @Test
     void testForEachInProductionMode() {
-        System.setProperty('grails.env', 'production')
+        System.setProperty("grails.env", "production")
 
         def gpte = new GroovyPagesTemplateEngine()
         gpte.afterPropertiesSet()
 
-        def t = gpte.createTemplate("<g:each var='num' in='\${1..5}'>\${num} </g:each>', 'foreach_test")
+        def t = gpte.createTemplate("<g:each var='num' in='\${1..5}'>\${num} </g:each>", "foreach_test")
         def w = t.make()
 
         def sw = new StringWriter()
         def pw = new PrintWriter(sw)
 
         w.writeTo(pw)
-        System.setProperty('grails.env', 'development')
+        System.setProperty("grails.env", "development")
 
-        assertEquals '1 2 3 4 5 ', sw.toString()
+        assertEquals "1 2 3 4 5 ", sw.toString()
     }
 
     @Test
@@ -544,10 +544,10 @@ never
         def gpte = new GroovyPagesTemplateEngine()
         gpte.afterPropertiesSet()
 
-        assertEquals '/WEB-INF/grails-app/views/myview.gsp', gpte.getUriWithinGrailsViews('/myview')
-        assertEquals '/WEB-INF/grails-app/views/myview.gsp', gpte.getUriWithinGrailsViews('myview')
-        assertEquals '/WEB-INF/grails-app/views/mydir/myview.gsp', gpte.getUriWithinGrailsViews('mydir/myview')
-        assertEquals '/WEB-INF/grails-app/views/mydir/myview.gsp', gpte.getUriWithinGrailsViews('/mydir/myview')
+        assertEquals "/WEB-INF/grails-app/views/myview.gsp", gpte.getUriWithinGrailsViews("/myview")
+        assertEquals "/WEB-INF/grails-app/views/myview.gsp", gpte.getUriWithinGrailsViews("myview")
+        assertEquals "/WEB-INF/grails-app/views/mydir/myview.gsp", gpte.getUriWithinGrailsViews("mydir/myview")
+        assertEquals "/WEB-INF/grails-app/views/mydir/myview.gsp", gpte.getUriWithinGrailsViews("/mydir/myview")
     }
 
 }

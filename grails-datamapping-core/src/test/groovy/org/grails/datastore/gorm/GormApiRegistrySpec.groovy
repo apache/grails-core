@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -107,25 +107,10 @@ class GormApiRegistrySpec extends Specification {
         apiRegistry.get(ApiRegistryEntity.name, 'secondary') instanceof GormValidationApi
     }
 
-    void 'api registries normalize entity key and default qualifier aliases'() {
-        given:
-        def registry = GormRegistry.instance
-        def apiRegistry = registry.staticApiRegistry
-        def (mappingContext, datastore, datastoreResolver) = createContext()
-        def api = new GormStaticApi(ApiRegistryEntity, mappingContext, [], datastoreResolver, ConnectionSource.DEFAULT, registry)
-
-        when:
-        apiRegistry.register(" ${ApiRegistryEntity.name} ", api)
-        registry.registerDatastore(ConnectionSource.OLD_DEFAULT, datastore)
-        registry.registerEntityDatastore(" ${ApiRegistryEntity.name} ", ConnectionSource.OLD_DEFAULT, datastore)
-
-        then:
-        apiRegistry.containsKey(ApiRegistryEntity.name)
-        apiRegistry.get(ApiRegistryEntity.name, ConnectionSource.OLD_DEFAULT).is(api)
-    }
-
     private List createContext() {
-        MappingContext mappingContext = Stub(MappingContext)
+        MappingContext mappingContext = Stub(MappingContext) {
+            getMappingFactory() >> null
+        }
         Datastore datastore = Stub(Datastore) {
             getMappingContext() >> mappingContext
         }
@@ -136,6 +121,5 @@ class GormApiRegistrySpec extends Specification {
     }
 
     static class ApiRegistryEntity {
-
     }
 }

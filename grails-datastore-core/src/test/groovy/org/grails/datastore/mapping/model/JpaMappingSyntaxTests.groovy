@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -28,8 +28,7 @@ import jakarta.persistence.*
  */
 class JpaMappingSyntaxTests extends Specification {
     
-    void 'test class is entity'() {
-
+    void "test class is entity"() {
         given:
         def strategy = new JpaMappingConfigurationStrategy(new TestMappedPropertyFactory())
 
@@ -39,7 +38,7 @@ class JpaMappingSyntaxTests extends Specification {
         !strategy.isPersistentEntity(JpaMappingSyntaxTests)
     }
     
-    void 'test get identity'() {
+    void "test get identity"() {
         given:
         def context = new TestMappingContext()
         context.addPersistentEntity(JpaTestEntity)
@@ -52,7 +51,7 @@ class JpaMappingSyntaxTests extends Specification {
         id.name == 'customId'
     }
 
-//    void 'test get composite identity'() {
+//    void "test get composite identity"() {
 //        given:
 //        def context = new TestMappingContext()
 //        PersistentEntity entity = context.addPersistentEntity(JpaCompositeIdEntity)
@@ -65,7 +64,7 @@ class JpaMappingSyntaxTests extends Specification {
 //    }
 
     
-    void 'test get simple persistent properties'() {
+    void "test get simple persistent properties"() {
         given:
         def context = new TestMappingContext()
         context.addPersistentEntity(JpaTestEntity)
@@ -79,7 +78,7 @@ class JpaMappingSyntaxTests extends Specification {
         props.size() == 5
     }
     
-    void 'test unidirectional one to one'() {
+    void "test unidirectional one to one"() {
         given:
         def context = new TestMappingContext()
         context.addPersistentEntity(JpaTestEntity)
@@ -89,7 +88,7 @@ class JpaMappingSyntaxTests extends Specification {
 
         when:
         def testEntity = context.getPersistentEntity(JpaTestEntity.name)
-        def association = testEntity.getPropertyByName('second')
+        def association = testEntity.getPropertyByName("second")
         org.grails.datastore.mapping.model.types.OneToOne toOne = association
 
         then:
@@ -103,7 +102,7 @@ class JpaMappingSyntaxTests extends Specification {
         toOne.owningSide
     }
 
-    void 'test bidirectional one to one'() {
+    void "test bidirectional one to one"() {
         given:
         def context = new TestMappingContext()
         context.addPersistentEntity(JpaTestEntity)
@@ -113,7 +112,7 @@ class JpaMappingSyntaxTests extends Specification {
 
         when:
         def testEntity = context.getPersistentEntity(JpaTestEntity.name)
-        def association = testEntity.getPropertyByName('third')
+        def association = testEntity.getPropertyByName("third")
         org.grails.datastore.mapping.model.types.OneToOne toOne = association
 
         then:
@@ -122,7 +121,7 @@ class JpaMappingSyntaxTests extends Specification {
         !toOne.foreignKeyInChild
         toOne.associatedEntity != null
         toOne.associatedEntity == context.getPersistentEntity(JpaSecondEntity.name)
-        toOne.referencedPropertyName == 'testEntity'
+        toOne.referencedPropertyName == "testEntity"
         toOne.bidirectional
         !toOne.owningSide
 
@@ -135,12 +134,13 @@ class JpaMappingSyntaxTests extends Specification {
         ((org.grails.datastore.mapping.model.types.OneToOne)association).foreignKeyInChild
         association.associatedEntity != null
         association.associatedEntity == context.getPersistentEntity(JpaTestEntity.name)
-        association.referencedPropertyName == 'third'
+        association.referencedPropertyName == "third"
         association.bidirectional
         association.owningSide
     }
 
-    void 'test uni-directional one to many'() {
+
+    void "test uni-directional one to many"() {
         given:
         def context = new TestMappingContext()
         context.addPersistentEntity(JpaPublisher)
@@ -150,7 +150,7 @@ class JpaMappingSyntaxTests extends Specification {
 
         when:
         def publisher = context.getPersistentEntity(JpaPublisher.name)
-        Association oneToMany = publisher.getPropertyByName('authors')
+        Association oneToMany = publisher.getPropertyByName("authors")
         
         then:
         publisher != null
@@ -160,7 +160,7 @@ class JpaMappingSyntaxTests extends Specification {
         (oneToMany instanceof org.grails.datastore.mapping.model.types.OneToMany)
     }
 
-    void 'test uni-directional many to one'() {
+    void "test uni-directional many to one"() {
         given:
         def context = new TestMappingContext()
         context.addPersistentEntity(JpaBook)
@@ -170,7 +170,7 @@ class JpaMappingSyntaxTests extends Specification {
 
         when:
         def book = context.getPersistentEntity(JpaBook.name)
-        Association manyToOne = book.getPropertyByName('simple')
+        Association manyToOne = book.getPropertyByName("simple")
 
         then:
         book != null
@@ -180,7 +180,7 @@ class JpaMappingSyntaxTests extends Specification {
         (manyToOne instanceof org.grails.datastore.mapping.model.types.ManyToOne)
     }
 
-    void 'test bidirectional one to many'() {
+    void "test bidirectional one to many"() {
         given:
         def context = new TestMappingContext()
         context.addPersistentEntity(JpaBook)
@@ -190,8 +190,9 @@ class JpaMappingSyntaxTests extends Specification {
 
         when:
         def book = context.getPersistentEntity(JpaBook.name)
-        Association authorAssociation = book.getPropertyByName('author')
+        Association authorAssociation = book.getPropertyByName("author")
         Association inverse = authorAssociation.inverseSide
+
 
         then:
         book != null
@@ -202,7 +203,7 @@ class JpaMappingSyntaxTests extends Specification {
 
         inverse != null
 
-        'books' == inverse.name
+        "books" == inverse.name
         JpaAuthor == inverse.owner.javaClass
         inverse.inverseSide != null
         inverse.bidirectional
@@ -210,7 +211,7 @@ class JpaMappingSyntaxTests extends Specification {
         inverse.owningSide
     }
 
-    void 'test many to many'() {
+    void "test many to many"() {
         given:
         def context = new TestMappingContext()
         context.addPersistentEntity(JpaAuthority)
@@ -220,8 +221,9 @@ class JpaMappingSyntaxTests extends Specification {
 
         when:
         def authority = context.getPersistentEntity(JpaAuthority.name)
-        Association userAssociation = authority.getPropertyByName('users')
+        Association userAssociation = authority.getPropertyByName("users")
         Association inverse = userAssociation.inverseSide
+
 
         then:
         authority != null
@@ -232,7 +234,7 @@ class JpaMappingSyntaxTests extends Specification {
 
         inverse != null
 
-        'roles' == inverse.name
+        "roles" == inverse.name
         JpaPerson == inverse.owner.javaClass
         inverse.inverseSide != null
         inverse.bidirectional
@@ -240,7 +242,8 @@ class JpaMappingSyntaxTests extends Specification {
         inverse.owningSide
     }
 
-    void 'test indexed property'() {
+
+    void "test indexed property"() {
         given:
         def context = new TestMappingContext()
         context.addPersistentEntity(JpaEntityWithIndexedProperty)
@@ -251,7 +254,7 @@ class JpaMappingSyntaxTests extends Specification {
         3 == context.mappingSyntaxStrategy.getPersistentProperties(JpaEntityWithIndexedProperty, context).size()
     }
     
-    void 'test force unidirectional'() {
+    void "test force unidirectional"() {
         given:
         def context = new TestMappingContext()
         context.addPersistentEntity(JpaUser)
@@ -261,9 +264,9 @@ class JpaMappingSyntaxTests extends Specification {
 
         when:
         def user = context.getPersistentEntity(JpaUser.name)
-        Association foesAssociation = user.getPropertyByName('foes')
-        Association friendsAssociation = user.getPropertyByName('friends')
-        Association bestBuddyAssociation = user.getPropertyByName('bestBuddy')
+        Association foesAssociation = user.getPropertyByName("foes")
+        Association friendsAssociation = user.getPropertyByName("friends")
+        Association bestBuddyAssociation = user.getPropertyByName("bestBuddy")
         
         then:
         (foesAssociation instanceof org.grails.datastore.mapping.model.types.OneToMany)
@@ -283,7 +286,6 @@ class JpaMappingSyntaxTests extends Specification {
 
 @jakarta.persistence.Entity
 class JpaPerson {
-
     @Id
     Long id
 
@@ -295,7 +297,6 @@ class JpaPerson {
 
 @jakarta.persistence.Entity
 class JpaAuthority {
-
     @Id
     Long id
 
@@ -305,9 +306,9 @@ class JpaAuthority {
     Set<JpaPerson> users
 }
 
+
 @jakarta.persistence.Entity
 class JpaBook {
-
     @Id
     Long id
     
@@ -322,13 +323,12 @@ class JpaBook {
 
 @jakarta.persistence.Entity
 class JpaAuthor {
-
     @Id
     Long id
     
     String name
     
-    @OneToMany(mappedBy = 'author')
+    @OneToMany(mappedBy = "author")
     Set<JpaBook> books
     
     def shouldBeIgnored
@@ -336,7 +336,6 @@ class JpaAuthor {
 
 @jakarta.persistence.Entity
 class JpaPublisher {
-
     @Id
     Long id
     
@@ -346,7 +345,6 @@ class JpaPublisher {
 
 @jakarta.persistence.Entity
 class JpaTestEntity {
-
     @Id
     Long customId
     Long version
@@ -364,7 +362,6 @@ class JpaTestEntity {
 
 @jakarta.persistence.Entity
 class JpaSecondEntity {
-
     @Id
     Long id
 
@@ -379,7 +376,6 @@ class JpaSecondEntity {
 
 @Entity
 class JpaEntityWithIndexedProperty {
-
     @Id
     Long id
     Long version
@@ -392,7 +388,6 @@ class JpaEntityWithIndexedProperty {
 
 @Entity
 class JpaUser {
-
     @Id
     Long id
     Long version
@@ -405,6 +400,7 @@ class JpaUser {
     Set<JpaUser> friends
 }
 
+
 //@Entity
 //class JpaCompositeIdEntity {
 //    @Id
@@ -416,7 +412,6 @@ class JpaUser {
 
 @Entity
 class JpaSimpleEntity {
-
     @Id
     Long id
 

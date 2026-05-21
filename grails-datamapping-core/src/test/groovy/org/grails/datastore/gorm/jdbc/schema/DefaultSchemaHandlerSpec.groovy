@@ -4,14 +4,14 @@
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * 'License'); you may not use this file except in compliance
+ * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
  *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
@@ -68,7 +68,7 @@ class DefaultSchemaHandlerSpec extends Specification {
     // useSchema — quoted DDL is executed
     // -------------------------------------------------------------------------
 
-    void 'useSchema executes SET SCHEMA with quoted name'() {
+    void "useSchema executes SET SCHEMA with quoted name"() {
         given:
         def executedSql = []
         def statement   = Mock(Statement) { execute(_ as String) >> { String sql -> executedSql << sql; true } }
@@ -80,10 +80,10 @@ class DefaultSchemaHandlerSpec extends Specification {
         handler.useSchema(conn, 'myschema')
 
         then:
-        executedSql == ["SET SCHEMA \"myschema\""]
+        executedSql == ['SET SCHEMA "myschema"']
     }
 
-    void 'useSchema wraps injection payload inside quotes so it cannot break out'() {
+    void "useSchema wraps injection payload inside quotes so it cannot break out"() {
         given:
         def executedSql = []
         def statement   = Mock(Statement) { execute(_ as String) >> { String sql -> executedSql << sql; true } }
@@ -94,11 +94,11 @@ class DefaultSchemaHandlerSpec extends Specification {
         when:
         handler.useSchema(conn, 'public; DROP TABLE users--')
 
-        then: 'dangerous payload is contained inside the identifier quotes'
-        executedSql == ["SET SCHEMA \"public; DROP TABLE users--\""]
+        then: "dangerous payload is contained inside the identifier quotes"
+        executedSql == ['SET SCHEMA "public; DROP TABLE users--"']
     }
 
-    void 'useSchema strips embedded quote chars before wrapping to prevent identifier breakout'() {
+    void "useSchema strips embedded quote chars before wrapping to prevent identifier breakout"() {
         given:
         def executedSql = []
         def statement   = Mock(Statement) { execute(_ as String) >> { String sql -> executedSql << sql; true } }
@@ -109,15 +109,15 @@ class DefaultSchemaHandlerSpec extends Specification {
         when:
         handler.useSchema(conn, 'bad"; DROP TABLE users; --')
 
-        then: 'embedded quote is removed — breakout is impossible'
-        executedSql == ["SET SCHEMA \"bad; DROP TABLE users; --\""]
+        then: "embedded quote is removed — breakout is impossible"
+        executedSql == ['SET SCHEMA "bad; DROP TABLE users; --"']
     }
 
     // -------------------------------------------------------------------------
     // createSchema — quoted DDL is executed
     // -------------------------------------------------------------------------
 
-    void 'createSchema executes CREATE SCHEMA with quoted name'() {
+    void "createSchema executes CREATE SCHEMA with quoted name"() {
         given:
         def executedSql = []
         def statement   = Mock(Statement) { execute(_ as String) >> { String sql -> executedSql << sql; true } }
@@ -129,10 +129,10 @@ class DefaultSchemaHandlerSpec extends Specification {
         handler.createSchema(conn, 'tenant_42')
 
         then:
-        executedSql == ["CREATE SCHEMA \"tenant_42\""]
+        executedSql == ['CREATE SCHEMA "tenant_42"']
     }
 
-    void 'createSchema wraps injection payload inside quotes'() {
+    void "createSchema wraps injection payload inside quotes"() {
         given:
         def executedSql = []
         def statement   = Mock(Statement) { execute(_ as String) >> { String sql -> executedSql << sql; true } }
@@ -144,14 +144,14 @@ class DefaultSchemaHandlerSpec extends Specification {
         handler.createSchema(conn, 'tenant; DROP TABLE users--')
 
         then:
-        executedSql == ["CREATE SCHEMA \"tenant; DROP TABLE users--\""]
+        executedSql == ['CREATE SCHEMA "tenant; DROP TABLE users--"']
     }
 
     // -------------------------------------------------------------------------
     // useDefaultSchema
     // -------------------------------------------------------------------------
 
-    void 'useDefaultSchema calls useSchema with the configured default name'() {
+    void "useDefaultSchema calls useSchema with the configured default name"() {
         given:
         def executedSql = []
         def statement   = Mock(Statement) { execute(_ as String) >> { String sql -> executedSql << sql; true } }
@@ -163,14 +163,14 @@ class DefaultSchemaHandlerSpec extends Specification {
         handler.useDefaultSchema(conn)
 
         then:
-        executedSql == ["SET SCHEMA \"PUBLIC\""]
+        executedSql == ['SET SCHEMA "PUBLIC"']
     }
 
     // -------------------------------------------------------------------------
     // Custom statement templates
     // -------------------------------------------------------------------------
 
-    void 'custom useSchemaStatement template is honoured with quoting'() {
+    void "custom useSchemaStatement template is honoured with quoting"() {
         given:
         def executedSql = []
         def statement   = Mock(Statement) { execute(_ as String) >> { String sql -> executedSql << sql; true } }
@@ -189,7 +189,7 @@ class DefaultSchemaHandlerSpec extends Specification {
     // Fall-through when quoting is unsupported
     // -------------------------------------------------------------------------
 
-    void 'when driver reports quoting unsupported (space) the name is used unquoted'() {
+    void "when driver reports quoting unsupported (space) the name is used unquoted"() {
         given:
         def executedSql = []
         def statement   = Mock(Statement) { execute(_ as String) >> { String sql -> executedSql << sql; true } }

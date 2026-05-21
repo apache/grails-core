@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -34,7 +34,7 @@ import java.lang.reflect.Modifier
  */
 class GormEntityTraitSpec extends Specification {
 
-    void 'Test dynamic parse'() {
+    void "Test dynamic parse"(){
         when:
         def cls = new GroovyClassLoader().parseClass('''
 import grails.persistence.*
@@ -60,12 +60,11 @@ class Author {
 
     String name
     // here to test properties with only a single letter
-    static belongsTo = [p: Publisher]
+    static belongsTo = [p:Publisher]
 }
 
 @Entity
 class Publisher {
-
     String name
 }
 ''')
@@ -73,8 +72,8 @@ class Publisher {
 
         then:
         cls.transients.contains('authorId')
-        cls.getMethod('getKingBooks').returnType == GormQueryOperations
-        Modifier.isStatic(cls.getMethod('getKingBooks').modifiers)
+        cls.getMethod("getKingBooks").returnType == GormQueryOperations
+        Modifier.isStatic(cls.getMethod("getKingBooks").modifiers)
         GormEntity.isAssignableFrom(cls)
         GormValidateable.isAssignableFrom(cls)
         DirtyCheckable.isAssignableFrom(cls)
@@ -88,10 +87,10 @@ class Publisher {
         }
 
         then:
-        m.returnType.name.contains('Book')
+        m.returnType.name.contains("Book")
     }
 
-    void 'Test dynamic parse 2'() {
+    void "Test dynamic parse 2"(){
         def cl = new GroovyClassLoader()
         when:
         def cls = cl.parseClass('''
@@ -99,16 +98,14 @@ import grails.persistence.*
 
 @Entity
 class Group {
-
     Long id
     String name
-    static hasMany = [members: Member]
+    static hasMany = [members:Member]
     Collection members
 }
 
 @Entity
 class Member   {
-
     Long id
     String name
     String externalId
@@ -116,7 +113,6 @@ class Member   {
 
 @Entity
 class SubMember extends Member {
-
     String extraName
 
    String getTransientProperty() {
@@ -126,7 +122,7 @@ class SubMember extends Member {
     void setTransientProperty(String transientProperty) {
         this.transientProperty = transientProperty
     }
-    static transients = ['transientProperty']
+    static transients = ["transientProperty"]
 }
 
 ''')
@@ -138,16 +134,14 @@ class SubMember extends Member {
         GormValidateable.isAssignableFrom(cls)
         DirtyCheckable.isAssignableFrom(cls)
         cls.getAnnotation(grails.gorm.annotation.Entity)
-        ClassPropertyFetcher.forClass(SubMember).getStaticPropertyValuesFromInheritanceHierarchy(GormProperties.TRANSIENT, Collection) ==  [[], ['transientProperty']]
+        ClassPropertyFetcher.forClass(SubMember).getStaticPropertyValuesFromInheritanceHierarchy(GormProperties.TRANSIENT, Collection) ==  [[], ["transientProperty"]]
     }
     void "test that a class marked with @Artefact('Domain') is enhanced with GormEntityTraitSpec"() {
-
         expect:
         GormEntity.isAssignableFrom QueryMethodArtefactDomain
     }
 
-    void 'test that a class marked with @Entity is enhanced with GormEntityTraitSpec'() {
-
+    void "test that a class marked with @Entity is enhanced with GormEntityTraitSpec"() {
         expect:
         GormEntity.isAssignableFrom QueryMethodEntityDomain
     }
@@ -166,12 +160,10 @@ class SubMember extends Member {
 
 @Artefact('Domain')
 class QueryMethodArtefactDomain {
-
     String name
 }
 
 @Entity
 class QueryMethodEntityDomain {
-
     String name
 }

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -29,16 +29,16 @@ class GrailsConcurrentLinkedMapCacheTests {
 
     @Test
    void testCreateCache() {
-      GrailsConcurrentLinkedMapCache smallCache = new GrailsConcurrentLinkedMapCache('smallCache', 1000)
+      GrailsConcurrentLinkedMapCache smallCache = new GrailsConcurrentLinkedMapCache("smallCache", 1000)
 
-      assert smallCache.getName() == 'smallCache'
+      assert smallCache.getName() == "smallCache"
       assert smallCache.getNativeCache() instanceof ConcurrentLinkedHashMap
       assert smallCache.getCapacity() == 1000
       assert smallCache.isAllowNullValues() == true
 
-      GrailsConcurrentLinkedMapCache bigCache = new GrailsConcurrentLinkedMapCache('bigCache', 5000000, false)
+      GrailsConcurrentLinkedMapCache bigCache = new GrailsConcurrentLinkedMapCache("bigCache", 5000000, false)
 
-      assert bigCache.getName() == 'bigCache'
+      assert bigCache.getName() == "bigCache"
       assert bigCache.getNativeCache() instanceof ConcurrentLinkedHashMap
       assert bigCache.getCapacity() == 5000000
       assert bigCache.isAllowNullValues() == false
@@ -46,37 +46,37 @@ class GrailsConcurrentLinkedMapCacheTests {
 
    @Test
    void testPutAndGet() {
-      GrailsConcurrentLinkedMapCache cache = new GrailsConcurrentLinkedMapCache('cache', 1000, true)
+      GrailsConcurrentLinkedMapCache cache = new GrailsConcurrentLinkedMapCache("cache", 1000, true)
 
-      cache.put('key', 'value')
+      cache.put("key", "value");
 
       assert cache.getSize() == 1
-      GrailsValueWrapper value = cache.get('key')
-      assert value.get().equals('value')
+      GrailsValueWrapper value = cache.get("key")
+      assert value.get().equals("value")
    }
 
    @Test
    void testPutIfAbsent() {
-      GrailsConcurrentLinkedMapCache cache = new GrailsConcurrentLinkedMapCache('cache', 1000, true)
-      cache.put('key', 'value')
-      cache.putIfAbsent('key', 'value') instanceof SimpleValueWrapper
+      GrailsConcurrentLinkedMapCache cache = new GrailsConcurrentLinkedMapCache("cache", 1000, true)
+      cache.put("key", "value")
+      cache.putIfAbsent("key", "value") instanceof SimpleValueWrapper
       assert cache.getSize() == 1
    }
 
    @Test
    void testEvict() {
-      GrailsConcurrentLinkedMapCache cache = new GrailsConcurrentLinkedMapCache('cache', 10, true)
-      cache.put('key', 'value')
+      GrailsConcurrentLinkedMapCache cache = new GrailsConcurrentLinkedMapCache("cache", 10, true)
+      cache.put("key", "value");
       assert cache.getSize() == 1
 
-      cache.evict('key')
+      cache.evict("key")
       assert cache.getSize() == 0
 
    }
 
    @Test
    void testCacheCapacity() {
-      GrailsConcurrentLinkedMapCache cache = new GrailsConcurrentLinkedMapCache('cache', 1000, true)
+      GrailsConcurrentLinkedMapCache cache = new GrailsConcurrentLinkedMapCache("cache", 1000, true)
       assert cache.getCapacity() == 1000
 
       for(int i = 0; i < 2000; i++) {
@@ -88,10 +88,10 @@ class GrailsConcurrentLinkedMapCacheTests {
 
    @Test
    void testCacheGetHottestKeys() {
-      GrailsConcurrentLinkedMapCache cache = new GrailsConcurrentLinkedMapCache('cache', 10, true)
+      GrailsConcurrentLinkedMapCache cache = new GrailsConcurrentLinkedMapCache("cache", 10, true)
 
       for(int i = 0; i < 10; i++) {
-         cache.put(i, i)
+         cache.put(i, i);
       }
 
       cache.get(1)
@@ -101,7 +101,7 @@ class GrailsConcurrentLinkedMapCacheTests {
       assert cache.getHottestKeys()[1] == 1
 
       for(int i = 10; i < 19; i++) {
-         cache.put(i, i)
+         cache.put(i, i);
       }
 
       assert cache.getHottestKeys()[cache.getSize()-1] == 2
@@ -110,10 +110,10 @@ class GrailsConcurrentLinkedMapCacheTests {
 
    @Test
    void testClear() {
-      GrailsConcurrentLinkedMapCache cache = new GrailsConcurrentLinkedMapCache('cache', 1000, true)
+      GrailsConcurrentLinkedMapCache cache = new GrailsConcurrentLinkedMapCache("cache", 1000, true)
       assert cache.getCapacity() == 1000
 
-      cache.put('key', 'value')
+      cache.put("key", "value")
       assert cache.getSize() == 1
 
       cache.clear()

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -40,7 +40,7 @@ class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
     }
 
     @Rollback
-    void 'test identity enum type'() {
+    void "test identity enum type"() {
         when:
         new EnumEntityDomain(status: EnumEntityDomain.Status.FOO).save(flush: true)
         DataSource ds = manager.hibernateDatastore.connectionSources.defaultConnectionSource.dataSource
@@ -53,9 +53,9 @@ class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
     }
 
     @Rollback
-    void 'test identity enum type 2'() {
+    void "test identity enum type 2"() {
         when:
-        new FooWithEnum(name: 'blah', mySuperValue: XEnum.X__TWO).save(flush: true)
+        new FooWithEnum(name: "blah", mySuperValue: XEnum.X__TWO).save(flush: true)
         DataSource ds = manager.hibernateDatastore.connectionSources.defaultConnectionSource.dataSource
         ResultSet resultSet = ds.getConnection().prepareStatement('select my_super_value from foo_with_enum').executeQuery()
 
@@ -67,7 +67,7 @@ class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
 
     // ── Direct unit tests for IdentityEnumType ────────────────────────────────
 
-    def 'setParameterValues initializes enumClass'() {
+    def "setParameterValues initializes enumClass"() {
         given:
         def type = new IdentityEnumType()
         def props = new Properties()
@@ -81,7 +81,7 @@ class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
         type.getSqlType() != 0
     }
 
-    def 'setParameterValues throws MappingException for enum without getId method'() {
+    def "setParameterValues throws MappingException for enum without getId method"() {
         given:
         def type = new IdentityEnumType()
         def props = new Properties()
@@ -94,7 +94,7 @@ class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
         thrown(HibernateException) // Throw by BidiEnumMap constructor
     }
 
-    def 'equals uses identity comparison'() {
+    def "equals uses identity comparison"() {
         given:
         def type = new IdentityEnumType()
 
@@ -104,7 +104,7 @@ class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
         !type.equals(null, IdentityStatusEnum.ACTIVE)
     }
 
-    def 'hashCode delegates to the object'() {
+    def "hashCode delegates to the object"() {
         given:
         def type = new IdentityEnumType()
         def val = IdentityStatusEnum.ACTIVE
@@ -113,7 +113,7 @@ class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
         type.hashCode(val) == val.hashCode()
     }
 
-    def 'deepCopy returns the same object reference'() {
+    def "deepCopy returns the same object reference"() {
         given:
         def type = new IdentityEnumType()
         def val = IdentityStatusEnum.ACTIVE
@@ -122,12 +122,12 @@ class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
         type.deepCopy(val).is(val)
     }
 
-    def 'isMutable returns false'() {
+    def "isMutable returns false"() {
         expect:
         !new IdentityEnumType().isMutable()
     }
 
-    def 'disassemble returns the value as Serializable'() {
+    def "disassemble returns the value as Serializable"() {
         given:
         def type = new IdentityEnumType()
         def val = IdentityStatusEnum.ACTIVE
@@ -136,7 +136,7 @@ class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
         type.disassemble(val).is(val)
     }
 
-    def 'assemble returns the cached value unchanged'() {
+    def "assemble returns the cached value unchanged"() {
         given:
         def type = new IdentityEnumType()
         def val = IdentityStatusEnum.ACTIVE
@@ -145,7 +145,7 @@ class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
         type.assemble(val, null).is(val)
     }
 
-    def 'replace returns the original value'() {
+    def "replace returns the original value"() {
         given:
         def type = new IdentityEnumType()
 
@@ -153,7 +153,7 @@ class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
         type.replace(IdentityStatusEnum.ACTIVE, IdentityStatusEnum.INACTIVE, null).is(IdentityStatusEnum.ACTIVE)
     }
 
-    def 'nullSafeGet returns null for null value'() {
+    def "nullSafeGet returns null for null value"() {
         given:
         def type = new IdentityEnumType()
         def props = new Properties()
@@ -170,7 +170,7 @@ class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
         res == null
     }
 
-    def 'nullSafeGet converts id to enum'() {
+    def "nullSafeGet converts id to enum"() {
         given:
         def type = new IdentityEnumType()
         def props = new Properties()
@@ -183,12 +183,12 @@ class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
         def res = type.nullSafeGet(rs, 1, options)
 
         then:
-        1 * rs.getString(1) >> 'A'
+        1 * rs.getString(1) >> "A"
         (0..1) * rs.wasNull() >> false
         res == IdentityStatusEnum.ACTIVE
     }
 
-    def 'nullSafeSet handles null value'() {
+    def "nullSafeSet handles null value"() {
         given:
         def type = new IdentityEnumType()
         def props = new Properties()
@@ -204,7 +204,7 @@ class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
         1 * st.setNull(1, _)
     }
 
-    def 'nullSafeSet converts enum to id'() {
+    def "nullSafeSet converts enum to id"() {
         given:
         def type = new IdentityEnumType()
         def props = new Properties()
@@ -217,22 +217,21 @@ class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
         type.nullSafeSet(st, IdentityStatusEnum.INACTIVE, 1, options)
 
         then:
-        1 * st.setString(1, 'I')
+        1 * st.setString(1, "I")
     }
 }
 
 @Entity
 class EnumEntityDomain {
-
     @Enumerated(EnumType.STRING)
     Status status
 
     static mapping = {
-        status(enumType: 'identity')
+        status(enumType: "identity")
     }
 
     enum Status {
-        FOO('F'), BAR('B')
+        FOO("F"), BAR("B")
         final String id
         Status(String id) { this.id = id }
     }
@@ -240,7 +239,6 @@ class EnumEntityDomain {
 
 @Entity
 class FooWithEnum {
-
     long id
     String name
     @Enumerated(EnumType.STRING)
@@ -248,14 +246,14 @@ class FooWithEnum {
 
     static mapping = {
         version false
-        mySuperValue enumType: 'identity'
+        mySuperValue enumType: "identity"
     }
 }
 
 enum XEnum {
-    X__ONE(000, 'x.one'),
-    X__TWO(100, 'x.two'),
-    X__THREE(200, 'x.three')
+    X__ONE(000, "x.one"),
+    X__TWO(100, "x.two"),
+    X__THREE(200, "x.three")
 
     final int id
     final String name
@@ -272,7 +270,7 @@ enum XEnum {
 
 /** Enum with a String id — used for direct IdentityEnumType unit tests. */
 enum IdentityStatusEnum {
-    ACTIVE('A'), INACTIVE('I')
+    ACTIVE("A"), INACTIVE("I")
     final String id
     IdentityStatusEnum(String id) { this.id = id }
 }
@@ -284,7 +282,7 @@ enum PlainEnum {
 
 /** Enum with duplicate ids — triggers the warn path in BidiEnumMap. */
 enum DuplicateIdEnum {
-    X('same'), Y('same')
+    X("same"), Y("same")
     final String id
     DuplicateIdEnum(String id) { this.id = id }
 }

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -33,7 +33,7 @@ class TimeZoneInputRendererSpec extends Specification {
         renderer = new TimeZoneInputRenderer()
     }
 
-    void 'test supports'() {
+    void "test supports"() {
         given:
         DomainProperty property
 
@@ -46,12 +46,12 @@ class TimeZoneInputRendererSpec extends Specification {
         renderer.supports(property)
     }
 
-    void 'test option key and value'() {
+    void "test option key and value"() {
         given:
-        TimeZone timeZone = TimeZone.getTimeZone('America/New_York')
+        TimeZone timeZone = TimeZone.getTimeZone("America/New_York")
 
         expect:
-        renderer.getOptionKey(timeZone) == 'America/New_York'
-//        renderer.getOptionValue(timeZone) == 'EDT, Eastern Daylight Time -5:0.0 [America/New_York]'
+        renderer.getOptionKey(timeZone) == "America/New_York"
+//        renderer.getOptionValue(timeZone) == "EDT, Eastern Daylight Time -5:0.0 [America/New_York]"
     }
 }

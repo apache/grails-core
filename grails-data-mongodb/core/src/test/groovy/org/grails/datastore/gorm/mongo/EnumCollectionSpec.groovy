@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -29,9 +29,9 @@ class EnumCollectionSpec extends MongoDatastoreSpec {
         manager.addAllDomainClasses([Teacher, Teacher2, Teacher3, DerivedTeacher])
     }
 
-    void 'Test persistence of enum'() {
+    void "Test persistence of enum"() {
         given:
-        def i = new Teacher(name: 'Melvin', subject: Subject.MATH)
+        def i = new Teacher(name: "Melvin", subject: Subject.MATH)
 
         when:
         i.save(flush: true)
@@ -41,7 +41,7 @@ class EnumCollectionSpec extends MongoDatastoreSpec {
 
         when:
         manager.session.clear()
-        i = Teacher.findByName('Melvin')
+        i = Teacher.findByName("Melvin")
 
         then:
         i != null
@@ -49,20 +49,20 @@ class EnumCollectionSpec extends MongoDatastoreSpec {
         i.subject == Subject.MATH
     }
 
-    void 'Test persistence of enum collections'() {
+    void "Test persistence of enum collections"() {
         given:
-        def i = new Teacher2(name: 'Melvin', subject: Subject.MATH)
+        def i = new Teacher2(name: "Melvin", subject: Subject.MATH)
         i.otherSubjects = [Subject.HISTORY, Subject.HOME_EC]
 
-        when: 'The entity is saved and flushed'
+        when: "The entity is saved and flushed"
         i.save(flush: true)
 
         then: "The collection hasn't been broken by saving it"
         i.otherSubjects == [Subject.HISTORY, Subject.HOME_EC]
 
-        when: 'The entity is queried for afresh'
+        when: "The entity is queried for afresh"
         manager.session.clear()
-        i = Teacher2.findByName('Melvin')
+        i = Teacher2.findByName("Melvin")
 
         then:
         i != null
@@ -74,20 +74,20 @@ class EnumCollectionSpec extends MongoDatastoreSpec {
         i.otherSubjects[1] == Subject.HOME_EC
     }
 
-    void 'Test persistence of parent enum collections'() {
+    void "Test persistence of parent enum collections"() {
         given:
-        def i = new DerivedTeacher(name: 'Melvin', subject: Subject.MATH, extra: 'hello')
+        def i = new DerivedTeacher(name: "Melvin", subject: Subject.MATH, extra: 'hello')
         i.otherSubjects = [Subject.HISTORY, Subject.HOME_EC]
 
-        when: 'The entity is saved and flushed'
+        when: "The entity is saved and flushed"
         i.save(flush: true)
 
         then: "The collection hasn't been broken by saving it"
         i.otherSubjects == [Subject.HISTORY, Subject.HOME_EC]
 
-        when: 'The entity is queried for afresh'
+        when: "The entity is queried for afresh"
         manager.session.clear()
-        i = DerivedTeacher.findByName('Melvin')
+        i = DerivedTeacher.findByName("Melvin")
 
         then:
         i != null
@@ -100,12 +100,13 @@ class EnumCollectionSpec extends MongoDatastoreSpec {
         i.extra == 'hello'
     }
 
-    void 'Test persistence of enum  set collections'() {
+
+    void "Test persistence of enum  set collections"() {
         given:
-        def i = new Teacher3(name: 'Melvin')
+        def i = new Teacher3(name: "Melvin")
         i.subjects = [Subject.HISTORY, Subject.HOME_EC]
 
-        when: 'The entity is saved and flushed'
+        when: "The entity is saved and flushed"
         i.save(flush: true)
 
         then: "The collection hasn't been broken by saving it"
@@ -113,9 +114,9 @@ class EnumCollectionSpec extends MongoDatastoreSpec {
         i.subjects.contains Subject.HOME_EC
         i.subjects.size() == 2
 
-        when: 'The entity is queried for afresh'
+        when: "The entity is queried for afresh"
         manager.session.clear()
-        i = Teacher3.findByName('Melvin')
+        i = Teacher3.findByName("Melvin")
 
         then:
         i != null
@@ -129,7 +130,6 @@ class EnumCollectionSpec extends MongoDatastoreSpec {
 
 @Entity
 class Teacher {
-
     Long id
     String name
     Subject subject
@@ -141,7 +141,6 @@ class Teacher {
 
 @Entity
 class Teacher2 {
-
     Long id
     String name
     Subject subject
@@ -154,7 +153,6 @@ class Teacher2 {
 
 @Entity
 class Teacher3 {
-
     Long id
     String name
     Set<Subject> subjects
@@ -164,9 +162,9 @@ class Teacher3 {
     }
 }
 
+
 @Entity
 class DerivedTeacher extends Teacher2 {
-
     String extra
 
     static mapping = {
@@ -179,6 +177,6 @@ enum Subject {
 
     @Override
     String toString() {
-        'Surprise!'
+        "Surprise!"
     }
 }

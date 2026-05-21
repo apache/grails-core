@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -47,7 +47,6 @@ import spock.lang.Specification
  * to simplify test case code.
  */
 class ParseSpec extends Specification {
-
     static final String GSP_FOOTER = """public static final Map JSP_TAGS = new HashMap()
 protected void init() {
 \tthis.jspTags = JSP_TAGS
@@ -91,11 +90,11 @@ public static final String TAGLIB_CODEC = 'none'
                 'Writer out = getOut()\n' +
                 "Writer expressionOut = getExpressionOut()\n" +
 
-                "invokeTag('message','g',1,['code': evaluate('\"testing [\"', 1, it) { return \"testing [\" }],-1)\n" +
+                "invokeTag('message','g',1,['code':evaluate('\"testing [\"', 1, it) { return \"testing [\" }],-1)\n" +
                 '}\n' + GSP_FOOTER
 
         when:
-        String output = parseCode('myTest2', "<g:message code='testing ['/>").generatedGsp
+        String output = parseCode('myTest2', '<g:message code="testing ["/>').generatedGsp;
 
         then:
         trimAndRemoveCR(expected) == trimAndRemoveCR(output)
@@ -107,7 +106,7 @@ public static final String TAGLIB_CODEC = 'none'
 
         then:
         def e = thrown(GrailsTagException)
-        e.message == '[myTest3: 1] Unclosed GSP expression'
+        e.message == '[myTest3:1] Unclosed GSP expression'
     }
 
     void 'parse with utf8'() {
@@ -129,7 +128,7 @@ public static final String TAGLIB_CODEC = 'none'
         // Sanity check the string loaded OK as unicode - it won't look right if you output it, default stdout is not UTF-8
         // on many OSes
         Assertions.assertEquals(src.indexOf('?'), -1)
-        def config =new ConfigSlurper().parse("grails.views.gsp.encoding = 'UTF-8'")
+        def config =new ConfigSlurper().parse('grails.views.gsp.encoding = "UTF-8"')
         buildMockRequest(config)
 
         when:
@@ -174,8 +173,8 @@ public static final String TAGLIB_CODEC = 'none'
         String output = parseCode('myTest6',
                 '<tbody>\n' +
                         '  <tt:form />\n' +
-                        '</tbody>').generatedGsp
-        System.out.println('output = ' + output)
+                        '</tbody>').generatedGsp;
+        System.out.println('output = ' + output);
 
         expect: "should have call to tag with 'tt' namespace"
         output.indexOf("invokeTag('form','tt',2,[:],-1)") > -1
@@ -193,7 +192,7 @@ public static final String TAGLIB_CODEC = 'none'
                 'h(0)\n' +
                 GroovyPage.EXPRESSION_OUT_STATEMENT + ".print(evaluate('uri', 3, it) { return uri })\n" +
                 'h(1)\n' +
-                '}\n' + GSP_FOOTER
+                '}\n' + GSP_FOOTER;
 
         when:
         def output = parseCode('myTest7',
@@ -220,7 +219,7 @@ public static final String TAGLIB_CODEC = 'none'
                 'Writer out = getOut()\n' +
                 'Writer expressionOut = getExpressionOut()\n' +
                 'createClosureForHtmlPart(0, 1)\n' +
-                "invokeTag('captureBody','grailsLayout',1,['class': evaluate('\"\${page.name} \${page.group.name.toLowerCase()}\"', 1, it) { return \"\${page.name} \${page.group.name.toLowerCase()}\" }],1)\n" +
+                "invokeTag('captureBody','grailsLayout',1,['class':evaluate('\"\${page.name} \${page.group.name.toLowerCase()}\"', 1, it) { return \"\${page.name} \${page.group.name.toLowerCase()}\" }],1)\n" +
                 '}\n' + GSP_FOOTER
 
         when:
@@ -262,14 +261,14 @@ public static final String TAGLIB_CODEC = 'none'
                 'Writer expressionOut = getExpressionOut()\n' +
                 'h(0)\n' +
                 'createTagBody(1, {->\n' +
-                "invokeTag('captureMeta','grailsLayout',1,['gsp_sm_xmlClosingForEmptyTag': evaluate('\"/\"', 1, it) { return \"/\" },'name': evaluate('\"SomeName\"', 1, it) { return \"SomeName\" },'content': evaluate('\"\${grailsApplication.config.myFirstConfig}/something/\${someVar}\"', 1, it) { return \"\${grailsApplication.config.myFirstConfig}/something/\${someVar}\" }],-1)\n" +
+                "invokeTag('captureMeta','grailsLayout',1,['gsp_sm_xmlClosingForEmptyTag':evaluate('\"/\"', 1, it) { return \"/\" },'name':evaluate('\"SomeName\"', 1, it) { return \"SomeName\" },'content':evaluate('\"\${grailsApplication.config.myFirstConfig}/something/\${someVar}\"', 1, it) { return \"\${grailsApplication.config.myFirstConfig}/something/\${someVar}\" }],-1)\n" +
                 '})\n' +
                 "invokeTag('captureHead','grailsLayout',1,[:],1)\n" +
                 'h(1)\n' +
                 '}\n' + GSP_FOOTER
 
         when:
-        def result = parseCode('GRAILS5605', "<html><head><meta name=\"SomeName\" content='\${grailsApplication.config.myFirstConfig}/something/\${someVar}' /></head></html>")
+        def result = parseCode('GRAILS5605', "<html><head><meta name=\"SomeName\" content='\${grailsApplication.config.myFirstConfig}/something/\${someVar}' /></head></html>");
 
         then:
         trimAndRemoveCR(expected) == trimAndRemoveCR(result.generatedGsp)
@@ -288,7 +287,7 @@ public static final String TAGLIB_CODEC = 'none'
 
     void 'parse with JSP declaration block containing method throws error'() {
         when:
-        parseCode('declTest2', "<html><%! String hello() { return 'hi'; } %></html>")
+        parseCode('declTest2', '<html><%! String hello() { return "hi"; } %></html>')
 
         then:
         def e = thrown(GrailsTagException)
@@ -363,13 +362,12 @@ public static final String TAGLIB_CODEC = 'none'
 
 @CompileStatic
 class ParsedResult {
-
-    String generatedGsp
-    GroovyPageParser parser
-    String[] htmlParts
+    String generatedGsp;
+    GroovyPageParser parser;
+    String[] htmlParts;
 
     @Override
     String toString() {
-        return generatedGsp
+        return generatedGsp;
     }
 }

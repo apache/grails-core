@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -51,14 +51,14 @@ import org.grails.orm.hibernate.HibernateDatastore
 class DataServiceMultiDataSourceSpec extends Specification {
 
     @Shared Map config = [
-            'dataSource.url': 'jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000',
+            'dataSource.url':"jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
             'dataSource.dbCreate': 'create-drop',
             'dataSource.dialect': H2Dialect.name,
             'dataSource.formatSql': 'true',
             'hibernate.flush.mode': 'COMMIT',
             'hibernate.cache.queries': 'true',
             'hibernate.hbm2ddl.auto': 'create-drop',
-            'dataSources.books': [url:'jdbc:h2:mem:booksDB;LOCK_TIMEOUT=10000'],
+            'dataSources.books':[url:"jdbc:h2:mem:booksDB;LOCK_TIMEOUT=10000"],
     ]
 
     @Shared @AutoCleanup HibernateDatastore datastore = new HibernateDatastore(
@@ -81,12 +81,12 @@ class DataServiceMultiDataSourceSpec extends Specification {
         productService.deleteAll()
     }
 
-    void 'schema is created on the books datasource'() {
+    void "schema is created on the books datasource"() {
         expect: 'Product table exists on books - count succeeds without exception'
         productService.count() == 0
     }
 
-    void 'save routes to books datasource'() {
+    void "save routes to books datasource"() {
         when: 'a product is saved through the Data Service'
         def saved = productService.save(new Product(name: 'Widget', amount: 42))
 
@@ -100,7 +100,7 @@ class DataServiceMultiDataSourceSpec extends Specification {
         productService.count() == 1
     }
 
-    void 'get by ID routes to books datasource'() {
+    void "get by ID routes to books datasource"() {
         given: 'a product saved on books'
         def saved = productService.save(new Product(name: 'Gadget', amount: 99))
 
@@ -114,7 +114,7 @@ class DataServiceMultiDataSourceSpec extends Specification {
         found.amount == 99
     }
 
-    void 'count routes to books datasource'() {
+    void "count routes to books datasource"() {
         given: 'two products saved on books'
         productService.save(new Product(name: 'Alpha', amount: 10))
         productService.save(new Product(name: 'Beta', amount: 20))
@@ -123,7 +123,7 @@ class DataServiceMultiDataSourceSpec extends Specification {
         productService.count() == 2
     }
 
-    void 'delete by ID routes to books datasource - FindAndDeleteImplementer'() {
+    void "delete by ID routes to books datasource - FindAndDeleteImplementer"() {
         given: 'a product saved on books'
         def saved = productService.save(new Product(name: 'Ephemeral', amount: 1))
 
@@ -137,7 +137,7 @@ class DataServiceMultiDataSourceSpec extends Specification {
         productService.count() == 0
     }
 
-    void 'delete by ID routes to books datasource - DeleteImplementer'() {
+    void "delete by ID routes to books datasource - DeleteImplementer"() {
         given: 'a product saved on books'
         def saved = productService.save(new Product(name: 'AlsoEphemeral', amount: 2))
 
@@ -149,21 +149,21 @@ class DataServiceMultiDataSourceSpec extends Specification {
         productService.count() == 0
     }
 
-    void 'findByName routes to books datasource'() {
-        given: 'products saved on books'
+    void "findByName routes to books datasource"() {
+        given: "products saved on books"
         productService.save(new Product(name: 'Unique', amount: 77))
         productService.save(new Product(name: 'Other', amount: 88))
 
-        when: 'we find by name'
+        when: "we find by name"
         def found = productService.findByName('Unique')
 
-        then: 'the correct entity is returned'
+        then: "the correct entity is returned"
         found != null
         found.name == 'Unique'
         found.amount == 77
     }
 
-    void 'findAllByName routes to books datasource'() {
+    void "findAllByName routes to books datasource"() {
         given: 'products with duplicate names on books'
         productService.save(new Product(name: 'Duplicate', amount: 10))
         productService.save(new Product(name: 'Duplicate', amount: 20))
@@ -177,7 +177,7 @@ class DataServiceMultiDataSourceSpec extends Specification {
         found.every { it.name == 'Duplicate' }
     }
 
-    void '@Query aggregate works on books datasource'() {
+    void "@Query aggregate works on books datasource"() {
         given: 'products saved on books'
         productService.save(new Product(name: 'Foo', amount: 100))
         productService.save(new Product(name: 'Bar', amount: 200))
@@ -189,7 +189,7 @@ class DataServiceMultiDataSourceSpec extends Specification {
         total == 300
     }
 
-    void 'save, get, and find round-trip through Data Service'() {
+    void "save, get, and find round-trip through Data Service"() {
         when: 'a product is saved, retrieved by ID, and found by name'
         def saved = productService.save(new Product(name: 'RoundTrip', amount: 33))
         def byId = productService.get(saved.id)
@@ -202,7 +202,7 @@ class DataServiceMultiDataSourceSpec extends Specification {
         byName.amount == 33
     }
 
-    void 'save with constructor-style arguments routes to books datasource'() {
+    void "save with constructor-style arguments routes to books datasource"() {
         when: 'a product is saved using property arguments'
         def saved = productService.saveProduct('Constructed', 55)
 
@@ -218,7 +218,7 @@ class DataServiceMultiDataSourceSpec extends Specification {
 
     // ---- Interface-pattern Data Service tests ----
 
-    void 'interface service: save routes to books datasource'() {
+    void "interface service: save routes to books datasource"() {
         when: 'a product is saved through the interface Data Service'
         def saved = productDataService.save(new Product(name: 'InterfaceWidget', amount: 42))
 
@@ -232,7 +232,7 @@ class DataServiceMultiDataSourceSpec extends Specification {
         productDataService.count() == 1
     }
 
-    void 'interface service: get by ID routes to books datasource'() {
+    void "interface service: get by ID routes to books datasource"() {
         given: 'a product saved on books via abstract service'
         def saved = productService.save(new Product(name: 'InterfaceGet', amount: 99))
 
@@ -245,7 +245,7 @@ class DataServiceMultiDataSourceSpec extends Specification {
         found.name == 'InterfaceGet'
     }
 
-    void 'interface service: delete routes to books datasource'() {
+    void "interface service: delete routes to books datasource"() {
         given: 'a product saved on books'
         def saved = productService.save(new Product(name: 'InterfaceDelete', amount: 1))
 
@@ -258,7 +258,7 @@ class DataServiceMultiDataSourceSpec extends Specification {
         productDataService.get(saved.id) == null
     }
 
-    void 'interface service: void delete routes to books datasource'() {
+    void "interface service: void delete routes to books datasource"() {
         given: 'a product saved on books'
         def saved = productService.save(new Product(name: 'InterfaceVoidDel', amount: 2))
 
@@ -269,7 +269,7 @@ class DataServiceMultiDataSourceSpec extends Specification {
         productDataService.get(saved.id) == null
     }
 
-    void 'interface and abstract services share the same datasource'() {
+    void "interface and abstract services share the same datasource"() {
         given: 'a product saved through the abstract service'
         def saved = productService.save(new Product(name: 'CrossService', amount: 77))
 
@@ -281,7 +281,7 @@ class DataServiceMultiDataSourceSpec extends Specification {
         productService.count() == productDataService.count()
     }
 
-    void '@Query find-one routes to books datasource - abstract service'() {
+    void "@Query find-one routes to books datasource - abstract service"() {
         given: 'a product saved on books'
         productService.save(new Product(name: 'QueryOne', amount: 50))
 
@@ -294,12 +294,12 @@ class DataServiceMultiDataSourceSpec extends Specification {
         found.amount == 50
     }
 
-    void '@Query find-one returns null for non-existent - abstract service'() {
+    void "@Query find-one returns null for non-existent - abstract service"() {
         expect: 'null for non-existent product'
         productService.findOneByQuery('NonExistent') == null
     }
 
-    void '@Query find-all routes to books datasource - abstract service'() {
+    void "@Query find-all routes to books datasource - abstract service"() {
         given: 'products saved on books with varying amounts'
         productService.save(new Product(name: 'Expensive1', amount: 500))
         productService.save(new Product(name: 'Expensive2', amount: 600))
@@ -313,7 +313,7 @@ class DataServiceMultiDataSourceSpec extends Specification {
         found*.name.containsAll(['Expensive1', 'Expensive2'])
     }
 
-    void '@Query update routes to books datasource - abstract service'() {
+    void "@Query update routes to books datasource - abstract service"() {
         given: 'a product saved on books'
         productService.save(new Product(name: 'UpdateTarget', amount: 100))
 
@@ -327,7 +327,7 @@ class DataServiceMultiDataSourceSpec extends Specification {
         productService.findByName('UpdateTarget').amount == 999
     }
 
-    void '@Query find-one routes to books datasource - interface service'() {
+    void "@Query find-one routes to books datasource - interface service"() {
         given: 'a product saved on books'
         productService.save(new Product(name: 'InterfaceQueryOne', amount: 75))
 
@@ -340,7 +340,7 @@ class DataServiceMultiDataSourceSpec extends Specification {
         found.amount == 75
     }
 
-    void '@Query find-all routes to books datasource - interface service'() {
+    void "@Query find-all routes to books datasource - interface service"() {
         given: 'products saved on books'
         productService.save(new Product(name: 'IfaceExpensive1', amount: 500))
         productService.save(new Product(name: 'IfaceExpensive2', amount: 600))
@@ -354,7 +354,7 @@ class DataServiceMultiDataSourceSpec extends Specification {
         found*.name.containsAll(['IfaceExpensive1', 'IfaceExpensive2'])
     }
 
-    void '@Query update routes to books datasource - interface service'() {
+    void "@Query update routes to books datasource - interface service"() {
         given: 'a product saved on books'
         productService.save(new Product(name: 'InterfaceUpdate', amount: 100))
 
@@ -372,7 +372,6 @@ class DataServiceMultiDataSourceSpec extends Specification {
 
 @Entity
 class Product {
-
     Long id
     Long version
     String name
@@ -404,10 +403,10 @@ abstract class ProductService {
 
     abstract List<Product> findAllByName(String name)
 
-    @Query('delete from Product where 1=1')
+    @Query("delete from Product where 1=1")
     abstract Number deleteAll()
 
-    @Query('select sum(p.amount) from Product p')
+    @Query("select sum(p.amount) from Product p")
     abstract Number getTotalAmount()
 
     /**
@@ -416,13 +415,13 @@ abstract class ProductService {
      */
     abstract Product saveProduct(String name, Integer amount)
 
-    @Query('from Product p where p.name = :name')
+    @Query("from Product p where p.name = :name")
     abstract Product findOneByQuery(String name)
 
-    @Query('from Product p where p.amount >= :minAmount')
+    @Query("from Product p where p.amount >= :minAmount")
     abstract List<Product> findAllByQuery(Integer minAmount)
 
-    @Query('update Product p set p.amount = :newAmount where p.name = :name')
+    @Query("update Product p set p.amount = :newAmount where p.name = :name")
     abstract Number updateAmountByName(String name, Integer newAmount)
 }
 
@@ -449,12 +448,12 @@ interface ProductDataService {
 
     List<Product> findAllByName(String name)
 
-    @Query('from Product p where p.name = :name')
+    @Query("from Product p where p.name = :name")
     Product findOneByQuery(String name)
 
-    @Query('from Product p where p.amount >= :minAmount')
+    @Query("from Product p where p.amount >= :minAmount")
     List<Product> findAllByQuery(Integer minAmount)
 
-    @Query('update Product p set p.amount = :newAmount where p.name = :name')
+    @Query("update Product p set p.amount = :newAmount where p.name = :name")
     Number updateAmountByName(String name, Integer newAmount)
 }

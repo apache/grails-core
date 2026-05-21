@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -29,16 +29,16 @@ import static org.junit.jupiter.api.Assertions.assertThrows
 
 class GroovyEachTagTests {
 
-    private GroovyEachTag tag = new GroovyEachTag()
-    private StringWriter sw = new StringWriter()
+    private GroovyEachTag tag = new GroovyEachTag();
+    private StringWriter sw = new StringWriter();
 
     @BeforeEach
     protected void setUp() throws Exception {
-        Map context = new HashMap()
-        context.put(GroovyPage.OUT, new PrintWriter(sw))
-        GroovyPageParser parser=new GroovyPageParser('test', 'test', 'test', new ByteArrayInputStream(new byte[] {}), null)
-        context.put(GroovyPageParser.class, parser)
-        tag.init(context)
+        Map context = new HashMap();
+        context.put(GroovyPage.OUT, new PrintWriter(sw));
+        GroovyPageParser parser=new GroovyPageParser("test", "test", "test", new ByteArrayInputStream(new byte[]{}), null);
+        context.put(GroovyPageParser.class, parser);
+        tag.init(context);
     }
 
     @Test
@@ -47,11 +47,11 @@ class GroovyEachTagTests {
             tag.doStartTag()
         }
 
-        tag.setAttributes(''in'': 'test?')
+        tag.setAttributes('"in"': 'test?')
 
         tag.doStartTag()
 
-       assertEquals('for( '+tag.getForeachRenamedIt()+" in evaluate('test', 1, it) { return test } ) {"+ System.getProperty('line.separator')+ 'changeItVariable(' + tag.getForeachRenamedIt() + ')' + System.getProperty('line.separator'), sw.toString())
+       assertEquals("for( "+tag.getForeachRenamedIt()+" in evaluate('test', 1, it) { return test } ) {"+ System.getProperty("line.separator")+ "changeItVariable(" + tag.getForeachRenamedIt() + ")" + System.getProperty("line.separator"), sw.toString())
     }
 
     @Test
@@ -60,25 +60,25 @@ class GroovyEachTagTests {
             tag.doStartTag()
         }
 
-        tag.setAttributes(''in'': 'test')
+        tag.setAttributes('"in"': 'test')
 
         tag.doStartTag()
 
-        assertEquals('for( '+tag.getForeachRenamedIt()+" in evaluate('test', 1, it) { return test } ) {"+ System.getProperty('line.separator')+ 'changeItVariable(' + tag.getForeachRenamedIt() + ')' + System.getProperty('line.separator'),sw.toString())
+        assertEquals("for( "+tag.getForeachRenamedIt()+" in evaluate('test', 1, it) { return test } ) {"+ System.getProperty("line.separator")+ "changeItVariable(" + tag.getForeachRenamedIt() + ")" + System.getProperty("line.separator"),sw.toString())
     }
 
     @Test
     void testEachWithVar() {
-        tag.setAttributes(''in'': 'test', ''var'': 'i')
+        tag.setAttributes('"in"': 'test', '"var"':"i")
 
         tag.doStartTag()
 
-        assertEquals("for( i in evaluate('test', 1, it) { return test } ) {"+ System.getProperty('line.separator'),sw.toString())
+        assertEquals("for( i in evaluate('test', 1, it) { return test } ) {"+ System.getProperty("line.separator"),sw.toString())
     }
 
     @Test
     void testEachWithStatusOnly() {
-        tag.setAttributes(''in'': 'test', ''status'': 'i')
+        tag.setAttributes('"in"': 'test', '"status"':"i")
         assertThrows(GrailsTagException) {
             tag.doStartTag()
         }
@@ -86,12 +86,12 @@ class GroovyEachTagTests {
 
     @Test
     void testEachWithStatusAndVar() {
-        tag.setAttributes(''in'': 'test', ''status'': 'i',''var'': 'i')
+        tag.setAttributes('"in"': 'test', '"status"':"i",'"var"':"i")
 
         assertThrows(GrailsTagException) {
             tag.doStartTag()
         }
-        tag.setAttributes(''var'': 'j')
+        tag.setAttributes('"var"':'j')
         tag.doStartTag()
 
         assert sw.toString().replaceAll('[\r\n]', '') == "loop:{int i = 0for( j in evaluate('test', 1, it) { return test } ) {"

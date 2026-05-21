@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -300,11 +300,11 @@ class CountryTagLib implements TagLibrary {
      * @attr default currently selected country code - if value is null
      * @attr name the select name
      * @attr id the DOM element id - uses the name attribute if not specified
-     * @attr keys A list of values to be used for the value attribute of each 'option' element.
-     * @attr optionKey By default value attribute of each <option> element will be the result of a 'toString()' call on each element. Setting this allows the value to be a bean property of each element in the list.
-     * @attr optionValue By default the body of each &lt;option&gt; element will be the result of a 'toString()' call on each element in the 'from' attribute list. Setting this allows the value to be a bean property of each element in the list.
+     * @attr keys A list of values to be used for the value attribute of each "option" element.
+     * @attr optionKey By default value attribute of each <option> element will be the result of a "toString()" call on each element. Setting this allows the value to be a bean property of each element in the list.
+     * @attr optionValue By default the body of each &lt;option&gt; element will be the result of a "toString()" call on each element in the "from" attribute list. Setting this allows the value to be a bean property of each element in the list.
      * @attr multiple boolean value indicating whether the select a multi-select (automatically true if the value is a collection, defaults to false - single-select)
-     * @attr noSelection A single-entry map detailing the key and value to use for the 'no selection made' choice in the select box. If there is no current selection this will be shown as it is first in the list, and if submitted with this selected, the key that you provide will be submitted. Typically this will be blank - but you can also use 'null' in the case that you're passing the ID of an object
+     * @attr noSelection A single-entry map detailing the key and value to use for the "no selection made" choice in the select box. If there is no current selection this will be shown as it is first in the list, and if submitted with this selected, the key that you provide will be submitted. Typically this will be blank - but you can also use 'null' in the case that you're passing the ID of an object
      * @attr disabled boolean value indicating whether the select is disabled or enabled (defaults to false - enabled)
      */
     Closure countrySelect = { attrs ->

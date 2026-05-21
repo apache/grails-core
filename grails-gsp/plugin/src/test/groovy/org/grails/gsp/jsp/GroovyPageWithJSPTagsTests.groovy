@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -76,10 +76,10 @@ class GroovyPageWithJSPTagsTests extends Specification implements TagLibUnitTest
     def testIterativeTags() {
         given:
         def template = '''
-            |<%@ taglib prefix='c' uri='jakarta.tags.core' %>
+            |<%@ taglib prefix="c" uri="jakarta.tags.core" %>
             |<html>
             |   <body>
-            |       <c:forEach var='i' begin='1' end='3'><c:out value="${i}' /> . <c:out value='${i}" /><br/></c:forEach>
+            |       <c:forEach var="i" begin="1" end="3"><c:out value="${i}" /> . <c:out value="${i}" /><br/></c:forEach>
             |   </body>
             |</html>
         '''.stripMargin()
@@ -96,13 +96,13 @@ class GroovyPageWithJSPTagsTests extends Specification implements TagLibUnitTest
     def testGRAILS3797() {
         given:
         def template = '''
-            |<%@ taglib prefix='spring' uri='http://www.springframework.org/tags' %>
+            |<%@ taglib prefix="spring" uri="http://www.springframework.org/tags" %>
             |<html>
             |   <body>
-            |       <g:form controller='search' action='search' method='get'>
-            |           <g:textField name='q' value='' />
-            |           <g:actionSubmit value='search' /><br/>
-            |           <img src='<spring:theme code='A_ICON' alt='icon'/>'/>
+            |       <g:form controller="search" action="search" method="get">
+            |           <g:textField name="q" value="" />
+            |           <g:actionSubmit value="search" /><br/>
+            |           <img src="<spring:theme code="A_ICON" alt="icon"/>"/>
             |       </g:form>
             |   </body>
             |</html>
@@ -113,16 +113,16 @@ class GroovyPageWithJSPTagsTests extends Specification implements TagLibUnitTest
         def output = applyTemplate(template)
 
         then:
-        output.contains("<img src='test'/>")
+        output.contains('<img src="test"/>')
     }
 
     void testDynamicAttributes() {
         given:
         def template = '''
-            |<%@ taglib prefix='spring' uri='http://www.springframework.org/tags/form' %>
+            |<%@ taglib prefix="spring" uri="http://www.springframework.org/tags/form" %>
             |<html>
             |   <body>
-            |       <spring:form action='action' grails='rocks'>
+            |       <spring:form action="action" grails="rocks">
             |       </spring:form>
             |   </body>
             |</html>
@@ -132,14 +132,14 @@ class GroovyPageWithJSPTagsTests extends Specification implements TagLibUnitTest
         def output = applyTemplate(template)
 
         then:
-        output.contains('grails='rocks'')
+        output.contains('grails="rocks"')
     }
 
     @Issue(['GRAILS-3845', 'https://github.com/apache/grails-core/issues/8830'])
     def testNestedJSPTags() {
         given:
         def template = '''
-            |<%@ taglib uri='jakarta.tags.core' prefix='c' %>
+            |<%@ taglib uri="jakarta.tags.core" prefix="c" %>
             |<html>
             |   <head>
             |       <title>test</title>
@@ -162,14 +162,14 @@ class GroovyPageWithJSPTagsTests extends Specification implements TagLibUnitTest
 
         then:
         output.contains('hello')
-        !output.contains('goodbye')
+        !output.contains("goodbye")
     }
 
     def testGSPCantOverrideDefaultNamespaceWithJSP() {
         given:
         def template = '''
-            |<%@ taglib prefix='g' uri='jakarta.tags.fmt' %>
-            |<g:formatNumber number='10' format='.00'/>
+            |<%@ taglib prefix="g" uri="jakarta.tags.fmt" %>
+            |<g:formatNumber number="10" format=".00"/>
         '''.stripMargin()
 
         when:
@@ -182,9 +182,9 @@ class GroovyPageWithJSPTagsTests extends Specification implements TagLibUnitTest
     def testGSPWithIterativeJSPTag() {
         given:
         def template = '''
-            |<%@ taglib prefix='c' uri='jakarta.tags.core' %>
-            |<g:set var='foo' value="${[1,2,3]}" />
-            |<c:forEach items="${foo}' var='num"><p>${num}</p></c:forEach>
+            |<%@ taglib prefix="c" uri="jakarta.tags.core" %>
+            |<g:set var="foo" value="${[1,2,3]}" />
+            |<c:forEach items="${foo}" var="num"><p>${num}</p></c:forEach>
         '''.stripMargin()
 
         when:
@@ -197,8 +197,8 @@ class GroovyPageWithJSPTagsTests extends Specification implements TagLibUnitTest
     def testSimpleTagWithValue() {
         given:
         def template = '''
-            |<%@ taglib prefix='fmt' uri='jakarta.tags.fmt' %>
-            |<fmt:formatNumber value="${10}' pattern='.00"/>
+            |<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
+            |<fmt:formatNumber value="${10}" pattern=".00"/>
         '''.stripMargin()
 
         when:
@@ -211,8 +211,8 @@ class GroovyPageWithJSPTagsTests extends Specification implements TagLibUnitTest
     def testInvokeJspTagAsMethod() {
         given:
         def template = '''
-            |<%@ taglib prefix='fmt' uri='jakarta.tags.fmt' %>
-            |${fmt.formatNumber(value: 10, pattern: '.00')}
+            |<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
+            |${fmt.formatNumber(value:10, pattern:".00")}
         '''.stripMargin()
 
         when:
@@ -225,8 +225,8 @@ class GroovyPageWithJSPTagsTests extends Specification implements TagLibUnitTest
     def testInvokeJspTagAsMethodWithBody() {
         given:
         def template = '''
-            |<%@ taglib prefix='fmt' uri='jakarta.tags.fmt' %>
-            |${fmt.formatNumber(pattern: '.00',10)}
+            |<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
+            |${fmt.formatNumber(pattern:".00",10)}
         '''.stripMargin()
 
         when:
@@ -239,8 +239,8 @@ class GroovyPageWithJSPTagsTests extends Specification implements TagLibUnitTest
     def testSimpleTagWithBody() {
         given:
         def template = '''
-            |<%@ taglib prefix='fmt' uri='jakarta.tags.fmt' %>
-            |<fmt:formatNumber pattern='.00'>10</fmt:formatNumber>
+            |<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
+            |<fmt:formatNumber pattern=".00">10</fmt:formatNumber>
         '''.stripMargin()
 
         when:
@@ -253,9 +253,9 @@ class GroovyPageWithJSPTagsTests extends Specification implements TagLibUnitTest
     def testSpringJSPTags() {
         given:
         def template = '''
-            |<%@ taglib prefix='form' uri='http://www.springframework.org/tags/form' %>
-            |<form:form commandName='address' action='do'>
-            |    <b>Zip: </b><form:input path='zip'/>
+            |<%@ taglib prefix="form" uri="http://www.springframework.org/tags/form" %>
+            |<form:form commandName="address" action="do">
+            |    <b>Zip: </b><form:input path="zip"/>
             |</form:form>
         '''.stripMargin()
 
@@ -266,14 +266,13 @@ class GroovyPageWithJSPTagsTests extends Specification implements TagLibUnitTest
 
         then:
         output == '''
-            |<form id='command' commandName='address' action='do' method='post'>
-            |    <b>Zip: </b><input id='zip' name='zip' type='text' value='342343'/>
+            |<form id="command" commandName="address" action="do" method="post">
+            |    <b>Zip: </b><input id="zip" name="zip" type="text" value="342343"/>
             |</form>
         '''.stripMargin().strip()
     }
 }
 
 class TestJspTagAddress {
-
     String zip
 }

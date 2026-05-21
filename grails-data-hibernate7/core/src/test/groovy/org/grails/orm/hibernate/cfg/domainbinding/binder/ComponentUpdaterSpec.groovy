@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -47,7 +47,7 @@ class ComponentUpdaterSpec extends HibernateGormDatastoreSpec {
         updater = new ComponentUpdater(propertyFromValueCreator)
     }
 
-    def 'should add property to component and set columns nullable if component property is nullable'() {
+    def "should add property to component and set columns nullable if component property is nullable"() {
         given:
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def root = new RootClass(metadataBuildingContext)
@@ -58,21 +58,21 @@ class ComponentUpdaterSpec extends HibernateGormDatastoreSpec {
         HibernatePersistentProperty streetProp = componentProperty.associatedEntity.persistentProperties.find { it.name == 'street' } as HibernatePersistentProperty
 
         def value = new BasicValue(metadataBuildingContext, root.getTable())
-        def column = new Column('street')
+        def column = new Column("street")
         value.addColumn(column)
         def hibernateProperty = new Property()
-        hibernateProperty.setName('street')
+        hibernateProperty.setName("street")
 
         when:
         updater.updateComponent(component, componentProperty, streetProp, value)
 
         then:
         1 * propertyFromValueCreator.createProperty(value, streetProp) >> hibernateProperty
-        component.getProperty('street') == hibernateProperty
+        component.getProperty("street") == hibernateProperty
         column.isNullable() // address is nullable on CUPerson
     }
 
-    def 'should not set columns nullable if component property is not nullable'() {
+    def "should not set columns nullable if component property is not nullable"() {
         given:
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def root = new RootClass(metadataBuildingContext)
@@ -83,11 +83,11 @@ class ComponentUpdaterSpec extends HibernateGormDatastoreSpec {
         HibernatePersistentProperty streetProp = componentProperty.associatedEntity.persistentProperties.find { it.name == 'street' } as HibernatePersistentProperty
 
         def value = new BasicValue(metadataBuildingContext, root.getTable())
-        def column = new Column('street')
+        def column = new Column("street")
         column.setNullable(false)
         value.addColumn(column)
         def hibernateProperty = new Property()
-        hibernateProperty.setName('street')
+        hibernateProperty.setName("street")
 
         when:
         updater.updateComponent(component, componentProperty, streetProp, value)
@@ -99,14 +99,12 @@ class ComponentUpdaterSpec extends HibernateGormDatastoreSpec {
 }
 
 class CUAddress {
-
     String street
     String city
 }
 
 @Entity
 class CUPerson implements HibernateEntity<CUPerson> {
-
     CUAddress address
     CUAddress requiredAddress
     static embedded = ['address', 'requiredAddress']

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -46,14 +46,14 @@ class VersionBinderSpec extends HibernateGormDatastoreSpec {
         simpleValueBinder = new SimpleValueBinder(metadataBuildingContext, binder.getNamingStrategy(), binder.getJdbcEnvironment())
         propertyBinder = new PropertyBinder()
         
-        versionBinder = new VersionBinder(metadataBuildingContext, simpleValueBinder, propertyBinder, BasicValue.&new)
+        versionBinder = new VersionBinder(metadataBuildingContext, simpleValueBinder, propertyBinder, BasicValue::new)
     }
 
-    def 'should bind version property correctly'() {
+    def "should bind version property correctly"() {
         given:
         def entity = createPersistentEntity(VersionBinderUniqueEntity)
         def rootClass = new RootClass(metadataBuildingContext)
-        rootClass.setTable(new Table('version_binder_unique_entity'))
+        rootClass.setTable(new Table("version_binder_unique_entity"))
         entity.setPersistentClass(rootClass)
         def versionProperty = entity.getVersion()
         
@@ -70,13 +70,13 @@ class VersionBinderSpec extends HibernateGormDatastoreSpec {
         
         def value = rootClass.getVersion().getValue()
         value instanceof BasicValue
-        value.getTypeName() == 'java.lang.Long'
+        value.getTypeName() == "java.lang.Long"
         
         def column = value.getColumns().first() as Column
-        column.getName() == 'my_version_col'
+        column.getName() == "my_version_col"
     }
 
-    def 'should set optimistic lock style to NONE if version is null'() {
+    def "should set optimistic lock style to NONE if version is null"() {
         given:
         def rootClass = new RootClass(metadataBuildingContext)
         
@@ -88,11 +88,11 @@ class VersionBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.getVersion() == null
     }
 
-    def 'should respect custom column name configured via version DSL'() {
+    def "should respect custom column name configured via version DSL"() {
         given:
         def entity = createPersistentEntity(VersionBinderCustomUniqueEntity)
         def rootClass = new RootClass(metadataBuildingContext)
-        rootClass.setTable(new Table('version_binder_custom_unique_entity'))
+        rootClass.setTable(new Table("version_binder_custom_unique_entity"))
         entity.setPersistentClass(rootClass)
         def versionProperty = entity.getVersion()
         
@@ -101,17 +101,17 @@ class VersionBinderSpec extends HibernateGormDatastoreSpec {
         
         then:
         rootClass.getVersion() != null
-        rootClass.getVersion().getValue().getTypeName() == 'java.lang.Long'
+        rootClass.getVersion().getValue().getTypeName() == "java.lang.Long"
         
         def column = rootClass.getVersion().getValue().getColumns().first() as Column
-        column.getName() == 'my_custom_ver_col'
+        column.getName() == "my_custom_ver_col"
     }
 
-    def 'should set OptimisticLockStyle.NONE when entity has no version property'() {
+    def "should set OptimisticLockStyle.NONE when entity has no version property"() {
         given:
         def entity = createPersistentEntity(VersionBinderNoVersionEntity)
         def rootClass = new RootClass(metadataBuildingContext)
-        rootClass.setTable(new Table('version_binder_no_version_entity'))
+        rootClass.setTable(new Table("version_binder_no_version_entity"))
         entity.setPersistentClass(rootClass)
 
         when:
@@ -125,27 +125,24 @@ class VersionBinderSpec extends HibernateGormDatastoreSpec {
 
 @Entity
 class VersionBinderUniqueEntity implements HibernateEntity<VersionBinderUniqueEntity> {
-
     Long id
     Long version
     static mapping = {
-        version column: 'my_version_col'
+        version column: "my_version_col"
     }
 }
 
 @Entity
 class VersionBinderCustomUniqueEntity implements HibernateEntity<VersionBinderCustomUniqueEntity> {
-
     Long id
     Long version
     static mapping = {
-        version column: 'my_custom_ver_col'
+        version column: "my_custom_ver_col"
     }
 }
 
 @Entity
 class VersionBinderNoVersionEntity implements HibernateEntity<VersionBinderNoVersionEntity> {
-
     Long id
     static mapping = {
         version false

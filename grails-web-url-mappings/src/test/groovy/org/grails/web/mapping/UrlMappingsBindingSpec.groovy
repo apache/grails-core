@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -30,14 +30,14 @@ import grails.core.DefaultGrailsApplication
 /**
  * Tests that focus on ensuring the applicationContext, grailsApplication and servletContext objects are available to UrlMappings
  */
-class UrlMappingsBindingSpec extends Specification {
+class UrlMappingsBindingSpec extends Specification{
 
-    void 'Test that common applications variables are available in UrlMappings'() {
-        when:'Mappings that use application variables'
+    void "Test that common applications variables are available in UrlMappings"() {
+        when:"Mappings that use application variables"
             def evaluator = getEvaluator()
             def urlMappings = new DefaultUrlMappingsHolder(evaluator.evaluateMappings(mappings))
 
-        then:'The url mappings are valid'
+        then:"The url mappings are valid"
             urlMappings != null
     }
 
@@ -52,7 +52,7 @@ class UrlMappingsBindingSpec extends Specification {
 
     Closure getMappings() {
         return {
-            '/foo' {
+            "/foo" {
                 assert applicationContext != null
                 assert grailsApplication != null
                 assert servletContext != null

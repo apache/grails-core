@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -40,7 +40,7 @@ class GeneratorCreationContextWrapperSpec extends Specification {
         wrapper = new GeneratorCreationContextWrapper(delegate, overrideValue)
     }
 
-    def 'getValue returns the override value when it is not null'() {
+    def "getValue returns the override value when it is not null"() {
         when:
         def result = wrapper.getValue()
 
@@ -49,7 +49,7 @@ class GeneratorCreationContextWrapperSpec extends Specification {
         0 * delegate.getValue()
     }
 
-    def 'getValue falls back to delegate when override value is null'() {
+    def "getValue falls back to delegate when override value is null"() {
         given:
         def delegateValue = Mock(Value)
         wrapper = new GeneratorCreationContextWrapper(delegate, null)
@@ -62,7 +62,7 @@ class GeneratorCreationContextWrapperSpec extends Specification {
         result.is(delegateValue)
     }
 
-    def 'getDatabase delegates to the wrapped context'() {
+    def "getDatabase delegates to the wrapped context"() {
         given:
         def db = Mock(Database)
 
@@ -74,7 +74,7 @@ class GeneratorCreationContextWrapperSpec extends Specification {
         result.is(db)
     }
 
-    def 'getServiceRegistry delegates to the wrapped context'() {
+    def "getServiceRegistry delegates to the wrapped context"() {
         given:
         def registry = Mock(ServiceRegistry)
 
@@ -86,25 +86,25 @@ class GeneratorCreationContextWrapperSpec extends Specification {
         result.is(registry)
     }
 
-    def 'getDefaultCatalog delegates to the wrapped context'() {
+    def "getDefaultCatalog delegates to the wrapped context"() {
         when:
         def result = wrapper.getDefaultCatalog()
 
         then:
-        1 * delegate.getDefaultCatalog() >> 'my_catalog'
-        result == 'my_catalog'
+        1 * delegate.getDefaultCatalog() >> "my_catalog"
+        result == "my_catalog"
     }
 
-    def 'getDefaultSchema delegates to the wrapped context'() {
+    def "getDefaultSchema delegates to the wrapped context"() {
         when:
         def result = wrapper.getDefaultSchema()
 
         then:
-        1 * delegate.getDefaultSchema() >> 'my_schema'
-        result == 'my_schema'
+        1 * delegate.getDefaultSchema() >> "my_schema"
+        result == "my_schema"
     }
 
-    def 'getPersistentClass delegates to the wrapped context'() {
+    def "getPersistentClass delegates to the wrapped context"() {
         when:
         def result = wrapper.getPersistentClass()
 
@@ -113,7 +113,7 @@ class GeneratorCreationContextWrapperSpec extends Specification {
         result == null
     }
 
-    def 'getRootClass delegates to the wrapped context'() {
+    def "getRootClass delegates to the wrapped context"() {
         when:
         def result = wrapper.getRootClass()
 
@@ -122,7 +122,7 @@ class GeneratorCreationContextWrapperSpec extends Specification {
         result == null
     }
 
-    def 'getProperty delegates to the wrapped context'() {
+    def "getProperty delegates to the wrapped context"() {
         given:
         def property = Mock(Property)
 
@@ -134,7 +134,7 @@ class GeneratorCreationContextWrapperSpec extends Specification {
         result.is(property)
     }
 
-    def 'getType delegates to the wrapped context'() {
+    def "getType delegates to the wrapped context"() {
         given:
         def type = Mock(Type)
 
@@ -146,7 +146,7 @@ class GeneratorCreationContextWrapperSpec extends Specification {
         result.is(type)
     }
 
-    def 'getSqlStringGenerationContext delegates to the wrapped context'() {
+    def "getSqlStringGenerationContext delegates to the wrapped context"() {
         given:
         def ctx = Mock(SqlStringGenerationContext)
 

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -22,7 +22,7 @@ import spock.lang.Specification
 
 class TableSpec extends Specification {
 
-    def 'configureNew with closure sets all fields'() {
+    def "configureNew with closure sets all fields"() {
         when:
         Table table = Table.configureNew {
             name 'my_table'
@@ -36,7 +36,7 @@ class TableSpec extends Specification {
         table.schema == 'my_schema'
     }
 
-    def 'configureNew with closure setting only name leaves catalog and schema null'() {
+    def "configureNew with closure setting only name leaves catalog and schema null"() {
         when:
         Table table = Table.configureNew {
             name 'orders'
@@ -48,7 +48,7 @@ class TableSpec extends Specification {
         table.schema == null
     }
 
-    def 'configureExisting with map updates only provided fields'() {
+    def "configureExisting with map updates only provided fields"() {
         given:
         Table table = new Table(name: 'original', catalog: 'cat', schema: 'sch')
 
@@ -62,7 +62,7 @@ class TableSpec extends Specification {
         result.schema == 'sch'
     }
 
-    def 'configureExisting with map sets multiple fields at once'() {
+    def "configureExisting with map sets multiple fields at once"() {
         given:
         Table table = new Table()
 
@@ -76,7 +76,7 @@ class TableSpec extends Specification {
         result.schema == 'public'
     }
 
-    def 'configureExisting with empty map leaves fields unchanged'() {
+    def "configureExisting with empty map leaves fields unchanged"() {
         given:
         Table table = new Table(name: 'products', catalog: 'store', schema: 'dbo')
 
@@ -90,7 +90,7 @@ class TableSpec extends Specification {
         result.schema == 'dbo'
     }
 
-    def 'configureExisting with closure updates an existing table'() {
+    def "configureExisting with closure updates an existing table"() {
         given:
         Table table = new Table(name: 'old_name')
 
@@ -106,7 +106,7 @@ class TableSpec extends Specification {
         result.schema == 'public'
     }
 
-    def 'builder-style setters return the table instance for chaining'() {
+    def "builder-style setters return the table instance for chaining"() {
         when:
         Table table = new Table().name('items').catalog('shop').schema('dbo')
 
@@ -116,7 +116,7 @@ class TableSpec extends Specification {
         table.schema == 'dbo'
     }
 
-    def 'default constructor produces a table with all fields null'() {
+    def "default constructor produces a table with all fields null"() {
         when:
         Table table = new Table()
 
@@ -128,7 +128,7 @@ class TableSpec extends Specification {
 
     // ── JoinTable ──────────────────────────────────────────────────────────────
 
-    def 'JoinTable extends Table and inherits name/schema fields'() {
+    def "JoinTable extends Table and inherits name/schema fields"() {
         when:
         JoinTable jt = new JoinTable(name: 'join_table', schema: 'public')
 
@@ -139,7 +139,7 @@ class TableSpec extends Specification {
         jt.column == null
     }
 
-    def 'JoinTable key(String) sets key column name and returns this'() {
+    def "JoinTable key(String) sets key column name and returns this"() {
         given:
         JoinTable jt = new JoinTable()
 
@@ -151,7 +151,7 @@ class TableSpec extends Specification {
         jt.keys[0].name == 'owner_id'
     }
 
-    def 'JoinTable column(String) sets column name and returns this'() {
+    def "JoinTable column(String) sets column name and returns this"() {
         given:
         JoinTable jt = new JoinTable()
 
@@ -163,7 +163,7 @@ class TableSpec extends Specification {
         jt.column.name == 'item_id'
     }
 
-    def 'JoinTable key(Closure) configures a ColumnConfig'() {
+    def "JoinTable key(Closure) configures a ColumnConfig"() {
         given:
         JoinTable jt = new JoinTable()
 
@@ -175,7 +175,7 @@ class TableSpec extends Specification {
         jt.keys[0].length == 20
     }
 
-    def 'JoinTable column(Closure) configures a ColumnConfig'() {
+    def "JoinTable column(Closure) configures a ColumnConfig"() {
         given:
         JoinTable jt = new JoinTable()
 

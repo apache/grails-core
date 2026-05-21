@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -65,82 +65,82 @@ class DelegatingParameters implements Parameters {
     }
 
     @Override
-    Byte 'byte'(String name) {
+    Byte "byte"(String name) {
         return parameterMap.byte(name)
     }
 
     @Override
-    Byte 'byte'(String name, Integer defaultValue) {
+    Byte "byte"(String name, Integer defaultValue) {
         return parameterMap.byte(name, defaultValue)
     }
 
     @Override
-    Character 'char'(String name) {
+    Character "char"(String name) {
         return parameterMap.char(name)
     }
 
     @Override
-    Character 'char'(String name, Character defaultValue) {
+    Character "char"(String name, Character defaultValue) {
         return parameterMap.char(name, defaultValue)
     }
 
     @Override
-    Integer 'int'(String name) {
+    Integer "int"(String name) {
         return parameterMap.int(name)
     }
 
     @Override
-    Integer 'int'(String name, Integer defaultValue) {
+    Integer "int"(String name, Integer defaultValue) {
         return parameterMap.int(name, defaultValue)
     }
 
     @Override
-    Long 'long'(String name) {
+    Long "long"(String name) {
         return parameterMap.long(name)
     }
 
     @Override
-    Long 'long'(String name, Long defaultValue) {
+    Long "long"(String name, Long defaultValue) {
         return parameterMap.long(name, defaultValue)
     }
 
     @Override
-    Short 'short'(String name) {
+    Short "short"(String name) {
         return parameterMap.short(name)
     }
 
     @Override
-    Short 'short'(String name, Integer defaultValue) {
+    Short "short"(String name, Integer defaultValue) {
         return parameterMap.short(name, defaultValue)
     }
 
     @Override
-    Double 'double'(String name) {
+    Double "double"(String name) {
         return parameterMap.double(name)
     }
 
     @Override
-    Double 'double'(String name, Double defaultValue) {
+    Double "double"(String name, Double defaultValue) {
         return parameterMap.double(name, defaultValue)
     }
 
     @Override
-    Float 'float'(String name) {
+    Float "float"(String name) {
         return parameterMap.float(name)
     }
 
     @Override
-    Float 'float'(String name, Float defaultValue) {
+    Float "float"(String name, Float defaultValue) {
         return parameterMap.float(name, defaultValue)
     }
 
     @Override
-    Boolean 'boolean'(String name) {
+    Boolean "boolean"(String name) {
         return parameterMap.boolean(name)
     }
 
     @Override
-    Boolean 'boolean'(String name, Boolean defaultValue) {
+    Boolean "boolean"(String name, Boolean defaultValue) {
         return parameterMap.boolean(name, defaultValue)
     }
 

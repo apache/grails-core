@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -25,7 +25,7 @@ import spock.lang.Specification
 
 class DefaultGrailsTagLibClassSpec extends Specification {
 
-    def 'tag discovery finds Closure properties in a dynamic TagLib'() {
+    def "tag discovery finds Closure properties in a dynamic TagLib"() {
         when:
         def tagLibClass = new DefaultGrailsTagLibClass(DynamicSampleTagLib)
 
@@ -37,7 +37,7 @@ class DefaultGrailsTagLibClassSpec extends Specification {
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15506')
-    def 'tag discovery finds Closure properties in a @CompileStatic TagLib'() {
+    def "tag discovery finds Closure properties in a @CompileStatic TagLib"() {
         when:
         def tagLibClass = new DefaultGrailsTagLibClass(CompileStaticSampleTagLib)
 
@@ -49,7 +49,7 @@ class DefaultGrailsTagLibClassSpec extends Specification {
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15506')
-    def 'tag discovery finds Closure properties from both parent and child classes with @CompileStatic'() {
+    def "tag discovery finds Closure properties from both parent and child classes with @CompileStatic"() {
         when:
         def tagLibClass = new DefaultGrailsTagLibClass(ChildCompileStaticTagLib)
 
@@ -58,7 +58,7 @@ class DefaultGrailsTagLibClassSpec extends Specification {
         tagLibClass.tagNames.contains('childTag')
     }
 
-    def 'namespace is correctly read from TagLib'() {
+    def "namespace is correctly read from TagLib"() {
         when:
         def tagLibClass = new DefaultGrailsTagLibClass(CustomNamespaceTagLib)
 
@@ -66,7 +66,7 @@ class DefaultGrailsTagLibClassSpec extends Specification {
         tagLibClass.namespace == 'custom'
     }
 
-    def 'returnObjectForTags is correctly read from TagLib'() {
+    def "returnObjectForTags is correctly read from TagLib"() {
         when:
         def tagLibClass = new DefaultGrailsTagLibClass(DynamicSampleTagLib)
 
@@ -79,31 +79,31 @@ class DynamicSampleTagLib {
 
     static returnObjectForTags = ['myTag']
 
-    Closure myTag = { attrs -> 'hello' }
+    Closure myTag = { attrs -> "hello" }
     Closure anotherTag = { attrs, body -> }
-    String nonClosureProperty = 'not a tag'
+    String nonClosureProperty = "not a tag"
     static Closure someStaticClosure = { -> }
 }
 
 @CompileStatic
 class CompileStaticSampleTagLib {
 
-    Closure staticTag = { Map attrs -> 'compiled' }
+    Closure staticTag = { Map attrs -> "compiled" }
     Closure anotherStaticTag = { Map attrs, body -> }
-    String nonClosureField = 'not a tag'
+    String nonClosureField = "not a tag"
     static Closure someStaticClosure = { -> }
 }
 
 @CompileStatic
 class ParentCompileStaticTagLib {
 
-    Closure parentTag = { Map attrs -> 'parent' }
+    Closure parentTag = { Map attrs -> "parent" }
 }
 
 @CompileStatic
 class ChildCompileStaticTagLib extends ParentCompileStaticTagLib {
 
-    Closure childTag = { Map attrs -> 'child' }
+    Closure childTag = { Map attrs -> "child" }
 }
 
 class CustomNamespaceTagLib {

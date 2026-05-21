@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -47,6 +47,7 @@ import org.grails.datastore.bson.codecs.decoders.EmbeddedDecoder
 import org.grails.datastore.bson.codecs.encoders.EmbeddedCollectionEncoder
 import org.grails.datastore.bson.codecs.encoders.EmbeddedEncoder
 import org.grails.datastore.bson.codecs.encoders.IdentityEncoder
+import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.schemaless.DynamicAttributes
 import org.grails.datastore.mapping.collection.PersistentList
@@ -59,6 +60,7 @@ import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckableCollection
 import org.grails.datastore.mapping.engine.EntityAccess
+import org.grails.datastore.mapping.engine.EntityPersister
 import org.grails.datastore.mapping.engine.internal.MappingUtils
 import org.grails.datastore.mapping.model.EmbeddedPersistentEntity
 import org.grails.datastore.mapping.model.PersistentEntity
@@ -279,7 +281,6 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
 
                     }
                     else if (embedded || !isNew) {
-
                         unsets[prop.name] = BLANK_STRING
                     }
                 }
@@ -364,7 +365,6 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
             writer.writeEndDocument()
 
             if (hasSets) {
-
                 update.put(MONGO_SET_OPERATOR, sets)
             }
             if (hasUnsets) {
@@ -479,7 +479,6 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
     }
 
     static class OneToManyDecoder implements PropertyDecoder<Association> {
-
         @Override
         void decode(BsonReader reader, Association property, EntityAccess entityAccess, DecoderContext decoderContext, CodecRegistry codecRegistry) {
             def session = AbstractDatastore.retrieveSession(MongoDatastore)

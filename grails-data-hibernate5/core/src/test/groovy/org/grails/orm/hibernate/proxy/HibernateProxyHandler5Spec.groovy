@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -40,17 +40,17 @@ class HibernateProxyHandler5Spec extends  GrailsDataTckSpec<GrailsDataHibernate5
         manager.addAllDomainClasses([Location, Person, Pet])
     }
 
-    void 'test isInitialized for a non-proxied object'() {
+    void "test isInitialized for a non-proxied object"() {
         given:
-        Location location = new Location(name: 'Test Location').save(flush: true)
+        Location location = new Location(name: "Test Location").save(flush: true)
 
         expect:
         proxyHandler.isInitialized(location) == true
     }
 
-    void 'test isInitialized for a native Hibernate proxy before initialization'() {
+    void "test isInitialized for a native Hibernate proxy before initialization"() {
         given:
-        Location location = new Location(name: 'Test Location').save(flush: true)
+        Location location = new Location(name: "Test Location").save(flush: true)
         manager.session.clear()
         manager.hibernateSession.clear()
 
@@ -65,9 +65,9 @@ class HibernateProxyHandler5Spec extends  GrailsDataTckSpec<GrailsDataHibernate5
         !Hibernate.isInitialized(proxyLocation)
     }
 
-    void 'test isInitialized for a native Hibernate proxy after initialization'() {
+    void "test isInitialized for a native Hibernate proxy after initialization"() {
         given:
-        Location location = new Location(name: 'Test Location').save(flush: true)
+        Location location = new Location(name: "Test Location").save(flush: true)
         manager.session.clear()
         manager.hibernateSession.clear()
 
@@ -79,11 +79,11 @@ class HibernateProxyHandler5Spec extends  GrailsDataTckSpec<GrailsDataHibernate5
         Hibernate.isInitialized(proxyLocation)
     }
 
-    void 'test isInitialized for a Groovy proxy before initialization'() {
+    void "test isInitialized for a Groovy proxy before initialization"() {
         given:
         def originalFactory = manager.session.mappingContext.proxyFactory
         manager.session.mappingContext.proxyFactory = new GroovyProxyFactory()
-        Location location = new Location(name: 'Test Location').save(flush: true)
+        Location location = new Location(name: "Test Location").save(flush: true)
         manager.session.clear()
         manager.hibernateSession.clear()
 
@@ -97,9 +97,9 @@ class HibernateProxyHandler5Spec extends  GrailsDataTckSpec<GrailsDataHibernate5
         manager.session.mappingContext.proxyFactory = originalFactory
     }
 
-    void 'test unwrap for a native Hibernate proxy'() {
+    void "test unwrap for a native Hibernate proxy"() {
         given:
-        Location location = new Location(name: 'Test Location').save(flush: true)
+        Location location = new Location(name: "Test Location").save(flush: true)
         manager.session.clear()
         manager.hibernateSession.clear()
 
@@ -111,11 +111,11 @@ class HibernateProxyHandler5Spec extends  GrailsDataTckSpec<GrailsDataHibernate5
         unwrapped.name == location.name
     }
 
-    void 'test unwrap for a Groovy proxy'() {
+    void "test unwrap for a Groovy proxy"() {
         given:
         def originalFactory = manager.session.mappingContext.proxyFactory
         manager.session.mappingContext.proxyFactory = new GroovyProxyFactory()
-        Location location = new Location(name: 'Test Location').save(flush: true)
+        Location location = new Location(name: "Test Location").save(flush: true)
         manager.session.clear()
         manager.hibernateSession.clear()
 
@@ -130,14 +130,14 @@ class HibernateProxyHandler5Spec extends  GrailsDataTckSpec<GrailsDataHibernate5
         manager.session.mappingContext.proxyFactory = originalFactory
     }
 
-    void 'test isInitialized for null'() {
+    void "test isInitialized for null"() {
         expect:
         proxyHandler.isInitialized(null) == false
     }
 
-    void 'test isInitialized for a persistent collection'() {
+    void "test isInitialized for a persistent collection"() {
         given:
-        Person p = new Person(firstName: 'Homer', lastName: 'Simpson').save(flush: true)
+        Person p = new Person(firstName: "Homer", lastName: "Simpson").save(flush: true)
         new Pet(name: "Santa's Little Helper", owner: p).save(flush: true)
         manager.session.clear()
         manager.hibernateSession.clear()
@@ -155,9 +155,9 @@ class HibernateProxyHandler5Spec extends  GrailsDataTckSpec<GrailsDataHibernate5
         proxyHandler.isInitialized(pets) == true
     }
 
-    void 'test isInitialized for association name'() {
+    void "test isInitialized for association name"() {
         given:
-        Person p = new Person(firstName: 'Homer', lastName: 'Simpson').save(flush: true)
+        Person p = new Person(firstName: "Homer", lastName: "Simpson").save(flush: true)
         new Pet(name: "Santa's Little Helper", owner: p).save(flush: true)
         manager.session.clear()
         manager.hibernateSession.clear()
@@ -174,9 +174,9 @@ class HibernateProxyHandler5Spec extends  GrailsDataTckSpec<GrailsDataHibernate5
         proxyHandler.isInitialized(loaded, 'pets') == true
     }
 
-    void 'test isProxy'() {
+    void "test isProxy"() {
         given:
-        Location location = new Location(name: 'Test').save(flush: true)
+        Location location = new Location(name: "Test").save(flush: true)
         manager.session.clear()
         manager.hibernateSession.clear()
 
@@ -188,9 +188,9 @@ class HibernateProxyHandler5Spec extends  GrailsDataTckSpec<GrailsDataHibernate5
         proxyHandler.isProxy(null) == false
     }
 
-    void 'test getIdentifier'() {
+    void "test getIdentifier"() {
         given:
-        Location location = new Location(name: 'Test').save(flush: true)
+        Location location = new Location(name: "Test").save(flush: true)
         manager.session.clear()
         manager.hibernateSession.clear()
 
@@ -201,9 +201,9 @@ class HibernateProxyHandler5Spec extends  GrailsDataTckSpec<GrailsDataHibernate5
         proxyHandler.getIdentifier(location) == null
     }
 
-    void 'test getProxiedClass'() {
+    void "test getProxiedClass"() {
         given:
-        Location location = new Location(name: 'Test').save(flush: true)
+        Location location = new Location(name: "Test").save(flush: true)
         manager.session.clear()
         manager.hibernateSession.clear()
 
@@ -214,9 +214,9 @@ class HibernateProxyHandler5Spec extends  GrailsDataTckSpec<GrailsDataHibernate5
         proxyHandler.getProxiedClass(location) == Location
     }
 
-    void 'test initialize'() {
+    void "test initialize"() {
         given:
-        Location location = new Location(name: 'Test').save(flush: true)
+        Location location = new Location(name: "Test").save(flush: true)
         manager.session.clear()
         manager.hibernateSession.clear()
 
@@ -232,9 +232,9 @@ class HibernateProxyHandler5Spec extends  GrailsDataTckSpec<GrailsDataHibernate5
         Hibernate.isInitialized(proxy)
     }
 
-    void 'test unwrap for persistent collection'() {
+    void "test unwrap for persistent collection"() {
         given:
-        Person p = new Person(firstName: 'Homer', lastName: 'Simpson').save(flush: true)
+        Person p = new Person(firstName: "Homer", lastName: "Simpson").save(flush: true)
         new Pet(name: "Santa's Little Helper", owner: p).save(flush: true)
         manager.session.clear()
         manager.hibernateSession.clear()
@@ -253,14 +253,14 @@ class HibernateProxyHandler5Spec extends  GrailsDataTckSpec<GrailsDataHibernate5
         proxyHandler.isInitialized(pets)
     }
 
-    void 'test isInitialized for association name with null object'() {
+    void "test isInitialized for association name with null object"() {
         expect:
         proxyHandler.isInitialized(null, 'any') == false
     }
 
-    void 'test createProxy'() {
+    void "test createProxy"() {
         given:
-        Location location = new Location(name: 'Test').save(flush: true)
+        Location location = new Location(name: "Test").save(flush: true)
         manager.session.clear()
         manager.hibernateSession.clear()
 
@@ -274,7 +274,7 @@ class HibernateProxyHandler5Spec extends  GrailsDataTckSpec<GrailsDataHibernate5
         !Hibernate.isInitialized(proxy)
     }
 
-    void 'test createProxy with AssociationQueryExecutor'() {
+    void "test createProxy with AssociationQueryExecutor"() {
         when:
         proxyHandler.createProxy(manager.session, null, null)
 
@@ -282,10 +282,10 @@ class HibernateProxyHandler5Spec extends  GrailsDataTckSpec<GrailsDataHibernate5
         thrown(UnsupportedOperationException)
     }
 
-    void 'test createProxy throws IllegalStateException if native interface is not GrailsHibernateTemplate'() {
+    void "test createProxy throws IllegalStateException if native interface is not GrailsHibernateTemplate"() {
         given:
         def mockSession = Stub(org.grails.datastore.mapping.core.Session)
-        mockSession.getNativeInterface() >> 'not a template'
+        mockSession.getNativeInterface() >> "not a template"
 
         when:
         proxyHandler.createProxy(mockSession, Location, 1L)
@@ -294,9 +294,9 @@ class HibernateProxyHandler5Spec extends  GrailsDataTckSpec<GrailsDataHibernate5
         thrown(IllegalStateException)
     }
 
-    void 'test deprecated unwrapProxy and unwrapIfProxy'() {
+    void "test deprecated unwrapProxy and unwrapIfProxy"() {
         given:
-        Location location = new Location(name: 'Test').save(flush: true)
+        Location location = new Location(name: "Test").save(flush: true)
         manager.session.clear()
         manager.hibernateSession.clear()
 
@@ -309,9 +309,9 @@ class HibernateProxyHandler5Spec extends  GrailsDataTckSpec<GrailsDataHibernate5
         proxyHandler.unwrapIfProxy(location) == location
     }
 
-    void 'test getAssociationProxy'() {
+    void "test getAssociationProxy"() {
         given:
-        Person p = new Person(firstName: 'Homer', lastName: 'Simpson').save(flush: true)
+        Person p = new Person(firstName: "Homer", lastName: "Simpson").save(flush: true)
         Pet pet = new Pet(name: "Santa's Little Helper", owner: p).save(flush: true)
         manager.session.clear()
         manager.hibernateSession.clear()

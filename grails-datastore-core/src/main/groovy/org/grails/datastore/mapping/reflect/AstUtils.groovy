@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -124,7 +124,6 @@ class AstUtils {
      * @return true if it is a domain class
      */
     static boolean isDomainClass(URL url) {
-
         if (url == null) return false
 
         return DOMAIN_PATH_PATTERN.matcher(url.getFile()).find()
@@ -136,7 +135,6 @@ class AstUtils {
      * @return The abstract method
      */
     static List<MethodNode> findPublicAbstractMethods(ClassNode classNode) {
-
         List<MethodNode> methods = []
         findAbstractMethodsInternal(classNode, methods, false)
         return methods
@@ -148,7 +146,6 @@ class AstUtils {
      * @return The abstract method
      */
     static List<MethodNode> findAllAbstractMethods(ClassNode classNode) {
-
         List<MethodNode> methods = []
         findAbstractMethodsInternal(classNode, methods, true)
         return methods
@@ -160,7 +157,6 @@ class AstUtils {
      * @return The abstract method
      */
     static List<MethodNode> findAllUnimplementedAbstractMethods(ClassNode classNode) {
-
         List<MethodNode> methods = []
         findAbstractMethodsInternal(classNode, methods, true)
         return methods.findAll() { MethodNode mn ->
@@ -279,7 +275,6 @@ class AstUtils {
      * @return True if it is
      */
     static boolean isSpockTest(ClassNode classNode) {
-
         return isSubclassOf(classNode, SPEC_CLASS)
     }
 
@@ -386,7 +381,6 @@ class AstUtils {
      * @return True if it is
      */
     static boolean isEnum(ClassNode classNode) {
-
         ClassNode parent = classNode.getSuperClass()
         while (parent != null) {
             if (parent.getName().equals('java.lang.Enum'))
@@ -402,7 +396,6 @@ class AstUtils {
      * @return True if it is
      */
     static boolean isNumberType(ClassNode classNode) {
-
         if (classNode != null) {
             return ClassHelper.isNumberType(classNode) || isSubclassOfOrImplementsInterface(classNode, Number.name)
         }
@@ -417,7 +410,6 @@ class AstUtils {
      * @return The property node or null
      */
     static PropertyNode getPropertyFromHierarchy(ClassNode cn, String name) {
-
         PropertyNode pn = cn.getProperty(name)
         ClassNode superClass = cn.getSuperClass()
         while (pn == null && superClass != null) {
@@ -634,7 +626,6 @@ class AstUtils {
      * @param annotationClass The annotation class
      */
     static void addAnnotationIfNecessary(AnnotatedNode classNode, Class<? extends Annotation> annotationClass) {
-
         AstAnnotationUtils.addAnnotationIfNecessary(classNode, annotationClass)
     }
 
@@ -645,7 +636,6 @@ class AstUtils {
      * @param annotationClass The annotation class
      */
     static AnnotationNode addAnnotationOrGetExisting(AnnotatedNode classNode, Class<? extends Annotation> annotationClass) {
-
         AstAnnotationUtils.addAnnotationOrGetExisting(classNode, annotationClass)
     }
 
@@ -663,7 +653,6 @@ class AstUtils {
      * @param annotationClass The annotation class
      */
     static AnnotationNode addAnnotationOrGetExisting(AnnotatedNode annotatedNode, Class<? extends Annotation> annotationClass, Map<String, Object> members) {
-
         AstAnnotationUtils.addAnnotationOrGetExisting(annotatedNode, annotationClass, members)
     }
 
@@ -728,7 +717,6 @@ class AstUtils {
      * @return True if it is a subclass
      */
     static boolean isSubclassOf(ClassNode classNode, String parentClassName) {
-
         if (classNode.name == parentClassName) return true
         ClassNode currentSuper = classNode.getSuperClass()
         while (currentSuper != null) {
@@ -755,7 +743,6 @@ class AstUtils {
      * @return True if it does
      */
     static boolean implementsInterface(ClassNode classNode, String interfaceName) {
-
         ClassNode interfaceNode = make(interfaceName)
         return implementsInterface(classNode, interfaceNode)
     }
@@ -767,7 +754,6 @@ class AstUtils {
      * @return True if it does
      */
     static boolean implementsInterface(ClassNode classNode, Class itfc) {
-
         return classNode.getAllInterfaces().contains(make(itfc))
     }
     /**
@@ -778,7 +764,6 @@ class AstUtils {
      * @return True if it does
      */
     static boolean implementsInterface(ClassNode classNode, ClassNode interfaceNode) {
-
         return classNode.getAllInterfaces().contains(interfaceNode)
     }
 

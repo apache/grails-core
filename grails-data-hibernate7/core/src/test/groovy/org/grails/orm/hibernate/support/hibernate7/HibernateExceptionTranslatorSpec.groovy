@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -26,23 +26,23 @@ import java.sql.SQLException
 
 class HibernateExceptionTranslatorSpec extends Specification {
 
-    def 'test translateExceptionIfPossible translates Hibernate exceptions'() {
-        given: 'A translator and a Hibernate exception'
+    def "test translateExceptionIfPossible translates Hibernate exceptions"() {
+        given: "A translator and a Hibernate exception"
         def translator = new HibernateExceptionTranslator()
-        def hibernateEx = new HibernateException('Test exception')
+        def hibernateEx = new HibernateException("Test exception")
 
-        when: 'translateExceptionIfPossible is called'
+        when: "translateExceptionIfPossible is called"
         DataAccessException dae = translator.translateExceptionIfPossible(hibernateEx)
 
-        then: 'it is translated to a Spring DataAccessException'
+        then: "it is translated to a Spring DataAccessException"
         dae != null
-        dae.message.contains('Test exception')
+        dae.message.contains("Test exception")
 
-        when: 'a ConstraintViolationException is translated'
-        def cve = new ConstraintViolationException('Violation', new SQLException('SQL error'), 'UK_TEST')
+        when: "a ConstraintViolationException is translated"
+        def cve = new ConstraintViolationException("Violation", new SQLException("SQL error"), "UK_TEST")
         dae = translator.translateExceptionIfPossible(cve)
 
-        then: 'it is correctly translated'
+        then: "it is correctly translated"
         dae != null
     }
 }

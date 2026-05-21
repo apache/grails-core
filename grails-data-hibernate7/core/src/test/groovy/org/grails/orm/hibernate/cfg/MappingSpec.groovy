@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -29,8 +29,8 @@ import spock.lang.Unroll
 class MappingSpec extends HibernateGormDatastoreSpec {
 
     @Unroll
-    void 'test isCompositeIdProperty should return #expectedResult for #description'() {
-        given: 'A persistent entity and its mapping'
+    void "test isCompositeIdProperty should return #expectedResult for #description"() {
+        given: "A persistent entity and its mapping"
         def binder = grailsDomainBinder
         // Ensure all related entities are processed by the mapping context
         createPersistentEntity(Author, binder)
@@ -38,44 +38,44 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         def mapping = (Mapping) entity.getMappedForm()
         def property = entity.getPropertyByName(propertyName)
 
-        when: 'The method is called on the property itself'
+        when: "The method is called on the property itself"
         def resultProperty = property.isCompositeIdProperty()
 
-        then: 'The results are as expected'
+        then: "The results are as expected"
         resultProperty == expectedResult
 
         where:
         description                               | domainClass       | propertyName | expectedResult
-        'a property that is part of a composite id' | CompositeIdBook   | 'title'      | true
-        'another property in the composite id'      | CompositeIdBook   | 'author'     | true
-        'a property not in the composite id'        | CompositeIdBook   | 'pageCount'  | false
-        'a property from a simple id class'         | SimpleIdBook      | 'title'      | false
+        "a property that is part of a composite id" | CompositeIdBook   | 'title'      | true
+        "another property in the composite id"      | CompositeIdBook   | 'author'     | true
+        "a property not in the composite id"        | CompositeIdBook   | 'pageCount'  | false
+        "a property from a simple id class"         | SimpleIdBook      | 'title'      | false
     }
 
     @Unroll
-    void 'test isIdentityProperty should return #expectedResult for #description'() {
-        given: 'A persistent entity and its property'
+    void "test isIdentityProperty should return #expectedResult for #description"() {
+        given: "A persistent entity and its property"
         def binder = grailsDomainBinder
         def entity = createPersistentEntity(domainClass, binder)
         def property = entity.getPropertyByName(propertyName)
 
-        when: 'The method is called on the property itself'
+        when: "The method is called on the property itself"
         def resultProperty = property.isIdentityProperty()
 
-        then: 'The result is as expected'
+        then: "The result is as expected"
         resultProperty == expectedResult
 
         where:
         description                        | domainClass     | propertyName | expectedResult
-        'the identity property'            | SimpleIdBook    | 'id'         | true
-        'a non-identity property'          | SimpleIdBook    | 'title'      | false
-        'the identity in composite entity' | CompositeIdBook | 'id'         | true
-        'a property in composite identity' | CompositeIdBook | 'title'      | false
+        "the identity property"            | SimpleIdBook    | 'id'         | true
+        "a non-identity property"          | SimpleIdBook    | 'title'      | false
+        "the identity in composite entity" | CompositeIdBook | 'id'         | true
+        "a property in composite identity" | CompositeIdBook | 'title'      | false
     }
 
     // --- methodMissing dispatch tests (pure unit, no datastore) ---
 
-    void 'methodMissing dispatches Closure arg to property(name, closure)'() {
+    void "methodMissing dispatches Closure arg to property(name, closure)"() {
         given:
         Mapping mapping = new Mapping()
 
@@ -87,7 +87,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         mapping.columns['firstName'].column == 'first_name'
     }
 
-    void 'methodMissing dispatches PropertyConfig arg directly into columns map'() {
+    void "methodMissing dispatches PropertyConfig arg directly into columns map"() {
         given:
         Mapping mapping = new Mapping()
         PropertyConfig pc = new PropertyConfig()
@@ -101,7 +101,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         mapping.columns['firstName'].column == 'first_name'
     }
 
-    void 'methodMissing dispatches Map arg to PropertyConfig.configureExisting'() {
+    void "methodMissing dispatches Map arg to PropertyConfig.configureExisting"() {
         given:
         Mapping mapping = new Mapping()
 
@@ -113,11 +113,11 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         mapping.columns['firstName'].column == 'first_name'
     }
 
-    void 'methodMissing dispatches Map + Closure args — Map configures, Closure also applied'() {
+    void "methodMissing dispatches Map + Closure args — Map configures, Closure also applied"() {
         given:
         Mapping mapping = new Mapping()
 
-        when: 'Map is first arg, Closure is last arg'
+        when: "Map is first arg, Closure is last arg"
         mapping.firstName([column: 'first_name'], { formula = 'UPPER(first_name)' })
 
         then:
@@ -125,7 +125,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         mapping.columns['firstName'].formula == 'UPPER(first_name)'
     }
 
-    void 'methodMissing throws MissingMethodException for unknown arg type'() {
+    void "methodMissing throws MissingMethodException for unknown arg type"() {
         given:
         Mapping mapping = new Mapping()
 
@@ -138,7 +138,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
 
     // --- getOrInitializePropertyConfig (protected, same-package access) ---
 
-    void 'getOrInitializePropertyConfig creates a new PropertyConfig when none exists'() {
+    void "getOrInitializePropertyConfig creates a new PropertyConfig when none exists"() {
         given:
         Mapping mapping = new Mapping()
 
@@ -150,7 +150,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         mapping.columns['age'].is(pc)
     }
 
-    void 'getOrInitializePropertyConfig returns existing PropertyConfig when already set'() {
+    void "getOrInitializePropertyConfig returns existing PropertyConfig when already set"() {
         given:
         Mapping mapping = new Mapping()
         PropertyConfig existing = new PropertyConfig()
@@ -163,7 +163,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         pc.is(existing)
     }
 
-    void 'getOrInitializePropertyConfig clones global constraint when present'() {
+    void "getOrInitializePropertyConfig clones global constraint when present"() {
         given:
         Mapping mapping = new Mapping()
         PropertyConfig global = new PropertyConfig()
@@ -181,7 +181,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
 
     // --- cloneGlobalConstraint (protected, same-package access) ---
 
-    void 'cloneGlobalConstraint returns a clone with firstColumnIsColumnCopy set for single column'() {
+    void "cloneGlobalConstraint returns a clone with firstColumnIsColumnCopy set for single column"() {
         given:
         Mapping mapping = new Mapping()
         PropertyConfig global = new PropertyConfig()
@@ -199,7 +199,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
 
     // --- PropertyConfig.checkHasSingleColumn (protected, same-package access) ---
 
-    void 'checkHasSingleColumn does not throw when only one column is configured'() {
+    void "checkHasSingleColumn does not throw when only one column is configured"() {
         given:
         PropertyConfig pc = new PropertyConfig()
         pc.column('my_col')
@@ -208,7 +208,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         pc.checkHasSingleColumn()  // no exception
     }
 
-    void 'checkHasSingleColumn throws when multiple columns are configured'() {
+    void "checkHasSingleColumn throws when multiple columns are configured"() {
         given:
         PropertyConfig pc = new PropertyConfig()
         pc.columns << new ColumnConfig(name: 'col_a')
@@ -223,7 +223,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
 
     // --- table() DSL ---
 
-    void 'table(String) sets the table name on the mapping'() {
+    void "table(String) sets the table name on the mapping"() {
         given:
         Mapping mapping = new Mapping()
 
@@ -234,7 +234,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         mapping.tableName == 'my_table'
     }
 
-    void 'table(Closure) configures the Table via closure'() {
+    void "table(Closure) configures the Table via closure"() {
         given:
         Mapping mapping = new Mapping()
 
@@ -245,7 +245,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         mapping.tableName == 'closure_table'
     }
 
-    void 'table(Map) configures the Table via map'() {
+    void "table(Map) configures the Table via map"() {
         given:
         Mapping mapping = new Mapping()
 
@@ -256,7 +256,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         mapping.tableName == 'map_table'
     }
 
-    void 'setTableName delegates to table.name'() {
+    void "setTableName delegates to table.name"() {
         given:
         Mapping mapping = new Mapping()
 
@@ -269,7 +269,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
 
     // --- id() DSL ---
 
-    void 'id(Map) configures the identity from a map'() {
+    void "id(Map) configures the identity from a map"() {
         given:
         Mapping mapping = new Mapping()
 
@@ -280,7 +280,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         (mapping.identity as HibernateSimpleIdentity).column == 'my_id_col'
     }
 
-    void 'id(Closure) configures the identity from a closure'() {
+    void "id(Closure) configures the identity from a closure"() {
         given:
         Mapping mapping = new Mapping()
 
@@ -291,7 +291,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         (mapping.identity as HibernateSimpleIdentity).column == 'closure_id'
     }
 
-    void 'id(HibernateCompositeIdentity) replaces the identity'() {
+    void "id(HibernateCompositeIdentity) replaces the identity"() {
         given:
         Mapping mapping = new Mapping()
         HibernateCompositeIdentity composite = new HibernateCompositeIdentity(propertyNames: ['a', 'b'])
@@ -305,7 +305,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
 
     // --- cache() DSL ---
 
-    void 'cache(Closure) initialises CacheConfig and applies the closure'() {
+    void "cache(Closure) initialises CacheConfig and applies the closure"() {
         given:
         Mapping mapping = new Mapping()
         assert mapping.cache == null
@@ -318,7 +318,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         mapping.cache.usage == CacheConfig.Usage.READ_ONLY
     }
 
-    void 'cache(Map) initialises CacheConfig and applies the map'() {
+    void "cache(Map) initialises CacheConfig and applies the map"() {
         given:
         Mapping mapping = new Mapping()
 
@@ -329,7 +329,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         mapping.cache != null
     }
 
-    void 'cache(String) sets cache usage and enables caching'() {
+    void "cache(String) sets cache usage and enables caching"() {
         given:
         Mapping mapping = new Mapping()
 
@@ -344,7 +344,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
 
     // --- sort() DSL ---
 
-    void 'sort(String, String) sets name and direction'() {
+    void "sort(String, String) sets name and direction"() {
         given:
         Mapping mapping = new Mapping()
 
@@ -356,7 +356,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         mapping.sort.direction == 'asc'
     }
 
-    void 'sort(Map) sets namesAndDirections'() {
+    void "sort(Map) sets namesAndDirections"() {
         given:
         Mapping mapping = new Mapping()
 
@@ -369,7 +369,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
 
     // --- discriminator() DSL ---
 
-    void 'discriminator(String) sets the discriminator value'() {
+    void "discriminator(String) sets the discriminator value"() {
         given:
         Mapping mapping = new Mapping()
 
@@ -380,7 +380,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         mapping.discriminator.value == 'DOG'
     }
 
-    void 'discriminator(Closure) applies closure to DiscriminatorConfig'() {
+    void "discriminator(Closure) applies closure to DiscriminatorConfig"() {
         given:
         Mapping mapping = new Mapping()
 
@@ -391,7 +391,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         mapping.discriminator.value == 'CAT'
     }
 
-    void 'discriminator(Map) sets value and column'() {
+    void "discriminator(Map) sets value and column"() {
         given:
         Mapping mapping = new Mapping()
 
@@ -405,7 +405,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
 
     // --- composite() ---
 
-    void 'composite(String...) creates a HibernateCompositeIdentity'() {
+    void "composite(String...) creates a HibernateCompositeIdentity"() {
         given:
         Mapping mapping = new Mapping()
 
@@ -419,7 +419,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
 
     // --- version() ---
 
-    void 'version(false) disables versioning'() {
+    void "version(false) disables versioning"() {
         given:
         Mapping mapping = new Mapping()
         assert mapping.versioned
@@ -431,7 +431,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         !mapping.versioned
     }
 
-    void 'version(Map) configures the version column'() {
+    void "version(Map) configures the version column"() {
         given:
         Mapping mapping = new Mapping()
 
@@ -445,8 +445,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
 
     // --- isJoinedSubclass / setTablePerConcreteClass ---
 
-    void 'isJoinedSubclass returns true when tablePerHierarchy=false and tablePerConcreteClass=false'() {
-
+    void "isJoinedSubclass returns true when tablePerHierarchy=false and tablePerConcreteClass=false"() {
         given:
         Mapping mapping = new Mapping()
         mapping.tablePerHierarchy = false
@@ -455,8 +454,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         mapping.isJoinedSubclass()
     }
 
-    void 'isJoinedSubclass returns false when tablePerHierarchy is true'() {
-
+    void "isJoinedSubclass returns false when tablePerHierarchy is true"() {
         given:
         Mapping mapping = new Mapping()
         mapping.tablePerHierarchy = true
@@ -465,7 +463,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         !mapping.isJoinedSubclass()
     }
 
-    void 'setTablePerConcreteClass(true) also sets tablePerHierarchy to false'() {
+    void "setTablePerConcreteClass(true) also sets tablePerHierarchy to false"() {
         given:
         Mapping mapping = new Mapping()
         assert mapping.tablePerHierarchy
@@ -480,7 +478,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
 
     // --- getTypeName ---
 
-    void 'getTypeName returns null for unknown class'() {
+    void "getTypeName returns null for unknown class"() {
         given:
         Mapping mapping = new Mapping()
 
@@ -488,8 +486,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         mapping.getTypeName(String) == null
     }
 
-    void 'getTypeName returns class name when mapped to a Class'() {
-
+    void "getTypeName returns class name when mapped to a Class"() {
         given:
         Mapping mapping = new Mapping()
         mapping.userTypes[String] = Integer
@@ -498,7 +495,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         mapping.getTypeName(String) == Integer.name
     }
 
-    void 'getTypeName returns string value when mapped to a string'() {
+    void "getTypeName returns string value when mapped to a string"() {
         given:
         Mapping mapping = new Mapping()
         mapping.userTypes[String] = 'my.custom.Type'
@@ -509,7 +506,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
 
     // --- hasCompositeIdentifier ---
 
-    void 'hasCompositeIdentifier returns false for default simple identity'() {
+    void "hasCompositeIdentifier returns false for default simple identity"() {
         given:
         Mapping mapping = new Mapping()
 
@@ -517,7 +514,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         !mapping.hasCompositeIdentifier()
     }
 
-    void 'hasCompositeIdentifier returns true after composite() is called'() {
+    void "hasCompositeIdentifier returns true after composite() is called"() {
         given:
         Mapping mapping = new Mapping()
         mapping.composite('a', 'b')
@@ -528,7 +525,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
 
     // --- configureNew / configureExisting ---
 
-    void 'configureNew(Closure) returns a new Mapping with closure applied'() {
+    void "configureNew(Closure) returns a new Mapping with closure applied"() {
         when:
         Mapping m = Mapping.configureNew { table 'books' }
 
@@ -537,7 +534,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         m.tableName == 'books'
     }
 
-    void 'configureExisting(Mapping, Map) applies map values to existing mapping'() {
+    void "configureExisting(Mapping, Map) applies map values to existing mapping"() {
         given:
         Mapping existing = new Mapping()
 
@@ -549,7 +546,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         !result.tablePerHierarchy
     }
 
-    void 'configureExisting(Mapping, Closure) applies closure to existing mapping'() {
+    void "configureExisting(Mapping, Closure) applies closure to existing mapping"() {
         given:
         Mapping existing = new Mapping()
 
@@ -563,8 +560,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
 
     // ─── Additional edge cases for coverage ───────────────────────────────────
 
-    void 'test subclass mapping booleans'() {
-
+    void "test subclass mapping booleans"() {
         given:
         Mapping mapping = new Mapping()
 
@@ -577,7 +573,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         !mapping.tablePerHierarchy
     }
 
-    void 'discriminator(Map) handles nested column map and formula'() {
+    void "discriminator(Map) handles nested column map and formula"() {
         given:
         Mapping mapping = new Mapping()
 
@@ -592,7 +588,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         !mapping.discriminator.insertable
     }
 
-    void 'id(Map) and id(Closure) do nothing if identity is not HibernateSimpleIdentity'() {
+    void "id(Map) and id(Closure) do nothing if identity is not HibernateSimpleIdentity"() {
         given:
         Mapping mapping = new Mapping()
         mapping.id(new HibernateCompositeIdentity(propertyNames: ['a', 'b']))
@@ -605,7 +601,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         mapping.identity instanceof HibernateCompositeIdentity
     }
 
-    void 'version(String) sets version column name'() {
+    void "version(String) sets version column name"() {
         given:
         Mapping mapping = new Mapping()
 
@@ -616,7 +612,7 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         mapping.columns['version'].column == 'ver_col_str'
     }
 
-    void 'property(Closure) and property(Map) handle global constraints'() {
+    void "property(Closure) and property(Map) handle global constraints"() {
         given:
         Mapping mapping = new Mapping()
         mapping.columns['*'] = new PropertyConfig(batchSize: 10)
@@ -632,24 +628,24 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         pc2.insertable == false
     }
 
-    void 'propertyMissing and methodMissing handle PropertyConfig and Map'() {
+    void "propertyMissing and methodMissing handle PropertyConfig and Map"() {
         given:
         Mapping mapping = new Mapping()
         def pc = new PropertyConfig().column('pc_col')
 
-        when: 'propertyMissing with PropertyConfig'
+        when: "propertyMissing with PropertyConfig"
         mapping.prop1 = pc
 
         then:
         mapping.columns['prop1'].is(pc)
 
-        when: 'methodMissing with PropertyConfig'
+        when: "methodMissing with PropertyConfig"
         mapping.prop2(pc)
 
         then:
         mapping.columns['prop2'].is(pc)
 
-        when: 'propertyMissing with non-Closure/non-PC throws'
+        when: "propertyMissing with non-Closure/non-PC throws"
         mapping.prop3 = 42
 
         then:
@@ -663,13 +659,11 @@ class MappingSpec extends HibernateGormDatastoreSpec {
 
 @Entity
 class Author {
-
     String name
 }
 
 @Entity
 class CompositeIdBook {
-
     String title
     Author author
     Integer pageCount
@@ -681,6 +675,5 @@ class CompositeIdBook {
 
 @Entity
 class SimpleIdBook {
-
     String title
 }

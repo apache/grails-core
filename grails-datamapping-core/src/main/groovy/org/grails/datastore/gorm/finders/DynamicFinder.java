@@ -36,7 +36,6 @@ import org.springframework.core.convert.ConversionService;
 import org.springframework.util.StringUtils;
 
 import grails.gorm.DetachedCriteria;
-import org.grails.datastore.gorm.DatastoreResolver;
 import org.grails.datastore.gorm.finders.MethodExpression.Between;
 import org.grails.datastore.gorm.finders.MethodExpression.Equal;
 import org.grails.datastore.gorm.finders.MethodExpression.GreaterThan;
@@ -56,6 +55,7 @@ import org.grails.datastore.gorm.finders.MethodExpression.NotInList;
 import org.grails.datastore.gorm.finders.MethodExpression.Rlike;
 import org.grails.datastore.gorm.query.criteria.AbstractCriteriaBuilder;
 import org.grails.datastore.gorm.query.criteria.AbstractDetachedCriteria;
+import org.grails.datastore.gorm.DatastoreResolver;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.model.MappingContext;
@@ -154,7 +154,7 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
     }
 
     protected DynamicFinder(final Pattern pattern, final String[] operators, final MappingContext mappingContext) {
-        super((Datastore) null);
+        super((Datastore)null);
         this.mappingContext = mappingContext;
         this.pattern = pattern;
         this.operators = operators;

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -38,13 +38,14 @@ class CompositeIdWithJoinTableSpec extends Specification {
     @Shared PlatformTransactionManager transactionManager = datastore.transactionManager
 
     @Rollback
-    void 'test composite id with join table'() {
-        when:'A parent with a composite id and a join table is saved'
-        new CompositeIdParent(name: 'Test' , last: 'Test 2')
+    void "test composite id with join table"() {
+        when:"A parent with a composite id and a join table is saved"
+        new CompositeIdParent(name: "Test" , last:"Test 2")
                 .addToChildren(new CompositeIdChild())
-                .save(flush: true)
+                .save(flush:true)
 
-        then:'The entity was saved'
+
+        then:"The entity was saved"
         CompositeIdParent.count() == 1
         CompositeIdParent.list().first().children.size() == 1
     }
@@ -52,22 +53,21 @@ class CompositeIdWithJoinTableSpec extends Specification {
 
 @Entity
 class CompositeIdParent implements Serializable {
-
     String name
     String last
-    static hasMany = [children: CompositeIdChild]
+    static hasMany = [children:CompositeIdChild]
     static mapping = define {
         id composite('name','last')
-        property('children') {
+        property("children") {
             joinTable {
-                name 'child_parent'
-                column 'child_id'
+                name "child_parent"
+                column "child_id"
             }
             column {
-                name 'foo'
+                name "foo"
             }
             column {
-                name 'bar'
+                name "bar"
             }
         }
     }

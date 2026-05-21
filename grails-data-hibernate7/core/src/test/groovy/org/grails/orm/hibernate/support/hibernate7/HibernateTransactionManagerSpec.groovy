@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -61,7 +61,7 @@ class HibernateTransactionManagerSpec extends Specification {
         TransactionSynchronizationManager.clear()
     }
 
-    def 'test begin new transaction'() {
+    def "test begin new transaction"() {
         given:
         TransactionDefinition definition = new DefaultTransactionDefinition()
 
@@ -79,7 +79,7 @@ class HibernateTransactionManagerSpec extends Specification {
         holder.transaction == transaction
     }
 
-    def 'test commit new transaction'() {
+    def "test commit new transaction"() {
         given:
         TransactionDefinition definition = new DefaultTransactionDefinition()
         1 * sessionFactory.openSession() >> session
@@ -96,7 +96,7 @@ class HibernateTransactionManagerSpec extends Specification {
         !TransactionSynchronizationManager.hasResource(sessionFactory)
     }
 
-    def 'test rollback new transaction'() {
+    def "test rollback new transaction"() {
         given:
         TransactionDefinition definition = new DefaultTransactionDefinition()
         1 * sessionFactory.openSession() >> session
@@ -113,7 +113,7 @@ class HibernateTransactionManagerSpec extends Specification {
         !TransactionSynchronizationManager.hasResource(sessionFactory)
     }
 
-    def 'test read-only transaction sets flush mode to manual'() {
+    def "test read-only transaction sets flush mode to manual"() {
         given:
         DefaultTransactionDefinition definition = new DefaultTransactionDefinition()
         definition.setReadOnly(true)
@@ -129,7 +129,7 @@ class HibernateTransactionManagerSpec extends Specification {
         txStatus.readOnly
     }
 
-    def 'test participating in existing transaction'() {
+    def "test participating in existing transaction"() {
         given:
         TransactionDefinition definition = new DefaultTransactionDefinition()
         
@@ -138,10 +138,10 @@ class HibernateTransactionManagerSpec extends Specification {
         1 * session.beginTransaction() >> transaction
         def status1 = transactionManager.getTransaction(definition)
 
-        when: 'Beginning a second transaction'
+        when: "Beginning a second transaction"
         def status2 = transactionManager.getTransaction(definition)
 
-        then: 'It should participate in the existing one'
+        then: "It should participate in the existing one"
         !status2.newTransaction
         status2.transaction != null
         0 * sessionFactory.openSession()
@@ -151,7 +151,7 @@ class HibernateTransactionManagerSpec extends Specification {
         _ * session.getHibernateFlushMode() >> FlushMode.AUTO
     }
 
-    def 'test suspend and resume transaction via REQUIRES_NEW'() {
+    def "test suspend and resume transaction via REQUIRES_NEW"() {
         given:
         TransactionDefinition def1 = new DefaultTransactionDefinition()
         DefaultTransactionDefinition def2 = new DefaultTransactionDefinition()
@@ -169,20 +169,20 @@ class HibernateTransactionManagerSpec extends Specification {
         session2.getJdbcCoordinator() >> jdbcCoordinator
         session2.getTransaction() >> transaction2
 
-        when: 'Beginning a REQUIRES_NEW transaction'
+        when: "Beginning a REQUIRES_NEW transaction"
         def status2 = transactionManager.getTransaction(def2)
 
-        then: 'The first one should be suspended and second one started'
+        then: "The first one should be suspended and second one started"
         1 * sessionFactory.openSession() >> session2
         1 * session2.beginTransaction() >> transaction2
         status2.newTransaction
         def holder2 = (SessionHolder) TransactionSynchronizationManager.getResource(sessionFactory)
         holder2.session == session2
 
-        when: 'Committing the second transaction'
+        when: "Committing the second transaction"
         transactionManager.commit(status2)
 
-        then: 'The second session should be closed and the first one resumed'
+        then: "The second session should be closed and the first one resumed"
         1 * transaction2.commit()
         1 * session2.isOpen() >> true
         1 * session2.close()

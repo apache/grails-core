@@ -14,31 +14,7 @@
  */
 package org.grails.datastore.mapping.simple;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.Serializable;
-import java.lang.reflect.Method;
-import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
-
 import groovy.lang.Closure;
-
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.ApplicationListener;
-import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.core.env.PropertyResolver;
-import org.springframework.core.env.StandardEnvironment;
-import org.springframework.transaction.PlatformTransactionManager;
-
 import org.grails.datastore.gorm.GormEnhancer;
 import org.grails.datastore.gorm.GormRegistry;
 import org.grails.datastore.gorm.events.AutoTimestampEventListener;
@@ -47,22 +23,31 @@ import org.grails.datastore.mapping.core.AbstractDatastore;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.DatastoreUtils;
 import org.grails.datastore.mapping.core.Session;
-import org.grails.datastore.mapping.core.connections.ConnectionSource;
-import org.grails.datastore.mapping.core.connections.ConnectionSourceFactory;
-import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings;
-import org.grails.datastore.mapping.core.connections.ConnectionSources;
-import org.grails.datastore.mapping.core.connections.ConnectionSourcesListener;
-import org.grails.datastore.mapping.core.connections.InMemoryConnectionSources;
-import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore;
+import org.grails.datastore.mapping.core.connections.*;
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext;
 import org.grails.datastore.mapping.model.MappingContext;
-import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
+import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore;
+import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
 import org.grails.datastore.mapping.multitenancy.TenantResolver;
 import org.grails.datastore.mapping.multitenancy.resolvers.NoTenantResolver;
 import org.grails.datastore.mapping.simple.connections.SimpleMapConnectionSourceFactory;
 import org.grails.datastore.mapping.transactions.DatastoreTransactionManager;
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.ApplicationListener;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.core.env.PropertyResolver;
+import org.springframework.core.env.StandardEnvironment;
+import org.springframework.transaction.PlatformTransactionManager;
+
+import java.io.Closeable;
+import java.io.IOException;
+import java.io.Serializable;
+import java.lang.reflect.Method;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * A simple implementation of the {@link org.grails.datastore.mapping.core.Datastore} interface that backs onto a Map
@@ -95,13 +80,13 @@ public class SimpleMapDatastore extends AbstractDatastore implements Transaction
     }
 
     public SimpleMapDatastore(ConnectionSources<Map<String, Map>, ConnectionSourceSettings> connectionSources, MappingContext mappingContext, ApplicationEventPublisher eventPublisher) {
-        this(connectionSources, (KeyValueMappingContext) mappingContext, eventPublisher, null);
+        this(connectionSources, (KeyValueMappingContext)mappingContext, eventPublisher, null);
     }
 
     public SimpleMapDatastore(ConnectionSources<Map<String, Map>, ConnectionSourceSettings> connectionSources, KeyValueMappingContext mappingContext, ApplicationEventPublisher eventPublisher, SharedState state) {
         this(connectionSources, mappingContext, eventPublisher, state, ConnectionSource.DEFAULT,
-             ((ConnectionSource<Map<String, Map>, ConnectionSourceSettings>) connectionSources.getDefaultConnectionSource()).getSettings().getMultiTenancy().getMode(),
-             ((ConnectionSource<Map<String, Map>, ConnectionSourceSettings>) connectionSources.getDefaultConnectionSource()).getSettings().getMultiTenancy().getTenantResolver());
+             ((ConnectionSource<Map<String, Map>, ConnectionSourceSettings>)connectionSources.getDefaultConnectionSource()).getSettings().getMultiTenancy().getMode(),
+             ((ConnectionSource<Map<String, Map>, ConnectionSourceSettings>)connectionSources.getDefaultConnectionSource()).getSettings().getMultiTenancy().getTenantResolver());
     }
 
     protected SimpleMapDatastore(ConnectionSources<Map<String, Map>, ConnectionSourceSettings> connectionSources, MappingContext mappingContext, ApplicationEventPublisher eventPublisher, SharedState state, String connectionName, MultiTenancySettings.MultiTenancyMode multiTenancyMode, TenantResolver tenantResolver) {
@@ -131,7 +116,7 @@ public class SimpleMapDatastore extends AbstractDatastore implements Transaction
 
         GormRegistry.getInstance().registerDatastore(this.connectionName, this);
         if (ConnectionSource.DEFAULT.equals(this.connectionName)) {
-            new GormEnhancer(this, this.transactionManager, ((ConnectionSource<Map<String, Map>, ConnectionSourceSettings>) connectionSources.getDefaultConnectionSource()).getSettings());
+            new GormEnhancer(this, this.transactionManager, ((ConnectionSource<Map<String, Map>, ConnectionSourceSettings>)connectionSources.getDefaultConnectionSource()).getSettings());
         }
         addApplicationListener(new DomainEventListener(this));
         addApplicationListener(new AutoTimestampEventListener(this));
@@ -171,7 +156,7 @@ public class SimpleMapDatastore extends AbstractDatastore implements Transaction
     }
 
     public SimpleMapDatastore(PropertyResolver configuration, ApplicationEventPublisher ctx, Class... classes) {
-        this(createConnectionSources(configuration), (KeyValueMappingContext) createMappingContext(configuration, classes), ctx, null);
+        this(createConnectionSources(configuration), (KeyValueMappingContext)createMappingContext(configuration, classes), ctx, null);
     }
 
     public SimpleMapDatastore(PropertyResolver configuration, Class... classes) {
@@ -187,7 +172,7 @@ public class SimpleMapDatastore extends AbstractDatastore implements Transaction
     }
 
     public SimpleMapDatastore(PropertyResolver configuration, Collection classes, Class... moreClasses) {
-        this(createConnectionSourcesFromCollection(configuration, classes), (KeyValueMappingContext) createMappingContext(configuration, combine(classes, moreClasses)), null, null);
+        this(createConnectionSourcesFromCollection(configuration, classes), (KeyValueMappingContext)createMappingContext(configuration, combine(classes, moreClasses)), null, null);
     }
 
     public SimpleMapDatastore(Collection classes, Class... moreClasses) {
@@ -459,7 +444,7 @@ public class SimpleMapDatastore extends AbstractDatastore implements Transaction
 
         @Override
         public V put(K key, V value) {
-            return proxy.put((K) (prefix + key), value);
+            return proxy.put((K)(prefix + key), value);
         }
 
         @Override
@@ -472,7 +457,7 @@ public class SimpleMapDatastore extends AbstractDatastore implements Transaction
             Set<Entry<K, V>> entries = new HashSet<>();
             for (Entry<K, V> entry : proxy.entrySet()) {
                 if (entry.getKey().toString().startsWith(prefix)) {
-                    entries.add(new SimpleEntry<>((K) entry.getKey().toString().substring(prefix.length()), entry.getValue()));
+                    entries.add(new SimpleEntry<>((K)entry.getKey().toString().substring(prefix.length()), entry.getValue()));
                 }
             }
             return entries;

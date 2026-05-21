@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -41,35 +41,36 @@ class BinaryPluginSpec extends Specification {
     </plugin>
     '''
 
-    def 'Test creation of a binary plugin'() {
+    def "Test creation of a binary plugin"() {
         when:
         def descriptor = new PluginDescriptor(new ByteArrayResource(testBinary.getBytes('UTF-8')), ['org.grails.plugins.TestBinaryResource'], ['org.grails.plugins.TestBinaryResource'])
             def binaryPlugin = new BinaryGrailsPlugin(TestBinaryGrailsPlugin, descriptor, new DefaultGrailsApplication())
 
         then:
-            binaryPlugin.version == '1.0'
+            binaryPlugin.version == "1.0"
             binaryPlugin.providedArtefacts.size() == 1
             binaryPlugin.providedArtefacts[0] == TestBinaryResource
     }
 
-    def 'Test load static resource from binary plugin'() {
+
+    def "Test load static resource from binary plugin"() {
         when:
             def resource = new MockBinaryPluginResource(testBinary.getBytes('UTF-8'))
         def descriptor = new PluginDescriptor(resource, ['org.grails.plugins.TestBinaryResource'], [])
             resource.relativesResources['static/css/main.css'] = new ByteArrayResource(''.bytes)
             def binaryPlugin = new BinaryGrailsPlugin(TestBinaryGrailsPlugin, descriptor, new DefaultGrailsApplication())
-            def cssResource = binaryPlugin.getResource('/css/main.css')
+            def cssResource = binaryPlugin.getResource("/css/main.css")
 
         then:
             cssResource != null
         when:
-            cssResource = binaryPlugin.resolveView('/css/foo.css')
+            cssResource = binaryPlugin.resolveView("/css/foo.css")
 
         then:
             cssResource == null
     }
 
-    def 'Test getPropertySource returns null when no mainContext is set on GrailsApplication'() {
+    def "Test getPropertySource returns null when no mainContext is set on GrailsApplication"() {
         when:
         def descriptor = new PluginDescriptor(new ByteArrayResource(testBinary.getBytes('UTF-8')), ['org.grails.plugins.TestBinaryResource'], [])
         def binaryPlugin = new BinaryGrailsPlugin(TestBinaryGrailsPlugin, descriptor, new DefaultGrailsApplication())
@@ -78,7 +79,7 @@ class BinaryPluginSpec extends Specification {
         binaryPlugin.propertySource == null
     }
 
-    def 'Test getPropertySource looks up plugin.yml from environment'() {
+    def "Test getPropertySource looks up plugin.yml from environment"() {
         given:
         def descriptor = new PluginDescriptor(new ByteArrayResource(testBinary.getBytes('UTF-8')), ['org.grails.plugins.TestBinaryResource'], [])
         def grailsApp = new DefaultGrailsApplication()
@@ -96,7 +97,7 @@ class BinaryPluginSpec extends Specification {
         binaryPlugin.propertySource.getProperty('foo') == 'bar'
     }
 
-    def 'Test getPropertySource looks up plugin.groovy from environment'() {
+    def "Test getPropertySource looks up plugin.groovy from environment"() {
         given:
         def descriptor = new PluginDescriptor(new ByteArrayResource(testBinary.getBytes('UTF-8')), ['org.grails.plugins.TestBinaryResource'], [])
         def grailsApp = new DefaultGrailsApplication()
@@ -114,8 +115,8 @@ class BinaryPluginSpec extends Specification {
         binaryPlugin.propertySource.getProperty('bar') == 'foo'
     }
 
-    def 'Test mutual exclusion of plugin.yml and plugin.groovy is enforced by EPP'() {
-        expect: 'Constructor no longer throws when both config files exist - validation moved to GrailsEnvironmentPostProcessor'
+    def "Test mutual exclusion of plugin.yml and plugin.groovy is enforced by EPP"() {
+        expect: "Constructor no longer throws when both config files exist - validation moved to GrailsEnvironmentPostProcessor"
         def descriptor = new PluginDescriptor(new ByteArrayResource(testBinary.getBytes('UTF-8')), ['org.grails.plugins.TestBinaryResource'], [])
         new BinaryGrailsPlugin(TestBinaryGrailsPlugin, descriptor, new DefaultGrailsApplication()) != null
     }
@@ -123,7 +124,6 @@ class BinaryPluginSpec extends Specification {
 }
 
 class TestBinaryGrailsPlugin {
-
     def version = 1.0
 }
 
@@ -144,10 +144,9 @@ class MockBinaryPluginResource extends ByteArrayResource {
 }
 
 class MyView extends Script {
-
     @Override
     Object run() {
-        return 'Good'
+        return "Good"
     }
 }
 

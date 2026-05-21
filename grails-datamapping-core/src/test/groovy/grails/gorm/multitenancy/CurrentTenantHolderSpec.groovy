@@ -1,14 +1,14 @@
 /*
  * Copyright 2026 the original author or authors.
  *
- * Licensed under the Apache License, Version 2.0 (the 'License')
+ * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an 'AS IS' BASIS,
+ * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -22,15 +22,15 @@ import spock.lang.Specification
 
 class CurrentTenantHolderSpec extends Specification {
 
-    void 'test set, get, and remove for Datastore instance'() {
+    void "test set, get, and remove for Datastore instance"() {
         given:
         Datastore mockDatastore = Mock(Datastore)
 
         when:
-        CurrentTenantHolder.set(mockDatastore, 'tenant1')
+        CurrentTenantHolder.set(mockDatastore, "tenant1")
 
         then:
-        CurrentTenantHolder.get(mockDatastore) == 'tenant1'
+        CurrentTenantHolder.get(mockDatastore) == "tenant1"
 
         when:
         CurrentTenantHolder.remove(mockDatastore)
@@ -39,16 +39,16 @@ class CurrentTenantHolderSpec extends Specification {
         CurrentTenantHolder.get(mockDatastore) == null
     }
 
-    void 'test set, get, and remove for Datastore class'() {
+    void "test set, get, and remove for Datastore class"() {
         given:
         Datastore mockDatastore = [:] as Datastore
         Class<? extends Datastore> mockDatastoreClass = mockDatastore.getClass()
 
         when:
-        CurrentTenantHolder.set(mockDatastoreClass, 'tenant2')
+        CurrentTenantHolder.set(mockDatastoreClass, "tenant2")
 
         then:
-        CurrentTenantHolder.get(mockDatastore) == 'tenant2'
+        CurrentTenantHolder.get(mockDatastore) == "tenant2"
 
         when:
         CurrentTenantHolder.remove(mockDatastoreClass)
@@ -57,70 +57,69 @@ class CurrentTenantHolderSpec extends Specification {
         CurrentTenantHolder.get(mockDatastore) == null
     }
 
-    void 'test fallback to Datastore class when instance tenant is not found'() {
-
+    void "test fallback to Datastore class when instance tenant is not found"() {
         given:
         Datastore mockDatastore = [:] as Datastore
         Class<? extends Datastore> datastoreClass = mockDatastore.getClass()
 
         when:
-        CurrentTenantHolder.set(datastoreClass, 'classTenant')
+        CurrentTenantHolder.set(datastoreClass, "classTenant")
 
         then:
-        CurrentTenantHolder.get(mockDatastore) == 'classTenant'
+        CurrentTenantHolder.get(mockDatastore) == "classTenant"
 
         when:
-        CurrentTenantHolder.set(mockDatastore, 'instanceTenant')
+        CurrentTenantHolder.set(mockDatastore, "instanceTenant")
 
         then:
-        CurrentTenantHolder.get(mockDatastore) == 'instanceTenant'
+        CurrentTenantHolder.get(mockDatastore) == "instanceTenant"
 
         cleanup:
         CurrentTenantHolder.remove(datastoreClass)
         CurrentTenantHolder.remove(mockDatastore)
     }
 
-    void 'test withTenant for Datastore instance'() {
+    void "test withTenant for Datastore instance"() {
         given:
         Datastore mockDatastore = [:] as Datastore
-        CurrentTenantHolder.set(mockDatastore, 'previousTenant')
+        CurrentTenantHolder.set(mockDatastore, "previousTenant")
 
         when:
-        def result = CurrentTenantHolder.withTenant(mockDatastore, 'newTenant') {
+        def result = CurrentTenantHolder.withTenant(mockDatastore, "newTenant") {
             return CurrentTenantHolder.get(mockDatastore)
         }
 
         then:
-        result == 'newTenant'
-        CurrentTenantHolder.get(mockDatastore) == 'previousTenant'
+        result == "newTenant"
+        CurrentTenantHolder.get(mockDatastore) == "previousTenant"
 
         cleanup:
         CurrentTenantHolder.remove(mockDatastore)
     }
 
-    void 'test withTenant for Datastore class'() {
+    void "test withTenant for Datastore class"() {
         given:
         Datastore mockDatastore = [:] as Datastore
         Class<? extends Datastore> mockDatastoreClass = mockDatastore.getClass()
-        CurrentTenantHolder.set(mockDatastoreClass, 'previousClassTenant')
+        CurrentTenantHolder.set(mockDatastoreClass, "previousClassTenant")
 
         when:
-        def result = CurrentTenantHolder.withTenant(mockDatastoreClass, 'newClassTenant') {
+        def result = CurrentTenantHolder.withTenant(mockDatastoreClass, "newClassTenant") {
             return CurrentTenantHolder.get(mockDatastore)
         }
 
         then:
-        result == 'newClassTenant'
-        CurrentTenantHolder.get(mockDatastore) == 'previousClassTenant'
+        result == "newClassTenant"
+        CurrentTenantHolder.get(mockDatastore) == "previousClassTenant"
 
         cleanup:
         CurrentTenantHolder.remove(mockDatastoreClass)
     }
 
-    void 'test withoutTenant'() {
+    void "test withoutTenant"() {
         given:
         Datastore mockDatastore = [:] as Datastore
-        CurrentTenantHolder.set(mockDatastore, 'currentTenant')
+        CurrentTenantHolder.set(mockDatastore, "currentTenant")
 
         when:
         def result = CurrentTenantHolder.withoutTenant(mockDatastore) {
@@ -129,7 +128,7 @@ class CurrentTenantHolderSpec extends Specification {
 
         then:
         result == ConnectionSource.DEFAULT
-        CurrentTenantHolder.get(mockDatastore) == 'currentTenant'
+        CurrentTenantHolder.get(mockDatastore) == "currentTenant"
 
         cleanup:
         CurrentTenantHolder.remove(mockDatastore)

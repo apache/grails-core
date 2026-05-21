@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -44,7 +44,7 @@ class ExistsCrossJoinSpec extends Specification {
     @Shared PlatformTransactionManager transactionManager = hibernateDatastore.getTransactionManager()
 
     @Rollback
-    void 'exists returns true for existing entity'() {
+    void "exists returns true for existing entity"() {
         given:
         ExistsItem item = new ExistsItem(name: 'alpha').save(flush: true)
 
@@ -53,13 +53,13 @@ class ExistsCrossJoinSpec extends Specification {
     }
 
     @Rollback
-    void 'exists returns false for non-existent id'() {
+    void "exists returns false for non-existent id"() {
         expect:
         !ExistsItem.exists(99999)
     }
 
     @Rollback
-    void 'exists does not produce a cross-join'() {
+    void "exists does not produce a cross-join"() {
         given:
         new ExistsItem(name: 'one').save(flush: true)
         new ExistsItem(name: 'two').save(flush: true)
@@ -71,29 +71,29 @@ class ExistsCrossJoinSpec extends Specification {
         sqlCapture.clear()
         ExistsItem.exists(item.id)
 
-        then: 'the SQL should contain only a single FROM clause (no cross-join)'
+        then: "the SQL should contain only a single FROM clause (no cross-join)"
         sqlCapture.statements.any { it.toLowerCase().contains('select count') }
 
-        and: 'there should be exactly one table reference in the FROM clause'
+        and: "there should be exactly one table reference in the FROM clause"
         String countSql = sqlCapture.statements.find { it.toLowerCase().contains('select count') }
         countSql != null
         // A cross-join would have the table name appearing twice after 'from'
-        // e.g. 'from exists_item x0_, exists_item x1_' vs correct 'from exists_item x0_'
+        // e.g. "from exists_item x0_, exists_item x1_" vs correct "from exists_item x0_"
         countSql.toLowerCase().split('cross join').length == 1
         // Verify no comma-join pattern (two table aliases after FROM)
         !countSql.toLowerCase().matches(/.*from\s+\S+\s+\S+\s*,\s*\S+\s+\S+.*/)
     }
 
     @Rollback
-    void 'exists with multiple rows returns correct result'() {
-        given: 'multiple entities in the table'
+    void "exists with multiple rows returns correct result"() {
+        given: "multiple entities in the table"
         ExistsItem target = new ExistsItem(name: 'target').save(flush: true)
         new ExistsItem(name: 'other1').save(flush: true)
         new ExistsItem(name: 'other2').save(flush: true)
         new ExistsItem(name: 'other3').save(flush: true)
         new ExistsItem(name: 'other4').save(flush: true)
 
-        expect: 'exists returns correct results'
+        expect: "exists returns correct results"
         ExistsItem.exists(target.id)
         !ExistsItem.exists(99999)
     }
@@ -102,7 +102,6 @@ class ExistsCrossJoinSpec extends Specification {
      * Captures SQL statements executed by Hibernate for inspection in tests.
      */
     static class SqlCapture implements StatementInspector {
-
         final List<String> statements = Collections.synchronizedList(new ArrayList<String>())
 
         @Override
@@ -119,6 +118,5 @@ class ExistsCrossJoinSpec extends Specification {
 
 @Entity
 class ExistsItem {
-
     String name
 }

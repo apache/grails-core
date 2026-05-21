@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -35,7 +35,6 @@ import org.springframework.context.ApplicationEvent
  * @author Tom Widmer
  */
 class PersistenceEventListenerSpec extends MongoDatastoreSpec {
-
     SpecPersistenceListener listener
 
     void setupSpec() {
@@ -47,10 +46,10 @@ class PersistenceEventListenerSpec extends MongoDatastoreSpec {
         manager.session.datastore.applicationEventPublisher.addApplicationListener(listener)
     }
 
-    void 'Test delete events'() {
+    void "Test delete events"() {
         given:
         def p = new Simples()
-        p.name = 'Fred'
+        p.name = "Fred"
         p.save(flush: true)
         manager.session.clear()
 
@@ -75,7 +74,7 @@ class PersistenceEventListenerSpec extends MongoDatastoreSpec {
         listener.events[-2] instanceof PreDeleteEvent
     }
 
-    void 'Test multi-delete events'() {
+    void "Test multi-delete events"() {
         given:
         def freds = (1..3).collect {
             new Simples(name: "Fred$it").save(flush: true)
@@ -107,11 +106,11 @@ class PersistenceEventListenerSpec extends MongoDatastoreSpec {
         }
     }
 
-    void 'Test update events'() {
+    void "Test update events"() {
         given:
         def p = new Simples()
 
-        p.name = 'Fred'
+        p.name = "Fred"
         p.save(flush: true)
         manager.session.clear()
 
@@ -119,27 +118,27 @@ class PersistenceEventListenerSpec extends MongoDatastoreSpec {
         p = Simples.get(p.id)
 
         then:
-        'Fred' == p.name
+        "Fred" == p.name
         0 == listener.PreUpdateCount
         0 == listener.PostUpdateCount
 
         when:
-        p.name = 'Bob'
+        p.name = "Bob"
         p.save(flush: true)
         manager.session.clear()
         p = Simples.get(p.id)
 
         then:
-        'Bob' == p.name
+        "Bob" == p.name
         1 == listener.PreUpdateCount
         1 == listener.PostUpdateCount
     }
 
-    void 'Test insert events'() {
+    void "Test insert events"() {
         given:
         def p = new Simples()
 
-        p.name = 'Fred'
+        p.name = "Fred"
         p.save(flush: true)
         manager.session.clear()
 
@@ -147,31 +146,31 @@ class PersistenceEventListenerSpec extends MongoDatastoreSpec {
         p = Simples.get(p.id)
 
         then:
-        'Fred' == p.name
+        "Fred" == p.name
         0 == listener.PreUpdateCount
         1 == listener.PreInsertCount
         0 == listener.PostUpdateCount
         1 == listener.PostInsertCount
 
         when:
-        p.name = 'Bob'
+        p.name = "Bob"
         p.save(flush: true)
         manager.session.clear()
         p = Simples.get(p.id)
 
         then:
-        'Bob' == p.name
+        "Bob" == p.name
         1 == listener.PreUpdateCount
         1 == listener.PreInsertCount
         1 == listener.PostUpdateCount
         1 == listener.PostInsertCount
     }
 
-    void 'Test load events'() {
+    void "Test load events"() {
         given:
         def p = new Simples()
 
-        p.name = 'Fred'
+        p.name = "Fred"
         p.save(flush: true)
         manager.session.clear()
 
@@ -179,7 +178,7 @@ class PersistenceEventListenerSpec extends MongoDatastoreSpec {
         p = Simples.get(p.id)
 
         then:
-        'Fred' == p.name
+        "Fred" == p.name
         if (!'JpaSession'.equals(manager.session.getClass().simpleName)) {
             // JPA doesn't seem to support a pre-load event
             1 == listener.PreLoadCount
@@ -187,7 +186,7 @@ class PersistenceEventListenerSpec extends MongoDatastoreSpec {
         1 == listener.PostLoadCount
     }
 
-    void 'Test multi-load events'() {
+    void "Test multi-load events"() {
         given:
         def freds = (1..3).collect {
             new Simples(name: "Fred$it").save(flush: true)
@@ -208,11 +207,11 @@ class PersistenceEventListenerSpec extends MongoDatastoreSpec {
         3 == listener.PostLoadCount
     }
 
-    void 'Test validation events'() {
+    void "Test validation events"() {
         given:
         def p = new Simples()
 
-        p.name = 'Fred'
+        p.name = "Fred"
 
         when:
         p.validate()
@@ -268,7 +267,6 @@ class SpecPersistenceListener extends AbstractPersistenceEventListener {
 
 @Entity
 class Simples implements Serializable {
-
     Long id
     String name
 }

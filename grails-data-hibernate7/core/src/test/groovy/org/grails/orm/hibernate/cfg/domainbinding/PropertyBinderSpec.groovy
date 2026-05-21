@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -40,69 +40,69 @@ class PropertyBinderSpec extends HibernateGormDatastoreSpec {
         manager.addAllDomainClasses([PBEntity, PBAuthor])
     }
 
-    void 'test property binding with real objects'() {
+    void "test property binding with real objects"() {
         given:
         def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(PBEntity.name)
-        def persistentProperty = (HibernatePersistentProperty) entity.getPropertyByName('name')
-        def table = new Table('PB_ENTITY')
+        def persistentProperty = (HibernatePersistentProperty) entity.getPropertyByName("name")
+        def table = new Table("PB_ENTITY")
         def value = new BasicValue(getGrailsDomainBinder().getMetadataBuildingContext(), table)
-        def column = new Column('TEST_COL')
+        def column = new Column("TEST_COL")
         value.addColumn(column)
 
         when:
         def property = binder.bindProperty(persistentProperty, value)
 
         then:
-        property.getName() == 'name'
+        property.getName() == "name"
         !property.isOptional()
         // In Hibernate 7, the Property object's insertable/updatable state
         // is derived from the Value object provided to the binder.
         property.isInsertable()
         property.isUpdatable()
-        property.getPropertyAccessorName() == 'property'
+        property.getPropertyAccessorName() == "property"
         !property.isLazy()
     }
 
-    void 'test association binding laziness'() {
+    void "test association binding laziness"() {
         given:
         def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(PBEntity.name)
-        def persistentProperty = (HibernatePersistentProperty) entity.getPropertyByName('author')
-        def table = new Table('PB_ENTITY')
+        def persistentProperty = (HibernatePersistentProperty) entity.getPropertyByName("author")
+        def table = new Table("PB_ENTITY")
         def value = new BasicValue(getGrailsDomainBinder().getMetadataBuildingContext(), table)
 
         when:
         def property = binder.bindProperty(persistentProperty, value)
 
         then:
-        property.getName() == 'author'
+        property.getName() == "author"
         property.isLazy()
     }
 
-    void 'test explicit lazy false binding'() {
+    void "test explicit lazy false binding"() {
         given:
         def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(PBEntity.name)
-        def persistentProperty = (HibernatePersistentProperty) entity.getPropertyByName('eagerAuthor')
-        def table = new Table('PB_ENTITY')
+        def persistentProperty = (HibernatePersistentProperty) entity.getPropertyByName("eagerAuthor")
+        def table = new Table("PB_ENTITY")
         def value = new BasicValue(getGrailsDomainBinder().getMetadataBuildingContext(), table)
 
         when:
         def property = binder.bindProperty(persistentProperty, value)
 
         then:
-        property.getName() == 'eagerAuthor'
+        property.getName() == "eagerAuthor"
         !property.isLazy()
     }
 
-    void 'test default constructor'() {
+    void "test default constructor"() {
         expect:
         new PropertyBinder() != null
     }
 
-    void 'test accessorName for field access'() {
+    void "test accessorName for field access"() {
         given:
         def entity = (HibernatePersistentEntity) getMappingContext().getPersistentEntity(PBEntity.name)
-        def persistentProperty = (HibernatePersistentProperty) entity.getPropertyByName('name')
-        def table = new Table('PB_ENTITY')
+        def persistentProperty = (HibernatePersistentProperty) entity.getPropertyByName("name")
+        def table = new Table("PB_ENTITY")
         def value = new BasicValue(getGrailsDomainBinder().getMetadataBuildingContext(), table)
         
         def mockConfig = new org.grails.orm.hibernate.cfg.PropertyConfig()
@@ -115,13 +115,12 @@ class PropertyBinderSpec extends HibernateGormDatastoreSpec {
         def property = binder.bindProperty(spyProp, value)
 
         then:
-        property.getPropertyAccessorName() == 'field'
+        property.getPropertyAccessorName() == "field"
     }
 }
 
 @Entity
 class PBEntity {
-
     Long id
     String name
     PBAuthor author
@@ -135,7 +134,6 @@ class PBEntity {
 
 @Entity
 class PBAuthor {
-
     Long id
     String name
 }

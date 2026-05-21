@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -52,13 +52,13 @@ abstract class GrailsStringUtils extends StringUtils {
      * Returns a substring before the given token
      *
      * GrailsStringUtils.substringBefore(null, *)      = null
-     * GrailsStringUtils.substringBefore('', *)        = ''
-     * GrailsStringUtils.substringBefore('abc', 'a')   = ''
-     * GrailsStringUtils.substringBefore('abcba', 'b') = 'a'
-     * GrailsStringUtils.substringBefore('abc', 'c')   = 'ab'
-     * GrailsStringUtils.substringBefore('abc', 'd')   = 'abc'
-     * GrailsStringUtils.substringBefore('abc', '')    = ''
-     * GrailsStringUtils.substringBefore('abc', null)  = 'abc'
+     * GrailsStringUtils.substringBefore("", *)        = ""
+     * GrailsStringUtils.substringBefore("abc", "a")   = ""
+     * GrailsStringUtils.substringBefore("abcba", "b") = "a"
+     * GrailsStringUtils.substringBefore("abc", "c")   = "ab"
+     * GrailsStringUtils.substringBefore("abc", "d")   = "abc"
+     * GrailsStringUtils.substringBefore("abc", "")    = ""
+     * GrailsStringUtils.substringBefore("abc", null)  = "abc"
      *
      * @param str The string to apply the substring
      * @param token The token to match
@@ -77,13 +77,13 @@ abstract class GrailsStringUtils extends StringUtils {
      * Returns a substring before the last occurance of the given token
      *
      * GrailsStringUtils.substringBefore(null, *)      = null
-     * GrailsStringUtils.substringBefore('', *)        = ''
-     * GrailsStringUtils.substringBefore('abc', 'a')   = ''
-     * GrailsStringUtils.substringBefore('abcba', 'b') = 'a'
-     * GrailsStringUtils.substringBefore('abc', 'c')   = 'ab'
-     * GrailsStringUtils.substringBefore('abc', 'd')   = 'abc'
-     * GrailsStringUtils.substringBefore('abc', '')    = ''
-     * GrailsStringUtils.substringBefore('abc', null)  = 'abc'
+     * GrailsStringUtils.substringBefore("", *)        = ""
+     * GrailsStringUtils.substringBefore("abc", "a")   = ""
+     * GrailsStringUtils.substringBefore("abcba", "b") = "a"
+     * GrailsStringUtils.substringBefore("abc", "c")   = "ab"
+     * GrailsStringUtils.substringBefore("abc", "d")   = "abc"
+     * GrailsStringUtils.substringBefore("abc", "")    = ""
+     * GrailsStringUtils.substringBefore("abc", null)  = "abc"
      *
      * @param str The string to apply the substring
      * @param token The token to match
@@ -102,13 +102,13 @@ abstract class GrailsStringUtils extends StringUtils {
      * Returns a substring after the given token
      *
      * GrailsStringUtils.substringAfter(null, *)      = null
-     * GrailsStringUtils.substringAfter('', *)        = ''
-     * GrailsStringUtils.substringAfter(*, null)      = ''
-     * GrailsStringUtils.substringAfter('abc', 'a')   = 'bc'
-     * GrailsStringUtils.substringAfter('abcba', 'b') = 'cba'
-     * GrailsStringUtils.substringAfter('abc', 'c')   = ''
-     * GrailsStringUtils.substringAfter('abc', 'd')   = ''
-     * GrailsStringUtils.substringAfter('abc', '')    = 'abc'
+     * GrailsStringUtils.substringAfter("", *)        = ""
+     * GrailsStringUtils.substringAfter(*, null)      = ""
+     * GrailsStringUtils.substringAfter("abc", "a")   = "bc"
+     * GrailsStringUtils.substringAfter("abcba", "b") = "cba"
+     * GrailsStringUtils.substringAfter("abc", "c")   = ""
+     * GrailsStringUtils.substringAfter("abc", "d")   = ""
+     * GrailsStringUtils.substringAfter("abc", "")    = "abc"
      *
      * @param str The string to apply the substring
      * @param token The token to match
@@ -127,13 +127,13 @@ abstract class GrailsStringUtils extends StringUtils {
      * Returns a substring after the last occurrence of the given token
      *
      * GrailsStringUtils.substringAfter(null, *)      = null
-     * GrailsStringUtils.substringAfter('', *)        = ''
-     * GrailsStringUtils.substringAfter(*, null)      = ''
-     * GrailsStringUtils.substringAfter('abc', 'a')   = 'bc'
-     * GrailsStringUtils.substringAfter('abcba', 'b') = 'cba'
-     * GrailsStringUtils.substringAfter('abc', 'c')   = ''
-     * GrailsStringUtils.substringAfter('abc', 'd')   = ''
-     * GrailsStringUtils.substringAfter('abc', '')    = 'abc'
+     * GrailsStringUtils.substringAfter("", *)        = ""
+     * GrailsStringUtils.substringAfter(*, null)      = ""
+     * GrailsStringUtils.substringAfter("abc", "a")   = "bc"
+     * GrailsStringUtils.substringAfter("abcba", "b") = "cba"
+     * GrailsStringUtils.substringAfter("abc", "c")   = ""
+     * GrailsStringUtils.substringAfter("abc", "d")   = ""
+     * GrailsStringUtils.substringAfter("abc", "")    = "abc"
      *
      * @param str The string to apply the substring
      * @param token The token to match
@@ -195,17 +195,17 @@ abstract class GrailsStringUtils extends StringUtils {
 
     /**
      * Removes all space from both ends of this String returning
-     * {@code null} if the String is empty ('') after the trim
+     * {@code null} if the String is empty ("") after the trim
      * or if it is {@code null}.
      *
      * <p>The String is trimmed using {@link String#trim()}.
      *
      * <pre>
      * GrailsStringUtils.trimToNull(null)          = null
-     * GrailsStringUtils.trimToNull('')            = null
-     * GrailsStringUtils.trimToNull('     ')       = null
-     * GrailsStringUtils.trimToNull('xyz')         = 'xyz'
-     * GrailsStringUtils.trimToNull('    xyz    ') = 'xyz'
+     * GrailsStringUtils.trimToNull("")            = null
+     * GrailsStringUtils.trimToNull("     ")       = null
+     * GrailsStringUtils.trimToNull("xyz")         = "xyz"
+     * GrailsStringUtils.trimToNull("    xyz    ") = "xyz"
      * </pre>
      *
      *  based on https://github.com/apache/commons-lang/blob/master/src/main/java/org/apache/commons/lang3/StringUtils.java#L8838

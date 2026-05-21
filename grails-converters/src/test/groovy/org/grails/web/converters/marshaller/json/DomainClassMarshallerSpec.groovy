@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -31,16 +31,17 @@ import spock.lang.Unroll
 
 class DomainClassMarshallerSpec extends Specification {
 
+
     void setup() {
     }
 
     void initJson(boolean domainClassname) {
         final initializer = new ConvertersConfigurationInitializer()
         def grailsApplication = new DefaultGrailsApplication(Author, Book, RenamedIdentifier)
-        grailsApplication.config.setAt('grails.converters.json.domain.include.class', domainClassname)
-        grailsApplication.config.setAt('grails.converters.xml.domain.include.class', domainClassname)
+        grailsApplication.config.setAt("grails.converters.json.domain.include.class", domainClassname)
+        grailsApplication.config.setAt("grails.converters.xml.domain.include.class", domainClassname)
         grailsApplication.initialise()
-        def mappingContext = new KeyValueMappingContext('json')
+        def mappingContext = new KeyValueMappingContext("json")
         mappingContext.addPersistentEntities(Book, Author, RenamedIdentifier)
         grailsApplication.setApplicationContext(Stub(ApplicationContext) {
             getBean('grailsDomainClassMappingContext', MappingContext) >> {
@@ -82,24 +83,23 @@ class DomainClassMarshallerSpec extends Specification {
 
         where:
         authors                                                      | expectedJson                                                                                                                     | expectedXml
-        [new Author(id: 1, name: 'a'), new Author(id: 2, name: 'b')] | "{'id':1,'authorsSet': [{'id':1,'name': 'a'},{'id':2,'name': 'b'}],'authorsMap': {'a':{'id':1,'name': 'a'},'b': {'id':2,'name': 'b'}}}" | "<?xml version='1.0' encoding='UTF-8'?><book id='1'><authorsSet><author id='1'><name>a</name></author><author id='2'><name>b</name></author></authorsSet><authorsMap><entry key='a' id='1'><name>a</name></entry><entry key='b' id='2'><name>b</name></entry></authorsMap></book>"
-        [new Author(id: 2, name: 'b'), new Author(id: 1, name: 'a')] | "{'id':1,'authorsSet': [{'id':1,'name': 'b'},{'id':2,'name': 'a'}],'authorsMap': {'b':{'id':1,'name': 'b'},'a': {'id':2,'name': 'a'}}}" | "<?xml version='1.0' encoding='UTF-8'?><book id='1'><authorsSet><author id='1'><name>b</name></author><author id='2'><name>a</name></author></authorsSet><authorsMap><entry key='b' id='1'><name>b</name></entry><entry key='a' id='2'><name>a</name></entry></authorsMap></book>"
+        [new Author(id: 1, name: 'a'), new Author(id: 2, name: 'b')] | '{"id":1,"authorsSet":[{"id":1,"name":"a"},{"id":2,"name":"b"}],"authorsMap":{"a":{"id":1,"name":"a"},"b":{"id":2,"name":"b"}}}' | '<?xml version="1.0" encoding="UTF-8"?><book id="1"><authorsSet><author id="1"><name>a</name></author><author id="2"><name>b</name></author></authorsSet><authorsMap><entry key="a" id="1"><name>a</name></entry><entry key="b" id="2"><name>b</name></entry></authorsMap></book>'
+        [new Author(id: 2, name: 'b'), new Author(id: 1, name: 'a')] | '{"id":1,"authorsSet":[{"id":1,"name":"b"},{"id":2,"name":"a"}],"authorsMap":{"b":{"id":1,"name":"b"},"a":{"id":2,"name":"a"}}}' | '<?xml version="1.0" encoding="UTF-8"?><book id="1"><authorsSet><author id="1"><name>b</name></author><author id="2"><name>a</name></author></authorsSet><authorsMap><entry key="b" id="1"><name>b</name></entry><entry key="a" id="2"><name>a</name></entry></authorsMap></book>'
     }
 
-    void 'test marshaller should render the ID properly'() {
+    void "test marshaller should render the ID properly"() {
         initJson(false)
         when:
-        RenamedIdentifier ri = new RenamedIdentifier(newId: 3, name: 'Sally')
+        RenamedIdentifier ri = new RenamedIdentifier(newId: 3, name: "Sally")
 
         then:
         def jsonString = new JSON(ri).toString()
-        jsonString.contains(''newId':3')
-        jsonString.contains(''name':'Sally'')
-        jsonString.contains(''version':null')
+        jsonString.contains('"newId":3')
+        jsonString.contains('"name":"Sally"')
+        jsonString.contains('"version":null')
     }
 
-    void 'test marshallers generate class names when options are set'() {
-
+    void "test marshallers generate class names when options are set"() {
         def json, xml
         initJson(true)
         when:
@@ -126,14 +126,13 @@ class DomainClassMarshallerSpec extends Specification {
 
         where:
         authors                                                      | expectedJson                                                                                                                                                                                                                                                                                                                                                                                                                          | expectedXml
-        [new Author(id: 1, name: 'a'), new Author(id: 2, name: 'b')] | "{'class':'org.grails.web.converters.marshaller.json.Book','id': 1,'authorsSet': [{'class':'org.grails.web.converters.marshaller.json.Author','id': 1,'name': 'a'},{'class':'org.grails.web.converters.marshaller.json.Author','id': 2,'name': 'b'}],'authorsMap': {'a':{'class':'org.grails.web.converters.marshaller.json.Author','id': 1,'name': 'a'},'b': {'class':'org.grails.web.converters.marshaller.json.Author','id': 2,'name': 'b'}}}" | "<?xml version='1.0' encoding='UTF-8'?><book id='1' class='org.grails.web.converters.marshaller.json.Book'><authorsSet><author id='1' class='org.grails.web.converters.marshaller.json.Author'><name>a</name></author><author id='2' class='org.grails.web.converters.marshaller.json.Author'><name>b</name></author></authorsSet><authorsMap><entry key='a' id='1' class='org.grails.web.converters.marshaller.json.Author'><name>a</name></entry><entry key='b' id='2' class='org.grails.web.converters.marshaller.json.Author'><name>b</name></entry></authorsMap></book>"
+        [new Author(id: 1, name: 'a'), new Author(id: 2, name: 'b')] | '{"class":"org.grails.web.converters.marshaller.json.Book","id":1,"authorsSet":[{"class":"org.grails.web.converters.marshaller.json.Author","id":1,"name":"a"},{"class":"org.grails.web.converters.marshaller.json.Author","id":2,"name":"b"}],"authorsMap":{"a":{"class":"org.grails.web.converters.marshaller.json.Author","id":1,"name":"a"},"b":{"class":"org.grails.web.converters.marshaller.json.Author","id":2,"name":"b"}}}' | '<?xml version="1.0" encoding="UTF-8"?><book id="1" class="org.grails.web.converters.marshaller.json.Book"><authorsSet><author id="1" class="org.grails.web.converters.marshaller.json.Author"><name>a</name></author><author id="2" class="org.grails.web.converters.marshaller.json.Author"><name>b</name></author></authorsSet><authorsMap><entry key="a" id="1" class="org.grails.web.converters.marshaller.json.Author"><name>a</name></entry><entry key="b" id="2" class="org.grails.web.converters.marshaller.json.Author"><name>b</name></entry></authorsMap></book>'
 
     }
 }
 
 @Entity
 class Author {
-
     Long id
     Long version
     String name
@@ -141,7 +140,6 @@ class Author {
 
 @Entity
 class Book {
-
     static hasMany = [authorsSet: Author, authorsMap: Author]
     Long id
     Long version

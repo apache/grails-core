@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -41,7 +41,6 @@ class GrailsPluginTests {
         def gcl = new GroovyClassLoader()
         def test1 = gcl.parseClass('''
 class TestOneGrailsPlugin {
-
     def version = 0.1
     def scopes = 'test'
 }
@@ -50,7 +49,7 @@ class TestOneGrailsPlugin {
         DefaultGrailsApplication application = new DefaultGrailsApplication()
         def plugin = new DefaultGrailsPlugin(test1, application)
 
-        assertEquals '/plugins/test-one-0.1', plugin.pluginPath
+        assertEquals "/plugins/test-one-0.1", plugin.pluginPath
     }
 
     @Test
@@ -59,7 +58,6 @@ class TestOneGrailsPlugin {
         def gcl = new GroovyClassLoader()
         def test1 = gcl.parseClass('''
 class TestOnetwoThreeFourfiveGrailsPlugin {
-
     def version = 0.1
     def scopes = 'test'
 }
@@ -68,7 +66,7 @@ class TestOnetwoThreeFourfiveGrailsPlugin {
         DefaultGrailsApplication application = new DefaultGrailsApplication()
         def plugin = new DefaultGrailsPlugin(test1, application)
 
-        assertEquals '/plugins/test-onetwo-three-fourfive-0.1', plugin.pluginPath
+        assertEquals "/plugins/test-onetwo-three-fourfive-0.1", plugin.pluginPath
     }
 
     @Test
@@ -77,7 +75,6 @@ class TestOnetwoThreeFourfiveGrailsPlugin {
         def gcl = new GroovyClassLoader()
         def test1 = gcl.parseClass('''
 class TestOneGrailsPlugin {
-
     def version = 0.1
     def scopes = 'test'
 }
@@ -86,7 +83,7 @@ class TestOneGrailsPlugin {
         DefaultGrailsApplication application = new DefaultGrailsApplication()
         def plugin = new DefaultGrailsPlugin(test1, application)
 
-        assertEquals '/plugins/testOne-0.1', plugin.pluginPathCamelCase
+        assertEquals "/plugins/testOne-0.1", plugin.pluginPathCamelCase
     }
 
     @Test
@@ -95,7 +92,6 @@ class TestOneGrailsPlugin {
         def gcl = new GroovyClassLoader()
         def test1 = gcl.parseClass('''
 class TestOnetwoThreeFourfiveGrailsPlugin {
-
     def version = 0.1
     def scopes = 'test'
 }
@@ -104,7 +100,7 @@ class TestOnetwoThreeFourfiveGrailsPlugin {
         DefaultGrailsApplication application = new DefaultGrailsApplication()
         def plugin = new DefaultGrailsPlugin(test1, application)
 
-        assertEquals '/plugins/testOnetwoThreeFourfive-0.1', plugin.pluginPathCamelCase
+        assertEquals "/plugins/testOnetwoThreeFourfive-0.1", plugin.pluginPathCamelCase
     }
 
     @Test
@@ -113,7 +109,6 @@ class TestOnetwoThreeFourfiveGrailsPlugin {
         def gcl = new GroovyClassLoader()
         def test1 = gcl.parseClass('''
 class TestOneGrailsPlugin {
-
     def version = 0.1
     def scopes = 'test'
 }
@@ -122,7 +117,7 @@ class TestOneGrailsPlugin {
         DefaultGrailsApplication application = new DefaultGrailsApplication()
         def plugin = new DefaultGrailsPlugin(test1, application)
 
-        assertEquals 'test-one-0.1', plugin.fileSystemName
+        assertEquals "test-one-0.1", plugin.fileSystemName
     }
 
     @Test
@@ -130,7 +125,6 @@ class TestOneGrailsPlugin {
         def gcl = new GroovyClassLoader()
         def test1 = gcl.parseClass('''
 class TestGrailsPlugin {
-
     def version = 0.1
     def environments = 'dev'
 }
@@ -148,7 +142,6 @@ class TestGrailsPlugin {
         def gcl = new GroovyClassLoader()
         def test1 = gcl.parseClass('''
 class TestGrailsPlugin {
-
     def version = 0.1
     def environments = ['test','dev']
 }
@@ -167,7 +160,6 @@ class TestGrailsPlugin {
         def gcl = new GroovyClassLoader()
         def test1 = gcl.parseClass('''
 class TestGrailsPlugin {
-
     def version = 0.1
     def environments = ['test','dev']
 }
@@ -180,14 +172,14 @@ class TestGrailsPlugin {
         application.mainContext = appCtx
 
         // Create discovery bean configured for unit tests
-        PluginDiscovery discovery = new DefaultPluginDiscovery(new Class<?>[] {test1})
+        PluginDiscovery discovery = new DefaultPluginDiscovery(new Class<?>[]{test1})
 
         // simulate the call in GrailsEnvironmentPostProcessor to populate the metadata
         discovery.init(new StandardEnvironment())
         
         def pluginManager = new DefaultGrailsPluginManager(application, discovery)
         pluginManager.loadPlugins()
-        assertNotNull pluginManager.getGrailsPlugin('test')
+        assertNotNull pluginManager.getGrailsPlugin("test")
 
         String originalEnv = System.getProperty(Environment.KEY)
         try {
@@ -199,14 +191,14 @@ class TestGrailsPlugin {
             application.mainContext = appCtx
 
             // Create new discovery bean for production environment test
-            discovery = new DefaultPluginDiscovery(new Class<?>[] {test1})
+            discovery = new DefaultPluginDiscovery(new Class<?>[]{test1})
             discovery.loadPluginsFromClasspath = false
             // simulate the call in GrailsEnvironmentPostProcessor to populate the metadata
             discovery.init(new StandardEnvironment())
             
             pluginManager = new DefaultGrailsPluginManager(application, discovery)
             pluginManager.loadPlugins()
-            assertNull pluginManager.getGrailsPlugin('test')
+            assertNull pluginManager.getGrailsPlugin("test")
         } finally {
             if (originalEnv != null) {
                 System.setProperty(Environment.KEY, originalEnv)

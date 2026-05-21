@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -32,7 +32,7 @@ class RecursiveConfigurationBuilderSpec extends Specification {
         PropertyResolver config = DatastoreUtils.createPropertyResolver([:])
 
         when:
-        MongoConnectionSourceSettingsBuilder builder = new MongoConnectionSourceSettingsBuilder(config, 'grails.mongodb')
+        MongoConnectionSourceSettingsBuilder builder = new MongoConnectionSourceSettingsBuilder(config, "grails.mongodb");
         MongoConnectionSourceSettings settings = builder.build()
 
         then:
@@ -40,12 +40,12 @@ class RecursiveConfigurationBuilderSpec extends Specification {
         !settings.options.autoEncryptionSettings
     }
 
-    void 'recursive builder get configured correctly'() {
+    void "recursive builder get configured correctly"() {
         given:
-        PropertyResolver config = DatastoreUtils.createPropertyResolver(['grails.mongodb.options.autoEncryptionSettings.bypassAutoEncryption': true])
+        PropertyResolver config = DatastoreUtils.createPropertyResolver(["grails.mongodb.options.autoEncryptionSettings.bypassAutoEncryption": true])
 
         when:
-        MongoConnectionSourceSettingsBuilder builder = new MongoConnectionSourceSettingsBuilder(config, 'grails.mongodb')
+        MongoConnectionSourceSettingsBuilder builder = new MongoConnectionSourceSettingsBuilder(config, "grails.mongodb")
         MongoConnectionSourceSettings settings = builder.build()
 
         then:
@@ -85,7 +85,6 @@ class RecursiveConfigurationBuilderSpec extends Specification {
     @AutoClone
     @Builder(builderStrategy = SimpleStrategy, prefix = '')
     static class MongoConnectionSourceSettings {
-
         MongoClientOptions.Builder options = MongoClientOptions.builder()
 
     }
@@ -95,7 +94,7 @@ class RecursiveConfigurationBuilderSpec extends Specification {
         private AutoEncryptionSettings autoEncryptionSettings
 
         private MongoClientOptions(Builder builder) {
-            autoEncryptionSettings = builder.autoEncryptionSettings
+            autoEncryptionSettings = builder.autoEncryptionSettings;
         }
 
         static Builder builder() {
@@ -131,7 +130,7 @@ class RecursiveConfigurationBuilderSpec extends Specification {
 
         static class Builder {
 
-            private AutoEncryptionSettings autoEncryptionSettings
+            private AutoEncryptionSettings autoEncryptionSettings;
 
             private Builder() {
 
@@ -149,8 +148,7 @@ class RecursiveConfigurationBuilderSpec extends Specification {
     }
 
     static class AutoEncryptionSettings {
-
-        private MongoClientSettings keyVaultMongoClientSettings
+        private MongoClientSettings keyVaultMongoClientSettings;
         private boolean bypassAutoEncryption
 
         private AutoEncryptionSettings(Builder builder) {
@@ -163,7 +161,6 @@ class RecursiveConfigurationBuilderSpec extends Specification {
         }
 
         static class Builder {
-
             private MongoClientSettings keyVaultMongoClientSettings
             private boolean bypassAutoEncryption
 

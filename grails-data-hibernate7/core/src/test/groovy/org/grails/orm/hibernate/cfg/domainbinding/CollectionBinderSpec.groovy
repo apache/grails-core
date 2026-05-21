@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -55,7 +55,7 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
             getBootstrapContext() >> mbc.getMetadataCollector().getBootstrapContext()
             getDatabase() >> mbc.getMetadataCollector().getDatabase()
             addTable(_, _, _, _, _, _) >> { schema, catalog, name, sub, isAbstract, context ->
-                return new Table('test', name).with {
+                return new Table("test", name).with {
                     setSchema(schema)
                     setCatalog(catalog)
                     return it
@@ -81,13 +81,13 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
         manager.addAllDomainClasses([Person, Pet, CBManyToManyA, CBManyToManyB])
     }
 
-    void 'test bindCollection delegates configuration to property.setCollection'() {
+    void "test bindCollection delegates configuration to property.setCollection"() {
         given:
         def personEntity = mappingContext.getPersistentEntity(Person.name) as GrailsHibernatePersistentEntity
-        def petsProp = personEntity.getPropertyByName('pets') as HibernateToManyEntityProperty
+        def petsProp = personEntity.getPropertyByName("pets") as HibernateToManyEntityProperty
 
         when:
-        def collection = binder.bindCollection(petsProp, 'my.path')
+        def collection = binder.bindCollection(petsProp, "my.path")
 
         then:
         1 * mockCollector.addCollectionBinding(_)
@@ -95,33 +95,32 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
         collection.fetchMode == petsProp.getFetchMode()
         collection.batchSize == petsProp.getBatchSize()
         
-        and: 'Property has been initialized'
+        and: "Property has been initialized"
         petsProp.getCollection() == collection
     }
 
-    void 'test bindCollection for many-to-many uses calculator'() {
+    void "test bindCollection for many-to-many uses calculator"() {
         given:
         def entityA = mappingContext.getPersistentEntity(CBManyToManyA.name) as GrailsHibernatePersistentEntity
-        def othersProp = entityA.getPropertyByName('others') as HibernateToManyProperty
+        def othersProp = entityA.getPropertyByName("others") as HibernateToManyProperty
         
-        mockCalculator.getTableName(othersProp) >> 'custom_join_table'
-        mockCalculator.getJoinTableSchema(othersProp) >> 'custom_schema'
-        mockCalculator.getJoinTableCatalog(othersProp) >> 'custom_catalog'
+        mockCalculator.getTableName(othersProp) >> "custom_join_table"
+        mockCalculator.getJoinTableSchema(othersProp) >> "custom_schema"
+        mockCalculator.getJoinTableCatalog(othersProp) >> "custom_catalog"
 
         when:
-        def collection = binder.bindCollection(othersProp, '')
+        def collection = binder.bindCollection(othersProp, "")
 
         then:
         1 * mockCollector.addCollectionBinding(_)
-        collection.collectionTable.name == 'custom_join_table'
-        collection.collectionTable.schema == 'custom_schema'
-        collection.collectionTable.catalog == 'custom_catalog'
+        collection.collectionTable.name == "custom_join_table"
+        collection.collectionTable.schema == "custom_schema"
+        collection.collectionTable.catalog == "custom_catalog"
     }
 }
 
 @Entity
 class Person {
-
     Long id
     String name
     static hasMany = [pets: Pet]
@@ -129,7 +128,6 @@ class Person {
 
 @Entity
 class Pet {
-
     Long id
     String name
     static belongsTo = [owner: Person]
@@ -137,14 +135,12 @@ class Pet {
 
 @Entity
 class CBManyToManyA {
-
     Long id
     static hasMany = [others: CBManyToManyB]
 }
 
 @Entity
 class CBManyToManyB {
-
     Long id
     static hasMany = [owners: CBManyToManyA]
     static belongsTo = CBManyToManyA

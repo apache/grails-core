@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -42,9 +42,9 @@ import spock.lang.Specification
 class MultiTenancyBidirectionalManyToManySpec extends Specification {
 
     final Map config = [
-            'grails.gorm.multiTenancy.mode': MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR,
-            'grails.gorm.multiTenancy.tenantResolverClass': SystemPropertyTenantResolver.name,
-            'dataSource.url': 'jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000',
+            "grails.gorm.multiTenancy.mode":MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR,
+            "grails.gorm.multiTenancy.tenantResolverClass":SystemPropertyTenantResolver.name,
+            'dataSource.url':"jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
             'dataSource.dialect': H2Dialect.name,
             'dataSource.formatSql': 'true',
             'hibernate.flush.mode': 'COMMIT',
@@ -58,31 +58,31 @@ class MultiTenancyBidirectionalManyToManySpec extends Specification {
     @AutoCleanup HibernateDatastore datastore
 
     void setup() {
-        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'oci')
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "oci")
         datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config), getClass().getPackage() )
         departmentService = datastore.getService(DepartmentService)
         userService = datastore.getService(UserService)
     }
 
     @Rollback
-    @Issue('https://github.com/grails/grails-data-hibernate5/issues/58')
+    @Issue("https://github.com/grails/grails-data-hibernate5/issues/58")
     void "test hasMany and 'in' query with multi-tenancy" () {
         given:
         createSomeUsers()
 
         when:
-        List<User> users = userService.findAllByDepartment('Grails')
+        List<User> users = userService.findAllByDepartment("Grails")
 
         then:
         users.size() == 4
     }
 
     Number createSomeUsers() {
-        Department department = departmentService.save('Grails')
-        department.addToUsers(username: 'John Doe').save()
-        department.addToUsers(username: 'Hanna William').save()
-        department.addToUsers(username: 'Mark').save()
-        department.addToUsers(username: 'Karl').save()
+        Department department = departmentService.save("Grails")
+        department.addToUsers(username: "John Doe").save()
+        department.addToUsers(username: "Hanna William").save()
+        department.addToUsers(username: "Mark").save()
+        department.addToUsers(username: "Karl").save()
         department.save(flush: true)
         department.users.size()
     }
@@ -91,7 +91,6 @@ class MultiTenancyBidirectionalManyToManySpec extends Specification {
 
 @Entity
 class User implements MultiTenant<User> {
-
     String username
     String tenantId
 
@@ -105,7 +104,6 @@ class User implements MultiTenant<User> {
 
 @Entity
 class Department implements MultiTenant<Department> {
-
     String name
     String tenantId
 
@@ -146,4 +144,7 @@ abstract class UserService {
 
     abstract Number count()
 }
+
+
+
 

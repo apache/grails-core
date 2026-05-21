@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -25,33 +25,32 @@ import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
 
 class EmbeddedWithNonEmbeddedCollectionsSpec extends MongoDatastoreSpec {
-
     void setupSpec() {
         manager.addAllDomainClasses([Ship, Crew, Sailor, Captain])
     }
 
-    void 'Test that embedded collections can have non-embedded collections'() {
-        given: 'A domain model with embedded associations that have non-embedded collections'
-        final captain = new Captain(name: 'Bob')
-        final firstMate = new Sailor(name: 'Jim', captain: captain)
-        def ship = new Ship(name: 'The Float')
+    void "Test that embedded collections can have non-embedded collections"() {
+        given: "A domain model with embedded associations that have non-embedded collections"
+        final captain = new Captain(name: "Bob")
+        final firstMate = new Sailor(name: "Jim", captain: captain)
+        def ship = new Ship(name: "The Float")
         ship.crew.firstMate = firstMate
-        ship.crew.sailors << new Sailor(name: 'Fred', captain: captain)
-        ship.crew.sailors << new Sailor(name: 'Joe', captain: captain)
-        ship.crew.reserves << new Sailor(name: 'Tristan', captain: captain)
-        ship.crew.reserves << new Sailor(name: 'Roger', captain: captain)
-        captain.shipmates << new Sailor(name: 'Jeff', captain: captain)
+        ship.crew.sailors << new Sailor(name: "Fred", captain: captain)
+        ship.crew.sailors << new Sailor(name: "Joe", captain: captain)
+        ship.crew.reserves << new Sailor(name: "Tristan", captain: captain)
+        ship.crew.reserves << new Sailor(name: "Roger", captain: captain)
+        captain.shipmates << new Sailor(name: "Jeff", captain: captain)
         captain.save flush: true, validate: false
         ship.save flush: true, validate: false
         manager.session.clear()
 
-        when: 'The underlying Mongo document is queried'
+        when: "The underlying Mongo document is queried"
         def shipDbo = Ship.collection.find().first()
-        Sailor fred = Sailor.findByName('Fred')
-        Sailor joe = Sailor.findByName('Joe')
+        Sailor fred = Sailor.findByName("Fred")
+        Sailor joe = Sailor.findByName("Joe")
 
-        then: 'It is correctly defined'
-        shipDbo.name == 'The Float'
+        then: "It is correctly defined"
+        shipDbo.name == "The Float"
         shipDbo.crew != null
         shipDbo.crew.firstMate == firstMate.id
         shipDbo.crew.sailors.size() == 2
@@ -61,13 +60,13 @@ class EmbeddedWithNonEmbeddedCollectionsSpec extends MongoDatastoreSpec {
         shipDbo.crew.reserves[0].$id == Sailor.findByName('Tristan').id
         shipDbo.crew.reserves[0].$ref == 'sailor'
 
-        when: 'The domain model is queried'
+        when: "The domain model is queried"
         manager.session.clear()
         ship = Ship.get(ship.id)
 
-        then: 'The right results are returned'
+        then: "The right results are returned"
         ship != null
-        ship.name == 'The Float'
+        ship.name == "The Float"
         ship.crew != null
         ship.crew.sailors.size() == 2
         ship.crew.sailors[0].name == 'Fred'
@@ -84,7 +83,6 @@ class EmbeddedWithNonEmbeddedCollectionsSpec extends MongoDatastoreSpec {
 
 @Entity
 class Ship implements MongoEntity<Ship> {
-
     String id
     String name
     Crew crew = new Crew()
@@ -93,7 +91,6 @@ class Ship implements MongoEntity<Ship> {
 
 @Entity
 class Crew implements MongoEntity<Ship> {
-
     String id
     String name
     Sailor firstMate

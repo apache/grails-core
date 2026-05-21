@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -28,8 +28,8 @@ import spock.lang.Specification
  */
 class HibernateConnectionSourceSettingsSpec extends Specification {
 
-    void 'test hibernate connection source settings'() {
-        when:'The configuration is built'
+    void "test hibernate connection source settings"() {
+        when:"The configuration is built"
         Map config = [
                 'dataSource.dbCreate': 'update',
                 'dataSource.dialect': H2Dialect.name,
@@ -37,8 +37,8 @@ class HibernateConnectionSourceSettingsSpec extends Specification {
                 'hibernate.flush.mode': 'commit',
                 'hibernate.cache.queries': 'true',
                 'hibernate.hbm2ddl.auto': 'create',
-                'hibernate.cache': ['region.factory_class':'org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory'],
-                'hibernate.configLocations': 'file:hibernate.cfg.xml',
+                'hibernate.cache':['region.factory_class':'org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory'],
+                'hibernate.configLocations':'file:hibernate.cfg.xml',
                 'hibernate.jpa.compliance.cascade': 'true',
         ]
         HibernateConnectionSourceSettingsBuilder builder = new HibernateConnectionSourceSettingsBuilder(DatastoreUtils.createPropertyResolver(config))
@@ -58,11 +58,11 @@ class HibernateConnectionSourceSettingsSpec extends Specification {
         expectedHibernateProperties.put('hibernate.entity_dirtiness_strategy', 'org.grails.orm.hibernate.dirty.GrailsEntityDirtinessStrategy')
         expectedHibernateProperties.put('hibernate.configLocations','file:hibernate.cfg.xml')
         expectedHibernateProperties.put('hibernate.use_query_cache','true')
-        expectedHibernateProperties.put('hibernate.connection.handling_mode', 'DELAYED_ACQUISITION_AND_HOLD')
+        expectedHibernateProperties.put("hibernate.connection.handling_mode", "DELAYED_ACQUISITION_AND_HOLD")
         expectedHibernateProperties.put('hibernate.cache.region.factory_class','org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory')
         expectedHibernateProperties.put('hibernate.jpa.compliance.cascade', 'true')
 
-        then:'The results are correct'
+        then:"The results are correct"
         settings.dataSource.dbCreate == 'update'
         settings.dataSource.dialect == H2Dialect
         settings.dataSource.formatSql
@@ -83,12 +83,12 @@ class HibernateConnectionSourceSettingsSpec extends Specification {
         hibernateProperties['hibernate.entity_dirtiness_strategy'] == 'org.grails.orm.hibernate.dirty.GrailsEntityDirtinessStrategy'
         hibernateProperties['hibernate.configLocations'] == 'file:hibernate.cfg.xml'
         hibernateProperties['hibernate.use_query_cache'] == 'true'
-        hibernateProperties['hibernate.connection.handling_mode'] == 'DELAYED_ACQUISITION_AND_HOLD'
+        hibernateProperties["hibernate.connection.handling_mode"] == "DELAYED_ACQUISITION_AND_HOLD"
         hibernateProperties['hibernate.cache.region.factory_class'] == 'org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory'
         hibernateProperties['hibernate.jpa.compliance.cascade'] == 'true'
     }
 
-    void 'test toHibernateEventListeners'() {
+    void "test toHibernateEventListeners"() {
         given:
         def interceptor = Mock(org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor)
 
@@ -97,7 +97,7 @@ class HibernateConnectionSourceSettingsSpec extends Specification {
         HibernateConnectionSourceSettings.HibernateSettings.toHibernateEventListeners(interceptor).size() == 8
     }
 
-    void 'test toProperties with dirty checking and custom config'() {
+    void "test toProperties with dirty checking and custom config"() {
         given:
         def settings = new HibernateConnectionSourceSettings()
         settings.hibernate.hibernateDirtyChecking = true
@@ -113,20 +113,20 @@ class HibernateConnectionSourceSettingsSpec extends Specification {
         props.get('hibernate.config_class') == org.hibernate.cfg.Configuration.name
     }
 
-    void 'test populateProperties with nested map'() {
+    void "test populateProperties with nested map"() {
         given:
         def settings = new HibernateConnectionSourceSettings.HibernateSettings()
-        settings.put('outer', [inner: 'value'])
+        settings.put("outer", [inner: "value"])
         def props = new Properties()
 
         when:
-        settings.populateProperties(props, settings, 'prefix')
+        settings.populateProperties(props, settings, "prefix")
 
         then:
-        props.get('prefix.outer.inner') == 'value'
+        props.get("prefix.outer.inner") == "value"
     }
 
-    void 'test clone settings'() {
+    void "test clone settings"() {
         given:
         def settings = new HibernateConnectionSourceSettings(enableReload: true)
 
@@ -138,18 +138,18 @@ class HibernateConnectionSourceSettingsSpec extends Specification {
         cloned.enableReload
     }
 
-    void 'test toProperties with additional properties'() {
+    void "test toProperties with additional properties"() {
         given:
         def settings = new HibernateConnectionSourceSettings()
         def hibernateSettings = settings.hibernate
         def addProps = new Properties()
-        addProps.put('custom.key', 'custom.value')
+        addProps.put("custom.key", "custom.value")
         hibernateSettings.@additionalProperties = addProps
 
         when:
         def props = hibernateSettings.toProperties()
 
         then:
-        props.get('custom.key') == 'custom.value'
+        props.get("custom.key") == "custom.value"
     }
 }

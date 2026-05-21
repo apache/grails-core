@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -44,7 +44,7 @@ class GrailsHibernateUtilSpec extends HibernateGormDatastoreSpec {
     }
 
     @Unroll
-    def 'test isDomainClass for #clazz.simpleName'() {
+    def "test isDomainClass for #clazz.simpleName"() {
         expect:
         GrailsHibernateUtil.isDomainClass(clazz) == expected
 
@@ -56,7 +56,7 @@ class GrailsHibernateUtilSpec extends HibernateGormDatastoreSpec {
         GHUAnnotatedEntity | true
     }
 
-    def 'test incrementVersion'() {
+    def "test incrementVersion"() {
         given:
         def book = new GHUBook(version: 1L)
 
@@ -67,7 +67,7 @@ class GrailsHibernateUtilSpec extends HibernateGormDatastoreSpec {
         book.version == 2L
     }
 
-    def 'test incrementVersion with non-long version'() {
+    def "test incrementVersion with non-long version"() {
         given:
         def obj = new GHUNonDomain()
 
@@ -78,20 +78,20 @@ class GrailsHibernateUtilSpec extends HibernateGormDatastoreSpec {
         noExceptionThrown()
     }
 
-    def 'test qualify and unqualify'() {
+    def "test qualify and unqualify"() {
         expect:
-        GrailsHibernateUtil.qualify('org.test', 'MyClass') == 'org.test.MyClass'
-        GrailsHibernateUtil.unqualify('org.test.MyClass') == 'MyClass'
+        GrailsHibernateUtil.qualify("org.test", "MyClass") == "org.test.MyClass"
+        GrailsHibernateUtil.unqualify("org.test.MyClass") == "MyClass"
     }
 
-    def 'test isNotEmpty'() {
+    def "test isNotEmpty"() {
         expect:
-        GrailsHibernateUtil.isNotEmpty('test')
-        !GrailsHibernateUtil.isNotEmpty('')
+        GrailsHibernateUtil.isNotEmpty("test")
+        !GrailsHibernateUtil.isNotEmpty("")
         !GrailsHibernateUtil.isNotEmpty(null)
     }
 
-    def 'test unwrapIfProxy'() {
+    def "test unwrapIfProxy"() {
         given:
         def obj = new Object()
         def unwrapped = new Object()
@@ -104,7 +104,7 @@ class GrailsHibernateUtilSpec extends HibernateGormDatastoreSpec {
         result == unwrapped
     }
 
-    def 'test unwrapProxy'() {
+    def "test unwrapProxy"() {
         given:
         def proxy = Mock(HibernateProxy)
         def unwrapped = new Object()
@@ -117,23 +117,23 @@ class GrailsHibernateUtilSpec extends HibernateGormDatastoreSpec {
         result == unwrapped
     }
 
-    def 'test getAssociationProxy and isInitialized'() {
+    def "test getAssociationProxy and isInitialized"() {
         given:
-        def book = new GHUBook(title: 'Carrie')
+        def book = new GHUBook(title: "Carrie")
         def proxy = Mock(HibernateProxy)
 
         when:
-        def result = GrailsHibernateUtil.getAssociationProxy(book, 'title')
-        def initialized = GrailsHibernateUtil.isInitialized(book, 'title')
+        def result = GrailsHibernateUtil.getAssociationProxy(book, "title")
+        def initialized = GrailsHibernateUtil.isInitialized(book, "title")
 
         then:
-        1 * proxyHandlerMock.getAssociationProxy(book, 'title') >> proxy
-        1 * proxyHandlerMock.isInitialized(book, 'title') >> true
+        1 * proxyHandlerMock.getAssociationProxy(book, "title") >> proxy
+        1 * proxyHandlerMock.isInitialized(book, "title") >> true
         result == proxy
         initialized
     }
 
-    def 'test isMappedWithHibernate'() {
+    def "test isMappedWithHibernate"() {
         given:
         def hibernateEntity = Mock(org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity)
         def otherEntity = Mock(org.grails.datastore.mapping.model.PersistentEntity)
@@ -143,7 +143,7 @@ class GrailsHibernateUtilSpec extends HibernateGormDatastoreSpec {
         !GrailsHibernateUtil.isMappedWithHibernate(otherEntity)
     }
 
-    def 'test ensureCorrectGroovyMetaClass'() {
+    def "test ensureCorrectGroovyMetaClass"() {
         given:
         def book = new GHUBook()
         def originalMc = book.getMetaClass()
@@ -159,9 +159,9 @@ class GrailsHibernateUtilSpec extends HibernateGormDatastoreSpec {
         book.setMetaClass(originalMc)
     }
 
-    def 'setObjectToReadyOnly does nothing when no bound transaction resource'() {
+    def "setObjectToReadyOnly does nothing when no bound transaction resource"() {
         given:
-        def book = new GHUBook(title: 'NoTx')
+        def book = new GHUBook(title: "NoTx")
 
         when:
         GrailsHibernateUtil.setObjectToReadyOnly(book, sessionFactory)
@@ -170,10 +170,10 @@ class GrailsHibernateUtilSpec extends HibernateGormDatastoreSpec {
         noExceptionThrown()
     }
 
-    def 'setObjectToReadyOnly marks persistent entity read-only within transaction'() {
+    def "setObjectToReadyOnly marks persistent entity read-only within transaction"() {
         given:
         GHUBook saved = GHUBook.withTransaction {
-            new GHUBook(title: 'ReadOnlyBook', version: 0L).save(flush: true, failOnError: true)
+            new GHUBook(title: "ReadOnlyBook", version: 0L).save(flush: true, failOnError: true)
         }
 
         when:
@@ -186,10 +186,10 @@ class GrailsHibernateUtilSpec extends HibernateGormDatastoreSpec {
         noExceptionThrown()
     }
 
-    def 'setObjectToReadWrite does nothing when entity not in session'() {
+    def "setObjectToReadWrite does nothing when entity not in session"() {
         when:
         GHUBook.withTransaction {
-            def book = new GHUBook(title: 'Detached')
+            def book = new GHUBook(title: "Detached")
             GrailsHibernateUtil.setObjectToReadWrite(book, sessionFactory)
         }
 
@@ -201,18 +201,17 @@ class GrailsHibernateUtilSpec extends HibernateGormDatastoreSpec {
     // isDomainClass — uncovered branches
     // -------------------------------------------------------------------------
 
-    def 'isDomainClass returns false for a Closure class'() {
+    def "isDomainClass returns false for a Closure class"() {
         expect:
         !GrailsHibernateUtil.isDomainClass(Closure)
     }
 
-    def 'isDomainClass returns false for an enum'() {
+    def "isDomainClass returns false for an enum"() {
         expect:
         !GrailsHibernateUtil.isDomainClass(GHUStatus)
     }
 
-    def 'isDomainClass returns true for class with id and version fields but no annotation'() {
-
+    def "isDomainClass returns true for class with id and version fields but no annotation"() {
         expect: "class that has 'id' and 'version' fields should pass the reflective check"
         GrailsHibernateUtil.isDomainClass(GHUIdVersionPojo)
     }
@@ -221,13 +220,12 @@ class GrailsHibernateUtilSpec extends HibernateGormDatastoreSpec {
     // ensureCorrectGroovyMetaClass — uncovered branches
     // -------------------------------------------------------------------------
 
-    def 'ensureCorrectGroovyMetaClass does nothing when metaclass already matches'() {
-
+    def "ensureCorrectGroovyMetaClass does nothing when metaclass already matches"() {
         given:
         def book = new GHUBook()
         def originalMc = book.getMetaClass()
 
-        when: 'called with the same class — no change expected'
+        when: "called with the same class — no change expected"
         GrailsHibernateUtil.ensureCorrectGroovyMetaClass(book, GHUBook)
 
         then:
@@ -235,10 +233,9 @@ class GrailsHibernateUtilSpec extends HibernateGormDatastoreSpec {
         noExceptionThrown()
     }
 
-    def 'ensureCorrectGroovyMetaClass does nothing for non-GroovyObject'() {
-
+    def "ensureCorrectGroovyMetaClass does nothing for non-GroovyObject"() {
         given:
-        def target = 'plain java string'
+        def target = "plain java string"
 
         when:
         GrailsHibernateUtil.ensureCorrectGroovyMetaClass(target, String)
@@ -251,10 +248,10 @@ class GrailsHibernateUtilSpec extends HibernateGormDatastoreSpec {
     // setObjectToReadyOnly — resource bound but entity not in session
     // -------------------------------------------------------------------------
 
-    def 'setObjectToReadyOnly does nothing when entity is not in session even with active transaction'() {
+    def "setObjectToReadyOnly does nothing when entity is not in session even with active transaction"() {
         when:
         GHUBook.withTransaction {
-            def detached = new GHUBook(title: 'NotInSession')
+            def detached = new GHUBook(title: "NotInSession")
             GrailsHibernateUtil.setObjectToReadyOnly(detached, sessionFactory)
         }
 
@@ -266,10 +263,10 @@ class GrailsHibernateUtilSpec extends HibernateGormDatastoreSpec {
     // setObjectToReadWrite — EntityEntry null branch
     // -------------------------------------------------------------------------
 
-    def 'setObjectToReadWrite does nothing when EntityEntry is null for a transient entity'() {
+    def "setObjectToReadWrite does nothing when EntityEntry is null for a transient entity"() {
         when:
         GHUBook.withTransaction {
-            def transient_ = new GHUBook(title: 'Transient')
+            def transient_ = new GHUBook(title: "Transient")
             // entity is in the session (contains() may return false for unsaved) — either way no exception
             GrailsHibernateUtil.setObjectToReadWrite(transient_, sessionFactory)
         }
@@ -283,9 +280,9 @@ class GrailsHibernateUtilSpec extends HibernateGormDatastoreSpec {
     // -------------------------------------------------------------------------
 
     @Rollback
-    def 'entity marked read-only can be reverted to read-write'() {
+    def "entity marked read-only can be reverted to read-write"() {
         given:
-        def book = new GHUBook(title: 'ReadWriteBook', version: 0L).save(flush: true, failOnError: true)
+        def book = new GHUBook(title: "ReadWriteBook", version: 0L).save(flush: true, failOnError: true)
 
         when:
         GHUBook.withTransaction {
@@ -299,10 +296,10 @@ class GrailsHibernateUtilSpec extends HibernateGormDatastoreSpec {
     }
 
     @Rollback
-    def 'setObjectToReadyOnly handles HibernateProxy correctly'() {
+    def "setObjectToReadyOnly handles HibernateProxy correctly"() {
         given:
         GHUBook saved = GHUBook.withTransaction {
-            new GHUBook(title: 'ProxyBook', version: 0L).save(flush: true, failOnError: true)
+            new GHUBook(title: "ProxyBook", version: 0L).save(flush: true, failOnError: true)
         }
 
         when:
@@ -317,10 +314,10 @@ class GrailsHibernateUtilSpec extends HibernateGormDatastoreSpec {
     }
 
     @Rollback
-    def 'setObjectToReadWrite handles HibernateProxy correctly'() {
+    def "setObjectToReadWrite handles HibernateProxy correctly"() {
         given:
         GHUBook saved = GHUBook.withTransaction {
-            new GHUBook(title: 'ProxyBookRW', version: 0L).save(flush: true, failOnError: true)
+            new GHUBook(title: "ProxyBookRW", version: 0L).save(flush: true, failOnError: true)
         }
 
         when:
@@ -334,13 +331,12 @@ class GrailsHibernateUtilSpec extends HibernateGormDatastoreSpec {
         noExceptionThrown()
     }
 
-    def 'isDomainClass returns true for class with Entity annotation from jakarta.persistence'() {
-
+    def "isDomainClass returns true for class with Entity annotation from jakarta.persistence"() {
         expect:
         GrailsHibernateUtil.isDomainClass(GHUJpaEntity)
     }
 
-    def 'isDomainClass returns false for POJO missing identity/version fields'() {
+    def "isDomainClass returns false for POJO missing identity/version fields"() {
         expect:
         !GrailsHibernateUtil.isDomainClass(GHUPojoMissingVersion)
     }
@@ -348,20 +344,17 @@ class GrailsHibernateUtilSpec extends HibernateGormDatastoreSpec {
 
 @jakarta.persistence.Entity
 class GHUJpaEntity {
-
     @jakarta.persistence.Id
     Long id
 }
 
 class GHUPojoMissingVersion {
-
     Long id
     String name
 }
 
 @Entity
 class GHUBook {
-
     Long id
     Long version
     String title
@@ -369,20 +362,17 @@ class GHUBook {
 
 @Entity
 class GHUAuthor {
-
     Long id
     String name
     static hasMany = [books: GHUBook]
 }
 
 class GHUNonDomain {
-
     String name
 }
 
 @grails.persistence.Entity
 class GHUAnnotatedEntity {
-
     Long id
 }
 
@@ -390,7 +380,6 @@ enum GHUStatus { ACTIVE, INACTIVE }
 
 /** Plain POJO with 'id' and 'version' fields — should satisfy the reflective isDomainClass check. */
 class GHUIdVersionPojo {
-
     Long id
     Long version
     String name

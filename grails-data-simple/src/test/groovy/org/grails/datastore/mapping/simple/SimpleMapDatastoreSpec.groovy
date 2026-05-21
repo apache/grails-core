@@ -1,14 +1,14 @@
 /*
  * Copyright 2026 the original author or authors.
  *
- * Licensed under the Apache License, Version 2.0 (the 'License')
+ * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an 'AS IS' BASIS,
+ * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -23,7 +23,7 @@ import grails.gorm.annotation.Entity
 
 class SimpleMapDatastoreSpec extends Specification {
 
-    void 'test backing map isolation for multiple datasources'() {
+    void "test backing map isolation for multiple datasources"() {
         given:
         def datastore = new SimpleMapDatastore([ConnectionSource.DEFAULT, 'one'], TestEntity)
         def secondary = datastore.getDatastoreForConnection('one')
@@ -41,13 +41,13 @@ class SimpleMapDatastoreSpec extends Specification {
         when:
         def session = datastore.connect()
         session.beginTransaction()
-        def t1 = new TestEntity(name: 'default')
+        def t1 = new TestEntity(name: "default")
         session.insert(t1)
         session.flush()
         
         def session2 = secondary.connect()
         session2.beginTransaction()
-        def t2 = new TestEntity(name: 'secondary')
+        def t2 = new TestEntity(name: "secondary")
         session2.insert(t2)
         session2.flush()
         
@@ -59,7 +59,6 @@ class SimpleMapDatastoreSpec extends Specification {
 
 @Entity
 class TestEntity {
-
     Long id
     String name
 }

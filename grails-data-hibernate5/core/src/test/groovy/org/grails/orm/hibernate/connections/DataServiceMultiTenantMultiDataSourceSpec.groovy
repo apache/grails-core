@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -62,16 +62,16 @@ class DataServiceMultiTenantMultiDataSourceSpec extends Specification {
 
     void setup() {
         Map config = [
-                'grails.gorm.multiTenancy.mode': MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR,
-                'grails.gorm.multiTenancy.tenantResolverClass': SystemPropertyTenantResolver,
-                'dataSource.url': 'jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000',
+                "grails.gorm.multiTenancy.mode": MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR,
+                "grails.gorm.multiTenancy.tenantResolverClass": SystemPropertyTenantResolver,
+                'dataSource.url': "jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
                 'dataSource.dbCreate': 'create-drop',
                 'dataSource.dialect': H2Dialect.name,
                 'dataSource.formatSql': 'true',
                 'hibernate.flush.mode': 'COMMIT',
                 'hibernate.cache.queries': 'true',
                 'hibernate.hbm2ddl.auto': 'create-drop',
-                'dataSources.analytics': [url: 'jdbc:h2:mem:analyticsDB;LOCK_TIMEOUT=10000'],
+                'dataSources.analytics': [url: "jdbc:h2:mem:analyticsDB;LOCK_TIMEOUT=10000"],
         ]
 
         datastore = new HibernateDatastore(
@@ -89,7 +89,7 @@ class DataServiceMultiTenantMultiDataSourceSpec extends Specification {
         tenant = 'tenant1'
     }
 
-    void 'schema is created on analytics datasource'() {
+    void "schema is created on analytics datasource"() {
         expect: 'The analytics datasource connects to the analyticsDB H2 database'
         Metric.analytics.withNewSession { Session s ->
             assert s.connection().metaData.getURL() == 'jdbc:h2:mem:analyticsDB'
@@ -103,7 +103,7 @@ class DataServiceMultiTenantMultiDataSourceSpec extends Specification {
         }
     }
 
-    void 'save routes to analytics datasource with tenant isolation'() {
+    void "save routes to analytics datasource with tenant isolation"() {
         when: 'A metric is saved under tenant1'
         def saved = metricService.save(new Metric(name: 'page_views', amount: 100))
 
@@ -119,7 +119,7 @@ class DataServiceMultiTenantMultiDataSourceSpec extends Specification {
         }
     }
 
-    void 'get retrieves from analytics datasource'() {
+    void "get retrieves from analytics datasource"() {
         given: 'A metric saved to the analytics datasource'
         def saved = metricService.save(new Metric(name: 'sessions', amount: 42))
 
@@ -133,7 +133,7 @@ class DataServiceMultiTenantMultiDataSourceSpec extends Specification {
         found.amount == 42
     }
 
-    void 'count returns count scoped to current tenant'() {
+    void "count returns count scoped to current tenant"() {
         given: 'Metrics saved under tenant1'
         metricService.save(new Metric(name: 'alpha', amount: 1))
         metricService.save(new Metric(name: 'beta', amount: 2))
@@ -155,7 +155,7 @@ class DataServiceMultiTenantMultiDataSourceSpec extends Specification {
         count2 == 1
     }
 
-    void 'delete removes from analytics datasource'() {
+    void "delete removes from analytics datasource"() {
         given: 'A metric saved under tenant1'
         def saved = metricService.save(new Metric(name: 'disposable', amount: 0))
         def id = saved.id
@@ -168,7 +168,7 @@ class DataServiceMultiTenantMultiDataSourceSpec extends Specification {
         metricService.count() == 0
     }
 
-    void 'findByName routes to analytics datasource with tenant isolation'() {
+    void "findByName routes to analytics datasource with tenant isolation"() {
         given: 'Same-named metrics under different tenants'
         metricService.save(new Metric(name: 'shared_name', amount: 100))
         tenant = 'tenant2'
@@ -190,7 +190,7 @@ class DataServiceMultiTenantMultiDataSourceSpec extends Specification {
         found2.amount == 200
     }
 
-    void 'analytics datasource is registered and functional for MultiTenant entity'() {
+    void "analytics datasource is registered and functional for MultiTenant entity"() {
         when: 'A metric is saved via the data service (routes to analytics datasource)'
         def saved = metricService.save(new Metric(name: 'registration-check', amount: 1))
 
@@ -200,7 +200,7 @@ class DataServiceMultiTenantMultiDataSourceSpec extends Specification {
         metricService.count() == 1
     }
 
-    void 'aggregate HQL routes to analytics datasource via data service'() {
+    void "aggregate HQL routes to analytics datasource via data service"() {
         given: 'Multiple metrics saved under tenant1'
         metricService.save(new Metric(name: 'alpha', amount: 10))
         metricService.save(new Metric(name: 'beta', amount: 20))
@@ -226,7 +226,6 @@ class DataServiceMultiTenantMultiDataSourceSpec extends Specification {
  */
 @Entity
 class Metric implements GormEntity<Metric>, MultiTenant<Metric> {
-
     Long id
     Long version
     String tenantId
@@ -257,7 +256,7 @@ interface MetricDataService {
 
 /**
  * Abstract class that binds MetricDataService to the 'analytics' datasource.
- * The @Transactional(connection = 'analytics') ensures all auto-implemented methods
+ * The @Transactional(connection = "analytics") ensures all auto-implemented methods
  * and custom methods route to the secondary datasource.
  */
 @Service(Metric)
@@ -270,7 +269,6 @@ abstract class MetricService implements MetricDataService {
      * executeUpdate routes to the analytics datasource.
      */
     void deleteAll() {
-
         Metric.executeUpdate('delete from Metric where 1=1')
     }
 
@@ -279,7 +277,6 @@ abstract class MetricService implements MetricDataService {
      * Executes against analytics datasource via the active transaction.
      */
     List getTotalAmountAbove(Integer minAmount) {
-
         Metric.executeQuery(
             'select sum(m.amount) from Metric m where m.amount > :minAmount',
             [minAmount: minAmount]

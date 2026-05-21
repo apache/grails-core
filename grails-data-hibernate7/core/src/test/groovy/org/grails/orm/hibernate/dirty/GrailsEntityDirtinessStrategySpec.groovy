@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -33,28 +33,28 @@ class GrailsEntityDirtinessStrategySpec extends HibernateGormDatastoreSpec {
         manager.addAllDomainClasses([DSBook, DSEmbeddedEntity])
     }
 
-    def 'canDirtyCheck returns true for DirtyCheckable'() {
+    def "canDirtyCheck returns true for DirtyCheckable"() {
         given:
         def strategy = new GrailsEntityDirtinessStrategy()
         def book = new DSBook()
-        def nonDirty = 'string'
+        def nonDirty = "string"
 
         expect:
         strategy.canDirtyCheck(book, null, null)
         !strategy.canDirtyCheck(nonDirty, null, null)
     }
 
-    def 'isDirty returns true if not in session or has changes'() {
+    def "isDirty returns true if not in session or has changes"() {
         given:
         def strategy = new GrailsEntityDirtinessStrategy()
         def nativeSession = sessionFactory.getCurrentSession()
-        def book = new DSBook(title: 'T1').save(flush: true)
+        def book = new DSBook(title: "T1").save(flush: true)
         
         expect:
         !strategy.isDirty(book, null, nativeSession)
         
         when:
-        book.title = 'T2'
+        book.title = "T2"
         
         then:
         strategy.isDirty(book, null, nativeSession)
@@ -66,7 +66,7 @@ class GrailsEntityDirtinessStrategySpec extends HibernateGormDatastoreSpec {
         strategy.isDirty(book, null, nativeSession)
     }
 
-    def 'findDirty handles various attribute types and statuses'() {
+    def "findDirty handles various attribute types and statuses"() {
         given:
         def strategy = new GrailsEntityDirtinessStrategy()
         def nativeSession = sessionFactory.getCurrentSession()
@@ -74,7 +74,7 @@ class GrailsEntityDirtinessStrategySpec extends HibernateGormDatastoreSpec {
         def persister = sessionImplementor.getSessionFactory().getRuntimeMetamodels().getMappingMetamodel().getEntityDescriptor(DSBook) as EntityPersister
         def context = Mock(CustomEntityDirtinessStrategy.DirtyCheckContext)
         
-        def book = new DSBook(title: 'B1', lastUpdated: new Date())
+        def book = new DSBook(title: "B1", lastUpdated: new Date())
         // book is NOT in session yet, so status will be null
         
         when:
@@ -89,7 +89,7 @@ class GrailsEntityDirtinessStrategySpec extends HibernateGormDatastoreSpec {
 
         when:
         book.save(flush: true)
-        book.title = 'B2' // make it dirty
+        book.title = "B2" // make it dirty
         strategy.findDirty(book, persister, nativeSession, context)
 
         then:
@@ -97,16 +97,16 @@ class GrailsEntityDirtinessStrategySpec extends HibernateGormDatastoreSpec {
             def checker = args[0] as CustomEntityDirtinessStrategy.AttributeChecker
             
             def infoTitle = Mock(CustomEntityDirtinessStrategy.AttributeInformation)
-            infoTitle.getName() >> 'title'
+            infoTitle.getName() >> "title"
             assert checker.isDirty(infoTitle) == true
             
             def infoOther = Mock(CustomEntityDirtinessStrategy.AttributeInformation)
-            infoOther.getName() >> 'other'
+            infoOther.getName() >> "other"
             assert checker.isDirty(infoOther) == false
         }
     }
 
-    def 'findDirty handles lastUpdated property'() {
+    def "findDirty handles lastUpdated property"() {
         given:
         def strategy = new GrailsEntityDirtinessStrategy()
         def nativeSession = sessionFactory.getCurrentSession()
@@ -114,27 +114,27 @@ class GrailsEntityDirtinessStrategySpec extends HibernateGormDatastoreSpec {
         def persister = sessionImplementor.getSessionFactory().getRuntimeMetamodels().getMappingMetamodel().getEntityDescriptor(DSBook) as EntityPersister
         def context = Mock(CustomEntityDirtinessStrategy.DirtyCheckContext)
         
-        def book = new DSBook(title: 'B1').save(flush: true)
+        def book = new DSBook(title: "B1").save(flush: true)
         
         when:
-        book.title = 'B2' // mark as changed
+        book.title = "B2" // mark as changed
         strategy.findDirty(book, persister, nativeSession, context)
 
         then:
         1 * context.doDirtyChecking(_) >> { args ->
             def checker = args[0] as CustomEntityDirtinessStrategy.AttributeChecker
             def info = Mock(CustomEntityDirtinessStrategy.AttributeInformation)
-            info.getName() >> 'lastUpdated'
+            info.getName() >> "lastUpdated"
             assert checker.isDirty(info) == true
         }
     }
 
-    def 'resetDirty tracks changes'() {
+    def "resetDirty tracks changes"() {
         given:
         def strategy = new GrailsEntityDirtinessStrategy()
         def nativeSession = sessionFactory.getCurrentSession()
-        def book = new DSBook(title: 'B1')
-        book.title = 'B2'
+        def book = new DSBook(title: "B1")
+        book.title = "B2"
         assert book.hasChanged()
 
         when:
@@ -147,7 +147,6 @@ class GrailsEntityDirtinessStrategySpec extends HibernateGormDatastoreSpec {
 
 @Entity
 class DSBook implements HibernateEntity<DSBook> {
-
     Long id
     String title
     Date lastUpdated
@@ -162,7 +161,6 @@ class DSBook implements HibernateEntity<DSBook> {
 
 @Entity
 class DSEmbeddedEntity implements HibernateEntity<DSEmbeddedEntity> {
-
     Long id
     String name
     static constraints = {

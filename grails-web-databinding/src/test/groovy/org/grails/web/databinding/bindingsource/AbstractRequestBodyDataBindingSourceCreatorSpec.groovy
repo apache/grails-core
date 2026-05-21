@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -54,7 +54,7 @@ class AbstractRequestBodyDataBindingSourceCreatorSpec extends Specification {
 
             @Override
             protected DataBindingSource createBindingSource(Reader reader) {
-                return new SimpleMapDataBindingSource([id: 'request'])
+                return new SimpleMapDataBindingSource([id: "request"])
             }
 
             @Override
@@ -65,7 +65,7 @@ class AbstractRequestBodyDataBindingSourceCreatorSpec extends Specification {
     }
 
     MockHttpServletRequest build(String method, String content) {
-        MockHttpServletRequestBuilder builder = MockMvcRequestBuilders.request(method, new URI('')).param('id', 'url')
+        MockHttpServletRequestBuilder builder = MockMvcRequestBuilders.request(method, new URI("")).param("id", "url")
         if (content != null) {
             builder.content(content)
         }
@@ -75,7 +75,7 @@ class AbstractRequestBodyDataBindingSourceCreatorSpec extends Specification {
     }
 
     @Unroll
-    void 'test binding request #request.method with content length #request.contentLength'() {
+    void "test binding request #request.method with content length #request.contentLength"() {
         given:
         MimeType mimeType = MimeType.ALL
         DataBindingSource source
@@ -88,18 +88,18 @@ class AbstractRequestBodyDataBindingSourceCreatorSpec extends Specification {
 
         where:
         expectedSource | request
-        'url'          | build('GET', null)
-        'url'          | build('GET', '')
-        'url'          | build('GET', 'x')
-        'url'          | build('DELETE', null)
-        'url'          | build('DELETE', '')
-        'url'          | build('DELETE', 'x')
-        'request'      | build('POST', null)
-        'url'          | build('POST', '')
-        'request'      | build('POST', 'x')
-        'request'      | build('PUT', null)
-        'url'          | build('PUT', '')
-        'request'      | build('PUT', 'x')
+        "url"          | build("GET", null)
+        "url"          | build("GET", "")
+        "url"          | build("GET", "x")
+        "url"          | build("DELETE", null)
+        "url"          | build("DELETE", "")
+        "url"          | build("DELETE", "x")
+        "request"      | build("POST", null)
+        "url"          | build("POST", "")
+        "request"      | build("POST", "x")
+        "request"      | build("PUT", null)
+        "url"          | build("PUT", "")
+        "request"      | build("PUT", "x")
     }
 }
 

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -43,10 +43,10 @@ class DependentKeyValueBinderSpec extends HibernateGormDatastoreSpec {
 
     protected HibernateToManyProperty createTestProperty(Class<?> domainClass = TestEntityWithMany) {
         PersistentEntity entity = createPersistentEntity(domainClass)
-        return (HibernateToManyProperty) entity.getPropertyByName('items')
+        return (HibernateToManyProperty) entity.getPropertyByName("items")
     }
 
-    void 'test bind without composite identifier'() {
+    void "test bind without composite identifier"() {
         given:
         HibernateToManyProperty property = createTestProperty(TestEntityWithMany)
         GrailsHibernatePersistentEntity owner = (GrailsHibernatePersistentEntity) property.getOwner()
@@ -60,7 +60,7 @@ class DependentKeyValueBinderSpec extends HibernateGormDatastoreSpec {
         0 * compositeIdentifierToManyToOneBinder.bindCompositeIdentifierToManyToOne(*_)
     }
 
-    void 'test bind with composite identifier and join column support'() {
+    void "test bind with composite identifier and join column support"() {
         given:
         HibernateToManyProperty property = createTestProperty(TestEntityWithCompositeMany)
         def spiedProperty = Spy(property)
@@ -79,7 +79,7 @@ class DependentKeyValueBinderSpec extends HibernateGormDatastoreSpec {
         0 * simpleValueBinder.bindSimpleValue(*_)
     }
 
-    void 'test bind with composite identifier but NO join column support'() {
+    void "test bind with composite identifier but NO join column support"() {
         given:
         HibernateToManyProperty property = createTestProperty(TestEntityWithCompositeMany)
         def spiedProperty = Spy(property)
@@ -99,7 +99,6 @@ class DependentKeyValueBinderSpec extends HibernateGormDatastoreSpec {
 
 @Entity
 class TestEntityWithMany {
-
     Long id
     String name
     static hasMany = [items: AssociatedItem]
@@ -107,7 +106,6 @@ class TestEntityWithMany {
 
 @Entity
 class AssociatedItem {
-
     Long id
     String value
     TestEntityWithMany parent
@@ -116,7 +114,6 @@ class AssociatedItem {
 
 @Entity
 class TestEntityWithCompositeMany {
-
     Long id
     String name
     static hasMany = [items: AssociatedItemWithComposite]
@@ -127,7 +124,6 @@ class TestEntityWithCompositeMany {
 
 @Entity
 class AssociatedItemWithComposite {
-
     Long id
     String value
     TestEntityWithCompositeMany parent

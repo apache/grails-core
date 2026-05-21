@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -39,8 +39,8 @@ class WithNewSessionAndExistingTransactionSpec extends GrailsDataTckSpec<GrailsD
         manager.addAllDomainClasses([Book])
     }
 
-    void 'Test withNewSession when an existing transaction is present'() {
-        when: 'An existing transaction not to pick up the current session'
+    void "Test withNewSession when an existing transaction is present"() {
+        when: "An existing transaction not to pick up the current session"
         DataSource dataSource = ((HibernateDatastore) manager.session.datastore).connectionSources.defaultConnectionSource.dataSource
         org.apache.tomcat.jdbc.pool.DataSource tomcatDataSource = dataSource.targetDataSource.targetDataSource
         int initialActive = tomcatDataSource.pool.active
@@ -56,7 +56,7 @@ class WithNewSessionAndExistingTransactionSpec extends GrailsDataTckSpec<GrailsD
         int result = Book.count()
         SessionHolder sessionHolder = TransactionSynchronizationManager.getResource(manager.sessionFactory)
 
-        then: 'The result is correct'
+        then: "The result is correct"
         dataSource != null
         tomcatDataSource != null
         tomcatDataSource.pool.active == initialActive || tomcatDataSource.pool.active == initialActive + 1
@@ -72,8 +72,8 @@ class WithNewSessionAndExistingTransactionSpec extends GrailsDataTckSpec<GrailsD
     }
 
     @Issue('https://github.com/apache/grails-core/issues/10426')
-    void 'Test with withNewSession with nested transaction'() {
-        when: 'An existing transaction not to pick up the current session'
+    void "Test with withNewSession with nested transaction"() {
+        when: "An existing transaction not to pick up the current session"
         DataSource dataSource = ((HibernateDatastore) manager.session.datastore).connectionSources.defaultConnectionSource.dataSource
         org.apache.tomcat.jdbc.pool.DataSource tomcatDataSource = dataSource.targetDataSource.targetDataSource
         int initialActive = tomcatDataSource.pool.active
@@ -84,17 +84,17 @@ class WithNewSessionAndExistingTransactionSpec extends GrailsDataTckSpec<GrailsD
             assert !previousSessionHolder.is(TransactionSynchronizationManager.getResource(manager.sessionFactory))
             // access the current session
             session.sessionFactory.currentSession
-            // reproduce 'Pre-bound JDBC Connection found!' problem
+            // reproduce "Pre-bound JDBC Connection found!" problem
             Book.withNewTransaction {
                 assert !previousSessionHolder.is(TransactionSynchronizationManager.getResource(manager.sessionFactory))
-                new Book(title: 'The Stand', author: 'Stephen King').save()
+                new Book(title: "The Stand", author: 'Stephen King').save()
             }
         }
 
         Book.count()
         SessionHolder sessionHolder = TransactionSynchronizationManager.getResource(manager.sessionFactory)
 
-        then: 'The result is correct'
+        then: "The result is correct"
         dataSource != null
         tomcatDataSource != null
         tomcatDataSource.pool.active == initialActive || tomcatDataSource.pool.active == initialActive + 1
@@ -108,40 +108,41 @@ class WithNewSessionAndExistingTransactionSpec extends GrailsDataTckSpec<GrailsD
     }
 
     @Issue('https://github.com/apache/grails-core/issues/10448')
-    void 'Test with withNewSession with existing transaction'() {
+    void "Test with withNewSession with existing transaction"() {
 
-        when: 'the connection pool is obtained'
+        when: "the connection pool is obtained"
         DataSource dataSource = ((HibernateDatastore) manager.session.datastore).connectionSources.defaultConnectionSource.dataSource
         org.apache.tomcat.jdbc.pool.DataSource tomcatDataSource = dataSource.targetDataSource.targetDataSource
         int initialActive = tomcatDataSource.pool.active
 
-        then: 'the active count is correct'
+        then: "the active count is correct"
         dataSource != null
         tomcatDataSource != null
 
-        when: 'An existing transaction not to pick up the current session'
+        when: "An existing transaction not to pick up the current session"
         manager.sessionFactory.currentSession
         SessionHolder previousSessionHolder = TransactionSynchronizationManager.getResource(manager.sessionFactory)
         Book.withNewTransaction { TransactionStatus status ->
-            // reproduce 'java.lang.IllegalStateException: No value for key' problem
+            // reproduce "java.lang.IllegalStateException: No value for key" problem
             Book.withNewSession { Session session ->
                 // access the current session
                 assert !previousSessionHolder.is(TransactionSynchronizationManager.getResource(manager.sessionFactory))
                 session.sessionFactory.currentSession
 
-                new Book(title: 'The Stand', author: 'Stephen King').save()
+                new Book(title: "The Stand", author: 'Stephen King').save()
             }
         }
 
         SessionHolder sessionHolder = TransactionSynchronizationManager.getResource(manager.sessionFactory)
 
-        then: 'After withNewSession is completed all connections are closed'
+
+        then: "After withNewSession is completed all connections are closed"
         tomcatDataSource.pool.active == initialActive || tomcatDataSource.pool.active == initialActive + 1
 
-        when: 'A count is executed that uses the current connection'
+        when: "A count is executed that uses the current connection"
         Book.count()
 
-        then: 'The result is correct'
+        then: "The result is correct"
         tomcatDataSource.pool.active == initialActive || tomcatDataSource.pool.active == initialActive + 1
         sessionHolder.is(previousSessionHolder)
         TransactionSynchronizationManager.isSynchronizationActive()

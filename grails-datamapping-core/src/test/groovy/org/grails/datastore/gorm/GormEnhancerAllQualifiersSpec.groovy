@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -111,7 +111,7 @@ class GormEnhancerAllQualifiersSpec extends Specification {
         GormRegistry.reset()
     }
 
-    void 'MultiTenant entity with explicit non-default datasource preserves qualifier'() {
+    void "MultiTenant entity with explicit non-default datasource preserves qualifier"() {
         given: "a MultiTenant entity with datasource 'secondary'"
         def enhancer = createEnhancer()
         def entity = mockEntity(MultiTenantSecondaryEntity, ['secondary'])
@@ -124,30 +124,30 @@ class GormEnhancerAllQualifiersSpec extends Specification {
         qualifiers == ['secondary']
     }
 
-    void 'registerEntity adds static api under default and secondary for non-default datasource'() {
+    void "registerEntity adds static api under default and secondary for non-default datasource"() {
         given: "a non-MultiTenant entity with datasource 'secondary'"
         def enhancer = createEnhancer()
         def entity = mockEntity(NonMultiTenantSecondaryEntity, ['secondary'])
-        when: 'registering the entity'
+        when: "registering the entity"
         enhancer.registerEntity(entity)
-        then: 'static api is available under DEFAULT and secondary qualifiers'
+        then: "static api is available under DEFAULT and secondary qualifiers"
         GormRegistry.instance.getDatastore(entity.name, ConnectionSource.DEFAULT) != null
         GormRegistry.instance.getDatastore(entity.name, 'secondary') != null
     }
 
-    void 'registerEntity adds static api under default and secondary for MultiTenant entity'() {
+    void "registerEntity adds static api under default and secondary for MultiTenant entity"() {
         given: "a MultiTenant entity with datasource 'secondary'"
         def enhancer = createEnhancer()
         def entity = mockEntity(MultiTenantSecondaryEntity, ['secondary'])
-        when: 'registering the entity'
+        when: "registering the entity"
         enhancer.registerEntity(entity)
-        then: 'static api is available under DEFAULT and secondary qualifiers'
+        then: "static api is available under DEFAULT and secondary qualifiers"
         GormRegistry.instance.getDatastore(entity.name, ConnectionSource.DEFAULT) != null
         GormRegistry.instance.getDatastore(entity.name, 'secondary') != null
     }
 
-    void 'MultiTenant entity with default datasource expands to all qualifiers'() {
-        given: 'a MultiTenant entity on the default datasource'
+    void "MultiTenant entity with default datasource expands to all qualifiers"() {
+        given: "a MultiTenant entity on the default datasource"
         def entity = mockEntity(MultiTenantDefaultEntity, [ConnectionSource.DEFAULT])
         def datastore = mockMultiConnectionDatastore([ConnectionSource.DEFAULT, 'secondary', 'reporting'])
         def transactionManager = Mock(PlatformTransactionManager)
@@ -156,15 +156,15 @@ class GormEnhancerAllQualifiersSpec extends Specification {
         when:
         def qualifiers = enhancer.allQualifiers(datastore, entity)
 
-        then: 'qualifiers expand to DEFAULT + all non-default connection sources'
+        then: "qualifiers expand to DEFAULT + all non-default connection sources"
         qualifiers.contains(ConnectionSource.DEFAULT)
         qualifiers.contains('secondary')
         qualifiers.contains('reporting')
         qualifiers.size() == 3
     }
 
-    void 'MultiTenant entity with ALL datasource expands to all qualifiers'() {
-        given: 'a MultiTenant entity declared with ConnectionSource.ALL'
+    void "MultiTenant entity with ALL datasource expands to all qualifiers"() {
+        given: "a MultiTenant entity declared with ConnectionSource.ALL"
         def entity = mockEntity(MultiTenantAllEntity, [ConnectionSource.ALL])
         def datastore = mockMultiConnectionDatastore([ConnectionSource.DEFAULT, 'secondary'])
         def transactionManager = Mock(PlatformTransactionManager)
@@ -173,13 +173,13 @@ class GormEnhancerAllQualifiersSpec extends Specification {
         when:
         def qualifiers = enhancer.allQualifiers(datastore, entity)
 
-        then: 'qualifiers expand to DEFAULT + all non-default connection sources'
+        then: "qualifiers expand to DEFAULT + all non-default connection sources"
         qualifiers.contains(ConnectionSource.DEFAULT)
         qualifiers.contains('secondary')
         qualifiers.size() == 2
     }
 
-    void 'non-MultiTenant entity with explicit datasource preserves qualifier'() {
+    void "non-MultiTenant entity with explicit datasource preserves qualifier"() {
         given: "a non-MultiTenant entity with datasource 'secondary'"
         def enhancer = createEnhancer()
         def entity = mockEntity(NonMultiTenantSecondaryEntity, ['secondary'])
@@ -188,12 +188,12 @@ class GormEnhancerAllQualifiersSpec extends Specification {
         when:
         def qualifiers = enhancer.allQualifiers(datastore, entity)
 
-        then: 'the explicit qualifier is preserved'
+        then: "the explicit qualifier is preserved"
         qualifiers == ['secondary']
     }
 
-    void 'non-MultiTenant entity with default datasource keeps default only'() {
-        given: 'a non-MultiTenant entity on the default datasource'
+    void "non-MultiTenant entity with default datasource keeps default only"() {
+        given: "a non-MultiTenant entity on the default datasource"
         def enhancer = createEnhancer()
         def entity = mockEntity(NonMultiTenantDefaultEntity, [ConnectionSource.DEFAULT])
         def datastore = mockMultiConnectionDatastore([ConnectionSource.DEFAULT, 'secondary'])
@@ -201,21 +201,21 @@ class GormEnhancerAllQualifiersSpec extends Specification {
         when:
         def qualifiers = enhancer.allQualifiers(datastore, entity)
 
-        then: 'only DEFAULT qualifier is returned'
+        then: "only DEFAULT qualifier is returned"
         qualifiers == [ConnectionSource.DEFAULT]
     }
 
-    void 'registerEntity adds static api under default for default datasource'() {
-        given: 'a non-MultiTenant entity on the default datasource'
+    void "registerEntity adds static api under default for default datasource"() {
+        given: "a non-MultiTenant entity on the default datasource"
         def enhancer = createEnhancer()
         def entity = mockEntity(NonMultiTenantDefaultEntity, [ConnectionSource.DEFAULT])
-        when: 'registering the entity'
+        when: "registering the entity"
         enhancer.registerEntity(entity)
-        then: 'static api is available under DEFAULT qualifier'
+        then: "static api is available under DEFAULT qualifier"
         GormRegistry.instance.getDatastore(entity.name, ConnectionSource.DEFAULT) != null
     }
 
-    void 'registerEntity can resolve through injected registry without touching global singleton'() {
+    void "registerEntity can resolve through injected registry without touching global singleton"() {
         given:
         def injectedRegistry = new GormRegistry()
         def enhancer = createEnhancer(injectedRegistry)
@@ -226,12 +226,12 @@ class GormEnhancerAllQualifiersSpec extends Specification {
 
         then:
         injectedRegistry.getDatastore(entity.name, ConnectionSource.DEFAULT) != null
-        injectedRegistry.resolveStaticApi(NonMultiTenantDefaultEntity) != null
+        injectedRegistry.findStaticApi(NonMultiTenantDefaultEntity) != null
         GormRegistry.instance.getDatastore(entity.name, ConnectionSource.DEFAULT) == null
     }
 
-    void 'non-MultiTenant entity with ALL datasource expands to all qualifiers'() {
-        given: 'a non-MultiTenant entity declared with ConnectionSource.ALL'
+    void "non-MultiTenant entity with ALL datasource expands to all qualifiers"() {
+        given: "a non-MultiTenant entity declared with ConnectionSource.ALL"
         def entity = mockEntity(NonMultiTenantAllEntity, [ConnectionSource.ALL])
         def datastore = mockMultiConnectionDatastore([ConnectionSource.DEFAULT, 'secondary'])
         def transactionManager = Mock(PlatformTransactionManager)
@@ -240,14 +240,14 @@ class GormEnhancerAllQualifiersSpec extends Specification {
         when:
         def qualifiers = enhancer.allQualifiers(datastore, entity)
 
-        then: 'qualifiers expand to DEFAULT + all non-default connection sources'
+        then: "qualifiers expand to DEFAULT + all non-default connection sources"
         qualifiers.contains(ConnectionSource.DEFAULT)
         qualifiers.contains('secondary')
         qualifiers.size() == 2
     }
 
-    void 'MultiTenant entity with multiple explicit datasources preserves all qualifiers'() {
-        given: 'a MultiTenant entity with multiple explicit datasources'
+    void "MultiTenant entity with multiple explicit datasources preserves all qualifiers"() {
+        given: "a MultiTenant entity with multiple explicit datasources"
         def enhancer = createEnhancer()
         def entity = mockEntity(MultiTenantMultiDsEntity, ['analytics', 'reporting'])
         def datastore = mockMultiConnectionDatastore([ConnectionSource.DEFAULT, 'analytics', 'reporting', 'other'])
@@ -255,7 +255,7 @@ class GormEnhancerAllQualifiersSpec extends Specification {
         when:
         def qualifiers = enhancer.allQualifiers(datastore, entity)
 
-        then: 'the explicit qualifiers are preserved, not expanded'
+        then: "the explicit qualifiers are preserved, not expanded"
         qualifiers == ['analytics', 'reporting']
     }
 

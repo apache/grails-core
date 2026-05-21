@@ -4,20 +4,21 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
  */
 
 package org.grails.orm.hibernate.cfg.domainbinding.binder
+
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.Mapping
@@ -63,17 +64,17 @@ class RootBinderSpec extends HibernateGormDatastoreSpec {
         )
     }
 
-    def 'test bindRoot with no children'() {
+    def "test bindRoot with no children"() {
         given:
         def entity = Mock(HibernatePersistentEntity)
-        entity.getName() >> 'Parent'
+        entity.getName() >> "Parent"
         entity.getChildEntities(ConnectionSource.DEFAULT) >> []
         entity.getMappedForm() >> new Mapping()
         
         def mappings = sharedCollector
         def rootClass = new RootClass(metadataBuildingContext)
-        rootClass.setEntityName('Parent')
-        rootClass.setJpaEntityName('Parent')
+        rootClass.setEntityName("Parent")
+        rootClass.setJpaEntityName("Parent")
 
         when:
         binder.bindRoot(entity)
@@ -83,14 +84,14 @@ class RootBinderSpec extends HibernateGormDatastoreSpec {
         0 * discriminatorPropertyBinder.bindDiscriminatorProperty(_)
         0 * subClassBinder.bindSubClass(_, _)
         1 * multiTenantFilterBinder.bind(entity, rootClass)
-        mappings.getEntityBinding('Parent') == rootClass
+        mappings.getEntityBinding("Parent") == rootClass
     }
 
-    def 'test bindRoot with children and table-per-hierarchy'() {
+    def "test bindRoot with children and table-per-hierarchy"() {
         given:
         def entity = Mock(HibernatePersistentEntity)
         def childEntity = Mock(HibernatePersistentEntity)
-        entity.getName() >> 'Parent'
+        entity.getName() >> "Parent"
         entity.getChildEntities(ConnectionSource.DEFAULT) >> [childEntity]
         def mapping = new Mapping()
         mapping.setTablePerHierarchy(true)
@@ -99,8 +100,8 @@ class RootBinderSpec extends HibernateGormDatastoreSpec {
         
         def mappings = sharedCollector
         def rootClass = new RootClass(metadataBuildingContext)
-        rootClass.setEntityName('Parent')
-        rootClass.setJpaEntityName('Parent')
+        rootClass.setEntityName("Parent")
+        rootClass.setJpaEntityName("Parent")
 
         when:
         binder.bindRoot(entity)
@@ -111,17 +112,17 @@ class RootBinderSpec extends HibernateGormDatastoreSpec {
         1 * discriminatorPropertyBinder.bindDiscriminatorProperty(rootClass)
         1 * subClassBinder.bindSubClass(childEntity, rootClass) >> []
         1 * multiTenantFilterBinder.bind(entity, rootClass)
-        mappings.getEntityBinding('Parent') == rootClass
+        mappings.getEntityBinding("Parent") == rootClass
     }
 
-    def 'test bindRoot already mapped'() {
+    def "test bindRoot already mapped"() {
         given:
         def entity = Mock(HibernatePersistentEntity)
-        entity.getName() >> 'Parent'
+        entity.getName() >> "Parent"
         def mappings = sharedCollector
         def rootClass = new RootClass(metadataBuildingContext)
-        rootClass.setEntityName('Parent')
-        rootClass.setJpaEntityName('Parent')
+        rootClass.setEntityName("Parent")
+        rootClass.setJpaEntityName("Parent")
         mappings.addEntityBinding(rootClass)
 
         when:

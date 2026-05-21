@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -31,14 +31,14 @@ import jakarta.persistence.FlushModeType
  */
 class PropertySourcesConfigSpec extends Specification {
 
-    void 'Test that PropertySourcesConfig works as expected'() {
-        given:'A PropertySourcesConfig instance'
-            def propertySource = new MapPropertySource('foo', [one: 1, two: 2, 'flush.mode': 'commit', 'three.four': 34, 'empty.value': null])
+    void "Test that PropertySourcesConfig works as expected"() {
+        given:"A PropertySourcesConfig instance"
+            def propertySource = new MapPropertySource("foo", [one:1, two:2, 'flush.mode': 'commit', 'three.four': 34, 'empty.value':null])
             def propertySources = new MutablePropertySources()
             propertySources.addLast(propertySource)
             def config = new PropertySourcesConfig(propertySources)
 
-        expect:'The config to be accessible'
+        expect:"The config to be accessible"
             config.one == 1
             config.two == 2
             config.three.four == 34
@@ -53,25 +53,25 @@ class PropertySourcesConfigSpec extends Specification {
             !config.empty.value
     }
 
-    @Issue('https://github.com/apache/grails-spring-security-core/issues/724')
-    void 'Test accessing a NavigableMap property as Map class'() {
+    @Issue("https://github.com/apache/grails-spring-security-core/issues/724")
+    void "Test accessing a NavigableMap property as Map class"() {
         given:
         def source = new NavigableMap()
-        source.merge(['grails': ['plugin': ['springsecurity': ['userLookup': ['usernamePropertyName': 'username']]]]])
-        def propertySource = new MapPropertySource('springsecurity', source)
+        source.merge(["grails": ["plugin": ["springsecurity": ["userLookup": ["usernamePropertyName": "username"]]]]])
+        def propertySource = new MapPropertySource("springsecurity", source)
         def propertySources = new MutablePropertySources()
         propertySources.addLast(propertySource)
         def config = new PropertySourcesConfig(propertySources)
 
         expect:
-        config.getProperty('grails.plugin.springsecurity', ConfigObject.class)
+        config.getProperty("grails.plugin.springsecurity", ConfigObject.class)
     }
 
-    void 'Test accessing a NavigableMap with nested NavigableMap property as Map class'() {
+    void "Test accessing a NavigableMap with nested NavigableMap property as Map class"() {
         given:
         def source = new NavigableMap()
         def chainMap = new NavigableMap()
-        chainMap.merge(['chainMap' :[
+        chainMap.merge(["chainMap" :[
                 [pattern: '/assets/**', filters: 'none'],
                 [pattern: '/**/js/**', filters: 'none'],
                 [pattern: '/**/css/**', filters: 'none'],
@@ -79,14 +79,14 @@ class PropertySourcesConfigSpec extends Specification {
                 [pattern: '/**/favicon.ico', filters: 'none'],
                 [pattern: '/**', filters: 'JOINED_FILTERS']
         ]])
-        source.merge(['grails': ['plugin': ['springsecurity': ['filterChain': chainMap, 'userLookup': ['usernamePropertyName': 'username']]]]])
-        def propertySource = new MapPropertySource('springsecurity', source)
+        source.merge(["grails": ["plugin": ["springsecurity": ["filterChain": chainMap, "userLookup": ["usernamePropertyName": "username"]]]]])
+        def propertySource = new MapPropertySource("springsecurity", source)
         def propertySources = new MutablePropertySources()
         propertySources.addLast(propertySource)
         def config = new PropertySourcesConfig(propertySources)
 
         when:
-        def securityConfig = config.getProperty('grails.plugin.springsecurity', ConfigObject.class)
+        def securityConfig = config.getProperty("grails.plugin.springsecurity", ConfigObject.class)
 
         then:
         !(securityConfig.userLookup instanceof NavigableMap)

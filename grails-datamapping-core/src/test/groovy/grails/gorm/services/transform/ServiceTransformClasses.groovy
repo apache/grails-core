@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -30,7 +30,6 @@ import jakarta.persistence.criteria.JoinType
 
 @Entity
 class XProj implements GormEntity<XProj> {
-
     String a
     String b
 }
@@ -50,7 +49,6 @@ interface HasTitleMarker {
 
 @Entity
 class ArticleMarker implements HasTitleMarker {
-
     String title
     String subtitle
 }
@@ -66,7 +64,6 @@ interface ArticleServiceMarker {
 
 @Entity
 class XTenant {
-
     String a
     String b
 }
@@ -79,7 +76,6 @@ interface XServiceTenant {
 
 @Entity
 class FooProt {
-
     String title
 }
 
@@ -95,7 +91,6 @@ abstract class AbstractMyServiceProt {
 
 @Entity
 class FooGen {
-
     String title
 }
 
@@ -106,7 +101,6 @@ interface MyServiceGen {
 
 @Entity
 class FooQ {
-
     String title
     String name
 }
@@ -123,7 +117,6 @@ interface MyServiceQ {
 
 @Entity
 class FooP {
-
     String title
     String name
 }
@@ -139,7 +132,6 @@ interface MyServiceP {
 
 @Entity
 class FooL {
-
     String title
     String name
 }
@@ -155,7 +147,6 @@ interface MyServiceL {
 
 @Entity
 class FooD {
-
     String title
     String name
 }
@@ -171,7 +162,6 @@ interface MyServiceD {
 
 @Entity
 class FooA {
-
     String title
 }
 
@@ -187,9 +177,8 @@ class BarJ {
 
 @Entity
 class FooJ {
-
     String title
-    static hasMany = [bars: BarJ]
+    static hasMany = [bars:BarJ]
 }
 
 @Service(FooJ)
@@ -205,9 +194,8 @@ class BarJ2 {
 
 @Entity
 class FooJ2 {
-
     String title
-    static hasMany = [bars: BarJ2]
+    static hasMany = [bars:BarJ2]
 }
 
 @Service(FooJ2)
@@ -218,7 +206,6 @@ interface MyJoinServiceJ2 {
 
 @Entity
 class FooS {
-
     String title
 }
 
@@ -231,7 +218,6 @@ interface MyServiceS {
 
 @Entity
 class FooProj {
-
     String title
     int age
 }
@@ -245,7 +231,6 @@ abstract class MyServiceProj {
 
 @Entity
 class FooU {
-
     String title
 }
 
@@ -261,7 +246,6 @@ interface MyServiceU {
 
 @Entity
 class FooI {
-
     String title
 }
 
@@ -277,12 +261,11 @@ interface MyServiceI {
 
 @Entity
 class FooT {
-
     String title
 }
 
 @Service(FooT)
-@Transactional('foo')
+@Transactional("foo")
 interface MyServiceT {
 
     @Query('update ${FooT foo} set ${foo.title} = $newTitle where ${foo.title} = $oldTitle')
@@ -294,7 +277,6 @@ interface MyServiceT {
 
 @Entity
 class FooV {
-
     String title
 }
 
@@ -307,7 +289,6 @@ interface MyServiceV {
 
 @Entity
 class FooW {
-
     String title
 }
 
@@ -320,7 +301,6 @@ interface MyServiceW {
 
 @Entity
 class FooAbs {
-
     String title
 }
 
@@ -355,14 +335,13 @@ abstract class AbstractMyServiceAbs implements MyServiceInterface {
     FooAbs delete(Serializable id) {
         def foo = FooAbs.get(id)
         foo?.delete()
-        foo?.title = 'DELETED'
+        foo?.title = "DELETED"
         return foo
     }
 }
 
 @Entity
 class FooInterface {
-
     String title
 }
 
@@ -392,14 +371,12 @@ class ServiceEntity {}
 
 @Service(ServiceEntity)
 class TestServiceBase {
-
     void doStuff() {
     }
 }
 
 @Service(ServiceEntity)
 class TestServiceBase2 {
-
     void doStuff() {
     }
 }

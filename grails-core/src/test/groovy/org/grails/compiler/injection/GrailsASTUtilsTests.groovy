@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -40,16 +40,16 @@ class GrailsASTUtilsTests {
 
     @BeforeEach
     protected void setUp() throws Exception {
-        originalGrailsVersion = System.getProperty('grails.version')
-        System.setProperty('grails.version', '3.0.0')
+        originalGrailsVersion = System.getProperty("grails.version")
+        System.setProperty("grails.version", "3.0.0")
     }
 
     @AfterEach
     protected void tearDown() throws Exception {
         if (originalGrailsVersion != null) {
-            System.setProperty('grails.version', originalGrailsVersion)
+            System.setProperty("grails.version", originalGrailsVersion)
         } else {
-            System.clearProperty('grails.version')
+            System.clearProperty("grails.version")
         }
     }
 
@@ -93,7 +93,7 @@ class GrailsASTUtilsTests {
                 def sb = new StringBuffer()
 
                 // this should NOT be considered a constraint configuration method call because
-                // it isn't a method invoked on 'this'
+                // it isn't a method invoked on "this"
                 sb.append nullable: true, size: 115
                 lastName bindable: false
             }
@@ -216,13 +216,13 @@ class Bar extends Foo {}
 class Baz extends Bar {}
 
 @Retention(RetentionPolicy.RUNTIME)
-@interface FirstAnnotation {}
+@interface FirstAnnotation{}
 @Retention(RetentionPolicy.RUNTIME)
-@interface SecondAnnotation {}
+@interface SecondAnnotation{}
 @Retention(RetentionPolicy.RUNTIME)
-@interface ThirdAnnotation {}
+@interface ThirdAnnotation{}
 @Retention(RetentionPolicy.RUNTIME)
-@interface FourthAnnotation {}
+@interface FourthAnnotation{}
 
 @FirstAnnotation
 @SecondAnnotation

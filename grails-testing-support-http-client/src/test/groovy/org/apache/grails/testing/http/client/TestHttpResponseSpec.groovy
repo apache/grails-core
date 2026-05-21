@@ -4,14 +4,14 @@
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * 'License'); you may not use this file except in compliance
+ * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
  *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
@@ -188,7 +188,7 @@ class TestHttpResponseSpec extends Specification {
 
     void 'json, jsonList and xml parse response body'() {
         given:
-        def jsonResponse = mockResponse(200, '{"a":1,"b": "two"}')
+        def jsonResponse = mockResponse(200, '{"a":1,"b":"two"}')
         def listResponse = mockResponse(200, '[1,2,3]')
         def xmlResponse = mockResponse(200, '<root><item>value</item></root>')
 
@@ -223,7 +223,7 @@ class TestHttpResponseSpec extends Specification {
     void 'xml secure default still allows inline doctype declarations with internal entities'() {
         given:
         def response = mockResponse(200, '''<!DOCTYPE root [
-<!ENTITY msg 'safe'>
+<!ENTITY msg "safe">
 ]>
 <root>&msg;</root>''')
 
@@ -299,7 +299,7 @@ class TestHttpResponseSpec extends Specification {
 
     void 'withJsonSlurper allows opt-in lax parsing for json access and assertions'() {
         given:
-        def body = "{name:'Widget', nested: {ok:true}}"
+        def body = "{name:'Widget', nested:{ok:true}}"
         def response = mockResponse(200, body, ['Content-Type': ['application/json']])
         def laxResponse = response.withJsonSlurper(parserType: JsonParserType.LAX)
 
@@ -328,7 +328,7 @@ class TestHttpResponseSpec extends Specification {
     void 'withJsonSlurper accepts additional JsonSlurper options'() {
         given:
         def body = "{name:'Widget'}"
-        def strictBody = '{'name':'Widget'}'
+        def strictBody = '{"name":"Widget"}'
         def response = mockResponse(200, body, ['Content-Type': ['application/json']])
         def configuredResponse = response.withJsonSlurper(
                 parserType: JsonParserType.LAX,
@@ -401,7 +401,7 @@ class TestHttpResponseSpec extends Specification {
 
     void 'expectJson overloads assert JSON with optional status and headers'() {
         given:
-        def body = '{'a':1,'nested': {'ok':true}}'
+        def body = '{"a":1,"nested":{"ok":true}}'
         def response = mockResponse(200, body, ['Content-Type': ['application/json']])
 
         expect:
@@ -419,7 +419,7 @@ class TestHttpResponseSpec extends Specification {
 
     void 'expectJsonContains overloads validate subset for status and headers'() {
         given:
-        def response = mockResponse(200, '{"first":"first","second": null,"n": 1}', ['X-Env': ['dev']])
+        def response = mockResponse(200, '{"first":"first","second":null,"n":1}', ['X-Env': ['dev']])
 
         expect:
         response.assertJsonContains(200, [first: 'first']).is(response)
@@ -436,7 +436,7 @@ class TestHttpResponseSpec extends Specification {
         thrown(AssertionError)
 
         when:
-        response.assertJsonContains('{'missing':true}')
+        response.assertJsonContains('{"missing":true}')
 
         then:
         thrown(AssertionError)

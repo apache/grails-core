@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -48,8 +48,7 @@ class JoinedSubClassBinderSpec extends HibernateGormDatastoreSpec {
         binder = new JoinedSubClassBinder(buildingContext, namingStrategy, simpleValueColumnBinder, fetcher, classBinder, buildingContext.getMetadataCollector())
     }
 
-    void 'test bind joined subclass with real entities'() {
-
+    void "test bind joined subclass with real entities"() {
         given:
         def buildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def mappings = buildingContext.getMetadataCollector()
@@ -61,14 +60,14 @@ class JoinedSubClassBinderSpec extends HibernateGormDatastoreSpec {
         // Setup Hibernate RootClass
         def rootClass = new RootClass(buildingContext)
         rootClass.setEntityName(JoinedSubClassRoot.name)
-        def rootTable = new Table('JS_ROOT_TABLE')
-        rootTable.setName('JS_ROOT_TABLE')
+        def rootTable = new Table("JS_ROOT_TABLE")
+        rootTable.setName("JS_ROOT_TABLE")
         rootClass.setTable(rootTable)
         
         def idProperty = new org.hibernate.mapping.Property()
-        idProperty.setName('id')
+        idProperty.setName("id")
         def idValue = new org.hibernate.mapping.BasicValue(buildingContext, rootTable)
-        idValue.setTypeName('long')
+        idValue.setTypeName("long")
         idProperty.setValue(idValue)
         rootClass.setIdentifier(idValue)
         rootClass.setIdentifierProperty(idProperty)
@@ -85,7 +84,7 @@ class JoinedSubClassBinderSpec extends HibernateGormDatastoreSpec {
         joinedSubclass != null
         joinedSubclass.getEntityName() == JoinedSubClassSub.name
         joinedSubclass.getTable() != null
-        joinedSubclass.getTable().getName() != 'JS_ROOT_TABLE'
+        joinedSubclass.getTable().getName() != "JS_ROOT_TABLE"
         joinedSubclass.getKey() != null
         joinedSubclass.getKey().getColumnSpan() > 0
         joinedSubclass.getTable().getPrimaryKey() != null
@@ -94,13 +93,11 @@ class JoinedSubClassBinderSpec extends HibernateGormDatastoreSpec {
 
 @Entity
 class JoinedSubClassRoot {
-
     Long id
 }
 
 @Entity
 class JoinedSubClassSub extends JoinedSubClassRoot {
-
     String name
     static mapping = {
         tablePerHierarchy false

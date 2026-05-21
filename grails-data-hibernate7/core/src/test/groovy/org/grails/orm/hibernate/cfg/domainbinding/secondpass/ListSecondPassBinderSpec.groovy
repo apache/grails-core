@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -63,7 +63,7 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         PropertyBinder pbh = new PropertyBinder()
         SimpleIdBinder sib = new SimpleIdBinder(mbc, new BasicValueCreator(mbc, je, ns), svb, pbh)
         IdentityBinder ib = new IdentityBinder(sib, cib)
-        VersionBinder vb = new VersionBinder(mbc, svb, pbh, BasicValue.&new)
+        VersionBinder vb = new VersionBinder(mbc, svb, pbh, BasicValue::new)
 
         ClassBinder clb = new ClassBinder(collector)
         ClassPropertiesBinder clpb = new ClassPropertiesBinder(pb, pfvc)
@@ -73,10 +73,10 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         SingleTableSubclassBinder stscb = new SingleTableSubclassBinder(clb, mbc)
 
         SubclassMappingBinder scmb = new SubclassMappingBinder(jscb, uscb, stscb, clpb)
-        SubClassBinder scb = new SubClassBinder(scmb, mtfb, 'dataSource')
+        SubClassBinder scb = new SubClassBinder(scmb, mtfb, "dataSource")
         RootPersistentClassCommonValuesBinder rpccvb = new RootPersistentClassCommonValuesBinder(mbc, ns, ib, vb, clb, clpb, collector)
         DiscriminatorPropertyBinder dpb = new DiscriminatorPropertyBinder(mbc, binder.getMappingCacheHolder(), new ConfiguredDiscriminatorBinder(new org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder(), new ColumnConfigToColumnBinder()), new DefaultDiscriminatorBinder(new org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder()))
-        RootBinder rb = new RootBinder('default', mtfb, scb, rpccvb, dpb, collector, binder.getMappingCacheHolder())
+        RootBinder rb = new RootBinder("default", mtfb, scb, rpccvb, dpb, collector, binder.getMappingCacheHolder())
 
         return [
             propertyBinder: pb,
@@ -120,12 +120,12 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         return rootClass
     }
 
-    def 'bindListSecondPass applies index customization'() {
+    def "bindListSecondPass applies index customization"() {
         given:
         def binder = getGrailsDomainBinder()
         def collector = getCollector()
         def listBinder = getBinders(binder, collector).collectionBinder.listSecondPassBinder
-        def property = propertyFor(LSBCustomIndex, 'items') as HibernateToManyProperty
+        def property = propertyFor(LSBCustomIndex, "items") as HibernateToManyProperty
 
         def rootClass = createMockPersistentClass(LSBCustomIndex, collector)
         
@@ -140,18 +140,18 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         list.index != null
-        list.index.getColumn(0).name == 'my_index_col'
-        (list.index as BasicValue).typeName == 'long'
+        list.index.getColumn(0).name == "my_index_col"
+        (list.index as BasicValue).typeName == "long"
     }
 
-    def 'bindListSecondPass throws exception for many-to-many non-owning side'() {
+    def "bindListSecondPass throws exception for many-to-many non-owning side"() {
         given:
         def binder = getGrailsDomainBinder()
         def collector = getCollector()
         def listBinder = getBinders(binder, collector).collectionBinder.listSecondPassBinder
         
-        def property = propertyFor(LSBManyToManyB, 'owners') as HibernateManyToManyProperty
-        def ownerRoot = createMockPersistentClass(LSBManyToManyB, collector, ['owners'])
+        def property = propertyFor(LSBManyToManyB, "owners") as HibernateManyToManyProperty
+        def ownerRoot = createMockPersistentClass(LSBManyToManyB, collector, ["owners"])
 
         def list = new org.hibernate.mapping.List(binder.getMetadataBuildingContext(), ownerRoot)
         list.setRole("${LSBManyToManyB.name}.owners".toString())
@@ -162,22 +162,22 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         def e = thrown(MappingException)
-        e.message.contains('has no associated class') || e.message.contains('List collection types only supported on the owning side')
+        e.message.contains("has no associated class") || e.message.contains("List collection types only supported on the owning side")
     }
 
-    def 'bindListSecondPass handles many-to-many specific flags'() {
+    def "bindListSecondPass handles many-to-many specific flags"() {
         given:
         def binder = getGrailsDomainBinder()
         def collector = getCollector()
         def listBinder = getBinders(binder, collector).collectionBinder.listSecondPassBinder
         
-        def property = propertyFor(LSBManyToManyA, 'others') as HibernateManyToManyProperty
-        def ownerRoot = createMockPersistentClass(LSBManyToManyA, collector, ['others'])
-        def otherRoot = createMockPersistentClass(LSBManyToManyB, collector, ['owners'])
+        def property = propertyFor(LSBManyToManyA, "others") as HibernateManyToManyProperty
+        def ownerRoot = createMockPersistentClass(LSBManyToManyA, collector, ["others"])
+        def otherRoot = createMockPersistentClass(LSBManyToManyB, collector, ["owners"])
 
         def list = new org.hibernate.mapping.List(binder.getMetadataBuildingContext(), ownerRoot)
         list.setRole("${LSBManyToManyA.name}.others".toString())
-        list.setCollectionTable(collector.addTable(null, null, 'JOIN_TABLE', null, false, binder.getMetadataBuildingContext()))
+        list.setCollectionTable(collector.addTable(null, null, "JOIN_TABLE", null, false, binder.getMetadataBuildingContext()))
         list.setKey(new DependantValue(binder.getMetadataBuildingContext(), list.getCollectionTable(), null))
         list.setElement(new ManyToOne(binder.getMetadataBuildingContext(), list.getCollectionTable()))
         ((ManyToOne)list.getElement()).setReferencedEntityName(LSBManyToManyB.name)
@@ -187,23 +187,23 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         listBinder.bindListSecondPass(property)
 
         then:
-        def backref = otherRoot.getProperties().find { it.name == '_' + 'LSBManyToManyA' + '_' + 'others' + 'Backref' }
+        def backref = otherRoot.getProperties().find { it.name == "_" + "LSBManyToManyA" + "_" + "others" + "Backref" }
         backref instanceof Backref
         !backref.isInsertable()
 
-        def indexBackref = otherRoot.getProperties().find { it.name == '_' + 'others' + 'IndexBackref' }
+        def indexBackref = otherRoot.getProperties().find { it.name == "_" + "others" + "IndexBackref" }
         indexBackref instanceof IndexBackref
         !indexBackref.isInsertable()
     }
 
-    def 'bindListSecondPass handles circular associations'() {
+    def "bindListSecondPass handles circular associations"() {
         given:
         def binder = getGrailsDomainBinder()
         def collector = getCollector()
         def listBinder = getBinders(binder, collector).collectionBinder.listSecondPassBinder
-        def property = propertyFor(LSBCircular, 'children') as HibernateToManyProperty
+        def property = propertyFor(LSBCircular, "children") as HibernateToManyProperty
 
-        def rootClass = createMockPersistentClass(LSBCircular, collector, ['parent', 'children'])
+        def rootClass = createMockPersistentClass(LSBCircular, collector, ["parent", "children"])
 
         def list = new org.hibernate.mapping.List(binder.getMetadataBuildingContext(), rootClass)
         list.setRole("${LSBCircular.name}.children".toString())
@@ -224,15 +224,15 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         list.getKey().isNullable()
     }
 
-    def 'bindListSecondPass handles composite identity'() {
+    def "bindListSecondPass handles composite identity"() {
         given:
         def binder = getGrailsDomainBinder()
         def collector = getCollector()
         def listBinder = getBinders(binder, collector).collectionBinder.listSecondPassBinder
         
-        def property = propertyFor(LSBCompositeIdOwner, 'items') as HibernateToManyProperty
-        def ownerRoot = createMockPersistentClass(LSBCompositeIdOwner, collector, ['items'])
-        def itemRoot = createMockPersistentClass(LSBCompositeIdItem, collector, ['owner', 'name'])
+        def property = propertyFor(LSBCompositeIdOwner, "items") as HibernateToManyProperty
+        def ownerRoot = createMockPersistentClass(LSBCompositeIdOwner, collector, ["items"])
+        def itemRoot = createMockPersistentClass(LSBCompositeIdItem, collector, ["owner", "name"])
 
         def list = new org.hibernate.mapping.List(binder.getMetadataBuildingContext(), ownerRoot)
         list.setRole("${LSBCompositeIdOwner.name}.items".toString())
@@ -250,27 +250,25 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         // No Backref should be created for composite ID inverse
-        !itemRoot.getProperties().find { it.name.endsWith('Backref') && it instanceof Backref }
+        !itemRoot.getProperties().find { it.name.endsWith("Backref") && it instanceof Backref }
         
         // IndexBackref should still be created
-        itemRoot.getProperties().find { it.name == '_' + 'items' + 'IndexBackref' } instanceof IndexBackref
+        itemRoot.getProperties().find { it.name == "_" + "items" + "IndexBackref" } instanceof IndexBackref
     }
 }
 
 @Entity
 class LSBCustomIndex {
-
     Long id
     java.util.List<String> items
     static hasMany = [items: String]
     static mapping = {
-        items index: [column: 'my_index_col', type: 'long']
+        items index: [column: "my_index_col", type: "long"]
     }
 }
 
 @Entity
 class LSBCircular {
-
     Long id
     LSBCircular parent
     java.util.List<LSBCircular> children
@@ -280,7 +278,6 @@ class LSBCircular {
 
 @Entity
 class LSBAuthor {
-
     Long id
     java.util.List<LSBBook> books
     static hasMany = [books: LSBBook]
@@ -288,7 +285,6 @@ class LSBAuthor {
 
 @Entity
 class LSBBook {
-
     Long id
     LSBAuthor author
     static belongsTo = [author: LSBAuthor]
@@ -296,7 +292,6 @@ class LSBBook {
 
 @Entity
 class LSBManyToManyA {
-
     Long id
     java.util.List<LSBManyToManyB> others
     static hasMany = [others: LSBManyToManyB]
@@ -304,7 +299,6 @@ class LSBManyToManyA {
 
 @Entity
 class LSBManyToManyB {
-
     Long id
     java.util.List<LSBManyToManyA> owners
     static hasMany = [owners: LSBManyToManyA]
@@ -313,7 +307,6 @@ class LSBManyToManyB {
 
 @Entity
 class LSBCompositeIdOwner {
-
     Long id
     java.util.List<LSBCompositeIdItem> items
     static hasMany = [items: LSBCompositeIdItem]
@@ -321,7 +314,6 @@ class LSBCompositeIdOwner {
 
 @Entity
 class LSBCompositeIdItem implements Serializable {
-
     LSBCompositeIdOwner owner
     String name
     static belongsTo = [owner: LSBCompositeIdOwner]

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -69,7 +69,7 @@ class CollectionKeyBinderSpec extends HibernateGormDatastoreSpec {
         binder = new CollectionKeyBinder(botml, dkvb, svcb, pkvc)
     }
 
-    private HibernateToManyProperty propertyFor(Class ownerClass, String name = 'items') {
+    private HibernateToManyProperty propertyFor(Class ownerClass, String name = "items") {
         (getPersistentEntity(ownerClass) as GrailsHibernatePersistentEntity).getPropertyByName(name) as HibernateToManyProperty
     }
 
@@ -77,9 +77,9 @@ class CollectionKeyBinderSpec extends HibernateGormDatastoreSpec {
         def mbc = getGrailsDomainBinder().getMetadataBuildingContext()
         def rootClass = new RootClass(mbc)
         rootClass.setEntityName(entityName)
-        def table = new Table('test', entityName.toLowerCase())
+        def table = new Table("test", entityName.toLowerCase())
         def simpleValue = new BasicValue(mbc, table)
-        simpleValue.setTypeName('long')
+        simpleValue.setTypeName("long")
         simpleValue.addColumn(new Column(columnName))
         def prop = new Property()
         prop.setName(propName)
@@ -91,11 +91,11 @@ class CollectionKeyBinderSpec extends HibernateGormDatastoreSpec {
     private RootClass ownerRootClass(String tableName) {
         def mbc = getGrailsDomainBinder().getMetadataBuildingContext()
         def rootClass = new RootClass(mbc)
-        def table = new Table('test', tableName)
+        def table = new Table("test", tableName)
         rootClass.setTable(table)
         def idValue = new BasicValue(mbc, table)
-        idValue.setTypeName('long')
-        idValue.addColumn(new Column('id'))
+        idValue.setTypeName("long")
+        idValue.addColumn(new Column("id"))
         rootClass.setIdentifier(idValue)
         return rootClass
     }
@@ -103,19 +103,19 @@ class CollectionKeyBinderSpec extends HibernateGormDatastoreSpec {
     private Bag bagWithOwner(RootClass owner, String collectionTableName) {
         def mbc = getGrailsDomainBinder().getMetadataBuildingContext()
         def bag = new Bag(mbc, owner)
-        bag.setCollectionTable(new Table('test', collectionTableName))
+        bag.setCollectionTable(new Table("test", collectionTableName))
         return bag
     }
 
-    def 'bind sets collection inverse for bidirectional one-to-many with foreign key'() {
+    def "bind sets collection inverse for bidirectional one-to-many with foreign key"() {
         given:
         def property = propertyFor(CKBBidOwner)
-        def ownerClass = ownerRootClass('ckb_bid_owner')
-        def collection = bagWithOwner(ownerClass, 'ckb_bid_item')
+        def ownerClass = ownerRootClass("ckb_bid_owner")
+        def collection = bagWithOwner(ownerClass, "ckb_bid_item")
         property.setCollection(collection)
 
-        and: 'Setup associated class for the linker'
-        def associatedClass = rootClassWith(CKBBidItem.name, 'owner', 'OWNER_ID')
+        and: "Setup associated class for the linker"
+        def associatedClass = rootClassWith(CKBBidItem.name, "owner", "OWNER_ID")
         property.getHibernateInverseSide().getHibernateOwner().setPersistentClass(associatedClass)
 
         when:
@@ -126,12 +126,11 @@ class CollectionKeyBinderSpec extends HibernateGormDatastoreSpec {
         collection.getKey().getColumnSpan() > 0
     }
 
-    def 'bind delegates to dependentKeyValueBinder for bidirectional many-to-many'() {
-
+    def "bind delegates to dependentKeyValueBinder for bidirectional many-to-many"() {
         given:
         def property = propertyFor(CKBManyToManyOwner)
-        def ownerClass = ownerRootClass('ckb_mtm_owner')
-        def collection = bagWithOwner(ownerClass, 'ckb_mtm_join')
+        def ownerClass = ownerRootClass("ckb_mtm_owner")
+        def collection = bagWithOwner(ownerClass, "ckb_mtm_join")
         property.setCollection(collection)
 
         when:
@@ -142,27 +141,27 @@ class CollectionKeyBinderSpec extends HibernateGormDatastoreSpec {
         !collection.isInverse()
     }
 
-    def 'bind uses simpleValueColumnBinder for unidirectional with join key mapping'() {
+    def "bind uses simpleValueColumnBinder for unidirectional with join key mapping"() {
         given:
         def property = propertyFor(CKBJoinKeyOwner)
-        def ownerClass = ownerRootClass('ckb_join_key_owner')
-        def collection = bagWithOwner(ownerClass, 'ckb_join_key_owner_ckb_join_key_item')
+        def ownerClass = ownerRootClass("ckb_join_key_owner")
+        def collection = bagWithOwner(ownerClass, "ckb_join_key_owner_ckb_join_key_item")
         property.setCollection(collection)
 
         when:
         binder.bind(property)
 
         then:
-        collection.getKey().getTypeName() == 'long'
+        collection.getKey().getTypeName() == "long"
         collection.getKey().getColumnSpan() > 0
         !collection.isInverse()
     }
 
-    def 'bind delegates to dependentKeyValueBinder for unidirectional without join key mapping'() {
+    def "bind delegates to dependentKeyValueBinder for unidirectional without join key mapping"() {
         given:
         def property = propertyFor(CKBUniOwner)
-        def ownerClass = ownerRootClass('ckb_uni_owner')
-        def collection = bagWithOwner(ownerClass, 'ckb_uni_owner_ckb_uni_item')
+        def ownerClass = ownerRootClass("ckb_uni_owner")
+        def collection = bagWithOwner(ownerClass, "ckb_uni_owner_ckb_uni_item")
         property.setCollection(collection)
 
         when:
@@ -173,10 +172,10 @@ class CollectionKeyBinderSpec extends HibernateGormDatastoreSpec {
         !collection.isInverse()
     }
 
-    def 'bind sets isSorted true for composite keys'() {
+    def "bind sets isSorted true for composite keys"() {
         given:
         def property = propertyFor(CKBCompositeOwner)
-        def ownerClass = ownerRootClass('ckb_comp_owner')
+        def ownerClass = ownerRootClass("ckb_comp_owner")
         def table = ownerClass.getTable()
         
         // Mock a composite key
@@ -184,7 +183,7 @@ class CollectionKeyBinderSpec extends HibernateGormDatastoreSpec {
         def compositeKey = new Component(mbc, ownerClass)
         ownerClass.setIdentifier(compositeKey)
         
-        def collection = bagWithOwner(ownerClass, 'ckb_comp_join')
+        def collection = bagWithOwner(ownerClass, "ckb_comp_join")
         property.setCollection(collection)
 
         when:
@@ -194,11 +193,11 @@ class CollectionKeyBinderSpec extends HibernateGormDatastoreSpec {
         key.isSorted()
     }
 
-    def 'bind sets null typeName on key for embedded value-type collection'() {
-        given: 'a mock embedded collection property (unidirectional, no join-key mapping)'
+    def "bind sets null typeName on key for embedded value-type collection"() {
+        given: "a mock embedded collection property (unidirectional, no join-key mapping)"
         def mbc = getGrailsDomainBinder().getMetadataBuildingContext()
-        def ownerClass = ownerRootClass('ckb_emb_owner')
-        def collection = bagWithOwner(ownerClass, 'ckb_emb_owner_dimensions')
+        def ownerClass = ownerRootClass("ckb_emb_owner")
+        def collection = bagWithOwner(ownerClass, "ckb_emb_owner_dimensions")
 
         def property = Mock(org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEmbeddedCollectionProperty)
         property.getCollection() >> collection
@@ -215,21 +214,19 @@ class CollectionKeyBinderSpec extends HibernateGormDatastoreSpec {
         when:
         def key = binder.bind(property)
 
-        then: 'the key typeName stays null — not overridden with the element class name'
+        then: "the key typeName stays null — not overridden with the element class name"
         key.getTypeName() == null
     }
 }
 
 @Entity
 class CKBBidOwner {
-
     Long id
     static hasMany = [items: CKBBidItem]
 }
 
 @Entity
 class CKBBidItem {
-
     Long id
     CKBBidOwner owner
     static belongsTo = [owner: CKBBidOwner]
@@ -237,35 +234,30 @@ class CKBBidItem {
 
 @Entity
 class CKBManyToManyOwner {
-
     Long id
     static hasMany = [items: CKBManyToManyItem]
 }
 
 @Entity
 class CKBManyToManyItem {
-
     Long id
     static hasMany = [owners: CKBManyToManyOwner]
 }
 
 @Entity
 class CKBUniOwner {
-
     Long id
     static hasMany = [items: CKBUniItem]
 }
 
 @Entity
 class CKBUniItem {
-
     Long id
     String description
 }
 
 @Entity
 class CKBJoinKeyOwner {
-
     Long id
     static hasMany = [items: CKBJoinKeyItem]
     static mapping = {
@@ -275,14 +267,12 @@ class CKBJoinKeyOwner {
 
 @Entity
 class CKBJoinKeyItem {
-
     Long id
     String description
 }
 
 @Entity
 class CKBCompositeOwner implements Serializable {
-
     String name
     Integer code
     static hasMany = [items: CKBCompositeItem]
@@ -293,7 +283,6 @@ class CKBCompositeOwner implements Serializable {
 
 @Entity
 class CKBCompositeItem {
-
     Long id
     String val
 }

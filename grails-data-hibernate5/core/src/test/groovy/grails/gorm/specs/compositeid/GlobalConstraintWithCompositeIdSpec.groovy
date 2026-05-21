@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -38,7 +38,7 @@ class GlobalConstraintWithCompositeIdSpec extends Specification {
 
     @Shared
     Map config = [
-            'dataSource.url'                 : 'jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000',
+            'dataSource.url'                 : "jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
             'dataSource.dbCreate'            : 'update',
             'dataSource.dialect'             : H2Dialect.name,
             'dataSource.formatSql'           : 'true',
@@ -54,10 +54,10 @@ class GlobalConstraintWithCompositeIdSpec extends Specification {
 
     @Rollback
     @Issue('https://github.com/apache/grails-core/issues/10457')
-    void 'test global constraints with composite id'() {
+    void "test global constraints with composite id"() {
         when:
-        ParentB parent = new ParentB(code: 'AAA', desc: 'BBB')
-                .addToChilds(name: 'Child A')
+        ParentB parent = new ParentB(code: "AAA", desc: "BBB")
+                .addToChilds(name: "Child A")
                 .save(flush: true)
 
         then:
@@ -67,7 +67,7 @@ class GlobalConstraintWithCompositeIdSpec extends Specification {
 
     @Rollback
     @Issue('https://github.com/apache/grails-data-mapping/issues/877')
-    void 'test global constraints with unique constraint'() {
+    void "test global constraints with unique constraint"() {
         given:
         PersistentEntity entity = hibernateDatastore.mappingContext.getPersistentEntity(DomainB.name)
         PropertyConfig nameProp = entity.getPropertyByName('name').mapping.mappedForm
@@ -81,6 +81,7 @@ class GlobalConstraintWithCompositeIdSpec extends Specification {
 
     }
 }
+
 
 @Entity
 class ParentB implements Serializable {
@@ -103,7 +104,6 @@ class ParentB implements Serializable {
 
 @Entity
 class ChildB implements Serializable {
-
     String name
 
     static belongsTo = [parent: ParentB]
@@ -133,7 +133,7 @@ class DomainB {
     static belongsTo = [domainB: DomainB]
 
     static constraints = {
-        name nullable: false, blank: false, unique: 'domainB'
+        name nullable: false, blank: false, unique: "domainB"
         someOther nullable: false, blank: false, unique: true
     }
 }

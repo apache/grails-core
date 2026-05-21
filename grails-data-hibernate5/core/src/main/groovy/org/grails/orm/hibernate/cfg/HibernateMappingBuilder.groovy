@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -57,7 +57,6 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
      * @param className The name of the class being mapped
      */
     HibernateMappingBuilder(String className) {
-
         this.className = className
     }
 
@@ -74,7 +73,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
 
     /**
      * Central entry point for the class. Passing a closure that defines a set of mappings will evaluate said mappings
-     * and populate the 'mapping' property of this class which can then be obtained with getMappings()
+     * and populate the "mapping" property of this class which can then be obtained with getMappings()
      *
      * @param mappingClosure The closure that defines the ORM DSL
      */
@@ -82,7 +81,6 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
     @Override
     @CompileStatic
     Mapping evaluate(Closure mappingClosure, Object context = null) {
-
         if (mapping == null) {
             mapping = new Mapping()
         }
@@ -150,7 +148,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
 
     /**
      * <p>Configures the discriminator name. Example:
-     * <code> { discriminator value:'foo', column: 'type' }
+     * <code> { discriminator value:'foo', column:'type' }
      *
      * @param name The name of the table
      */
@@ -170,7 +168,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
 
     /**
      * <p>Configures the table name. Example:
-     * <code> { table name:'foo', schema: 'dbo', catalog: 'CRM' }
+     * <code> { table name:'foo', schema:'dbo', catalog:'CRM' }
      */
     @CompileStatic
     void table(Map tableDef) {
@@ -287,9 +285,9 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
 
     /**
      * <p>Configures the second-level cache for the class
-     * <code> { cache usage:'read-only', include: 'all' }
+     * <code> { cache usage:'read-only', include:'all' }
      *
-     * @param args Named arguments that contain the 'usage' and/or 'include' parameters
+     * @param args Named arguments that contain the "usage" and/or "include" parameters
      */
     @CompileStatic
     void cache(Map args) {
@@ -325,7 +323,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
 
     /**
      * <p>Configures the second-level cache for the class
-     * <code> { cache 'read-only', include: 'all }
+     * <code> { cache 'read-only', include:'all }
      *
      * @param usage The usage type for the cache which is one of CacheConfig.USAGE_OPTIONS
      */
@@ -341,7 +339,6 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
      */
     @CompileStatic
     void tablePerHierarchy(boolean isTablePerHierarchy) {
-
         mapping.tablePerHierarchy = isTablePerHierarchy
     }
 
@@ -350,7 +347,6 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
      */
     @CompileStatic
     void tablePerSubclass(boolean isTablePerSubClass) {
-
         mapping.tablePerHierarchy = !isTablePerSubClass
     }
 
@@ -359,7 +355,6 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
      */
     @CompileStatic
     void tablePerConcreteClass(boolean isTablePerConcreteClass) {
-
         if (isTablePerConcreteClass) {
             mapping.tablePerHierarchy = false
             mapping.tablePerConcreteClass = true

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -42,8 +42,8 @@ import spock.lang.Issue
  */
 class MongoDbDataStoreSpringInitializerSpec extends AutoStartedMongoSpec {
 
-    void 'Test specify mongo database name settings'() {
-        when: 'the initializer used to setup GORM for MongoDB'
+    void "Test specify mongo database name settings"() {
+        when: "the initializer used to setup GORM for MongoDB"
         def initializer = makeInitializer([
                 (MongoSettings.SETTING_DATABASE_NAME): 'foo',
                 (MongoSettings.SETTING_HOST): mongoHost,
@@ -52,15 +52,15 @@ class MongoDbDataStoreSpringInitializerSpec extends AutoStartedMongoSpec {
         def applicationContext = initializer.configure()
         def mongoDatastore = applicationContext.getBean(MongoDatastore)
 
-        then: 'GORM for MongoDB is initialized correctly'
+        then: "GORM for MongoDB is initialized correctly"
         mongoDatastore.getDefaultDatabase() == 'foo'
 
         cleanup:
         mongoDatastore.destroy()
     }
 
-    void 'Test that MongoDbDatastoreSpringInitializer can setup GORM for MongoDB from scratch'() {
-        when: 'the initializer used to setup GORM for MongoDB'
+    void "Test that MongoDbDatastoreSpringInitializer can setup GORM for MongoDB from scratch"() {
+        when: "the initializer used to setup GORM for MongoDB"
         def initializer = makeInitializer([
                 (MongoSettings.SETTING_HOST): mongoHost,
                 (MongoSettings.SETTING_PORT): mongoPort,
@@ -69,12 +69,12 @@ class MongoDbDataStoreSpringInitializerSpec extends AutoStartedMongoSpec {
         def mongo = applicationContext.getBean(MongoClient)
         mongo.getDatabase(MongoDbDataStoreSpringInitializer.DEFAULT_DATABASE_NAME).drop()
 
-        then: 'GORM for MongoDB is initialized correctly'
+        then: "GORM for MongoDB is initialized correctly"
         Person.count() == 0
     }
 
-    void 'Test the alias is created when it is the primary datastore'() {
-        when: 'the initializer used to setup GORM for MongoDB'
+    void "Test the alias is created when it is the primary datastore"() {
+        when: "the initializer used to setup GORM for MongoDB"
         def initializer = makeInitializer([
                 'grails.mongodb.databaseName': 'foo',
                 (MongoSettings.SETTING_HOST): mongoHost,
@@ -84,14 +84,14 @@ class MongoDbDataStoreSpringInitializerSpec extends AutoStartedMongoSpec {
         def mongoDatastore = applicationContext.getBean(MongoDatastore)
 
         then:
-        applicationContext.containsBean('grailsDomainClassMappingContext')
+        applicationContext.containsBean("grailsDomainClassMappingContext")
 
         cleanup:
         mongoDatastore.destroy()
     }
 
-    void 'Test the alias is not created when it is the secondary datastore'() {
-        when: 'the initializer used to setup GORM for MongoDB'
+    void "Test the alias is not created when it is the secondary datastore"() {
+        when: "the initializer used to setup GORM for MongoDB"
         def initializer = makeInitializer([
                 'grails.mongodb.databaseName': 'foo',
                 (MongoSettings.SETTING_HOST): mongoHost,
@@ -102,7 +102,7 @@ class MongoDbDataStoreSpringInitializerSpec extends AutoStartedMongoSpec {
         def mongoDatastore = applicationContext.getBean(MongoDatastore)
 
         then:
-        !applicationContext.containsBean('grailsDomainClassMappingContext')
+        !applicationContext.containsBean("grailsDomainClassMappingContext")
 
         cleanup:
         mongoDatastore.destroy()
@@ -111,29 +111,29 @@ class MongoDbDataStoreSpringInitializerSpec extends AutoStartedMongoSpec {
     @Issue('GPMONGODB-339')
     @Ignore
     // The MongoDB API for this test has been altered / removed with no apparent replacement for getting the number of pooled connections in use
-    void 'Test withTransaction returns connections when used without session handling'() {
-        given: 'the initializer used to setup GORM for MongoDB'
+    void "Test withTransaction returns connections when used without session handling"() {
+        given: "the initializer used to setup GORM for MongoDB"
         def initializer = new MongoDbDataStoreSpringInitializer(Person)
         def applicationContext = initializer.configure()
         def mongo = applicationContext.getBean(Mongo)
 
-        when: 'The a normal GORM method is used'
+        when: "The a normal GORM method is used"
         Person.count()
-        then: 'No connections are in use afterwards'
-        db.getStats().get('connections') == 0
+        then: "No connections are in use afterwards"
+        db.getStats().get("connections") == 0
         mongo.connector.@_masterPortPool.statistics.inUse == 0
 
-        when: 'The withTransaction method is used'
+        when: "The withTransaction method is used"
         Person.withTransaction {
-            new Person(name: 'Bob').save()
+            new Person(name: "Bob").save()
         }
 
-        then: 'No connections in use'
+        then: "No connections in use"
         mongo.connector.@_masterPortPool.statistics.inUse == 0
     }
 
-    void 'Test that constraints and Geo types work'() {
-        given: 'the initializer used to setup GORM for MongoDB'
+    void "Test that constraints and Geo types work"() {
+        given: "the initializer used to setup GORM for MongoDB"
         def initializer = makeInitializer([
                 (MongoSettings.SETTING_HOST): mongoHost,
                 (MongoSettings.SETTING_PORT): mongoPort,
@@ -141,65 +141,65 @@ class MongoDbDataStoreSpringInitializerSpec extends AutoStartedMongoSpec {
         initializer.configure()
         Person.DB.drop()
 
-        when: 'we try to persist an invalid object'
+        when: "we try to persist an invalid object"
         def p = new Person().save(flush: true)
 
-        then: 'The object is null and not persisted'
+        then: "The object is null and not persisted"
         p == null
         Person.count() == 0
 
-        when: 'We persist a Geo type'
+        when: "We persist a Geo type"
         Person.withNewSession {
-            new Person(name: 'Bob', home: Point.valueOf(10, 10)).save(flush: true)
+            new Person(name: "Bob", home: Point.valueOf(10, 10)).save(flush: true)
             p = Person.first()
         }
 
-        then: 'The geo type was persisted'
+        then: "The geo type was persisted"
         p != null
         p.home != null
 
     }
 
-    void 'Test custom codecs from Spring'() {
-        given: 'the initializer used to setup GORM for MongoDB'
+    void "Test custom codecs from Spring"() {
+        given: "the initializer used to setup GORM for MongoDB"
         def initializer = makeInitializer([
                 (MongoSettings.SETTING_HOST): mongoHost,
                 (MongoSettings.SETTING_PORT): mongoPort,
         ], Person)
         AnnotationConfigApplicationContext applicationContext = new AnnotationConfigApplicationContext()
-        applicationContext.beanFactory.registerSingleton('birthdayCodec', new BirthdayCodec())
+        applicationContext.beanFactory.registerSingleton("birthdayCodec", new BirthdayCodec())
 
         initializer.configureForBeanDefinitionRegistry(applicationContext)
         applicationContext.refresh()
         Person.DB.drop()
 
-        when: 'we persist an object with a custom type '
+        when: "we persist an object with a custom type "
         def birthday = new Birthday(new Date())
-        def p = new Person(name: 'Bob', home: Point.valueOf(10, 10), birthday: birthday).save(flush: true)
+        def p = new Person(name: "Bob", home: Point.valueOf(10, 10), birthday: birthday).save(flush: true)
 
-        then: 'The object was persisted successfully'
+        then: "The object was persisted successfully"
         Person.findByBirthday(birthday).birthday == birthday
         !Person.findByBirthday(new Birthday(new Date() - 7))
     }
 
-    void 'Test custom type marshallers from Spring'() {
-        given: 'the initializer used to setup GORM for MongoDB'
+    void "Test custom type marshallers from Spring"() {
+        given: "the initializer used to setup GORM for MongoDB"
         def initializer = makeInitializer([
                 (MongoSettings.SETTING_HOST): mongoHost,
                 (MongoSettings.SETTING_PORT): mongoPort,
         ], Person)
         AnnotationConfigApplicationContext applicationContext = new AnnotationConfigApplicationContext()
-        applicationContext.beanFactory.registerSingleton('birthdayMarshaller', new BirthdayCustomTypeMarshaller())
+        applicationContext.beanFactory.registerSingleton("birthdayMarshaller", new BirthdayCustomTypeMarshaller())
 
         initializer.configureForBeanDefinitionRegistry(applicationContext)
         applicationContext.refresh()
         Person.DB.drop()
 
-        when: 'we persist an object with a custom type '
+        when: "we persist an object with a custom type "
         def birthday = new Birthday(new Date())
-        new Person(name: 'Bob', home: Point.valueOf(10, 10), birthday: birthday).save(flush: true)
+        new Person(name: "Bob", home: Point.valueOf(10, 10), birthday: birthday).save(flush: true)
 
-        then: 'The object was persisted successfully'
+        then: "The object was persisted successfully"
         Person.first().birthday == birthday
         Person.findByBirthday(birthday).birthday == birthday
         !Person.findByBirthday(new Birthday(new Date() - 7))
@@ -216,9 +216,9 @@ class MongoDbDataStoreSpringInitializerSpec extends AutoStartedMongoSpec {
     }
 }
 
+
 @Entity
 class Person implements MongoEntity<Person> {
-
     Long id
     Long version
     String name

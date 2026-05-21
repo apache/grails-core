@@ -4,19 +4,20 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
  */
 package org.grails.web.mapping
+
 
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
@@ -34,12 +35,12 @@ import spock.lang.Specification
  *
  * These test focus on testing integration with the URL mappings to ensure they are respected.
  */
-class LinkGeneratorWithUrlMappingsSpec extends Specification {
+class LinkGeneratorWithUrlMappingsSpec extends Specification{
 
-    def baseUrl = 'https://myserver.com/foo'
+    def baseUrl = "https://myserver.com/foo"
     def context = null
-    def path = 'welcome'
-    def action = [controller: 'home', action: 'index']
+    def path = "welcome"
+    def action = [controller:'home', action:'index']
 
     def mappings = {
         "/${this.path}"(this.action)
@@ -73,9 +74,9 @@ class LinkGeneratorWithUrlMappingsSpec extends Specification {
         generator.link(link)
     }
 
-    void 'link is prefixed by the deployment context, and uses path specified in the mapping'() {
+    void "link is prefixed by the deployment context, and uses path specified in the mapping"() {
         when:
-            context = '/bar'
+            context = "/bar"
 
         then:
             uri == "$context/$path"
@@ -83,7 +84,7 @@ class LinkGeneratorWithUrlMappingsSpec extends Specification {
 
     void "absolute links are prefixed by the base url, don't contain the deployment context, and use path specified in the mapping"() {
         when:
-            context = '/bar'
+            context = "/bar"
 
         and:
             link.absolute = true
@@ -92,7 +93,7 @@ class LinkGeneratorWithUrlMappingsSpec extends Specification {
             uri == "$baseUrl/$path"
     }
 
-    void 'absolute links are generated when a relative link is asked for, but the deployment context is not known or set'() {
+    void "absolute links are generated when a relative link is asked for, but the deployment context is not known or set"() {
         when:
             context = null
 

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -31,70 +31,71 @@ class IndexBinderSpec extends Specification {
 
     def indexBinder = new IndexBinder()
     def table = Mock(Table)
-    def column = new Column('test_column')
+    def column = new Column("test_column")
     def index = Mock(Index)
 
-    def 'should create default index when index is true'() {
+
+    def "should create default index when index is true"() {
         given:
         def cc = new ColumnConfig()
         cc.index = true
-        table.getName() >> 'test_table'
+        table.getName() >> "test_table"
 
         when:
-        indexBinder.bindIndex('test_column', column, cc, table)
+        indexBinder.bindIndex("test_column", column, cc, table)
 
         then:
-        1 * table.getOrCreateIndex('test_table_test_column_idx') >> index
+        1 * table.getOrCreateIndex("test_table_test_column_idx") >> index
         1 * index.addColumn(column)
     }
 
-    def 'should not create index when index is false'() {
+    def "should not create index when index is false"() {
         given:
         def cc = new ColumnConfig()
         cc.index = false
 
         when:
-        indexBinder.bindIndex('test_column', column, cc, table)
+        indexBinder.bindIndex("test_column", column, cc, table)
 
         then:
         0 * table.getOrCreateIndex(_)
         0 * index.addColumn(_)
     }
 
-    def 'should create multiple indices when comma-separated string is provided'() {
+    def "should create multiple indices when comma-separated string is provided"() {
         given:
         def cc = new ColumnConfig()
-        cc.index = 'idx_one,idx_two'
+        cc.index = "idx_one,idx_two"
 
         when:
-        indexBinder.bindIndex('test_column', column, cc, table)
+        indexBinder.bindIndex("test_column", column, cc, table)
 
         then:
-        1 * table.getOrCreateIndex('idx_one') >> index
-        1 * table.getOrCreateIndex('idx_two') >> index
+        1 * table.getOrCreateIndex("idx_one") >> index
+        1 * table.getOrCreateIndex("idx_two") >> index
         2 * index.addColumn(column)
     }
 
-    def 'should create single index when string value is provided'() {
+    def "should create single index when string value is provided"() {
         given:
         def cc = new ColumnConfig()
-        cc.index = 'custom_idx'
+        cc.index = "custom_idx"
 
         when:
-        indexBinder.bindIndex('test_column', column, cc, table)
+        indexBinder.bindIndex("test_column", column, cc, table)
 
         then:
-        1 * table.getOrCreateIndex('custom_idx') >> index
+        1 * table.getOrCreateIndex("custom_idx") >> index
         1 * index.addColumn(column)
     }
 
-    def 'should not create index when index value is null'() {
+    def "should not create index when index value is null"() {
         given:
         def cc = new ColumnConfig()
         cc.index = null
 
         when:
-        indexBinder.bindIndex('test_column', column, cc, table)
+        indexBinder.bindIndex("test_column", column, cc, table)
 
         then:
         0 * table.getOrCreateIndex(_)
@@ -104,10 +105,10 @@ class IndexBinderSpec extends Specification {
     def "should not create index when index is the string 'false'"() {
         given:
         def cc = new ColumnConfig()
-        cc.index = 'false'
+        cc.index = "false"
 
         when:
-        indexBinder.bindIndex('test_column', column, cc, table)
+        indexBinder.bindIndex("test_column", column, cc, table)
 
         then:
         0 * table.getOrCreateIndex(_)
@@ -117,14 +118,14 @@ class IndexBinderSpec extends Specification {
     def "should create default index when index is the string 'true'"() {
         given:
         def cc = new ColumnConfig()
-        cc.index = 'true'
-        table.getName() >> 'test_table'
+        cc.index = "true"
+        table.getName() >> "test_table"
 
         when:
-        indexBinder.bindIndex('test_column', column, cc, table)
+        indexBinder.bindIndex("test_column", column, cc, table)
 
         then:
-        1 * table.getOrCreateIndex('test_table_test_column_idx') >> index
+        1 * table.getOrCreateIndex("test_table_test_column_idx") >> index
         1 * index.addColumn(column)
     }
 }

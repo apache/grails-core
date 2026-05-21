@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -44,7 +44,7 @@ import org.grails.gsp.GroovyPage
 /**
  * Used to compile GSP files into a specified target directory. The compiler creates 3 files per page.
  * Firstly, it generates a {@link GroovyPage} derived class which is then compiled to a .class file.
- * It also will generate a '_html.data' and a '_linenumbers.data' file which contain the static HTML parts of the page.
+ * It also will generate a "_html.data" and a "_linenumbers.data" file which contain the static HTML parts of the page.
  * These are read at runtime by the {@link org.grails.gsp.GroovyPagesTemplateEngine} class.
  *
  * @author Graeme Rocher
@@ -167,7 +167,7 @@ class GroovyPageCompiler {
                 }
                 PropertyFileUtils.makePropertiesFileReproducible(viewregistryFile)
             } finally {
-                // eventListener?.triggerEvent('StatusUpdate', 'Shutting Down ThreadPool')
+                // eventListener?.triggerEvent("StatusUpdate", "Shutting Down ThreadPool")
                 threadPool.shutdown()
             }
         }
@@ -271,7 +271,6 @@ class GroovyPageCompiler {
             } else {
                 // package or class name cannot start with a number
                 if (nextMustBeStartChar && !Character.isJavaIdentifierStart(ch)) {
-
                     sb.append('_')
                 }
                 nextMustBeStartChar = false

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -36,44 +36,44 @@ class BatchUpdateDeleteSpec extends MongoDatastoreSpec {
         manager.addAllDomainClasses([BatchUser, BatchAddress, Plant])
     }
 
-    void 'Test that batch delete works'() {
-        when: 'Some test data'
+    void "Test that batch delete works"() {
+        when: "Some test data"
         createTestData()
 
-        then: 'The correct amount of data exists'
+        then: "The correct amount of data exists"
         Plant.count() == 6
 
-        when: 'a batch delete is executed'
+        when: "a batch delete is executed"
         Plant.where {
             name == ~/Ca+/
         }.deleteAll()
         manager.session.flush()
 
-        then: 'The right amount of data is deleted'
+        then: "The right amount of data is deleted"
         Plant.count() == 4
     }
 
-    void 'Test that batch update works'() {
-        when: 'Some test data'
+    void "Test that batch update works"() {
+        when: "Some test data"
         createTestData()
 
-        then: 'The correct amount of data exists'
+        then: "The correct amount of data exists"
         Plant.count() == 6
 
-        when: 'a batch delete is executed'
+        when: "a batch delete is executed"
         Plant.where {
             name == ~/Ca+/
         }.updateAll(goesInPatch: true)
         manager.session.flush()
 
-        then: 'The right amount of data is deleted'
+        then: "The right amount of data is deleted"
         Plant.countByGoesInPatch(true) == 2
     }
 
-    void 'Test that batch update works with domain properties'() {
+    void "Test that batch update works with domain properties"() {
         given:
-        BatchAddress addressA = new BatchAddress(name: 'a').save()
-        BatchAddress addressB = new BatchAddress(name: 'b').save(flush: true, failOnError: true)
+        BatchAddress addressA = new BatchAddress(name: "a").save()
+        BatchAddress addressB = new BatchAddress(name: "b").save(flush: true, failOnError: true)
         new BatchUser(address: addressA).save()
         new BatchUser(address: addressA).save()
         new BatchUser(address: addressB).save(flush: true, failOnError: true)
@@ -101,18 +101,18 @@ class BatchUpdateDeleteSpec extends MongoDatastoreSpec {
     }
 
     void createTestData() {
-        new Plant(name: 'Cabbage').save()
-        new Plant(name: 'Carrot').save()
-        new Plant(name: 'Lettuce').save()
-        new Plant(name: 'Pumpkin').save()
-        new Plant(name: 'Bamboo').save()
-        new Plant(name: 'Palm Tree').save(flush: true)
+        new Plant(name: "Cabbage").save()
+        new Plant(name: "Carrot").save()
+        new Plant(name: "Lettuce").save()
+        new Plant(name: "Pumpkin").save()
+        new Plant(name: "Bamboo").save()
+        new Plant(name: "Palm Tree").save(flush: true)
     }
 }
 
+
 @Entity
 class BatchAddress implements MongoEntity<BatchAddress> {
-
     Long id
     String name
     static mapping = {
@@ -122,7 +122,6 @@ class BatchAddress implements MongoEntity<BatchAddress> {
 
 @Entity
 class BatchUser implements MongoEntity<BatchUser> {
-
     Long id
     BatchAddress address
     static mapping = {

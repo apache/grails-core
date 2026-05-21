@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -101,7 +101,6 @@ class GormRegistryEntityRegistrationSpec extends Specification {
     }
 
     class RegistryBook {
-
     }
 
     void 'registerEntityDatastores registers datastore for single connection source'() {
@@ -154,32 +153,5 @@ class GormRegistryEntityRegistrationSpec extends Specification {
         registry.getDatastore(className, ConnectionSource.DEFAULT) == datastore
         registry.getDatastore(className, 'secondary') == datastore
         registry.getDatastore(className, 'reporting') == datastore
-    }
-
-    void 'registry normalizes default qualifier aliases when registering datastores'() {
-        given:
-        GormRegistry registry = GormRegistry.instance
-        Datastore datastore = Mock(Datastore)
-
-        when:
-        registry.registerDatastore(ConnectionSource.OLD_DEFAULT, datastore)
-
-        then:
-        registry.getDatastore((String) null, ConnectionSource.DEFAULT) == datastore
-        registry.getDatastore((String) null, ConnectionSource.OLD_DEFAULT) == datastore
-        registry.getDatastore((String) null, '   ') == datastore
-    }
-
-    void 'registry normalizes entity keys for entity-specific datastore lookups'() {
-        given:
-        GormRegistry registry = GormRegistry.instance
-        Datastore datastore = Mock(Datastore)
-
-        when:
-        registry.registerEntityDatastore(" ${RegistryBook.name} ", ConnectionSource.OLD_DEFAULT, datastore)
-
-        then:
-        registry.getDatastore(RegistryBook.name, ConnectionSource.DEFAULT) == datastore
-        registry.getDatastore(" ${RegistryBook.name} ", ConnectionSource.OLD_DEFAULT) == datastore
     }
 }

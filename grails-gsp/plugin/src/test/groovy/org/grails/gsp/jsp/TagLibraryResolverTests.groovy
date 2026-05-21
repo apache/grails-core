@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -85,11 +85,11 @@ class MockWebXmlTagLibraryResolver extends TagLibraryResolverImpl {
         assert '/WEB-INF/tld/grails.tld' == loc
 
         new ByteArrayResource('''\
-            |<?xml version='1.0' encoding='UTF-8'?>
-            |<taglib xmlns='https://jakarta.ee/xml/ns/jakartaee'
-            |        xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'
-            |        xsi:schemaLocation='https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/web-jsptaglibrary_3_0.xsd'
-            |        version='3.0'>
+            |<?xml version="1.0" encoding="UTF-8"?>
+            |<taglib xmlns="https://jakarta.ee/xml/ns/jakartaee"
+            |        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            |        xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/web-jsptaglibrary_3_0.xsd"
+            |        version="3.0">
             |   <description>The Grails (Groovy on Rails) custom tag library</description>
             |   <tlib-version>0.2</tlib-version>
             |   <short-name>grails</short-name>
@@ -131,11 +131,11 @@ class MockWebXmlTagLibraryResolver extends TagLibraryResolverImpl {
 
     protected Resource getWebXmlFromServletContext() {
         new ByteArrayResource('''\
-            |<?xml version='1.0' encoding='UTF-8'?>
-            |<web-app xmlns='https://jakarta.ee/xml/ns/jakartaee'
-            |         xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'
-            |         xsi:schemaLocation='https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd'
-            |         version='6.0'>
+            |<?xml version="1.0" encoding="UTF-8"?>
+            |<web-app xmlns="https://jakarta.ee/xml/ns/jakartaee"
+            |         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            |         xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd"
+            |         version="6.0">
             |    <display-name>/@grails.project.key@</display-name>
             |
 	        |    <!-- Grails dispatcher servlet -->

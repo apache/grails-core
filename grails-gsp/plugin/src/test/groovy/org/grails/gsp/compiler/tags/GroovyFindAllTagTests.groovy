@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -36,11 +36,11 @@ class GroovyFindAllTagTests {
 
     @BeforeEach
     protected void setUp() {
-        Map context = new HashMap()
-        context.put(GroovyPage.OUT, new PrintWriter(sw))
-        GroovyPageParser parser=new GroovyPageParser('test', 'test', 'test', new ByteArrayInputStream([] as byte[]), null)
-        context.put(GroovyPageParser.class, parser)
-        tag.init(context)
+        Map context = new HashMap();
+        context.put(GroovyPage.OUT, new PrintWriter(sw));
+        GroovyPageParser parser=new GroovyPageParser("test", "test", "test", new ByteArrayInputStream([] as byte[]), null);
+        context.put(GroovyPageParser.class, parser);
+        tag.init(context);
     }
 
     @Test
@@ -55,7 +55,7 @@ class GroovyFindAllTagTests {
 
     @Test
     void testDoStartWithNoInAttribute() {
-        tag.attributes = ['expr': ' someExpression ']
+        tag.attributes = ['"expr"': " someExpression "]
         assertThrows(GrailsTagException) {
             tag.doStartTag()
         }
@@ -63,7 +63,7 @@ class GroovyFindAllTagTests {
 
     @Test
     void testDoStartWithNoExprAttribute() {
-        tag.attributes = ['in': ' someExpression ']
+        tag.attributes = ['"in"': " someExpression "]
         assertThrows(GrailsTagException) {
             tag.doStartTag()
         }
@@ -71,10 +71,10 @@ class GroovyFindAllTagTests {
 
     @Test
     void testDoStartTag() {
-        tag.attributes = ['expr': " \${it.age > 19}", 'in': "myObj"]
+        tag.attributes = ['"expr"': " \${it.age > 19}", '"in"': "myObj"]
         tag.doStartTag()
 
-        assertEquals('for( '+tag.getForeachRenamedIt()+" in evaluate('myObj.findAll {it.age > 19}', 1, it) { return myObj.findAll {it.age > 19} } ) {"+System.getProperty('line.separator')+ 'changeItVariable(' + tag.getForeachRenamedIt() + ')' + System.getProperty('line.separator'), sw.toString())
+        assertEquals("for( "+tag.getForeachRenamedIt()+" in evaluate('myObj.findAll {it.age > 19}', 1, it) { return myObj.findAll {it.age > 19} } ) {"+System.getProperty("line.separator")+ "changeItVariable(" + tag.getForeachRenamedIt() + ")" + System.getProperty("line.separator"), sw.toString())
     }
 
     @Test
@@ -85,6 +85,6 @@ class GroovyFindAllTagTests {
 
     @Test
     void testTagName() {
-        assertEquals('findAll', tag.getName())
+        assertEquals("findAll", tag.getName())
     }
 }

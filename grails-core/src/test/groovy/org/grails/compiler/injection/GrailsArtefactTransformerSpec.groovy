@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -29,7 +29,6 @@ import spock.util.environment.RestoreSystemProperties
 
 @RestoreSystemProperties
 class GrailsArtefactTransformerSpec extends Specification {
-
     static testClass
     static gcl
 
@@ -37,20 +36,20 @@ class GrailsArtefactTransformerSpec extends Specification {
         gcl = new GrailsAwareClassLoader()
         def transformer = new TestTransformer()
         gcl.classInjectors = [transformer]as ClassInjector[]
-        System.setProperty('grails.version', '3.0.0')
+        System.setProperty("grails.version", "3.0.0")
     }
 
-    void 'Test that a marker annotation can be added to weaved methods'() {
-         given:'An enhanced class'
+    void "Test that a marker annotation can be added to weaved methods"() {
+         given:"An enhanced class"
             def theClass = gcl.parseClass('''
-                class AnnotatedClass {}
+                class AnnotatedClass{}
     ''')
 
-        when:'The marker annotation on added methods retrieved'
-            def theMethod = theClass.getDeclaredMethod('getSomePropertyDefinedInTestInstanceApi')
+        when:"The marker annotation on added methods retrieved"
+            def theMethod = theClass.getDeclaredMethod("getSomePropertyDefinedInTestInstanceApi")
             final theAnnotation = theMethod.getAnnotation(PersistenceMethod)
 
-        then:'The annotation is present'
+        then:"The annotation is present"
             theAnnotation != null
         and: 'it has also Generated annotation'
             true == theMethod.isAnnotationPresent(Generated)
@@ -83,7 +82,6 @@ class GrailsArtefactTransformerSpec extends Specification {
         given:
             def testClass = gcl.parseClass('''
             class TestClass {
-
             }
             ''')
 
@@ -104,11 +102,9 @@ class GrailsArtefactTransformerSpec extends Specification {
     }
 
     void 'Test properties defined in class take precedence over properties defined in InstanceApi'() {
-
         given:
             def testClass = gcl.parseClass('''
             class TestClass {
-
                 List somePropertyDefinedInTestInstanceApi
             }
             ''')
@@ -133,7 +129,6 @@ class GrailsArtefactTransformerSpec extends Specification {
         given:
         def testClass = gcl.parseClass('''
             class TestClass {
-
                 List somePropertyDefinedInTestInstanceApi
                 
                 List getSomePropertyDefinedInTestInstanceApi() {
@@ -158,7 +153,6 @@ class GrailsArtefactTransformerSpec extends Specification {
         given:
             def testClass = gcl.parseClass('''
             class TestClass2 {
-
                 String firstName
             }
             ''')
@@ -195,7 +189,6 @@ class GrailsArtefactTransformerSpec extends Specification {
         given:
             def testClass = gcl.parseClass('''
             class TestClass3 {
-
                 String firstName
             }
             ''')
@@ -205,13 +198,12 @@ class GrailsArtefactTransformerSpec extends Specification {
            def version = enhancedAnnotation.version()
 
         then:
-            version == '3.0.0'
+            version == "3.0.0"
     }
 
 }
 
 class TestTransformer extends AbstractGrailsArtefactTransformer {
-
     Class getInstanceImplementation() { TestInstanceApi }
 
     Class getStaticImplementation() {}
@@ -222,7 +214,7 @@ class TestTransformer extends AbstractGrailsArtefactTransformer {
 
     @Override
     protected String getArtefactType() {
-        '*'
+        "*"
     }
 
     @Override
@@ -232,7 +224,6 @@ class TestTransformer extends AbstractGrailsArtefactTransformer {
 }
 
 class TestInstanceApi {
-
     void setFirstName(Object instance, String firstName, String someArgWhichMakesThisNotAPropertySetterMethod) {}
     String getFirstName(Object instance, String someArgumentWhichMakesThisNotAPropertyGetter) {}
     void setSomePropertyDefinedInTestInstanceApi(Object instance, String arg) {}

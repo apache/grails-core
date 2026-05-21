@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -52,62 +52,61 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         binder.setGrailsPropertyBinder(grailsPropertyBinder)
     }
 
-    def 'should bind component and its properties'() {
+    def "should bind component and its properties"() {
         given:
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def root = new RootClass(metadataBuildingContext)
-        root.setEntityName('MyEntity')
-        root.setTable(new Table('my_entity'))
+        root.setEntityName("MyEntity")
+        root.setTable(new Table("my_entity"))
 
         def associatedEntity = GroovyMock(GrailsHibernatePersistentEntity)
-        def embeddedProp = mockEmbeddedProperty(associatedEntity, 'address', Address, root)
+        def embeddedProp = mockEmbeddedProperty(associatedEntity, "address", Address, root)
 
         // Ensure the associated entity also knows its class for initialization logic
         associatedEntity.getPersistentClass() >> root
 
         def prop1 = Mock(HibernateSimpleProperty)
-        prop1.getName() >> 'street'
+        prop1.getName() >> "street"
         prop1.getType() >> String
 
         associatedEntity.getHibernateParentProperty(MyEntity) >> Optional.empty()
         associatedEntity.getHibernatePersistentProperties(MyEntity) >> [prop1]
 
         when:
-        def component = binder.bindComponent(embeddedProp, '')
+        def component = binder.bindComponent(embeddedProp, "")
 
         then:
         component.getComponentClassName() == Address.name
-        component.getRoleName() == Address.name + '.address'
+        component.getRoleName() == Address.name + ".address"
         1 * mappingCacheHolder.cacheMapping(associatedEntity)
-        1 * grailsPropertyBinder.bindProperty(prop1, embeddedProp, 'address') >> new BasicValue(metadataBuildingContext, root.getTable())
+        1 * grailsPropertyBinder.bindProperty(prop1, embeddedProp, "address") >> new BasicValue(metadataBuildingContext, root.getTable())
         1 * componentUpdater.updateComponent(_ as Component, embeddedProp, prop1, _ as Value)
     }
 
-    def 'should skip identity properties during binding'() {
-
+    def "should skip identity properties during binding"() {
         given:
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def root = new RootClass(metadataBuildingContext)
-        root.setTable(new Table('my_entity'))
+        root.setTable(new Table("my_entity"))
 
         def associatedEntity = GroovyMock(GrailsHibernatePersistentEntity)
-        def embeddedProp = mockEmbeddedProperty(associatedEntity, 'address', Address, root)
+        def embeddedProp = mockEmbeddedProperty(associatedEntity, "address", Address, root)
 
         associatedEntity.getPersistentClass() >> root
 
         // HibernatePersistentProperty includes ID properties; usually filtered by the loop logic
         def idProp = Mock(HibernateIdentityProperty)
-        idProp.getName() >> 'id'
+        idProp.getName() >> "id"
 
         def normalProp = Mock(HibernateSimpleProperty)
-        normalProp.getName() >> 'street'
+        normalProp.getName() >> "street"
         normalProp.getType() >> String
 
         associatedEntity.getHibernateParentProperty(MyEntity) >> Optional.empty()
         associatedEntity.getHibernatePersistentProperties(MyEntity) >> [normalProp]
 
         when:
-        binder.bindComponent(embeddedProp, '')
+        binder.bindComponent(embeddedProp, "")
 
         then:
         // Logic check: if idProp is not in the list returned by getHibernatePersistentProperties, it's skipped
@@ -115,28 +114,28 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         1 * componentUpdater.updateComponent(_, _, normalProp, _)
     }
 
-    def 'should set parent property when component has reference back to owner'() {
+    def "should set parent property when component has reference back to owner"() {
         given:
         def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
         def root = new RootClass(metadataBuildingContext)
-        root.setTable(new Table('my_entity'))
+        root.setTable(new Table("my_entity"))
 
         def associatedEntity = GroovyMock(GrailsHibernatePersistentEntity)
-        def embeddedProp = mockEmbeddedProperty(associatedEntity, 'address', Address, root)
+        def embeddedProp = mockEmbeddedProperty(associatedEntity, "address", Address, root)
 
         associatedEntity.getPersistentClass() >> root
 
         def parentProp = Mock(HibernateSimpleProperty)
-        parentProp.getName() >> 'myEntity'
+        parentProp.getName() >> "myEntity"
 
         associatedEntity.getHibernateParentProperty(MyEntity) >> Optional.of(parentProp)
         associatedEntity.getHibernatePersistentProperties(MyEntity) >> []
 
         when:
-        def component = binder.bindComponent(embeddedProp, '')
+        def component = binder.bindComponent(embeddedProp, "")
 
         then:
-        component.getParentProperty() == 'myEntity'
+        component.getParentProperty() == "myEntity"
     }
 
     /**
@@ -179,29 +178,29 @@ class ComponentBinderSpec extends HibernateGormDatastoreSpec {
         return prop
     }
 
-    def 'bindEmbeddedCollectionComponent creates a Component element for the collection'() {
+    def "bindEmbeddedCollectionComponent creates a Component element for the collection"() {
         given:
         def mbc = getGrailsDomainBinder().getMetadataBuildingContext()
         def ownerClass = new RootClass(mbc)
         ownerClass.setEntityName(MyEntity.name)
-        ownerClass.setTable(new Table('my_entity'))
+        ownerClass.setTable(new Table("my_entity"))
         def bag = new org.hibernate.mapping.Bag(mbc, ownerClass)
-        bag.setCollectionTable(new Table('my_entity_dim'))
+        bag.setCollectionTable(new Table("my_entity_dim"))
 
         def associatedEntity = GroovyMock(GrailsHibernatePersistentEntity)
         associatedEntity.getPersistentClass() >> ownerClass
 
         def widthProp = Mock(HibernateSimpleProperty)
-        widthProp.getName() >> 'width'
+        widthProp.getName() >> "width"
         widthProp.getType() >> int
         widthProp.getMappedForm() >> Mock(org.grails.orm.hibernate.cfg.PropertyConfig)
         widthProp.getType() >> int
 
         associatedEntity.getHibernatePersistentProperties(MyEntity) >> [widthProp]
 
-        grailsPropertyBinder.bindProperty(widthProp, null, 'dimensions') >> Mock(BasicValue)
+        grailsPropertyBinder.bindProperty(widthProp, null, "dimensions") >> Mock(BasicValue)
 
-        def prop = mockEmbeddedCollectionProperty(associatedEntity, 'dimensions', Dimension, bag)
+        def prop = mockEmbeddedCollectionProperty(associatedEntity, "dimensions", Dimension, bag)
 
         when:
         def component = binder.bindEmbeddedCollectionComponent(prop)

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -47,7 +47,6 @@ import org.hibernate.event.spi.EventSource
 class HibernateEventListenerSpec extends HibernateGormDatastoreSpec {
 
     class RecordingHibernateEventListener extends HibernateEventListener {
-
         boolean onMergeEventCalled = false
         boolean onPersistEventCalled = false
         boolean onPreInsertCalled = false
@@ -107,49 +106,49 @@ class HibernateEventListenerSpec extends HibernateGormDatastoreSpec {
         }
     }
 
-    void 'test onPersistenceEvent handles Merge event without fall-through'() {
+    void "test onPersistenceEvent handles Merge event without fall-through"() {
         given:
         def datastore = getDatastore()
         def listener = new RecordingHibernateEventListener(datastore)
         def entity = new Object()
         def hibernateSession = Mock(EventSource)
 
-        and: 'a GORM Merge event wrapping a Hibernate Merge event'
-        def hibernateMergeEvent = new HibernateMergeEvent('Foo', entity, hibernateSession)
+        and: "a GORM Merge event wrapping a Hibernate Merge event"
+        def hibernateMergeEvent = new HibernateMergeEvent("Foo", entity, hibernateSession)
         def gormMergeEvent = new GormMergeEvent(datastore, entity)
         gormMergeEvent.setNativeEvent(hibernateMergeEvent)
 
-        when: 'Merge event is published'
+        when: "Merge event is published"
         listener.onApplicationEvent(gormMergeEvent)
 
-        then: 'Only onMergeEvent is called'
+        then: "Only onMergeEvent is called"
         listener.onMergeEventCalled
         listener.lastMergeEvent == hibernateMergeEvent
         !listener.onPersistEventCalled
     }
 
-    void 'test onPersistenceEvent handles Persist event without fall-through'() {
+    void "test onPersistenceEvent handles Persist event without fall-through"() {
         given:
         def datastore = getDatastore()
         def listener = new RecordingHibernateEventListener(datastore)
         def entity = new Object()
         def hibernateSession = Mock(EventSource)
 
-        and: 'a GORM Persist event wrapping a Hibernate Persist event'
-        def hibernatePersistEvent = new HibernatePersistEvent('Foo', entity, hibernateSession)
+        and: "a GORM Persist event wrapping a Hibernate Persist event"
+        def hibernatePersistEvent = new HibernatePersistEvent("Foo", entity, hibernateSession)
         def gormPersistEvent = new GormPersistEvent(datastore, entity)
         gormPersistEvent.setNativeEvent(hibernatePersistEvent)
 
-        when: 'Persist event is published'
+        when: "Persist event is published"
         listener.onApplicationEvent(gormPersistEvent)
 
-        then: 'Only onPersistEvent is called'
+        then: "Only onPersistEvent is called"
         listener.onPersistEventCalled
         listener.lastPersistEvent == hibernatePersistEvent
         !listener.onMergeEventCalled
     }
 
-    void 'test onPersistenceEvent handles PreInsert event'() {
+    void "test onPersistenceEvent handles PreInsert event"() {
         given:
         def datastore = getDatastore()
         def listener = new RecordingHibernateEventListener(datastore)
@@ -166,7 +165,7 @@ class HibernateEventListenerSpec extends HibernateGormDatastoreSpec {
         listener.onPreInsertCalled
     }
 
-    void 'test onPersistenceEvent handles PostInsert event'() {
+    void "test onPersistenceEvent handles PostInsert event"() {
         given:
         def datastore = getDatastore()
         def listener = new RecordingHibernateEventListener(datastore)
@@ -183,7 +182,7 @@ class HibernateEventListenerSpec extends HibernateGormDatastoreSpec {
         listener.onPostInsertCalled
     }
 
-    void 'test onPersistenceEvent handles PreUpdate event'() {
+    void "test onPersistenceEvent handles PreUpdate event"() {
         given:
         def datastore = getDatastore()
         def listener = new RecordingHibernateEventListener(datastore)
@@ -200,7 +199,7 @@ class HibernateEventListenerSpec extends HibernateGormDatastoreSpec {
         listener.onPreUpdateCalled
     }
 
-    void 'test onPersistenceEvent handles PostUpdate event'() {
+    void "test onPersistenceEvent handles PostUpdate event"() {
         given:
         def datastore = getDatastore()
         def listener = new RecordingHibernateEventListener(datastore)
@@ -217,7 +216,7 @@ class HibernateEventListenerSpec extends HibernateGormDatastoreSpec {
         listener.onPostUpdateCalled
     }
 
-    void 'test onPersistenceEvent handles PreDelete event'() {
+    void "test onPersistenceEvent handles PreDelete event"() {
         given:
         def datastore = getDatastore()
         def listener = new RecordingHibernateEventListener(datastore)
@@ -234,7 +233,7 @@ class HibernateEventListenerSpec extends HibernateGormDatastoreSpec {
         listener.onPreDeleteCalled
     }
 
-    void 'test onPersistenceEvent handles PostDelete event'() {
+    void "test onPersistenceEvent handles PostDelete event"() {
         given:
         def datastore = getDatastore()
         def listener = new RecordingHibernateEventListener(datastore)
@@ -251,7 +250,7 @@ class HibernateEventListenerSpec extends HibernateGormDatastoreSpec {
         listener.onPostDeleteCalled
     }
 
-    void 'test onPersistenceEvent handles PreLoad event'() {
+    void "test onPersistenceEvent handles PreLoad event"() {
         given:
         def datastore = getDatastore()
         def listener = new RecordingHibernateEventListener(datastore)
@@ -268,7 +267,7 @@ class HibernateEventListenerSpec extends HibernateGormDatastoreSpec {
         listener.onPreLoadCalled
     }
 
-    void 'test onPersistenceEvent handles PostLoad event'() {
+    void "test onPersistenceEvent handles PostLoad event"() {
         given:
         def datastore = getDatastore()
         def listener = new RecordingHibernateEventListener(datastore)
@@ -285,7 +284,7 @@ class HibernateEventListenerSpec extends HibernateGormDatastoreSpec {
         listener.onPostLoadCalled
     }
 
-    void 'test onPersistenceEvent calls event.cancel when PreInsert handler returns true'() {
+    void "test onPersistenceEvent calls event.cancel when PreInsert handler returns true"() {
         given:
         def datastore = getDatastore()
         def listener = new CancellingHibernateEventListener(datastore)
@@ -302,7 +301,7 @@ class HibernateEventListenerSpec extends HibernateGormDatastoreSpec {
         gormEvent.isCancelled()
     }
 
-    void 'test onPersistenceEvent calls event.cancel when PreUpdate handler returns true'() {
+    void "test onPersistenceEvent calls event.cancel when PreUpdate handler returns true"() {
         given:
         def datastore = getDatastore()
         def listener = new CancellingHibernateEventListener(datastore)
@@ -319,7 +318,7 @@ class HibernateEventListenerSpec extends HibernateGormDatastoreSpec {
         gormEvent.isCancelled()
     }
 
-    void 'test onPersistenceEvent calls event.cancel when PreDelete handler returns true'() {
+    void "test onPersistenceEvent calls event.cancel when PreDelete handler returns true"() {
         given:
         def datastore = getDatastore()
         def listener = new CancellingHibernateEventListener(datastore)
@@ -336,7 +335,7 @@ class HibernateEventListenerSpec extends HibernateGormDatastoreSpec {
         gormEvent.isCancelled()
     }
 
-    void 'test onPersistenceEvent handles Validation event via onValidate'() {
+    void "test onPersistenceEvent handles Validation event via onValidate"() {
         given:
         def datastore = getDatastore()
         def listener = new CancellingHibernateEventListener(datastore)
@@ -351,7 +350,7 @@ class HibernateEventListenerSpec extends HibernateGormDatastoreSpec {
         noExceptionThrown()
     }
 
-    void 'test onPersistenceEvent throws for unexpected EventType'() {
+    void "test onPersistenceEvent throws for unexpected EventType"() {
         given:
         def datastore = getDatastore()
         def listener = new RecordingHibernateEventListener(datastore)
@@ -365,7 +364,7 @@ class HibernateEventListenerSpec extends HibernateGormDatastoreSpec {
         thrown(IllegalStateException)
     }
 
-    void 'test getDatastore returns the HibernateDatastore'() {
+    void "test getDatastore returns the HibernateDatastore"() {
         given:
         def datastore = getDatastore()
         def listener = new CancellingHibernateEventListener(datastore)
@@ -374,7 +373,7 @@ class HibernateEventListenerSpec extends HibernateGormDatastoreSpec {
         listener.getDatastore().is(datastore)
     }
 
-    void 'test getTimestampProvider returns DefaultTimestampProvider'() {
+    void "test getTimestampProvider returns DefaultTimestampProvider"() {
         given:
         def listener = new CancellingHibernateEventListener(getDatastore())
 
@@ -382,7 +381,7 @@ class HibernateEventListenerSpec extends HibernateGormDatastoreSpec {
         listener.getTimestampProvider() instanceof DefaultTimestampProvider
     }
 
-    void 'test real HibernateEventListener methods for coverage'() {
+    void "test real HibernateEventListener methods for coverage"() {
         given:
         def datastore = getDatastore()
         def listener = new HibernateEventListener(datastore) {
@@ -398,21 +397,21 @@ class HibernateEventListenerSpec extends HibernateGormDatastoreSpec {
         mockPersister.getFactory() >> mockSessionFactory
         mockEventSource.getSessionFactory() >> mockSessionFactory
 
-        when: 'Calling onPersistEvent'
-        def persistEvent = new HibernatePersistEvent('Foo', entity, mockEventSource)
+        when: "Calling onPersistEvent"
+        def persistEvent = new HibernatePersistEvent("Foo", entity, mockEventSource)
         listener.onPersistEvent(persistEvent)
 
         then:
         noExceptionThrown()
 
-        when: 'Calling onMergeEvent'
-        def mergeEvent = new HibernateMergeEvent('Foo', entity, mockEventSource)
+        when: "Calling onMergeEvent"
+        def mergeEvent = new HibernateMergeEvent("Foo", entity, mockEventSource)
         listener.onMergeEvent(mergeEvent)
 
         then:
         noExceptionThrown()
 
-        when: 'Calling onPreLoad'
+        when: "Calling onPreLoad"
         def preLoadEvent = new HibernatePreLoadEvent(mockEventSource)
         preLoadEvent.setEntity(entity)
         preLoadEvent.setPersister(mockPersister)
@@ -421,7 +420,7 @@ class HibernateEventListenerSpec extends HibernateGormDatastoreSpec {
         then:
         noExceptionThrown()
 
-        when: 'Calling onPostLoad'
+        when: "Calling onPostLoad"
         def postLoadEvent = new HibernatePostLoadEvent(mockEventSource)
         postLoadEvent.setEntity(entity)
         postLoadEvent.setPersister(mockPersister)
@@ -430,49 +429,49 @@ class HibernateEventListenerSpec extends HibernateGormDatastoreSpec {
         then:
         noExceptionThrown()
 
-        when: 'Calling onPostInsert'
+        when: "Calling onPostInsert"
         def postInsertEvent = new HibernatePostInsertEvent(entity, 1L, new Object[0], mockPersister, mockEventSource)
         listener.onPostInsert(postInsertEvent)
 
         then:
         noExceptionThrown()
 
-        when: 'Calling onPreInsert'
+        when: "Calling onPreInsert"
         def preInsertEvent = new HibernatePreInsertEvent(entity, 1L, new Object[0], mockPersister, mockEventSource)
         listener.onPreInsert(preInsertEvent)
 
         then:
         noExceptionThrown()
 
-        when: 'Calling onPreUpdate'
+        when: "Calling onPreUpdate"
         def preUpdateEvent = new HibernatePreUpdateEvent(entity, 1L, new Object[0], new Object[0], mockPersister, mockEventSource)
         listener.onPreUpdate(preUpdateEvent)
 
         then:
         noExceptionThrown()
 
-        when: 'Calling onPostUpdate'
+        when: "Calling onPostUpdate"
         def postUpdateEvent = new HibernatePostUpdateEvent(entity, 1L, new Object[0], new Object[0], [0] as int[], mockPersister, mockEventSource)
         listener.onPostUpdate(postUpdateEvent)
 
         then:
         noExceptionThrown()
 
-        when: 'Calling onPreDelete'
+        when: "Calling onPreDelete"
         def preDeleteEvent = new HibernatePreDeleteEvent(entity, 1L, new Object[0], mockPersister, mockEventSource)
         listener.onPreDelete(preDeleteEvent)
 
         then:
         noExceptionThrown()
 
-        when: 'Calling onPostDelete'
+        when: "Calling onPostDelete"
         def postDeleteEvent = new HibernatePostDeleteEvent(entity, 1L, new Object[0], mockPersister, mockEventSource)
         listener.onPostDelete(postDeleteEvent)
 
         then:
         noExceptionThrown()
 
-        when: 'Calling onValidate'
+        when: "Calling onValidate"
         def validationEvent = new GormValidationEvent(datastore, entity)
         listener.onValidate(validationEvent)
 

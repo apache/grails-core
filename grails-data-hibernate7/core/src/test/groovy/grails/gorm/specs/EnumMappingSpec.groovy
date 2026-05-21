@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -29,21 +29,20 @@ import java.sql.ResultSet
  * Created by graemerocher on 24/02/16.
  */
 class EnumMappingSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
-
     void setupSpec() {
         manager.addAllDomainClasses([Recipe])
     }
 
-    void 'Test enum mapping'() {
-        when:'An enum property is persisted'
-        new Recipe(title: 'Chicken Tikka Masala').save(flush: true)
+    void "Test enum mapping"() {
+        when:"An enum property is persisted"
+        new Recipe(title: "Chicken Tikka Masala").save(flush:true)
         SessionImplementor sessionImplementor = (SessionImplementor) manager.sessionFactory.currentSession
         ResultSet resultSet = sessionImplementor.doReturningWork {
-            return it.prepareStatement('select * from recipe').executeQuery()
+            return it.prepareStatement("select * from recipe").executeQuery()
         }
         resultSet.next()
 
-        then: 'The enum is mapped as a varchar'
+        then: "The enum is mapped as a varchar"
         resultSet.getString('type') == 'GOOD'
 
     }
@@ -51,7 +50,6 @@ class EnumMappingSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> 
 
 @Entity
 class Recipe {
-
     String title
     RecipeType type = RecipeType.GOOD
 }

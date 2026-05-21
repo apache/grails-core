@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -58,17 +58,17 @@ class JavascriptTagLib implements ApplicationContextAware, TagLibrary {
      * The 'library' attribute will attempt to use the library mappings defined above to import the
      * right js files and not duplicate imports eg.<br/>
      *
-     * &lt;g:javascript library='scriptaculous' /&gt; // imports all the necessary js for the scriptaculous library<br/>
+     * &lt;g:javascript library="scriptaculous" /&gt; // imports all the necessary js for the scriptaculous library<br/>
      *
      * The 'src' attribute will merely import the js file but within the right context (ie inside the /js/ directory of
      * the Grails application:<br/>
      *
-     * &lt;g:javascript src='myscript.js' /&gt; // actually imports '/app/js/myscript.js'
+     * &lt;g:javascript src="myscript.js" /&gt; // actually imports '/app/js/myscript.js'
      *
      * @attr src The name of the javascript file to import. Will look in web-app/js dir
-     * @attr library The name of the library to include. e.g. 'jquery', 'prototype', 'scriptaculous', 'yahoo' or 'dojo'
+     * @attr library The name of the library to include. e.g. "jquery", "prototype", "scriptaculous", "yahoo" or "dojo"
      * @attr plugin The plugin to look for the javascript in
-     * @attr contextPath the context path to use (relative to the application context path). Defaults to '' or path to the plugin for a plugin view or template.
+     * @attr contextPath the context path to use (relative to the application context path). Defaults to "" or path to the plugin for a plugin view or template.
      * @attr base specifies the full base url to prepend to the library name
      */
     Closure javascript = { attrs, body ->
@@ -78,7 +78,7 @@ class JavascriptTagLib implements ApplicationContextAware, TagLibrary {
             if (hasResourceProcessor) {
                 out << r.script(Collections.EMPTY_MAP, body)
             } else {
-                out.println("<script type='text/javascript'>")
+                out.println('<script type="text/javascript">')
                 out << body()
                 out.println()
                 out.println('</script>')
@@ -119,7 +119,7 @@ class JavascriptTagLib implements ApplicationContextAware, TagLibrary {
     /**
      * Escapes a javascript string replacing single/double quotes and new lines.<br/>
      *
-     * &lt;g:escapeJavascript&gt;This is some 'text' to be escaped&lt;/g:escapeJavascript&gt
+     * &lt;g:escapeJavascript&gt;This is some "text" to be escaped&lt;/g:escapeJavascript&gt;
      */
     Closure escapeJavascript = { attrs, body ->
         if (body) {

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -68,23 +68,23 @@ class IterableRenderSpec extends Specification implements JsonViewUnitTest {
         then: 'The result is an array'
         objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('''
             {
-                '_links': {
-                    'self': {
-                        'href': 'http://localhost:8080/player/index',
-                        'hreflang': 'en',
-                        'type': 'application/hal+json'
+                "_links": {
+                    "self": {
+                        "href": "http://localhost:8080/player/index",
+                        "hreflang": "en",
+                        "type": "application/hal+json"
                     }
                 },
-                '_embedded': [
+                "_embedded": [
                     {
-                        '_links': {
-                            'self': {
-                                'href': 'http://localhost:8080/player/index',
-                                'hreflang': 'en',
-                                'type': 'application/hal+json'
+                        "_links": {
+                            "self": {
+                                "href": "http://localhost:8080/player/index",
+                                "hreflang": "en",
+                                "type": "application/hal+json"
                             }
                         },
-                        'name': 'Cantona'
+                        "name": "Cantona"
                     }
                 ]
             }
@@ -114,22 +114,22 @@ class IterableRenderSpec extends Specification implements JsonViewUnitTest {
         then: 'The result is an array'
         objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('''
             {
-                'data': [
+                "data": [
                     {
-                        'type': 'player',
-                        'id': '1',
-                        'attributes': {
-                            'name': 'Cantona'
+                        "type": "player",
+                        "id": "1",
+                        "attributes": {
+                            "name": "Cantona"
                         },
-                        'relationships': {
-                            'team': {
-                                'data': null
+                        "relationships": {
+                            "team": {
+                                "data": null
                             }
                         }
                     }
                 ],
-                'links': {
-                    'self': '/foo'
+                "links": {
+                    "self": "/foo"
                 }
             }
         ''')
@@ -159,34 +159,34 @@ class IterableRenderSpec extends Specification implements JsonViewUnitTest {
         then: 'The result is an array'
         objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('''
             {
-                'data': [
+                "data": [
                     {
-                        'type': 'player',
-                        'id': '1',
-                        'attributes': {
-                            'name': 'Cantona'
+                        "type": "player",
+                        "id": "1",
+                        "attributes": {
+                            "name": "Cantona"
                         },
-                        'relationships': {
-                            'team': {
-                                'data': null
+                        "relationships": {
+                            "team": {
+                                "data": null
                             }
                         }
                     },
                     {
-                        'type': 'player',
-                        'id': '2',
-                        'attributes': {
-                            'name': 'Louis'
+                        "type": "player",
+                        "id": "2",
+                        "attributes": {
+                            "name": "Louis"
                         },
-                        'relationships': {
-                            'team': {
-                                'data': null
+                        "relationships": {
+                            "team": {
+                                "data": null
                             }
                         }
                     }
                 ],
-                'links': {
-                    'self': '/foo'
+                "links": {
+                    "self": "/foo"
                 }
             }
         ''')
@@ -216,37 +216,37 @@ class IterableRenderSpec extends Specification implements JsonViewUnitTest {
         then: 'The result is an array'
         objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('''
             {
-                'data': [
+                "data": [
                     {
-                        'type': 'player',
-                        'id': '1',
-                        'attributes': {
-                            'name': 'Cantona'
+                        "type": "player",
+                        "id": "1",
+                        "attributes": {
+                            "name": "Cantona"
                         },
-                        'relationships': {
-                            'team': {
-                                'data': null
+                        "relationships": {
+                            "team": {
+                                "data": null
                             }
                         }
                     },
                     {
-                        'type': 'player',
-                        'id': '2',
-                        'attributes': {
-                            'name': 'Louis'
+                        "type": "player",
+                        "id": "2",
+                        "attributes": {
+                            "name": "Louis"
                         },
-                        'relationships': {
-                            'team': {
-                                'data': null
+                        "relationships": {
+                            "team": {
+                                "data": null
                             }
                         }
                     }
                 ],
-                'links': {
-                    'self': '/foo',
-                    'first': 'http://localhost:8080/player/index?offset=0&max=10',
-                    'next': 'http://localhost:8080/player/index?offset=10&max=10',
-                    'last': 'http://localhost:8080/player/index?offset=10&max=10'
+                "links": {
+                    "self": "/foo",
+                    "first": "http://localhost:8080/player/index?offset=0&max=10",
+                    "next": "http://localhost:8080/player/index?offset=10&max=10",
+                    "last": "http://localhost:8080/player/index?offset=10&max=10"
                 }
             }
         ''')
@@ -276,37 +276,37 @@ class IterableRenderSpec extends Specification implements JsonViewUnitTest {
         then: 'The result is an array'
         objectMapper.readTree(renderResult.jsonText) == objectMapper.readTree('''
             {
-                'data': [
+                "data": [
                     {
-                        'type': 'player',
-                        'id': '1',
-                        'attributes': {
-                            'name': 'Cantona'
+                        "type": "player",
+                        "id": "1",
+                        "attributes": {
+                            "name": "Cantona"
                         },
-                        'relationships': {
-                            'team': {
-                                'data': null
+                        "relationships": {
+                            "team": {
+                                "data": null
                             }
                         }
                     },
                     {
-                        'type': 'player',
-                        'id': '2',
-                        'attributes': {
-                            'name': 'Louis'
+                        "type": "player",
+                        "id": "2",
+                        "attributes": {
+                            "name": "Louis"
                         },
-                        'relationships': {
-                            'team': {
-                                'data': null
+                        "relationships": {
+                            "team": {
+                                "data": null
                             }
                         }
                     }
                 ],
-                'links': {
-                    'self': '/foo',
-                    'first': 'http://localhost:8080/player/index?offset=0&max=5',
-                    'next': 'http://localhost:8080/player/index?offset=5&max=5',
-                    'last': 'http://localhost:8080/player/index?offset=10&max=5'
+                "links": {
+                    "self": "/foo",
+                    "first": "http://localhost:8080/player/index?offset=0&max=5",
+                    "next": "http://localhost:8080/player/index?offset=5&max=5",
+                    "last": "http://localhost:8080/player/index?offset=10&max=5"
                 }
             }
         ''')

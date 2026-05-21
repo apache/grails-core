@@ -4,20 +4,20 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
  */
 
-package org.grails.orm.hibernate.cfg.domainbinding.secondpass
+package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.persistence.Entity
@@ -81,18 +81,18 @@ class UnidirectionalOneToManyBinderSpec extends HibernateGormDatastoreSpec {
         binder = new UnidirectionalOneToManyBinder(collectionWithJoinTableBinder, grailsDomainBinder.metadataBuildingContext.metadataCollector)
     }
 
-    def 'test bindUnidirectionalOneToMany with join table'() {
+    def "test bindUnidirectionalOneToMany with join table"() {
         given:
         def grailsDomainBinder = getGrailsDomainBinder()
         def ownerEntity = grailsDomainBinder.hibernateMappingContext.getPersistentEntity(UniOwner.name) as GrailsHibernatePersistentEntity
         def petEntity = grailsDomainBinder.hibernateMappingContext.getPersistentEntity(UniPet.name) as GrailsHibernatePersistentEntity
 
-        def ownerToPetsProperty = ownerEntity.getPropertyByName('pets') as HibernateOneToManyProperty
+        def ownerToPetsProperty = ownerEntity.getPropertyByName("pets") as HibernateOneToManyProperty
 
         def mappings = grailsDomainBinder.metadataBuildingContext.metadataCollector
         def ownerPersistentClass = mappings.getEntityBinding(UniOwner.name)
         def collection = new Bag(grailsDomainBinder.metadataBuildingContext, ownerPersistentClass)
-        def role = UniOwner.name + '.pets'
+        def role = UniOwner.name + ".pets"
         collection.setRole(role)
         collection.setCollectionTable(ownerPersistentClass.getTable()) // Just use owner table for simplicity in this test
         def element = new OneToMany(grailsDomainBinder.metadataBuildingContext, ownerPersistentClass)
@@ -111,7 +111,7 @@ class UnidirectionalOneToManyBinderSpec extends HibernateGormDatastoreSpec {
         collection.getElement() instanceof org.hibernate.mapping.ManyToOne 
     }
 
-    def 'test bindUnidirectionalOneToMany with backref'() {
+    def "test bindUnidirectionalOneToMany with backref"() {
         given:
         def grailsDomainBinder = getGrailsDomainBinder()
         def ownerEntity = grailsDomainBinder.hibernateMappingContext.getPersistentEntity(UniOwner.name) as GrailsHibernatePersistentEntity
@@ -123,7 +123,7 @@ class UnidirectionalOneToManyBinderSpec extends HibernateGormDatastoreSpec {
 
         // 1. Initialize the collection
         def collection = new Bag(grailsDomainBinder.metadataBuildingContext, ownerPersistentClass)
-        collection.setRole(UniOwner.name + '.pets')
+        collection.setRole(UniOwner.name + ".pets")
 
         // 2. IMPORTANT: Initialize and set the element (This fixes the NPE)
         def element = new OneToMany(grailsDomainBinder.metadataBuildingContext, ownerPersistentClass)
@@ -136,7 +136,7 @@ class UnidirectionalOneToManyBinderSpec extends HibernateGormDatastoreSpec {
         def ownerToPetsProperty = Stub(HibernateOneToManyProperty) {
             shouldBindWithForeignKey() >> true
             getOwner() >> ownerEntity
-            getName() >> 'pets'
+            getName() >> "pets"
             getCollection() >> collection
         }
 
@@ -145,13 +145,12 @@ class UnidirectionalOneToManyBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         collection.isInverse() == false
-        petPersistentClass.getProperty('_UniOwner_petsBackref') != null
+        petPersistentClass.getProperty("_UniOwner_petsBackref") != null
     }
 }
 
 @Entity
 class UniOwner {
-
     Long id
     Set<UniPet> pets
     static hasMany = [pets: UniPet]
@@ -159,6 +158,5 @@ class UniOwner {
 
 @Entity
 class UniPet {
-
     Long id
 }

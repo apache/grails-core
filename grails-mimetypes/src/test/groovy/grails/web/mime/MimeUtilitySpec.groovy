@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -68,37 +68,37 @@ class MimeUtilitySpec extends Specification {
         return new DefaultMimeUtility(mimeTypesConfiguration.mimeTypes())
     }
 
-    void 'Test get mime by extension method'() {
-        when:'We lookup the mime type for the js extension'
-            def mimeType = mimeUtility.getMimeTypeForExtension('js')
+    void "Test get mime by extension method"() {
+        when:"We lookup the mime type for the js extension"
+            def mimeType = mimeUtility.getMimeTypeForExtension("js")
 
         then:"The mime name should be 'text/javascript'"
             mimeType != null
             mimeType.extension == 'js'
             mimeType.name == 'text/javascript'
 
-        when:'We lookup the mime type for an extension with multiple mime types'
-            mimeType = mimeUtility.getMimeTypeForExtension('xml')
+        when:"We lookup the mime type for an extension with multiple mime types"
+            mimeType = mimeUtility.getMimeTypeForExtension("xml")
 
-        then: 'We get the first specified mime type back'
+        then: "We get the first specified mime type back"
             mimeType != null
             mimeType.extension == 'xml'
             mimeType.name == 'text/xml'
     }
 
-    void 'Test get mime by URI method'() {
-        when:'We lookup the mime type for the js extension'
-            def mimeType = mimeUtility.getMimeTypeForURI('/myapp/js/jquery-1.8.1.js')
+    void "Test get mime by URI method"() {
+        when:"We lookup the mime type for the js extension"
+            def mimeType = mimeUtility.getMimeTypeForURI("/myapp/js/jquery-1.8.1.js")
 
         then:"The mime name should be 'text/javascript'"
             mimeType != null
             mimeType.extension == 'js'
             mimeType.name == 'text/javascript'
 
-        when:'We lookup the mime type for an extension with multiple mime types'
-            mimeType = mimeUtility.getMimeTypeForURI('/WEB-INF/web.xml')
+        when:"We lookup the mime type for an extension with multiple mime types"
+            mimeType = mimeUtility.getMimeTypeForURI("/WEB-INF/web.xml")
 
-        then: 'We get the first specified mime type back'
+        then: "We get the first specified mime type back"
             mimeType != null
             mimeType.extension == 'xml'
             mimeType.name == 'text/xml'

@@ -18,30 +18,25 @@
  */
 package org.grails.datastore.gorm.multitenancy;
 
-import java.io.Serializable;
-import java.util.Arrays;
-import java.util.List;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.springframework.context.ApplicationEvent;
-
 import grails.gorm.multitenancy.Tenants;
-import org.grails.datastore.gorm.GormRegistry;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
-import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent;
-import org.grails.datastore.mapping.engine.event.PersistenceEventListener;
-import org.grails.datastore.mapping.engine.event.PreInsertEvent;
-import org.grails.datastore.mapping.engine.event.PreUpdateEvent;
-import org.grails.datastore.mapping.engine.event.ValidationEvent;
+import org.grails.datastore.mapping.engine.event.*;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.TenantId;
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore;
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantException;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.event.PreQueryEvent;
+import org.springframework.context.ApplicationEvent;
+import org.grails.datastore.gorm.GormRegistry;
+
+import java.io.Serializable;
+import java.util.Arrays;
+import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * An event listener that hooks into persistence events to enable discriminator based multi tenancy (ie {@link org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode#DISCRIMINATOR}
@@ -105,7 +100,7 @@ public class MultiTenantEventListener implements PersistenceEventListener {
                                 if (ConnectionSource.DEFAULT.equals(currentId) && Number.class.isAssignableFrom(tenantId.getType())) {
                                     currentId = 0L;
                                 }
-                                query.eq(tenantId.getName(), currentId);
+                                query.eq(tenantId.getName(), currentId );
                             }
                         }
                     }

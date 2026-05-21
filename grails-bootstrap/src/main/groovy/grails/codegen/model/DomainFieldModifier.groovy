@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -58,7 +58,6 @@ class DomainFieldModifier {
      * @return the domain class file, or null if not found
      */
     File findDomainFile(File projectDir, String className) {
-
         File domainDir = new File(projectDir, 'grails-app/domain')
         if (!domainDir.exists()) {
             return null
@@ -98,7 +97,6 @@ class DomainFieldModifier {
      * @return true if the member exists, false otherwise
      */
     boolean memberExists(File domainFile, String memberName) {
-
         if (!domainFile?.exists()) {
             return false
         }
@@ -137,7 +135,6 @@ class DomainFieldModifier {
      * @throws IllegalStateException if the file cannot be modified
      */
     void addMember(File domainFile, AbstractMemberDefinition member) {
-
         if (!domainFile?.exists()) {
             throw new IllegalStateException("Domain file does not exist: ${domainFile}")
         }
@@ -217,7 +214,6 @@ class DomainFieldModifier {
      * @throws IllegalStateException if the file cannot be modified
      */
     void addProperty(File domainFile, PropertyDefinition property) {
-
         addMember(domainFile, property)
     }
 
@@ -229,7 +225,6 @@ class DomainFieldModifier {
      * @throws IllegalStateException if the file cannot be modified
      */
     void addField(File domainFile, FieldDefinition field) {
-
         addMember(domainFile, field)
     }
 
@@ -252,7 +247,6 @@ class DomainFieldModifier {
      * Parses the Groovy source file and returns the main class node.
      */
     private ClassNode parseClass(File sourceFile) {
-
         CompilerConfiguration config = new CompilerConfiguration()
         config.tolerance = 10
 
@@ -388,7 +382,6 @@ class DomainFieldModifier {
      * Internal class to hold insertion point information.
      */
     private static class InsertionPoints {
-
         int importInsertLine = 0
         int fieldInsertLine = 0
         int constraintInsertLine = 0

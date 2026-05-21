@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -33,18 +33,18 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * @since 8.0
  */
 @CompileStatic
-class HibernateSessionResolver implements SessionResolver<Session> {
+public class HibernateSessionResolver implements SessionResolver<Session> {
 
     private final SessionFactory sessionFactory
     private final HibernateDatastore datastore
 
-    HibernateSessionResolver(HibernateDatastore datastore, SessionFactory sessionFactory) {
+    public HibernateSessionResolver(HibernateDatastore datastore, SessionFactory sessionFactory) {
         this.datastore = datastore
         this.sessionFactory = sessionFactory
     }
 
     @Override
-    Session resolve() {
+    public Session resolve() {
         // 1. Try to find a GORM session bound to the datastore
         Object resource = TransactionSynchronizationManager.getResource(datastore)
         if (resource instanceof org.grails.datastore.mapping.transactions.SessionHolder) {
@@ -66,20 +66,20 @@ class HibernateSessionResolver implements SessionResolver<Session> {
     }
 
     @Override
-    Session resolve(String qualifier) {
+    public Session resolve(String qualifier) {
         // Implementation for multi-datasource routing
         return datastore.getDatastoreForConnection(qualifier).getSessionResolver().resolve()
     }
 
     @Override
-    void bind(Session session) {
+    public void bind(Session session) {
         if (session instanceof HibernateSession) {
             TransactionSynchronizationManager.bindResource(sessionFactory, new SessionHolder(((HibernateSession) session).getNativeSession()))
         }
     }
 
     @Override
-    void unbind() {
+    public void unbind() {
         TransactionSynchronizationManager.unbindResource(sessionFactory)
     }
 }

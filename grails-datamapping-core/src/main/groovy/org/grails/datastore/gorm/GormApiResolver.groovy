@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -81,6 +81,9 @@ class GormApiResolver {
 
         Datastore defaultDs = defaultDatastoreSelector.select(registry, stateRegistry, entity, className, depth, this)
 
+        if (defaultDs == null) {
+            defaultDs = registry.getDatastore(null, ConnectionSource.DEFAULT)
+        }
         if (defaultDs == null && entity != null) {
             throw stateException(entity)
         }
@@ -89,14 +92,6 @@ class GormApiResolver {
 
     Datastore findDatastoreByType(Class<? extends Datastore> datastoreType) {
         Datastore datastore = registry.datastoresByType.get(datastoreType)
-        if (datastore == null) {
-            for (entry in registry.datastoresByType.entrySet()) {
-                if (datastoreType.isAssignableFrom(entry.key)) {
-                    datastore = entry.value
-                    break
-                }
-            }
-        }
         if (datastore == null) {
             throw new IllegalStateException("No GORM implementation configured for type [$datastoreType]. Ensure GORM has been initialized correctly")
         }
@@ -134,7 +129,7 @@ class GormApiResolver {
 
     private String findTenantId(Class entity) {
         if (entity != null && MultiTenant.isAssignableFrom(entity)) {
-            Datastore defaultDatastore = registry.getDatastoreByString(entity.name, ConnectionSource.DEFAULT)
+            Datastore defaultDatastore = registry.getDatastore(entity.name, ConnectionSource.DEFAULT)
             if (defaultDatastore instanceof MultiTenantCapableDatastore) {
                 MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore) defaultDatastore
                 try {
@@ -221,20 +216,13 @@ class QualifiedDatastoreSelector {
             return (Datastore) resource
         }
 
-        Datastore ds = registry.getDatastoreByString(className, qualifier)
+        Datastore ds = registry.getDatastore(className, qualifier)
         if (ds != null) {
             return ds
         }
 
-        Datastore defaultDs = registry.getDatastoreByString(className, ConnectionSource.DEFAULT)
+        Datastore defaultDs = registry.getDatastore(className, ConnectionSource.DEFAULT)
         if (defaultDs instanceof MultipleConnectionSourceCapableDatastore) {
-            if (defaultDs instanceof MultiTenantCapableDatastore) {
-                MultiTenancySettings.MultiTenancyMode mode = ((MultiTenantCapableDatastore) defaultDs).getMultiTenancyMode()
-                if (mode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR ||
-                        mode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
-                    return defaultDs
-                }
-            }
             try {
                 stateRegistry.setResolvingDatastoreDepth(depth + 1)
                 ds = ((MultipleConnectionSourceCapableDatastore) defaultDs).getDatastoreForConnection(qualifier)
@@ -269,44 +257,16 @@ class ActiveSessionDatastoreSelector {
 
     @CompileDynamic
     Datastore select(GormRegistry registry, String className) {
-        // Optimization: Use TransactionSynchronizationManager.getResourceMap() to only check datastores with active sessions in the current thread.
-        // This avoids O(M) iteration over all registered datastores (which can be thousands in multi-tenancy).
-        Map resourceMap = TransactionSynchronizationManager.getResourceMap()
-        if (resourceMap != null && !resourceMap.isEmpty()) {
-            for (Object key : resourceMap.keySet()) {
-                if (key instanceof Datastore) {
-                    Datastore ds = (Datastore) key
-                    if (!ds.hasCurrentSession()) {
-                        continue
-                    }
-                    if (className != null) {
-                        if (registry.getDatastoreByString(className, ConnectionSource.DEFAULT) == ds) {
-                            return ds
-                        } else if (ds.getMappingContext().getPersistentEntity(className) != null) {
-                            return ds
-                        }
-                    } else {
-                        return ds
-                    }
-                }
-            }
-        }
-        
-        // Fallback: If no datastore found in TransactionSynchronizationManager, 
-        // we might still have a non-transactional session bound to a ThreadLocalSessionResolver.
-        // For performance, we only do the full iteration if allDatastores is small.
-        if (registry.allDatastores.size() <= 10) {
-            for (Datastore registeredDs in registry.allDatastores) {
-                if (registeredDs.hasCurrentSession()) {
-                    if (className != null) {
-                        if (registry.getDatastoreByString(className, ConnectionSource.DEFAULT) == registeredDs) {
-                            return registeredDs
-                        } else if (registeredDs.getMappingContext().getPersistentEntity(className) != null) {
-                            return registeredDs
-                        }
-                    } else if (registry.allDatastores.size() == 1) {
+        for (Datastore registeredDs in registry.allDatastores) {
+            if (TransactionSynchronizationManager.hasResource(registeredDs) || registeredDs.hasCurrentSession()) {
+                if (className != null) {
+                    if (registry.getDatastore(className, ConnectionSource.DEFAULT) == registeredDs) {
+                        return registeredDs
+                    } else if (registeredDs.getMappingContext().getPersistentEntity(className) != null) {
                         return registeredDs
                     }
+                } else if (registry.allDatastores.size() == 1) {
+                    return registeredDs
                 }
             }
         }
@@ -319,7 +279,7 @@ class DefaultDatastoreSelector {
 
     @CompileDynamic
     Datastore select(GormRegistry registry, GormEnhancerRegistry stateRegistry, Class entity, String className, int depth, GormApiResolver resolver) {
-        Datastore defaultDs = registry.getDatastoreByString(className, ConnectionSource.DEFAULT)
+        Datastore defaultDs = registry.getDatastore(className, ConnectionSource.DEFAULT)
         if (defaultDs instanceof MultiTenantCapableDatastore) {
             MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore) defaultDs
             boolean isDatabaseMode = multiTenantCapableDatastore.getMultiTenancyMode() ==

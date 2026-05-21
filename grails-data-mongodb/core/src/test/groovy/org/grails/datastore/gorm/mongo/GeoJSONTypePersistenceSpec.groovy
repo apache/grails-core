@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -43,8 +43,8 @@ class GeoJSONTypePersistenceSpec extends MongoDatastoreSpec {
         manager.addAllDomainClasses([Place, Loc])
     }
 
-    void 'Test persist GeometryCollection GeoJSON type'() {
-        when: 'A GeometryCollection is persisted and queried'
+    void "Test persist GeometryCollection GeoJSON type"() {
+        when: "A GeometryCollection is persisted and queried"
         def col = new GeometryCollection()
         col << Point.valueOf(5, 10)
         col << LineString.valueOf([[40, 5], [41, 6]])
@@ -53,12 +53,12 @@ class GeoJSONTypePersistenceSpec extends MongoDatastoreSpec {
         manager.session.clear()
         p = Place.get(p.id)
 
-        then: 'The collection is correct'
+        then: "The collection is correct"
         p.geometryCollection == col
     }
 
-    void 'Test persist MultiPoint GeoJSON type'() {
-        when: 'A domain with a multipoint is persisted'
+    void "Test persist MultiPoint GeoJSON type"() {
+        when: "A domain with a multipoint is persisted"
         def mp = MultiPoint.valueOf([
                 [-73.9580, 40.8003],
                 [-73.9498, 40.7968],
@@ -70,13 +70,13 @@ class GeoJSONTypePersistenceSpec extends MongoDatastoreSpec {
         manager.session.clear()
         p = Place.findByMultiPoint(mp)
 
-        then: 'The MultiPoint is persisted correctly'
+        then: "The MultiPoint is persisted correctly"
         p != null
         p.multiPoint == mp
     }
 
-    void 'Test persist MultiLineString GeoJSON type'() {
-        when: 'A domain with a multipoint is persisted'
+    void "Test persist MultiLineString GeoJSON type"() {
+        when: "A domain with a multipoint is persisted"
         def mls = MultiLineString.valueOf([
                 [[-73.96943, 40.78519], [-73.96082, 40.78095]],
                 [[-73.96415, 40.79229], [-73.95544, 40.78854]],
@@ -88,13 +88,13 @@ class GeoJSONTypePersistenceSpec extends MongoDatastoreSpec {
         manager.session.clear()
         p = Place.findByMultiLineString(mls)
 
-        then: 'The MultiPoint is persisted correctly'
+        then: "The MultiPoint is persisted correctly"
         p != null
         p.multiLineString == mls
     }
 
-    void 'Test persist MultiPolygon GeoJSON type'() {
-        when: 'A domain with a multipoint is persisted'
+    void "Test persist MultiPolygon GeoJSON type"() {
+        when: "A domain with a multipoint is persisted"
         def mp = MultiPolygon.valueOf([
                 [[[-73.958, 40.8003], [-73.9498, 40.7968], [-73.9737, 40.7648], [-73.9814, 40.7681], [-73.958, 40.8003]]],
                 [[[-73.958, 40.8003], [-73.9498, 40.7968], [-73.9737, 40.7648], [-73.958, 40.8003]]]
@@ -104,13 +104,13 @@ class GeoJSONTypePersistenceSpec extends MongoDatastoreSpec {
         manager.session.clear()
         p = Place.findByMultiPolygon(mp)
 
-        then: 'The MultiPoint is persisted correctly'
+        then: "The MultiPoint is persisted correctly"
         p != null
         p.multiPolygon == mp
     }
 
-    void 'Test persist GeoJSON types'() {
-        given: 'A domain with GeoJSON types'
+    void "Test persist GeoJSON types"() {
+        given: "A domain with GeoJSON types"
 
         def point = new Point(5, 10)
         def poly = Polygon.valueOf([[100.0, 0.0], [101.0, 0.0], [101.0, 1.0], [100.0, 1.0], [100.0, 0.0]])
@@ -124,12 +124,12 @@ class GeoJSONTypePersistenceSpec extends MongoDatastoreSpec {
                 box: box,
                 circle: circle)
 
-        when: 'the entity is persisted and retrieved'
+        when: "the entity is persisted and retrieved"
         p.save(flush: true, validate: false)
         manager.session.clear()
         p = Place.get(p.id)
 
-        then: 'The GeoJSON types are correctly loaded'
+        then: "The GeoJSON types are correctly loaded"
         p.point == point
         p.polygon == poly
         p.lineString == line
@@ -137,8 +137,8 @@ class GeoJSONTypePersistenceSpec extends MongoDatastoreSpec {
         p.circle == circle
     }
 
-    void 'Test geoWithin dynamic finder'() {
-        given: 'A domain with GeoJSON types'
+    void "Test geoWithin dynamic finder"() {
+        given: "A domain with GeoJSON types"
         def point = new Point(2, 1)
         // Order: bottom left, top left, top right, bottom right, bottom left
         def poly1 = Polygon.valueOf([[0.0, 0.0], [3.0, 0.0], [3.0, 3.0], [0.0, 3.0], [0.0, 0.0]])
@@ -146,7 +146,7 @@ class GeoJSONTypePersistenceSpec extends MongoDatastoreSpec {
         def p = new Place(point: point)
         p.save(flush: true, validate: false)
 
-        expect: 'A geoWithin query is executed to find a point within'
+        expect: "A geoWithin query is executed to find a point within"
         Place.findByPointGeoWithin(poly1)
         !Place.findByPointGeoWithin(poly2)
         Place.findByPointGeoWithin(Box.valueOf([[0.0d, 0.0d], [5.0d, 5.0d]]))
@@ -160,22 +160,24 @@ class GeoJSONTypePersistenceSpec extends MongoDatastoreSpec {
 
     }
 
-    void 'Test persist abstract shape type'() {
-        given: 'A data model based on https://blog.codecentric.de/en/2013/03/mongodb-geospatial-indexing-search-geojson-point-linestring-polygon/'
+    void "Test persist abstract shape type"() {
+        given: "A data model based on https://blog.codecentric.de/en/2013/03/mongodb-geospatial-indexing-search-geojson-point-linestring-polygon/"
         createGeoDataModel()
+
 
         expect:
         Loc.count() == 4
-        Loc.findByName('P1').shape instanceof Point
-        Loc.findByName('P2').shape instanceof Point
-        Loc.findByName('Poly1').shape instanceof Polygon
-        Loc.findByName('LS1').shape instanceof LineString
+        Loc.findByName("P1").shape instanceof Point
+        Loc.findByName("P2").shape instanceof Point
+        Loc.findByName("Poly1").shape instanceof Polygon
+        Loc.findByName("LS1").shape instanceof LineString
         Loc.findByShape(Point.valueOf(2, 2))
         !Loc.findByShape(Point.valueOf(20, 10))
     }
 
-    void 'Test geoIntersects dynamic finder'() {
-        given: 'A geo data model'
+
+    void "Test geoIntersects dynamic finder"() {
+        given: "A geo data model"
         createGeoDataModel()
 
         expect:
@@ -186,71 +188,73 @@ class GeoJSONTypePersistenceSpec extends MongoDatastoreSpec {
         !Loc.findByShapeGeoIntersects(['$geometry': [type: 'LineString', coordinates: [[1, 7], [8, 7]]]])
     }
 
-    void 'Test near queries with GeoJSON types'() {
-        given: 'A geo data model'
+    void "Test near queries with GeoJSON types"() {
+        given: "A geo data model"
         createGeoDataModel()
 
-        when: 'We find points near a given point'
+        when: "We find points near a given point"
         def results = Loc.findAllByShapeNear(Point.valueOf(1, 7))
 
-        then: 'The results are correct'
+        then: "The results are correct"
         results.size() == 4
         results*.name == ['P2', 'Poly1', 'P1', 'LS1']
 
-        when: 'We find points near a given point'
+        when: "We find points near a given point"
         results = Loc.findAllByShapeNear([$geometry: [type: 'Point', coordinates: [1, 7]]])
 
-        then: 'The results are correct'
+        then: "The results are correct"
         results.size() == 4
         results*.name == ['P2', 'Poly1', 'P1', 'LS1']
 
-        when: 'We find points near a given point'
+        when: "We find points near a given point"
         results = Loc.withCriteria {
             near 'shape', Point.valueOf(1, 7), 300000
         }
 
-        then: 'The results are correct'
+        then: "The results are correct"
         results.size() == 1
         results*.name == ['P2']
 
-        when: 'We look for points near a given point that are too far away'
+        when: "We look for points near a given point that are too far away"
         results = Loc.withCriteria {
             near 'shape', Point.valueOf(1, 7), 1
         }
 
-        then: 'The results are correct'
+        then: "The results are correct"
         results.size() == 0
     }
 
-    void 'Test nearSphere queries with GeoJSON types'() {
-        given: 'A geo data model'
+
+    void "Test nearSphere queries with GeoJSON types"() {
+        given: "A geo data model"
         createGeoDataModel()
 
-        when: 'We find points near a given point'
+        when: "We find points near a given point"
         def results = Loc.findAllByShapeNearSphere(Point.valueOf(1, 7))
 
-        then: 'The results are correct'
+        then: "The results are correct"
         results.size() == 4
         results*.name == ['P2', 'Poly1', 'P1', 'LS1']
 
-        when: 'We find points near a given point'
+        when: "We find points near a given point"
         results = Loc.findAllByShapeNearSphere([$geometry: [type: 'Point', coordinates: [1, 7]]])
 
-        then: 'The results are correct'
+        then: "The results are correct"
         results.size() == 4
         results*.name == ['P2', 'Poly1', 'P1', 'LS1']
 
-        when: 'We find points near a given point'
+        when: "We find points near a given point"
         results = Loc.withCriteria {
             nearSphere 'shape', Point.valueOf(1, 7), 300000
         }
 
-        then: 'The results are correct'
+        then: "The results are correct"
         results.size() == 1
         results*.name == ['P2']
     }
 
-    void 'TestPolygonsPersist'() {
+
+    void "TestPolygonsPersist"() {
         when:
         Polygon p = Polygon.valueOf([Point.valueOf(0, 0), Point.valueOf(3, 6), Point.valueOf(6, 1), Point.valueOf(0, 0)]) // points
         Loc l = new Loc(shape: p).save(flush: true, validate: false)
@@ -259,6 +263,7 @@ class GeoJSONTypePersistenceSpec extends MongoDatastoreSpec {
         p.asList() == [[[0, 0], [3, 6], [6, 1], [0, 0]]]
         l.id != null
 
+
         when:
         p = Polygon.valueOf([[0, 0], [3, 6], [6, 1], [0, 0]]) // number arrays as points
         l = new Loc(shape: p).save(flush: true, validate: false)
@@ -266,6 +271,7 @@ class GeoJSONTypePersistenceSpec extends MongoDatastoreSpec {
         then:
         p.asList() == [[[0, 0], [3, 6], [6, 1], [0, 0]]]
         l.id != null
+
 
         when:
         p = Polygon.valueOf([[[0, 0], [3, 6], [6, 1], [0, 0]]]) // single ring with number arrays as points
@@ -293,6 +299,7 @@ class GeoJSONTypePersistenceSpec extends MongoDatastoreSpec {
         ]
         l.id != null
 
+
         when:
         p = Polygon.valueOf( // multi rings with number array as points
                 [
@@ -310,16 +317,18 @@ class GeoJSONTypePersistenceSpec extends MongoDatastoreSpec {
         ]
         l.id != null
 
+
     }
 
-    void 'Test multi-ring Polygons'() {
-        when: 'Define and Save a multi-ring polygon'
+
+    void "Test multi-ring Polygons"() {
+        when: "Define and Save a multi-ring polygon"
         Polygon multiringPolygon = Polygon.valueOf([
                 [[0, 0], [20, 0], [20, 20], [0, 20], [0, 0]], // exterior ring
                 [[5, 5], [15, 5], [15, 15], [5, 15], [5, 5]]  // interior ring
         ])
 
-        Loc exampleMultiRingedPoly = new Loc(name: 'MultiRingPoly1', shape: multiringPolygon).save(flush: true)
+        Loc exampleMultiRingedPoly = new Loc(name: "MultiRingPoly1", shape: multiringPolygon).save(flush: true)
         manager.session.clear()
 
         then:
@@ -328,6 +337,7 @@ class GeoJSONTypePersistenceSpec extends MongoDatastoreSpec {
         Loc.findByShapeGeoIntersects(LineString.valueOf([[-10, 10], [-1, 10]])) == null // test outsie the poly
         Loc.findByShapeGeoIntersects(LineString.valueOf([[6, 6], [9, 9]])) == null // test within the exterior cut-out.
     }
+
 
     /**
      * Creates a data model based on A data model based on
@@ -349,7 +359,6 @@ class GeoJSONTypePersistenceSpec extends MongoDatastoreSpec {
 
 @Entity
 class Place {
-
     Long id
     String name
     Point point
@@ -370,7 +379,6 @@ class Place {
 
 @Entity
 class Loc {
-
     Long id
     String name
     Shape shape

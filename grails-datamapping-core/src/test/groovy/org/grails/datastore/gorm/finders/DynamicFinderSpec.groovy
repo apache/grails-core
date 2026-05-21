@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -26,7 +26,7 @@ import spock.lang.Specification
  */
 class DynamicFinderSpec extends Specification {
 
-    void 'test build match spec'() {
+    void "test build match spec"() {
         given:
         MatchSpec spec = DynamicFinder.buildMatchSpec(prefix, methodName, parameters)
 
@@ -39,12 +39,12 @@ class DynamicFinderSpec extends Specification {
 
         where:
         prefix   | methodName              | parameters | expressions | queryExpression    |   propertyNames
-        'findBy' | 'findByTitle'           | 1          |    1        | 'Title'            |  ['title']
-        'findBy' | 'findByTitleBetween'    | 2          |    1        | 'TitleBetween'     |  ['title']
-        'findBy' | 'findByTitleAndAuthor'  | 2          |    2        | 'TitleAndAuthor'   |  ['title', 'author']
+        "findBy" | "findByTitle"           | 1          |    1        | "Title"            |  ['title']
+        "findBy" | "findByTitleBetween"    | 2          |    1        | "TitleBetween"     |  ['title']
+        "findBy" | "findByTitleAndAuthor"  | 2          |    2        | "TitleAndAuthor"   |  ['title', 'author']
     }
 
-    void 'populateArgumentsForCriteria does not require query mapping context for BuildableCriteria'() {
+    void "populateArgumentsForCriteria does not require query mapping context for BuildableCriteria"() {
         given:
         BuildableCriteria query = Mock()
         Map arguments = [order: 'desc']

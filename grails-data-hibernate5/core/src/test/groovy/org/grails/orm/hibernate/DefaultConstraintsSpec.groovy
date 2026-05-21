@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -37,7 +37,7 @@ class DefaultConstraintsSpec extends Specification {
 
     @Shared PropertyResolver configuration = DatastoreUtils.createPropertyResolver(
             (Settings.SETTING_DB_CREATE):'create',
-        'grails.gorm.default.constraints': {
+        'grails.gorm.default.constraints':{
             '*'(nullable: true)
         }
     )
@@ -46,28 +46,28 @@ class DefaultConstraintsSpec extends Specification {
 
     @Rollback
     @Issue('https://github.com/apache/grails-data-mapping/issues/746')
-    void 'Test that when constraints are nullable true by default, they can be altered to nullable false'() {
-        when:'An object is validated'
+    void "Test that when constraints are nullable true by default, they can be altered to nullable false"() {
+        when:"An object is validated"
         Book book = new Book()
         book.validate()
 
-        then:'It has errors'
+        then:"It has errors"
         book.hasErrors()
-        book.errors.getFieldError('title')
+        book.errors.getFieldError("title")
 
-        when:'The title is set'
-        book.title = 'The Stand'
+        when:"The title is set"
+        book.title = "The Stand"
         book.clearErrors()
         book.validate()
 
-        then:'It validates'
+        then:"It validates"
         !book.hasErrors()
 
-        when:'Validation is bypassed'
+        when:"Validation is bypassed"
         book.title = null
-        book.save(validate: false)
+        book.save(validate:false)
 
-        then:'A constraint violation exception is thrown'
+        then:"A constraint violation exception is thrown"
         Book.count() == 0
         thrown DataIntegrityViolationException
     }
@@ -75,7 +75,6 @@ class DefaultConstraintsSpec extends Specification {
 
 @Entity
 class Book {
-
     String title
     String author
 

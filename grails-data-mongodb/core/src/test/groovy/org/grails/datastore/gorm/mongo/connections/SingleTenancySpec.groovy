@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -53,8 +53,8 @@ class SingleTenancySpec extends AutoStartedMongoSpec {
         // Ensure tenant property is cleared before each test for test isolation
         System.clearProperty(SystemPropertyTenantResolver.PROPERTY_NAME)
         Map config = [
-                'grails.gorm.multiTenancy.mode': 'DATABASE',
-                'grails.gorm.multiTenancy.tenantResolverClass': SystemPropertyTenantResolver,
+                "grails.gorm.multiTenancy.mode":"DATABASE",
+                "grails.gorm.multiTenancy.tenantResolverClass":SystemPropertyTenantResolver,
                 (MongoSettings.SETTING_URL): "mongodb://${mongoHost}:${mongoPort}/defaultDb" as String,
                 (MongoSettings.SETTING_CONNECTIONS): [
                         test1: [
@@ -68,7 +68,7 @@ class SingleTenancySpec extends AutoStartedMongoSpec {
         this.datastore = new MongoDatastore(config, getDomainClasses() as Class[])
     }
 
-    void 'Test no tenant id'() {
+    void "Test no tenant id"() {
         when:
         CompanyB.DB
 
@@ -76,81 +76,81 @@ class SingleTenancySpec extends AutoStartedMongoSpec {
         thrown(TenantNotFoundException)
     }
 
-    void 'Test multi tenancy state'() {
+    void "Test multi tenancy state"() {
         given:
-        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'test1')
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "test1")
         expect:
-        City.DB.name == 'defaultDb'
+        City.DB.name == "defaultDb"
         CompanyB.DB.name == 'test1Db'
     }
 
-    void 'Test persist and retrieve entities with multi tenancy'() {
+    void "Test persist and retrieve entities with multi tenancy"() {
         setup:
         CompanyB.eachTenant {
             CompanyB.DB.drop()
         }
 
-        when:'A tenant id is present'
-        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'test1')
+        when:"A tenant id is present"
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "test1")
 
-        then:'the correct tenant is used'
+        then:"the correct tenant is used"
         CompanyB.count() == 0
         CompanyB.DB.name == 'test1Db'
 
-        when:'An object is saved'
-        new CompanyB(name: 'Foo').save(flush: true)
+        when:"An object is saved"
+        new CompanyB(name: "Foo").save(flush:true)
 
-        then:'The results are correct'
+        then:"The results are correct"
         CompanyB.count() == 1
 
-        when:'An object is updated'
-        CompanyB cb = CompanyB.findByName('Foo')
-        cb.name = 'Bar'
-        cb.save(flush: true)
+        when:"An object is updated"
+        CompanyB cb = CompanyB.findByName("Foo")
+        cb.name = "Bar"
+        cb.save(flush:true)
 
         then:
-        !CompanyB.findByName('Foo')
-        CompanyB.findByName('Bar')?.version == 1
+        !CompanyB.findByName("Foo")
+        CompanyB.findByName("Bar")?.version == 1
 
-        when:'The tenant id is switched'
-        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'test2')
+        when:"The tenant id is switched"
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "test2")
 
-        then:'the correct tenant is used'
+        then:"the correct tenant is used"
         CompanyB.DB.name == 'test2Db'
         CompanyB.count() == 0
-        !CompanyB.find(eq('name', 'Foo')).first()
-        !CompanyB.find(eq('name', 'Bar')).first()
+        !CompanyB.find(eq("name", "Foo")).first()
+        !CompanyB.find(eq("name", "Bar")).first()
 
-        CompanyB.withTenant('test1') { Serializable tenantId, Session s ->
+        CompanyB.withTenant("test1") { Serializable tenantId, Session s ->
             assert tenantId
             assert s
             CompanyB.count() == 1
         }
 
-        when:'each tenant is iterated over'
+        when:"each tenant is iterated over"
         Map tenantIds = [:]
         CompanyB.eachTenant { String tenantId ->
             tenantIds.put(tenantId, CompanyB.count())
         }
 
-        then:'The result is correct'
-        tenantIds == [test1: 1, test2: 0]
+        then:"The result is correct"
+        tenantIds == [test1:1, test2:0]
     }
 
-    void 'Test tenant mapped to all'() {
+    void "Test tenant mapped to all"() {
         setup:
         CompanyD.eachTenant {
             CompanyD.DB.drop()
         }
 
-        when:'each tenant is iterated over'
+        when:"each tenant is iterated over"
         Map tenantIds = [:]
         CompanyB.eachTenant { String tenantId ->
             tenantIds.put(tenantId, CompanyB.count())
         }
 
-        then:'The result is correct'
-        tenantIds == [test1: 0, test2: 0]
+        then:"The result is correct"
+        tenantIds == [test1:0, test2:0]
 
     }
 
@@ -162,14 +162,12 @@ class SingleTenancySpec extends AutoStartedMongoSpec {
 
 @Entity
 class CompanyB implements MongoEntity<CompanyB>, MultiTenant {
-
     ObjectId id
     String name
 }
 
 @Entity
 class CompanyD implements MongoEntity<CompanyC>, MultiTenant {
-
     ObjectId id
     String name
 

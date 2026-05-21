@@ -4,14 +4,14 @@
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * 'License'); you may not use this file except in compliance
+ * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
  *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
@@ -35,18 +35,18 @@ import org.grails.datastore.mapping.core.connections.ConnectionSource
 @Requires({ isDockerAvailable() })
 class HibernateDatastoreIntegrationSpec extends HibernateGormDatastoreSpec {
 
-    @Shared PostgreSQLContainer postgres = new PostgreSQLContainer('postgres:16')
+    @Shared PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:16")
 
     @Override
     void setupSpec() {
-        println '=== HibernateDatastoreIntegrationSpec setup ==='
+        println "=== HibernateDatastoreIntegrationSpec setup ==="
         println "  Docker socket : ${isDockerAvailable()}"
-        println '  Container     : postgres:16'
+        println "  Container     : postgres:16"
         println "  Container running : ${postgres.running}"
         println "  JDBC URL      : ${postgres.jdbcUrl}"
         println "  Username      : ${postgres.username}"
         println "  Driver        : ${postgres.driverClassName}"
-        println '================================================'
+        println "================================================"
 
         manager.grailsConfig = [
             'dataSource.url'                 : postgres.jdbcUrl,
@@ -62,44 +62,44 @@ class HibernateDatastoreIntegrationSpec extends HibernateGormDatastoreSpec {
             'grails.hibernate.osiv.readonly' : false,
         ]
         manager.addAllDomainClasses([DatastoreBook])
-        println '================================================'
+        println "================================================"
     }
 
     // -------------------------------------------------------------------------
     // Core infrastructure — non-null checks
     // -------------------------------------------------------------------------
 
-    void 'sessionFactory is available'() {
+    void "sessionFactory is available"() {
         expect:
         datastore.sessionFactory != null
     }
 
-    void 'dataSource is available'() {
+    void "dataSource is available"() {
         expect:
         datastore.dataSource != null
     }
 
-    void 'mappingContext is a HibernateMappingContext'() {
+    void "mappingContext is a HibernateMappingContext"() {
         expect:
         datastore.mappingContext instanceof HibernateMappingContext
     }
 
-    void 'transactionManager is available'() {
+    void "transactionManager is available"() {
         expect:
         datastore.transactionManager != null
     }
 
-    void 'hibernate template is available'() {
+    void "hibernate template is available"() {
         expect:
         datastore.hibernateTemplate != null
     }
 
-    void 'hibernate template with flush mode is available'() {
+    void "hibernate template with flush mode is available"() {
         expect:
         datastore.getHibernateTemplate(GrailsHibernateTemplate.FLUSH_COMMIT) != null
     }
 
-    void 'metadata is available'() {
+    void "metadata is available"() {
         expect:
         datastore.metadata != null
     }
@@ -108,42 +108,42 @@ class HibernateDatastoreIntegrationSpec extends HibernateGormDatastoreSpec {
     // Configuration flags (HibernateDatastore)
     // -------------------------------------------------------------------------
 
-    void 'dataSourceName defaults to DEFAULT'() {
+    void "dataSourceName defaults to DEFAULT"() {
         expect:
         datastore.dataSourceName == ConnectionSource.DEFAULT
     }
 
-    void 'isAutoFlush is false when grails.gorm.autoFlush is not set'() {
+    void "isAutoFlush is false when grails.gorm.autoFlush is not set"() {
         expect:
         !datastore.autoFlush
     }
 
-    void 'defaultFlushMode is COMMIT by default'() {
+    void "defaultFlushMode is COMMIT by default"() {
         expect:
         datastore.defaultFlushMode == FlushMode.COMMIT
     }
 
-    void 'defaultFlushModeName is COMMIT by default'() {
+    void "defaultFlushModeName is COMMIT by default"() {
         expect:
         datastore.defaultFlushModeName == 'COMMIT'
     }
 
-    void 'isFailOnError is false by default'() {
+    void "isFailOnError is false by default"() {
         expect:
         !datastore.failOnError
     }
 
-    void 'isOsivReadOnly is false by default'() {
+    void "isOsivReadOnly is false by default"() {
         expect:
         !datastore.osivReadOnly
     }
 
-    void 'isPassReadOnlyToHibernate is false by default'() {
+    void "isPassReadOnlyToHibernate is false by default"() {
         expect:
         !datastore.passReadOnlyToHibernate
     }
 
-    void 'isCacheQueries is false when not configured'() {
+    void "isCacheQueries is false when not configured"() {
         expect:
         !datastore.cacheQueries
     }
@@ -152,7 +152,7 @@ class HibernateDatastoreIntegrationSpec extends HibernateGormDatastoreSpec {
     // FlushMode (org.hibernate.FlushMode)
     // -------------------------------------------------------------------------
 
-    void 'FlushMode enum values are all present'() {
+    void "FlushMode enum values are all present"() {
         expect:
         FlushMode.values().size() == 4
         FlushMode.valueOf('MANUAL')  != null
@@ -165,8 +165,8 @@ class HibernateDatastoreIntegrationSpec extends HibernateGormDatastoreSpec {
     // Session management
     // -------------------------------------------------------------------------
 
-    void 'hasCurrentSession is false outside a transaction'() {
-        setup: 'ensure no session is bound from a prior test'
+    void "hasCurrentSession is false outside a transaction"() {
+        setup: "ensure no session is bound from a prior test"
         TransactionSynchronizationManager.unbindResourceIfPossible(sessionFactory)
         TransactionSynchronizationManager.unbindResourceIfPossible(datastore)
 
@@ -174,7 +174,7 @@ class HibernateDatastoreIntegrationSpec extends HibernateGormDatastoreSpec {
         !datastore.hasCurrentSession()
     }
 
-    void 'hasCurrentSession is true inside withSession'() {
+    void "hasCurrentSession is true inside withSession"() {
         when:
         boolean insideSession = false
         datastore.withSession {
@@ -185,7 +185,7 @@ class HibernateDatastoreIntegrationSpec extends HibernateGormDatastoreSpec {
         insideSession
     }
 
-    void 'openSession returns a new Hibernate session with the default flush mode'() {
+    void "openSession returns a new Hibernate session with the default flush mode"() {
         when:
         def sess = datastore.openSession()
 
@@ -197,28 +197,28 @@ class HibernateDatastoreIntegrationSpec extends HibernateGormDatastoreSpec {
         sess?.close()
     }
 
-    void 'withSession executes the closure and returns a result'() {
+    void "withSession executes the closure and returns a result"() {
         given:
         DatastoreBook.withTransaction {
-            new DatastoreBook(title: 'Groovy in Action', author: 'Dierk König').save(flush: true, failOnError: true)
+            new DatastoreBook(title: "Groovy in Action", author: "Dierk König").save(flush: true, failOnError: true)
         }
 
         when:
         Long count = datastore.withSession { sess ->
-            sess.createQuery('select count(b) from DatastoreBook b', Long).uniqueResult()
+            sess.createQuery("select count(b) from DatastoreBook b", Long).uniqueResult()
         }
 
         then:
         count >= 1L
     }
 
-    void 'withNewSession executes in a separate session'() {
-        when: 'a query runs inside a brand-new session opened by the datastore'
+    void "withNewSession executes in a separate session"() {
+        when: "a query runs inside a brand-new session opened by the datastore"
         Long count = datastore.withNewSession { sess ->
-            sess.createQuery('select count(b) from DatastoreBook b', Long).uniqueResult()
+            sess.createQuery("select count(b) from DatastoreBook b", Long).uniqueResult()
         }
 
-        then: 'the new session is functional and returns a non-null result'
+        then: "the new session is functional and returns a non-null result"
         count != null
         count >= 0L
     }
@@ -227,7 +227,7 @@ class HibernateDatastoreIntegrationSpec extends HibernateGormDatastoreSpec {
     // withFlushMode
     // -------------------------------------------------------------------------
 
-    void 'withFlushMode executes the callable'() {
+    void "withFlushMode executes the callable"() {
         given:
         boolean executed = false
 
@@ -243,7 +243,7 @@ class HibernateDatastoreIntegrationSpec extends HibernateGormDatastoreSpec {
         executed
     }
 
-    void 'withFlushMode restores the previous flush mode after execution'() {
+    void "withFlushMode restores the previous flush mode after execution"() {
         given:
         org.hibernate.FlushMode modeAfter
 
@@ -266,7 +266,7 @@ class HibernateDatastoreIntegrationSpec extends HibernateGormDatastoreSpec {
     // MappingContext — entity registration
     // -------------------------------------------------------------------------
 
-    void 'mappingContext contains the registered domain class'() {
+    void "mappingContext contains the registered domain class"() {
         when:
         def entity = datastore.mappingContext.getPersistentEntity(DatastoreBook.name)
 
@@ -275,7 +275,7 @@ class HibernateDatastoreIntegrationSpec extends HibernateGormDatastoreSpec {
         entity.javaClass == DatastoreBook
     }
 
-    void 'mappingContext reports the correct persistent properties for DatastoreBook'() {
+    void "mappingContext reports the correct persistent properties for DatastoreBook"() {
         when:
         def entity = datastore.mappingContext.getPersistentEntity(DatastoreBook.name)
         def propNames = entity.persistentProperties*.name as Set
@@ -289,7 +289,7 @@ class HibernateDatastoreIntegrationSpec extends HibernateGormDatastoreSpec {
     // Metadata (Hibernate boot Metadata)
     // -------------------------------------------------------------------------
 
-    void 'metadata contains entity mappings for DatastoreBook'() {
+    void "metadata contains entity mappings for DatastoreBook"() {
         when:
         def entityBindings = datastore.metadata.entityBindings
 
@@ -301,12 +301,12 @@ class HibernateDatastoreIntegrationSpec extends HibernateGormDatastoreSpec {
     // Event listeners (HibernateDatastore)
     // -------------------------------------------------------------------------
 
-    void 'eventTriggeringInterceptor is a HibernateEventListener'() {
+    void "eventTriggeringInterceptor is a HibernateEventListener"() {
         expect:
         datastore.eventTriggeringInterceptor instanceof HibernateEventListener
     }
 
-    void 'autoTimestampEventListener is registered'() {
+    void "autoTimestampEventListener is registered"() {
         expect:
         datastore.autoTimestampEventListener != null
     }
@@ -315,7 +315,7 @@ class HibernateDatastoreIntegrationSpec extends HibernateGormDatastoreSpec {
     // getDatastoreForConnection
     // -------------------------------------------------------------------------
 
-    void 'getDatastoreForConnection with DEFAULT returns the same datastore'() {
+    void "getDatastoreForConnection with DEFAULT returns the same datastore"() {
         when:
         def same = datastore.getDatastoreForConnection('DEFAULT')
 
@@ -326,7 +326,6 @@ class HibernateDatastoreIntegrationSpec extends HibernateGormDatastoreSpec {
 
 @Entity
 class DatastoreBook implements HibernateEntity<DatastoreBook> {
-
     String title
     String author
     static mapping = {

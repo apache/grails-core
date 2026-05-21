@@ -68,13 +68,17 @@ class DatabasePerTenantSpec extends HibernateSpec {
     }
 
      void 'Test database per tenant'() {
+        when:"When there is no tenant"
+        Book.count()
+
+        then:"You still get an exception"
+        thrown(TenantNotFoundException)
+
         when:"But look you can add a new Schema at runtime!"
 
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "moreBooks")
 
         AnotherBookService bookService = new AnotherBookService()
-        bookService.setTargetDatastore(hibernateDatastore)
-        bookService.setTransactionManager(transactionManager)
 
         then:
         bookService.countBooks() == 0

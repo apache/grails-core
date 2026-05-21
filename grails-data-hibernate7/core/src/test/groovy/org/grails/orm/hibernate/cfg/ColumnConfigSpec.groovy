@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -23,7 +23,7 @@ import spock.lang.Unroll
 
 class ColumnConfigSpec extends Specification {
 
-    void 'test default values'() {
+    void "test default values"() {
         when:
         def config = new ColumnConfig()
 
@@ -35,68 +35,68 @@ class ColumnConfigSpec extends Specification {
         config.scale == -1
     }
 
-    void 'test configureNew with closure'() {
+    void "test configureNew with closure"() {
         when:
         def config = ColumnConfig.configureNew {
-            name 'my_column'
-            sqlType 'varchar(255)'
-            index 'my_index'
+            name "my_column"
+            sqlType "varchar(255)"
+            index "my_index"
             unique true
             length 100
             precision 10
             scale 2
-            defaultValue 'default_val'
-            comment 'my comment'
-            read 'read_sql'
-            write 'write_sql'
+            defaultValue "default_val"
+            comment "my comment"
+            read "read_sql"
+            write "write_sql"
         }
 
         then:
-        config.name == 'my_column'
-        config.sqlType == 'varchar(255)'
-        config.index == 'my_index'
+        config.name == "my_column"
+        config.sqlType == "varchar(255)"
+        config.index == "my_index"
         config.unique == true
         config.length == 100
         config.precision == 10
         config.scale == 2
-        config.defaultValue == 'default_val'
-        config.comment == 'my comment'
-        config.read == 'read_sql'
-        config.write == 'write_sql'
+        config.defaultValue == "default_val"
+        config.comment == "my comment"
+        config.read == "read_sql"
+        config.write == "write_sql"
     }
 
-    void 'test configureNew with map'() {
+    void "test configureNew with map"() {
         when:
         def config = ColumnConfig.configureNew(
-            name: 'my_column',
-            sqlType: 'varchar(255)',
-            index: 'my_index',
+            name: "my_column",
+            sqlType: "varchar(255)",
+            index: "my_index",
             unique: true,
             length: 100,
             precision: 10,
             scale: 2,
-            defaultValue: 'default_val',
-            comment: 'my comment',
-            read: 'read_sql',
-            write: 'write_sql'
+            defaultValue: "default_val",
+            comment: "my comment",
+            read: "read_sql",
+            write: "write_sql"
         )
 
         then:
-        config.name == 'my_column'
-        config.sqlType == 'varchar(255)'
-        config.index == 'my_index'
+        config.name == "my_column"
+        config.sqlType == "varchar(255)"
+        config.index == "my_index"
         config.unique == true
         config.length == 100
         config.precision == 10
         config.scale == 2
-        config.defaultValue == 'default_val'
-        config.comment == 'my comment'
-        config.read == 'read_sql'
-        config.write == 'write_sql'
+        config.defaultValue == "default_val"
+        config.comment == "my comment"
+        config.read == "read_sql"
+        config.write == "write_sql"
     }
 
     @Unroll
-    void 'test getIndexAsMap with valid input: #input'() {
+    void "test getIndexAsMap with valid input: #input"() {
         given:
         def config = new ColumnConfig(index: input)
 
@@ -108,19 +108,19 @@ class ColumnConfigSpec extends Specification {
         null                                       | [:]
         [:]                                        | [:]
         [column: 'foo', type: 'string']            | [column: 'foo', type: 'string']
-        'my_idx'                                   | [column: 'my_idx']
-        'invalid_format'                           | [column: 'invalid_format']
-        '[]'                                       | [:]
-        '  '                                       | [:]
-        'column: item_idx, type: integer'           | [column: 'item_idx', type: 'integer']
-        '[column: item_idx, type: integer]'          | [column: 'item_idx', type: 'integer']
-        "column: 'item_idx', type: 'integer'"       | [column: 'item_idx', type: 'integer']
-        'column: \'item_idx\', type: \'integer\''   | [column: 'item_idx', type: 'integer']
-        '  column : item_idx ,  type : integer  '  | [column: 'item_idx', type: 'integer']
+        "my_idx"                                   | [column: "my_idx"]
+        "invalid_format"                           | [column: "invalid_format"]
+        "[]"                                       | [:]
+        "  "                                       | [:]
+        "column:item_idx, type:integer"            | [column: "item_idx", type: "integer"]
+        "[column:item_idx, type:integer]"          | [column: "item_idx", type: "integer"]
+        "column:'item_idx', type:'integer'"        | [column: "item_idx", type: "integer"]
+        'column:"item_idx", type:"integer"'        | [column: "item_idx", type: "integer"]
+        "  column : item_idx ,  type : integer  "  | [column: "item_idx", type: "integer"]
     }
 
     @Unroll
-    void 'test getIndexAsMap with invalid input: #input'() {
+    void "test getIndexAsMap with invalid input: #input"() {
         given:
         def config = new ColumnConfig(index: input)
 
@@ -132,39 +132,39 @@ class ColumnConfigSpec extends Specification {
 
         where:
         input << [
-            'column:foo, invalid',
-            'column:foo, invalid: bar, extra'
+            "column:foo, invalid",
+            "column:foo, invalid:bar, extra"
         ]
     }
 
-    void 'test getIndexAsMap with non-string non-map input returns empty map'() {
+    void "test getIndexAsMap with non-string non-map input returns empty map"() {
         given:
-        def config = new ColumnConfig(index: { 'closure' })
+        def config = new ColumnConfig(index: { "closure" })
 
         expect:
         config.getIndexAsMap() == [:]
     }
 
-    void 'test toString'() {
+    void "test toString"() {
         given:
-        def config = new ColumnConfig(name: 'foo', index: 'bar', unique: true, length: 10, precision: 5, scale: 2)
+        def config = new ColumnConfig(name: "foo", index: "bar", unique: true, length: 10, precision: 5, scale: 2)
 
         expect:
-        config.toString() == 'column[name: foo, index: bar, unique: true, length: 10, precision: 5, scale: 2]'
+        config.toString() == "column[name:foo, index:bar, unique:true, length:10, precision:5, scale:2]"
     }
 
-    void 'test isUnique with various values'() {
+    void "test isUnique with various values"() {
         expect:
         new ColumnConfig(unique: true).isUnique() == true
         new ColumnConfig(unique: false).isUnique() == false
-        new ColumnConfig(unique: 'true').isUnique() == true
-        new ColumnConfig(unique: 'any string').isUnique() == true
+        new ColumnConfig(unique: "true").isUnique() == true
+        new ColumnConfig(unique: "any string").isUnique() == true
         new ColumnConfig(unique: null).isUnique() == false
     }
 
-    void 'test clone'() {
+    void "test clone"() {
         given:
-        def config = new ColumnConfig(name: 'foo', index: 'bar', unique: true)
+        def config = new ColumnConfig(name: "foo", index: "bar", unique: true)
 
         when:
         def cloned = config.clone()
@@ -176,15 +176,15 @@ class ColumnConfigSpec extends Specification {
         cloned.unique == config.unique
     }
 
-    void 'test configureExisting with map'() {
+    void "test configureExisting with map"() {
         given:
-        def config = new ColumnConfig(name: 'old')
+        def config = new ColumnConfig(name: "old")
 
         when:
-        ColumnConfig.configureExisting(config, [name: 'new', length: 50])
+        ColumnConfig.configureExisting(config, [name: "new", length: 50])
 
         then:
-        config.name == 'new'
+        config.name == "new"
         config.length == 50
     }
 }

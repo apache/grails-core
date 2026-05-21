@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -34,7 +34,7 @@ import com.mongodb.WriteConcern
 
 class MongoEntityConfigSpec extends MongoDatastoreSpec {
 
-    def 'Test custom collection config'() {
+    def "Test custom collection config"() {
         given:
         manager.session.mappingContext.addPersistentEntity MyMongoEntity
 
@@ -52,12 +52,12 @@ class MongoEntityConfigSpec extends MongoDatastoreSpec {
 
         when:
         MongoCollection coll = entity.mapping.mappedForm
-        MongoAttribute attr = entity.getPropertyByName('name').getMapping().getMappedForm()
-        MongoAttribute location = entity.getPropertyByName('location').getMapping().getMappedForm()
+        MongoAttribute attr = entity.getPropertyByName("name").getMapping().getMappedForm()
+        MongoAttribute location = entity.getPropertyByName("location").getMapping().getMappedForm()
         then:
         coll != null
         coll.collection == 'mycollection'
-        coll.database == 'test2'
+        coll.database == "test2"
         coll.writeConcern == WriteConcern.JOURNALED
         attr != null
         attr.index == true
@@ -65,14 +65,14 @@ class MongoEntityConfigSpec extends MongoDatastoreSpec {
         attr.indexAttributes == [unique: true]
         location != null
         location.index == true
-        location.indexAttributes == [type: '2d']
+        location.indexAttributes == [type: "2d"]
         coll.indices.size() == 1
-        coll.indices[0].definition == [summary: 'text']
+        coll.indices[0].definition == [summary: "text"]
 
         when:
         AbstractMongoSession ms = manager.session
         then:
-        ms.getCollectionName(entity) == 'mycollection'
+        ms.getCollectionName(entity) == "mycollection"
     }
 }
 
@@ -86,13 +86,13 @@ class MyMongoEntity implements MongoEntity<MyMongoEntity> {
     String summary
 
     static mapping = {
-        collection 'mycollection'
-        database 'test2'
-        shard 'name'
+        collection "mycollection"
+        database "test2"
+        shard "name"
         writeConcern WriteConcern.JOURNALED
-        index summary: 'text'
+        index summary: "text"
 
-        name index: true, attr: 'myattribute', indexAttributes: [unique: true]
+        name index: true, attr: "myattribute", indexAttributes: [unique: true]
 
         location geoIndex: true
     }

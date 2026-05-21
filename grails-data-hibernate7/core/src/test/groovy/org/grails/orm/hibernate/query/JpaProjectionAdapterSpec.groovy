@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -34,7 +34,7 @@ class JpaProjectionAdapterSpec extends HibernateGormDatastoreSpec {
         manager.addAllDomainClasses([AdapterTestEntity])
     }
 
-    void 'test adapt single property projection'() {
+    void "test adapt single property projection"() {
         given:
         def cb = getCriteriaBuilder()
         def query = cb.createQuery(String.class)
@@ -43,7 +43,7 @@ class JpaProjectionAdapterSpec extends HibernateGormDatastoreSpec {
         def adapter = new JpaProjectionAdapter(cb, context)
         
         def projectionList = new Query.ProjectionList()
-        projectionList.property('name')
+        projectionList.property("name")
 
         when:
         adapter.adapt(projectionList, query)
@@ -53,8 +53,7 @@ class JpaProjectionAdapterSpec extends HibernateGormDatastoreSpec {
         query.getSelection().getJavaType() == String.class
     }
 
-    void 'test adapt multiple property projections (Tuple)'() {
-
+    void "test adapt multiple property projections (Tuple)"() {
         given:
         def cb = getCriteriaBuilder()
         def query = cb.createTupleQuery()
@@ -63,8 +62,8 @@ class JpaProjectionAdapterSpec extends HibernateGormDatastoreSpec {
         def adapter = new JpaProjectionAdapter(cb, context)
         
         def projectionList = new Query.ProjectionList()
-        projectionList.property('name')
-        projectionList.property('amount')
+        projectionList.property("name")
+        projectionList.property("amount")
 
         when:
         adapter.adapt(projectionList, query)
@@ -75,7 +74,7 @@ class JpaProjectionAdapterSpec extends HibernateGormDatastoreSpec {
         query.getSelection().getCompoundSelectionItems().size() == 2
     }
 
-    void 'test adapt aggregate projections'() {
+    void "test adapt aggregate projections"() {
         given:
         def cb = getCriteriaBuilder()
         def query = cb.createQuery(Number.class)
@@ -84,7 +83,7 @@ class JpaProjectionAdapterSpec extends HibernateGormDatastoreSpec {
         def adapter = new JpaProjectionAdapter(cb, context)
         
         def projectionList = new Query.ProjectionList()
-        projectionList.sum('amount')
+        projectionList.sum("amount")
 
         when:
         adapter.adapt(projectionList, query)
@@ -94,7 +93,7 @@ class JpaProjectionAdapterSpec extends HibernateGormDatastoreSpec {
         // JPA sum returns Long or Double usually
     }
 
-    void 'test adapt distinct projection'() {
+    void "test adapt distinct projection"() {
         given:
         def cb = getCriteriaBuilder()
         def query = cb.createQuery(String.class)
@@ -103,7 +102,7 @@ class JpaProjectionAdapterSpec extends HibernateGormDatastoreSpec {
         def adapter = new JpaProjectionAdapter(cb, context)
         
         def projectionList = new Query.ProjectionList()
-        projectionList.distinct('category')
+        projectionList.distinct("category")
 
         when:
         adapter.adapt(projectionList, query)
@@ -113,7 +112,7 @@ class JpaProjectionAdapterSpec extends HibernateGormDatastoreSpec {
         query.getSelection() != null
     }
 
-    void 'test adapt subquery projections selects first and aliases'() {
+    void "test adapt subquery projections selects first and aliases"() {
         given:
         def cb = getCriteriaBuilder()
         def mainQuery = cb.createQuery(AdapterTestEntity)
@@ -123,8 +122,8 @@ class JpaProjectionAdapterSpec extends HibernateGormDatastoreSpec {
         def adapter = new JpaProjectionAdapter(cb, context)
         
         def projectionList = new Query.ProjectionList()
-        projectionList.property('name')
-        projectionList.property('amount')
+        projectionList.property("name")
+        projectionList.property("amount")
 
         when:
         adapter.adapt(projectionList, subquery)
@@ -132,13 +131,12 @@ class JpaProjectionAdapterSpec extends HibernateGormDatastoreSpec {
         then:
         subquery.getSelection() != null
         !subquery.getSelection().isCompoundSelection()
-        subquery.getSelection().getAlias() == 'col_0'
+        subquery.getSelection().getAlias() == "col_0"
     }
 }
 
 @Entity
 class AdapterTestEntity {
-
     Long id
     String name
     Integer amount

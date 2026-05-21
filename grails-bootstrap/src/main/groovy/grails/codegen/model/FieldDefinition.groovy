@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -68,7 +68,7 @@ class FieldDefinition extends AbstractMemberDefinition {
     /**
      * Generates the field declaration line for the domain class.
      *
-     * @return the field declaration (e.g., 'private String title')
+     * @return the field declaration (e.g., "private String title")
      */
     @Override
     String toDeclaration() {
@@ -76,10 +76,10 @@ class FieldDefinition extends AbstractMemberDefinition {
     }
 
     /**
-     * Parses a field specification string like 'title:String' into a FieldDefinition.
+     * Parses a field specification string like "title:String" into a FieldDefinition.
      * Note: The access modifier must be set separately.
      *
-     * @param fieldSpec the field specification (e.g., 'title:String' or just 'title')
+     * @param fieldSpec the field specification (e.g., "title:String" or just "title")
      * @return a new FieldDefinition instance
      */
     static FieldDefinition parse(String fieldSpec) {
@@ -102,7 +102,6 @@ class FieldDefinition extends AbstractMemberDefinition {
      * Builder pattern for creating FieldDefinition instances.
      */
     static class Builder {
-
         private FieldDefinition definition = new FieldDefinition()
 
         Builder name(String name) {

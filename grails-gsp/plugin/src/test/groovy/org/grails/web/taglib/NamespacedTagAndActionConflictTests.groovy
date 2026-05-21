@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -34,17 +34,15 @@ class NamespacedTagAndActionConflictTests extends AbstractGrailsTagTests {
         
         gcl.parseClass '''
 class FeedsTagLib {
-
-    static namespace = 'feed'
+    static namespace = "feed"
     def rss = {
-        out << 'rss feed'
+        out << "rss feed"
     }
 }
 @grails.artefact.Artefact('Controller')
 class TestController {
-
     def feed = {
-        'foo'
+        "foo"
     }
     def test = {
         println "FEED IS $feed"
@@ -58,12 +56,12 @@ class TestController {
 
     @Test
     void testTagLibNamespaceAndActionConflict() {
-        def controllerClass = ga.getControllerClass('TestController').clazz
+        def controllerClass = ga.getControllerClass("TestController").clazz
 
         def controller = controllerClass.newInstance()
 
         controller.test()
 
-        assertEquals 'foo', response.contentAsString
+        assertEquals "foo", response.contentAsString
     }
 }

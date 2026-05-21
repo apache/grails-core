@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -44,7 +44,6 @@ class EmbeddedAssociationsSpec extends Specification implements JsonViewTest, Gr
             import grails.plugin.json.view.*
             
             model {
-
                 Person person
             }
             json g.render(person)
@@ -54,13 +53,13 @@ class EmbeddedAssociationsSpec extends Specification implements JsonViewTest, Gr
         then: 'The result is correct'
         objectMapper.readTree(result.jsonText) == objectMapper.readTree('''
             {
-                'otherAddresses': [
-                    {'postCode': '6789'},
-                    {'postCode': '54321'}
+                "otherAddresses": [
+                    {"postCode": "6789"},
+                    {"postCode": "54321"}
                 ],
-                'name': 'Robert',
-                'nickNames': ['Rob', 'Bob'],
-                'homeAddress': {'postCode': '12345'}
+                "name": "Robert",
+                "nickNames": ["Rob", "Bob"],
+                "homeAddress": {"postCode": "12345"}
             }
         ''')
     }
@@ -79,7 +78,6 @@ class EmbeddedAssociationsSpec extends Specification implements JsonViewTest, Gr
             import grails.plugin.json.view.*
             
             model {
-
                 Person person
             }
             json jsonapi.render(person)
@@ -88,23 +86,23 @@ class EmbeddedAssociationsSpec extends Specification implements JsonViewTest, Gr
         then: 'The result is correct'
         objectMapper.readTree(result.jsonText) == objectMapper.readTree('''
             {
-                'data': {
-                    'type': 'person',
-                    'id': '2',
-                    'attributes': {
-                        'otherAddresses': [
-                            {'postCode': '6789'},
-                            {'postCode': '54321'}
+                "data": {
+                    "type": "person",
+                    "id": "2",
+                    "attributes": {
+                        "otherAddresses": [
+                            {"postCode": "6789"},
+                            {"postCode": "54321"}
                         ],
-                        'name': 'Robert',
-                        'nickNames': ['Rob', 'Bob'],
-                        'homeAddress': {
-                            'postCode': '12345'
+                        "name": "Robert",
+                        "nickNames": ["Rob", "Bob"],
+                        "homeAddress": {
+                            "postCode": "12345"
                         }
                     }
                 },
-                'links': {
-                    'self': '/person/2'
+                "links": {
+                    "self": "/person/2"
                 }
             }
         ''')
@@ -124,7 +122,6 @@ class EmbeddedAssociationsSpec extends Specification implements JsonViewTest, Gr
             import grails.plugin.json.view.*
             
             model {
-
                 Person person
             }
             json g.render(person, [includes: ['name', 'homeAddress']])
@@ -133,8 +130,8 @@ class EmbeddedAssociationsSpec extends Specification implements JsonViewTest, Gr
         then: 'the result is correct'
         objectMapper.readTree(result.jsonText) == objectMapper.readTree('''
             {
-                'name': 'Robert',
-                'homeAddress': {'postCode': '12345'}
+                "name": "Robert",
+                "homeAddress": {"postCode": "12345"}
             }
         ''')
     }
@@ -154,7 +151,6 @@ class EmbeddedAssociationsSpec extends Specification implements JsonViewTest, Gr
             import grails.plugin.json.view.*
             
             model {
-
                 Person person
             }
             json jsonapi.render(person, [includes: ['name', 'homeAddress']])
@@ -163,25 +159,25 @@ class EmbeddedAssociationsSpec extends Specification implements JsonViewTest, Gr
         then: 'the result is correct'
         objectMapper.readTree(result.jsonText) == objectMapper.readTree('''
             {
-                'data': {
-                    'type': 'person',
-                    'id': '4',
-                    'attributes': {
-                        'name': 'Robert',
-                        'homeAddress': {'postCode': '12345'}
+                "data": {
+                    "type": "person",
+                    "id": "4",
+                    "attributes": {
+                        "name": "Robert",
+                        "homeAddress": {"postCode": "12345"}
                     }
                 },
-                'links': {
-                    'self': '/person/4'
+                "links": {
+                    "self": "/person/4"
                 }
             }
         ''')
     }
 }
 
+
 @Entity
 class Person {
-
     String name
     Address homeAddress
     List<Address> otherAddresses = []
@@ -192,6 +188,5 @@ class Person {
 }
 
 class Address {
-
     String postCode
 }

@@ -1,13 +1,13 @@
 /* Copyright (C) 2014 SpringSource
  *
- * Licensed under the Apache License, Version 2.0 (the 'License')
+ * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
  *      https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an 'AS IS' BASIS,
+ * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
@@ -46,7 +46,6 @@ import org.grails.datastore.mapping.query.Query.NotEquals
  *
  * <pre>
  *      class User {
-
  *          UserType type
  *          String name
  *      }
@@ -86,7 +85,6 @@ class EnumType extends AbstractMappingAwareCustomTypeMarshaller<Object, Document
      * @Example: Will return String class for list of String mapped by hasMany.
      */
     private static Class getCollectionType(PersistentProperty property) {
-
         if (property instanceof Basic) {
             return ((Basic) property).componentType
         }
@@ -174,10 +172,10 @@ class EnumType extends AbstractMappingAwareCustomTypeMarshaller<Object, Document
      *      <code>
      *          User.withCriteria {
      *              or {
-     *                  eq('name', 'admin')
-     *                  eq('status', UserStatus.ACTIVE)
+     *                  eq("name", "admin")
+     *                  eq("status", UserStatus.ACTIVE)
      *              }
-     *              eq('foo', 'bar')
+     *              eq("foo", "bar")
      *          }
      *      </code>
      * </pre>
@@ -185,7 +183,7 @@ class EnumType extends AbstractMappingAwareCustomTypeMarshaller<Object, Document
      * Then the query we receive will be like:
      * <code>
      *      <pre>
-     *          [$and: [[$or: [['name': 'admin'], [:]]], ['foo': 'bar']]
+     *          [$and: [[$or: [["name": "admin"], [:]]], ["foo": "bar"]]
      *      </pre>
      * </code>
      *
@@ -258,7 +256,7 @@ class EnumType extends AbstractMappingAwareCustomTypeMarshaller<Object, Document
             finalValue = []
             propertyType = getCollectionType(property)
 
-            // Then value will be a list like: ['ACTIVE', 'INACTIVE']
+            // Then value will be a list like: ["ACTIVE", "INACTIVE"]
             value.each { persistedValue ->
                 // If value is a number, then Enum type has id field.
                 if (persistedValue.toString().isNumber()) {

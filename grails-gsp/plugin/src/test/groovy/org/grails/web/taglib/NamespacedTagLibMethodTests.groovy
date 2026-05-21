@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -43,9 +43,9 @@ class NamespacedTagLibMethodTests extends Specification implements TagLibUnitTes
 
     def testInvokeTagLibNoNamespace() {
         when:
-        def templateString = '<%= link(controller: 'hello') { 'good' } %>'
-        GroovyPagesTemplateEngine engine = grailsApplication.getMainContext().getBean('groovyPagesTemplateEngine')
-        GroovyPageTemplate template = engine.createTemplate(templateString,'test_' + System.currentTimeMillis())
+        def templateString = '<%= link(controller:"hello") { "good" } %>'
+        GroovyPagesTemplateEngine engine = grailsApplication.getMainContext().getBean("groovyPagesTemplateEngine")
+        GroovyPageTemplate template = engine.createTemplate(templateString,"test_" + System.currentTimeMillis())
         template.allowSettingContentType = true
         def w = template.make()
         MockHttpServletResponse mockResponse = new MockHttpServletResponse()
@@ -56,8 +56,9 @@ class NamespacedTagLibMethodTests extends Specification implements TagLibUnitTes
         writer.flush()
         String output = mockResponse.contentAsString
 
+
         then:
-        output == "<a href='/hello'>good</a>"
+        output == '<a href="/hello">good</a>'
 
     }
 
@@ -70,21 +71,21 @@ class NamespacedTagLibMethodTests extends Specification implements TagLibUnitTes
         output == 'errors'
     }
 
-    def testInvokeNamespacedTagLibFromAnother() {
+    def testInvokeTagNoArguments() {
         when:
         def template = '<two:hello/>'
-        def taglib = grailsApplication.getArtefact(TagLibArtefactHandler.TYPE,'SecondTagLib')
+        def taglib = grailsApplication.getArtefact(TagLibArtefactHandler.TYPE,"SecondTagLib")
 
         String output = applyTemplate(template)
 
         then:
-        output == "<a href='/foo/bar'>hello</a>"
-        output == "<a href='/foo/bar'>hello</a>"
+        output == '<a href="/foo/bar">hello</a>'
+        output == '<a href="/foo/bar">hello</a>'
     }
 
     def testInvokeTagWithNamespace() {
         when:
-        def template = '<mye:test1>foo: <mye:test2 foo='bar1' /> one: ${mye.test2(foo: 'bar2')} two: ${mye.test2()}</mye:test1>'
+        def template = '<mye:test1>foo: <mye:test2 foo="bar1" /> one: ${mye.test2(foo:"bar2")} two: ${mye.test2()}</mye:test1>'
         String output = applyTemplate(template)
         then:
         output == 'foo: hello! bar1 one: hello! bar2 two: hello! null'
@@ -101,7 +102,7 @@ class NamespacedTagLibMethodTests extends Specification implements TagLibUnitTes
 
     void testInvokeTagWithNonExistantNamespace() {
         when:
-        def template = '''<foaf:Person a='b' c='d'>foo</foaf:Person>'''
+        def template = '''<foaf:Person a="b" c="d">foo</foaf:Person>'''
         String output = applyTemplate(template)
 
         then:
@@ -110,7 +111,7 @@ class NamespacedTagLibMethodTests extends Specification implements TagLibUnitTes
 
         when:
         // test with nested 'unknown' tags
-        template = '''<foaf:Person a='b' c='d'><foaf:Nested e='f' g='h'>Something here.</foaf:Nested></foaf:Person>'''
+        template = '''<foaf:Person a="b" c="d"><foaf:Nested e="f" g="h">Something here.</foaf:Nested></foaf:Person>'''
         output = applyTemplate(template)
 
         then:
@@ -124,25 +125,25 @@ class NamespacedTagLibMethodTests extends Specification implements TagLibUnitTes
         String output = applyTemplate(template)
 
         then:
-        output == '/test/foo'
+        output == "/test/foo"
 
         when:
         template = '''<alt:showmeToo />'''
         output = applyTemplate(template)
 
         then:
-        output == '/test/foo'
+        output == "/test/foo"
 
         when:
         template = '''<alt:showmeThree />'''
         output = applyTemplate(template)
 
         then:
-        output == 'hello! bar'
+        output == "hello! bar"
     }
 
-    class NSTestBean {
 
+    class NSTestBean {
         def errors = [hasErrors: { true }, hasFieldErrors: { String name -> true }] // mock errors object
         def hasErrors() { true }
     }
@@ -151,10 +152,9 @@ class NamespacedTagLibMethodTests extends Specification implements TagLibUnitTes
 
 @Artefact('TagLib')
 class MyeTagLib {
-
-    static namespace = 'mye'
+    static namespace = "mye"
     Closure test1 = { attrs, body ->
-        out << body(foo: 'bar', one: 2)
+        out << body(foo:"bar", one:2)
     }
 
     Closure test2 = { attrs, body ->
@@ -164,7 +164,6 @@ class MyeTagLib {
 
 @Artefact('TagLib')
 class HasErrorTagLib {
-
     Closure tag = { attr, body ->
         out << hasErrors('bean': attr.bean, field: 'bar', 'errors')
     }
@@ -176,35 +175,34 @@ class HasErrorTagLib {
 
 @Artefact('TagLib')
 class SecondOneTagLib {
-
-    static namespace = 'two'
+    static namespace = "two"
 
     Closure test1 = { attrs, body ->
 
-        out << mye.test2(foo: 'bar3')
+        out << mye.test2(foo:"bar3")
     }
 
     Closure hello = { attrs ->
-        out << g.link(controller: 'foo', action: 'bar') { 'hello' }
+        out << g.link(controller:'foo', action:'bar') { "hello" }
     }
 
 }
 
 @Artefact('TagLib')
 class AlternateTagLib {
-
-    static namespace = 'alt'
+    static namespace = "alt"
 
     Closure showme = { attrs, body ->
-        out << createLink(controller: 'test',action: 'foo')
+        out << createLink(controller:'test',action:'foo')
     }
 
     Closure showmeToo = { attrs, body ->
-        out << g.createLink(controller: 'test',action: 'foo')
+        out << g.createLink(controller:'test',action:'foo')
     }
 
     Closure showmeThree = { attrs, body ->
-        out << mye.test2(foo: 'bar')
+        out << mye.test2(foo:"bar")
     }
 }
+
 

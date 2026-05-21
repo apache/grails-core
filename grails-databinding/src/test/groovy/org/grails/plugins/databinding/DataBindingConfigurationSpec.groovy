@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -30,8 +30,9 @@ import java.text.SimpleDateFormat
 import java.time.Month
 import java.time.ZoneId
 
-@SuppressWarnings('GrMethodMayBeStatic')
+@SuppressWarnings("GrMethodMayBeStatic")
 class DataBindingConfigurationSpec extends Specification implements GrailsUnitTest, WebDataBinding {
+
 
     void setup() {
         defineBeans {
@@ -41,32 +42,32 @@ class DataBindingConfigurationSpec extends Specification implements GrailsUnitTe
         }
     }
 
-    void 'test that grailsWebDataBinder exists'() {
+    void "test that grailsWebDataBinder exists"() {
 
         expect:
-        grailsApplication.mainContext.containsBean('grailsWebDataBinder')
+        grailsApplication.mainContext.containsBean("grailsWebDataBinder")
     }
 
-    void 'test custom ValueConverter are ordered if defined with @Order'() {
+    void "test custom ValueConverter are ordered if defined with @Order"() {
 
         when:
-        Map source = ['name': 'John Doe', 'prop': 'test']
+        Map source = ["name": "John Doe", "prop": "test"]
         Person person = new Person()
         person.setProperties(source)
 
         then:
-        person.prop.value == 'test2'
+        person.prop.value == "test2"
 
     }
 
-    void 'test customize data binding for the types which have standard ValueConverters using @Order'() {
+    void "test customize data binding for the types which have standard ValueConverters using @Order"() {
         when:
-        Map source = ['name': 'John Doe', 'prop': 'test', 'dob': '12031990']
+        Map source = ["name": "John Doe", "prop": "test", "dob": "12031990"]
         Person person = new Person()
         person.setProperties(source)
 
         then:
-        person.prop.value == 'test2'
+        person.prop.value == "test2"
         person.dob
         Month.MARCH == getMonth(person.dob)
     }
@@ -86,7 +87,7 @@ class DataBindingConfigurationSpec extends Specification implements GrailsUnitTe
         @Override
         Object convert(Object value) {
             if (value) {
-                DateFormat formatter = new SimpleDateFormat('ddMMyyyy')
+                DateFormat formatter = new SimpleDateFormat("ddMMyyyy")
                 return formatter.parse((String) value)
             }
             return value
@@ -108,7 +109,7 @@ class DataBindingConfigurationSpec extends Specification implements GrailsUnitTe
 
         @Override
         Object convert(Object value) {
-            new MyCustomProp((String) value + '1')
+            new MyCustomProp((String) value + "1")
         }
 
         @Override
@@ -127,7 +128,7 @@ class DataBindingConfigurationSpec extends Specification implements GrailsUnitTe
 
         @Override
         Object convert(Object value) {
-            new MyCustomProp((String) value + '2')
+            new MyCustomProp((String) value + "2")
         }
 
         @Override
@@ -137,7 +138,6 @@ class DataBindingConfigurationSpec extends Specification implements GrailsUnitTe
     }
 
     static class MyCustomProp {
-
         String value
 
         MyCustomProp(String value) {
@@ -146,7 +146,6 @@ class DataBindingConfigurationSpec extends Specification implements GrailsUnitTe
     }
 
     static class Person implements WebDataBinding {
-
         String name
         Date dob
         MyCustomProp prop

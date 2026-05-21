@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -28,39 +28,37 @@ import spock.lang.Issue
  */
 @Issue('https://github.com/grails/grails-data-mapping/issues/937')
 class TablePerConcreteClassAndDateCreatedSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
-
     void setupSpec() {
         manager.addAllDomainClasses([Vehicle, Spaceship])
     }
 
-    void 'should set the dateCreated automatically'() {
+    void "should set the dateCreated automatically"() {
         given:
-        Spaceship ship = new Spaceship(name: 'Heart of Gold')
+        Spaceship ship = new Spaceship(name: "Heart of Gold")
         ship.save(flush: true)
 
         expect:
         ship.dateCreated != null
     }
 
-    void 'should set the dateCreated automatically on update'() {
+    void "should set the dateCreated automatically on update"() {
         given:
-        Spaceship ship = new Spaceship(name: 'Heart of Gold')
+        Spaceship ship = new Spaceship(name: "Heart of Gold")
         ship.save()
 
         when:
-        ship.name = 'Heart of Gold II'
+        ship.name = "Heart of Gold II"
         ship.save(flush: true)
 
         then:
         // DataIntegrityViolationException is thrown:
-        // NULL not allowed for column 'DATE_CREATED'
+        // NULL not allowed for column "DATE_CREATED"
         ship.dateCreated != null
     }
 }
 
 @Entity
 abstract class Vehicle {
-
     String name
     Date dateCreated
 
@@ -73,7 +71,6 @@ abstract class Vehicle {
 
 @Entity
 class Spaceship extends Vehicle {
-
     static mapping = {
         dynamicUpdate true
     }

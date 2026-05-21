@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -49,7 +49,7 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
 
     // --- unit-style tests (standalone factory) ---
 
-    void 'factory can be instantiated standalone'() {
+    void "factory can be instantiated standalone"() {
         when:
         def factory = new HibernateMappingFactory()
 
@@ -59,12 +59,12 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
         factory.getEntityMappedFormType() == org.grails.orm.hibernate.cfg.Mapping
     }
 
-    void 'allowArbitraryCustomTypes returns true'() {
+    void "allowArbitraryCustomTypes returns true"() {
         expect:
         new HibernateMappingFactory().allowArbitraryCustomTypes()
     }
 
-    void 'custom type marshaller is registered and detectable'() {
+    void "custom type marshaller is registered and detectable"() {
         given:
         HibernateConnectionSourceSettings settings = new HibernateConnectionSourceSettings()
         settings.custom.types = [new FactoryTypeMarshaller(FactoryCustomType)]
@@ -74,7 +74,7 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
         ctx.mappingFactory.isCustomType(FactoryCustomType)
     }
 
-    void 'custom type marshaller is NOT registered for unrelated type'() {
+    void "custom type marshaller is NOT registered for unrelated type"() {
         given:
         HibernateConnectionSourceSettings settings = new HibernateConnectionSourceSettings()
         settings.custom.types = [new FactoryTypeMarshaller(FactoryCustomType)]
@@ -86,12 +86,12 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
 
     // --- integration-style tests using live datastore ---
 
-    void 'mappingFactory is a HibernateMappingFactory'() {
+    void "mappingFactory is a HibernateMappingFactory"() {
         expect:
         mappingContext.mappingFactory instanceof HibernateMappingFactory
     }
 
-    void 'createSimple produces HibernateSimpleProperty for a String field'() {
+    void "createSimple produces HibernateSimpleProperty for a String field"() {
         when:
         PersistentEntity entity = mappingContext.getPersistentEntity(MappingFactoryBook.name)
         def titleProp = entity.persistentProperties.find { it.name == 'title' }
@@ -100,7 +100,7 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
         titleProp instanceof HibernateSimpleProperty
     }
 
-    void 'createManyToOne produces HibernateManyToOneProperty for a many-to-one association'() {
+    void "createManyToOne produces HibernateManyToOneProperty for a many-to-one association"() {
         when:
         PersistentEntity entity = mappingContext.getPersistentEntity(MappingFactoryBook.name)
         def authorProp = entity.persistentProperties.find { it.name == 'author' }
@@ -109,7 +109,7 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
         authorProp instanceof HibernateManyToOneProperty
     }
 
-    void 'createOneToMany produces HibernateOneToManyProperty for a one-to-many association'() {
+    void "createOneToMany produces HibernateOneToManyProperty for a one-to-many association"() {
         when:
         PersistentEntity entity = mappingContext.getPersistentEntity(MappingFactoryAuthor.name)
         def booksProp = entity.persistentProperties.find { it.name == 'books' }
@@ -118,7 +118,7 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
         booksProp instanceof HibernateOneToManyProperty
     }
 
-    void 'createManyToMany produces HibernateManyToManyProperty'() {
+    void "createManyToMany produces HibernateManyToManyProperty"() {
         when:
         PersistentEntity entity = mappingContext.getPersistentEntity(MappingFactoryBook.name)
         def tagsProp = entity.persistentProperties.find { it.name == 'tags' }
@@ -127,7 +127,7 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
         tagsProp instanceof HibernateManyToManyProperty
     }
 
-    void 'createIdentity produces HibernateIdentityProperty'() {
+    void "createIdentity produces HibernateIdentityProperty"() {
         when:
         PersistentEntity entity = mappingContext.getPersistentEntity(MappingFactoryBook.name)
 
@@ -135,7 +135,7 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
         entity.identity instanceof HibernateIdentityProperty
     }
 
-    void 'createIdentityMapping resolves NATIVE generator by default'() {
+    void "createIdentityMapping resolves NATIVE generator by default"() {
         when:
         PersistentEntity entity = mappingContext.getPersistentEntity(MappingFactoryBook.name)
 
@@ -143,8 +143,7 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
         entity.mapping.identifier.generator == ValueGenerator.IDENTITY
     }
 
-    void 'createIdentityMapping resolves CUSTOM generator for a custom class name'() {
-
+    void "createIdentityMapping resolves CUSTOM generator for a custom class name"() {
         when:
         def ctx = new HibernateMappingContext()
         PersistentEntity entity = ctx.addPersistentEntity(MappingFactoryCustomIdEntity)
@@ -153,7 +152,7 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
         entity.mapping.identifier.generator == ValueGenerator.CUSTOM
     }
 
-    void 'createIdentityMapping returns HibernateIdentityMapping instance'() {
+    void "createIdentityMapping returns HibernateIdentityMapping instance"() {
         when:
         PersistentEntity entity = mappingContext.getPersistentEntity(MappingFactoryBook.name)
         def idMapping = entity.mapping.identifier
@@ -164,7 +163,7 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
         idMapping.identifierName.length > 0
     }
 
-    void 'createEmbedded produces HibernateEmbeddedProperty'() {
+    void "createEmbedded produces HibernateEmbeddedProperty"() {
         when:
         PersistentEntity entity = mappingContext.getPersistentEntity(MappingFactoryArticle.name)
         def addrProp = entity.persistentProperties.find { it.name == 'metadata' }
@@ -173,7 +172,7 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
         addrProp instanceof HibernateEmbeddedProperty
     }
 
-    void 'createSimple creates HibernateSimpleEnumProperty for a plain enum field'() {
+    void "createSimple creates HibernateSimpleEnumProperty for a plain enum field"() {
         when:
         PersistentEntity entity = mappingContext.getPersistentEntity(MappingFactoryEnumBook.name)
         def statusProp = entity.persistentProperties.find { it.name == 'status' }
@@ -182,7 +181,7 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
         statusProp instanceof HibernateSimpleEnumProperty
     }
 
-    void 'createCustom creates HibernateCustomEnumProperty for an enum field with a registered marshaller'() {
+    void "createCustom creates HibernateCustomEnumProperty for an enum field with a registered marshaller"() {
         given:
         HibernateConnectionSourceSettings settings = new HibernateConnectionSourceSettings()
         settings.custom.types = [new MappingFactoryEnumMarshaller()]
@@ -197,7 +196,7 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
     }
 
     @Rollback
-    void 'factory-created entities can be persisted and retrieved'() {
+    void "factory-created entities can be persisted and retrieved"() {
         when:
         def author = new MappingFactoryAuthor(name: 'Test Author').save(flush: true)
         def book = new MappingFactoryBook(title: 'Test Book', author: author).save(flush: true)
@@ -207,7 +206,7 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
         MappingFactoryBook.findByTitle('Test Book')?.author?.name == 'Test Author'
     }
 
-    void 'createOneToOne produces HibernateOneToOneProperty for a one-to-one association'() {
+    void "createOneToOne produces HibernateOneToOneProperty for a one-to-one association"() {
         when:
         PersistentEntity entity = mappingContext.getPersistentEntity(MappingFactoryPerson.name)
         def passportProp = entity.persistentProperties.find { it.name == 'passport' }
@@ -216,7 +215,7 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
         passportProp instanceof HibernateOneToOneProperty
     }
 
-    void 'createBasicCollection produces HibernateBasicProperty for a basic element collection'() {
+    void "createBasicCollection produces HibernateBasicProperty for a basic element collection"() {
         when:
         PersistentEntity entity = mappingContext.getPersistentEntity(MappingFactoryLibrary.name)
         def sectionsProp = entity.persistentProperties.find { it.name == 'sections' }
@@ -225,24 +224,23 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
         sectionsProp instanceof HibernateBasicProperty
     }
 
-    void 'createEmbeddedCollection produces HibernateEmbeddedCollectionProperty for embedded value-object collection'() {
-        given: 'factory method is called directly with mocked params'
+    void "createEmbeddedCollection produces HibernateEmbeddedCollectionProperty for embedded value-object collection"() {
+        given: "factory method is called directly with mocked params"
         def factory = mappingContext.mappingFactory as HibernateMappingFactory
         def entity = mappingContext.getPersistentEntity(MappingFactoryBook.name)
         def pd = new PropertyDescriptor('title', MappingFactoryBook)
 
-        when: 'createEmbeddedCollection is called'
+        when: "createEmbeddedCollection is called"
         def prop = factory.createEmbeddedCollection(entity, mappingContext, pd)
 
-        then: 'the result is HibernateEmbeddedCollectionProperty'
+        then: "the result is HibernateEmbeddedCollectionProperty"
         prop instanceof HibernateEmbeddedCollectionProperty
 
-        and: 'getTypeName() returns null so Hibernate does not try to resolve the element class as a BasicType'
+        and: "getTypeName() returns null so Hibernate does not try to resolve the element class as a BasicType"
         (prop as HibernateEmbeddedCollectionProperty).getTypeName() == null
     }
 
-    void 'createSimpleIdentityProperty produces HibernateSimpleIdentityProperty'() {
-
+    void "createSimpleIdentityProperty produces HibernateSimpleIdentityProperty"() {
         given:
         def factory = mappingContext.mappingFactory as HibernateMappingFactory
         PersistentEntity entity = mappingContext.getPersistentEntity(MappingFactoryBook.name)
@@ -255,7 +253,7 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
         result instanceof HibernateSimpleIdentityProperty
     }
 
-    void 'createCompositeIdentityProperty produces HibernateCompositeIdentityProperty'() {
+    void "createCompositeIdentityProperty produces HibernateCompositeIdentityProperty"() {
         given:
         def factory = mappingContext.mappingFactory as HibernateMappingFactory
         PersistentEntity entity = mappingContext.getPersistentEntity(MappingFactoryBook.name)
@@ -268,7 +266,7 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
         result instanceof HibernateCompositeIdentityProperty
     }
 
-    void 'createConfigurationBuilder returns HibernateMappingBuilder via mapped form'() {
+    void "createConfigurationBuilder returns HibernateMappingBuilder via mapped form"() {
         when:
         PersistentEntity entity = mappingContext.getPersistentEntity(MappingFactoryBook.name)
         def mappedForm = entity.mappedForm
@@ -277,7 +275,7 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
         mappedForm instanceof org.grails.orm.hibernate.cfg.Mapping
     }
 
-    void 'createTenantId produces HibernateTenantIdProperty when called directly'() {
+    void "createTenantId produces HibernateTenantIdProperty when called directly"() {
         given:
         def factory = mappingContext.mappingFactory as HibernateMappingFactory
         PersistentEntity entity = mappingContext.getPersistentEntity(MappingFactoryBook.name)
@@ -290,7 +288,7 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
         result instanceof HibernateTenantIdProperty
     }
 
-    void 'createCustom falls back to Enum base marshaller when no specific marshaller found for enum type'() {
+    void "createCustom falls back to Enum base marshaller when no specific marshaller found for enum type"() {
         given:
         HibernateConnectionSourceSettings settings = new HibernateConnectionSourceSettings()
         settings.custom.types = [new MappingFactoryBaseEnumMarshaller()]
@@ -304,7 +302,7 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
         statusProp instanceof HibernateCustomEnumProperty
     }
 
-    void 'createBasicCollection sets custom marshaller for enum hasMany'() {
+    void "createBasicCollection sets custom marshaller for enum hasMany"() {
         given:
         HibernateConnectionSourceSettings settings = new HibernateConnectionSourceSettings()
         settings.custom.types = [new MappingFactoryEnumMarshaller()]
@@ -319,7 +317,7 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
         (prop as HibernateBasicProperty).customTypeMarshaller != null
     }
 
-    void 'createBasicCollection uses Enum base marshaller when no specific marshaller for enum collection type'() {
+    void "createBasicCollection uses Enum base marshaller when no specific marshaller for enum collection type"() {
         given:
         HibernateConnectionSourceSettings settings = new HibernateConnectionSourceSettings()
         settings.custom.types = [new MappingFactoryBaseEnumMarshaller()]
@@ -334,7 +332,7 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
         (prop as HibernateBasicProperty).customTypeMarshaller != null
     }
 
-    void 'createIdentityMapping throws DatastoreConfigurationException for unresolvable generator name'() {
+    void "createIdentityMapping throws DatastoreConfigurationException for unresolvable generator name"() {
         given:
         def ctx = new HibernateMappingContext()
 
@@ -345,7 +343,7 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
         thrown(DatastoreConfigurationException)
     }
 
-    void 'createIdentityMapping returns AUTO for composite identity entity'() {
+    void "createIdentityMapping returns AUTO for composite identity entity"() {
         given:
         def ctx = new HibernateMappingContext()
         PersistentEntity entity = ctx.addPersistentEntity(MappingFactoryCompositeIdEntity)
@@ -359,14 +357,12 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
 
 @Entity
 class MappingFactoryAuthor implements HibernateEntity<MappingFactoryAuthor> {
-
     String name
     static hasMany = [books: MappingFactoryBook]
 }
 
 @Entity
 class MappingFactoryBook implements HibernateEntity<MappingFactoryBook> {
-
     String title
     MappingFactoryAuthor author
     static belongsTo = [author: MappingFactoryAuthor]
@@ -375,7 +371,6 @@ class MappingFactoryBook implements HibernateEntity<MappingFactoryBook> {
 
 @Entity
 class MappingFactoryTag implements HibernateEntity<MappingFactoryTag> {
-
     String name
     static hasMany = [books: MappingFactoryBook]
     static belongsTo = MappingFactoryBook
@@ -383,20 +378,17 @@ class MappingFactoryTag implements HibernateEntity<MappingFactoryTag> {
 
 @Entity
 class MappingFactoryArticle implements HibernateEntity<MappingFactoryArticle> {
-
     String title
     MappingFactoryMetadata metadata
     static embedded = ['metadata']
 }
 
 class MappingFactoryMetadata {
-
     String description
 }
 
 @Entity
 class MappingFactoryCustomIdEntity implements HibernateEntity<MappingFactoryCustomIdEntity> {
-
     String name
     static mapping = {
         id generator: 'grails.gorm.specs.FactoryCustomType', type: 'uuid-binary'
@@ -408,7 +400,6 @@ class MappingFactoryCustomIdEntity implements HibernateEntity<MappingFactoryCust
 class FactoryCustomType {}
 
 class FactoryTypeMarshaller extends AbstractMappingAwareCustomTypeMarshaller {
-
     FactoryTypeMarshaller(Class targetType) { super(targetType) }
 
     @Override
@@ -422,20 +413,17 @@ enum MappingFactoryBookStatus { AVAILABLE, CHECKED_OUT }
 
 @Entity
 class MappingFactoryEnumBook implements HibernateEntity<MappingFactoryEnumBook> {
-
     String title
     MappingFactoryBookStatus status
 }
 
 @Entity
 class MappingFactoryCustomEnumBook implements HibernateEntity<MappingFactoryCustomEnumBook> {
-
     String title
     MappingFactoryBookStatus status
 }
 
 class MappingFactoryEnumMarshaller extends AbstractMappingAwareCustomTypeMarshaller {
-
     MappingFactoryEnumMarshaller() { super(MappingFactoryBookStatus) }
 
     @Override
@@ -449,7 +437,6 @@ class MappingFactoryEnumMarshaller extends AbstractMappingAwareCustomTypeMarshal
 
 @Entity
 class MappingFactoryPerson implements HibernateEntity<MappingFactoryPerson> {
-
     String name
     MappingFactoryPassport passport
     static hasOne = [passport: MappingFactoryPassport]
@@ -457,21 +444,18 @@ class MappingFactoryPerson implements HibernateEntity<MappingFactoryPerson> {
 
 @Entity
 class MappingFactoryPassport implements HibernateEntity<MappingFactoryPassport> {
-
     String number
     static belongsTo = [person: MappingFactoryPerson]
 }
 
 @Entity
 class MappingFactoryLibrary implements HibernateEntity<MappingFactoryLibrary> {
-
     String name
     static hasMany = [sections: String]
 }
 
 @Entity
 class MappingFactoryProduct implements HibernateEntity<MappingFactoryProduct> {
-
     String name
     static hasMany = [dimensions: MappingFactoryDimension]
     static mapping = {
@@ -480,7 +464,6 @@ class MappingFactoryProduct implements HibernateEntity<MappingFactoryProduct> {
 }
 
 class MappingFactoryDimension {
-
     int width
     int height
 }
@@ -489,7 +472,6 @@ enum MappingFactoryOtherStatus { X, Y }
 
 @Entity
 class MappingFactoryEnumCollection implements HibernateEntity<MappingFactoryEnumCollection> {
-
     String name
     Set<MappingFactoryBookStatus> statuses
     static hasMany = [statuses: MappingFactoryBookStatus]
@@ -497,7 +479,6 @@ class MappingFactoryEnumCollection implements HibernateEntity<MappingFactoryEnum
 
 @Entity
 class MappingFactoryOtherEnumCollection implements HibernateEntity<MappingFactoryOtherEnumCollection> {
-
     String name
     Set<MappingFactoryOtherStatus> statuses
     static hasMany = [statuses: MappingFactoryOtherStatus]
@@ -505,14 +486,12 @@ class MappingFactoryOtherEnumCollection implements HibernateEntity<MappingFactor
 
 @Entity
 class MappingFactoryCustomEnumBook2 implements HibernateEntity<MappingFactoryCustomEnumBook2> {
-
     String title
     MappingFactoryBookStatus status
 }
 
 @Entity
 class MappingFactoryCompositeIdEntity implements HibernateEntity<MappingFactoryCompositeIdEntity> {
-
     String firstName
     String lastName
     static mapping = {
@@ -522,7 +501,6 @@ class MappingFactoryCompositeIdEntity implements HibernateEntity<MappingFactoryC
 
 @Entity
 class MappingFactoryBadGeneratorEntity implements HibernateEntity<MappingFactoryBadGeneratorEntity> {
-
     String name
     static mapping = {
         id generator: 'notAValidGeneratorOrClassName'
@@ -530,7 +508,6 @@ class MappingFactoryBadGeneratorEntity implements HibernateEntity<MappingFactory
 }
 
 class MappingFactoryBaseEnumMarshaller extends AbstractMappingAwareCustomTypeMarshaller {
-
     MappingFactoryBaseEnumMarshaller() { super(Enum) }
 
     @Override

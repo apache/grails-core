@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -33,16 +33,15 @@ import spock.lang.Requires
     System.getenv().get('CI') as Boolean
 })
 class ReadManyObjectsSpec extends MongoDatastoreSpec {
-
     void setupSpec() {
         manager.addAllDomainClasses([ProfileDoc])
     }
 
     void "Test that reading thousands of objects doesn't run out of memory"() {
-        given: 'A lot of test data'
+        given: "A lot of test data"
         createData()
 
-        when: 'The data is read'
+        when: "The data is read"
         long took = 30000
         final now = System.currentTimeMillis()
         for (p in ProfileDoc.list()) {
@@ -57,10 +56,10 @@ class ReadManyObjectsSpec extends MongoDatastoreSpec {
     }
 
     void "Test that reading thousands of objects doesn't run out of memory native query"() {
-        given: 'A lot of test data'
+        given: "A lot of test data"
         createData()
 
-        when: 'The data is read'
+        when: "The data is read"
         final now = System.currentTimeMillis()
         final cursor = ProfileDoc.collection.find()
         for (p in cursor) {
@@ -70,7 +69,7 @@ class ReadManyObjectsSpec extends MongoDatastoreSpec {
         long took = then - now
         println "Took ${then - now}ms"
 
-        then: 'If it gets to this point we '
+        then: "If it gets to this point we "
         took < 30000
 
     }
@@ -85,7 +84,6 @@ class ReadManyObjectsSpec extends MongoDatastoreSpec {
 
 @Entity
 class ProfileDoc {
-
     ObjectId id
     String n1
     Integer n2

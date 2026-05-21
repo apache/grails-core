@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -453,7 +453,6 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      */
     @Generated
     static PersistentEntity getGormPersistentEntity() {
-
         currentGormStaticApi().getGormPersistentEntity()
     }
 
@@ -606,7 +605,6 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      */
     @Generated
     static D create() {
-
         currentGormStaticApi().create()
     }
 
@@ -743,7 +741,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     }
 
     /**
-     * Lists objects in the datastore. eg. Book.list(max: 10)
+     * Lists objects in the datastore. eg. Book.list(max:10)
      *
      * @param params Any parameters such as offset, max etc.
      * @return A list of results
@@ -919,7 +917,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     }
 
     /**
-     * Finds all results matching all of the given conditions. Eg. Book.findAllWhere(author: 'Stephen King', title: 'The Stand')
+     * Finds all results matching all of the given conditions. Eg. Book.findAllWhere(author:"Stephen King", title:"The Stand")
      *
      * @param queryMap The map of conditions
      * @return A list of results
@@ -930,7 +928,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     }
 
     /**
-     * Finds all results matching all of the given conditions. Eg. Book.findAllWhere(author: 'Stephen King', title: 'The Stand')
+     * Finds all results matching all of the given conditions. Eg. Book.findAllWhere(author:"Stephen King", title:"The Stand")
      *
      * @param queryMap The map of conditions
      * @param args The Query arguments
@@ -967,7 +965,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     }
 
     /**
-     * Finds a single result matching all of the given conditions. Eg. Book.findWhere(author: 'Stephen King', title: 'The Stand')
+     * Finds a single result matching all of the given conditions. Eg. Book.findWhere(author:"Stephen King", title:"The Stand")
      *
      * @param queryMap The map of conditions
      * @return A single result
@@ -978,7 +976,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     }
 
     /**
-     * Finds a single result matching all of the given conditions. Eg. Book.findWhere(author: 'Stephen King', title: 'The Stand')
+     * Finds a single result matching all of the given conditions. Eg. Book.findWhere(author:"Stephen King", title:"The Stand")
      *
      * @param queryMap The map of conditions
      * @param args The Query arguments
@@ -991,7 +989,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     }
 
     /**
-     * Finds a single result matching all of the given conditions. Eg. Book.findWhere(author: 'Stephen King', title: 'The Stand').  If
+     * Finds a single result matching all of the given conditions. Eg. Book.findWhere(author:"Stephen King", title:"The Stand").  If
      * a matching persistent entity is not found a new entity is created and returned.
      *
      * @param queryMap The map of conditions
@@ -1003,7 +1001,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     }
 
     /**
-     * Finds a single result matching all of the given conditions. Eg. Book.findWhere(author: 'Stephen King', title: 'The Stand').  If
+     * Finds a single result matching all of the given conditions. Eg. Book.findWhere(author:"Stephen King", title:"The Stand").  If
      * a matching persistent entity is not found a new entity is created, saved and returned.
      *
      * @param queryMap The map of conditions
@@ -1477,14 +1475,12 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     }
 
     @Generated
-    GormInstanceApi<D> currentGormInstanceApi() {
-        Class<D> cls = (Class<D>) getClass()
-        GormRegistry.instance.resolveInstanceApi(cls)
+    private GormInstanceApi<D> currentGormInstanceApi() {
+        (GormInstanceApi<D>) GormRegistry.instance.findInstanceApi((Class<D>) getClass())
     }
 
     @Generated
-    static GormStaticApi<D> currentGormStaticApi() {
-        Class<D> cls = (Class<D>) this
-        GormRegistry.instance.resolveStaticApi(cls)
+    private static GormStaticApi<D> currentGormStaticApi() {
+        return (GormStaticApi<D>) GormRegistry.instance.findStaticApi((Class<D>) this)
     }
 }

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -31,7 +31,7 @@ class HibernateOneToOnePropertySpec extends HibernateGormDatastoreSpec {
         manager.addAllDomainClasses([OneToOneFace, OneToOneNose, OneToOneLeft, OneToOneRight])
     }
 
-    void 'getHibernateInverseSide returns HibernateOneToOneProperty'() {
+    void "getHibernateInverseSide returns HibernateOneToOneProperty"() {
         when:
         def faceEntity = mappingContext.getPersistentEntity(OneToOneFace.name)
         def noseProp = faceEntity.persistentProperties.find { it.name == 'nose' } as HibernateOneToOneProperty
@@ -41,7 +41,7 @@ class HibernateOneToOnePropertySpec extends HibernateGormDatastoreSpec {
         noseProp.getHibernateInverseSide().name == 'face'
     }
 
-    void 'isHibernateConstrained is false when other side does not have hasOne'() {
+    void "isHibernateConstrained is false when other side does not have hasOne"() {
         when:
         def faceEntity = mappingContext.getPersistentEntity(OneToOneFace.name)
         def noseProp = faceEntity.persistentProperties.find { it.name == 'nose' } as HibernateOneToOneProperty
@@ -50,7 +50,7 @@ class HibernateOneToOnePropertySpec extends HibernateGormDatastoreSpec {
         !noseProp.isHibernateConstrained()
     }
 
-    void 'isHibernateConstrained is true when other side has hasOne'() {
+    void "isHibernateConstrained is true when other side has hasOne"() {
         when:
         def noseEntity = mappingContext.getPersistentEntity(OneToOneNose.name)
         def faceProp = noseEntity.persistentProperties.find { it.name == 'face' } as HibernateOneToOneProperty
@@ -59,7 +59,7 @@ class HibernateOneToOnePropertySpec extends HibernateGormDatastoreSpec {
         faceProp.isHibernateConstrained()
     }
 
-    void 'getHibernateReferencedEntityName returns other side owner name when inverse exists'() {
+    void "getHibernateReferencedEntityName returns other side owner name when inverse exists"() {
         when:
         def faceEntity = mappingContext.getPersistentEntity(OneToOneFace.name)
         def noseProp = faceEntity.persistentProperties.find { it.name == 'nose' } as HibernateOneToOneProperty
@@ -68,7 +68,7 @@ class HibernateOneToOnePropertySpec extends HibernateGormDatastoreSpec {
         noseProp.getHibernateReferencedEntityName() == OneToOneNose.name
     }
 
-    void 'getHibernateReferencedPropertyName returns inverse side name when inverse exists'() {
+    void "getHibernateReferencedPropertyName returns inverse side name when inverse exists"() {
         when:
         def faceEntity = mappingContext.getPersistentEntity(OneToOneFace.name)
         def noseProp = faceEntity.persistentProperties.find { it.name == 'nose' } as HibernateOneToOneProperty
@@ -77,7 +77,7 @@ class HibernateOneToOnePropertySpec extends HibernateGormDatastoreSpec {
         noseProp.getHibernateReferencedPropertyName() == 'face'
     }
 
-    void 'getHibernateReferencedPropertyName returns null when no inverse'() {
+    void "getHibernateReferencedPropertyName returns null when no inverse"() {
         when:
         def noseEntity = mappingContext.getPersistentEntity(OneToOneNose.name)
         // face belongs to OneToOneFace via hasOne — it has no inverse side from nose's perspective
@@ -88,7 +88,7 @@ class HibernateOneToOnePropertySpec extends HibernateGormDatastoreSpec {
         faceProp.getHibernateReferencedPropertyName() == 'nose'
     }
 
-    void 'getHibernateForeignKeyDirection returns TO_PARENT when not constrained'() {
+    void "getHibernateForeignKeyDirection returns TO_PARENT when not constrained"() {
         when:
         def faceEntity = mappingContext.getPersistentEntity(OneToOneFace.name)
         def noseProp = faceEntity.persistentProperties.find { it.name == 'nose' } as HibernateOneToOneProperty
@@ -97,7 +97,7 @@ class HibernateOneToOnePropertySpec extends HibernateGormDatastoreSpec {
         noseProp.getHibernateForeignKeyDirection() == ForeignKeyDirection.TO_PARENT
     }
 
-    void 'getHibernateForeignKeyDirection returns FROM_PARENT when constrained'() {
+    void "getHibernateForeignKeyDirection returns FROM_PARENT when constrained"() {
         when:
         def noseEntity = mappingContext.getPersistentEntity(OneToOneNose.name)
         def faceProp = noseEntity.persistentProperties.find { it.name == 'face' } as HibernateOneToOneProperty
@@ -106,7 +106,7 @@ class HibernateOneToOnePropertySpec extends HibernateGormDatastoreSpec {
         faceProp.getHibernateForeignKeyDirection() == ForeignKeyDirection.FROM_PARENT
     }
 
-    void 'getHibernateFetchMode returns DEFAULT when no fetch config'() {
+    void "getHibernateFetchMode returns DEFAULT when no fetch config"() {
         when:
         def faceEntity = mappingContext.getPersistentEntity(OneToOneFace.name)
         def noseProp = faceEntity.persistentProperties.find { it.name == 'nose' } as HibernateOneToOneProperty
@@ -115,7 +115,7 @@ class HibernateOneToOnePropertySpec extends HibernateGormDatastoreSpec {
         noseProp.getHibernateFetchMode() == FetchMode.DEFAULT
     }
 
-    void 'needsSimpleValueBinding is false when not constrained and inverse exists'() {
+    void "needsSimpleValueBinding is false when not constrained and inverse exists"() {
         when:
         def faceEntity = mappingContext.getPersistentEntity(OneToOneFace.name)
         def noseProp = faceEntity.persistentProperties.find { it.name == 'nose' } as HibernateOneToOneProperty
@@ -124,7 +124,7 @@ class HibernateOneToOnePropertySpec extends HibernateGormDatastoreSpec {
         !noseProp.needsSimpleValueBinding()
     }
 
-    void 'needsSimpleValueBinding is true when constrained'() {
+    void "needsSimpleValueBinding is true when constrained"() {
         when:
         def noseEntity = mappingContext.getPersistentEntity(OneToOneNose.name)
         def faceProp = noseEntity.persistentProperties.find { it.name == 'face' } as HibernateOneToOneProperty
@@ -133,7 +133,7 @@ class HibernateOneToOnePropertySpec extends HibernateGormDatastoreSpec {
         faceProp.needsSimpleValueBinding()
     }
 
-    void 'isAssociationColumnNullable is false when bidirectional non-owning and inverse has hasOne'() {
+    void "isAssociationColumnNullable is false when bidirectional non-owning and inverse has hasOne"() {
         when:
         def noseEntity = mappingContext.getPersistentEntity(OneToOneNose.name)
         def faceProp = noseEntity.persistentProperties.find { it.name == 'face' } as HibernateOneToOneProperty
@@ -142,7 +142,7 @@ class HibernateOneToOnePropertySpec extends HibernateGormDatastoreSpec {
         !faceProp.isAssociationColumnNullable()
     }
 
-    void 'isAssociationColumnNullable is true when owning side declares hasOne'() {
+    void "isAssociationColumnNullable is true when owning side declares hasOne"() {
         when:
         def faceEntity = mappingContext.getPersistentEntity(OneToOneFace.name)
         def noseProp = faceEntity.persistentProperties.find { it.name == 'nose' } as HibernateOneToOneProperty
@@ -151,7 +151,7 @@ class HibernateOneToOnePropertySpec extends HibernateGormDatastoreSpec {
         noseProp.isAssociationColumnNullable()
     }
 
-    void 'isAssociationColumnNullable is true when bidirectional non-owning but inverse does not have hasOne'() {
+    void "isAssociationColumnNullable is true when bidirectional non-owning but inverse does not have hasOne"() {
         when:
         def leftEntity = mappingContext.getPersistentEntity(OneToOneLeft.name)
         def rightProp = leftEntity.persistentProperties.find { it.name == 'right' } as HibernateOneToOneProperty
@@ -160,7 +160,7 @@ class HibernateOneToOnePropertySpec extends HibernateGormDatastoreSpec {
         rightProp.isAssociationColumnNullable()
     }
 
-    void 'isValidHibernateManyToOne delegates to validateAssociation and isValidHibernateOneToOne'() {
+    void "isValidHibernateManyToOne delegates to validateAssociation and isValidHibernateOneToOne"() {
         when:
         def leftEntity = mappingContext.getPersistentEntity(OneToOneLeft.name)
         def rightProp = leftEntity.persistentProperties.find { it.name == 'right' } as HibernateOneToOneProperty
@@ -169,7 +169,7 @@ class HibernateOneToOnePropertySpec extends HibernateGormDatastoreSpec {
         rightProp.isValidHibernateManyToOne() != null
     }
 
-    void 'getHibernateReferencedEntityName returns associated entity name when no inverse side'() {
+    void "getHibernateReferencedEntityName returns associated entity name when no inverse side"() {
         given:
         createPersistentEntity(OneToOneUnidirSource)
         createPersistentEntity(OneToOneUnidirDest)
@@ -180,7 +180,7 @@ class HibernateOneToOnePropertySpec extends HibernateGormDatastoreSpec {
         destProp.getHibernateReferencedEntityName() == OneToOneUnidirDest.name
     }
 
-    void 'validateAssociation throws MappingException for unidirectional hasOne'() {
+    void "validateAssociation throws MappingException for unidirectional hasOne"() {
         given:
         createPersistentEntity(OneToOneUnidirSource)
         createPersistentEntity(OneToOneUnidirDest)
@@ -197,7 +197,6 @@ class HibernateOneToOnePropertySpec extends HibernateGormDatastoreSpec {
 
 @Entity
 class OneToOneFace implements HibernateEntity<OneToOneFace> {
-
     String name
     OneToOneNose nose
     static hasOne = [nose: OneToOneNose]
@@ -205,7 +204,6 @@ class OneToOneFace implements HibernateEntity<OneToOneFace> {
 
 @Entity
 class OneToOneNose implements HibernateEntity<OneToOneNose> {
-
     Boolean hasFreckles
     OneToOneFace face
     static belongsTo = [face: OneToOneFace]
@@ -213,14 +211,12 @@ class OneToOneNose implements HibernateEntity<OneToOneNose> {
 
 @Entity
 class OneToOneRight implements HibernateEntity<OneToOneRight> {
-
     String code
     OneToOneLeft left
 }
 
 @Entity
 class OneToOneLeft implements HibernateEntity<OneToOneLeft> {
-
     String label
     OneToOneRight right
     static belongsTo = [right: OneToOneRight]
@@ -228,13 +224,11 @@ class OneToOneLeft implements HibernateEntity<OneToOneLeft> {
 
 @Entity
 class OneToOneUnidirSource implements HibernateEntity<OneToOneUnidirSource> {
-
     OneToOneUnidirDest dest
     static hasOne = [dest: OneToOneUnidirDest]
 }
 
 @Entity
 class OneToOneUnidirDest implements HibernateEntity<OneToOneUnidirDest> {
-
     String value
 }

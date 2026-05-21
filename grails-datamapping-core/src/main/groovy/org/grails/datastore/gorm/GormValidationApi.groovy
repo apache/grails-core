@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -27,22 +27,18 @@ import org.springframework.validation.Errors
 import org.springframework.validation.FieldError
 import org.springframework.validation.ObjectError
 import org.springframework.validation.Validator
-import org.springframework.transaction.PlatformTransactionManager
 
 import grails.gorm.validation.CascadingValidator
 import org.grails.datastore.gorm.support.BeforeValidateHelper
 import org.grails.datastore.gorm.validation.ValidatorProvider
 import org.grails.datastore.mapping.core.Datastore
-import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
-import org.grails.datastore.mapping.core.SessionCallback
 import org.grails.datastore.mapping.engine.event.ValidationEvent
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.datastore.mapping.validation.ValidationErrors
-import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 
 /**
  * Methods used for validating GORM instances.
@@ -61,29 +57,32 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
     protected final MappingContext mappingContext
     protected final ApplicationEventPublisher eventPublisher
     protected final boolean hasDatastore
+    protected final GormRegistry registry
 
     GormValidationApi(Class<D> persistentClass, Datastore datastore) {
-        this(persistentClass, datastore, (GormRegistry) null)
+        this(persistentClass, datastore, null)
     }
 
     GormValidationApi(Class<D> persistentClass, Datastore datastore, GormRegistry registry) {
-        super(persistentClass, datastore, registry)
+        super(persistentClass, datastore)
         beforeValidateHelper = new BeforeValidateHelper()
         this.mappingContext = datastore?.mappingContext
         this.eventPublisher = datastore?.applicationEventPublisher
         this.hasDatastore = datastore != null
+        this.registry = registry ?: GormEnhancer.getRegistry()
     }
 
     GormValidationApi(Class<D> persistentClass, MappingContext mappingContext, DatastoreResolver datastoreResolver) {
-        this(persistentClass, mappingContext, datastoreResolver, (GormRegistry) null)
+        this(persistentClass, mappingContext, datastoreResolver, null)
     }
 
     GormValidationApi(Class<D> persistentClass, MappingContext mappingContext, DatastoreResolver datastoreResolver, GormRegistry registry) {
-        super(persistentClass, mappingContext, datastoreResolver, null, registry)
+        super(persistentClass, mappingContext, datastoreResolver)
         beforeValidateHelper = new BeforeValidateHelper()
         this.mappingContext = mappingContext
         this.eventPublisher = null // Will be resolved if needed
         this.hasDatastore = true
+        this.registry = registry ?: GormEnhancer.getRegistry()
     }
 
     GormValidationApi<D> forQualifier(String qualifier) {
@@ -100,24 +99,7 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
         this.mappingContext = mappingContext
         this.eventPublisher = eventPublisher
         this.hasDatastore = false
-    }
-
-    @Override
-    protected <T1> T1 executeQualified(String qualifier, SessionCallback<T1> callback) {
-        GormValidationApi<D> qualifiedApi = registry.findValidationApi(persistentClass, qualifier)
-        if (qualifiedApi != null && qualifiedApi != this) {
-            return (T1) qualifiedApi.execute(callback)
-        }
-        return DatastoreUtils.execute(getDatastore(), callback)
-    }
-
-    @Override
-    PlatformTransactionManager getTransactionManager() {
-        Datastore ds = getDatastore()
-        if (ds instanceof TransactionCapableDatastore) {
-            return ((TransactionCapableDatastore) ds).getTransactionManager()
-        }
-        return null
+        this.registry = GormEnhancer.getRegistry()
     }
 
     Validator getValidator() {
@@ -151,9 +133,9 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
             deepValidate = ClassUtils.getBooleanFromMap(ARGUMENT_DEEP_VALIDATE, arguments)
         }
 
-        if (hasDatastore && getDatastore().hasCurrentSession()) {
+        if (hasDatastore && datastore.hasCurrentSession()) {
             try {
-                currentSession = getDatastore().currentSession
+                currentSession = datastore.currentSession
                 previousFlushMode = currentSession.flushMode
                 currentSession.setFlushMode(FlushModeType.COMMIT)
             } catch (IllegalStateException e) {
@@ -365,5 +347,14 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
             }
             return false
         }
+    }
+
+    @Override
+    org.springframework.transaction.PlatformTransactionManager getTransactionManager() {
+        Datastore ds = getDatastore()
+        if (ds instanceof org.grails.datastore.mapping.transactions.TransactionCapableDatastore) {
+            return ((org.grails.datastore.mapping.transactions.TransactionCapableDatastore)ds).getTransactionManager()
+        }
+        return null
     }
 }

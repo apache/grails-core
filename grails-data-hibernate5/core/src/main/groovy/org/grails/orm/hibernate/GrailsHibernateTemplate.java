@@ -32,6 +32,7 @@ import java.util.List;
 import javax.sql.DataSource;
 
 import groovy.lang.Closure;
+import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 
 import jakarta.persistence.PersistenceException;
 import jakarta.persistence.criteria.CriteriaBuilder;

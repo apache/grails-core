@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -32,23 +32,23 @@ import spock.lang.Specification
  */
 class AnsiConsoleUrlMappingsRendererSpec extends Specification {
 
-    void 'Test render URL mappings for 3 level resource'() {
-        given: 'A URL mappings renderer'
+    void "Test render URL mappings for 3 level resource"() {
+        given: "A URL mappings renderer"
         def sw = new ByteArrayOutputStream()
         def ps = new PrintStream(sw)
         def renderer = new AnsiConsoleUrlMappingsRenderer(ps)
         renderer.isAnsiEnabled = false
         def urlMappingsHolder = getUrlMappingsHolder {
-            '/books'(resources: 'book') {
+            "/books"(resources: 'book') {
                 '/authors'(resources: 'author') {
                     '/publisher'(resource: 'publisher')
                 }
             }
         }
-        when: 'The URL mappings are rendered'
+        when: "The URL mappings are rendered"
         renderer.render(urlMappingsHolder.urlMappings.toList())
         println sw.toString()
-        then: 'The output is correct'
+        then: "The output is correct"
         sw.toString() == '''Controller: author
  |   GET    | /books/${bookId}/authors/create                            | Action: create           |
  |   GET    | /books/${bookId}/authors/${id}/edit                        | Action: edit             |
@@ -81,25 +81,25 @@ Controller: publisher
 '''.denormalize()
     }
 
-    void 'Test render URL mappings to target stream'() {
-        given: 'A URL mappings renderer'
+    void "Test render URL mappings to target stream"() {
+        given: "A URL mappings renderer"
         def sw = new ByteArrayOutputStream()
         def ps = new PrintStream(sw)
         def renderer = new AnsiConsoleUrlMappingsRenderer(ps)
         renderer.isAnsiEnabled = false
         def urlMappingsHolder = getUrlMappingsHolder {
             "/$controller/$action?/$id?(.$format)?"()
-            "/images/$name**.jpg"(controller: 'image')
-            '/foo'(resources: 'foo')
-            '500'(controller: 'errors')
-            '/'(view: '/index')
+            "/images/$name**.jpg"(controller: "image")
+            "/foo"(resources: "foo")
+            "500"(controller: "errors")
+            "/"(view: "/index")
 
         }
 
-        when: 'The URL mappings are rendered'
+        when: "The URL mappings are rendered"
         renderer.render(urlMappingsHolder.urlMappings.toList())
         println sw.toString()
-        then: 'The output is correct'
+        then: "The output is correct"
         sw.toString() == '''Dynamic Mappings
  |    *     | /                                                 | View:   /index           |
  |    *     | /${controller}/${action}?/${id}?(.${format)?      | Action: (default action) |

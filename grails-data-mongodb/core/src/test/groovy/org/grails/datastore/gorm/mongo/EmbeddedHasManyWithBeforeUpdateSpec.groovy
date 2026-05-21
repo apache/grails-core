@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -30,19 +30,19 @@ class EmbeddedHasManyWithBeforeUpdateSpec extends MongoDatastoreSpec {
         manager.addAllDomainClasses([User, UserAddress])
     }
 
-    void 'Test embedded hasMany with beforeUpdate event'() {
+    void "Test embedded hasMany with beforeUpdate event"() {
         given:
-        def user = User.findByName('Ratler')
+        def user = User.findByName("Ratler")
         if (!user) {
-            user = new User(name: 'Ratler')
+            user = new User(name: "Ratler")
         }
-        def address = new UserAddress(type: 'home')
+        def address = new UserAddress(type: "home")
         user.addresses = [address]
         user.save(flush: true)
         manager.session.clear()
 
         when:
-        user = User.findByName('Ratler')
+        user = User.findByName("Ratler")
 
         then:
         user != null
@@ -50,10 +50,10 @@ class EmbeddedHasManyWithBeforeUpdateSpec extends MongoDatastoreSpec {
         user.addresses[0].type == 'home'
 
         when:
-        user.name = 'Bob'
+        user.name = "Bob"
         user.save(flush: true)
         manager.session.clear()
-        user = User.findByName('bob')
+        user = User.findByName("bob")
 
         then:
         user != null
@@ -64,7 +64,6 @@ class EmbeddedHasManyWithBeforeUpdateSpec extends MongoDatastoreSpec {
 
 @Entity
 class User {
-
     ObjectId id
     String name
     List<UserAddress> addresses
@@ -79,7 +78,6 @@ class User {
 
 @Entity
 class UserAddress {
-
     ObjectId id
     String type
 }

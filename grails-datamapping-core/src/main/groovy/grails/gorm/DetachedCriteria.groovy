@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -24,6 +24,7 @@ import groovy.util.logging.Slf4j
 
 import jakarta.persistence.criteria.JoinType
 
+import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.finders.DynamicFinder
@@ -52,7 +53,6 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
      * @param alias The root alias to be used in queries
      */
     DetachedCriteria(Class<T> targetClass, String alias = null) {
-
         super(targetClass, alias)
     }
 
@@ -194,12 +194,12 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
     }
 
     @Override
-    DetachedCriteria<T> 'in'(String propertyName, Collection values) {
+    DetachedCriteria<T> "in"(String propertyName, Collection values) {
         return (DetachedCriteria<T>) super.in(propertyName, values)
     }
 
     @Override
-    DetachedCriteria<T> 'in'(String propertyName, QueryableCriteria subquery) {
+    DetachedCriteria<T> "in"(String propertyName, QueryableCriteria subquery) {
         return (DetachedCriteria<T>) super.in(propertyName, subquery)
     }
 
@@ -209,7 +209,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
     }
 
     @Override
-    DetachedCriteria<T> 'in'(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> subquery) {
+    DetachedCriteria<T> "in"(String propertyName, @DelegatesTo(AbstractDetachedCriteria) Closure<?> subquery) {
         return (DetachedCriteria<T>) super.in(propertyName, subquery)
     }
 
@@ -219,7 +219,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
     }
 
     @Override
-    DetachedCriteria<T> 'in'(String propertyName, Object[] values) {
+    DetachedCriteria<T> "in"(String propertyName, Object[] values) {
         return (DetachedCriteria<T>) super.in(propertyName, values)
     }
 
@@ -742,7 +742,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
 
     private withPopulatedQuery(Map args, Closure additionalCriteria, Closure callable)  {
 
-        GormStaticApi staticApi = GormRegistry.instance.findStaticApi(targetClass, connectionName)
+        GormStaticApi staticApi = persistentEntity.isMultiTenant() ? GormRegistry.instance.findStaticApi(targetClass) : GormRegistry.instance.findStaticApi(targetClass, connectionName)
         staticApi.withDatastoreSession { Session session ->
             applyLazyCriteria()
             Query query

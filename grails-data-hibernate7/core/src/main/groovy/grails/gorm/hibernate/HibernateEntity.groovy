@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -23,7 +23,9 @@ import groovy.transform.Generated
 
 import org.codehaus.groovy.runtime.InvokerHelper
 
+import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormEntity
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.ToOne
@@ -48,7 +50,7 @@ trait HibernateEntity<D> extends GormEntity<D> {
      */
     @Generated
     static List<D> findAllWithNativeSql(CharSequence sql) {
-        HibernateGormStaticApi<D> api = (HibernateGormStaticApi<D>) currentGormStaticApi()
+        HibernateGormStaticApi<D> api = (HibernateGormStaticApi<D>) GormRegistry.instance.findStaticApi((Class<D>) this)
         return (List<D>) api.findAllWithNativeSql(sql, Collections.emptyMap())
     }
 
@@ -61,7 +63,7 @@ trait HibernateEntity<D> extends GormEntity<D> {
      */
     @Generated
     static D findWithNativeSql(CharSequence sql) {
-        HibernateGormStaticApi<D> api = (HibernateGormStaticApi<D>) currentGormStaticApi()
+        HibernateGormStaticApi<D> api = (HibernateGormStaticApi<D>) GormRegistry.instance.findStaticApi((Class<D>) this)
         return (D) api.findWithNativeSql(sql, Collections.emptyMap())
     }
 
@@ -75,7 +77,7 @@ trait HibernateEntity<D> extends GormEntity<D> {
      */
     @Generated
     static List<D> findAllWithNativeSql(CharSequence sql, Map args) {
-        HibernateGormStaticApi<D> api = (HibernateGormStaticApi<D>) currentGormStaticApi()
+        HibernateGormStaticApi<D> api = (HibernateGormStaticApi<D>) GormRegistry.instance.findStaticApi((Class<D>) this)
         return (List<D>) api.findAllWithNativeSql(sql, args)
     }
 
@@ -89,7 +91,7 @@ trait HibernateEntity<D> extends GormEntity<D> {
      */
     @Generated
     static D findWithNativeSql(CharSequence sql, Map args) {
-        HibernateGormStaticApi<D> api = (HibernateGormStaticApi<D>) currentGormStaticApi()
+        HibernateGormStaticApi<D> api = (HibernateGormStaticApi<D>) GormRegistry.instance.findStaticApi((Class<D>) this)
         return (D) api.findWithNativeSql(sql, args)
     }
 
@@ -99,7 +101,7 @@ trait HibernateEntity<D> extends GormEntity<D> {
     @Deprecated
     @Generated
     static List<D> findAllWithSql(CharSequence sql) {
-        HibernateGormStaticApi<D> api = (HibernateGormStaticApi<D>) currentGormStaticApi()
+        HibernateGormStaticApi<D> api = (HibernateGormStaticApi<D>) GormRegistry.instance.findStaticApi((Class<D>) this)
         return (List<D>) api.findAllWithNativeSql(sql, Collections.emptyMap())
     }
 
@@ -109,7 +111,7 @@ trait HibernateEntity<D> extends GormEntity<D> {
     @Deprecated
     @Generated
     static D findWithSql(CharSequence sql) {
-        HibernateGormStaticApi<D> api = (HibernateGormStaticApi<D>) currentGormStaticApi()
+        HibernateGormStaticApi<D> api = (HibernateGormStaticApi<D>) GormRegistry.instance.findStaticApi((Class<D>) this)
         return (D) api.findWithNativeSql(sql, Collections.emptyMap())
     }
 
@@ -119,7 +121,7 @@ trait HibernateEntity<D> extends GormEntity<D> {
     @Deprecated
     @Generated
     static List<D> findAllWithSql(CharSequence sql, Map args) {
-        HibernateGormStaticApi<D> api = (HibernateGormStaticApi<D>) currentGormStaticApi()
+        HibernateGormStaticApi<D> api = (HibernateGormStaticApi<D>) GormRegistry.instance.findStaticApi((Class<D>) this)
         return (List<D>) api.findAllWithNativeSql(sql, args)
     }
 
@@ -129,12 +131,12 @@ trait HibernateEntity<D> extends GormEntity<D> {
     @Deprecated
     @Generated
     static D findWithSql(CharSequence sql, Map args) {
-        HibernateGormStaticApi<D> api = (HibernateGormStaticApi<D>) currentGormStaticApi()
+        HibernateGormStaticApi<D> api = (HibernateGormStaticApi<D>) GormRegistry.instance.findStaticApi((Class<D>) this)
         return (D) api.findWithNativeSql(sql, args)
     }
 
     /**
-     * Overrides {@link GormEntity#addTo} to fix 'Found two representations of same collection'
+     * Overrides {@link GormEntity#addTo} to fix "Found two representations of same collection"
      * in Hibernate 7.
      *
      * H7 uses bytecode-enhanced attribute interception: the entity field for a collection is

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -20,18 +20,24 @@ package org.grails.orm.hibernate
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+import groovy.transform.Generated
 import org.grails.datastore.gorm.GormInstanceApi
 import org.grails.datastore.gorm.GormValidateable
 import org.grails.datastore.mapping.engine.event.ValidationEvent
 import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.proxy.ProxyHandler
 import org.grails.datastore.mapping.reflect.ClassUtils
+import org.grails.orm.hibernate.cfg.HibernateMappingContext
+import org.grails.orm.hibernate.query.GrailsHibernateQueryUtils
 import org.grails.orm.hibernate.support.HibernateRuntimeUtils
 import org.hibernate.LockMode
 import org.hibernate.Session
+import org.springframework.context.ApplicationEventPublisher
+import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.validation.Errors
 import org.springframework.validation.Validator
 import org.grails.datastore.gorm.support.BeforeValidateHelper
@@ -50,7 +56,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     private static final Class DEFERRED_BINDING
     static {
         try {
-            DEFERRED_BINDING = AbstractHibernateGormInstanceApi.classLoader.loadClass('org.grails.datastore.mapping.core.DeferredBindingActions')
+            DEFERRED_BINDING = AbstractHibernateGormInstanceApi.class.classLoader.loadClass("org.grails.datastore.mapping.core.DeferredBindingActions")
         } catch (Throwable e) {
             DEFERRED_BINDING = null
         }
@@ -75,15 +81,15 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
     protected Exception createValidationException(Errors errors) {
         String msg = 'Validation Error(s) occurred during save()'
-        def classNames = ['grails.validation.ValidationException', 'org.grails.datastore.mapping.validation.ValidationException']
-        def loaders = [persistentClass.classLoader, Thread.currentThread().contextClassLoader, AbstractHibernateGormInstanceApi.classLoader].unique()
+        def classNames = ["grails.validation.ValidationException", "org.grails.datastore.mapping.validation.ValidationException"]
+        def loaders = [persistentClass.classLoader, Thread.currentThread().contextClassLoader, AbstractHibernateGormInstanceApi.class.classLoader].unique()
         
         for (className in classNames) {
             for (loader in loaders) {
                 if (loader == null) continue
                 try {
                     Class exClass = Class.forName(className, true, loader)
-                    return (Exception) exClass.getConstructor(String, Errors).newInstance(msg, errors)
+                    return (Exception) exClass.getConstructor(String.class, Errors.class).newInstance(msg, errors)
                 } catch (Throwable e) {
                     // ignore
                 }
@@ -97,12 +103,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     }
 
     protected IHibernateTemplate getHibernateTemplate() {
-        IHibernateTemplate template = (IHibernateTemplate) getHibernateDatastore().getHibernateTemplate()
-        String connectionName = getHibernateDatastore().connectionSources.defaultConnectionSource.name
-        if (qualifier != null && !connectionName.equals(qualifier) && !org.grails.datastore.mapping.core.connections.ConnectionSource.DEFAULT.equals(qualifier) && getHibernateDatastore().getMultiTenancyMode() == org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
-            return new TenantBoundHibernateTemplate(template, (Serializable)qualifier, getHibernateDatastore())
-        }
-        return template
+        return (IHibernateTemplate) getHibernateDatastore().getHibernateTemplate()
     }
 
     protected ProxyHandler getProxyHandler() {
@@ -202,8 +203,8 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     }
 
     protected boolean shouldFail(Map arguments) {
-        if (arguments?.containsKey('failOnError')) {
-            return ClassUtils.getBooleanFromMap('failOnError', arguments)
+        if (arguments?.containsKey("failOnError")) {
+            return ClassUtils.getBooleanFromMap("failOnError", arguments)
         }
         return isFailOnError()
     }

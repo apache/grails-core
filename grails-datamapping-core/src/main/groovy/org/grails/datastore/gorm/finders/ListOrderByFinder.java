@@ -84,7 +84,7 @@ public class ListOrderByFinder extends AbstractFinder {
                 }
 
                 if (arguments.length > 0 && (arguments[0] instanceof Map)) {
-                    Map args = new LinkedHashMap((Map) arguments[0]);
+                    Map args = new LinkedHashMap((Map)arguments[0]);
                     final Object order = args.remove("order");
                     if (order != null) {
                         if (order.toString().equalsIgnoreCase("desc")) {

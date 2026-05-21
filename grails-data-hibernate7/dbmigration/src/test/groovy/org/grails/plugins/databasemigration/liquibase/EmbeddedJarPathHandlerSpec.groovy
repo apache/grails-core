@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -35,23 +35,23 @@ class EmbeddedJarPathHandlerSpec extends Specification {
     @TempDir
     Path tempDir
 
-    def 'test getPriority'() {
+    def "test getPriority"() {
         expect:
         handler.getPriority(root) == expectedPriority
 
         where:
         root                                                 | expectedPriority
-        'jar:file:/path/to/outer.jar!/inner.jar!/'           | PathHandler.PRIORITY_SPECIALIZED
-        'jar:file:/path/to/outer.jar!/nested/inner.jar!/'    | PathHandler.PRIORITY_SPECIALIZED
-        'jar:file:/path/to/outer.jar!/'                      | PathHandler.PRIORITY_NOT_APPLICABLE
-        'file:/path/to/dir/'                                 | PathHandler.PRIORITY_NOT_APPLICABLE
-        'jar:file:/path/to/outer.jar!/some/path'             | PathHandler.PRIORITY_NOT_APPLICABLE
+        "jar:file:/path/to/outer.jar!/inner.jar!/"           | PathHandler.PRIORITY_SPECIALIZED
+        "jar:file:/path/to/outer.jar!/nested/inner.jar!/"    | PathHandler.PRIORITY_SPECIALIZED
+        "jar:file:/path/to/outer.jar!/"                      | PathHandler.PRIORITY_NOT_APPLICABLE
+        "file:/path/to/dir/"                                 | PathHandler.PRIORITY_NOT_APPLICABLE
+        "jar:file:/path/to/outer.jar!/some/path"             | PathHandler.PRIORITY_NOT_APPLICABLE
     }
 
-    def 'getResourceAccessor handles nested jars'() {
-        given: 'A physical jar file on disk'
-        Path outerJar = tempDir.resolve('outer.jar')
-        createJarWithInnerJar(outerJar, 'inner.jar')
+    def "getResourceAccessor handles nested jars"() {
+        given: "A physical jar file on disk"
+        Path outerJar = tempDir.resolve("outer.jar")
+        createJarWithInnerJar(outerJar, "inner.jar")
 
         String root = "jar:file:${outerJar.toAbsolutePath()}!/inner.jar!/"
 
@@ -60,15 +60,15 @@ class EmbeddedJarPathHandlerSpec extends Specification {
 
         then:
         accessor instanceof EmbeddedJarResourceAccessor
-        accessor.describeLocations().any { it.contains('inner.jar') }
+        accessor.describeLocations().any { it.contains("inner.jar") }
 
         cleanup:
         accessor?.close()
     }
 
-    def 'getResourceAccessor throws IllegalArgumentException for invalid paths'() {
+    def "getResourceAccessor throws IllegalArgumentException for invalid paths"() {
         when:
-        handler.getResourceAccessor('jar:file:/non/existent.jar!/inner.jar!/')
+        handler.getResourceAccessor("jar:file:/non/existent.jar!/inner.jar!/")
 
         then:
         thrown(IllegalArgumentException)
@@ -81,8 +81,8 @@ class EmbeddedJarPathHandlerSpec extends Specification {
         // 1. Create inner jar content in memory
         ByteArrayOutputStream innerJarByteStream = new ByteArrayOutputStream()
         JarOutputStream innerJarStream = new JarOutputStream(innerJarByteStream)
-        innerJarStream.putNextEntry(new JarEntry('test.txt'))
-        innerJarStream.write('hello'.bytes)
+        innerJarStream.putNextEntry(new JarEntry("test.txt"))
+        innerJarStream.write("hello".bytes)
         innerJarStream.closeEntry()
         innerJarStream.close()
 

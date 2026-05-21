@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -33,154 +33,158 @@ import spock.lang.Specification
  * Created by graemerocher on 06/07/2016.
  */
 class MultipleDataSourceConnectionsSpec extends Specification {
-
     @Shared  Map config = [
-            'dataSource.url': 'jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000',
+            'dataSource.url':"jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
             'dataSource.dbCreate': 'create-drop',
             'dataSource.dialect': H2Dialect.name,
             'dataSource.formatSql': 'true',
             'hibernate.flush.mode': 'COMMIT',
             'hibernate.cache.queries': 'true',
             'hibernate.hbm2ddl.auto': 'create-drop',
-            'dataSources.books': [url:'jdbc:h2:mem:books;LOCK_TIMEOUT=10000'],
-            'dataSources.moreBooks.url': 'jdbc:h2:mem:moreBooks;LOCK_TIMEOUT=10000',
-            'dataSources.moreBooks.hibernate.default_schema': 'schema2'
+            'dataSources.books':[url:"jdbc:h2:mem:books;LOCK_TIMEOUT=10000"],
+            'dataSources.moreBooks.url':"jdbc:h2:mem:moreBooks;LOCK_TIMEOUT=10000",
+            'dataSources.moreBooks.hibernate.default_schema':"schema2"
     ]
 
     @Shared @AutoCleanup HibernateDatastore datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config),Book, Author )
 
-    void 'Test map to multiple data sources'() {
+    void "Test map to multiple data sources"() {
 
-        when: 'The default data source is used'
+        when: "The default data source is used"
         int result = Author.withTransaction {
-            new Author(name: 'Fred').save(flush: true)
+            new Author(name: 'Fred').save(flush:true)
             Author.count()
         }
 
-        then:'The default data source is bound'
+
+
+        then:"The default data source is bound"
         result ==1
         Book.withNewSession { Session s ->
             def url = s.doReturningWork { return it.metaData.getURL()  }
-            assert url  == 'jdbc:h2:mem:books'
+            assert url  == "jdbc:h2:mem:books"
             return true
         }
         Book.moreBooks.withNewSession { Session s ->
             def url = s.doReturningWork { return it.metaData.getURL()  }
-            assert url   == 'jdbc:h2:mem:moreBooks'
+            assert url   == "jdbc:h2:mem:moreBooks"
             return true
         }
         Author.withNewSession { Author.count() == 1 }
         Author.withNewSession { Session s ->
             def url = s.doReturningWork { return it.metaData.getURL()  }
-            assert url  == 'jdbc:h2:mem:grailsDB'
+            assert url  == "jdbc:h2:mem:grailsDB"
             return true
         }
         Author.books.withNewSession { Session s ->
             def url = s.doReturningWork { return it.metaData.getURL()  }
-            assert url  == 'jdbc:h2:mem:books'
+            assert url  == "jdbc:h2:mem:books"
             return true
         }
         Author.moreBooks.withNewSession { Session s ->
             def url = s.doReturningWork { return it.metaData.getURL()  }
-            assert url == 'jdbc:h2:mem:moreBooks'
+            assert url == "jdbc:h2:mem:moreBooks"
             return true
         }
 
-        when:'A book is saved'
+        when:"A book is saved"
         Book b =  Book.withTransaction {
-            new Book(name: 'The Stand').save(flush: true)
+            new Book(name: "The Stand").save(flush:true)
             Book.first()
         }
 
-        then:'The data was saved correctly'
+
+
+        then:"The data was saved correctly"
         b.name == 'The Stand'
         b.dateCreated
         b.lastUpdated
 
-        when:'A new data source is added at runtime'
-        datastore.connectionSources.addConnectionSource('yetAnother', [pooled         : true,
-                                                                       dbCreate       : 'create-drop',
+
+        when:"A new data source is added at runtime"
+        datastore.connectionSources.addConnectionSource("yetAnother", [pooled         : true,
+                                                                       dbCreate       : "create-drop",
                                                                        logSql         : false,
                                                                        formatSql      : true,
-                                                                       url            : 'jdbc:h2:mem:yetAnotherDB;LOCK_TIMEOUT=10000'])
+                                                                       url            : "jdbc:h2:mem:yetAnotherDB;LOCK_TIMEOUT=10000"])
 
-        then:'The other data sources have not been touched'
+        then:"The other data sources have not been touched"
         Author.withTransaction { Author.count() } == 1
         Book.withTransaction { Book.count() } == 1
         Author.yetAnother.withNewSession { Session s ->
             def url = s.doReturningWork { return it.metaData.getURL()  }
-            assert url  == 'jdbc:h2:mem:yetAnotherDB'
+            assert url  == "jdbc:h2:mem:yetAnotherDB"
             return true
         }
     }
 
-    void 'static GORM operations use first non-default datasource for multi datasource entity'() {
-        given: 'a unique book name'
+    void "static GORM operations use first non-default datasource for multi datasource entity"() {
+        given: "a unique book name"
         def uniqueName = "The Stand ${UUID.randomUUID()}"
 
-        when: 'saving a book to the books datasource'
+        when: "saving a book to the books datasource"
         Book.withTransaction {
             new Book(name: uniqueName).save(flush: true)
         }
 
-        then: 'withNewSession uses books datasource'
+        then: "withNewSession uses books datasource"
         Book.withNewSession { Session s ->
             def url = s.doReturningWork { return it.metaData.getURL() }
-            assert url == 'jdbc:h2:mem:books'
+            assert url == "jdbc:h2:mem:books"
             return true
         }
 
-        when: 'executing a static query'
+        when: "executing a static query"
         def books = Book.withTransaction {
-            Book.executeQuery('from Book where name = :name', [name: uniqueName])
+            Book.executeQuery("from Book where name = :name", [name: uniqueName])
         }
 
-        then: 'the books datasource is queried'
+        then: "the books datasource is queried"
         books.size() == 1
 
-        when: 'executing criteria query'
+        when: "executing criteria query"
         def criteriaResults = Book.withTransaction {
             Book.withCriteria {
                 eq('name', uniqueName)
             }
         }
 
-        then: 'criteria uses the books datasource'
+        then: "criteria uses the books datasource"
         criteriaResults.size() == 1
 
-        when: 'executing update'
+        when: "executing update"
         def updatedName = "The Stand Updated ${UUID.randomUUID()}"
         int updated = Book.withTransaction {
-            Book.executeUpdate('update Book set name = :name where name = :oldName', [name: updatedName, oldName: uniqueName])
+            Book.executeUpdate("update Book set name = :name where name = :oldName", [name: updatedName, oldName: uniqueName])
         }
 
-        then: 'update affects the books datasource'
+        then: "update affects the books datasource"
         updated == 1
         Book.withTransaction { Book.findByName(updatedName) } != null
 
-        when: 'executing a static transaction'
+        when: "executing a static transaction"
         int count = Book.withTransaction {
             Book.countByName(updatedName)
         }
 
-        then: 'transaction uses the books datasource'
+        then: "transaction uses the books datasource"
         count == 1
     }
 
-    void 'ALL mapped entity uses default datasource for withNewSession'() {
-        when: 'requesting a new session for ALL mapped entity'
+    void "ALL mapped entity uses default datasource for withNewSession"() {
+        when: "requesting a new session for ALL mapped entity"
         def url = Author.withNewSession { Session s ->
             s.doReturningWork { return it.metaData.getURL() }
         }
 
-        then: 'default datasource is used'
-        url == 'jdbc:h2:mem:grailsDB'
+        then: "default datasource is used"
+        url == "jdbc:h2:mem:grailsDB"
     }
 
-    void 'test @Transactional with connection property to non-default database'() {
+    void "test @Transactional with connection property to non-default database"() {
 
         when:
-        TestService testService = datastore.getDatastoreForConnection('books').getService(TestService)
+        TestService testService = datastore.getDatastoreForConnection("books").getService(TestService)
         testService.doSomething()
 
         then:
@@ -190,7 +194,6 @@ class MultipleDataSourceConnectionsSpec extends Specification {
 
 @Entity
 class Book {
-
     Long id
     Long version
     String name
@@ -207,7 +210,6 @@ class Book {
 
 @Entity
 class Author {
-
     Long id
     Long version
     String name
@@ -221,9 +223,11 @@ class Author {
 }
 
 @Service
-@Transactional(connection = 'books')
+@Transactional(connection = "books")
 class TestService {
 
     def doSomething() {}
 }
+
+
 

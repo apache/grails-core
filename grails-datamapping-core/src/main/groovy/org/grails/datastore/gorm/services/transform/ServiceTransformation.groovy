@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -99,8 +99,10 @@ import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
 import org.grails.datastore.mapping.core.order.OrderedComparator
+import org.grails.datastore.mapping.reflect.AstAnnotationUtils
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 
+import static org.codehaus.groovy.ast.tools.GeneralUtils.*
 import static org.grails.datastore.mapping.reflect.AstUtils.ZERO_PARAMETERS
 
 import static org.apache.groovy.ast.tools.AnnotatedNodeUtils.markAsGenerated
@@ -119,6 +121,7 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.callD
 import static org.grails.datastore.mapping.reflect.AstUtils.COMPILE_STATIC_TYPE
+import static org.grails.datastore.mapping.reflect.AstUtils.ZERO_PARAMETERS
 import static org.grails.datastore.mapping.reflect.AstAnnotationUtils.addAnnotationIfNecessary
 import static org.grails.datastore.mapping.reflect.AstAnnotationUtils.findAnnotation
 import static org.grails.datastore.mapping.reflect.AstUtils.copyAnnotations
@@ -175,7 +178,6 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
 
     @Override
     protected Class getTraitClass() {
-
         org.grails.datastore.mapping.services.Service
     }
 
@@ -332,6 +334,8 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
 
                         def implementedAnn = new AnnotationNode(ClassHelper.make(Implemented))
 
+
+
                         Class implementedClass = implementer.getClass()
                         if (implementer instanceof AdaptedImplementer) {
                             implementedClass = ((AdaptedImplementer) implementer).getAdapted().getClass()
@@ -349,7 +353,6 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
                     error(sourceUnit, classNode.isPrimaryClassNode() ? method : classNode, "No implementations possible for method '${method.typeDescriptor}'. Please use an abstract class instead and provide an implementation.")
                     break
                 } else {
-
                     for (ServiceImplementer implementer in implementers) {
                         if (implementer instanceof ServiceEnhancer) {
                             ServiceEnhancer enhancer = ((ServiceEnhancer) implementer)
