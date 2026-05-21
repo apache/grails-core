@@ -376,7 +376,40 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
             }
         }
         else {
-            // TODO: Support non-dirty checkable objects?
+            // Non-DirtyCheckable values: no per-property change history available,
+            // so when the caller is encoding this as an embedded update (null→non-null
+            // transition on a single-valued embedded field), encode every persistent
+            // property. Without this, the parent's $set on the embedded path stays
+            // empty and the sub-document is silently dropped.
+            if (embedded) {
+                def sets = new BsonDocument()
+                BsonWriter writer = new BsonDocumentWriter(sets)
+                writer.writeStartDocument()
+                if (!entity.isRoot()) {
+                    sets.put(MongoConstants.MONGO_CLASS_FIELD, new BsonString(entity.discriminator))
+                }
+                for (propertyName in entity.persistentPropertyNames) {
+                    def prop = entity.getPropertyByName(propertyName)
+                    if (prop == null) continue
+                    Object v = access.getProperty(prop.name)
+                    if (v == null) continue
+                    if (prop instanceof Embedded) {
+                        encodeEmbeddedUpdate(sets, new Document(), (Association) prop, v)
+                    }
+                    else if (prop instanceof EmbeddedCollection) {
+                        encodeEmbeddedCollectionUpdate(access, sets, new Document(), (Association) prop, v)
+                    }
+                    else {
+                        def propKind = prop.getClass().superclass
+                        PropertyEncoder<? extends PersistentProperty> propertyEncoder = getPropertyEncoder((Class<? extends PersistentProperty>) propKind)
+                        propertyEncoder?.encode(writer, prop, v, access, encoderContext, codecRegistry)
+                    }
+                }
+                writer.writeEndDocument()
+                if (!sets.isEmpty()) {
+                    update.put(MONGO_SET_OPERATOR, sets)
+                }
+            }
         }
 
         return update

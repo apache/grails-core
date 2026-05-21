@@ -30,6 +30,7 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 enum OperationType {
+
     QUERY,
     MUTATION
 }
