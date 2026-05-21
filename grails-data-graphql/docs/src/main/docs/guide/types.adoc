@@ -80,5 +80,5 @@ import graphql.schema.Coercing
 
 GraphQLTypeManager typeManager
 
-include::{sourcedir}/core/src/test/groovy/org/grails/gorm/graphql/MongoSchemaSpec.groovy[tags=registerObjectId]
+include::{sourcedir}/core/src/test/groovy/org/grails/gorm/graphql/MongoSchemaSpec.groovy.disabled[tags=registerObjectId]
 ----

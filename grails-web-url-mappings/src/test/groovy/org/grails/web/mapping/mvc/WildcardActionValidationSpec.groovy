@@ -152,6 +152,35 @@ class WildcardActionValidationSpec extends AbstractUrlMappingsSpec {
         }
     }
 
+    void 'literal segment in path beats generic $id/$action/$imageId wildcard pattern declared earlier'() {
+        when: 'a URL whose second segment is the literal "list" matches both a hardcoded list route and a generic /$id/$action/$imageId wildcard'
+        def mappingInfo = evaluateRequestFor('/articles/list/gallery/spring', {
+            "/articles/$id/$action(.$format)?"(controller: 'topic')
+            "/articles/$id/$action/$imageId(.$format)?"(controller: 'topic')
+            "/articles/list/$stage/$sort?(.$format)?"(controller: 'topic', action: 'home')
+        }, TopicController)
+
+        then: 'the route with the literal "list" segment wins because it is more specific'
+        with(mappingInfo) {
+            controllerName == 'topic'
+            actionName == 'home'
+        }
+    }
+
+    void 'literal segment in path beats generic $id/$action/$imageId wildcard even when wildcard is declared first'() {
+        when: 'the generic /$id/$action/$imageId pattern is declared before the literal-segment route'
+        def mappingInfo = evaluateRequestFor('/articles/list/gallery/spring', {
+            "/articles/$id/$action/$imageId(.$format)?"(controller: 'topic')
+            "/articles/list/$stage/$sort?(.$format)?"(controller: 'topic', action: 'home')
+        }, TopicController)
+
+        then: 'the literal segment route still wins regardless of declaration order'
+        with(mappingInfo) {
+            controllerName == 'topic'
+            actionName == 'home'
+        }
+    }
+
     void 'prefers literal path mappings over wildcard controller matches'() {
         when: 'a literal path mapping and a wildcard controller mapping can both match the request'
         def mappingInfo = evaluateRequestFor('/community', {
@@ -342,3 +371,4 @@ class TopicController {
     def save() {}
     def show() {}
 }
+
