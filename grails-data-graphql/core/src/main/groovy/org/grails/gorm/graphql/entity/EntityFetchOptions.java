@@ -33,6 +33,7 @@ import graphql.language.SelectionSet;
 import graphql.schema.DataFetchingEnvironment;
 
 import org.grails.datastore.gorm.GormEnhancer;
+import org.grails.datastore.gorm.GormRegistry;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.ToMany;
@@ -60,7 +61,7 @@ public class EntityFetchOptions {
     }
 
     public EntityFetchOptions(Class<?> entityClass, String projectionName) {
-        this(GormEnhancer.findStaticApi(entityClass).getGormPersistentEntity(), projectionName);
+        this(GormRegistry.getInstance().findStaticApi(entityClass).getGormPersistentEntity(), projectionName);
     }
 
     public EntityFetchOptions(PersistentEntity entity) {

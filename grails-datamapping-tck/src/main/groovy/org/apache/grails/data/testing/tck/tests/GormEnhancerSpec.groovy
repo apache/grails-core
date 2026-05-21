@@ -4,14 +4,14 @@
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
+ * 'License'); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
  *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
@@ -31,7 +31,7 @@ class GormEnhancerSpec extends GrailsDataTckSpec {
         manager.addAllDomainClasses([TestEntity, ChildEntity])
     }
 
-    void "Test basic CRUD operations"() {
+    void 'Test basic CRUD operations'() {
         given:
         def t
 
@@ -63,7 +63,7 @@ class GormEnhancerSpec extends GrailsDataTckSpec {
         'Bob' == t.name
     }
 
-    void "Test simple dynamic finder"() {
+    void 'Test simple dynamic finder'() {
 
         given:
         def t = new TestEntity(name: 'Bob', child: new ChildEntity(name: 'Child'))
@@ -82,7 +82,7 @@ class GormEnhancerSpec extends GrailsDataTckSpec {
         'Bob' == bob.name
     }
 
-    void "Test dynamic finder with disjunction"() {
+    void 'Test dynamic finder with disjunction'() {
         given:
         def age = 40
         ['Bob', 'Fred', 'Barney'].each {
@@ -105,7 +105,7 @@ class GormEnhancerSpec extends GrailsDataTckSpec {
         'Bob' == bob.name
     }
 
-    void "Test getAll() method"() {
+    void 'Test getAll() method'() {
         given:
         def age = 40
         def ids = []
@@ -120,7 +120,7 @@ class GormEnhancerSpec extends GrailsDataTckSpec {
         2 == results.size()
     }
 
-    void "Test ident() method"() {
+    void 'Test ident() method'() {
         given:
         def t
 
@@ -133,7 +133,7 @@ class GormEnhancerSpec extends GrailsDataTckSpec {
         t.id == t.ident()
     }
 
-    void "Test dynamic finder with pagination parameters"() {
+    void 'Test dynamic finder with pagination parameters'() {
         given:
         def age = 40
         ['Bob', 'Fred', 'Barney', 'Frank'].each {
@@ -150,7 +150,7 @@ class GormEnhancerSpec extends GrailsDataTckSpec {
         1 == TestEntity.findAllByNameOrAge('Barney', 40, [max: 1]).size()
     }
 
-    void "Test in list query"() {
+    void 'Test in list query'() {
         given:
         def age = 40
         ['Bob', 'Fred', 'Barney', 'Frank'].each {
@@ -168,7 +168,7 @@ class GormEnhancerSpec extends GrailsDataTckSpec {
         2 == TestEntity.findAllByNameInListOrName(['Joe', 'Frank'], 'Bob').size()
     }
 
-    void "Test like query"() {
+    void 'Test like query'() {
         given:
         def age = 40
         ['Bob', 'Fred', 'Barney', 'Frank', 'frita'].each {
@@ -184,7 +184,7 @@ class GormEnhancerSpec extends GrailsDataTckSpec {
         results.find { it.name == 'Frank' } != null
     }
 
-    void "Test ilike query"() {
+    void 'Test ilike query'() {
         given:
         def age = 40
         ['Bob', 'Fred', 'Barney', 'Frank', 'frita'].each {
@@ -201,7 +201,7 @@ class GormEnhancerSpec extends GrailsDataTckSpec {
         results.find { it.name == 'frita' } != null
     }
 
-    void "Test count by query"() {
+    void 'Test count by query'() {
 
         given:
         def age = 40
@@ -219,7 +219,7 @@ class GormEnhancerSpec extends GrailsDataTckSpec {
         1 == TestEntity.countByNameAndAge('Bob', 40)
     }
 
-    void "Test dynamic finder with conjunction"() {
+    void 'Test dynamic finder with conjunction'() {
         given:
         def age = 40
         ['Bob', 'Fred', 'Barney'].each {
@@ -237,7 +237,7 @@ class GormEnhancerSpec extends GrailsDataTckSpec {
         !TestEntity.findByNameAndAge('Bob', 41)
     }
 
-    void "Test count() method"() {
+    void 'Test count() method'() {
         given:
         def t
 

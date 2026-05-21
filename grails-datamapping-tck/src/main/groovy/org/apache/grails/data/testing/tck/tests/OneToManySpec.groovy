@@ -4,14 +4,14 @@
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
+ * 'License'); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
  *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
@@ -41,7 +41,7 @@ class OneToManySpec extends GrailsDataTckSpec {
         manager.addAllDomainClasses([Owner_Default_Uni_P, ChildPersister, Location, Country, Person, Pet, PetType, SimpleCountry, Face, Nose])
     }
 
-    void "test save and return unidirectional one to many Country "() {
+    void 'test save and return unidirectional one to many Country '() {
         given:
         Person p = new Person(firstName: 'Fred', lastName: 'Flinstone')
         Country c = new Country(name: 'Dinoville')
@@ -74,7 +74,7 @@ class OneToManySpec extends GrailsDataTckSpec {
     }
 
     @Rollback
-    void "test unidirectional default cascade Owner_Default_Uni_P  persists child"() {
+    void 'test unidirectional default cascade Owner_Default_Uni_P  persists child'() {
         when: 'A new owner is saved after adding a child'
         def owner = new Owner_Default_Uni_P(name: 'Owner')
         owner.addToChildren(new ChildPersister(title: 'Child'))
@@ -93,7 +93,7 @@ class OneToManySpec extends GrailsDataTckSpec {
 
     }
 
-    void "test save and return bidirectional one to many"() {
+    void 'test save and return bidirectional one to many'() {
         given:
         Person p = new Person(firstName: 'Fred', lastName: 'Flinstone')
         p.addToPets(new Pet(name: 'Dino', type: new PetType(name: 'Dinosaur')))
@@ -132,7 +132,7 @@ class OneToManySpec extends GrailsDataTckSpec {
         p.pets.every { it instanceof Pet } == true
     }
 
-    void "test update inverse side of bidirectional one to many collection"() {
+    void 'test update inverse side of bidirectional one to many collection'() {
         given:
         Person p = new Person(firstName: 'Fred', lastName: 'Flinstone').save()
         new Pet(name: 'Dino', type: new PetType(name: 'Dinosaur'), owner: p).save()
@@ -156,7 +156,7 @@ class OneToManySpec extends GrailsDataTckSpec {
         pet.type.name == 'Dinosaur'
     }
 
-    void "test update inverse side of bidirectional one to many happens before flushing the session"() {
+    void 'test update inverse side of bidirectional one to many happens before flushing the session'() {
 
         if (manager.session.datastore.getClass().name.contains('Hibernate')) {
             return
@@ -182,7 +182,7 @@ class OneToManySpec extends GrailsDataTckSpec {
         person.pets.size() == 2
     }
 
-    void "Test persist of association with proxy"() {
+    void 'Test persist of association with proxy'() {
         given: 'A domain model with a many-to-one'
         def person = new Person(firstName: 'Fred', lastName: 'Flintstone')
         person.save(flush: true)

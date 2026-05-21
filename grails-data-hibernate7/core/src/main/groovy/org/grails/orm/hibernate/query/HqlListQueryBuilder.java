@@ -20,6 +20,7 @@ package org.grails.orm.hibernate.query;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -87,6 +88,12 @@ public class HqlListQueryBuilder {
                 parts.add(buildSortPart(prop, direction, isIgnoreCase));
             });
             return String.join(", ", parts);
+        } else if (sort instanceof java.util.List) {
+            List<String> parts = new ArrayList<>();
+            for (Object prop : (java.util.List) sort) {
+                parts.add(buildSortPart(prop.toString(), order instanceof String ? (String) order : "asc", isIgnoreCase));
+            }
+            return String.join(", ", parts);
         }
 
         // Default sort from mapping
@@ -105,6 +112,22 @@ public class HqlListQueryBuilder {
             String name = sortConfig.getName();
             if (name != null) {
                 return buildSortPart(name, sortConfig.getDirection(), isIgnoreCase);
+            }
+        }
+
+        // If no sort but order is present, default to identity
+        if (order != null) {
+            org.grails.datastore.mapping.model.PersistentProperty identity = entity.getIdentity();
+            if (identity != null) {
+                return buildSortPart(identity.getName(), order instanceof String ? (String) order : "asc", isIgnoreCase);
+            }
+            org.grails.datastore.mapping.model.PersistentProperty[] compositeId = entity.getCompositeIdentity();
+            if (compositeId != null && compositeId.length > 0) {
+                List<String> parts = new ArrayList<>();
+                for (org.grails.datastore.mapping.model.PersistentProperty prop : compositeId) {
+                    parts.add(buildSortPart(prop.getName(), order instanceof String ? (String) order : "asc", isIgnoreCase));
+                }
+                return String.join(", ", parts);
             }
         }
 

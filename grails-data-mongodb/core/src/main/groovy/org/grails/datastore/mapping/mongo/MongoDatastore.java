@@ -51,14 +51,11 @@ import grails.gorm.multitenancy.Tenants;
 import grails.util.GrailsMessageSourceUtils;
 import org.grails.datastore.bson.codecs.CodecExtensions;
 import org.grails.datastore.gorm.GormEnhancer;
-import org.grails.datastore.gorm.GormInstanceApi;
-import org.grails.datastore.gorm.GormValidationApi;
 import org.grails.datastore.gorm.events.AutoTimestampEventListener;
 import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher;
 import org.grails.datastore.gorm.events.DefaultApplicationEventPublisher;
 import org.grails.datastore.gorm.events.DomainEventListener;
 import org.grails.datastore.gorm.mongo.MongoGormEnhancer;
-import org.grails.datastore.gorm.mongo.api.MongoStaticApi;
 import org.grails.datastore.gorm.multitenancy.MultiTenantEventListener;
 import org.grails.datastore.gorm.utils.ClasspathEntityScanner;
 import org.grails.datastore.gorm.validation.constraints.MappingContextAwareConstraintFactory;
@@ -76,7 +73,6 @@ import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.core.connections.ConnectionSources;
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesInitializer;
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesListener;
-import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport;
 import org.grails.datastore.mapping.core.connections.DefaultConnectionSource;
 import org.grails.datastore.mapping.core.connections.InMemoryConnectionSources;
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore;
@@ -764,52 +760,7 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
 
         buildIndex();
 
-        return new MongoGormEnhancer(this, transactionManager, settings) {
-            @Override
-            protected <D> MongoStaticApi<D> getStaticApi(Class<D> cls, String qualifier) {
-                MongoDatastore mongoDatastore = getDatastoreForQualifier(cls, qualifier);
-                return new MongoStaticApi<>(cls, mongoDatastore, createDynamicFinders(mongoDatastore), transactionManager);
-            }
-
-            @Override
-            protected <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, String qualifier) {
-                MongoDatastore mongoDatastore = getDatastoreForQualifier(cls, qualifier);
-
-                GormInstanceApi<D> instanceApi = new GormInstanceApi<>(cls, mongoDatastore);
-                instanceApi.setFailOnError(getFailOnError());
-                instanceApi.setMarkDirty(getMarkDirty());
-                return instanceApi;
-            }
-
-            @Override
-            protected <D> GormValidationApi<D> getValidationApi(Class<D> cls, String qualifier) {
-                MongoDatastore mongoDatastore = getDatastoreForQualifier(cls, qualifier);
-                return new GormValidationApi<>(cls, mongoDatastore);
-            }
-
-            private <D> MongoDatastore getDatastoreForQualifier(Class<D> cls, String qualifier) {
-                String defaultConnectionSourceName = ConnectionSourcesSupport.getDefaultConnectionSourceName(getMappingContext().getPersistentEntity(cls.getName()));
-                if (defaultConnectionSourceName.equals(ConnectionSource.ALL)) {
-                    defaultConnectionSourceName = ConnectionSource.DEFAULT;
-                }
-
-                boolean isDefaultQualifier = qualifier.equals(ConnectionSource.DEFAULT);
-                if (isDefaultQualifier && defaultConnectionSourceName.equals(ConnectionSource.DEFAULT)) {
-                    return MongoDatastore.this;
-                }
-                else {
-                    if (isDefaultQualifier) {
-                        qualifier = defaultConnectionSourceName;
-                    }
-                    ConnectionSource<MongoClient, MongoConnectionSourceSettings> connectionSource = connectionSources.getConnectionSource(qualifier);
-                    if (connectionSource == null) {
-                        throw new ConfigurationException("Invalid connection [" + defaultConnectionSourceName + "] configured for class [" + cls + "]");
-                    }
-
-                    return datastoresByConnectionSource.get(qualifier);
-                }
-            }
-        };
+        return new MongoGormEnhancer(this, transactionManager, settings);
 
     }
 

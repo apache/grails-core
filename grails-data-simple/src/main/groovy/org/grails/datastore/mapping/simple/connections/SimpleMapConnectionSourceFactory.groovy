@@ -51,7 +51,7 @@ class SimpleMapConnectionSourceFactory extends AbstractConnectionSourceFactory<M
 
     @Override
     protected <F extends ConnectionSourceSettings> ConnectionSourceSettings buildSettings(String name, PropertyResolver configuration, F fallbackSettings, boolean isDefaultDataSource) {
-        ConnectionSourceSettingsBuilder builder = new ConnectionSourceSettingsBuilder(configuration, PREFIX)
+        ConnectionSourceSettingsBuilder builder = new ConnectionSourceSettingsBuilder(configuration, PREFIX, fallbackSettings)
         return builder.build()
     }
 }

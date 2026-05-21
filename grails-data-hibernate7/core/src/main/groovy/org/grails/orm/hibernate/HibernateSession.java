@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -37,14 +38,18 @@ import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.query.MutationQuery;
 
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.core.convert.ConversionService;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import org.grails.datastore.gorm.proxy.GroovyProxyFactory;
 import org.grails.datastore.gorm.timestamp.DefaultTimestampProvider;
 import org.grails.datastore.mapping.core.AbstractAttributeStoringSession;
 import org.grails.datastore.mapping.core.Datastore;
+import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.engine.Persister;
 import org.grails.datastore.mapping.model.MappingContext;
+import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.proxy.ProxyHandler;
@@ -61,6 +66,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
 import org.grails.orm.hibernate.query.HibernateHqlQueryCreator;
+import org.grails.orm.hibernate.query.HibernateHqlQuery;
 import org.grails.orm.hibernate.query.HibernateQuery;
 import org.grails.orm.hibernate.query.HqlQueryContext;
 import org.grails.orm.hibernate.query.MutationHqlQuery;
@@ -84,12 +90,19 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
     /** The hibernate template. */
     protected IHibernateTemplate hibernateTemplate;
 
+    protected Session nativeSession;
+
     ProxyHandler proxyHandler = new HibernateProxyHandler();
     DefaultTimestampProvider timestampProvider;
 
     public HibernateSession(HibernateDatastore hibernateDatastore, SessionFactory sessionFactory) {
+        this(hibernateDatastore, sessionFactory, null);
+    }
+
+    public HibernateSession(HibernateDatastore hibernateDatastore, SessionFactory sessionFactory, Session nativeSession) {
         datastore = hibernateDatastore;
         hibernateTemplate = (IHibernateTemplate) hibernateDatastore.getHibernateTemplate();
+        this.nativeSession = nativeSession;
     }
 
     @Override
@@ -103,13 +116,16 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
     }
 
     @Override
-    public boolean isConnected() {
-        return connected;
+    public void disconnect() {
+        connected = false;
+        if (nativeSession != null && nativeSession.isOpen()) {
+            nativeSession.close();
+        }
     }
 
     @Override
-    public void disconnect() {
-        connected = false; // don't actually do any disconnection here. This will be handled by OSVI
+    public boolean isConnected() {
+        return connected;
     }
 
     @Override
@@ -206,11 +222,42 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
 
     @Override
     public <T> T retrieve(Class<T> type, Serializable key) {
-        return getHibernateTemplate().execute(session -> session.find(type, key));
+        if (key == null) {
+            return null;
+        }
+        PersistentEntity entity = getMappingContext().getPersistentEntity(type.getName());
+        if (entity != null) {
+            PersistentProperty identity = entity.getIdentity();
+            if (identity != null && !identity.getType().isAssignableFrom(key.getClass())) {
+                ConversionService conversionService = getMappingContext().getConversionService();
+                if (conversionService.canConvert(key.getClass(), identity.getType())) {
+                    try {
+                        key = (Serializable) conversionService.convert(key, identity.getType());
+                    } catch (Exception ignored) {
+                        return null;
+                    }
+                }
+            }
+        }
+        final Serializable finalKey = key;
+        return getHibernateTemplate().execute(session -> {
+            try {
+                return session.find(type, finalKey);
+            } catch (IllegalArgumentException e) {
+                return null;
+            }
+        });
     }
 
     @Override
     public <T> T proxy(Class<T> type, Serializable key) {
+        if (key == null) {
+            return null;
+        }
+        var proxyFactory = getMappingContext().getProxyFactory();
+        if (proxyFactory instanceof GroovyProxyFactory groovyProxyFactory) {
+            return groovyProxyFactory.createProxy(this, type, key);
+        }
         return hibernateTemplate.load(type, key);
     }
 
@@ -276,6 +323,13 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
     @Override
     public Object getNativeInterface() {
         return hibernateTemplate;
+    }
+
+    public Session getNativeSession() {
+        if (nativeSession != null) {
+            return nativeSession;
+        }
+        return hibernateTemplate.getSessionFactory().getCurrentSession();
     }
 
     @Override
@@ -385,19 +439,31 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
 
     @Override
     @SuppressWarnings({"PMD.DataflowAnomalyAnalysis"})
-    //TODO Cleanup
     public List retrieveAll(final Class type, final Iterable keys) {
         final GrailsHibernatePersistentEntity persistentEntity = (GrailsHibernatePersistentEntity) getMappingContext().getPersistentEntity(type.getName());
         final String entityName = persistentEntity.getName();
         final String idName = persistentEntity.getIdentity().getName();
+
+        // Collect input keys preserving order (including duplicates)
+        List<Object> inputKeys = new ArrayList<>();
+        for (Object k : keys) {
+            inputKeys.add(k);
+        }
+        if (inputKeys.isEmpty()) {
+            return Collections.emptyList();
+        }
+        // Determine the unique set of keys for the HQL IN query
+        Collection<Object> uniqueKeys = new LinkedHashMap<Object, Object>() {{
+            for (Object k : inputKeys) { put(k, k); }
+        }}.keySet();
+
         final String hql = "from " + entityName + " as e where e." + idName + " in (:keys)";
 
-        return getHibernateTemplate().execute(session -> {
-            // Prepare the HqlQueryContext using our manual HQL string and type override
+        Map<Object, Object> entityById = getHibernateTemplate().execute(session -> {
             HqlQueryContext queryContext = HqlQueryContext.prepare(
                 persistentEntity,
                 hql,
-                Map.of("keys", getIterableAsCollection(keys)),
+                Map.of("keys", uniqueKeys),
                 null,
                 null,
                 new HashMap<>(),
@@ -406,13 +472,45 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
                 type
             );
 
-            return HibernateHqlQueryCreator.createHqlQuery(
+            List fetched = HibernateHqlQueryCreator.createHqlQuery(
                 (HibernateDatastore) getDatastore(),
                 getHibernateTemplate().getSessionFactory(),
                 persistentEntity,
                 queryContext
             ).list();
+
+            Map<Object, Object> byId = new LinkedHashMap<>();
+            org.hibernate.Session nativeSession = session;
+            for (Object entity : fetched) {
+                Object id = nativeSession.getIdentifier(entity);
+                byId.put(id, entity);
+            }
+            return byId;
         });
+
+        // Build result list in input order, with null for missing IDs
+        List<Object> result = new ArrayList<>(inputKeys.size());
+        for (Object k : inputKeys) {
+            result.add(entityById.get(k));
+        }
+        return result;
+    }
+
+    public Query createQuery(String queryString) {
+        return createQuery(queryString, null);
+    }
+
+    public Query createQuery(String queryString, Class resultType) {
+        String trimmed = queryString.trim().toLowerCase(java.util.Locale.ENGLISH);
+        if (trimmed.startsWith("delete") || trimmed.startsWith("update")) {
+            org.hibernate.query.MutationQuery q = getNativeSession().createMutationQuery(queryString);
+            return new HibernateHqlQuery(this, null, q);
+        } else {
+            org.hibernate.query.Query q = resultType != null ?
+                    getNativeSession().createQuery(queryString, resultType) :
+                    getNativeSession().createQuery(queryString);
+            return new HibernateHqlQuery(this, null, q);
+        }
     }
 
     @Override
@@ -452,13 +550,16 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
 
     //TODO could be used
     protected <D> HibernateGormStaticApi<D> getStaticApi(Class<D> type) {
-        return new HibernateGormStaticApi<>(
+        HibernateDatastore datastore = (HibernateDatastore) getDatastore();
+        return new HibernateGormStaticApi<D>(
             type,
-            (HibernateDatastore) getDatastore(),
+            datastore,
             Collections.emptyList(),
-            Thread.currentThread().getContextClassLoader(),
-            ((HibernateDatastore) getDatastore()).getTransactionManager(),
-            null
+            new org.grails.datastore.gorm.DatastoreResolver() {
+                @Override public Datastore resolve() { return getDatastore(); }
+            },
+            ConnectionSource.DEFAULT,
+            ((HibernateDatastore)getDatastore()).getMappingContext().getMappingFactory().getClass().getClassLoader()
         );
     }
 }

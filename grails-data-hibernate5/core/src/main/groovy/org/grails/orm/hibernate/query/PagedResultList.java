@@ -30,6 +30,7 @@ import org.hibernate.query.Query;
 
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.orm.hibernate.GrailsHibernateTemplate;
+import org.grails.orm.hibernate.IHibernateTemplate;
 
 public class PagedResultList extends grails.gorm.PagedResultList {
 
@@ -37,9 +38,9 @@ public class PagedResultList extends grails.gorm.PagedResultList {
     private final Root queryRoot;
     private final CriteriaBuilder criteriaBuilder;
     private final PersistentEntity entity;
-    private transient GrailsHibernateTemplate hibernateTemplate;
+    private transient IHibernateTemplate hibernateTemplate;
 
-    public PagedResultList(GrailsHibernateTemplate template,
+    public PagedResultList(IHibernateTemplate template,
                            PersistentEntity entity,
                            HibernateHqlQuery hibernateHqlQuery,
                            CriteriaQuery criteriaQuery,

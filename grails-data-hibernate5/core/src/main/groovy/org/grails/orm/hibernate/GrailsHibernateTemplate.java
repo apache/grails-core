@@ -87,6 +87,8 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
     protected int flushMode = FLUSH_AUTO;
     private boolean applyFlushModeOnlyToNonExistingTransactions = false;
 
+    protected AbstractHibernateDatastore datastore;
+
     public interface HibernateCallback<T> {
         T doInHibernate(Session session) throws HibernateException, SQLException;
     }
@@ -99,7 +101,14 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         Assert.notNull(sessionFactory, "Property 'sessionFactory' is required");
         this.sessionFactory = sessionFactory;
 
-        ConnectionProvider connectionProvider = ((SessionFactoryImplementor) sessionFactory).getServiceRegistry().getService(ConnectionProvider.class);
+        ConnectionProvider connectionProvider = null;
+        try {
+            connectionProvider = ((SessionFactoryImplementor) sessionFactory).getServiceRegistry().getService(ConnectionProvider.class);
+        }
+        catch (Exception e) {
+            // ignore
+        }
+
         if (connectionProvider instanceof DatasourceConnectionProviderImpl) {
             this.dataSource = ((DatasourceConnectionProviderImpl) connectionProvider).getDataSource();
             if (dataSource instanceof TransactionAwareDataSourceProxy) {
@@ -115,12 +124,13 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         }
     }
 
-    public GrailsHibernateTemplate(SessionFactory sessionFactory, HibernateDatastore datastore) {
+    public GrailsHibernateTemplate(SessionFactory sessionFactory, AbstractHibernateDatastore datastore) {
         this(sessionFactory, datastore, datastore.getDefaultFlushMode());
     }
 
-    public GrailsHibernateTemplate(SessionFactory sessionFactory, HibernateDatastore datastore, int defaultFlushMode) {
+    public GrailsHibernateTemplate(SessionFactory sessionFactory, AbstractHibernateDatastore datastore, int defaultFlushMode) {
         this(sessionFactory);
+        this.datastore = datastore;
         if (datastore != null) {
             cacheQueries = datastore.isCacheQueries();
             this.osivReadOnly = datastore.isOsivReadOnly();
@@ -131,8 +141,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
 
     @Override
     public <T> T execute(Closure<T> callable) {
-        HibernateCallback<T> hibernateCallback = DefaultGroovyMethods.asType(callable, HibernateCallback.class);
-        return execute(hibernateCallback);
+        return executeWithExistingOrCreateNewSession(getSessionFactory(), callable);
     }
 
     @Override
@@ -222,7 +231,18 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
             return executeWithNewSession(callable);
         }
         else {
-            return callable.call(sessionHolder.getSession());
+            try {
+                return (T1) callable.call(sessionHolder.getSession());
+            } catch (HibernateException ex) {
+                throw convertHibernateAccessException(ex);
+            }
+            catch (PersistenceException ex) {
+                DataAccessException dae = SessionFactoryUtils.convertPersistenceException(ex);
+                if (dae != null) {
+                    throw dae;
+                }
+                throw ex;
+            }
         }
     }
 
@@ -316,8 +336,9 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
             throw convertHibernateAccessException(ex);
         }
         catch (PersistenceException ex) {
-            if (ex.getCause() instanceof HibernateException) {
-                throw SessionFactoryUtils.convertHibernateAccessException((HibernateException) ex.getCause());
+            DataAccessException dae = SessionFactoryUtils.convertPersistenceException(ex);
+            if (dae != null) {
+                throw dae;
             }
             throw ex;
         }
@@ -340,13 +361,26 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
 
     protected boolean isSessionTransactional(Session session) {
         SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(sessionFactory);
-        return sessionHolder != null && sessionHolder.getSession() == session;
+        if (sessionHolder != null) {
+            return true;
+        }
+        if (datastore != null) {
+            Object gormHolder = TransactionSynchronizationManager.getResource(datastore);
+            if (gormHolder instanceof org.grails.datastore.mapping.transactions.SessionHolder) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public Session getSession() {
         try {
             return sessionFactory.getCurrentSession();
         } catch (HibernateException ex) {
+            SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(sessionFactory);
+            if (sessionHolder == null) {
+                return sessionFactory.openSession();
+            }
             throw new DataAccessResourceFailureException("Could not obtain current Hibernate Session", ex);
         }
     }
@@ -714,7 +748,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
     }
 
     protected void flushIfNecessary(Session session, boolean existingTransaction) throws HibernateException {
-        if (getFlushMode() == FLUSH_EAGER || (!existingTransaction && getFlushMode() != FLUSH_NEVER)) {
+        if (getFlushMode() == FLUSH_EAGER) {
             LOG.debug("Eagerly flushing Hibernate session");
             session.flush();
         }

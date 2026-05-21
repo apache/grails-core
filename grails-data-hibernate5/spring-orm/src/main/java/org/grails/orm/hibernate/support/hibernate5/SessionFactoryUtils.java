@@ -62,7 +62,10 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.dao.InvalidDataAccessResourceUsageException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.dao.PessimisticLockingFailureException;
+import org.springframework.jdbc.support.SQLErrorCodeSQLExceptionTranslator;
+
 import org.springframework.jdbc.datasource.DataSourceUtils;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ClassUtils;
@@ -173,6 +176,25 @@ public abstract class SessionFactoryUtils {
     }
 
     /**
+     * Convert the given PersistenceException to an appropriate exception
+     * from the {@code org.springframework.dao} hierarchy.
+     * @param ex the PersistenceException that occurred
+     * @return the corresponding DataAccessException instance
+     */
+    public static DataAccessException convertPersistenceException(PersistenceException ex) {
+        if (ex.getCause() instanceof HibernateException hibernateException) {
+            return convertHibernateAccessException(hibernateException);
+        }
+        if (ex instanceof jakarta.persistence.OptimisticLockException) {
+            return new OptimisticLockingFailureException(ex.getMessage(), ex);
+        }
+        if (ex instanceof jakarta.persistence.PessimisticLockException) {
+            return new PessimisticLockingFailureException(ex.getMessage(), ex);
+        }
+        return null;
+    }
+
+    /**
      * Convert the given HibernateException to an appropriate exception
      * from the {@code org.springframework.dao} hierarchy.
      * @param ex the HibernateException that occurred
@@ -181,6 +203,15 @@ public abstract class SessionFactoryUtils {
      * @see HibernateTransactionManager#convertHibernateAccessException
      */
     public static DataAccessException convertHibernateAccessException(HibernateException ex) {
+        if (ex instanceof StaleObjectStateException staleObjectStateException) {
+            return new HibernateOptimisticLockingFailureException(staleObjectStateException);
+        }
+        if (ex instanceof StaleStateException staleStateException) {
+            return new HibernateOptimisticLockingFailureException(staleStateException);
+        }
+        if (ex instanceof OptimisticEntityLockException optimisticEntityLockException) {
+            return new HibernateOptimisticLockingFailureException(optimisticEntityLockException);
+        }
         if (ex instanceof JDBCConnectionException) {
             return new DataAccessResourceFailureException(ex.getMessage(), ex);
         }

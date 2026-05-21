@@ -4,14 +4,14 @@
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
+ * 'License'); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
  *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
@@ -43,7 +43,7 @@ class CrossLayerMultiDataSourceSpec extends GrailsDataTckSpec {
         manager.cleanupMultiDataSource()
     }
 
-    void "domain save visible through data service"() {
+    void 'domain save visible through data service'() {
         given: 'a product saved via domain API'
         def saved = saveDomainProduct('DomainVisible', 10)
 
@@ -55,7 +55,7 @@ class CrossLayerMultiDataSourceSpec extends GrailsDataTckSpec {
         found.id == saved.id
     }
 
-    void "data service save visible through domain API"() {
+    void 'data service save visible through domain API'() {
         given: 'a product saved via data service'
         def saved = productService.save(new DataServiceRoutingProduct(name: 'ServiceVisible', amount: 20))
 
@@ -70,7 +70,7 @@ class CrossLayerMultiDataSourceSpec extends GrailsDataTckSpec {
         found.name == 'ServiceVisible'
     }
 
-    void "domain delete reflected in data service count"() {
+    void 'domain delete reflected in data service count'() {
         given: 'two products saved via data service'
         def first = productService.save(new DataServiceRoutingProduct(name: 'First', amount: 1))
         productService.save(new DataServiceRoutingProduct(name: 'Second', amount: 2))
@@ -82,7 +82,7 @@ class CrossLayerMultiDataSourceSpec extends GrailsDataTckSpec {
         productDataService.count() == 1
     }
 
-    void "data service delete reflected in domain API count"() {
+    void 'data service delete reflected in domain API count'() {
         given: 'two products saved via domain API'
         def first = saveDomainProduct('Primary', 1)
         saveDomainProduct('Secondary', 2)
@@ -94,7 +94,7 @@ class CrossLayerMultiDataSourceSpec extends GrailsDataTckSpec {
         countOnConnection('secondary') == 1
     }
 
-    void "domain and service counts match on secondary"() {
+    void 'domain and service counts match on secondary'() {
         given: 'products saved across domain and service layers'
         saveDomainProduct('Mixed1', 5)
         productService.save(new DataServiceRoutingProduct(name: 'Mixed2', amount: 6))

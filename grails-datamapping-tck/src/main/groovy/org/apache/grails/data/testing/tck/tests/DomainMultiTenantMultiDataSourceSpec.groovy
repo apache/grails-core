@@ -4,14 +4,14 @@
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
+ * 'License'); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
  *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
@@ -46,7 +46,7 @@ class DomainMultiTenantMultiDataSourceSpec extends GrailsDataTckSpec {
         }
     }
 
-    void "save with tenant isolation on secondary via domain API"() {
+    void 'save with tenant isolation on secondary via domain API'() {
         given: 'a tenant selected'
         setTenant('tenant1')
         when: 'a metric is saved under tenant1'
@@ -60,7 +60,7 @@ class DomainMultiTenantMultiDataSourceSpec extends GrailsDataTckSpec {
         } == 1
     }
 
-    void "count scoped to tenant on secondary via domain API"() {
+    void 'count scoped to tenant on secondary via domain API'() {
         given: 'metrics under tenant1'
         setTenant('tenant1')
         saveMetric('alpha', 1)
@@ -83,7 +83,7 @@ class DomainMultiTenantMultiDataSourceSpec extends GrailsDataTckSpec {
         tenant2Count == 1
     }
 
-    void "criteria query scoped to tenant on secondary via domain API"() {
+    void 'criteria query scoped to tenant on secondary via domain API'() {
         given: 'same named metrics across tenants'
         setTenant('tenant1')
         saveMetric('shared', 10)
@@ -105,7 +105,7 @@ class DomainMultiTenantMultiDataSourceSpec extends GrailsDataTckSpec {
         tenant2Results.first().amount == 20
     }
 
-    void "delete with tenant isolation on secondary via domain API"() {
+    void 'delete with tenant isolation on secondary via domain API'() {
         given: 'a metric saved under tenant1'
         setTenant('tenant1')
         def saved = DataServiceRoutingMetric.secondary.withNewTransaction {
@@ -123,7 +123,7 @@ class DomainMultiTenantMultiDataSourceSpec extends GrailsDataTckSpec {
         countMetrics() == 0
     }
 
-    void "tenant1 data not visible to tenant2 via domain API"() {
+    void 'tenant1 data not visible to tenant2 via domain API'() {
         given: 'data under tenant1'
         setTenant('tenant1')
         saveMetric('isolated', 5)

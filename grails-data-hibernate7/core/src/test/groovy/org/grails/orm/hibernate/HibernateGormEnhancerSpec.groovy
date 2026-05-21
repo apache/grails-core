@@ -20,7 +20,7 @@ package org.grails.orm.hibernate
 
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.HibernateGormDatastoreSpec
-import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 
 class HibernateGormEnhancerSpec extends HibernateGormDatastoreSpec {
@@ -31,17 +31,14 @@ class HibernateGormEnhancerSpec extends HibernateGormDatastoreSpec {
 
     def "test findStaticApi"() {
         expect:
-        HibernateGormEnhancer.findStaticApi(HGESimple, ConnectionSource.DEFAULT) != null
+        GormRegistry.instance.findStaticApi(HGESimple, ConnectionSource.DEFAULT) != null
     }
 
     def "test getStaticApi, getInstanceApi, getValidationApi"() {
-        given:
-        def enhancer = manager.hibernateDatastore.gormEnhancer
-
         expect:
-        enhancer.getStaticApi(HGESimple, ConnectionSource.DEFAULT) instanceof HibernateGormStaticApi
-        enhancer.getInstanceApi(HGESimple, ConnectionSource.DEFAULT) instanceof HibernateGormInstanceApi
-        enhancer.getValidationApi(HGESimple, ConnectionSource.DEFAULT) instanceof HibernateGormValidationApi
+        GormRegistry.instance.findStaticApi(HGESimple, ConnectionSource.DEFAULT) instanceof HibernateGormStaticApi
+        GormRegistry.instance.findInstanceApi(HGESimple, ConnectionSource.DEFAULT) instanceof HibernateGormInstanceApi
+        GormRegistry.instance.findValidationApi(HGESimple, ConnectionSource.DEFAULT) instanceof HibernateGormValidationApi
     }
 
     def "test deprecated constructor"() {

@@ -18,7 +18,6 @@
  */
 package org.grails.orm.hibernate
 
-import java.lang.reflect.Modifier
 
 import grails.gorm.MultiTenant
 import grails.gorm.annotation.Entity

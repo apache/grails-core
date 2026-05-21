@@ -1,49 +1,49 @@
-/*
- *  Licensed to the Apache Software Foundation (ASF) under one
- *  or more contributor license agreements.  See the NOTICE file
- *  distributed with this work for additional information
- *  regarding copyright ownership.  The ASF licenses this file
- *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
- *  with the License.  You may obtain a copy of the License at
+/* Copyright (C) 2010-2025 the original author or authors.
  *
- *    https://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *  KIND, either express or implied.  See the License for the
- *  specific language governing permissions and limitations
- *  under the License.
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.grails.datastore.mapping.simple;
 
-import java.util.Map;
-
-import org.springframework.context.ApplicationEventPublisher;
-
 import org.grails.datastore.mapping.core.AbstractSession;
-import org.grails.datastore.mapping.engine.Persister;
+import org.grails.datastore.mapping.core.Datastore;
+import org.grails.datastore.mapping.core.connections.ConnectionSource;
+import org.grails.datastore.mapping.engine.EntityPersister;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
+import grails.gorm.multitenancy.Tenants;
 import org.grails.datastore.mapping.simple.engine.SimpleMapEntityPersister;
 import org.grails.datastore.mapping.transactions.Transaction;
+import org.springframework.context.ApplicationEventPublisher;
+
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * A simple implementation of the {@link org.grails.datastore.mapping.core.Session} interface that backs onto an in-memory map.
- * Mainly used for mocking and testing scenarios
+ * A {@link org.grails.datastore.mapping.core.Session} implementation that backs onto an in-memory map.
  *
  * @author Graeme Rocher
  * @since 1.0
  */
-@SuppressWarnings("rawtypes")
-public class SimpleMapSession extends AbstractSession<Map> {
-    private Map<String, Map> datastore;
+public class SimpleMapSession extends AbstractSession {
 
-    public SimpleMapSession(SimpleMapDatastore datastore, MappingContext mappingContext,
+    public SimpleMapSession(Datastore datastore, MappingContext mappingContext,
                ApplicationEventPublisher publisher) {
         super(datastore, mappingContext, publisher);
-        this.datastore = datastore.getBackingMap();
     }
 
     @Override
@@ -51,18 +51,41 @@ public class SimpleMapSession extends AbstractSession<Map> {
         return false;
     }
 
+    public Map<Serializable, Map> getBackingMap() {
+        SimpleMapDatastore datastore = (SimpleMapDatastore) getDatastore();
+        return datastore.getBackingMap();
+    }
+
+    public Map getIndices() {
+        SimpleMapDatastore datastore = (SimpleMapDatastore) getDatastore();
+        return datastore.getIndices();
+    }
+
     @Override
-    protected Persister createPersister(Class cls, MappingContext mappingContext) {
+    protected EntityPersister createPersister(Class cls, MappingContext mappingContext) {
         PersistentEntity entity = mappingContext.getPersistentEntity(cls.getName());
         if (entity == null) {
             return null;
         }
         return new SimpleMapEntityPersister(mappingContext, entity, this,
-            (SimpleMapDatastore) getDatastore(), publisher);
+                publisher);
     }
 
-    public Map<String, Map> getBackingMap() {
-        return datastore;
+    private boolean rollbackOnly = false;
+
+    public void setRollbackOnly() {
+        this.rollbackOnly = true;
+    }
+
+    public boolean isRollbackOnly() {
+        return this.rollbackOnly;
+    }
+
+    @Override
+    public void flush() {
+        if (!isRollbackOnly()) {
+            super.flush();
+        }
     }
 
     @Override
@@ -70,20 +93,71 @@ public class SimpleMapSession extends AbstractSession<Map> {
         return new MockTransaction(this);
     }
 
-    public Map getNativeInterface() {
-        return datastore;
+    @Override
+    public Map<Serializable, Map> getNativeInterface() {
+        return getBackingMap();
     }
 
     private class MockTransaction implements Transaction {
+        private final SimpleMapSession session;
+        private final Map<Serializable, Map> dataBackup;
+        private final Map<String, List> indicesBackup;
+        private final Map<String, Long> lastKeysBackup;
+
         public MockTransaction(SimpleMapSession simpleMapSession) {
+            this.session = simpleMapSession;
+            SimpleMapDatastore datastore = (SimpleMapDatastore) session.getDatastore();
+            SimpleMapDatastore.SharedState state = datastore.getSharedState();
+            
+            this.dataBackup = new HashMap<>();
+            for (Map.Entry<Serializable, Map> entry : state.inmemoryData.entrySet()) {
+                Map familyMap = entry.getValue();
+                Map familyBackup = new HashMap();
+                for (Object key : familyMap.keySet()) {
+                    Object val = familyMap.get(key);
+                    if (val instanceof Map) {
+                        familyBackup.put(key, new HashMap((Map) val));
+                    } else {
+                        familyBackup.put(key, val);
+                    }
+                }
+                dataBackup.put(entry.getKey(), familyBackup);
+            }
+            
+            this.indicesBackup = new HashMap<>();
+            for (Map.Entry<String, List> entry : state.indices.entrySet()) {
+                indicesBackup.put(entry.getKey(), new ArrayList(entry.getValue()));
+            }
+            
+            this.lastKeysBackup = new HashMap<>();
+            for (Map.Entry<String, AtomicLong> entry : state.lastKeys.entrySet()) {
+                lastKeysBackup.put(entry.getKey(), entry.getValue().get());
+            }
         }
 
         public void commit() {
-            // do nothing
+            if (!session.isRollbackOnly()) {
+                session.flush();
+            }
         }
 
         public void rollback() {
-            // do nothing
+            session.setRollbackOnly();
+            SimpleMapDatastore datastore = (SimpleMapDatastore) session.getDatastore();
+            SimpleMapDatastore.SharedState state = datastore.getSharedState();
+            
+            state.inmemoryData.clear();
+            state.inmemoryData.putAll(dataBackup);
+            
+            state.indices.clear();
+            state.indices.putAll(indicesBackup);
+            
+            for (Map.Entry<String, Long> entry : lastKeysBackup.entrySet()) {
+                AtomicLong al = state.lastKeys.get(entry.getKey());
+                if (al != null) {
+                    al.set(entry.getValue());
+                }
+            }
         }
 
         public Object getNativeTransaction() {
@@ -96,6 +170,14 @@ public class SimpleMapSession extends AbstractSession<Map> {
 
         public void setTimeout(int timeout) {
             // do nothing
+        }
+
+        public void setRollbackOnly() {
+            session.setRollbackOnly();
+        }
+
+        public boolean isRollbackOnly() {
+            return session.isRollbackOnly();
         }
     }
 }

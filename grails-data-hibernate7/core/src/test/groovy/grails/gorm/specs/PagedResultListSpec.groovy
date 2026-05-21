@@ -20,7 +20,6 @@ package grails.gorm.specs
 import grails.gorm.PagedResultList
 import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.HibernateEntity
-import org.grails.orm.hibernate.query.HibernatePagedResultList
 
 class PagedResultListSpec extends HibernateGormDatastoreSpec {
 
@@ -40,7 +39,7 @@ class PagedResultListSpec extends HibernateGormDatastoreSpec {
         def results = PRLBook.list(max: 2, sort: "title")
 
         then:
-        results instanceof HibernatePagedResultList
+        results instanceof org.grails.orm.hibernate.query.PagedResultList
         results.size() == 2
         results.totalCount == 3
         results[0].title == "Carrie"
@@ -57,7 +56,7 @@ class PagedResultListSpec extends HibernateGormDatastoreSpec {
         def results = PRLBook.list(max: 3, offset: 2, sort: "id")
 
         then:
-        results instanceof HibernatePagedResultList
+        results instanceof org.grails.orm.hibernate.query.PagedResultList
         results.size() == 3
         results.totalCount == 10
         results.max == 3
@@ -81,7 +80,7 @@ class PagedResultListSpec extends HibernateGormDatastoreSpec {
         }
 
         then:
-        results instanceof HibernatePagedResultList
+        results instanceof org.grails.orm.hibernate.query.PagedResultList
         results.size() == 2
         results.totalCount == 2
         results.max == 2

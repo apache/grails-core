@@ -284,7 +284,7 @@ class ClosureEventListenerSpec extends HibernateGormDatastoreSpec {
     void "failOnError is enabled if package is in failOnErrorPackages"() {
         given:
         def persistentEntity = manager.hibernateDatastore.mappingContext.getPersistentEntity(ValidatedBook.name) as GrailsHibernatePersistentEntity
-        def listener = new ClosureEventListener(persistentEntity, false, ["org.grails.orm.hibernate.support"])
+        def listener = new ClosureEventListener(manager.hibernateDatastore, persistentEntity, false, ["org.grails.orm.hibernate.support"])
 
         expect:
         listener.failOnErrorEnabled

@@ -37,6 +37,7 @@ import jakarta.annotation.Nullable;
 import org.hibernate.jpa.AvailableHints;
 
 import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 
 import static org.grails.orm.hibernate.query.HqlQueryMethods.convertValue;
 
@@ -120,7 +121,10 @@ public record HqlQueryContext(
                 resolveHql(queryCharseq, isNative, namedParamsCopy) :
                 resolveHql(queryCharseq, isNative, positionalParamsCopy))
             .filter(s -> !s.trim().isEmpty())
-            .orElseGet(() -> "from %s".formatted(entity.getName()));
+            .orElseGet(() -> {
+                HqlListQueryBuilder builder = new HqlListQueryBuilder((GrailsHibernatePersistentEntity) entity, querySettingsCopy);
+                return builder.buildListHql();
+            });
 
         namedParamsCopy.replaceAll((k, v) -> convertValue(v));
         positionalParamsCopy.replaceAll(HqlQueryMethods::convertValue);

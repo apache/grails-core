@@ -4,14 +4,14 @@
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
+ * 'License'); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
  *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
@@ -30,7 +30,7 @@ class EnumSpec extends GrailsDataTckSpec {
         manager.addAllDomainClasses([EnumThing])
     }
 
-    void "Test save()"() {
+    void 'Test save()'() {
         given:
 
         EnumThing t = new EnumThing(name: 'e1', en: TestEnum.V1)
@@ -52,7 +52,7 @@ class EnumSpec extends GrailsDataTckSpec {
     }
 
     @Issue('GPMONGODB-248')
-    void "Test findByEnInList()"() {
+    void 'Test findByEnInList()'() {
         given:
 
         new EnumThing(name: 'e1', en: TestEnum.V1).save(failOnError: true)
@@ -73,7 +73,7 @@ class EnumSpec extends GrailsDataTckSpec {
         instance3 == null
     }
 
-    void "Test findBy()"() {
+    void 'Test findBy()'() {
         given:
 
         new EnumThing(name: 'e1', en: TestEnum.V1).save(failOnError: true)
@@ -94,7 +94,7 @@ class EnumSpec extends GrailsDataTckSpec {
         instance3 == null
     }
 
-    void "Test findBy() with clearing the session"() {
+    void 'Test findBy() with clearing the session'() {
         given:
 
         new EnumThing(name: 'e1', en: TestEnum.V1).save(failOnError: true, flush: true)
@@ -118,7 +118,7 @@ class EnumSpec extends GrailsDataTckSpec {
 
     @Issue('GPMONGODB-248')
 
-    void "Test findByInList()"() {
+    void 'Test findByInList()'() {
         given:
 
         new EnumThing(name: 'e1', en: TestEnum.V1).save(failOnError: true)
@@ -158,7 +158,7 @@ class EnumSpec extends GrailsDataTckSpec {
         instance3.isEmpty()
     }
 
-    void "Test findAllBy()"() {
+    void 'Test findAllBy()'() {
         given:
 
         new EnumThing(name: 'e1', en: TestEnum.V1).save(failOnError: true)
@@ -185,7 +185,7 @@ class EnumSpec extends GrailsDataTckSpec {
 
     }
 
-    void "Test findAllBy() with clearing the session"() {
+    void 'Test findAllBy() with clearing the session'() {
         given:
 
         new EnumThing(name: 'e1', en: TestEnum.V1).save(failOnError: true, flush: true)
@@ -212,7 +212,7 @@ class EnumSpec extends GrailsDataTckSpec {
         instance3.isEmpty()
     }
 
-    void "Test findAllBy()"() {
+    void 'Test findAllBy()'() {
         given:
 
         new EnumThing(name: 'e1', en: TestEnum.V1).save(failOnError: true)
@@ -246,7 +246,7 @@ class EnumSpec extends GrailsDataTckSpec {
         v12Instances.size() == 3
     }
 
-    void "Test countBy()"() {
+    void 'Test countBy()'() {
         given:
 
         new EnumThing(name: 'e1', en: TestEnum.V1).save(failOnError: true)

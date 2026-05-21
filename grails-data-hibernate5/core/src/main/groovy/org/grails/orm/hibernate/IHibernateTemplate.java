@@ -66,9 +66,13 @@ public interface IHibernateTemplate {
 
     <T> T load(Class<T> type, Serializable key);
 
+    <T> T lock(Class<T> type, Serializable key, LockMode mode);
+
     void delete(Object o);
 
     SessionFactory getSessionFactory();
+
+    <T> T execute(GrailsHibernateTemplate.HibernateCallback<T> action);
 
     <T> T execute(Closure<T> callable);
 

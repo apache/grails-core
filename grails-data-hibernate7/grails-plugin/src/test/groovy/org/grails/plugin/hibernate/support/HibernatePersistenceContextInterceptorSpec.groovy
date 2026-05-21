@@ -105,20 +105,27 @@ class HibernatePersistenceContextInterceptorSpec extends Specification {
     }
 
     def "test flush and clear"() {
-        given: "A persistence context interceptor"
+        given: "A persistence context interceptor and a manually-bound Hibernate session"
         def interceptor = new HibernatePersistenceContextInterceptor()
         interceptor.setHibernateDatastore(datastore)
+        def sf = datastore.sessionFactory
+        def nativeSession = sf.openSession()
+        TransactionSynchronizationManager.bindResource(sf, new SessionHolder(nativeSession))
 
-        when: "Operations are called within a session context"
-        HpciBook.withNewSession {
-            interceptor.init()
-            interceptor.clear()
-            interceptor.flush()
-            interceptor.destroy()
-        }
+        when: "Operations are called within the session context"
+        interceptor.init()
+        interceptor.clear()
+        interceptor.flush()
+        interceptor.destroy()
 
         then: "no exception occurs"
         noExceptionThrown()
+
+        cleanup:
+        if (TransactionSynchronizationManager.hasResource(sf)) {
+            TransactionSynchronizationManager.unbindResource(sf)
+        }
+        nativeSession.close()
     }
 }
 

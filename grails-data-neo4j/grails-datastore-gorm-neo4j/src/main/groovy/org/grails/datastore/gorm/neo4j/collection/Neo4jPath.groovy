@@ -23,7 +23,7 @@ import grails.neo4j.Neo4jEntity
 import grails.neo4j.Path
 import grails.neo4j.Relationship
 import groovy.transform.CompileStatic
-import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.neo4j.GraphPersistentEntity
 import org.grails.datastore.gorm.neo4j.Neo4jDatastore
 import org.grails.datastore.gorm.neo4j.Neo4jMappingContext
@@ -83,7 +83,7 @@ class Neo4jPath<S extends Neo4jEntity<S>, E extends Neo4jEntity<E>> implements P
     S start() {
         if(start == null) {
             Class clazz = from.javaClass
-            Neo4jEntityPersister persister = (Neo4jEntityPersister )GormEnhancer.findDatastore(clazz).currentSession.getPersister(clazz)
+            Neo4jEntityPersister persister = (Neo4jEntityPersister )GormRegistry.instance.apiResolver.findDatastore(clazz).currentSession.getPersister(clazz)
             start = (S)persister.unmarshallOrFromCache(from, neo4jPath.start())
         }
         return start
@@ -93,7 +93,7 @@ class Neo4jPath<S extends Neo4jEntity<S>, E extends Neo4jEntity<E>> implements P
     E end() {
         if(end == null) {
             Class clazz = to.javaClass
-            Neo4jEntityPersister persister = (Neo4jEntityPersister )GormEnhancer.findDatastore(clazz).currentSession.getPersister(clazz)
+            Neo4jEntityPersister persister = (Neo4jEntityPersister )GormRegistry.instance.apiResolver.findDatastore(clazz).currentSession.getPersister(clazz)
 
             end = (E)persister.unmarshallOrFromCache(to, neo4jPath.end())
         }

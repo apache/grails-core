@@ -23,6 +23,7 @@ import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.MethodNode
+import org.codehaus.groovy.ast.expr.ArgumentListExpression
 import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.GStringExpression
@@ -51,7 +52,13 @@ class FindOneStringQueryImplementer extends AbstractStringQueryImplementer imple
         String methodToExecute = getFindMethodToInvoke(domainClassNode, newMethodNode, returnType)
 
         if (methodToExecute != 'find') {
-            queryArg = args(queryArg, AstUtils.mapX(max: constX(1)))
+            if (queryArg instanceof ArgumentListExpression) {
+                List<Expression> exprs = new ArrayList<>(((ArgumentListExpression) queryArg).expressions)
+                exprs.add(AstUtils.mapX(max: constX(1)))
+                queryArg = new ArgumentListExpression(exprs)
+            } else {
+                queryArg = args(queryArg, AstUtils.mapX(max: constX(1)))
+            }
         }
 
         Expression queryCall = callX(findStaticApiForConnectionId(domainClassNode, newMethodNode),
@@ -83,11 +90,19 @@ class FindOneStringQueryImplementer extends AbstractStringQueryImplementer imple
         else if (!AstUtils.isSubclassOfOrImplementsInterface(returnType, Iterable.name) && !returnType.isArray() && !returnType.packageName?.startsWith('rx.')) {
             def queryAnnotation = AstUtils.findAnnotation(methodNode, getAnnotationType())
             def query = queryAnnotation.getMember('value')
+            String queryText = null
             if (query instanceof GStringExpression) {
                 GStringExpression gstring = (GStringExpression) query
                 List<ConstantExpression> strings = gstring.strings
-                ConstantExpression stem = strings.first()
-                if (stem.text.toLowerCase(Locale.ENGLISH).contains('select')) {
+                queryText = strings.first().text
+            }
+            else if (query instanceof ConstantExpression) {
+                queryText = query.text
+            }
+
+            if (queryText != null) {
+                String queryLower = queryText.toLowerCase(Locale.ENGLISH)
+                if (queryLower.contains('select') || queryLower.contains('from')) {
                     return returnType != ClassHelper.VOID_TYPE
                 }
             }

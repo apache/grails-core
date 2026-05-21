@@ -19,13 +19,18 @@
 package org.grails.orm.hibernate;
 
 import org.hibernate.SessionFactory;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher;
+import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.core.connections.ConnectionSources;
 import org.grails.orm.hibernate.cfg.HibernateMappingContext;
 import org.grails.orm.hibernate.cfg.Settings;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
+import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
+import org.grails.datastore.mapping.core.connections.SingletonConnectionSources;
+import java.util.Collections;
 
 /**
  * A datastore for a specific connection in a multiple data source setup.
@@ -45,15 +50,19 @@ public class ChildHibernateDatastore extends HibernateDatastore {
     }
 
     @Override
+    public HibernateDatastore getPrimaryDatastore() {
+        return parent;
+    }
+
+    @Override
     protected HibernateGormEnhancer initialize() {
-        return null;
+        return new HibernateGormEnhancer(this, transactionManager, connectionSources.getDefaultConnectionSource().getSettings(), Collections.emptyMap());
     }
 
     @Override
     public void destroy() {
         if (!this.destroyed) {
-            // Only mark as destroyed, don't close shared resources
-            this.destroyed = true;
+            super.destroy();
         }
     }
 
@@ -71,5 +80,36 @@ public class ChildHibernateDatastore extends HibernateDatastore {
             }
             return hibernateDatastore;
         }
+    }
+
+    /**
+     * Returns a {@link HibernateSession} for this child datastore's {@link SessionFactory}.
+     *
+     * <p>When a Spring-managed transaction is active (e.g. inside {@code withNewTransaction}),
+     * the transaction manager binds the Hibernate session to TSM with key = {@link SessionFactory}.
+     * In that case we reuse that session so that any Hibernate filters enabled on it (e.g. the
+     * DISCRIMINATOR multi-tenancy filter set by {@link org.grails.orm.hibernate.multitenancy.MultiTenantEventListener})
+     * are visible to the query that {@code connect()} feeds.</p>
+     *
+     * <p>When no transaction session is bound (e.g. in SCHEMA mode where each child datastore
+     * has its own session factory and sessions are created explicitly), we open a new session.
+     * This preserves the original behaviour required by SCHEMA multi-tenancy.</p>
+     *
+     * <p>Session lifecycle is safe: {@link HibernateSession#disconnect()} closes
+     * the {@code nativeSession} when it is non-null, and
+     * {@code DatastoreUtils.closeSessionOrRegisterDeferredClose()} always delegates
+     * to {@code disconnect()} for non-transactional sessions.</p>
+     */
+    @Override
+    public Session connect() {
+        SessionFactory sf = getSessionFactory();
+        Object resource = TransactionSynchronizationManager.getResource(sf);
+        if (resource instanceof SessionHolder sfHolder) {
+            org.hibernate.Session nativeSession = sfHolder.getSession();
+            if (nativeSession != null && nativeSession.isOpen()) {
+                return new HibernateSession(this, sf, nativeSession);
+            }
+        }
+        return new HibernateSession(this, sf, sf.openSession());
     }
 }

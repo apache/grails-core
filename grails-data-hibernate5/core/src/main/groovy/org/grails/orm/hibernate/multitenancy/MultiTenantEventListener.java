@@ -24,7 +24,7 @@ import java.io.Serializable;
 import org.springframework.context.ApplicationEvent;
 
 import grails.gorm.multitenancy.Tenants;
-import org.grails.datastore.gorm.GormEnhancer;
+import org.grails.datastore.gorm.GormRegistry;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent;
@@ -68,7 +68,7 @@ public class MultiTenantEventListener implements PersistenceEventListener {
                 PersistentEntity entity = query.getEntity();
                 if (entity.isMultiTenant()) {
                     if (hibernateDatastore == null) {
-                        hibernateDatastore = GormEnhancer.findDatastore(entity.getJavaClass());
+                        hibernateDatastore = GormRegistry.getInstance().getApiResolver().findDatastore(entity.getJavaClass());
                     }
                     if (supportsSourceType(hibernateDatastore.getClass())) {
                         ((AbstractHibernateDatastore) hibernateDatastore).enableMultiTenancyFilter();
@@ -81,7 +81,7 @@ public class MultiTenantEventListener implements PersistenceEventListener {
                 if (entity.isMultiTenant()) {
                     TenantId tenantId = entity.getTenantId();
                     if (hibernateDatastore == null) {
-                        hibernateDatastore = GormEnhancer.findDatastore(entity.getJavaClass());
+                        hibernateDatastore = GormRegistry.getInstance().getApiResolver().findDatastore(entity.getJavaClass());
                     }
                     if (supportsSourceType(hibernateDatastore.getClass())) {
                         Serializable currentId;
@@ -113,4 +113,3 @@ public class MultiTenantEventListener implements PersistenceEventListener {
         return DEFAULT_ORDER;
     }
 }
-

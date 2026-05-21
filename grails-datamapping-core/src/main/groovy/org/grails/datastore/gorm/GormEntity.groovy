@@ -38,6 +38,11 @@ import org.grails.datastore.mapping.model.types.OneToMany
 import org.grails.datastore.mapping.model.types.ToOne
 import org.grails.datastore.mapping.query.api.BuildableCriteria
 import org.grails.datastore.mapping.query.api.Criteria
+import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
+import grails.gorm.multitenancy.CurrentTenantHolder
+import grails.gorm.multitenancy.Tenants
+import grails.gorm.MultiTenant
 import org.grails.datastore.mapping.reflect.EntityReflector
 
 /**
@@ -61,7 +66,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     @Generated
     @CompileDynamic
     def propertyMissing(String name) {
-        GormEnhancer.findInstanceApi(getClass()).propertyMissing(this, name)
+        GormRegistry.instance.findInstanceApi(getClass()).propertyMissing(this, name)
     }
 
     /**
@@ -453,7 +458,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      */
     @Generated
     static PersistentEntity getGormPersistentEntity() {
-        currentGormStaticApi().persistentEntity
+        currentGormStaticApi().getGormPersistentEntity()
     }
 
     @Generated
@@ -542,6 +547,25 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     @Generated
     static List<Serializable> saveAll(Iterable<?> objectsToSave) {
         currentGormStaticApi().saveAll(objectsToSave)
+    }
+
+    /**
+     * Deletes all objects
+     * @return The number of objects deleted
+     */
+    @Generated
+    static Number deleteAll() {
+        currentGormStaticApi().deleteAll()
+    }
+
+    /**
+     * Deletes all objects for the given arguments
+     * @param params The arguments
+     * @return The number of objects deleted
+     */
+    @Generated
+    static Number deleteAll(Map params) {
+        currentGormStaticApi().deleteAll(params)
     }
 
     /**
@@ -855,9 +879,15 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     @Generated
     static Object staticPropertyMissing(String property) {
         try {
-            currentGormStaticApi().propertyMissing(property)
-        } catch (IllegalStateException e) {
-            throw new MissingPropertyException(property, this)
+            def result = currentGormStaticApi().propertyMissing(property)
+            if (result == null) {
+                throw new MissingPropertyException(property, this)
+            }
+            return result
+        } catch (MissingPropertyException e) {
+            throw e
+        } catch (Throwable e) {
+            throw new MissingPropertyException(property, this, e)
         }
     }
 
@@ -1450,12 +1480,14 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     }
 
     @Generated
-    private GormInstanceApi<D> currentGormInstanceApi() {
-        (GormInstanceApi<D>) GormEnhancer.findInstanceApi(getClass())
+    GormInstanceApi<D> currentGormInstanceApi() {
+        Class<D> cls = (Class<D>) getClass()
+        GormRegistry.instance.resolveInstanceApi(cls)
     }
 
     @Generated
-    private static GormStaticApi<D> currentGormStaticApi() {
-        (GormStaticApi<D>) GormEnhancer.findStaticApi(this)
+    static GormStaticApi<D> currentGormStaticApi() {
+        Class<D> cls = (Class<D>) this
+        GormRegistry.instance.resolveStaticApi(cls)
     }
 }

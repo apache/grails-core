@@ -1,400 +1,466 @@
-/*
- *  Licensed to the Apache Software Foundation (ASF) under one
- *  or more contributor license agreements.  See the NOTICE file
- *  distributed with this work for additional information
- *  regarding copyright ownership.  The ASF licenses this file
- *  to you under the Apache License, Version 2.0 (the
- *  "License"); you may not use this file except in compliance
- *  with the License.  You may obtain a copy of the License at
+/* Copyright (C) 2010-2025 the original author or authors.
  *
- *    https://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *  KIND, either express or implied.  See the License for the
- *  specific language governing permissions and limitations
- *  under the License.
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.grails.datastore.mapping.simple;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.Serializable;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 import groovy.lang.Closure;
-
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.core.env.PropertyResolver;
-import org.springframework.transaction.PlatformTransactionManager;
-
 import org.grails.datastore.gorm.GormEnhancer;
-import org.grails.datastore.gorm.GormInstanceApi;
-import org.grails.datastore.gorm.GormStaticApi;
-import org.grails.datastore.gorm.GormValidationApi;
+import org.grails.datastore.gorm.GormRegistry;
 import org.grails.datastore.gorm.events.AutoTimestampEventListener;
-import org.grails.datastore.gorm.events.ConfigurableApplicationContextEventPublisher;
-import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher;
-import org.grails.datastore.gorm.events.DefaultApplicationEventPublisher;
 import org.grails.datastore.gorm.events.DomainEventListener;
-import org.grails.datastore.gorm.multitenancy.MultiTenantEventListener;
-import org.grails.datastore.gorm.utils.ClasspathEntityScanner;
-import org.grails.datastore.mapping.config.Settings;
 import org.grails.datastore.mapping.core.AbstractDatastore;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.DatastoreUtils;
 import org.grails.datastore.mapping.core.Session;
-import org.grails.datastore.mapping.core.connections.ConnectionSource;
-import org.grails.datastore.mapping.core.connections.ConnectionSourceFactory;
-import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings;
-import org.grails.datastore.mapping.core.connections.ConnectionSources;
-import org.grails.datastore.mapping.core.connections.ConnectionSourcesInitializer;
-import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider;
-import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport;
-import org.grails.datastore.mapping.core.connections.DefaultConnectionSource;
-import org.grails.datastore.mapping.core.connections.InMemoryConnectionSources;
-import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore;
-import org.grails.datastore.mapping.core.connections.SingletonConnectionSources;
-import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
+import org.grails.datastore.mapping.core.connections.*;
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore;
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
-import org.grails.datastore.mapping.multitenancy.SchemaMultiTenantCapableDatastore;
 import org.grails.datastore.mapping.multitenancy.TenantResolver;
+import org.grails.datastore.mapping.multitenancy.resolvers.NoTenantResolver;
 import org.grails.datastore.mapping.simple.connections.SimpleMapConnectionSourceFactory;
 import org.grails.datastore.mapping.transactions.DatastoreTransactionManager;
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.ApplicationListener;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.core.env.PropertyResolver;
+import org.springframework.core.env.StandardEnvironment;
+import org.springframework.transaction.PlatformTransactionManager;
+
+import java.io.Closeable;
+import java.io.IOException;
+import java.io.Serializable;
+import java.lang.reflect.Method;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * A simple implementation of the {@link org.grails.datastore.mapping.core.Datastore} interface that backs onto an in-memory map.
- * Mainly used for mocking and testing scenarios.
+ * A simple implementation of the {@link org.grails.datastore.mapping.core.Datastore} interface that backs onto a Map
  *
  * @author Graeme Rocher
  * @since 1.0
  */
-@SuppressWarnings("rawtypes")
-public class SimpleMapDatastore extends AbstractDatastore implements Closeable, TransactionCapableDatastore, MultipleConnectionSourceCapableDatastore, SchemaMultiTenantCapableDatastore<Map<String, Map>, ConnectionSourceSettings>, ConnectionSourcesProvider<Map<String, Map>, ConnectionSourceSettings> {
-    private final Map<String, Map> inmemoryData;
-    private final TenantResolver tenantResolver;
-    protected final GormEnhancer gormEnhancer;
-    private final ConfigurableApplicationEventPublisher eventPublisher;
-    private Map indices = new ConcurrentHashMap();
-    private final PlatformTransactionManager transactionManager;
-    private final ConnectionSources<Map<String, Map>, ConnectionSourceSettings> connectionSources;
-    private final MultiTenancySettings.MultiTenancyMode multiTenancyMode;
-    protected final Map<String, SimpleMapDatastore> datastoresByConnectionSource = new LinkedHashMap<>();
-    protected final boolean failOnError;
+public class SimpleMapDatastore extends AbstractDatastore implements TransactionCapableDatastore, MultiTenantCapableDatastore<Map<String, Map>, ConnectionSourceSettings>, MultipleConnectionSourceCapableDatastore, Closeable {
 
-    public SimpleMapDatastore(ConnectionSources<Map<String, Map>, ConnectionSourceSettings> connectionSources, MappingContext mappingContext, ConfigurableApplicationEventPublisher eventPublisher) {
-        super(mappingContext);
+    protected static final Map<MappingContext, SharedState> stateCache = new ConcurrentHashMap<>();
+
+    public static class SharedState {
+        public final Map<Serializable, Map> inmemoryData = new ConcurrentHashMap<>();
+        public final Map<String, List> indices = new ConcurrentHashMap<>();
+        public final Map<String, AtomicLong> lastKeys = new ConcurrentHashMap<>();
+    }
+
+    private SharedState state;
+    protected final ConnectionSources<Map<String, Map>, ConnectionSourceSettings> connectionSources;
+    protected final DatastoreTransactionManager transactionManager;
+    protected final String connectionName;
+    protected final MultiTenancySettings.MultiTenancyMode multiTenancyMode;
+    protected final TenantResolver tenantResolver;
+    protected final Map<String, SimpleMapDatastore> childDatastores = new ConcurrentHashMap<>();
+    protected final org.grails.datastore.mapping.core.SessionResolver sessionResolver = new org.grails.datastore.mapping.core.ThreadLocalSessionResolver<>();
+
+    @Override
+    public org.grails.datastore.mapping.core.SessionResolver getSessionResolver() {
+        return sessionResolver;
+    }
+
+    public SimpleMapDatastore(ConnectionSources<Map<String, Map>, ConnectionSourceSettings> connectionSources, MappingContext mappingContext, ApplicationEventPublisher eventPublisher) {
+        this(connectionSources, (KeyValueMappingContext)mappingContext, eventPublisher, null);
+    }
+
+    public SimpleMapDatastore(ConnectionSources<Map<String, Map>, ConnectionSourceSettings> connectionSources, KeyValueMappingContext mappingContext, ApplicationEventPublisher eventPublisher, SharedState state) {
+        this(connectionSources, mappingContext, eventPublisher, state, ConnectionSource.DEFAULT,
+             ((ConnectionSource<Map<String, Map>, ConnectionSourceSettings>)connectionSources.getDefaultConnectionSource()).getSettings().getMultiTenancy().getMode(),
+             ((ConnectionSource<Map<String, Map>, ConnectionSourceSettings>)connectionSources.getDefaultConnectionSource()).getSettings().getMultiTenancy().getTenantResolver());
+    }
+
+    protected SimpleMapDatastore(ConnectionSources<Map<String, Map>, ConnectionSourceSettings> connectionSources, MappingContext mappingContext, ApplicationEventPublisher eventPublisher, SharedState state, String connectionName, MultiTenancySettings.MultiTenancyMode multiTenancyMode, TenantResolver tenantResolver) {
+        super(mappingContext, connectionSources.getBaseConfiguration(), (eventPublisher instanceof ConfigurableApplicationContext ? (ConfigurableApplicationContext) eventPublisher : null));
+        if (eventPublisher != null) {
+            this.applicationEventPublisher = eventPublisher;
+        }
         this.connectionSources = connectionSources;
-        ConnectionSource<Map<String, Map>, ConnectionSourceSettings> defaultConnectionSource = connectionSources.getDefaultConnectionSource();
-        this.inmemoryData = defaultConnectionSource.getSource();
-        DatastoreTransactionManager dtm = new DatastoreTransactionManager();
-        dtm.setDatastore(this);
-        this.transactionManager = dtm;
-        MultiTenancySettings multiTenancy = defaultConnectionSource.getSettings().getMultiTenancy();
-        this.multiTenancyMode = multiTenancy.getMode();
-        this.tenantResolver = multiTenancy.getTenantResolver();
-        PropertyResolver config = connectionSources.getBaseConfiguration();
-        this.failOnError = config.getProperty(Settings.SETTING_FAIL_ON_ERROR, Boolean.class, false);
-        if (!(connectionSources instanceof SingletonConnectionSources)) {
+        this.connectionName = connectionName;
+        this.multiTenancyMode = multiTenancyMode != null ? multiTenancyMode : MultiTenancySettings.MultiTenancyMode.NONE;
+        this.tenantResolver = tenantResolver != null ? tenantResolver : new NoTenantResolver();
+        this.state = state;
+        this.transactionManager = new DatastoreTransactionManager();
+        this.transactionManager.setDatastore(this);
 
-            Iterable<ConnectionSource<Map<String, Map>, ConnectionSourceSettings>> allConnectionSources = connectionSources.getAllConnectionSources();
-            for (ConnectionSource<Map<String, Map>, ConnectionSourceSettings> connectionSource : allConnectionSources) {
-                SingletonConnectionSources singletonConnectionSources = new SingletonConnectionSources(connectionSource, connectionSources.getBaseConfiguration());
-                SimpleMapDatastore childDatastore;
-
-                if (ConnectionSource.DEFAULT.equals(connectionSource.getName())) {
-                    childDatastore = this;
-                }
-                else {
-                    childDatastore = new SimpleMapDatastore(singletonConnectionSources, mappingContext, eventPublisher) {
-                        @Override
-                        protected GormEnhancer initialize(ConnectionSourceSettings settings) {
-                            return null;
-                        }
-                    };
-                }
-                datastoresByConnectionSource.put(connectionSource.getName(), childDatastore);
+        if (this.state == null) {
+            this.state = stateCache.get(mappingContext);
+            if (this.state == null) {
+                this.state = new SharedState();
+                stateCache.put(mappingContext, this.state);
             }
         }
-        this.eventPublisher = eventPublisher;
-        this.gormEnhancer = initialize(defaultConnectionSource.getSettings());
+
+        if (!(mappingContext instanceof KeyValueMappingContext)) {
+            throw new IllegalArgumentException("MappingContext must be an instance of KeyValueMappingContext");
+        }
+
+        GormRegistry.getInstance().registerDatastore(this.connectionName, this);
+        if (ConnectionSource.DEFAULT.equals(this.connectionName)) {
+            new GormEnhancer(this, this.transactionManager, ((ConnectionSource<Map<String, Map>, ConnectionSourceSettings>)connectionSources.getDefaultConnectionSource()).getSettings());
+        }
+        addApplicationListener(new DomainEventListener(this));
+        addApplicationListener(new AutoTimestampEventListener(this));
+
+        if (ConnectionSource.DEFAULT.equals(this.connectionName)) {
+            for (ConnectionSource<Map<String, Map>, ConnectionSourceSettings> connectionSource : connectionSources.getAllConnectionSources()) {
+                String name = connectionSource.getName();
+                if (!this.connectionName.equals(name)) {
+                    getDatastoreForConnection(name);
+                }
+            }
+        }
+
+        if (this.multiTenancyMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
+            ApplicationEventPublisher publisher = getApplicationEventPublisher();
+            if (publisher instanceof ConfigurableApplicationContext) {
+                ((ConfigurableApplicationContext) publisher).addApplicationListener(new org.grails.datastore.gorm.multitenancy.MultiTenantEventListener(this));
+            } else {
+                try {
+                    Method addApplicationListener = publisher.getClass().getMethod("addApplicationListener", ApplicationListener.class);
+                    addApplicationListener.setAccessible(true);
+                    addApplicationListener.invoke(publisher, new org.grails.datastore.gorm.multitenancy.MultiTenantEventListener(this));
+                } catch (Exception e) {
+                    // fallback to just creating the listener, it might register itself in some other way or via the constructor
+                    new org.grails.datastore.gorm.multitenancy.MultiTenantEventListener(this);
+                }
+            }
+        }
     }
 
-    public SimpleMapDatastore(ConnectionSources<Map<String, Map>, ConnectionSourceSettings> connectionSources, ConfigurableApplicationEventPublisher eventPublisher, Class... classes) {
-        this(connectionSources, createMappingContext(connectionSources, classes), eventPublisher);
+    public SimpleMapDatastore(ApplicationEventPublisher ctx) {
+        this(new StandardEnvironment(), ctx);
     }
 
-    public SimpleMapDatastore(PropertyResolver configuration, ConfigurableApplicationEventPublisher eventPublisher, Class... classes) {
-        this(ConnectionSourcesInitializer.create(new SimpleMapConnectionSourceFactory(), configuration), eventPublisher, classes);
+    public SimpleMapDatastore(PropertyResolver configuration, ApplicationEventPublisher ctx) {
+        this(configuration, ctx, new Class[0]);
     }
 
-    public SimpleMapDatastore() {
-        this(DatastoreUtils.createPropertyResolver(null), new DefaultApplicationEventPublisher());
+    public SimpleMapDatastore(PropertyResolver configuration, ApplicationEventPublisher ctx, Class... classes) {
+        this(createConnectionSources(configuration), (KeyValueMappingContext)createMappingContext(configuration, classes), ctx, null);
     }
 
-    public SimpleMapDatastore(final Iterable<String> dataSourceNames, Class... classes) {
-        this(createMultipleDataSources(dataSourceNames, DatastoreUtils.createPropertyResolver(null)), new DefaultApplicationEventPublisher(), classes);
+    public SimpleMapDatastore(PropertyResolver configuration, Class... classes) {
+        this(configuration, Arrays.asList(classes));
     }
 
     public SimpleMapDatastore(Class... classes) {
-        this(DatastoreUtils.createPropertyResolver(null), new DefaultApplicationEventPublisher(), classes);
+        this(new StandardEnvironment(), Arrays.asList(classes));
     }
 
-    public SimpleMapDatastore(PropertyResolver configuration, final Iterable<String> dataSourceNames, Class... classes) {
-        this(createMultipleDataSources(dataSourceNames, configuration), new DefaultApplicationEventPublisher(), classes);
+    public SimpleMapDatastore(PropertyResolver configuration, Collection classes) {
+        this(configuration, classes, new Class[0]);
     }
 
-    public SimpleMapDatastore(PropertyResolver configuration, final Iterable<String> dataSourceNames, Package... packages) {
-        this(createMultipleDataSources(dataSourceNames, configuration), new DefaultApplicationEventPublisher(), new ClasspathEntityScanner().scan(packages));
+    public SimpleMapDatastore(PropertyResolver configuration, Collection classes, Class... moreClasses) {
+        this(createConnectionSourcesFromCollection(configuration, classes), (KeyValueMappingContext)createMappingContext(configuration, combine(classes, moreClasses)), null, null);
     }
 
-    public SimpleMapDatastore(Map configuration, final Iterable<String> dataSourceNames, Package... packages) {
-        this(createMultipleDataSources(dataSourceNames, DatastoreUtils.createPropertyResolver(configuration)), new DefaultApplicationEventPublisher(), new ClasspathEntityScanner().scan(packages));
+    public SimpleMapDatastore(Collection classes, Class... moreClasses) {
+        this(new StandardEnvironment(), classes, moreClasses);
     }
 
-    public SimpleMapDatastore(Map configuration, Package... packages) {
-        this(DatastoreUtils.createPropertyResolver(configuration), new DefaultApplicationEventPublisher(), new ClasspathEntityScanner().scan(packages));
-    }
-
-    public SimpleMapDatastore(PropertyResolver configuration, final Iterable<String> dataSourceNames, Package packageToScan) {
-        this(createMultipleDataSources(dataSourceNames, configuration), new DefaultApplicationEventPublisher(), new ClasspathEntityScanner().scan(packageToScan));
-    }
-
-    /**
-     * Creates a map based datastore backing onto the specified map
-     *
-     * @param datastore The datastore to back on to
-     * @param ctx the application context
-     */
-    @Deprecated
-    public SimpleMapDatastore(Map<String, Map> datastore, ConfigurableApplicationContext ctx) {
-        this(new SingletonConnectionSources<>(new DefaultConnectionSource<>(ConnectionSource.DEFAULT, datastore, new ConnectionSourceSettings()), DatastoreUtils.createPropertyResolver(null)), new ConfigurableApplicationContextEventPublisher(ctx));
-        setApplicationContext(ctx);
-    }
-
-    private static PropertyResolver getConfiguration(ConfigurableApplicationContext ctx) {
-        PropertyResolver propertyResolver;
-        try {
-            propertyResolver = ctx.getBean(PropertyResolver.class);
-        } catch (Exception e) {
-            propertyResolver = DatastoreUtils.createPropertyResolver(null);
-        }
-        return propertyResolver;
-    }
-
-    @Deprecated
-    public SimpleMapDatastore(ConfigurableApplicationContext ctx) {
-        this(getConfiguration(ctx), new ConfigurableApplicationContextEventPublisher(ctx));
-        setApplicationContext(ctx);
-    }
-
-    /**
-     * Creates a map based datastore for the specified mapping context
-     *
-     * @param mappingContext The mapping context
-     */
-    @Deprecated
-    public SimpleMapDatastore(MappingContext mappingContext, ConfigurableApplicationContext ctx) {
-        this(ConnectionSourcesInitializer.create(new SimpleMapConnectionSourceFactory(), DatastoreUtils.createPropertyResolver(null)), mappingContext, new ConfigurableApplicationContextEventPublisher(ctx));
-    }
-
-    protected static KeyValueMappingContext createMappingContext(ConnectionSources<Map<String, Map>, ConnectionSourceSettings> connectionSources, Class... classes) {
-        KeyValueMappingContext ctx = new KeyValueMappingContext("test", connectionSources.getDefaultConnectionSource().getSettings());
-        ctx.addPersistentEntities(classes);
-        return ctx;
-    }
-
-    protected static InMemoryConnectionSources<Map<String, Map>, ConnectionSourceSettings> createMultipleDataSources(final Iterable<String> dataSourceNames, PropertyResolver propertyResolver) {
-        SimpleMapConnectionSourceFactory simpleMapConnectionSourceFactory = new SimpleMapConnectionSourceFactory();
-        return new InMemoryConnectionSources<>(
-                simpleMapConnectionSourceFactory.create(ConnectionSource.DEFAULT, propertyResolver),
-                simpleMapConnectionSourceFactory,
-                propertyResolver
-        ) {
-            @Override
-            protected Iterable<String> getConnectionSourceNames(ConnectionSourceFactory<Map<String, Map>, ConnectionSourceSettings> connectionSourceFactory, PropertyResolver configuration) {
-                return dataSourceNames;
-            }
-        };
-    }
-
-    protected GormEnhancer initialize(ConnectionSourceSettings settings) {
-        registerEventListeners(this.eventPublisher);
-
-        this.mappingContext.addMappingContextListener(new MappingContext.Listener() {
-            @Override
-            public void persistentEntityAdded(PersistentEntity entity) {
-                gormEnhancer.registerEntity(entity);
-            }
-        });
-
-        return new GormEnhancer(this, transactionManager, settings) {
-
-            @Override
-            protected <D> GormStaticApi<D> getStaticApi(Class<D> cls, String qualifier) {
-                SimpleMapDatastore datastore = getDatastoreForQualifier(cls, qualifier);
-                return new GormStaticApi<>(cls, datastore, createDynamicFinders(datastore), datastore.getTransactionManager());
-            }
-
-            @Override
-            protected <D> GormValidationApi<D> getValidationApi(Class<D> cls, String qualifier) {
-                SimpleMapDatastore datastore = getDatastoreForQualifier(cls, qualifier);
-                return new GormValidationApi<>(cls, datastore);
-            }
-
-            @Override
-            protected <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, String qualifier) {
-                SimpleMapDatastore datastore = getDatastoreForQualifier(cls, qualifier);
-                GormInstanceApi<D> instanceApi = new GormInstanceApi<>(cls, datastore);
-                instanceApi.setFailOnError(failOnError);
-                return instanceApi;
-            }
-
-            private <D> SimpleMapDatastore getDatastoreForQualifier(Class<D> cls, String qualifier) {
-                String defaultConnectionSourceName = ConnectionSourcesSupport.getDefaultConnectionSourceName(getMappingContext().getPersistentEntity(cls.getName()));
-                boolean isDefaultQualifier = qualifier.equals(ConnectionSource.DEFAULT);
-                if (isDefaultQualifier && defaultConnectionSourceName.equals(ConnectionSource.DEFAULT)) {
-                    return SimpleMapDatastore.this;
-                }
-                else {
-                    if (isDefaultQualifier) {
-                        qualifier = defaultConnectionSourceName;
-                    }
-                    ConnectionSource<Map<String, Map>, ConnectionSourceSettings> connectionSource = connectionSources.getConnectionSource(qualifier);
-                    if (connectionSource == null) {
-                        throw new ConfigurationException("Invalid connection [" + defaultConnectionSourceName + "] configured for class [" + cls + "]");
-                    }
-                    return SimpleMapDatastore.this.datastoresByConnectionSource.get(qualifier);
+    private static ConnectionSources<Map<String, Map>, ConnectionSourceSettings> createConnectionSourcesFromCollection(PropertyResolver configuration, Collection collection) {
+        List<String> names = new ArrayList<>();
+        if (collection != null) {
+            for (Object o : collection) {
+                if (o instanceof CharSequence) {
+                    names.add(o.toString());
                 }
             }
-        };
-    }
-
-    protected void registerEventListeners(ConfigurableApplicationEventPublisher eventPublisher) {
-        eventPublisher.addApplicationListener(new DomainEventListener(this));
-        eventPublisher.addApplicationListener(new AutoTimestampEventListener(this));
-        if (multiTenancyMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
-            eventPublisher.addApplicationListener(new MultiTenantEventListener(this));
         }
+        return createConnectionSources(configuration, names.toArray(new String[0]));
     }
 
-    public Map getIndices() {
-        return indices;
+    public SimpleMapDatastore(Map<String, Object> configuration, Class... classes) {
+        this(DatastoreUtils.createPropertyResolver(configuration), classes);
     }
 
-    @Override
-    protected Session createSession(PropertyResolver connectionDetails) {
-        return new SimpleMapSession(this, getMappingContext(), eventPublisher);
+    public SimpleMapDatastore(Map<String, Object> configuration, Collection<Class> classes) {
+        this(DatastoreUtils.createPropertyResolver(configuration), classes, new Class[0]);
     }
 
-    @Override
-    public ApplicationEventPublisher getApplicationEventPublisher() {
-        return this.eventPublisher;
+    public SimpleMapDatastore(Map<String, Object> configuration, Package pkg) {
+        this(DatastoreUtils.createPropertyResolver(configuration), new Class[0]);
+        // Note: Package scanning not implemented here, but constructor needed for compatibility
     }
 
-    public Map<String, Map> getBackingMap() {
-        return inmemoryData;
-    }
-
-    public void clearData() {
-        inmemoryData.clear();
-        indices.clear();
-    }
-
-    @Override
-    public PlatformTransactionManager getTransactionManager() {
-        return this.transactionManager;
-    }
-
-    @Override
-    public ConnectionSources<Map<String, Map>, ConnectionSourceSettings> getConnectionSources() {
-        return this.connectionSources;
-    }
-
-    @Override
-    public MultiTenancySettings.MultiTenancyMode getMultiTenancyMode() {
-        return this.multiTenancyMode == MultiTenancySettings.MultiTenancyMode.SCHEMA ? MultiTenancySettings.MultiTenancyMode.DATABASE : this.multiTenancyMode;
-    }
-
-    @Override
-    public TenantResolver getTenantResolver() {
-        return this.tenantResolver;
-    }
-
-    @Override
-    public Datastore getDatastoreForTenantId(Serializable tenantId) {
-        if (multiTenancyMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
-            return this;
+    private static Class[] combine(Collection classes, Class... moreClasses) {
+        List<Class> all = new ArrayList<>();
+        if (classes != null) {
+            for (Object o : classes) {
+                if (o instanceof Class) {
+                    all.add((Class) o);
+                }
+            }
         }
-        if (tenantId != null) {
-            return getDatastoreForConnection(tenantId.toString());
+        if (moreClasses != null) {
+            for (Class c : moreClasses) {
+                if (c != null) {
+                    all.add(c);
+                }
+            }
         }
-        return this;
+        return all.toArray(new Class[0]);
     }
 
-    @Override
-    public <T1> T1 withNewSession(Serializable tenantId, Closure<T1> callable) {
-        Datastore datastore = getDatastoreForTenantId(tenantId);
-        org.grails.datastore.mapping.core.Session session = datastore.connect();
-        try {
-            DatastoreUtils.bindNewSession(session);
-            return callable.call(session);
+    private static ConnectionSources<Map<String, Map>, ConnectionSourceSettings> createConnectionSources(PropertyResolver configuration, String... connectionNames) {
+        ConnectionSourceFactory<Map<String, Map>, ConnectionSourceSettings> factory = new SimpleMapConnectionSourceFactory();
+        ConnectionSource<Map<String, Map>, ConnectionSourceSettings> defaultConnectionSource = factory.create(ConnectionSource.DEFAULT, configuration);
+        InMemoryConnectionSources<Map<String, Map>, ConnectionSourceSettings> connectionSources = new InMemoryConnectionSources<>(defaultConnectionSource, factory, configuration);
+        for (String name : connectionNames) {
+            connectionSources.addConnectionSource(name, configuration);
         }
-        finally {
-            DatastoreUtils.unbindSession(session);
-        }
+        return connectionSources;
     }
 
-    @Override
-    public Datastore getDatastoreForConnection(String connectionName) {
+    private static MappingContext createMappingContext(PropertyResolver configuration, Class... classes) {
+        ConnectionSourceSettings settings = configuration != null ? new SimpleMapConnectionSourceFactory().createSettings(configuration) : new ConnectionSourceSettings();
+        return createMappingContext(settings, classes);
+    }
 
-        SimpleMapDatastore childDatastore = datastoresByConnectionSource.get(connectionName);
-        if (childDatastore == null) {
-            throw new ConfigurationException("No datastore found for connection named [" + connectionName + "]");
+    private static KeyValueMappingContext createMappingContext(ConnectionSourceSettings settings, Class... classes) {
+        KeyValueMappingContext context = new KeyValueMappingContext("");
+        context.initialize(settings);
+        if (classes != null) {
+            for (Class cls : classes) {
+                context.addPersistentEntity(cls);
+            }
         }
-        return childDatastore;
+        return context;
     }
 
     @Override
     public void close() throws IOException {
-        try {
-            destroy();
-        } catch (Exception e) {
-            throw new IOException(e);
+        for (SimpleMapDatastore child : childDatastores.values()) {
+            child.close();
         }
-        gormEnhancer.close();
+        GormRegistry.getInstance().removeDatastore(this);
+        connectionSources.close();
+    }
+
+    public SharedState getSharedState() {
+        return state;
+    }
+
+    public void clearData() {
+        state.inmemoryData.clear();
+        state.indices.clear();
+        state.lastKeys.clear();
     }
 
     @Override
+    protected Session createSession(PropertyResolver connectionDetails) {
+        SimpleMapSession session = new SimpleMapSession(this, getMappingContext(), getApplicationEventPublisher());
+        return session;
+    }
+
+    public Map<Serializable, Map> getBackingMap() {
+        return getBackingMap(connectionName);
+    }
+
+    public Map<Serializable, Map> getBackingMap(String connectionName) {
+        if (multiTenancyMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
+            return state.inmemoryData;
+        }
+        return new ScopedMap<>(state.inmemoryData, connectionName);
+    }
+
+    public Map<String, List> getIndices() {
+        return getIndices(connectionName);
+    }
+
+    public Map<String, List> getIndices(String connectionName) {
+        if (multiTenancyMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
+            return state.indices;
+        }
+        return new ScopedMap<>(state.indices, connectionName);
+    }
+
+    public long nextId(String family) {
+        AtomicLong lastKey = state.lastKeys.get(family);
+        if (lastKey == null) {
+            lastKey = new AtomicLong(0);
+            AtomicLong existing = state.lastKeys.putIfAbsent(family, lastKey);
+            if (existing != null) {
+                lastKey = existing;
+            }
+        }
+        return lastKey.incrementAndGet();
+    }
+
+    @Override
+    public PlatformTransactionManager getTransactionManager() {
+        return transactionManager;
+    }
+
+    @Override
+    public MultiTenancySettings.MultiTenancyMode getMultiTenancyMode() {
+        return multiTenancyMode;
+    }
+
+    @Override
+    public TenantResolver getTenantResolver() {
+        return tenantResolver;
+    }
+
+    @Override
+    public Datastore getDatastoreForTenantId(Serializable tenantId) {
+        return getDatastoreForConnection(tenantId.toString());
+    }
+
+    @Override
+    public <T1> T1 withNewSession(Serializable tenantId, final Closure<T1> callable) {
+        return org.grails.datastore.mapping.core.DatastoreUtils.execute(getDatastoreForTenantId(tenantId), new org.grails.datastore.mapping.core.SessionCallback<T1>() {
+            @Override
+            public T1 doInSession(Session s) {
+                return callable.call(s);
+            }
+        });
+    }
+
+    @Override
+    public ConnectionSources<Map<String, Map>, ConnectionSourceSettings> getConnectionSources() {
+        return connectionSources;
+    }
+
+    public String getConnectionName() {
+        return connectionName;
+    }
+
     public void addTenantForSchema(String schemaName) {
-        ConnectionSource<Map<String, Map>, ConnectionSourceSettings> connectionSource = this.connectionSources.addConnectionSource(schemaName, Collections.<String, Object>emptyMap());
-        SingletonConnectionSources singletonConnectionSources = new SingletonConnectionSources(connectionSource, connectionSources.getBaseConfiguration());
-        SimpleMapDatastore childDatastore;
+        getDatastoreForConnection(schemaName);
+    }
 
-        if (ConnectionSource.DEFAULT.equals(connectionSource.getName())) {
-            childDatastore = this;
+    public Datastore getDatastoreForConnection(String connectionName) {
+        if (this.connectionName.equals(connectionName)) {
+            return this;
         }
-        else {
-            childDatastore = new SimpleMapDatastore(singletonConnectionSources, mappingContext, eventPublisher) {
-                @Override
-                protected GormEnhancer initialize(ConnectionSourceSettings settings) {
-                    return null;
+        SimpleMapDatastore child = childDatastores.get(connectionName);
+        if (child == null) {
+            ConnectionSource<Map<String, Map>, ConnectionSourceSettings> tenantConnectionSource = connectionSources.getConnectionSource(connectionName);
+            if (tenantConnectionSource == null) {
+                tenantConnectionSource = connectionSources.addConnectionSource(connectionName, connectionSources.getBaseConfiguration());
+            }
+            ConnectionSources<Map<String, Map>, ConnectionSourceSettings> childConnectionSources = new RebasedConnectionSources<>(tenantConnectionSource, connectionSources);
+            child = new SimpleMapDatastore(childConnectionSources, (KeyValueMappingContext) mappingContext, getApplicationEventPublisher(), state, connectionName, multiTenancyMode, tenantResolver);
+            childDatastores.put(connectionName, child);
+        }
+        return child;
+    }
+
+    private static class RebasedConnectionSources<T, S extends ConnectionSourceSettings> implements ConnectionSources<T, S> {
+        private final ConnectionSource<T, S> defaultConnectionSource;
+        private final ConnectionSources<T, S> delegate;
+
+        RebasedConnectionSources(ConnectionSource<T, S> defaultConnectionSource, ConnectionSources<T, S> delegate) {
+            this.defaultConnectionSource = defaultConnectionSource;
+            this.delegate = delegate;
+        }
+
+        @Override
+        public PropertyResolver getBaseConfiguration() {
+            return delegate.getBaseConfiguration();
+        }
+
+        @Override
+        public ConnectionSourceFactory<T, S> getFactory() {
+            return delegate.getFactory();
+        }
+
+        @Override
+        public Iterable<ConnectionSource<T, S>> getAllConnectionSources() {
+            return delegate.getAllConnectionSources();
+        }
+
+        @Override
+        public ConnectionSource<T, S> getConnectionSource(String name) {
+            return delegate.getConnectionSource(name);
+        }
+
+        @Override
+        public ConnectionSource<T, S> getDefaultConnectionSource() {
+            return defaultConnectionSource;
+        }
+
+        @Override
+        public ConnectionSource<T, S> addConnectionSource(String name, PropertyResolver configuration) {
+            return delegate.addConnectionSource(name, configuration);
+        }
+
+        @Override
+        public ConnectionSource<T, S> addConnectionSource(String name, Map<String, Object> configuration) {
+            return delegate.addConnectionSource(name, configuration);
+        }
+
+        @Override
+        public ConnectionSources<T, S> addListener(ConnectionSourcesListener<T, S> listener) {
+            return delegate.addListener(listener);
+        }
+
+        @Override
+        public void close() throws IOException {
+            // Do not close delegate, it's shared
+        }
+
+        @Override
+        public Iterator<ConnectionSource<T, S>> iterator() {
+            return delegate.iterator();
+        }
+    }
+
+    private static class ScopedMap<K, V> extends AbstractMap<K, V> {
+        private final Map<K, V> proxy;
+        private final String prefix;
+
+        ScopedMap(Map<K, V> proxy, String prefix) {
+            this.proxy = proxy;
+            this.prefix = prefix + ":";
+        }
+
+        @Override
+        public V get(Object key) {
+            return proxy.get(prefix + key);
+        }
+
+        @Override
+        public V put(K key, V value) {
+            return proxy.put((K)(prefix + key), value);
+        }
+
+        @Override
+        public V remove(Object key) {
+            return proxy.remove(prefix + key);
+        }
+
+        @Override
+        public Set<Entry<K, V>> entrySet() {
+            Set<Entry<K, V>> entries = new HashSet<>();
+            for (Entry<K, V> entry : proxy.entrySet()) {
+                if (entry.getKey().toString().startsWith(prefix)) {
+                    entries.add(new SimpleEntry<>((K)entry.getKey().toString().substring(prefix.length()), entry.getValue()));
                 }
-            };
-        }
-        datastoresByConnectionSource.put(connectionSource.getName(), childDatastore);
-
-        for (PersistentEntity persistentEntity : mappingContext.getPersistentEntities()) {
-            gormEnhancer.registerEntity(persistentEntity);
+            }
+            return entries;
         }
     }
 }

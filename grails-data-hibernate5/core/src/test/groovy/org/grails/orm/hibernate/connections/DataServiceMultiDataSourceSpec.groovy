@@ -403,10 +403,10 @@ abstract class ProductService {
 
     abstract List<Product> findAllByName(String name)
 
-    @Query("delete from ${Product p} where 1=1")
+    @Query("delete from Product p where 1=1")
     abstract Number deleteAll()
 
-    @Query("select sum(p.amount) from ${Product p}")
+    @Query("select sum(p.amount) from Product p")
     abstract Number getTotalAmount()
 
     /**
@@ -415,14 +415,14 @@ abstract class ProductService {
      */
     abstract Product saveProduct(String name, Integer amount)
 
-    @Query("from ${Product p} where $p.name = $name")
+    @Query("from Product p where p.name = :name")
     abstract Product findOneByQuery(String name)
 
 
-    @Query("from ${Product p} where $p.amount >= $minAmount")
+    @Query("from Product p where p.amount >= :minAmount")
     abstract List<Product> findAllByQuery(Integer minAmount)
 
-    @Query("update ${Product p} set $p.amount = $newAmount where $p.name = $name")
+    @Query("update Product p set p.amount = :newAmount where p.name = :name")
     abstract Number updateAmountByName(String name, Integer newAmount)
 }
 
@@ -449,12 +449,12 @@ interface ProductDataService {
 
     List<Product> findAllByName(String name)
 
-    @Query("from ${Product p} where $p.name = $name")
+    @Query("from Product p where p.name = :name")
     Product findOneByQuery(String name)
 
-    @Query("from ${Product p} where $p.amount >= $minAmount")
+    @Query("from Product p where p.amount >= :minAmount")
     List<Product> findAllByQuery(Integer minAmount)
 
-    @Query("update ${Product p} set $p.amount = $newAmount where $p.name = $name")
+    @Query("update Product p set p.amount = :newAmount where p.name = :name")
     Number updateAmountByName(String name, Integer newAmount)
 }

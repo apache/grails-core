@@ -46,7 +46,7 @@ class SchemaMultiTenantSpec extends Specification {
         Map config = [
                 "grails.gorm.multiTenancy.mode":"SCHEMA",
                 "grails.gorm.multiTenancy.tenantResolverClass":MyResolver,
-                'dataSource.url':"jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
+                'dataSource.url':"jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000;DB_CLOSE_DELAY=-1",
                 'dataSource.dbCreate': 'update',
                 'dataSource.dialect': H2Dialect.name,
                 'dataSource.formatSql': 'true',
@@ -128,16 +128,24 @@ class SchemaMultiTenantSpec extends Specification {
         }
         SingleTenantAuthor.withTenant("moreBooks") { String tenantId, Session s ->
             assert s != null
-            SingleTenantAuthor.count() == 2
+            int c = SingleTenantAuthor.count()
+            assert c == 2
+            return true
         }
         Tenants.withId("books") {
-            SingleTenantAuthor.count() == 0
+            int c = SingleTenantAuthor.count()
+            assert c == 0
+            return true
         }
         Tenants.withId("moreBooks") {
-            SingleTenantAuthor.count() == 2
+            int c = SingleTenantAuthor.count()
+            assert c == 2
+            return true
         }
         Tenants.withCurrent {
-            SingleTenantAuthor.count() == 0
+            int c = SingleTenantAuthor.count()
+            assert c == 0
+            return true
         }
 
         SingleTenantAuthor.withTransaction{

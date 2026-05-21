@@ -241,7 +241,7 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
 
         hibernateMappingContext.getHibernatePersistentEntities(dataSourceName).stream()
                 .filter(persistentEntity -> persistentEntity.forGrailsDomainMapping(dataSourceName))
-                .forEach(rootBinder::bindRoot);
+                .forEach(entity -> rootBinder.bindRoot(entity));
     }
 
     /**

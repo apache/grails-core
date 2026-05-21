@@ -68,31 +68,32 @@ class HibernateDatastoreSpringInitializerSpec extends Specification{
 
         and:"Each domain has the correct data source(s)"
         HibernateDatastore hibernateDatastore = applicationContext.getBean(HibernateDatastore)
-        Person.withNewSession { Person.count() == 0 }
-                hibernateDatastore.withNewSession { Session s ->
-                    assert s.doReturningWork { it.getMetaData().getURL() } == "jdbc:h2:mem:people"
-                    return true
-                }
-                hibernateDatastore.withNewSession("books") { Session s ->
-                    assert s.doReturningWork { it.getMetaData().getURL() } == "jdbc:h2:mem:books"
-                    return true
-                }
-                hibernateDatastore.withNewSession("moreBooks") { Session s ->
-                    assert s.doReturningWork { it.getMetaData().getURL() } == "jdbc:h2:mem:moreBooks"
-                    return true
-                }
-                hibernateDatastore.withNewSession { Session s ->
-                    assert s.doReturningWork { it.getMetaData().getURL() } == "jdbc:h2:mem:people"
-                    return true
-                }
-                hibernateDatastore.withNewSession("books") { Session s ->
-                    assert s.doReturningWork { it.getMetaData().getURL() } == "jdbc:h2:mem:books"
-                    return true
-                }
-                Author.moreBooks.withNewSession { Session s ->
-                    assert s.doReturningWork { it.getMetaData().getURL() } == "jdbc:h2:mem:moreBooks"
-                    return true
-                }
+        println "Author.moreBooks class is: " + Author.moreBooks.getClass().getName()
+        Person.withTransaction { Person.count() == 0 }
+        hibernateDatastore.withNewSession('DEFAULT') { Session s ->
+            assert s.doReturningWork { it.getMetaData().getURL() } == "jdbc:h2:mem:people"
+            return true
+        }
+        hibernateDatastore.withNewSession("books") { Session s ->
+            assert s.doReturningWork { it.getMetaData().getURL() } == "jdbc:h2:mem:books"
+            return true
+        }
+        hibernateDatastore.withNewSession("moreBooks") { Session s ->
+            assert s.doReturningWork { it.getMetaData().getURL() } == "jdbc:h2:mem:moreBooks"
+            return true
+        }
+        hibernateDatastore.withNewSession('DEFAULT') { Session s ->
+            assert s.doReturningWork { it.getMetaData().getURL() } == "jdbc:h2:mem:people"
+            return true
+        }
+        hibernateDatastore.withNewSession("books") { Session s ->
+            assert s.doReturningWork { it.getMetaData().getURL() } == "jdbc:h2:mem:books"
+            return true
+        }
+        hibernateDatastore.withNewSession("moreBooks") { Session s ->
+            assert s.doReturningWork { it.getMetaData().getURL() } == "jdbc:h2:mem:moreBooks"
+            return true
+        }
 
     }
 }

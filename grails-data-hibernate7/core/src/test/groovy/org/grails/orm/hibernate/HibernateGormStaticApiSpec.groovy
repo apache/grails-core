@@ -23,6 +23,7 @@ package org.grails.orm.hibernate
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.gorm.annotation.Entity
 import grails.gorm.specs.entities.Club
+import org.grails.datastore.gorm.GormRegistry
 
 class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
 
@@ -32,8 +33,7 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
 
     void "Test that HibernateGormStaticApi uses the shared template from the datastore"() {
         given:
-        def enhancer = manager.hibernateDatastore.gormEnhancer
-        def api = enhancer.getStaticApi(HibernateGormStaticApiEntity)
+        def api = GormRegistry.instance.findStaticApi(HibernateGormStaticApiEntity)
 
         expect:
         api.hibernateTemplate.is(manager.hibernateDatastore.getHibernateTemplate())
@@ -231,10 +231,12 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
 
         when:
         String hql = "select name from HibernateGormStaticApiEntity"
-        HibernateGormStaticApiEntity.executeQuery(hql)
+        List results = HibernateGormStaticApiEntity.executeQuery(hql)
 
         then:
-        thrown(UnsupportedOperationException)
+        results.size() == 2
+        results.contains("test1")
+        results.contains("test2")
     }
 
     void "Test executeUpdate with plain String"() {
@@ -242,11 +244,12 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         new HibernateGormStaticApiEntity(name: "test").save(flush: true, failOnError: true)
 
         when:
-        String hql = "update HibernateGormStaticApiEntity set name = 'updated'"
-        HibernateGormStaticApiEntity.executeUpdate(hql)
+        String hql = "update HibernateGormStaticApiEntity set name = 'updated' where name = 'test'"
+        int result = HibernateGormStaticApiEntity.executeUpdate(hql)
 
         then:
-        thrown(UnsupportedOperationException)
+        result == 1
+        HibernateGormStaticApiEntity.countByName("updated") == 1
     }
 
 
@@ -824,10 +827,10 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
     }
 
     // -------------------------------------------------------------------------
-    // list with max — returns HibernatePagedResultList
+    // list with max — returns PagedResultList
     // -------------------------------------------------------------------------
 
-    void "list with max parameter returns a HibernatePagedResultList"() {
+    void "list with max parameter returns a PagedResultList"() {
         given:
         setupTestData()
 
@@ -835,7 +838,7 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         def result = Club.list(max: 2)
 
         then:
-        result instanceof org.grails.orm.hibernate.query.HibernatePagedResultList
+        result instanceof org.grails.orm.hibernate.query.PagedResultList
         result.size() <= 2
     }
 
@@ -883,4 +886,3 @@ class HibernateGormStaticApiEntity {
 class HibernateGormStaticApiMultiTenantEntity implements grails.gorm.MultiTenant<HibernateGormStaticApiMultiTenantEntity> {
     String name
 }
-

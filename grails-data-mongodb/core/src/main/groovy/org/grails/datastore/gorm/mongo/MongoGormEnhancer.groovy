@@ -23,6 +23,7 @@ import groovy.transform.CompileStatic
 import org.springframework.transaction.PlatformTransactionManager
 
 import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.mapping.mongo.MongoDatastore
 import org.grails.datastore.mapping.mongo.connections.MongoConnectionSourceSettings
@@ -35,10 +36,11 @@ import org.grails.datastore.mapping.mongo.connections.MongoConnectionSourceSetti
 @CompileStatic
 class MongoGormEnhancer extends GormEnhancer {
 
-    MongoGormEnhancer(MongoDatastore datastore, PlatformTransactionManager transactionManager, boolean failOnError = false) {
-        super(datastore, transactionManager, failOnError)
-        registerMongoMethodExpressions()
+    static {
+        // Register the MongoDB API factory before any enhancers are created
+        GormRegistry.getInstance().registerApiFactory(MongoDatastore.class, new MongoGormApiFactory())
     }
+
 
     MongoGormEnhancer(MongoDatastore datastore, PlatformTransactionManager transactionManager, MongoConnectionSourceSettings settings) {
         super(datastore, transactionManager, settings)
@@ -53,10 +55,6 @@ class MongoGormEnhancer extends GormEnhancer {
         DynamicFinder.registerNewMethodExpression(WithinCircle)
         DynamicFinder.registerNewMethodExpression(GeoWithin)
         DynamicFinder.registerNewMethodExpression(GeoIntersects)
-    }
-
-    MongoGormEnhancer(MongoDatastore datastore) {
-        this(datastore, null)
     }
 
 }

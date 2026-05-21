@@ -83,6 +83,7 @@ public class HibernateQuery extends Query {
     private Integer timeout;
     private QueryFlushMode flushMode;
     private Boolean readOnly;
+    private boolean wrapping = false;
 
     public HibernateQuery(HibernateSession session, GrailsHibernatePersistentEntity entity) {
         super(session, entity);
@@ -175,6 +176,20 @@ public class HibernateQuery extends Query {
     @Override
     public void add(Criterion criterion) {
         detachedCriteria.add(criterion);
+    }
+
+    @Override
+    public Junction disjunction() {
+        Disjunction dis = new Disjunction();
+        detachedCriteria.add(dis);
+        return dis;
+    }
+
+    @Override
+    public Junction conjunction() {
+        Conjunction con = new Conjunction();
+        detachedCriteria.add(con);
+        return con;
     }
 
     public void add(DetachedCriteria<?> detachedCriteria) {
@@ -423,6 +438,18 @@ public class HibernateQuery extends Query {
 
     @Override
     public List list() {
+        if (max != null && max > 0 && !wrapping) {
+            wrapping = true;
+            try {
+                return new PagedResultList(this);
+            } finally {
+                wrapping = false;
+            }
+        }
+        return executeListInternal();
+    }
+
+    public List executeListInternal() {
         firePreQueryEvent();
         List results = executeList();
         return firePostQueryEvent(results);
@@ -434,6 +461,16 @@ public class HibernateQuery extends Query {
 
     public List list(Session session) {
         return getHibernateQueryExecutor().list(session, getJpaCriteriaQuery());
+    }
+
+    /**
+     * Deletes all entities matching the current criteria.
+     * Called by {@code GormStaticApi.deleteAll()} via {@code session.createQuery(cls).deleteAll()}.
+     *
+     * @return the number of entities deleted
+     */
+    public Number deleteAll() {
+        return ((HibernateSession) getSession()).deleteAll(detachedCriteria);
     }
 
     private HibernateQueryExecutor getHibernateQueryExecutor() {
@@ -531,7 +568,7 @@ public class HibernateQuery extends Query {
     }
 
     private Session getCurrentSession() {
-        return getSessionFactory().getCurrentSession();
+        return ((HibernateSession) session).getNativeSession();
     }
 
     private SessionFactory getSessionFactory() {

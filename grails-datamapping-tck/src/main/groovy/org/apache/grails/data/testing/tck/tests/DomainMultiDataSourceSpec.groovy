@@ -4,14 +4,14 @@
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
+ * 'License'); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
  *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
@@ -36,7 +36,7 @@ class DomainMultiDataSourceSpec extends GrailsDataTckSpec {
         manager.cleanupMultiDataSource()
     }
 
-    void "save to secondary datasource via domain API"() {
+    void 'save to secondary datasource via domain API'() {
         when: 'a product is saved through the secondary connection'
         DataServiceRoutingProduct.secondary.withNewTransaction {
             new DataServiceRoutingProduct(name: 'Widget', amount: 42).secondary.save(flush: true)
@@ -46,7 +46,7 @@ class DomainMultiDataSourceSpec extends GrailsDataTckSpec {
         countOnConnection('secondary') == 1
     }
 
-    void "get by ID from secondary datasource via domain API"() {
+    void 'get by ID from secondary datasource via domain API'() {
         given: 'a product saved on secondary'
         def id = DataServiceRoutingProduct.secondary.withNewTransaction {
             def saved = new DataServiceRoutingProduct(name: 'Gadget', amount: 99)
@@ -65,7 +65,7 @@ class DomainMultiDataSourceSpec extends GrailsDataTckSpec {
         found.name == 'Gadget'
     }
 
-    void "count on secondary datasource via domain API"() {
+    void 'count on secondary datasource via domain API'() {
         given: 'two products saved on secondary'
         saveToConnection('secondary', 'Alpha', 10)
         saveToConnection('secondary', 'Beta', 20)
@@ -77,7 +77,7 @@ class DomainMultiDataSourceSpec extends GrailsDataTckSpec {
         countOnConnection('secondary') == 2
     }
 
-    void "list on secondary datasource via domain API"() {
+    void 'list on secondary datasource via domain API'() {
         given: 'three products on secondary'
         saveToConnection('secondary', 'One', 1)
         saveToConnection('secondary', 'Two', 2)
@@ -92,7 +92,7 @@ class DomainMultiDataSourceSpec extends GrailsDataTckSpec {
         items.size() == 3
     }
 
-    void "criteria query on secondary datasource via domain API"() {
+    void 'criteria query on secondary datasource via domain API'() {
         given: 'two products with different names'
         saveToConnection('secondary', 'Match', 1)
         saveToConnection('secondary', 'Other', 2)
@@ -109,7 +109,7 @@ class DomainMultiDataSourceSpec extends GrailsDataTckSpec {
         results.first().name == 'Match'
     }
 
-    void "delete from secondary datasource via domain API"() {
+    void 'delete from secondary datasource via domain API'() {
         given: 'a product saved on secondary'
         def saved = DataServiceRoutingProduct.secondary.withNewTransaction {
             def item = new DataServiceRoutingProduct(name: 'Disposable', amount: 5)
@@ -126,7 +126,7 @@ class DomainMultiDataSourceSpec extends GrailsDataTckSpec {
         countOnConnection('secondary') == 0
     }
 
-    void "secondary data not visible on default via domain API"() {
+    void 'secondary data not visible on default via domain API'() {
         given: 'a product saved on secondary'
         saveToConnection('secondary', 'SecondaryOnly', 42)
 
@@ -134,7 +134,7 @@ class DomainMultiDataSourceSpec extends GrailsDataTckSpec {
         countOnConnection(null) == 0
     }
 
-    void "default data not visible on secondary via domain API"() {
+    void 'default data not visible on secondary via domain API'() {
         given: 'a product saved on default'
         saveToConnection(null, 'DefaultOnly', 42)
 
