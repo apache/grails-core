@@ -19,6 +19,7 @@
 package org.grails.web.errors;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -77,6 +78,11 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
     protected ServletContext servletContext;
     protected GrailsApplication grailsApplication;
     protected StackTraceFilterer stackFilterer;
+    protected AuditorAwareLookup auditorAwareLookup;
+    private volatile boolean logFlagsResolved;
+    private boolean logFullStackTrace;
+    private boolean logAuditor;
+    private boolean logRemoteAddr;
 
     /* (non-Javadoc)
      * @see org.springframework.web.servlet.handler.SimpleMappingExceptionResolver#resolveException(jakarta.servlet.http.HttpServletRequest, jakarta.servlet.http.HttpServletResponse, java.lang.Object, java.lang.Exception)
@@ -88,6 +94,8 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
         request.removeAttribute(GrailsApplicationAttributes.GRAILS_CONTROLLER_CLASS_AVAILABLE);
 
         ex = findWrappedException(ex);
+
+        logFullStackTraceIfEnabled(ex);
 
         filterStackTrace(ex);
 
@@ -123,6 +131,7 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
     public void setGrailsApplication(GrailsApplication grailsApplication) {
         this.grailsApplication = grailsApplication;
         createStackFilterer();
+        this.auditorAwareLookup = new AuditorAwareLookup(grailsApplication.getMainContext());
     }
 
     /**
@@ -261,6 +270,94 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
         LOG.error(getRequestLogMessage(e, request), e);
     }
 
+    /**
+     * When the {@code grails.exceptionresolver.logFullStackTrace} property is enabled,
+     * emits the unfiltered stack trace to the dedicated {@code StackTrace} logger.
+     * Must be invoked <em>before</em> {@link #filterStackTrace(Exception)} — once the
+     * filterer calls {@code setStackTrace(clean)}, the original frames are gone and
+     * this method can only log the already-trimmed trace.
+     */
+    protected void logFullStackTraceIfEnabled(Exception e) {
+        if (shouldLogFullStackTrace()) {
+            DefaultStackTraceFilterer.STACK_LOG.error(StackTraceFilterer.FULL_STACK_TRACE_MESSAGE, e);
+        }
+    }
+
+    protected boolean shouldLogFullStackTrace() {
+        resolveLogFlags();
+        return logFullStackTrace;
+    }
+
+    protected boolean shouldLogAuditor() {
+        resolveLogFlags();
+        return logAuditor;
+    }
+
+    protected boolean shouldLogRemoteAddr() {
+        resolveLogFlags();
+        return logRemoteAddr;
+    }
+
+    /**
+     * Resolves the three {@code shouldLog*} flags from the application config once, on first use.
+     * Config values do not change at runtime, so each {@link Config#getProperty} lookup is paid once
+     * rather than per resolved exception. Subclasses that override the {@code shouldLog*} predicates
+     * never reach this method.
+     */
+    private void resolveLogFlags() {
+        if (logFlagsResolved) {
+            return;
+        }
+        synchronized (this) {
+            if (logFlagsResolved) {
+                return;
+            }
+            Config config = grailsApplication != null ? grailsApplication.getConfig() : null;
+            if (config != null) {
+                logFullStackTrace = config.getProperty(Settings.SETTING_LOG_FULL_STACKTRACE, Boolean.class, false);
+                logAuditor = config.getProperty(Settings.SETTING_LOG_AUDITOR, Boolean.class, false);
+                logRemoteAddr = config.getProperty(Settings.SETTING_LOG_REMOTE_ADDR, Boolean.class, false);
+            }
+            logFlagsResolved = true;
+        }
+    }
+
+    /**
+     * Resolves the client address to include in the exception log headline. The default
+     * returns {@link HttpServletRequest#getRemoteAddr()} — the container's view of the
+     * TCP peer, which reflects forwarded-header handling only when the servlet container
+     * is configured to trust a proxy chain (for example Spring Boot's
+     * {@code server.forward-headers-strategy}). Subclasses can override this to apply a
+     * different resolution strategy; the returned value (null or empty to omit) is
+     * appended verbatim as {@code ip: <value>}.
+     */
+    protected String resolveRemoteAddr(HttpServletRequest request) {
+        return request.getRemoteAddr();
+    }
+
+    /**
+     * Appends optional per-request context (remote address, current auditor) to the log
+     * headline as a single parenthesised clause — e.g. {@code (ip: 1.2.3.4, user: alice)}.
+     * Emits nothing when no tokens apply, so the baseline headline format is unchanged.
+     */
+    protected void appendRequestContext(StringBuilder sb, HttpServletRequest request) {
+        List<String> tokens = new ArrayList<>(2);
+        if (shouldLogRemoteAddr()) {
+            String remoteAddr = resolveRemoteAddr(request);
+            if (remoteAddr != null && !remoteAddr.isEmpty()) {
+                tokens.add("ip: " + remoteAddr);
+            }
+        }
+        if (shouldLogAuditor() && auditorAwareLookup != null) {
+            auditorAwareLookup.getCurrentAuditor().ifPresent(auditor ->
+                tokens.add("user: " + auditor)
+            );
+        }
+        if (!tokens.isEmpty()) {
+            sb.append(" (").append(String.join(", ", tokens)).append(")");
+        }
+    }
+
     protected Exception findWrappedException(Exception e) {
         if ((e instanceof InvokerInvocationException) || (e instanceof GrailsMVCException)) {
             Throwable t = getRootCause(e);
@@ -283,6 +380,8 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
         } else {
             sb.append(request.getRequestURI());
         }
+
+        appendRequestContext(sb, request);
 
         Config config = grailsApplication != null ? grailsApplication.getConfig() : null;
         final boolean shouldLogRequestParameters = config != null ? config.getProperty(Settings.SETTING_LOG_REQUEST_PARAMETERS, Boolean.class, Environment.getCurrent() == Environment.DEVELOPMENT) : false;
@@ -338,6 +437,23 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
         catch (Throwable t) {
             logger.error("Problem instantiating StackTracePrinter class, using default: " + t.getMessage());
             stackFilterer = new DefaultStackTraceFilterer();
+        }
+        applyLogFullStackTraceOnFilter();
+    }
+
+    /**
+     * Propagates {@code grails.exceptionresolver.logFullStackTraceOnFilter} to the
+     * filterer instance when it is a {@link DefaultStackTraceFilterer} (or subclass
+     * thereof). Custom {@link StackTraceFilterer} implementations that do not extend
+     * the default are responsible for their own logging policy.
+     */
+    protected void applyLogFullStackTraceOnFilter() {
+        if (stackFilterer instanceof DefaultStackTraceFilterer) {
+            Config config = grailsApplication != null ? grailsApplication.getConfig() : null;
+            boolean logOnFilter = config == null ?
+                true :
+                config.getProperty(Settings.SETTING_LOG_FULL_STACKTRACE_ON_FILTER, Boolean.class, true);
+            ((DefaultStackTraceFilterer) stackFilterer).setLogFullStackTraceOnFilter(logOnFilter);
         }
     }
 }

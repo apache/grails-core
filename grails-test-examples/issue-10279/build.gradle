@@ -1,0 +1,48 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+plugins {
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.buildsrc.compile'
+}
+
+version = '0.1'
+group = 'issue10279'
+
+apply plugin: 'org.apache.grails.gradle.grails-web'
+
+dependencies {
+    implementation platform(project(':grails-bom'))
+
+    implementation 'org.springframework.boot:spring-boot-starter-logging'
+    implementation 'org.apache.grails:grails-dependencies-starter-web'
+
+    testAndDevelopmentOnly platform(project(':grails-bom'))
+
+    testImplementation 'org.apache.grails:grails-testing-support-web'
+    testImplementation 'org.spockframework:spock-core'
+
+    integrationTestImplementation 'com.fasterxml.jackson.core:jackson-databind'
+    integrationTestImplementation project(':grails-testing-support-http-client')
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
+}
