@@ -53,7 +53,7 @@ class ApplicationClassInjectorSpec extends Specification {
         where:
         expected << [
             [
-                    excludeClass: 'org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration',
+                    excludeClass: 'org.springframework.boot.liquibase.autoconfigure.LiquibaseAutoConfiguration',
                     pluginClass: 'org.grails.plugins.databasemigration.DatabaseMigrationGrailsPlugin',
                     systemProperty: 'grails.autoconfigure.exclude.liquibase'
             ]
