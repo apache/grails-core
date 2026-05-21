@@ -80,6 +80,10 @@ class DirtyCheckingSupport {
                             if (coll.isDirty()) return true
                         }
                     }
+                    else if (value instanceof DirtyCheckableCollection) {
+                        DirtyCheckableCollection coll = (DirtyCheckableCollection) value
+                        if (coll.hasChanged()) return true
+                    }
                 }
 
             }

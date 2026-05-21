@@ -16,33 +16,28 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.datastore.mapping.services
 
-import groovy.transform.Generated
+package org.grails.datastore.mapping.core;
 
-import org.grails.datastore.mapping.core.Datastore
+import groovy.transform.CompileStatic;
 
 /**
- * Represents a service available exposed by the GORM {@link Datastore}
+ * Resolver for sessions in the current context (thread, tenant, etc)
  *
- * @author Graeme Rocher
- * @since 6.1
- *
- * <T> The domain class type this service operates with
+ * @author borinquenkid
+ * @since 8.0
  */
-trait Service<T> {
+@CompileStatic
+public interface SessionResolver<S extends Session> {
+    /** Resolves the current session based on current context (thread, tenant, etc) */
+    S resolve();
 
-    /**
-     * @return The datastore that this service is related to
-     */
-    @Generated
-    abstract Datastore getDatastore()
+    /** Resolves a session for a specific qualifier/tenant */
+    S resolve(String qualifier);
 
-    /**
-     * Sets the datastore
-     * @param datastore The datastore
-     */
-    @Generated
-    abstract void setDatastore(Datastore datastore)
+    /** Binds a session to the current context */
+    void bind(S session);
 
+    /** Unbinds the current session */
+    void unbind();
 }

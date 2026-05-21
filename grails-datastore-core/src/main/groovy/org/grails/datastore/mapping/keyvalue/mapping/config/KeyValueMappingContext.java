@@ -25,7 +25,7 @@ import org.grails.datastore.mapping.model.AbstractMappingContext;
 import org.grails.datastore.mapping.model.MappingConfigurationStrategy;
 import org.grails.datastore.mapping.model.MappingFactory;
 import org.grails.datastore.mapping.model.PersistentEntity;
-import org.grails.datastore.mapping.model.config.JpaMappingConfigurationStrategy;
+import org.grails.datastore.mapping.model.config.GormMappingConfigurationStrategy;
 
 /**
  * A MappingContext used to map objects to a Key/Value store
@@ -54,7 +54,7 @@ public class KeyValueMappingContext extends AbstractMappingContext {
         Assert.notNull(keyspace, "Argument [keyspace] cannot be null");
         this.keyspace = keyspace;
         initializeDefaultMappingFactory(keyspace);
-        syntaxStrategy = new JpaMappingConfigurationStrategy(mappingFactory);
+        syntaxStrategy = new GormMappingConfigurationStrategy(mappingFactory);
         super.initialize(new ConnectionSourceSettings());
     }
 
@@ -67,7 +67,7 @@ public class KeyValueMappingContext extends AbstractMappingContext {
         Assert.notNull(keyspace, "Argument [keyspace] cannot be null");
         this.keyspace = keyspace;
         initializeDefaultMappingFactory(keyspace);
-        syntaxStrategy = new JpaMappingConfigurationStrategy(this.mappingFactory);
+        syntaxStrategy = new GormMappingConfigurationStrategy(this.mappingFactory);
         super.initialize(settings);
     }
 

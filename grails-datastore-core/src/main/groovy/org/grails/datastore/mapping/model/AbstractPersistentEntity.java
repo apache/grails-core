@@ -97,6 +97,14 @@ public abstract class AbstractPersistentEntity<T extends Entity> implements Pers
     }
 
     public TenantId getTenantId() {
+        if (this.tenantId == null && isMultiTenant()) {
+            for (PersistentProperty prop : persistentProperties) {
+                if (prop instanceof TenantId) {
+                    this.tenantId = (TenantId) prop;
+                    break;
+                }
+            }
+        }
         return tenantId;
     }
 
@@ -152,7 +160,7 @@ public abstract class AbstractPersistentEntity<T extends Entity> implements Pers
             associations = new ArrayList();
             embedded = new ArrayList();
 
-            boolean multiTenancyEnabled = isMultiTenant && context.getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR;
+            boolean multiTenancyEnabled = isMultiTenant() && context.getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR;
             for (PersistentProperty persistentProperty : persistentProperties) {
                 if (multiTenancyEnabled && persistentProperty instanceof TenantId) {
                     this.tenantId = (TenantId) persistentProperty;

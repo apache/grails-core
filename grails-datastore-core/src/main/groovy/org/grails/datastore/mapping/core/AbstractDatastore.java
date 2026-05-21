@@ -14,6 +14,9 @@
  */
 package org.grails.datastore.mapping.core;
 
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import groovy.lang.Closure;
@@ -26,8 +29,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.ApplicationListener;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.PayloadApplicationEvent;
 import org.springframework.core.convert.converter.ConverterRegistry;
 import org.springframework.core.env.PropertyResolver;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -55,12 +61,48 @@ import org.grails.datastore.mapping.transactions.SessionHolder;
 @SuppressWarnings({"rawtypes", "unchecked"})
 public abstract class AbstractDatastore implements Datastore, StatelessDatastore, ServiceRegistry {
     protected static final Logger LOG = LoggerFactory.getLogger(AbstractDatastore.class);
+
+    private static final class DefaultApplicationEventPublisher implements ApplicationEventPublisher {
+        private final List<ApplicationListener> listeners = new ArrayList<>();
+
+        @Override
+        public void publishEvent(ApplicationEvent event) {
+            publishEvent((Object) event);
+        }
+
+        @Override
+        public void publishEvent(Object event) {
+            for (ApplicationListener listener : new ArrayList<>(listeners)) {
+                if (event instanceof ApplicationEvent) {
+                    listener.onApplicationEvent((ApplicationEvent) event);
+                } else {
+                    listener.onApplicationEvent(new PayloadApplicationEvent(this, event));
+                }
+            }
+        }
+
+        public void addApplicationListener(ApplicationListener<?> listener) {
+            listeners.add(listener);
+        }
+    }
+
     private ApplicationContext applicationContext;
+    protected ApplicationEventPublisher applicationEventPublisher = new DefaultApplicationEventPublisher();
 
     protected final MappingContext mappingContext;
     protected final ServiceRegistry serviceRegistry;
     protected final PropertyResolver connectionDetails;
     protected final TPCacheAdapterRepository cacheAdapterRepository;
+    protected SessionResolver sessionResolver;
+
+    @Override
+    public SessionResolver getSessionResolver() {
+        return sessionResolver;
+    }
+
+    public void setSessionResolver(SessionResolver sessionResolver) {
+        this.sessionResolver = sessionResolver;
+    }
 
     public AbstractDatastore(MappingContext mappingContext) {
         this(mappingContext, (PropertyResolver) null, null);
@@ -80,8 +122,10 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
                              ConfigurableApplicationContext ctx, TPCacheAdapterRepository cacheAdapterRepository) {
         this.mappingContext = mappingContext;
         this.connectionDetails = connectionDetails;
-        setApplicationContext(ctx);
         this.cacheAdapterRepository = cacheAdapterRepository;
+        this.applicationEventPublisher = ctx != null ? ctx : new DefaultApplicationEventPublisher();
+        this.sessionResolver = new ThreadLocalSessionResolver<>();
+        setApplicationContext(ctx);
         DefaultServiceRegistry defaultServiceRegistry = new DefaultServiceRegistry(this);
         this.serviceRegistry = defaultServiceRegistry;
         defaultServiceRegistry.initialize();
@@ -122,6 +166,36 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
 
     public void setApplicationContext(ApplicationContext ctx) {
         applicationContext = ctx;
+        if (ctx instanceof ApplicationEventPublisher) {
+            this.applicationEventPublisher = (ApplicationEventPublisher) ctx;
+        }
+        else if (ctx == null && !(this.applicationEventPublisher instanceof DefaultApplicationEventPublisher)) {
+            this.applicationEventPublisher = new DefaultApplicationEventPublisher();
+        }
+    }
+
+    public void setApplicationEventPublisher(ApplicationEventPublisher applicationEventPublisher) {
+        this.applicationEventPublisher = applicationEventPublisher;
+    }
+
+    /**
+     * Adds an application listener to the datastore
+     * @param listener The listener
+     */
+    public void addApplicationListener(ApplicationListener<?> listener) {
+        if (applicationEventPublisher instanceof ConfigurableApplicationContext) {
+            ((ConfigurableApplicationContext) applicationEventPublisher).addApplicationListener(listener);
+        } else if (applicationEventPublisher instanceof DefaultApplicationEventPublisher) {
+            ((DefaultApplicationEventPublisher) applicationEventPublisher).addApplicationListener(listener);
+        }
+        else {
+            try {
+                Method method = applicationEventPublisher.getClass().getMethod("addApplicationListener", ApplicationListener.class);
+                method.invoke(applicationEventPublisher, listener);
+            } catch (Exception e) {
+                // ignore
+            }
+        }
     }
 
     public Session connect() {
@@ -171,7 +245,7 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
     }
 
     public boolean hasCurrentSession() {
-        return TransactionSynchronizationManager.hasResource(this);
+        return sessionResolver.resolve() != null || TransactionSynchronizationManager.hasResource(this);
     }
 
     /**
@@ -223,7 +297,7 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
     }
 
     public ApplicationEventPublisher getApplicationEventPublisher() {
-        return getApplicationContext();
+        return applicationEventPublisher;
     }
 
     protected void initializeConverters(MappingContext mappingContext) {

@@ -27,6 +27,7 @@ import org.springframework.validation.Validator;
 
 import org.grails.datastore.mapping.engine.EntityAccess;
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
+import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings;
 import org.grails.datastore.mapping.proxy.ProxyFactory;
 import org.grails.datastore.mapping.proxy.ProxyHandler;
 import org.grails.datastore.mapping.reflect.EntityReflector;
@@ -52,9 +53,22 @@ import org.grails.datastore.mapping.validation.ValidatorRegistry;
 public interface MappingContext {
 
     /**
+     * Initialize the mapping context with the given settings
+     * @param settings The settings
+     */
+    void initialize(ConnectionSourceSettings settings);
+
+    /**
      * @return The multi tenancy mode
      */
     MultiTenancySettings.MultiTenancyMode getMultiTenancyMode();
+
+    /**
+     * Set the multi tenancy mode
+     *
+     * @param multiTenancyMode The multi tenancy mode
+     */
+    void setMultiTenancyMode(MultiTenancySettings.MultiTenancyMode multiTenancyMode);
 
     /**
      * Obtains a list of PersistentEntity instances
