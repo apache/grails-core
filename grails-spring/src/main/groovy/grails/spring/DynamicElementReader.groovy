@@ -121,6 +121,10 @@ class DynamicElementReader extends GroovyObjectSupport {
 
         def sw = new StringWriter()
         writable.writeTo(sw)
+        def xml = sw.toString()
+        if (xml.contains("context")) {
+            // println "DEBUG: DynamicElementReader generated XML: $xml"
+        }
 
         def documentLoader = new DefaultDocumentLoader()
         InputSource is = new InputSource(new StringReader(sw.toString()))
