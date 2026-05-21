@@ -29,13 +29,16 @@ import org.grails.orm.hibernate.cfg.HibernateMappingContext;
 import org.grails.orm.hibernate.cfg.Settings;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
 import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
-import org.grails.datastore.mapping.core.connections.SingletonConnectionSources;
+
 import java.util.Collections;
+import java.util.Map;
 
 /**
  * A datastore for a specific connection in a multiple data source setup.
  */
 public class ChildHibernateDatastore extends HibernateDatastore {
+
+    private static final ThreadLocal<HibernateDatastore> PARENT_HOLDER = new ThreadLocal<>();
 
     private final HibernateDatastore parent;
 
@@ -44,19 +47,27 @@ public class ChildHibernateDatastore extends HibernateDatastore {
             ConnectionSources<SessionFactory, HibernateConnectionSourceSettings> connectionSources,
             HibernateMappingContext mappingContext,
             ConfigurableApplicationEventPublisher eventPublisher) {
-        super(connectionSources, mappingContext, eventPublisher,
-            connectionSources.getDefaultConnectionSource().getSource());
+        super(bindParent(parent, connectionSources), mappingContext, eventPublisher,
+                connectionSources.getDefaultConnectionSource().getSource());
         this.parent = parent;
+        PARENT_HOLDER.remove();
+    }
+
+    private static ConnectionSources<SessionFactory, HibernateConnectionSourceSettings> bindParent(HibernateDatastore parent, ConnectionSources<SessionFactory, HibernateConnectionSourceSettings> connectionSources) {
+        PARENT_HOLDER.set(parent);
+        return connectionSources;
     }
 
     @Override
     public HibernateDatastore getPrimaryDatastore() {
-        return parent;
+        return parent != null ? parent : PARENT_HOLDER.get();
     }
 
     @Override
     protected HibernateGormEnhancer initialize() {
-        return new HibernateGormEnhancer(this, transactionManager, connectionSources.getDefaultConnectionSource().getSettings(), Collections.emptyMap());
+        HibernateDatastore p = getPrimaryDatastore();
+        Map<String, HibernateDatastore> datastoresMap = p != null ? p.datastoresByConnectionSource : Collections.emptyMap();
+        return new HibernateGormEnhancer(this, transactionManager, connectionSources.getDefaultConnectionSource().getSettings(), datastoresMap);
     }
 
     @Override
@@ -68,38 +79,28 @@ public class ChildHibernateDatastore extends HibernateDatastore {
 
     @Override
     public HibernateDatastore getDatastoreForConnection(String connectionName) {
-        if (Settings.SETTING_DATASOURCE.equals(connectionName) ||
-                ConnectionSource.DEFAULT.equals(connectionName)) {
-            return parent;
-        } else {
-            HibernateDatastore hibernateDatastore = parent.datastoresByConnectionSource.get(connectionName);
-            if (hibernateDatastore == null) {
-                throw new org.grails.datastore.mapping.core.exceptions.ConfigurationException(
-                        "DataSource not found for name [" + connectionName +
-                                "] in configuration. Please check your multiple data sources configuration and try again.");
-            }
-            return hibernateDatastore;
+        String myName = getConnectionSources().getDefaultConnectionSource().getName();
+        if (connectionName.equals(myName)) {
+            return this;
         }
+
+        HibernateDatastore p = getPrimaryDatastore();
+        if (Settings.SETTING_DATASOURCE.equals(connectionName) || ConnectionSource.DEFAULT.equals(connectionName)) {
+            return p;
+        }
+
+        if (p != null) {
+            HibernateDatastore hibernateDatastore = p.datastoresByConnectionSource.get(connectionName);
+            if (hibernateDatastore != null) {
+                return hibernateDatastore;
+            }
+        }
+
+        throw new org.grails.datastore.mapping.core.exceptions.ConfigurationException(
+                "DataSource not found for name [" + connectionName +
+                        "] in configuration. Please check your multiple data sources configuration and try again.");
     }
 
-    /**
-     * Returns a {@link HibernateSession} for this child datastore's {@link SessionFactory}.
-     *
-     * <p>When a Spring-managed transaction is active (e.g. inside {@code withNewTransaction}),
-     * the transaction manager binds the Hibernate session to TSM with key = {@link SessionFactory}.
-     * In that case we reuse that session so that any Hibernate filters enabled on it (e.g. the
-     * DISCRIMINATOR multi-tenancy filter set by {@link org.grails.orm.hibernate.multitenancy.MultiTenantEventListener})
-     * are visible to the query that {@code connect()} feeds.</p>
-     *
-     * <p>When no transaction session is bound (e.g. in SCHEMA mode where each child datastore
-     * has its own session factory and sessions are created explicitly), we open a new session.
-     * This preserves the original behaviour required by SCHEMA multi-tenancy.</p>
-     *
-     * <p>Session lifecycle is safe: {@link HibernateSession#disconnect()} closes
-     * the {@code nativeSession} when it is non-null, and
-     * {@code DatastoreUtils.closeSessionOrRegisterDeferredClose()} always delegates
-     * to {@code disconnect()} for non-transactional sessions.</p>
-     */
     @Override
     public Session connect() {
         SessionFactory sf = getSessionFactory();

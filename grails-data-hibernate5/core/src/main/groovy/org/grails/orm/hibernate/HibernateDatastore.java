@@ -204,6 +204,10 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
 
             @Override
             public HibernateDatastore getDatastoreForConnection(String connectionName) {
+                String myName = getConnectionSources().getDefaultConnectionSource().getName();
+                if (connectionName.equals(myName)) {
+                    return this;
+                }
                 if (connectionName.equals(Settings.SETTING_DATASOURCE) || connectionName.equals(ConnectionSource.DEFAULT)) {
                     return parent;
                 } else {
