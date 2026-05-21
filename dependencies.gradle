@@ -104,7 +104,9 @@ ext {
             'commons-codec.version'         : '1.21.0',
             'commons-lang3.version'         : '3.20.0',
             'geb-spock.version'             : '8.0.1',
-            'groovy.version'                : '4.0.31',
+            'graphql-java.version'          : '24.3',
+            'graphql-java-extended-scalars.version': '24.0',
+            'groovy.version'                : '4.0.32',
             'hibernate-groovy-proxy.version': '1.1',
             'jakarta-servlet-api.version'   : '6.1.0',
             'jakarta-validation.version': '3.1.1',
@@ -118,6 +120,7 @@ ext {
             'sitemesh.version'              : '2.6.0',
             'spock.version'                 : '2.3-groovy-4.0',
             'starter-sitemesh.version'      : '3.2.2',
+            'spring-webmvc-sitemesh.version': '3.2.2',
             // Spring Boot 4 no longer manages spring-retry; pin it here so the
             // grails-shell-cli SpringRetryCompilerAutoConfiguration's unversioned
             // reference resolves and consumer apps using @Retryable get a known version.
@@ -141,6 +144,8 @@ ext {
             'commons-codec'            : "commons-codec:commons-codec:${bomDependencyVersions['commons-codec.version']}",
             'commons-lang3'            : "org.apache.commons:commons-lang3:${bomDependencyVersions['commons-lang3.version']}",
             'geb-spock'                : "org.apache.groovy.geb:geb-spock:${bomDependencyVersions['geb-spock.version']}",
+            'graphql-java'             : "com.graphql-java:graphql-java:${bomDependencyVersions['graphql-java.version']}",
+            'graphql-java-extended-scalars': "com.graphql-java:graphql-java-extended-scalars:${bomDependencyVersions['graphql-java-extended-scalars.version']}",
             'groovy'                   : "org.apache.groovy:groovy:${bomDependencyVersions['groovy.version']}",
             'groovy-ant'               : "org.apache.groovy:groovy-ant:${bomDependencyVersions['groovy.version']}",
             'groovy-astbuilder'        : "org.apache.groovy:groovy-astbuilder:${bomDependencyVersions['groovy.version']}",
@@ -199,6 +204,7 @@ ext {
             'spock-spring'             : "org.spockframework:spock-spring:${bomDependencyVersions['spock.version']}",
             'spring-retry'             : "org.springframework.retry:spring-retry:${bomDependencyVersions['spring-retry.version']}",
             'starter-sitemesh'         : "org.sitemesh:spring-boot-starter-sitemesh:${bomDependencyVersions['starter-sitemesh.version']}",
+            'spring-webmvc-sitemesh'   : "org.sitemesh:spring-webmvc-sitemesh:${bomDependencyVersions['spring-webmvc-sitemesh.version']}",
     ]
 
     // Because pom exclusions aren't properly supported by gradle, we can't inherit the grails-gradle-bom

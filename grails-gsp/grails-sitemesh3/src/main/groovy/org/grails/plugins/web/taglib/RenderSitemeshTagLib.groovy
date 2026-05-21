@@ -16,60 +16,103 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.plugins.web.taglib
 
 import java.nio.CharBuffer
 
+import org.sitemesh.DecoratorSelector
+import org.sitemesh.SiteMeshContext
 import org.sitemesh.content.Content
+import org.sitemesh.content.ContentProcessor
 import org.sitemesh.content.ContentProperty
-import org.sitemesh.webapp.SiteMeshFilter
 import org.sitemesh.webapp.WebAppContext
 import org.sitemesh.webapp.contentfilter.ResponseMetaData
 
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.boot.web.servlet.FilterRegistrationBean
+import org.springframework.context.annotation.Lazy
+import org.springframework.web.servlet.ViewResolver
 
 import grails.artefact.TagLibrary
 import grails.gsp.TagLib
+import org.grails.encoder.CodecLookup
+import org.grails.encoder.Encoder
+import org.grails.plugins.sitemesh3.GrailsSiteMeshViewContext
 import org.grails.web.util.WebUtils
 
 /**
- * The tags in this library are rendered by sitemesh itself instead of the grails tags so they should always be written
- * as a 'sitemesh' namespace.
+ * Tags rendered by SiteMesh itself (not the Grails taglib pipeline) when a
+ * layout GSP is being processed. Kept in the {@code sitemesh} namespace.
  */
 @TagLib
 class RenderSitemeshTagLib implements TagLibrary {
 
-    SiteMeshFilter siteMeshFilter
+    @Autowired
+    CodecLookup codecLookup
 
     @Autowired
-    RenderSitemeshTagLib(@Qualifier('sitemesh') FilterRegistrationBean sitemesh) {
-        this.siteMeshFilter = (SiteMeshFilter) sitemesh.getFilter()
-    }
+    ContentProcessor contentProcessor
 
+    @Autowired
+    DecoratorSelector<SiteMeshContext> decoratorSelector
+
+    // Break the circular dependency
+    // RenderSitemeshTagLib -> ViewResolver -> groovyPagesTemplateEngine ->
+    // gspTagLibraryLookup -> RenderSitemeshTagLib by deferring resolution.
+    // @Qualifier is required because the context has several ViewResolver
+    // beans (mvcViewResolver, beanNameViewResolver, groovyMarkupViewResolver,
+    // jspViewResolver, gspViewResolver) and autowiring by type is ambiguous.
+    @Autowired
+    @Lazy
+    @Qualifier('jspViewResolver')
+    ViewResolver viewResolver
+
+    // Dispatches via GrailsSiteMeshViewContext so the layout is rendered
+    // through Spring's View API rather than RequestDispatcher.forward().
+    // Using the default WebAppContext here would re-enter the servlet
+    // pipeline on every <g:applyLayout> call, and nesting (applyLayout
+    // inside applyLayout inside a Sitemesh3LayoutView render) would tear
+    // down the outer request scope before the outer render finished —
+    // causing "request is not active anymore" errors.
     Closure applyLayout = { Map attrs, body ->
         String savedAttribute = request.getAttribute(WebUtils.LAYOUT_ATTRIBUTE)
-        WebAppContext context = new WebAppContext('text/html', request, response,
-                servletContext, siteMeshFilter.contentProcessor,  new ResponseMetaData(), false)
-        Content content = siteMeshFilter.contentProcessor.build(CharBuffer.wrap(body()), context)
-        if (attrs.name) {
-            request.setAttribute(WebUtils.LAYOUT_ATTRIBUTE, attrs.name)
+        GrailsSiteMeshViewContext context = new GrailsSiteMeshViewContext(
+                'text/html', request, response, servletContext,
+                contentProcessor, new ResponseMetaData(), false,
+                viewResolver, request.getLocale())
+        try {
+            Content content = contentProcessor.build(CharBuffer.wrap(body()), context)
+            if (attrs.name) {
+                request.setAttribute(WebUtils.LAYOUT_ATTRIBUTE, attrs.name)
+            }
+            String[] decoratorPaths = decoratorSelector.selectDecoratorPaths(content, context)
+            for (String decoratorPath : decoratorPaths) {
+                Content next = context.decorate(decoratorPath, content)
+                if (next == null) {
+                    break
+                }
+                content = next
+            }
+            if (content != null) {
+                content.getData().writeValueTo(out)
+            }
+        } finally {
+            if (savedAttribute != null) {
+                request.setAttribute(WebUtils.LAYOUT_ATTRIBUTE, savedAttribute)
+            } else {
+                request.removeAttribute(WebUtils.LAYOUT_ATTRIBUTE)
+            }
         }
-        String[] decoratorPaths = siteMeshFilter.decoratorSelector.selectDecoratorPaths(content, context)
-        for (String decoratorPath : decoratorPaths) {
-            content = context.decorate(decoratorPath, content)
-        }
-        content.getData().writeValueTo(out)
-        request.setAttribute(WebUtils.LAYOUT_ATTRIBUTE, savedAttribute)
     }
 
     private ContentProperty getContentProperty(String name) {
         if (!name) {
             return null
         }
-        Content content = request.getAttribute(WebAppContext.CONTENT_KEY)
+        Content content = (Content) request.getAttribute(WebAppContext.CONTENT_KEY)
+        if (content == null) {
+            return null
+        }
         ContentProperty currentProperty = content.getExtractedProperties()
         for (String childPropertyName : name.split('\\.')) {
             currentProperty = currentProperty.getChild(childPropertyName)
@@ -148,40 +191,45 @@ class RenderSitemeshTagLib implements TagLibrary {
         }
     }
 
+    // layoutTitle/layoutHead/layoutBody inline-expand at tag-render time.
+    // This avoids emitting <sitemesh:write> placeholders that would otherwise
+    // require a second HTML parse of the layout output to expand. The
+    // property is pulled directly from the Content being merged (set on the
+    // request under WebAppContext.CONTENT_KEY by WebAppContext.decorate).
     Closure layoutTitle = { attrs ->
-        out << """<sitemesh:write property="title">${attrs.default ?: ''}</sitemesh:write>""".toString()
+        ContentProperty titleProp = getContentProperty('title')
+        String defaultValue = attrs.default?.toString() ?: ''
+        if (titleProp?.hasValue()) {
+            titleProp.writeValueTo(out)
+        } else if (defaultValue) {
+            out << defaultValue
+        }
     }
 
     Closure layoutHead = { attrs, body ->
-        StringBuilder tag = new StringBuilder('<sitemesh:write property="head"')
-        String bodyContent = body()
-        if (bodyContent) {
-            tag.append('>')
-            tag.append(bodyContent)
-            tag.append('</sitemesh:write>')
-        } else {
-            tag.append('/>')
+        ContentProperty headProp = getContentProperty('head')
+        if (headProp?.hasValue()) {
+            headProp.writeValueTo(out)
+        } else if (body) {
+            out << body()
         }
-        out << tag.toString()
     }
 
     Closure layoutBody = { attrs, body ->
-        StringBuilder tag = new StringBuilder('<sitemesh:write property="body"')
-        String bodyContent = body()
-        if (bodyContent) {
-            tag.append('>')
-            tag.append(bodyContent)
-            tag.append('</sitemesh:write>')
-        } else {
-            tag.append('/>')
+        ContentProperty bodyProp = getContentProperty('body')
+        if (bodyProp?.hasValue()) {
+            bodyProp.writeValueTo(out)
+        } else if (body) {
+            out << body()
         }
-        out << tag.toString()
     }
 
     Closure content = { attrs, body ->
-        StringBuilder tag = new StringBuilder("""<content tag="${attrs.tag}">""")
-        tag.append(body())
-        tag.append('</content>')
-        out << tag.toString()
+        Encoder htmlEncoder = codecLookup?.lookupEncoder('HTML')
+        out << '<content tag="'
+        out << (htmlEncoder != null ? htmlEncoder.encode(attrs.tag) : attrs.tag)
+        out << '">'
+        out << body()
+        out << '</content>'
     }
 }

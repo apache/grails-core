@@ -35,7 +35,7 @@ import org.grails.gorm.graphql.fetcher.ReadingGormDataFetcher
  */
 @CompileStatic
 @InheritConstructors
-class SingleEntityDataFetcher<T> extends DefaultGormDataFetcher<T> implements ReadingGormDataFetcher {
+class SingleEntityDataFetcher<T> extends DefaultGormDataFetcher<T> implements ReadingGormDataFetcher<T> {
 
     @Override
     T get(DataFetchingEnvironment environment) {

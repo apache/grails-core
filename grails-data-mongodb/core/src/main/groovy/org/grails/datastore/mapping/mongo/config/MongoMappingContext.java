@@ -46,6 +46,8 @@ import org.bson.types.Code;
 import org.bson.types.Decimal128;
 import org.bson.types.ObjectId;
 import org.bson.types.Symbol;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.core.convert.converter.ConverterRegistry;
@@ -101,6 +103,8 @@ import org.grails.datastore.mapping.reflect.ClassUtils;
  */
 @SuppressWarnings("rawtypes")
 public class MongoMappingContext extends DocumentMappingContext {
+
+    private static final Logger log = LoggerFactory.getLogger(MongoMappingContext.class);
     private static final String DECIMAL_TYPE_CLASS_NAME = "org.bson.types.Decimal128";
     /**
      * Java types supported as mongo property types.
@@ -134,6 +138,21 @@ public class MongoMappingContext extends DocumentMappingContext {
     private CodecRegistry codecRegistry;
     private Map<Class, Boolean> hasCodecCache = new HashMap<>();
 
+    /**
+     * Global default storage type for {@code String id} fields that don't declare an explicit
+     * {@code id storedAs: ...} in their mapping. Null means "no default — use the declared
+     * Java type" (current GORM behavior). See {@link MongoSettings#SETTING_STRING_IDS_DEFAULT_STORED_AS}.
+     */
+    private Class<?> stringIdDefaultStoredAs;
+
+    public Class<?> getStringIdDefaultStoredAs() {
+        return stringIdDefaultStoredAs;
+    }
+
+    public void setStringIdDefaultStoredAs(Class<?> stringIdDefaultStoredAs) {
+        this.stringIdDefaultStoredAs = stringIdDefaultStoredAs;
+    }
+
     public MongoMappingContext(String defaultDatabaseName) {
         this(defaultDatabaseName, null);
     }
@@ -165,7 +184,28 @@ public class MongoMappingContext extends DocumentMappingContext {
      */
     @Deprecated
     public MongoMappingContext(PropertyResolver configuration, Class... classes) {
-        this(getDefaultDatabaseName(configuration), configuration.getProperty(MongoSettings.SETTING_DEFAULT_MAPPING, Closure.class, null), classes);
+        super(getDefaultDatabaseName(configuration), configuration.getProperty(MongoSettings.SETTING_DEFAULT_MAPPING, Closure.class, null));
+        // Must run BEFORE initialize(classes) so that MongoDocumentMappingFactory.createIdentity
+        // (invoked during entity registration) can read the global default.
+        String storedAsDefault = configuration.getProperty(MongoSettings.SETTING_STRING_IDS_DEFAULT_STORED_AS, String.class, null);
+        this.stringIdDefaultStoredAs = parseStoredAs(storedAsDefault);
+        initialize(classes);
+    }
+
+    private static Class<?> parseStoredAs(String value) {
+        if (value == null) return null;
+        switch (value.toLowerCase()) {
+            case "objectid":
+            case "object_id":
+                return ObjectId.class;
+            case "string":
+                return String.class;
+            default:
+                log.warn("Unrecognized value '{}' for {}; accepted values are 'objectid' or 'string'. " +
+                        "Falling back to default behavior (no coercion).",
+                        value, MongoSettings.SETTING_STRING_IDS_DEFAULT_STORED_AS);
+                return null;
+        }
     }
 
     /**
@@ -176,6 +216,10 @@ public class MongoMappingContext extends DocumentMappingContext {
      */
     public MongoMappingContext(AbstractMongoConnectionSourceSettings settings, Class... classes) {
         super(settings.getDatabase(), settings);
+        // Must run BEFORE initialize(classes) so that MongoDocumentMappingFactory.createIdentity
+        // (invoked during entity registration) can read the global default.
+        String storedAsDefault = settings.getStringIds() != null ? settings.getStringIds().getDefaultStoredAs() : null;
+        this.stringIdDefaultStoredAs = parseStoredAs(storedAsDefault);
         initialize(classes);
     }
 
@@ -333,7 +377,14 @@ public class MongoMappingContext extends DocumentMappingContext {
         @Override
         public Identity<MongoAttribute> createIdentity(PersistentEntity owner, MappingContext context, PropertyDescriptor pd) {
             Identity<MongoAttribute> identity = super.createIdentity(owner, context, pd);
-            identity.getMapping().getMappedForm().setTargetName(MongoConstants.MONGO_ID_FIELD);
+            MongoAttribute mappedForm = identity.getMapping().getMappedForm();
+            mappedForm.setTargetName(MongoConstants.MONGO_ID_FIELD);
+            // Apply the global default storedAs for String-id domains that don't declare their own.
+            if (mappedForm.getStoredAs() == null &&
+                    stringIdDefaultStoredAs != null &&
+                    String.class.equals(pd.getPropertyType())) {
+                mappedForm.setStoredAs(stringIdDefaultStoredAs);
+            }
             return identity;
         }
 

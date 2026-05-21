@@ -1,0 +1,102 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+=== Upgrade Instructions for Grails 7.1 to Grails 7.2
+
+This guide outlines the changes introduced in Grails 7.2 and the steps required to upgrade your application.
+
+==== 1. SiteMesh 3 Filter-less Integration
+
+Grails 7.2 upgrades the SiteMesh 3 integration to a *filter-less* architecture. Decoration is now performed by a Spring MVC `ViewResolver` rather than a Servlet filter. This change improves performance, eliminates ordering issues with other filters, and correctly supports async controller return types (`Callable`, `@Async`).
+
+===== What Changed
+
+* The `SiteMeshFilter` servlet filter is no longer active. A `NoopSitemeshFilter` placeholder bean is registered under the `sitemesh` name to prevent SiteMesh's auto-configuration from activating the upstream filter-based integration.
+* Layout resolution and decoration are now handled by `Sitemesh3LayoutView` (a Spring `View`) and `CaptureAwareContentProcessor`.
+* GSP pages populate a `Sitemesh3CapturedPage` at render time via the `grailsLayout` capture tag library. SiteMesh no longer parses the raw HTML response to extract head/body/title.
+
+===== Required Actions
+
+For most applications **no changes are required**. The filter-less integration is a drop-in replacement: layouts, `<g:layoutHead>`, `<g:layoutTitle>`, `<g:layoutBody>`, `<g:pageProperty>`, `<g:applyLayout>`, and layout-by-convention all behave identically to the previous release.
+
+[IMPORTANT]
+====
+The guidance below applies *only* when the SiteMesh 3 integration is in use. The legacy `grails-layout` plugin (SiteMesh 2) remains supported in Grails 7.2 and continues to honor its existing configuration. If your application still depends on `grails-layout`, leave the SiteMesh 2 properties in place — they remain meaningful for that codepath.
+====
+
+When using the SiteMesh 3 integration, the following SiteMesh 2-era configuration properties are no longer consulted and can be removed from your `application.yml` if present:
+
+[source,yaml]
+----
+# Remove these — no longer used by the SiteMesh 3 integration in Grails 7.2.
+# (Retain them if your application still uses the grails-layout / SiteMesh 2 plugin.)
+grails.gsp.view.layoutViewResolver: false
+sitemesh.filter.order: ...
+sitemesh.decorator.tagRuleBundles: ...
+----
+
+===== Configuring the Default Layout
+
+The default layout is still configured via:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    sitemesh:
+        default:
+            layout: application
+----
+
+===== Layout Cache Tuning (Optional)
+
+In non-development environments, layout paths are cached by controller/action pair. The cache TTL can be tuned independently of the GSP reload interval using a dedicated key:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    sitemesh:
+        layout:
+            cache:
+                interval: 5000   # milliseconds, default 5000
+----
+
+This replaces any reliance on `grails.gsp.reload.interval` for layout cache expiration in previous snapshots.
+
+===== Async Controller Support
+
+The filter-less architecture correctly handles Grails controllers that return `Callable` or use `@Async`. Previously, async dispatch could cause decoration to run on a different thread from the one that populated the SiteMesh request scope, leading to empty layouts or stale content. This is resolved in 7.2.
+
+===== Content Blocks
+
+Content blocks (the `<content tag="...">` pattern) continue to work as before. The GSP preprocessor maps them to `<grailsLayout:captureContent tag="...">` at compile time, and the captured buffers are passed directly to the layout without an additional HTML parse.
+
+[source,xml]
+----
+<%-- Page --%>
+<content tag="sidebar">
+    ... sidebar content ...
+</content>
+
+<%-- Layout --%>
+<div id="sidebar">
+    <g:pageProperty name="page.sidebar" />
+</div>
+----

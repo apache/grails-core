@@ -2,13 +2,6 @@ Hi Everyone,
 
 I am happy to start the VOTE thread to release ${PROJECT_NAME} ${VERSION}!
 
-
-Please note the following build reproducibility issues for this release:
-1. grails-forge-core-${VERSION}-javadoc.jar # due to groovy 3 in forge, we need to update to groovy 4 to fix this
-
-Given that these differences are known, explainable, and immaterial, we are moving forward with a release vote.
-
-
 Pre-release discussion thread is here:
 <Thread Link>
 
