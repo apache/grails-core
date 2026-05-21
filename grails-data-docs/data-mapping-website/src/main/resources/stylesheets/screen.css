@@ -42,53 +42,6 @@
 	url('../fonts/roboto-medium.svg#svgFontName') format('svg'); /* Legacy iOS */
 }
 
-@font-face {
-	font-family: 'Archia-Regular';
-	src: url('../fonts/archia-regular.eot'); /* IE9 Compat Modes */
-	src: url('../fonts/archia-regular.eot?#iefix') format('embedded-opentype'),
-		 url('../fonts/archia-regular.woff2') format('woff2'),
-	     url('../fonts/archia-regular.woff') format('woff');
-	font-weight: normal;
-	font-style: normal;
-}
-@font-face {
-	font-family: 'Archia-Thin';
-	src: url('../fonts/archia-thin.eot');
-	src: url('../fonts/archia-thin.eot?#iefix') format('embedded-opentype'),
-	     url('../fonts/archia-thin.woff2') format('woff2'),
-	    url('../fonts/archia-thin.woff') format('woff');
-	font-weight: normal;
-	font-style: normal;
-}
-@font-face {
-	font-family: 'Archia-Light';
-	src: url('../fonts/archia-light.eot');
-	src: url('../fonts/archia-light.eot?#iefix') format('embedded-opentype'),
-	     url('../fonts/archia-light.woff2') format('woff2'),
-	     url('../fonts/archia-light.woff') format('woff');
-	font-weight: normal;
-	font-style: normal;
-}
-@font-face {
-	font-family: 'Archia-Medium';
-	src: url('../fonts/archia-medium.eot');
-	src: url('../fonts/archia-medium.eot?#iefix') format('embedded-opentype'),
-	     url('../fonts/archia-medium.woff') format('woff'),
-	     url('../fonts/archia-medium.woff2') format('woff2');
-	font-weight: normal;
-	font-style: normal;
-}
-
-@font-face {
-	font-family: 'Archia-Medium';
-	src: url('../fonts/archia-bold.eot');
-	src: url('../fonts/archia-bold.eot?#iefix') format('embedded-opentype'),
-	url('../fonts/archia-bold.woff') format('woff'),
-	url('../fonts/archia-bold.woff2') format('woff2');
-	font-weight: normal;
-	font-style: normal;
-}
-
 body {
 	color: #7c7c7c;
 	background-color: #F5F5F5;
@@ -209,7 +162,7 @@ td {
 }
 .training h2 {
 	text-transform: uppercase;
-	font-family: 'Archia-Light', 'Roboto-Light', "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+	font-family: 'Roboto-Light', "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
 	margin-bottom: 20px;
 }
 .training table {
@@ -580,7 +533,7 @@ a:hover,
 #features h3 {
 	margin-top: 10px;
 	text-transform: uppercase;
-	font-family: 'Archia-Light', 'Roboto-Light', "Open Sans","Helvetica Neue",Helvetica,Arial,sans-serif;
+	font-family: 'Roboto-Light', "Open Sans","Helvetica Neue",Helvetica,Arial,sans-serif;
 }
 .chailicelogo {
 	display: none;
@@ -965,7 +918,7 @@ body.home .grailslogo {
 	text-align: center;
 	width: 52.58545136%; /* 680px / 1141px; */
 	margin: 0 auto;
-	font-family: 'Archia-Thin', 'Roboto-Light', "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+	font-family: 'Roboto-Light', "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
 	font-weight: normal;
 	font-size: 20px;
 }
@@ -984,7 +937,7 @@ article.quote h2 {
 	-moz-box-shadow: 1px 4px 4px #ccc;
 	box-shadow: 1px 4px 4px #ccc;
 	margin: 0 auto;
-	font-family: 'Archia-Light', 'Roboto-Light', "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+	font-family: 'Roboto-Light', "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
 .calltoaction {
@@ -1027,7 +980,7 @@ article.quote h2 {
 .testimonials h2 {
 	text-transform: uppercase;
 	color: #ffffff;
-	font-family: 'Archia-Light', 'Roboto-Light', "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;	font-size: 24px;
+	font-family: 'Roboto-Light', "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;	font-size: 24px;
 	margin-top: 50px;
 	margin-bottom: 50px;
 }

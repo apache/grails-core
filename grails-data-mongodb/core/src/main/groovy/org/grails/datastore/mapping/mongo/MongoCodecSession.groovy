@@ -62,6 +62,7 @@ import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.ToOne
 import org.grails.datastore.mapping.mongo.engine.MongoCodecEntityPersister
 import org.grails.datastore.mapping.mongo.engine.MongoEntityPersister
+import org.grails.datastore.mapping.mongo.engine.MongoIdCoercion
 import org.grails.datastore.mapping.mongo.engine.codecs.PersistentEntityCodec
 import org.grails.datastore.mapping.mongo.query.MongoQuery
 import org.grails.datastore.mapping.query.Query
@@ -152,7 +153,7 @@ class MongoCodecSession extends AbstractMongoSession {
                         DirtyCheckable changedObject = (DirtyCheckable) update.getNativeEntry()
                         PersistentEntityCodec codec = (PersistentEntityCodec) datastore.codecRegistry.get(changedObject.getClass())
 
-                        final Object nativeKey = update.nativeKey
+                        final Object nativeKey = coerceIdToStoredType(update.nativeKey, persistentEntity)
                         final Document id = new Document(MongoEntityPersister.MONGO_ID_FIELD, nativeKey)
 
                         EntityAccess entityAccess = update.entityAccess
@@ -200,7 +201,7 @@ class MongoCodecSession extends AbstractMongoSession {
 
                         if (delete.vetoed) continue
 
-                        final Object k = delete.nativeKey
+                        final Object k = coerceIdToStoredType(delete.nativeKey, persistentEntity)
                         if (k) {
                             nativeKeys << k
                             final List cascadeOperations = delete.cascadeOperations
@@ -284,6 +285,25 @@ class MongoCodecSession extends AbstractMongoSession {
             writeModels[key] = entityWrites
         }
         return entityWrites
+    }
+
+    /**
+     * If the entity's id mapping declares {@code storedAs} and it differs from the in-memory
+     * native key type, coerce the key so that update/delete filters target BSON values of
+     * the correct type (otherwise {@code {_id: "<hex>"}} sent as a BSON String would never
+     * match an {@code _id: ObjectId(...)} document on disk, and the write would silently miss,
+     * surfacing as a misleading {@link OptimisticLockingException}).
+     *
+     * <p>Exercised end-to-end by {@code StringIdWithObjectIdStorageSpec}:
+     * <ul>
+     *   <li>"with storedAs ObjectId, updates persist (no phantom OptimisticLockingException)" — happy path on update filter</li>
+     *   <li>"with storedAs ObjectId, update of a non-hex id document lands on the right row" — null-return fallback on update filter</li>
+     *   <li>"with storedAs ObjectId, delete of a non-hex id document removes the row" — null-return fallback on delete filter</li>
+     *   <li>"with storedAs ObjectId, legacy documents written directly as BSON ObjectId are fully accessible" — update path against legacy BSON ObjectId _id</li>
+     * </ul>
+     */
+    protected Object coerceIdToStoredType(Object nativeKey, PersistentEntity entity) {
+        MongoIdCoercion.coerceIdToStoredType(nativeKey, entity)
     }
 
     @Override

@@ -33,6 +33,15 @@ import org.apache.commons.logging.LogFactory;
  */
 public class DefaultStackTraceFilterer implements StackTraceFilterer {
     public static final String STACK_LOG_NAME = "StackTrace";
+    /**
+     * Dedicated logger for exception stack traces. The filterer emits the unfiltered
+     * trace to this logger as a side effect of {@link #filter(Throwable)} — before the
+     * trace is trimmed in place — when {@link #logFullStackTraceOnFilter} is {@code true}
+     * (the default). {@code GrailsExceptionResolver} also emits to this logger when
+     * {@code grails.exceptionresolver.logFullStackTrace} is enabled. Exposed as a public
+     * constant so that subclasses and logback configurations can reference the logger
+     * name symbolically.
+     */
     public static final Log STACK_LOG = LogFactory.getLog(STACK_LOG_NAME);
 
     private static final String[] DEFAULT_INTERNAL_PACKAGES = new String[] {
@@ -58,6 +67,7 @@ public class DefaultStackTraceFilterer implements StackTraceFilterer {
     private List<String> packagesToFilter = new ArrayList<>();
     private boolean shouldFilter;
     private String cutOffPackage = null;
+    private boolean logFullStackTraceOnFilter = true;
 
     public DefaultStackTraceFilterer() {
         this(!Boolean.getBoolean(SYS_PROP_DISPLAY_FULL_STACKTRACE));
@@ -77,36 +87,52 @@ public class DefaultStackTraceFilterer implements StackTraceFilterer {
         this.cutOffPackage = cutOffPackage;
     }
 
+    /**
+     * Controls whether {@link #filter(Throwable)} emits the unfiltered stack trace
+     * to {@link #STACK_LOG} as a side effect before trimming the trace in place.
+     * Defaults to {@code true} for backwards compatibility with pre-7.1 behaviour;
+     * set to {@code false} to disable the side-effect emission. The exception
+     * resolver wires this from {@code grails.exceptionresolver.logFullStackTraceOnFilter}.
+     */
+    public void setLogFullStackTraceOnFilter(boolean logFullStackTraceOnFilter) {
+        this.logFullStackTraceOnFilter = logFullStackTraceOnFilter;
+    }
+
     public Throwable filter(Throwable source, boolean recursive) {
         if (recursive) {
             Throwable current = source;
             while (current != null) {
-                current = filter(current);
+                filter(current);
                 current = current.getCause();
             }
+            return source;
         }
         return filter(source);
     }
 
     public Throwable filter(Throwable source) {
-        if (shouldFilter) {
-            StackTraceElement[] trace = source.getStackTrace();
-            List<StackTraceElement> newTrace = filterTraceWithCutOff(trace, cutOffPackage);
+        if (!shouldFilter) {
+            return source;
+        }
+        StackTraceElement[] trace = source.getStackTrace();
+        List<StackTraceElement> newTrace = filterTraceWithCutOff(trace, cutOffPackage);
 
-            if (newTrace.isEmpty()) {
-                // filter with no cut-off so at least there is some trace
-                newTrace = filterTraceWithCutOff(trace, null);
-            }
+        if (newTrace.isEmpty()) {
+            // filter with no cut-off so at least there is some trace
+            newTrace = filterTraceWithCutOff(trace, null);
+        }
 
-            // Only trim the trace if there was some application trace on the stack
-            // if not we will just skip sanitizing and leave it as is
-            if (!newTrace.isEmpty()) {
-                // We don't want to lose anything, so log it
+        // Only trim the trace if there was some application trace on the stack
+        // if not we will just skip sanitizing and leave it as is
+        if (!newTrace.isEmpty()) {
+            if (logFullStackTraceOnFilter) {
+                // emit the unfiltered trace before mutating in place; once setStackTrace(clean)
+                // runs the original frames are gone
                 STACK_LOG.error(FULL_STACK_TRACE_MESSAGE, source);
-                StackTraceElement[] clean = new StackTraceElement[newTrace.size()];
-                newTrace.toArray(clean);
-                source.setStackTrace(clean);
             }
+            StackTraceElement[] clean = new StackTraceElement[newTrace.size()];
+            newTrace.toArray(clean);
+            source.setStackTrace(clean);
         }
         return source;
     }

@@ -43,6 +43,7 @@ class GrailsExtension {
         this.project = project
         this.pluginDefiner = new PluginDefiner(project)
         this.indy = project.objects.property(Boolean).convention(false)
+        this.preserveParameterNames = project.objects.property(Boolean).convention(true)
     }
 
     /**
@@ -118,6 +119,12 @@ class GrailsExtension {
     void setIndy(boolean enabled) {
         this.indy.set(enabled)
     }
+
+    /**
+     * Keep method and constructor parameter names in class files, allowing frameworks such as Spring to use parameter
+     * names for dependency resolution, including autowiring by name without requiring annotations such as @Qualifier.
+     */
+    final Property<Boolean> preserveParameterNames
 
     DependencyHandler getPlugins() {
         if (pluginDefiner == null) {
