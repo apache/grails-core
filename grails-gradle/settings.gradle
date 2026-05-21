@@ -78,6 +78,3 @@ project(':grails-gradle-model').projectDir = file('model')
 
 include 'grails-gradle-tasks'
 project(':grails-gradle-tasks').projectDir = file('tasks')
-
-include 'grails-gradle-bom-property-overrides'
-project(':grails-gradle-bom-property-overrides').projectDir = file('bom-property-overrides')

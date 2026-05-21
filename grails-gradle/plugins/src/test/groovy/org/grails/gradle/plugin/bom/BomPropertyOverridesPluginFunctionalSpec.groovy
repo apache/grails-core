@@ -18,8 +18,10 @@
  */
 package org.grails.gradle.plugin.bom
 
+import org.grails.gradle.plugin.core.GradleSpecification
+
 /**
- * End-to-end functional test for the standalone
+ * End-to-end functional test for the
  * {@code org.apache.grails.gradle.bom-property-overrides} plugin.
  *
  * <p>Uses Gradle TestKit to apply the plugin in isolation (without any

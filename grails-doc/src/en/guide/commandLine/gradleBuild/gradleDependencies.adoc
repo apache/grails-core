@@ -97,9 +97,9 @@ dependencies {
 }
 ----
 
-==== Using `bom-property-overrides` Standalone (Non-Grails Projects)
+==== Using `bom-property-overrides` Outside a Grails App
 
-The property-override mechanism is published as a standalone, BOM-agnostic Gradle plugin so it can be reused with any BOM that follows the Maven `<properties>` convention. Apply it directly when you want the same `gradle.properties` / `ext['…']` override workflow without applying any Grails plugin:
+The property-override mechanism is BOM-agnostic and can be applied to any project that consumes a BOM with `<properties>` references. Apply the plugin directly when you want the same `gradle.properties` / `ext['…']` override workflow without applying the full Grails web plugin:
 
 [source,groovy]
 ----

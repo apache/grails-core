@@ -26,7 +26,6 @@ import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.w3c.dom.Document
 import org.w3c.dom.Element
-import org.w3c.dom.NodeList
 
 import javax.xml.parsers.DocumentBuilderFactory
 
@@ -47,9 +46,10 @@ import javax.xml.parsers.DocumentBuilderFactory
  * (see <a href="https://github.com/gradle/gradle/issues/9160">Gradle #9160</a>).</p>
  *
  * <p>This is the underlying utility used by the
- * {@code org.apache.grails.gradle.bom-property-overrides} plugin. It is
- * BOM-agnostic and can be used directly with any BOM that follows the
- * Maven {@code <properties>} convention for managed versions.</p>
+ * {@code org.apache.grails.gradle.bom-property-overrides} plugin
+ * (registered in {@code grails-gradle-plugins}). It is BOM-agnostic and
+ * can be used directly with any BOM that follows the Maven
+ * {@code <properties>} convention for managed versions.</p>
  *
  * @since 8.0
  */
@@ -85,14 +85,14 @@ class BomManagedVersions {
      * @return a BomManagedVersions instance containing any version overrides to apply
      */
     static BomManagedVersions resolve(Project project, Collection<String> bomCoordinatesList) {
-        BomManagedVersions instance = new BomManagedVersions()
+        def instance = new BomManagedVersions()
 
-        Map<String, String> bomProperties = new LinkedHashMap<>()
-        Map<String, List<String>> propertyToArtifacts = new LinkedHashMap<>()
-        Set<String> processed = new HashSet<>()
+        def bomProperties = new LinkedHashMap<String, String>()
+        def propertyToArtifacts = new LinkedHashMap<String, List<String>>()
+        def processed = new HashSet<String>()
 
         for (String bomCoordinates : bomCoordinatesList) {
-            String[] parts = bomCoordinates?.split(':')
+            def parts = bomCoordinates?.split(':')
             if (parts == null || parts.length != 3) {
                 LOG.warn('Invalid BOM coordinates: {}', bomCoordinates)
                 continue
@@ -100,14 +100,14 @@ class BomManagedVersions {
             processBom(project, parts[0], parts[1], parts[2], bomProperties, propertyToArtifacts, processed)
         }
 
-        for (Map.Entry<String, List<String>> entry : propertyToArtifacts.entrySet()) {
-            String propertyName = entry.key
+        for (def entry : propertyToArtifacts.entrySet()) {
+            def propertyName = entry.key
             if (project.hasProperty(propertyName)) {
-                String overrideVersion = project.property(propertyName).toString()
-                String defaultVersion = bomProperties.get(propertyName)
+                def overrideVersion = project.property(propertyName).toString()
+                def defaultVersion = bomProperties.get(propertyName)
 
                 if (overrideVersion != defaultVersion) {
-                    for (String artifactKey : entry.value) {
+                    for (def artifactKey : entry.value) {
                         instance.versionOverrides.put(artifactKey, overrideVersion)
                     }
                     LOG.lifecycle(
@@ -135,10 +135,10 @@ class BomManagedVersions {
             return
         }
 
-        Map<String, String> overrides = this.versionOverrides
+        def overrides = this.versionOverrides
         configuration.resolutionStrategy.eachDependency { DependencyResolveDetails details ->
-            String key = "${details.requested.group}:${details.requested.name}" as String
-            String override = overrides.get(key)
+            def key = "${details.requested.group}:${details.requested.name}" as String
+            def override = overrides.get(key)
             if (override != null) {
                 details.useVersion(override)
                 details.because('BOM version override via project property')
@@ -171,38 +171,38 @@ class BomManagedVersions {
      * @param propertyToArtifacts output map to receive property name to artifact coordinate mappings
      */
     static void parseBomFile(File pomFile, Map<String, String> bomProperties, Map<String, List<String>> propertyToArtifacts) {
-        Document doc = parseXml(pomFile)
+        def doc = parseXml(pomFile)
         if (doc == null) {
             return
         }
         extractProperties(doc, bomProperties)
 
-        NodeList depMgmtNodes = doc.getElementsByTagName('dependencyManagement')
+        def depMgmtNodes = doc.getElementsByTagName('dependencyManagement')
         if (depMgmtNodes.length == 0) {
             return
         }
-        Element depMgmt = (Element) depMgmtNodes.item(0)
-        NodeList dependenciesNodes = depMgmt.getElementsByTagName('dependencies')
+        def depMgmt = (Element) depMgmtNodes.item(0)
+        def dependenciesNodes = depMgmt.getElementsByTagName('dependencies')
         if (dependenciesNodes.length == 0) {
             return
         }
-        Element dependenciesElement = (Element) dependenciesNodes.item(0)
-        NodeList depNodes = dependenciesElement.getElementsByTagName('dependency')
+        def dependenciesElement = (Element) dependenciesNodes.item(0)
+        def depNodes = dependenciesElement.getElementsByTagName('dependency')
 
         for (int i = 0; i < depNodes.length; i++) {
-            Element dep = (Element) depNodes.item(i)
-            String depGroupId = getChildText(dep, 'groupId')
-            String depArtifactId = getChildText(dep, 'artifactId')
-            String depVersion = getChildText(dep, 'version')
+            def dep = (Element) depNodes.item(i)
+            def depGroupId = getChildText(dep, 'groupId')
+            def depArtifactId = getChildText(dep, 'artifactId')
+            def depVersion = getChildText(dep, 'version')
 
             if (!depGroupId || !depArtifactId || !depVersion) {
                 continue
             }
 
             if (depVersion.contains('${')) {
-                String propertyName = extractPropertyName(depVersion)
+                def propertyName = extractPropertyName(depVersion)
                 if (propertyName) {
-                    String artifactKey = "${depGroupId}:${depArtifactId}" as String
+                    def artifactKey = "${depGroupId}:${depArtifactId}" as String
                     propertyToArtifacts.computeIfAbsent(propertyName) { new ArrayList<String>() }.add(artifactKey)
                 }
             }
@@ -215,17 +215,17 @@ class BomManagedVersions {
         Map<String, List<String>> propertyToArtifacts,
         Set<String> processed
     ) {
-        String bomKey = "${group}:${artifact}:${version}" as String
+        def bomKey = "${group}:${artifact}:${version}" as String
         if (!processed.add(bomKey)) {
             return
         }
 
-        File pomFile = resolvePomFile(project, group, artifact, version)
+        def pomFile = resolvePomFile(project, group, artifact, version)
         if (pomFile == null) {
             return
         }
 
-        Document doc = parseXml(pomFile)
+        def doc = parseXml(pomFile)
         if (doc == null) {
             return
         }
@@ -236,7 +236,7 @@ class BomManagedVersions {
 
     private static File resolvePomFile(Project project, String group, String artifact, String version) {
         try {
-            Configuration detached = project.configurations.detachedConfiguration(
+            def detached = project.configurations.detachedConfiguration(
                 project.dependencies.create("${group}:${artifact}:${version}@pom" as String)
             )
             detached.transitive = false
@@ -250,7 +250,7 @@ class BomManagedVersions {
 
     private static Document parseXml(File pomFile) {
         try {
-            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance()
+            def factory = DocumentBuilderFactory.newInstance()
             factory.setNamespaceAware(false)
             factory.setValidating(false)
             factory.setXIncludeAware(false)
@@ -266,18 +266,18 @@ class BomManagedVersions {
     }
 
     private static void extractProperties(Document doc, Map<String, String> bomProperties) {
-        NodeList propertiesNodes = doc.getElementsByTagName('properties')
+        def propertiesNodes = doc.getElementsByTagName('properties')
         if (propertiesNodes.length == 0) {
             return
         }
 
-        Element propertiesElement = (Element) propertiesNodes.item(0)
-        NodeList children = propertiesElement.childNodes
+        def propertiesElement = (Element) propertiesNodes.item(0)
+        def children = propertiesElement.childNodes
         for (int i = 0; i < children.length; i++) {
             if (children.item(i) instanceof Element) {
-                Element prop = (Element) children.item(i)
-                String name = prop.tagName
-                String value = prop.textContent?.trim()
+                def prop = (Element) children.item(i)
+                def name = prop.tagName
+                def value = prop.textContent?.trim()
                 if (name && value) {
                     bomProperties.put(name, value)
                 }
@@ -291,33 +291,33 @@ class BomManagedVersions {
         Map<String, List<String>> propertyToArtifacts,
         Set<String> processed
     ) {
-        NodeList depMgmtNodes = doc.getElementsByTagName('dependencyManagement')
+        def depMgmtNodes = doc.getElementsByTagName('dependencyManagement')
         if (depMgmtNodes.length == 0) {
             return
         }
 
-        Element depMgmt = (Element) depMgmtNodes.item(0)
-        NodeList dependenciesNodes = depMgmt.getElementsByTagName('dependencies')
+        def depMgmt = (Element) depMgmtNodes.item(0)
+        def dependenciesNodes = depMgmt.getElementsByTagName('dependencies')
         if (dependenciesNodes.length == 0) {
             return
         }
 
-        Element dependenciesElement = (Element) dependenciesNodes.item(0)
-        NodeList depNodes = dependenciesElement.getElementsByTagName('dependency')
+        def dependenciesElement = (Element) dependenciesNodes.item(0)
+        def depNodes = dependenciesElement.getElementsByTagName('dependency')
 
         for (int i = 0; i < depNodes.length; i++) {
-            Element dep = (Element) depNodes.item(i)
-            String depGroupId = getChildText(dep, 'groupId')
-            String depArtifactId = getChildText(dep, 'artifactId')
-            String depVersion = getChildText(dep, 'version')
-            String depScope = getChildText(dep, 'scope')
+            def dep = (Element) depNodes.item(i)
+            def depGroupId = getChildText(dep, 'groupId')
+            def depArtifactId = getChildText(dep, 'artifactId')
+            def depVersion = getChildText(dep, 'version')
+            def depScope = getChildText(dep, 'scope')
 
             if (!depGroupId || !depArtifactId) {
                 continue
             }
 
             if ('import' == depScope) {
-                String resolvedVersion = interpolateProperties(depVersion, bomProperties)
+                def resolvedVersion = interpolateProperties(depVersion, bomProperties)
                 if (resolvedVersion) {
                     processBom(project, depGroupId, depArtifactId, resolvedVersion,
                         bomProperties, propertyToArtifacts, processed)
@@ -326,9 +326,9 @@ class BomManagedVersions {
             }
 
             if (depVersion && depVersion.contains('${')) {
-                String propertyName = extractPropertyName(depVersion)
+                def propertyName = extractPropertyName(depVersion)
                 if (propertyName) {
-                    String artifactKey = "${depGroupId}:${depArtifactId}" as String
+                    def artifactKey = "${depGroupId}:${depArtifactId}" as String
                     propertyToArtifacts.computeIfAbsent(propertyName) { new ArrayList<String>() }.add(artifactKey)
                 }
             }
@@ -352,14 +352,14 @@ class BomManagedVersions {
             return value
         }
 
-        String result = value
+        def result = value
         int maxIterations = MAX_PROPERTY_INTERPOLATION_DEPTH
         while (result.contains('${') && maxIterations-- > 0) {
-            String propertyName = extractPropertyName(result)
+            def propertyName = extractPropertyName(result)
             if (propertyName == null) {
                 break
             }
-            String resolved = properties.get(propertyName)
+            def resolved = properties.get(propertyName)
             if (resolved == null) {
                 break
             }
@@ -369,7 +369,7 @@ class BomManagedVersions {
     }
 
     private static String getChildText(Element parent, String childTagName) {
-        NodeList children = parent.getElementsByTagName(childTagName)
+        def children = parent.getElementsByTagName(childTagName)
         if (children.length == 0) {
             return null
         }

@@ -27,14 +27,14 @@ import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.attributes.Category
 
 /**
- * Standalone Gradle plugin that enables Maven-style property-based version
- * overrides for {@code platform()} BOMs.
+ * Gradle plugin that enables Maven-style property-based version overrides
+ * for {@code platform()} BOMs.
  *
- * <p>This is the BOM-agnostic, generically reusable extraction of the
- * property-override mechanism that historically lived inside the Spring
- * Dependency Management plugin. Apply it to any project that consumes a
- * BOM published with version property references in its
- * {@code <dependencyManagement>} block:</p>
+ * <p>This is the BOM-agnostic replacement for the Spring Dependency
+ * Management plugin's property-override feature. The plugin is shipped as
+ * part of {@code grails-gradle-plugins} but can be applied to any project
+ * (Grails or otherwise) that consumes a BOM published with version
+ * property references in its {@code <dependencyManagement>} block:</p>
  *
  * <pre>
  * plugins {
@@ -86,7 +86,7 @@ class BomPropertyOverridesPlugin implements Plugin<Project> {
 
     @Override
     void apply(Project project) {
-        BomPropertyOverridesExtension extension = project.extensions.create(
+        def extension = project.extensions.create(
                 BomPropertyOverridesExtension.EXTENSION_NAME,
                 BomPropertyOverridesExtension,
                 project.objects
@@ -102,7 +102,7 @@ class BomPropertyOverridesPlugin implements Plugin<Project> {
      * to all project configurations. Visible for testing.
      */
     static void applyOverrides(Project project, BomPropertyOverridesExtension extension) {
-        Set<String> bomCoordinates = new LinkedHashSet<>()
+        def bomCoordinates = new LinkedHashSet<String>()
 
         if (extension.autoDetect.get()) {
             bomCoordinates.addAll(detectDeclaredBoms(project))
@@ -118,7 +118,7 @@ class BomPropertyOverridesPlugin implements Plugin<Project> {
             return
         }
 
-        BomManagedVersions managedVersions = BomManagedVersions.resolve(project, bomCoordinates)
+        def managedVersions = BomManagedVersions.resolve(project, bomCoordinates)
         if (!managedVersions.hasOverrides()) {
             return
         }
@@ -134,7 +134,7 @@ class BomPropertyOverridesPlugin implements Plugin<Project> {
      * Visible for testing.
      */
     static Set<String> detectDeclaredBoms(Project project) {
-        Set<String> coordinates = new LinkedHashSet<>()
+        def coordinates = new LinkedHashSet<String>()
 
         project.configurations.each { Configuration conf ->
             for (Dependency dep : conf.dependencies) {
@@ -144,9 +144,9 @@ class BomPropertyOverridesPlugin implements Plugin<Project> {
                 if (!isPlatformDependency((ModuleDependency) dep)) {
                     continue
                 }
-                String group = dep.group
-                String name = dep.name
-                String version = dep.version
+                def group = dep.group
+                def name = dep.name
+                def version = dep.version
                 if (group && name && version) {
                     coordinates.add("${group}:${name}:${version}" as String)
                 }
@@ -157,11 +157,11 @@ class BomPropertyOverridesPlugin implements Plugin<Project> {
     }
 
     private static boolean isPlatformDependency(ModuleDependency dep) {
-        Object categoryAttr = dep.attributes.getAttribute(Category.CATEGORY_ATTRIBUTE)
+        def categoryAttr = dep.attributes.getAttribute(Category.CATEGORY_ATTRIBUTE)
         if (categoryAttr == null) {
             return false
         }
-        String category = categoryAttr.toString()
+        def category = categoryAttr.toString()
         return category == Category.REGULAR_PLATFORM || category == Category.ENFORCED_PLATFORM
     }
 }

@@ -35,9 +35,9 @@ class BomManagedVersionsSpec extends Specification {
 
     def "parseBomFile extracts properties from BOM POM"() {
         given:
-        File pomFile = new File(getClass().getClassLoader().getResource('test-poms/test-bom.pom').toURI())
-        Map<String, String> bomProperties = [:]
-        Map<String, List<String>> propertyToArtifacts = [:]
+        def pomFile = new File(getClass().getClassLoader().getResource('test-poms/test-bom.pom').toURI())
+        def bomProperties = [:] as Map<String, String>
+        def propertyToArtifacts = [:] as Map<String, List<String>>
 
         when:
         BomManagedVersions.parseBomFile(pomFile, bomProperties, propertyToArtifacts)
@@ -50,9 +50,9 @@ class BomManagedVersionsSpec extends Specification {
 
     def "parseBomFile maps property references to artifact coordinates"() {
         given:
-        File pomFile = new File(getClass().getClassLoader().getResource('test-poms/test-bom.pom').toURI())
-        Map<String, String> bomProperties = [:]
-        Map<String, List<String>> propertyToArtifacts = [:]
+        def pomFile = new File(getClass().getClassLoader().getResource('test-poms/test-bom.pom').toURI())
+        def bomProperties = [:] as Map<String, String>
+        def propertyToArtifacts = [:] as Map<String, List<String>>
 
         when:
         BomManagedVersions.parseBomFile(pomFile, bomProperties, propertyToArtifacts)
@@ -73,9 +73,9 @@ class BomManagedVersionsSpec extends Specification {
 
     def "parseBomFile ignores dependencies with hardcoded versions"() {
         given:
-        File pomFile = new File(getClass().getClassLoader().getResource('test-poms/test-bom.pom').toURI())
-        Map<String, String> bomProperties = [:]
-        Map<String, List<String>> propertyToArtifacts = [:]
+        def pomFile = new File(getClass().getClassLoader().getResource('test-poms/test-bom.pom').toURI())
+        def bomProperties = [:] as Map<String, String>
+        def propertyToArtifacts = [:] as Map<String, List<String>>
 
         when:
         BomManagedVersions.parseBomFile(pomFile, bomProperties, propertyToArtifacts)

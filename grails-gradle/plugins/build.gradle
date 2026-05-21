@@ -46,7 +46,6 @@ dependencies {
 
     implementation project(':grails-gradle-common')
     implementation project(':grails-gradle-tasks')
-    implementation project(':grails-gradle-bom-property-overrides')
 
     // spock is leaking from the grails-gradle-bom through grails-gradle-model
     implementation project(':grails-gradle-model'), {
@@ -136,12 +135,15 @@ gradlePlugin {
             id = 'org.apache.grails.gradle.grails-integration-test'
             implementationClass = 'org.grails.gradle.plugin.core.IntegrationTestGradlePlugin'
         }
-    }
-}
-
-tasks.withType(Copy) {
-    configure {
-        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+        bomPropertyOverrides {
+            displayName = 'Grails BOM Property Overrides Plugin'
+            description = 'Enables Maven-style property-based version overrides for any Gradle platform() BOM. ' +
+                    'Apply this plugin and override versions via gradle.properties or ext[\'property.name\']. ' +
+                    'Auto-detects declared platform() BOMs by default, or accepts an explicit list via the ' +
+                    'bomPropertyOverrides extension.'
+            id = 'org.apache.grails.gradle.bom-property-overrides'
+            implementationClass = 'org.grails.gradle.plugin.bom.BomPropertyOverridesPlugin'
+        }
     }
 }
 

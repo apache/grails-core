@@ -37,14 +37,13 @@ class BomPropertyOverridesPluginSpec extends Specification {
 
     def "applying the plugin registers the bomPropertyOverrides extension"() {
         given:
-        Project project = ProjectBuilder.builder().build()
+        def project = ProjectBuilder.builder().build()
 
         when:
         project.plugins.apply(BomPropertyOverridesPlugin)
 
         then:
-        BomPropertyOverridesExtension extension =
-                project.extensions.findByType(BomPropertyOverridesExtension)
+        def extension = project.extensions.findByType(BomPropertyOverridesExtension)
         extension != null
         extension.autoDetect.get() == true
         extension.boms.get().isEmpty()
@@ -52,10 +51,9 @@ class BomPropertyOverridesPluginSpec extends Specification {
 
     def "extension bom() method registers explicit BOM coordinates"() {
         given:
-        Project project = ProjectBuilder.builder().build()
+        def project = ProjectBuilder.builder().build()
         project.plugins.apply(BomPropertyOverridesPlugin)
-        BomPropertyOverridesExtension extension =
-                project.extensions.getByType(BomPropertyOverridesExtension)
+        def extension = project.extensions.getByType(BomPropertyOverridesExtension)
 
         when:
         extension.bom('org.example:my-bom:1.0.0')
@@ -67,10 +65,9 @@ class BomPropertyOverridesPluginSpec extends Specification {
 
     def "extension boms() vararg method registers multiple BOMs"() {
         given:
-        Project project = ProjectBuilder.builder().build()
+        def project = ProjectBuilder.builder().build()
         project.plugins.apply(BomPropertyOverridesPlugin)
-        BomPropertyOverridesExtension extension =
-                project.extensions.getByType(BomPropertyOverridesExtension)
+        def extension = project.extensions.getByType(BomPropertyOverridesExtension)
 
         when:
         extension.boms('org.example:a:1.0.0', 'org.example:b:2.0.0', 'org.example:c:3.0.0')
@@ -81,7 +78,7 @@ class BomPropertyOverridesPluginSpec extends Specification {
 
     def "detectDeclaredBoms finds regular platform() dependencies"() {
         given:
-        Project project = ProjectBuilder.builder().build()
+        def project = ProjectBuilder.builder().build()
         project.plugins.apply('java')
         project.dependencies.add(
                 'implementation',
@@ -89,7 +86,7 @@ class BomPropertyOverridesPluginSpec extends Specification {
         )
 
         when:
-        Set<String> coordinates = BomPropertyOverridesPlugin.detectDeclaredBoms(project)
+        def coordinates = BomPropertyOverridesPlugin.detectDeclaredBoms(project)
 
         then:
         'org.example:test-bom:1.0.0' in coordinates
@@ -97,7 +94,7 @@ class BomPropertyOverridesPluginSpec extends Specification {
 
     def "detectDeclaredBoms finds enforcedPlatform() dependencies"() {
         given:
-        Project project = ProjectBuilder.builder().build()
+        def project = ProjectBuilder.builder().build()
         project.plugins.apply('java')
         project.dependencies.add(
                 'implementation',
@@ -105,7 +102,7 @@ class BomPropertyOverridesPluginSpec extends Specification {
         )
 
         when:
-        Set<String> coordinates = BomPropertyOverridesPlugin.detectDeclaredBoms(project)
+        def coordinates = BomPropertyOverridesPlugin.detectDeclaredBoms(project)
 
         then:
         'org.example:enforced-bom:2.0.0' in coordinates
@@ -113,12 +110,12 @@ class BomPropertyOverridesPluginSpec extends Specification {
 
     def "detectDeclaredBoms ignores non-platform dependencies"() {
         given:
-        Project project = ProjectBuilder.builder().build()
+        def project = ProjectBuilder.builder().build()
         project.plugins.apply('java')
         project.dependencies.add('implementation', 'org.example:regular-lib:1.0.0')
 
         when:
-        Set<String> coordinates = BomPropertyOverridesPlugin.detectDeclaredBoms(project)
+        def coordinates = BomPropertyOverridesPlugin.detectDeclaredBoms(project)
 
         then:
         coordinates.isEmpty()
@@ -126,7 +123,7 @@ class BomPropertyOverridesPluginSpec extends Specification {
 
     def "detectDeclaredBoms deduplicates the same BOM declared on multiple configurations"() {
         given:
-        Project project = ProjectBuilder.builder().build()
+        def project = ProjectBuilder.builder().build()
         project.plugins.apply('java')
         project.dependencies.add(
                 'implementation',
@@ -138,7 +135,7 @@ class BomPropertyOverridesPluginSpec extends Specification {
         )
 
         when:
-        Set<String> coordinates = BomPropertyOverridesPlugin.detectDeclaredBoms(project)
+        def coordinates = BomPropertyOverridesPlugin.detectDeclaredBoms(project)
 
         then:
         coordinates == ['org.example:shared-bom:1.0.0'] as Set

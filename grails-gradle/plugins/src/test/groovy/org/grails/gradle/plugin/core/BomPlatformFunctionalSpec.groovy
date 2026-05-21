@@ -23,9 +23,9 @@ package org.grails.gradle.plugin.core
  *
  * <p>Uses Gradle TestKit to verify that the Grails Gradle plugin correctly
  * applies {@code grails-bom} as a Gradle {@code platform()} dependency,
- * applies the standalone
- * {@code org.apache.grails.gradle.bom-property-overrides} plugin, and no
- * longer depends on the Spring Dependency Management plugin.</p>
+ * applies the {@code org.apache.grails.gradle.bom-property-overrides}
+ * plugin, and no longer depends on the Spring Dependency Management
+ * plugin.</p>
  *
  * @since 8.0
  * @see GrailsGradlePlugin#applyGrailsBom
