@@ -20,7 +20,9 @@ under the License.
 
 ==== Creating Layouts
 
-This product includes software developed by the OpenSymphony Group (https://github.com/sitemesh). The Sitemesh framework is used to provide a decorator engine, to support view layouts. Layouts are located in the `grails-app/views/layouts` directory. A typical layout can be seen below:
+Grails uses the https://github.com/sitemesh/sitemesh3[SiteMesh 3] framework as its decorator engine to support view layouts. In Grails 7.2 and later, decoration is performed by a Spring MVC `ViewResolver` rather than a Servlet filter, which improves performance and enables correct support for async controller return types.
+
+Layouts are located in the `grails-app/views/layouts` directory. A typical layout can be seen below:
 
 [source,xml]
 ----
@@ -128,16 +130,21 @@ Alternatively, you can create a layout called `grails-app/views/layouts/book/lis
 If you have both the above-mentioned layouts in place the layout specific to the action will take precedence when the list action is executed.
 
 If a layout is not located using any of those conventions, the convention of last resort is to look for the application default layout which
-is `grails-app/views/layouts/application.gsp`.  The name of the application default layout may be changed by defining the property `grails.views.layout.default`
+is `grails-app/views/layouts/application.gsp`.  The name of the application default layout may be changed by defining the property `grails.sitemesh.default.layout`
 in the application configuration as follows:
 
 [source,yaml]
 .grails-app/conf/application.yml
 ----
-grails.views.layout.default: myLayoutName
+grails:
+    sitemesh:
+        default:
+            layout: myLayoutName
 ----
 
 With that property in place, the application default layout will be `grails-app/views/layouts/myLayoutName.gsp`.
+
+NOTE: In Grails 7.2+ the canonical property for the default layout is `grails.sitemesh.default.layout`. The older `grails.views.layout.default` key is no longer consulted by the SiteMesh 3 integration.
 
 
 ==== Inline Layouts
@@ -186,3 +193,15 @@ def content = include(controller:"book", action:"list")
 ----
 
 The resulting content will be provided via the return value of the link:{gspTagsRef}include.html[include] tag.
+
+
+==== SiteMesh 2 Attribution (grails-layout)
+
+The legacy `grails-layout` plugin remains available for applications that have not yet migrated to the SiteMesh 3 integration. When `grails-layout` is on the classpath, decoration is provided by SiteMesh 2 and the following attribution applies:
+
+[NOTE]
+====
+This product includes software developed by the OpenSymphony Group (https://github.com/sitemesh). The SiteMesh 2 framework is licensed under the OpenSymphony Software License, Version 1.1.
+====
+
+This acknowledgment is required by the OpenSymphony Software License when redistributing SiteMesh 2 and applies only to applications that include the `grails-layout` plugin. Applications using only the SiteMesh 3 integration are not subject to this requirement.

@@ -116,7 +116,7 @@ abstract class DefaultGormDataFetcher<T> implements DataFetcher<T> {
     }
 
     protected GormEntity queryInstance(DataFetchingEnvironment environment) {
-        buildCriteria(environment).get(getFetchArguments(environment))
+        (GormEntity) buildCriteria(environment).get(getFetchArguments(environment))
     }
 
     protected Object withTransaction(boolean readOnly, Closure closure) {

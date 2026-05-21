@@ -17,16 +17,52 @@
  *  under the License.
  */
 
-/*
-publishGuide {
-    sourceRepo = "https://github.com/${githubSlug}/edit/${githubBranch}/docs/src/main/docs"
-}
-*/
+import org.asciidoctor.gradle.jvm.AsciidoctorTask
 
-dependencies {
-    documentation "org.codehaus.groovy:groovy-groovydoc"
+plugins {
+    id 'org.asciidoctor.jvm.convert'
 }
 
+version = projectVersion
+group = 'org.apache.grails'
 
-apply from: "${commonBuild}/common-docs.gradle"
+def asciidoctorAttributes = [
+        'doctype'           : 'book',
+        'toc'               : 'left',
+        'toclevels'         : 3,
+        'icons'             : 'font',
+        'source-highlighter': 'coderay',
+        'sectanchors'       : '',
+        'idprefix'          : '',
+        'idseparator'       : '-',
+        'project-version'   : project.version,
+        'grails-version'    : projectVersion,
+        'gorm-version'      : projectVersion,
+        'imagesdir'         : 'images',
+        'sourcedir'         : rootDir.absolutePath.replace('\\', '/')
+]
 
+tasks.named('asciidoctor', AsciidoctorTask).configure { AsciidoctorTask it ->
+    it.inputs.dir(project.layout.projectDirectory.dir('src/main/docs'))
+            .withPropertyName('docsSrcDir')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+    it.outputs.dir project.layout.buildDirectory.dir('docs/manual')
+
+    it.jvm {
+        jvmArgs('--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED',
+                '--add-opens', 'java.base/java.io=ALL-UNNAMED')
+    }
+    it.baseDirFollowsSourceFile()
+    it.sourceDir project.layout.projectDirectory.dir('src/main/docs')
+    it.sources {
+        include 'index.adoc'
+    }
+    it.outputDir = project.layout.buildDirectory.dir('docs/manual').get().asFile
+    it.attributes asciidoctorAttributes
+}
+
+tasks.register('docs') {
+    group = 'documentation'
+    description = 'Builds the GORM for GraphQL reference guide.'
+    dependsOn tasks.named('asciidoctor')
+}

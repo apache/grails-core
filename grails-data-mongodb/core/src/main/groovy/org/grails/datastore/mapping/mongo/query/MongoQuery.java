@@ -62,7 +62,6 @@ import org.grails.datastore.mapping.engine.EntityAccess;
 import org.grails.datastore.mapping.engine.EntityPersister;
 import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller;
 import org.grails.datastore.mapping.model.EmbeddedPersistentEntity;
-import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
@@ -77,6 +76,7 @@ import org.grails.datastore.mapping.mongo.MongoDatastore;
 import org.grails.datastore.mapping.mongo.config.MongoCollection;
 import org.grails.datastore.mapping.mongo.engine.MongoCodecEntityPersister;
 import org.grails.datastore.mapping.mongo.engine.MongoEntityPersister;
+import org.grails.datastore.mapping.mongo.engine.MongoIdCoercion;
 import org.grails.datastore.mapping.mongo.engine.codecs.PersistentEntityCodec;
 import org.grails.datastore.mapping.query.AssociationQuery;
 import org.grails.datastore.mapping.query.Query;
@@ -134,12 +134,58 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
 
     static {
         queryHandlers.put(IdEquals.class, new QueryHandler<IdEquals>() {
+            // Exercised end-to-end by StringIdWithObjectIdStorageSpec:
+            //   - "with storedAs ObjectId, point lookup by hex string works" (happy path)
+            //   - "with storedAs ObjectId, point lookup of a non-hex id matches the
+            //     BSON String the encoder wrote" (null-return fallback for natural keys)
+            //   - "with storedAs ObjectId, updates persist (no phantom OptimisticLockingException)"
+            //     and related update/delete specs (which also hit IdEquals via the session filter)
             public void handle(EmbeddedQueryEncoder queryEncoder, IdEquals criterion, Document query, PersistentEntity entity) {
                 Object value = criterion.getValue();
-                MappingContext mappingContext = entity.getMappingContext();
-                PersistentProperty identity = entity.getIdentity();
-                Object converted = mappingContext.getConversionService().convert(value, identity.getType());
+                // Prefer the configured storage type ('storedAs' on the id mapping) so query BSON
+                // matches what's actually on disk. Falls back to the declared Java type otherwise.
+                Class<?> storedAs = MongoIdCoercion.resolveStoredAs(entity);
+                Class<?> targetType = storedAs != null ? storedAs : entity.getIdentity().getType();
+                Object converted = entity.getMappingContext().getConversionService().convert(value, targetType);
+                // Symmetry with IdentityEncoder's non-hex fallback: if the converter returns
+                // null for a non-null input (e.g. a natural-key String being converted to
+                // ObjectId), keep the original value so the query targets what the encoder
+                // actually wrote rather than {_id: null}.
+                if (converted == null && value != null) {
+                    converted = value;
+                }
                 query.put(MongoEntityPersister.MONGO_ID_FIELD, converted);
+            }
+        });
+
+        // Override the In handler so that criteria targeting the identity (findAllByIdInList,
+        // Domain.createCriteria().list { 'in'('id', [...]) }, etc.) honor 'storedAs' the same way
+        // IdEquals does. Without this, a domain declaring storedAs: ObjectId would send BSON Strings
+        // in {_id: {$in: [...]}} and miss all stored ObjectId documents.
+        //
+        // Exercised end-to-end by StringIdWithObjectIdStorageSpec:
+        //   - "with storedAs ObjectId, findAllByIdInList resolves all ids" (happy path via dynamic finder)
+        //   - "with storedAs ObjectId, criteria in('id', [...]) resolves all ids" (happy path via createCriteria)
+        //   - "with storedAs ObjectId, batch getAll with non-hex ids falls back to BSON String in the in-list"
+        //     (null-return fallback for natural keys)
+        queryHandlers.put(In.class, new QueryHandler<In>() {
+            public void handle(EmbeddedQueryEncoder queryEncoder, In in, Document query, PersistentEntity entity) {
+                Document inQuery = new Document();
+                List<Object> values = getInListQueryValues(entity, in);
+
+                PersistentProperty identityProp = entity.getIdentity();
+                boolean isIdInList = identityProp != null && identityProp.getName().equals(in.getProperty());
+                if (isIdInList && MongoIdCoercion.resolveStoredAs(entity) != null) {
+                    List<Object> coerced = new ArrayList<>(values.size());
+                    for (Object v : values) {
+                        coerced.add(MongoIdCoercion.coerceIdToStoredType(v, entity));
+                    }
+                    values = coerced;
+                }
+
+                inQuery.put(IN_OPERATOR, values);
+                String propertyName = getPropertyName(entity, in);
+                query.put(propertyName, inQuery);
             }
         });
 

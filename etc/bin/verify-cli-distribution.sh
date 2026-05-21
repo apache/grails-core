@@ -90,8 +90,26 @@ echo "Checking Shell CLI ..."
 ./grails-shell-cli create-app ShellApp
 echo "✅ Generated Shell App"
 
+echo "Verifying Shell App dependencies resolve ..."
+DEP_OUTPUT=$(cd ShellApp && ./gradlew dependencies 2>&1) || { echo "❌ Shell App dependency resolution failed"; exit 1; }
+if echo "$DEP_OUTPUT" | grep -q 'FAILED'; then
+  echo "❌ Shell App has unresolvable dependencies:"
+  echo "$DEP_OUTPUT" | grep 'FAILED'
+  exit 1
+fi
+echo "✅ Shell App dependencies resolved"
+
 echo "Checking Forge CLI ..."
 ./grails-forge-cli create-app -x -g mongodb -f gradle-settings-file ForgeApp
 echo "✅ Generated Forge App"
+
+echo "Verifying Forge App dependencies resolve ..."
+DEP_OUTPUT=$(cd ForgeApp && ./gradlew dependencies 2>&1) || { echo "❌ Forge App dependency resolution failed"; exit 1; }
+if echo "$DEP_OUTPUT" | grep -q 'FAILED'; then
+  echo "❌ Forge App has unresolvable dependencies:"
+  echo "$DEP_OUTPUT" | grep 'FAILED'
+  exit 1
+fi
+echo "✅ Forge App dependencies resolved"
 
 echo "✅✅✅ All cli binary distribution checks passed successfully for Apache Grails ${VERSION}."

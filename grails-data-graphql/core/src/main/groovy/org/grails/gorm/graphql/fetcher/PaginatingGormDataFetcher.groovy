@@ -28,7 +28,7 @@ import org.grails.gorm.graphql.response.pagination.GraphQLPaginationResponseHand
  * @author James Kleeh
  * @since 1.0.0
  */
-interface PaginatingGormDataFetcher extends ReadingGormDataFetcher {
+interface PaginatingGormDataFetcher<T> extends ReadingGormDataFetcher<T> {
 
     void setResponseHandler(GraphQLPaginationResponseHandler dataBinder)
 
