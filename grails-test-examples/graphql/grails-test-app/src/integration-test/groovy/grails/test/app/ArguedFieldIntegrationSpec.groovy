@@ -47,7 +47,7 @@ class ArguedFieldIntegrationSpec extends Specification implements GraphQLSpec {
               }
             }
         """)
-        def obj = resp.body().data.arguedField
+        def obj = resp.body.data.arguedField
 
         then:
         obj.withArgument == "PONG"
@@ -62,7 +62,7 @@ class ArguedFieldIntegrationSpec extends Specification implements GraphQLSpec {
               }
             }
         """)
-        def obj = resp.body().data.arguedField
+        def obj = resp.body.data.arguedField
 
         then:
         obj.withArgumentList == "P-O-N-G"
@@ -77,7 +77,7 @@ class ArguedFieldIntegrationSpec extends Specification implements GraphQLSpec {
               }
             }
         """)
-        def obj = resp.body().data.arguedField
+        def obj = resp.body.data.arguedField
 
         then:
         obj.withCustomArgument == "PONG"

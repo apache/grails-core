@@ -19,13 +19,14 @@
 
 package org.grails.gorm.graphql.plugin.testing
 
-import groovy.json.StreamingJsonBuilder
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
 import groovy.transform.TupleConstructor
-import io.micronaut.http.HttpRequest
-import io.micronaut.http.HttpResponse
-import io.micronaut.http.uri.UriBuilder
-import io.micronaut.rxjava2.http.client.RxHttpClient
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.http.MediaType
+import org.springframework.http.ResponseEntity
+import org.springframework.http.converter.StringHttpMessageConverter
+import org.springframework.web.client.RestClient
 
 trait GraphQLSpec {
 
@@ -37,7 +38,15 @@ trait GraphQLSpec {
 
     GraphQLRequestHelper getGraphQL() {
         if (_graphql == null) {
-            _graphql = new GraphQLRequestHelper(rest: RxHttpClient.create(new URL(getServerUrl())))
+            StringHttpMessageConverter stringConverter = new StringHttpMessageConverter()
+            stringConverter.supportedMediaTypes = [MediaType.ALL]
+            _graphql = new GraphQLRequestHelper(rest: RestClient.builder()
+                    .baseUrl(getServerUrl())
+                    .messageConverters({ converters ->
+                        converters.clear()
+                        converters.add(stringConverter)
+                    })
+                    .build())
         }
         _graphql
     }
@@ -56,59 +65,90 @@ trait GraphQLSpec {
     @TupleConstructor
     static class GraphQLRequestHelper {
 
-        RxHttpClient rest
+        private static final MediaType APPLICATION_GRAPHQL = MediaType.parseMediaType('application/graphql')
+        private static final JsonSlurper SLURPER = new JsonSlurper()
 
-        HttpResponse<Map> graphql(String requestBody) {
-            rest.exchange(HttpRequest.POST('/graphql', requestBody).contentType('application/graphql'), Map)
-                    .firstOrError().blockingGet()
+        RestClient rest
+
+        ResponseEntity<Map> graphql(String requestBody) {
+            wrapJson(exchangeGraphql(requestBody))
         }
 
-        def <T> HttpResponse<T> graphql(String requestBody, Class<T> bodyType) {
-            rest.exchange(HttpRequest.POST('/graphql', requestBody).contentType('application/graphql'), bodyType)
-                    .firstOrError().blockingGet()
-        }
-
-        private HttpResponse<Map> buildJsonRequest(Map<String, Object> data) {
-            rest.exchange(HttpRequest.POST('/graphql', data), Map).firstOrError().blockingGet()
-        }
-        private HttpResponse<Map> buildGetRequest(Map<String, Object> data) {
-            if (data.containsKey('variables')) {
-                StringWriter sw = new StringWriter()
-                new StreamingJsonBuilder(sw).call(data.variables)
-                data.put('variables', sw.toString())
+        // Overload that returns the raw body for callers asserting on the
+        // unparsed JSON payload (only String is supported - tests asserting on
+        // a structured body should use the no-class overload above which parses
+        // into a Map).
+        @SuppressWarnings('unchecked')
+        def <T> ResponseEntity<T> graphql(String requestBody, Class<T> bodyType) {
+            if (bodyType != String) {
+                throw new IllegalArgumentException(
+                        "graphql(String, Class) only supports String.class; got ${bodyType.name}")
             }
-
-            UriBuilder uriBuilder = UriBuilder.of('/')
-            data.forEach({ key, value ->
-                uriBuilder.queryParam(key, value)
-            })
-
-            rest.exchange(HttpRequest.GET(uriBuilder.build()), Map).firstOrError().blockingGet()
+            (ResponseEntity<T>) exchangeGraphql(requestBody)
         }
 
-        HttpResponse<Map> json(String query) {
+        private ResponseEntity<String> exchangeGraphql(String requestBody) {
+            rest.post()
+                    .uri('/graphql')
+                    .contentType(APPLICATION_GRAPHQL)
+                    .body(requestBody)
+                    .retrieve()
+                    .toEntity(String)
+        }
+
+        private ResponseEntity<Map> buildJsonRequest(Map<String, Object> data) {
+            wrapJson(rest.post()
+                    .uri('/graphql')
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(JsonOutput.toJson(data))
+                    .retrieve()
+                    .toEntity(String))
+        }
+
+        private ResponseEntity<Map> buildGetRequest(Map<String, Object> data) {
+            if (data.containsKey('variables')) {
+                data.put('variables', JsonOutput.toJson(data.variables))
+            }
+            wrapJson(rest.get()
+                    .uri('/', { uriBuilder ->
+                        data.each { key, value ->
+                            uriBuilder.queryParam(key, value)
+                        }
+                        uriBuilder.build()
+                    })
+                    .retrieve()
+                    .toEntity(String))
+        }
+
+        private static ResponseEntity<Map> wrapJson(ResponseEntity<String> raw) {
+            String body = raw.body
+            Map parsed = (body == null || body.isEmpty()) ? null : (Map) SLURPER.parseText(body)
+            new ResponseEntity<Map>(parsed, raw.headers, raw.statusCode)
+        }
+
+        ResponseEntity<Map> json(String query) {
             buildJsonRequest([query: query])
         }
-        HttpResponse<Map> json(String query, String operationName) {
+        ResponseEntity<Map> json(String query, String operationName) {
             buildJsonRequest([query: query, operationName: operationName])
         }
-        HttpResponse<Map> json(String query, Map variables) {
+        ResponseEntity<Map> json(String query, Map variables) {
             buildJsonRequest([query: query, variables: variables])
         }
-        HttpResponse<Map> json(String query, Map variables, String operationName) {
+        ResponseEntity<Map> json(String query, Map variables, String operationName) {
             buildJsonRequest([query: query, operationName: operationName, variables: variables])
         }
 
-        HttpResponse<Map> get(String query) {
+        ResponseEntity<Map> get(String query) {
             buildGetRequest([query: query])
         }
-        HttpResponse<Map> get(String query, String operationName) {
+        ResponseEntity<Map> get(String query, String operationName) {
             buildGetRequest([query: query, operationName: operationName])
         }
-        HttpResponse<Map> get(String query, Map variables) {
+        ResponseEntity<Map> get(String query, Map variables) {
             buildGetRequest([query: query, variables: variables])
         }
-        HttpResponse<Map> get(String query, Map variables, String operationName) {
+        ResponseEntity<Map> get(String query, Map variables, String operationName) {
             buildGetRequest([query: query, operationName: operationName, variables: variables])
         }
     }

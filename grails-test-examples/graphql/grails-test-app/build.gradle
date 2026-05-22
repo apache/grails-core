@@ -55,9 +55,6 @@ dependencies {
 
     implementation "org.hibernate:hibernate-core-jakarta:$hibernate5Version"
     implementation 'com.graphql-java:graphql-java'
-    implementation "io.micronaut.rxjava2:micronaut-rxjava2-http-client:$micronautRxjava2Version"
-    // JSON mapper for the micronaut HTTP client used by the GraphQLSpec trait.
-    implementation "io.micronaut.serde:micronaut-serde-jackson:$micronautSerdeJacksonVersion"
 
     console 'org.apache.grails:grails-console'
     profile 'org.apache.grails.profiles:rest-api'
