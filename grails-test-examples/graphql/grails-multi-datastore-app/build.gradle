@@ -70,6 +70,10 @@ dependencies {
 
     testImplementation 'org.apache.grails:grails-testing-support-datamapping'
     testImplementation 'org.apache.grails:grails-testing-support-web'
+
+    // Auto-start a MongoDB testcontainer before integration tests (overrides the
+    // localhost:27017 host in application.yml via grails.mongodb.host system property).
+    testImplementation 'org.apache.grails.testing:grails-testing-support-mongodb'
 }
 
 apply {
