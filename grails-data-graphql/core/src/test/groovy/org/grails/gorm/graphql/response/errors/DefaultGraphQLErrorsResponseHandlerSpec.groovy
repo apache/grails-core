@@ -97,7 +97,10 @@ class DefaultGraphQLErrorsResponseHandlerSpec extends Specification implements G
         DataFetcher errorsFetcher = codeRegistry.getDataFetcher(coordinates("MockValidateable", "errors"), field)
 
         then:
-        errorsFetcher.get(mockObjectEnv) instanceof List<FieldError>
+        // Groovy 5 disallows `instanceof` against a parameterized type (type erasure makes
+        // the generic argument unverifiable at runtime); the cast on the next line still
+        // expresses the intended element type for the size() assertion.
+        errorsFetcher.get(mockObjectEnv) instanceof List
         ((List<FieldError>) errorsFetcher.get(mockObjectEnv)).size() == 1
 
         when:
