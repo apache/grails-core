@@ -202,6 +202,10 @@ jobs:
       - name: "🔨 Build project without tests"
         if: ${{ contains(github.event.head_commit.message, '[skip tests]') }}
         working-directory: 'grails-forge'
+        # The Forge composite build includes the root grails-core via
+        # `includeBuild('..')` in grails-forge/settings.gradle, so on Java 21
+        # we must propagate -PskipMicronautProjects to keep the included
+        # grails-core build from trying to compile the JVM-25 Micronaut island.
         run: >
           ./gradlew build
           --continue
@@ -209,9 +213,11 @@ jobs:
           -PgrailsIndy=${{ matrix.indy }}
           -PskipCodeStyle
           -PskipTests
+          ${{ matrix.java == 21 && '-PskipMicronautProjects' || '' }}
       - name: "🔨 Build project with tests"
         if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
         working-directory: 'grails-forge'
+        # See comment above on '-PskipMicronautProjects'.
         run: >
           ./gradlew build
           --continue
@@ -219,6 +225,7 @@ jobs:
           --stacktrace
           -PgrailsIndy=${{ matrix.indy }}
           -PskipCodeStyle
+          ${{ matrix.java == 21 && '-PskipMicronautProjects' || '' }}
       - name: "✅ Verify combined CLI"
         run: |
           cd grails-forge
