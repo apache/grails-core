@@ -125,12 +125,16 @@ jobs:
       - name: "🔍 Setup TestLens"
         uses: testlens-app/setup-testlens@v1
       - name: "🔨 Build project"
+        # Micronaut 5 platform GA targets JVM 25 bytecode, so on the Java 21 jobs we
+        # skip the Grails-Micronaut "island" (grails-micronaut, grails-micronaut-bom,
+        # the micronaut-tied test-examples). Java 25 jobs build the full graph.
         run: >
           ./gradlew build :grails-shell-cli:installDist groovydoc
           --continue
           --stacktrace
           -PonlyCoreTests
           -PskipCodeStyle
+          ${{ matrix.java == 21 && '-PskipMicronautProjects' || '' }}
   buildRerunTasks:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: 'Build Grails-Core Rerunning all Tasks'
@@ -158,6 +162,8 @@ jobs:
       - name: "🔍 Setup TestLens"
         uses: testlens-app/setup-testlens@v1
       - name: "🔨 Build project"
+        # This job only runs on Java 21; skip the Micronaut island because the
+        # Micronaut 5 platform GA targets JVM 25 bytecode (see comment on `build`).
         run: >
           ./gradlew build :grails-shell-cli:installDist groovydoc
           --continue
@@ -165,6 +171,7 @@ jobs:
           --stacktrace
           -PonlyCoreTests
           -PskipCodeStyle
+          -PskipMicronautProjects
   buildForge:
     name: "Build Grails Forge (Java ${{ matrix.java }}, indy=${{ matrix.indy }})"
     strategy:
@@ -257,6 +264,8 @@ jobs:
       - name: "🔍 Setup TestLens"
         uses: testlens-app/setup-testlens@v1
       - name: "🏃 Run Functional Tests"
+        # Micronaut 5 platform GA targets JVM 25 bytecode, so skip the Micronaut
+        # island on Java 21 jobs (see comment on `build`).
         run: >
           ./gradlew bootJar check
           --continue
@@ -268,6 +277,7 @@ jobs:
           -PskipCodeStyle
           -PskipHibernate5Tests
           -PskipMongodbTests
+          ${{ matrix.java == 21 && '-PskipMicronautProjects' || '' }}
   mongodbFunctional:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: "Mongodb Functional Tests (Java ${{ matrix.java }}, MongoDB ${{ matrix.mongodb-version }}, indy=${{ matrix.indy }})"
@@ -299,6 +309,8 @@ jobs:
       - name: "🏃 Run Functional Tests"
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        # Micronaut 5 platform GA targets JVM 25 bytecode, so skip the Micronaut
+        # island on Java 21 jobs (see comment on `build`).
         run: >
           ./gradlew bootJar check
           --continue
@@ -308,6 +320,7 @@ jobs:
           -PonlyMongodbTests
           -PmongodbContainerVersion=${{ matrix.mongodb-version }}
           -PskipCodeStyle
+          ${{ matrix.java == 21 && '-PskipMicronautProjects' || '' }}
   hibernate5Functional:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: "Hibernate5 Functional Tests (Java ${{ matrix.java }}, indy=${{ matrix.indy }})"
@@ -337,6 +350,8 @@ jobs:
       - name: "🏃 Run Functional Tests"
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        # Micronaut 5 platform GA targets JVM 25 bytecode, so skip the Micronaut
+        # island on Java 21 jobs (see comment on `build`).
         run: >
           ./gradlew bootJar check
           --continue
@@ -345,6 +360,7 @@ jobs:
           -PgrailsIndy=${{ matrix.indy }}
           -PonlyHibernate5Tests
           -PskipCodeStyle
+          ${{ matrix.java == 21 && '-PskipMicronautProjects' || '' }}
   publishGradle:
     if: github.repository_owner == 'apache' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     needs: [ buildGradle ]
