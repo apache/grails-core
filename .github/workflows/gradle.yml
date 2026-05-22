@@ -439,6 +439,10 @@ jobs:
       - name: "🔍 Setup TestLens"
         uses: testlens-app/setup-testlens@v1
       - name: "📤 Publish Grails-Core Snapshot Artifacts"
+        # -PskipMicronautProjects keeps this Java 21 publish from trying to compile
+        # the Micronaut 5 / JVM 25 island. The Micronaut artifacts (grails-micronaut,
+        # grails-micronaut-bom) are published by the parallel publishMicronaut job
+        # below, which runs on JDK 25.
         uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 #v3.0.2 
         env:
           GRAILS_PUBLISH_RELEASE: 'false'
@@ -449,7 +453,7 @@ jobs:
           timeout_seconds: 1200 # normal range 14min if build is not cached (no tests running)
           max_attempts: 3 # Attempts to address: Could not write to resource 'https://repository.apache.org/content/repositories/snapshots/...' Read timed out
           retry_wait_seconds: 180
-          command: ./gradlew publish aggregateChecksums aggregatePublishedArtifacts --no-build-cache --rerun-tasks
+          command: ./gradlew publish aggregateChecksums aggregatePublishedArtifacts --no-build-cache --rerun-tasks -PskipMicronautProjects
       - name: "📤 Upload grails-core checksums"
         uses: actions/upload-artifact@v7.0.1
         with:
@@ -472,6 +476,53 @@ jobs:
         with:
           name: apache-grails-wrapper-SNAPSHOT-bin
           path: build/tmp/wrapper
+  publishMicronaut:
+    # Micronaut 5.0.0 publishes JARs targeting JVM 25 bytecode, so the Micronaut
+    # "island" (grails-micronaut, grails-micronaut-bom) must publish from a JDK 25
+    # runner. The sibling `publish` job runs on JDK 21 with
+    # -PskipMicronautProjects to publish everything else; this job publishes the
+    # two Micronaut artifacts. The two test-example projects in the island are
+    # not published.
+    needs: [ publishGradle, build, functional, hibernate5Functional, mongodbFunctional ]
+    if: >-
+      ${{ always() &&
+          github.repository_owner == 'apache' &&
+          (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+          needs.publishGradle.result == 'success' &&
+          (needs.build.result == 'success' || needs.build.result == 'skipped') &&
+          (needs.functional.result == 'success' || needs.functional.result == 'skipped') &&
+          (needs.hibernate5Functional.result == 'success' || needs.hibernate5Functional.result == 'skipped') &&
+          (needs.mongodbFunctional.result == 'success' || needs.mongodbFunctional.result == 'skipped')
+      }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v6
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          distribution: liberica
+          java-version: 25
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
+        with:
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
+      - name: "🔍 Setup TestLens"
+        uses: testlens-app/setup-testlens@v1
+      - name: "📤 Publish Grails-Micronaut Snapshot Artifacts"
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 #v3.0.2
+        env:
+          GRAILS_PUBLISH_RELEASE: 'false'
+          MAVEN_PUBLISH_URL: ${{ secrets.GRAILS_NEXUS_PUBLISH_SNAPSHOT_URL }}
+          MAVEN_PUBLISH_USERNAME: ${{ secrets.NEXUS_USER }}
+          MAVEN_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PW  }}
+        with:
+          timeout_seconds: 1200
+          max_attempts: 3
+          retry_wait_seconds: 180
+          command: ./gradlew :grails-micronaut:publish :grails-micronaut-bom:publish --no-build-cache --rerun-tasks
   publishForge:
     if: github.repository_owner == 'apache' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     needs: [ buildForge, publishGradle, publish ]
