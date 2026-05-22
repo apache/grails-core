@@ -16,28 +16,23 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.util;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
+package issue12688
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+class SessionController {
 
-/**
- * Tests for the GrailsUtils class.
- *
- * @author Graeme Rocher
- * @since 0.4
- */
-public class GrailsUtilTests {
+    static allowedMethods = [store: 'POST']
 
-    @Test
-    public void testGrailsVersion() {
-        assertEquals("7.0.12-SNAPSHOT", GrailsUtil.getGrailsVersion());
+    def index() {}
+
+    def store() {
+        // Store only a plain String extracted from params, not the GrailsParameterMap itself.
+        // This exercises request param processing on Jetty without causing NotSerializableException.
+        session.message = params.message?.toString()
+        redirect action: 'show'
     }
 
-    @AfterEach
-    protected void tearDown() throws Exception {
-        System.setProperty(Environment.KEY, "");
+    def show() {
+        [message: session.message]
     }
 }

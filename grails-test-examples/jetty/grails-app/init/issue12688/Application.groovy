@@ -16,28 +16,16 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.util;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
+package issue12688
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import grails.boot.GrailsApp
+import grails.boot.config.GrailsAutoConfiguration
+import groovy.transform.CompileStatic
 
-/**
- * Tests for the GrailsUtils class.
- *
- * @author Graeme Rocher
- * @since 0.4
- */
-public class GrailsUtilTests {
-
-    @Test
-    public void testGrailsVersion() {
-        assertEquals("7.0.12-SNAPSHOT", GrailsUtil.getGrailsVersion());
-    }
-
-    @AfterEach
-    protected void tearDown() throws Exception {
-        System.setProperty(Environment.KEY, "");
+@CompileStatic
+class Application extends GrailsAutoConfiguration {
+    static void main(String[] args) {
+        GrailsApp.run(Application, args)
     }
 }

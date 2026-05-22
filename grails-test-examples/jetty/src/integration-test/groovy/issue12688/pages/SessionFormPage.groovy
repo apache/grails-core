@@ -16,28 +16,17 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.util;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
+package issue12688.pages
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import geb.Page
 
-/**
- * Tests for the GrailsUtils class.
- *
- * @author Graeme Rocher
- * @since 0.4
- */
-public class GrailsUtilTests {
+class SessionFormPage extends Page {
 
-    @Test
-    public void testGrailsVersion() {
-        assertEquals("7.0.12-SNAPSHOT", GrailsUtil.getGrailsVersion());
-    }
-
-    @AfterEach
-    protected void tearDown() throws Exception {
-        System.setProperty(Environment.KEY, "");
+    static url = '/session'
+    static at = { title == 'Session Test' }
+    static content = {
+        messageInput { $('input#message') }
+        submitButton { $('input#submit') }
     }
 }

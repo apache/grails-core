@@ -23,7 +23,7 @@ in [Appendix: Release Setup Requirements & History](#appendix-release-setup-requ
 
 ## Prerequisites
 
-Prior to starting the release process, ensure that any other dependent library is set to a non-snapshot version in `dependencies.gradle`. Per the [Apache Release Policy](https://www.apache.org/legal/release-policy.html), all dependencies must be official releases and cannot be snapshots. The build will fail if any snapshot dependencies are present. The verification process will also now check for SNAPSHOT versions.
+Prior to starting the release process, ensure that any other dependent library is set to a non-snapshot version in `dependencies.gradle`. Per the [Apache Release Policy](https://www.apache.org/legal/release-policy.html), all dependencies must be official releases and cannot be snapshots. The build will fail if any snapshot dependencies are present. The verification process will also now check for SNAPSHOT versions. Additionally, `./gradlew validateDependencyVersions` is run during the release workflow and verification to ensure all BOM dependency versions resolve correctly.
 
 Due to a limitation with GitHub, private groups cannot be used as approvers for an environment.  For this reason, prior to performing the release, add GitHub username to asf.yaml in the environment section for approvers. Only 6 approvers may exist on a given environment.
 
@@ -156,6 +156,14 @@ The license audit can be triggered by running the gradle task `rat`. This will e
 
     ./gradlew rat
 
+### Manual Verification: Validating Dependency Versions
+
+To ensure that all dependencies declared in the BOM resolve correctly and no version mismatches exist, run:
+
+    ./gradlew validateDependencyVersions
+
+This task is also run automatically during the `publish` job of the release workflow, so any dependency resolution issues will fail the build before artifacts are staged.
+
 ### Manual Verification: Binary Distribution Verification
 
 Grails has 2 binary distributions:
@@ -184,6 +192,10 @@ Verifies the wrapper distribution signature via the command:
 Extracts the zip file and verifies the contents:
 * Ensure the `LICENSE` & `NOTICE` files are present to ensure license compliance.
 
+Generates applications using the wrapper and verifies all dependencies resolve:
+* Creates a shell app and a forge app against the staging repository.
+* Runs `./gradlew dependencies` in each generated app to confirm all dependencies resolve successfully. The build will fail if any dependency is marked as `FAILED`.
+
 #### Manual Verification: Verify Grails Delegating CLI Binary Distribution
 
 The following are the Grails distribution artifacts:
@@ -205,6 +217,10 @@ Verifies the cli distribution signature via the command:
 
 Extracts the zip file and verifies the contents:
 * Ensure the `LICENSE` & `NOTICE` files are present to ensure license compliance.
+
+Generates applications using the CLIs and verifies all dependencies resolve:
+* Creates a shell app via `grails-shell-cli` and a forge app via `grails-forge-cli` against the staging repository.
+* Runs `./gradlew dependencies` in each generated app to confirm all dependencies resolve successfully. The build will fail if any dependency is marked as `FAILED`.
 
 ## 3. Verifying the CLIs are Functional
 
