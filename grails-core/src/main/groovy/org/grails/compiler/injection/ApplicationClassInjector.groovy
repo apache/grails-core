@@ -83,7 +83,7 @@ class ApplicationClassInjector implements GrailsArtefactClassInjector {
     static final List<Map<String, String>> CONDITIONAL_EXCLUSIONS = [
             [
                     pluginClass: 'org.grails.plugins.databasemigration.DatabaseMigrationGrailsPlugin',
-                    excludeClass: 'org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration',
+                    excludeClass: 'org.springframework.boot.liquibase.autoconfigure.LiquibaseAutoConfiguration',
                     systemProperty: 'grails.autoconfigure.exclude.liquibase'
             ]
     ]
