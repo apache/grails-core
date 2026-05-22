@@ -225,7 +225,7 @@ ext {
                 // Keep aligned with bomDependencyVersions['groovy.version']; the main bom now uses
                 // Groovy 5, so the micronaut bom must match to avoid validateDependencyVersions
                 // failures from transitive dependencies upgrading groovy-bom past the pinned version.
-                'groovy.version'  : '5.0.6',
+                'groovy.version'  : '5.0.7-SNAPSHOT',
                 'spock.version'   : '2.4-groovy-5.0',
                 'protobuf.version': '4.30.2',
         ]
