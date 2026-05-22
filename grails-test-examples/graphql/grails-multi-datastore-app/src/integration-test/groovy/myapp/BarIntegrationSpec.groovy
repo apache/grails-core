@@ -21,12 +21,13 @@ package myapp
 
 import grails.testing.mixin.integration.Integration
 import org.bson.types.ObjectId
+import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.mapping.mongo.MongoDatastore
 import org.grails.gorm.graphql.plugin.testing.GraphQLSpec
-
+import spock.lang.Specification
 
 @Integration
-class BarIntegrationSpec implements GraphQLSpec {
+class BarIntegrationSpec extends Specification implements GraphQLSpec {
 
     void "test a bar can be created"() {
         when:
@@ -43,8 +44,8 @@ class BarIntegrationSpec implements GraphQLSpec {
         """)
         Map obj = resp.body().data.barCreate
 
-        then:
+        then: 'bar is created in the Mongo datastore with a valid ObjectId'
         new ObjectId((String) obj.id)
-        Bar.withNewSession { session -> session.datastore instanceof MongoDatastore }
+        GormEnhancer.findStaticApi(Bar).datastore instanceof MongoDatastore
     }
 }
