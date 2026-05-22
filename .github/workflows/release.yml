@@ -25,6 +25,7 @@ env:
   GRAILS_PUBLISH_RELEASE: 'true'
   JAVA_DISTRIBUTION: liberica
   JAVA_VERSION: 21.0.7 # this must be a specific version for reproducible builds, keep it synced with .sdkmanrc and verification container
+  JAVA_VERSION_MICRONAUT: 25.0.3 # the Grails-Micronaut "island" (grails-micronaut, grails-micronaut-bom) is built against Micronaut 5 which targets JVM 25 bytecode. Keep this synced with the secondary JDK installed in etc/bin/Dockerfile and the JDK_25_HOME branch in etc/bin/verify-reproducible.sh.
   PROJECT_DESC: >
     Grails is a powerful Groovy-based web application framework for the JVM,
     built on top of Spring Boot, and supported by a rich ecosystem of plugins
@@ -92,12 +93,19 @@ jobs:
       - name: "🔍 Validate dependency versions"
         run: ./gradlew validateDependencyVersions
       - name: "🧩 Run grails-core assemble"
-        run: ./gradlew assemble -PgithubBranch=${TARGET_BRANCH}
+        # Pre-publish smoke check on JDK 21. The Micronaut island is built and
+        # smoke-checked implicitly by the JDK 25 publishToSonatype step below;
+        # no separate JDK-25 assemble step is needed here.
+        run: ./gradlew assemble -PgithubBranch=${TARGET_BRANCH} -PskipMicronautProjects
       - name: "🧩 Run grails-forge assemble"
         working-directory: grails-forge
-        run: ./gradlew assemble -PgithubBranch=${TARGET_BRANCH}
+        run: ./gradlew assemble -PgithubBranch=${TARGET_BRANCH} -PskipMicronautProjects
       - name: "📦 Generate grails-core docs (to assert that is works, before proceeding)"
-        run: ./gradlew grails-doc:build -PgithubBranch=${TARGET_BRANCH}
+        # grails-doc has no code dependency on the Micronaut island, but the
+        # configuration phase still evaluates all sibling projects in the
+        # multi-project build. -PskipMicronautProjects prunes the island from
+        # the project graph so Gradle does not try to resolve its JDK 25 deps.
+        run: ./gradlew grails-doc:build -PgithubBranch=${TARGET_BRANCH} -PskipMicronautProjects
       - name: "🔏 Sign grails-wrapper ZIP"
         run: >
           gpg
@@ -173,6 +181,10 @@ jobs:
           aggregateChecksums
           aggregatePublishedArtifacts
       - name: "📤 Publish Grails Core to Staging Repository"
+        # -PskipMicronautProjects excludes the Grails-Micronaut "island" from
+        # this JDK 21 publish. The two island artifacts (grails-micronaut,
+        # grails-micronaut-bom) are signed and staged by the
+        # `Publish Grails-Micronaut` step below, which switches to JDK 25.
         env:
           NEXUS_PUBLISH_USERNAME: ${{ secrets.NEXUS_STAGE_DEPLOYER_USER }}
           NEXUS_PUBLISH_PASSWORD: ${{ secrets.NEXUS_STAGE_DEPLOYER_PW }}
@@ -187,7 +199,11 @@ jobs:
           publishToSonatype
           aggregateChecksums
           aggregatePublishedArtifacts
+          -PskipMicronautProjects
       - name: "📤 Publish Grails Forge to Staging Repository"
+        # The Forge composite build does includeBuild('..') so it pulls in the
+        # root grails-core build. Without -PskipMicronautProjects the Micronaut
+        # island would be evaluated on JDK 21 and fail to resolve.
         env:
           NEXUS_PUBLISH_USERNAME: ${{ secrets.NEXUS_STAGE_DEPLOYER_USER }}
           NEXUS_PUBLISH_PASSWORD: ${{ secrets.NEXUS_STAGE_DEPLOYER_PW }}
@@ -203,6 +219,40 @@ jobs:
           publishToSonatype
           aggregateChecksums
           aggregatePublishedArtifacts
+          -PskipMicronautProjects
+      - name: "☕️ Switch to JDK 25 for Micronaut publish"
+        # Micronaut 5 platform GA targets JVM 25 bytecode, so the island
+        # artifacts (grails-micronaut, grails-micronaut-bom) must be built and
+        # staged from a JDK 25 runner. This is a NEW reproducibility pin -
+        # keep $JAVA_VERSION_MICRONAUT synced with the secondary JDK in
+        # etc/bin/Dockerfile so verifiers can reproduce the resulting JARs.
+        uses: actions/setup-java@v4
+        with:
+          distribution: liberica
+          java-version: ${{ env.JAVA_VERSION_MICRONAUT }}
+      - name: "📤 Publish Grails-Micronaut to Staging Repository"
+        env:
+          NEXUS_PUBLISH_USERNAME: ${{ secrets.NEXUS_STAGE_DEPLOYER_USER }}
+          NEXUS_PUBLISH_PASSWORD: ${{ secrets.NEXUS_STAGE_DEPLOYER_PW }}
+          NEXUS_PUBLISH_URL: ${{ vars.STAGING_URL }}
+          NEXUS_PUBLISH_STAGING_PROFILE_ID: ${{ secrets.STAGING_PROFILE_ID }}
+          NEXUS_PUBLISH_DESCRIPTION: '${{ env.REPO_NAME }}:${{ env.VERSION }}'
+          SIGNING_KEY: ${{ secrets.GPG_KEY_ID }}
+        run: >
+          ./gradlew
+          -x initializeSonatypeStagingRepository
+          findSonatypeStagingRepository
+          :grails-micronaut:publishToSonatype
+          :grails-micronaut-bom:publishToSonatype
+      - name: "☕️ Restore JDK 21 for staging-repo close"
+        # Symmetry with the rest of the release flow - the close step and the
+        # downstream checksum/artifact-list combination steps all expect the
+        # default JDK 21 toolchain. Also keeps any future steps that touch the
+        # repository's own (non-Micronaut) Gradle config on the documented JDK.
+        uses: actions/setup-java@v4
+        with:
+          distribution: liberica
+          java-version: ${{ env.JAVA_VERSION }}
       - name: "✅ Close Staging Repository"
         env:
           NEXUS_PUBLISH_USERNAME: ${{ secrets.NEXUS_STAGE_DEPLOYER_USER }}
@@ -610,7 +660,7 @@ jobs:
         with:
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "📖 Generate Documentation"
-        run: ./gradlew grails-doc:build -PgithubBranch=${TARGET_BRANCH}
+        run: ./gradlew grails-doc:build -PgithubBranch=${TARGET_BRANCH} -PskipMicronautProjects
       - name: "🚀 Publish to GitHub Pages"
         uses: apache/grails-github-actions/deploy-github-pages@asf
         env:
@@ -650,14 +700,14 @@ jobs:
       - name: "🚀 Grails SDK Minor Release"
         if: contains(env.VERSION, 'M') || contains(env.VERSION, 'RC')
         working-directory: grails-forge
-        run: ./gradlew sdkMinorRelease
+        run: ./gradlew sdkMinorRelease -PskipMicronautProjects
         env:
           GVM_SDKVENDOR_KEY: ${{ secrets.GVM_SDKVENDOR_KEY }}
           GVM_SDKVENDOR_TOKEN: ${{ secrets.GVM_SDKVENDOR_TOKEN }}
       - name: "🚀 Grails SDK Major Release"
         if: startsWith(env.VERSION, '7.') && !contains(env.VERSION, 'M') && !contains(env.VERSION, 'RC')
         working-directory: grails-forge
-        run: ./gradlew sdkMajorRelease
+        run: ./gradlew sdkMajorRelease -PskipMicronautProjects
         env:
           GVM_SDKVENDOR_KEY: ${{ secrets.GVM_SDKVENDOR_KEY }}
           GVM_SDKVENDOR_TOKEN: ${{ secrets.GVM_SDKVENDOR_TOKEN }}
