@@ -21,7 +21,13 @@ package org.grails.gorm.graphql.types
 
 import graphql.Scalars
 import graphql.scalars.ExtendedScalars
-import graphql.schema.*
+import graphql.schema.GraphQLCodeRegistry
+import graphql.schema.GraphQLEnumType
+import graphql.schema.GraphQLInputType
+import graphql.schema.GraphQLNonNull
+import graphql.schema.GraphQLOutputType
+import graphql.schema.GraphQLType
+import graphql.schema.GraphQLTypeReference
 import groovy.transform.CompileStatic
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.reflect.ClassUtils
@@ -31,7 +37,11 @@ import org.grails.gorm.graphql.entity.GraphQLEntityNamingConvention
 import org.grails.gorm.graphql.entity.property.manager.GraphQLDomainPropertyManager
 import org.grails.gorm.graphql.response.errors.GraphQLErrorsResponseHandler
 import org.grails.gorm.graphql.response.pagination.GraphQLPaginationResponseHandler
-import org.grails.gorm.graphql.types.input.*
+import org.grails.gorm.graphql.types.input.CreateInputObjectTypeBuilder
+import org.grails.gorm.graphql.types.input.EmbeddedInputObjectTypeBuilder
+import org.grails.gorm.graphql.types.input.InputObjectTypeBuilder
+import org.grails.gorm.graphql.types.input.NestedInputObjectTypeBuilder
+import org.grails.gorm.graphql.types.input.UpdateInputObjectTypeBuilder
 import org.grails.gorm.graphql.types.output.EmbeddedObjectTypeBuilder
 import org.grails.gorm.graphql.types.output.ObjectTypeBuilder
 import org.grails.gorm.graphql.types.output.PaginatedObjectTypeBuilder

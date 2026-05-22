@@ -348,6 +348,19 @@ project(':grails-data-mongodb').projectDir = new File(settingsDir, 'grails-data-
 include 'grails-data-mongodb-gson-templates'
 project(':grails-data-mongodb-gson-templates').projectDir = new File(settingsDir, 'grails-data-mongodb/gson-templates')
 
+// GraphQL
+// core
+include 'grails-data-graphql-core'
+project(':grails-data-graphql-core').projectDir = new File(settingsDir, 'grails-data-graphql/core')
+
+// documentation
+include 'grails-data-graphql-docs'
+project(':grails-data-graphql-docs').projectDir = new File(settingsDir, 'grails-data-graphql/docs')
+
+// plugins
+include 'grails-data-graphql'
+project(':grails-data-graphql').projectDir = new File(settingsDir, 'grails-data-graphql/plugin')
+
 // functional tests - mongodb examples
 include 'grails-test-examples-mongodb-base'
 project(':grails-test-examples-mongodb-base').projectDir = new File(settingsDir, 'grails-test-examples/mongodb/base')
@@ -366,6 +379,22 @@ project(':grails-test-examples-mongodb-test-data-service').projectDir = new File
 
 include 'grails-test-examples-mongodb-gson-templates'
 project(':grails-test-examples-mongodb-gson-templates').projectDir = new File(settingsDir, 'grails-test-examples/mongodb/gson-templates')
+
+// functional tests - graphql examples
+include 'grails-test-examples-graphql-grails-test-app'
+project(':grails-test-examples-graphql-grails-test-app').projectDir = new File(settingsDir, 'grails-test-examples/graphql/grails-test-app')
+
+include 'grails-test-examples-graphql-grails-docs-app'
+project(':grails-test-examples-graphql-grails-docs-app').projectDir = new File(settingsDir, 'grails-test-examples/graphql/grails-docs-app')
+
+include 'grails-test-examples-graphql-grails-tenant-app'
+project(':grails-test-examples-graphql-grails-tenant-app').projectDir = new File(settingsDir, 'grails-test-examples/graphql/grails-tenant-app')
+
+include 'grails-test-examples-graphql-grails-multi-datastore-app'
+project(':grails-test-examples-graphql-grails-multi-datastore-app').projectDir = new File(settingsDir, 'grails-test-examples/graphql/grails-multi-datastore-app')
+
+include 'grails-test-examples-graphql-spring-boot-app'
+project(':grails-test-examples-graphql-spring-boot-app').projectDir = new File(settingsDir, 'grails-test-examples/graphql/spring-boot-app')
 
 // profiles
 include 'grails-profiles-base'
@@ -413,8 +442,10 @@ include(
         'grails-test-examples-hyphenated',
         'grails-test-examples-issue-11102',
         'grails-test-examples-issue-15228',
+        'grails-test-examples-issue-10279',
         'grails-test-examples-issue-698-domain-save-npe',
         'grails-test-examples-issue-views-182',
+        'grails-test-examples-jetty',
         'grails-test-examples-namespaces',
         'grails-test-examples-plugins-exploded',
         'grails-test-examples-plugins-issue11005',
@@ -456,6 +487,7 @@ project(':grails-test-examples-plugins-loadsecond').projectDir = file('grails-te
 project(':grails-test-examples-plugins-loadafter').projectDir = file('grails-test-examples/plugins/loadafter')
 project(':grails-test-examples-plugins-issue11005').projectDir = file('grails-test-examples/plugins/issue11005')
 project(':grails-test-examples-issue-15228').projectDir = file('grails-test-examples/issue-15228')
+project(':grails-test-examples-issue-10279').projectDir = file('grails-test-examples/issue-10279')
 project(':grails-test-examples-plugins-exploded').projectDir = file('grails-test-examples/plugins/exploded')
 project(':grails-test-examples-cache').projectDir = file('grails-test-examples/cache')
 project(':grails-test-examples-config-report').projectDir = file('grails-test-examples/config-report')
@@ -464,6 +496,7 @@ project(':grails-test-examples-scaffolding-fields').projectDir = file('grails-te
 project(':grails-test-examples-views-functional-tests').projectDir = file('grails-test-examples/views-functional-tests')
 project(':grails-test-examples-views-functional-tests-plugin').projectDir = file('grails-test-examples/views-functional-tests-plugin')
 project(':grails-test-examples-test-phases').projectDir = file('grails-test-examples/test-phases')
+project(':grails-test-examples-jetty').projectDir = file('grails-test-examples/jetty')
 
 includeBuild('./grails-gradle') {
     name = 'grails-gradle'

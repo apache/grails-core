@@ -33,3 +33,9 @@ This product includes software from the Spring Framework project (https://spring
 vendored from Spring Framework 6.2.x. These classes were removed in Spring Framework 7.0.
 Copyright 2002-2024 the original author or authors.
 Licensed under the Apache License, Version 2.0.
+
+Roboto Font
+This product bundles the Roboto font (https://fonts.google.com/specimen/Roboto), used by the
+GORM documentation website under grails-data-docs/data-mapping-website/.
+Font data copyright Google 2012.
+Licensed under the Apache License, Version 2.0.

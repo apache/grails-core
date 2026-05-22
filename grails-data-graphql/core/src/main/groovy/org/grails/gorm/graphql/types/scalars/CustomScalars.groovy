@@ -20,7 +20,16 @@
 package org.grails.gorm.graphql.types.scalars
 
 import graphql.schema.GraphQLScalarType
-import org.grails.gorm.graphql.types.scalars.coercing.*
+import org.grails.gorm.graphql.types.scalars.coercing.ByteArrayCoercion
+import org.grails.gorm.graphql.types.scalars.coercing.CharacterArrayCoercion
+import org.grails.gorm.graphql.types.scalars.coercing.CurrencyCoercion
+import org.grails.gorm.graphql.types.scalars.coercing.SqlDateCoercion
+import org.grails.gorm.graphql.types.scalars.coercing.TimeCoercion
+import org.grails.gorm.graphql.types.scalars.coercing.TimeZoneCoercion
+import org.grails.gorm.graphql.types.scalars.coercing.TimestampCoercion
+import org.grails.gorm.graphql.types.scalars.coercing.URICoercion
+import org.grails.gorm.graphql.types.scalars.coercing.URLCoercion
+import org.grails.gorm.graphql.types.scalars.coercing.UUIDCoercion
 
 /**
  * Custom scalars

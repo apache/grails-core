@@ -793,3 +793,59 @@ grails:
 ----
 
 See the {gspTagsRef}flashMessages.html[flashMessages] tag reference for full details.
+
+===== 2.12 Exception Log Line Includes Per-Request Context
+
+`GrailsExceptionResolver` now appends a parenthesised clause of per-request context — the current auditor and,
+optionally, the remote client address — to its exception log headline:
+
+----
+RuntimeException occurred when processing request: [GET] /admin/users/42 (ip: 198.51.100.42, user: alice)
+----
+
+The auditor entry reuses the same `AuditorAware` resolution that populates `@CreatedBy` / `@LastModifiedBy`
+(see section 2.4), so no second "current user" bean is needed. The IP entry is
+`HttpServletRequest.getRemoteAddr()` — behind a reverse proxy, set `server.forward-headers-strategy: native` so
+the address reflects the real client.
+
+====== Impact
+
+Any log parser, alert rule, or log-aggregation query that matches on the exact exception headline format will
+need to tolerate the optional ` (ip: <value>, user: <value>)` suffix. Both entries are opt-in — the auditor
+entry is gated to avoid writing user identifiers (typically PII) into exception logs without an explicit
+decision, and the remote-address entry is gated for the same reason. Toggle each independently:
+
+[source, yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    exceptionresolver:
+        logAuditor: true        # add ' user: <value>' when an AuditorAware bean is registered
+        logRemoteAddr: true     # add ' ip: <value>'
+----
+
+With both disabled — the default — the headline matches its pre-7.1 form. See the Logging Full Stack Traces
+section of the user guide for details.
+
+===== 2.13 StackTrace Logger Side-Effect Emission
+
+Pre-7.1, `DefaultStackTraceFilterer.filter(Throwable)` emitted the unfiltered stack trace to the dedicated
+`StackTrace` logger as a side effect of cleaning the trace. The 7.1 PR that fixed duplicate-per-cause logging
+removed this emission, breaking applications that relied on it for non-resolver code paths (for example,
+scheduled jobs that call `GrailsUtil.sanitizeRootCause(ex)` before logging via their own logger, or custom
+exception handlers that route the cleaned exception elsewhere).
+
+The side-effect emission has been restored as the default and is now controlled by a dedicated property:
+
+[source, yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    exceptionresolver:
+        logFullStackTraceOnFilter: true   # default; preserves pre-7.1 emission
+----
+
+Set to `false` to disable the side-effect emission and rely solely on `logFullStackTrace` for resolver-driven
+output. The two flags interact — if both are enabled, a request exception with N causes produces N+1 `StackTrace`
+records (one resolver-driven plus one per throwable visited by the recursive filter walk). The Logging Full
+Stack Traces section of the user guide includes a matrix of behaviours for the four flag combinations.

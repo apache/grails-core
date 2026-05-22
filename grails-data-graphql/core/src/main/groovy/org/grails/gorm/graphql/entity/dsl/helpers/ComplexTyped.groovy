@@ -19,7 +19,12 @@
 
 package org.grails.gorm.graphql.entity.dsl.helpers
 
-import graphql.schema.*
+import graphql.schema.GraphQLInputObjectType
+import graphql.schema.GraphQLInputType
+import graphql.schema.GraphQLList
+import graphql.schema.GraphQLNonNull
+import graphql.schema.GraphQLObjectType
+import graphql.schema.GraphQLOutputType
 import groovy.transform.CompileStatic
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.gorm.graphql.entity.fields.ComplexField

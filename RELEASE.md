@@ -23,7 +23,7 @@ in [Appendix: Release Setup Requirements & History](#appendix-release-setup-requ
 
 ## Prerequisites
 
-Prior to starting the release process, ensure that any other dependent library is set to a non-snapshot version in `dependencies.gradle`. Per the [Apache Release Policy](https://www.apache.org/legal/release-policy.html), all dependencies must be official releases and cannot be snapshots. The build will fail if any snapshot dependencies are present. The verification process will also now check for SNAPSHOT versions.
+Prior to starting the release process, ensure that any other dependent library is set to a non-snapshot version in `dependencies.gradle`. Per the [Apache Release Policy](https://www.apache.org/legal/release-policy.html), all dependencies must be official releases and cannot be snapshots. The build will fail if any snapshot dependencies are present. The verification process will also now check for SNAPSHOT versions. Additionally, `./gradlew validateDependencyVersions` is run during the release workflow and verification to ensure all BOM dependency versions resolve correctly.
 
 Due to a limitation with GitHub, private groups cannot be used as approvers for an environment.  For this reason, prior to performing the release, add GitHub username to asf.yaml in the environment section for approvers. Only 6 approvers may exist on a given environment.
 
@@ -136,7 +136,7 @@ Example:
 ```
 
 ### Manual Verification: Reproducible Jar Files
-After all jar files are verified to be signed by a valid Grails key, we need to build a local copy to ensure the file was built with the right code base. The `very-reproducible.sh` script handles this check, but if the bootstrap needs to be manually bootstrapped, perform the following step: 
+After all jar files are verified to be signed by a valid Grails key, we need to build a local copy to ensure the file was built with the right code base. The `verify-reproducible.sh` script handles this check, but if the bootstrap needs to be manually bootstrapped, perform the following step: 
 
     gradle -p gradle-bootstrap
 
@@ -155,6 +155,14 @@ There is a dockerfile checked into to assist building in an environment like Git
 The license audit can be triggered by running the gradle task `rat`. This will ensure that license requirements are met:
 
     ./gradlew rat
+
+### Manual Verification: Validating Dependency Versions
+
+To ensure that all dependencies declared in the BOM resolve correctly and no version mismatches exist, run:
+
+    ./gradlew validateDependencyVersions
+
+This task is also run automatically during the `publish` job of the release workflow, so any dependency resolution issues will fail the build before artifacts are staged.
 
 ### Manual Verification: Binary Distribution Verification
 
@@ -184,6 +192,10 @@ Verifies the wrapper distribution signature via the command:
 Extracts the zip file and verifies the contents:
 * Ensure the `LICENSE` & `NOTICE` files are present to ensure license compliance.
 
+Generates applications using the wrapper and verifies all dependencies resolve:
+* Creates a shell app and a forge app against the staging repository.
+* Runs `./gradlew dependencies` in each generated app to confirm all dependencies resolve successfully. The build will fail if any dependency is marked as `FAILED`.
+
 #### Manual Verification: Verify Grails Delegating CLI Binary Distribution
 
 The following are the Grails distribution artifacts:
@@ -205,6 +217,10 @@ Verifies the cli distribution signature via the command:
 
 Extracts the zip file and verifies the contents:
 * Ensure the `LICENSE` & `NOTICE` files are present to ensure license compliance.
+
+Generates applications using the CLIs and verifies all dependencies resolve:
+* Creates a shell app via `grails-shell-cli` and a forge app via `grails-forge-cli` against the staging repository.
+* Runs `./gradlew dependencies` in each generated app to confirm all dependencies resolve successfully. The build will fail if any dependency is marked as `FAILED`.
 
 ## 3. Verifying the CLIs are Functional
 
@@ -288,7 +304,7 @@ an example call to the checked in script to move the distributions.
 After moving the distributions, you will receive an email from the ASF reporter. Click the link in the email to mark the
 release as published or go to https://reporter.apache.org/addrelease.html?grails. The `release` job in the `Release` workflow has a step to remind you of this.
 
-For example, if the release is out of core with version `7.0.0-M4`, then the release name with be `CORE-7.0.0-M4`. Enter
+For example, if the release is out of core with version `7.0.0-M4`, then the release name will be `CORE-7.0.0-M4`. Enter
 the date you moved the distribution artifacts and report the release.
 
 ### Deploy the release to Grails Forge
@@ -383,7 +399,7 @@ Setup the key for validity:
 # Appendix: Verification from a Container
 
 The Grails image is officially built on linux in a GitHub action using an Ubuntu container. To run a linux container
-locally, you can use the following command (substitute `<git-tag-of-release` with the tag name):
+locally, you can use the following command (substitute `<git-tag-of-release>` with the tag name):
 
 **macOS/Linux**
 ```bash
