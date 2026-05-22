@@ -48,7 +48,6 @@ dependencies {
     api 'org.yaml:snakeyaml:2.4'
 
     api "org.asciidoctor:asciidoctorj:${gradleBomDependencyVersions['asciidoctorj.version']}"
-    implementation "org.springframework.boot:spring-boot-gradle-plugin:${gradleBomDependencyVersions['spring-boot.version']}"
 
     testImplementation platform("org.spockframework:spock-bom:${gradleBomDependencyVersions['gradle-spock.version']}")
     testImplementation('org.spockframework:spock-core') {

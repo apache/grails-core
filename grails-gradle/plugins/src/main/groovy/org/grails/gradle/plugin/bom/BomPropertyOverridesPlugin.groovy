@@ -18,12 +18,16 @@
  */
 package org.grails.gradle.plugin.bom
 
+import java.util.function.Function
+
 import groovy.transform.CompileStatic
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.ConfigurationContainer
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ModuleDependency
+import org.gradle.api.artifacts.dsl.DependencyHandler
 import org.gradle.api.attributes.Category
 
 /**
@@ -92,20 +96,47 @@ class BomPropertyOverridesPlugin implements Plugin<Project> {
                 project.objects
         )
 
+        // We wait until afterEvaluate to scan the project's declared platforms
+        // and resolve their POMs, because the user typically declares
+        // platform() dependencies and configures the bomPropertyOverrides
+        // extension in the same build.gradle that applies this plugin.
+        //
+        // The afterEvaluate callback itself is a configuration-time callback,
+        // not serialised into the configuration cache. We capture Gradle
+        // services (ConfigurationContainer, DependencyHandler) and a property
+        // lookup function at the boundary of this callback and hand them to
+        // the resolver, so the resulting BomManagedVersions instance carries
+        // no Project reference. The per-configuration eachDependency closures
+        // installed by applyOverrides() capture only the resulting
+        // Map<String, String> of overrides, which is fully serialisable and
+        // safe for the configuration cache.
+        //
+        // Verified with `./gradlew --configuration-cache`: zero CC warnings
+        // originate from this plugin or from BomManagedVersions.
         project.afterEvaluate {
-            applyOverrides(project, extension)
+            applyOverrides(
+                    project.configurations,
+                    project.dependencies,
+                    { String name -> project.hasProperty(name) ? project.property(name)?.toString() : null } as Function<String, String>,
+                    extension
+            )
         }
     }
 
     /**
      * Resolves the configured BOMs and applies any version overrides found
-     * to all project configurations. Visible for testing.
+     * to all project configurations. Takes captured Gradle services rather
+     * than a {@link Project} so that the resolve path holds no
+     * configuration-cache-hostile state. Visible for testing.
      */
-    static void applyOverrides(Project project, BomPropertyOverridesExtension extension) {
+    static void applyOverrides(ConfigurationContainer configurations,
+                               DependencyHandler dependencies,
+                               Function<String, String> propertyLookup,
+                               BomPropertyOverridesExtension extension) {
         def bomCoordinates = new LinkedHashSet<String>()
 
         if (extension.autoDetect.get()) {
-            bomCoordinates.addAll(detectDeclaredBoms(project))
+            bomCoordinates.addAll(detectDeclaredBoms(configurations))
         }
 
         for (String explicit : extension.boms.get()) {
@@ -118,12 +149,12 @@ class BomPropertyOverridesPlugin implements Plugin<Project> {
             return
         }
 
-        def managedVersions = BomManagedVersions.resolve(project, bomCoordinates)
+        def managedVersions = BomManagedVersions.resolve(configurations, dependencies, propertyLookup, bomCoordinates)
         if (!managedVersions.hasOverrides()) {
             return
         }
 
-        project.configurations.configureEach { Configuration conf ->
+        configurations.configureEach { Configuration conf ->
             managedVersions.applyTo(conf)
         }
     }
@@ -131,12 +162,13 @@ class BomPropertyOverridesPlugin implements Plugin<Project> {
     /**
      * Scans every configuration for declared {@code platform()} or
      * {@code enforcedPlatform()} dependencies and returns their coordinates.
-     * Visible for testing.
+     * Takes a {@link ConfigurationContainer} rather than a {@link Project}
+     * so the call path stays free of Project references. Visible for testing.
      */
-    static Set<String> detectDeclaredBoms(Project project) {
+    static Set<String> detectDeclaredBoms(ConfigurationContainer configurations) {
         def coordinates = new LinkedHashSet<String>()
 
-        project.configurations.each { Configuration conf ->
+        configurations.each { Configuration conf ->
             for (Dependency dep : conf.dependencies) {
                 if (!(dep instanceof ModuleDependency)) {
                     continue

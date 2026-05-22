@@ -401,39 +401,60 @@ ${importStatements}
      * @since 8.0
      */
     protected void applyGrailsBom(Project project) {
-        String grailsVersion = (project.findProperty('grailsVersion') ?: BuildSettings.grailsVersion) as String
-        String bomCoordinates = "org.apache.grails:grails-bom:${grailsVersion}" as String
-
         // Ensure the developmentOnly configuration exists. Spring Boot's plugin
         // normally creates this, but using maybeCreate guarantees it is available
-        // even if plugin ordering changes or Spring Boot is not applied.
+        // even if plugin ordering changes or Spring Boot is not applied. We do
+        // this outside afterEvaluate so that other plugins applied during the
+        // same configuration phase can rely on the configuration existing.
         project.configurations.maybeCreate('developmentOnly')
 
-        // Apply the BOM platform to all declarable project configurations, matching
-        // the behavior of the Spring Dependency Management plugin which applied version
-        // constraints globally via configurations.all() + resolutionStrategy.eachDependency().
-        // Non-declarable configurations (e.g. apiElements, runtimeElements) inherit
-        // constraints through their parent configurations. Tool/annotation-processor
-        // configurations are excluded because they hold independent classpaths that
-        // already use their own platforms (e.g. Micronaut's annotation processors
-        // import io.micronaut.platform:micronaut-platform). Adding grails-bom as a
-        // second non-enforced platform on those configurations causes version conflict
-        // resolution to upgrade transitives and break the tools/processors - unlike
-        // resolutionStrategy hooks, platform() constraints participate in version
-        // conflict resolution.
-        project.configurations.configureEach { Configuration conf ->
-            if (conf.canBeDeclared && !isExcludedFromBomPlatform(conf.name)) {
-                project.dependencies.add(conf.name, project.dependencies.platform(bomCoordinates))
+        // The opt-out flag `grails { autoApplyBom = false }` is set in the user's
+        // build.gradle, which runs AFTER plugin apply. We therefore wait until
+        // afterEvaluate to read the flag and apply the BOM accordingly. By that
+        // point all declarable configurations exist (java-base creates them
+        // during apply), so iterating them eagerly via .each is sufficient -
+        // any plugin that adds a configuration later is responsible for
+        // declaring its own BOM coordination if it needs it.
+        project.afterEvaluate {
+            GrailsExtension grailsExtension = project.extensions.findByType(GrailsExtension)
+            boolean autoApply = grailsExtension == null || grailsExtension.autoApplyBom.getOrElse(true)
+            if (!autoApply) {
+                project.logger.info(
+                    'grails.autoApplyBom is false; skipping automatic application of platform(grails-bom) and bom-property-overrides plugin for project {}',
+                    project.path
+                )
+                return
             }
-        }
 
-        // Delegate property-based version overrides to the standalone plugin.
-        // Auto-detect picks up the platform(grails-bom) declarations we just
-        // added, plus any additional platform()/enforcedPlatform() the user
-        // declares (e.g. grails-micronaut-bom). Users can extend the override
-        // surface by declaring their own platforms - no extra configuration
-        // is required here.
-        project.plugins.apply(BomPropertyOverridesPlugin)
+            String grailsVersion = (project.findProperty('grailsVersion') ?: BuildSettings.grailsVersion) as String
+            String bomCoordinates = "org.apache.grails:grails-bom:${grailsVersion}" as String
+
+            // Apply the BOM platform to all declarable project configurations, matching
+            // the behavior of the Spring Dependency Management plugin which applied version
+            // constraints globally via configurations.all() + resolutionStrategy.eachDependency().
+            // Non-declarable configurations (e.g. apiElements, runtimeElements) inherit
+            // constraints through their parent configurations. Tool/annotation-processor
+            // configurations are excluded because they hold independent classpaths that
+            // already use their own platforms (e.g. Micronaut's annotation processors
+            // import io.micronaut.platform:micronaut-platform). Adding grails-bom as a
+            // second non-enforced platform on those configurations causes version conflict
+            // resolution to upgrade transitives and break the tools/processors - unlike
+            // resolutionStrategy hooks, platform() constraints participate in version
+            // conflict resolution.
+            project.configurations.each { Configuration conf ->
+                if (conf.canBeDeclared && !isExcludedFromBomPlatform(conf.name)) {
+                    project.dependencies.add(conf.name, project.dependencies.platform(bomCoordinates))
+                }
+            }
+
+            // Delegate property-based version overrides to the bundled plugin.
+            // Auto-detect picks up the platform(grails-bom) declarations we just
+            // added, plus any additional platform()/enforcedPlatform() the user
+            // declares (e.g. grails-micronaut-bom). Users can extend the override
+            // surface by declaring their own platforms - no extra configuration
+            // is required here.
+            project.plugins.apply(BomPropertyOverridesPlugin)
+        }
     }
 
     private static boolean isExcludedFromBomPlatform(String name) {

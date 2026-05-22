@@ -16,7 +16,7 @@ tasks.register('inspectBomSetup') {
         println "AUTO_DETECT_DEFAULT=${extension?.autoDetect?.get()}"
 
         Set<String> detected = org.grails.gradle.plugin.bom.BomPropertyOverridesPlugin
-                .detectDeclaredBoms(project)
+                .detectDeclaredBoms(project.configurations)
         println "DETECTED_BOMS=${detected.sort().join(',')}"
     }
 }

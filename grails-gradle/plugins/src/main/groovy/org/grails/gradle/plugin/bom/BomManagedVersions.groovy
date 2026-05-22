@@ -18,10 +18,14 @@
  */
 package org.grails.gradle.plugin.bom
 
+import java.util.function.Function
+
 import groovy.transform.CompileStatic
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.ConfigurationContainer
 import org.gradle.api.artifacts.DependencyResolveDetails
+import org.gradle.api.artifacts.dsl.DependencyHandler
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.w3c.dom.Document
@@ -62,29 +66,43 @@ class BomManagedVersions {
     private final Map<String, String> versionOverrides = new LinkedHashMap<>()
 
     /**
-     * Resolves a BOM, parses its POM chain, and determines which managed
-     * dependency versions need to be overridden based on project properties.
+     * Resolves a single BOM via captured Gradle services rather than a
+     * {@link Project} reference. Preferred for config-cache discipline:
+     * callers capture services once (typically inside a single
+     * {@code afterEvaluate} block) and never leak a {@link Project}
+     * reference into the override map that lives on past configuration time.
      *
-     * @param project the Gradle project (used for artifact resolution and property lookup)
+     * @param configurations the project's configuration container, captured at apply/afterEvaluate time
+     * @param dependencies the project's dependency handler, captured at apply/afterEvaluate time
+     * @param propertyLookup function returning the project's property value as a String, or {@code null} if unset
      * @param bomCoordinates the BOM coordinates in {@code group:artifact:version} format
      * @return a BomManagedVersions instance containing any version overrides to apply
      */
-    static BomManagedVersions resolve(Project project, String bomCoordinates) {
-        return resolve(project, [bomCoordinates])
+    static BomManagedVersions resolve(ConfigurationContainer configurations,
+                                      DependencyHandler dependencies,
+                                      Function<String, String> propertyLookup,
+                                      String bomCoordinates) {
+        return resolve(configurations, dependencies, propertyLookup, [bomCoordinates])
     }
 
     /**
-     * Resolves multiple BOMs, parses their POM chains, and determines which
-     * managed dependency versions need to be overridden based on project
-     * properties. Useful when a project applies several platforms (e.g., a
-     * Grails BOM plus a Micronaut BOM) and any of them may declare overridable
-     * properties.
+     * Resolves multiple BOMs via captured Gradle services. The result is a
+     * plain data carrier (a {@code Map<String, String>} of version overrides
+     * inside {@link BomManagedVersions}) that holds no {@link Project}
+     * reference, so it can be safely captured by per-configuration
+     * {@code eachDependency} closures and survive configuration-cache
+     * serialization.
      *
-     * @param project the Gradle project (used for artifact resolution and property lookup)
+     * @param configurations the project's configuration container, captured at apply/afterEvaluate time
+     * @param dependencies the project's dependency handler, captured at apply/afterEvaluate time
+     * @param propertyLookup function returning the project's property value as a String, or {@code null} if unset
      * @param bomCoordinatesList list of BOM coordinates in {@code group:artifact:version} format
      * @return a BomManagedVersions instance containing any version overrides to apply
      */
-    static BomManagedVersions resolve(Project project, Collection<String> bomCoordinatesList) {
+    static BomManagedVersions resolve(ConfigurationContainer configurations,
+                                      DependencyHandler dependencies,
+                                      Function<String, String> propertyLookup,
+                                      Collection<String> bomCoordinatesList) {
         def instance = new BomManagedVersions()
 
         def bomProperties = new LinkedHashMap<String, String>()
@@ -97,13 +115,14 @@ class BomManagedVersions {
                 LOG.warn('Invalid BOM coordinates: {}', bomCoordinates)
                 continue
             }
-            processBom(project, parts[0], parts[1], parts[2], bomProperties, propertyToArtifacts, processed)
+            processBom(configurations, dependencies, parts[0], parts[1], parts[2],
+                    bomProperties, propertyToArtifacts, processed)
         }
 
         for (def entry : propertyToArtifacts.entrySet()) {
             def propertyName = entry.key
-            if (project.hasProperty(propertyName)) {
-                def overrideVersion = project.property(propertyName).toString()
+            def overrideVersion = propertyLookup.apply(propertyName)
+            if (overrideVersion != null) {
                 def defaultVersion = bomProperties.get(propertyName)
 
                 if (overrideVersion != defaultVersion) {
@@ -123,6 +142,37 @@ class BomManagedVersions {
         }
 
         return instance
+    }
+
+    /**
+     * Convenience overload that captures services from the given {@link Project}.
+     * Production callers should prefer the services-based overload above so the
+     * resolve path never sees a {@link Project} reference. This overload is
+     * primarily useful for tests and ad-hoc usage.
+     *
+     * @param project the Gradle project (services are extracted at call time)
+     * @param bomCoordinates the BOM coordinates in {@code group:artifact:version} format
+     */
+    static BomManagedVersions resolve(Project project, String bomCoordinates) {
+        return resolve(project, [bomCoordinates])
+    }
+
+    /**
+     * Convenience overload that captures services from the given {@link Project}.
+     * Production callers should prefer the services-based overload above so the
+     * resolve path never sees a {@link Project} reference. This overload is
+     * primarily useful for tests and ad-hoc usage.
+     *
+     * @param project the Gradle project (services are extracted at call time)
+     * @param bomCoordinatesList list of BOM coordinates in {@code group:artifact:version} format
+     */
+    static BomManagedVersions resolve(Project project, Collection<String> bomCoordinatesList) {
+        return resolve(
+            project.configurations,
+            project.dependencies,
+            { String name -> project.hasProperty(name) ? project.property(name)?.toString() : null } as Function<String, String>,
+            bomCoordinatesList
+        )
     }
 
     /**
@@ -210,7 +260,9 @@ class BomManagedVersions {
     }
 
     private static void processBom(
-        Project project, String group, String artifact, String version,
+        ConfigurationContainer configurations,
+        DependencyHandler dependencies,
+        String group, String artifact, String version,
         Map<String, String> bomProperties,
         Map<String, List<String>> propertyToArtifacts,
         Set<String> processed
@@ -220,7 +272,7 @@ class BomManagedVersions {
             return
         }
 
-        def pomFile = resolvePomFile(project, group, artifact, version)
+        def pomFile = resolvePomFile(configurations, dependencies, group, artifact, version)
         if (pomFile == null) {
             return
         }
@@ -231,13 +283,15 @@ class BomManagedVersions {
         }
 
         extractProperties(doc, bomProperties)
-        processManagedDependencies(doc, project, bomProperties, propertyToArtifacts, processed)
+        processManagedDependencies(doc, configurations, dependencies, bomProperties, propertyToArtifacts, processed)
     }
 
-    private static File resolvePomFile(Project project, String group, String artifact, String version) {
+    private static File resolvePomFile(ConfigurationContainer configurations,
+                                       DependencyHandler dependencies,
+                                       String group, String artifact, String version) {
         try {
-            def detached = project.configurations.detachedConfiguration(
-                project.dependencies.create("${group}:${artifact}:${version}@pom" as String)
+            def detached = configurations.detachedConfiguration(
+                dependencies.create("${group}:${artifact}:${version}@pom" as String)
             )
             detached.transitive = false
             return detached.singleFile
@@ -286,7 +340,9 @@ class BomManagedVersions {
     }
 
     private static void processManagedDependencies(
-        Document doc, Project project,
+        Document doc,
+        ConfigurationContainer configurations,
+        DependencyHandler dependencies,
         Map<String, String> bomProperties,
         Map<String, List<String>> propertyToArtifacts,
         Set<String> processed
@@ -319,7 +375,7 @@ class BomManagedVersions {
             if ('import' == depScope) {
                 def resolvedVersion = interpolateProperties(depVersion, bomProperties)
                 if (resolvedVersion) {
-                    processBom(project, depGroupId, depArtifactId, resolvedVersion,
+                    processBom(configurations, dependencies, depGroupId, depArtifactId, resolvedVersion,
                         bomProperties, propertyToArtifacts, processed)
                 }
                 continue

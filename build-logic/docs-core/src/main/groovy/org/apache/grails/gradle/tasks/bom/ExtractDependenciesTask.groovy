@@ -20,9 +20,8 @@
 package org.apache.grails.gradle.tasks.bom
 
 import java.util.regex.Pattern
+import javax.xml.parsers.DocumentBuilderFactory
 
-import io.spring.gradle.dependencymanagement.org.apache.maven.model.Model
-import io.spring.gradle.dependencymanagement.org.apache.maven.model.io.xpp3.MavenXpp3Reader
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.NamedDomainObjectProvider
@@ -48,6 +47,9 @@ import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import org.w3c.dom.Document
+import org.w3c.dom.Element
+import org.w3c.dom.NodeList
 
 /**
  * Grails Bom files define their dependencies in a series of maps, this task takes those maps and generates an
@@ -259,89 +261,227 @@ abstract class ExtractDependenciesTask extends DefaultTask {
     Properties populatePlatformDependencies(CoordinateVersionHolder bomCoordinates, List<CoordinateHolder> exclusionRules, Map<CoordinateHolder, ExtractedDependencyConstraint> constraints, boolean error = true, int level = 0) {
         Dependency bomDependency = dependencyHandler.create("${bomCoordinates.coordinates}@pom")
         Configuration dependencyConfiguration = configurationContainer.detachedConfiguration(bomDependency)
+        dependencyConfiguration.transitive = false
         File bomPomFile = dependencyConfiguration.singleFile
 
-        MavenXpp3Reader reader = new MavenXpp3Reader()
-        Model model = reader.read(new FileReader(bomPomFile))
-
+        Document doc = parsePom(bomPomFile)
         Properties versionProperties = new Properties()
-        if (model.parent) {
-            // Need to populate the parent bom if it's present first
-            CoordinateVersionHolder parentBom = new CoordinateVersionHolder(
-                    groupId: model.parent.groupId,
-                    artifactId: model.parent.artifactId,
-                    version: model.parent.version
-            )
+
+        // Parent POM populated first so its properties can be overridden by the child
+        CoordinateVersionHolder parentBom = readParentCoordinates(doc)
+        if (parentBom) {
             populatePlatformDependencies(parentBom, exclusionRules, constraints, false, level + 1)?.entrySet()?.each { Map.Entry<Object, Object> entry ->
                 versionProperties.put(entry.key, entry.value)
             }
         }
-        model.properties.entrySet().each { Map.Entry<Object, Object> entry ->
-            versionProperties.put(entry.key, entry.value)
+
+        readProperties(doc).each { String name, String value ->
+            versionProperties.put(name, value)
         }
         versionProperties.put('project.groupId', bomCoordinates.groupId)
         versionProperties.put('project.version', bomCoordinates.version)
 
-        if (model.dependencyManagement && model.dependencyManagement.dependencies) {
-            for (io.spring.gradle.dependencymanagement.org.apache.maven.model.Dependency depItem : model.dependencyManagement.dependencies) {
-                CoordinateHolder baseCoordinates = new CoordinateHolder(
-                        groupId: depItem.groupId,
-                        artifactId: depItem.artifactId
-                )
-
-                CoordinateHolder resolvedCoordinates = new CoordinateHolder(
-                        groupId: resolveMavenProperty(baseCoordinates.coordinatesWithoutVersion, depItem.groupId, versionProperties),
-                        artifactId: resolveMavenProperty(baseCoordinates.coordinatesWithoutVersion, depItem.artifactId, versionProperties)
-                )
-
-                if (!constraints.containsKey(resolvedCoordinates)) {
-                    boolean isExcluded = exclusionRules.any { CoordinateHolder excludedCoordinate ->
-                        if (excludedCoordinate.groupId && excludedCoordinate.artifactId) {
-                            return resolvedCoordinates == excludedCoordinate
-                        }
-
-                        if (excludedCoordinate.groupId && !excludedCoordinate.artifactId) {
-                            return depItem.groupId == excludedCoordinate.groupId
-                        }
-
-                        if (!excludedCoordinate.groupId && excludedCoordinate.artifactId) {
-                            return depItem.artifactId == excludedCoordinate.artifactId
-                        }
-
-                        false
-                    }
-
-                    if (!isExcluded) {
-                        String resolvedVersion = resolveMavenProperty(resolvedCoordinates.coordinatesWithoutVersion, depItem.version, versionProperties)
-                        String propertyName = depItem.version.contains('$') ? depItem.version : null
-                        ExtractedDependencyConstraint constraint = new ExtractedDependencyConstraint(
-                                groupId: resolvedCoordinates.groupId, artifactId: resolvedCoordinates.artifactId,
-                                version: resolvedVersion, versionPropertyReference: propertyName, source: bomCoordinates.artifactId
-                        )
-                        if (depItem.scope == 'import') {
-                            constraints.put(resolvedCoordinates, constraint)
-
-                            CoordinateVersionHolder resolvedBomCoordinates = new CoordinateVersionHolder(
-                                    groupId: resolvedCoordinates.groupId,
-                                    artifactId: resolvedCoordinates.artifactId,
-                                    version: resolvedVersion
-                            )
-                            populatePlatformDependencies(resolvedBomCoordinates, exclusionRules, constraints, error, level + 1)
-                        } else {
-                            constraints.put(resolvedCoordinates, constraint)
-                        }
-                    }
-                }
-            }
-        } else {
+        List<ManagedDependency> managedDependencies = readManagedDependencies(doc)
+        if (managedDependencies.isEmpty()) {
             if (error) {
                 // only the boms we directly include need to error since we expect a dependency management;
                 // parent boms are sometimes use to share properties so we need to not error on these cases
                 throw new GradleException("BOM ${bomCoordinates.coordinates} has no dependencyManagement section.")
             }
+            return versionProperties
+        }
+
+        for (ManagedDependency depItem : managedDependencies) {
+            CoordinateHolder baseCoordinates = new CoordinateHolder(
+                    groupId: depItem.groupId,
+                    artifactId: depItem.artifactId
+            )
+
+            CoordinateHolder resolvedCoordinates = new CoordinateHolder(
+                    groupId: resolveMavenProperty(baseCoordinates.coordinatesWithoutVersion, depItem.groupId, versionProperties),
+                    artifactId: resolveMavenProperty(baseCoordinates.coordinatesWithoutVersion, depItem.artifactId, versionProperties)
+            )
+
+            if (constraints.containsKey(resolvedCoordinates)) {
+                continue
+            }
+
+            boolean isExcluded = exclusionRules.any { CoordinateHolder excludedCoordinate ->
+                if (excludedCoordinate.groupId && excludedCoordinate.artifactId) {
+                    return resolvedCoordinates == excludedCoordinate
+                }
+
+                if (excludedCoordinate.groupId && !excludedCoordinate.artifactId) {
+                    return depItem.groupId == excludedCoordinate.groupId
+                }
+
+                if (!excludedCoordinate.groupId && excludedCoordinate.artifactId) {
+                    return depItem.artifactId == excludedCoordinate.artifactId
+                }
+
+                false
+            }
+
+            if (isExcluded) {
+                continue
+            }
+
+            String resolvedVersion = resolveMavenProperty(resolvedCoordinates.coordinatesWithoutVersion, depItem.version, versionProperties)
+            String propertyName = depItem.version?.contains('$') ? depItem.version : null
+            ExtractedDependencyConstraint constraint = new ExtractedDependencyConstraint(
+                    groupId: resolvedCoordinates.groupId, artifactId: resolvedCoordinates.artifactId,
+                    version: resolvedVersion, versionPropertyReference: propertyName, source: bomCoordinates.artifactId
+            )
+            constraints.put(resolvedCoordinates, constraint)
+
+            if (depItem.scope == 'import') {
+                CoordinateVersionHolder resolvedBomCoordinates = new CoordinateVersionHolder(
+                        groupId: resolvedCoordinates.groupId,
+                        artifactId: resolvedCoordinates.artifactId,
+                        version: resolvedVersion
+                )
+                populatePlatformDependencies(resolvedBomCoordinates, exclusionRules, constraints, error, level + 1)
+            }
         }
 
         versionProperties
+    }
+
+    /**
+     * Parses a BOM POM file using the JDK's built-in {@link DocumentBuilderFactory}.
+     * XML parsing is hardened against XXE / XInclude attacks.
+     */
+    private static Document parsePom(File pomFile) {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance()
+        factory.setNamespaceAware(false)
+        factory.setValidating(false)
+        factory.setXIncludeAware(false)
+        factory.setFeature('http://apache.org/xml/features/nonvalidating/load-external-dtd', false)
+        factory.setFeature('http://xml.org/sax/features/external-general-entities', false)
+        factory.setFeature('http://xml.org/sax/features/external-parameter-entities', false)
+        return factory.newDocumentBuilder().parse(pomFile)
+    }
+
+    private static CoordinateVersionHolder readParentCoordinates(Document doc) {
+        NodeList parentNodes = doc.documentElement.getElementsByTagName('parent')
+        if (parentNodes.length == 0) {
+            return null
+        }
+        // Only consider <parent> elements that are direct children of <project>;
+        // a nested parent (e.g. inside <dependencyManagement>) would be a malformed POM.
+        Element parent = null
+        for (int i = 0; i < parentNodes.length; i++) {
+            Element candidate = (Element) parentNodes.item(i)
+            if (candidate.parentNode == doc.documentElement) {
+                parent = candidate
+                break
+            }
+        }
+        if (parent == null) {
+            return null
+        }
+        String groupId = childText(parent, 'groupId')
+        String artifactId = childText(parent, 'artifactId')
+        String version = childText(parent, 'version')
+        if (!groupId || !artifactId || !version) {
+            return null
+        }
+        return new CoordinateVersionHolder(groupId: groupId, artifactId: artifactId, version: version)
+    }
+
+    private static Map<String, String> readProperties(Document doc) {
+        Map<String, String> result = [:]
+        NodeList propsNodes = doc.documentElement.getElementsByTagName('properties')
+        if (propsNodes.length == 0) {
+            return result
+        }
+        // Only consider the top-level <properties>, not properties nested inside other elements
+        Element props = null
+        for (int i = 0; i < propsNodes.length; i++) {
+            Element candidate = (Element) propsNodes.item(i)
+            if (candidate.parentNode == doc.documentElement) {
+                props = candidate
+                break
+            }
+        }
+        if (props == null) {
+            return result
+        }
+        NodeList children = props.childNodes
+        for (int i = 0; i < children.length; i++) {
+            if (children.item(i) instanceof Element) {
+                Element prop = (Element) children.item(i)
+                String name = prop.tagName
+                String value = prop.textContent?.trim()
+                if (name && value != null) {
+                    result.put(name, value)
+                }
+            }
+        }
+        return result
+    }
+
+    private static List<ManagedDependency> readManagedDependencies(Document doc) {
+        List<ManagedDependency> result = []
+        NodeList depMgmtNodes = doc.documentElement.getElementsByTagName('dependencyManagement')
+        if (depMgmtNodes.length == 0) {
+            return result
+        }
+        // Only the top-level <dependencyManagement> on <project>
+        Element depMgmt = null
+        for (int i = 0; i < depMgmtNodes.length; i++) {
+            Element candidate = (Element) depMgmtNodes.item(i)
+            if (candidate.parentNode == doc.documentElement) {
+                depMgmt = candidate
+                break
+            }
+        }
+        if (depMgmt == null) {
+            return result
+        }
+        NodeList depsNodes = depMgmt.getElementsByTagName('dependencies')
+        if (depsNodes.length == 0) {
+            return result
+        }
+        Element depsEl = (Element) depsNodes.item(0)
+        NodeList depNodes = depsEl.getElementsByTagName('dependency')
+        for (int i = 0; i < depNodes.length; i++) {
+            Element dep = (Element) depNodes.item(i)
+            result.add(new ManagedDependency(
+                    groupId: childText(dep, 'groupId'),
+                    artifactId: childText(dep, 'artifactId'),
+                    version: childText(dep, 'version'),
+                    scope: childText(dep, 'scope')
+            ))
+        }
+        return result
+    }
+
+    private static String childText(Element parent, String childTagName) {
+        NodeList children = parent.getElementsByTagName(childTagName)
+        if (children.length == 0) {
+            return null
+        }
+        // Only consider direct children, not nested same-named tags
+        for (int i = 0; i < children.length; i++) {
+            Element candidate = (Element) children.item(i)
+            if (candidate.parentNode == parent) {
+                return candidate.textContent?.trim()
+            }
+        }
+        return null
+    }
+
+    /**
+     * Plain data carrier mirroring the four fields we used from Spring DM's
+     * shaded Maven model {@code Dependency}. Kept private and minimal so the
+     * task has no external Maven-model dependency.
+     */
+    private static class ManagedDependency {
+        String groupId
+        String artifactId
+        String version
+        String scope
     }
 
     private String resolveMavenProperty(String errorDescription, String dynamicVersion, Map properties, int maxIterations = 10) {

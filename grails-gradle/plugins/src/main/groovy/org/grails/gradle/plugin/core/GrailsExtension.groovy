@@ -44,6 +44,7 @@ class GrailsExtension {
         this.pluginDefiner = new PluginDefiner(project)
         this.indy = project.objects.property(Boolean).convention(false)
         this.preserveParameterNames = project.objects.property(Boolean).convention(true)
+        this.autoApplyBom = project.objects.property(Boolean).convention(true)
     }
 
     /**
@@ -125,6 +126,32 @@ class GrailsExtension {
      * names for dependency resolution, including autowiring by name without requiring annotations such as @Qualifier.
      */
     final Property<Boolean> preserveParameterNames
+
+    /**
+     * Whether the Grails Gradle plugin should automatically apply the {@code grails-bom}
+     * as a Gradle {@code platform()} on every declarable project configuration
+     * (and apply the {@code org.apache.grails.gradle.bom-property-overrides} plugin
+     * for property-based version overrides).
+     *
+     * <p>Defaults to {@code true}, which matches the behaviour of every Grails 7 release:
+     * the BOM is always applied so that the framework's curated managed-dependency set
+     * is the source of truth for the application.</p>
+     *
+     * <p>Disable this only when you intentionally want to manage Grails dependencies
+     * yourself - for example, when consuming Grails modules from a different curated
+     * platform and you need to declare the BOM by hand (and apply
+     * {@code org.apache.grails.gradle.bom-property-overrides} explicitly if you still
+     * want {@code gradle.properties} / {@code ext['...']} overrides).</p>
+     *
+     * <pre>
+     * grails {
+     *     autoApplyBom = false
+     * }
+     * </pre>
+     *
+     * @since 8.0
+     */
+    final Property<Boolean> autoApplyBom
 
     DependencyHandler getPlugins() {
         if (pluginDefiner == null) {

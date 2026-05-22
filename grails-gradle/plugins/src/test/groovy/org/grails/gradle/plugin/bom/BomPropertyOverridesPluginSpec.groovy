@@ -86,7 +86,7 @@ class BomPropertyOverridesPluginSpec extends Specification {
         )
 
         when:
-        def coordinates = BomPropertyOverridesPlugin.detectDeclaredBoms(project)
+        def coordinates = BomPropertyOverridesPlugin.detectDeclaredBoms(project.configurations)
 
         then:
         'org.example:test-bom:1.0.0' in coordinates
@@ -102,7 +102,7 @@ class BomPropertyOverridesPluginSpec extends Specification {
         )
 
         when:
-        def coordinates = BomPropertyOverridesPlugin.detectDeclaredBoms(project)
+        def coordinates = BomPropertyOverridesPlugin.detectDeclaredBoms(project.configurations)
 
         then:
         'org.example:enforced-bom:2.0.0' in coordinates
@@ -115,7 +115,7 @@ class BomPropertyOverridesPluginSpec extends Specification {
         project.dependencies.add('implementation', 'org.example:regular-lib:1.0.0')
 
         when:
-        def coordinates = BomPropertyOverridesPlugin.detectDeclaredBoms(project)
+        def coordinates = BomPropertyOverridesPlugin.detectDeclaredBoms(project.configurations)
 
         then:
         coordinates.isEmpty()
@@ -135,7 +135,7 @@ class BomPropertyOverridesPluginSpec extends Specification {
         )
 
         when:
-        def coordinates = BomPropertyOverridesPlugin.detectDeclaredBoms(project)
+        def coordinates = BomPropertyOverridesPlugin.detectDeclaredBoms(project.configurations)
 
         then:
         coordinates == ['org.example:shared-bom:1.0.0'] as Set

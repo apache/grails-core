@@ -510,6 +510,21 @@ If you require Spring DM's "BOM wins always" behaviour for a given configuration
 
 NOTE: Projects that apply the `grails-micronaut` plugin already require `enforcedPlatform` for unrelated reasons (see section 7.2); those projects retain Spring DM's strict-version semantics automatically.
 
+**Opting out of the auto-applied BOM.**
+The Grails Gradle plugin applies `grails-bom` automatically by default - this preserves the Grails 7 behaviour and is the right choice for the vast majority of applications.
+You can disable it if you intentionally want to manage Grails dependency versions yourself (for example, when consuming Grails modules from a different curated platform):
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    autoApplyBom = false
+}
+----
+
+When disabled, the Grails Gradle plugin will not declare `platform("org.apache.grails:grails-bom:$grailsVersion")` on your configurations and will not apply the `org.apache.grails.gradle.bom-property-overrides` plugin.
+You are responsible for declaring the BOM yourself and, if you still want `gradle.properties` / `ext['...']` overrides, applying `id 'org.apache.grails.gradle.bom-property-overrides'` explicitly.
+
 ==== 15. Spring Boot Starter Renames
 
 Spring Boot 4 renamed several starters as part of its modularization effort.
