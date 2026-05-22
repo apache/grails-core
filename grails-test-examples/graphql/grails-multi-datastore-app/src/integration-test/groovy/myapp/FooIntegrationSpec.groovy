@@ -45,8 +45,6 @@ class FooIntegrationSpec extends Specification implements GraphQLSpec {
 
         then: 'foo is created in the Hibernate datastore'
         obj.id == 1
-        // GORM no longer surfaces `datastore` as a property on the Hibernate
-        // SessionImpl; reach it through GormEnhancer's static API instead.
         GormEnhancer.findStaticApi(Foo).datastore instanceof HibernateDatastore
     }
 }
