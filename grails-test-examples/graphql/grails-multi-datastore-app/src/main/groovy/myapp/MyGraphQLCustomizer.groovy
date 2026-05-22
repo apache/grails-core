@@ -33,7 +33,7 @@ class MyGraphQLCustomizer extends GraphQLPostProcessor {
     @Override
     void doWith(GraphQLTypeManager typeManager) {
         typeManager.registerType(ObjectId, GraphQLScalarType.newScalar()
-                .name("ObjectId").description("Hex representation of a Mongo object id").coercing(new Coercing<ObjectId, ObjectId>() {
+                .name("ObjectId").description("Hex representation of a Mongo object id").coercing(new Coercing<ObjectId, String>() {
 
             protected Optional<ObjectId> convert(Object input) {
                 if (input instanceof ObjectId) {
@@ -45,9 +45,13 @@ class MyGraphQLCustomizer extends GraphQLPostProcessor {
                 }
             }
 
+            // graphql-java 25 no longer invokes toString on returned scalar values during
+            // serialization; the Coercing must produce the wire representation itself.
+            // Returning a String (hex) ensures the GraphQL response carries the 24-char
+            // hex form rather than ObjectId's structured property bag.
             @Override
-            ObjectId serialize(Object input) {
-                convert(input).orElseThrow({
+            String serialize(Object input) {
+                convert(input).map { it.toString() }.orElseThrow({
                     throw new CoercingSerializeException("Could not convert ${input.class.name} to an ObjectId")
                 })
             }
