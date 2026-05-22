@@ -37,8 +37,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-web'
 
-    // GORM + Hibernate 5 (Jakarta variant), configured via GORM's Spring Boot auto-config
-    // (registers HibernateDatastore, dataSource, transactionManager as Spring beans).
+    implementation 'org.springframework.boot:spring-boot-hibernate'
+
     implementation 'org.apache.grails:grails-data-hibernate5-spring-boot'
     implementation 'org.apache.grails.data:grails-data-hibernate5-core'
     implementation 'org.apache.grails.data:grails-datamapping-core'

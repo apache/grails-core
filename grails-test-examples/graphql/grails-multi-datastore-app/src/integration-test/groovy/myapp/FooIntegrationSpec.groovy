@@ -20,11 +20,13 @@
 package myapp
 
 import grails.testing.mixin.integration.Integration
+import org.grails.datastore.gorm.GormEnhancer
 import org.grails.gorm.graphql.plugin.testing.GraphQLSpec
 import org.grails.orm.hibernate.HibernateDatastore
+import spock.lang.Specification
 
 @Integration
-class FooIntegrationSpec implements GraphQLSpec {
+class FooIntegrationSpec extends Specification implements GraphQLSpec {
 
     void "test a foo can be created"() {
         when:
@@ -41,8 +43,8 @@ class FooIntegrationSpec implements GraphQLSpec {
         """)
         Map obj = resp.body().data.fooCreate
 
-        then:
+        then: 'foo is created in the Hibernate datastore'
         obj.id == 1
-        Foo.withNewSession { session -> session.datastore instanceof HibernateDatastore }
+        GormEnhancer.findStaticApi(Foo).datastore instanceof HibernateDatastore
     }
 }
