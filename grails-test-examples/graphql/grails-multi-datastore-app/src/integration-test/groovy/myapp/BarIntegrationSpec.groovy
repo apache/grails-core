@@ -46,8 +46,6 @@ class BarIntegrationSpec extends Specification implements GraphQLSpec {
 
         then: 'bar is created in the Mongo datastore with a valid ObjectId'
         new ObjectId((String) obj.id)
-        // GORM no longer surfaces `datastore` as a property on the Mongo session;
-        // reach it through GormEnhancer's static API instead.
         GormEnhancer.findStaticApi(Bar).datastore instanceof MongoDatastore
     }
 }
