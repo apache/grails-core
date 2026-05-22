@@ -27,6 +27,13 @@ plugins {
 version = '0.1'
 group = 'micronaut'
 
+// Groovy 6.0.0-SNAPSHOT requires asm 9.10 (for JDK 27 bytecode support), while
+// the grails-micronaut-bom inherits asm 9.9.1 from Spring Boot 4 / Micronaut
+// platform. The divergence is intentional on this canary; un-pin via the
+// validator plugin's allowedBomOverrides mechanism (see GrailsDependencyValidatorPlugin
+// `ALLOWED_OVERRIDES_EXT` for the contract).
+ext.allowedBomOverrides = ['org.ow2.asm:asm', 'org.ow2.asm:asm-util'] as Set<String>
+
 apply plugin: 'org.apache.grails.gradle.grails-web'
 apply plugin: 'cloud.wondrify.asset-pipeline'
 

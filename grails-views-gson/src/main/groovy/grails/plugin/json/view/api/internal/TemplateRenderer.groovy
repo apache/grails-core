@@ -19,8 +19,10 @@
 
 package grails.plugin.json.view.api.internal
 
+import groovy.json.StreamingJsonBuilder
 import groovy.transform.CompileStatic
 
+import grails.plugin.json.builder.JsonOutput
 import grails.plugin.json.view.api.GrailsJsonViewHelper
 import grails.util.GrailsNameUtils
 
@@ -37,6 +39,36 @@ class TemplateRenderer {
 
     TemplateRenderer(GrailsJsonViewHelper jsonViewHelper) {
         this.jsonViewHelper = jsonViewHelper
+    }
+
+    // Explicit forwarders for the 5 GrailsJsonViewHelper#render(...) overloads.
+    // Under Groovy 6.0.0-SNAPSHOT the @Delegate AST transform no longer satisfies
+    // the abstract-method-implementation check for interface methods whose return
+    // type is an inner class (here JsonOutput.JsonWritable): the @CompileStatic
+    // verifier runs before @Delegate generates the forwarders, so the compiler
+    // reports "Can't have an abstract method in a non-abstract class".
+    // The 5 inline(...) overloads return void and are unaffected, so @Delegate
+    // still handles them. Behaviour is identical to what @Delegate generates on
+    // Groovy 5.
+
+    JsonOutput.JsonWritable render(Map arguments) {
+        jsonViewHelper.render(arguments)
+    }
+
+    JsonOutput.JsonWritable render(Object object, Map arguments, @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer) {
+        jsonViewHelper.render(object, arguments, customizer)
+    }
+
+    JsonOutput.JsonWritable render(Object object, Map arguments) {
+        jsonViewHelper.render(object, arguments)
+    }
+
+    JsonOutput.JsonWritable render(Object object) {
+        jsonViewHelper.render(object)
+    }
+
+    JsonOutput.JsonWritable render(Object object, @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer) {
+        jsonViewHelper.render(object, customizer)
     }
 
     @Override
