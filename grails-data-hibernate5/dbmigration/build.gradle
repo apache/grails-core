@@ -75,11 +75,7 @@ dependencies {
     testImplementation project(':grails-testing-support-web')
     testImplementation 'com.h2database:h2'
 
-    // Liquibase uses JUL for logging -> redirect it to SLF4J to reliably capture its output.
-    // Spring Boot's starter (transitively via spring-boot-starter-tomcat) already supplies
-    // Logback as the SLF4J binding; adding slf4j-simple here would cause two competing
-    // bindings and Spring Boot's LogbackLoggingSystem aborts context startup when that
-    // happens. See https://www.slf4j.org/codes.html#multiple_bindings
+    // Liquibase uses JUL for logging -> redirect it to SLF4J to reliably capture its output
     testRuntimeOnly 'org.slf4j:jul-to-slf4j'
 }
 

@@ -37,15 +37,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-web'
 
-    // Spring Boot 4 moved HibernateJpaAutoConfiguration to the spring-boot-hibernate module.
-    // It must be on the runtime classpath: GORM's HibernateGormAutoConfiguration
-    // declares @AutoConfigureBefore([HibernateJpaAutoConfiguration]), and DemoApplication
-    // references the class in @EnableAutoConfiguration(exclude = ...). Spring Boot's actual
-    // JPA auto-configuration is then suppressed by that exclusion so GORM owns Hibernate.
     implementation 'org.springframework.boot:spring-boot-hibernate'
 
-    // GORM + Hibernate 5 (Jakarta variant), configured via GORM's Spring Boot auto-config
-    // (registers HibernateDatastore, dataSource, transactionManager as Spring beans).
     implementation 'org.apache.grails:grails-data-hibernate5-spring-boot'
     implementation 'org.apache.grails.data:grails-data-hibernate5-core'
     implementation 'org.apache.grails.data:grails-datamapping-core'
