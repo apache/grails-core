@@ -210,13 +210,19 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
                 }
                 if (connectionName.equals(Settings.SETTING_DATASOURCE) || connectionName.equals(ConnectionSource.DEFAULT)) {
                     return parent;
-                } else {
-                    HibernateDatastore hibernateDatastore = parent.datastoresByConnectionSource.get(connectionName);
-                    if (hibernateDatastore == null) {
-                        throw new ConfigurationException("DataSource not found for name [" + connectionName + "] in configuration. Please check your multiple data sources configuration and try again.");
-                    }
+                }
+                HibernateDatastore hibernateDatastore = parent.datastoresByConnectionSource.get(connectionName);
+                if (hibernateDatastore != null) {
                     return hibernateDatastore;
                 }
+                // If this child is not yet in the parent map, it is still being initialized.
+                // Sibling datastores may not exist yet; return null so GormRegistry falls back
+                // to this datastore for the unresolved qualifier. The parent will re-register
+                // all entities with the correct datastores once all children are created.
+                if (!parent.datastoresByConnectionSource.containsKey(myName)) {
+                    return null;
+                }
+                throw new ConfigurationException("DataSource not found for name [" + connectionName + "] in configuration. Please check your multiple data sources configuration and try again.");
             }
         };
     }
@@ -685,6 +691,15 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
             @Override
             protected HibernateGormEnhancer initialize() {
                 return new HibernateGormEnhancer(this, transactionManager, getConnectionSources().getDefaultConnectionSource().getSettings());
+            }
+
+            @Override
+            public HibernateDatastore getDatastoreForConnection(String connectionName) {
+                String myName = getConnectionSources().getDefaultConnectionSource().getName();
+                if (connectionName.equals(myName)) {
+                    return this;
+                }
+                return HibernateDatastore.this.getDatastoreForConnection(connectionName);
             }
         };
         datastoresByConnectionSource.put(connectionSource.getName(), childDatastore);

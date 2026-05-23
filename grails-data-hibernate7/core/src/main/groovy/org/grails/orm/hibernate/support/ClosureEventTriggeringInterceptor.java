@@ -20,6 +20,7 @@ package org.grails.orm.hibernate.support;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -70,8 +71,10 @@ import org.grails.datastore.mapping.engine.ModificationTrackingEntityAccess;
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.proxy.ProxyHandler;
+import org.grails.datastore.mapping.reflect.EntityReflector;
 import org.grails.orm.hibernate.HibernateDatastore;
 
 /**
@@ -282,27 +285,55 @@ public class ClosureEventTriggeringInterceptor
 
     private void synchronizeHibernateState(
             PreInsertEvent hibernateEvent, ModificationTrackingEntityAccess entityAccess) {
-        Map<String, Object> modifiedProperties = entityAccess.getModifiedProperties();
+        Object[] state = hibernateEvent.getState();
+        EntityPersister persister = hibernateEvent.getPersister();
+        Map<String, Object> modifiedProperties = findModifiedProperties(hibernateEvent.getEntity(), persister, state);
+        modifiedProperties.putAll(entityAccess.getModifiedProperties());
         if (!modifiedProperties.isEmpty()) {
-            Object[] state = hibernateEvent.getState();
-            EntityPersister persister = hibernateEvent.getPersister();
             synchronizeHibernateState(persister, state, modifiedProperties);
         }
     }
 
     private void synchronizeHibernateState(
             PreUpdateEvent hibernateEvent, ModificationTrackingEntityAccess entityAccess, boolean autoTimestamp) {
-        Map<String, Object> modifiedProperties = entityAccess.getModifiedProperties();
+        Object[] state = hibernateEvent.getState();
+        EntityPersister persister = hibernateEvent.getPersister();
+        Map<String, Object> modifiedProperties = findModifiedProperties(hibernateEvent.getEntity(), persister, state);
+        modifiedProperties.putAll(entityAccess.getModifiedProperties());
 
         if (autoTimestamp) {
             updateModifiedPropertiesWithAutoTimestamp(modifiedProperties, hibernateEvent);
         }
 
         if (!modifiedProperties.isEmpty()) {
-            Object[] state = hibernateEvent.getState();
-            EntityPersister persister = hibernateEvent.getPersister();
             synchronizeHibernateState(persister, state, modifiedProperties);
         }
+    }
+
+    private Map<String, Object> findModifiedProperties(Object entity, EntityPersister persister, Object[] state) {
+        Map<String, Object> modifiedProperties = new HashMap<>();
+        PersistentEntity persistentEntity = mappingContext.getPersistentEntity(Hibernate.getClass(entity).getName());
+        if (persistentEntity != null) {
+            EntityReflector reflector = persistentEntity.getReflector();
+            EntityMappingType entityMappingType = persister.getEntityMappingType();
+            entityMappingType.getAttributeMappings().forEach(attributeMapping -> {
+                String propertyName = attributeMapping.getAttributeName();
+                if ("version".equals(propertyName)) {
+                    return;
+                }
+                PersistentProperty property = persistentEntity.getPropertyByName(propertyName);
+                if (property != null) {
+                    int stateIdx = attributeMapping.getStateArrayPosition();
+                    if (stateIdx >= 0 && stateIdx < state.length) {
+                        Object value = reflector.getProperty(entity, propertyName);
+                        if (state[stateIdx] != value) {
+                            modifiedProperties.put(propertyName, value);
+                        }
+                    }
+                }
+            });
+        }
+        return modifiedProperties;
     }
 
     private void updateModifiedPropertiesWithAutoTimestamp(

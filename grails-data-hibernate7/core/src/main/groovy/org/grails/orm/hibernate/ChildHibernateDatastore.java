@@ -94,6 +94,16 @@ public class ChildHibernateDatastore extends HibernateDatastore {
             if (hibernateDatastore != null) {
                 return hibernateDatastore;
             }
+            // During initialization this child may not yet be registered in the parent's runtime map,
+            // while sibling datastores being initialized in parallel may also be absent. Return null
+            // only when (a) this child is not yet registered (so we are in the initialization phase)
+            // AND (b) the requested connection name is a sibling that is configured in the parent's
+            // connection sources (i.e., it will exist once initialization completes). Truly unknown
+            // names always throw ConfigurationException regardless of initialization state.
+            if (!p.datastoresByConnectionSource.containsKey(myName) &&
+                    p.connectionSources.getConnectionSource(connectionName) != null) {
+                return null;
+            }
         }
 
         throw new org.grails.datastore.mapping.core.exceptions.ConfigurationException(

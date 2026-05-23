@@ -170,6 +170,13 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
                 }
             }
         }
+        // Fallback: the preferred/transactional datastore may be a single-datasource datastore
+        // that doesn't expose the named qualifier in its connectionSources. Check the registry
+        // directly so that entities mapped to multiple datasources (e.g. datasource 'ALL') can
+        // still be accessed via the qualifier even when a single-datasource transaction is active.
+        if (registry.getDatastoreByString(persistentClass.name, name) != null) {
+            return registry.findStaticApi(persistentClass, name)
+        }
         throw new MissingPropertyException(name, persistentClass)
     }
 

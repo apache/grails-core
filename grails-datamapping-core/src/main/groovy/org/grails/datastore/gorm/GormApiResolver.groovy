@@ -167,6 +167,17 @@ class PreferredDatastoreSelector {
             return null
         }
         if (qualifier != null) {
+            if (ConnectionSource.DEFAULT.equals(qualifier)) {
+                // For the DEFAULT qualifier, the preferred datastore itself is the active
+                // transaction's datastore — return it directly rather than routing through
+                // getDatastoreForConnection (which would return the parent and mismatch the
+                // session factory bound by the active transaction). Skip only if preferred
+                // doesn't know the entity (e.g., an unrelated single-datasource datastore).
+                if (className == null || preferred.mappingContext.getPersistentEntity(className) != null) {
+                    return preferred
+                }
+                return null
+            }
             if (preferred instanceof MultipleConnectionSourceCapableDatastore) {
                 try {
                     Datastore ds = ((MultipleConnectionSourceCapableDatastore) preferred).getDatastoreForConnection(qualifier)
@@ -176,9 +187,6 @@ class PreferredDatastoreSelector {
                 } catch (Throwable e) {
                     // ignore
                 }
-            }
-            if (ConnectionSource.DEFAULT.equals(qualifier)) {
-                return preferred
             }
             return null
         }
@@ -224,20 +232,27 @@ class QualifiedDatastoreSelector {
             return (Datastore) resource
         }
 
+        // Check the entity-specific datastore map first. For SCHEMA mode, tenant IDs ARE connection
+        // names (each tenant has its own child datastore registered here). For DISCRIMINATOR mode
+        // with an explicit datasource mapping (e.g. datasource 'analytics'), the analytics child is
+        // also registered here and must be returned directly.
         Datastore ds = registry.getDatastoreByString(className, qualifier)
         if (ds != null) {
             return ds
         }
 
         Datastore defaultDs = registry.getDatastoreByString(className, ConnectionSource.DEFAULT)
-        if (defaultDs instanceof MultipleConnectionSourceCapableDatastore) {
-            if (defaultDs instanceof MultiTenantCapableDatastore) {
-                MultiTenancySettings.MultiTenancyMode mode = ((MultiTenantCapableDatastore) defaultDs).getMultiTenancyMode()
-                if (mode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR ||
-                        mode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
-                    return defaultDs
-                }
+        // For DISCRIMINATOR mode: the qualifier is a logical tenant ID, not a datasource connection
+        // name. Discriminator switching happens at the Hibernate session/filter level, so the parent
+        // datastore must be returned. (SCHEMA tenants are already handled above via the entity map.)
+        if (defaultDs instanceof MultiTenantCapableDatastore) {
+            MultiTenancySettings.MultiTenancyMode mode = ((MultiTenantCapableDatastore) defaultDs).getMultiTenancyMode()
+            if (mode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
+                return defaultDs
             }
+        }
+
+        if (defaultDs instanceof MultipleConnectionSourceCapableDatastore) {
             try {
                 stateRegistry.setResolvingDatastoreDepth(depth + 1)
                 ds = ((MultipleConnectionSourceCapableDatastore) defaultDs).getDatastoreForConnection(qualifier)

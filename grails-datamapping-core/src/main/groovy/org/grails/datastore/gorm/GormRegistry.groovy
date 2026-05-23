@@ -201,6 +201,12 @@ class GormRegistry {
     PlatformTransactionManager findTransactionManager(Class entityClass, String qualifier) {
         Datastore ds = getDatastore(entityClass, qualifier)
         if (ds == null) {
+            // The qualifier may be a tenant ID rather than a registered datastore qualifier
+            // (e.g. DISCRIMINATOR / SCHEMA multi-tenancy). Fall back via the full resolver
+            // which understands the multi-tenancy mode and returns the correct datastore.
+            ds = apiResolver.findDatastore(entityClass, qualifier)
+        }
+        if (ds == null) {
             throw new IllegalStateException("No GORM implementations configured. Ensure GORM has been initialized correctly")
         }
         if (ds instanceof TransactionCapableDatastore) {
@@ -671,22 +677,31 @@ class GormRegistry {
 
         Datastore primaryDatastore = defaultDatastore
 
-        // Register datastores for each connection source, resolving connection-specific datastores when available.
+        // Register datastores for each connection source. For each qualifier, attempt to resolve a
+        // connection-specific child datastore. If the resolution falls back to the parent (meaning
+        // the qualifier is a runtime tenant ID, not a datasource connection name), skip registration
+        // for non-DEFAULT qualifiers in multi-tenant mode so that we do not overwrite the correctly
+        // registered child datastores (e.g. those added by addTenantForSchemaInternal).
         for (String connectionSourceName in qualifiers) {
             String normalizedQualifier = normalizeQualifier(connectionSourceName)
             Datastore qualifierDatastore = defaultDatastore
             if (defaultDatastore instanceof MultipleConnectionSourceCapableDatastore &&
                     !ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
-                boolean canUseConnectionDatastore = !(multiTenantEntity &&
-                        (multiTenancyMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR ||
-                                multiTenancyMode == MultiTenancySettings.MultiTenancyMode.SCHEMA))
-                if (canUseConnectionDatastore) {
-                    Datastore resolvedDatastore = ((MultipleConnectionSourceCapableDatastore) defaultDatastore)
+                try {
+                    Datastore resolved = ((MultipleConnectionSourceCapableDatastore) defaultDatastore)
                             .getDatastoreForConnection(normalizedQualifier)
-                    if (resolvedDatastore != null) {
-                        qualifierDatastore = resolvedDatastore
+                    if (resolved != null) {
+                        qualifierDatastore = resolved
                     }
+                } catch (Throwable e) {
+                    // qualifier is not a datasource connection name; keep defaultDatastore
                 }
+            }
+            // Skip non-DEFAULT qualifiers that resolve back to the parent for multi-tenant entities.
+            // Those qualifiers are runtime tenant IDs handled at the session level, not datasource names.
+            if (multiTenantEntity && !ConnectionSource.DEFAULT.equals(normalizedQualifier) &&
+                    qualifierDatastore == defaultDatastore) {
+                continue
             }
             if (!ConnectionSource.DEFAULT.equals(normalizedQualifier) && primaryDatastore == defaultDatastore) {
                 primaryDatastore = qualifierDatastore

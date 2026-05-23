@@ -144,7 +144,11 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
                     this.hibernateTemplate = template
                 }
             } else {
-                this.hibernateTemplate = template
+                // For DEFAULT qualifier or non-discriminator mode, the datastore resolver may return
+                // different datastores in different transaction contexts (e.g., preferred datastore switching
+                // between a multi-datasource parent and a secondary child). Do not cache here — resolve
+                // the template dynamically on every call to avoid using a stale template from a prior context.
+                return template
             }
         }
         return hibernateTemplate
@@ -494,10 +498,8 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     protected void flushSession(Session session) {
         HibernateDatastore datastore = getHibernateDatastore()
         if (datastore.isOsivReadOnly(datastore.sessionFactory)) {
-            System.err.println "SKIPPING flush because OSIV is read-only"
             return
         }
-        System.err.println "Executing session.flush() on ${session}"
         session.flush()
     }
 

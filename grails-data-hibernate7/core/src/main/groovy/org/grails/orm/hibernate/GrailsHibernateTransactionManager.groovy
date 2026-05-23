@@ -45,7 +45,6 @@ class GrailsHibernateTransactionManager extends HibernateTransactionManager {
     private Datastore datastore
 
     void setDatastore(Datastore datastore) {
-        System.err.println "SETTING DATASTORE ON TM [${System.identityHashCode(this)}]: ${datastore}"
         this.datastore = datastore
     }
 
@@ -73,10 +72,7 @@ class GrailsHibernateTransactionManager extends HibernateTransactionManager {
                     org.grails.datastore.mapping.core.Session session = new HibernateSession((HibernateDatastore) this.datastore, sessionFactory as SessionFactory, null);
                     TransactionSynchronizationManager.bindResource(this.datastore, new org.grails.datastore.mapping.transactions.SessionHolder(session));
                 }
-                System.err.println "SETTING PREFERRED DATASTORE: ${this.datastore}"
                 org.grails.datastore.gorm.GormEnhancerRegistry.getInstance().setPreferredDatastore(this.datastore)
-            } else {
-                System.err.println "DATASTORE IS NULL in TransactionManager!"
             }
         }
     }
