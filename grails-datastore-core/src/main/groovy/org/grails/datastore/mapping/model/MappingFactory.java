@@ -450,6 +450,7 @@ public abstract class MappingFactory<R extends Entity, T extends Property> {
         String generatorName = property != null ? property.getGenerator() : null;
         ValueGenerator generator = generatorName != null ? ValueGenerator.valueOf(generatorName.toUpperCase(java.util.Locale.ENGLISH)) : ValueGenerator.AUTO;
         return new DefaultIdentityMapping<>(classMapping, property, identifierNames, generator);
+
     }
 
     public static String associationtoString(String desc, Association a) {

@@ -68,3 +68,64 @@ p.insert()
 // to update
 p.save()
 ----
+
+
+==== Decoupling the Declared Type from the Storage Type
+
+When a domain declares `String id`, GORM by default writes `_id` as a BSON `String`. This is convenient in application code — HTTP controllers return clean JSON, URLs embed ids directly, and you never need `new ObjectId(...)` at call sites — but it gives up the native `ObjectId` benefits at the storage layer (12-byte index entries vs. 24-byte hex strings, embedded creation timestamp, etc.).
+
+You can get both using the `storedAs` mapping option. The domain sees a `String id` (hex form), but `_id` on disk is a BSON `ObjectId`:
+
+[source,groovy]
+----
+import org.bson.types.ObjectId
+
+class Person {
+    String id
+
+    static mapping = {
+        id storedAs: ObjectId
+    }
+}
+----
+
+With `storedAs: ObjectId`:
+
+* `_id` is written as BSON `ObjectId` (native index size, sort order, creation timestamp)
+* `person.id` in application code is the 24-char hex string (clean JSON, no conversion at boundaries)
+* `Person.get(hexString)`, `findAllByIdInList([hexA, hexB])`, updates, and deletes all coerce the declared-type value to the storage type automatically
+* Existing documents that already have BSON `ObjectId` `_id` values continue to load without a data migration
+
+This is especially useful when migrating a legacy `ObjectId id` domain to `String id` for ergonomic reasons, because neither a data migration nor any change in application call sites is required.
+
+===== Global Default
+
+You can opt in globally with an `application.yml` setting, which applies to every domain declaring `String id` that does not specify its own `storedAs`:
+
+[source,yaml]
+----
+grails:
+  mongodb:
+    stringIds:
+      defaultStoredAs: objectid
+----
+
+Valid values are `string` (current default, BSON String) and `objectid` (BSON ObjectId). Unrecognized values fall back to the default with a warning logged at startup.
+
+Per-domain `storedAs` always wins over the global default. Domains using a natural string key (slug, email, UUID) should opt out explicitly:
+
+[source,groovy]
+----
+class UserProfile {
+    String id   // e.g. "jsmith@example.com"
+
+    static mapping = {
+        id generator: 'assigned', storedAs: String
+    }
+}
+----
+
+===== Caveats
+
+* `storedAs` is currently honored only for converting between `String` and `ObjectId`. Other combinations are accepted but behave as if `storedAs` were unset.
+* Combining `generator: 'assigned'` with `storedAs: ObjectId` requires that the assigned value be a valid 24-char ObjectId hex string. Invalid values fall back to writing BSON `String` on the assumption that the domain is using a natural key despite the `storedAs` setting — consider declaring `storedAs: String` (or omitting it) in that case.

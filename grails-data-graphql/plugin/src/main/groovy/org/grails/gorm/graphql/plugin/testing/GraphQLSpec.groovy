@@ -43,7 +43,7 @@ trait GraphQLSpec {
     }
 
     String getUrl() {
-       getServerUrl() + "/graphql"
+        getServerUrl() + '/graphql'
     }
 
     String getServerUrl() {
