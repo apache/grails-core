@@ -338,25 +338,17 @@ class TransactionalTransform extends AbstractDatastoreMethodDecoratingTransforma
             // Use the class-level transaction manager (which supports overrides)
             transactionManagerExpression = propX(varThis(), PROPERTY_TRANSACTION_MANAGER)
         }
+        else if (isMultiTenant && hasDataSourceProperty) {
+            Expression targetDatastoreExpr = castX(make(MultiTenantCapableDatastore), callThisD(classNode, 'getTargetDatastore', ZERO_ARGUMENTS))
+            targetDatastoreExpr = castX(make(TransactionCapableDatastore), callX(targetDatastoreExpr, 'getDatastoreForTenantId', connectionName))
+            transactionManagerExpression = castX(make(PlatformTransactionManager), propX(targetDatastoreExpr, PROPERTY_TRANSACTION_MANAGER))
+        }
+        else if (hasDataSourceProperty) {
+            Expression targetDatastoreExpr = castX(make(TransactionCapableDatastore), callThisD(classNode, 'getTargetDatastore', connectionName))
+            transactionManagerExpression = castX(make(PlatformTransactionManager), propX(targetDatastoreExpr, PROPERTY_TRANSACTION_MANAGER))
+        }
         else {
-            // For explicit connections, use the shared resolver
-            Expression registryExpr = callX(classX(GormRegistry), 'getInstance')
-            AnnotationNode serviceAnn = findAnnotation(classNode, grails.gorm.services.Service)
-            if (serviceAnn != null) {
-                // For services, resolve entirely via static bridge using the domain class from @Service
-                Expression domainClassExpr = serviceAnn.getMember('value') ?: classX(org.codehaus.groovy.ast.ClassHelper.OBJECT_TYPE)
-                transactionManagerExpression = callX(registryExpr, 'findTransactionManager', args(domainClassExpr, connectionName))
-            }
-            else {
-                // For non-services, use the datastore hint if present, otherwise fall back to single TM
-                Expression datastoreHint = annotationNode.getMember('datastore')
-                if (datastoreHint instanceof ClassExpression) {
-                    transactionManagerExpression = callX(registryExpr, 'findTransactionManager', args(datastoreHint, connectionName))
-                }
-                else {
-                    transactionManagerExpression = callX(registryExpr, 'findSingleTransactionManager', connectionName)
-                }
-            }
+            transactionManagerExpression = propX(varThis(), PROPERTY_TRANSACTION_MANAGER)
         }
 
         // PlatformTransactionManager $transactionManager = ... resolved TM ...

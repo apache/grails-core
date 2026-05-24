@@ -315,7 +315,6 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
                                 method.exceptions,
                                 new BlockStatement())
                         methodImpl.setDeclaringClass(impl)
-                        copyAnnotations(method, methodImpl)
                         markAsGenerated(impl, methodImpl)
 
                         if (Modifier.isProtected(method.modifiers)) {
@@ -325,6 +324,10 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
                         }
 
                         implementer.implement(targetDomainClass, method, methodImpl, impl)
+
+                        // Copy annotations after implement() so that @Query GString values are
+                        // already replaced with constX(IMPLEMENTED) before being copied to methodImpl.
+                        copyAnnotations(method, methodImpl)
 
                         if (!Modifier.isProtected(method.modifiers)) {
                             if (!TransactionalTransform.hasTransactionalAnnotation(methodImpl)) {
@@ -386,6 +389,16 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
     private void addDatastoreMethods(ClassNode classNode, ClassNode datastoreType, ClassNode targetDomainClass, List<FieldNode> propertiesFields) {
         BlockStatement setterBody = block()
         Parameter datastoreParam = param(datastoreType, 'd')
+        
+        FieldNode datastoreField = null
+        if (targetDomainClass.name == 'java.lang.Object') {
+            datastoreField = classNode.getField('$datastore')
+            if (datastoreField == null) {
+                datastoreField = classNode.addField('$datastore', Modifier.PRIVATE, datastoreType.plainNodeReference, null)
+            }
+            setterBody.addStatement(assignS(varX(datastoreField), varX(datastoreParam)))
+        }
+
         if (classNode.getDeclaredMethod('setDatastore', params(datastoreParam)) == null) {
             MethodNode datastoreSetterNode = classNode.addMethod('setDatastore', Modifier.PUBLIC, ClassHelper.VOID_TYPE, params(
                     datastoreParam
@@ -405,11 +418,21 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
         }
 
         if (classNode.getDeclaredMethod('getDatastore', ZERO_PARAMETERS) == null) {
-            // Always override getDatastore() for dynamic resolution
             def apiResolverExpr = callX(callX(classX(GormRegistry), 'getInstance'), 'getApiResolver')
-            MethodNode datastoreGetterNode = classNode.addMethod('getDatastore', Modifier.PUBLIC, datastoreType.plainNodeReference, ZERO_PARAMETERS, null,
-                    returnS(callX(apiResolverExpr, 'findDatastore', args(classX(targetDomainClass))))
-            )
+            MethodNode datastoreGetterNode
+            if (targetDomainClass.name == 'java.lang.Object') {
+                datastoreGetterNode = classNode.addMethod('getDatastore', Modifier.PUBLIC, datastoreType.plainNodeReference, ZERO_PARAMETERS, null,
+                        ifElseS(
+                            notNullX(varX(datastoreField)),
+                            returnS(varX(datastoreField)),
+                            returnS(callX(apiResolverExpr, 'findDatastore', args(constX(null))))
+                        )
+                )
+            } else {
+                datastoreGetterNode = classNode.addMethod('getDatastore', Modifier.PUBLIC, datastoreType.plainNodeReference, ZERO_PARAMETERS, null,
+                        returnS(callX(apiResolverExpr, 'findDatastore', args(classX(targetDomainClass))))
+                )
+            }
             markAsGenerated(classNode, datastoreGetterNode)
         }
     }

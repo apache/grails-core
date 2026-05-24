@@ -82,7 +82,7 @@ class GormApiResolver {
         Datastore defaultDs = defaultDatastoreSelector.select(registry, stateRegistry, entity, className, depth, this)
 
         if (defaultDs == null) {
-            defaultDs = registry.getDatastore(null, ConnectionSource.DEFAULT)
+            defaultDs = registry.getDatastore((Class) null, ConnectionSource.DEFAULT)
         }
         if (defaultDs == null && entity != null) {
             throw stateException(entity)
@@ -173,7 +173,7 @@ class PreferredDatastoreSelector {
                 // getDatastoreForConnection (which would return the parent and mismatch the
                 // session factory bound by the active transaction). Skip only if preferred
                 // doesn't know the entity (e.g., an unrelated single-datasource datastore).
-                if (className == null || preferred.mappingContext.getPersistentEntity(className) != null) {
+                if (className == null || preferred.mappingContext?.getPersistentEntity(className) != null) {
                     return preferred
                 }
                 return null

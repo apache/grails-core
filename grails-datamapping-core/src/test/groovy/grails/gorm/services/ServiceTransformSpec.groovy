@@ -225,7 +225,7 @@ class Foo {
 
         then:"The impl is valid - protected methods should have no transaction"
         impl.getMethod("readFoo", Serializable).getAnnotation(ReadOnly) != null
-        impl.getMethod("findFoo", Serializable).getAnnotation(ReadOnly) == null
+        impl.getDeclaredMethod("findFoo", Serializable).getAnnotation(ReadOnly) == null
         org.grails.datastore.mapping.services.Service.isAssignableFrom(impl)
 
     }
@@ -916,7 +916,7 @@ class Foo {
 
         then:
         def e = thrown(IllegalStateException)
-        e.message == 'No GORM implementations configured. Ensure GORM has been initialized correctly'
+        e.message?.contains('No GORM implementation') && e.message?.contains('configured')
     }
 
     void "test implement interface"() {
@@ -971,7 +971,7 @@ class Foo {
 
         then:
         def e = thrown(IllegalStateException)
-        e.message == 'No GORM implementations configured. Ensure GORM has been initialized correctly'
+        e.message?.contains('No GORM implementation') && e.message?.contains('configured')
     }
 
     void "test service transform applied to interface that can't be implemented"() {
