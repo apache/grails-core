@@ -92,63 +92,36 @@ class GormRegistry {
         allDatastores.clear()
     }
 
-    @Deprecated
     static <D> GormStaticApi<D> findStaticApi(Class<D> entity) {
         instance.resolveStaticApi(entity, (String) null)
     }
 
-    /**
-     * @deprecated Use {@code GormRegistry.getInstance().findStaticApi(entity, qualifier)}.
-     */
-    @Deprecated
+
     static <D> GormStaticApi<D> findStaticApi(Class<D> entity, String qualifier) {
         instance.resolveStaticApi(entity, qualifier)
     }
 
-    /**
-     * @deprecated Use {@code GormRegistry.getInstance().findInstanceApi(entity, qualifier)}.
-     */
-    @Deprecated
+
     static <D> GormInstanceApi<D> findInstanceApi(Class<D> entity) {
         instance.resolveInstanceApi(entity, (String) null)
     }
 
-    /**
-     * @deprecated Use {@code GormRegistry.getInstance().findInstanceApi(entity, qualifier)}.
-     */
-    @Deprecated
     static <D> GormInstanceApi<D> findInstanceApi(Class<D> entity, String qualifier) {
         instance.resolveInstanceApi(entity, qualifier)
     }
 
-    /**
-     * @deprecated Use {@code GormRegistry.getInstance().findValidationApi(entity, qualifier)}.
-     */
-    @Deprecated
     static <D> GormValidationApi<D> findValidationApi(Class<D> entity) {
         instance.resolveValidationApi(entity, (String) null)
     }
 
-    /**
-     * @deprecated Use {@code GormRegistry.getInstance().findValidationApi(entity, qualifier)}.
-     */
-    @Deprecated
     static <D> GormValidationApi<D> findValidationApi(Class<D> entity, String qualifier) {
         instance.resolveValidationApi(entity, qualifier)
     }
 
-    /**
-     * @deprecated Use {@code GormRegistry.getInstance().getApiResolver().findDatastore(entity, qualifier)}.
-     */
-    @Deprecated
     static Datastore findDatastore(Class entity) {
         instance.apiResolver.findDatastore(entity, (String) null)
     }
 
-    /**
-     * @deprecated Use {@code GormRegistry.getInstance().getApiResolver().findDatastore(entity, qualifier)}.
-     */
-    @Deprecated
     static Datastore findDatastore(Class entity, String qualifier) {
         instance.apiResolver.findDatastore(entity, qualifier)
     }

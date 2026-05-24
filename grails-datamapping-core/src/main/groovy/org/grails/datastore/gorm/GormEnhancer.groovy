@@ -171,47 +171,6 @@ class GormEnhancer implements Closeable {
         return GormRegistry.instance
     }
 
-    /** @deprecated Delegate to {@link GormRegistry#findStaticApi(Class)} */
-    static <D> GormStaticApi<D> findStaticApi(Class entity) {
-        (GormStaticApi<D>) GormRegistry.findStaticApi(entity)
-    }
-
-    /** @deprecated Delegate to {@link GormRegistry#findStaticApi(Class, String)} */
-    static <D> GormStaticApi<D> findStaticApi(Class entity, String qualifier) {
-        (GormStaticApi<D>) GormRegistry.findStaticApi(entity, qualifier)
-    }
-
-    /** @deprecated Delegate to {@link GormRegistry#findInstanceApi(Class)} */
-    static <D> GormInstanceApi<D> findInstanceApi(Class entity) {
-        (GormInstanceApi<D>) GormRegistry.findInstanceApi(entity)
-    }
-
-    /** @deprecated Delegate to {@link GormRegistry#findInstanceApi(Class, String)} */
-    static <D> GormInstanceApi<D> findInstanceApi(Class entity, String qualifier) {
-        (GormInstanceApi<D>) GormRegistry.findInstanceApi(entity, qualifier)
-    }
-
-    /** @deprecated Delegate to {@link GormRegistry#findValidationApi(Class)} */
-    static <D> GormValidationApi<D> findValidationApi(Class entity) {
-        (GormValidationApi<D>) GormRegistry.findValidationApi(entity)
-    }
-
-    /** @deprecated Delegate to {@link GormRegistry#findValidationApi(Class, String)} */
-    static <D> GormValidationApi<D> findValidationApi(Class entity, String qualifier) {
-        (GormValidationApi<D>) GormRegistry.findValidationApi(entity, qualifier)
-    }
-
-    /** @deprecated Delegate to {@link GormRegistry#findDatastore(Class)} */
-    static Datastore findDatastore(Class entity) {
-        GormRegistry.findDatastore(entity)
-    }
-
-    /** @deprecated Delegate to {@link GormRegistry#findDatastore(Class, String)} */
-    static Datastore findDatastore(Class entity, String qualifier) {
-        GormRegistry.findDatastore(entity, qualifier)
-    }
-
-    /** @deprecated Use {@link GormRegistry} and {@link org.grails.datastore.mapping.model.MappingContext} directly */
     static PersistentEntity findEntity(Class entity) {
         GormApiResolver resolver = GormRegistry.instance.apiResolver
         Datastore ds = resolver.findDatastore(entity, null)

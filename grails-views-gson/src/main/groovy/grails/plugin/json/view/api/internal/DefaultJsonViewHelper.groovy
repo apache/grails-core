@@ -98,7 +98,7 @@ class DefaultJsonViewHelper extends DefaultGrailsViewHelper {
         def clazz = object.getClass()
         try {
             return GormEnhancer.findEntity(clazz)
-        } catch (Throwable e) {
+        } catch (Exception ignored) {
             return ((JsonView) view)?.mappingContext?.getPersistentEntity(clazz.name)
         }
     }
