@@ -18,6 +18,8 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import org.hibernate.boot.spi.MetadataBuildingContext;
@@ -29,8 +31,6 @@ import org.hibernate.mapping.Table;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.HibernateCompositeIdentity;
 import org.grails.orm.hibernate.cfg.JoinTable;
-import java.util.List;
-import java.util.ArrayList;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
