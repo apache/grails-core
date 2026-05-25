@@ -91,7 +91,11 @@ class GormApiResolverSpec extends Specification {
         given:
         GormRegistry registry = GormRegistry.instance
         GormApiResolver resolver = registry.apiResolver
-        Datastore preferredDatastore = Mock(Datastore)
+        Datastore preferredDatastore = Mock(Datastore) {
+            getMappingContext() >> Mock(org.grails.datastore.mapping.model.MappingContext) {
+                getPersistentEntity(TestEntity.name) >> Mock(org.grails.datastore.mapping.model.PersistentEntity)
+            }
+        }
         stateRegistry.setPreferredDatastore(preferredDatastore)
 
         expect:
