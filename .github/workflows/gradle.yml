@@ -38,7 +38,7 @@ jobs:
           distribution: liberica
           java-version: 21
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
       - name: "🔍 Validate grails-core dependency versions"
@@ -70,7 +70,7 @@ jobs:
           distribution: liberica
           java-version: ${{ matrix.java }}
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
       - name: "🔍 Setup TestLens"
@@ -120,7 +120,7 @@ jobs:
           distribution: liberica
           java-version: ${{ matrix.java }}
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
       - name: "🔍 Setup TestLens"
@@ -153,7 +153,7 @@ jobs:
           distribution: liberica
           java-version: ${{ matrix.java }}
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
       - name: "🔍 Setup TestLens"
@@ -188,7 +188,7 @@ jobs:
           distribution: 'liberica'
           java-version: ${{ matrix.java }}
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
       - name: "🔍 Setup TestLens"
@@ -252,7 +252,7 @@ jobs:
           distribution: liberica
           java-version: ${{ matrix.java }}
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
       - name: "🔍 Setup TestLens"
@@ -295,7 +295,7 @@ jobs:
           distribution: liberica
           java-version: ${{ matrix.java }}
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "🏃 Run Functional Tests"
@@ -333,7 +333,7 @@ jobs:
           distribution: liberica
           java-version: ${{ matrix.java }}
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "🏃 Run Functional Tests"
@@ -370,7 +370,7 @@ jobs:
           distribution: liberica
           java-version: ${{ matrix.java }}
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "🏃 Run Functional Tests"
@@ -399,7 +399,7 @@ jobs:
           distribution: liberica
           java-version: 21
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
       - name: "🔍 Setup TestLens"
@@ -449,7 +449,7 @@ jobs:
           distribution: liberica
           java-version: 21
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
       - name: "🔍 Setup TestLens"
@@ -503,7 +503,7 @@ jobs:
           distribution: liberica
           java-version: 21
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
       - name: "🔍 Setup TestLens"
@@ -602,7 +602,7 @@ jobs:
           distribution: liberica
           java-version: 21
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "🔨 Build Snapshot Documentation"
