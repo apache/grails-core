@@ -26,7 +26,7 @@ import spock.lang.Issue
 class AddToAndInjectedServiceSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Pirate, Ship])
+        manager.addAllDomainClasses([Pirate, Ship])
     }
 
     @Issue('GRAILS-9119')

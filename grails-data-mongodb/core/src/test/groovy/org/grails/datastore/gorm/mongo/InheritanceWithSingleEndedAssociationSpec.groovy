@@ -31,7 +31,7 @@ import spock.lang.Issue
 class InheritanceWithSingleEndedAssociationSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Node, NodeA, NodeB, NodeC])
+        manager.addAllDomainClasses([Node, NodeA, NodeB, NodeC])
     }
 
     @Issue('GPMONGODB-304')

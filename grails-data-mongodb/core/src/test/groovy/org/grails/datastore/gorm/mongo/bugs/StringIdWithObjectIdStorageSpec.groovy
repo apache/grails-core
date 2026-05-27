@@ -48,7 +48,7 @@ import org.grails.datastore.mapping.core.OptimisticLockingException
 class StringIdWithObjectIdStorageSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([LegacyVideo, ObjectIdVideo, StoredAsVideo, AssignedNonHexVideo, VersionedStoredAsVideo])
+        manager.addAllDomainClasses([LegacyVideo, ObjectIdVideo, StoredAsVideo, AssignedNonHexVideo, VersionedStoredAsVideo])
     }
 
     void "scan read decodes a BSON ObjectId _id into a String-typed id field"() {

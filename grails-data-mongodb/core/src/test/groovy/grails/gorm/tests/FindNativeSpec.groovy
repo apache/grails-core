@@ -34,7 +34,7 @@ import static com.mongodb.client.model.Filters.eq
 class FindNativeSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Product])
+        manager.addAllDomainClasses([Product])
     }
 
     void "test native find method"() {

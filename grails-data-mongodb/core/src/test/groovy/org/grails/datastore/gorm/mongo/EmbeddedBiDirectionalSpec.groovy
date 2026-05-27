@@ -28,7 +28,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class EmbeddedBiDirectionalSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([EBDDogOwner, EBDDog, EBDToy])
+        manager.addAllDomainClasses([EBDDogOwner, EBDDog, EBDToy])
     }
 
     void "test nested backreferences"() {

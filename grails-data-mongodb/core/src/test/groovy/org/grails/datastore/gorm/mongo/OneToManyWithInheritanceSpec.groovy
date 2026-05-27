@@ -26,7 +26,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class OneToManyWithInheritanceSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Animal, Donkey, Carrot])
+        manager.addAllDomainClasses([Animal, Donkey, Carrot])
     }
 
     void "Test that a one-to-many with inheritances behaves correctly"() {

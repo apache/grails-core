@@ -28,7 +28,7 @@ import org.bson.types.ObjectId
  */
 class CascadeDeleteOneToOneSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([SystemUser, UserSettings, Company, Executive, Employee])
+        manager.addAllDomainClasses([SystemUser, UserSettings, Company, Executive, Employee])
     }
 
     void "Test owner deletes child in one-to-one cascade"() {

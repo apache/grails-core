@@ -29,7 +29,7 @@ import org.springframework.validation.Validator
 
 class SaveWithFailOnErrorDefaultSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([TestProduct])
+        manager.addAllDomainClasses([TestProduct])
     }
 
     def setup() {

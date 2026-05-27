@@ -28,7 +28,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class CustomCollectionAndAttributeMappingSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([CCAAMPerson])
+        manager.addAllDomainClasses([CCAAMPerson])
     }
 
     void "Test that custom collection and attribute names are correctly used"() {

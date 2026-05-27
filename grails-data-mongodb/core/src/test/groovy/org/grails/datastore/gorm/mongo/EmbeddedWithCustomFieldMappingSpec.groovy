@@ -25,7 +25,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class EmbeddedWithCustomFieldMappingSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([EWCFMPerson, EWCFMPet])
+        manager.addAllDomainClasses([EWCFMPerson, EWCFMPet])
     }
 
     void "Test that embedded collections map to the correct underlying attributes"() {

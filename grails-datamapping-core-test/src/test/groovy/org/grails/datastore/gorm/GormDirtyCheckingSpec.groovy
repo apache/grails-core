@@ -25,7 +25,7 @@ import spock.lang.Issue
 
 class GormDirtyCheckingSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([Student, BooleanTest])
+        manager.addAllDomainClasses([Student, BooleanTest])
     }
 
     void "test a new instance is dirty by default"() {

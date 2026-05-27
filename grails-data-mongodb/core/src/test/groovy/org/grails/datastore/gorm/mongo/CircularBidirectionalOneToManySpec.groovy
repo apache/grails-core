@@ -28,7 +28,7 @@ import spock.lang.Issue
  */
 class CircularBidirectionalOneToManySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([Comment])
+        manager.addAllDomainClasses([Comment])
     }
 
     void "Test store and retrieve circular one-to-many association"() {

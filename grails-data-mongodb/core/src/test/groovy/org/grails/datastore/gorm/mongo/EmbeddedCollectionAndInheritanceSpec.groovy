@@ -28,7 +28,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class EmbeddedCollectionAndInheritanceSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([ECAISPerson, ECAISPet, ECAISDog])
+        manager.addAllDomainClasses([ECAISPerson, ECAISPet, ECAISDog])
     }
 
     def "Test read and write embedded collection inherited from parent"() {

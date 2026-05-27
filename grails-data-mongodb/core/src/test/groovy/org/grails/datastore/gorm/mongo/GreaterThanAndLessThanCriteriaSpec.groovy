@@ -25,7 +25,7 @@ import spock.lang.Issue
 
 class GreaterThanAndLessThanCriteriaSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([GTBook])
+        manager.addAllDomainClasses([GTBook])
     }
 
     @Issue('GPMONGODB-180')

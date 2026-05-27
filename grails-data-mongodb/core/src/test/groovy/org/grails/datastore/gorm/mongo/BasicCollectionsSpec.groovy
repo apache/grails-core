@@ -24,7 +24,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class BasicCollectionsSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([Linguist, Increment])
+        manager.addAllDomainClasses([Linguist, Increment])
     }
 
     void "Test that a Locale can be used inside a collection"() {

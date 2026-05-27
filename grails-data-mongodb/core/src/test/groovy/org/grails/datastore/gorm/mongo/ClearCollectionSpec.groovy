@@ -26,7 +26,7 @@ import org.bson.types.ObjectId
 
 class ClearCollectionSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([Building, Room, RoomCompany])
+        manager.addAllDomainClasses([Building, Room, RoomCompany])
     }
 
     void "Test clear embedded mongo collection"() {
