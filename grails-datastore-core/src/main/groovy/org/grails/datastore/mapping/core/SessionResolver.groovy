@@ -17,9 +17,9 @@
  *  under the License.
  */
 
-package org.grails.datastore.mapping.core;
+package org.grails.datastore.mapping.core
 
-import groovy.transform.CompileStatic;
+import groovy.transform.CompileStatic
 
 /**
  * Resolver for sessions in the current context (thread, tenant, etc)
@@ -28,16 +28,17 @@ import groovy.transform.CompileStatic;
  * @since 8.0
  */
 @CompileStatic
-public interface SessionResolver<S extends Session> {
+interface SessionResolver<S extends Session> {
+
     /** Resolves the current session based on current context (thread, tenant, etc) */
-    S resolve();
+    S resolve()
 
     /** Resolves a session for a specific qualifier/tenant */
-    S resolve(String qualifier);
+    S resolve(String qualifier)
 
     /** Binds a session to the current context */
-    void bind(S session);
+    void bind(S session)
 
     /** Unbinds the current session */
-    void unbind();
+    void unbind()
 }

@@ -18,7 +18,11 @@
  */
 package org.grails.orm.hibernate;
 
+import java.util.Collections;
+import java.util.Map;
+
 import org.hibernate.SessionFactory;
+
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher;
@@ -29,9 +33,6 @@ import org.grails.orm.hibernate.cfg.HibernateMappingContext;
 import org.grails.orm.hibernate.cfg.Settings;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
 import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
-
-import java.util.Collections;
-import java.util.Map;
 
 /**
  * A datastore for a specific connection in a multiple data source setup.

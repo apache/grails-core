@@ -21,25 +21,22 @@ package org.grails.datastore.gorm
 import groovy.transform.CompileDynamic
 import org.codehaus.groovy.runtime.InvokerHelper
 
+import org.springframework.transaction.PlatformTransactionManager
+
 import grails.gorm.api.GormInstanceOperations
+import org.grails.datastore.gorm.schemaless.DynamicAttributes
 import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.SessionCallback
 import org.grails.datastore.mapping.core.VoidSessionCallback
+import org.grails.datastore.mapping.core.connections.ConnectionSources
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
+import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.proxy.EntityProxy
-import org.grails.datastore.mapping.validation.ValidationException
-import org.grails.datastore.mapping.core.connections.ConnectionSources
-import org.springframework.transaction.PlatformTransactionManager
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
-import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
-import org.grails.datastore.gorm.schemaless.DynamicAttributes
-
-import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
-import grails.gorm.multitenancy.Tenants
-import grails.gorm.MultiTenant
-import org.grails.datastore.mapping.core.DatastoreUtils
+import org.grails.datastore.mapping.validation.ValidationException
 
 /**
  * GORM instance API implementation.

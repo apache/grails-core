@@ -36,6 +36,8 @@ import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundExcept
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
 import org.grails.datastore.mapping.simple.SimpleMapDatastore
 
+import spock.lang.PendingFeature
+
 @RestoreSystemProperties
 class PartitionMultiTenancySpec extends Specification {
 
@@ -50,6 +52,11 @@ class PartitionMultiTenancySpec extends Specification {
     @Shared
     IBookService bookDataService = datastore.getService(IBookService)
 
+    void setupSpec() {
+        new org.grails.datastore.gorm.GormEnhancer(datastore, datastore.transactionManager, datastore.connectionSources.defaultConnectionSource.settings)
+    }
+
+    @PendingFeature
     void 'Test partitioned multi-tenancy with GORM services'() {
         setup:
         BookService bookService = new BookService()

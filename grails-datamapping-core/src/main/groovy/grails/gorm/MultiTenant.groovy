@@ -23,7 +23,6 @@ import groovy.transform.CompileStatic
 import groovy.transform.Generated
 
 import grails.gorm.api.GormAllOperations
-import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 

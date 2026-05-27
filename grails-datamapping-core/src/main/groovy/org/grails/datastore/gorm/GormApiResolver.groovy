@@ -298,12 +298,16 @@ class ActiveSessionDatastoreSelector {
                         continue
                     }
                     if (className != null) {
-                        if (registry.getDatastore(className, ConnectionSource.DEFAULT) == ds) {
+                        Datastore defaultDs = registry.getDatastore(className, ConnectionSource.DEFAULT)
+                        if (defaultDs == ds) {
+                            System.out.println("DEBUG TCK: ActiveSessionDatastoreSelector returning ds (== defaultDs) " + ds.getClass().getSimpleName() + " for " + className)
                             return ds
-                        } else if (ds.getMappingContext().getPersistentEntity(className) != null) {
+                        } else if (registry.isDatastoreRegisteredForEntity(className, ds)) {
+                            System.out.println("DEBUG TCK: ActiveSessionDatastoreSelector returning ds (isDatastoreRegisteredForEntity) " + ds.getClass().getSimpleName() + " for " + className)
                             return ds
                         }
                     } else {
+                        System.out.println("DEBUG TCK: ActiveSessionDatastoreSelector returning ds (className null) " + ds.getClass().getSimpleName() + " for " + className)
                         return ds
                     }
                 }
@@ -317,12 +321,16 @@ class ActiveSessionDatastoreSelector {
             for (Datastore registeredDs in registry.allDatastores) {
                 if (registeredDs.hasCurrentSession()) {
                     if (className != null) {
-                        if (registry.getDatastore(className, ConnectionSource.DEFAULT) == registeredDs) {
+                        Datastore defaultDs = registry.getDatastore(className, ConnectionSource.DEFAULT)
+                        if (defaultDs == registeredDs) {
+                            System.out.println("DEBUG TCK: ActiveSessionDatastoreSelector (fallback) returning ds (== defaultDs) " + registeredDs.getClass().getSimpleName() + " for " + className)
                             return registeredDs
-                        } else if (registeredDs.getMappingContext().getPersistentEntity(className) != null) {
+                        } else if (registry.isDatastoreRegisteredForEntity(className, registeredDs)) {
+                            System.out.println("DEBUG TCK: ActiveSessionDatastoreSelector (fallback) returning ds (isDatastoreRegisteredForEntity) " + registeredDs.getClass().getSimpleName() + " for " + className)
                             return registeredDs
                         }
                     } else if (registry.allDatastores.size() == 1) {
+                        System.out.println("DEBUG TCK: ActiveSessionDatastoreSelector (fallback) returning ds (size 1) " + registeredDs.getClass().getSimpleName() + " for " + className)
                         return registeredDs
                     }
                 }

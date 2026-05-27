@@ -23,11 +23,11 @@ import groovy.transform.CompileStatic
 import jakarta.persistence.FlushModeType
 
 import org.springframework.context.ApplicationEventPublisher
+import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.validation.Errors
 import org.springframework.validation.FieldError
 import org.springframework.validation.ObjectError
 import org.springframework.validation.Validator
-import org.springframework.transaction.PlatformTransactionManager
 
 import grails.gorm.validation.CascadingValidator
 import org.grails.datastore.gorm.support.BeforeValidateHelper
@@ -36,19 +36,13 @@ import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.SessionCallback
-import org.grails.datastore.mapping.core.VoidSessionCallback
 import org.grails.datastore.mapping.engine.event.ValidationEvent
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.reflect.ClassUtils
-import org.grails.datastore.mapping.validation.ValidationErrors
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
-
-import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
-import grails.gorm.multitenancy.Tenants
-import grails.gorm.multitenancy.CurrentTenantHolder
-import grails.gorm.MultiTenant
+import org.grails.datastore.mapping.validation.ValidationErrors
 
 /**
  * Methods used for validating GORM instances.

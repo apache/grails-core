@@ -18,19 +18,20 @@
  */
 package org.grails.orm.hibernate
 
+import javax.sql.DataSource
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import javax.sql.DataSource
+
 import org.hibernate.FlushMode
 import org.hibernate.SessionFactory
 
-import org.grails.datastore.gorm.GormEnhancer
-import org.grails.orm.hibernate.support.hibernate7.HibernateTransactionManager
-import org.grails.orm.hibernate.support.hibernate7.SessionHolder
 import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.support.TransactionSynchronizationManager
-import org.springframework.transaction.support.DefaultTransactionStatus
+
 import org.grails.datastore.mapping.core.Datastore
+import org.grails.orm.hibernate.support.hibernate7.HibernateTransactionManager
+import org.grails.orm.hibernate.support.hibernate7.SessionHolder
 
 /**
  * Extends the standard class to always set the flush mode to manual when in a read-only transaction.
@@ -69,8 +70,8 @@ class GrailsHibernateTransactionManager extends HibernateTransactionManager {
             }
             if (this.datastore != null) {
                 if (!TransactionSynchronizationManager.hasResource(this.datastore)) {
-                    org.grails.datastore.mapping.core.Session session = new HibernateSession((HibernateDatastore) this.datastore, sessionFactory as SessionFactory, null);
-                    TransactionSynchronizationManager.bindResource(this.datastore, new org.grails.datastore.mapping.transactions.SessionHolder(session));
+                    org.grails.datastore.mapping.core.Session session = new HibernateSession((HibernateDatastore) this.datastore, sessionFactory as SessionFactory, null)
+                    TransactionSynchronizationManager.bindResource(this.datastore, new org.grails.datastore.mapping.transactions.SessionHolder(session))
                 }
                 org.grails.datastore.gorm.GormEnhancerRegistry.getInstance().setPreferredDatastore(this.datastore)
             }

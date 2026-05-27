@@ -18,11 +18,11 @@
  */
 package org.grails.gorm.graphql
 
+import spock.lang.Specification
+
 import grails.gorm.multitenancy.Tenants
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
-import org.grails.gorm.graphql.fetcher.GormEntityDataFetcher
-import spock.lang.Specification
 
 class GraphqlTenantContextProfilingSpec extends Specification {
 

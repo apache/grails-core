@@ -58,6 +58,17 @@ class MongoGormInstanceApi<D> extends GormInstanceApi<D> {
     }
 
     @Override
+    void delete(D instance) {
+        delete(instance, [:])
+    }
+
+    @Override
+    void delete(D instance, Map arguments) {
+        if (!arguments?.containsKey('flush') && shouldAutoFlushByDefault()) {
+            arguments = (arguments ?: [:]) + [flush: true]
+        }
+        super.delete(instance, arguments)
+    }
     D save(D instance, boolean validate) {
         save(instance, [validate: validate])
     }
@@ -66,7 +77,7 @@ class MongoGormInstanceApi<D> extends GormInstanceApi<D> {
     D save(D instance, Map arguments) {
         // Only force flush outside active transactions.
         // Inside a transaction, immediate flush breaks rollback semantics.
-        if (!arguments?.containsKey("flush") && shouldAutoFlushByDefault()) {
+        if (!arguments?.containsKey('flush') && shouldAutoFlushByDefault()) {
             arguments = (arguments ?: [:]) + [flush: true]
         }
         return super.save(instance, arguments)

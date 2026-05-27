@@ -25,7 +25,6 @@ import org.springframework.context.MessageSource
 import org.springframework.validation.Errors
 
 import grails.gorm.DetachedCriteria
-import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.validation.constraints.AbstractConstraint
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable

@@ -115,11 +115,11 @@ public class HibernateSession extends AbstractHibernateSession {
 
                 HibernateHqlQuery hqlQuery = new HibernateHqlQuery(HibernateSession.this, criteria.getPersistentEntity(), query);
                 ApplicationEventPublisher applicationEventPublisher = datastore.getApplicationEventPublisher();
-                if(applicationEventPublisher != null) {
+                if (applicationEventPublisher != null) {
                     applicationEventPublisher.publishEvent(new PreQueryEvent(datastore, hqlQuery));
                 }
                 int result = query.executeUpdate();
-                if(applicationEventPublisher != null) {
+                if (applicationEventPublisher != null) {
                     applicationEventPublisher.publishEvent(new PostQueryEvent(datastore, hqlQuery, Collections.singletonList(result)));
                 }
                 return result;
@@ -163,11 +163,11 @@ public class HibernateSession extends AbstractHibernateSession {
 
                 HibernateHqlQuery hqlQuery = new HibernateHqlQuery(HibernateSession.this, targetEntity, query);
                 ApplicationEventPublisher applicationEventPublisher = datastore.getApplicationEventPublisher();
-                if(applicationEventPublisher != null) {
+                if (applicationEventPublisher != null) {
                     applicationEventPublisher.publishEvent(new PreQueryEvent(datastore, hqlQuery));
                 }
                 int result = query.executeUpdate();
-                if(applicationEventPublisher != null) {
+                if (applicationEventPublisher != null) {
                     applicationEventPublisher.publishEvent(new PostQueryEvent(datastore, hqlQuery, Collections.singletonList(result)));
                 }
                 return result;

@@ -18,24 +18,25 @@
  */
 package org.grails.datastore.gorm
 
+import java.util.concurrent.ConcurrentHashMap
+
 import groovy.transform.CompileDynamic
-import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+
+import org.springframework.transaction.PlatformTransactionManager
+
+import grails.gorm.MultiTenant
+import grails.gorm.multitenancy.CurrentTenantHolder
+import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
-import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
-import grails.gorm.multitenancy.CurrentTenantHolder
-import grails.gorm.MultiTenant
-import org.grails.datastore.gorm.finders.FinderMethod
+import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.reflect.NameUtils
-import org.springframework.transaction.PlatformTransactionManager
-
-import java.util.concurrent.ConcurrentHashMap
+import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 
 /**
  * A registry of GORM API objects. This registry is used to decouple the API
@@ -96,11 +97,9 @@ class GormRegistry {
         instance.resolveStaticApi(entity, (String) null)
     }
 
-
     static <D> GormStaticApi<D> findStaticApi(Class<D> entity, String qualifier) {
         instance.resolveStaticApi(entity, qualifier)
     }
-
 
     static <D> GormInstanceApi<D> findInstanceApi(Class<D> entity) {
         instance.resolveInstanceApi(entity, (String) null)
@@ -160,7 +159,7 @@ class GormRegistry {
     PlatformTransactionManager findSingleTransactionManager(String qualifier) {
         Datastore ds = getDatastoreByString((String) null, qualifier)
         if (ds == null) {
-            throw new IllegalStateException("No GORM implementations configured. Ensure GORM has been initialized correctly")
+            throw new IllegalStateException('No GORM implementations configured. Ensure GORM has been initialized correctly')
         }
         if (ds instanceof TransactionCapableDatastore) {
             return ((TransactionCapableDatastore) ds).transactionManager
@@ -180,7 +179,7 @@ class GormRegistry {
             ds = apiResolver.findDatastore(entityClass, qualifier)
         }
         if (ds == null) {
-            throw new IllegalStateException("No GORM implementations configured. Ensure GORM has been initialized correctly")
+            throw new IllegalStateException('No GORM implementations configured. Ensure GORM has been initialized correctly')
         }
         if (ds instanceof TransactionCapableDatastore) {
             return ((TransactionCapableDatastore) ds).transactionManager
@@ -363,6 +362,19 @@ class GormRegistry {
         }
     }
 
+    /**
+     * Checks if a specific datastore is explicitly registered for an entity.
+     */
+    boolean isDatastoreRegisteredForEntity(String className, Datastore datastore) {
+        if (className != null && datastore != null) {
+            Map<String, Datastore> entityMap = entityDatastores.get(normalizeEntityKey(className))
+            if (entityMap != null && entityMap.values().contains(datastore)) {
+                return true
+            }
+        }
+        return false
+    }
+
     Map<String, Datastore> getDatastoresByQualifier() {
         return datastoresByQualifier
     }
@@ -403,7 +415,7 @@ class GormRegistry {
         String normalizedClassName = normalizeEntityKey(entityClass)
         String normalizedQualifier = normalizeQualifier(qualifier)
 
-        if (MultiTenant.class.isAssignableFrom(entityClass)) {
+        if (MultiTenant.isAssignableFrom(entityClass)) {
             // Priority 1: Explicit qualifier that doesn't match default is likely a tenant ID
             if (!ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
                 GormStaticApi api = staticApiRegistry.getDirect(normalizedClassName, normalizedQualifier)
@@ -439,7 +451,7 @@ class GormRegistry {
         String normalizedClassName = normalizeEntityKey(entityClass)
         String normalizedQualifier = normalizeQualifier(qualifier)
 
-        if (MultiTenant.class.isAssignableFrom(entityClass)) {
+        if (MultiTenant.isAssignableFrom(entityClass)) {
             if (!ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
                 GormInstanceApi api = instanceApiRegistry.getDirect(normalizedClassName, normalizedQualifier)
                 if (api != null) return api
@@ -471,7 +483,7 @@ class GormRegistry {
         String normalizedClassName = normalizeEntityKey(entityClass)
         String normalizedQualifier = normalizeQualifier(qualifier)
 
-        if (MultiTenant.class.isAssignableFrom(entityClass)) {
+        if (MultiTenant.isAssignableFrom(entityClass)) {
             if (!ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
                 GormValidationApi api = validationApiRegistry.getDirect(normalizedClassName, normalizedQualifier)
                 if (api != null) return api

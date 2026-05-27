@@ -94,7 +94,7 @@ abstract class AbstractStringQueryImplementer extends AbstractReadOperationImple
                     AstUtils.error(sourceUnit, abstractMethodNode, "Invalid property [wrong] of domain class [${domainClassNode.name}] in query.")
                 }
                 else if (queryText.contains('java.lang.String')) {
-                    AstUtils.error(sourceUnit, abstractMethodNode, "Invalid query class [java.lang.String]. Referenced classes in queries must be domain classes")
+                    AstUtils.error(sourceUnit, abstractMethodNode, 'Invalid query class [java.lang.String]. Referenced classes in queries must be domain classes')
                 }
             }
         }

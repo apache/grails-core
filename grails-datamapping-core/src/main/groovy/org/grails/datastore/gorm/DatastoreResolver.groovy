@@ -19,6 +19,7 @@
 package org.grails.datastore.gorm
 
 import groovy.transform.CompileStatic
+
 import org.grails.datastore.mapping.core.Datastore
 
 /**
@@ -30,6 +31,7 @@ import org.grails.datastore.mapping.core.Datastore
  */
 @CompileStatic
 interface DatastoreResolver {
+
     /**
      * @return The datastore to use for the current call
      */

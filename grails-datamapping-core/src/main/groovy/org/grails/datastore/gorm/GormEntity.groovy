@@ -38,11 +38,6 @@ import org.grails.datastore.mapping.model.types.OneToMany
 import org.grails.datastore.mapping.model.types.ToOne
 import org.grails.datastore.mapping.query.api.BuildableCriteria
 import org.grails.datastore.mapping.query.api.Criteria
-import org.grails.datastore.mapping.core.Datastore
-import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
-import grails.gorm.multitenancy.CurrentTenantHolder
-import grails.gorm.multitenancy.Tenants
-import grails.gorm.MultiTenant
 import org.grails.datastore.mapping.reflect.EntityReflector
 
 /**

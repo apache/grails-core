@@ -75,7 +75,9 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
                 (MongoSettings.SETTING_DATABASE_NAME): 'test',
                 (MongoSettings.SETTING_HOST)         : mongoDBContainer.host,
                 (MongoSettings.SETTING_PORT)         : mongoDBContainer.getMappedPort(AbstractMongoGrailsExtension.DEFAULT_MONGO_PORT) as String,
-                //TODO: 'grails.mongodb.url': "mongodb://${host}:${port as String}/myDb" as String
+                'grails.mongodb.connections': [
+                        'secondary': ['url': "mongodb://${mongoDBContainer.host}:${mongoDBContainer.getMappedPort(AbstractMongoGrailsExtension.DEFAULT_MONGO_PORT)}/tckSecondaryDB" as String]
+                ]
         ]
     }
 

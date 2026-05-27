@@ -19,9 +19,8 @@
 package org.grails.datastore.gorm
 
 import groovy.transform.CompileStatic
-import org.grails.datastore.mapping.core.Datastore
 
-import java.util.concurrent.ConcurrentHashMap
+import org.grails.datastore.mapping.core.Datastore
 
 /**
  * Singleton registry for managing GormEnhancer's static state.

@@ -33,20 +33,15 @@ import org.hibernate.Session
 import org.hibernate.SessionFactory
 import org.hibernate.query.Query
 
-import org.springframework.core.convert.ConversionService
-import org.grails.orm.hibernate.support.hibernate5.SessionHolder
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import grails.orm.HibernateCriteriaBuilder
-import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormStaticApi
-import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.finders.FinderMethod
-import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.query.api.BuildableCriteria as GrailsCriteria
 import org.grails.datastore.mapping.query.event.PostQueryEvent
 import org.grails.datastore.mapping.query.event.PreQueryEvent
@@ -55,6 +50,7 @@ import org.grails.orm.hibernate.query.GrailsHibernateQueryUtils
 import org.grails.orm.hibernate.query.HibernateHqlQuery
 import org.grails.orm.hibernate.query.HibernateQuery
 import org.grails.orm.hibernate.query.PagedResultList
+import org.grails.orm.hibernate.support.hibernate5.SessionHolder
 
 /**
  * The implementation of the GORM static method contract for Hibernate

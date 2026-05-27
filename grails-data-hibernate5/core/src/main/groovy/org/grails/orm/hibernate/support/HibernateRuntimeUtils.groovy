@@ -38,7 +38,6 @@ import org.grails.datastore.mapping.model.types.OneToOne
 import org.grails.datastore.mapping.proxy.ProxyHandler
 import org.grails.datastore.mapping.validation.ValidationErrors
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler
-import groovy.lang.MetaClass
 
 /**
  * Utility methods used at runtime by the GORM for Hibernate implementation

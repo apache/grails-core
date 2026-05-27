@@ -224,7 +224,9 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
 
         Expression valueMember = annotationNode.getMember('value')
         ClassExpression ce = valueMember instanceof ClassExpression ? (ClassExpression) valueMember : null
+        
         ClassNode targetDomainClass = ce != null ? ce.type : ClassHelper.OBJECT_TYPE
+
         ClassNode datastoreType = ClassHelper.make(Datastore)
 
         if (isInterface || isAbstractClass) {
@@ -253,16 +255,15 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
             // add compile static by default
             impl.addAnnotation(new AnnotationNode(COMPILE_STATIC_TYPE))
 
-            // Auto-inherit datasource from domain class's mapping if the service
-            // does not already have an explicit @Transactional(connection=...)
-            if (targetDomainClass != ClassHelper.OBJECT_TYPE) {
+            String explicitConnection = getExplicitConnection(classNode)
+            if (explicitConnection != null) {
+                generateConnectionAwareTransactionManager(impl, new ConstantExpression(explicitConnection))
+            } else if (targetDomainClass != ClassHelper.OBJECT_TYPE) {
                 def domainConnection = resolveDomainDatasource(targetDomainClass)
                 if (domainConnection != null
                         && ConnectionSource.DEFAULT != domainConnection
                         && ConnectionSource.ALL != domainConnection) {
-                    if (!hasExplicitConnectionAnnotation(classNode)) {
-                        applyDomainConnectionToService(classNode, impl, domainConnection)
-                    }
+                    applyDomainConnectionToService(classNode, impl, domainConnection)
                 } else {
                     // Generate a default transaction manager getter for DEFAULT connections
                     generateDefaultTransactionManager(impl, targetDomainClass)
@@ -581,16 +582,18 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
         return null
     }
 
-    private static boolean hasExplicitConnectionAnnotation(ClassNode classNode) {
+    private static String getExplicitConnection(ClassNode classNode) {
         AnnotationNode ann = findAnnotation((AnnotatedNode)classNode, Transactional)
         if (ann != null) {
             Expression connection = ann.getMember('connection')
             if (connection instanceof ConstantExpression) {
                 def value = ((ConstantExpression) connection).value?.toString()
-                return value != null && !value.isEmpty()
+                if (value != null && !value.isEmpty()) {
+                    return value
+                }
             }
         }
-        return false
+        return null
     }
 
     private static void applyDomainConnectionToService(ClassNode classNode, ClassNode implClass, String connectionName) {
@@ -633,8 +636,10 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
         def multipleConnectionDatastore = ClassHelper.make(MultipleConnectionSourceCapableDatastore)
         def registryExpr = callX(classX(GormRegistry), 'getInstance')
 
-        // getDatastore() call (method from Service trait or overridden on impl)
-        def datastoreVar = callX(varX('this'), 'getDatastore')
+        // getTargetDatastore() respects the $targetDatastore field set via setTargetDatastore(),
+        // which is the parent multi-datasource datastore. getDatastore() resolves via GormRegistry
+        // and may return a child (default-only) datastore that can't route to secondary.
+        def datastoreVar = callX(varX('this'), 'getTargetDatastore')
         // ((MultipleConnectionSourceCapableDatastore) datastore).getDatastoreForConnection(connectionName)
         def datastoreForConnection = callD(
                 castX(multipleConnectionDatastore, datastoreVar),

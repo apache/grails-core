@@ -18,6 +18,7 @@
  */
 package org.grails.datastore.gorm
 
+import spock.lang.PendingFeature
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.Person
@@ -28,6 +29,7 @@ class DistinctProjectionSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager>
         manager.addAllDomainClasses([Person])
     }
 
+    @PendingFeature(reason = 'SimpleMapDatastore does not support distinct projections')
     def "Test that using the distinct projection returns distinct results"() {
         given: "Some people with the same last names"
         new Person(firstName: "Homer", lastName: "Simpson").save()

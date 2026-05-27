@@ -18,42 +18,42 @@
  */
 package org.grails.orm.hibernate
 
-import java.util.Arrays
-import java.util.Collections
-import java.util.ArrayList
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import org.grails.datastore.gorm.GormInstanceApi
-import org.grails.datastore.gorm.GormValidateable
-import org.grails.datastore.mapping.engine.event.ValidationEvent
-import org.grails.datastore.mapping.core.Datastore
-import org.grails.datastore.mapping.model.MappingContext
-import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.datastore.mapping.model.config.GormProperties
-import org.grails.datastore.mapping.reflect.ClassUtils
+import org.codehaus.groovy.runtime.InvokerHelper
+
+import jakarta.persistence.LockModeType
+
+import org.hibernate.Hibernate
+import org.hibernate.Session
+import org.hibernate.collection.spi.PersistentCollection
+import org.hibernate.engine.spi.EntityEntry
+import org.hibernate.engine.spi.SessionImplementor
+import org.hibernate.persister.entity.EntityPersister
+
 import org.springframework.validation.Errors
 import org.springframework.validation.Validator
+
 import grails.gorm.validation.CascadingValidator
 import org.grails.datastore.gorm.DatastoreResolver
-import org.hibernate.Session
-import org.hibernate.engine.spi.SessionImplementor
-import org.hibernate.engine.spi.EntityEntry
-import org.hibernate.persister.entity.EntityPersister
-import org.grails.datastore.mapping.reflect.EntityReflector
-import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
-import org.grails.datastore.mapping.model.types.Association
-import org.grails.datastore.mapping.model.types.OneToMany
-import org.grails.datastore.mapping.model.types.ManyToMany
-import org.hibernate.collection.spi.PersistentCollection
-import jakarta.persistence.LockModeType
-import org.codehaus.groovy.runtime.InvokerHelper
-import org.grails.datastore.mapping.model.PersistentProperty
-import org.grails.orm.hibernate.HibernateGormValidationApi
+import org.grails.datastore.gorm.GormInstanceApi
+import org.grails.datastore.gorm.GormValidateable
 import org.grails.datastore.gorm.finders.DynamicFinder
-import org.grails.orm.hibernate.support.HibernateRuntimeUtils
-import org.grails.orm.hibernate.support.ClosureEventListener
+import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
+import org.grails.datastore.mapping.engine.event.ValidationEvent
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.PersistentProperty
+import org.grails.datastore.mapping.model.config.GormProperties
+import org.grails.datastore.mapping.model.types.Association
+import org.grails.datastore.mapping.model.types.ManyToMany
+import org.grails.datastore.mapping.model.types.OneToMany
+import org.grails.datastore.mapping.reflect.ClassUtils
+import org.grails.datastore.mapping.reflect.EntityReflector
 import org.grails.orm.hibernate.proxy.GroovyProxyInterceptorLogic
-import org.hibernate.Hibernate
+import org.grails.orm.hibernate.support.ClosureEventListener
+import org.grails.orm.hibernate.support.HibernateRuntimeUtils
 
 /**
  * Hibernate GORM instance API.
@@ -82,10 +82,10 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     }
 
     protected void initializeValidationException(ClassLoader classLoader) {
-        for (cl in [classLoader, Thread.currentThread().getContextClassLoader(), HibernateGormInstanceApi.class.classLoader]) {
+        for (cl in [classLoader, Thread.currentThread().getContextClassLoader(), HibernateGormInstanceApi.classLoader]) {
             if (cl == null) continue
             try {
-                this.validationException = (Class<? extends Exception>) cl.loadClass("grails.validation.ValidationException")
+                this.validationException = (Class<? extends Exception>) cl.loadClass('grails.validation.ValidationException')
                 return
             } catch (Throwable e) {
                 // ignore
@@ -107,11 +107,11 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
      */
     @CompileDynamic
     Object methodMissing(Object target, String name, Object[] args) {
-        if ("isInitialized" == name) {
+        if ('isInitialized' == name) {
             Boolean groovyResult = GroovyProxyInterceptorLogic.isInitialized(target)
             return groovyResult != null ? groovyResult : Hibernate.isInitialized(target)
         }
-        if ("initialize" == name || "getTarget" == name) {
+        if ('initialize' == name || 'getTarget' == name) {
             Hibernate.initialize(target)
             return target
         }
@@ -309,7 +309,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
     static {
         try {
-            DEFERRED_BINDING = HibernateGormInstanceApi.class.classLoader.loadClass("org.grails.datastore.mapping.core.DeferredBindingActions")
+            DEFERRED_BINDING = HibernateGormInstanceApi.classLoader.loadClass('org.grails.datastore.mapping.core.DeferredBindingActions')
         } catch (Throwable e) {
             DEFERRED_BINDING = null
         }
@@ -340,8 +340,8 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     }
 
     protected boolean shouldFlush(Map arguments) {
-        if (arguments?.containsKey("flush")) {
-            return ClassUtils.getBooleanFromMap("flush", arguments)
+        if (arguments?.containsKey('flush')) {
+            return ClassUtils.getBooleanFromMap('flush', arguments)
         }
         if (arguments?.containsKey(DynamicFinder.ARGUMENT_FLUSH_MODE)) {
             return ClassUtils.getBooleanFromMap(DynamicFinder.ARGUMENT_FLUSH_MODE, arguments)
@@ -350,8 +350,8 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     }
 
     protected boolean shouldValidate(Map arguments, PersistentEntity domainClass) {
-        if (arguments?.containsKey("validate")) {
-            return ClassUtils.getBooleanFromMap("validate", arguments)
+        if (arguments?.containsKey('validate')) {
+            return ClassUtils.getBooleanFromMap('validate', arguments)
         }
         if (arguments?.containsKey(org.grails.datastore.gorm.GormValidationApi.ARGUMENT_DEEP_VALIDATE)) {
             return ClassUtils.getBooleanFromMap(org.grails.datastore.gorm.GormValidationApi.ARGUMENT_DEEP_VALIDATE, arguments)
@@ -360,8 +360,8 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     }
 
     protected boolean shouldFail(Map arguments) {
-        if (arguments?.containsKey("failOnError")) {
-            return ClassUtils.getBooleanFromMap("failOnError", arguments)
+        if (arguments?.containsKey('failOnError')) {
+            return ClassUtils.getBooleanFromMap('failOnError', arguments)
         }
         return isFailOnError()
     }

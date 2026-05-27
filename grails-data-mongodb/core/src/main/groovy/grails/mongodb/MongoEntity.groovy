@@ -32,7 +32,6 @@ import org.bson.Document
 import org.bson.conversions.Bson
 
 import grails.mongodb.api.MongoAllOperations
-import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.mongo.MongoCriteriaBuilder

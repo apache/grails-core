@@ -28,10 +28,6 @@ tasks.withType(Test).configureEach {
     outputs.cacheIf { !doNotCacheTests }
     outputs.upToDateWhen { !doNotCacheTests }
 
-    // Each test class runs in its own JVM to prevent cross-class GormRegistry singleton
-    // pollution between TCK specs (which register/destroy datastores per feature) and
-    // standalone multi-tenant specs that rely on @Shared datastore state across features.
-    forkEvery = 1
 
     onlyIf {
         ![

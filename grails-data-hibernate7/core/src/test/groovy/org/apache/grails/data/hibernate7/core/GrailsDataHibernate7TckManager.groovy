@@ -25,6 +25,7 @@ import groovy.sql.Sql
 import org.apache.grails.data.testing.tck.base.GrailsDataTckManager
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
+import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
 import org.grails.orm.hibernate.GrailsHibernateTransactionManager
@@ -191,9 +192,12 @@ class GrailsDataHibernate7TckManager extends GrailsDataTckManager {
 
     @Override
     def getServiceForConnection(Class serviceType, String connectionName) {
-        multiDataSourceDatastore
-                .getDatastoreForConnection(connectionName)
-                .getService(serviceType)
+        def service = multiDataSourceDatastore.getDatastoreForConnection(connectionName).getService(serviceType)
+        if (service.respondsTo('setTargetDatastore')) {
+            MultipleConnectionSourceCapableDatastore[] arr = [multiDataSourceDatastore]
+            service.setTargetDatastore(arr)
+        }
+        return service
     }
 
     @Override

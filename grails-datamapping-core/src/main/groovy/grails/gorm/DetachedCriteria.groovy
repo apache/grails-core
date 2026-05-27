@@ -24,7 +24,6 @@ import groovy.util.logging.Slf4j
 
 import jakarta.persistence.criteria.JoinType
 
-import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.finders.DynamicFinder

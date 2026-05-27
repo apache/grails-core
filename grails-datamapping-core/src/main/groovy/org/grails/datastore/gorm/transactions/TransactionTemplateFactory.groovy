@@ -19,10 +19,12 @@
 package org.grails.datastore.gorm.transactions
 
 import groovy.transform.CompileStatic
-import grails.gorm.transactions.GrailsTransactionTemplate
+
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.interceptor.TransactionAttribute
+
+import grails.gorm.transactions.GrailsTransactionTemplate
 
 /**
  * Factory interface for creating transaction templates with datastore-specific behavior.
@@ -31,6 +33,7 @@ import org.springframework.transaction.interceptor.TransactionAttribute
  */
 @CompileStatic
 interface TransactionTemplateFactory {
+
     /**
      * Create a transaction template with default settings
      * @param transactionManager The transaction manager

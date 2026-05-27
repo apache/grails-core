@@ -26,8 +26,8 @@ import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.FieldNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.Parameter
-import org.codehaus.groovy.ast.expr.ClassExpression
 import org.codehaus.groovy.ast.expr.ArgumentListExpression
+import org.codehaus.groovy.ast.expr.ClassExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
@@ -116,16 +116,23 @@ abstract class AbstractDatastoreMethodDecoratingTransformation extends AbstractM
             markAsGenerated(declaringClassNode, targetDatastoreField)
         }
 
-        if (declaringClassNode.getMethod(METHOD_GET_TARGET_DATASTORE, getTargetDatastoreParams) == null && !AstUtils.hasProperty(declaringClassNode, "targetDatastore")) {
+        if (declaringClassNode.getMethod(METHOD_GET_TARGET_DATASTORE, getTargetDatastoreParams) == null && !AstUtils.hasProperty(declaringClassNode, 'targetDatastore')) {
+            // When $targetDatastore is explicitly set (e.g. by setTargetDatastore), it is the authoritative
+            // parent multi-datasource datastore and must be used for connection routing. Falling back to the
+            // API resolver can return a child datastore that doesn't know about sibling connections.
             MethodNode mn = declaringClassNode.addMethod(METHOD_GET_TARGET_DATASTORE, Modifier.PUBLIC, datastoreType, getTargetDatastoreParams, null,
-                    returnS(datastoreLookupCall)
+                    ifElseS(
+                        notNullX(varX(targetDatastoreField)),
+                        returnS(callD(varX(targetDatastoreField), METHOD_GET_DATASTORE_FOR_CONNECTION, varX(connectionNameParam))),
+                        returnS(datastoreLookupCall)
+                    )
             )
             markAsGenerated(declaringClassNode, mn)
             if (!isSpockTest) {
                 compileMethodStatically(source, mn)
             }
         }
-        if (declaringClassNode.getMethod(METHOD_GET_TARGET_DATASTORE, ZERO_PARAMETERS) == null && !AstUtils.hasProperty(declaringClassNode, "targetDatastore")) {
+        if (declaringClassNode.getMethod(METHOD_GET_TARGET_DATASTORE, ZERO_PARAMETERS) == null && !AstUtils.hasProperty(declaringClassNode, 'targetDatastore')) {
             MethodNode mn = declaringClassNode.addMethod(METHOD_GET_TARGET_DATASTORE, Modifier.PUBLIC,  datastoreType, ZERO_PARAMETERS, null,
                     ifElseS(notNullX(varX(targetDatastoreField)), returnS(varX(targetDatastoreField)), returnS(datastoreLookupDefaultCall))
             )

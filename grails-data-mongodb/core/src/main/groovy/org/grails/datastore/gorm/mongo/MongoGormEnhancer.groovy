@@ -38,9 +38,8 @@ class MongoGormEnhancer extends GormEnhancer {
 
     static {
         // Register the MongoDB API factory before any enhancers are created
-        GormRegistry.getInstance().registerApiFactory(MongoDatastore.class, new MongoGormApiFactory())
+        GormRegistry.getInstance().registerApiFactory(MongoDatastore, new MongoGormApiFactory())
     }
-
 
     MongoGormEnhancer(MongoDatastore datastore, PlatformTransactionManager transactionManager, MongoConnectionSourceSettings settings) {
         super(datastore, transactionManager, settings)

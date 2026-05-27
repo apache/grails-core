@@ -138,7 +138,7 @@ class GrailsDataHibernate5TckManager extends GrailsDataTckManager {
                 'hibernate.flush.mode'     : 'COMMIT',
                 'hibernate.cache.queries'  : 'true',
                 'hibernate.hbm2ddl.auto'   : 'create-drop',
-                'dataSources.secondary'    : [url: "jdbc:h2:mem:tckSecondaryDB;LOCK_TIMEOUT=10000"],
+                'dataSources.secondary.url': "jdbc:h2:mem:tckSecondaryDB;LOCK_TIMEOUT=10000",
         ]
         multiDataSourceDatastore = new HibernateDatastore(
                 DatastoreUtils.createPropertyResolver(config), domainClasses
@@ -179,7 +179,7 @@ class GrailsDataHibernate5TckManager extends GrailsDataTckManager {
                 'hibernate.flush.mode'                      : 'COMMIT',
                 'hibernate.cache.queries'                   : 'true',
                 'hibernate.hbm2ddl.auto'                    : 'create-drop',
-                'dataSources.secondary'                     : [url: "jdbc:h2:mem:tckMtSecondaryDB;LOCK_TIMEOUT=10000"],
+                'dataSources.secondary.url': "jdbc:h2:mem:tckMtSecondaryDB;LOCK_TIMEOUT=10000",
         ]
         multiTenantMultiDataSourceDatastore = new HibernateDatastore(
                 DatastoreUtils.createPropertyResolver(config), domainClasses

@@ -19,13 +19,15 @@
 package org.grails.orm.hibernate
 
 import groovy.transform.CompileStatic
+
+import org.springframework.transaction.PlatformTransactionManager
+
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.model.PersistentEntity
-import org.springframework.transaction.PlatformTransactionManager
 
 /**
  * A {@link GormEnhancer} for Hibernate.
@@ -60,12 +62,7 @@ class HibernateGormEnhancer extends GormEnhancer {
     }
 
     @Override
-    void close() throws IOException {
-        super.close()
-    }
-
-    @Override
-    public List<String> allQualifiers(Datastore datastore, PersistentEntity entity) {
+    List<String> allQualifiers(Datastore datastore, PersistentEntity entity) {
         List<String> qualifiers = new ArrayList<>(super.allQualifiers(datastore, entity))
         if (qualifiers.contains(ConnectionSource.ALL)) {
             qualifiers.remove(ConnectionSource.ALL)

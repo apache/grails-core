@@ -20,11 +20,14 @@
 package org.grails.orm.hibernate
 
 import groovy.transform.CompileStatic
+
+import org.hibernate.SessionFactory
+
+import org.springframework.transaction.support.TransactionSynchronizationManager
+
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.SessionResolver
 import org.grails.orm.hibernate.support.hibernate7.SessionHolder
-import org.hibernate.SessionFactory
-import org.springframework.transaction.support.TransactionSynchronizationManager
 
 /**
  * Hibernate 7 specific SessionResolver
@@ -33,18 +36,18 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * @since 8.0
  */
 @CompileStatic
-public class HibernateSessionResolver implements SessionResolver<Session> {
+class HibernateSessionResolver implements SessionResolver<Session> {
 
     private final SessionFactory sessionFactory
     private final HibernateDatastore datastore
 
-    public HibernateSessionResolver(HibernateDatastore datastore, SessionFactory sessionFactory) {
+    HibernateSessionResolver(HibernateDatastore datastore, SessionFactory sessionFactory) {
         this.datastore = datastore
         this.sessionFactory = sessionFactory
     }
 
     @Override
-    public Session resolve() {
+    Session resolve() {
         // 1. Try to find a GORM session bound to the datastore
         Object resource = TransactionSynchronizationManager.getResource(datastore)
         if (resource instanceof org.grails.datastore.mapping.transactions.SessionHolder) {
@@ -66,20 +69,20 @@ public class HibernateSessionResolver implements SessionResolver<Session> {
     }
 
     @Override
-    public Session resolve(String qualifier) {
+    Session resolve(String qualifier) {
         // Implementation for multi-datasource routing
         return datastore.getDatastoreForConnection(qualifier).getSessionResolver().resolve()
     }
 
     @Override
-    public void bind(Session session) {
+    void bind(Session session) {
         if (session instanceof HibernateSession) {
             TransactionSynchronizationManager.bindResource(sessionFactory, new SessionHolder(((HibernateSession) session).getNativeSession()))
         }
     }
 
     @Override
-    public void unbind() {
+    void unbind() {
         TransactionSynchronizationManager.unbindResource(sessionFactory)
     }
 }

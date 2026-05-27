@@ -20,12 +20,9 @@ package grails.gorm.hibernate
 
 import groovy.transform.CompileStatic
 import groovy.transform.Generated
-
 import org.codehaus.groovy.runtime.InvokerHelper
 
-import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormEntity
-import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.ToOne

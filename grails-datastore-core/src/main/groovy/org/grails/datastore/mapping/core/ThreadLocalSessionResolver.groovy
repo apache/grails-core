@@ -17,11 +17,11 @@
  *  under the License.
  */
 
-package org.grails.datastore.mapping.core;
+package org.grails.datastore.mapping.core
 
-import groovy.transform.CompileStatic;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentHashMap
+
+import groovy.transform.CompileStatic
 
 /**
  * A default thread-bound SessionResolver
@@ -30,37 +30,37 @@ import java.util.concurrent.ConcurrentHashMap;
  * @since 8.0
  */
 @CompileStatic
-public class ThreadLocalSessionResolver<S extends Session> implements SessionResolver<S> {
+class ThreadLocalSessionResolver<S extends Session> implements SessionResolver<S> {
 
-    private final ThreadLocal<S> currentSession = new ThreadLocal<>();
-    private final Map<String, S> qualifiedSessions = new ConcurrentHashMap<>();
+    private final ThreadLocal<S> currentSession = new ThreadLocal<>()
+    private final Map<String, S> qualifiedSessions = new ConcurrentHashMap<>()
 
     @Override
-    public S resolve() {
-        return currentSession.get();
+    S resolve() {
+        return currentSession.get()
     }
 
     @Override
-    public S resolve(String qualifier) {
-        return qualifiedSessions.get(qualifier);
+    S resolve(String qualifier) {
+        return qualifiedSessions.get(qualifier)
     }
 
     @Override
-    public void bind(S session) {
-        currentSession.set(session);
+    void bind(S session) {
+        currentSession.set(session)
         // Note: In a production scenario, we'd need to link the session's datastore qualifier here.
     }
 
-    public void bind(String qualifier, S session) {
-        qualifiedSessions.put(qualifier, session);
+    void bind(String qualifier, S session) {
+        qualifiedSessions.put(qualifier, session)
     }
 
     @Override
-    public void unbind() {
-        currentSession.remove();
+    void unbind() {
+        currentSession.remove()
     }
     
-    public void unbind(String qualifier) {
-        qualifiedSessions.remove(qualifier);
+    void unbind(String qualifier) {
+        qualifiedSessions.remove(qualifier)
     }
 }

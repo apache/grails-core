@@ -26,6 +26,7 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 class MongoTransactionContext {
+
     private static final ThreadLocal<Boolean> ROLLBACK_AWARE = new ThreadLocal<>()
 
     static boolean isRollbackAwareActive() {

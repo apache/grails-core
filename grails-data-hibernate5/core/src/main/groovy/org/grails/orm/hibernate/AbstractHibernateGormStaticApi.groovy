@@ -40,9 +40,11 @@ import org.hibernate.transform.DistinctRootEntityResultTransformer
 import org.springframework.core.convert.ConversionService
 import org.springframework.transaction.PlatformTransactionManager
 
+import org.grails.datastore.gorm.DatastoreResolver
 import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.finders.FinderMethod
+import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.proxy.ProxyHandler
 import org.grails.datastore.mapping.reflect.ClassUtils
@@ -52,8 +54,6 @@ import org.grails.orm.hibernate.exceptions.GrailsQueryException
 import org.grails.orm.hibernate.query.GrailsHibernateQueryUtils
 import org.grails.orm.hibernate.query.HibernateHqlQuery
 import org.grails.orm.hibernate.support.HibernateRuntimeUtils
-import org.grails.datastore.mapping.model.MappingContext
-import org.grails.datastore.gorm.DatastoreResolver
 
 /**
  * Abstract implementation of the Hibernate static API for GORM, providing String-based method implementations
@@ -95,7 +95,6 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
         }
         return template
     }
-
 
     protected ConversionService getConversionService() {
         getHibernateDatastore().mappingContext.conversionService

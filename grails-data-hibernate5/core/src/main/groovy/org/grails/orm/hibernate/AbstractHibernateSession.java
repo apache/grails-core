@@ -225,5 +225,6 @@ public abstract class AbstractHibernateSession extends AbstractAttributeStoringS
     }
 
     public abstract IHibernateTemplate getHibernateTemplate();
+
     public abstract FlushModeType getFlushMode();
 }

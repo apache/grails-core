@@ -157,7 +157,7 @@ class GraphQLDataFetcherManagerSpec extends Specification {
 
     void "test registering a binding fetcher"() {
         given:
-        GormEnhancer.STATIC_APIS.put(ConnectionSource.DEFAULT, ['java.lang.String': Mock(GormStaticApi)])
+        org.grails.datastore.gorm.GormRegistry.instance.registerApi('java.lang.String', Mock(GormStaticApi), null, null)
 
         when:
         manager.registerBindingDataFetcher(String, mockBindingFetcher)

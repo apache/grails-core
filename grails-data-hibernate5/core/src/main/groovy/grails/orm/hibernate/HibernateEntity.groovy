@@ -22,9 +22,7 @@ package grails.gorm.hibernate
 import groovy.transform.CompileStatic
 import groovy.transform.Generated
 
-import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormEntity
-import org.grails.datastore.gorm.GormRegistry
 import org.grails.orm.hibernate.AbstractHibernateGormStaticApi
 
 /**

@@ -25,23 +25,19 @@ import java.util.concurrent.ConcurrentHashMap
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
+import grails.gorm.MultiTenant
+import grails.gorm.multitenancy.CurrentTenantHolder
+import grails.gorm.multitenancy.Tenants
 import org.grails.datastore.gorm.utils.ReflectionUtils
 import org.grails.datastore.mapping.core.Datastore
-import org.grails.datastore.mapping.core.Session
-import org.grails.datastore.mapping.model.MappingContext
-import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.datastore.mapping.reflect.EntityReflector
-
 import org.grails.datastore.mapping.core.DatastoreUtils
+import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.SessionCallback
 import org.grails.datastore.mapping.core.VoidSessionCallback
 import org.grails.datastore.mapping.core.connections.ConnectionSource
-import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
-import org.grails.datastore.mapping.core.connections.ConnectionSources
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
-import grails.gorm.multitenancy.CurrentTenantHolder
-import grails.gorm.multitenancy.Tenants
-import grails.gorm.MultiTenant
 
 /**
  * Abstract base class for GORM API objects
@@ -100,7 +96,7 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
 
         String currentQualifier = getQualifier()
         boolean isMultiTenantCapable = ds instanceof MultiTenantCapableDatastore
-        boolean isMultiTenantEntity = MultiTenant.class.isAssignableFrom(persistentClass)
+        boolean isMultiTenantEntity = MultiTenant.isAssignableFrom(persistentClass)
 
         // Check if we have a non-default qualifier
         if (currentQualifier != null && !ConnectionSource.DEFAULT.equals(currentQualifier) && !ConnectionSource.OLD_DEFAULT.equalsIgnoreCase(currentQualifier)) {

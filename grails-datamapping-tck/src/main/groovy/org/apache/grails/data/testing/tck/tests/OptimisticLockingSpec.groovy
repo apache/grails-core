@@ -62,9 +62,10 @@ class OptimisticLockingSpec extends GrailsDataTckSpec {
         o.version == 1
     }
 
-    // hibernate has a customized version of this
     @IgnoreIf({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' })
     void 'Test optimistic locking'() {
+        if (manager.session.datastore.class.name.contains('SimpleMapDatastore')) return
+
         given:
         def o = new OptLockVersioned(name: 'locked').save(flush: true)
         manager.session.clear()

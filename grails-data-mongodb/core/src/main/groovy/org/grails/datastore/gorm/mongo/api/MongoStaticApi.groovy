@@ -336,7 +336,7 @@ class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D
         PersistentEntity persistentEntity = getGormPersistentEntity()
         if (mongoDatastore.multiTenancyMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR && persistentEntity.isMultiTenant()) {
             Serializable tenantId
-            if (qualifier != null && qualifier != ConnectionSource.DEFAULT) {
+            if (qualifier != null && !ConnectionSource.DEFAULT.equals(qualifier)) {
                 tenantId = qualifier
             } else {
                 tenantId = Tenants.currentId((Class<Datastore>) datastore.getClass())
@@ -355,7 +355,7 @@ class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D
         PersistentEntity persistentEntity = getGormPersistentEntity()
         if (mongoDatastore.multiTenancyMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR && persistentEntity.isMultiTenant()) {
             Serializable tenantId
-            if (qualifier != null && qualifier != ConnectionSource.DEFAULT) {
+            if (qualifier != null && !ConnectionSource.DEFAULT.equals(qualifier)) {
                 tenantId = qualifier
             } else {
                 tenantId = Tenants.currentId((Class<Datastore>) datastore.getClass())

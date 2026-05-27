@@ -23,9 +23,14 @@
  */
 package org.grails.datastore.mapping.simple.engine
 
+import java.util.concurrent.ConcurrentHashMap
+
+import org.springframework.context.ApplicationEventPublisher
+
+import grails.gorm.multitenancy.Tenants
+import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.engine.AssociationIndexer
 import org.grails.datastore.mapping.engine.EntityAccess
-import org.grails.datastore.mapping.engine.NativeEntryEntityPersister
 import org.grails.datastore.mapping.engine.PropertyValueIndexer
 import org.grails.datastore.mapping.keyvalue.engine.AbstractKeyValueEntityPersister
 import org.grails.datastore.mapping.model.MappingContext
@@ -35,17 +40,9 @@ import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.Basic
 import org.grails.datastore.mapping.model.types.Custom
 import org.grails.datastore.mapping.model.types.Embedded
-import org.grails.datastore.mapping.model.types.Embedded
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
-import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.simple.SimpleMapDatastore
 import org.grails.datastore.mapping.simple.SimpleMapSession
-import org.grails.datastore.mapping.simple.query.SimpleMapQuery
-import grails.gorm.multitenancy.Tenants
-import org.springframework.context.ApplicationEventPublisher
-import org.grails.datastore.mapping.core.OptimisticLockingException
-import org.grails.datastore.mapping.core.Session
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * A {@link org.grails.datastore.mapping.engine.EntityPersister} abstract class that backs onto an in-memory map.
@@ -142,11 +139,11 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
             return embeddedEntry
         } else if (prop instanceof Association) {
             if (value instanceof Collection) {
-                 return value.collect { 
-                     if (it == null) return null
-                     def persister = session.getPersister(it)
-                     return persister != null ? persister.getObjectIdentifier(it) : it
-                 }.findAll { it != null }
+                return value.collect {
+                    if (it == null) return null
+                    def persister = session.getPersister(it)
+                    return persister != null ? persister.getObjectIdentifier(it) : it
+                }.findAll { it != null }
             } else if (value != null) {
                 def persister = session.getPersister(value)
                 def id = persister != null ? persister.getObjectIdentifier(value) : value
@@ -172,7 +169,6 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
         
         Object k = key instanceof Number ? key.longValue() : key
         Map existing = (Map) dsMap[family].get(k)
-        
 
         if (isVersioned(entityAccess)) {
             if (existing == null || isDirty(entityAccess.getEntity(), existing)) {
@@ -249,7 +245,7 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
             if (datastore.getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
                 def currentId = Tenants.currentId(datastore)
                 if (currentId != null) {
-                    def entryTenantId = entry.get("tenantId")
+                    def entryTenantId = entry.get('tenantId')
                     if (entryTenantId != null && entryTenantId.toString() != currentId.toString()) {
                         return null
                     }
@@ -451,7 +447,7 @@ class SimpleMapEntityPersister extends AbstractKeyValueEntityPersister<Map, Obje
 
     @Override
     protected PersistentEntity discriminatePersistentEntity(PersistentEntity persistentEntity, Map nativeEntry) {
-        def disc = nativeEntry?.get("discriminator")
+        def disc = nativeEntry?.get('discriminator')
         if (disc) {
             def child = mappingContext.getChildEntityByDiscriminator(persistentEntity.rootEntity, disc.toString())
             if (child) return child

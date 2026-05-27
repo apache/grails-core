@@ -47,6 +47,7 @@ tasks.withType(Test).configureEach {
 
     useJUnitPlatform()
     maxParallelForks = 1
+
     jvmArgs = ['-Xmx1028M']
     afterSuite {
         System.out.print('.')

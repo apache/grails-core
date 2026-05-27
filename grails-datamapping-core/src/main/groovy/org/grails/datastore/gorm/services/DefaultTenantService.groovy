@@ -18,8 +18,6 @@
  */
 package org.grails.datastore.gorm.services
 
-import grails.gorm.transactions.NotTransactional
-import grails.gorm.transactions.ReadOnly
 import groovy.transform.CompileStatic
 
 import grails.gorm.multitenancy.TenantService

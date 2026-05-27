@@ -760,6 +760,7 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
 
         buildIndex();
 
+        org.grails.datastore.gorm.GormRegistry.getInstance().registerApiFactory(MongoDatastore.class, new org.grails.datastore.gorm.mongo.MongoGormApiFactory());
         return new MongoGormEnhancer(this, transactionManager, settings);
 
     }

@@ -21,18 +21,18 @@ package org.grails.datastore.gorm
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+
+import org.springframework.transaction.PlatformTransactionManager
+
 import grails.gorm.MultiTenant
 import org.grails.datastore.mapping.core.Datastore
-
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.reflect.MetaClassUtils
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
-import org.springframework.transaction.PlatformTransactionManager
-
 
 /**
  * Enhances a class with GORM methods
@@ -55,8 +55,6 @@ class GormEnhancer implements Closeable {
      * Whether to include external entities
      */
     boolean includeExternal = true
-
-
 
     /**
      * Backward-compatible constructor for callers that pass failOnError as a boolean.
@@ -204,7 +202,7 @@ class GormEnhancer implements Closeable {
     @CompileDynamic
     protected void removeConstraints() {
         try {
-            def cls = Class.forName("org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator", false, GormEnhancer.classLoader)
+            def cls = Class.forName('org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator', false, GormEnhancer.classLoader)
             if (cls != null) {
                 def factory = datastore.mappingContext.mappingFactory
                 if (factory.hasProperty('entityContext')) {
@@ -249,8 +247,6 @@ class GormEnhancer implements Closeable {
             }
         }
     }
-
-
 
     @CompileDynamic
     protected void addInstanceMethods(PersistentEntity e) {
