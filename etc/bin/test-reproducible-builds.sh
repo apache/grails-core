@@ -39,18 +39,18 @@ build_all() {
   # JDK 21 (default) pass across the three composites, Micronaut island skipped.
   killall -e java || true
   cd grails-gradle
-  ./gradlew build --rerun-tasks -PskipTests --no-build-cache
+  ./gradlew build --rerun-tasks -PskipTests --no-build-cache --no-daemon
   cd ..
-  ./gradlew build --rerun-tasks -PskipTests --no-build-cache -PskipMicronautProjects
+  ./gradlew build --rerun-tasks -PskipTests --no-build-cache --no-daemon -PskipMicronautProjects
   cd grails-forge
-  ./gradlew build --rerun-tasks -PskipTests --no-build-cache -PskipMicronautProjects
+  ./gradlew build --rerun-tasks -PskipTests --no-build-cache --no-daemon -PskipMicronautProjects
   cd ..
 
   # JDK 25 pass: the Grails-Micronaut island only.
   killall -e java || true
   JAVA_HOME="${JDK_25_HOME}" PATH="${JDK_25_HOME}/bin:${PATH}" \
     ./gradlew :grails-micronaut:build :grails-micronaut-bom:build \
-    --rerun-tasks -PskipTests --no-build-cache
+    --rerun-tasks -PskipTests --no-build-cache --no-daemon
   killall -e java || true
 }
 

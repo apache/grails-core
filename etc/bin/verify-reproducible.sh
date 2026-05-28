@@ -63,11 +63,11 @@ killall -e java || true
 # (Micronaut island skipped), grails-forge composite (transitively pulls in
 # the root build via includeBuild('..'), island skipped there too).
 cd grails-gradle
-./gradlew publishToMavenLocal --rerun-tasks -PskipTests --no-build-cache
+./gradlew publishToMavenLocal --rerun-tasks -PskipTests --no-build-cache --no-daemon
 cd ..
-./gradlew publishToMavenLocal --rerun-tasks -PskipTests --no-build-cache -PskipMicronautProjects
+./gradlew publishToMavenLocal --rerun-tasks -PskipTests --no-build-cache --no-daemon -PskipMicronautProjects
 cd grails-forge
-./gradlew publishToMavenLocal --rerun-tasks -PskipTests --no-build-cache -PskipMicronautProjects
+./gradlew publishToMavenLocal --rerun-tasks -PskipTests --no-build-cache --no-daemon -PskipMicronautProjects
 cd ..
 
 # JDK 25 pass: the Grails-Micronaut "island" only (grails-micronaut,
@@ -86,7 +86,7 @@ killall -e java || true
 echo "Switching to JDK 25 at ${JDK_25_HOME} for the Micronaut island..."
 JAVA_HOME="${JDK_25_HOME}" PATH="${JDK_25_HOME}/bin:${PATH}" \
   ./gradlew :grails-micronaut:publishToMavenLocal :grails-micronaut-bom:publishToMavenLocal \
-  --rerun-tasks -PskipTests --no-build-cache
+  --rerun-tasks -PskipTests --no-build-cache --no-daemon
 killall -e java || true
 echo "Generating Checksums for Built Jars"
 "${SCRIPT_DIR}/generate-build-artifact-hashes.groovy" "${DOWNLOAD_LOCATION}/grails" > "${DOWNLOAD_LOCATION}/grails/etc/bin/results/second.txt"
