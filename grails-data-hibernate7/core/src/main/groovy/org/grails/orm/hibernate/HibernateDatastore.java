@@ -578,7 +578,6 @@ public class HibernateDatastore extends AbstractDatastore
         }
     }
 
-
     protected void configureValidatorRegistry(HibernateMappingContext mappingContext) {
         StaticMessageSource messageSource = new StaticMessageSource();
         ValidatorRegistry defaultValidatorRegistry = createValidatorRegistry(messageSource);
@@ -1055,8 +1054,8 @@ public class HibernateDatastore extends AbstractDatastore
             }
         }
         final HibernateDatastore self = this;
-        return DatastoreUtils.execute(this, (SessionCallback<T>) session -> {
-            org.hibernate.Session nativeSession = ((HibernateSession)session).getNativeSession();
+        return DatastoreUtils.execute(this, session -> {
+            org.hibernate.Session nativeSession = ((HibernateSession) session).getNativeSession();
             SessionFactory sessionFactory = getSessionFactory();
             boolean alreadyBound = TransactionSynchronizationManager.hasResource(sessionFactory);
             if (!alreadyBound) {
