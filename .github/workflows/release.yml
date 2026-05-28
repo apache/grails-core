@@ -59,7 +59,7 @@ jobs:
           current_limit=$(gh api rate_limit --jq '.resources.graphql')
           echo "Current Rate Limit: $current_limit"
       - name: "📥 Checkout repository"
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.2
         with:
           fetch-depth: 0 # needed for docs release dropdown, (fetch-tags: true with fetch-depth: 1 does not work; https://github.com/actions/checkout/issues/1471)
           filter: tree:0 # limit size, keeping tags for docs release dropdown
@@ -76,13 +76,14 @@ jobs:
           echo "${GPG_KEY}" | gpg --batch --import
           gpg --list-keys
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v5.2.0
         with:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
           java-version: ${{ env.JAVA_VERSION }}
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:
+          cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "⚙️ Run pre-release"
         uses: apache/grails-github-actions/pre-release@asf
@@ -116,7 +117,7 @@ jobs:
           echo "Generated checksum for grails wrapper ZIP:"
           cat ${DIST_NAME}-wrapper-${VERSION}-bin.zip.sha512
       - name: "📤 Upload grails-wrapper ZIP"
-        uses: softprops/action-gh-release@v2.6.1
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
         with:
           tag_name: ${{ env.TAG }}
           files: |
@@ -141,7 +142,7 @@ jobs:
           echo "Generated checksum for grails cli ZIP:"
           cat ${DIST_NAME}-${VERSION}-bin.zip.sha512
       - name: "📤 Upload grails-cli ZIP"
-        uses: softprops/action-gh-release@v2.6.1
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
         with:
           tag_name: ${{ env.TAG }}
           files: |
@@ -230,7 +231,7 @@ jobs:
       - name: "📅 Generate build date file"
         run: echo "$SOURCE_DATE_EPOCH" >> build/BUILD_DATE.txt
       - name: "📤 Upload build date, checksums and published artifact files"
-        uses: softprops/action-gh-release@v2.6.1
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
         with:
           tag_name: ${{ env.TAG }}
           files: |
@@ -253,7 +254,7 @@ jobs:
           current_limit=$(gh api rate_limit --jq '.resources.graphql')
           echo "Current Rate Limit: $current_limit"
       - name: "📥 Checkout Grails Core repository"
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.2
         with:
           path: grails
           ref: ${{ env.TAG }}
@@ -322,7 +323,7 @@ jobs:
       - name: "📦 Create source distribution checksum"
         run: sha512sum ${DIST_NAME}-${VERSION}-src.zip > ${DIST_NAME}-${VERSION}-src.zip.sha512
       - name: "🚀 Upload ZIP and Signature to GitHub Release"
-        uses: softprops/action-gh-release@v2.6.1
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
         with:
           tag_name: ${{ env.TAG }}
           files: |
@@ -449,12 +450,12 @@ jobs:
           cd dev-repo
           svn info ${VERSION} > DIST_SVN_REVISION.txt
       - name: "📤 Upload Distribution SVN revision"
-        uses: softprops/action-gh-release@v2.6.1
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
         with:
           tag_name: ${{ env.TAG }}
           files: dev-repo/DIST_SVN_REVISION.txt
       - name: "📥 Checkout repository"
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.2
         with:
           path: ${{ env.REPO_NAME }}
           ref: ${{ env.TAG }}
@@ -505,7 +506,7 @@ jobs:
           current_limit=$(gh api rate_limit --jq '.resources.graphql')
           echo "Current Rate Limit: $current_limit"
       - name: "📥 Checkout repository"
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.2
         with:
           ref: ${{ env.TAG }}
       - name: "🛠️️ Install tools"
@@ -592,7 +593,7 @@ jobs:
 
           df -h
       - name: "📥 Checkout repository"
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.2
         with:
           fetch-depth: 0 # needed for docs release dropdown, (fetch-tags: true with fetch-depth: 1 does not work; https://github.com/actions/checkout/issues/1471)
           filter: tree:0 # limit size, keeping tags for docs release dropdown
@@ -601,13 +602,14 @@ jobs:
       - name: "📅 Ensure Common Build Date" # to ensure a reproducible build
         run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v5.2.0
         with:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
           java-version: ${{ env.JAVA_VERSION }}
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:
+          cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "📖 Generate Documentation"
         run: ./gradlew grails-doc:build -PgithubBranch=${TARGET_BRANCH}
@@ -635,17 +637,18 @@ jobs:
           current_limit=$(gh api rate_limit --jq '.resources.graphql')
           echo "Current Rate Limit: $current_limit"
       - name: "📥 Checkout repository"
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.2
         with:
           ref: ${{ env.TAG }}
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v5.2.0
         with:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
           java-version: ${{ env.JAVA_VERSION }}
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:
+          cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "🚀 Grails SDK Minor Release"
         if: contains(env.VERSION, 'M') || contains(env.VERSION, 'RC')
@@ -681,7 +684,7 @@ jobs:
           current_limit=$(gh api rate_limit --jq '.resources.graphql')
           echo "Current Rate Limit: $current_limit"
       - name: "📥 Checkout repository"
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.2
         with:
           ref: ${{ env.TAG }}
           token: ${{ secrets.GITHUB_TOKEN }}
