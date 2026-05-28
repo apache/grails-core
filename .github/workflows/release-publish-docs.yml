@@ -49,7 +49,7 @@ jobs:
       - name: "📝 Store release version"
         run: echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
       - name: "📥 Checkout repository"
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0 # needed for docs release dropdown, (fetch-tags: true with fetch-depth: 1 does not work; https://github.com/actions/checkout/issues/1471)
           filter: tree:0 # limit size, keeping tags for docs release dropdown
@@ -58,7 +58,7 @@ jobs:
       - name: "📅 Ensure Common Build Date" # to ensure a reproducible build
         run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v5.2.0
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
           java-version: ${{ env.JAVA_VERSION }}
