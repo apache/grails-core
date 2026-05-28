@@ -269,22 +269,11 @@ NOTE: The Grails Forge generator enforces this requirement: selecting any Micron
 
 ===== 7.4 Hibernate-Specific Micronaut BOMs
 
-Grails 8 introduces two new BOMs for projects that combine Micronaut integration with a specific Hibernate version:
-
-* `org.apache.grails:grails-hibernate5-micronaut-bom` -- For Micronaut projects using Hibernate 5. This is the default Micronaut BOM for Hibernate 5 users (analogous to how `grails-micronaut-bom` is the default). Use this when your Micronaut-enabled Grails application targets Hibernate 5.
+Grails 8 introduces a new BOM for projects that combine Micronaut integration with Hibernate 7:
 
 * `org.apache.grails:grails-hibernate7-micronaut-bom` -- For Micronaut projects using Hibernate 7. Use this when your Micronaut-enabled Grails application targets Hibernate 7.
 
-Both BOMs extend `grails-base-bom` and the Micronaut platform directly, and include the appropriate Hibernate dependency versions alongside the Micronaut-specific overrides (Groovy 5, Spock 2.4, etc.). This ensures no version conflicts when consumed via `enforcedPlatform`.
-
-[source,groovy]
-.build.gradle - Hibernate 5 with Micronaut (default)
-----
-dependencies {
-    implementation enforcedPlatform("org.apache.grails:grails-hibernate5-micronaut-bom:$grailsVersion")
-    implementation 'org.apache.grails:grails-micronaut'
-}
-----
+This BOM extends `grails-base-bom` and the Micronaut platform directly, and includes the appropriate Hibernate dependency versions alongside the Micronaut-specific overrides (Groovy 5, Spock 2.4, etc.). This ensures no version conflicts when consumed via `enforcedPlatform`.
 
 [source,groovy]
 .build.gradle - Hibernate 7 with Micronaut
@@ -295,7 +284,7 @@ dependencies {
 }
 ----
 
-The existing `grails-micronaut-bom` remains available and is equivalent to `grails-hibernate5-micronaut-bom` for backward compatibility. If the framework changes its default Hibernate version in the future, `grails-micronaut-bom` will track the new default while the Hibernate-specific BOMs remain pinned to their respective versions.
+The existing `grails-micronaut-bom` remains available. If the framework changes its default Hibernate version in the future, `grails-micronaut-bom` will track the new default while the Hibernate-specific BOM remains pinned to its version.
 
 ==== 8. Enum Serialization Default Changed
 

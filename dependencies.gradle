@@ -293,7 +293,7 @@ ext {
         bomPlatformDependencies += customBomPlatformDependencies
         combinedDependencies += customBomDependencies
         combinedPlatforms += customBomPlatformDependencies
-    } else if (project.name in ['grails-micronaut-bom', 'grails-hibernate5-micronaut-bom']) {
+    } else if (project.name == 'grails-micronaut-bom') {
         customBomVersions = [
                 'liquibase-hibernate.version': '4.27.0',
                 'liquibase.version'          : '4.27.0',

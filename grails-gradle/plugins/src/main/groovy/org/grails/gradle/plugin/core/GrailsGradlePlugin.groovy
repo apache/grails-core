@@ -479,7 +479,6 @@ ${importStatements}
 
         Set<String> validMicronautBoms = [
                 'grails-micronaut-bom',
-                'grails-hibernate5-micronaut-bom',
                 'grails-hibernate7-micronaut-bom',
         ] as Set<String>
 
@@ -499,7 +498,6 @@ ${importStatements}
                         "Micronaut's platform declares higher versions of javaparser-core and other libraries that would " +
                         'override the grails-bom versions via conflict resolution. Change to one of:\n\n' +
                         '    implementation enforcedPlatform("org.apache.grails:grails-micronaut-bom:$grailsVersion")\n' +
-                        '    implementation enforcedPlatform("org.apache.grails:grails-hibernate5-micronaut-bom:$grailsVersion")\n' +
                         '    implementation enforcedPlatform("org.apache.grails:grails-hibernate7-micronaut-bom:$grailsVersion")\n'
         )
     }

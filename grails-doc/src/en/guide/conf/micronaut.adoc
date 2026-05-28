@@ -47,17 +47,7 @@ The `grails-micronaut-bom` layers Micronaut-specific dependency overrides on top
 
 If your project targets a specific Hibernate version, use the corresponding Hibernate-specific Micronaut BOM instead of the generic `grails-micronaut-bom`:
 
-* `org.apache.grails:grails-hibernate5-micronaut-bom` -- Micronaut + Hibernate 5 (the default). See link:{versionsRef}Grails%20BOM%20Hibernate5%20Micronaut.html[Grails Hibernate 5 Micronaut BOM Dependencies].
 * `org.apache.grails:grails-hibernate7-micronaut-bom` -- Micronaut + Hibernate 7. See link:{versionsRef}Grails%20BOM%20Hibernate7%20Micronaut.html[Grails Hibernate 7 Micronaut BOM Dependencies].
-
-[source,groovy]
-.build.gradle - Hibernate 5 with Micronaut
-----
-dependencies {
-    implementation enforcedPlatform("org.apache.grails:grails-hibernate5-micronaut-bom:$grailsVersion")
-    implementation 'org.apache.grails:grails-micronaut'
-}
-----
 
 [source,groovy]
 .build.gradle - Hibernate 7 with Micronaut
