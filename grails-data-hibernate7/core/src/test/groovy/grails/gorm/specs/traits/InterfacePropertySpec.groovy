@@ -28,7 +28,7 @@ import spock.lang.Issue
  */
 class InterfacePropertySpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([TestDomain])
+        manager.domainClasses.addAll([TestDomain])
     }
 
     @Issue('https://github.com/grails/grails-data-hibernate5/issues/38')

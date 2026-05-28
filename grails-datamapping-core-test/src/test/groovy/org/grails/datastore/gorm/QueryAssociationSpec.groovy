@@ -28,7 +28,7 @@ import org.apache.grails.data.testing.tck.domains.TestEntity
 class QueryAssociationSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([TestEntity, ChildEntity, PlantCategory, Plant])
+        manager.domainClasses.addAll([TestEntity, ChildEntity, PlantCategory, Plant])
     }
 
     void "Test query one-to-one association with disjunction"() {

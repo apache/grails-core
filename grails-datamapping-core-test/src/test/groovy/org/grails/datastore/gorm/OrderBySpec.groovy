@@ -29,7 +29,7 @@ import org.apache.grails.data.testing.tck.domains.TestEntity
 class OrderBySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     def setupSpec() {
-        manager.addAllDomainClasses([TestEntity])
+        manager.domainClasses.addAll([TestEntity])
     }
 
     def setup() {

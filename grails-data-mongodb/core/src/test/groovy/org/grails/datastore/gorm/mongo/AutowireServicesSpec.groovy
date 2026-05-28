@@ -18,15 +18,14 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.springframework.context.support.GenericApplicationContext
 
-class AutowireServicesSpec extends MongoDatastoreSpec {
+class AutowireServicesSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([Pizza])
+        manager.domainClasses.addAll([Pizza])
     }
 
     void "Test that services can be autowired"() {

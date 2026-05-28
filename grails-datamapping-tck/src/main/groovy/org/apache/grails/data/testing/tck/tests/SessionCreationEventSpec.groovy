@@ -35,7 +35,7 @@ class SessionCreationEventSpec extends GrailsDataTckSpec {
     boolean contextAvailable = false
 
     void setupSpec() {
-        manager.addAllDomainClasses([TestEntity])
+        manager.domainClasses.addAll([TestEntity])
     }
 
     def setup() {

@@ -27,7 +27,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
  */
 class DomainGetterSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([DomainOne, DomainWithGetter])
+        manager.domainClasses.addAll([DomainOne, DomainWithGetter])
     }
 
     void "test a domain with a getter"() {

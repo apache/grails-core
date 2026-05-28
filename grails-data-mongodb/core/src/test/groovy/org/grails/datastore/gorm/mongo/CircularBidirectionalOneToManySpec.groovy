@@ -18,18 +18,17 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
 /**
  * Created by graemerocher on 24/08/2016.
  */
-class CircularBidirectionalOneToManySpec extends MongoDatastoreSpec {
+class CircularBidirectionalOneToManySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([Comment])
+        manager.domainClasses.addAll([Comment])
     }
 
     void "Test store and retrieve circular one-to-many association"() {

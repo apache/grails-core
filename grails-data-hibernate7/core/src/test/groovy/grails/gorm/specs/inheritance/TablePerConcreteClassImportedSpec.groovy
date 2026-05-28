@@ -25,7 +25,7 @@ import spock.lang.Issue
 @Issue('https://github.com/grails/grails-data-hibernate5/issues/151')
 class TablePerConcreteClassImportedSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([Vehicle, Spaceship])
+        manager.domainClasses.addAll([Vehicle, Spaceship])
     }
 
     void "test that subclasses are added to the imports on the metamodel"() {

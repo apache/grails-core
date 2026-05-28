@@ -29,7 +29,7 @@ import org.grails.orm.hibernate.proxy.HibernateProxyHandler
  */
 class ToOneProxySpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([Team, Club])
+        manager.domainClasses.addAll([Team, Club])
     }
 
     void "test that a proxy is not initialized on get"() {

@@ -18,18 +18,17 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Created by graemerocher on 20/04/16.
  */
-class LastUpdatedSpec extends MongoDatastoreSpec {
+class LastUpdatedSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([LastUpdateMe])
+        manager.domainClasses.addAll([LastUpdateMe])
     }
 
     void "Test lastUpdated and dateCreated"() {

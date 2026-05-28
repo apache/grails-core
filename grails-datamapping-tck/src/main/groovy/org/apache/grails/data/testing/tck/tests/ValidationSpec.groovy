@@ -40,7 +40,7 @@ import org.grails.datastore.mapping.model.PersistentEntity
 class ValidationSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([ClassWithListArgBeforeValidate, ClassWithNoArgBeforeValidate,
+        manager.domainClasses.addAll([ClassWithListArgBeforeValidate, ClassWithNoArgBeforeValidate,
                                      ClassWithOverloadedBeforeValidate, TestEntity, ChildEntity, Task])
     }
 

@@ -27,7 +27,7 @@ import org.apache.grails.data.testing.tck.domains.Dog
 class PropertyComparisonQuerySpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Dog])
+        manager.domainClasses.addAll([Dog])
     }
 
     void 'Test geProperty query'() {

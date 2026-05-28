@@ -32,7 +32,7 @@ import org.apache.grails.data.testing.tck.domains.PersonEvent
 class DomainEventsSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([ModifyPerson, PersonEvent])
+        manager.domainClasses.addAll([ModifyPerson, PersonEvent])
     }
 
     def setup() {

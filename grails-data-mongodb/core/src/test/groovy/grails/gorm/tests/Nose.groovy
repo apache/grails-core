@@ -16,9 +16,22 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.apache.grails.data.mongo.core
+package grails.gorm.tests
 
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import grails.persistence.Entity
 
-abstract class MongoDatastoreSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+/**
+ * @author graemerocher
+ */
+@Entity
+class Nose implements Serializable {
+    Long id
+    Long version
+    boolean hasFreckles
+    Face face
+    static belongsTo = [face: Face]
+
+    static mapping = {
+        face index:true
+    }
 }

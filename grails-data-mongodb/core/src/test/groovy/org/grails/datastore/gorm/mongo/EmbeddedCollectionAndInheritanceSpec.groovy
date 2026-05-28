@@ -18,18 +18,17 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Tests the use of embedded collections in inheritance hierarchies.
  */
-class EmbeddedCollectionAndInheritanceSpec extends MongoDatastoreSpec {
+class EmbeddedCollectionAndInheritanceSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([ECAISPerson, ECAISPet, ECAISDog])
+        manager.domainClasses.addAll([ECAISPerson, ECAISPet, ECAISDog])
     }
 
     def "Test read and write embedded collection inherited from parent"() {

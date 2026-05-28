@@ -27,7 +27,7 @@ import org.grails.datastore.gorm.validation.CascadingValidator
 class DeepValidateWithSaveSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([TestEntity])
+        manager.domainClasses.addAll([TestEntity])
     }
 
     void "save delegates deepValidate:true to CascadingValidator"() {

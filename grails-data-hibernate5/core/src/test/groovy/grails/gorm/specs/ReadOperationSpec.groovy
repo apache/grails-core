@@ -24,7 +24,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class ReadOperationSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([TestEntity])
+        manager.domainClasses.addAll([TestEntity])
     }
 
     void "test read operation for non existent"() {

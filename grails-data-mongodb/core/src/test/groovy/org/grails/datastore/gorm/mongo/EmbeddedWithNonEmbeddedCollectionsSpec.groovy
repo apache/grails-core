@@ -18,15 +18,14 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import grails.mongodb.MongoEntity
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class EmbeddedWithNonEmbeddedCollectionsSpec extends MongoDatastoreSpec {
+class EmbeddedWithNonEmbeddedCollectionsSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([Ship, Crew, Sailor, Captain])
+        manager.domainClasses.addAll([Ship, Crew, Sailor, Captain])
     }
 
     void "Test that embedded collections can have non-embedded collections"() {

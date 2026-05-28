@@ -27,7 +27,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class AddToAndInjectedServiceSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Pirate, Ship])
+        manager.domainClasses.addAll([Pirate, Ship])
     }
 
     @Issue('GRAILS-9119')

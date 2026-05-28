@@ -84,11 +84,9 @@ class FutureTaskPromise<T> extends FutureTask<T> implements Promise<T> {
     @Override
     protected void set(T t) {
         super.set(t)
-        if (successCallbacks != null) {
-            synchronized (successCallbacks) {
-                for (FutureTaskChildPromise callback : successCallbacks) {
-                    callback.accept(t)
-                }
+        synchronized (successCallbacks) {
+            for (FutureTaskChildPromise callback : successCallbacks) {
+                callback.accept(t)
             }
         }
     }
@@ -96,11 +94,9 @@ class FutureTaskPromise<T> extends FutureTask<T> implements Promise<T> {
     @Override
     protected void setException(Throwable t) {
         super.setException(t)
-        if (failureCallbacks != null) {
-            synchronized (failureCallbacks) {
-                for (FutureTaskChildPromise callback : failureCallbacks) {
-                    callback.accept(t)
-                }
+        synchronized (failureCallbacks) {
+            for (FutureTaskChildPromise callback : failureCallbacks) {
+                callback.accept(t)
             }
         }
     }

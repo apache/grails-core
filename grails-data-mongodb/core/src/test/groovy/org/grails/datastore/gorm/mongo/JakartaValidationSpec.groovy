@@ -18,20 +18,19 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import grails.gorm.annotation.Entity
 
 import jakarta.validation.constraints.Digits
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Created by graemerocher on 30/12/2016.
  */
-class JakartaValidationSpec extends MongoDatastoreSpec {
+class JakartaValidationSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([JakartaProduct])
+        manager.domainClasses.addAll([JakartaProduct])
     }
 
     void "test jakarta.validator validation"() {

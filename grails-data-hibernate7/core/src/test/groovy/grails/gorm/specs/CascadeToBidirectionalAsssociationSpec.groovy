@@ -33,7 +33,7 @@ import spock.lang.Issue
 @Issue('https://github.com/apache/grails-core/issues/9290')
 class CascadeToBidirectionalAsssociationSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([Club, Team, Player, Contract])
+        manager.domainClasses.addAll([Club, Team, Player, Contract])
     }
 
     /**

@@ -24,7 +24,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class ConstraintsSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([ConstrainedEntity])
+        manager.domainClasses.addAll([ConstrainedEntity])
     }
 
     void 'Test constraints with static default values'() {

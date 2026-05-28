@@ -18,19 +18,18 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.types.ObjectId
 import spock.lang.Ignore
 
 /**
  * Created by graemerocher on 22/04/16.
  */
-class EmbeddedSetAssignedIdSpec extends MongoDatastoreSpec {
+class EmbeddedSetAssignedIdSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([Itemized, LineItem, SubItem, JobItem])
+        manager.domainClasses.addAll([Itemized, LineItem, SubItem, JobItem])
     }
 
     void "Test saved nested embedded association graph"() {

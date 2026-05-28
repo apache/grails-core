@@ -24,7 +24,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class SaveAllSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Person])
+        manager.domainClasses.addAll([Person])
     }
 
     def "Test that many objects can be saved at once using multiple arguments"() {

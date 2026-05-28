@@ -18,19 +18,18 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import grails.gorm.annotation.Entity
 import grails.mongodb.MongoEntity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Created by graemerocher on 24/08/2016.
  */
-class IndexWithInheritanceSpec extends MongoDatastoreSpec {
+class IndexWithInheritanceSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Lion, Mammal])
+        manager.domainClasses.addAll([Lion, Mammal])
     }
 
     void "Test collection indexes"() {

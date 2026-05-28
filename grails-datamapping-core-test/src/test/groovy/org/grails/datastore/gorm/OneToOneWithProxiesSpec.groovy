@@ -31,7 +31,7 @@ import org.grails.datastore.mapping.proxy.EntityProxy
 class OneToOneWithProxiesSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     def setupSpec() {
-        manager.addAllDomainClasses([Face, Nose, Pet, org.apache.grails.data.testing.tck.domains.Person])
+        manager.domainClasses.addAll([Face, Nose, Pet, org.apache.grails.data.testing.tck.domains.Person])
     }
 
     void "Test persist and retrieve unidirectional many-to-one"() {

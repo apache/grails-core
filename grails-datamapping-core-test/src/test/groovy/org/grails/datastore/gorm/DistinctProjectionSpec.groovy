@@ -25,7 +25,7 @@ import org.apache.grails.data.testing.tck.domains.Person
 class DistinctProjectionSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Person])
+        manager.domainClasses.addAll([Person])
     }
 
     def "Test that using the distinct projection returns distinct results"() {

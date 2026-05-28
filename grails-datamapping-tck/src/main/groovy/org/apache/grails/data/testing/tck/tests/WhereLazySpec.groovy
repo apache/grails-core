@@ -24,7 +24,7 @@ import org.apache.grails.data.testing.tck.domains.Product
 class WhereLazySpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Product])
+        manager.domainClasses.addAll([Product])
     }
 
     void createProducts() {

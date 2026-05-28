@@ -34,7 +34,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class OneToManySpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Location, Country, Person, Pet, PetType, Face, Nose])
+        manager.domainClasses.addAll([Location, Country, Person, Pet, PetType, Face, Nose])
     }
 
     void "test save and return unidirectional one to many"() {

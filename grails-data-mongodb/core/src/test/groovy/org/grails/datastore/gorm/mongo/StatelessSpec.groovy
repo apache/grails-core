@@ -18,14 +18,13 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class StatelessSpec extends MongoDatastoreSpec {
+class StatelessSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Volcano])
+        manager.domainClasses.addAll([Volcano])
     }
 
     void "stateless and self-assigned ids can be used together"() {

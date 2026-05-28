@@ -18,18 +18,17 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
 /**
  * Created by graemerocher on 21/04/16.
  */
-class EventsWithAbstractInheritanceSpec extends MongoDatastoreSpec {
+class EventsWithAbstractInheritanceSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([ConcreteEventDomain])
+        manager.domainClasses.addAll([ConcreteEventDomain])
     }
 
     @Issue('https://github.com/apache/grails-data-mapping/issues/701')

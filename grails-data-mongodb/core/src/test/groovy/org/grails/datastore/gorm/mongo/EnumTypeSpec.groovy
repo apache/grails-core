@@ -18,19 +18,18 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import grails.persistence.Entity
 import jakarta.persistence.EnumType
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.types.ObjectId
 
 /**
  * Created by graemerocher on 06/05/14.
  */
-class EnumTypeSpec extends MongoDatastoreSpec {
+class EnumTypeSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([Dist])
+        manager.domainClasses.addAll([Dist])
     }
 
     void "Test ordinal mapping for enums"() {

@@ -27,7 +27,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class AutoLinkOneToManyAssociationSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([AutoLinkListAuthor, AutoLinkListBook])
+        manager.domainClasses.addAll([AutoLinkListAuthor, AutoLinkListBook])
     }
 
     @Issue('GRAILS-8815')

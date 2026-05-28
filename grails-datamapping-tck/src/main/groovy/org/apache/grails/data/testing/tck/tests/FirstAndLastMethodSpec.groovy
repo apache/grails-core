@@ -28,7 +28,7 @@ import org.apache.grails.data.testing.tck.domains.SimpleWidgetWithNonStandardId
 class FirstAndLastMethodSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([SimpleWidget, PersonWithCompositeKey, SimpleWidgetWithNonStandardId])
+        manager.domainClasses.addAll([SimpleWidget, PersonWithCompositeKey, SimpleWidgetWithNonStandardId])
     }
 
     void "Test first and last method with empty datastore"() {

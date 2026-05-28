@@ -16,22 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.gorm.specs
+package grails.gorm.tests
 
-import grails.mongodb.MongoEntity
 import grails.persistence.Entity
 
+/**
+ * @author graemerocher
+ */
 @Entity
-class Plant implements Serializable, MongoEntity<Plant> {
+class Face implements Serializable {
     Long id
     Long version
-    boolean goesInPatch
     String name
+    Nose nose
+    Person person
+    static hasOne = [nose: Nose]
+    static belongsTo = [person:Person]
 
-    static mapping = {
-        name index:true
-        goesInPatch index:true
+    static constraints = {
+        person nullable:true
     }
 }
-
-

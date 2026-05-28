@@ -18,13 +18,12 @@
  */
 package grails.mongodb.cascade
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class MongoCascadeSpec extends MongoDatastoreSpec {
+class MongoCascadeSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([Product, ProductLine])
+        manager.domainClasses.addAll([Product, ProductLine])
     }
 
     void "test association is not cascaded on update or insert"() {

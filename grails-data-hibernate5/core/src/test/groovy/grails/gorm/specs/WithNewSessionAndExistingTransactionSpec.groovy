@@ -36,7 +36,7 @@ import javax.sql.DataSource
 class WithNewSessionAndExistingTransactionSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Book])
+        manager.domainClasses.addAll([Book])
     }
 
     void "Test withNewSession when an existing transaction is present"() {

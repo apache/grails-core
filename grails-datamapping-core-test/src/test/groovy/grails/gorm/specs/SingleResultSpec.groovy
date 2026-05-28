@@ -30,7 +30,7 @@ import org.apache.grails.data.testing.tck.domains.TestEntity
 class SingleResultSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     def setupSpec() {
-        manager.addAllDomainClasses([TestEntity])
+        manager.domainClasses.addAll([TestEntity])
     }
 
     @Issue('https://github.com/apache/grails-data-mapping/issues/872')

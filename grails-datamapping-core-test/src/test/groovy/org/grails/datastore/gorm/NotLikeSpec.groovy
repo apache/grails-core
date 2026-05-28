@@ -28,7 +28,7 @@ import org.apache.grails.data.testing.tck.domains.TestEntity
 class NotLikeSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([TestEntity])
+        manager.domainClasses.addAll([TestEntity])
     }
 
 

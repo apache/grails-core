@@ -23,7 +23,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class DirtyCheckingSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([TestBook])
+        manager.domainClasses.addAll([TestBook])
     }
 
     void "When marking whole class dirty, then derived and transient properties are still not dirty"() {

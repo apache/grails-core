@@ -30,7 +30,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class BasicTypeHasManySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Workspace])
+        manager.domainClasses.addAll([Workspace])
     }
 
     @Issue('GRAILS-9876')

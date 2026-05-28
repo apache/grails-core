@@ -18,19 +18,18 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import com.mongodb.MongoBulkWriteException
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
 /**
  * Tests for usage of assigned identifiers
  */
-class AssignedIdentifierSpec extends MongoDatastoreSpec {
+class AssignedIdentifierSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([River, Lake, Volcano])
+        manager.domainClasses.addAll([River, Lake, Volcano])
     }
 
     void "Test that entities can be saved, retrieved and updated with assigned ids"() {

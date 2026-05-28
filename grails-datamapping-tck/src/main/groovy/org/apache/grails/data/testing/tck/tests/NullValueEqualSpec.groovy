@@ -25,7 +25,7 @@ import spock.lang.IgnoreIf
 class NullValueEqualSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([TestEntity])
+        manager.domainClasses.addAll([TestEntity])
     }
 
     void "test null value in equal"() {

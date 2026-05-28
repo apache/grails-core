@@ -27,6 +27,6 @@ import org.apache.grails.data.testing.tck.domains.UniqueGroup
 class UniqueConstraintSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([UniqueGroup, GroupWithin])
+        manager.domainClasses.addAll([UniqueGroup, GroupWithin])
     }
 }

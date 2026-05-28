@@ -32,10 +32,10 @@ import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.request.async.WebAsyncManager
 import org.springframework.web.context.request.async.WebAsyncUtils
 
-import grails.async.decorator.PromiseDecorator
 import grails.async.web.AsyncGrailsWebRequest
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.WebUtils
+import grails.async.decorator.PromiseDecorator
 
 /**
  * A promise decorated lookup strategy that binds a WebRequest to the promise thread

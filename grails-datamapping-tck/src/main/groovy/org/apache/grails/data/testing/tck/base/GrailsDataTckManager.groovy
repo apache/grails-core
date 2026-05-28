@@ -84,14 +84,6 @@ abstract class GrailsDataTckManager {
             TestEntity
     ]
 
-    /**
-     * Adds all the specified classes to the domain classes list.
-     * @param classes The classes to add
-     */
-    void addAllDomainClasses(Collection<Class> classes) {
-        domainClasses.addAll(classes)
-    }
-
     void setupSpec() {
         // noop
     }

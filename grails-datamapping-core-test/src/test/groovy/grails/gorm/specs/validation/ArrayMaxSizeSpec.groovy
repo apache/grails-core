@@ -31,7 +31,7 @@ import org.grails.datastore.mapping.model.MappingContext
 class ArrayMaxSizeSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([ArrayEntity])
+        manager.domainClasses.addAll([ArrayEntity])
     }
 
     void "test size validation"() {

@@ -18,11 +18,10 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import com.mongodb.DBRef
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.Document
 import org.bson.types.ObjectId
 import spock.lang.Issue
@@ -30,9 +29,9 @@ import spock.lang.Issue
 /**
  * @author Graeme Rocher
  */
-class DbRefWithEmbeddedSpec extends MongoDatastoreSpec {
+class DbRefWithEmbeddedSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([One, Two])
+        manager.domainClasses.addAll([One, Two])
     }
 
     @Issue('GPMONGODB-260')

@@ -16,15 +16,14 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.gorm.specs
-
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+package grails.gorm.tests
 
 import grails.persistence.Entity
-
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.types.ObjectId
 
-class DirtyCheckEmbeddedCollectionSpec extends MongoDatastoreSpec {
+class DirtyCheckEmbeddedCollectionSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
         manager.addAllDomainClasses([Foo, Bar])

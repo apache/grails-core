@@ -18,12 +18,13 @@
  */
 package grails.mongodb.bootstrap
 
-import grails.gorm.specs.Plant
+import grails.gorm.tests.Plant
 import org.apache.grails.testing.mongo.AutoStartedMongoSpec
 import org.grails.datastore.mapping.config.Settings
 import org.grails.datastore.mapping.mongo.MongoDatastore
 import spock.lang.AutoCleanup
 import spock.lang.Shared
+import spock.lang.Specification
 
 /**
  * Created by graemerocher on 16/12/16.

@@ -71,7 +71,7 @@ class Partner {
         def Contact = this.gcl.loadClass("Contact")
         def Address = this.gcl.loadClass("Address")
 
-        manager.addAllDomainClasses([Partner, Contact, Address])
+        manager.domainClasses.addAll([Partner, Contact, Address])
     }
 
     def setup() {

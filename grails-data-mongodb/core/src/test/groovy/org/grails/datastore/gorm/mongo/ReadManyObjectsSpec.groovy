@@ -18,10 +18,9 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.Document
 import org.bson.types.ObjectId
 import spock.lang.Requires
@@ -32,9 +31,9 @@ import spock.lang.Requires
 @Requires({
     System.getenv().get('CI') as Boolean
 })
-class ReadManyObjectsSpec extends MongoDatastoreSpec {
+class ReadManyObjectsSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([ProfileDoc])
+        manager.domainClasses.addAll([ProfileDoc])
     }
 
     void "Test that reading thousands of objects doesn't run out of memory"() {

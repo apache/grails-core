@@ -27,7 +27,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class InheritanceWithOneToManySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Group, Member, SubMember])
+        manager.domainClasses.addAll([Group, Member, SubMember])
     }
 
     @Issue('GRAILS-9010')

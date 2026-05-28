@@ -27,7 +27,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
  */
 class LastUpdateWithDynamicUpdateSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([LastUpdateTestA, LastUpdateTestB, LastUpdateTestC])
+        manager.domainClasses.addAll([LastUpdateTestA, LastUpdateTestB, LastUpdateTestC])
     }
 
     void "lastUpdated should work for dynamic update and no versioning on TestA"() {

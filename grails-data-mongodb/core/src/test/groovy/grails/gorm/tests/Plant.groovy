@@ -16,35 +16,22 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.gorm.specs
+package grails.gorm.tests
 
-import org.apache.grails.data.testing.tck.domains.PetType
+import grails.mongodb.MongoEntity
 import grails.persistence.Entity
 
-/**
- * @author graemerocher
- */
-/**
- * @author graemerocher
- */
 @Entity
-class Pet implements Serializable {
+class Plant implements Serializable, MongoEntity<Plant> {
     Long id
     Long version
+    boolean goesInPatch
     String name
-    Date birthDate = new Date()
-    PetType type = new PetType(name:"Unknown")
-    Person owner
-    Integer age
-    Face face
 
     static mapping = {
         name index:true
-    }
-
-    static constraints = {
-        owner nullable:true
-        age nullable: true
-        face nullable:true
+        goesInPatch index:true
     }
 }
+
+

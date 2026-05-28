@@ -16,12 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.gorm.specs.listener
-
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+package grails.gorm.tests.listener
 
 import grails.gorm.DetachedCriteria
 import grails.persistence.Entity
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEventListener
@@ -34,7 +34,7 @@ import org.springframework.context.ApplicationEvent
 /**
  * @author Tom Widmer
  */
-class PersistenceEventListenerSpec extends MongoDatastoreSpec {
+class PersistenceEventListenerSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     SpecPersistenceListener listener
 
     void setupSpec() {

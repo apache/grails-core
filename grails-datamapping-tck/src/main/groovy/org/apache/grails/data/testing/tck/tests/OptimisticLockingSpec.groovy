@@ -31,7 +31,7 @@ import org.grails.datastore.mapping.core.OptimisticLockingException
 class OptimisticLockingSpec extends GrailsDataTckSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([OptLockVersioned, OptLockNotVersioned])
+        manager.domainClasses.addAll([OptLockVersioned, OptLockNotVersioned])
     }
 
     void "Test versioning"() {

@@ -18,13 +18,13 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+import grails.gorm.tests.Plant
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-import grails.gorm.specs.Plant
-
-class SchemalessSpec extends MongoDatastoreSpec {
+class SchemalessSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([Plant])
+        manager.domainClasses += [Plant]
     }
 
     def "Test attach additional data"() {

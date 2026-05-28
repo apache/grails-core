@@ -18,18 +18,17 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 /**
  * @author Graeme Rocher
  */
-class CircularOneToManySpec extends MongoDatastoreSpec {
+class CircularOneToManySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Profile])
+        manager.domainClasses.addAll([Profile])
     }
 
     @Issue('GPMONGODB-254')

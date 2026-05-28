@@ -27,7 +27,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class NegationSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Book])
+        manager.domainClasses.addAll([Book])
     }
 
     void "Test negation in dynamic finder"() {

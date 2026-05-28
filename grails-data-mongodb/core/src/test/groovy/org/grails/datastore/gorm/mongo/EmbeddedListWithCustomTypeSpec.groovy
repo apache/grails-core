@@ -18,17 +18,16 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.types.ObjectId
 import spock.lang.Issue
 
-class EmbeddedListWithCustomTypeSpec extends MongoDatastoreSpec {
+class EmbeddedListWithCustomTypeSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Person, Family])
+        manager.domainClasses.addAll([Person, Family])
     }
 
     @Issue('GPMONGODB-217')

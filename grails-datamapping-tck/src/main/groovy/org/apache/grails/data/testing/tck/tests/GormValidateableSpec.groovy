@@ -25,7 +25,7 @@ import org.grails.datastore.gorm.GormValidateable
 class GormValidateableSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([TestEntity])
+        manager.domainClasses.addAll([TestEntity])
     }
 
     void 'Test that a class marked with @Entity implements GormValidateable'() {

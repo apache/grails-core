@@ -18,17 +18,16 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import com.mongodb.client.MongoCollection
 
 import grails.mongodb.MongoEntity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class MongoGormEnhancerSpec extends MongoDatastoreSpec {
+class MongoGormEnhancerSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([MyMongoEntity])
+        manager.domainClasses.addAll([MyMongoEntity])
     }
 
     def "Test is MongoEntity"() {

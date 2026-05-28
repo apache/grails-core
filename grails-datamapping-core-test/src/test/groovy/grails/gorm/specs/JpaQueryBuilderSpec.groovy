@@ -32,7 +32,7 @@ import org.grails.datastore.mapping.query.jpa.JpaQueryBuilder
 class JpaQueryBuilderSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     def setupSpec() {
-        manager.addAllDomainClasses([Person])
+        manager.domainClasses.addAll([Person])
     }
 
     void "Test update query with ilike criterion"() {

@@ -31,7 +31,7 @@ import spock.lang.Issue
 class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Club, Team])
+        manager.domainClasses.addAll([Club, Team])
     }
 
     @Issue('https://github.com/apache/grails-core/issues/9860')

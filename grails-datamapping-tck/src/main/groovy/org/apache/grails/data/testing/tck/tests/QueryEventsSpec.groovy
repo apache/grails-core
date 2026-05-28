@@ -38,7 +38,7 @@ class QueryEventsSpec extends GrailsDataTckSpec {
     boolean contextAvailable = false
 
     void setupSpec() {
-        manager.addAllDomainClasses([Simples, TestEntity])
+        manager.domainClasses.addAll([Simples, TestEntity])
     }
 
     def setup() {

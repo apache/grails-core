@@ -18,17 +18,16 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * @author Graeme Rocher
  */
-class EmbeddedCollectionWithOneToOneSpec extends MongoDatastoreSpec {
+class EmbeddedCollectionWithOneToOneSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Building, Room, RoomCompany])
+        manager.domainClasses.addAll([Building, Room, RoomCompany])
     }
 
     void "Test that embedded collections with one to one associations can be persisted correctly"() {

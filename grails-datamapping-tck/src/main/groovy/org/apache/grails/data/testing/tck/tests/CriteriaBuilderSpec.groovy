@@ -29,7 +29,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class CriteriaBuilderSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([TestEntity, ChildEntity, Task])
+        manager.domainClasses.addAll([TestEntity, ChildEntity, Task])
     }
 
     void 'Test count distinct projection'() {

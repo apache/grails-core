@@ -18,21 +18,20 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import grails.persistence.Entity
 import jakarta.persistence.FlushModeType
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.mapping.core.OptimisticLockingException
 import spock.lang.Issue
 
 /**
  * @author Graeme Rocher
  */
-class OptimisticLockingWithExceptionSpec extends MongoDatastoreSpec {
+class OptimisticLockingWithExceptionSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Counter])
+        manager.domainClasses.addAll([Counter])
     }
 
     @Issue('GPMONGODB-256')

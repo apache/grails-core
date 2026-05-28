@@ -18,15 +18,14 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
-class DefaultSortOrderSpec extends MongoDatastoreSpec {
+class DefaultSortOrderSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([SOBook])
+        manager.domainClasses.addAll([SOBook])
     }
 
     @Issue('GPMONGODB-181')

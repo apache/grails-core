@@ -18,18 +18,17 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import grails.gorm.services.Service
 import grails.gorm.services.Where
 import grails.persistence.Entity
 
 import jakarta.persistence.Embeddable
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class EmbeddedWhereClauseSpec extends MongoDatastoreSpec {
+class EmbeddedWhereClauseSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([PersonAttribute])
+        manager.domainClasses.addAll([PersonAttribute])
     }
 
     void "Can construct data service where clause on embedded object"() {

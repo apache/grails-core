@@ -24,7 +24,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class SubclassToOneProxySpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([SuperclassProxy, SubclassProxy, HasOneProxy])
+        manager.domainClasses.addAll([SuperclassProxy, SubclassProxy, HasOneProxy])
     }
 
     void "the hasOne is a proxy and unwraps"() {

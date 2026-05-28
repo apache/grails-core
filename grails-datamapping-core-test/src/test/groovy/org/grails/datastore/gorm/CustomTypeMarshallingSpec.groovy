@@ -32,7 +32,7 @@ class CustomTypeMarshallingSpec extends GrailsDataTckSpec<GrailsDataCoreTckManag
     Date now = new Date()
 
     void setupSpec() {
-        manager.addAllDomainClasses([Person])
+        manager.domainClasses.addAll([Person])
     }
 
     def setup() {

@@ -24,7 +24,7 @@ import org.apache.grails.data.testing.tck.domains.TestEntity
 class FindOrCreateWhereSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([TestEntity])
+        manager.domainClasses.addAll([TestEntity])
     }
 
     def "Test findOrCreateWhere returns a new instance if it doesn't exist in the database"() {

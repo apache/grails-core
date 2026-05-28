@@ -37,7 +37,7 @@ import org.grails.datastore.mapping.engine.event.PreUpdateEvent
 class DirtyCheckingAfterListenerSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([TestPlayer])
+        manager.domainClasses.addAll([TestPlayer])
     }
 
     TestSaveOrUpdateEventListener listener

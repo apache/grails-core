@@ -31,7 +31,7 @@ class Hibernate5OptimisticLockingSpec extends GrailsDataTckSpec<GrailsDataHibern
 
 
     void setupSpec() {
-        manager.addAllDomainClasses([OptLockVersioned, OptLockNotVersioned])
+        manager.domainClasses.addAll([OptLockVersioned, OptLockNotVersioned])
     }
 
     void "Test optimistic locking"() {

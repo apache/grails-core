@@ -33,7 +33,7 @@ import org.grails.datastore.mapping.query.Query
 class DetachedCriteriaAssociationQuerySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([BookA, Genre])
+        manager.domainClasses.addAll([BookA, Genre])
     }
 
     @Issue('https://github.com/apache/grails-data-mapping/issues/776')

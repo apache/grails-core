@@ -18,18 +18,17 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import grails.gorm.dirty.checking.DirtyCheck
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.types.ObjectId
 import org.grails.datastore.mapping.mongo.config.MongoSettings
 
-class MarkDirtyFalseSpec extends MongoDatastoreSpec {
+class MarkDirtyFalseSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Bar, BarWithTimestamp])
+        manager.domainClasses.addAll([Bar, BarWithTimestamp])
         manager.configuration.putAll([(MongoSettings.SETTING_MARK_DIRTY): false])
     }
 

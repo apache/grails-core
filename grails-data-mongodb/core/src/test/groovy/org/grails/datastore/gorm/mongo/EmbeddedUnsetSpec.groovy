@@ -18,16 +18,15 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
-class EmbeddedUnsetSpec extends MongoDatastoreSpec {
+class EmbeddedUnsetSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([EmbeddedPetOwner, EmbeddedPet])
+        manager.domainClasses.addAll([EmbeddedPetOwner, EmbeddedPet])
     }
 
     @Issue('https://github.com/apache/grails-data-mapping/issues/718')

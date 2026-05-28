@@ -18,14 +18,14 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+import grails.gorm.tests.Person
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-import grails.gorm.specs.Person
-
-class NegateInListSpec extends MongoDatastoreSpec {
+class NegateInListSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Person])
+        manager.domainClasses += [Person]
     }
 
     void "Test negate in list query"() {

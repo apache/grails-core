@@ -25,7 +25,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class AutoImportSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([A, grails.gorm.specs.autoimport.other.A])
+        manager.domainClasses.addAll([A, grails.gorm.specs.autoimport.other.A])
     }
 
     void "test a domain with a getter"() {
