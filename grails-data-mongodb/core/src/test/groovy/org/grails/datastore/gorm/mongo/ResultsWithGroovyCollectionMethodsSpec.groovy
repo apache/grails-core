@@ -30,7 +30,7 @@ import spock.lang.Issue
 class ResultsWithGroovyCollectionMethodsSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Plant])
+        manager.domainClasses.addAll([Plant])
     }
 
     @Issue('GPMONGODB-316')

@@ -29,7 +29,7 @@ import grails.gorm.specs.Person
 class HintQueryArgumentSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Person])
+        manager.domainClasses.addAll([Person])
     }
 
     void "Test that hints work on criteria queries"() {

@@ -24,7 +24,7 @@ import grails.gorm.specs.Plant
 
 class SchemalessSpec extends MongoDatastoreSpec {
     void setupSpec() {
-        manager.addAllDomainClasses([Plant])
+        manager.domainClasses.addAll([Plant])
     }
 
     def "Test attach additional data"() {

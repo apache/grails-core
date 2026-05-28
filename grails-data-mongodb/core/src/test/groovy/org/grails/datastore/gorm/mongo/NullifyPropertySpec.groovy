@@ -29,7 +29,7 @@ import grails.gorm.specs.Person
 class NullifyPropertySpec extends MongoDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Pet, Person])
+        manager.domainClasses.addAll([Pet, Person])
     }
 
     void "Test nullify basic property"() {

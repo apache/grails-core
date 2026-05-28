@@ -27,7 +27,7 @@ import grails.gorm.specs.Person
  */
 class SessionCachingSpec extends MongoDatastoreSpec {
     void setupSpec() {
-        manager.addAllDomainClasses([Person])
+        manager.domainClasses.addAll([Person])
     }
 
     void "test cache used for get"() {

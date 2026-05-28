@@ -32,7 +32,7 @@ class DisjunctionQuerySpec extends MongoDatastoreSpec {
     def birdType
 
     void setupSpec() {
-        manager.addAllDomainClasses([Pet, PetType])
+        manager.domainClasses.addAll([Pet, PetType])
     }
 
     @Issue('GPMONGODB-380')

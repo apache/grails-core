@@ -30,7 +30,7 @@ import org.apache.grails.data.testing.tck.domains.PetType
 class GetAllSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Pet, Person, PetType])
+        manager.domainClasses.addAll([Pet, Person, PetType])
     }
 
     void "test that 'null' returns null"() {

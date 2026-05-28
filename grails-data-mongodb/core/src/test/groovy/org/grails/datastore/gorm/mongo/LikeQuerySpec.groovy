@@ -25,7 +25,7 @@ import grails.gorm.specs.Pet
 class LikeQuerySpec extends MongoDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Pet])
+        manager.domainClasses.addAll([Pet])
     }
 
     void "Test for like query"() {

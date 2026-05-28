@@ -28,7 +28,7 @@ import grails.gorm.specs.Person
 class MongoResultsListIndexSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Person])
+        manager.domainClasses.addAll([Person])
     }
 
     void "Test that indexing into results works with MongoDB"() {

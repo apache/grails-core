@@ -25,7 +25,7 @@ import grails.gorm.specs.Person
 class NegateInListSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Person])
+        manager.domainClasses.addAll([Person])
     }
 
     void "Test negate in list query"() {

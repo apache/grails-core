@@ -26,7 +26,7 @@ import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
 class EmbeddedWithIdSpecifiedSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([SystemCustomer, PreorderTreeNode, MultiLevelKpi])
+        manager.domainClasses.addAll([SystemCustomer, PreorderTreeNode, MultiLevelKpi])
     }
 
     void "Test that id is saved of embedded entity if specified"() {

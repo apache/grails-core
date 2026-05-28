@@ -34,7 +34,7 @@ import spock.lang.Ignore
 class ReadConcernArgumentSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([grails.gorm.specs.Person])
+        manager.domainClasses.addAll([grails.gorm.specs.Person])
     }
 
     @Ignore

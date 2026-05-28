@@ -30,7 +30,7 @@ import spock.lang.Issue
 class InListQuerySpec extends MongoDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Pet, Person, PetType])
+        manager.domainClasses.addAll([Pet, Person, PetType])
     }
 
     @Issue('https://github.com/grails/grails-data-mongodb/issues/11')

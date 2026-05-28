@@ -30,7 +30,7 @@ import org.bson.Document
 class OneToOneIntegritySpec extends MongoDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Person, Pet, Face, Nose])
+        manager.domainClasses.addAll([Person, Pet, Face, Nose])
     }
 
     def "Test persist and retrieve unidirectional many-to-one"() {

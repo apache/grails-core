@@ -27,7 +27,7 @@ import org.bson.types.ObjectId
 class EmbeddedHasManyWithBeforeUpdateSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([User, UserAddress])
+        manager.domainClasses.addAll([User, UserAddress])
     }
 
     void "Test embedded hasMany with beforeUpdate event"() {
