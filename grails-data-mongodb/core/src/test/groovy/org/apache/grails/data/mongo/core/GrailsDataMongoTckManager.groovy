@@ -25,6 +25,7 @@ import grails.core.GrailsApplication
 import grails.gorm.validation.PersistentEntityValidator
 import groovy.util.logging.Slf4j
 import org.apache.grails.data.testing.tck.base.GrailsDataTckManager
+import spock.lang.Specification
 import org.apache.grails.testing.mongo.AbstractMongoGrailsExtension
 import org.bson.Document
 import org.grails.datastore.bson.query.BsonQuery
@@ -63,6 +64,13 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
     Map<String, Object> configuration
     MongoDatastore multiDataSourceDatastore
     MongoDatastore multiTenantMultiDataSourceDatastore
+
+    @Override
+    void setup(Class<? extends Specification> spec) {
+        cleanRegistry()
+        GormRegistry.reset()
+        super.setup(spec)
+    }
 
     @Override
     void setupSpec() {

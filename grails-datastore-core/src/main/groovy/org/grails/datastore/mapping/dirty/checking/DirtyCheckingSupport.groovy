@@ -78,6 +78,11 @@ class DirtyCheckingSupport {
                         PersistentCollection coll = (PersistentCollection) value
                         if (coll.isInitialized()) {
                             if (coll.isDirty()) return true
+                            for (Object item in (Collection) coll) {
+                                if (item instanceof DirtyCheckable && ((DirtyCheckable) item).hasChanged()) {
+                                    return true
+                                }
+                            }
                         }
                     }
                     else if (value instanceof DirtyCheckableCollection) {
