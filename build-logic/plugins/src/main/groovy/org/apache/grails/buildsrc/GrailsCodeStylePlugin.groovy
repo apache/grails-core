@@ -228,15 +228,23 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
                     content = content.replaceAll(/(class\s+[^{]+\{\n)([ \t]*[^ \s\n\/])/, '$1\n$2')
 
                     // 2. SpaceAroundMapEntryColon
-                    content = content.replaceAll(/([\[,]\s*(?:[\w\-.]+|'[^']+'|"[^"]+")):([^\s\/])/, '$1: $2')
-                    content = content.replaceAll(/(\(\s*(?:[\w\-.]+|'[^']+'|"[^"]+")):([^\s\/])/, '$1: $2')
+                    // (?!:) prevents matching the first : in a :: method reference (e.g. String::trim)
+                    content = content.replaceAll(/([\[,]\s*(?:[\w\-.]+|'[^']+'|"[^"]+")):(?!:)([^\s\/])/, '$1: $2')
+                    content = content.replaceAll(/(\(\s*(?:[\w\-.]+|'[^']+'|"[^"]+")):(?!:)([^\s\/])/, '$1: $2')
 
                     // 3. UnnecessaryGString
-                    content = content.replaceAll(/(?<!\\)(?<!")"([^"$\n\\]*)"(?!")/) { all, inner ->
+                    // The alternation skips over single-quoted strings so their embedded double-quote
+                    // content is never touched. The (?<!}) lookbehind prevents fusing the closing "
+                    // of a GString with the opening " of an adjacent plain string (e.g. obj."${x}"("y")).
+                    content = content.replaceAll(/(?<!\\)'(?:[^'\\\n]|\\.)*'|(?<!\\)(?<!")(?<!})"([^"$\n\\]*)"(?!")/) { List<String> args ->
+                        if (args[1] == null) {
+                            return args[0]  // single-quoted string matched — leave it untouched
+                        }
+                        String inner = args[1]
                         if (!inner.contains("'")) {
                             return "'$inner'"
                         }
-                        return all
+                        return args[0]
                     }
 
                     // 4. UnnecessarySemicolon
