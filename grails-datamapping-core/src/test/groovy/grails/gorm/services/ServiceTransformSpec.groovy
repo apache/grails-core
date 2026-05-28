@@ -23,6 +23,7 @@ import grails.gorm.transactions.ReadOnly
 import grails.gorm.transactions.TransactionService
 import grails.gorm.transactions.Transactional
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.services.Implemented
 import org.grails.datastore.gorm.services.implementers.FindAllImplementer
 import org.grails.datastore.gorm.services.implementers.FindOneImplementer
@@ -36,6 +37,14 @@ import spock.lang.Specification
  * Created by graemerocher on 11/01/2017.
  */
 class ServiceTransformSpec extends Specification {
+
+    def setup() {
+        GormRegistry.reset()
+    }
+
+    def cleanup() {
+        GormRegistry.reset()
+    }
 
     void "test interface projection with an entity that implements GormEntity"() {
         when:

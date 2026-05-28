@@ -300,14 +300,11 @@ class ActiveSessionDatastoreSelector {
                     if (className != null) {
                         Datastore defaultDs = registry.getDatastore(className, ConnectionSource.DEFAULT)
                         if (defaultDs == ds) {
-                            System.out.println("DEBUG TCK: ActiveSessionDatastoreSelector returning ds (== defaultDs) " + ds.getClass().getSimpleName() + " for " + className)
                             return ds
                         } else if (registry.isDatastoreRegisteredForEntity(className, ds)) {
-                            System.out.println("DEBUG TCK: ActiveSessionDatastoreSelector returning ds (isDatastoreRegisteredForEntity) " + ds.getClass().getSimpleName() + " for " + className)
                             return ds
                         }
                     } else {
-                        System.out.println("DEBUG TCK: ActiveSessionDatastoreSelector returning ds (className null) " + ds.getClass().getSimpleName() + " for " + className)
                         return ds
                     }
                 }
@@ -323,14 +320,11 @@ class ActiveSessionDatastoreSelector {
                     if (className != null) {
                         Datastore defaultDs = registry.getDatastore(className, ConnectionSource.DEFAULT)
                         if (defaultDs == registeredDs) {
-                            System.out.println("DEBUG TCK: ActiveSessionDatastoreSelector (fallback) returning ds (== defaultDs) " + registeredDs.getClass().getSimpleName() + " for " + className)
                             return registeredDs
                         } else if (registry.isDatastoreRegisteredForEntity(className, registeredDs)) {
-                            System.out.println("DEBUG TCK: ActiveSessionDatastoreSelector (fallback) returning ds (isDatastoreRegisteredForEntity) " + registeredDs.getClass().getSimpleName() + " for " + className)
                             return registeredDs
                         }
                     } else if (registry.allDatastores.size() == 1) {
-                        System.out.println("DEBUG TCK: ActiveSessionDatastoreSelector (fallback) returning ds (size 1) " + registeredDs.getClass().getSimpleName() + " for " + className)
                         return registeredDs
                     }
                 }

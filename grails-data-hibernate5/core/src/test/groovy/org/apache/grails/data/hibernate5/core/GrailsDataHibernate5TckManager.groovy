@@ -23,8 +23,10 @@ import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
 import groovy.sql.Sql
 import org.apache.grails.data.testing.tck.base.GrailsDataTckManager
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
+import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
 import org.grails.orm.hibernate.GrailsHibernateTransactionManager
 import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration
@@ -58,7 +60,14 @@ class GrailsDataHibernate5TckManager extends GrailsDataTckManager {
     @Override
     void setup(Class<? extends Specification> spec) {
         cleanRegistry()
+        GormRegistry.reset()
         super.setup(spec)
+        if (multiDataSourceDatastore != null) {
+            multiDataSourceDatastore.registerAllEntitiesWithEnhancer()
+        }
+        if (multiTenantMultiDataSourceDatastore != null) {
+            multiTenantMultiDataSourceDatastore.registerAllEntitiesWithEnhancer()
+        }
     }
 
     @Override
@@ -157,9 +166,12 @@ class GrailsDataHibernate5TckManager extends GrailsDataTckManager {
 
     @Override
     def getServiceForConnection(Class serviceType, String connectionName) {
-        multiDataSourceDatastore
-                .getDatastoreForConnection(connectionName)
-                .getService(serviceType)
+        def service = multiDataSourceDatastore.getDatastoreForConnection(connectionName).getService(serviceType)
+        if (service.respondsTo('setTargetDatastore')) {
+            MultipleConnectionSourceCapableDatastore[] arr = [multiDataSourceDatastore]
+            service.setTargetDatastore(arr)
+        }
+        return service
     }
 
     @Override
@@ -198,9 +210,12 @@ class GrailsDataHibernate5TckManager extends GrailsDataTckManager {
 
     @Override
     def getServiceForMultiTenantConnection(Class serviceType, String connectionName) {
-        multiTenantMultiDataSourceDatastore
-                .getDatastoreForConnection(connectionName)
-                .getService(serviceType)
+        def service = multiTenantMultiDataSourceDatastore.getDatastoreForConnection(connectionName).getService(serviceType)
+        if (service.respondsTo('setTargetDatastore')) {
+            MultipleConnectionSourceCapableDatastore[] arr = [multiTenantMultiDataSourceDatastore]
+            service.setTargetDatastore(arr)
+        }
+        return service
     }
 
     private void shutdownInMemDb() {

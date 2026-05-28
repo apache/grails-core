@@ -240,9 +240,12 @@ class GrailsDataHibernate7TckManager extends GrailsDataTckManager {
 
     @Override
     def getServiceForMultiTenantConnection(Class serviceType, String connectionName) {
-        multiTenantMultiDataSourceDatastore
-                .getDatastoreForConnection(connectionName)
-                .getService(serviceType)
+        def service = multiTenantMultiDataSourceDatastore.getDatastoreForConnection(connectionName).getService(serviceType)
+        if (service.respondsTo('setTargetDatastore')) {
+            MultipleConnectionSourceCapableDatastore[] arr = [multiTenantMultiDataSourceDatastore]
+            service.setTargetDatastore(arr)
+        }
+        return service
     }
 
     private void shutdownInMemDb() {
