@@ -27,7 +27,7 @@ class ApplicationStartupSpec extends ContainerGebSpec {
         go '/'
 
         then: 'The page loads successfully'
-        title || true // Grails default index page has a title, but we just need the server to respond
+        title == 'Micronaut Hibernate 5 Test App'
         driver.currentUrl.contains('/')
     }
 }
