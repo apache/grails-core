@@ -38,15 +38,6 @@ dependencies {
     implementation "${gradleBomDependencies['grails-publish-plugin']}"
     implementation "org.gradle.crypto.checksum:org.gradle.crypto.checksum.gradle.plugin:${gradleProperties.gradleChecksumPluginVersion}"
     implementation "org.cyclonedx.bom:org.cyclonedx.bom.gradle.plugin:${gradleProperties.gradleCycloneDxPluginVersion}"
-    implementation "com.github.spotbugs.snom:spotbugs-gradle-plugin:${gradleProperties.spotbugsPluginVersion}"
-
-    testImplementation "org.spockframework:spock-core:${gradleBomDependencyVersions['gradle-spock.version']}"
-    testImplementation gradleTestKit()
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-}
-
-tasks.named('test') {
-    useJUnitPlatform()
 }
 
 gradlePlugin {
@@ -70,18 +61,6 @@ gradlePlugin {
         register('grailsCodeStyle') {
             id = 'org.apache.grails.gradle.grails-code-style'
             implementationClass = 'org.apache.grails.buildsrc.GrailsCodeStylePlugin'
-        }
-        register('grailsCodeAnalysis') {
-            id = 'org.apache.grails.gradle.grails-code-analysis'
-            implementationClass = 'org.apache.grails.buildsrc.GrailsCodeAnalysisPlugin'
-        }
-        register('grailsJacoco') {
-            id = 'org.apache.grails.gradle.grails-jacoco'
-            implementationClass = 'org.apache.grails.buildsrc.GrailsJacocoPlugin'
-        }
-        register('grailsViolationAggregation') {
-            id = 'org.apache.grails.gradle.grails-violation-aggregation'
-            implementationClass = 'org.apache.grails.buildsrc.GrailsViolationAggregationPlugin'
         }
         register('groovydocEnhancer') {
             id = 'org.apache.grails.buildsrc.groovydoc-enhancer'

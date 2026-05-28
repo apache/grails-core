@@ -25,19 +25,18 @@ import groovy.transform.CompileStatic
 import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.model.ObjectFactory
-import org.gradle.api.provider.Property
 
 @CompileStatic
 class GrailsCodeStyleExtension {
 
     /**
-     * Defaults to project.rootProject.buildDir/codestyle/checkstyle.
+     * Defaults to project.buildDir/checkstyle.
      * Default checkstyle files will be written here and used from this location.
      */
     final DirectoryProperty checkstyleDirectory
 
     /**
-     * Defaults to project.rootProject.buildDir/codestyle/codenarc.
+     * Defaults to project.buildDir/codenarc.
      * Default codenarc files will be written here and used from this location.
      */
     final DirectoryProperty codenarcDirectory
@@ -51,10 +50,10 @@ class GrailsCodeStyleExtension {
     @Inject
     GrailsCodeStyleExtension(ObjectFactory objects, Project project) {
         checkstyleDirectory = objects.directoryProperty().convention(
-                project.rootProject.layout.buildDirectory.dir('codestyle/checkstyle')
+                project.rootProject.layout.buildDirectory.dir('checkstyle')
         )
         codenarcDirectory = objects.directoryProperty().convention(
-                project.rootProject.layout.buildDirectory.dir('codestyle/codenarc')
+                project.rootProject.layout.buildDirectory.dir('codenarc')
         )
         reportsDirectory = objects.directoryProperty().convention(
                 project.rootProject.layout.buildDirectory.dir('reports/codestyle')

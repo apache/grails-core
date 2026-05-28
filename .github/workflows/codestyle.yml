@@ -18,7 +18,6 @@ on:
   push:
     branches:
       - '[0-9]+.[0-9]+.x'
-      - '8.0.x-hibernate7.*'
   pull_request:
   workflow_dispatch:
 # queue jobs and only allow 1 run per branch due to the likelihood of hitting GitHub resource limits
@@ -44,54 +43,24 @@ jobs:
         with:
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "🔎 Check Core Projects"
-        run: ./gradlew aggregateStyleViolations --continue
-      - name: "📤 Upload Reports"
+        run: ./gradlew codeStyle
+      - name: "📤 Upload Failure Reports"
         if: always()
         uses: actions/upload-artifact@v7.0.1
         with:
           name: core-reports
-          path: build/reports/violations/
+          path: build/reports/codestyle/
       - name: "📋 Publish Code Style Report in Job Summary"
         if: always()
         run: |
           echo "## 🔎 Code Style Report - Core Projects" >> $GITHUB_STEP_SUMMARY
-          for report in CODENARC_VIOLATIONS.md CHECKSTYLE_VIOLATIONS.md; do
-            file="build/reports/violations/$report"
-            [ -f "$file" ] && cat "$file" >> $GITHUB_STEP_SUMMARY || true
-          done
-  check_forge_projects:
-    name: "Forge Projects"
-    runs-on: ubuntu-24.04
-    steps:
-      - name: "🌐 Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
-        run: curl -s https://api.ipify.org
-      - name: "📥 Checkout repository"
-        uses: actions/checkout@v6
-      - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v4
-        with:
-          distribution: liberica
-          java-version: 21
-      - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
-        with:
-          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
-      - name: "🔎 Check Forge Projects"
-        working-directory: grails-forge
-        run: ./gradlew aggregateStyleViolations --continue
-      - name: "📤 Upload Reports"
-        if: always()
-        uses: actions/upload-artifact@v7.0.1
-        with:
-          name: forge-reports
-          path: grails-forge/build/reports/violations/
-      - name: "📋 Publish Code Style Report in Job Summary"
-        if: always()
-        run: |
-          echo "## 🔎 Code Style Report - Forge Projects" >> $GITHUB_STEP_SUMMARY
-          for report in CODENARC_VIOLATIONS.md CHECKSTYLE_VIOLATIONS.md; do
-            file="grails-forge/build/reports/violations/$report"
-            [ -f "$file" ] && cat "$file" >> $GITHUB_STEP_SUMMARY || true
+          for file in build/reports/codestyle/checkstyle/*.xml build/reports/codestyle/codenarc/*.xml; do
+            [ -f "$file" ] || continue
+            if grep -q "<error " "$file" || grep -q "<Violation " "$file"; then
+              echo "### ❌ $(basename $file .xml)" >> $GITHUB_STEP_SUMMARY
+              grep "<error " "$file" | awk -F'"' '{print "- **Line " $2 "**: " $8}' >> $GITHUB_STEP_SUMMARY
+              grep "<Violation " "$file" | awk -F"'" '{print "- **Line " $6 "**: " $2}' >> $GITHUB_STEP_SUMMARY
+            fi
           done
   check_gradle_plugin_projects:
     name: "Gradle Plugin Projects"
@@ -112,18 +81,60 @@ jobs:
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "🔎 Check Gradle Plugin Projects"
         working-directory: grails-gradle
-        run: ./gradlew aggregateStyleViolations --continue
-      - name: "📤 Upload Reports"
+        run: ./gradlew codeStyle
+      - name: "📤 Upload Failure Reports"
         if: always()
         uses: actions/upload-artifact@v7.0.1
         with:
           name: gradle-plugin-reports
-          path: grails-gradle/build/reports/violations/
+          path: grails-gradle/build/reports/codestyle/
       - name: "📋 Publish Code Style Report in Job Summary"
         if: always()
         run: |
           echo "## 🔎 Code Style Report - Gradle Plugin Projects" >> $GITHUB_STEP_SUMMARY
-          for report in CODENARC_VIOLATIONS.md CHECKSTYLE_VIOLATIONS.md; do
-            file="grails-gradle/build/reports/violations/$report"
-            [ -f "$file" ] && cat "$file" >> $GITHUB_STEP_SUMMARY || true
+          for file in grails-gradle/build/reports/codestyle/checkstyle/*.xml grails-gradle/build/reports/codestyle/codenarc/*.xml; do
+            [ -f "$file" ] || continue
+            if grep -q "<error " "$file" || grep -q "<Violation " "$file"; then
+              echo "### ❌ $(basename $file .xml)" >> $GITHUB_STEP_SUMMARY
+              grep "<error " "$file" | awk -F'"' '{print "- **Line " $2 "**: " $8}' >> $GITHUB_STEP_SUMMARY
+              grep "<Violation " "$file" | awk -F"'" '{print "- **Line " $6 "**: " $2}' >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+  check_grails_forge_projects:
+    name: "Forge Projects"
+    runs-on: ubuntu-24.04
+    steps:
+      - name: "🌐 Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v6
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          distribution: liberica
+          java-version: 21
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
+        with:
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: "🔎 Check Forge Projects"
+        working-directory: grails-forge
+        run: ./gradlew codeStyle
+      - name: "📤 Upload Failure Reports"
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: forge-reports
+          path: grails-forge/build/reports/codestyle/
+      - name: "📋 Publish Code Style Report in Job Summary"
+        if: always()
+        run: |
+          echo "## 🔎 Code Style Report - Forge Projects" >> $GITHUB_STEP_SUMMARY
+          for file in grails-forge/build/reports/codestyle/checkstyle/*.xml grails-forge/build/reports/codestyle/codenarc/*.xml; do
+            [ -f "$file" ] || continue
+            if grep -q "<error " "$file" || grep -q "<Violation " "$file"; then
+              echo "### ❌ $(basename $file .xml)" >> $GITHUB_STEP_SUMMARY
+              grep "<error " "$file" | awk -F'"' '{print "- **Line " $2 "**: " $8}' >> $GITHUB_STEP_SUMMARY
+              grep "<Violation " "$file" | awk -F"'" '{print "- **Line " $6 "**: " $2}' >> $GITHUB_STEP_SUMMARY
+            fi
           done
