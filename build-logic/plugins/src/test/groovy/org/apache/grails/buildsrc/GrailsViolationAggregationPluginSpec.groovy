@@ -174,4 +174,68 @@ class GrailsViolationAggregationPluginSpec extends Specification {
         and: "no report file is created"
         !testProjectDir.resolve('build/reports/violations/JACOCO_COVERAGE.md').toFile().exists()
     }
+
+    def "aggregateJacocoCoverage excludes the default hibernate7 support classes"() {
+        given: "a root project with a jacoco csv containing an h7 support class and a normal class"
+        testProjectDir.resolve('settings.gradle').toFile().text = ''
+        testProjectDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'org.apache.grails.gradle.grails-violation-aggregation'
+            }
+        """
+        writeJacocoCsv([
+                'app,org.grails.orm.hibernate.support.hibernate7,HibernateSupport,10,0',
+                'app,org.example.kept,KeptClass,0,20',
+        ])
+
+        when:
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('aggregateJacocoCoverage', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+
+        then: "task succeeds and the report drops the colliding h7 class but keeps the normal one"
+        result.task(':aggregateJacocoCoverage').outcome == TaskOutcome.SUCCESS
+        def report = testProjectDir.resolve('build/reports/violations/JACOCO_COVERAGE.md').toFile()
+        report.exists()
+        def text = report.text
+        text.contains('org.example.kept.KeptClass')
+        !text.contains('org.grails.orm.hibernate.support.hibernate7.HibernateSupport')
+    }
+
+    def "aggregateJacocoCoverage exclusion prefixes are configurable via property"() {
+        given: "a root project and a custom exclusion prefix that keeps the h7 class and drops a custom one"
+        testProjectDir.resolve('settings.gradle').toFile().text = ''
+        testProjectDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'org.apache.grails.gradle.grails-violation-aggregation'
+            }
+        """
+        writeJacocoCsv([
+                'app,org.grails.orm.hibernate.support.hibernate7,HibernateSupport,10,0',
+                'app,com.example.skip,SkipMe,5,5',
+                'app,org.example.kept,KeptClass,0,20',
+        ])
+
+        when:
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('aggregateJacocoCoverage', '-Pgrails.jacoco.aggregation.excludedClassPrefixes=com.example.skip', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+
+        then: "the custom prefix is dropped while the default h7 class is now retained"
+        result.task(':aggregateJacocoCoverage').outcome == TaskOutcome.SUCCESS
+        def text = testProjectDir.resolve('build/reports/violations/JACOCO_COVERAGE.md').toFile().text
+        text.contains('org.example.kept.KeptClass')
+        text.contains('org.grails.orm.hibernate.support.hibernate7.HibernateSupport')
+        !text.contains('com.example.skip.SkipMe')
+    }
+
+    private void writeJacocoCsv(List<String> dataRows) {
+        def csv = testProjectDir.resolve('build/reports/jacoco/test/jacocoTestReport.csv').toFile()
+        csv.parentFile.mkdirs()
+        csv.text = (['GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED'] + dataRows).join('\n') + '\n'
+    }
 }
