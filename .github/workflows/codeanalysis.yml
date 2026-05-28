@@ -1,0 +1,95 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: "Code Analysis"
+on:
+  push:
+    branches:
+      - '[0-9]+.[0-9]+.x'
+      - '8.0.x-hibernate7.*'
+  pull_request:
+  workflow_dispatch:
+# queue jobs and only allow 1 run per branch due to the likelihood of hitting GitHub resource limits
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  check_core_projects:
+    name: "Core Projects"
+    runs-on: ubuntu-24.04
+    steps:
+      - name: "🌐 Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v6
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          distribution: liberica
+          java-version: 21
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
+        with:
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: "🔎 Check Core Projects"
+        run: ./gradlew aggregateAnalysisViolations --continue
+      - name: "📤 Upload Reports"
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: core-reports
+          path: build/reports/violations/
+      - name: "📋 Publish Code Analysis Report in Job Summary"
+        if: always()
+        run: |
+          echo "## 🔎 Code Analysis Report - Core Projects" >> $GITHUB_STEP_SUMMARY
+          for report in PMD_VIOLATIONS.md SPOTBUGS_VIOLATIONS.md; do
+            file="build/reports/violations/$report"
+            [ -f "$file" ] && cat "$file" >> $GITHUB_STEP_SUMMARY || true
+          done
+  check_gradle_plugin_projects:
+    name: "Gradle Plugin Projects"
+    runs-on: ubuntu-24.04
+    steps:
+      - name: "🌐 Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v6
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          distribution: liberica
+          java-version: 21
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
+        with:
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: "🔎 Check Gradle Plugin Projects"
+        working-directory: grails-gradle
+        run: ./gradlew aggregateAnalysisViolations --continue
+      - name: "📤 Upload Reports"
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: gradle-plugin-reports
+          path: grails-gradle/build/reports/violations/
+      - name: "📋 Publish Code Analysis Report in Job Summary"
+        if: always()
+        run: |
+          echo "## 🔎 Code Analysis Report - Gradle Plugin Projects" >> $GITHUB_STEP_SUMMARY
+          for report in PMD_VIOLATIONS.md SPOTBUGS_VIOLATIONS.md; do
+            file="grails-gradle/build/reports/violations/$report"
+            [ -f "$file" ] && cat "$file" >> $GITHUB_STEP_SUMMARY || true
+          done
