@@ -18,13 +18,14 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import grails.mongodb.MongoEntity
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.types.ObjectId
 
-class CustomTypeMarshallingSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class CustomTypeMarshallingSpec extends MongoDatastoreSpec {
     void setupSpec() {
         manager.domainClasses.addAll([Person])
     }

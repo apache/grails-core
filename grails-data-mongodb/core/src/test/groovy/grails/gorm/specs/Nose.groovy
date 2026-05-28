@@ -16,35 +16,22 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.gorm.tests
+package grails.gorm.specs
 
-import org.apache.grails.data.testing.tck.domains.PetType
 import grails.persistence.Entity
 
 /**
  * @author graemerocher
  */
-/**
- * @author graemerocher
- */
 @Entity
-class Pet implements Serializable {
+class Nose implements Serializable {
     Long id
     Long version
-    String name
-    Date birthDate = new Date()
-    PetType type = new PetType(name:"Unknown")
-    Person owner
-    Integer age
+    boolean hasFreckles
     Face face
+    static belongsTo = [face: Face]
 
     static mapping = {
-        name index:true
-    }
-
-    static constraints = {
-        owner nullable:true
-        age nullable: true
-        face nullable:true
+        face index:true
     }
 }

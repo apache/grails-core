@@ -18,14 +18,15 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Tests the use of embedded collections in inheritance hierarchies.
  */
-class EmbeddedCollectionAndInheritanceSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class EmbeddedCollectionAndInheritanceSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
         manager.domainClasses.addAll([ECAISPerson, ECAISPet, ECAISDog])

@@ -18,20 +18,21 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import grails.gorm.tests.Pet
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
+import grails.gorm.specs.Pet
 
 import org.apache.grails.data.testing.tck.domains.PetType
-import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+
 import spock.lang.Issue
 
-class DisjunctionQuerySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class DisjunctionQuerySpec extends MongoDatastoreSpec {
     def dogType
     def catType
     def birdType
 
     void setupSpec() {
-        manager.domainClasses += [Pet, PetType]
+        manager.addAllDomainClasses([Pet, PetType])
     }
 
     @Issue('GPMONGODB-380')

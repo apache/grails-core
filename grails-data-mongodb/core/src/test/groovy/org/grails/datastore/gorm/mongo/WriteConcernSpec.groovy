@@ -18,10 +18,11 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import com.mongodb.WriteConcern
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
 import static grails.mongodb.mapping.MappingBuilder.document
@@ -29,7 +30,7 @@ import static grails.mongodb.mapping.MappingBuilder.document
 /**
  * Tests usage of WriteConcern
  */
-class WriteConcernSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class WriteConcernSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
         manager.domainClasses.addAll([SafeWrite, UnacknowledgedWrite])

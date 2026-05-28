@@ -18,16 +18,17 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import com.mongodb.MongoBulkWriteException
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
 /**
  * Tests for usage of assigned identifiers
  */
-class AssignedIdentifierSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class AssignedIdentifierSpec extends MongoDatastoreSpec {
     void setupSpec() {
         manager.domainClasses.addAll([River, Lake, Volcano])
     }

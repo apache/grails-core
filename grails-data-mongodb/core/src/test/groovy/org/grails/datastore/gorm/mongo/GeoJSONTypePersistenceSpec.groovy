@@ -18,6 +18,8 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import grails.mongodb.geo.Box
 import grails.mongodb.geo.Circle
 import grails.mongodb.geo.GeometryCollection
@@ -31,12 +33,11 @@ import grails.mongodb.geo.Shape
 import grails.mongodb.geo.Sphere
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Created by graemerocher on 17/03/14.
  */
-class GeoJSONTypePersistenceSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class GeoJSONTypePersistenceSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
         manager.domainClasses.addAll([Place, Loc])

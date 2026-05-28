@@ -18,14 +18,15 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.Document
 import org.bson.types.Binary
 import org.bson.types.ObjectId
 
-class MongoTypesSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class MongoTypesSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
         manager.domainClasses.addAll([MongoTypes])

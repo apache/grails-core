@@ -18,16 +18,17 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.Document
 import org.bson.types.ObjectId
 
 /**
  * Created by Jim on 8/15/2016.
  */
-class EmbeddedCollectionWithIdSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class EmbeddedCollectionWithIdSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
         manager.domainClasses.addAll([MainUser, EmbeddedBar])

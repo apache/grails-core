@@ -18,12 +18,13 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
-class EmbeddedUnsetSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class EmbeddedUnsetSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
         manager.domainClasses.addAll([EmbeddedPetOwner, EmbeddedPet])

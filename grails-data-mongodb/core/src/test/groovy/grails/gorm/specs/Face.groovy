@@ -16,40 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.datastore.gorm.mongo
-
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+package grails.gorm.specs
 
 import grails.persistence.Entity
-import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
 
-class EmbeddedSimpleObjectSpec extends MongoDatastoreSpec {
-    void setupSpec() {
-        manager.domainClasses.addAll([Space])
-    }
-
-    void "Test embedded non-domain object"() {
-        when: "An entity with a simple non-domain embedded object is persisted"
-        def s = new Space(displayName: "foo", db: new DatabaseConfig(name: "test"))
-        s.save(flush: true)
-        manager.session.clear()
-        s = Space.get(s.id)
-        then: "The embedded association is persisted correctly"
-        s.db.name == 'test'
-    }
-}
-
+/**
+ * @author graemerocher
+ */
 @Entity
-class Space {
-
-    String id
-    String displayName
-
-    DatabaseConfig db
-
-    static embedded = ['db']
-}
-
-class DatabaseConfig {
+class Face implements Serializable {
+    Long id
+    Long version
     String name
+    Nose nose
+    Person person
+    static hasOne = [nose: Nose]
+    static belongsTo = [person:Person]
+
+    static constraints = {
+        person nullable:true
+    }
 }

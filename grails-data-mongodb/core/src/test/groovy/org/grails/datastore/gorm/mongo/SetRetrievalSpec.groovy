@@ -18,11 +18,12 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import com.mongodb.client.MongoDatabase
 import grails.mongodb.MongoEntity
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.Document
 import org.bson.types.ObjectId
 import spock.lang.Issue
@@ -30,7 +31,7 @@ import spock.lang.Issue
 /**
  * Created by graemerocher on 01/04/16.
  */
-class SetRetrievalSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class SetRetrievalSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
         manager.domainClasses.addAll([Team, Player])

@@ -18,12 +18,13 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.types.ObjectId
 
-class NegationEnumSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class NegationEnumSpec extends MongoDatastoreSpec {
     void setupSpec() {
         manager.domainClasses.addAll([HasEnum])
     }

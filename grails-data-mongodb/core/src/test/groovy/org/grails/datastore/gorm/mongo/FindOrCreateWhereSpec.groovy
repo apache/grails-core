@@ -18,11 +18,11 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import grails.gorm.tests.Pet
-import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
 
-class FindOrCreateWhereSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+import grails.gorm.specs.Pet
+
+class FindOrCreateWhereSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
         manager.domainClasses.addAll([Person, Pet])

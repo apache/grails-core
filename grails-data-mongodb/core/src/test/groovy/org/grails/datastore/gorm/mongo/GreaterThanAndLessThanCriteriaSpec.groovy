@@ -18,12 +18,13 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
-class GreaterThanAndLessThanCriteriaSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class GreaterThanAndLessThanCriteriaSpec extends MongoDatastoreSpec {
     void setupSpec() {
         manager.domainClasses.addAll([GTBook])
     }

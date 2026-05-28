@@ -18,10 +18,11 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import grails.gorm.dirty.checking.DirtyCheck
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.types.ObjectId
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import org.grails.datastore.mapping.mongo.config.MongoSettings
@@ -30,7 +31,7 @@ import spock.lang.Issue
 /**
  * Created by graemerocher on 14/03/14.
  */
-class DirtyCheckUpdateSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class DirtyCheckUpdateSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
         manager.domainClasses.addAll([Bar])

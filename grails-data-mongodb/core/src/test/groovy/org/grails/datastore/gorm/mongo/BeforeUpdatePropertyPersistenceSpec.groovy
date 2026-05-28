@@ -18,10 +18,11 @@
  */
 package org.grails.datastore.gorm.mongo
 
+import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+
 import grails.gorm.annotation.LastModifiedDate
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.types.ObjectId
 import spock.lang.Issue
 
@@ -30,7 +31,7 @@ import spock.lang.Issue
  * This specifically tests the scenario where a property is set in beforeUpdate()
  * but was NOT explicitly modified by the user code.
  */
-class BeforeUpdatePropertyPersistenceSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
+class BeforeUpdatePropertyPersistenceSpec extends MongoDatastoreSpec {
 
     void setupSpec() {
         manager.domainClasses.addAll([UserWithBeforeUpdate, UserWithBeforeUpdateAndAutoTimestamp])
