@@ -175,7 +175,10 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
     private static void parseStyleViolations(Directory styleXmlDir, Directory violationsDir,
             boolean checkStyleTests, boolean codenarcEnabled, boolean checkstyleEnabled) {
         def slurper = new XmlSlurper()
+        slurper.setFeature('http://apache.org/xml/features/disallow-doctype-decl', true)
         slurper.setFeature('http://apache.org/xml/features/nonvalidating/load-external-dtd', false)
+        slurper.setFeature('http://xml.org/sax/features/external-general-entities', false)
+        slurper.setFeature('http://xml.org/sax/features/external-parameter-entities', false)
         slurper.setFeature('http://xml.org/sax/features/namespaces', false)
 
         def getModule = { String fileName ->
@@ -300,7 +303,10 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
     private static void parseAnalysisViolations(Directory analysisXmlDir, Directory violationsDir,
             boolean checkAnalysisTests, boolean pmdEnabled, boolean spotbugsEnabled) {
         def slurper = new XmlSlurper()
+        slurper.setFeature('http://apache.org/xml/features/disallow-doctype-decl', true)
         slurper.setFeature('http://apache.org/xml/features/nonvalidating/load-external-dtd', false)
+        slurper.setFeature('http://xml.org/sax/features/external-general-entities', false)
+        slurper.setFeature('http://xml.org/sax/features/external-parameter-entities', false)
         slurper.setFeature('http://xml.org/sax/features/namespaces', false)
 
         def getModule = { String fileName ->

@@ -30,7 +30,7 @@ import org.gradle.api.model.ObjectFactory
 class GrailsCodeAnalysisExtension {
 
     /**
-     * Defaults to project.rootProject.buildDir/codestyle/pmd.
+     * Defaults to project.rootProject.buildDir/codeanalysis/pmd.
      * Directory for PMD configuration files (e.g. pmd.xml).
      */
     final DirectoryProperty pmdDirectory
