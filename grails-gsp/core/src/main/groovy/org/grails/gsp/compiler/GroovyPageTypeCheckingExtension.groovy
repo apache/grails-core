@@ -69,7 +69,29 @@ class GroovyPageTypeCheckingExtension extends GroovyTypeCheckingExtensionSupport
         }
 
         methodNotFound { receiver, name, argList, argTypes, call ->
-            if (isThisTheReceiver(call) || (call.objectExpression != null && currentScope.dynamicProperties.contains(call.objectExpression))) {
+            if (isThisTheReceiver(call)) {
+                return makeDynamic(call)
+            }
+            def objectExpression = call.objectExpression
+            if (objectExpression == null) {
+                return null
+            }
+            if (currentScope.dynamicProperties.contains(objectExpression)) {
+                return makeDynamic(call)
+            }
+            // Groovy 5+ (GROOVY-12041): when the compiled GSP page inherits
+            // getProperty(String) from its base class, the unresolvedVariable /
+            // unresolvedProperty callback no longer fires for a taglib namespace
+            // such as 'g', so the receiver is never recorded in dynamicProperties
+            // and the node-identity check above cannot match. Fall back to
+            // matching the receiver by name against the allowed taglib namespaces.
+            String namespaceName = null
+            if (objectExpression instanceof VariableExpression) {
+                namespaceName = ((VariableExpression) objectExpression).name
+            } else if (objectExpression instanceof PropertyExpression && isThisTheReceiver(objectExpression)) {
+                namespaceName = ((PropertyExpression) objectExpression).propertyAsString
+            }
+            if (namespaceName != null && currentScope.allowedTagLibs.contains(namespaceName)) {
                 return makeDynamic(call)
             }
         }
