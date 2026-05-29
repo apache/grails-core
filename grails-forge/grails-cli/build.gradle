@@ -76,7 +76,7 @@ dependencies {
     // transforms are applied to both dependencies and our own projects
     shadowCombined platform("org.apache.grails:grails-bom:$projectVersion")
     shadowCombined 'org.apache.groovy:groovy'
-    shadowCombined files(project(':grails-cli-shadow').tasks.named('shadowJar'))
+    shadowCombined files(rootProject.project(':grails-cli-shadow').tasks.named('shadowJar'))
 }
 
 apply {

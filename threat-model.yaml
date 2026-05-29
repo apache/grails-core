@@ -1,0 +1,451 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Machine-readable companion to THREAT_MODEL.md (§15).
+#
+# This file is a derived index for automated and AI-assisted triage tooling.
+# THREAT_MODEL.md is canonical; regenerate this file whenever the prose
+# document changes. Schema follows the structure suggested in the
+# threat-model-producer rubric (https://gist.github.com/potiuk/da14a826283038ddfe38cc9fe6310573).
+
+project:
+  name: apache/grails-core
+  version_binding: "8.0.x"
+  threat_model: THREAT_MODEL.md
+  status: draft
+  date: "2026-01"
+  disclosure: SECURITY.md
+
+# §2/§3 - component families and their in/out-of-model disposition.
+components:
+  - name: http_request_ingress
+    in_model: true
+    representative_files:
+      - grails-web-mvc/src/main/groovy/org/grails/web/servlet/mvc/GrailsDispatcherServlet.groovy
+      - grails-web-url-mappings/src/main/groovy/org/grails/web/mapping/mvc/UrlMappingsHandlerMapping.groovy
+  - name: interceptors_controllers
+    in_model: true
+    representative_files:
+      - grails-interceptors/src/main/groovy/org/grails/plugins/web/interceptors/GrailsInterceptorHandlerInterceptorAdapter.groovy
+      - grails-controllers/src/main/groovy/grails/artefact/Controller.groovy
+  - name: data_binding
+    in_model: true
+    representative_files:
+      - grails-web-databinding/src/main/groovy/grails/web/databinding/GrailsWebDataBinder.groovy
+      - grails-web-databinding/src/main/groovy/org/grails/web/databinding/bindingsource/DefaultDataBindingSourceRegistry.groovy
+      - grails-databinding-core/src/main/groovy/grails/databinding/SimpleDataBinder.groovy
+  - name: view_rendering
+    in_model: true
+    representative_files:
+      - grails-gsp/core/src/main/groovy/org/grails/gsp/compiler/GroovyPageCompiler.groovy
+      - grails-views-core/src/main/groovy/grails/views/ResolvableGroovyTemplateEngine.groovy
+      - grails-views-core/src/main/groovy/grails/views/mvc/SmartViewResolver.groovy
+  - name: codecs_output_encoding
+    in_model: true
+    representative_files:
+      - grails-encoder/
+  - name: gorm_mapping_validation
+    in_model: true
+    representative_files:
+      - grails-datamapping-core/src/main/groovy/org/grails/compiler/gorm/GormEntityTransformation.groovy
+      - grails-datamapping-validation/src/main/groovy/grails/gorm/validation/PersistentEntityValidator.groovy
+      - grails-data-hibernate5/core/src/main/groovy/org/grails/orm/hibernate/cfg/HibernateMappingBuilder.groovy
+  - name: configuration_loading
+    in_model: true
+    representative_files:
+      - grails-core/src/main/groovy/grails/config/external/ExternalConfigRunListener.groovy
+      - grails-core/src/main/groovy/org/grails/core/cfg/GroovyConfigPropertySourceLoader.groovy
+      - grails-core/src/main/groovy/grails/boot/config/GrailsApplicationPostProcessor.groovy
+  - name: plugin_artefact_discovery
+    in_model: true
+    representative_files:
+      - grails-core/src/main/groovy/grails/plugins/PluginManagerLoader.groovy
+      - grails-core/src/main/groovy/grails/boot/config/tools/ClassPathScanner.groovy
+      - grails-core/src/main/groovy/org/grails/core/io/support/GrailsFactoriesLoader.groovy
+  - name: compile_time_ast_transforms
+    in_model: true
+    notes: "Developer-trusted inputs only; not reachable from HTTP."
+    representative_files:
+      - grails-core/src/main/groovy/org/grails/compiler/injection/GlobalGrailsClassInjectorTransformation.groovy
+      - grails-rest-transforms/src/main/groovy/org/grails/plugins/web/rest/transform/ResourceTransform.groovy
+      - grails-views-core/src/main/groovy/grails/views/compiler/ViewsTransform.groovy
+  - name: cli_shell_grails_shell_cli
+    in_model: true
+    notes: "Developer surface; see §7 supply-chain caveats."
+    representative_files:
+      - grails-shell-cli/src/main/groovy/org/grails/cli/GrailsCli.groovy
+      - grails-shell-cli/src/main/groovy/org/grails/cli/profile/repository/MavenProfileRepository.groovy
+  - name: interactive_consoles_grails_console
+    in_model: false
+    out_of_model_reason: "Developer-only tools providing unrestricted Groovy execution by design (§3)."
+    representative_files:
+      - grails-console/src/main/groovy/grails/ui/shell/GrailsShell.groovy
+      - grails-console/src/main/groovy/grails/ui/console/support/GroovyConsoleApplicationContext.groovy
+  - name: grails_forge_http_api
+    in_model: false
+    out_of_model_reason: "Separate Micronaut-based service deployed independently from any application built with Grails (§3)."
+    representative_files:
+      - grails-forge/grails-forge-api/src/main/java/org/grails/forge/api/create/zip/ZipCreateController.java
+      - grails-forge/grails-forge-api/src/main/java/org/grails/forge/api/create/github/GitHubCreateController.java
+  - name: generated_scaffolding_demo_apps
+    in_model: false
+    out_of_model_reason: "Separately authored; not shipped in framework distributions (§3)."
+    representative_files:
+      - grails-profiles/
+      - grails-test-examples/
+
+# §5a - build-time and configuration variants that change the security envelope.
+config_knobs:
+  - name: grails.views.default.codec
+    default: html
+    security_relevant: true
+    if_changed_from_default: OUT-OF-MODEL_non_default_build
+    section: "§5a, §8 P2"
+  - name: grails.databinding.autoGrowCollectionLimit
+    default: 256
+    default_source: grails-databinding-core/.../SimpleDataBinder.groovy
+    security_relevant: true
+    maintainer_stance: unresolved
+    if_raised: OUT-OF-MODEL_non_default_build
+    section: "§5a, §8 P9"
+  - name: grails.databinding.dateFormats
+    default: rfc3339_plus_locale_defaults_lenient_on
+    security_relevant: true
+    maintainer_stance: unresolved
+    section: "§5a"
+  - name: grails.controllers.upload.maxFileSize
+    default: 128000
+    default_units: bytes
+    default_source: grails-controllers/.../ControllersAutoConfiguration.java
+    security_relevant: true
+    maintainer_stance: unresolved
+    section: "§5a"
+  - name: grails.controllers.upload.maxRequestSize
+    default: 128000
+    default_units: bytes
+    default_source: grails-controllers/.../ControllersAutoConfiguration.java
+    security_relevant: true
+    maintainer_stance: unresolved
+    section: "§5a"
+  - name: grails.allowedMethods
+    default: none_developer_opt_in
+    security_relevant: false
+    section: "§5a"
+  - name: grails.config.locations
+    default: empty
+    security_relevant: true
+    notes: "Operator-trusted input; a non-empty value sourced from an untrusted location is BY-DESIGN_property_disclaimed (§9 false-friend, §11 misuse)."
+    section: "§5a, §9, §11"
+  - name: GRAILS_ENV
+    default: production_for_bootjar_development_for_cli
+    security_relevant: true
+    if_deployed_as_development_in_production: OUT-OF-MODEL_non_default_build
+    notes: "Not a security boundary; see §9 false-friend on GRAILS_ENV=development."
+    section: "§5a"
+  - name: grails.serverURL
+    default: operator_set
+    security_relevant: false
+    notes: "Link-generation helper, not an origin-binding security claim. See §9 false-friend."
+    section: "§5a"
+
+# §6 - per-parameter trust (subset; HTTP request boundary is the primary surface).
+entry_points:
+  - surface: Controller.params
+    parameter: any
+    attacker_controllable: true
+    caller_must_enforce:
+      - "type coercion correctness"
+      - "no concatenation into HQL/SQL/JPQL/Groovy strings"
+      - "no use as redirect target without allow-list"
+  - surface: Controller.request.headers
+    parameter: any
+    attacker_controllable: true
+    caller_must_enforce:
+      - "verify auth headers via configured auth subsystem"
+      - "do not treat presence as evidence"
+  - surface: Controller.request.cookies
+    parameter: any
+    attacker_controllable: true
+  - surface: Controller.request.JSON
+    parameter: body
+    attacker_controllable: true
+  - surface: Controller.request.XML
+    parameter: body
+    attacker_controllable: true
+    notes: "XXE hardening is the parser's responsibility (§9 false friend)."
+  - surface: bindData
+    parameter: source
+    attacker_controllable: true
+    caller_must_enforce:
+      - "use bindable=false, include, or exclude allow-lists"
+  - surface: domain_class_constructor_binding
+    parameter: params_map
+    attacker_controllable: true
+    notes: "Mass-assignment risk; prefer command objects."
+  - surface: MultipartFile
+    parameter: bytes_originalFilename_contentType
+    attacker_controllable: true
+    caller_must_enforce:
+      - "never use originalFilename as filesystem path"
+      - "verify contentType against actual bytes"
+  - surface: grails.config.locations
+    parameter: path
+    attacker_controllable: false
+    trusted_role: operator
+  - surface: application.groovy
+    parameter: file_contents
+    attacker_controllable: false
+    trusted_role: operator
+    notes: "Evaluated as Groovy by ConfigSlurper."
+  - surface: domain_mapping_closure
+    parameter: closure_body
+    attacker_controllable: false
+    trusted_role: developer
+  - surface: MavenProfileRepository
+    parameter: profile_coordinates
+    attacker_controllable: false
+    trusted_role: developer
+    notes: "CLI-only; downloaded profiles execute .groovy command scripts."
+
+# §7 - adversary model summary.
+adversaries:
+  in_scope:
+    - id: http_end_user
+      description: "Remote unauthenticated HTTP client crafting arbitrary requests against the deployed application."
+  out_of_scope:
+    - id: local_shell_attacker
+    - id: classpath_compromise
+    - id: malicious_grails_plugin
+    - id: build_environment_compromise
+    - id: jvm_co_tenant
+    - id: malicious_profile_via_MavenProfileRepository
+    - id: GrailsShell_or_GroovyConsole_reachability
+    - id: side_channel_observer
+
+# §8 - claimed security properties.
+properties_provided:
+  - id: P1
+    description: "Parameterized GORM queries are SQL/HQL-injection safe."
+    cwe: CWE-89
+    conditions: "Caller uses named or positional parameters (or criteria DSL / where DSL with bound values), not string concatenation into HQL/SQL."
+    violation_symptom: "Reflected data appears unescaped in executed SQL; attacker boolean predicates evaluate."
+    severity: security_critical
+    provenance: documented
+    source: grails-doc/src/en/guide/security/securingAgainstAttacks.adoc
+  - id: P2
+    description: "Default GSP ${...} expression output is HTML-encoded."
+    cwe: CWE-79
+    conditions: "View runs with the default codec configuration (expression=html); developer has not opted into raw() or set the codec to none."
+    violation_symptom: "Reflected XSS via value rendered through ${userInput} without raw()."
+    severity: security_critical
+    provenance: documented
+    source: grails-doc/src/en/guide/security/xssPrevention.adoc
+  - id: P3
+    description: "Grails-supplied link/form/createLink/createLinkTo tag helpers URL-encode parameter values."
+    cwe: CWE-601
+    conditions: "Caller uses the supplied tag library rather than hand-built strings."
+    violation_symptom: "Reflected URL or header injection via tag-helper parameter."
+    severity: security_critical
+    provenance: documented
+    source: grails-doc/src/en/guide/security.adoc
+  - id: P4
+    description: "HTMLCodec, URLCodec, JavaScriptCodec, Base64Codec encode for their stated context."
+    cwe: CWE-116
+    conditions: "Codec is invoked at the boundary between trusted source and the named output context."
+    violation_symptom: "Output does not match documented encoding for the context."
+    severity: security_critical
+    provenance: documented
+    source: grails-doc/src/en/guide/security/codecs.adoc
+  - id: P5
+    description: "useToken (synchronizer token) on a form blocks naive CSRF and double-submit."
+    cwe: CWE-352
+    conditions: "Form rendered with useToken=\"true\" and the receiving action uses withForm { }."
+    violation_symptom: "Token validation accepts missing, reused, or attacker-supplied token."
+    severity: security_critical
+    provenance: documented
+    source: grails-doc/src/en/guide/security/securingAgainstAttacks.adoc
+  - id: P6
+    description: "Data binding respects bindable=false and explicit include/exclude lists."
+    cwe: CWE-915
+    conditions: "Field is annotated bindable=false or the binding call explicitly lists allowed/forbidden fields."
+    violation_symptom: "Field marked unbindable is set from request input."
+    severity: security_critical
+    provenance: inferred
+  - id: P7
+    description: "Compile-time AST transforms act only on developer-authored source."
+    cwe: CWE-94
+    conditions: "Build runs on developer-controlled source."
+    violation_symptom: "Transform fires on or is influenced by attacker-supplied input."
+    severity: correctness
+    provenance: inferred
+  - id: P8
+    description: "Configuration loading does not evaluate application.groovy from a path the framework chose at runtime."
+    cwe: CWE-94
+    conditions: "Operator has not pointed grails.config.locations at attacker-writable storage."
+    violation_symptom: "User request causes evaluation of an unauthorized Groovy file."
+    severity: security_critical
+    provenance: inferred
+    open_question: "§14 wave 1"
+  - id: P9
+    description: "maxFileSize, maxRequestSize, autoGrowCollectionLimit provide bounded data-binding memory."
+    cwe: CWE-770
+    conditions: "Operator does not raise the limits past application needs."
+    violation_symptom: "Memory growth proportional to input regardless of configured limit."
+    severity: resource_bug
+    provenance: inferred
+    open_question: "§14 wave 2"
+
+# §9 - properties the framework does NOT provide.
+properties_disclaimed:
+  - id: auth
+    description: "Authentication, authorization, session management, password storage."
+    delegate_to: spring_security_plugin_or_equivalent
+    provenance: documented
+  - id: csrf_without_useToken
+    description: "CSRF protection on requests not protected by useToken."
+    provenance: documented
+  - id: xss_with_codec_disabled
+    description: "XSS protection when codec is disabled or raw() is used."
+    provenance: documented
+  - id: hql_concatenation
+    description: "Injection protection for queries built by string concatenation."
+    provenance: documented
+  - id: object_level_authz_guessable_ids
+    description: "Authorization for individual domain-object access by ID."
+    provenance: documented
+  - id: rate_limiting
+    description: "Built-in throttling or DoS volume protection."
+    provenance: documented
+  - id: constant_time_crypto
+    description: "Constant-time cryptographic primitives."
+    provenance: inferred
+  - id: groovy_sandboxing
+    description: "Sandboxing of Groovy code on the classpath, in application.groovy, or in plugin closures."
+    provenance: inferred
+  - id: profile_jar_provenance
+    description: "Verification of Maven profile JAR provenance beyond Maven Resolver defaults."
+    provenance: inferred
+  - id: cross_tenant_isolation
+    description: "Process-level isolation between deployed applications sharing a JVM."
+    provenance: inferred
+  - id: transport_security
+    description: "TLS; provided by Spring Boot embedded container or operator proxy."
+    provenance: inferred
+
+# False-friend properties - features that look like security guarantees but are not.
+false_friends:
+  - id: secured_annotation
+    looks_like: "Authorization decoration on a method."
+    actually_is: "Integration hint for the Spring Security plugin. Inert without the plugin."
+  - id: bindable_false
+    looks_like: "Field-level access control."
+    actually_is: "Data-binding allow-list only; does not prevent code from setting the field or response from including it."
+  - id: useToken
+    looks_like: "Replay-protection mechanism."
+    actually_is: "Synchronizer-token CSRF defense and double-submit guard; not replay protection."
+  - id: domain_constraints
+    looks_like: "Security boundary."
+    actually_is: "Input-validation rules. A constraint failure is a validation error, not an attack signal."
+  - id: gsp_html_comments
+    looks_like: "Server-side comments stripped on render."
+    actually_is: "HTML comments (<!-- ... -->) reach the client. Use GSP comments (<%-- ... --%>) for server-side stripping."
+  - id: grails_serverURL
+    looks_like: "Authoritative deployment URL declaration."
+    actually_is: "Link-generation helper; does not bind the embedded container's listening address."
+  - id: grails_env_development
+    looks_like: "Production-vs-development security boundary."
+    actually_is: "Environment selector that loosens dev defaults (stack traces in error responses, dev-tool surfaces). Deploying with GRAILS_ENV=development is OUT-OF-MODEL_non_default_build, not a framework bug."
+  - id: grails_config_locations_as_config
+    looks_like: "Configuration-file path."
+    actually_is: "Groovy code-execution path - .groovy files are evaluated via ConfigSlurper. A file the application can read and an attacker can write is equivalent to classpath compromise."
+
+# §11a - recurring false positives that automated triage should suppress or treat as KNOWN-NON-FINDING.
+known_non_findings:
+  - pattern: "Dynamic class loading in ClassPathScanner.classLoader.loadClass(name)"
+    discharged_by: "§6 trust assumption on classpath input"
+    disposition: "OUT-OF-MODEL: trusted-input"
+  - pattern: "Reflective Class.forName / loadClass in ApplicationClassInjector, DatabaseMigrationCommand (passwordEncryptionCodec), ConfigSupport (source), ExecuteStep (profile YAML className)"
+    discharged_by: "§6 trust assumption on application.yml / application.groovy / profile-YAML inputs"
+    disposition: "OUT-OF-MODEL: trusted-input"
+  - pattern: "Groovy evaluate() / ConfigSlurper in GroovyConfigPropertySourceLoader, ExternalConfigRunListener, HibernateMappingBuilder, GroovyChangeLogParser"
+    discharged_by: "§6 trust assumption on application.groovy / mapping closures / external config / migration files"
+    disposition: "OUT-OF-MODEL: trusted-input"
+    related: "BY-DESIGN: property-disclaimed if §11 misuse holds"
+  - pattern: "GroovyShell in grails-console (GrailsShell, GroovyConsoleApplicationContext) and GrailsApplicationScriptRunner"
+    discharged_by: "§3 - developer-only tools by design"
+    disposition: "OUT-OF-MODEL: unsupported-component"
+  - pattern: "Every @GroovyASTTransformation implementation in framework JARs"
+    discharged_by: "§8 P7 and §6 trust assumption on annotated source"
+    disposition: "OUT-OF-MODEL: trusted-input"
+    inventory: ["CachePutTransformation", "CacheEvictTransformation", "CacheableTransformation", "TransactionalTransform", "RollbackTransform", "OrderedGormTransformation", "TenantTransform", "ServiceTransformation", "GormEntityTransformation", "JpaGormEntityTransformation", "GlobalJpaEntityTransform", "DirtyCheckTransformation", "SubscriberTransform", "PublisherTransform", "MarkupViewsTransform", "JsonViewsTransform", "ViewsTransform", "ResourceTransform", "LinkableTransform", "GlobalGrailsClassInjectorTransformation", "GlobalImportTransformation", "EnhancesTraitTransformation", "HibernateEntityTransformation", "RxScheduleIOTransformation", "GroovyScriptCommandTransform"]
+  - pattern: "Mass-assignment warning on domain-class binding with bindable=false or command object"
+    discharged_by: "§8 P6 (data binding respects bindable=false)"
+    disposition: "KNOWN-NON-FINDING"
+  - pattern: "GSP ${raw(x)} on a developer-controlled value"
+    discharged_by: "§6 trust assumption (source of x is not a request parameter)"
+    disposition: "KNOWN-NON-FINDING"
+  - pattern: "SimpleDataBinder reflection on target field types"
+    discharged_by: "§6 trust assumption (target class is developer-authored)"
+    disposition: "OUT-OF-MODEL: trusted-input"
+  - pattern: "SpelExpressionParser in GroovyEclipseCompilationHelper"
+    discharged_by: "§3 - compile-time IDE helper, not runtime"
+    disposition: "OUT-OF-MODEL: unsupported-component"
+  - pattern: "BeforeValidateHelper Serializable with custom readObject"
+    discharged_by: "§6 trust assumption on serialization sources (no production code deserializes attacker-supplied ObjectInputStream)"
+    disposition: "OUT-OF-MODEL: trusted-input"
+    open_question: "§14 wave 3"
+    file: grails-datamapping-validation/src/main/groovy/org/grails/datastore/gorm/support/BeforeValidateHelper.java
+  - pattern: "SynchronizerTokensHolder is Serializable"
+    discharged_by: "§6 trust assumption on session-store infrastructure"
+    disposition: "OUT-OF-MODEL: trusted-input"
+  - pattern: "@Secured present but no in-method authz logic"
+    discharged_by: "§9 (auth delegated to Spring Security plugin)"
+    disposition: "KNOWN-NON-FINDING"
+  - pattern: "Framework-level logging reflects user input"
+    discharged_by: "§6 (framework's own logging never serializes request data without explicit developer code)"
+    disposition: "OUT-OF-MODEL: unsupported-component"
+  - pattern: "new File(...) with multipart-derived names in framework code"
+    discharged_by: "§6 (no in-framework sink reaches a request-influenced filename; the risk lives in user controller code)"
+    disposition: "OUT-OF-MODEL: unsupported-component"
+  - pattern: "Production @RestController / @Controller beans shipped in framework JARs"
+    discharged_by: "§2 (framework ships no Spring HTTP-handler beans; every endpoint is user-defined)"
+    disposition: "KNOWN-NON-FINDING"
+
+# §13 - closed set of triage dispositions.
+dispositions:
+  - label: VALID
+    licensed_by: ["§8", "§6", "§7"]
+  - label: VALID-HARDENING
+    licensed_by: ["§11"]
+  - label: "OUT-OF-MODEL: trusted-input"
+    licensed_by: ["§6"]
+  - label: "OUT-OF-MODEL: adversary-not-in-scope"
+    licensed_by: ["§7"]
+  - label: "OUT-OF-MODEL: unsupported-component"
+    licensed_by: ["§3"]
+  - label: "OUT-OF-MODEL: non-default-build"
+    licensed_by: ["§5a"]
+  - label: "BY-DESIGN: property-disclaimed"
+    licensed_by: ["§9"]
+  - label: KNOWN-NON-FINDING
+    licensed_by: ["§11a"]
+  - label: MODEL-GAP
+    licensed_by: ["§12"]
+    triggers_revision: true
+
+# Provenance counts (approximate; track THREAT_MODEL.md §1 draft confidence).
+provenance_counts:
+  documented: 48
+  maintainer: 0
+  inferred: 64

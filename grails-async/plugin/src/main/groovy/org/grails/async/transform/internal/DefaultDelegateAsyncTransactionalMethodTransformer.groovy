@@ -44,9 +44,9 @@ import org.codehaus.groovy.syntax.Types
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.annotation.Transactional
 
+import grails.transaction.TransactionManagerAware
 import org.grails.compiler.injection.GrailsASTUtils
 import org.grails.compiler.web.async.TransactionalAsyncTransformUtils
-import grails.transaction.TransactionManagerAware
 
 /**
  * Modifies the @DelegateAsync transform to take into account transactional services. New instance should be created per class transform, as state is held.
@@ -61,7 +61,9 @@ class DefaultDelegateAsyncTransactionalMethodTransformer implements DelegateAsyn
     private static final ClassNode TRANSACTIONAL_CLASS_NODE = new ClassNode(Transactional)
     private static final ClassNode INTERFACE_TRANSACTION_MANAGER = new ClassNode(PlatformTransactionManager).getPlainNodeReference()
     private static final ClassNode INTERFACE_TRANSACTION_MANAGER_AWARE = new ClassNode(TransactionManagerAware).getPlainNodeReference()
-    private static final Parameter[] SET_TRANSACTION_MANAGER_METHOD_PARAMETERS = [new Parameter(INTERFACE_TRANSACTION_MANAGER, 'transactionManager')] as Parameter[]
+    private static final Parameter[] SET_TRANSACTION_MANAGER_METHOD_PARAMETERS = [
+        new Parameter(INTERFACE_TRANSACTION_MANAGER, 'transactionManager')
+    ] as Parameter[]
     private static final String FIELD_NAME_TRANSACTION_MANAGER = '$transactionManager'
     private static final String FIELD_NAME_PROMISE_DECORATORS = '$promiseDecorators'
     private static final ClassNode CLASS_NODE_MAP = new ClassNode(Map).getPlainNodeReference()
