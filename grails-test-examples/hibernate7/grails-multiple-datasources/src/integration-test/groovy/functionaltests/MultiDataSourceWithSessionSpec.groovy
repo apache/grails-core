@@ -16,71 +16,61 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package functionaltests
 
-import datasources.Application
-import grails.testing.mixin.integration.Integration
-import grails.testing.spock.OnceBefore
-import io.micronaut.http.client.HttpClient
 import spock.lang.Issue
-import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Stepwise
+import spock.lang.Tag
 
-@Integration(applicationClass = Application)
+import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.http.client.HttpClientSupport
+
 @Stepwise
-class MultiDataSourceWithSessionSpec extends Specification {
-
-    @Shared
-    HttpClient client
-
-    @OnceBefore
-    void init() {
-        String baseUrl = "http://localhost:$serverPort"
-        this.client = HttpClient.create(baseUrl.toURL())
-    }
+@Integration
+@Tag('http-client')
+class MultiDataSourceWithSessionSpec extends Specification implements HttpClientSupport {
 
     @Issue('https://github.com/apache/grails-core/issues/14333')
     void "withSession on secondary datasource does not throw No Session found"() {
         when:
-        String response = client.toBlocking().retrieve('/secondaryBook/withSessionTest')
+        def response = http('/secondaryBook/withSessionTest')
 
         then:
-        response.contains('sessionObtained:true')
+        response.assertContains('sessionObtained:true')
     }
 
     @Issue('https://github.com/apache/grails-core/issues/14333')
     void "CRUD via withSession on secondary datasource works"() {
         when:
-        String response = client.toBlocking().retrieve('/secondaryBook/crudViaWithSession')
+        def response = http('/secondaryBook/crudViaWithSession')
 
         then:
-        response.contains('count:1')
+        response.assertContains('count:1')
 
         cleanup:
-        client.toBlocking().retrieve('/secondaryBook/cleanup')
+        http('/secondaryBook/cleanup')
     }
 
     @Issue('https://github.com/apache/grails-core/issues/11798')
     void "domain class on secondary datasource can be validated via withSession"() {
         when:
-        String response = client.toBlocking().retrieve('/secondaryBook/validateCommandObject')
+        def response = http('/secondaryBook/validateCommandObject')
 
         then:
-        response.contains('validated:true')
-        response.contains('hasErrors:true')
+        response.assertContains('validated:true')
+                .assertContains('hasErrors:true')
     }
 
     @Issue('https://github.com/apache/grails-core/issues/14333')
     void "withSession works after executeUpdate on secondary datasource"() {
         when:
-        String response = client.toBlocking().retrieve('/secondaryBook/sessionAfterExecuteUpdate')
+        def response = http('/secondaryBook/sessionAfterExecuteUpdate')
 
         then:
-        response.contains('title:After Update')
+        response.assertContains('title:After Update')
 
         cleanup:
-        client.toBlocking().retrieve('/secondaryBook/cleanup')
+        http('/secondaryBook/cleanup')
     }
 }

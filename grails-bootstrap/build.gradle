@@ -29,6 +29,8 @@ plugins {
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-code-analysis'
+    id 'org.apache.grails.gradle.grails-jacoco'
 }
 
 version = projectVersion
@@ -51,7 +53,7 @@ dependencies {
 
     compileOnly 'io.methvin:directory-watcher'
     compileOnly 'org.fusesource.jansi:jansi'
-    compileOnly 'jline:jline'
+    compileOnly 'org.jline:jline'
     compileOnly 'net.java.dev.jna:jna'
 
     api 'org.yaml:snakeyaml'
@@ -59,7 +61,7 @@ dependencies {
     testImplementation 'org.apache.groovy:groovy-xml'
     testImplementation 'org.apache.groovy:groovy-templates'
     testImplementation 'org.fusesource.jansi:jansi'
-    testImplementation 'jline:jline'
+    testImplementation 'org.jline:jline'
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'

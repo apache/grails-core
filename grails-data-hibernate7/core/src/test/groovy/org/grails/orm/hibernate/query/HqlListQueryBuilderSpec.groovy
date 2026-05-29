@@ -18,9 +18,8 @@
  */
 package org.grails.orm.hibernate.query
 
-import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.datastore.mapping.model.PersistentProperty
-import org.grails.datastore.mapping.model.types.Association
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.HibernateMappingContext
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.MappingCacheHolder
@@ -30,7 +29,7 @@ import spock.lang.Unroll
 
 class HqlListQueryBuilderSpec extends Specification {
 
-    PersistentEntity entity = Mock(PersistentEntity)
+    GrailsHibernatePersistentEntity entity = Mock(GrailsHibernatePersistentEntity)
     HibernateMappingContext mappingContext = Mock(HibernateMappingContext)
     MappingCacheHolder cacheHolder = Mock(MappingCacheHolder)
 
@@ -59,9 +58,10 @@ class HqlListQueryBuilderSpec extends Specification {
 
     void "test buildListHql with simple sort"() {
         given:
-        entity.getPropertyByName("name") >> Mock(PersistentProperty) {
-            getType() >> String
-        }
+        def prop = Mock(HibernatePersistentProperty)
+        prop.getType() >> String
+        entity.getHibernatePropertyByPath("name") >> prop
+        
         def builder = new HqlListQueryBuilder(entity, [
                 (HibernateQueryArgument.SORT.value()) : "name",
                 (HibernateQueryArgument.ORDER.value()): HibernateQueryArgument.ORDER_DESC.value()
@@ -73,9 +73,10 @@ class HqlListQueryBuilderSpec extends Specification {
 
     void "test buildListHql with numeric sort"() {
         given:
-        entity.getPropertyByName("age") >> Mock(PersistentProperty) {
-            getType() >> Integer
-        }
+        def prop = Mock(HibernatePersistentProperty)
+        prop.getType() >> Integer
+        entity.getHibernatePropertyByPath("age") >> prop
+
         def builder = new HqlListQueryBuilder(entity, [
                 (HibernateQueryArgument.SORT.value()) : "age",
                 (HibernateQueryArgument.ORDER.value()): HibernateQueryArgument.ORDER_ASC.value()
@@ -87,9 +88,10 @@ class HqlListQueryBuilderSpec extends Specification {
 
     void "test buildListHql with ignoreCase false"() {
         given:
-        entity.getPropertyByName("name") >> Mock(PersistentProperty) {
-            getType() >> String
-        }
+        def prop = Mock(HibernatePersistentProperty)
+        prop.getType() >> String
+        entity.getHibernatePropertyByPath("name") >> prop
+
         def builder = new HqlListQueryBuilder(entity, [
                 (HibernateQueryArgument.SORT.value())       : "name",
                 (HibernateQueryArgument.IGNORE_CASE.value()): false
@@ -101,8 +103,14 @@ class HqlListQueryBuilderSpec extends Specification {
 
     void "test buildListHql with multiple sorts"() {
         given:
-        entity.getPropertyByName("name") >> Mock(PersistentProperty) { getType() >> String }
-        entity.getPropertyByName("age") >> Mock(PersistentProperty) { getType() >> Integer }
+        def nameProp = Mock(HibernatePersistentProperty)
+        nameProp.getType() >> String
+        def ageProp = Mock(HibernatePersistentProperty)
+        ageProp.getType() >> Integer
+        
+        entity.getHibernatePropertyByPath("name") >> nameProp
+        entity.getHibernatePropertyByPath("age") >> ageProp
+
         // Use LinkedHashMap to ensure deterministic order in HQL generation
         def builder = new HqlListQueryBuilder(entity, [
                 (HibernateQueryArgument.SORT.value()): [
@@ -117,11 +125,9 @@ class HqlListQueryBuilderSpec extends Specification {
 
     void "test buildListHql with nested property sort"() {
         given:
-        def authorAssociation = Mock(Association)
-        def authorEntity = Mock(PersistentEntity)
-        entity.getPropertyByName("author") >> authorAssociation
-        authorAssociation.getAssociatedEntity() >> authorEntity
-        authorEntity.getPropertyByName("name") >> Mock(PersistentProperty) { getType() >> String }
+        def prop = Mock(HibernatePersistentProperty)
+        prop.getType() >> String
+        entity.getHibernatePropertyByPath("author.name") >> prop
 
         def builder = new HqlListQueryBuilder(entity, [(HibernateQueryArgument.SORT.value()): "author.name"])
 
@@ -154,12 +160,40 @@ class HqlListQueryBuilderSpec extends Specification {
 
         cacheHolder.getMapping(_) >> mapping
         mapping.getSort() >> sortConfig
-        entity.getPropertyByName("lastName") >> Mock(PersistentProperty) { getType() >> String }
+        
+        def prop = Mock(HibernatePersistentProperty)
+        prop.getType() >> String
+        entity.getHibernatePropertyByPath("lastName") >> prop
 
         def builder = new HqlListQueryBuilder(entity, [:])
 
         expect:
         builder.buildListHql() == "from Person e order by upper(e.lastName) asc"
+    }
+
+    void "test buildListHql with multiple default sorts from mapping"() {
+        given:
+        def mapping = Mock(Mapping)
+        // Use LinkedHashMap to ensure deterministic order in HQL generation
+        def namesAndDirections = [lastName: "asc", firstName: "desc"]
+        def sortConfig = Mock(SortConfig)
+        sortConfig.getNamesAndDirections() >> namesAndDirections
+
+        cacheHolder.getMapping(_) >> mapping
+        mapping.getSort() >> sortConfig
+        
+        def lastProp = Mock(HibernatePersistentProperty)
+        lastProp.getType() >> String
+        def firstProp = Mock(HibernatePersistentProperty)
+        firstProp.getType() >> String
+        
+        entity.getHibernatePropertyByPath("lastName") >> lastProp
+        entity.getHibernatePropertyByPath("firstName") >> firstProp
+
+        def builder = new HqlListQueryBuilder(entity, [:])
+
+        expect:
+        builder.buildListHql() == "from Person e order by upper(e.lastName) asc, upper(e.firstName) desc"
     }
 
     @Unroll
@@ -171,7 +205,7 @@ class HqlListQueryBuilderSpec extends Specification {
         params               | expected
         [:]                  | false
         [max: 10]            | true
-        [offset: 5]          | false
+        [offset: 5]          | true
         [max: 10, offset: 5] | true
     }
 }

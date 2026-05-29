@@ -125,7 +125,7 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         1 * simpleValueBinder.bindSimpleValue(otherSide, null, _ as ManyToOne, "/test")
 
         mapping.getColumns().get("circularProp") == propertyConfig
-        1 * propertyConfig.setJoinTable({ it.key.name == "circular_prop_id" })
+        1 * propertyConfig.setJoinTable({ it.keys && it.keys[0].name == "circular_prop_id" })
     }
 
     def "Test bindManyToOne (OneToOneProperty)"() {
@@ -197,7 +197,7 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         then:
         result instanceof ManyToOne
         mapping.getColumns().containsKey("newProp")
-        1 * propertyConfig.setJoinTable({ it.key.name == "new_prop_id" })
+        1 * propertyConfig.setJoinTable({ it.keys && it.keys[0].name == "new_prop_id" })
     }
 
     private List mockEntity(boolean composite) {

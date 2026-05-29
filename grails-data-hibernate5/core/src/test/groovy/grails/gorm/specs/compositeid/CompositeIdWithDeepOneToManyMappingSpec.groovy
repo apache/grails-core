@@ -34,9 +34,7 @@ import spock.lang.Specification
  */
 class CompositeIdWithDeepOneToManyMappingSpec extends Specification {
 
-    @AutoCleanup
-    @Shared
-    HibernateDatastore datastore = new HibernateDatastore(GrandParent, Parent, Child)
+    @Shared @AutoCleanup HibernateDatastore datastore = new HibernateDatastore(GrandParent, Parent, Child)
     @Shared
     PlatformTransactionManager transactionManager = datastore.transactionManager
 

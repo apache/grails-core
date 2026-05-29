@@ -18,16 +18,18 @@
  */
 package org.grails.datastore.gorm
 
+import org.springframework.validation.Errors
+import org.springframework.validation.Validator
+
 import grails.gorm.annotation.Entity
 import grails.gorm.validation.ConstrainedProperty
 import grails.validation.ValidationException
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.gorm.validation.constraints.eval.DefaultConstraintEvaluator
-import org.springframework.validation.Errors
-import org.springframework.validation.Validator
 
 class SaveWithFailOnErrorDefaultSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
     void setupSpec() {
         manager.addAllDomainClasses([TestProduct])
     }
@@ -87,6 +89,7 @@ class SaveWithFailOnErrorDefaultSpec extends GrailsDataTckSpec<GrailsDataCoreTck
 
 @Entity
 class TestProduct {
+
     Long id
     String name
 

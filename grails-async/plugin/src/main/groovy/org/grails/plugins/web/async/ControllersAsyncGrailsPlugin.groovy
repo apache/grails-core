@@ -33,9 +33,8 @@ class ControllersAsyncGrailsPlugin extends Plugin {
 
     def grailsVersion = '7.0.0-SNAPSHOT > *'
     def loadAfter = ['controllers']
-    Closure doWithSpring() { {
-
-            ->
+    Closure doWithSpring() {
+        { ->
             asyncPromiseResponseActionResultTransformer(AsyncActionResultTransformer)
             grailsPromiseFactory(PromiseFactoryBean)
         }

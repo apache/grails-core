@@ -27,6 +27,8 @@ plugins {
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-code-analysis'
+    id 'org.apache.grails.gradle.grails-jacoco'
 }
 
 version = projectVersion
@@ -44,6 +46,7 @@ dependencies {
 
     implementation 'com.github.ben-manes.caffeine:caffeine'
     api 'org.apache.groovy:groovy'
+    implementation 'org.apache.groovy:groovy-json'
     api 'org.springframework.boot:spring-boot'
     api 'org.springframework.boot:spring-boot-web-server'
     api 'org.springframework:spring-core'

@@ -18,9 +18,6 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import spock.lang.IgnoreIf
-import spock.lang.Requires
-
 import org.apache.grails.data.testing.tck.domains.Book as TckBook
 import org.apache.grails.data.testing.tck.domains.Highway
 import org.apache.grails.data.testing.tck.domains.Person
@@ -40,11 +37,6 @@ class FindByMethodSpec extends GrailsDataTckSpec {
         manager.addAllDomainClasses([Person, TckBook, Highway])
     }
 
-    @Requires({
-        System.getProperty('hibernate5.gorm.suite') == 'true' ||
-                System.getProperty('hibernate7.gorm.suite') == 'true' ||
-                System.getProperty('mongodb.gorm.suite') == 'true'
-    })
     void 'Test Using AND Multiple Times In A Dynamic Finder'() {
         given:
         new Person(firstName: 'Jake', lastName: 'Brown', age: 11).save()
@@ -84,11 +76,6 @@ class FindByMethodSpec extends GrailsDataTckSpec {
         1 == cnt
     }
 
-    @Requires({
-        System.getProperty('hibernate5.gorm.suite') == 'true' ||
-                System.getProperty('hibernate7.gorm.suite') == 'true' ||
-                System.getProperty('mongodb.gorm.suite') == 'true'
-    })
     void 'Test Using OR Multiple Times In A Dynamic Finder'() {
         given:
         new Person(firstName: 'Jake', lastName: 'Brown', age: 11).save()
@@ -115,11 +102,6 @@ class FindByMethodSpec extends GrailsDataTckSpec {
         3 == cnt
     }
 
-    @Requires({
-        System.getProperty('hibernate5.gorm.suite') == 'true' ||
-                System.getProperty('hibernate7.gorm.suite') == 'true' ||
-                System.getProperty('mongodb.gorm.suite') == 'true'
-    })
     void testBooleanPropertyQuery() {
         given:
         new Highway(bypassed: true, name: 'Bypassed Highway').save()
@@ -300,108 +282,8 @@ class FindByMethodSpec extends GrailsDataTckSpec {
         originalId == book.id
     }
 
-    @IgnoreIf({ System.getProperty('hibernate7.gorm.suite') == 'true' })
-    void "Test patterns which shold throw MissingMethodException"() {
-        when:
-        TckBook.findOrCreateByAuthorInList(['Jeff'])
-
-        then:
-        thrown(MissingMethodException)
-
-        when:
-        TckBook.findOrCreateByAuthorOrTitle('Jim', 'Title')
-
-        then:
-        thrown(MissingMethodException)
-
-        when:
-        TckBook.findOrCreateByAuthorNotEqual('B')
-
-        then:
-        thrown(MissingMethodException)
-
-        when:
-        TckBook.findOrCreateByAuthorGreaterThan('B')
-
-        then:
-        thrown(MissingMethodException)
-
-        when:
-        TckBook.findOrCreateByAuthorLessThan('B')
-
-        then:
-        thrown(MissingMethodException)
-
-        when:
-        TckBook.findOrCreateByAuthorBetween('A', 'B')
-
-        then:
-        thrown(MissingMethodException)
-
-        when:
-        TckBook.findOrCreateByAuthorGreaterThanEquals('B')
-
-        then:
-        thrown(MissingMethodException)
-
-        when:
-        TckBook.findOrCreateByAuthorLessThanEquals('B')
-
-        then:
-        thrown(MissingMethodException)
-
-        when:
-        TckBook.findOrSaveByAuthorInList(['Jeff'])
-
-        then:
-        thrown(MissingMethodException)
-
-        when:
-        TckBook.findOrSaveByAuthorOrTitle('Jim', 'Title')
-
-        then:
-        thrown(MissingMethodException)
-
-        when:
-        TckBook.findOrSaveByAuthorNotEqual('B')
-
-        then:
-        thrown(MissingMethodException)
-
-        when:
-        TckBook.findOrSaveByAuthorGreaterThan('B')
-
-        then:
-        thrown(MissingMethodException)
-
-        when:
-        TckBook.findOrSaveByAuthorLessThan('B')
-
-        then:
-        thrown(MissingMethodException)
-
-        when:
-        TckBook.findOrSaveByAuthorBetween('A', 'B')
-
-        then:
-        thrown(MissingMethodException)
-
-        when:
-        TckBook.findOrSaveByAuthorGreaterThanEquals('B')
-
-        then:
-        thrown(MissingMethodException)
-
-        when:
-        TckBook.findOrSaveByAuthorLessThanEquals('B')
-
-        then:
-        thrown(MissingMethodException)
-    }
-
     @Unroll
-    @Requires({ System.getProperty('hibernate7.gorm.suite') == 'true' })
-    void "Test Hib7 pattern [#index] #methodName should throw #exception.simpleName"() {
+    void "Test findOrCreateBy/findOrSaveBy patterns [#index] #methodName should throw #exception.simpleName"() {
         when:
         action.call()
 
@@ -409,25 +291,25 @@ class FindByMethodSpec extends GrailsDataTckSpec {
         thrown(exception)
 
         where:
-        index | methodName                                | exception              | action
+        index | methodName                              | exception              | action
         // findOrCreateBy patterns
-        1     | 'findOrCreateByAuthorOrTitle'             | MissingMethodException | { TckBook.findOrCreateByAuthorOrTitle('Jim', 'Title') }
-        2     | 'findOrCreateByAuthorGreaterThan'         | ConfigurationException | { TckBook.findOrCreateByAuthorGreaterThan('B') }
-        3     | 'findOrCreateByAuthorLessThan'            | ConfigurationException | { TckBook.findOrCreateByAuthor_LessThan('B') }
-        4     | 'findOrCreateByAuthorGreaterThanEquals'   | ConfigurationException | { TckBook.findOrCreateByAuthorGreaterThanEquals('B') }
-        5     | 'findOrCreateByAuthorLessThanEquals'      | ConfigurationException | { TckBook.findOrCreateByAuthorLessThanEquals('B') }
-        6     | 'findOrCreateByAuthorInList'              | MissingMethodException | { TckBook.findOrCreateByAuthorInList(['Jeff']) }
-        7     | 'findOrCreateByAuthorNotEqual'            | MissingMethodException | { TckBook.findOrCreateByAuthorNotEqual('B') }
-        8     | 'findOrCreateByAuthorBetween'             | MissingMethodException | { TckBook.findOrCreateByAuthorBetween('A', 'B') }
+        1     | 'findOrCreateByAuthorInList'            | MissingMethodException | { TckBook.findOrCreateByAuthorInList(['Jeff']) }
+        2     | 'findOrCreateByAuthorOrTitle'           | MissingMethodException | { TckBook.findOrCreateByAuthorOrTitle('Jim', 'Title') }
+        3     | 'findOrCreateByAuthorNotEqual'          | MissingMethodException | { TckBook.findOrCreateByAuthorNotEqual('B') }
+        4     | 'findOrCreateByAuthorGreaterThan'       | ConfigurationException | { TckBook.findOrCreateByAuthorGreaterThan('B') }
+        5     | 'findOrCreateByAuthorLessThan'          | ConfigurationException | { TckBook.findOrCreateByAuthorLessThan('B') }
+        6     | 'findOrCreateByAuthorBetween'           | MissingMethodException | { TckBook.findOrCreateByAuthorBetween('A', 'B') }
+        7     | 'findOrCreateByAuthorGreaterThanEquals' | ConfigurationException | { TckBook.findOrCreateByAuthorGreaterThanEquals('B') }
+        8     | 'findOrCreateByAuthorLessThanEquals'    | ConfigurationException | { TckBook.findOrCreateByAuthorLessThanEquals('B') }
 
         // findOrSaveBy patterns
-        9     | 'findOrSaveByAuthorInList'                | MissingMethodException | { TckBook.findOrSaveByAuthorInList(['Jeff']) }
-        10    | 'findOrSaveByAuthorOrTitle'               | MissingMethodException | { TckBook.findOrSaveByAuthorOrTitle('Jim', 'Title') }
-        11    | 'findOrSaveByAuthorNotEqual'              | MissingMethodException | { TckBook.findOrSaveByAuthorNotEqual('B') }
-        12    | 'findOrSaveByAuthorGreaterThan'           | ConfigurationException | { TckBook.findOrSaveByAuthorGreaterThan('B') }
-        13    | 'findOrSaveByAuthorLessThan'              | ConfigurationException | { TckBook.findOrSaveByAuthorLessThan('B') }
-        14    | 'findOrSaveByAuthorBetween'               | MissingMethodException | { TckBook.findOrSaveByAuthorBetween('A', 'B') }
-        15    | 'findOrSaveByAuthorGreaterThanEquals'     | ConfigurationException | { TckBook.findOrSaveByAuthorGreaterThanEquals('B') }
-        16    | 'findOrSaveByAuthorLessThanEquals'        | ConfigurationException | { TckBook.findOrSaveByAuthorLessThanEquals('B') }
+        9     | 'findOrSaveByAuthorInList'              | MissingMethodException | { TckBook.findOrSaveByAuthorInList(['Jeff']) }
+        10    | 'findOrSaveByAuthorOrTitle'             | MissingMethodException | { TckBook.findOrSaveByAuthorOrTitle('Jim', 'Title') }
+        11    | 'findOrSaveByAuthorNotEqual'            | MissingMethodException | { TckBook.findOrSaveByAuthorNotEqual('B') }
+        12    | 'findOrSaveByAuthorGreaterThan'         | ConfigurationException | { TckBook.findOrSaveByAuthorGreaterThan('B') }
+        13    | 'findOrSaveByAuthorLessThan'            | ConfigurationException | { TckBook.findOrSaveByAuthorLessThan('B') }
+        14    | 'findOrSaveByAuthorBetween'             | MissingMethodException | { TckBook.findOrSaveByAuthorBetween('A', 'B') }
+        15    | 'findOrSaveByAuthorGreaterThanEquals'   | ConfigurationException | { TckBook.findOrSaveByAuthorGreaterThanEquals('B') }
+        16    | 'findOrSaveByAuthorLessThanEquals'      | ConfigurationException | { TckBook.findOrSaveByAuthorLessThanEquals('B') }
     }
 }

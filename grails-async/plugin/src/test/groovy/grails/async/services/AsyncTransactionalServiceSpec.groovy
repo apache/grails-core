@@ -29,7 +29,6 @@ import org.springframework.transaction.annotation.Transactional
 import org.springframework.transaction.support.SimpleTransactionStatus
 import spock.lang.Specification
 
-
 class AsyncTransactionalServiceSpec extends Specification {
 
     void 'Test that an async transactional service is transaction manager aware'() {

@@ -79,6 +79,26 @@ class PublishPlugin implements Plugin<Project> {
         disableSigningWhenTesting(project)
 
         project.plugins.withId('maven-publish') {
+            // Ensure Gradle module metadata includes resolved versions for all dependencies.
+            // Without this, dependencies declared without an explicit version (relying on a
+            // platform/BOM) are published with no version in the .module file, causing
+            // resolution failures for consumers since Gradle prefers .module over .pom.
+            // Only apply to non-platform projects since java-platform has no runtimeClasspath.
+            if (!project.pluginManager.hasPlugin('java-platform')) {
+                project.extensions.configure(PublishingExtension) { PublishingExtension pe ->
+                    pe.publications.withType(MavenPublication).configureEach { MavenPublication pub ->
+                        pub.versionMapping { strategy ->
+                            strategy.usage('java-api') { variant ->
+                                variant.fromResolutionOf('runtimeClasspath')
+                            }
+                            strategy.usage('java-runtime') { variant ->
+                                variant.fromResolutionResult()
+                            }
+                        }
+                    }
+                }
+            }
+
             def artifactsTask = configurePublishedArtifacts(project)
 
             configureChecksums(project, artifactsTask)
@@ -92,9 +112,14 @@ class PublishPlugin implements Plugin<Project> {
             task.group = 'publishing'
             task.outputs.dir(artifactsDir)
             task.dependsOn(project.tasks.withType(Jar))
+
+            // Capture publishing extension at configuration time to avoid Task.project access at execution time
+            // See: https://docs.gradle.org/current/userguide/configuration_cache.html#config_cache:requirements:use_project_during_execution
+            def publishingExtension = project.extensions.getByType(PublishingExtension)
+
             task.doLast {
                 Map<String, String> artifacts = [:]
-                project.extensions.getByType(PublishingExtension).publications.withType(MavenPublication).each { MavenPublication publication ->
+                publishingExtension.publications.withType(MavenPublication).each { MavenPublication publication ->
                     publication.artifacts.each { MavenArtifact artifact ->
                         if (!artifact.file.exists() || artifact.file.name in ['grails-plugin.xml', 'profile.yml']) {
                             return

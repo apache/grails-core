@@ -20,8 +20,7 @@ package org.grails.datastore.gorm.mongo
 
 import org.apache.grails.data.mongo.core.MongoDatastoreSpec
 
-import grails.gorm.tests.Plant
-import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import grails.gorm.specs.Plant
 
 class SchemalessSpec extends MongoDatastoreSpec {
     void setupSpec() {

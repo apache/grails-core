@@ -87,4 +87,10 @@ public class DefaultIdentityMapping<T extends Property> extends DefaultPropertyM
     public ValueGenerator getGenerator() {
         return generator;
     }
+
+    @Override
+    public Class<?> getStoredAs() {
+        T mappedForm = getMappedForm();
+        return mappedForm != null ? mappedForm.getStoredAs() : null;
+    }
 }

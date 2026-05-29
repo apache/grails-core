@@ -24,8 +24,7 @@ import com.mongodb.MongoException
 import com.mongodb.MongoQueryException
 import grails.gorm.CriteriaBuilder
 import grails.gorm.DetachedCriteria
-import grails.gorm.tests.Person
-import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import grails.gorm.specs.Person
 
 class HintQueryArgumentSpec extends MongoDatastoreSpec {
 

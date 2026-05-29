@@ -26,6 +26,8 @@ plugins {
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-code-analysis'
+    id 'org.apache.grails.gradle.grails-jacoco'
 }
 
 version = projectVersion
@@ -55,7 +57,7 @@ dependencies {
     api 'org.apache.grails.gradle:grails-gradle-model'
     api 'org.apache.ant:ant'
     api 'org.fusesource.jansi:jansi'
-    api 'jline:jline'
+    api 'org.jline:jline'
     api "org.gradle:gradle-tooling-api:$gradleToolingApiVersion"
     
     compileOnly 'org.springframework.boot:spring-boot'

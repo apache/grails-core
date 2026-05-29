@@ -22,6 +22,17 @@ import spock.lang.Specification
 
 class SoftKeySpec extends Specification {
 
+    static class TestSoftKey<T> extends SoftKey<T> {
+        boolean forceNull = false
+        TestSoftKey(T referent) {
+            super(referent)
+        }
+        @Override
+        T get() {
+            return forceNull ? null : super.get()
+        }
+    }
+
     def "constructor stores referent and computes hashCode from it"() {
         given:
         def key = "hello"
@@ -93,5 +104,35 @@ class SoftKeySpec extends Specification {
 
         expect:
         sk1 != sk2
+    }
+
+    def "equals handles null referent after gc"() {
+        given:
+        def sk1 = new TestSoftKey<>("a")
+        def sk2 = new TestSoftKey<>("a")
+        
+        when:
+        sk1.forceNull = true
+
+        then:
+        !sk1.equals(sk2)
+        
+        when:
+        sk2.forceNull = true
+        
+        then:
+        sk1.equals(sk2)
+    }
+
+    def "equals returns false if one referent is null and the other is not"() {
+        given:
+        def sk1 = new TestSoftKey<>("a")
+        def sk2 = new TestSoftKey<>("a")
+
+        when:
+        sk2.forceNull = true
+
+        then:
+        !sk1.equals(sk2)
     }
 }

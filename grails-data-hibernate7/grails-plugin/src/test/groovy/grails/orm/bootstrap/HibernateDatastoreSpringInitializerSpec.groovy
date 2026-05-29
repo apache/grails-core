@@ -23,13 +23,18 @@ import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.Session
 import org.hibernate.SessionFactory
 import org.hibernate.dialect.H2Dialect
+import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.transaction.PlatformTransactionManager
+import spock.lang.AutoCleanup
 import spock.lang.Specification
 
 /**
  * Created by graemerocher on 29/01/14.
  */
 class HibernateDatastoreSpringInitializerSpec extends Specification{
+
+    @AutoCleanup
+    ConfigurableApplicationContext applicationContext
 
     void "Test configure multiple data sources"() {
         given:"An initializer instance"
@@ -46,7 +51,7 @@ class HibernateDatastoreSpringInitializerSpec extends Specification{
         def datastoreInitializer = new HibernateDatastoreSpringInitializer(config, Person, Book, Author)
 
         when:"the application is configured"
-        def applicationContext = datastoreInitializer.configure()
+        applicationContext = (ConfigurableApplicationContext) datastoreInitializer.configure()
         println applicationContext.getBeanDefinitionNames()
 
         then:"Each session factory has the correct number of persistent entities"

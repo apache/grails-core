@@ -22,8 +22,8 @@ import java.io.File;
 import java.util.List;
 import java.util.Set;
 
-import jline.console.completer.Completer;
 import org.eclipse.aether.graph.Dependency;
+import org.jline.reader.Completer;
 
 import org.grails.config.NavigableMap;
 import org.grails.io.support.Resource;
@@ -129,7 +129,7 @@ public interface Profile {
     /**
      * The profile completers
      * @param context The {@link org.grails.cli.profile.ProjectContext} instance
-     * @return An {@link java.lang.Iterable} of {@link jline.console.completer.Completer} instances
+     * @return An {@link java.lang.Iterable} of {@link org.jline.reader.Completer} instances
      */
     Iterable<Completer> getCompleters(ProjectContext context);
 

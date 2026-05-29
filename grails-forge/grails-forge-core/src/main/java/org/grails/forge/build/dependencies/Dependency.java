@@ -387,7 +387,7 @@ public final class Dependency {
             if (extension != null) {
                 builder.extension(extension);
             }
-            return builder.order(order).pom(pom);
+            return builder.order(order).pom(pom).enforced(enforced);
         }
     }
 }

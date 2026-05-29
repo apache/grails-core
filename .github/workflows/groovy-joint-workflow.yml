@@ -43,7 +43,7 @@ jobs:
           java-version: 21
           distribution: liberica
       - name: "🗄️ Cache local Maven repository"
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.m2/repository
           key: cache-local-maven-${{ github.sha }}
@@ -65,9 +65,9 @@ jobs:
       - name: "📥 Checkout Groovy 4_0_X (Grails 7 and later)"
         run: git clone --depth 1 https://github.com/apache/groovy.git -b GROOVY_4_0_X --single-branch
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:
-          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
       - name: "🔍 Setup TestLens"
         uses: testlens-app/setup-testlens@v1
       - name: "📝 Store Groovy version to use when building Grails"
@@ -91,7 +91,7 @@ jobs:
         id: develocity-conf-2
         run: |
           echo "VALUE<<EOF" >> $GITHUB_OUTPUT
-          echo "def isAuthenticated = System.getenv('GRAILS_DEVELOCITY_ACCESS_KEY ') != null" >> $GITHUB_OUTPUT
+          echo "def isAuthenticated = System.getenv('DEVELOCITY_ACCESS_KEY ') != null" >> $GITHUB_OUTPUT
           echo "develocity {" >> $GITHUB_OUTPUT
           echo "    server = 'https://develocity.apache.org'" >> $GITHUB_OUTPUT
           echo "    buildScan {" >> $GITHUB_OUTPUT
@@ -125,7 +125,6 @@ jobs:
         run: |
           cd groovy
           ./gradlew pTML -x groovydoc -x javadoc -x javadocAll -x groovydocAll -x asciidoc -x docGDK
-
   build_grails:
     needs: [build_groovy]
     runs-on: ubuntu-latest
@@ -148,13 +147,13 @@ jobs:
           java-version: 21
           distribution: liberica
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:
-          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
       - name: "🔍 Setup TestLens"
         uses: testlens-app/setup-testlens@v1
       - name: "🗄️ Restore local Maven repository from cache"
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.m2/repository
           key: cache-local-maven-${{ github.sha }}
@@ -162,6 +161,11 @@ jobs:
         run: |
           sed -i "/['\"]groovy\.version['\"][[:space:]]*:/c\'groovy.version':'${{ needs.build_groovy.outputs.groovyVersion }}'," dependencies.gradle
       - name: "🔨 Build and test Grails using the locally built Groovy snapshot"
+        # -PskipMicronautProjects excludes the Grails-Micronaut "island" (grails-micronaut,
+        # grails-micronaut-bom, and the micronaut-tied test-examples) from the build graph.
+        # That island intentionally pins Groovy 5 / Spock 2.4-groovy-5.0 via grails-micronaut-bom,
+        # which is incompatible with the Groovy 4.x snapshot this job swaps in above.
+        # See https://github.com/apache/grails-core/issues/15613.
         run: >
           ./gradlew build
           --continue
@@ -169,6 +173,7 @@ jobs:
           -x groovydoc
           -PgebAtCheckWaiting
           -PskipCodeStyle
+          -PskipMicronautProjects
           -PmaxTestParallel=3
         env:
           GRAILS_INCLUDE_MAVEN_LOCAL: true

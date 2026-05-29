@@ -23,6 +23,11 @@ dependencies {
 }
 
 tasks.withType(Test).configureEach {
+    // Honor DO_NOT_CACHE_TESTS=1 so developers can repeatedly invoke the same test command
+    // without --rerun-tasks (and without recompiling everything else).
+    outputs.cacheIf { !doNotCacheTests }
+    outputs.upToDateWhen { !doNotCacheTests }
+
     onlyIf {
         ![
                 'onlyFunctionalTests',
@@ -38,15 +43,14 @@ tasks.withType(Test).configureEach {
 
     useJUnitPlatform()
     systemProperty('hibernate7.gorm.suite', System.getProperty('hibernate7.gorm.suite') ?: true)
-    reports.html.required = !System.getenv('CI')
-    reports.junitXml.required = !System.getenv('CI')
+    reports.html.required = !isCiBuild
+    reports.junitXml.required = !isCiBuild
     testLogging {
         events('passed', 'skipped', 'failed')
         showExceptions = true
         exceptionFormat = 'full'
         showCauses = true
         showStackTraces = true
-        showStandardStreams = true
 
         // set options for log level DEBUG and INFO
         debug {

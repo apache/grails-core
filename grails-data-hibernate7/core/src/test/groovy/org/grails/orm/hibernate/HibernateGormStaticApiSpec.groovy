@@ -27,7 +27,16 @@ import grails.gorm.specs.entities.Club
 class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([HibernateGormStaticApiEntity,Club])
+        manager.addAllDomainClasses([HibernateGormStaticApiEntity, Club, HibernateGormStaticApiMultiTenantEntity])
+    }
+
+    void "Test that HibernateGormStaticApi uses the shared template from the datastore"() {
+        given:
+        def enhancer = manager.hibernateDatastore.gormEnhancer
+        def api = enhancer.getStaticApi(HibernateGormStaticApiEntity)
+
+        expect:
+        api.hibernateTemplate.is(manager.hibernateDatastore.getHibernateTemplate())
     }
 
     void "proxy test"() {
@@ -760,11 +769,58 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
     void "findWhere with empty queryMap returns null"() {
         expect:
         Club.findWhere([:]) == null
+        Club.findWhere(null) == null
     }
 
     void "findAllWhere with empty queryMap returns null"() {
         expect:
         Club.findAllWhere([:]) == null
+        Club.findAllWhere(null) == null
+    }
+
+    void "Test proxy returns null when id is null"() {
+        expect:
+        HibernateGormStaticApiEntity.proxy(null) == null
+    }
+
+    void "Test load returns null when id is null"() {
+        expect:
+        HibernateGormStaticApiEntity.load(null) == null
+    }
+
+    void "Test findWhere returns null when queryMap is null"() {
+        expect:
+        HibernateGormStaticApiEntity.findWhere(null) == null
+    }
+
+    void "Test findAllWhere returns null when queryMap is null"() {
+        expect:
+        HibernateGormStaticApiEntity.findAllWhere(null) == null
+    }
+
+    void "Test getAll with Iterable"() {
+        given:
+        def e1 = new HibernateGormStaticApiEntity(name: "test1").save(failOnError: true)
+        def e2 = new HibernateGormStaticApiEntity(name: "test2").save(flush: true, failOnError: true)
+
+        when:
+        Iterable<Serializable> iterableIds = [e1.id, e2.id] as Set
+        def instances = HibernateGormStaticApiEntity.getAll(iterableIds)
+
+        then:
+        instances.size() == 2
+    }
+
+    void "Test findAllWhere with queryMap and args"() {
+        given:
+        new HibernateGormStaticApiEntity(name: "test").save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: "test").save(flush: true, failOnError: true)
+
+        when:
+        def instances = HibernateGormStaticApiEntity.findAllWhere([name: 'test'], [max: 1])
+
+        then:
+        instances.size() == 1
     }
 
     // -------------------------------------------------------------------------
@@ -820,6 +876,11 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
 
 @Entity
 class HibernateGormStaticApiEntity {
+    String name
+}
+
+@Entity
+class HibernateGormStaticApiMultiTenantEntity implements grails.gorm.MultiTenant<HibernateGormStaticApiMultiTenantEntity> {
     String name
 }
 

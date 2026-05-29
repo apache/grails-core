@@ -21,7 +21,7 @@ import groovy.transform.CompileStatic
 def openApiOutputFile = layout.buildDirectory.file('generated/openapi/openapi.properties')
 def openApiPropertiesTask = tasks.register('openApiProperties', WriteProperties)
 openApiPropertiesTask.configure { WriteProperties it ->
-    it.outputFile(openApiOutputFile.get().asFile)
+    it.destinationFile.set(openApiOutputFile)
     it.properties(
             'swagger-ui.enabled': true,
             'redoc.enabled': true,

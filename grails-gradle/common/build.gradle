@@ -24,6 +24,8 @@ plugins {
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-code-analysis'
+    id 'org.apache.grails.gradle.grails-jacoco'
 }
 
 version = projectVersion
@@ -38,14 +40,14 @@ dependencies {
     compileOnly platform(project(':grails-gradle-bom'))
 
     // compile with the Groovy version provided by Gradle
-    // to ensure build compatibility with Gradle, currently Groovy 3.0.x
+    // Groovy 4+ uses org.apache.groovy coordinates
     // see: https://docs.gradle.org/current/userguide/compatibility.html#groovy
-    compileOnly 'org.codehaus.groovy:groovy'
+    compileOnly 'org.apache.groovy:groovy'
 
     testImplementation platform(project(':grails-gradle-bom'))
     testImplementation 'org.slf4j:slf4j-simple'
     testImplementation('org.spockframework:spock-core') { transitive = false }
-    testImplementation 'org.codehaus.groovy:groovy-test-junit5'
+    testImplementation 'org.apache.groovy:groovy-test-junit5'
     // for easier setting of environment variables in tests
     testImplementation 'uk.org.webcompere:system-stubs-core:2.1.8'
 

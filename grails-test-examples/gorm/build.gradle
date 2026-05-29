@@ -42,7 +42,7 @@ dependencies {
     }
 
     implementation 'org.apache.grails:grails-data-hibernate5'
-    runtimeOnly "org.hibernate:hibernate-ehcache", {
+    runtimeOnly 'org.hibernate:hibernate-ehcache', {
         // exclude javax variant of hibernate-core
         exclude group: 'org.hibernate', module: 'hibernate-core'
     }

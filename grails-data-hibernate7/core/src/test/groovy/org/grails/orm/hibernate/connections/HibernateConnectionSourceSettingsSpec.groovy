@@ -87,4 +87,69 @@ class HibernateConnectionSourceSettingsSpec extends Specification {
         hibernateProperties['hibernate.cache.region.factory_class'] == 'org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory'
         hibernateProperties['hibernate.jpa.compliance.cascade'] == 'true'
     }
+
+    void "test toHibernateEventListeners"() {
+        given:
+        def interceptor = Mock(org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor)
+
+        expect:
+        HibernateConnectionSourceSettings.HibernateSettings.toHibernateEventListeners(null).isEmpty()
+        HibernateConnectionSourceSettings.HibernateSettings.toHibernateEventListeners(interceptor).size() == 8
+    }
+
+    void "test toProperties with dirty checking and custom config"() {
+        given:
+        def settings = new HibernateConnectionSourceSettings()
+        settings.hibernate.hibernateDirtyChecking = true
+        settings.hibernate.configClass = org.hibernate.cfg.Configuration
+        settings.hibernate.naming_strategy = null
+
+        when:
+        def props = settings.hibernate.toProperties()
+
+        then:
+        !props.containsKey('hibernate.entity_dirtiness_strategy')
+        !props.containsKey('hibernate.naming_strategy')
+        props.get('hibernate.config_class') == org.hibernate.cfg.Configuration.name
+    }
+
+    void "test populateProperties with nested map"() {
+        given:
+        def settings = new HibernateConnectionSourceSettings.HibernateSettings()
+        settings.put("outer", [inner: "value"])
+        def props = new Properties()
+
+        when:
+        settings.populateProperties(props, settings, "prefix")
+
+        then:
+        props.get("prefix.outer.inner") == "value"
+    }
+
+    void "test clone settings"() {
+        given:
+        def settings = new HibernateConnectionSourceSettings(enableReload: true)
+
+        when:
+        def cloned = settings.clone()
+
+        then:
+        cloned !== settings
+        cloned.enableReload
+    }
+
+    void "test toProperties with additional properties"() {
+        given:
+        def settings = new HibernateConnectionSourceSettings()
+        def hibernateSettings = settings.hibernate
+        def addProps = new Properties()
+        addProps.put("custom.key", "custom.value")
+        hibernateSettings.@additionalProperties = addProps
+
+        when:
+        def props = hibernateSettings.toProperties()
+
+        then:
+        props.get("custom.key") == "custom.value"
+    }
 }

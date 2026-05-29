@@ -21,10 +21,13 @@ plugins {
     id 'groovy'
     id 'java-library'
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-code-analysis'
+    id 'org.apache.grails.gradle.grails-jacoco'
 }
 
 version = projectVersion
@@ -138,21 +141,3 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/grails-data-tck-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
 }
-
-// spotbugs {
-//     effort = Effort.valueOf('MAX')
-//     reportLevel = Confidence.valueOf('HIGH')// or Confidence.MEDIUM, Confidence.LOW
-//     // other settings...
-// }
-//
-// tasks.withType(com.github.spotbugs.snom.SpotBugsTask).configureEach {
-//     onlyIf { project.hasProperty('runCodeStyle') }
-//     reports {
-//         xml.enabled = false
-//         html.enabled = true     // → nice HTML report in build/reports/spotbugs
-//     }
-// }
-//
-// tasks.named('check') {
-//     dependsOn 'spotbugsMain'
-// }

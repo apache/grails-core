@@ -17,3 +17,39 @@ specific language governing permissions and limitations
 under the License.
 ////
 
+GORM supports the notion of multiple data sources where multiple individual SQL `DataSource` instances can be configured and switched between.
+
+=== Configuring Multiple Data Sources
+
+include::configuration.adoc[]
+
+=== Mapping Domain Classes to Data Sources
+
+include::mappingDomainsToDataSources.adoc[]
+
+=== Data Source Namespaces
+
+include::dataSourceNamespaces.adoc[]
+
+=== Using Data Services with Multiple Datasources
+
+GORM Data Services support multi-datasource routing via `@Transactional(connection = 'connectionName')` on the abstract class. All auto-implemented methods - `get()`, `save()`, `delete()`, `findBy*()`, `countBy*()` - route to the specified datasource automatically. For complex queries, domain static methods like `Book.executeQuery()` and `Book.createCriteria()` also route to the correct datasource. This works with `@CompileStatic`, injected `@Service` properties, and `MultiTenant` domain classes. See the <<dataServicesMultipleDataSources,Data Services and Multiple Datasources>> section for the full pattern.
+
+[[connectionSources]]
+=== The ConnectionSources API
+
+Introduced in GORM 6.0, the link:../api/org/grails/datastore/mapping/core/connections/ConnectionSources.html[ConnectionSources] API allows you to introspect the data sources configured for the application:
+
+[source,groovy]
+----
+@Autowired
+HibernateDatastore hibernateDatastore
+...
+ConnectionSources<SessionFactory, HibernateConnectionSourceSettings> connectionSources
+					= hibernateDatastore.getConnectionSources()
+
+for(ConnectionSource<SessionFactory, HibernateConnectionSourceSettings> connectionSource in connectionSources) {
+	println "Name $connectionSource.name"
+	SessionFactory sessionFactory = connectionSource.source
+}
+----

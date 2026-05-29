@@ -22,6 +22,8 @@ import java.time.format.DateTimeFormatter
 
 plugins {
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.gradle.grails-violation-aggregation'
 }
 
 allprojects {
@@ -41,6 +43,10 @@ ext {
 
     isReleaseVersion = Boolean.parseBoolean(System.getenv('GRAILS_PUBLISH_RELEASE'))
     isCiBuild = System.getenv().containsKey('CI')
+    // Set DO_NOT_CACHE_TESTS=1 to force test tasks to re-run on every invocation without
+    // needing --rerun-tasks. Useful for repeatedly running the same test command while
+    // chasing flaky tests across runs.
+    doNotCacheTests = System.getenv('DO_NOT_CACHE_TESTS')?.toBoolean()
     configuredTestParallel = findProperty('maxTestParallel') as Integer ?: (isCiBuild ? 3 : Runtime.runtime.availableProcessors() * 3/4 as int ?: 1)
 }
 

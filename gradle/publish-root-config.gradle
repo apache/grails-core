@@ -68,7 +68,6 @@ def publishedProjects = [
         'grails-interceptors',
         'grails-layout',
         'grails-logging',
-        'grails-micronaut',
         'grails-mimetypes',
         'grails-rest-transforms',
         'grails-scaffolding',
@@ -125,6 +124,7 @@ def publishedProjects = [
         'grails-data-hibernate7',
         'grails-data-hibernate7-core',
         'grails-data-hibernate7-dbmigration',
+        'grails-data-hibernate7-dbmigration-core',
         'grails-data-hibernate7-spring-boot',
         'grails-data-hibernate7-spring-orm',
         // mongodb
@@ -134,6 +134,9 @@ def publishedProjects = [
         'grails-data-mongodb-ext',
         'grails-data-mongodb-gson-templates',
         'grails-data-mongodb-spring-boot',
+        // graphql
+        'grails-data-graphql',
+        'grails-data-graphql-core',
         // wrapper
         'grails-wrapper',
         // profiles
@@ -145,6 +148,16 @@ def publishedProjects = [
         'grails-profiles-web',
         'grails-profiles-web-plugin',
 ]
+
+def skipMicronautProjects = providers.gradleProperty('skipMicronautProjects').isPresent()
+if (!skipMicronautProjects) {
+    publishedProjects.addAll([
+            'grails-hibernate5-micronaut-bom',
+            'grails-hibernate7-micronaut-bom',
+            'grails-micronaut',
+            'grails-micronaut-bom',
+    ])
+}
 
 subprojects {
     if (name in publishedProjects) {

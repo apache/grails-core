@@ -17,3 +17,33 @@ specific language governing permissions and limitations
 under the License.
 ////
 
+Introduced in GORM 6.1, Data Services take the work out of implemented service layer logic by adding the ability to automatically implement abstract classes or interfaces using GORM logic.
+
+To illustrate what GORM Data Services are about let's walk through an example.
+
+=== Data Service Basics
+
+include::basics.adoc[]
+
+=== Data Service Queries
+
+include::queries.adoc[]
+
+=== Data Service Write Operations
+
+include::writeOperations.adoc[]
+
+=== Validating Data Services
+
+include::serviceValidation.adoc[]
+
+[[dataServicesMultipleDataSources]]
+=== Data Services and Multiple Datasources
+
+include::multipleDataSources.adoc[]
+
+=== RxJava Support
+
+include::rxServices.adoc[]
+
+

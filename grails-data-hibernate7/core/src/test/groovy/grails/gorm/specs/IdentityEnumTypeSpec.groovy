@@ -23,13 +23,15 @@ import grails.gorm.transactions.Rollback
 import jakarta.persistence.Enumerated
 import jakarta.persistence.EnumType
 import org.grails.orm.hibernate.cfg.IdentityEnumType
+import org.hibernate.HibernateException
 import org.hibernate.MappingException
+import org.hibernate.type.descriptor.WrapperOptions
 
 import javax.sql.DataSource
 import java.sql.ResultSet
 
 /**
- * Created by graemerocher on 16/11/16.
+ * Tests for IdentityEnumType in Hibernate 7.
  */
 class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
 
@@ -46,7 +48,7 @@ class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
 
         then:
         resultSet.next()
-        resultSet.getString(1) == 'FOO'
+        resultSet.getString(1) == 'F' // FOO id is 'F'
         EnumEntityDomain.first().status == EnumEntityDomain.Status.FOO
     }
 
@@ -59,13 +61,13 @@ class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
 
         then:
         resultSet.next()
-        resultSet.getString(1) == "X__TWO"
+        resultSet.getInt(1) == 100 // X__TWO id is 100
         FooWithEnum.first().mySuperValue == XEnum.X__TWO
     }
 
     // ── Direct unit tests for IdentityEnumType ────────────────────────────────
 
-    def "setParameterValues initializes enumClass and bidiMap"() {
+    def "setParameterValues initializes enumClass"() {
         given:
         def type = new IdentityEnumType()
         def props = new Properties()
@@ -76,8 +78,7 @@ class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
 
         then:
         type.returnedClass() == IdentityStatusEnum
-        type.getSqlTypes() != null
-        type.getSqlTypes().length > 0
+        type.getSqlType() != 0
     }
 
     def "setParameterValues throws MappingException for enum without getId method"() {
@@ -90,16 +91,7 @@ class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
         type.setParameterValues(props)
 
         then:
-        thrown(MappingException)
-    }
-
-    def "getBidiEnumMap caches the same instance across calls"() {
-        when:
-        def map1 = IdentityEnumType.getBidiEnumMap(IdentityStatusEnum)
-        def map2 = IdentityEnumType.getBidiEnumMap(IdentityStatusEnum)
-
-        then:
-        map1.is(map2)
+        thrown(HibernateException) // Throw by BidiEnumMap constructor
     }
 
     def "equals uses identity comparison"() {
@@ -161,68 +153,71 @@ class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
         type.replace(IdentityStatusEnum.ACTIVE, IdentityStatusEnum.INACTIVE, null).is(IdentityStatusEnum.ACTIVE)
     }
 
-    def "getBidiEnumMap logs warning for duplicate enum ids and still returns a map"() {
-        when:
-        def map = IdentityEnumType.getBidiEnumMap(DuplicateIdEnum)
-
-        then:
-        noExceptionThrown()
-        map != null
-    }
-
-    def "getSqlType returns 0"() {
-        expect:
-        new IdentityEnumType().getSqlType() == 0
-    }
-
-    def "getDefaultSqlLength returns without throwing"() {
-        expect:
-        new IdentityEnumType().getDefaultSqlLength() >= -1
-    }
-
-    def "getDefaultSqlPrecision returns without throwing"() {
-        expect:
-        new IdentityEnumType().getDefaultSqlPrecision() >= -1
-    }
-
-    def "getDefaultSqlScale returns without throwing"() {
-        expect:
-        new IdentityEnumType().getDefaultSqlScale() >= -1
-    }
-
-    def "getValueConverter returns null (default UserType behavior)"() {
-        expect:
-        new IdentityEnumType().getValueConverter() == null
-    }
-
-    def "BidiEnumMap.getEnumValue looks up enum by id"() {
+    def "nullSafeGet returns null for null value"() {
         given:
-        def bidiMap = IdentityEnumType.getBidiEnumMap(IdentityStatusEnum)
+        def type = new IdentityEnumType()
+        def props = new Properties()
+        props.setProperty(IdentityEnumType.PARAM_ENUM_CLASS, IdentityStatusEnum.name)
+        type.setParameterValues(props)
+        def rs = Mock(java.sql.ResultSet)
+        def options = Mock(WrapperOptions)
 
         when:
-        def result = bidiMap.getEnumValue("A")
+        def res = type.nullSafeGet(rs, 1, options)
 
         then:
-        result == IdentityStatusEnum.ACTIVE
+        1 * rs.getString(1) >> null
+        res == null
     }
 
-    def "BidiEnumMap.getKey looks up id by enum value"() {
+    def "nullSafeGet converts id to enum"() {
         given:
-        def bidiMap = IdentityEnumType.getBidiEnumMap(IdentityStatusEnum)
+        def type = new IdentityEnumType()
+        def props = new Properties()
+        props.setProperty(IdentityEnumType.PARAM_ENUM_CLASS, IdentityStatusEnum.name)
+        type.setParameterValues(props)
+        def rs = Mock(java.sql.ResultSet)
+        def options = Mock(WrapperOptions)
 
         when:
-        def result = bidiMap.getKey(IdentityStatusEnum.INACTIVE)
+        def res = type.nullSafeGet(rs, 1, options)
 
         then:
-        result == "I"
+        1 * rs.getString(1) >> "A"
+        (0..1) * rs.wasNull() >> false
+        res == IdentityStatusEnum.ACTIVE
     }
 
-    def "BidiEnumMap.getEnumValue returns null for unknown id"() {
+    def "nullSafeSet handles null value"() {
         given:
-        def bidiMap = IdentityEnumType.getBidiEnumMap(IdentityStatusEnum)
+        def type = new IdentityEnumType()
+        def props = new Properties()
+        props.setProperty(IdentityEnumType.PARAM_ENUM_CLASS, IdentityStatusEnum.name)
+        type.setParameterValues(props)
+        def st = Mock(java.sql.PreparedStatement)
+        def options = Mock(WrapperOptions)
 
-        expect:
-        bidiMap.getEnumValue("UNKNOWN") == null
+        when:
+        type.nullSafeSet(st, null, 1, options)
+
+        then:
+        1 * st.setNull(1, _)
+    }
+
+    def "nullSafeSet converts enum to id"() {
+        given:
+        def type = new IdentityEnumType()
+        def props = new Properties()
+        props.setProperty(IdentityEnumType.PARAM_ENUM_CLASS, IdentityStatusEnum.name)
+        type.setParameterValues(props)
+        def st = Mock(java.sql.PreparedStatement)
+        def options = Mock(WrapperOptions)
+
+        when:
+        type.nullSafeSet(st, IdentityStatusEnum.INACTIVE, 1, options)
+
+        then:
+        1 * st.setString(1, "I")
     }
 }
 
@@ -232,13 +227,12 @@ class EnumEntityDomain {
     Status status
 
     static mapping = {
-        status(enumType: "string")
+        status(enumType: "identity")
     }
 
     enum Status {
         FOO("F"), BAR("B")
-        String id
-
+        final String id
         Status(String id) { this.id = id }
     }
 }
@@ -252,7 +246,7 @@ class FooWithEnum {
 
     static mapping = {
         version false
-        mySuperValue enumType: "string"
+        mySuperValue enumType: "identity"
     }
 }
 

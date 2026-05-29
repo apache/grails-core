@@ -270,6 +270,88 @@ class HibernateConnectionSourceFactorySpec extends HibernateGormDatastoreSpec {
         config != null
     }
 
+    void "buildConfiguration with annotatedClasses, annotatedPackages, packagesToScan"() {
+        given:
+        def factory = new HibernateConnectionSourceFactory(Foo)
+        def settings = new HibernateConnectionSourceSettings()
+        settings.hibernate.annotatedClasses = [Foo]
+        settings.hibernate.annotatedPackages = ["org.grails.orm.hibernate.connections"]
+        settings.hibernate.packagesToScan = ["org.grails.orm.hibernate.connections"]
+        def dsConfig = DatastoreUtils.createPropertyResolver([
+            'dataSource.url'         : "jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
+            'dataSource.dbCreate'    : 'update',
+            'dataSource.dialect'     : H2Dialect.name,
+            'hibernate.hbm2ddl.auto' : 'create',
+        ])
+        def dsCs = new org.grails.datastore.gorm.jdbc.connections.DataSourceConnectionSourceFactory()
+            .create(ConnectionSource.DEFAULT, dsConfig)
+
+        when:
+        def config = factory.buildConfiguration(ConnectionSource.DEFAULT, dsCs, settings)
+
+        then:
+        config != null
+    }
+
+    void "buildConfiguration with mappingLocations and mappingDirectoryLocations"() {
+        given:
+        def factory = new HibernateConnectionSourceFactory(Foo)
+        def settings = new HibernateConnectionSourceSettings()
+        def xml = """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-mapping PUBLIC "-//Hibernate/Hibernate Mapping DTD 3.0//EN" "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
+<hibernate-mapping>
+</hibernate-mapping>"""
+        def goodResource = Mock(org.springframework.core.io.Resource) {
+            getInputStream() >> { new ByteArrayInputStream(xml.bytes) }
+            getURL() >> { new java.net.URL("file:///dummy") }
+        }
+        def goodDirResource = Mock(org.springframework.core.io.Resource) {
+            getFile() >> java.nio.file.Files.createTempDirectory("hbm-dir").toFile()
+        }
+        def badDirResource = Mock(org.springframework.core.io.Resource) {
+            getFile() >> java.nio.file.Files.createTempFile("hbm-dir", ".txt").toFile()
+        }
+        settings.hibernate.mappingLocations = [goodResource] as org.springframework.core.io.Resource[]
+        settings.hibernate.mappingDirectoryLocations = [goodDirResource] as org.springframework.core.io.Resource[]
+        
+        def dsConfig = DatastoreUtils.createPropertyResolver([
+            'dataSource.url'         : "jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
+            'dataSource.dbCreate'    : 'update',
+            'dataSource.dialect'     : H2Dialect.name,
+            'hibernate.hbm2ddl.auto' : 'create',
+        ])
+        def dsCs = new org.grails.datastore.gorm.jdbc.connections.DataSourceConnectionSourceFactory()
+            .create(ConnectionSource.DEFAULT, dsConfig)
+
+        when:
+        def config = factory.buildConfiguration(ConnectionSource.DEFAULT, dsCs, settings)
+
+        then:
+        config != null
+        
+        when: "using a bad directory location"
+        settings.hibernate.mappingDirectoryLocations = [badDirResource] as org.springframework.core.io.Resource[]
+        factory.buildConfiguration(ConnectionSource.DEFAULT, dsCs, settings)
+        
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    void "buildSettingsWithPrefix with empty prefix and nested properties"() {
+        given:
+        def factory = new HibernateConnectionSourceFactory(Foo)
+        def config = h2Config() + [
+            "secondary.dataSource.url": "jdbc:h2:mem:secondaryDB",
+        ]
+        def resolver = DatastoreUtils.createPropertyResolver(config)
+
+        when:
+        def settings = factory.buildSettings('secondary', resolver, null, false)
+
+        then:
+        settings != null
+    }
+
     void "buildConfiguration with an interceptor applies it to the configuration"() {
         given:
         def factory = new HibernateConnectionSourceFactory(Foo)

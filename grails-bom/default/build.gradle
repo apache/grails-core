@@ -52,6 +52,10 @@ ext {
 
 dependencies {
     api platform(project(':grails-base-bom'))
+    api platform(gradleBomPlatformDependencies['spring-boot-bom']), {
+        exclude group: 'org.apache.groovy'
+        exclude group: 'org.hibernate.orm'
+    }
 
     constraints {
         // Re-declare base BOM constraints directly so enforcedPlatform() consumers
@@ -88,6 +92,7 @@ configurations.register('bomDependencies').configure {
 }
 
 tasks.register('extractConstraints', ExtractDependenciesTask).configure { ExtractDependenciesTask it ->
+    it.captureProjectServices(project.dependencies, project.configurations)
     it.configuration = configurations.named('bomDependencies')
     it.configurationName = 'bomDependencies'
     it.destination = project.layout.buildDirectory.file('grails-bom-constraints.adoc')

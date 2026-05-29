@@ -23,7 +23,6 @@ import java.io.Serial;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -333,9 +332,17 @@ public class HibernateMappingContextConfiguration extends Configuration
             public <S> Collection<S> loadJavaServices(Class<S> serviceContract) {
                 // Ensure Grails contributes mappings for GORM entities even if they lack JPA @Entity
                 if (AdditionalMappingContributor.class.isAssignableFrom(serviceContract)) {
+                    // Include the GrailsDomainBinder first, then any other contributors
+                    // discovered by the parent classloader (e.g., Envers AdditionalMappingContributorImpl).
+                    // Without this, Envers' AdditionalMappingContributor would be excluded,
+                    // preventing EnversService from being initialized before EnversIntegrator runs.
+                    Collection<S> parentContributors = super.loadJavaServices(serviceContract);
                     @SuppressWarnings("unchecked")
-                    Collection<S> contributors = (Collection<S>) Collections.singletonList(domainBinder);
-                    return contributors;
+                    S grailsBinder = (S) domainBinder;
+                    List<S> allContributors = new ArrayList<>(parentContributors.size() + 1);
+                    allContributors.add(grailsBinder);
+                    allContributors.addAll(parentContributors);
+                    return allContributors;
                 }
                 return super.loadJavaServices(serviceContract);
             }

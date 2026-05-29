@@ -18,40 +18,14 @@ grails:
     profile: web
     codegen:
         defaultPackage: issue11102
-    gorm:
-        reactor:
-            # Whether to translate GORM events into Reactor events
-            # Disabled by default for performance reasons
-            events: false
 info:
     app:
         name: '@info.app.name@'
         version: '@info.app.version@'
         grailsVersion: '@info.app.grailsVersion@'
-spring:
-    main:
-        banner-mode: "off"
-    groovy:
-        template:
-            check-template-location: false
-
-# Spring Actuator Endpoints are Disabled by Default
-endpoints:
-    enabled: false
-    jmx:
-        enabled: true
-
 ---
 grails:
     mime:
-        disable:
-            accept:
-                header:
-                    userAgents:
-                        - Gecko
-                        - WebKit
-                        - Presto
-                        - Trident
         types:
             all: '*/*'
             atom: application/atom+xml
@@ -75,28 +49,12 @@ grails:
             xml:
               - text/xml
               - application/xml
-    urlmapping:
-        cache:
-            maxsize: 1000
-    controllers:
-        defaultScope: singleton
-    converters:
-        encoding: UTF-8
     views:
-        default:
-            codec: html
         gsp:
             encoding: UTF-8
             htmlcodec: xml
             codecs:
-                expression: html
-                scriptlets: html
-                taglib: none
-                staticparts: none
-endpoints:
-    jmx:
-        unique-names: true
-
+                scriptlet: html
 ---
 hibernate:
     cache:

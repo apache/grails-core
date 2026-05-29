@@ -33,7 +33,7 @@ import spock.lang.IgnoreIf
 })
 // this test is ignored because Groovy proxies are not used with Hibernate
 class GroovyProxySpec extends GrailsDataTckSpec {
-    
+
     void setupSpec() {
         manager.addAllDomainClasses([Location])
     }

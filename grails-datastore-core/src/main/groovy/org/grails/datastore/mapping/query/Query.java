@@ -32,6 +32,9 @@ import jakarta.persistence.FlushModeType;
 import jakarta.persistence.LockModeType;
 import jakarta.persistence.criteria.JoinType;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.InvalidDataAccessResourceUsageException;
 import org.springframework.util.Assert;
@@ -55,10 +58,11 @@ import org.grails.datastore.mapping.query.event.PreQueryEvent;
  * @since 1.0
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
-public abstract class Query implements Cloneable {
+public abstract class Query implements Cloneable, Serializable {
 
-    protected final PersistentEntity entity;
-    protected final Session session;
+    protected final transient PersistentEntity entity;
+    protected final transient Session session;
+    protected transient Log logger = LogFactory.getLog(this.getClass());
 
     protected Junction criteria = new Conjunction();
     protected ProjectionList projections = new ProjectionList();
@@ -622,6 +626,16 @@ public abstract class Query implements Cloneable {
      */
     public Number countResults() {
         if (!projections.getProjectionList().isEmpty()) {
+            // When user-defined projections exist (e.g. groupProperty + count),
+            // a simple count() projection returns incorrect results because it
+            // appends to the existing projections rather than replacing them.
+            // Fall back to counting the grouped result rows.
+            // TODO: This needs resolved properly in Grails 8 with Hibernate 7's
+            // JpaSelectCriteria.from(Subquery) support for derived tables.
+            logger.warn("DetachedCriteria.count() with user-defined projections cannot use a SQL count query " +
+                "due to a Hibernate 5 limitation. All grouped result rows will be loaded into memory to " +
+                "determine the count. This may impact performance on large result sets. " +
+                "This will be resolved in Grails 8 (Hibernate 7) which supports derived table subqueries.");
             return list().size();
         }
         projections().count();
@@ -793,14 +807,15 @@ public abstract class Query implements Cloneable {
     /**
      * Common interface for all query elements
      */
-    public static interface QueryElement {}
+    public static interface QueryElement extends Serializable {}
 
     public static interface Criterion extends QueryElement {}
 
     /**
      * The ordering of results.
      */
-    public static class Order {
+    public static class Order implements Serializable {
+        private static final long serialVersionUID = 1L;
         private Direction direction = Direction.ASC;
         private String property;
         private boolean ignoreCase = false;

@@ -20,18 +20,25 @@ package org.grails.orm.hibernate.query;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import groovy.lang.GString;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
+
+import org.hibernate.jpa.AvailableHints;
 
 import org.grails.datastore.mapping.model.PersistentEntity;
+
+import static org.grails.orm.hibernate.query.HqlQueryMethods.convertValue;
 
 /**
  * Immutable value object that holds all resolved HQL query state which can be computed without a
@@ -51,12 +58,14 @@ import org.grails.datastore.mapping.model.PersistentEntity;
     "PMD.AvoidLiteralsInIfCondition",
     "PMD.UseLocaleWithCaseConversions"
 })
+//TODO Cleanup
 public record HqlQueryContext(
         String hql,
         Class<?> targetClass,
         Map<String, Object> namedParams,
         List<Object> positionalParams,
         Map<String, Object> querySettings,
+        Map<String, Object> hints,
         boolean isUpdate,
         boolean isNative) {
 
@@ -67,39 +76,71 @@ public record HqlQueryContext(
      * named parameters. No {@code Session} is required.
      */
     public static HqlQueryContext prepare(
-            PersistentEntity entity,
-            CharSequence queryCharseq,
-            Map<String, Object> namedParams,
-            Collection<Object> positionalParams,
-            Map<String, Object> querySettings,
-            boolean isNative,
-            boolean isUpdate) {
-        Map<String, Object> _namedParams = namedParams != null ? new HashMap<>(namedParams) : new HashMap<>();
-        List<Object> positionalParamsCopy =
-                positionalParams != null ? new ArrayList<>(positionalParams) : new ArrayList<>();
-        Map<String, Object> querySettingsCopy = querySettings != null ? new HashMap<>(querySettings) : new HashMap<>();
+        PersistentEntity entity,
+        CharSequence queryCharseq,
+        Map<String, Object> namedParams,
+        Collection<Object> positionalParams,
+        Map<String, Object> querySettings,
+        Map<String, Object> hints,
+        boolean isNative,
+        boolean isUpdate) {
+        return prepare(entity, queryCharseq, namedParams, positionalParams, querySettings, hints, isNative, isUpdate, null);
+    }
 
-        boolean _isNative = toBool(isNative);
-        boolean _isUpdate = toBool(isUpdate);
+    public static HqlQueryContext prepare(
+        PersistentEntity entity,
+        CharSequence queryCharseq,
+        Map<String, Object> namedParams,
+        Collection<Object> positionalParams,
+        Map<String, Object> querySettings,
+        Map<String, Object> hints,
+        boolean isNative,
+        boolean isUpdate,
+        Class<?> targetClassOverride) {
 
-        String hql;
-        // Prefer positional resolution only if positional parameters are explicitly provided (not null)
-        // and named parameters are empty. This preserves legacy GString->named parameter behavior
-        // while allowing opt-in to positional parameters via methods that pass them.
-        if (_namedParams.isEmpty()) {
-            hql = resolveHql(queryCharseq, _isNative, positionalParamsCopy);
-        } else {
-            hql = resolveHql(queryCharseq, _isNative, _namedParams);
-        }
+        var namedParamsCopy = Optional.ofNullable(namedParams)
+            .map(HashMap::new)
+            .orElseGet(HashMap::new);
 
-        Class<?> target = getTarget(hql, entity.getJavaClass());
+        var positionalParamsCopy = Optional.ofNullable(positionalParams)
+            .map(ArrayList::new)
+            .orElseGet(ArrayList::new);
+
+        var querySettingsCopy = Optional.ofNullable(querySettings)
+            .map(HashMap::new)
+            .orElseGet(HashMap::new);
+
+        var filteredHints = Optional.ofNullable(hints)
+            .orElseGet(Collections::emptyMap)
+            .entrySet().stream()
+            .filter(e -> AvailableHints.getDefinedHints().contains(e.getKey()))
+            .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
+
+        var hql = Optional.ofNullable(positionalParamsCopy.isEmpty() ?
+                resolveHql(queryCharseq, isNative, namedParamsCopy) :
+                resolveHql(queryCharseq, isNative, positionalParamsCopy))
+            .filter(s -> !s.trim().isEmpty())
+            .orElseGet(() -> "from %s".formatted(entity.getName()));
+
+        namedParamsCopy.replaceAll((k, v) -> convertValue(v));
+        positionalParamsCopy.replaceAll(HqlQueryMethods::convertValue);
+
+        Class<?> targetClass = targetClassOverride != null ? targetClassOverride : getTarget(hql, entity.getJavaClass());
+
         return new HqlQueryContext(
-                hql, target, _namedParams, positionalParamsCopy, querySettingsCopy, _isUpdate, _isNative);
+            hql,
+            targetClass,
+            namedParamsCopy,
+            positionalParamsCopy,
+            querySettingsCopy,
+            filteredHints,
+            isUpdate,
+            isNative);
     }
 
     // ─── HQL resolution ──────────────────────────────────────────────────────
 
-    public static @Nullable String resolveHql(
+    static @Nullable String resolveHql(
             CharSequence queryCharseq, boolean isNative, Map<String, Object> namedParams) {
         String raw = queryCharseq instanceof GString gstr ?
                 buildNamedParameterQueryFromGString(gstr, namedParams) :
@@ -108,7 +149,7 @@ public record HqlQueryContext(
         return isNative ? normalized : normalizeNonAliasedSelect(normalized);
     }
 
-    public static @Nullable String resolveHql(
+    static @Nullable String resolveHql(
             CharSequence queryCharseq, boolean isNative, Collection<Object> positionalParams) {
         String raw = queryCharseq instanceof GString gstr ?
                 buildPositionalParameterQueryFromGString(gstr, positionalParams, isNative) :
@@ -124,47 +165,35 @@ public record HqlQueryContext(
      * or a single entity projection, {@code Object.class} for a single scalar projection, or {@code
      * Object[].class} for multiple projections.
      */
-    public static Class<?> getTarget(CharSequence hql, Class<?> clazz) {
+    static Class<?> getTarget(CharSequence hql, Class<?> clazz) {
         String normalized = normalizeNonAliasedSelect(hql == null ? null : hql.toString());
         return switch (countHqlProjections(normalized)) {
             case 0 -> clazz;
-            case 1 ->
-                isAggregateProjection(normalized) ?
-                        aggregateTargetClass(normalized) :
-                        (isPropertyProjection(normalized) ? Object.class : clazz);
+            case 1 -> {
+                String clause = getSingleProjectionClause(normalized);
+                if (clause != null) {
+                    if (clause.startsWith("count(") || clause.startsWith("sum(") ||
+                            clause.startsWith("avg(") || clause.startsWith("min(") ||
+                            clause.startsWith("max(")) {
+                        yield null; // Let Hibernate determine the result type for aggregates
+                    }
+                }
+                yield (isPropertyProjection(normalized) ? Object.class : clazz);
+            }
             default -> Object[].class;
         };
     }
 
-    private static Class<?> aggregateTargetClass(CharSequence hql) {
-        String clause = getSingleProjectionClause(hql);
-        if (clause == null) return Long.class;
-        if (clause.startsWith("count(")) return Long.class;
-        if (clause.startsWith("avg(")) return Double.class;
-        return Number.class;
-    }
-
-    private static boolean isAggregateProjection(CharSequence hql) {
-        String clause = getSingleProjectionClause(hql);
-        if (clause == null) return false;
-
-        return clause.startsWith("count(") ||
-                clause.startsWith("sum(") ||
-                clause.startsWith("avg(") ||
-                clause.startsWith("min(") ||
-                clause.startsWith("max(");
-    }
-
-    private static @Nullable String getSingleProjectionClause(CharSequence hql) {
+    static @Nullable String getSingleProjectionClause(CharSequence hql) {
         if (hql == null) return null;
         String s = hql.toString().toLowerCase(Locale.ROOT).trim();
-        int selectIdx = s.indexOf(HibernateQueryArgument.HQL_SELECT.value() + " ");
+        int selectIdx = s.indexOf("%s ".formatted(HibernateQueryArgument.HQL_SELECT.value()));
         if (selectIdx < 0) return null;
-        int fromIdx = s.indexOf(" " + HibernateQueryArgument.HQL_FROM.value() + " ", selectIdx);
+        int fromIdx = s.indexOf(" %s ".formatted(HibernateQueryArgument.HQL_FROM.value()), selectIdx);
         return extractSelectClause(s, selectIdx, fromIdx);
     }
 
-    private static @NonNull String extractSelectClause(String s, int selectIdx, int fromIdx) {
+    static @Nonnull String extractSelectClause(String s, int selectIdx, int fromIdx) {
         String clause = s.substring(
                         selectIdx + HibernateQueryArgument.HQL_SELECT.value().length(),
                         fromIdx < 0 ? s.length() : fromIdx)
@@ -194,7 +223,7 @@ public record HqlQueryContext(
         int selectIdx = lower.indexOf(HibernateQueryArgument.HQL_SELECT.value() + " ");
         if (selectIdx < 0) return 0;
 
-        int fromIdx = lower.indexOf(" " + HibernateQueryArgument.HQL_FROM.value() + " ", selectIdx);
+        int fromIdx = lower.indexOf(" %s ".formatted(HibernateQueryArgument.HQL_FROM.value()), selectIdx);
         String sel = s.substring(
                         selectIdx + HibernateQueryArgument.HQL_SELECT.value().length(),
                         fromIdx < 0 ? s.length() : fromIdx)
@@ -215,7 +244,7 @@ public record HqlQueryContext(
         return commas == 0 ? 1 : 2;
     }
 
-    private static int getCommas(String sel) {
+    static int getCommas(String sel) {
         int depth = 0;
         int commas = 0;
         boolean inSingle = false;
@@ -264,7 +293,7 @@ public record HqlQueryContext(
         int selectIdx = lower.indexOf(HibernateQueryArgument.HQL_SELECT.value() + " ");
         if (selectIdx < 0) return s; // no SELECT clause — nothing to normalize
 
-        int fromIdx = lower.indexOf(" " + HibernateQueryArgument.HQL_FROM.value() + " ", selectIdx);
+        int fromIdx = lower.indexOf(" %s ".formatted(HibernateQueryArgument.HQL_FROM.value()), selectIdx);
         if (fromIdx < 0) return s; // malformed — leave as-is
 
         int selectStart = selectIdx + HibernateQueryArgument.HQL_SELECT.value().length() + 1;
@@ -290,8 +319,47 @@ public record HqlQueryContext(
         // Read the next token; a clause keyword means no user-defined alias is present
         int tokenEnd = cur;
         while (tokenEnd < s.length() && !Character.isWhitespace(s.charAt(tokenEnd))) tokenEnd++;
+        boolean hasAlias = isHasAlias(s, cur, tokenEnd);
+        if (hasAlias) return s;
+
+        // Strip DISTINCT/ALL prefix before adjusting the projection
+        String prefix = "";
+        String projOrig = selectClauseOrig;
+        String projLower = selectClauseLower;
+        if (projLower.startsWith(HibernateQueryArgument.HQL_DISTINCT.value() + " ")) {
+            prefix = HibernateQueryArgument.HQL_DISTINCT.value() + " ";
+            projOrig = selectClauseOrig.substring(prefix.length()).trim();
+            projLower = projLower.substring(prefix.length()).trim();
+        } else if (projLower.startsWith(HibernateQueryArgument.HQL_ALL.value() + " ")) {
+            prefix = HibernateQueryArgument.HQL_ALL.value() + " ";
+            projOrig = selectClauseOrig.substring(prefix.length()).trim();
+            projLower = projLower.substring(prefix.length()).trim();
+        }
+
+        // Qualify the projection with the synthetic alias
+        String adjusted = getAdjusted(projLower, entityName, projOrig);
+
+        return HibernateQueryArgument.HQL_SELECT.value() + " " + prefix + adjusted + " " +
+                HibernateQueryArgument.HQL_FROM.value() + " " + entityName + " e" + s.substring(entityEnd);
+    }
+
+    private static String getAdjusted(String projLower, String entityName, String projOrig) {
+        String adjusted;
+        if (projLower.equalsIgnoreCase(entityName)) {
+            adjusted = "e"; // "select Person from Person" → "select e"
+        } else if (!projLower.contains("(") &&
+                !projLower.contains(".") &&
+                !projLower.startsWith(HibernateQueryArgument.HQL_NEW.value() + " ")) {
+            adjusted = "e." + projOrig; // "select name from Person"   → "select e.name"
+        } else {
+            adjusted = projOrig; // functions / constructor expr / already qualified
+        }
+        return adjusted;
+    }
+
+    private static boolean isHasAlias(String s, int cur, int tokenEnd) {
         String token = s.substring(cur, tokenEnd).toLowerCase(Locale.ROOT);
-        boolean hasAlias = !token.isEmpty() &&
+        return !token.isEmpty() &&
                 !Set.of(
                                 HibernateQueryArgument.HQL_WHERE.value(),
                                 HibernateQueryArgument.HQL_JOIN.value(),
@@ -303,44 +371,6 @@ public record HqlQueryContext(
                                 HibernateQueryArgument.HQL_ORDER.value(),
                                 HibernateQueryArgument.HQL_HAVING.value())
                         .contains(token);
-        if (hasAlias) return s;
-
-        // Strip DISTINCT/ALL prefix before adjusting the projection
-        String prefix = "";
-        String projOrig = selectClauseOrig;
-        String projLower = selectClauseLower;
-        if (projLower.startsWith(HibernateQueryArgument.HQL_DISTINCT.value() + " ")) {
-            prefix = HibernateQueryArgument.HQL_DISTINCT.value() + " ";
-            projOrig = selectClauseOrig
-                    .substring(HibernateQueryArgument.HQL_DISTINCT.value().length() + 1)
-                    .trim();
-            projLower = projLower
-                    .substring(HibernateQueryArgument.HQL_DISTINCT.value().length() + 1)
-                    .trim();
-        } else if (projLower.startsWith(HibernateQueryArgument.HQL_ALL.value() + " ")) {
-            prefix = HibernateQueryArgument.HQL_ALL.value() + " ";
-            projOrig = selectClauseOrig
-                    .substring(HibernateQueryArgument.HQL_ALL.value().length() + 1)
-                    .trim();
-            projLower = projLower
-                    .substring(HibernateQueryArgument.HQL_ALL.value().length() + 1)
-                    .trim();
-        }
-
-        // Qualify the projection with the synthetic alias
-        String adjusted;
-        if (projLower.equalsIgnoreCase(entityName)) {
-            adjusted = "e"; // "select Person from Person" → "select e"
-        } else if (!projLower.contains("(") &&
-                !projLower.contains(".") &&
-                !projLower.startsWith(HibernateQueryArgument.HQL_NEW.value() + " ")) {
-            adjusted = "e." + projOrig; // "select name from Person"   → "select e.name"
-        } else {
-            adjusted = projOrig; // functions / constructor expr / already qualified
-        }
-
-        return HibernateQueryArgument.HQL_SELECT.value() + " " + prefix + adjusted + " " +
-                HibernateQueryArgument.HQL_FROM.value() + " " + entityName + " e" + s.substring(entityEnd);
     }
 
     // ─── Private helpers ─────────────────────────────────────────────────────
@@ -362,6 +392,9 @@ public record HqlQueryContext(
         for (int i = 0; i < strings.length; i++) {
             sql.append(strings[i]);
             if (i < values.length) {
+                if (!sql.isEmpty() && !Character.isWhitespace(sql.charAt(sql.length() - 1))) {
+                    sql.append(' ');
+                }
                 String name = "p" + i;
                 sql.append(':').append(name);
                 params.put(name, values[i]);
@@ -371,13 +404,16 @@ public record HqlQueryContext(
     }
 
     private static String buildPositionalParameterQueryFromGString(
-            GString query, Collection<Object> positionalParams, boolean isNative) {
+        GString query, Collection<Object> positionalParams, boolean isNative) {
         StringBuilder sql = new StringBuilder();
         Object[] values = query.getValues();
         String[] strings = query.getStrings();
         for (int i = 0; i < strings.length; i++) {
             sql.append(strings[i]);
             if (i < values.length) {
+                if (!sql.isEmpty() && !Character.isWhitespace(sql.charAt(sql.length() - 1))) {
+                    sql.append(' ');
+                }
                 if (isNative) {
                     sql.append('?');
                 } else {
@@ -388,9 +424,5 @@ public record HqlQueryContext(
             }
         }
         return sql.toString();
-    }
-
-    private static boolean toBool(Object v) {
-        return v instanceof Boolean b ? b : v != null && Boolean.parseBoolean(v.toString());
     }
 }

@@ -393,4 +393,71 @@ class GrailsSessionContextSpec extends HibernateGormDatastoreSpec {
         then:
         result == null
     }
+
+    // ─── Additional edge cases for coverage ───────────────────────────────────
+
+    void "test resolveJtaTransactionManager returns non-null when platform exists"() {
+        given:
+        def mockTm = Mock(TransactionManager)
+        def mockPlatform = Mock(org.hibernate.engine.transaction.jta.platform.spi.JtaPlatform) {
+            retrieveTransactionManager() >> mockTm
+        }
+        def mockRegistry = Mock(org.hibernate.service.spi.ServiceRegistryImplementor) {
+            getService(org.hibernate.engine.transaction.jta.platform.spi.JtaPlatform) >> mockPlatform
+        }
+        SessionFactoryImplementor mockSessionFactory = Mock(SessionFactoryImplementor) {
+            getServiceRegistry() >> mockRegistry
+        }
+        def sessionContext = new GrailsSessionContext(mockSessionFactory)
+
+        when:
+        def result = sessionContext.resolveJtaTransactionManager()
+
+        then:
+        result == mockTm
+    }
+
+    void "test registerJtaSynchronization handles null transaction"() {
+        given:
+        def mockTm = Mock(TransactionManager) {
+            getTransaction() >> null
+        }
+        SessionFactoryImplementor mockSessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
+        def sessionContext = new GrailsSessionContext(mockSessionFactory) {
+            @Override
+            protected TransactionManager lookupJtaTransactionManager(SessionFactoryImplementor sf) { mockTm }
+        }
+        def session = mockSessionFactory.openSession()
+
+        when:
+        sessionContext.registerJtaSynchronization(session, null)
+
+        then:
+        noExceptionThrown()
+
+        cleanup:
+        session.close()
+    }
+
+    void "test registerJtaSynchronization wraps exceptions"() {
+        given:
+        def mockTm = Mock(TransactionManager) {
+            getTransaction() >> { throw new RuntimeException("fail") }
+        }
+        SessionFactoryImplementor mockSessionFactory = manager.hibernateDatastore.sessionFactory as SessionFactoryImplementor
+        def sessionContext = new GrailsSessionContext(mockSessionFactory) {
+            @Override
+            protected TransactionManager lookupJtaTransactionManager(SessionFactoryImplementor sf) { mockTm }
+        }
+        def session = mockSessionFactory.openSession()
+
+        when:
+        sessionContext.registerJtaSynchronization(session, null)
+
+        then:
+        thrown(org.springframework.dao.DataAccessResourceFailureException)
+
+        cleanup:
+        session.close()
+    }
 }

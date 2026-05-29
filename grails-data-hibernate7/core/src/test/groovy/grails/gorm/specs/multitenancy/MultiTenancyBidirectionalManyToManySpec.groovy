@@ -18,10 +18,6 @@
  */
 package grails.gorm.specs.multitenancy
 
-import grails.gorm.specs.multitenancy.User
-import grails.gorm.specs.multitenancy.Department
-import grails.gorm.specs.multitenancy.DepartmentService
-import grails.gorm.specs.multitenancy.UserService
 import grails.gorm.transactions.Rollback
 
 import org.grails.datastore.mapping.core.DatastoreUtils
@@ -33,55 +29,42 @@ import spock.lang.AutoCleanup
 import spock.lang.Issue
 import spock.lang.Shared
 import spock.lang.Specification
+import spock.util.environment.RestoreSystemProperties
 
 /**
  * Created by puneetbehl on 21/03/2018.
- *
- * NOTE: This test has been refactored and fixed by the Gemini CLI.
- * The following changes were made:
- * - The domain classes (User, Department) and service classes (DepartmentService, UserService) were extracted
- *   from being inner classes within MultiTenancyBidirectionalManyToManySpec into their own respective .groovy files.
- *   This resolves issues related to implicit outer class references and bean instantiation.
- * - The `import grails.gorm.transactions.Rollback` was re-added to MultiTenancyBidirectionalManyToManySpec
- *   to ensure proper transaction rollback during testing.
- * - The `createSomeUsers` method was refactored to explicitly save User instances after they are added
- *   to the Department's users collection. This ensures the bidirectional relationship is correctly established
- *   and persisted, resolving TransientObjectException and MissingPropertyException.
- * - The `UserService.findAllByDepartment` method was changed to use a direct HQL query
- *   (`from User u where u.department = :department`) instead of criteria queries. This resolves
- *   PathElementException and NullPointerException issues encountered with criteria query attempts,
- *   providing a more robust way to query associations in a multi-tenant context.
  */
-//TODO Multitenancy not working
+@RestoreSystemProperties
 class MultiTenancyBidirectionalManyToManySpec extends Specification {
 
+    @Shared
     final Map config = [
-            "grails.gorm.multiTenancy.mode":MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR,
-            "grails.gorm.multiTenancy.tenantResolverClass":SystemPropertyTenantResolver.name,
-            'dataSource.url':"jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
-            'dataSource.dialect': H2Dialect.name,
-            'dataSource.formatSql': 'true',
-            'hibernate.flush.mode': 'COMMIT',
-            'hibernate.cache.queries': 'true',
-            'hibernate.hbm2ddl.auto': 'create',
+            "grails.gorm.multiTenancy.mode"               : MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR,
+            "grails.gorm.multiTenancy.tenantResolverClass": SystemPropertyTenantResolver.name,
+            'dataSource.url'                              : "jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
+            'dataSource.dialect'                          : H2Dialect.name,
+            'dataSource.formatSql'                        : 'true',
+            'hibernate.flush.mode'                        : 'COMMIT',
+            'hibernate.cache.queries'                     : 'true',
+            'hibernate.hbm2ddl.auto'                      : 'create',
     ]
 
-    @Shared DepartmentService departmentService
-    @Shared UserService userService
+    DepartmentService departmentService
+    UserService userService
 
-    @Shared @AutoCleanup HibernateDatastore datastore
-
+    @AutoCleanup
+    HibernateDatastore datastore
 
     void setup() {
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "oci")
-        datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config), getClass().getPackage() )
+        datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config), getClass().getPackage())
         departmentService = datastore.getService(DepartmentService)
         userService = datastore.getService(UserService)
     }
 
     @Rollback
     @Issue("https://github.com/grails/gorm-hibernate5/issues/58")
-    void "test hasMany and 'in' query with multi-tenancy" () {
+    void "test hasMany and 'in' query with multi-tenancy"() {
         given:
         createSomeUsers()
 
@@ -104,9 +87,3 @@ class MultiTenancyBidirectionalManyToManySpec extends Specification {
     }
 
 }
-
-
-
-
-
-

@@ -24,6 +24,8 @@ import java.time.format.DateTimeFormatter
 
 plugins {
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.gradle.grails-violation-aggregation'
 }
 
 ext {
@@ -37,6 +39,10 @@ ext {
             DateTimeFormatter.ISO_DATE.format(LocalDate.ofInstant(buildInstant as Instant, ZoneOffset.UTC))
     buildDate = (buildInstant as Instant).atZone(ZoneOffset.UTC) // for reproducible builds
     isCiBuild = System.getenv().containsKey('CI')
+    // Set DO_NOT_CACHE_TESTS=1 to force test tasks to re-run on every invocation without
+    // needing --rerun-tasks. Useful for repeatedly running the same test command while
+    // chasing flaky tests across runs.
+    doNotCacheTests = System.getenv('DO_NOT_CACHE_TESTS')?.toBoolean()
 }
 
 allprojects {
@@ -45,6 +51,11 @@ allprojects {
                 gradle.includedBuild('grails-core').task(':publishAllPublicationsToTestCaseMavenRepoRepository'),
                 gradle.includedBuild('grails-gradle').task(':publishAllPublicationsToTestCaseMavenRepoRepository')
         )
+
+        // Honor DO_NOT_CACHE_TESTS=1 so developers can repeatedly invoke the same test command
+        // without --rerun-tasks (and without recompiling everything else).
+        testTask.outputs.cacheIf { !doNotCacheTests }
+        testTask.outputs.upToDateWhen { !doNotCacheTests }
     }
 }
 

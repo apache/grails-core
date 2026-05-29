@@ -102,6 +102,7 @@ class GrailsDataHibernate7TckManager extends GrailsDataTckManager {
             transactionManager.rollback(tx)
         }
         if (hibernateSession != null) {
+            TransactionSynchronizationManager.unbindResourceIfPossible(sessionFactory)
             SessionFactoryUtils.closeSession((org.hibernate.Session) hibernateSession)
         }
 

@@ -48,90 +48,6 @@ class GrailsCodeStylePluginSpec extends Specification {
         groovyFile = testProjectDir.resolve('src/main/groovy/Test.groovy').toFile()
     }
 
-    def "test codeStyle and aggregation tasks including jacoco"() {
-        given: "a project structure with violations and jacoco report"
-        testProjectDir.resolve('build/reports/codestyle/checkstyle').toFile().mkdirs()
-        testProjectDir.resolve('build/reports/codestyle/codenarc').toFile().mkdirs()
-        def jacocoDir = testProjectDir.resolve('build/reports/jacoco/test').toFile()
-        jacocoDir.mkdirs()
-        
-        buildFile = testProjectDir.resolve('settings.gradle').toFile()
-        buildFile.text = "include 'app-module'"
-        def moduleDir = testProjectDir.resolve('app-module')
-        def moduleBuildFile = moduleDir.resolve('build.gradle').toFile()
-        moduleBuildFile.parentFile.mkdirs()
-        moduleBuildFile.text = """
-            plugins {
-                id 'groovy'
-                id 'jacoco'
-                id 'org.apache.grails.gradle.grails-code-style'
-            }
-            repositories {
-                mavenCentral()
-            }
-            dependencies {
-                implementation 'org.apache.groovy:groovy:4.0.11'
-            }
-        """
-        def sourceFile = moduleDir.resolve('src/main/groovy/com/example/AppClass.groovy')
-        sourceFile.toFile().parentFile.mkdirs()
-        sourceFile.toFile().text = "package com.example\nclass AppClass {}"
-
-        def checkstyleReport = testProjectDir.resolve('build/reports/codestyle/checkstyle/app-module-checkstyleMain.xml').toFile()
-        checkstyleReport.parentFile.mkdirs()
-        checkstyleReport.text = """<?xml version="1.0" encoding="UTF-8"?>
-<checkstyle version="10.0">
-<file name="${sourceFile.toFile().absolutePath}">
-<error line="1" column="1" severity="error" message="Missing a Javadoc comment." source="com.puppycrawl.tools.checkstyle.checks.javadoc.JavadocPackageCheck"/>
-</file>
-</checkstyle>
-"""
-        def codenarcReport = testProjectDir.resolve('build/reports/codestyle/codenarc/app-module-codenarcMain.xml').toFile()
-        codenarcReport.parentFile.mkdirs()
-        codenarcReport.text = """<?xml version="1.0" encoding="UTF-8"?>
-<CodeNarc version="3.1.0">
-<Package name="com.example">
-<File name="AppClass.groovy">
-<Violation ruleName="EmptyClass" priority="2" lineNumber="1">
-<Message>The class is empty</Message>
-</Violation>
-</File>
-</Package>
-</CodeNarc>
-"""
-        def csvReport = new File(jacocoDir, 'jacocoTestReport.csv')
-        csvReport.text = """GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,COMPLEXITY_MISSED,COMPLEXITY_COVERED,METHOD_MISSED,METHOD_COVERED
-app-module,com.example,AppClass,1,9,0,0,0,1,0,1,0,1
-"""
-
-        when: "running aggregateStyleViolations with jacoco enabled"
-        def result = GradleRunner.create()
-                .withProjectDir(testProjectDir.toFile())
-                .withArguments('aggregateStyleViolations', '-Pgrails.codestyle.enabled.jacoco=true', '-x', 'checkstyleMain', '-x', 'codenarcMain', '--stacktrace')
-                .withPluginClasspath()
-                .build()
-
-        then: "task finished successfully"
-        result.task(':aggregateStyleViolations').outcome == org.gradle.testkit.runner.TaskOutcome.SUCCESS
-
-        and: "violation reports are generated"
-        testProjectDir.resolve('CHECKSTYLE_VIOLATIONS.md').toFile().exists()
-        testProjectDir.resolve('CODENARC_VIOLATIONS.md').toFile().exists()
-        testProjectDir.resolve('JACOCO_COVERAGE_VIOLATIONS.md').toFile().exists()
-        
-        def checkstyleMd = testProjectDir.resolve('CHECKSTYLE_VIOLATIONS.md').toFile().text
-        checkstyleMd.contains('## Module: app-module')
-        checkstyleMd.contains('| com.example.AppClass | Checkstyle | JavadocPackageCheck | 1 | Missing a Javadoc comment. |')
-
-        def codenarcMd = testProjectDir.resolve('CODENARC_VIOLATIONS.md').toFile().text
-        codenarcMd.contains('## Module: app-module')
-        codenarcMd.contains('| com.example.AppClass | CodeNarc | EmptyClass | 1 | The class is empty |')
-
-        def jacocoMd = testProjectDir.resolve('JACOCO_COVERAGE_VIOLATIONS.md').toFile().text
-        jacocoMd.contains('## Module: app-module')
-        jacocoMd.contains('| com.example.AppClass | 90.00% |')
-    }
-
     def "test codenarcFix task fixes violations"() {
         given: "a file with violations"
         groovyFile.text = """package org.test
@@ -165,5 +81,143 @@ class Test{
         fixedContent.contains("def semi = 'semicolon'") // UnnecessarySemicolon
         !fixedContent.contains(";")
         fixedContent.count('\n\n') == 3 // ConsecutiveBlankLines
+    }
+
+    def "test codenarcFix task does not break strings with single quotes"() {
+        given: "a file with double quoted strings containing single quotes"
+        groovyFile.text = """package org.test
+
+class Test {
+    def s1 = "it's a test"
+    def s2 = "format 'yyyy-MM-dd'"
+    def s3 = "contains \\"double\\" and 'single' quotes"
+}
+"""
+        when: "running codenarcFix"
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('codenarcFix', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+
+        then: "task finished successfully"
+        result.task(':codenarcFix').outcome == org.gradle.testkit.runner.TaskOutcome.SUCCESS
+
+        and: "strings with single quotes are NOT changed to single quotes (which would break them)"
+        def content = groovyFile.text
+        content.contains('def s1 = "it\'s a test"')
+        content.contains('def s2 = "format \'yyyy-MM-dd\'"')
+        // s3 has escaped double quotes, so it should also remain double quoted
+        content.contains('def s3 = "contains \\"double\\" and \'single\' quotes"')
+    }
+
+    def "test codenarcFix task does not break escaped double quotes in double quotes"() {
+        given: "a file with escaped double quotes"
+        groovyFile.text = """package org.test
+
+class Test {
+    def s = "\\"\\\$it\\""
+}
+"""
+        when: "running codenarcFix"
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('codenarcFix', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+
+        then: "task finished successfully"
+        result.task(':codenarcFix').outcome == org.gradle.testkit.runner.TaskOutcome.SUCCESS
+
+        and: "escaped quotes are NOT broken"
+        groovyFile.text.contains('"\\"\\$it\\""')
+    }
+
+    def "test codenarcFix task does not corrupt method references (::)"() {
+        given: "a file with :: method references"
+        groovyFile.text = """package org.test
+
+import java.util.Arrays
+
+class Test {
+    def result = Arrays.stream(items).map(String::trim).toList()
+    def other = items.collect(String::valueOf)
+    def cors = parseConfigList(config, 'allowedOrigins', corsConfig::setAllowedOrigins)
+}
+"""
+        when: "running codenarcFix"
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('codenarcFix', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+
+        then: "task finished successfully"
+        result.task(':codenarcFix').outcome == org.gradle.testkit.runner.TaskOutcome.SUCCESS
+
+        and: "method references are NOT broken"
+        def content = groovyFile.text
+        content.contains('String::trim')
+        content.contains('String::valueOf')
+        content.contains('corsConfig::setAllowedOrigins')
+        !content.contains('String: :trim')
+        !content.contains('String: :valueOf')
+        !content.contains('corsConfig: :setAllowedOrigins')
+    }
+
+    def "test codenarcFix task does not corrupt adjacent GString and plain string"() {
+        given: "a file with a GString method name followed by a plain string argument"
+        groovyFile.text = '''package org.test
+
+class Test {
+    def invoke(invoker, name) {
+        invoker."${name}"("plain arg")
+        invoker."${name}"("-Pargs=${someVar}")
+    }
+}
+'''
+        when: "running codenarcFix"
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('codenarcFix', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+
+        then: "task finished successfully"
+        result.task(':codenarcFix').outcome == org.gradle.testkit.runner.TaskOutcome.SUCCESS
+
+        and: "adjacent GString boundaries are NOT fused"
+        def content = groovyFile.text
+        content.contains('invoker."${name}"(\'plain arg\')')
+        content.contains('invoker."${name}"("-Pargs=${someVar}")')
+        !content.contains('invoker."${name}\'(\'plain arg")')
+        !content.contains('invoker."${name}\'(\'plain arg\')')
+    }
+
+    def "test codenarcFix task does not corrupt double quotes inside single-quoted strings"() {
+        given: "a file with single-quoted strings containing double quotes"
+        groovyFile.text = """package org.test
+
+class Test {
+    def d1 = description('Accepts format "hh:mm:ss"')
+    def d2 = writeLine('[cols="2,5,2", options="header"]')
+    def d3 = 'value with "double quotes" inside'
+}
+"""
+        when: "running codenarcFix"
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('codenarcFix', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+
+        then: "task finished successfully"
+        result.task(':codenarcFix').outcome == org.gradle.testkit.runner.TaskOutcome.SUCCESS
+
+        and: "double quotes inside single-quoted strings are NOT changed"
+        def content = groovyFile.text
+        content.contains('\'Accepts format "hh:mm:ss"\'')
+        content.contains('\'[cols="2,5,2", options="header"]\'')
+        content.contains('\'value with "double quotes" inside\'')
     }
 }

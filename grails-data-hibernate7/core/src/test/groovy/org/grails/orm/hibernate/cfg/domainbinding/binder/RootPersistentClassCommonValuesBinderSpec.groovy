@@ -41,7 +41,7 @@ class RootPersistentClassCommonValuesBinderSpec extends HibernateGormDatastoreSp
     GrailsDomainBinder gormDomainBinder
 
     void setup() {
-        manager.addAllDomainClasses([TestEntity, AbstractTestEntity])
+        manager.addAllDomainClasses([TestEntity, AbstractTestEntity, CachedEntity, ReadOnlyCachedEntity, NonLazyCachedEntity])
         
         gormDomainBinder = getGrailsDomainBinder()
         metadataBuildingContext = gormDomainBinder.getMetadataBuildingContext()
@@ -70,7 +70,6 @@ class RootPersistentClassCommonValuesBinderSpec extends HibernateGormDatastoreSp
     void "test bindRootPersistentClassCommonValues binds properties correctly"() {
         given:
         def entity = createPersistentEntity(TestEntity) as HibernatePersistentEntity
-        def mappings = getCollector()
 
         when:
         RootClass rootClass = binder.bindRoot(entity)
@@ -86,7 +85,6 @@ class RootPersistentClassCommonValuesBinderSpec extends HibernateGormDatastoreSp
     void "test bindRootPersistentClassCommonValues for abstract entity"() {
         given:
         def entity = createPersistentEntity(AbstractTestEntity) as HibernatePersistentEntity
-        def mappings = getCollector()
 
         when:
         RootClass rootClass = binder.bindRoot(entity)
@@ -94,6 +92,45 @@ class RootPersistentClassCommonValuesBinderSpec extends HibernateGormDatastoreSp
         then:
         rootClass != null
         rootClass.isAbstract() == true
+    }
+
+    void "test bindRoot with caching enabled"() {
+        given:
+        def entity = createPersistentEntity(CachedEntity) as HibernatePersistentEntity
+
+        when:
+        RootClass rootClass = binder.bindRoot(entity)
+
+        then:
+        rootClass.isCached()
+        rootClass.getCacheConcurrencyStrategy() == "read-write"
+        rootClass.isMutable() == true
+        rootClass.isLazyPropertiesCacheable() == true
+    }
+
+    void "test bindRoot with read-only caching"() {
+        given:
+        def entity = createPersistentEntity(ReadOnlyCachedEntity) as HibernatePersistentEntity
+
+        when:
+        RootClass rootClass = binder.bindRoot(entity)
+
+        then:
+        rootClass.isCached()
+        rootClass.getCacheConcurrencyStrategy() == "read-only"
+        rootClass.isMutable() == false
+    }
+
+    void "test bindRoot with non-lazy cache include"() {
+        given:
+        def entity = createPersistentEntity(NonLazyCachedEntity) as HibernatePersistentEntity
+
+        when:
+        RootClass rootClass = binder.bindRoot(entity)
+
+        then:
+        rootClass.isCached()
+        rootClass.isLazyPropertiesCacheable() == false
     }
 }
 
@@ -109,4 +146,28 @@ abstract class AbstractTestEntity {
     Long id
     Long version
     String name
+}
+
+@Entity
+class CachedEntity {
+    Long id
+    static mapping = {
+        cache true
+    }
+}
+
+@Entity
+class ReadOnlyCachedEntity {
+    Long id
+    static mapping = {
+        cache usage: 'read-only'
+    }
+}
+
+@Entity
+class NonLazyCachedEntity {
+    Long id
+    static mapping = {
+        cache include: 'non-lazy'
+    }
 }

@@ -26,6 +26,8 @@ plugins {
     // TODO: id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-code-analysis'
+    id 'org.apache.grails.gradle.grails-jacoco'
 }
 
 version = projectVersion
@@ -38,48 +40,28 @@ ext {
 
 dependencies {
 
+    astImplementation platform(project(':grails-bom'))
+
     implementation platform(project(':grails-bom'))
     api "org.sitemesh:spring-boot-starter-sitemesh"
+    api "org.sitemesh:spring-webmvc-sitemesh"
     api project(':grails-web-gsp-taglib')
+    api project(':grails-web-gsp')
+    api project(':grails-web-common')
+    api project(':grails-gsp')
+    api project(':grails-core')
 
-//    api project(':grails-web-gsp'), { // GrailsConventionGroovyPageLocator
-//        // API dependencies in grails-web-gsp
-//        //exclude group: 'org.apache.grails.views', module: 'grails-gsp-core' // DefaultGroovyPageLocator
-//        exclude group: 'org.apache.grails.web', module: 'grails-web-common'
-//        exclude group: 'org.apache.grails.web', module: 'grails-web-taglib'
-//    }
-//    api project(':grails-web-gsp-taglib'), { // GrailsConventionGroovyPageLocator
-//        // API dependencies in grails-web-gsp-taglib
-//        exclude group: 'org.apache.grails.web', module: 'grails-taglib'
-//        //exclude group: 'org.apache.grails.web', module: 'grails-web-gsp' // DefaultGroovyPageLocator
-//    }
-//    api "org.sitemesh:sitemesh:$sitemeshVersion" // SiteMeshFilter
-//    api 'org.springframework:spring-webmvc' // AbstractHandlerAdapter, ParameterizableViewController, AbstractHandlerMapping
-//    api 'org.springframework.boot:spring-boot' // FilterRegistrationBean
-//
-//    implementation project(':grails-web-taglib'), { // TagLib, TagLibrary
-//        // API dependencies in grails-web-taglib
-//        exclude group: 'org.apache.grails.web', module: 'grails-taglib'
-//        exclude group: 'org.apache.grails.web', module: 'grails-web-common'
-//    }
-//    implementation project(':grails-web-common'), { // WebUtils
-//        // API dependencies in grails-web-common
-//        exclude group: 'org.apache.groovy', module: 'groovy-templates'
-//        exclude group: 'org.apache.grails', module: 'grails-core'
-//        exclude group: 'org.apache.grails', module: 'grails-databinding'
-//        exclude group: 'org.apache.grails', module: 'grails-encoder'
-//        exclude group: 'org.springframework', module: 'spring-webmvc'
-//        exclude group: 'org.springframework', module: 'spring-context-support'
-//    }
-//    implementation 'org.springframework:spring-beans' // Autowired, Qualifier
-//    implementation 'org.springframework:spring-web' // HttpMethod, ResponseStatusException, HttpStatus
-//
-//    runtimeOnly "org.apache.grails:grails-codecs:$grailsVersion" // Registers CodecLookup bean
-//    runtimeOnly "org.sitemesh:spring-boot-starter-sitemesh:$sitemeshVersion"
-//
-//    compileOnly 'jakarta.servlet:jakarta.servlet-api' // Provided by servlet container
-//    compileOnly 'org.apache.groovy:groovy' // Provided by Grails Application
+    implementation 'org.apache.groovy:groovy'
 
+    compileOnly 'jakarta.servlet:jakarta.servlet-api'
+
+    testImplementation 'jakarta.servlet:jakarta.servlet-api'
+    testImplementation 'org.spockframework:spock-core'
+    testImplementation 'org.springframework:spring-test'
+    testImplementation project(':grails-testing-support-web')
+    testImplementation 'org.objenesis:objenesis'
+    testRuntimeOnly 'net.bytebuddy:byte-buddy'
+    testRuntimeOnly 'org.slf4j:slf4j-nop'
 }
 
 apply {

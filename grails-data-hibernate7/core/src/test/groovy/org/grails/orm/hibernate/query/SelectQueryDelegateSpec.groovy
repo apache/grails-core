@@ -230,6 +230,17 @@ class SelectQueryDelegateSpec extends HibernateGormDatastoreSpec {
         noExceptionThrown()
     }
 
+    void "setHint does not throw"() {
+        given:
+        def delegate = buildDelegate("FROM SelectQueryDelegateTestBook")
+
+        when:
+        delegate.setHint("org.hibernate.readOnly", true)
+
+        then:
+        noExceptionThrown()
+    }
+
     void "executeUpdate throws UnsupportedOperationException"() {
         given:
         def delegate = buildDelegate("FROM SelectQueryDelegateTestBook")

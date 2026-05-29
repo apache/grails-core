@@ -66,14 +66,19 @@ public class CollectionKeyBinder {
             }
         } else {
             if (property.getHibernateMappedForm().hasJoinKeyMapping()) {
-                simpleValueColumnBinder.bindSimpleValue(
+                var joinTable = property.getHibernateMappedForm().getJoinTable();
+                var keys = joinTable.getKeys();
+                if (keys != null && keys.size() > 1) {
+                    // Composite key: delegate to DependentKeyValueBinder
+                    dependentKeyValueBinder.bind(property, key);
+                } else {
+                    // Single key: use SimpleValueColumnBinder
+                    simpleValueColumnBinder.bindSimpleValue(
                         key,
                         "long",
-                        property.getHibernateMappedForm()
-                                .getJoinTable()
-                                .getKey()
-                                .getName(),
+                        joinTable.getKeys() != null && !joinTable.getKeys().isEmpty() ? joinTable.getKeys().get(0).getName() : null,
                         true);
+                }
             } else if (property instanceof EmbeddedCollection) {
                 // For embedded (value-type) collections the DependantValue already wraps the owner PK;
                 // do not override the type name with the element class name.

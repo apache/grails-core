@@ -23,7 +23,10 @@ import groovy.lang.Closure;
 import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.tasks.SourceSet;
-import org.gradle.util.ConfigureUtil;
+import org.gradle.util.internal.ClosureBackedAction;
+
+import java.io.File;
+import java.util.Set;
 
 /**
  * The rocker property added to the {@link SourceSet}.
@@ -45,7 +48,7 @@ public class RockerSourceSetProperty {
     }
 
     public RockerSourceSetProperty rocker(Closure<?> configureClosure) {
-        ConfigureUtil.configure(configureClosure, getRocker());
+        new ClosureBackedAction<>(configureClosure).execute(getRocker());
         return this;
     }
 
@@ -53,5 +56,25 @@ public class RockerSourceSetProperty {
         Action<? super TemplateDirectorySet> configureAction) {
         configureAction.execute(getRocker());
         return this;
+    }
+
+    // Delegate methods to TemplateDirectorySet for DSL compatibility
+    public RockerSourceSetProperty srcDir(Object srcDir) {
+        templateDirs.srcDir(srcDir);
+        return this;
+    }
+
+    public RockerSourceSetProperty srcDirs(Object... srcDirs) {
+        templateDirs.srcDirs(srcDirs);
+        return this;
+    }
+
+    public RockerSourceSetProperty setSrcDirs(Iterable<?> srcPaths) {
+        templateDirs.setSrcDirs(srcPaths);
+        return this;
+    }
+
+    public Set<File> getSrcDirs() {
+        return templateDirs.getSrcDirs();
     }
 }

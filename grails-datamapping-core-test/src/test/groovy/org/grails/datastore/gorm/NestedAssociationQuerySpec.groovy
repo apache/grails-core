@@ -99,6 +99,7 @@ class NestedAssociationQuerySpec extends GrailsDataTckSpec<GrailsDataCoreTckMana
 
 @grails.persistence.Entity
 class UserOpinion {
+
     Long id
     Set answers = []
     static hasMany = [answers: Answer]
@@ -129,6 +130,7 @@ class Question {
 
 @grails.persistence.Entity
 class Release {
+
     Long id
     String name
     MilestoneCycle milestoneCycle
@@ -136,6 +138,7 @@ class Release {
 
 @grails.persistence.Entity
 class MilestoneCycle {
+
     Long id
     String name
     Department department
@@ -143,6 +146,7 @@ class MilestoneCycle {
 
 @grails.persistence.Entity
 class Department {
+
     Long id
     String name
 }

@@ -22,18 +22,20 @@
 // These files are split to facilitate separation of build vs application dependencies. These are the application dependencies.
 ext {
     gradleBomDependencyVersions = [
-            'ant.version'                   : '1.10.15',
+            'ant.version'                   : '1.10.17',
             'asciidoctor-gradle-jvm.version': '4.0.5',
             'asciidoctorj.version'          : '3.0.0',
             'asset-pipeline-gradle.version' : '5.1.0-M4',
             'byte-buddy.version'            : '1.18.8',
-            'commons-text.version'          : '1.14.0',
+            'commons-text.version'          : '1.15.0',
             'directory-watcher.version'     : '0.19.1',
-            'gradle-spock.version'          : '2.3-groovy-3.0',
-            'grails-publish-plugin.version' : '0.0.4',
-            'jansi.version'                 : '1.18',
+            'gradle-groovy.version'         : '4.0.32',
+            'gradle-spock.version'          : '2.3-groovy-4.0',
+            'grails-publish-plugin.version' : '1.0.0-M1',
+            'jansi.version'                 : '2.4.2',
             'javaparser-core.version'       : '3.28.0',
-            'jline.version'                 : '2.14.6',
+            'jline.version'                 : '3.30.6',
+            'jline2.version'                : '2.14.6',
             'jna.version'                   : '5.18.1',
             'jquery.version'                : '3.7.1',
             'objenesis.version'             : '3.4',
@@ -42,8 +44,9 @@ ext {
 
     // Note: the name of the dependency must be the prefix of the property name so properties in the pom are resolved correctly
     gradleBomPlatformDependencies = [
-            'spring-boot-bom' : "org.springframework.boot:spring-boot-dependencies:${gradleBomDependencyVersions['spring-boot.version']}",
-            'gradle-spock-bom': "org.spockframework:spock-bom:${gradleBomDependencyVersions['gradle-spock.version']}",
+            'spring-boot-bom'  : "org.springframework.boot:spring-boot-dependencies:${gradleBomDependencyVersions['spring-boot.version']}",
+            'gradle-groovy-bom': "org.apache.groovy:groovy-bom:${gradleBomDependencyVersions['gradle-groovy.version']}",
+            'gradle-spock-bom' : "org.spockframework:spock-bom:${gradleBomDependencyVersions['gradle-spock.version']}",
     ]
 
     // Note: the name of the dependency must be the prefix of the property name so properties in the pom are resolved correctly
@@ -59,7 +62,8 @@ ext {
             'grails-publish-plugin'   : "org.apache.grails.gradle:grails-publish:${gradleBomDependencyVersions['grails-publish-plugin.version']}",
             'jansi'                   : "org.fusesource.jansi:jansi:${gradleBomDependencyVersions['jansi.version']}",
             'javaparser-core'         : "com.github.javaparser:javaparser-core:${gradleBomDependencyVersions['javaparser-core.version']}",
-            'jline'                   : "jline:jline:${gradleBomDependencyVersions['jline.version']}",
+            'jline'                   : "org.jline:jline:${gradleBomDependencyVersions['jline.version']}",
+            'jline2'                  : "jline:jline:${gradleBomDependencyVersions['jline2.version']}",
             'jna'                     : "net.java.dev.jna:jna:${gradleBomDependencyVersions['jna.version']}",
             'objenesis'               : "org.objenesis:objenesis:${gradleBomDependencyVersions['objenesis.version']}",
             'spring-boot-cli'         : "org.springframework.boot:spring-boot-cli:${gradleBomDependencyVersions['spring-boot.version']}",
@@ -72,100 +76,112 @@ ext {
             'bootstrap-icons.version'       : '1.13.1',
             'bootstrap.version'             : '5.3.8',
             'checker-qual.version'          : '3.55.1',
-            'commons-codec.version'         : '1.19.0',
+            'commons-codec.version'         : '1.21.0',
             'commons-lang3.version'         : '3.20.0',
             'geb-spock.version'             : '8.0.1',
-            'groovy.version'                : '4.0.31',
+            'graphql-java.version'          : '25.0',
+            'graphql-java-extended-scalars.version': '24.0',
+            'groovy.version'                : '4.0.32',
+            'hibernate-groovy-proxy.version': '1.1',
+            'jakarta-servlet-api.version'   : '6.1.0',
+            'jakarta-validation.version'    : '3.1.1',
             'jquery.version'                : '3.7.1',
-            'liquibase-hibernate5.version'  : '4.27.0',
+            'junit.version'                 : '6.0.3',
             'mongodb.version'               : '5.6.4',
+            'reactor.version'               : '3.8.5',
             'rxjava.version'                : '1.3.8',
             'rxjava2.version'               : '2.2.21',
             'rxjava3.version'               : '3.1.12',
             'selenium.version'              : '4.38.0',
-            'kotlin.version'                : '2.2.21',
-            'mockito.version'               : '5.20.0',
-            'spock.version'                 : '2.3-groovy-4.0',
             'sitemesh.version'              : '2.6.0',
+            'spock.version'                 : '2.3-groovy-4.0',
             'starter-sitemesh.version'      : '3.2.2',
+            'spring-webmvc-sitemesh.version': '3.2.2',
             // Spring Boot 4 no longer manages spring-retry; pin it here so the
             // grails-shell-cli SpringRetryCompilerAutoConfiguration's unversioned
             // reference resolves and consumer apps using @Retryable get a known version.
             'spring-retry.version'          : '2.0.11',
-            'hibernate-groovy-proxy.version': '1.1',
     ]
 
     // Note: the name of the dependency must be the prefix of the property name so properties in the pom are resolved correctly
     bomPlatformDependencies = [
             'asset-pipeline-bom': "cloud.wondrify:asset-pipeline-bom:${bomDependencyVersions['asset-pipeline-bom.version']}",
-            'spock-bom'         : "org.spockframework:spock-bom:${bomDependencyVersions['spock.version']}",
             'groovy-bom'        : "org.apache.groovy:groovy-bom:${bomDependencyVersions['groovy.version']}",
+            'junit-bom'         : "org.junit:junit-bom:${bomDependencyVersions['junit.version']}",
             'selenium-bom'      : "org.seleniumhq.selenium:selenium-bom:${bomDependencyVersions['selenium.version']}",
+            'spock-bom'         : "org.spockframework:spock-bom:${bomDependencyVersions['spock.version']}",
     ]
 
     // Note: the name of the dependency must be the prefix of the property name so properties in the pom are resolved correctly
     bomDependencies = [
-            'bootstrap'             : "org.webjars.npm:bootstrap:${bomDependencyVersions['bootstrap.version']}",
-            'bootstrap-icons'       : "org.webjars.npm:bootstrap-icons:${bomDependencyVersions['bootstrap-icons.version']}",
+            'bootstrap'                : "org.webjars.npm:bootstrap:${bomDependencyVersions['bootstrap.version']}",
+            'bootstrap-icons'          : "org.webjars.npm:bootstrap-icons:${bomDependencyVersions['bootstrap-icons.version']}",
+            'byte-buddy-agent'         : "net.bytebuddy:byte-buddy-agent:${gradleBomDependencyVersions['byte-buddy.version']}",
             'checker-qual'          : "org.checkerframework:checker-qual:${bomDependencyVersions['checker-qual.version']}",
-            'commons-codec'         : "commons-codec:commons-codec:${bomDependencyVersions['commons-codec.version']}",
-            'commons-lang3'         : "org.apache.commons:commons-lang3:${bomDependencyVersions['commons-lang3.version']}",
-            'byte-buddy-agent'      : "net.bytebuddy:byte-buddy-agent:${gradleBomDependencyVersions['byte-buddy.version']}",
-            'geb-spock'             : "org.apache.groovy.geb:geb-spock:${bomDependencyVersions['geb-spock.version']}",
-            // start - restate the groovy-bom includes here because the spring dependency management will pick the library from spring-boot-dependencies otherwise
-            'groovy'                : "org.apache.groovy:groovy:${bomDependencyVersions['groovy.version']}",
-            'groovy-ant'            : "org.apache.groovy:groovy-ant:${bomDependencyVersions['groovy.version']}",
-            'groovy-astbuilder'     : "org.apache.groovy:groovy-astbuilder:${bomDependencyVersions['groovy.version']}",
-            'groovy-cli-commons'    : "org.apache.groovy:groovy-cli-commons:${bomDependencyVersions['groovy.version']}",
-            'groovy-cli-picocli'    : "org.apache.groovy:groovy-cli-picocli:${bomDependencyVersions['groovy.version']}",
-            'groovy-console'        : "org.apache.groovy:groovy-console:${bomDependencyVersions['groovy.version']}",
-            'groovy-contracts'      : "org.apache.groovy:groovy-contracts:${bomDependencyVersions['groovy.version']}",
-            'groovy-datetime'       : "org.apache.groovy:groovy-datetime:${bomDependencyVersions['groovy.version']}",
-            'groovy-dateutil'       : "org.apache.groovy:groovy-dateutil:${bomDependencyVersions['groovy.version']}",
-            'groovy-docgenerator'   : "org.apache.groovy:groovy-docgenerator:${bomDependencyVersions['groovy.version']}",
-            'groovy-ginq'           : "org.apache.groovy:groovy-ginq:${bomDependencyVersions['groovy.version']}",
-            'groovy-groovydoc'      : "org.apache.groovy:groovy-groovydoc:${bomDependencyVersions['groovy.version']}",
-            'groovy-groovysh'       : "org.apache.groovy:groovy-groovysh:${bomDependencyVersions['groovy.version']}",
-            'groovy-jmx'            : "org.apache.groovy:groovy-jmx:${bomDependencyVersions['groovy.version']}",
-            'groovy-json'           : "org.apache.groovy:groovy-json:${bomDependencyVersions['groovy.version']}",
-            'groovy-jsr223'         : "org.apache.groovy:groovy-jsr223:${bomDependencyVersions['groovy.version']}",
-            'groovy-macro'          : "org.apache.groovy:groovy-macro:${bomDependencyVersions['groovy.version']}",
-            'groovy-macro-library'  : "org.apache.groovy:groovy-macro-library:${bomDependencyVersions['groovy.version']}",
-            'groovy-nio'            : "org.apache.groovy:groovy-nio:${bomDependencyVersions['groovy.version']}",
-            'groovy-servlet'        : "org.apache.groovy:groovy-servlet:${bomDependencyVersions['groovy.version']}",
-            'groovy-sql'            : "org.apache.groovy:groovy-sql:${bomDependencyVersions['groovy.version']}",
-            'groovy-swing'          : "org.apache.groovy:groovy-swing:${bomDependencyVersions['groovy.version']}",
-            'groovy-templates'      : "org.apache.groovy:groovy-templates:${bomDependencyVersions['groovy.version']}",
-            'groovy-test'           : "org.apache.groovy:groovy-test:${bomDependencyVersions['groovy.version']}",
-            'groovy-test-junit5'    : "org.apache.groovy:groovy-test-junit5:${bomDependencyVersions['groovy.version']}",
-            'groovy-testng'         : "org.apache.groovy:groovy-testng:${bomDependencyVersions['groovy.version']}",
-            'groovy-toml'           : "org.apache.groovy:groovy-toml:${bomDependencyVersions['groovy.version']}",
-            'groovy-typecheckers'   : "org.apache.groovy:groovy-typecheckers:${bomDependencyVersions['groovy.version']}",
-            'groovy-xml'            : "org.apache.groovy:groovy-xml:${bomDependencyVersions['groovy.version']}",
-            'groovy-yaml'           : "org.apache.groovy:groovy-yaml:${bomDependencyVersions['groovy.version']}",
-            'hibernate-groovy-proxy': "org.yakworks:hibernate-groovy-proxy:${bomDependencyVersions['hibernate-groovy-proxy.version']}",
-            // end - restate the groovy-bom here because the spring dependency management
-            // start - restate versions managed by Spring Boot / Spock BOMs so enforcedPlatform can enforce them
-            // when micronaut is used (Micronaut 5 platform declares higher versions that override preferences)
-            'kotlin-stdlib'         : "org.jetbrains.kotlin:kotlin-stdlib:${bomDependencyVersions['kotlin.version']}",
-            'kotlin-stdlib-common'  : "org.jetbrains.kotlin:kotlin-stdlib-common:${bomDependencyVersions['kotlin.version']}",
-            'kotlin-stdlib-jdk7'    : "org.jetbrains.kotlin:kotlin-stdlib-jdk7:${bomDependencyVersions['kotlin.version']}",
-            'kotlin-stdlib-jdk8'    : "org.jetbrains.kotlin:kotlin-stdlib-jdk8:${bomDependencyVersions['kotlin.version']}",
-            'mockito-core'          : "org.mockito:mockito-core:${bomDependencyVersions['mockito.version']}",
-            'spock-core'            : "org.spockframework:spock-core:${bomDependencyVersions['spock.version']}",
-            'spock-spring'          : "org.spockframework:spock-spring:${bomDependencyVersions['spock.version']}",
-            // end - restate versions managed by inherited BOMs
-            'jquery'                : "org.webjars.npm:jquery:${bomDependencyVersions['jquery.version']}",
-            'mongodb-bson'          : "org.mongodb:bson:${bomDependencyVersions['mongodb.version']}",
-            'mongodb-driver-core'   : "org.mongodb:mongodb-driver-core:${bomDependencyVersions['mongodb.version']}",
-            'mongodb-driver-sync'   : "org.mongodb:mongodb-driver-sync:${bomDependencyVersions['mongodb.version']}",
-            'mongodb-record-codec'  : "org.mongodb:bson-record-codec:${bomDependencyVersions['mongodb.version']}",
-            'rxjava'                : "io.reactivex:rxjava:${bomDependencyVersions['rxjava.version']}",
-            'rxjava2'               : "io.reactivex.rxjava2:rxjava:${bomDependencyVersions['rxjava2.version']}",
-            'rxjava3'               : "io.reactivex.rxjava3:rxjava:${bomDependencyVersions['rxjava3.version']}",
-            'sitemesh'              : "opensymphony:sitemesh:${bomDependencyVersions['sitemesh.version']}",
-            'starter-sitemesh'      : "org.sitemesh:spring-boot-starter-sitemesh:${bomDependencyVersions['starter-sitemesh.version']}",
-            'spring-retry'          : "org.springframework.retry:spring-retry:${bomDependencyVersions['spring-retry.version']}",
+            'commons-codec'            : "commons-codec:commons-codec:${bomDependencyVersions['commons-codec.version']}",
+            'commons-lang3'            : "org.apache.commons:commons-lang3:${bomDependencyVersions['commons-lang3.version']}",
+            'geb-spock'                : "org.apache.groovy.geb:geb-spock:${bomDependencyVersions['geb-spock.version']}",
+            'graphql-java'             : "com.graphql-java:graphql-java:${bomDependencyVersions['graphql-java.version']}",
+            'graphql-java-extended-scalars': "com.graphql-java:graphql-java-extended-scalars:${bomDependencyVersions['graphql-java-extended-scalars.version']}",
+            'groovy'                   : "org.apache.groovy:groovy:${bomDependencyVersions['groovy.version']}",
+            'groovy-ant'               : "org.apache.groovy:groovy-ant:${bomDependencyVersions['groovy.version']}",
+            'groovy-astbuilder'        : "org.apache.groovy:groovy-astbuilder:${bomDependencyVersions['groovy.version']}",
+            'groovy-cli-commons'       : "org.apache.groovy:groovy-cli-commons:${bomDependencyVersions['groovy.version']}",
+            'groovy-cli-picocli'       : "org.apache.groovy:groovy-cli-picocli:${bomDependencyVersions['groovy.version']}",
+            'groovy-console'           : "org.apache.groovy:groovy-console:${bomDependencyVersions['groovy.version']}",
+            'groovy-contracts'         : "org.apache.groovy:groovy-contracts:${bomDependencyVersions['groovy.version']}",
+            'groovy-datetime'          : "org.apache.groovy:groovy-datetime:${bomDependencyVersions['groovy.version']}",
+            'groovy-dateutil'          : "org.apache.groovy:groovy-dateutil:${bomDependencyVersions['groovy.version']}",
+            'groovy-docgenerator'      : "org.apache.groovy:groovy-docgenerator:${bomDependencyVersions['groovy.version']}",
+            'groovy-ginq'              : "org.apache.groovy:groovy-ginq:${bomDependencyVersions['groovy.version']}",
+            'groovy-groovydoc'         : "org.apache.groovy:groovy-groovydoc:${bomDependencyVersions['groovy.version']}",
+            'groovy-groovysh'          : "org.apache.groovy:groovy-groovysh:${bomDependencyVersions['groovy.version']}",
+            'groovy-jmx'               : "org.apache.groovy:groovy-jmx:${bomDependencyVersions['groovy.version']}",
+            'groovy-json'              : "org.apache.groovy:groovy-json:${bomDependencyVersions['groovy.version']}",
+            'groovy-jsr223'            : "org.apache.groovy:groovy-jsr223:${bomDependencyVersions['groovy.version']}",
+            'groovy-macro'             : "org.apache.groovy:groovy-macro:${bomDependencyVersions['groovy.version']}",
+            'groovy-macro-library'     : "org.apache.groovy:groovy-macro-library:${bomDependencyVersions['groovy.version']}",
+            'groovy-nio'               : "org.apache.groovy:groovy-nio:${bomDependencyVersions['groovy.version']}",
+            'groovy-servlet'           : "org.apache.groovy:groovy-servlet:${bomDependencyVersions['groovy.version']}",
+            'groovy-sql'               : "org.apache.groovy:groovy-sql:${bomDependencyVersions['groovy.version']}",
+            'groovy-swing'             : "org.apache.groovy:groovy-swing:${bomDependencyVersions['groovy.version']}",
+            'groovy-templates'         : "org.apache.groovy:groovy-templates:${bomDependencyVersions['groovy.version']}",
+            'groovy-test'              : "org.apache.groovy:groovy-test:${bomDependencyVersions['groovy.version']}",
+            'groovy-test-junit5'       : "org.apache.groovy:groovy-test-junit5:${bomDependencyVersions['groovy.version']}",
+            'groovy-testng'            : "org.apache.groovy:groovy-testng:${bomDependencyVersions['groovy.version']}",
+            'groovy-toml'              : "org.apache.groovy:groovy-toml:${bomDependencyVersions['groovy.version']}",
+            'groovy-typecheckers'      : "org.apache.groovy:groovy-typecheckers:${bomDependencyVersions['groovy.version']}",
+            'groovy-xml'               : "org.apache.groovy:groovy-xml:${bomDependencyVersions['groovy.version']}",
+            'groovy-yaml'              : "org.apache.groovy:groovy-yaml:${bomDependencyVersions['groovy.version']}",
+            'hibernate-groovy-proxy'      : "org.yakworks:hibernate-groovy-proxy:${bomDependencyVersions['hibernate-groovy-proxy.version']}",
+            'jakarta-servlet-api'         : "jakarta.servlet:jakarta.servlet-api:${bomDependencyVersions['jakarta-servlet-api.version']}",
+            'jakarta-validation'      : "jakarta.validation:jakarta.validation-api:${bomDependencyVersions['jakarta-validation.version']}",
+            'jquery'                   : "org.webjars.npm:jquery:${bomDependencyVersions['jquery.version']}",
+            'junit-jupiter'               : "org.junit.jupiter:junit-jupiter:${bomDependencyVersions['junit.version']}", // boot & spock conflict
+            'junit-jupiter-api'           : "org.junit.jupiter:junit-jupiter-api:${bomDependencyVersions['junit.version']}", // boot & spock conflict
+            'junit-jupiter-engine'        : "org.junit.jupiter:junit-jupiter-engine:${bomDependencyVersions['junit.version']}", // boot & spock conflict
+            'junit-jupiter-params'        : "org.junit.jupiter:junit-jupiter-params:${bomDependencyVersions['junit.version']}", // boot & spock conflict
+            'junit-platform-commons'      : "org.junit.platform:junit-platform-commons:${bomDependencyVersions['junit.version']}", // boot & spock conflict
+            'junit-platform-engine'       : "org.junit.platform:junit-platform-engine:${bomDependencyVersions['junit.version']}", // boot & spock conflict
+            'junit-platform-launcher'     : "org.junit.platform:junit-platform-launcher:${bomDependencyVersions['junit.version']}", // boot & spock conflict
+            'junit-platform-runner'       : "org.junit.platform:junit-platform-runner:${bomDependencyVersions['junit.version']}", // boot & spock conflict
+            'junit-platform-suite'        : "org.junit.platform:junit-platform-suite:${bomDependencyVersions['junit.version']}", // boot & spock conflict
+            'junit-platform-suite-api'    : "org.junit.platform:junit-platform-suite-api:${bomDependencyVersions['junit.version']}", // boot & spock conflict
+            'junit-platform-suite-commons': "org.junit.platform:junit-platform-suite-commons:${bomDependencyVersions['junit.version']}", // boot & spock conflict
+            'junit-platform-suite-engine' : "org.junit.platform:junit-platform-suite-engine:${bomDependencyVersions['junit.version']}", // boot & spock conflict
+            'mongodb-bson'             : "org.mongodb:bson:${bomDependencyVersions['mongodb.version']}",
+            'mongodb-driver-core'      : "org.mongodb:mongodb-driver-core:${bomDependencyVersions['mongodb.version']}",
+            'mongodb-driver-sync'      : "org.mongodb:mongodb-driver-sync:${bomDependencyVersions['mongodb.version']}",
+            'mongodb-record-codec'     : "org.mongodb:bson-record-codec:${bomDependencyVersions['mongodb.version']}",
+            'rxjava'                   : "io.reactivex:rxjava:${bomDependencyVersions['rxjava.version']}",
+            'rxjava2'                  : "io.reactivex.rxjava2:rxjava:${bomDependencyVersions['rxjava2.version']}",
+            'rxjava3'                  : "io.reactivex.rxjava3:rxjava:${bomDependencyVersions['rxjava3.version']}",
+            'sitemesh'                 : "opensymphony:sitemesh:${bomDependencyVersions['sitemesh.version']}",
+            'spock-core'               : "org.spockframework:spock-core:${bomDependencyVersions['spock.version']}",
+            'spock-spring'             : "org.spockframework:spock-spring:${bomDependencyVersions['spock.version']}",
+            'spring-retry'             : "org.springframework.retry:spring-retry:${bomDependencyVersions['spring-retry.version']}",
+            'starter-sitemesh'         : "org.sitemesh:spring-boot-starter-sitemesh:${bomDependencyVersions['starter-sitemesh.version']}",
+            'spring-webmvc-sitemesh'   : "org.sitemesh:spring-webmvc-sitemesh:${bomDependencyVersions['spring-webmvc-sitemesh.version']}",
     ]
 
     // Because pom exclusions aren't properly supported by gradle, we can't inherit the grails-gradle-bom
@@ -174,11 +190,14 @@ ext {
     combinedDependencies = gradleBomDependencies + bomDependencies
     combinedVersions = gradleBomDependencyVersions + bomDependencyVersions
 
-    // Liquibase dependency and version definitions used only for POM property name resolution
+    // Defaults for per-BOM overrides; populated in the if/else blocks below
+    customBomVersions = [:]
+    customBomDependencies = [:]
+
+    // Liquibase / Hibernate dependency and version definitions used only for POM property name resolution
     // by PropertyNameCalculator. The actual dependency constraints are declared directly in the
-    // BOM projects (grails-bom, grails-hibernate7-bom) to avoid conflicting version constraints
-    // when both hibernate5 and hibernate7 versions of liquibase-core appear in the same map.
-    // These use gradle.properties values which are only available in the root project context.
+    // BOM projects (grails-bom, grails-hibernate5-bom) so consumers of the hibernate5 BOM get the
+    // correct versions without needing to declare them.
     if (project.name in ['grails-bom', 'grails-hibernate5-bom'] || project.name.startsWith('grails-data-hibernate5')) {
         customBomVersions = [
                 'liquibase-hibernate.version': '4.27.0',
@@ -193,26 +212,13 @@ ext {
                 'liquibase-hibernate'   : "org.liquibase.ext:liquibase-hibernate5:${combinedVersions['liquibase-hibernate.version']}",
                 'hibernate-core-jakarta': "org.hibernate:hibernate-core-jakarta:${combinedVersions['hibernate.version']}",
                 'hibernate-ehcache'     : "org.hibernate:hibernate-ehcache:${combinedVersions['hibernate.version']}",
+                'hibernate-envers'      : "org.hibernate:hibernate-envers:${combinedVersions['hibernate.version']}",
         ]
         combinedDependencies += customBomDependencies
-
-        // Gradle will not use the version property that gets written out to overwrite the spring bom, so force the version here
-        // exclusion support would be real nice ... maven 4.0 only though
-//        configurations.configureEach {
-//            resolutionStrategy.eachDependency { details ->
-//                if (details.requested.group == 'org.liquibase') {
-//                    details.useVersion "${combinedVersions['liquibase.version']}"
-//                    details.because 'Force liquibase version to match Grails Hibernate 5 requirements'
-//                }
-//                if (details.requested.group == 'org.hibernate') {
-//                    details.useVersion "${combinedVersions['hibernate.version']}"
-//                    details.because 'Force hibernate version to match Grails Hibernate 5 requirements'
-//                }
-//            }
-//        }
     } else if (project.name in ['grails-hibernate7-bom'] || project.name.startsWith('grails-data-hibernate7')) {
         customBomVersions = [
                 'cache-ri-impl.version'         : '1.1.1',
+                'derby.version'                 : '10.17.1.0',
                 'hibernate-models.version'      : '1.0.1',
                 // Aligned with Spring Boot 4.0.5's managed Hibernate version to avoid a
                 // version-constraint conflict when consumers import both grails-hibernate7-bom
@@ -227,8 +233,13 @@ ext {
         combinedVersions += customBomVersions
         customBomDependencies = [
                 'cache-ri-impl'         : "org.jsr107.ri:cache-ri-impl:${combinedVersions['cache-ri-impl.version']}",
+                'derby'                 : "org.apache.derby:derby:${combinedVersions['derby.version']}",
+                'derbyclient'           : "org.apache.derby:derbyclient:${combinedVersions['derby.version']}",
+                'derbyshared'           : "org.apache.derby:derbyshared:${combinedVersions['derby.version']}",
+                'derbytools'            : "org.apache.derby:derbytools:${combinedVersions['derby.version']}",
                 'hibernate-core'        : "org.hibernate.orm:hibernate-core:${combinedVersions['hibernate.version']}",
-                'hibernate-jcache'        : "org.hibernate.orm:hibernate-jcache:${combinedVersions['hibernate.version']}",
+                'hibernate-envers'      : "org.hibernate.orm:hibernate-envers:${combinedVersions['hibernate.version']}",
+                'hibernate-jcache'      : "org.hibernate.orm:hibernate-jcache:${combinedVersions['hibernate.version']}",
                 'hibernate-models'      : "org.hibernate.models:hibernate-models:${combinedVersions['hibernate-models.version']}",
                 'hibernate-tools-orm'   : "org.hibernate.tool:hibernate-tools-orm:${combinedVersions['hibernate.version']}",
                 'hibernate-tools-utils' : "org.hibernate.tool:hibernate-tools-utils:${combinedVersions['hibernate.version']}",
@@ -241,20 +252,257 @@ ext {
                 'mockito-inline'        : "org.mockito:mockito-inline:${combinedVersions['mockito-inline.version']}",
         ]
         combinedDependencies += customBomDependencies
-
-        // Gradle will not use the version property that gets written out to overwrite the spring bom, so force the version here
-        // exclusion support would be real nice ... maven 4.0 only though
-//        configurations.configureEach {
-//            resolutionStrategy.eachDependency { details ->
-//                if (details.requested.group == 'org.liquibase') {
-//                    details.useVersion "${combinedVersions['liquibase.version']}"
-//                    details.because 'Force liquibase version to match Grails Hibernate 5 requirements'
-//                }
-//                if (details.requested.group == 'org.hibernate') {
-//                    details.useVersion "${combinedVersions['hibernate.version']}"
-//                    details.because 'Force hibernate version to match Grails Hibernate 5 requirements'
-//                }
-//            }
-//        }
+    } else if (project.name == 'grails-hibernate5-micronaut-bom') {
+        customBomVersions = [
+                'groovy.version'             : '5.0.5',
+                'liquibase-hibernate.version': '4.27.0',
+                'liquibase.version'          : '4.27.0',
+                'hibernate.version'          : '5.6.15.Final',
+                'protobuf.version'           : '4.30.2',
+                'spock.version'              : '2.4-groovy-5.0',
+        ]
+        combinedVersions += customBomVersions
+        customBomDependencies = [
+                'groovy'               : "org.apache.groovy:groovy:${combinedVersions['groovy.version']}",
+                'groovy-ant'           : "org.apache.groovy:groovy-ant:${combinedVersions['groovy.version']}",
+                'groovy-astbuilder'    : "org.apache.groovy:groovy-astbuilder:${combinedVersions['groovy.version']}",
+                'groovy-cli-commons'   : "org.apache.groovy:groovy-cli-commons:${combinedVersions['groovy.version']}",
+                'groovy-cli-picocli'   : "org.apache.groovy:groovy-cli-picocli:${combinedVersions['groovy.version']}",
+                'groovy-console'       : "org.apache.groovy:groovy-console:${combinedVersions['groovy.version']}",
+                'groovy-contracts'     : "org.apache.groovy:groovy-contracts:${combinedVersions['groovy.version']}",
+                'groovy-datetime'      : "org.apache.groovy:groovy-datetime:${combinedVersions['groovy.version']}",
+                'groovy-dateutil'      : "org.apache.groovy:groovy-dateutil:${combinedVersions['groovy.version']}",
+                'groovy-docgenerator'  : "org.apache.groovy:groovy-docgenerator:${combinedVersions['groovy.version']}",
+                'groovy-ginq'          : "org.apache.groovy:groovy-ginq:${combinedVersions['groovy.version']}",
+                'groovy-groovydoc'     : "org.apache.groovy:groovy-groovydoc:${combinedVersions['groovy.version']}",
+                'groovy-groovysh'      : "org.apache.groovy:groovy-groovysh:${combinedVersions['groovy.version']}",
+                'groovy-jmx'           : "org.apache.groovy:groovy-jmx:${combinedVersions['groovy.version']}",
+                'groovy-json'          : "org.apache.groovy:groovy-json:${combinedVersions['groovy.version']}",
+                'groovy-jsr223'        : "org.apache.groovy:groovy-jsr223:${combinedVersions['groovy.version']}",
+                'groovy-macro'         : "org.apache.groovy:groovy-macro:${combinedVersions['groovy.version']}",
+                'groovy-macro-library' : "org.apache.groovy:groovy-macro-library:${combinedVersions['groovy.version']}",
+                'groovy-nio'           : "org.apache.groovy:groovy-nio:${combinedVersions['groovy.version']}",
+                'groovy-servlet'       : "org.apache.groovy:groovy-servlet:${combinedVersions['groovy.version']}",
+                'groovy-sql'           : "org.apache.groovy:groovy-sql:${combinedVersions['groovy.version']}",
+                'groovy-swing'         : "org.apache.groovy:groovy-swing:${combinedVersions['groovy.version']}",
+                'groovy-templates'     : "org.apache.groovy:groovy-templates:${combinedVersions['groovy.version']}",
+                'groovy-test'          : "org.apache.groovy:groovy-test:${combinedVersions['groovy.version']}",
+                'groovy-test-junit5'   : "org.apache.groovy:groovy-test-junit5:${combinedVersions['groovy.version']}",
+                'groovy-testng'        : "org.apache.groovy:groovy-testng:${combinedVersions['groovy.version']}",
+                'groovy-toml'          : "org.apache.groovy:groovy-toml:${combinedVersions['groovy.version']}",
+                'groovy-typecheckers'  : "org.apache.groovy:groovy-typecheckers:${combinedVersions['groovy.version']}",
+                'groovy-xml'           : "org.apache.groovy:groovy-xml:${combinedVersions['groovy.version']}",
+                'groovy-yaml'          : "org.apache.groovy:groovy-yaml:${combinedVersions['groovy.version']}",
+                'hibernate-core-jakarta': "org.hibernate:hibernate-core-jakarta:${combinedVersions['hibernate.version']}",
+                'hibernate-ehcache'     : "org.hibernate:hibernate-ehcache:${combinedVersions['hibernate.version']}",
+                'hibernate-envers'      : "org.hibernate:hibernate-envers:${combinedVersions['hibernate.version']}",
+                'liquibase'             : "org.liquibase:liquibase:${combinedVersions['liquibase.version']}",
+                'liquibase-cdi'         : "org.liquibase:liquibase-cdi:${combinedVersions['liquibase.version']}",
+                'liquibase-core'        : "org.liquibase:liquibase-core:${combinedVersions['liquibase.version']}",
+                'liquibase-hibernate'   : "org.liquibase.ext:liquibase-hibernate5:${combinedVersions['liquibase-hibernate.version']}",
+                'protobuf-java'        : "com.google.protobuf:protobuf-java:${combinedVersions['protobuf.version']}",
+                'spock-core'           : "org.spockframework:spock-core:${combinedVersions['spock.version']}",
+                'spock-spring'         : "org.spockframework:spock-spring:${combinedVersions['spock.version']}",
+        ]
+        def customBomPlatformDependencies = [
+                'groovy-bom': "org.apache.groovy:groovy-bom:${combinedVersions['groovy.version']}",
+                'spock-bom' : "org.spockframework:spock-bom:${combinedVersions['spock.version']}",
+        ]
+        bomPlatformDependencies += customBomPlatformDependencies
+        combinedDependencies += customBomDependencies
+        combinedPlatforms += customBomPlatformDependencies
+    } else if (project.name == 'grails-hibernate7-micronaut-bom') {
+        customBomVersions = [
+                'cache-ri-impl.version'         : '1.1.1',
+                'groovy.version'                : '5.0.5',
+                'hibernate-models.version'      : '1.0.1',
+                'hibernate.version'             : '7.2.5.Final',
+                'jandex.version'                : '3.2.3',
+                'liquibase-hibernate.version'   : '4.27.0',
+                'liquibase-test-harness.version': '1.0.11',
+                'liquibase.version'             : '4.27.0',
+                'mockito-inline.version'        : '5.2.0',
+                'protobuf.version'              : '4.30.2',
+                'spock.version'                 : '2.4-groovy-5.0',
+        ]
+        combinedVersions += customBomVersions
+        customBomDependencies = [
+                'cache-ri-impl'         : "org.jsr107.ri:cache-ri-impl:${combinedVersions['cache-ri-impl.version']}",
+                'groovy'               : "org.apache.groovy:groovy:${combinedVersions['groovy.version']}",
+                'groovy-ant'           : "org.apache.groovy:groovy-ant:${combinedVersions['groovy.version']}",
+                'groovy-astbuilder'    : "org.apache.groovy:groovy-astbuilder:${combinedVersions['groovy.version']}",
+                'groovy-cli-commons'   : "org.apache.groovy:groovy-cli-commons:${combinedVersions['groovy.version']}",
+                'groovy-cli-picocli'   : "org.apache.groovy:groovy-cli-picocli:${combinedVersions['groovy.version']}",
+                'groovy-console'       : "org.apache.groovy:groovy-console:${combinedVersions['groovy.version']}",
+                'groovy-contracts'     : "org.apache.groovy:groovy-contracts:${combinedVersions['groovy.version']}",
+                'groovy-datetime'      : "org.apache.groovy:groovy-datetime:${combinedVersions['groovy.version']}",
+                'groovy-dateutil'      : "org.apache.groovy:groovy-dateutil:${combinedVersions['groovy.version']}",
+                'groovy-docgenerator'  : "org.apache.groovy:groovy-docgenerator:${combinedVersions['groovy.version']}",
+                'groovy-ginq'          : "org.apache.groovy:groovy-ginq:${combinedVersions['groovy.version']}",
+                'groovy-groovydoc'     : "org.apache.groovy:groovy-groovydoc:${combinedVersions['groovy.version']}",
+                'groovy-groovysh'      : "org.apache.groovy:groovy-groovysh:${combinedVersions['groovy.version']}",
+                'groovy-jmx'           : "org.apache.groovy:groovy-jmx:${combinedVersions['groovy.version']}",
+                'groovy-json'          : "org.apache.groovy:groovy-json:${combinedVersions['groovy.version']}",
+                'groovy-jsr223'        : "org.apache.groovy:groovy-jsr223:${combinedVersions['groovy.version']}",
+                'groovy-macro'         : "org.apache.groovy:groovy-macro:${combinedVersions['groovy.version']}",
+                'groovy-macro-library' : "org.apache.groovy:groovy-macro-library:${combinedVersions['groovy.version']}",
+                'groovy-nio'           : "org.apache.groovy:groovy-nio:${combinedVersions['groovy.version']}",
+                'groovy-servlet'       : "org.apache.groovy:groovy-servlet:${combinedVersions['groovy.version']}",
+                'groovy-sql'           : "org.apache.groovy:groovy-sql:${combinedVersions['groovy.version']}",
+                'groovy-swing'         : "org.apache.groovy:groovy-swing:${combinedVersions['groovy.version']}",
+                'groovy-templates'     : "org.apache.groovy:groovy-templates:${combinedVersions['groovy.version']}",
+                'groovy-test'          : "org.apache.groovy:groovy-test:${combinedVersions['groovy.version']}",
+                'groovy-test-junit5'   : "org.apache.groovy:groovy-test-junit5:${combinedVersions['groovy.version']}",
+                'groovy-testng'        : "org.apache.groovy:groovy-testng:${combinedVersions['groovy.version']}",
+                'groovy-toml'          : "org.apache.groovy:groovy-toml:${combinedVersions['groovy.version']}",
+                'groovy-typecheckers'  : "org.apache.groovy:groovy-typecheckers:${combinedVersions['groovy.version']}",
+                'groovy-xml'           : "org.apache.groovy:groovy-xml:${combinedVersions['groovy.version']}",
+                'groovy-yaml'          : "org.apache.groovy:groovy-yaml:${combinedVersions['groovy.version']}",
+                'hibernate-core'        : "org.hibernate.orm:hibernate-core:${combinedVersions['hibernate.version']}",
+                'hibernate-envers'      : "org.hibernate.orm:hibernate-envers:${combinedVersions['hibernate.version']}",
+                'hibernate-jcache'      : "org.hibernate.orm:hibernate-jcache:${combinedVersions['hibernate.version']}",
+                'hibernate-models'      : "org.hibernate.models:hibernate-models:${combinedVersions['hibernate-models.version']}",
+                'hibernate-tools-orm'   : "org.hibernate.tool:hibernate-tools-orm:${combinedVersions['hibernate.version']}",
+                'hibernate-tools-utils' : "org.hibernate.tool:hibernate-tools-utils:${combinedVersions['hibernate.version']}",
+                'jandex'                : "io.smallrye:jandex:${combinedVersions['jandex.version']}",
+                'liquibase'             : "org.liquibase:liquibase:${combinedVersions['liquibase.version']}",
+                'liquibase-cdi'         : "org.liquibase:liquibase-cdi:${combinedVersions['liquibase.version']}",
+                'liquibase-core'        : "org.liquibase:liquibase-core:${combinedVersions['liquibase.version']}",
+                'liquibase-hibernate'   : "org.liquibase.ext:liquibase-hibernate7:${combinedVersions['liquibase-hibernate.version']}",
+                'liquibase-test-harness': "org.liquibase:liquibase-test-harness:${combinedVersions['liquibase-test-harness.version']}",
+                'mockito-inline'        : "org.mockito:mockito-inline:${combinedVersions['mockito-inline.version']}",
+                'protobuf-java'        : "com.google.protobuf:protobuf-java:${combinedVersions['protobuf.version']}",
+                'spock-core'           : "org.spockframework:spock-core:${combinedVersions['spock.version']}",
+                'spock-spring'         : "org.spockframework:spock-spring:${combinedVersions['spock.version']}",
+        ]
+        def customBomPlatformDependencies = [
+                'groovy-bom': "org.apache.groovy:groovy-bom:${combinedVersions['groovy.version']}",
+                'spock-bom' : "org.spockframework:spock-bom:${combinedVersions['spock.version']}",
+        ]
+        bomPlatformDependencies += customBomPlatformDependencies
+        combinedDependencies += customBomDependencies
+        combinedPlatforms += customBomPlatformDependencies
+    }
+    // Micronaut-specific dependency overrides. These layer on top of grails-bom
+    // (and transitively whatever DB BOM grails-bom carries) and only apply to the
+    // grails-micronaut-bom project. Declared with `strictly` in the BOM project so
+    // they win over Micronaut platform's higher versions when consumers use
+    // enforcedPlatform(:grails-micronaut-bom).
+    else if (project.name in (['grails-hibernate7-micronaut-bom'])) {
+        customBomVersions = [
+                'liquibase-hibernate.version': '4.27.0',
+                'liquibase.version'          : '4.27.0',
+                'hibernate.version'          : '5.6.15.Final',
+                'groovy.version'  : '5.0.5',
+                'spock.version'   : '2.4-groovy-5.0',
+                'protobuf.version': '4.30.2',
+        ]
+        combinedVersions += customBomVersions
+        customBomDependencies = [
+                'liquibase'             : "org.liquibase:liquibase:${combinedVersions['liquibase.version']}",
+                'liquibase-cdi'         : "org.liquibase:liquibase-cdi:${combinedVersions['liquibase.version']}",
+                'liquibase-core'        : "org.liquibase:liquibase-core:${combinedVersions['liquibase.version']}",
+                'liquibase-hibernate'   : "org.liquibase.ext:liquibase-hibernate5:${combinedVersions['liquibase-hibernate.version']}",
+                'hibernate-core-jakarta': "org.hibernate:hibernate-core-jakarta:${combinedVersions['hibernate.version']}",
+                'hibernate-ehcache'     : "org.hibernate:hibernate-ehcache:${combinedVersions['hibernate.version']}",
+                'groovy'               : "org.apache.groovy:groovy:${combinedVersions['groovy.version']}",
+                'groovy-ant'           : "org.apache.groovy:groovy-ant:${combinedVersions['groovy.version']}",
+                'groovy-astbuilder'    : "org.apache.groovy:groovy-astbuilder:${combinedVersions['groovy.version']}",
+                'groovy-cli-commons'   : "org.apache.groovy:groovy-cli-commons:${combinedVersions['groovy.version']}",
+                'groovy-cli-picocli'   : "org.apache.groovy:groovy-cli-picocli:${combinedVersions['groovy.version']}",
+                'groovy-console'       : "org.apache.groovy:groovy-console:${combinedVersions['groovy.version']}",
+                'groovy-contracts'     : "org.apache.groovy:groovy-contracts:${combinedVersions['groovy.version']}",
+                'groovy-datetime'      : "org.apache.groovy:groovy-datetime:${combinedVersions['groovy.version']}",
+                'groovy-dateutil'      : "org.apache.groovy:groovy-dateutil:${combinedVersions['groovy.version']}",
+                'groovy-docgenerator'  : "org.apache.groovy:groovy-docgenerator:${combinedVersions['groovy.version']}",
+                'groovy-ginq'          : "org.apache.groovy:groovy-ginq:${combinedVersions['groovy.version']}",
+                'groovy-groovydoc'     : "org.apache.groovy:groovy-groovydoc:${combinedVersions['groovy.version']}",
+                'groovy-groovysh'      : "org.apache.groovy:groovy-groovysh:${combinedVersions['groovy.version']}",
+                'groovy-jmx'           : "org.apache.groovy:groovy-jmx:${combinedVersions['groovy.version']}",
+                'groovy-json'          : "org.apache.groovy:groovy-json:${combinedVersions['groovy.version']}",
+                'groovy-jsr223'        : "org.apache.groovy:groovy-jsr223:${combinedVersions['groovy.version']}",
+                'groovy-macro'         : "org.apache.groovy:groovy-macro:${combinedVersions['groovy.version']}",
+                'groovy-macro-library' : "org.apache.groovy:groovy-macro-library:${combinedVersions['groovy.version']}",
+                'groovy-nio'           : "org.apache.groovy:groovy-nio:${combinedVersions['groovy.version']}",
+                'groovy-servlet'       : "org.apache.groovy:groovy-servlet:${combinedVersions['groovy.version']}",
+                'groovy-sql'           : "org.apache.groovy:groovy-sql:${combinedVersions['groovy.version']}",
+                'groovy-swing'         : "org.apache.groovy:groovy-swing:${combinedVersions['groovy.version']}",
+                'groovy-templates'     : "org.apache.groovy:groovy-templates:${combinedVersions['groovy.version']}",
+                'groovy-test'          : "org.apache.groovy:groovy-test:${combinedVersions['groovy.version']}",
+                'groovy-test-junit5'   : "org.apache.groovy:groovy-test-junit5:${combinedVersions['groovy.version']}",
+                'groovy-testng'        : "org.apache.groovy:groovy-testng:${combinedVersions['groovy.version']}",
+                'groovy-toml'          : "org.apache.groovy:groovy-toml:${combinedVersions['groovy.version']}",
+                'groovy-typecheckers'  : "org.apache.groovy:groovy-typecheckers:${combinedVersions['groovy.version']}",
+                'groovy-xml'           : "org.apache.groovy:groovy-xml:${combinedVersions['groovy.version']}",
+                'groovy-yaml'          : "org.apache.groovy:groovy-yaml:${combinedVersions['groovy.version']}",
+                'protobuf-java'        : "com.google.protobuf:protobuf-java:${combinedVersions['protobuf.version']}",
+                'spock-core'           : "org.spockframework:spock-core:${combinedVersions['spock.version']}",
+                'spock-spring'         : "org.spockframework:spock-spring:${combinedVersions['spock.version']}",
+        ]
+        def customBomPlatformDependencies = [
+                'groovy-bom': "org.apache.groovy:groovy-bom:${combinedVersions['groovy.version']}",
+                'spock-bom' : "org.spockframework:spock-bom:${combinedVersions['spock.version']}",
+        ]
+        bomPlatformDependencies += customBomPlatformDependencies
+        combinedDependencies += customBomDependencies
+        combinedPlatforms += customBomPlatformDependencies
+    } else if (project.name in ['grails-micronaut-bom', 'grails-hibernate5-micronaut-bom']) {
+        customBomVersions = [
+                'liquibase-hibernate.version': '4.27.0',
+                'liquibase.version'          : '4.27.0',
+                'hibernate.version'          : '5.6.15.Final',
+                'groovy.version'  : '5.0.5',
+                'spock.version'   : '2.4-groovy-5.0',
+                'protobuf.version': '4.30.2',
+        ]
+        combinedVersions += customBomVersions
+        customBomDependencies = [
+                'liquibase'             : "org.liquibase:liquibase:${combinedVersions['liquibase.version']}",
+                'liquibase-cdi'         : "org.liquibase:liquibase-cdi:${combinedVersions['liquibase.version']}",
+                'liquibase-core'        : "org.liquibase:liquibase-core:${combinedVersions['liquibase.version']}",
+                'liquibase-hibernate'   : "org.liquibase.ext:liquibase-hibernate5:${combinedVersions['liquibase-hibernate.version']}",
+                'hibernate-core-jakarta': "org.hibernate:hibernate-core-jakarta:${combinedVersions['hibernate.version']}",
+                'hibernate-ehcache'     : "org.hibernate:hibernate-ehcache:${combinedVersions['hibernate.version']}",
+                'groovy'               : "org.apache.groovy:groovy:${combinedVersions['groovy.version']}",
+                'groovy-ant'           : "org.apache.groovy:groovy-ant:${combinedVersions['groovy.version']}",
+                'groovy-astbuilder'    : "org.apache.groovy:groovy-astbuilder:${combinedVersions['groovy.version']}",
+                'groovy-cli-commons'   : "org.apache.groovy:groovy-cli-commons:${combinedVersions['groovy.version']}",
+                'groovy-cli-picocli'   : "org.apache.groovy:groovy-cli-picocli:${combinedVersions['groovy.version']}",
+                'groovy-console'       : "org.apache.groovy:groovy-console:${combinedVersions['groovy.version']}",
+                'groovy-contracts'     : "org.apache.groovy:groovy-contracts:${combinedVersions['groovy.version']}",
+                'groovy-datetime'      : "org.apache.groovy:groovy-datetime:${combinedVersions['groovy.version']}",
+                'groovy-dateutil'      : "org.apache.groovy:groovy-dateutil:${combinedVersions['groovy.version']}",
+                'groovy-docgenerator'  : "org.apache.groovy:groovy-docgenerator:${combinedVersions['groovy.version']}",
+                'groovy-ginq'          : "org.apache.groovy:groovy-ginq:${combinedVersions['groovy.version']}",
+                'groovy-groovydoc'     : "org.apache.groovy:groovy-groovydoc:${combinedVersions['groovy.version']}",
+                'groovy-groovysh'      : "org.apache.groovy:groovy-groovysh:${combinedVersions['groovy.version']}",
+                'groovy-jmx'           : "org.apache.groovy:groovy-jmx:${combinedVersions['groovy.version']}",
+                'groovy-json'          : "org.apache.groovy:groovy-json:${combinedVersions['groovy.version']}",
+                'groovy-jsr223'        : "org.apache.groovy:groovy-jsr223:${combinedVersions['groovy.version']}",
+                'groovy-macro'         : "org.apache.groovy:groovy-macro:${combinedVersions['groovy.version']}",
+                'groovy-macro-library' : "org.apache.groovy:groovy-macro-library:${combinedVersions['groovy.version']}",
+                'groovy-nio'           : "org.apache.groovy:groovy-nio:${combinedVersions['groovy.version']}",
+                'groovy-servlet'       : "org.apache.groovy:groovy-servlet:${combinedVersions['groovy.version']}",
+                'groovy-sql'           : "org.apache.groovy:groovy-sql:${combinedVersions['groovy.version']}",
+                'groovy-swing'         : "org.apache.groovy:groovy-swing:${combinedVersions['groovy.version']}",
+                'groovy-templates'     : "org.apache.groovy:groovy-templates:${combinedVersions['groovy.version']}",
+                'groovy-test'          : "org.apache.groovy:groovy-test:${combinedVersions['groovy.version']}",
+                'groovy-test-junit5'   : "org.apache.groovy:groovy-test-junit5:${combinedVersions['groovy.version']}",
+                'groovy-testng'        : "org.apache.groovy:groovy-testng:${combinedVersions['groovy.version']}",
+                'groovy-toml'          : "org.apache.groovy:groovy-toml:${combinedVersions['groovy.version']}",
+                'groovy-typecheckers'  : "org.apache.groovy:groovy-typecheckers:${combinedVersions['groovy.version']}",
+                'groovy-xml'           : "org.apache.groovy:groovy-xml:${combinedVersions['groovy.version']}",
+                'groovy-yaml'          : "org.apache.groovy:groovy-yaml:${combinedVersions['groovy.version']}",
+                'protobuf-java'        : "com.google.protobuf:protobuf-java:${combinedVersions['protobuf.version']}",
+                'spock-core'           : "org.spockframework:spock-core:${combinedVersions['spock.version']}",
+                'spock-spring'         : "org.spockframework:spock-spring:${combinedVersions['spock.version']}",
+        ]
+        def customBomPlatformDependencies = [
+                'groovy-bom': "org.apache.groovy:groovy-bom:${combinedVersions['groovy.version']}",
+                'spock-bom' : "org.spockframework:spock-bom:${combinedVersions['spock.version']}",
+        ]
+        bomPlatformDependencies += customBomPlatformDependencies
+        combinedDependencies += customBomDependencies
+        combinedPlatforms += customBomPlatformDependencies
     }
 }

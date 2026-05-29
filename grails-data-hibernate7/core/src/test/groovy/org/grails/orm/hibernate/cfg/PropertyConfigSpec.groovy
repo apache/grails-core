@@ -119,6 +119,15 @@ class PropertyConfigSpec extends Specification {
         new PropertyConfig().column == null
     }
 
+    void "columns supports multiple ColumnConfig for composite keys"() {
+        given:
+        PropertyConfig pc = new PropertyConfig()
+        pc.columns = [new ColumnConfig(name: 'a_col'), new ColumnConfig(name: 'b_col')]
+
+        expect:
+        pc.columns*.name == ['a_col', 'b_col']
+    }
+
     void "getColumn returns the column name when one column is configured"() {
         given:
         PropertyConfig pc = new PropertyConfig()
@@ -289,7 +298,7 @@ class PropertyConfigSpec extends Specification {
 
         then:
         pc.joinTable.name == 'book_tag'
-        pc.joinTable.key?.name == 'book_id'
+        pc.joinTable.keys && pc.joinTable.keys[0].name == 'book_id'
         pc.joinTable.column?.name == 'tag_id'
     }
 

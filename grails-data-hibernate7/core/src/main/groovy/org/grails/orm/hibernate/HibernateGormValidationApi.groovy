@@ -64,7 +64,7 @@ class HibernateGormValidationApi<D> extends GormValidationApi<D> {
         super(persistentClass, datastore)
         this.classLoader = classLoader
         this.datastore = datastore
-        hibernateTemplate = new GrailsHibernateTemplate(datastore.getSessionFactory(), datastore)
+        hibernateTemplate = (IHibernateTemplate) datastore.getHibernateTemplate()
     }
 
     @Override

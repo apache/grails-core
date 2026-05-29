@@ -63,7 +63,6 @@ public class ViewJson extends GrailsViews implements DefaultFeature {
     @Override
     public void apply(GeneratorContext generatorContext) {
         final Map<String, Object> config = generatorContext.getConfiguration();
-        config.put("grails.mime.disable.accept.header.userAgents", Arrays.asList("Gecko", "WebKit", "Presto", "Trident"));
         config.put("grails.mime.types.json", Arrays.asList("application/json", "text/json"));
         config.put("grails.mime.types.hal", Arrays.asList("application/hal+json", "application/hal+xml"));
         config.put("grails.mime.types.xml", Arrays.asList("text/xml", "application/xml"));

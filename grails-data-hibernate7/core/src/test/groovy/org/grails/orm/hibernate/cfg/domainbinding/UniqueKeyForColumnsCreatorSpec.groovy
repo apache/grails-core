@@ -31,32 +31,30 @@ class UniqueKeyForColumnsCreatorSpec extends Specification {
 
     def "Test that createUniqueKeyForColumns adds a unique key to the table"() {
         given:
-        UniqueNameGenerator mockUniqueNameGenerator = Mock()
-        Table mockTable = Mock()
-        def creator = new UniqueKeyForColumnsCreator(mockUniqueNameGenerator)
+        def generator = new UniqueNameGenerator()
+        def table = new Table("test", "my_table")
+        def creator = new UniqueKeyForColumnsCreator(generator)
         def columns = [new Column("col1"), new Column("col2")]
 
         when:
-        creator.createUniqueKeyForColumns(mockTable, columns)
+        creator.createUniqueKeyForColumns(table, columns)
 
         then:
-        1 * mockTable.addUniqueKey({ UniqueKey uk ->
-            uk.table == mockTable
-            uk.columns.size() == 2
-            // The creator reverses the list
-            uk.columns.get(0).name == "col2"
-            uk.columns.get(1).name == "col1"
-        })
-        1 * mockUniqueNameGenerator.setGeneratedUniqueName({ UniqueKey uk ->
-            uk.table == mockTable
-            uk.columns.size() == 2
-        })
+        def keys = table.getUniqueKeys().values().toList()
+        keys.size() == 1
+        UniqueKey uk = keys[0]
+        uk.table == table
+        uk.columns.size() == 2
+        // The creator reverses the list
+        uk.columns.get(0).name == "col2"
+        uk.columns.get(1).name == "col1"
+        uk.getName() != null
     }
 
     def "default constructor creates a functional UniqueKeyForColumnsCreator"() {
         given:
         def creator = new UniqueKeyForColumnsCreator()
-        def table = new Table("test", "my_table")
+        def table = new Table("test", "my_table_2")
         def columns = [new Column("a"), new Column("b")]
 
         when:
@@ -66,5 +64,20 @@ class UniqueKeyForColumnsCreatorSpec extends Specification {
         def keys = table.getUniqueKeys().values().toList()
         keys.size() == 1
         keys[0].columns*.name.toSet() == ["a", "b"].toSet()
+    }
+
+    def "createUniqueKeyForColumns works with empty columns list"() {
+        given:
+        def creator = new UniqueKeyForColumnsCreator()
+        def table = new Table("test", "empty_table")
+        def columns = []
+
+        when:
+        creator.createUniqueKeyForColumns(table, columns)
+
+        then:
+        def keys = table.getUniqueKeys().values().toList()
+        keys.size() == 1
+        keys[0].columns.size() == 0
     }
 }

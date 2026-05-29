@@ -26,6 +26,8 @@ plugins {
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-code-analysis'
+    id 'org.apache.grails.gradle.grails-jacoco'
 }
 
 version = projectVersion
@@ -48,7 +50,7 @@ dependencies {
     api project(':grails-data-hibernate5-spring-orm')
     api 'org.springframework:spring-orm'
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
-    api "org.hibernate:hibernate-core-jakarta", {
+    api 'org.hibernate:hibernate-core-jakarta', {
         exclude group:'commons-logging', module:'commons-logging'
         exclude group:'com.h2database', module:'h2'
         exclude group:'commons-collections', module:'commons-collections'
@@ -77,7 +79,7 @@ dependencies {
         exclude group: 'org.codehaus.groovy', module: 'groovy'
     }
 
-    testRuntimeOnly "org.hibernate:hibernate-ehcache", {
+    testRuntimeOnly 'org.hibernate:hibernate-ehcache', {
         // exclude javax variant of hibernate-core 5.6
         exclude group: 'org.hibernate', module: 'hibernate-core'
     }

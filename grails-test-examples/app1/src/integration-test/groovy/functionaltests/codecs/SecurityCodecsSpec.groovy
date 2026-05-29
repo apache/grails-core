@@ -26,7 +26,7 @@ import org.apache.grails.testing.http.client.HttpClientSupport
 
 /**
  * Comprehensive integration tests for Grails codec functionality.
- * 
+ *
  * Tests cover:
  * - HTML encoding/decoding (XSS prevention)
  * - URL encoding/decoding

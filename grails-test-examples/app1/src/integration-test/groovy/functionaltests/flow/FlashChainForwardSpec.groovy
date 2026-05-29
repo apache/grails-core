@@ -64,7 +64,7 @@ class FlashChainForwardSpec extends Specification implements HttpClientSupport {
             // Not a redirect, parse body
             return response1
         }
-        
+
         // Follow redirect with session cookie
         def redirectPath = location.startsWith('http') ?
                 new URL(location).path + (new URL(location).query ? "?${new URL(location).query}" : '') :
@@ -86,7 +86,7 @@ class FlashChainForwardSpec extends Specification implements HttpClientSupport {
         String currentPath = path
         int maxRedirects = 10
         int redirectCount = 0
-        
+
         while (redirectCount < maxRedirects) {
             //def request = HttpRequest.GET(currentPath)
             def headers = [:] as Map<String, String>
@@ -95,7 +95,7 @@ class FlashChainForwardSpec extends Specification implements HttpClientSupport {
             }
 
             def response = http(headers, currentPath, noRedirectClient)
-            
+
             // Update session cookie if new one provided
             def newCookie = response.headerValue('Set-Cookie')
             if (newCookie) {
@@ -107,10 +107,10 @@ class FlashChainForwardSpec extends Specification implements HttpClientSupport {
                 // No more redirects, return parsed body
                 return response
             }
-            
+
             // Follow to next location
-            currentPath = location.startsWith('http') ? 
-                new URL(location).path + (new URL(location).query ? "?${new URL(location).query}" : '') : 
+            currentPath = location.startsWith('http') ?
+                new URL(location).path + (new URL(location).query ? "?${new URL(location).query}" : '') :
                 location
             redirectCount++
         }

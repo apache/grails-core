@@ -21,12 +21,10 @@ package org.apache.grails.data.testing.tck.tests
 import org.apache.grails.data.testing.tck.domains.SimpleCountry
 import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import spock.lang.IgnoreIf
 
 /**
  * Tests for querying the size of collections etc.
  */
-@IgnoreIf({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' })
 class SizeQuerySpec extends GrailsDataTckSpec {
 
     void setupSpec() {

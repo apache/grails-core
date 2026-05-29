@@ -106,11 +106,11 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         super(persistentClass, datastore as Datastore)
         this.classLoader = classLoader
         this.sessionFactory = datastore.getSessionFactory()
-        this.hibernateTemplate = new GrailsHibernateTemplate(sessionFactory, datastore)
+        this.hibernateTemplate = (GrailsHibernateTemplate) datastore.getHibernateTemplate()
         this.autoFlush = datastore.autoFlush
         this.failOnError = datastore.failOnError
         this.markDirty = datastore.markDirty
-        this.instanceApiHelper = new InstanceApiHelper((GrailsHibernateTemplate) this.hibernateTemplate)
+        this.instanceApiHelper = datastore.getInstanceApiHelper()
     }
 
     @Override

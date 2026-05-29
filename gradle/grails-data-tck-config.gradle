@@ -59,6 +59,12 @@ cleanupTask.configure { Task it ->
 
 tasks.withType(Test).configureEach { Test it ->
     it.dependsOn(extractTck)
+
+    // Honor DO_NOT_CACHE_TESTS=1 so developers can repeatedly invoke the same test command
+    // without --rerun-tasks (and without recompiling everything else).
+    it.outputs.cacheIf { !doNotCacheTests }
+    it.outputs.upToDateWhen { !doNotCacheTests }
+
     it.onlyIf {
         if (project.hasProperty('onlyFunctionalTests')) {
             return false
@@ -97,8 +103,8 @@ tasks.withType(Test).configureEach { Test it ->
         }
 
         true
-        }
+    }
 
-        it.testClassesDirs = project.files(extractTck.map { task -> task.outputs.files }, sourceSets.test.output.classesDirs)
-        it.finalizedBy(cleanupTask)
-        }
+    it.testClassesDirs = objects.fileCollection().from(extractTck, testClassesDirs)
+    it.finalizedBy(cleanupTask)
+}

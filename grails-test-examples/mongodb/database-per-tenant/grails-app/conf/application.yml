@@ -24,11 +24,8 @@ info:
         version: '@info.app.version@'
         grailsVersion: '@info.app.grailsVersion@'
 spring:
-  groovy:
-        template:
-            check-template-location: false
-  main:
-    allow-circular-references: true
+    main:
+        allow-circular-references: true
 
 ---
 grails:
@@ -48,14 +45,6 @@ grails:
 ---
 grails:
     mime:
-        disable:
-            accept:
-                header:
-                    userAgents:
-                        - Gecko
-                        - WebKit
-                        - Presto
-                        - Trident
         types:
             all: '*/*'
             atom: application/atom+xml
@@ -79,21 +68,9 @@ grails:
             xml:
               - text/xml
               - application/xml
-    urlmapping:
-        cache:
-            maxsize: 1000
-    controllers:
-        defaultScope: singleton
-    converters:
-        encoding: UTF-8
     views:
-        default:
-            codec: html
         gsp:
             encoding: UTF-8
             htmlcodec: xml
             codecs:
-                expression: html
-                scriptlets: html
-                taglib: none
-                staticparts: none
+                scriptlet: html

@@ -19,19 +19,15 @@
 package org.apache.grails.data.testing.tck.tests
 
 import spock.lang.IgnoreIf
-import spock.lang.Requires
 
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.OptLockNotVersioned
 import org.apache.grails.data.testing.tck.domains.OptLockVersioned
-import org.springframework.dao.OptimisticLockingFailureException
-
 import org.grails.datastore.mapping.core.OptimisticLockingException
 
 /**
  * @author Burt Beckwith
  */
-@Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
 class OptimisticLockingSpec extends GrailsDataTckSpec {
 
     def setupSpec() {
@@ -43,7 +39,7 @@ class OptimisticLockingSpec extends GrailsDataTckSpec {
         def o = new OptLockVersioned(name: 'locked')
 
         when:
-        o.save flush: true
+        o.save(flush: true)
 
         then:
         o.version == 0
@@ -52,7 +48,7 @@ class OptimisticLockingSpec extends GrailsDataTckSpec {
         manager.session.clear()
         o = OptLockVersioned.get(o.id)
         o.name = 'Fred'
-        o.save flush: true
+        o.save(flush: true)
 
         then:
         o.version == 1
@@ -66,94 +62,9 @@ class OptimisticLockingSpec extends GrailsDataTckSpec {
         o.version == 1
     }
 
-    @IgnoreIf({ System.getProperty('mongodb.gorm.suite') == 'true' })
-    void "Test optimistic locking"() {
-
-        given:
-        def o = new OptLockVersioned(name: 'locked').save(flush: true)
-        manager.session.clear()
-        manager.transactionManager.commit manager.transactionStatus
-        manager.transactionStatus = null
-
-        when:
-        OptLockVersioned.withTransaction {
-            try {
-                o = OptLockVersioned.get(o.id)
-
-                Thread.start {
-                    OptLockVersioned.withTransaction { s ->
-                        def reloaded = OptLockVersioned.get(o.id)
-                        assert reloaded
-                        assert reloaded != o
-                        reloaded.name += ' in new session'
-                        reloaded.save(flush: true)
-                        assert reloaded.version == 1
-                        assert o.version == 0
-                    }
-
-                }.join()
-
-                o.name += ' in main session'
-                o.save(flush: true)
-
-                manager.session.clear()
-                o = OptLockVersioned.get(o.id)
-            } catch (Throwable e) {
-                System.getProperties().each { key, value ->
-                    println "${key}: ${value}"
-                }
-                throw e
-            }
-        }
-        then:
-        thrown OptimisticLockingFailureException
-    }
-
-    @IgnoreIf({ System.getProperty('mongodb.gorm.suite') == 'true' })
-    void "Test optimistic locking disabled with 'version false'"() {
-        given:
-        def o = new OptLockNotVersioned(name: 'locked').save(flush: true)
-        manager.session.clear()
-        manager.transactionManager.commit manager.transactionStatus
-        manager.transactionStatus = null
-
-        when:
-        def ex
-        OptLockNotVersioned.withTransaction {
-            o = OptLockNotVersioned.get(o.id)
-
-            Thread.start {
-                OptLockNotVersioned.withTransaction { s ->
-                    def reloaded = OptLockNotVersioned.get(o.id)
-                    reloaded.name += ' in new session'
-                    reloaded.save(flush: true)
-                }
-
-            }.join()
-
-            o.name += ' in main session'
-
-            try {
-                o.save(flush: true)
-            }
-            catch (e) {
-                ex = e
-                e.printStackTrace()
-            }
-
-            manager.session.clear()
-            o = OptLockNotVersioned.get(o.id)
-
-        }
-
-        then:
-        ex == null
-        o.name == 'locked in main session'
-    }
-
+    // hibernate has a customized version of this
     @IgnoreIf({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' })
-    void "Test optimistic locking with withNewSession"() {
-
+    void "Test optimistic locking"() {
         given:
         def o = new OptLockVersioned(name: 'locked').save(flush: true)
         manager.session.clear()
@@ -161,21 +72,37 @@ class OptimisticLockingSpec extends GrailsDataTckSpec {
         when:
         o = OptLockVersioned.get(o.id)
 
-        OptLockVersioned.withNewSession { session ->
-            def reloaded = OptLockVersioned.get(o.id)
-            reloaded.name += ' in new session'
-            reloaded.save(flush: true)
-        }
+        Thread.start {
+            OptLockVersioned.withNewSession { s ->
+                def reloaded = OptLockVersioned.get(o.id)
+                assert reloaded
+                reloaded.name += ' in new session'
+                reloaded.save(flush: true)
+            }
+        }.join()
+        sleep(2000) // heisenbug
 
         o.name += ' in main session'
-        o.save(flush: true)
+        def ex
+        try {
+            o.save(flush: true)
+        }
+        catch (e) {
+            ex = e
+            e.printStackTrace()
+        }
+
+        manager.session.clear()
+        o = OptLockVersioned.get(o.id)
 
         then:
-        thrown OptimisticLockingException
+        ex instanceof OptimisticLockingException
+        o.version == 1
+        o.name == 'locked in new session'
     }
 
-    @IgnoreIf({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' })
-    void "Test optimistic locking disabled with 'version false' using withNewSession"() {
+    void "Test optimistic locking disabled with 'version false'"() {
+
         given:
         def o = new OptLockNotVersioned(name: 'locked').save(flush: true)
         manager.session.clear()
@@ -183,15 +110,18 @@ class OptimisticLockingSpec extends GrailsDataTckSpec {
         when:
         o = OptLockNotVersioned.get(o.id)
 
-        OptLockNotVersioned.withNewSession { session ->
-            def reloaded = OptLockNotVersioned.get(o.id)
-            reloaded.name += ' in new session'
-            reloaded.save(flush: true)
-        }
+        Thread.start {
+            OptLockNotVersioned.withNewSession { s ->
+                def reloaded = OptLockNotVersioned.get(o.id)
+                reloaded.name += ' in new session'
+                reloaded.save(flush: true)
+            }
+        }.join()
+        sleep(2000) // heisenbug
 
+        o.name += ' in main session'
         def ex
         try {
-            o.name += ' in main session'
             o.save(flush: true)
         }
         catch (e) {

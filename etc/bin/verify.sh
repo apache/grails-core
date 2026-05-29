@@ -31,6 +31,7 @@ fi
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 CWD=$(pwd)
 VERSION=${RELEASE_TAG#v}
+export PREFERRED_GRAILS_VERSION=${VERSION}
 
 cleanup() {
   echo "❌ Verification failed. ❌"
@@ -85,6 +86,11 @@ echo "Applying License Audit ..."
 cd "${DOWNLOAD_LOCATION}/grails"
 ./gradlew rat
 echo "✅ RAT passed"
+
+echo "Validating Dependency Versions ..."
+cd "${DOWNLOAD_LOCATION}/grails"
+./gradlew validateDependencyVersions
+echo "✅ Dependency Versions Validated"
 
 echo "Verifying Reproducible Build ..."
 set +e # because we have known issues here

@@ -159,7 +159,6 @@ class DomainEventsSpec extends GrailsDataTckSpec {
         1 == PersonEvent.STORE.afterDelete
     }
 
-    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     void 'Test multi-delete events'() {
         given:
         def freds = (1..3).collect {
@@ -270,7 +269,6 @@ class DomainEventsSpec extends GrailsDataTckSpec {
         1 == PersonEvent.STORE.afterLoad
     }
 
-    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     void 'Test multi-load events'() {
         given:
         def freds = (1..3).collect {

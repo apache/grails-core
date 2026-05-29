@@ -19,8 +19,8 @@ package org.grails.cli.profile
 import groovy.transform.CompileStatic
 import groovy.transform.ToString
 
-import jline.console.completer.ArgumentCompleter
-import jline.console.completer.Completer
+import org.jline.reader.Completer
+import org.jline.reader.impl.completer.ArgumentCompleter
 import org.eclipse.aether.artifact.DefaultArtifact
 import org.eclipse.aether.graph.Dependency
 import org.eclipse.aether.graph.Exclusion

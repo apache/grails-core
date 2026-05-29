@@ -18,33 +18,35 @@
  */
 package org.grails.datastore.gorm
 
+import spock.lang.PendingFeature
+
 import grails.persistence.Entity
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import spock.lang.PendingFeature
 
 /**
  * TODO: Support composite ids
  */
 class CompositeIdentifierSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
     void setupSpec() {
         manager.addAllDomainClasses([User, Role, UserRole])
     }
 
     @PendingFeature(reason = 'Composite ids not supported')
     void "Test that a composite identifier is treated as assigned"() {
-        given:"A domain model with a composite identifier"
-            def u = new User(name: "Bob").save()
-            def r = new Role(name: "Admin").save()
-            def ur = new UserRole(user: u, role: r)
-            ur.save flush: true
+        given: "A domain model with a composite identifier"
+        def u = new User(name: "Bob").save()
+        def r = new Role(name: "Admin").save()
+        def ur = new UserRole(user: u, role: r)
+        ur.save flush: true
         manager.session.clear()
 
-        when:"The entity is queried"
-            ur = UserRole.get(new UserRole(user: u, role: r))
+        when: "The entity is queried"
+        ur = UserRole.get(new UserRole(user: u, role: r))
 
-        then:"it is found"
-            ur != null
+        then: "it is found"
+        ur != null
     }
 }
 
@@ -61,12 +63,14 @@ class UserRole implements Serializable {
 
 @Entity
 class User {
+
     Long id
     String name
 }
 
 @Entity
 class Role {
+
     Long id
     String name
 }

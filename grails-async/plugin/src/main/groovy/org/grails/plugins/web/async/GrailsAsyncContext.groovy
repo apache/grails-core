@@ -75,7 +75,7 @@ class GrailsAsyncContext implements AsyncContext {
 
     void complete() {
         delegate.complete()
-    }
+     }
 
     protected Collection<PersistenceContextInterceptor> getPersistenceInterceptors(GrailsWebRequest webRequest) {
         def servletContext = webRequest.servletContext

@@ -38,10 +38,9 @@ apply {
 dependencies {
     gradleConf gradleApi()
 
-    // grails-docs classes are used in Gradle builds,
-    // so we must compile with Groovy 3 until Gradle upgrades to Groovy 4.
-    compileOnly "org.codehaus.groovy:groovy:${GroovySystem.version}"
-    compileOnly "org.codehaus.groovy:groovy-ant:${GroovySystem.version}"
+    // grails-docs classes are used in Gradle builds, using Gradle's embedded Groovy version
+    compileOnly "org.apache.groovy:groovy:${GroovySystem.version}"
+    compileOnly "org.apache.groovy:groovy-ant:${GroovySystem.version}"
 
     api "org.apache.commons:commons-text:${gradleBomDependencyVersions['commons-text.version']}"
     api "org.apache.ant:ant:${gradleBomDependencyVersions['ant.version']}"
@@ -56,7 +55,7 @@ dependencies {
         transitive = false
     }
 
-    testImplementation "org.codehaus.groovy:groovy-test-junit5:${GroovySystem.version}"
+    testImplementation "org.apache.groovy:groovy-test-junit5:${GroovySystem.version}"
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.12.2'
     testImplementation 'org.junit.platform:junit-platform-suite:1.12.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.12.2'
@@ -88,10 +87,17 @@ def java17moduleReflectionCompatibilityArguments = [
         '--add-opens=java.base/java.util=ALL-UNNAMED'
 ]
 tasks.withType(Test).configureEach {
+    // Honor DO_NOT_CACHE_TESTS=1 so developers can repeatedly invoke the same test command
+    // without --rerun-tasks (and without recompiling everything else).
+    boolean doNotCacheTests = System.getenv('DO_NOT_CACHE_TESTS')?.toBoolean()
+    outputs.cacheIf { !doNotCacheTests }
+    outputs.upToDateWhen { !doNotCacheTests }
+
     onlyIf {
         ![
                 'onlyFunctionalTests',
                 'onlyHibernate5Tests',
+                'onlyHibernate7Tests',
                 'onlyMongodbTests',
                 'skipCoreTests',
                 'skipTests'

@@ -35,12 +35,14 @@ These can be set on the command line like so:
 * `onlyCoreTests` - runs tests that do not include mongo, hibernate, or functional
 * `onlyFunctionalTests` - runs only grails-test-examples/* tests
 * `onlyHibernate5Tests` - runs only a hibernate5 related test
+* `onlyHibernate7Tests` - runs only a hibernate7 related test
 * `onlyMongodbTests` - runs only a mongodb related test
 * `serializeMongoTests` - if true, only integration tests from one mongo project will run at a time
 * `skipCodeStyle` - does not run code style checks
 * `skipCoreTests` - does not run the "core" tests
 * `skipFunctionalTests` - does not run the functional tests
 * `skipHibernate5Tests` - does not run hibernate5 related tests
+* `skipHibernate7Tests` - does not run hibernate7 related tests
 * `skipMongodbTests` - does not run mongo related tests
 * `skipTests` - no tests will run
 
@@ -65,6 +67,18 @@ Example with multiple tags:
 ```bash
 ./gradlew iT -PincludeTestTags=geb,api
 ```
+
+## Environment variables
+
+* `DO_NOT_CACHE_TESTS` - set to `1` (or any truthy value) to force every `Test` task to run
+  every invocation, without needing `--rerun-tasks`. This skips both Gradle's build cache
+  and the `up-to-date` check for tests, while leaving the rest of the build (compilation,
+  resource processing, etc.) cacheable. Useful when chasing flaky tests that depend on
+  test execution order across runs.
+
+  ```
+  DO_NOT_CACHE_TESTS=1 ./gradlew :grails-gsp:test
+  ```
 
 ## Start a mongo docker container (containers will start by default)
 `docker run -d  --name mongo-on-docker  -p 27017:27017 mongo`

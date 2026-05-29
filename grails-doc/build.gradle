@@ -20,6 +20,9 @@
 import grails.doc.git.FetchTagsTask
 import grails.doc.dropdown.CreateReleaseDropDownTask
 import grails.doc.gradle.PublishGuideTask
+import groovy.json.JsonSlurper
+
+import java.util.zip.ZipFile
 
 plugins {
     id 'base'
@@ -137,17 +140,51 @@ String getVersion(String artifact) {
 
 def generateBomDocumentation = tasks.register('generateBomDocumentation')
 generateBomDocumentation.configure { Task it ->
-    it.dependsOn(':grails-bom:extractConstraints', ':grails-hibernate5-bom:extractConstraints', ':grails-hibernate7-bom:extractConstraints')
+    // grails-micronaut-bom is gated by -PskipMicronautProjects in settings.gradle (see grails-core#15613).
+    // findProject returns null when the flag is set; the Micronaut BOM pages are then omitted.
+    def grailsMicronautBom = findProject(':grails-micronaut-bom')
+    def grailsHibernate5MicronautBom = findProject(':grails-hibernate5-micronaut-bom')
+    def grailsHibernate7MicronautBom = findProject(':grails-hibernate7-micronaut-bom')
 
-    it.description = 'Generates AsciiDoc tables listing Group, Artifact, and Version for all BOM variants (default, hibernate5, hibernate7).'
+    def extractConstraintsDeps = [':grails-bom:extractConstraints', ':grails-hibernate5-bom:extractConstraints', ':grails-hibernate7-bom:extractConstraints']
+    if (grailsMicronautBom != null) {
+        extractConstraintsDeps << ':grails-micronaut-bom:extractConstraints'
+    }
+    if (grailsHibernate5MicronautBom != null) {
+        extractConstraintsDeps << ':grails-hibernate5-micronaut-bom:extractConstraints'
+    }
+    if (grailsHibernate7MicronautBom != null) {
+        extractConstraintsDeps << ':grails-hibernate7-micronaut-bom:extractConstraints'
+    }
+    it.dependsOn(*extractConstraintsDeps)
+
+    it.description = 'Generates AsciiDoc tables listing Group, Artifact, and Version for all BOM variants (default, hibernate5, hibernate7, micronaut, hibernate5-micronaut, hibernate7-micronaut).'
     it.group = 'documentation'
 
     it.inputs.files(project(':grails-bom').layout.projectDirectory.asFileTree)
     it.inputs.files(project(':grails-hibernate5-bom').layout.projectDirectory.asFileTree)
     it.inputs.files(project(':grails-hibernate7-bom').layout.projectDirectory.asFileTree)
+    if (grailsMicronautBom != null) {
+        it.inputs.files(grailsMicronautBom.layout.projectDirectory.asFileTree)
+    }
+    if (grailsHibernate5MicronautBom != null) {
+        it.inputs.files(grailsHibernate5MicronautBom.layout.projectDirectory.asFileTree)
+    }
+    if (grailsHibernate7MicronautBom != null) {
+        it.inputs.files(grailsHibernate7MicronautBom.layout.projectDirectory.asFileTree)
+    }
     it.outputs.file(project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM.adoc'))
     it.outputs.file(project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Hibernate5.adoc'))
     it.outputs.file(project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Hibernate7.adoc'))
+    if (grailsMicronautBom != null) {
+        it.outputs.file(project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Micronaut.adoc'))
+    }
+    if (grailsHibernate5MicronautBom != null) {
+        it.outputs.file(project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Hibernate5 Micronaut.adoc'))
+    }
+    if (grailsHibernate7MicronautBom != null) {
+        it.outputs.file(project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Hibernate7 Micronaut.adoc'))
+    }
 
     def versionsDir = project.layout.projectDirectory.dir('src/en/ref/Versions')
     it.doFirst {
@@ -166,6 +203,28 @@ generateBomDocumentation.configure { Task it ->
     def bomHibernate7DocumentFile = project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Hibernate7.adoc')
     def grailsBomHibernate7ConstraintFile = project(':grails-hibernate7-bom').layout.buildDirectory.file('grails-hibernate7-bom-constraints.adoc')
 
+    // Micronaut BOM
+    def bomMicronautDocumentFile = grailsMicronautBom != null
+            ? project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Micronaut.adoc')
+            : null
+    def grailsBomMicronautConstraintFile = grailsMicronautBom?.layout?.buildDirectory?.file('grails-micronaut-bom-constraints.adoc')
+
+    // Hibernate 5 Micronaut BOM
+    def bomHibernate5MicronautDocumentFile = grailsHibernate5MicronautBom != null
+            ? project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Hibernate5 Micronaut.adoc')
+            : null
+    def grailsBomHibernate5MicronautConstraintFile = grailsHibernate5MicronautBom?.layout?.buildDirectory?.file('grails-hibernate5-micronaut-bom-constraints.adoc')
+
+    // Hibernate 7 Micronaut BOM
+    def bomHibernate7MicronautDocumentFile = grailsHibernate7MicronautBom != null
+            ? project.layout.projectDirectory.file('src/en/ref/Versions/Grails BOM Hibernate7 Micronaut.adoc')
+            : null
+    def grailsBomHibernate7MicronautConstraintFile = grailsHibernate7MicronautBom?.layout?.buildDirectory?.file('grails-hibernate7-micronaut-bom-constraints.adoc')
+
+    def micronautBomCrossRefSuffix = grailsMicronautBom != null
+            ? ' | link:Grails%20BOM%20Micronaut.html[Grails Micronaut BOM] | link:Grails%20BOM%20Hibernate5%20Micronaut.html[Grails Hibernate 5 Micronaut BOM] | link:Grails%20BOM%20Hibernate7%20Micronaut.html[Grails Hibernate 7 Micronaut BOM]'
+            : ''
+
     it.doLast {
         // Generate default BOM page
         bomDocumentFile.asFile.withWriter { writer ->
@@ -173,7 +232,7 @@ generateBomDocumentation.configure { Task it ->
             writer.writeLine ''
             writer.writeLine 'This document provides information about the dependencies defined in the default Grails BOM - also known as `org.apache.grails:grails-bom`. The default BOM uses Hibernate 5 compatible dependency versions.'
             writer.writeLine ''
-            writer.writeLine 'NOTE: Hibernate-specific BOM variants are also available: link:Grails%20BOM%20Hibernate5.html[Grails Hibernate 5 BOM] | link:Grails%20BOM%20Hibernate7.html[Grails Hibernate 7 BOM]'
+            writer.writeLine "NOTE: Variant BOMs are also available: link:Grails%20BOM%20Hibernate5.html[Grails Hibernate 5 BOM] | link:Grails%20BOM%20Hibernate7.html[Grails Hibernate 7 BOM]${micronautBomCrossRefSuffix}"
             writer.writeLine ''
             writer.write(grailsBomConstraintFile.get().asFile.text)
             writer.writeLine ''
@@ -184,9 +243,9 @@ generateBomDocumentation.configure { Task it ->
         bomHibernate5DocumentFile.asFile.withWriter { writer ->
             writer.writeLine '== Grails Hibernate 5 BOM Dependencies'
             writer.writeLine ''
-            writer.writeLine 'This document provides information about the dependencies defined in `org.apache.grails:grails-hibernate5-bom`. This BOM inherits from the default `grails-bom` and is configured for Hibernate 5 compatible dependency versions.'
+            writer.writeLine 'This document provides information about the dependencies defined in `org.apache.grails:grails-hibernate5-bom`. This BOM inherits from the default `grails-bom` and explicitly enforces Hibernate 5 compatible dependency versions for consumers using `enforcedPlatform`.'
             writer.writeLine ''
-            writer.writeLine 'See also: link:Grails%20BOM.html[Default BOM] | link:Grails%20BOM%20Hibernate7.html[Grails Hibernate 7 BOM]'
+            writer.writeLine "See also: link:Grails%20BOM.html[Default BOM] | link:Grails%20BOM%20Hibernate7.html[Grails Hibernate 7 BOM]'${micronautBomCrossRefSuffix}"
             writer.writeLine ''
             writer.write(grailsBomHibernate5ConstraintFile.get().asFile.text)
             writer.writeLine ''
@@ -197,20 +256,384 @@ generateBomDocumentation.configure { Task it ->
         bomHibernate7DocumentFile.asFile.withWriter { writer ->
             writer.writeLine '== Grails Hibernate 7 BOM Dependencies'
             writer.writeLine ''
-            writer.writeLine 'This document provides information about the dependencies defined in `org.apache.grails:grails-hibernate7-bom`. This BOM inherits from the default `grails-bom` and overrides Liquibase dependencies for Hibernate 7 compatibility.'
+            writer.writeLine 'This document provides information about the dependencies defined in `org.apache.grails:grails-hibernate7-bom`. This BOM inherits from the default `grails-bom` and explicitly enforces Hibernate 7 compatible dependency versions for consumers using `enforcedPlatform`.'
             writer.writeLine ''
-            writer.writeLine 'See also: link:Grails%20BOM.html[Default BOM] | link:Grails%20BOM%20Hibernate5.html[Grails Hibernate 5 BOM]'
+            writer.writeLine "See also: link:Grails%20BOM.html[Default BOM] | link:Grails%20BOM%20Hibernate5.html[Grails Hibernate 5 BOM]${micronautBomCrossRefSuffix}"
             writer.writeLine ''
             writer.write(grailsBomHibernate7ConstraintFile.get().asFile.text)
             writer.writeLine ''
         }
         it.logger.lifecycle "BOM Hibernate 7 Dependency Page generated to: ${bomHibernate7DocumentFile.asFile.absolutePath}"
+
+        if (grailsMicronautBom != null) {
+            // Generate Micronaut BOM page
+            bomMicronautDocumentFile.asFile.withWriter { writer ->
+                writer.writeLine '== Grails Micronaut BOM Dependencies'
+                writer.writeLine ''
+                writer.writeLine 'This document provides information about the dependencies defined in `org.apache.grails:grails-micronaut-bom`. This BOM inherits from the default `grails-bom` and layers Micronaut-specific dependency overrides on top. Consumers integrating with Micronaut should apply this BOM as `enforcedPlatform` so the Micronaut platform cannot override the managed versions.'
+                writer.writeLine ''
+                writer.writeLine 'See also: link:Grails%20BOM.html[Default BOM] | link:Grails%20BOM%20Hibernate5.html[Grails Hibernate 5 BOM] | link:Grails%20BOM%20Hibernate5%20Micronaut.html[Grails Hibernate 5 Micronaut BOM] | link:Grails%20BOM%20Hibernate7%20Micronaut.html[Grails Hibernate 7 Micronaut BOM]'
+                writer.writeLine ''
+                writer.write(grailsBomMicronautConstraintFile.get().asFile.text)
+                writer.writeLine ''
+            }
+            it.logger.lifecycle "BOM Micronaut Dependency Page generated to: ${bomMicronautDocumentFile.asFile.absolutePath}"
+        }
+
+        if (grailsHibernate5MicronautBom != null) {
+            // Generate Hibernate 5 Micronaut BOM page
+            bomHibernate5MicronautDocumentFile.asFile.withWriter { writer ->
+                writer.writeLine '== Grails Hibernate 5 Micronaut BOM Dependencies'
+                writer.writeLine ''
+                writer.writeLine 'This document provides information about the dependencies defined in `org.apache.grails:grails-hibernate5-micronaut-bom`. This BOM combines Hibernate 5 dependency management with Micronaut-specific overrides (Groovy 5, Spock 2.4). Consumers integrating with Micronaut and Hibernate 5 should apply this BOM as `enforcedPlatform`.'
+                writer.writeLine ''
+                writer.writeLine 'See also: link:Grails%20BOM.html[Default BOM] | link:Grails%20BOM%20Micronaut.html[Grails Micronaut BOM] | link:Grails%20BOM%20Hibernate7%20Micronaut.html[Grails Hibernate 7 Micronaut BOM]'
+                writer.writeLine ''
+                writer.write(grailsBomHibernate5MicronautConstraintFile.get().asFile.text)
+                writer.writeLine ''
+            }
+            it.logger.lifecycle "BOM Hibernate 5 Micronaut Dependency Page generated to: ${bomHibernate5MicronautDocumentFile.asFile.absolutePath}"
+        }
+
+        if (grailsHibernate7MicronautBom != null) {
+            // Generate Hibernate 7 Micronaut BOM page
+            bomHibernate7MicronautDocumentFile.asFile.withWriter { writer ->
+                writer.writeLine '== Grails Hibernate 7 Micronaut BOM Dependencies'
+                writer.writeLine ''
+                writer.writeLine 'This document provides information about the dependencies defined in `org.apache.grails:grails-hibernate7-micronaut-bom`. This BOM combines Hibernate 7 dependency management with Micronaut-specific overrides (Groovy 5, Spock 2.4). Consumers integrating with Micronaut and Hibernate 7 should apply this BOM as `enforcedPlatform`.'
+                writer.writeLine ''
+                writer.writeLine 'See also: link:Grails%20BOM.html[Default BOM] | link:Grails%20BOM%20Micronaut.html[Grails Micronaut BOM] | link:Grails%20BOM%20Hibernate5%20Micronaut.html[Grails Hibernate 5 Micronaut BOM]'
+                writer.writeLine ''
+                writer.write(grailsBomHibernate7MicronautConstraintFile.get().asFile.text)
+                writer.writeLine ''
+            }
+            it.logger.lifecycle "BOM Hibernate 7 Micronaut Dependency Page generated to: ${bomHibernate7MicronautDocumentFile.asFile.absolutePath}"
+        }
+    }
+}
+
+def generateConfigReference = tasks.register('generateConfigReference')
+generateConfigReference.configure { Task it ->
+    it.dependsOn(
+            project(':grails-core').tasks.named('jar'),
+            project(':grails-web-core').tasks.named('jar'),
+            project(':grails-gsp').tasks.named('jar'),
+            project(':grails-databinding').tasks.named('jar'),
+            project(':grails-data-hibernate5-core').tasks.named('jar'),
+            project(':grails-cache').tasks.named('jar'),
+            project(':grails-data-hibernate5-dbmigration').tasks.named('jar'),
+            project(':grails-data-mongodb').tasks.named('jar'),
+            project(':grails-views-gson').tasks.named('jar')
+    )
+
+    it.description = 'Generates the Application Properties reference from configuration metadata.'
+    it.group = 'documentation'
+
+    def configDir = project.layout.projectDirectory.dir('src/en/ref/Configuration')
+    def outputFile = project.layout.projectDirectory.file('src/en/ref/Configuration/Application Properties.adoc')
+
+    it.inputs.files(
+            project(':grails-core').tasks.named('jar').flatMap { task -> task.archiveFile },
+            project(':grails-web-core').tasks.named('jar').flatMap { task -> task.archiveFile },
+            project(':grails-gsp').tasks.named('jar').flatMap { task -> task.archiveFile },
+            project(':grails-databinding').tasks.named('jar').flatMap { task -> task.archiveFile },
+            project(':grails-data-hibernate5-core').tasks.named('jar').flatMap { task -> task.archiveFile },
+            project(':grails-cache').tasks.named('jar').flatMap { task -> task.archiveFile },
+            project(':grails-data-hibernate5-dbmigration').tasks.named('jar').flatMap { task -> task.archiveFile },
+            project(':grails-data-mongodb').tasks.named('jar').flatMap { task -> task.archiveFile },
+            project(':grails-views-gson').tasks.named('jar').flatMap { task -> task.archiveFile }
+    )
+    it.outputs.file(outputFile)
+
+    it.doFirst {
+        configDir.asFile.mkdirs()
+    }
+
+    it.doLast {
+        List<File> jarFiles = [
+                project(':grails-core').tasks.named('jar').get().archiveFile.get().asFile,
+                project(':grails-web-core').tasks.named('jar').get().archiveFile.get().asFile,
+                project(':grails-gsp').tasks.named('jar').get().archiveFile.get().asFile,
+                project(':grails-databinding').tasks.named('jar').get().archiveFile.get().asFile,
+                project(':grails-data-hibernate5-core').tasks.named('jar').get().archiveFile.get().asFile,
+                project(':grails-cache').tasks.named('jar').get().archiveFile.get().asFile,
+                project(':grails-data-hibernate5-dbmigration').tasks.named('jar').get().archiveFile.get().asFile,
+                project(':grails-data-mongodb').tasks.named('jar').get().archiveFile.get().asFile,
+                project(':grails-views-gson').tasks.named('jar').get().archiveFile.get().asFile
+        ]
+
+        Map<String, String> groupDescriptions = new LinkedHashMap<String, String>()
+        List<Map<String, Object>> properties = new ArrayList<Map<String, Object>>()
+        JsonSlurper slurper = new JsonSlurper()
+
+        jarFiles.each { File jarFile ->
+            if (!jarFile.exists()) {
+                return
+            }
+            ZipFile zipFile = new ZipFile(jarFile)
+            try {
+                def entry = zipFile.getEntry('META-INF/spring-configuration-metadata.json')
+                if (entry == null) {
+                    return
+                }
+                String jsonText = zipFile.getInputStream(entry).getText('UTF-8')
+                Map<String, Object> jsonData = (Map<String, Object>) slurper.parseText(jsonText)
+                Object groupsObject = jsonData.get('groups')
+                if (groupsObject instanceof List) {
+                    ((List<Object>) groupsObject).each { Object groupObject ->
+                        if (groupObject instanceof Map) {
+                            Map<String, Object> groupMap = (Map<String, Object>) groupObject
+                            Object nameObject = groupMap.get('name')
+                            Object descriptionObject = groupMap.get('description')
+                            if (nameObject instanceof String && descriptionObject instanceof String) {
+                                groupDescriptions.put((String) nameObject, (String) descriptionObject)
+                            }
+                        }
+                    }
+                }
+                Object propertiesObject = jsonData.get('properties')
+                if (propertiesObject instanceof List) {
+                    ((List<Object>) propertiesObject).each { Object propertyObject ->
+                        if (!(propertyObject instanceof Map)) {
+                            return
+                        }
+                        Map<String, Object> propertyMap = (Map<String, Object>) propertyObject
+                        Object nameObject = propertyMap.get('name')
+                        if (!(nameObject instanceof String)) {
+                            return
+                        }
+                        String name = (String) nameObject
+                        if (!(name.startsWith('grails.') || name.startsWith('dataSource.') || name.startsWith('hibernate.'))) {
+                            return
+                        }
+                        String description = propertyMap.get('description') instanceof String ? (String) propertyMap.get('description') : ''
+                        Object defaultValue = propertyMap.get('defaultValue')
+                        String group = propertyMap.get('group') instanceof String ? (String) propertyMap.get('group') : null
+                        properties.add([
+                                name        : name,
+                                description : description,
+                                defaultValue: defaultValue,
+                                group       : group
+                        ])
+                    }
+                }
+            }
+            finally {
+                zipFile.close()
+            }
+        }
+
+        Set<String> groupNames = groupDescriptions.keySet()
+        Closure<String> fallbackGroup = { String name ->
+            int delimiter = name.lastIndexOf('.')
+            if (delimiter <= 0) {
+                return name
+            }
+            name.substring(0, delimiter)
+        }
+        Closure<String> resolveGroup = { String name, String group ->
+            if (group) {
+                return group
+            }
+            if (groupNames == null || groupNames.isEmpty()) {
+                return fallbackGroup(name)
+            }
+            String match = groupNames.findAll { String groupName ->
+                name == groupName || name.startsWith("${groupName}.")
+            }.sort { String left, String right -> right.length() <=> left.length() }
+                .find { String groupName -> groupName }
+            match ?: fallbackGroup(name)
+        }
+
+        Closure<String> escapeAsciidoc = { String value ->
+            if (!value) {
+                return value
+            }
+            value.replace('|', '\\|')
+        }
+
+        Closure<String> formatDefaultValue = { Object value ->
+            if (value == null) {
+                return ''
+            }
+            if (value instanceof List) {
+                List<Object> values = (List<Object>) value
+                String joined = values.collect { Object item -> "\"${item?.toString()}\"" }.join(', ')
+                return "[${joined}]"
+            }
+            if (value instanceof Map) {
+                Map<Object, Object> mapValue = (Map<Object, Object>) value
+                if (mapValue.isEmpty()) {
+                    return '{}'
+                }
+                return mapValue.toString()
+            }
+            value.toString()
+        }
+
+        Map<String, List<Map<String, Object>>> categories = new LinkedHashMap<String, List<Map<String, Object>>>()
+        properties.each { Map<String, Object> property ->
+            String name = (String) property.get('name')
+            String resolvedGroup = resolveGroup(name, (String) property.get('group'))
+            String category = groupDescriptions.get(resolvedGroup) ?: resolvedGroup
+            if (!categories.containsKey(category)) {
+                categories.put(category, new ArrayList<Map<String, Object>>())
+            }
+            categories.get(category).add([
+                    name        : name,
+                    description : property.get('description') as String,
+                    defaultValue: property.get('defaultValue')
+            ])
+        }
+
+        List<String> preferredOrder = [
+                'Core Properties',
+                'Web & Controllers',
+                'CORS',
+                'Views & GSP',
+                'Content Negotiation & MIME Types',
+                'Data Binding',
+                'Internationalization',
+                'Static Resources',
+                'URL Mappings',
+                'Scaffolding',
+                'Development & Reloading',
+                'Events',
+                'JSON & Converters',
+                'GORM',
+                'DataSource',
+                'Hibernate',
+                'Database Migration Plugin',
+                'Cache Plugin',
+                'MongoDB GORM Plugin'
+        ]
+        List<String> orderedCategories = new ArrayList<String>()
+        preferredOrder.each { String category ->
+            if (categories.containsKey(category)) {
+                orderedCategories.add(category)
+            }
+        }
+        categories.keySet().findAll { String category -> !orderedCategories.contains(category) }.sort().each { String category ->
+            orderedCategories.add(category)
+        }
+
+        def documentFile = outputFile.asFile
+        documentFile.withWriter('UTF-8') { writer ->
+            writer.writeLine('////')
+            writer.writeLine('Licensed to the Apache Software Foundation (ASF) under one')
+            writer.writeLine('or more contributor license agreements.  See the NOTICE file')
+            writer.writeLine('distributed with this work for additional information')
+            writer.writeLine('regarding copyright ownership.  The ASF licenses this file')
+            writer.writeLine('to you under the Apache License, Version 2.0 (the')
+            writer.writeLine('"License"); you may not use this file except in compliance')
+            writer.writeLine('with the License.  You may obtain a copy of the License at')
+            writer.writeLine('')
+            writer.writeLine('https://www.apache.org/licenses/LICENSE-2.0')
+            writer.writeLine('')
+            writer.writeLine('Unless required by applicable law or agreed to in writing,')
+            writer.writeLine('software distributed under the License is distributed on an')
+            writer.writeLine('"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY')
+            writer.writeLine('KIND, either express or implied.  See the License for the')
+            writer.writeLine('specific language governing permissions and limitations')
+            writer.writeLine('under the License.')
+            writer.writeLine('////')
+            writer.writeLine('')
+            writer.writeLine('== Application Properties')
+            writer.writeLine('')
+            writer.writeLine('A comprehensive reference of all configuration properties specific to Grails and its bundled modules. These properties are set in `grails-app/conf/application.yml` (or `application.groovy`).')
+            writer.writeLine('')
+            writer.writeLine('Since Grails is built on Spring Boot, all https://docs.spring.io/spring-boot/{springBootVersion}/appendix/application-properties/index.html[Spring Boot Common Application Properties] are also available (for example `server.port`, `logging.*`, `spring.datasource.hikari.*`, and `management.*`). This reference covers only Grails-specific properties.')
+            writer.writeLine('')
+            writer.writeLine('=== Environment-Specific Configuration')
+            writer.writeLine('')
+            writer.writeLine('Properties in `application.yml` (or `application.groovy`) are global by default - they apply to all environments. To override a property for a specific environment, nest it under an `environments` block:')
+            writer.writeLine('')
+            writer.writeLine('[source,yaml]')
+            writer.writeLine('----')
+            writer.writeLine('# Global (applies to all environments)')
+            writer.writeLine('grails:')
+            writer.writeLine('    serverURL: https://my.app.com')
+            writer.writeLine('')
+            writer.writeLine('# Environment-specific overrides')
+            writer.writeLine('environments:')
+            writer.writeLine('    development:')
+            writer.writeLine('        grails:')
+            writer.writeLine('            serverURL: http://localhost:8080')
+            writer.writeLine('    test:')
+            writer.writeLine('        grails:')
+            writer.writeLine('            serverURL: http://localhost:8080')
+            writer.writeLine('    production:')
+            writer.writeLine('        grails:')
+            writer.writeLine('            serverURL: https://my.app.com')
+            writer.writeLine('----')
+            writer.writeLine('')
+            writer.writeLine('Or in `application.groovy`:')
+            writer.writeLine('')
+            writer.writeLine('[source,groovy]')
+            writer.writeLine('----')
+            writer.writeLine("grails.serverURL = 'https://my.app.com'")
+            writer.writeLine('')
+            writer.writeLine('environments {')
+            writer.writeLine('    development {')
+            writer.writeLine("        grails.serverURL = 'http://localhost:8080'")
+            writer.writeLine('    }')
+            writer.writeLine('    test {')
+            writer.writeLine("        grails.serverURL = 'http://localhost:8080'")
+            writer.writeLine('    }')
+            writer.writeLine('    production {')
+            writer.writeLine("        grails.serverURL = 'https://my.app.com'")
+            writer.writeLine('    }')
+            writer.writeLine('}')
+            writer.writeLine('----')
+            writer.writeLine('')
+
+            orderedCategories.each { String category ->
+                List<Map<String, Object>> categoryProperties = categories.get(category)
+                if (categoryProperties == null || categoryProperties.isEmpty()) {
+                    return
+                }
+                writer.writeLine("=== ${category}")
+                writer.writeLine('')
+                writer.writeLine('[cols="3,5,2", options="header"]')
+                writer.writeLine('|===')
+                writer.writeLine('| Property | Description | Default')
+                writer.writeLine('')
+                categoryProperties.sort { Map<String, Object> left, Map<String, Object> right ->
+                    (left.get('name') as String) <=> (right.get('name') as String)
+                }.each { Map<String, Object> property ->
+                    String name = property.get('name') as String
+                    String description = property.get('description') as String
+                    String defaultValue = formatDefaultValue(property.get('defaultValue'))
+                    writer.writeLine("| `${name}`")
+                    writer.writeLine("| ${escapeAsciidoc(description)}")
+                    if (defaultValue) {
+                        writer.writeLine("| `${escapeAsciidoc(defaultValue)}`")
+                    }
+                    else {
+                        writer.writeLine('|')
+                    }
+                    writer.writeLine('')
+                }
+                writer.writeLine('|===')
+                writer.writeLine('')
+            }
+
+            writer.writeLine('== Plugin References')
+            writer.writeLine('')
+            writer.writeLine('The following plugin documentation covers configuration properties that are not listed above:')
+            writer.writeLine('')
+            writer.writeLine('- https://apache.github.io/grails-spring-security/snapshot/guide/index.html#configuration-properties[Spring Security Core Configuration Properties]')
+            writer.writeLine('- https://wondrify.github.io/asset-pipeline/#configuration-properties[Asset Pipeline Configuration Properties]')
+            writer.writeLine('')
+        }
+
+        it.logger.lifecycle "Application Properties reference generated to: ${documentFile.absolutePath}"
     }
 }
 
 def publishGuideTask = tasks.register('publishGuide', PublishGuideTask)
 publishGuideTask.configure { PublishGuideTask publish ->
-    publish.dependsOn([generateBomDocumentation])
+    publish.dependsOn([generateBomDocumentation, generateConfigReference])
 
     // No language setting because we want the English guide to be
     // generated with a 'en' in the path, but the source is in 'en'
@@ -320,7 +743,7 @@ createReleaseDropdownTask.configure {
 
 def docsTask = tasks.register('docs', Sync)
 docsTask.configure { Sync it ->
-    it.dependsOn(combinedGroovydoc, createReleaseDropdownTask, ':grails-data-docs-stage:docs')
+    it.dependsOn(combinedGroovydoc, createReleaseDropdownTask, ':grails-data-docs-stage:docs', ':grails-data-docs-stage:groovydoc')
     it.group = 'documentation'
 
     def manualDocsDir = project.layout.buildDirectory.dir('modified-guide')
@@ -351,12 +774,24 @@ tasks.register('dist', Zip).configure { Zip it ->
     it.from(outputDir)
 }
 
-artifacts {
-    archives dist
+// Make dist a direct dependency of assemble instead of using deprecated archives configuration
+tasks.named('assemble').configure {
+    dependsOn(tasks.named('dist'))
 }
 
 // the groovy plugin is applied to this project, but we do not build a jar file since
 // the dependencies are only used for resolving versions from the bom
 tasks.withType(Jar).configureEach {
     enabled = false
+}
+
+// grails-doc has no real source to document - the groovy plugin is only applied so this
+// project can resolve dependency versions from the grails-bom for the guide's asciidoc
+// templates. The default `groovydoc` task would still write into build/docs/groovydoc,
+// which Gradle 9 then reports as an implicit input of the `dist` task. Disabling the
+// task removes both the empty output directory and the implicit dependency without a
+// bogus dependsOn. The user-facing groovydoc is produced by the `aggregateGroovydoc`
+// task (see `combinedGroovydoc` above), which is already wired into `docs`.
+tasks.named('groovydoc').configure {
+    it.enabled = false
 }

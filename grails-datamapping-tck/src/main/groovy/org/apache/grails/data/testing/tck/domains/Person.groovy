@@ -37,13 +37,11 @@ class Person implements Serializable, Comparable<Person>, AsyncEntity<Person> {
         lastName == 'Simpson'
     }
 
-//    Long id
     Long version
     String firstName
     String lastName
     Integer age = 0
     static hasMany = [pets: Pet]
-//    SimpleCountry country
     Face face
     boolean myBooleanProperty
 
@@ -70,16 +68,16 @@ class Person implements Serializable, Comparable<Person>, AsyncEntity<Person> {
         firstName index: true
         lastName index: true
         age index: true
-//        pets cascade: 'all-delete-orphan'
     }
 
     static constraints = {
         face nullable: true
-//        country nullable: true
     }
 
     @Override
     int compareTo(Person t) {
-        age <=> t.age
+        age <=> t.age ?:
+                firstName <=> t.firstName ?:
+                        lastName <=> t.lastName
     }
 }

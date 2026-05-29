@@ -113,7 +113,17 @@ class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
         datastore.getDataSource('default').is(datastore.dataSource)
     }
 
-    void "test getHibernateTemplate returns a template for the given flush mode"() {
+    void "test getHibernateTemplate returns a singleton instance"() {
+        when:
+        def template1 = datastore.getHibernateTemplate()
+        def template2 = datastore.getHibernateTemplate()
+
+        then:
+        template1 != null
+        template1.is(template2)
+    }
+
+    void "test getHibernateTemplate(flushMode) returns a new instance"() {
         when:
         def template = datastore.getHibernateTemplate(GrailsHibernateTemplate.FLUSH_AUTO)
 
@@ -193,6 +203,9 @@ class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
 
         then:
         noExceptionThrown()
+
+        cleanup:
+        ds.close()
     }
 
     void "test destroy logs error when closeConnectionSources throws IOException"() {
@@ -210,6 +223,9 @@ class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
 
         then:
         noExceptionThrown()
+
+        cleanup:
+        ds.close()
     }
 
     void "test destroy logs error when closeGormEnhancer throws IOException"() {
@@ -227,6 +243,9 @@ class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
 
         then:
         noExceptionThrown()
+
+        cleanup:
+        ds.close()
     }
 
     void "test isAutoFlush reflects defaultFlushMode"() {
@@ -286,6 +305,9 @@ class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
 
         then:
         noExceptionThrown()
+
+        cleanup:
+        ds.close()
     }
     
     void "test constructors"() {
@@ -337,11 +359,13 @@ class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
         def ds7 = new HibernateDatastore(datastore.mappingContext, datastore.sessionFactory, propertyResolver, datastore.applicationContext, "default")
         then:
         ds7 != null
+        ds7.close()
         
         when: "Constructor with MappingContext, SessionFactory, PropertyResolver"
         def ds8 = new HibernateDatastore(datastore.mappingContext, datastore.sessionFactory, propertyResolver)
         then:
         ds8 != null
+        ds8.close()
     }
 
     void "test setMessageSource"() {

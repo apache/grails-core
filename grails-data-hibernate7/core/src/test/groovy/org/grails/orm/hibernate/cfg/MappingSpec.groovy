@@ -558,6 +558,99 @@ class MappingSpec extends HibernateGormDatastoreSpec {
         result.tableName == 'my_table'
     }
 
+    // ─── Additional edge cases for coverage ───────────────────────────────────
+
+    void "test subclass mapping booleans"() {
+        given:
+        Mapping mapping = new Mapping()
+
+        when:
+        mapping.setTablePerConcreteClass(true)
+
+        then:
+        mapping.isUnionSubclass()
+        mapping.isTablePerConcreteClass()
+        !mapping.tablePerHierarchy
+    }
+
+    void "discriminator(Map) handles nested column map and formula"() {
+        given:
+        Mapping mapping = new Mapping()
+
+        when:
+        mapping.discriminator(value: 'VAL', column: [name: 'd_col', length: 10], formula: 'lower(type)', insertable: false)
+
+        then:
+        mapping.discriminator.value == 'VAL'
+        mapping.discriminator.column.name == 'd_col'
+        mapping.discriminator.column.length == 10
+        mapping.discriminator.formula == 'lower(type)'
+        !mapping.discriminator.insertable
+    }
+
+    void "id(Map) and id(Closure) do nothing if identity is not HibernateSimpleIdentity"() {
+        given:
+        Mapping mapping = new Mapping()
+        mapping.id(new HibernateCompositeIdentity(propertyNames: ['a', 'b']))
+
+        when:
+        mapping.id(column: 'ignored')
+        mapping.id { column = 'ignored' }
+
+        then:
+        mapping.identity instanceof HibernateCompositeIdentity
+    }
+
+    void "version(String) sets version column name"() {
+        given:
+        Mapping mapping = new Mapping()
+
+        when:
+        mapping.version('ver_col_str')
+
+        then:
+        mapping.columns['version'].column == 'ver_col_str'
+    }
+
+    void "property(Closure) and property(Map) handle global constraints"() {
+        given:
+        Mapping mapping = new Mapping()
+        mapping.columns['*'] = new PropertyConfig(batchSize: 10)
+
+        when:
+        def pc1 = mapping.property { ignoreNotFound = true }
+        def pc2 = mapping.property(insertable: false)
+
+        then:
+        pc1.batchSize == 10
+        pc1.ignoreNotFound == true
+        pc2.batchSize == 10
+        pc2.insertable == false
+    }
+
+    void "propertyMissing and methodMissing handle PropertyConfig and Map"() {
+        given:
+        Mapping mapping = new Mapping()
+        def pc = new PropertyConfig().column('pc_col')
+
+        when: "propertyMissing with PropertyConfig"
+        mapping.prop1 = pc
+
+        then:
+        mapping.columns['prop1'].is(pc)
+
+        when: "methodMissing with PropertyConfig"
+        mapping.prop2(pc)
+
+        then:
+        mapping.columns['prop2'].is(pc)
+
+        when: "propertyMissing with non-Closure/non-PC throws"
+        mapping.prop3 = 42
+
+        then:
+        thrown(MissingPropertyException)
+    }
 }
 
 // --- Test Domain Classes ---

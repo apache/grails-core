@@ -77,7 +77,6 @@ class HibernateDirtyCheckingSpec extends Specification {
 
         when: 'the name is changed'
         person.address.street = "New Town"
-        person.markDirty('address')
 
         then:
         person.address.hasChanged()

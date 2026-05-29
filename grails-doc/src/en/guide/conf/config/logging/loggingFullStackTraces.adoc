@@ -1,0 +1,212 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+When a request-handling exception reaches `GrailsExceptionResolver`, Grails emits a single log record to the
+`org.grails.web.errors.GrailsExceptionResolver` logger at `ERROR` level. That record contains the HTTP method and
+request URI alongside a _filtered_ stack trace — framework internals such as `java.lang.reflect`, `jakarta.servlet`,
+`org.codehaus.groovy.runtime`, and similar dispatch/plumbing frames are trimmed out so that application code is the
+first thing visible on the trace.
+
+For most operational use the filtered trace is what you want: it surfaces the application frames that actually matter
+and keeps the log readable. For cases that need the untrimmed trace — routing the raw frames to a separate audit
+file, correlating with an APM tool, or debugging dispatcher internals — Grails exposes an opt-in:
+
+[source, yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    exceptionresolver:
+        logFullStackTrace: true
+----
+
+The setting defaults to `false`.
+
+When enabled, Grails emits an additional log record to a dedicated logger named `StackTrace`, containing the
+_unfiltered_ stack trace as it was captured at throw time. This record is written _before_ the filter step runs,
+so no frames are lost. Each request-handling exception therefore produces two log records:
+
+* A `StackTrace` logger record with the full, unfiltered trace (header `Full Stack Trace:`).
+* A `GrailsExceptionResolver` logger record with the filtered trace and the request-context headline
+(`<ExceptionType> occurred when processing request: [<METHOD>] <uri>`).
+
+The two records carry different trace content — that is the value of the opt-in. The `StackTrace` record includes
+every reflection, dispatch, and servlet frame; the `GrailsExceptionResolver` record shows only application code.
+
+==== Routing the StackTrace Logger To a Separate Appender
+
+Enabling `logFullStackTrace` alone will cause the unfiltered trace to appear on whatever appender the root logger
+is configured with — typically the console — in addition to the filtered trace from the resolver logger. If that is
+not what you want, pair the opt-in with a Logback configuration that routes the `StackTrace` logger to its own
+appender and disables additivity so it does not bubble up to the root:
+
+[source, xml]
+.grails-app/conf/logback.xml
+----
+<appender name="STACK_FILE" class="ch.qos.logback.core.FileAppender">
+    <file>logs/stacktraces.log</file>
+    <encoder>
+        <pattern>%date %msg%n%ex%n</pattern>
+    </encoder>
+</appender>
+
+<logger name="StackTrace" level="ERROR" additivity="false">
+    <appender-ref ref="STACK_FILE"/>
+</logger>
+----
+
+With this configuration the unfiltered trace is written only to `logs/stacktraces.log`, which you can rotate and
+retain independently. The console continues to show the concise, filtered resolver record as before.
+
+==== Suppressing the StackTrace Logger
+
+Setting the `StackTrace` logger level to `OFF` in Logback makes the opt-in a no-op, regardless of the
+`logFullStackTrace` property value:
+
+[source, xml]
+.grails-app/conf/logback.xml
+----
+<logger name="StackTrace" level="OFF"/>
+----
+
+This is useful if the property is enabled in a shared `application.yml` but a particular environment needs to
+silence the extra record.
+
+==== Side-Effect Emission From the Filterer
+
+In addition to the resolver-driven emission described above, `DefaultStackTraceFilterer.filter(Throwable)` emits
+the unfiltered stack trace to the `StackTrace` logger as a side effect _before_ trimming the trace in place.
+This preserves the pre-7.1 behaviour where any caller of the filterer — `GrailsExceptionResolver`,
+`GroovyPageView.deepSanitize`, `GrailsUtil.sanitizeRootCause`, or custom plugin code — produced a `StackTrace`
+log record. It means non-resolver code paths (for example, a scheduled job that calls
+`GrailsUtil.sanitizeRootCause(ex)` before logging via its own logger) continue to populate the `StackTrace`
+appender without an explicit emission call.
+
+The behaviour is enabled by default. To disable the side-effect emission and rely solely on
+`logFullStackTrace` for resolver-driven output, set:
+
+[source, yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    exceptionresolver:
+        logFullStackTraceOnFilter: false
+----
+
+When the side-effect emission is enabled and `logFullStackTrace` is also enabled, a request exception produces
+both — one resolver-driven record (top-level exception with the full cause chain) and one record per throwable
+visited by the recursive filter walk. This matches pre-7.1 multiplicity. Pick the combination that suits your
+log-routing setup:
+
+[cols="1,1,3"]
+|===
+|`logFullStackTrace` |`logFullStackTraceOnFilter` |Behaviour for a request exception with N causes
+
+|`false` (default)
+|`true` (default)
+|N `StackTrace` records (one per throwable in the chain) + 1 resolver record. Matches pre-7.1 (minus a former
+duplicate "condensed" record).
+
+|`true`
+|`false`
+|1 `StackTrace` record (top-level with full chain) + 1 resolver record. Cleanest output; recommended for new
+deployments that don't depend on per-cause emission.
+
+|`true`
+|`true`
+|N+1 `StackTrace` records + 1 resolver record. Highest fidelity, most verbose.
+
+|`false`
+|`false`
+|1 resolver record only. Silent on `StackTrace`.
+|===
+
+==== Including Per-Request Context in the Exception Log
+
+The resolver can append a small parenthesised clause of per-request context — the current user and the remote
+client address — to the exception headline:
+
+----
+RuntimeException occurred when processing request: [GET] /admin/users/42 (ip: 198.51.100.42, user: alice)
+Stacktrace follows:
+----
+
+When both pieces of context apply they share a single clause (`(ip: …, user: …)`); when only one applies the
+clause collapses to that one entry. When neither applies, the headline is unchanged.
+
+===== Current User
+
+When the application has registered an `AuditorAware` bean (see the GORM audit timestamps section), the resolver
+calls `getCurrentAuditor()` on that bean and includes ` user: <value>` in the clause, reusing the same auditor
+resolution that populates `@CreatedBy` and `@LastModifiedBy` fields. This avoids registering a second "current
+user" bean purely for logging.
+
+The appended value is the `toString()` of whatever the `AuditorAware` implementation returns — typically a
+username string or a numeric id, depending on the type parameter chosen for the bean. If no `AuditorAware` bean
+is registered, or if it returns `Optional.empty()` for the current request (for example, an unauthenticated
+request), no `user:` entry is emitted.
+
+Disabled by default to avoid writing user identifiers (which may be PII — usernames, email addresses, numeric
+ids) into exception logs without an explicit decision. To opt in, set:
+
+[source, yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    exceptionresolver:
+        logAuditor: true
+----
+
+===== Remote Client Address
+
+The resolver can also include the remote client address (`HttpServletRequest.getRemoteAddr()`) as ` ip: <value>`
+in the clause. Disabled by default to avoid writing client IPs into exception logs without an explicit decision.
+To opt in, set:
+
+[source, yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    exceptionresolver:
+        logRemoteAddr: true
+----
+
+When the application is behind a reverse proxy, `getRemoteAddr()` returns the proxy's address, not the real
+client's. To see the real client IP in the log, configure the servlet container to honour forwarded headers —
+for Spring Boot embedded Tomcat, set `server.forward-headers-strategy: native` in `application.yml`:
+
+[source, yaml]
+.grails-app/conf/application.yml
+----
+server:
+    forward-headers-strategy: native
+----
+
+With that in place, Tomcat's `RemoteIpValve` populates `remoteAddr` from the `X-Forwarded-For` header before
+the resolver reads it. The valve only honours the header when the immediate peer is in its trusted-proxy list
+(loopback and RFC 1918 ranges by default; configurable via `server.tomcat.remoteip.internal-proxies`), so
+spoofed headers on direct requests are ignored.
+
+====== Custom Address Resolution
+
+Applications that need a different strategy — for example, reading `X-Forwarded-For` without container-level
+forwarded-header handling — can override `GrailsExceptionResolver.resolveRemoteAddr(HttpServletRequest)` in a
+subclass and register that subclass as the active resolver bean. The override receives the raw request and
+returns a string that is appended verbatim as `ip: <value>`; returning `null` or an empty string omits the
+entry. Be aware that any strategy which trusts request headers without a proxy-trust check is open to header
+spoofing by clients that connect directly to the server.

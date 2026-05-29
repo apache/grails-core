@@ -19,11 +19,14 @@
 
 plugins {
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.gradle.grails-plugin'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-code-analysis'
+    id 'org.apache.grails.gradle.grails-jacoco'
 }
 
 version = projectVersion
@@ -35,12 +38,18 @@ ext {
     pomDescription = 'The Database Migration plugin helps you manage database changes, via Liquibase, while developing Grails applications for Hibernate 7'
 }
 
+configurations {
+    enversRuntime.extendsFrom(testImplementation)
+}
+
 dependencies {
     // TODO: Clarify and clean up dependencies
     implementation platform(project(':grails-hibernate7-bom'))
 
     implementation("org.liquibase:liquibase-core")
     implementation("org.hibernate.models:hibernate-models")
+    implementation project(':grails-data-hibernate7-dbmigration-core')
+    testImplementation testFixtures(project(':grails-data-hibernate7-dbmigration-core'))
     implementation project(':grails-data-hibernate7')
     implementation project(':grails-data-hibernate7-spring-orm')
     compileOnly("org.hibernate.orm:hibernate-envers")
@@ -91,28 +100,23 @@ dependencies {
     testImplementation('org.liquibase:liquibase-test-harness') {
         exclude group: 'org.liquibase', module: 'liquibase-commercial'
     }
-    testImplementation("org.hibernate.orm:hibernate-envers")
+    enversRuntime("org.hibernate.orm:hibernate-envers")
+
+    // Liquibase uses JUL for logging -> redirect it to SLF4J to reliably capture its output
+    testRuntimeOnly 'org.slf4j:jul-to-slf4j'
+}
+
+tasks.named('test', Test) {
+    systemProperty("java.util.logging.config.file", "src/test/resources/logging.properties")
+    classpath += configurations.enversRuntime
 }
 
 tasks.named('jar', Jar) {
     exclude('testapp/**/**')
 }
 
-tasks.withType(Test).configureEach {
-    develocity.testRetry {
-        if (isCiBuild) {
-            maxRetries = 2
-            maxFailures = 20
-            failOnPassedAfterRetry = true
-            filter {
-                excludeClasses.add('*.GroovyChangeLogSpec')
-            }
-        }
-    }
-}
 apply {
     from rootProject.layout.projectDirectory.file('gradle/hibernate7-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
 }
-

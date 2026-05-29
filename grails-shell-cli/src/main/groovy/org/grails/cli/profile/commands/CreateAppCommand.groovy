@@ -101,7 +101,7 @@ class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepos
     }
 
     @Override
-    protected int complete(CommandLine commandLine, CommandDescription desc, List<CharSequence> candidates, int cursor) {
+    protected void complete(CommandLine commandLine, CommandDescription desc, List<org.jline.reader.Candidate> candidates) {
         def lastOption = commandLine.lastOption()
         if (lastOption != null) {
             // if value == true it means no profile is specified and only the flag is present
@@ -109,47 +109,43 @@ class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepos
             if (lastOption.key == PROFILE_FLAG) {
                 def val = lastOption.value
                 if (val == true) {
-                    candidates.addAll(profileNames)
-                    return cursor
+                    profileNames.each { candidates.add(new org.jline.reader.Candidate(it)) }
+                    return
                 } else if (!profileNames.contains(val)) {
                     def valStr = val.toString()
 
                     def candidateProfiles = profileNames.findAll { String pn ->
                         pn.startsWith(valStr)
-                    }.collect() { String pn ->
-                        "${pn.substring(valStr.size())} ".toString()
                     }
-                    candidates.addAll(candidateProfiles)
-                    return cursor
+                    candidateProfiles.each { candidates.add(new org.jline.reader.Candidate(it)) }
+                    return
                 }
             } else if (lastOption.key == FEATURES_FLAG) {
                 def val = lastOption.value
                 def profile = profileRepository.getProfile(commandLine.hasOption(PROFILE_FLAG) ? commandLine.optionValue(PROFILE_FLAG).toString() : getDefaultProfile())
                 def featureNames = profile.features.collect() { Feature f -> f.name }
                 if (val == true) {
-                    candidates.addAll(featureNames)
-                    return cursor
+                    featureNames.each { candidates.add(new org.jline.reader.Candidate(it)) }
+                    return
                 } else if (!profileNames.contains(val)) {
                     def valStr = val.toString()
                     if (valStr.endsWith(',')) {
                         def specified = valStr.split(',')
-                        candidates.addAll(featureNames.findAll { String f ->
+                        featureNames.findAll { String f ->
                             !specified.contains(f)
-                        })
-                        return cursor
+                        }.each { candidates.add(new org.jline.reader.Candidate(it)) }
+                        return
                     }
 
                     def candidatesFeatures = featureNames.findAll { String pn ->
                         pn.startsWith(valStr)
-                    }.collect() { String pn ->
-                        "${pn.substring(valStr.size())} ".toString()
                     }
-                    candidates.addAll(candidatesFeatures)
-                    return cursor
+                    candidatesFeatures.each { candidates.add(new org.jline.reader.Candidate(it)) }
+                    return
                 }
             }
         }
-        return super.complete(commandLine, desc, candidates, cursor)
+        super.complete(commandLine, desc, candidates)
     }
 
     protected File getDestinationDirectory(File srcFile) {

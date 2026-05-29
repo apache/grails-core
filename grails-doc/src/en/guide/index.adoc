@@ -165,6 +165,11 @@ include::conf/config/logging/loggerName.adoc[]
 
 include::conf/config/logging/maskingRequestParametersFromStacktraceLogs.adoc[]
 
+[[loggingFullStackTraces]]
+===== Logging Full Stack Traces
+
+include::conf/config/logging/loggingFullStackTraces.adoc[]
+
 [[externalLoggingConfiguration]]
 ===== External Logging Configuration
 
@@ -1764,11 +1769,6 @@ include::ref/Database Mapping/table.adoc[]
 ==== type
 
 include::ref/Database Mapping/type.adoc[]
-
-[[ref-database-mapping-updatable]]
-==== updatable
-
-include::ref/Database Mapping/updatable.adoc[]
 
 [[ref-database-mapping-updatable]]
 ==== updatable

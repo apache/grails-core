@@ -16,8 +16,7 @@
  */
 
 plugins {
-    id 'org.apache.grails.gradle.test-aggregation'
-    id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-violation-aggregation'
 }
 
 import java.time.Instant
@@ -30,13 +29,6 @@ import javax.inject.Inject
 import org.apache.tools.ant.taskdefs.condition.Os
 
 ext {
-    if (file('local.properties').exists()) {
-        def props = new Properties()
-        file('local.properties').withInputStream { props.load(it) }
-        props.each { key, value ->
-            project.extensions.extraProperties.set(key as String, value)
-        }
-    }
     isReproducibleBuild = System.getenv("SOURCE_DATE_EPOCH") != null
     buildInstant = java.util.Optional.ofNullable(System.getenv("SOURCE_DATE_EPOCH"))
             .filter(s -> !s.isEmpty())
@@ -48,6 +40,10 @@ ext {
             DateTimeFormatter.ISO_DATE.format(LocalDate.ofInstant(buildInstant as Instant, ZoneOffset.UTC))
     buildDate = (buildInstant as Instant).atZone(ZoneOffset.UTC) // for reproducible builds
     isCiBuild = System.getenv().get('CI') as Boolean
+    // Set DO_NOT_CACHE_TESTS=1 to force test tasks to re-run on every invocation without
+    // needing --rerun-tasks. Useful for repeatedly running the same test command while
+    // chasing flaky tests across runs.
+    doNotCacheTests = System.getenv('DO_NOT_CACHE_TESTS')?.toBoolean()
     configuredTestParallel = findProperty('maxTestParallel') as Integer ?: (isCiBuild ? 4 : Runtime.runtime.availableProcessors() * 3 / 4 as int ?: 1)
     excludeUnusedTransDeps = findProperty('excludeUnusedTransDeps')
 

@@ -83,8 +83,7 @@ class PagedResultListSpec extends HibernateGormDatastoreSpec {
         then:
         results instanceof HibernatePagedResultList
         results.size() == 2
-        // results.totalCount == 2 // Hibernate 7 fallback HQL count returns total count of table
-        results.totalCount == 3
+        results.totalCount == 2
         results.max == 2
         results.offset == 0
         results[0].title == "The Shining"

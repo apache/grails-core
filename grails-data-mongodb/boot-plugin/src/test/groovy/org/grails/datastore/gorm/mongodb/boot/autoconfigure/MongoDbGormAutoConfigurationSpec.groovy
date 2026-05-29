@@ -53,12 +53,10 @@ class MongoDbGormAutoConfigurationSpec extends AutoStartedMongoSpec {
     }
 
     void setup() {
-
         AutoConfigurationPackages.register(context, "org.grails.datastore.gorm.mongodb.boot.autoconfigure")
         this.context.register(TestConfiguration, MongoAutoConfiguration.class,
                               PropertyPlaceholderAutoConfiguration.class);
     }
-
 
     void 'Test that GORM is correctly configured'() {
         when:"The context is refreshed"

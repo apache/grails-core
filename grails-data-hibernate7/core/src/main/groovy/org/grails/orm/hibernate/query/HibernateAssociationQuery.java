@@ -20,11 +20,11 @@ package org.grails.orm.hibernate.query;
 
 import java.util.List;
 
-import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.query.AssociationQuery;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.orm.hibernate.HibernateSession;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 
 /**
  * A thin wrapper over {@link HibernateQuery} that collects criteria for a single association scope.
@@ -53,7 +53,7 @@ public class HibernateAssociationQuery extends AssociationQuery {
 
     public HibernateAssociationQuery(
             HibernateSession session,
-            PersistentEntity associatedEntity,
+            GrailsHibernatePersistentEntity associatedEntity,
             Association association,
             String associationPath,
             String alias) {
@@ -66,6 +66,11 @@ public class HibernateAssociationQuery extends AssociationQuery {
     /** Returns the criteria collected inside the association closure. */
     public List<Query.Criterion> getAssociationCriteria() {
         return innerQuery.getAllCriteria();
+    }
+
+    @Override
+    public GrailsHibernatePersistentEntity getEntity() {
+        return (GrailsHibernatePersistentEntity) super.getEntity();
     }
 
     @Override

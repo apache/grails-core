@@ -27,6 +27,8 @@ plugins {
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-code-analysis'
+    id 'org.apache.grails.gradle.grails-jacoco'
 }
 
 version = projectVersion
@@ -52,7 +54,7 @@ dependencies {
 
     runtimeOnly project(':grails-i18n')
 
-    testRuntimeOnly 'jline:jline'
+    testRuntimeOnly 'org.jline:jline'
     testRuntimeOnly 'org.fusesource.jansi:jansi'
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'

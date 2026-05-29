@@ -18,13 +18,16 @@
  */
 package org.grails.datastore.gorm
 
-import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.Person
 
 class DistinctProjectionSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
-    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
+    void setupSpec() {
+        manager.addAllDomainClasses([Person])
+    }
+
     def "Test that using the distinct projection returns distinct results"() {
         given: "Some people with the same last names"
         new Person(firstName: "Homer", lastName: "Simpson").save()

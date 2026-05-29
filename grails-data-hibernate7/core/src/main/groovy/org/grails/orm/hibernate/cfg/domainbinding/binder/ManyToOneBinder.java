@@ -18,6 +18,8 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import org.hibernate.boot.spi.MetadataBuildingContext;
@@ -85,7 +87,7 @@ public class ManyToOneBinder {
         Table collectionTable = collection.getCollectionTable();
         GrailsHibernatePersistentEntity refDomainClass = otherSide.getHibernateOwner();
         Optional<HibernateCompositeIdentity> compositeId = refDomainClass.getHibernateCompositeIdentity();
-        if (compositeId.isEmpty() && otherSide.isCircular()) {
+        if (otherSide.isCircular()) {
             prepareCircularManyToMany(otherSide);
         }
         ManyToOne manyToOne = doBind(otherSide, refDomainClass, collectionTable, path);
@@ -121,9 +123,30 @@ public class ManyToOneBinder {
         }
         if (!property.getHibernateMappedForm().hasJoinKeyMapping()) {
             JoinTable jt = new JoinTable();
-            ColumnConfig columnConfig = new ColumnConfig();
-            columnConfig.setName(namingStrategy.resolveColumnName(property.getName()) + FOREIGN_KEY_SUFFIX);
-            jt.setKey(columnConfig);
+            Optional<HibernateCompositeIdentity> compositeId = property.getHibernateOwner().getHibernateCompositeIdentity();
+            List<ColumnConfig> keyColumns = new ArrayList<>();
+            if (compositeId.isPresent() && compositeId.get().getPropertyNames() != null && compositeId.get().getPropertyNames().length > 0) {
+                List<ColumnConfig> joinKeys = property.getHibernateMappedForm().getJoinTable() != null ? property.getHibernateMappedForm().getJoinTable().getKeys() : null;
+                String[] propNames = compositeId.get().getPropertyNames();
+                if (joinKeys != null && joinKeys.size() == propNames.length) {
+                    for (int i = 0; i < propNames.length; i++) {
+                        ColumnConfig cc = new ColumnConfig();
+                        cc.setName(joinKeys.get(i).getName());
+                        keyColumns.add(cc);
+                    }
+                } else {
+                    for (String propName : propNames) {
+                        ColumnConfig cc = new ColumnConfig();
+                        cc.setName(namingStrategy.resolveColumnName(propName) + FOREIGN_KEY_SUFFIX);
+                        keyColumns.add(cc);
+                    }
+                }
+            } else {
+                ColumnConfig cc = new ColumnConfig();
+                cc.setName(namingStrategy.resolveColumnName(property.getName()) + FOREIGN_KEY_SUFFIX);
+                keyColumns.add(cc);
+            }
+            jt.setKeys(keyColumns);
             property.getHibernateMappedForm().setJoinTable(jt);
         }
     }

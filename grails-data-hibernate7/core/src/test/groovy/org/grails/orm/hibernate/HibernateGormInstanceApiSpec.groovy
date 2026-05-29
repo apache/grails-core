@@ -21,13 +21,36 @@ package org.grails.orm.hibernate
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.HibernateEntity
+import grails.gorm.transactions.Rollback
+
+import org.hibernate.FlushMode
+import org.grails.orm.hibernate.query.SelectHqlQuery
 
 class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([PersonInstanceApi, BookInstanceApi, ConstrainedPerson])
+        manager.addAllDomainClasses([PersonInstanceApi, BookInstanceApi, ConstrainedPerson, ConstrainedBook, HGIAuthor, HGIBook])
     }
 
+    void "Test that HibernateGormInstanceApi uses the shared template from the datastore"() {
+        given:
+        def enhancer = manager.hibernateDatastore.gormEnhancer
+        def api = enhancer.getInstanceApi(PersonInstanceApi)
+
+        expect:
+        api.hibernateTemplate.is(manager.hibernateDatastore.getHibernateTemplate())
+    }
+
+    void "Test that HibernateGormInstanceApi uses the shared InstanceApiHelper from the datastore"() {
+        given:
+        def enhancer = manager.hibernateDatastore.gormEnhancer
+        def api = enhancer.getInstanceApi(PersonInstanceApi)
+
+        expect:
+        api.instanceApiHelper.is(manager.hibernateDatastore.getInstanceApiHelper())
+    }
+
+    @Rollback
     def "test save and get"() {
         given:
         def person = new PersonInstanceApi(name: 'Bob', age: 40)
@@ -47,6 +70,7 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
         found.age == 40
     }
 
+    @Rollback
     def "test delete"() {
         given:
         def person = new PersonInstanceApi(name: 'Bob', age: 40)
@@ -63,6 +87,32 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
         PersonInstanceApi.get(id) == null
     }
 
+    @Rollback
+    def "test delete without flush"() {
+        given:
+        def person = new PersonInstanceApi(name: 'Bob', age: 40).save(flush: true)
+        def id = person.id
+
+        when:
+        person.delete()
+
+        then: "Entity is removed from session but still in DB"
+        PersonInstanceApi.get(id) == null
+        getSessionFactory().getCurrentSession().createNativeQuery("select count(*) from person_instance_api where id = :id", Long)
+               .setParameter("id", id)
+               .setHibernateFlushMode(FlushMode.MANUAL)
+               .uniqueResult() == 1L
+
+        when:
+        session.flush()
+
+        then:
+        getSessionFactory().getCurrentSession().createNativeQuery("select count(*) from person_instance_api where id = :id", Long)
+               .setParameter("id", id)
+               .uniqueResult() == 0L
+    }
+
+    @Rollback
     def "test isDirty"() {
         given:
         def person = new PersonInstanceApi(name: 'Bob', age: 40)
@@ -78,6 +128,7 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
         person.getDirtyPropertyNames() == ['name']
     }
 
+    @Rollback
     def "test getPersistentValue"() {
         given:
         def person = new PersonInstanceApi(name: 'Bob', age: 40)
@@ -90,6 +141,7 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
         person.getPersistentValue('name') == 'Bob'
     }
 
+    @Rollback
     def "test discard"() {
         given:
         def person = new PersonInstanceApi(name: 'Bob', age: 40)
@@ -109,6 +161,7 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
         found.name == 'Bob'
     }
 
+    @Rollback
     def "test attach and merge"() {
         given:
         def person = new PersonInstanceApi(name: 'Bob', age: 40)
@@ -133,6 +186,7 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
         found.name == 'Fred'
     }
 
+    @Rollback
     def "merge on new instance assigns id and sets version to 0"() {
         given:
         def person = new PersonInstanceApi(name: 'Alice', age: 30)
@@ -146,6 +200,7 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
         merged.version == 0
     }
 
+    @Rollback
     def "merge on detached instance keeps id and increments version"() {
         given:
         def person = new PersonInstanceApi(name: 'Alice', age: 30)
@@ -164,6 +219,7 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
         PersonInstanceApi.get(originalId).name == 'Alice Updated'
     }
 
+    @Rollback
     def "test insert"() {
         given:
         def person = new PersonInstanceApi(name: 'Joe', age: 25)
@@ -176,6 +232,7 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
         PersonInstanceApi.get(person.id).name == 'Joe'
     }
 
+    @Rollback
     def "test refresh"() {
         given:
         def person = new PersonInstanceApi(name: 'Bob', age: 40)
@@ -190,10 +247,7 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
         person.name == 'Bob'
     }
 
-    // -------------------------------------------------------------------------
-    // lock
-    // -------------------------------------------------------------------------
-
+    @Rollback
     def "lock acquires a pessimistic write lock on the entity"() {
         given:
         Long savedId = PersonInstanceApi.withTransaction {
@@ -210,10 +264,7 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
         noExceptionThrown()
     }
 
-    // -------------------------------------------------------------------------
-    // save — shouldValidate/deepValidate/shouldFail branches
-    // -------------------------------------------------------------------------
-
+    @Rollback
     def "save with validate:false skips validation"() {
         given:
         def person = new ConstrainedPerson(name: '')  // blank name violates constraint
@@ -228,6 +279,7 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
         result.id != null
     }
 
+    @Rollback
     def "save with deepValidate:false still runs validator without deep cascade"() {
         given:
         def person = new ConstrainedPerson(name: 'Alice')
@@ -242,6 +294,7 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
         result.id != null
     }
 
+    @Rollback
     def "save with invalid entity returns null and sets errors when failOnError is false"() {
         given:
         def person = new ConstrainedPerson(name: '')  // blank violates constraint
@@ -257,6 +310,7 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
         person.errors.fieldErrors.any { it.field == 'name' }
     }
 
+    @Rollback
     def "save with invalid entity and failOnError:true throws an exception"() {
         given:
         def person = new ConstrainedPerson(name: '')
@@ -270,10 +324,7 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
         thrown(Exception)
     }
 
-    // -------------------------------------------------------------------------
-    // shouldFlush — autoFlush=false (no flush arg)
-    // -------------------------------------------------------------------------
-
+    @Rollback
     def "save without flush argument uses autoFlush setting"() {
         given: "autoFlush is false by default in the test datastore"
         def person = new PersonInstanceApi(name: 'AutoFlushTest', age: 55)
@@ -289,20 +340,17 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
         PersonInstanceApi.get(person.id)?.name == 'AutoFlushTest'
     }
 
-    // -------------------------------------------------------------------------
-    // isDirty edge cases
-    // -------------------------------------------------------------------------
-
+    @Rollback
     def "isDirty returns false for a non-attached (transient) instance"() {
         given:
         def person = new PersonInstanceApi(name: 'Transient', age: 10)
-        // not saved — no EntityEntry in the session
 
         expect:
         !person.isDirty()
         !person.isDirty('name')
     }
 
+    @Rollback
     def "getDirtyPropertyNames returns empty list for a non-attached instance"() {
         given:
         def person = new PersonInstanceApi(name: 'Ghost', age: 99)
@@ -311,10 +359,7 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
         person.getDirtyPropertyNames() == []
     }
 
-    // -------------------------------------------------------------------------
-    // getPersistentValue edge cases
-    // -------------------------------------------------------------------------
-
+    @Rollback
     def "getPersistentValue returns null for an unknown field name"() {
         given:
         def person = new PersonInstanceApi(name: 'Bob', age: 40)
@@ -324,90 +369,194 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
         person.getPersistentValue('nonExistentField') == null
     }
 
+    @Rollback
     def "getPersistentValue returns null for a non-attached instance"() {
         given:
         def person = new PersonInstanceApi(name: 'Detached', age: 5)
-        // not saved
 
         expect:
         person.getPersistentValue('name') == null
     }
 
-    // -------------------------------------------------------------------------
-    // autoRetrieveAssociations — sub-branches via BookInstanceApi
-    // -------------------------------------------------------------------------
-
-    def "save book with null author skips association retrieval (null propValue branch)"() {
+    @Rollback
+    def "save book with null author skips association retrieval"() {
         given:
-        def book = new BookInstanceApi(title: 'Orphan Book')  // no author
+        def book = new HGIBook(title: 'Orphan Book')
 
         when:
-        def result = BookInstanceApi.withTransaction {
+        HGIBook.withTransaction {
             book.save(flush: true, validate: false)
         }
 
         then:
-        result != null
-        result.id != null
+        book.id != null
     }
 
-    def "save book with already-managed author skips re-retrieval (contains branch)"() {
+    @Rollback
+    def "save book with already-managed author skips re-retrieval"() {
         given:
-        def author = PersonInstanceApi.withTransaction {
-            new PersonInstanceApi(name: 'Managed Author', age: 35).save(flush: true, failOnError: true)
+        def author = HGIAuthor.withTransaction {
+            new HGIAuthor(name: 'Managed Author').save(flush: true, failOnError: true)
         }
-        // author is still in session after save — template.contains returns true
-        def book = new BookInstanceApi(title: 'Managed Book', author: author)
+        def book = new HGIBook(title: 'Managed Book', author: author)
 
         when:
-        def result = BookInstanceApi.withTransaction {
+        HGIBook.withTransaction {
             book.save(flush: true, validate: false)
         }
 
         then:
-        result != null
-        result.id != null
+        book.id != null
     }
 
-    def "save book with detached author triggers association re-retrieval (full fetch path)"() {
+    @Rollback
+    def "save book with detached author triggers association re-retrieval"() {
         given:
-        def author = PersonInstanceApi.withTransaction {
-            new PersonInstanceApi(name: 'Detached Author', age: 42).save(flush: true, failOnError: true)
+        def author = new HGIAuthor(name: 'Detached Author')
+        HGIAuthor.withTransaction {
+            author.save(flush: true, failOnError: true)
         }
-        // Evict the author via the hibernate template so it is no longer in the session
-        manager.hibernateDatastore.hibernateTemplate.evict(author)
+        session.clear()
 
-        def book = new BookInstanceApi(title: 'Fetched Book', author: author)
+        def book = new HGIBook(title: 'Fetched Book', author: author)
 
         when:
-        def result = BookInstanceApi.withTransaction {
+        HGIBook.withTransaction {
             book.save(flush: true, validate: false)
         }
 
         then:
-        result != null
-        result.id != null
-        result.author != null
-        result.author.name == 'Detached Author'
+        book != null
+        book.id != null
+        book.author != null
+        book.author.id == author.id
+    }
+
+    @Rollback
+    def "handleValidationError sets association to read-only"() {
+        given:
+        def author = new PersonInstanceApi(name: 'Valid Author', age: 30)
+        def book = new ConstrainedBook(title: '', author: author)
+
+        when:
+        def result = ConstrainedBook.withTransaction {
+            book.save(flush: true)
+        }
+
+        then:
+        result == null
+        book.hasErrors()
+    }
+
+    @Rollback
+    def "delete resets flush mode on exception"() {
+        given:
+        def person = new PersonInstanceApi(name: 'Bob', age: 40)
+        person.save(flush: true)
+
+        def api = new HibernateGormInstanceApi<PersonInstanceApi>(PersonInstanceApi, manager.hibernateDatastore, Thread.currentThread().contextClassLoader)
+        def mockTemplate = Mock(IHibernateTemplate)
+        api.hibernateTemplate = mockTemplate
+        int callCount = 0
+
+        when:
+        api.delete(person, [flush: true])
+
+        then:
+        (1.._) * mockTemplate.execute(_) >> { args ->
+            callCount++
+            if (callCount == 1) {
+                throw new org.springframework.dao.InvalidDataAccessApiUsageException("Simulated exception")
+            }
+        }
+        thrown(org.springframework.dao.InvalidDataAccessApiUsageException)
+    }
+
+    @Rollback
+    def "reconcileCollections replaces stale PersistentCollection"() {
+        given:
+        def author = new HGIAuthor(name: 'Author').save(flush: true)
+        new HGIBook(title: 'Book', author: author).save(flush: true)
+        session.clear()
+        
+        def loadedAuthor = HGIAuthor.get(author.id)
+        assert loadedAuthor.books.size() == 1
+        session.clear()
+        
+        when: "merging the detached entity"
+        HGIAuthor.withTransaction {
+            loadedAuthor.save(flush: true)
+        }
+        
+        then:
+        noExceptionThrown()
+    }
+
+    @Rollback
+    def "test prepareHqlQuery and executeUpdate via HibernateGormStaticApi"() {
+        given:
+        def staticApi = new HibernateGormStaticApi<>(PersonInstanceApi, datastore, [], Thread.currentThread().contextClassLoader, transactionManager)
+        
+        when: "Calling prepareHqlQuery (protected, accessible in Groovy test)"
+        def query = staticApi.prepareHqlQuery("from PersonInstanceApi where name = 'Bob'", false, false, [:], [], [:])
+        
+        then:
+        query != null
+        query instanceof SelectHqlQuery
+        
+        when: "Using doListInternal (protected)"
+        def results = staticApi.doListInternal("from PersonInstanceApi where name = 'Bob'", [:], [], [:], false)
+        
+        then:
+        results != null
+        
+        when: "Executing an update through the static API"
+        int updated = staticApi.executeUpdate("delete from PersonInstanceApi where name = 'NonExistent'", [:], [:])
+        
+        then:
+        updated == 0
     }
 }
 
 @Entity
-class PersonInstanceApi implements HibernateEntity<PersonInstanceApi> {
+class ConstrainedBook {
+    String title
+    static belongsTo = [author: PersonInstanceApi]
+    static constraints = {
+        title blank: false
+    }
+}
+
+@Entity
+class PersonInstanceApi {
     String name
     Integer age
 }
 
 @Entity
-class BookInstanceApi implements HibernateEntity<BookInstanceApi> {
+class BookInstanceApi {
     String title
+    PersonInstanceApi author
     static belongsTo = [author: PersonInstanceApi]
 }
 
 @Entity
-class ConstrainedPerson implements HibernateEntity<ConstrainedPerson> {
+class ConstrainedPerson {
     String name
     static constraints = {
         name blank: false, maxSize: 100
     }
+}
+
+@Entity
+class HGIAuthor implements HibernateEntity<HGIAuthor> {
+    String name
+    static hasMany = [books: HGIBook]
+}
+
+@Entity
+class HGIBook implements HibernateEntity<HGIBook> {
+    String title
+    HGIAuthor author
+    static belongsTo = [author: HGIAuthor]
 }

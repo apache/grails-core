@@ -44,7 +44,7 @@ public class GrailsSequenceStyleGenerator extends SequenceStyleGenerator {
         generatorProps.putIfAbsent(INCREMENT_PARAM, "50");
         generatorProps.putIfAbsent(OPT_PARAM, "pooled-lo");
 
-        super.configure(context, generatorProps);
+        this.configure(context, generatorProps);
 
         if (jdbcEnvironment != null) {
             var database = context.getDatabase();

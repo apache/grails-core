@@ -20,6 +20,7 @@
 package grails.gorm
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 
 import jakarta.persistence.criteria.JoinType
 
@@ -41,6 +42,7 @@ import org.grails.datastore.mapping.query.api.QueryableCriteria
  * @author Graeme Rocher
  * @since 1.0
  */
+@Slf4j
 @CompileStatic
 class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOperations<T>, QueryableCriteria<T>, Iterable<T> {
 

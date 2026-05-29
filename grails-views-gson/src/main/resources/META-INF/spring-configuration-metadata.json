@@ -1,0 +1,67 @@
+{
+    "groups": [
+        {
+            "name": "grails.views.json",
+            "description": "JSON Views"
+        }
+    ],
+    "properties": [
+        {
+            "name": "grails.views.json.mimeTypes",
+            "type": "java.util.List",
+            "description": "MIME types handled by JSON views.",
+            "defaultValue": [
+                "application/json",
+                "application/hal+json"
+            ]
+        },
+        {
+            "name": "grails.views.json.generator.escapeUnicode",
+            "type": "java.lang.Boolean",
+            "description": "Whether to escape Unicode characters in JSON output.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.views.json.generator.dateFormat",
+            "type": "java.lang.String",
+            "description": "The date format pattern for JSON serialization.",
+            "defaultValue": "yyyy-MM-dd'T'HH:mm:ss.SSSX"
+        },
+        {
+            "name": "grails.views.json.generator.timeZone",
+            "type": "java.lang.String",
+            "description": "The time zone for JSON date serialization.",
+            "defaultValue": "GMT"
+        },
+        {
+            "name": "grails.views.json.generator.locale",
+            "type": "java.lang.String",
+            "description": "The locale for JSON output formatting.",
+            "defaultValue": "en/US"
+        },
+        {
+            "name": "grails.views.json.compileStatic",
+            "type": "java.lang.Boolean",
+            "description": "Whether JSON views are statically compiled.",
+            "defaultValue": true
+        },
+        {
+            "name": "grails.views.json.encoding",
+            "type": "java.lang.String",
+            "description": "The character encoding for JSON views.",
+            "defaultValue": "UTF-8"
+        },
+        {
+            "name": "grails.views.json.prettyPrint",
+            "type": "java.lang.Boolean",
+            "description": "Whether to pretty-print JSON output with indentation.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.views.json.allowResourceExpansion",
+            "type": "java.lang.Boolean",
+            "description": "Whether to allow HAL resource expansion in JSON views.",
+            "defaultValue": true
+        }
+    ]
+}

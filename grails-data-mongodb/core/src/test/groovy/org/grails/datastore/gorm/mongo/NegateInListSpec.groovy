@@ -20,8 +20,7 @@ package org.grails.datastore.gorm.mongo
 
 import org.apache.grails.data.mongo.core.MongoDatastoreSpec
 
-import grails.gorm.tests.Person
-import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import grails.gorm.specs.Person
 
 class NegateInListSpec extends MongoDatastoreSpec {
 

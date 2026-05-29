@@ -28,7 +28,6 @@ version = '0.1'
 group = 'micronaut'
 
 apply plugin: 'org.apache.grails.gradle.grails-web'
-
 apply plugin: 'cloud.wondrify.asset-pipeline'
 
 // The grails-gsp Gradle plugin is not needed for running the functional tests.
@@ -37,22 +36,21 @@ apply plugin: 'cloud.wondrify.asset-pipeline'
 apply plugin: 'org.apache.grails.gradle.grails-gsp'
 
 dependencies {
-    implementation enforcedPlatform(project(':grails-bom'))
+    implementation enforcedPlatform(project(':grails-micronaut-bom'))
 
-    implementation "io.micronaut:micronaut-http-client:$micronautHttpClientVersion"
-    implementation "io.micronaut:micronaut-retry:$micronautHttpClientVersion"
-    implementation "io.micronaut.serde:micronaut-serde-jackson:$micronautSerdeJacksonVersion"
+    implementation 'io.micronaut:micronaut-http-client'
+    implementation 'io.micronaut:micronaut-retry'
+    implementation 'io.micronaut.serde:micronaut-serde-jackson'
     implementation 'org.apache.grails:grails-dependencies-starter-web'
     implementation 'org.apache.grails:grails-micronaut'
     implementation 'org.apache.grails:grails-scaffolding'
     implementation project(':grails-test-examples-plugins-micronaut-singleton')
 
-    annotationProcessor enforcedPlatform(project(':grails-bom'))
-    annotationProcessor platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion")
+    annotationProcessor enforcedPlatform(project(':grails-micronaut-bom'))
     annotationProcessor 'io.micronaut:micronaut-inject-java'
     annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
 
-    testAndDevelopmentOnly enforcedPlatform(project(':grails-bom'))
+    testAndDevelopmentOnly enforcedPlatform(project(':grails-micronaut-bom'))
     testAndDevelopmentOnly 'org.apache.grails:grails-dependencies-assets'
 
     runtimeOnly 'cloud.wondrify:asset-pipeline-grails'

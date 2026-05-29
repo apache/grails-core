@@ -170,4 +170,9 @@ class NamespaceNameExtractorSpec extends Specification {
         "the catalog identifier" | 'catalog'
     }
 
+    def "should be able to instantiate NamespaceNameExtractor"() {
+        expect:
+        new NamespaceNameExtractor() != null
+    }
+
 }

@@ -100,8 +100,7 @@ class PropertyConfig extends Property {
      *
      * @deprecated Use updatable instead
      */
-    @Deprecated
-    // Cheap to keep around for backwards compatibility
+    @Deprecated // Cheap to keep around for backwards compatibility
     boolean getUpdateable() {
         return updatable
     }
@@ -110,8 +109,7 @@ class PropertyConfig extends Property {
      * Whether or not this column is updatable by hibernate
      * @deprecated Use updatable instead
      */
-    @Deprecated
-    // Cheap to keep around for backwards compatibility
+    @Deprecated // Cheap to keep around for backwards compatibility
     void setUpdateable(boolean updateable) {
         this.updatable = updateable
     }
@@ -234,7 +232,11 @@ class PropertyConfig extends Property {
         DataBinder dataBinder = new DataBinder(joinTable)
         dataBinder.bind(new MutablePropertyValues(joinTableDef))
         if (joinTableDef.key) {
-            joinTable.key(joinTableDef.key.toString())
+            if (joinTableDef.key instanceof Collection || joinTableDef.key.getClass().isArray()) {
+                joinTable.keys(joinTableDef.key as List)
+            } else {
+                joinTable.key(joinTableDef.key.toString())
+            }
         }
         if (joinTableDef.column) {
             joinTable.column(joinTableDef.column.toString())
@@ -446,8 +448,7 @@ class PropertyConfig extends Property {
     }
 
     String toString() {
-        // TODO(Grails 8): updateable -> updatable
-        "property[type:$type, lazy:$lazy, columns:$columns, insertable:${insertable}, updateable:${updatable}]"
+        "property[type:$type, lazy:$lazy, columns:$columns, insertable:${insertable}, updatable:${updatable}]"
     }
 
     protected void checkHasSingleColumn() {
@@ -474,5 +475,9 @@ class PropertyConfig extends Property {
             newColumns.add(c.clone())
         }
         return pc
+    }
+
+    boolean hasJoinKeyMapping() {
+        joinTable?.keys
     }
 }

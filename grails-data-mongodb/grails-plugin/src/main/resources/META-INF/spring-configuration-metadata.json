@@ -1,0 +1,160 @@
+{
+    "groups": [
+        {
+            "name": "grails.mongodb",
+            "description": "MongoDB GORM Plugin"
+        },
+        {
+            "name": "grails.mongodb.options",
+            "description": "MongoDB GORM Plugin - Client Options"
+        },
+        {
+            "name": "grails.mongodb.options.connectionPoolSettings",
+            "description": "MongoDB GORM Plugin - Connection Pool"
+        },
+        {
+            "name": "grails.mongodb.options.sslSettings",
+            "description": "MongoDB GORM Plugin - SSL"
+        }
+    ],
+    "properties": [
+        {
+            "name": "grails.mongodb.url",
+            "type": "java.lang.String",
+            "description": "The MongoDB connection URL. Supports the full MongoDB connection string format.",
+            "defaultValue": "mongodb://localhost/test"
+        },
+        {
+            "name": "grails.mongodb.host",
+            "type": "java.lang.String",
+            "description": "The MongoDB server hostname. Ignored when `url` or `connectionString` is set.",
+            "defaultValue": "localhost"
+        },
+        {
+            "name": "grails.mongodb.port",
+            "type": "java.lang.Integer",
+            "description": "The MongoDB server port. Ignored when `url` or `connectionString` is set.",
+            "defaultValue": 27017
+        },
+        {
+            "name": "grails.mongodb.databaseName",
+            "type": "java.lang.String",
+            "description": "The MongoDB database name.",
+            "defaultValue": null
+        },
+        {
+            "name": "grails.mongodb.username",
+            "type": "java.lang.String",
+            "description": "The username for MongoDB authentication.",
+            "defaultValue": null
+        },
+        {
+            "name": "grails.mongodb.password",
+            "type": "java.lang.String",
+            "description": "The password for MongoDB authentication.",
+            "defaultValue": null
+        },
+        {
+            "name": "grails.mongodb.stateless",
+            "type": "java.lang.Boolean",
+            "description": "Whether to use stateless mode with no session-level caching of entities.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.mongodb.decimalType",
+            "type": "java.lang.Boolean",
+            "description": "Whether to use Decimal128 for BigDecimal values instead of Double.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.mongodb.codecs",
+            "type": "java.util.List",
+            "description": "List of custom MongoDB Codec classes to register for BSON serialization.",
+            "defaultValue": []
+        },
+        {
+            "name": "grails.mongodb.default.mapping",
+            "type": "groovy.lang.Closure",
+            "description": "A closure applied as the default GORM mapping block for all MongoDB domain classes.",
+            "defaultValue": {}
+        },
+        {
+            "name": "grails.mongodb.options.connectionPoolSettings.maxSize",
+            "type": "java.lang.Integer",
+            "description": "Maximum number of connections in the connection pool.",
+            "defaultValue": 100
+        },
+        {
+            "name": "grails.mongodb.options.connectionPoolSettings.minSize",
+            "type": "java.lang.Integer",
+            "description": "Minimum number of connections in the connection pool.",
+            "defaultValue": 0
+        },
+        {
+            "name": "grails.mongodb.options.connectionPoolSettings.maxWaitTime",
+            "type": "java.lang.Long",
+            "description": "Maximum time in milliseconds to wait for a connection from the pool.",
+            "defaultValue": 120000
+        },
+        {
+            "name": "grails.mongodb.options.connectionPoolSettings.maxConnectionLifeTime",
+            "type": "java.lang.Long",
+            "description": "Maximum lifetime in milliseconds of a pooled connection (0 for unlimited).",
+            "defaultValue": 0
+        },
+        {
+            "name": "grails.mongodb.options.connectionPoolSettings.maxConnectionIdleTime",
+            "type": "java.lang.Long",
+            "description": "Maximum idle time in milliseconds before a pooled connection is closed (0 for unlimited).",
+            "defaultValue": 0
+        },
+        {
+            "name": "grails.mongodb.options.readPreference",
+            "type": "java.lang.String",
+            "description": "The MongoDB read preference (e.g., primary, secondary, nearest).",
+            "defaultValue": null
+        },
+        {
+            "name": "grails.mongodb.options.writeConcern",
+            "type": "java.lang.String",
+            "description": "The MongoDB write concern (e.g., majority, w1, journaled).",
+            "defaultValue": null
+        },
+        {
+            "name": "grails.mongodb.options.readConcern",
+            "type": "java.lang.String",
+            "description": "The MongoDB read concern level (e.g., local, majority, linearizable).",
+            "defaultValue": null
+        },
+        {
+            "name": "grails.mongodb.options.retryWrites",
+            "type": "java.lang.Boolean",
+            "description": "Whether to retry write operations on transient network errors.",
+            "defaultValue": null
+        },
+        {
+            "name": "grails.mongodb.options.retryReads",
+            "type": "java.lang.Boolean",
+            "description": "Whether to retry read operations on transient network errors.",
+            "defaultValue": null
+        },
+        {
+            "name": "grails.mongodb.options.applicationName",
+            "type": "java.lang.String",
+            "description": "Application name sent to MongoDB for server logs and profiling.",
+            "defaultValue": null
+        },
+        {
+            "name": "grails.mongodb.options.sslSettings.enabled",
+            "type": "java.lang.Boolean",
+            "description": "Whether to enable TLS/SSL for connections to MongoDB.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.mongodb.options.sslSettings.invalidHostNameAllowed",
+            "type": "java.lang.Boolean",
+            "description": "Whether to allow connections to MongoDB servers with invalid hostnames in TLS certificates.",
+            "defaultValue": false
+        }
+    ]
+}

@@ -45,7 +45,7 @@ import org.hibernate.boot.spi.AdditionalMappingContributor
 /**
  * The original GormDataStoreSpec destroyed the setup
  * between tests instead of at the end of all tests
- * It also wqs default configured for H2 which
+ * It also was default configured for H2 which
  * made it break with some Java types.
  * Finally, it loaded all the test Entities,
  * now it can be setup individually.

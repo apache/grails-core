@@ -31,12 +31,19 @@ import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.Session
 import org.hibernate.dialect.H2Dialect
 import org.hibernate.resource.jdbc.spi.JdbcSessionOwner
+import spock.lang.AutoCleanup
+import spock.lang.Shared
 import spock.lang.Specification
+import spock.util.environment.RestoreSystemProperties
 
 /**
  * Created by graemerocher on 07/07/2016.
  */
+@RestoreSystemProperties
 class SingleTenantSpec extends Specification {
+
+    @AutoCleanup HibernateDatastore datastore
+
     void "Test a database per tenant multi tenancy"() {
         given:"A configuration for multiple data sources"
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "")
@@ -54,7 +61,7 @@ class SingleTenantSpec extends Specification {
                 'dataSources.moreBooks':[url:"jdbc:h2:mem:moreBooks;LOCK_TIMEOUT=10000"]
         ]
 
-        HibernateDatastore datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config),Book, SingleTenantAuthor )
+        datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config),Book, SingleTenantAuthor )
 
         when:"no tenant id is present"
         SingleTenantAuthor.list()
@@ -143,7 +150,6 @@ class SingleTenantSpec extends Specification {
         authorService.countAuthors() == 0
         authorService.countMoreAuthors() == 2
     }
-
 
 }
 

@@ -20,15 +20,18 @@ package org.grails.datastore.gorm
 
 import grails.async.Promise
 import grails.async.Promises
-import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.Person
 
 /**
  */
 class AsyncReadMethodsSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
-    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
+    void setupSpec() {
+        manager.addAllDomainClasses([Person])
+    }
+
     def "Test that normal GORM methods can be used within the doAsync method"() {
         given: "Some people"
         final p1 = new Person(firstName: "Homer", lastName: "Simpson").save()
@@ -49,7 +52,7 @@ class AsyncReadMethodsSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
         results[2].firstName == "Barney"
     }
 
-    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
+
     def "Test that the list method works async"() {
         given: "Some people"
         new Person(firstName: "Homer", lastName: "Simpson").save()
@@ -63,7 +66,7 @@ class AsyncReadMethodsSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
         then: "A promise is returned"
         promise instanceof Promise
 
-        when: "The promise value is returned"
+                when : "The promise value is returned"
         def results = promise.get()
 
         then: "They are correct"
@@ -71,7 +74,7 @@ class AsyncReadMethodsSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     }
 
-    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
+
     def "Test multiples GORM promises using get method"() {
         given: "Some people"
         final p1 = new Person(firstName: "Homer", lastName: "Simpson").save()
@@ -101,7 +104,7 @@ class AsyncReadMethodsSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
         results[2].firstName == "Barney"
     }
 
-    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
+
     def "Test multiples GORM promises using dynamic finder method"() {
         given: "Some people"
         final p1 = new Person(firstName: "Homer", lastName: "Simpson").save()

@@ -19,6 +19,7 @@
 
 plugins {
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.gradle.grails-web'
     id 'org.apache.grails.gradle.grails-gsp'
     id 'cloud.wondrify.asset-pipeline'
@@ -54,7 +55,7 @@ dependencies {
     runtimeOnly 'org.apache.grails:grails-services'
     runtimeOnly 'org.apache.grails:grails-url-mappings'
     runtimeOnly 'org.apache.grails:grails-fields'
-    // TODO: hibernate-ehcache was icnluded here but historically was replaced by hibernate-jcache
+    runtimeOnly 'org.hibernate.orm:hibernate-jcache'
     runtimeOnly "org.jboss.spec.javax.transaction:jboss-transaction-api_1.3_spec:$jbossTransactionApiVersion", {
         // required for hibernate-ehcache to work with javax variant of hibernate-core excluded
     }

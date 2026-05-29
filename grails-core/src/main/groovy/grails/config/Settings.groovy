@@ -67,6 +67,62 @@ interface Settings {
     String VIEWS_FILTERING_CODEC_FOR_CONTENT_TYPE = 'grails.views.filteringCodecForContentType'
 
     /**
+     * Default CSS class for {@code flash.message} alerts rendered by {@code <g:flashMessages />}.
+     *
+     * @since 7.1
+     */
+    String VIEWS_GSP_FLASH_MESSAGES_MESSAGE_CLASS = 'grails.views.gsp.flashMessages.messageClass'
+
+    /**
+     * Default icon class for {@code flash.message} alerts rendered by {@code <g:flashMessages />}.
+     *
+     * @since 7.1
+     */
+    String VIEWS_GSP_FLASH_MESSAGES_MESSAGE_ICON = 'grails.views.gsp.flashMessages.messageIcon'
+
+    /**
+     * Default CSS class for {@code flash.error} alerts rendered by {@code <g:flashMessages />}.
+     *
+     * @since 7.1
+     */
+    String VIEWS_GSP_FLASH_MESSAGES_ERROR_CLASS = 'grails.views.gsp.flashMessages.errorClass'
+
+    /**
+     * Default icon class for {@code flash.error} alerts rendered by {@code <g:flashMessages />}.
+     *
+     * @since 7.1
+     */
+    String VIEWS_GSP_FLASH_MESSAGES_ERROR_ICON = 'grails.views.gsp.flashMessages.errorIcon'
+
+    /**
+     * Default CSS class for {@code flash.warning} alerts rendered by {@code <g:flashMessages />}.
+     *
+     * @since 7.1
+     */
+    String VIEWS_GSP_FLASH_MESSAGES_WARNING_CLASS = 'grails.views.gsp.flashMessages.warningClass'
+
+    /**
+     * Default icon class for {@code flash.warning} alerts rendered by {@code <g:flashMessages />}.
+     *
+     * @since 7.1
+     */
+    String VIEWS_GSP_FLASH_MESSAGES_WARNING_ICON = 'grails.views.gsp.flashMessages.warningIcon'
+
+    /**
+     * Default ARIA role for alerts rendered by {@code <g:flashMessages />}.
+     *
+     * @since 7.1
+     */
+    String VIEWS_GSP_FLASH_MESSAGES_ROLE = 'grails.views.gsp.flashMessages.role'
+
+    /**
+     * Whether alerts rendered by {@code <g:flashMessages />} are dismissible by default.
+     *
+     * @since 7.1
+     */
+    String VIEWS_GSP_FLASH_MESSAGES_DISMISSIBLE = 'grails.views.gsp.flashMessages.dismissible'
+
+    /**
      * Whether to disable caching of resources in GSP
      */
     String GSP_DISABLE_CACHING_RESOURCES = 'grails.gsp.disable.caching.resources'
@@ -236,6 +292,41 @@ interface Settings {
      * The parameters to exclude from logging
      */
     String SETTING_EXCEPTION_RESOLVER_PARAM_EXCLUDES = 'grails.exceptionresolver.params.exclude'
+    /**
+     * Whether the exception resolver should also emit the exception on the separate
+     * {@code StackTrace} logger in addition to its own request-context log entry.
+     * Defaults to {@code false}; set to {@code true} to restore the historical two-logger
+     * behaviour, which allows routing the trace to a separate appender via logback config.
+     */
+    String SETTING_LOG_FULL_STACKTRACE = 'grails.exceptionresolver.logFullStackTrace'
+    /**
+     * Whether the exception resolver should append the current auditor (resolved via a
+     * registered {@code org.grails.datastore.gorm.timestamp.AuditorAware} bean) to the
+     * exception log line. Defaults to {@code true}; set to {@code false} to keep user
+     * identifiers out of exception logs. When no {@code AuditorAware} bean is registered
+     * the log line is unchanged regardless of this setting.
+     */
+    String SETTING_LOG_AUDITOR = 'grails.exceptionresolver.logAuditor'
+    /**
+     * Whether the exception resolver should append the remote client address
+     * ({@link jakarta.servlet.http.HttpServletRequest#getRemoteAddr()}) to the exception
+     * log line. Defaults to {@code false}; set to {@code true} to include client addresses
+     * in exception logs. Behind a reverse proxy, configure the servlet container
+     * (for example Spring Boot's {@code server.forward-headers-strategy}) so that
+     * {@code remoteAddr} reflects the real client IP.
+     */
+    String SETTING_LOG_REMOTE_ADDR = 'grails.exceptionresolver.logRemoteAddr'
+    /**
+     * Whether {@link org.grails.exceptions.reporting.DefaultStackTraceFilterer#filter(Throwable)}
+     * should emit the unfiltered stack trace to the dedicated {@code StackTrace} logger as a
+     * side effect, before trimming the trace in place. Defaults to {@code true} to preserve
+     * historical behaviour — non-resolver callers (for example {@code GrailsUtil.sanitizeRootCause},
+     * {@code GroovyPageView.deepSanitize}, custom plugin code) that previously relied on this
+     * side-effect emission continue to produce {@code StackTrace} entries. Set to {@code false}
+     * to disable the side-effect emission and rely solely on {@link #SETTING_LOG_FULL_STACKTRACE}
+     * for resolver-driven emission.
+     */
+    String SETTING_LOG_FULL_STACKTRACE_ON_FILTER = 'grails.exceptionresolver.logFullStackTraceOnFilter'
     /**
      * The class to use for stacktrace filtering. Should be an instanceof {@link org.grails.exceptions.reporting.StackTraceFilterer}
      */

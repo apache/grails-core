@@ -24,6 +24,8 @@ import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
 import grails.validation.ValidationException
 import org.grails.orm.hibernate.support.hibernate7.HibernateSystemException
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 
 class ClosureEventListenerSpec extends HibernateGormDatastoreSpec {
 
@@ -33,6 +35,8 @@ class ClosureEventListenerSpec extends HibernateGormDatastoreSpec {
             EventBook,
             ValidatedBook,
             MutatingBook,
+            LegacyLoadBook,
+            NoEventBook
         ])
     }
 
@@ -260,6 +264,43 @@ class ClosureEventListenerSpec extends HibernateGormDatastoreSpec {
         then:
         reloaded.title == "SECOND"
     }
+
+    // ─── Additional edge cases for coverage ───────────────────────────────────
+
+    @Rollback
+    void "beforeLoad is called if onLoad is missing"() {
+        given:
+        def book = new LegacyLoadBook(name: "Legacy").save(flush: true)
+        session.clear()
+        LegacyLoadBook.beforeLoadCalled = false
+
+        when:
+        LegacyLoadBook.get(book.id)
+
+        then:
+        LegacyLoadBook.beforeLoadCalled
+    }
+
+    void "failOnError is enabled if package is in failOnErrorPackages"() {
+        given:
+        def persistentEntity = manager.hibernateDatastore.mappingContext.getPersistentEntity(ValidatedBook.name) as GrailsHibernatePersistentEntity
+        def listener = new ClosureEventListener(persistentEntity, false, ["org.grails.orm.hibernate.support"])
+
+        expect:
+        listener.failOnErrorEnabled
+    }
+
+    @Rollback
+    void "onPreDelete returns false if no listener present"() {
+        given:
+        def book = new NoEventBook(name: "NoEvent").save(flush: true)
+        
+        when:
+        book.delete(flush: true)
+
+        then:
+        noExceptionThrown()
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -355,5 +396,29 @@ class MutatingBook implements HibernateEntity<MutatingBook> {
 
     def beforeUpdate() {
         title = title?.toUpperCase()
+    }
+}
+
+@Entity
+class LegacyLoadBook implements HibernateEntity<LegacyLoadBook> {
+    Long id
+    String name
+    static boolean beforeLoadCalled = false
+
+    static mapping = {
+        id generator: 'identity'
+    }
+
+    def beforeLoad() {
+        beforeLoadCalled = true
+    }
+}
+
+@Entity
+class NoEventBook implements HibernateEntity<NoEventBook> {
+    Long id
+    String name
+    static mapping = {
+        id generator: 'identity'
     }
 }

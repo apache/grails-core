@@ -18,9 +18,9 @@
  */
 package org.grails.datastore.gorm
 
-import org.apache.grails.data.testing.tck.domains.TestEntity
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.TestEntity
 
 /**
  * Created by graemerocher on 22/08/2017.
@@ -31,12 +31,12 @@ class NotLikeSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
         manager.addAllDomainClasses([TestEntity])
     }
 
-    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
+
     void "test not like"() {
         when:
-        new TestEntity(name:"Fred").save()
-        new TestEntity(name:"Frank").save()
-        new TestEntity(name:"Jack").save(flush:true)
+        new TestEntity(name: "Fred").save()
+        new TestEntity(name: "Frank").save()
+        new TestEntity(name: "Jack").save(flush: true)
 
         then:
         TestEntity.countByNameNotLike("F%") == 1

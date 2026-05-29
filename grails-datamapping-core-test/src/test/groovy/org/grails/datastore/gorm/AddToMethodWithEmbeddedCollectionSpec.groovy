@@ -66,6 +66,7 @@ class Library {
 
 @Entity
 class LibraryBook {
+
     Long id
     String title
     String author

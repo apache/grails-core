@@ -17,47 +17,55 @@
  *  under the License.
  */
 
-repositories {
-    mavenCentral()
-    maven { url "https://repo.grails.org/grails/restricted" }
+plugins {
+    id 'groovy'
+    id 'java-library'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.gradle.grails-code-style'
 }
-apply plugin: 'codenarc'
+
+version = projectVersion
+group = 'org.apache.grails.data'
+
+ext {
+    gormApiDocs = true
+    pomTitle = 'GORM for GraphQL'
+    pomDescription = 'Generates a GraphQL schema based on entities in GORM'
+}
 
 dependencies {
-    documentation "org.codehaus.groovy:groovy-cli-picocli"
 
-    api "org.apache.grails.data:grails-datamapping-core:${gormVersion}"
-    api "com.graphql-java:graphql-java:$graphqlJavaVersion"
-    api "com.graphql-java:graphql-java-extended-scalars:$graphqlJavaScalarExtVersion"
-    api 'com.github.javaparser:javaparser-core:3.25.7'
-    api 'org.apache.grails:grails-views-gson:2.3.2'
-    api "org.javassist:javassist:$javassistVersion"
+    implementation platform(project(':grails-bom'))
 
-    codenarc "org.codenarc:CodeNarc:$codenarcVersion"
+    api project(':grails-datamapping-core'), {
+        // api: ConstrainedProperty, GormEntity, MappingContext, PersistentEntity, PersistentProperty
+    }
+    api 'com.graphql-java:graphql-java', {
+        // api: GraphQLSchema, GraphQLType, GraphQLObjectType, DataFetcher, DataFetchingEnvironment
+    }
+    api 'com.graphql-java:graphql-java-extended-scalars', {
+        // api: ExtendedScalars
+    }
+    api 'com.github.javaparser:javaparser-core', {
+        // api: JavaParser, ParseResult, CompilationUnit
+    }
+    api "org.javassist:javassist:$javassistVersion", {
+        // api: ClassPool, CtClass, CtMethod (used for runtime bytecode manipulation)
+    }
 
-    testImplementation "org.apache.grails.data:grails-data-hibernate5-core:${gormHibernateVersion}"
-    testImplementation "org.apache.grails.data:grails-data-mongodb-core:${gormMongoDbVersion}"
-    testImplementation 'com.github.fakemongo:fongo:2.1.1'
-    testImplementation 'com.h2database:h2:2.2.224'
-    testImplementation 'org.apache.tomcat:tomcat-jdbc:8.5.97'
-    testImplementation "org.slf4j:slf4j-api:$slf4jVersion"
+    testImplementation project(':grails-data-hibernate5-core')
+    testImplementation 'com.h2database:h2'
+    testImplementation 'org.apache.tomcat:tomcat-jdbc'
+    testImplementation 'org.slf4j:slf4j-api'
+    testImplementation 'org.objenesis:objenesis'
+    testImplementation 'net.bytebuddy:byte-buddy'
+    testImplementation 'org.spockframework:spock-core'
 }
 
-targetCompatibility = 1.8
-sourceCompatibility = 1.8
-
-codenarc {
-    toolVersion = codenarcVersion
-    configFile = file("${projectDir}/config/codenarc/rules.groovy")
-    maxPriority1Violations = 0
-    maxPriority2Violations = 0
-    maxPriority3Violations = 0
-}
-
-codenarcMain {
-    exclude '**/CustomScalars.groovy'
-}
-
-codenarcTest {
-    ignoreFailures = true
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
 }

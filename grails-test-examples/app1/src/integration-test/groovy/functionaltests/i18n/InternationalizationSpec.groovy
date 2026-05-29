@@ -26,7 +26,7 @@ import org.apache.grails.testing.http.client.HttpClientSupport
 
 /**
  * Comprehensive integration tests for internationalization (i18n) features.
- * 
+ *
  * Tests cover:
  * - Locale switching (English, German, French)
  * - Message resolution from property files

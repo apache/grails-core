@@ -570,11 +570,6 @@ include::ref/Database Mapping/type.adoc[]
 
 include::ref/Database Mapping/updatable.adoc[]
 
-[[ref-database-mapping-updatable]]
-==== updatable
-
-include::ref/Database Mapping/updatable.adoc[]
-
 [[ref-database-mapping-version]]
 ==== version
 
@@ -1142,6 +1137,11 @@ include::ref/Tags/fieldValue.adoc[]
 ==== findAll
 
 include::ref/Tags/findAll.adoc[]
+
+[[ref-tags-flashMessages]]
+==== flashMessages
+
+include::ref/Tags/flashMessages.adoc[]
 
 [[ref-tags-form]]
 ==== form

@@ -12,6 +12,7 @@
 .gradle
 .gradle/
 .idea
+.mailmap
 .idea/
 !.idea/codeStyles/
 !.idea/codeStyles/Project.xml
@@ -35,7 +36,6 @@
 /grails.iws
 /idea-target
 /lib
-/local.properties
 /out
 /src
 /test/grails-app
@@ -54,6 +54,10 @@ _alternativeTable.gsp
 **/src/en/ref/Versions/Grails BOM.adoc
 **/src/en/ref/Versions/Grails BOM Hibernate5.adoc
 **/src/en/ref/Versions/Grails BOM Hibernate7.adoc
+**/src/en/ref/Versions/Grails BOM Micronaut.adoc
+**/src/en/ref/Versions/Grails BOM Hibernate5 Micronaut.adoc
+**/src/en/ref/Versions/Grails BOM Hibernate7 Micronaut.adoc
+**/src/en/ref/Configuration/Application Properties.adoc
 stacktrace.log
 target
 tmp/
@@ -61,7 +65,7 @@ tmp/
 !etc/bin
 etc/bin/results
 .vscode/
-STATE_SNAPSHOT.xml
-0_build_grails.txt
-*_VIOLATIONS.md
-/TEST_FAILURES.md
+/scratch/
+/local.properties
+local-tasks.gradle
+local-init.gradle

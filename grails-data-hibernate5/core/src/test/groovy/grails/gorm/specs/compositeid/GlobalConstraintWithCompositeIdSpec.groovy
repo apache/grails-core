@@ -48,9 +48,7 @@ class GlobalConstraintWithCompositeIdSpec extends Specification {
             }
     ]
 
-    @Shared
-    @AutoCleanup
-    HibernateDatastore hibernateDatastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config), ParentB, ChildB, DomainB)
+    @Shared @AutoCleanup HibernateDatastore hibernateDatastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config), ParentB, ChildB, DomainB)
     @Shared
     PlatformTransactionManager transactionManager = hibernateDatastore.transactionManager
 

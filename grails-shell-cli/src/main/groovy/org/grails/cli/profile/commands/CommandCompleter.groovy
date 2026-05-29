@@ -18,7 +18,10 @@
  */
 package org.grails.cli.profile.commands
 
-import jline.console.completer.Completer
+import org.jline.reader.Candidate
+import org.jline.reader.Completer
+import org.jline.reader.LineReader
+import org.jline.reader.ParsedLine
 
 import org.grails.cli.profile.Command
 
@@ -37,7 +40,8 @@ class CommandCompleter implements Completer {
     }
 
     @Override
-    int complete(String buffer, int cursor, List<CharSequence> candidates) {
+    void complete(LineReader reader, ParsedLine line, List<Candidate> candidates) {
+        String buffer = line.line()
         def cmd = commands.find() {
             def trimmed = buffer.trim()
             if (trimmed.split(/\s/).size() > 1) {
@@ -48,8 +52,7 @@ class CommandCompleter implements Completer {
             }
         }
         if (cmd instanceof Completer) {
-            return ((Completer) cmd).complete(buffer, cursor, candidates)
+            ((Completer) cmd).complete(reader, line, candidates)
         }
-        return cursor
     }
 }

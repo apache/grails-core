@@ -35,9 +35,9 @@ jobs:
           distribution: 'liberica'
           java-version: '21'
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:
-          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
       - name: "🔍 Setup TestLens"
         uses: testlens-app/setup-testlens@v1
       - name: "🧩 Assemble"
@@ -58,9 +58,9 @@ jobs:
           distribution: 'liberica'
           java-version: '21'
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:
-          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
       - name: "🔍 Setup TestLens"
         uses: testlens-app/setup-testlens@v1
       - name: "🔑 Login to Google Cloud"
@@ -101,9 +101,9 @@ jobs:
           release_version: ${{ needs.build.outputs.release_version }}
           IMAGE_NAME: us-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_APP_NAME }}/${{ secrets.GCP_APP_NAME }}:${{ needs.build.outputs.release_version }}
         run: |
-          gcloud run deploy ${{ secrets.GCP_PROJECT_ID }}-latest --image $IMAGE_NAME --region us-central1 --update-env-vars=HOSTNAME="latest.grails.org",CORS_ALLOWED_ORIGIN="https://start.grails.org",GITHUB_OAUTH_APP_CLIENT_ID=${{ secrets.GH_OAUTH_LATEST_CLIENT_ID }},GITHUB_OAUTH_APP_CLIENT_SECRET=${{ secrets.GH_OAUTH_LATEST_CLIENT_SECRET }},GITHUB_USER_AGENT=${{ secrets.GH_USER_AGENT }},GITHUB_REDIRECT_URL=${{ secrets.GH_REDIRECT_URL }} --platform managed --allow-unauthenticated --service-account=${{ secrets.GCLOUD_EMAIL }}
+          gcloud run deploy ${{ secrets.GCP_PROJECT_ID }}-latest --image $IMAGE_NAME --region us-central1 --update-env-vars=HOSTNAME="latest.grails.org",CORS_ALLOWED_ORIGIN="https://start.grails.org",CORS_ALLOWED_ORIGIN_APACHE="https://grails.apache.org",GITHUB_OAUTH_APP_CLIENT_ID=${{ secrets.GH_OAUTH_LATEST_CLIENT_ID }},GITHUB_OAUTH_APP_CLIENT_SECRET=${{ secrets.GH_OAUTH_LATEST_CLIENT_SECRET }},GITHUB_USER_AGENT=${{ secrets.GH_USER_AGENT }},GITHUB_REDIRECT_URL=${{ secrets.GH_REDIRECT_URL }} --platform managed --allow-unauthenticated --service-account=${{ secrets.GCLOUD_EMAIL }}
           version="$(echo "${release_version//./}" | tr '[A-Z]' '[a-z]')"
-          gcloud run deploy ${{ secrets.GCP_PROJECT_ID }}-$version --image $IMAGE_NAME --region us-central1 --update-env-vars=HOSTNAME="grailsforge-600-cjmq3uyfcq-uc.a.run.app",CORS_ALLOWED_ORIGIN="https://start.grails.org",GITHUB_OAUTH_APP_CLIENT_ID=${{ secrets.GH_OAUTH_LATEST_CLIENT_ID }},GITHUB_OAUTH_APP_CLIENT_SECRET=${{ secrets.GH_OAUTH_LATEST_CLIENT_SECRET }},GITHUB_USER_AGENT=${{ secrets.GH_USER_AGENT }},GITHUB_REDIRECT_URL=${{ secrets.GH_REDIRECT_URL }} --platform managed --allow-unauthenticated --service-account=${{ secrets.GCLOUD_EMAIL }}
+          gcloud run deploy ${{ secrets.GCP_PROJECT_ID }}-$version --image $IMAGE_NAME --region us-central1 --update-env-vars=HOSTNAME="grailsforge-600-cjmq3uyfcq-uc.a.run.app",CORS_ALLOWED_ORIGIN="https://start.grails.org",CORS_ALLOWED_ORIGIN_APACHE="https://grails.apache.org",GITHUB_OAUTH_APP_CLIENT_ID=${{ secrets.GH_OAUTH_LATEST_CLIENT_ID }},GITHUB_OAUTH_APP_CLIENT_SECRET=${{ secrets.GH_OAUTH_LATEST_CLIENT_SECRET }},GITHUB_USER_AGENT=${{ secrets.GH_USER_AGENT }},GITHUB_REDIRECT_URL=${{ secrets.GH_REDIRECT_URL }} --platform managed --allow-unauthenticated --service-account=${{ secrets.GCLOUD_EMAIL }}
   deployAnalytics:
     name: "Deploy analytics to Google Cloud Run"
     runs-on: ubuntu-24.04
@@ -117,9 +117,9 @@ jobs:
           distribution: 'liberica'
           java-version: '21'
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:
-          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY  }}
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
       - name: "🔍 Setup TestLens"
         uses: testlens-app/setup-testlens@v1
       - name: "🔑 Login to Google Cloud"

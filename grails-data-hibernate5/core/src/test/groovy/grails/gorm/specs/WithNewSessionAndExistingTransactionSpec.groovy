@@ -34,6 +34,7 @@ import javax.sql.DataSource
  * Created by graemerocher on 26/08/2016.
  */
 class WithNewSessionAndExistingTransactionSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
+
     void setupSpec() {
         manager.addAllDomainClasses([Book])
     }

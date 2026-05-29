@@ -135,7 +135,7 @@ class TableSpec extends Specification {
         then:
         jt.name == 'join_table'
         jt.schema == 'public'
-        jt.key == null
+        jt.keys.isEmpty()
         jt.column == null
     }
 
@@ -148,7 +148,7 @@ class TableSpec extends Specification {
 
         then:
         result.is(jt)
-        jt.key.name == 'owner_id'
+        jt.keys[0].name == 'owner_id'
     }
 
     def "JoinTable column(String) sets column name and returns this"() {
@@ -171,8 +171,8 @@ class TableSpec extends Specification {
         jt.key { name 'fk_id'; length 20 }
 
         then:
-        jt.key.name == 'fk_id'
-        jt.key.length == 20
+        jt.keys[0].name == 'fk_id'
+        jt.keys[0].length == 20
     }
 
     def "JoinTable column(Closure) configures a ColumnConfig"() {

@@ -56,6 +56,9 @@ dependencies {
         exclude group: 'org.spockframework'
         exclude group: 'org.liquibase'
         exclude group: 'org.hibernate'
+        exclude group: 'org.hibernate.orm'
+        exclude group: 'jakarta.servlet'
+        exclude group: 'jakarta.validation'
     }
 
     for (def entry : bomPlatformDependencies.entrySet()) {
@@ -66,6 +69,7 @@ dependencies {
         for (def entry : gradleBomDependencies.entrySet()) {
             api entry.value
         }
+
         for (def entry : bomDependencies.entrySet()) {
             api entry.value
         }
@@ -102,6 +106,7 @@ configurations.register('bomDependencies').configure {
 }
 
 tasks.register('extractConstraints', ExtractDependenciesTask).configure { ExtractDependenciesTask it ->
+    it.captureProjectServices(project.dependencies, project.configurations)
     it.configuration = configurations.named('bomDependencies')
     it.configurationName = 'bomDependencies'
     it.destination = project.layout.buildDirectory.file('grails-bom-constraints.adoc')

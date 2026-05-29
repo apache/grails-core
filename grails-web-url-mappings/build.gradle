@@ -27,6 +27,8 @@ plugins {
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-code-analysis'
+    id 'org.apache.grails.gradle.grails-jacoco'
 }
 
 version = projectVersion
@@ -49,7 +51,7 @@ dependencies {
 
     compileOnly 'org.fusesource.jansi:jansi'
     testRuntimeOnly 'org.fusesource.jansi:jansi'
-    compileOnly 'jline:jline'
+    compileOnly 'org.jline:jline'
 
     implementation 'com.github.ben-manes.caffeine:caffeine'
 

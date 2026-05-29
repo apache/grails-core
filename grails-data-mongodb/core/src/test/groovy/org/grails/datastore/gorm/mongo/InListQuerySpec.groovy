@@ -20,11 +20,11 @@ package org.grails.datastore.gorm.mongo
 
 import org.apache.grails.data.mongo.core.MongoDatastoreSpec
 
-import grails.gorm.tests.Person
-import grails.gorm.tests.Pet
+import grails.gorm.specs.Person
+import grails.gorm.specs.Pet
 
 import org.apache.grails.data.testing.tck.domains.PetType
-import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+
 import spock.lang.Issue
 
 class InListQuerySpec extends MongoDatastoreSpec {

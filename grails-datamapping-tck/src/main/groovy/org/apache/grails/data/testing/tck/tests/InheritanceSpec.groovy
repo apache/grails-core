@@ -33,7 +33,6 @@ class InheritanceSpec extends GrailsDataTckSpec {
         manager.addAllDomainClasses([Practice, City, Country, Location])
     }
 
-    @spock.lang.Requires({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' || System.getProperty('mongodb.gorm.suite') == 'true' })
     void 'Test inheritance with dynamic finder'() {
 
         given:
