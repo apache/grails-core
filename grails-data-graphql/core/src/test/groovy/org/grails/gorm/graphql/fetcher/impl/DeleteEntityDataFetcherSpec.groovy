@@ -21,6 +21,7 @@ package org.grails.gorm.graphql.fetcher.impl
 
 import grails.gorm.transactions.Transactional
 import graphql.schema.DataFetchingEnvironment
+import org.grails.datastore.gorm.GormEntity
 import org.grails.gorm.graphql.HibernateSpec
 import org.grails.gorm.graphql.domain.general.toone.One
 import org.grails.gorm.graphql.fetcher.GraphQLDataFetcherType
@@ -74,6 +75,19 @@ class DeleteEntityDataFetcherSpec extends HibernateSpec {
 
         then:
         1 * responseHandler.createResponse(env, false, _ as NullPointerException)
+    }
+
+    void "test deleteInstance flushes the delete and does not pass the ignored failOnError argument"() {
+        given:
+        DeleteEntityDataFetcher fetcher = new DeleteEntityDataFetcher<>(mappingContext.getPersistentEntity(One.name))
+        GormEntity instance = Mock(GormEntity)
+
+        when:
+        fetcher.deleteInstance(instance)
+
+        then: 'the delete is flushed so database failures surface, and failOnError (ignored by delete) is not used'
+        1 * instance.delete([flush: true])
+        0 * instance.delete([failOnError: true])
     }
 
     void "test supports"() {
