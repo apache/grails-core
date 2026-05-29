@@ -2,5 +2,5 @@
 java=21.0.7-librca
 # Keep gradle version synced with gradle.properties (gradleToolingApiVersion).
 # Update the gradle-bootstrap project to propagate the version to all gradle-wrapper.properties files.
-gradle=9.4.1
+gradle=9.5.1
 
