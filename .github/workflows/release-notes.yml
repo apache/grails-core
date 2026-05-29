@@ -33,5 +33,6 @@ jobs:
     steps:
       - name: "📝 Update Release Draft"
         uses: release-drafter/release-drafter@e1247478eabc9f6d9cf5ec2b3547469b0e1d2767 # v7.3.1
+        continue-on-error: true # this pull_request-triggered run only has contents:read; the draft is created/updated by the pull_request_target run
         env:
           GITHUB_TOKEN: ${{ secrets.GRAILS_GH_TOKEN }}
