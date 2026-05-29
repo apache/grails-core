@@ -38,7 +38,7 @@ class PersistenceEventListenerSpec extends GrailsDataTckSpec<GrailsDataMongoTckM
     SpecPersistenceListener listener
 
     void setupSpec() {
-        manager.addAllDomainClasses([Simples])
+        manager.domainClasses.addAll([Simples])
     }
 
     def setup() {

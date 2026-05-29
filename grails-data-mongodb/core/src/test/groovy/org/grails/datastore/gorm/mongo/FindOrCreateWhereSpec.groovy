@@ -25,7 +25,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class FindOrCreateWhereSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Person, Pet])
+        manager.domainClasses.addAll([Person, Pet])
     }
 
     void "Test findOrCreateWhere with association"() {
