@@ -26,6 +26,48 @@ import spock.lang.Specification
 
 class SimpleMapSessionSpec extends Specification {
 
+    def "a rolled back transaction clears the rollback-only marker so the session can flush again"() {
+        given: "a connected session"
+        SimpleMapDatastore datastore = new SimpleMapDatastore()
+        SimpleMapSession session = (SimpleMapSession) datastore.connect()
+
+        when: "a transaction is begun and rolled back"
+        def transaction = session.beginTransaction()
+        transaction.rollback()
+
+        then: "the session is no longer marked rollback-only, so subsequent flushes are not suppressed"
+        !session.isRollbackOnly()
+    }
+
+    def "beginning a transaction resets a previously set rollback-only marker"() {
+        given: "a connected session that has been marked rollback-only"
+        SimpleMapDatastore datastore = new SimpleMapDatastore()
+        SimpleMapSession session = (SimpleMapSession) datastore.connect()
+        session.setRollbackOnly()
+
+        expect: "the marker is set"
+        session.isRollbackOnly()
+
+        when: "a new transaction is begun"
+        session.beginTransaction()
+
+        then: "the marker is reset so the new transaction starts clean"
+        !session.isRollbackOnly()
+    }
+
+    def "clearRollbackOnly resets the marker"() {
+        given:
+        SimpleMapDatastore datastore = new SimpleMapDatastore()
+        SimpleMapSession session = (SimpleMapSession) datastore.connect()
+        session.setRollbackOnly()
+
+        when:
+        session.clearRollbackOnly()
+
+        then:
+        !session.isRollbackOnly()
+    }
+
     def "test logical isolation in DISCRIMINATOR mode"() {
         given: "A datastore in DISCRIMINATOR mode"
         SimpleMapDatastore datastore = new SimpleMapDatastore(

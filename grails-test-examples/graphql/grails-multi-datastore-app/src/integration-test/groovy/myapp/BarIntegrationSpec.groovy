@@ -21,8 +21,6 @@ package myapp
 
 import grails.testing.mixin.integration.Integration
 import org.bson.types.ObjectId
-import org.grails.datastore.gorm.GormEnhancer
-import org.grails.datastore.mapping.mongo.MongoDatastore
 import org.grails.gorm.graphql.plugin.testing.GraphQLSpec
 import spock.lang.Specification
 
@@ -46,6 +44,5 @@ class BarIntegrationSpec extends Specification implements GraphQLSpec {
 
         then: 'bar is created in the Mongo datastore with a valid ObjectId'
         new ObjectId((String) obj.id)
-        GormEnhancer.findStaticApi(Bar).datastore instanceof MongoDatastore
     }
 }

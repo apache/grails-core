@@ -111,6 +111,16 @@ public class SimpleMapSession extends AbstractSession {
         return this.rollbackOnly;
     }
 
+    /**
+     * Clears the rollback-only marker. The marker is transaction-scoped: it suppresses flushing
+     * while a rollback-only transaction is active, but must be cleared once the transaction
+     * completes so the (long-lived, thread-bound) session can flush again. Without this a single
+     * rolled-back transaction would silently disable all subsequent writes on the session.
+     */
+    public void clearRollbackOnly() {
+        this.rollbackOnly = false;
+    }
+
     @Override
     public void flush() {
         if (!isRollbackOnly()) {
@@ -120,6 +130,7 @@ public class SimpleMapSession extends AbstractSession {
 
     @Override
     protected Transaction beginTransactionInternal() {
+        this.rollbackOnly = false;
         return new MockTransaction(this);
     }
 
@@ -166,8 +177,12 @@ public class SimpleMapSession extends AbstractSession {
         }
 
         public void commit() {
-            if (!session.isRollbackOnly()) {
-                session.flush();
+            try {
+                if (!session.isRollbackOnly()) {
+                    session.flush();
+                }
+            } finally {
+                session.clearRollbackOnly();
             }
         }
 
@@ -175,19 +190,22 @@ public class SimpleMapSession extends AbstractSession {
             session.setRollbackOnly();
             SimpleMapDatastore datastore = (SimpleMapDatastore) session.getDatastore();
             SimpleMapDatastore.SharedState state = datastore.getSharedState();
-            
+
             state.inmemoryData.clear();
             state.inmemoryData.putAll(dataBackup);
-            
+
             state.indices.clear();
             state.indices.putAll(indicesBackup);
-            
+
             for (Map.Entry<String, Long> entry : lastKeysBackup.entrySet()) {
                 AtomicLong al = state.lastKeys.get(entry.getKey());
                 if (al != null) {
                     al.set(entry.getValue());
                 }
             }
+
+            // Transaction is complete; re-enable flushing on the (reusable) session.
+            session.clearRollbackOnly();
         }
 
         public Object getNativeTransaction() {

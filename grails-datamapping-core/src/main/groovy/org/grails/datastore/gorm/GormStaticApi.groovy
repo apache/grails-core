@@ -642,9 +642,14 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     @Override
     def <T1> T1 withTransaction(Map transactionProperties, Closure<T1> callable) {
         DefaultTransactionDefinition definition = new DefaultTransactionDefinition()
-        for (String key : transactionProperties.keySet()) {
-            if (definition.metaClass.hasProperty(definition, key)) {
-                definition.setProperty(key, transactionProperties.get(key))
+        transactionProperties.each { k, v ->
+            if (v instanceof CharSequence && !(v instanceof String)) {
+                v = v.toString()
+            }
+            try {
+                definition[k as String] = v
+            } catch (MissingPropertyException mpe) {
+                throw new IllegalArgumentException("[${k}] is not a valid transaction property.")
             }
         }
         withTransaction(definition, callable)
@@ -653,9 +658,14 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     @Override
     def <T1> T1 withNewTransaction(Map transactionProperties, Closure<T1> callable) {
         DefaultTransactionDefinition definition = new DefaultTransactionDefinition()
-        for (String key : transactionProperties.keySet()) {
-            if (definition.metaClass.hasProperty(definition, key)) {
-                definition.setProperty(key, transactionProperties.get(key))
+        transactionProperties.each { k, v ->
+            if (v instanceof CharSequence && !(v instanceof String)) {
+                v = v.toString()
+            }
+            try {
+                definition[k as String] = v
+            } catch (MissingPropertyException mpe) {
+                throw new IllegalArgumentException("[${k}] is not a valid transaction property.")
             }
         }
         definition.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW)

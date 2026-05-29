@@ -457,7 +457,8 @@ class HalEmbeddedSpec extends Specification implements JsonViewTest {
                         "nickNames": ["Rob", "Bob"],
                         "homeAddress": {
                             "postCode": "12345"
-                        }
+                        },
+                        "version": 0
                     }
                 },
                 "_links": {

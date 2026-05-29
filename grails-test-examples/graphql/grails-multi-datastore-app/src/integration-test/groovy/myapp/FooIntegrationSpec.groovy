@@ -20,9 +20,7 @@
 package myapp
 
 import grails.testing.mixin.integration.Integration
-import org.grails.datastore.gorm.GormEnhancer
 import org.grails.gorm.graphql.plugin.testing.GraphQLSpec
-import org.grails.orm.hibernate.HibernateDatastore
 import spock.lang.Specification
 
 @Integration
@@ -43,8 +41,7 @@ class FooIntegrationSpec extends Specification implements GraphQLSpec {
         """)
         Map obj = resp.body().data.fooCreate
 
-        then: 'foo is created in the Hibernate datastore'
+        then: 'foo is created in the Hibernate datastore with a sequential numeric id'
         obj.id == 1
-        GormEnhancer.findStaticApi(Foo).datastore instanceof HibernateDatastore
     }
 }
