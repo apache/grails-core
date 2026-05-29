@@ -58,6 +58,10 @@ trait GormEntityDirtyCheckable extends DirtyCheckable {
 
     @Generated
     private GormInstanceApi currentGormInstanceApi() {
-        (GormInstanceApi) GormRegistry.instance.findInstanceApi(getClass())
+        GormInstanceApi api = (GormInstanceApi) GormRegistry.instance.findInstanceApi(getClass())
+        if (api == null) {
+            throw new IllegalStateException("No GORM implementation configured for class [${getClass().name}]. Ensure GORM has been initialized correctly")
+        }
+        api
     }
 }

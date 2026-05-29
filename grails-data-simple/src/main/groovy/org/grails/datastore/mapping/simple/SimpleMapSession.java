@@ -49,6 +49,38 @@ public class SimpleMapSession extends AbstractSession {
         return false;
     }
 
+    /**
+     * In the in-memory test datastore the backing map can be emptied between unit-test feature
+     * methods (see {@code SimpleMapDatastore.clearData()}), while {@code @Shared} domain instances
+     * that were saved in a previous iteration retain their identifier and a "clean" dirty-checking
+     * state. {@link org.grails.datastore.mapping.engine.NativeEntryEntityPersister} skips the write
+     * for an identified instance that is not dirty, which would leave the cleared datastore empty on
+     * re-save. Treat an identified instance that is absent from the backing map as dirty so that
+     * {@code save()} re-inserts it. Hibernate (H5/H7) does not need this: {@code saveOrUpdate}
+     * already re-inserts a detached instance that is missing from the database.
+     */
+    @Override
+    public boolean isDirty(Object instance) {
+        if (super.isDirty(instance)) {
+            return true;
+        }
+        if (instance == null) {
+            return false;
+        }
+        EntityPersister persister = (EntityPersister) getPersister(instance);
+        if (persister == null) {
+            return false;
+        }
+        Serializable id = persister.getObjectIdentifier(instance);
+        if (id == null) {
+            return false;
+        }
+        String family = ((SimpleMapEntityPersister) persister).getEntityFamily();
+        Map familyMap = getBackingMap().get(family);
+        Object key = id instanceof Number ? ((Number) id).longValue() : id;
+        return familyMap == null || !familyMap.containsKey(key);
+    }
+
     public Map<Serializable, Map> getBackingMap() {
         SimpleMapDatastore datastore = (SimpleMapDatastore) getDatastore();
         return datastore.getBackingMap();

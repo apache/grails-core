@@ -105,6 +105,14 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
         if (entity == null) {
             entity = registry.apiResolver.findEntity(persistentClass)
         }
+        // Final fallback: resolve from the mapping context captured when this API was constructed.
+        // Entity metadata is identical across tenants/connections (only the datastore/session differs),
+        // so this stable reference is the most reliable source and avoids a null entity when runtime
+        // registry resolution is disturbed by cross-spec state — e.g. a qualified API created by
+        // withTenant(tenantId) for DISCRIMINATOR/SCHEMA multi-tenancy.
+        if (entity == null && mappingContext != null) {
+            entity = mappingContext.getPersistentEntity(persistentClass.name)
+        }
         entity
     }
 

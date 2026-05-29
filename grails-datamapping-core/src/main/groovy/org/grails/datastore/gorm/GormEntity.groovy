@@ -1477,12 +1477,20 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     @Generated
     GormInstanceApi<D> currentGormInstanceApi() {
         Class<D> cls = (Class<D>) getClass()
-        GormRegistry.instance.resolveInstanceApi(cls)
+        GormInstanceApi<D> api = GormRegistry.instance.resolveInstanceApi(cls)
+        if (api == null) {
+            throw new IllegalStateException("No GORM implementation configured for class [${cls.name}]. Ensure GORM has been initialized correctly")
+        }
+        api
     }
 
     @Generated
     static GormStaticApi<D> currentGormStaticApi() {
         Class<D> cls = (Class<D>) this
-        GormRegistry.instance.resolveStaticApi(cls)
+        GormStaticApi<D> api = GormRegistry.instance.resolveStaticApi(cls)
+        if (api == null) {
+            throw new IllegalStateException("No GORM implementation configured for class [${cls.name}]. Ensure GORM has been initialized correctly")
+        }
+        api
     }
 }

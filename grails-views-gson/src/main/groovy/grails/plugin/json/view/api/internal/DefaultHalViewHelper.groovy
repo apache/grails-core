@@ -440,7 +440,15 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
     }
 
     protected void renderEntityProperties(PersistentEntity entity, Object instance, EntityReflector entityReflector, StreamingJsonBuilder.StreamingJsonDelegate associationJsonDelegate) {
+        PersistentProperty version = entity.isVersioned() ? entity.getVersion() : null
         for (prop in entity.persistentProperties) {
+            // Exclude the version property from embedded output, consistent with top-level GORM
+            // rendering (DefaultJsonViewHelper.DEFAULT_GORM_EXCLUDES). KeyValue entities only gained
+            // an auto-mapped version property once they adopted the GORM mapping strategy, so this
+            // embedded path must exclude it too to keep rendering consistent across datastores.
+            if (version != null && prop.name == version.name) {
+                continue
+            }
             renderProperty(instance, prop, entityReflector, associationJsonDelegate)
         }
     }
