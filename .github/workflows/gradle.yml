@@ -125,16 +125,17 @@ jobs:
       - name: "🔍 Setup TestLens"
         uses: testlens-app/setup-testlens@v1
       - name: "🔨 Build project"
-        # Micronaut 5 platform GA targets JVM 25 bytecode, so on the Java 21 jobs we
-        # skip the Grails-Micronaut "island" (grails-micronaut, grails-micronaut-bom,
-        # the micronaut-tied test-examples). Java 25 jobs build the full graph.
+        # The Grails-Micronaut "island" (grails-micronaut, grails-micronaut-bom, the
+        # micronaut-tied test-examples) is auto-managed by settings.gradle based on the
+        # build JDK: it is pruned on a sub-25 JDK (Micronaut 5 GA targets JVM 25 bytecode)
+        # and included automatically on JDK 25+. So the Java 21 entries build everything
+        # except the island and the Java 25 entries build the full graph - no flag needed.
         run: >
           ./gradlew build :grails-shell-cli:installDist groovydoc
           --continue
           --stacktrace
           -PonlyCoreTests
           -PskipCodeStyle
-          ${{ matrix.java == 21 && '-PskipMicronautProjects' || '' }}
   buildRerunTasks:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: 'Build Grails-Core Rerunning all Tasks'
@@ -162,8 +163,8 @@ jobs:
       - name: "🔍 Setup TestLens"
         uses: testlens-app/setup-testlens@v1
       - name: "🔨 Build project"
-        # This job only runs on Java 21; skip the Micronaut island because the
-        # Micronaut 5 platform GA targets JVM 25 bytecode (see comment on `build`).
+        # This job only runs on Java 21, where settings.gradle auto-prunes the Micronaut
+        # island (Micronaut 5 GA targets JVM 25 bytecode). See comment on `build`.
         run: >
           ./gradlew build :grails-shell-cli:installDist groovydoc
           --continue
@@ -171,7 +172,6 @@ jobs:
           --stacktrace
           -PonlyCoreTests
           -PskipCodeStyle
-          -PskipMicronautProjects
   buildForge:
     name: "Build Grails Forge (Java ${{ matrix.java }}, indy=${{ matrix.indy }})"
     strategy:
@@ -203,9 +203,9 @@ jobs:
         if: ${{ contains(github.event.head_commit.message, '[skip tests]') }}
         working-directory: 'grails-forge'
         # The Forge composite build includes the root grails-core via
-        # `includeBuild('..')` in grails-forge/settings.gradle, so on Java 21
-        # we must propagate -PskipMicronautProjects to keep the included
-        # grails-core build from trying to compile the JVM-25 Micronaut island.
+        # `includeBuild('..')` in grails-forge/settings.gradle. On Java 21 that
+        # included build auto-prunes the Micronaut island (settings.gradle), so the
+        # Forge build never tries to compile the JVM-25 island; Java 25 includes it.
         run: >
           ./gradlew build
           --continue
@@ -213,11 +213,10 @@ jobs:
           -PgrailsIndy=${{ matrix.indy }}
           -PskipCodeStyle
           -PskipTests
-          ${{ matrix.java == 21 && '-PskipMicronautProjects' || '' }}
       - name: "🔨 Build project with tests"
         if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
         working-directory: 'grails-forge'
-        # See comment above on '-PskipMicronautProjects'.
+        # See comment above on the auto-managed Micronaut island.
         run: >
           ./gradlew build
           --continue
@@ -225,7 +224,6 @@ jobs:
           --stacktrace
           -PgrailsIndy=${{ matrix.indy }}
           -PskipCodeStyle
-          ${{ matrix.java == 21 && '-PskipMicronautProjects' || '' }}
       - name: "✅ Verify combined CLI"
         run: |
           cd grails-forge
@@ -271,8 +269,8 @@ jobs:
       - name: "🔍 Setup TestLens"
         uses: testlens-app/setup-testlens@v1
       - name: "🏃 Run Functional Tests"
-        # Micronaut 5 platform GA targets JVM 25 bytecode, so skip the Micronaut
-        # island on Java 21 jobs (see comment on `build`).
+        # The Micronaut island is auto-pruned on a sub-25 JDK (settings.gradle), so the
+        # Java 21 entries skip it and the Java 25 entries include it (see comment on `build`).
         run: >
           ./gradlew bootJar check
           --continue
@@ -284,7 +282,6 @@ jobs:
           -PskipCodeStyle
           -PskipHibernate5Tests
           -PskipMongodbTests
-          ${{ matrix.java == 21 && '-PskipMicronautProjects' || '' }}
   mongodbFunctional:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: "Mongodb Functional Tests (Java ${{ matrix.java }}, MongoDB ${{ matrix.mongodb-version }}, indy=${{ matrix.indy }})"
@@ -316,8 +313,8 @@ jobs:
       - name: "🏃 Run Functional Tests"
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-        # Micronaut 5 platform GA targets JVM 25 bytecode, so skip the Micronaut
-        # island on Java 21 jobs (see comment on `build`).
+        # The Micronaut island is auto-pruned on a sub-25 JDK (settings.gradle), so the
+        # Java 21 entries skip it and the Java 25 entries include it (see comment on `build`).
         run: >
           ./gradlew bootJar check
           --continue
@@ -327,7 +324,6 @@ jobs:
           -PonlyMongodbTests
           -PmongodbContainerVersion=${{ matrix.mongodb-version }}
           -PskipCodeStyle
-          ${{ matrix.java == 21 && '-PskipMicronautProjects' || '' }}
   hibernate5Functional:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: "Hibernate5 Functional Tests (Java ${{ matrix.java }}, indy=${{ matrix.indy }})"
@@ -357,8 +353,8 @@ jobs:
       - name: "🏃 Run Functional Tests"
         env:
           GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-        # Micronaut 5 platform GA targets JVM 25 bytecode, so skip the Micronaut
-        # island on Java 21 jobs (see comment on `build`).
+        # The Micronaut island is auto-pruned on a sub-25 JDK (settings.gradle), so the
+        # Java 21 entries skip it and the Java 25 entries include it (see comment on `build`).
         run: >
           ./gradlew bootJar check
           --continue
@@ -367,7 +363,6 @@ jobs:
           -PgrailsIndy=${{ matrix.indy }}
           -PonlyHibernate5Tests
           -PskipCodeStyle
-          ${{ matrix.java == 21 && '-PskipMicronautProjects' || '' }}
   publishGradle:
     if: github.repository_owner == 'apache' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     needs: [ buildGradle ]
@@ -439,10 +434,10 @@ jobs:
       - name: "🔍 Setup TestLens"
         uses: testlens-app/setup-testlens@v1
       - name: "📤 Publish Grails-Core Snapshot Artifacts"
-        # -PskipMicronautProjects keeps this Java 21 publish from trying to compile
-        # the Micronaut 5 / JVM 25 island. The Micronaut artifacts (grails-micronaut,
-        # grails-micronaut-bom) are published by the parallel publishMicronaut job
-        # below, which runs on JDK 25.
+        # This Java 21 publish excludes the Micronaut 5 / JVM 25 island automatically -
+        # settings.gradle prunes it on a sub-25 JDK. The island artifacts (grails-micronaut,
+        # grails-micronaut-bom) are published by the parallel publishMicronaut job below,
+        # which runs on JDK 25.
         uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 #v3.0.2 
         env:
           GRAILS_PUBLISH_RELEASE: 'false'
@@ -453,7 +448,7 @@ jobs:
           timeout_seconds: 1200 # normal range 14min if build is not cached (no tests running)
           max_attempts: 3 # Attempts to address: Could not write to resource 'https://repository.apache.org/content/repositories/snapshots/...' Read timed out
           retry_wait_seconds: 180
-          command: ./gradlew publish aggregateChecksums aggregatePublishedArtifacts --no-build-cache --rerun-tasks -PskipMicronautProjects
+          command: ./gradlew publish aggregateChecksums aggregatePublishedArtifacts --no-build-cache --rerun-tasks
       - name: "📤 Upload grails-core checksums"
         uses: actions/upload-artifact@v7.0.1
         with:
@@ -479,9 +474,9 @@ jobs:
   publishMicronaut:
     # Micronaut 5.0.0 publishes JARs targeting JVM 25 bytecode, so the Micronaut
     # "island" (grails-micronaut, grails-micronaut-bom) must publish from a JDK 25
-    # runner. The sibling `publish` job runs on JDK 21 with
-    # -PskipMicronautProjects to publish everything else; this job publishes the
-    # two Micronaut artifacts. The two test-example projects in the island are
+    # runner. The sibling `publish` job runs on JDK 21, where settings.gradle
+    # auto-prunes the island, so it publishes everything else; this job publishes
+    # the two Micronaut artifacts. The two test-example projects in the island are
     # not published.
     needs: [ publishGradle, build, functional, hibernate5Functional, mongodbFunctional ]
     if: >-
