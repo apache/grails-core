@@ -27,12 +27,47 @@ To create a domain class use Map constructor to set its properties and call link
 
 [source,groovy]
 ----
-def p = new Person(name: "Fred", age: 40, lastVisit: new Date())
+def p = new Person(
+    name: "Fred",
+    age: 40,
+    lastVisit: new Date(),
+)
+
 p.save()
 ----
 
 The link:{domainClassesRef}save.html[save] method will persist your class to the database using the underlying Hibernate ORM layer.
 
+
+=== List
+
+To retrieve multiple instances, use the `list` method:
+
+[source,groovy]
+----
+def people = Person.list()
+----
+
+This returns all `Person` records from the database.
+
+You can also pass pagination and sorting parameters:
+
+[source,groovy]
+----
+def fetchParams = [sort: 'name', order: 'asc', max: 10, offset: 0]
+def people = Person.list(fetchParams)
+----
+
+The `list` method supports:
+
+* `max` – maximum number of results
+* `offset` – starting position
+* `sort` – property to sort by
+* `order` – sort direction (`asc` or `desc`)
+
+In addition to these you can specify advanced parameters such as `cache`, `fetch`, `lock`, `readOnly`, `fetchSize`, `timeout`, `flushMode`, and `ignoreCase`.
+
+See link:{domainClassesRef}list.html[list] for the complete list of supported parameters.
 
 === Read
 
@@ -42,7 +77,7 @@ Grails transparently adds an implicit `id` property to your domain class which y
 [source,groovy]
 ----
 def p = Person.get(1)
-assert 1 == p.id
+assert p.id == 1
 ----
 
 This uses the link:{domainClassesRef}get.html[get] method that expects a database identifier to read the `Person` object back from the database.
@@ -79,6 +114,19 @@ p.name = "Bob"
 p.save()
 ----
 
+You can also update multiple properties at once using the `properties` assignment:
+
+[source,groovy]
+----
+def p = Person.get(1)
+p.properties = [name: "Bob", age: 45]
+p.save()
+----
+
+This will bind the given map to the domain instance, updating all matching properties in a single step.
+
+Only properties defined in the domain class will be assigned, and any missing properties in the map will remain unchanged.
+
 
 === Delete
 
@@ -91,6 +139,141 @@ def p = Person.get(1)
 p.delete()
 ----
 
+If a delete operation fails (for example due to database constraints), an exception is thrown.
 
+You can handle this using a `try/catch` block:
 
+[source,groovy]
+----
+def p = Person.get(1)
+try {
+    p.delete(flush: true)
+} catch (Exception e) {
+    println "Delete failed: ${e.message}"
+}
+----
+
+Unlike the link:{domainClassesRef}save.html[save] method, the `delete` method does not support a `failOnError` parameter. Instead, errors are propagated as exceptions.
+
+Using `flush: true` ensures the delete is executed immediately, so any errors are raised at that point.
+
+=== Querying
+
+To dynamically build queries based on optional parameters a common pattern is to use `DetachedCriteria` and progressively compose filters depending on the provided inputs.
+
+==== Properties
+
+Consider the following example using the `Person` domain class:
+
+[source,groovy]
+----
+import grails.gorm.DetachedCriteria
+
+private DetachedCriteria<Person> buildQuery(Map filterParams) {
+    def query = Person.where {}
+
+    if (filterParams.containsKey('id')) {
+        query = query.where { id == filterParams.id }
+    }
+
+    if (filterParams.containsKey('name')) {
+        query = query.where { name == filterParams.name }
+    }
+
+    if (filterParams.containsKey('age')) {
+        query = query.where { age == filterParams.age }
+    }
+
+    return query
+}
+----
+
+==== Associations
+
+You can filter by associated properties using dot notation or nested criteria. For example, if `Person` has a self-referencing relationship `parent`, you can filter by properties of the parent.
+
+[source,groovy]
+----
+class Person {
+    String name
+    Integer age
+    Date lastVisit
+    Person parent
+}
+----
+
+Using dot notation:
+
+[source,groovy]
+----
+if (filterParams.containsKey('parent.name')) {
+    query = query.where { parent.name == filterParams.'parent.name' }
+}
+----
+
+Using a nested criteria block, which is useful when filtering multiple properties of the association:
+
+[source,groovy]
+----
+if (filterParams.containsKey('parent.name')) {
+    query = query.where {
+        parent {
+            name == filterParams.'parent.name'
+        }
+    }
+}
+----
+
+This approach allows you to:
+
+* Build queries incrementally
+* Apply only the filters that are actually provided
+* Keep query logic reusable and centralized
+
+You can then use this query in different ways.
+
+==== Find a Single Result
+
+[source,groovy]
+----
+def filterParams = [id: 1]
+def person = buildQuery(filterParams).get()
+----
+
+NOTE: Note: `DetachedCriteria.get()` returns a single result from the criteria query, while `Person.get(id)` is a static lookup by primary key on the domain class.
+
+==== List Results
+
+[source,groovy]
+----
+def filterParams = [age: 40]
+def fetchParams = [sort: 'name', order: 'asc']
+def people = buildQuery(filterParams).list(fetchParams)
+----
+
+Filters can be combined simply by passing multiple items:
+
+[source,groovy]
+----
+def filterParams = [name: "Fred", age: 40]
+def results = buildQuery(filterParams).list()
+----
+
+==== Count Results
+
+[source,groovy]
+----
+def filterParams = [age: 40]
+def total = buildQuery(filterParams).count()
+----
+
+Each condition is applied only if the corresponding parameter exists, making this pattern highly flexible for search forms and APIs.
+
+==== Notes
+
+* Each call to `where {}` returns a new `DetachedCriteria`, allowing safe chaining.
+* This pattern avoids large, hardcoded query methods.
+* It works seamlessly with GORM and Hibernate in Grails.
+
+This technique is especially useful in service layers where filtering logic must remain dynamic and maintainable.
 

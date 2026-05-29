@@ -37,14 +37,16 @@ jobs:
     steps:
 @javaSetup.template(jdkVersion)
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@@v4
-        # Uncomment the build-scan parameters if you want to publish a Gradle build scan
-        # in order to see all the build logs, a complete task timeline, test outputs,
-        # and the resolved dependencies of your build.
-        # with:
-        #   build-scan-publish: true
-        #   build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
-        #   build-scan-terms-of-use-agree: "yes"
+        uses: gradle/actions/setup-gradle@@v6.1.0
+        with:
+          # 'basic' is the MIT-licensed cache provider; the default 'enhanced' provider is proprietary (Gradle commercial Terms of Use)
+          cache-provider: basic
+          # Uncomment the build-scan parameters if you want to publish a Gradle build scan
+          # in order to see all the build logs, a complete task timeline, test outputs,
+          # and the resolved dependencies of your build.
+          # build-scan-publish: true
+          # build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
+          # build-scan-terms-of-use-agree: "yes"
       - name: Run Tests
         if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
         id: tests
