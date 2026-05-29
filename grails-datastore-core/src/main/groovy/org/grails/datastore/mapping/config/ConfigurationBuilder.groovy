@@ -168,11 +168,9 @@ abstract class ConfigurationBuilder<B, C> {
                     continue
                 }
                 else if (!hasBuilderPrefix &&
-                        ((org.grails.datastore.mapping.reflect.ReflectionUtils.isGetter(methodName, parameterTypes) &&
-                                method.returnType.getAnnotation(Builder) == null && !isLikelyBuilderType(method.returnType)) ||
+                        ((org.grails.datastore.mapping.reflect.ReflectionUtils.isGetter(methodName, parameterTypes) && method.returnType.getAnnotation(Builder) == null) ||
                                 org.grails.datastore.mapping.reflect.ReflectionUtils.isSetter(methodName, parameterTypes))) {
                     // don't process getters or setters, unless the getter returns a builder
-                    // Note: @Builder annotation has SOURCE retention so we also check isLikelyBuilderType
                     continue
                 }
                 else {
@@ -244,13 +242,8 @@ abstract class ConfigurationBuilder<B, C> {
                         }
                     }
 
-                    // Check if this type should be treated as a builder type
-                    // Note: @Builder annotation has SOURCE retention so we can't detect it at runtime
-                    // Instead we check if the type is a likely configuration object (has no-arg constructor,
-                    // isn't a primitive/wrapper/collection/etc.)
                     Builder builderAnnotation = argType.getAnnotation(Builder)
-                    if (builderAnnotation != null && builderAnnotation.builderStrategy() == SimpleStrategy ||
-                            isLikelyBuilderType(argType)) {
+                    if (builderAnnotation != null && builderAnnotation.builderStrategy() == SimpleStrategy) {
                         Method existingGetter = ReflectionUtils.findMethod(builderClass, NameUtils.getGetterName(methodName))
                         def newBuilder
                         if (existingGetter != null) {
@@ -309,8 +302,7 @@ abstract class ConfigurationBuilder<B, C> {
                         continue
                     }
                 } else if (methodName.startsWith('get') && parameterTypes.length == 0) {
-                    // Note: @Builder annotation has SOURCE retention so we can't detect it at runtime
-                    if (method.returnType.getAnnotation(Builder) || isLikelyBuilderType(method.returnType)) {
+                    if (method.returnType.getAnnotation(Builder)) {
                         def childBuilder = method.invoke(builder)
                         if (childBuilder != null) {
                             Object fallBackChildConfig = null
@@ -466,11 +458,9 @@ abstract class ConfigurationBuilder<B, C> {
 
     /**
      * Handle ConverterNotFoundException - for nested configuration types,
-     * try to instantiate and populate from Map. This handles Groovy 5 / Spring 6 compatibility where
-     * Spring can't auto-convert from LinkedHashMap to these types.
-     *
-     * Note: @Builder annotation has SOURCE retention, so we can't check for it at runtime.
-     * Instead we try instantiation for any type that has a no-arg constructor.
+     * try to instantiate and populate from Map. This handles Spring 7 compatibility where
+     * Spring can't auto-convert from LinkedHashMap to these types. This is independent of the
+     * Groovy version and is required regardless of @Builder annotation retention.
      */
     @CompileDynamic
     private Object handleConverterNotFoundException(ConverterNotFoundException e, Class argType, String propertyPathForArg, Object fallBackValue) {
@@ -515,48 +505,5 @@ abstract class ConfigurationBuilder<B, C> {
             throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $e.message", e)
         }
         return null
-    }
-
-    /**
-     * Check if a type is likely a builder/configuration type that should be recursively processed.
-     * This is needed because @Builder annotation has SOURCE retention and can't be detected at runtime.
-     *
-     * A type is considered a likely builder type if:
-     * - It has a public no-arg constructor
-     * - It's not a primitive, wrapper, String, enum, collection, map, or closure
-     * - It's in an org.grails package (to avoid false positives with third-party types)
-     */
-    private static boolean isLikelyBuilderType(Class<?> type) {
-        if (type == null) return false
-
-        // Skip primitives, wrappers, common types
-        if (type.isPrimitive()) return false
-        if (type == String || type == CharSequence) return false
-        if (Number.isAssignableFrom(type)) return false
-        if (type == Boolean || type == Character) return false
-        if (type.isEnum()) return false
-        if (type.isInterface()) return false
-        if (java.lang.reflect.Modifier.isAbstract(type.getModifiers())) return false
-        if (Collection.isAssignableFrom(type)) return false
-        if (Closure.isAssignableFrom(type)) return false
-        if (type.isArray()) return false
-        if (Class.isAssignableFrom(type)) return false
-
-        // Check if it's in a Grails package (to avoid false positives)
-        String packageName = type.getPackage()?.getName()
-        if (packageName == null) return false
-        if (!packageName.startsWith('org.grails') && !packageName.startsWith('grails.')) return false
-
-        // Note: Map subtypes in Grails packages (e.g., HibernateSettings extends LinkedHashMap)
-        // are intentionally NOT excluded here. They serve as configuration objects with typed
-        // properties (cache, flush, etc.) and need recursive builder processing.
-
-        // Check if it has a public no-arg constructor
-        try {
-            type.getDeclaredConstructor()
-            return true
-        } catch (NoSuchMethodException e) {
-            return false
-        }
     }
 }
