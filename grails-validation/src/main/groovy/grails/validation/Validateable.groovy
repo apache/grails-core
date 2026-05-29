@@ -286,9 +286,10 @@ trait Validateable {
      * override semantics. Starting in Groovy 5, {@code TraitReceiverTransformer}
      * rewrites {@code this.defaultNullable()} from another method inside the
      * trait body to a direct call into the trait helper's static method,
-     * silently losing any implementing-class override.
-     * {@link java.lang.reflect.Method#invoke} is opaque to the transform so it
-     * dispatches to the implementing-class bytecode directly.
+     * silently losing any implementing-class override. The same regression
+     * is present in Groovy 6.0.0-SNAPSHOT. {@link java.lang.reflect.Method#invoke}
+     * is opaque to the transform so it dispatches to the implementing-class
+     * bytecode directly.
      *
      * Standalone reproducer:
      *   https://github.com/jamesfredley/groovy-trait-static-method-override-bug

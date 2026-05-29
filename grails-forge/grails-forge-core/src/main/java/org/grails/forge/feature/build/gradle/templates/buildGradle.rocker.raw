@@ -107,8 +107,21 @@ tasks.named('bootRun') {
 }
 
 @if (features.contains("spock")) {
+// Spock 2.4-groovy-5.0 (managed by grails-bom while a Groovy 6-compatible
+// Spock artifact is unreleased) refuses to load its compiler AST transform
+// against Groovy 6 with IncompatibleGroovyVersionException. The runtime
+// effect of this check is just a guard, so opt out on both the
+// GroovyCompile classpath (where Spock's AST transform runs) and the Test
+// JVM (where BeanBuilder.loadBeans() and similar compile Groovy at
+// runtime). The flag is a no-op when Spock and Groovy major versions
+// match, so it is safe to always set; remove this block once grails-bom
+// pins a Spock artifact whose Groovy major matches groovy.version.
+tasks.withType(GroovyCompile).configureEach {
+    options.forkOptions.jvmArgs = (options.forkOptions.jvmArgs ?: []) + ['-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true']
+}
 tasks.withType(Test).configureEach {
     useJUnitPlatform()
+    systemProperty 'spock.iKnowWhatImDoing.disableGroovyVersionCheck', 'true'
     @if (features.contains("geb")) {
     systemProperty "geb.env", System.getProperty('geb.env')
     systemProperty "geb.build.reportsDir", reporting.file("geb/integrationTest")

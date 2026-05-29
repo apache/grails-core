@@ -35,11 +35,12 @@ dependencies {
     add('testRuntimeOnly', 'org.objenesis:objenesis')
 }
 
-tasks.named('compileTestGroovy') {
-    options.forkOptions.jvmArgs += ['-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true']
-}
-
-tasks.named('compileGroovy') {
+// Disable Spock's compile-time Groovy version check on ALL Groovy compile
+// tasks. Spock's SpockTransform is registered via META-INF services and
+// the Groovy compiler loads every AST transform on the classpath, so even
+// main source sets trip the version check when Groovy is newer than the
+// Spock artifact's groovy variant.
+tasks.withType(GroovyCompile).configureEach {
     options.forkOptions.jvmArgs += ['-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true']
 }
 

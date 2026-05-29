@@ -80,7 +80,7 @@ ext {
             'geb-spock.version'             : '8.0.1',
             'graphql-java.version'          : '25.0',
             'graphql-java-extended-scalars.version': '24.0',
-            'groovy.version'                : '5.0.7-SNAPSHOT',
+            'groovy.version'                : '6.0.0-SNAPSHOT',
             'hibernate-groovy-proxy.version': '1.1',
             'jakarta-servlet-api.version'   : '6.1.0',
             'jakarta-validation.version'    : '3.1.1',
@@ -223,9 +223,9 @@ ext {
     else if (project.name == 'grails-micronaut-bom') {
         customBomVersions = [
                 // Keep aligned with bomDependencyVersions['groovy.version']; the main bom now uses
-                // Groovy 5, so the micronaut bom must match to avoid validateDependencyVersions
+                // Groovy 6, so the micronaut bom must match to avoid validateDependencyVersions
                 // failures from transitive dependencies upgrading groovy-bom past the pinned version.
-                'groovy.version'  : '5.0.7-SNAPSHOT',
+                'groovy.version'  : '6.0.0-SNAPSHOT',
                 'spock.version'   : '2.4-groovy-5.0',
                 'protobuf.version': '4.30.2',
         ]
