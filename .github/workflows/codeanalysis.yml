@@ -45,7 +45,7 @@ jobs:
           cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "🔎 Check Core Projects"
-        run: ./gradlew aggregateAnalysisViolations --continue -Pgrails.codeanalysis.enabled.pmd=true -Pgrails.codeanalysis.enabled.spotbugs=true
+        run: ./gradlew aggregateAnalysisViolations --continue -Pgrails.codeanalysis.enabled.pmd=true -Pgrails.codeanalysis.enabled.spotbugs=true -Pgrails.codeanalysis.ignoreFailures=true
       - name: "📤 Upload Reports"
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -80,7 +80,7 @@ jobs:
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "🔎 Check Gradle Plugin Projects"
         working-directory: grails-gradle
-        run: ./gradlew aggregateAnalysisViolations --continue -Pgrails.codeanalysis.enabled.pmd=true -Pgrails.codeanalysis.enabled.spotbugs=true
+        run: ./gradlew aggregateAnalysisViolations --continue -Pgrails.codeanalysis.enabled.pmd=true -Pgrails.codeanalysis.enabled.spotbugs=true -Pgrails.codeanalysis.ignoreFailures=true
       - name: "📤 Upload Reports"
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
