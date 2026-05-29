@@ -22,8 +22,6 @@ try {
         arguments << '--quiet'
     }
 
-    arguments << '-Dgrails.management.endpoints.shutdown.enabled=true'
-
     arguments.addAll commandLine.remainingArgs
 
     Integer port = flag('port')?.toInteger() ?: config.getProperty('server.port', Integer)
@@ -106,7 +104,7 @@ try {
             addShutdownHook {
                 if(Boolean.getBoolean("run-app.running")) {
                     try {
-                        stopApp()
+                        org.grails.cli.gradle.RunningApplicationRegistry.stopAll()
                     }
                     catch(e) {
                         // ignore

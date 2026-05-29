@@ -26,10 +26,10 @@ import groovy.transform.stc.SimpleType
 import org.gradle.tooling.BuildAction
 import org.gradle.tooling.BuildActionExecuter
 import org.gradle.tooling.BuildLauncher
+import org.gradle.tooling.CancellationTokenSource
 import org.gradle.tooling.GradleConnector
 import org.gradle.tooling.LongRunningOperation
 import org.gradle.tooling.ProjectConnection
-import org.gradle.tooling.internal.consumer.DefaultCancellationTokenSource
 
 import grails.build.logging.GrailsConsole
 import grails.io.support.SystemOutErrCapturer
@@ -95,12 +95,28 @@ class GradleUtil {
 
     static void runBuildWithConsoleOutput(ExecutionContext context,
                                           @ClosureParams(value = SimpleType, options = 'org.gradle.tooling.BuildLauncher') Closure<?> buildLauncherCustomizationClosure) {
+        // workaround for GROOVY-7211, static type checking problem when default parameters are used
+        runBuildWithConsoleOutput(context, false, buildLauncherCustomizationClosure)
+    }
+
+    static void runBuildWithConsoleOutput(ExecutionContext context, boolean trackForStop,
+                                          @ClosureParams(value = SimpleType, options = 'org.gradle.tooling.BuildLauncher') Closure<?> buildLauncherCustomizationClosure) {
         withProjectConnection(context.getBaseDir(), DEFAULT_SUPPRESS_OUTPUT) { ProjectConnection projectConnection ->
             BuildLauncher launcher = projectConnection.newBuild()
             setupConsoleOutput(context, launcher)
-            wireCancellationSupport(context, launcher)
-            buildLauncherCustomizationClosure.call(launcher)
-            launcher.run()
+            CancellationTokenSource cancellationTokenSource = wireCancellationSupport(context, launcher)
+            if (trackForStop) {
+                RunningApplicationRegistry.register(cancellationTokenSource)
+            }
+            try {
+                buildLauncherCustomizationClosure.call(launcher)
+                launcher.run()
+            }
+            finally {
+                if (trackForStop) {
+                    RunningApplicationRegistry.deregister(cancellationTokenSource)
+                }
+            }
         }
     }
 
@@ -136,11 +152,12 @@ class GradleUtil {
         return buildActionExecuter.run()
     }
 
-    static wireCancellationSupport(ExecutionContext context, BuildLauncher buildLauncher) {
-        DefaultCancellationTokenSource cancellationTokenSource = new DefaultCancellationTokenSource()
+    static CancellationTokenSource wireCancellationSupport(ExecutionContext context, BuildLauncher buildLauncher) {
+        CancellationTokenSource cancellationTokenSource = GradleConnector.newCancellationTokenSource()
         buildLauncher.withCancellationToken(cancellationTokenSource.token())
         context.addCancelledListener({
             cancellationTokenSource.cancel()
         })
+        return cancellationTokenSource
     }
 }

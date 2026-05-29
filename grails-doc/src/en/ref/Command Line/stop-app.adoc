@@ -25,9 +25,9 @@ under the License.
 === Purpose
 
 
-Stops a running Grails application in an embedded servlet container.
+Stops a Grails application that was started with the link:{commandLineRef}run-app.html[run-app] command in the same interactive CLI session.
 
-NOTE: This command will work in development mode only.
+NOTE: This command works in development mode only and must be run from the same interactive `grails` session that started the application with `run-app`.
 
 
 === Examples
@@ -35,20 +35,17 @@ NOTE: This command will work in development mode only.
 
 [source,groovy]
 ----
-grails stop-app
-grails stop-app --port=9090 --host=mywebsite
+$ grails
+grails> run-app
+grails> stop-app
 ----
 
 
 === Description
 
 
-Arguments:
+When an application is started with `run-app` in the interactive Grails shell, the application runs as an asynchronous Gradle `bootRun` build. The `stop-app` command cancels that build, which shuts down the running application without exiting the CLI. A subsequent `run-app` can then start the application again.
 
-* `port` - Specifies the port which the Grails application is running on (defaults to 8080 for HTTP or 8443 for HTTPS)
-* `host` - Specifies the host the Grails application is bound to
+This is a CLI only mechanism: it does not require the Spring Boot Actuator shutdown endpoint to be enabled, nor does it rely on JMX.
 
-Supported system properties:
-
-* `server.port` - Same as `port` argument.
-* `server.address` - Same as `host` argument.
+If no application started by `run-app` is running in the current session, `stop-app` reports that the application is not running.
