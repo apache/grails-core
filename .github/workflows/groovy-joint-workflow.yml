@@ -36,17 +36,17 @@ jobs:
       groovyVersion: ${{ steps.groovy-version.outputs.value }}
     steps:
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
           java-version: 21
           distribution: liberica
       - name: "🗄️ Cache local Maven repository"
-        uses: actions/cache@v5
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: ~/.m2/repository
           key: cache-local-maven-${{ github.sha }}
       - name: "📥 Checkout Grails Core to fetch Gradle Plugin versions it uses"
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           sparse-checkout-cone-mode: false
           sparse-checkout: settings.gradle
@@ -63,11 +63,12 @@ jobs:
       - name: "📥 Checkout Groovy 4_0_X (Grails 7 and later)"
         run: git clone --depth 1 https://github.com/apache/groovy.git -b GROOVY_4_0_X --single-branch
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:
+          cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
       - name: "🔍 Setup TestLens"
-        uses: testlens-app/setup-testlens@v1
+        uses: testlens-app/setup-testlens@d96a555133c275a00949d2cc77b70fe9a4242ebf # v1.9.2
       - name: "📝 Store Groovy version to use when building Grails"
         id: groovy-version
         run: |
@@ -139,20 +140,21 @@ jobs:
           --health-retries 5
     steps:
       - name: "📥 Checkout project"
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
           java-version: 21
           distribution: liberica
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@4d9f0ba0025fe599b4ebab900eb7f3a1d93ef4c2 # v5.0.0
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:
+          cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
       - name: "🔍 Setup TestLens"
-        uses: testlens-app/setup-testlens@v1
+        uses: testlens-app/setup-testlens@d96a555133c275a00949d2cc77b70fe9a4242ebf # v1.9.2
       - name: "🗄️ Restore local Maven repository from cache"
-        uses: actions/cache@v5
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: ~/.m2/repository
           key: cache-local-maven-${{ github.sha }}
