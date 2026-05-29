@@ -25,3 +25,7 @@ For information about the currently supported versions of the Grails framework, 
 ## Reporting Vulnerabilities
 
 Please see the page of the [ASF Security Team](https://www.apache.org/security/) for further information and contact information.
+
+## Threat Model
+
+The framework's threat model - what is in scope, what is out, what security properties are claimed, what is explicitly disclaimed, and how inbound reports and findings are triaged - is documented in [THREAT_MODEL.md](./THREAT_MODEL.md). Reporters and triagers should consult that document alongside this policy.
