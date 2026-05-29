@@ -93,10 +93,6 @@ class GspCompileStaticSpec extends Specification {
         compileStatic << [true, false]
     }
 
-    // Note: In Groovy 5, the g.message() syntax with g. prefix fails static type checking
-    // because the type checking extension doesn't properly resolve the 'g' taglib property.
-    // Tests with gDotPrefix: true are skipped on Groovy 5+.
-    @IgnoreIf({ instance.isGroovy5OrLater() && data.gDotPrefix })
     def "should support message tag invocation"() {
         given:
         def template = '<%@ compileStatic="true"%>${' + (gDotPrefix ? 'g.' : '') + '''message(code:'World')}'''
@@ -108,7 +104,6 @@ class GspCompileStaticSpec extends Specification {
         gDotPrefix << [false, true]
     }
 
-    @IgnoreIf({ instance.isGroovy5OrLater() && data.gDotPrefix })
     def "should support message tag invocation inline"() {
         given:
         def template = """<%@ compileStatic="true"%><%
@@ -124,7 +119,6 @@ out.print(${gDotPrefix ? 'g.' : ''}message(code:'World'))
         gDotPrefix << [false, true]
     }
 
-    @IgnoreIf({ instance.isGroovy5OrLater() && data.gDotPrefix })
     def "should support message tag invocation inline in a closure"() {
         given:
         def template = """<%@ compileStatic="true"%><%
