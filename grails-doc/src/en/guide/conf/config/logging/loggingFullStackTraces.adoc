@@ -97,11 +97,12 @@ log record. It means non-resolver code paths (for example, a scheduled job that 
 `GrailsUtil.sanitizeRootCause(ex)` before logging via its own logger) continue to populate the `StackTrace`
 appender without an explicit emission call.
 
-NOTE: `GrailsUtil` resolves its filterer lazily from the same config keys as the exception resolver
-(`grails.logging.stackTraceFiltererClass` and `grails.exceptionresolver.logFullStackTraceOnFilter`),
-so this property controls both resolver-driven _and_ `GrailsUtil`-driven emission (including the GSP
-view-render path through `GroovyPageView.handleException`). Custom `StackTraceFilterer` implementations
-that don't extend `DefaultStackTraceFilterer` are responsible for their own logging policy.
+NOTE: `GrailsUtil` honours the same config keys as the exception resolver
+(`grails.logging.stackTraceFiltererClass` and `grails.exceptionresolver.logFullStackTraceOnFilter`);
+`GrailsExceptionResolver.setGrailsApplication` calls `GrailsUtil.initializeStackFilterer(application)` during
+Spring bean wiring, so this property controls both resolver-driven _and_ `GrailsUtil`-driven emission
+(including the GSP view-render path through `GroovyPageView.handleException`). Custom `StackTraceFilterer`
+implementations that don't extend `DefaultStackTraceFilterer` are responsible for their own logging policy.
 
 The behaviour is enabled by default. To disable the side-effect emission and rely solely on
 `logFullStackTrace` for resolver-driven output, set:

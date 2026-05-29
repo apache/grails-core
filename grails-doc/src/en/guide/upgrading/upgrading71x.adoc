@@ -851,9 +851,12 @@ records (one resolver-driven plus one per throwable visited by the recursive fil
 Stack Traces section of the user guide includes a matrix of behaviours for the four flag combinations.
 
 `GrailsUtil` honours both `grails.logging.stackTraceFiltererClass` and
-`grails.exceptionresolver.logFullStackTraceOnFilter` as well — the filterer is resolved lazily on first use
-from the application config, so non-resolver paths (including GSP view-render exceptions routed through
-`GroovyPageView.handleException` → `GrailsUtil.deepSanitize`) participate in the same emission policy as
-the resolver. Pre-7.1, `GrailsUtil` held a hardcoded `DefaultStackTraceFilterer` static field that ignored
-both keys; applications that previously had to silence the `StackTrace` logger in logback purely to suppress
-GSP-render-time noise can now set `logFullStackTraceOnFilter: false` and reach every caller of the filterer.
+`grails.exceptionresolver.logFullStackTraceOnFilter` as well — `GrailsExceptionResolver.setGrailsApplication`
+calls the new `GrailsUtil.initializeStackFilterer(GrailsApplication)` during Spring bean wiring, so non-resolver
+paths (including GSP view-render exceptions routed through `GroovyPageView.handleException` →
+`GrailsUtil.deepSanitize`) participate in the same emission policy as the resolver. Before initialization
+runs (CLI, tests that don't boot a context, plain `main()`), `GrailsUtil` uses a single hardcoded
+`DefaultStackTraceFilterer` fallback, matching the pre-PR behaviour. Pre-7.1, `GrailsUtil` held a
+hardcoded `DefaultStackTraceFilterer` static field that ignored both keys; applications that previously had
+to silence the `StackTrace` logger in logback purely to suppress GSP-render-time noise can now set
+`logFullStackTraceOnFilter: false` and reach every caller of the filterer.
