@@ -68,4 +68,40 @@ class OrderBySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
         then:
         45 == results[0].age
     }
+
+    def 'Test multi-field sort ascending with a Map passed to list()'() {
+        given: 'additional people sharing an age so the secondary sort field is observable'
+        new TestEntity(name: "Amy", age: 40, child: new ChildEntity(name: "Amy Child")).save()
+        new TestEntity(name: "Zoe", age: 40, child: new ChildEntity(name: "Zoe Child")).save()
+
+        when: 'sorting by age ascending and then name ascending'
+        def results = TestEntity.list(sort: [age: 'asc', name: 'asc'])
+
+        then: 'entries with the same age are ordered by name ascending'
+        results*.name == ["Amy", "Bob", "Zoe", "Fred", "Barney", "Frank", "Joe", "Ernie"]
+    }
+
+    def 'Test multi-field sort with mixed directions in a Map passed to list()'() {
+        given: 'additional people sharing an age so the secondary sort field is observable'
+        new TestEntity(name: "Amy", age: 40, child: new ChildEntity(name: "Amy Child")).save()
+        new TestEntity(name: "Zoe", age: 40, child: new ChildEntity(name: "Zoe Child")).save()
+
+        when: 'sorting by age ascending and then name descending'
+        def results = TestEntity.list(sort: [age: 'asc', name: 'desc'])
+
+        then: 'entries with the same age are ordered by name descending'
+        results*.name == ["Zoe", "Bob", "Amy", "Fred", "Barney", "Frank", "Joe", "Ernie"]
+    }
+
+    def 'Test multi-field sort with a Map passed to a dynamic finder'() {
+        given: 'additional people sharing an age so the secondary sort field is observable'
+        new TestEntity(name: "Amy", age: 40, child: new ChildEntity(name: "Amy Child")).save()
+        new TestEntity(name: "Zoe", age: 40, child: new ChildEntity(name: "Zoe Child")).save()
+
+        when: 'sorting by age ascending and then name descending via a dynamic finder'
+        def results = TestEntity.findAllByAgeGreaterThanEquals(40, [sort: [age: 'asc', name: 'desc']])
+
+        then: 'the multi-field Map sort is applied to the dynamic finder results'
+        results*.name == ["Zoe", "Bob", "Amy", "Fred", "Barney", "Frank", "Joe", "Ernie"]
+    }
 }
