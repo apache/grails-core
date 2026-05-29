@@ -109,6 +109,7 @@ dependencies {
     // Required by Spock's Mocking
     testRuntimeOnly 'net.bytebuddy:byte-buddy'
     testImplementation 'org.objenesis:objenesis'
+    testImplementation 'io.leangen.geantyref:geantyref'
 
     // any project that should be included in the end distribution should be included here
     // historically these were the included projects so we have trimmed them back down to pre7.0

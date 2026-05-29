@@ -46,6 +46,7 @@ dependencies {
 
     testRuntimeOnly 'net.bytebuddy:byte-buddy'
     testRuntimeOnly 'org.objenesis:objenesis'
+    testRuntimeOnly 'io.leangen.geantyref:geantyref'
 
     testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during test task
 }

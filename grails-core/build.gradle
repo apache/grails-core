@@ -85,6 +85,7 @@ dependencies {
     // Required by Spock's Mocking
     testRuntimeOnly 'net.bytebuddy:byte-buddy'
     testImplementation 'org.objenesis:objenesis'
+    testImplementation 'io.leangen.geantyref:geantyref'
 }
 
 TaskProvider<WriteProperties> writeProps = tasks.register('writeGrailsProperties', WriteProperties)

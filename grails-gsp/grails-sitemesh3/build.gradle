@@ -58,6 +58,7 @@ dependencies {
     testImplementation 'org.springframework:spring-test'
     testImplementation project(':grails-testing-support-web')
     testImplementation 'org.objenesis:objenesis'
+    testImplementation 'io.leangen.geantyref:geantyref'
     testRuntimeOnly 'net.bytebuddy:byte-buddy'
     testRuntimeOnly 'org.slf4j:slf4j-nop'
 }

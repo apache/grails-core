@@ -61,6 +61,7 @@ dependencies {
     testImplementation 'org.apache.tomcat:tomcat-jdbc'
     testImplementation 'org.slf4j:slf4j-api'
     testImplementation 'org.objenesis:objenesis'
+    testImplementation 'io.leangen.geantyref:geantyref'
     testImplementation 'net.bytebuddy:byte-buddy'
     testImplementation 'org.spockframework:spock-core'
 }

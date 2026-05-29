@@ -68,6 +68,7 @@ dependencies {
     }
     testImplementation project(':grails-datamapping-validation')
     testImplementation 'org.objenesis:objenesis'
+    testImplementation 'io.leangen.geantyref:geantyref'
 
     testCompileOnly 'jakarta.servlet:jakarta.servlet-api'
     testCompileOnly 'org.springframework:spring-test', {
