@@ -52,5 +52,4 @@ class PromiseFactoryBean extends PromiseFactoryBuilder implements FactoryBean<Pr
     boolean isSingleton() {
         return true
     }
-
 }
