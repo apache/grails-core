@@ -145,9 +145,20 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
         final Set<String> propertyNamesToIncludeInWhiteList = new HashSet<>();
         final Set<String> unbindablePropertyNames = new HashSet<>();
         final Set<String> bindablePropertyNames = new HashSet<>();
+        final boolean isDomainClass = GrailsASTUtils.isDomainClass(classNode, sourceUnit);
         if (!classNode.getSuperClass().equals(new ClassNode(Object.class))) {
             final Set<String> parentClassPropertyNames = getPropertyNamesToIncludeInWhiteListForParentClass(sourceUnit, classNode.getSuperClass());
-            bindablePropertyNames.addAll(parentClassPropertyNames);
+            for (final String parentPropertyName : parentClassPropertyNames) {
+                // The id, version, dateCreated and lastUpdated properties of a domain class are never bound by default.
+                // A parent class may legitimately include these in its own whitelist when it is not itself recognised as
+                // a domain class (for example an abstract @DirtyCheck base class in src/main/groovy onto which GORM injects
+                // id and version). Such properties must not be inherited into a domain class' whitelist, otherwise the
+                // exclusion performed by shouldFieldBeInWhiteList is bypassed via the inherited bindable property names.
+                if (isDomainClass && DOMAIN_CLASS_PROPERTIES_TO_EXCLUDE_BY_DEFAULT.contains(parentPropertyName)) {
+                    continue;
+                }
+                bindablePropertyNames.add(parentPropertyName);
+            }
         }
 
         final FieldNode constraintsFieldNode = classNode.getDeclaredField(CONSTRAINTS_FIELD_NAME);
@@ -191,7 +202,6 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
         }
 
         final Set<String> fieldsInTransientsList = getPropertyNamesExpressedInTransientsList(classNode);
-        final boolean isDomainClass = GrailsASTUtils.isDomainClass(classNode, sourceUnit);
 
         propertyNamesToIncludeInWhiteList.addAll(bindablePropertyNames);
         final List<FieldNode> fields = classNode.getFields();

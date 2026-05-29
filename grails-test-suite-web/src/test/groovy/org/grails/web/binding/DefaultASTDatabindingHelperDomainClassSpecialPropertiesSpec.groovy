@@ -18,7 +18,9 @@
  */
 package org.grails.web.binding
 
+import grails.gorm.dirty.checking.DirtyCheck
 import grails.persistence.Entity
+import groovy.transform.CompileStatic
 import org.grails.validation.ConstraintEvalUtils
 import spock.lang.Issue
 import spock.lang.Specification
@@ -55,6 +57,17 @@ class DefaultASTDatabindingHelperDomainClassSpecialPropertiesSpec extends
         obj.dateCreated == now
         obj.lastUpdated == now
     }
+
+    @Issue('https://github.com/apache/grails-core/issues/15681')
+    void 'Test id and version are not bound when a domain class extends a @DirtyCheck abstract base class'() {
+        when: 'a domain class that extends a @DirtyCheck abstract base is bound with id and version'
+        def obj = new MyDirtyCheckedDomain(id: 99L, version: 7L, name: 'Grace')
+
+        then: 'the regular property is bound but id and version are not'
+        obj.name == 'Grace'
+        obj.id == null
+        obj.version == null
+    }
 }
         
 @Entity
@@ -71,5 +84,18 @@ class SomeDomainClassWithExplicitBindableRules {
     static constraints = {
         dateCreated bindable: true
         lastUpdated bindable: true
+    }
+}
+
+@DirtyCheck
+@CompileStatic
+abstract class AbstractDirtyCheckedBase {
+    String name
+}
+
+@Entity
+class MyDirtyCheckedDomain extends AbstractDirtyCheckedBase {
+    static constraints = {
+        name nullable: false
     }
 }
