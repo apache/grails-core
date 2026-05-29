@@ -24,7 +24,8 @@ import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 
 /**
- * A comparator capable of sorting versions from newest to oldest.
+ * A comparator that orders versions from oldest to newest, following the standard
+ * {@link Comparator} contract (a negative result means the first version is older).
  *
  * <p>Versions are compared by their numeric components first (major, minor, patch, ...),
  * padding the shorter side with zeros so that {@code 7.0} and {@code 7.0.0} are equal.
@@ -142,11 +143,15 @@ class VersionComparator implements Comparator<String> {
     }
 
     private static int compareQualifiers(String q1, String q2) {
-        int tier = Integer.compare(qualifierTier(q1), qualifierTier(q2))
-        if (tier != 0) {
-            return tier
+        int tier1 = qualifierTier(q1)
+        int tier2 = qualifierTier(q2)
+        if (tier1 != tier2) {
+            return Integer.compare(tier1, tier2)
         }
-        return Integer.compare(qualifierNumber(q1), qualifierNumber(q2))
+        if (tier1 == TIER_MILESTONE || tier1 == TIER_RELEASE_CANDIDATE) {
+            return Integer.compare(qualifierNumber(q1), qualifierNumber(q2))
+        }
+        return 0
     }
 
     private static String normalizeQualifier(String qualifier) {

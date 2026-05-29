@@ -75,6 +75,11 @@ class VersionComparatorSpec extends Specification {
         "7.0.0.RC1"            | "7.0.0-RC1"            || 0
         "7.0.0.BUILD-SNAPSHOT" | "7.0.0-SNAPSHOT"       || 0
         "7.0.0-rc3"            | "7.0.0-RC3"            || 0
+
+        // An unrecognised qualifier is treated as a final release, even when it has a trailing number
+        "7.0.0-FOO2"           | "7.0.0"                || 0
+        "7.0.0"                | "7.0.0-FOO2"           || 0
+        "7.0.0-FOO"            | "7.0.0"                || 0
     }
 
     def "sorts mixed milestone, release candidate, snapshot and final versions from oldest to newest"() {
