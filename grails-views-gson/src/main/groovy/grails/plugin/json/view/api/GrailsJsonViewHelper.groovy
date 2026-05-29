@@ -45,7 +45,18 @@ interface GrailsJsonViewHelper extends GrailsViewHelper {
      * @param arguments The named arguments: 'template', 'collection', 'model', 'var' and 'bean'
      * @return The unescaped JSON
      */
-    JsonOutput.JsonWritable render(Map arguments)
+    // Groovy 6 Verifier workaround (blocker #6): declared as `default` (concrete) rather than
+    // abstract. Under Groovy 6.0.0-SNAPSHOT the concrete render(...) overrides in
+    // DefaultGrailsJsonViewHelper get a different return-type descriptor than these interface
+    // methods (inner-class return type JsonOutput.JsonWritable; groovy.json.JsonOutput.JsonWritable
+    // was removed in Groovy 6), so the abstract-method check in
+    // ClassCompletionVerifier.checkNoAbstractMethodsNonAbstractClass spuriously reports them
+    // unimplemented. Making them default removes them from getAbstractMethods() so the check has
+    // nothing to flag; every real implementor overrides them. Remove once the upstream regression
+    // is fixed.
+    default JsonOutput.JsonWritable render(Map arguments) {
+        throw new UnsupportedOperationException()
+    }
 
     /**
      * Renders the given object to JSON, typically a domain class, ignoring lazy and internal properties
@@ -55,7 +66,9 @@ interface GrailsJsonViewHelper extends GrailsViewHelper {
      * @param customizer Used to customize the contents
      * @return The unescaped JSON
      */
-    JsonOutput.JsonWritable render(Object object, Map arguments, @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer)
+    default JsonOutput.JsonWritable render(Object object, Map arguments, @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer) {
+        throw new UnsupportedOperationException()
+    }
 
     /**
      * Renders the given object to JSON, typically a domain class, ignoring lazy and internal properties
@@ -64,7 +77,9 @@ interface GrailsJsonViewHelper extends GrailsViewHelper {
      * @param arguments The supported named arguments: 'includes' or 'excludes' list
      * @return The unescaped JSON
      */
-    JsonOutput.JsonWritable render(Object object, Map arguments)
+    default JsonOutput.JsonWritable render(Object object, Map arguments) {
+        throw new UnsupportedOperationException()
+    }
 
     /**
      * Renders the given object to JSON, typically a domain class, ignoring lazy and internal properties
@@ -72,7 +87,9 @@ interface GrailsJsonViewHelper extends GrailsViewHelper {
      * @param object The object to render
      * @return The unescaped JSON
      */
-    JsonOutput.JsonWritable render(Object object)
+    default JsonOutput.JsonWritable render(Object object) {
+        throw new UnsupportedOperationException()
+    }
 
     /**
      * Renders the given object to JSON, typically a domain class, ignoring lazy and internal properties
@@ -81,7 +98,9 @@ interface GrailsJsonViewHelper extends GrailsViewHelper {
      * @param customizer the customizer
      * @return The unescaped JSON
      */
-    JsonOutput.JsonWritable render(Object object, @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer)
+    default JsonOutput.JsonWritable render(Object object, @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer) {
+        throw new UnsupportedOperationException()
+    }
 
     /**
      * Renders the given object inline within the current JSON object instead of creating a new JSON object
