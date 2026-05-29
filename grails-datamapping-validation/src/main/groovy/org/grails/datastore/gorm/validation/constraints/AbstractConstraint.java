@@ -242,8 +242,13 @@ public abstract class AbstractConstraint implements Constraint {
 
     /**
      * Gets the default message from the static map or directly from the resource bundle.
-     * This provides a robust fallback for Groovy 5 where interface static initialization
-     * order may differ.
+     * <p>
+     * On Groovy 5 the {@link ConstrainedProperty} interface constant
+     * {@code DEFAULT_MESSAGES} is initialised with null values (its map initialiser runs
+     * before the {@code DEFAULT_*_MESSAGE} constants it references are assigned), so a direct
+     * {@code DEFAULT_MESSAGES.get(code)} returns null. This falls back to reading the value
+     * straight from {@code MESSAGE_BUNDLE} when that happens. Reproduced by
+     * {@code DefaultMessageResolutionSpec}.
      */
     private String getDefaultMessageFromBundle(String code) {
         String message = ConstrainedProperty.DEFAULT_MESSAGES.get(code);
