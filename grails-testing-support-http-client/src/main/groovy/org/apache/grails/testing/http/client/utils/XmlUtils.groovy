@@ -45,12 +45,14 @@ import org.xml.sax.SAXException
 @CompileStatic
 class XmlUtils {
 
-    private static final String DISALLOW_DOCTYPE_DECL = 'https://apache.org/xml/features/disallow-doctype-decl'
-    private static final String EXTERNAL_GENERAL_ENTITIES = 'https://xml.org/sax/features/external-general-entities'
-    private static final String EXTERNAL_PARAMETER_ENTITIES = 'https://xml.org/sax/features/external-parameter-entities'
+    // SAX/Xerces feature identifiers are namespace-style URIs that use the http scheme; the parser
+    // matches them by exact string, so https variants throw SAXNotRecognizedException, get swallowed
+    // below, and silently leave the parser at its (JDK-version-dependent) defaults.
+    private static final String DISALLOW_DOCTYPE_DECL = 'http://apache.org/xml/features/disallow-doctype-decl'
+    private static final String EXTERNAL_PARAMETER_ENTITIES = 'http://xml.org/sax/features/external-parameter-entities'
     private static final String FEATURE_SECURE_PROCESSING = XMLConstants.FEATURE_SECURE_PROCESSING
-    private static final String LOAD_DTD_GRAMMAR = 'https://apache.org/xml/features/nonvalidating/load-dtd-grammar'
-    private static final String LOAD_EXTERNAL_DTD = 'https://apache.org/xml/features/nonvalidating/load-external-dtd'
+    private static final String LOAD_DTD_GRAMMAR = 'http://apache.org/xml/features/nonvalidating/load-dtd-grammar'
+    private static final String LOAD_EXTERNAL_DTD = 'http://apache.org/xml/features/nonvalidating/load-external-dtd'
 
     private static final Pattern SPACE_AND_EMPTY_ELEMENT_CLOSE = ~/ \/>/
     private static final String EMPTY_ELEMENT_CLOSE = '/>'
@@ -58,13 +60,25 @@ class XmlUtils {
     private static final Pattern LINE_ENDINGS = ~/\r\n|[\r\n]/
     private static final Pattern XML_DECLARATION = ~/^\s*(<\?xml\b.*?\?>)/
 
+    // Inline DOCTYPE with internal entities is allowed (disallow-doctype-decl=false). External general
+    // entities are intentionally left enabled so a SYSTEM reference is *attempted* and then blocked by
+    // the accessExternalDTD/Schema properties below, which throws a SAXParseException ("External Entity:
+    // ... access is not allowed") rather than silently dropping the reference.
     private static final Map<String, Boolean> SECURE_XML_SLURPER_FEATURES = [
             (DISALLOW_DOCTYPE_DECL): false,
-            (EXTERNAL_GENERAL_ENTITIES): false,
             (EXTERNAL_PARAMETER_ENTITIES): false,
             (FEATURE_SECURE_PROCESSING): true,
             (LOAD_DTD_GRAMMAR): false,
             (LOAD_EXTERNAL_DTD): false
+    ].asImmutable()
+
+    // JAXP parser properties: an empty value forbids every protocol for external DTD/entity access,
+    // so an inline DOCTYPE with internal entities still parses while any external SYSTEM reference
+    // throws a SAXParseException ("External Entity: ... access is not allowed"). Disabling the
+    // external-general-entities feature alone only skips the entity silently; these throw.
+    private static final Map<String, String> SECURE_XML_SLURPER_PROPERTIES = [
+            (XMLConstants.ACCESS_EXTERNAL_DTD): '',
+            (XMLConstants.ACCESS_EXTERNAL_SCHEMA): ''
     ].asImmutable()
 
     /**
@@ -235,7 +249,16 @@ class XmlUtils {
             }
         }
 
-        saxParserFactory.newSAXParser()
+        def saxParser = saxParserFactory.newSAXParser()
+        SECURE_XML_SLURPER_PROPERTIES.each { name, value ->
+            try {
+                saxParser.setProperty(name, value)
+            }
+            catch (Exception ignored) {
+                // ignore, parser doesn't support
+            }
+        }
+        saxParser
     }
 
 }
