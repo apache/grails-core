@@ -44,7 +44,7 @@ jobs:
         with:
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "🔎 Check Core Projects"
-        run: ./gradlew aggregateAnalysisViolations --continue
+        run: ./gradlew aggregateAnalysisViolations --continue -Pgrails.codeanalysis.enabled.pmd=true -Pgrails.codeanalysis.enabled.spotbugs=true
       - name: "📤 Upload Reports"
         if: always()
         uses: actions/upload-artifact@v7.0.1
@@ -78,7 +78,7 @@ jobs:
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "🔎 Check Gradle Plugin Projects"
         working-directory: grails-gradle
-        run: ./gradlew aggregateAnalysisViolations --continue
+        run: ./gradlew aggregateAnalysisViolations --continue -Pgrails.codeanalysis.enabled.pmd=true -Pgrails.codeanalysis.enabled.spotbugs=true
       - name: "📤 Upload Reports"
         if: always()
         uses: actions/upload-artifact@v7.0.1

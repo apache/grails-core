@@ -61,6 +61,20 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
 
     private static final Logger LOGGER = Logging.getLogger(GrailsViolationAggregationPlugin)
 
+    /**
+     * Comma-separated list of fully-qualified class-name prefixes to exclude from the aggregated
+     * JaCoCo coverage report. Configure via {@code -Pgrails.jacoco.aggregation.excludedClassPrefixes=...}
+     * or in {@code gradle.properties}.
+     *
+     * <p>Defaults to {@link #DEFAULT_JACOCO_EXCLUDED_CLASS_PREFIXES}: the Hibernate 7 support classes
+     * share fully-qualified names with their Hibernate 5 counterparts, and JaCoCo cannot aggregate
+     * coverage for two different classes with the same name (it fails with
+     * "Can't add different class with same name"). Excluding one variant keeps the aggregate valid.
+     */
+    static final String JACOCO_EXCLUDED_CLASS_PREFIXES_PROPERTY = 'grails.jacoco.aggregation.excludedClassPrefixes'
+
+    static final String DEFAULT_JACOCO_EXCLUDED_CLASS_PREFIXES = 'org.grails.orm.hibernate.support.hibernate7.'
+
     @Override
     void apply(Project project) {
         if (project != project.rootProject) {
@@ -153,13 +167,23 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
             root.allprojects.collect { Project p -> p.file('build/reports/jacoco/test/jacocoTestReport.csv') }
         )
 
+        // Resolve the excluded class-name prefixes as a Provider so the value is captured
+        // configuration-cache-safely and read at task execution time.
+        Provider<List<String>> excludedClassPrefixes = root.providers
+            .gradleProperty(JACOCO_EXCLUDED_CLASS_PREFIXES_PROPERTY)
+            .orElse(DEFAULT_JACOCO_EXCLUDED_CLASS_PREFIXES)
+            .map { String value ->
+                value.split(',').collect { it.trim() }.findAll { !it.isEmpty() }
+            }
+
         TaskProvider<Task> aggregateTask = root.tasks.register('aggregateJacocoCoverage') { Task task ->
             task.group = 'verification'
             task.description = 'Aggregates JaCoCo coverage reports from all subprojects into build/reports/violations/'
             task.inputs.files(jacocoCsvFiles).optional(true)
+            task.inputs.property('excludedClassPrefixes', excludedClassPrefixes)
             task.outputs.file(root.file('build/reports/violations/JACOCO_COVERAGE.md'))
             task.doLast {
-                parseJacocoCoverage(jacocoCsvFiles, violationsDir.get())
+                parseJacocoCoverage(jacocoCsvFiles, violationsDir.get(), excludedClassPrefixes.get())
             }
         }
         root.subprojects { Project sub ->
@@ -175,7 +199,10 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
     private static void parseStyleViolations(Directory styleXmlDir, Directory violationsDir,
             boolean checkStyleTests, boolean codenarcEnabled, boolean checkstyleEnabled) {
         def slurper = new XmlSlurper()
+        slurper.setFeature('http://apache.org/xml/features/disallow-doctype-decl', true)
         slurper.setFeature('http://apache.org/xml/features/nonvalidating/load-external-dtd', false)
+        slurper.setFeature('http://xml.org/sax/features/external-general-entities', false)
+        slurper.setFeature('http://xml.org/sax/features/external-parameter-entities', false)
         slurper.setFeature('http://xml.org/sax/features/namespaces', false)
 
         def getModule = { String fileName ->
@@ -300,7 +327,10 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
     private static void parseAnalysisViolations(Directory analysisXmlDir, Directory violationsDir,
             boolean checkAnalysisTests, boolean pmdEnabled, boolean spotbugsEnabled) {
         def slurper = new XmlSlurper()
+        slurper.setFeature('http://apache.org/xml/features/disallow-doctype-decl', true)
         slurper.setFeature('http://apache.org/xml/features/nonvalidating/load-external-dtd', false)
+        slurper.setFeature('http://xml.org/sax/features/external-general-entities', false)
+        slurper.setFeature('http://xml.org/sax/features/external-parameter-entities', false)
         slurper.setFeature('http://xml.org/sax/features/namespaces', false)
 
         def getModule = { String fileName ->
@@ -406,7 +436,7 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
     }
 
     @CompileDynamic
-    private static void parseJacocoCoverage(FileCollection csvFiles, Directory violationsDir) {
+    private static void parseJacocoCoverage(FileCollection csvFiles, Directory violationsDir, List<String> excludedClassPrefixes) {
         def jacocoCoverage = []
         csvFiles.each { File csvReport ->
             if (csvReport.exists()) {
@@ -442,7 +472,11 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
             return
         }
 
-        jacocoCoverage.removeIf { it.className.startsWith('org.grails.orm.hibernate.support.hibernate7.') }
+        // Drop classes whose fully-qualified names collide across Hibernate variants (see
+        // JACOCO_EXCLUDED_CLASS_PREFIXES_PROPERTY) so the aggregate report stays valid.
+        if (excludedClassPrefixes) {
+            jacocoCoverage.removeIf { entry -> excludedClassPrefixes.any { prefix -> entry.className.startsWith(prefix) } }
+        }
 
         def outDir = violationsDir.asFile
         outDir.mkdirs()

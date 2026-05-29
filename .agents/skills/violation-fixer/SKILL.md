@@ -31,7 +31,7 @@ Activate this skill when:
 | Plugin | Applied to | Responsibility |
 |--------|-----------|----------------|
 | `org.apache.grails.gradle.grails-code-style` | Every subproject | Applies Checkstyle and CodeNarc; registers per-project `codeStyle` task; redirects XML reports to root `build/reports/codestyle/` |
-| `org.apache.grails.gradle.grails-code-analysis` | Every subproject | Applies PMD and SpotBugs (both opt-in); registers per-project `codeAnalysis` task; redirects XML reports to root `build/reports/codestyle/` |
+| `org.apache.grails.gradle.grails-code-analysis` | Every subproject | Applies PMD and SpotBugs (both opt-in); registers per-project `codeAnalysis` task; redirects XML reports to root `build/reports/codeanalysis/` |
 | `org.apache.grails.gradle.grails-jacoco` | Every subproject | Applies JaCoCo; wires `jacocoTestReport` to run after each `test` task |
 | `org.apache.grails.gradle.grails-violation-aggregation` | **Root project only** | Registers `aggregateViolations` and `aggregateJacocoCoverage` tasks; writes Markdown summaries to `build/reports/violations/` |
 
@@ -214,11 +214,13 @@ build/reports/codestyle/        ← XML inputs for style aggregation
 │   ├── grails-core-checkstyleMain.xml
 │   ├── grails-web-mvc-checkstyleMain.xml
 │   └── ...
-├── codenarc/
-│   ├── grails-core-codenarcMain.xml
-│   └── ...
-├── pmd/       (if enabled)
-└── spotbugs/  (if enabled)
+└── codenarc/
+    ├── grails-core-codenarcMain.xml
+    └── ...
+
+build/reports/codeanalysis/     ← XML inputs for analysis aggregation (if enabled)
+├── pmd/
+└── spotbugs/
 
 build/reports/violations/       ← Markdown summaries written by aggregateViolations
 ├── CODENARC_VIOLATIONS.md
