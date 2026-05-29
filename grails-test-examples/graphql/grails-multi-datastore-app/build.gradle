@@ -70,6 +70,7 @@ dependencies {
 
     testImplementation 'org.apache.grails:grails-testing-support-datamapping'
     testImplementation 'org.apache.grails:grails-testing-support-web'
+    testImplementation 'org.apache.grails.testing:grails-testing-support-mongodb'
 }
 
 apply {
