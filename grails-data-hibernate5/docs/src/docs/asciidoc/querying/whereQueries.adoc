@@ -30,6 +30,7 @@ The link:../api/org/grails/datastore/gorm/GormEntity.html#where(groovy.lang.Clos
 def query = Person.where {
    firstName == "Bart"
 }
+
 Person bart = query.find()
 ----
 
@@ -43,9 +44,10 @@ class Person {
     static DetachedCriteria<Person> simpsons = where {
          lastName == "Simpson"
     }
-    ...
 }
+
 ...
+
 Person.simpsons.each { Person p ->
     println p.firstname
 }
@@ -58,9 +60,11 @@ Query execution is lazy and only happens upon usage of the <<detachedCriteria,De
 def results = Person.findAll {
      lastName == "Simpson"
 }
+
 def results = Person.findAll(sort:"firstName") {
      lastName == "Simpson"
 }
+
 Person p = Person.find { firstName == "Bart" }
 ----
 
@@ -87,6 +91,7 @@ It is possible use regular Groovy comparison operators and logic to formulate co
 def query = Person.where {
     (lastName != "Simpson" && firstName != "Fred") || (firstName == "Bart" && age > 9)
 }
+
 def results = query.list(sort:"firstName")
 ----
 
@@ -129,9 +134,11 @@ Since the return value of the `where` method is a <<detachedCriteria,DetachedCri
 DetachedCriteria<Person> query = Person.where {
      lastName == "Simpson"
 }
+
 DetachedCriteria<Person> bartQuery = query.where {
      firstName == "Bart"
 }
+
 Person p = bartQuery.find()
 ----
 
@@ -142,6 +149,8 @@ Note that you cannot pass a closure defined as a variable into the `where` metho
 def callable = {
     lastName == "Simpson"
 }
+
+// Fails: where() requires an inline closure for the AST transform
 def query = Person.where(callable)
 ----
 
@@ -154,6 +163,7 @@ import grails.gorm.DetachedCriteria
 def callable = {
     lastName == "Simpson"
 } as DetachedCriteria<Person>
+
 def query = Person.where(callable)
 ----
 
@@ -262,42 +272,76 @@ Operator,Criteria Method,Description
 *<=*,sizeLe,The collection size is less than or equal to
 |===
 
-==== Query Aliases and Sorting
 
-If you define a query for an association an alias is automatically generated for the query. For example the following query:
+==== Sorting
+
+Sorting with `where` queries is performed by passing `sort` and (optionally) `order` arguments to the `list` method of a <<detachedCriteria,Detached Criteria>>.
+
+===== Single-field Sorting
+
+To sort by a single property:
 
 [source,groovy]
 ----
-def query = Pet.where {
-    owner.firstName == "Fred"
+def query = Person.where {
+    firstName == "Jack"
 }
+
+def results = query.list(sort: "firstName")
 ----
 
-Will generate an alias for the `owner` association such as `owner_alias_0`. These generated aliases are fine for most cases, but are not useful if you want to later sort or use a projection on the results. For example the following query will fail:
+By default, sorting is ascending. You can specify the direction explicitly using the `order` argument:
+
+[source,groovy]
+----
+def results = query.list(sort: "firstName", order: "desc")
+----
+
+===== Multi-field Sorting
+
+To sort by multiple fields, pass a `Map` to the `sort` argument:
+
+[source,groovy]
+----
+def results = query.list(sort: [
+    firstName: "asc",
+    lastName: "desc"
+])
+----
+
+This sorts results first by `firstName` ascending and then by `lastName` descending.
+
+===== Sorting with Associations
+
+When sorting by properties of associated entities, you must define an explicit alias within the `where` query.
+Without an explicit alias, sorting on association properties may fail due to dynamically generated aliases.
+
+For example the following query will fail:
 
 [source,groovy]
 ----
 // fails because a dynamic alias is used
 Pet.where {
     owner.firstName == "Fred"
-}.list(sort:"owner.lastName")
+}.list(sort: "owner.lastName")
 ----
 
-If you plan to sort the results then an explicit alias should be used and these can be defined by simply declaring a variable in the `where` query:
+In this case GORM will generate an alias for the `owner` association such as `owner_alias_0`. These generated aliases are internal and are not suitable for later reference in sorting or projections.
+
+To avoid this problem, define an explicit alias:
 
 [source,groovy]
 ----
+// 1. Define alias
 def query = Pet.where {
-    def o1 = owner <1>
-    o1.firstName == "Fred" <2>
-}.list(sort:'o1.lastName') <3>
+    def o = owner
+    o.firstName == "Fred"
+}
+
+// 2. Execute query using alias for sorting
+def results = query.list(sort: "o.lastName")
 ----
 
-<1> Define an alias called `o1`
-<2> Use the alias in the query itself
-<3> Use the alias to sort the results
-
-By assigning the name of an association to a local variable it will automatically become an alias usable within the query itself and also for the purposes of sorting or projecting the results.
 
 ==== Subqueries
 
@@ -307,7 +351,7 @@ It is possible to execute subqueries within where queries. For example to find a
 [source,groovy]
 ----
 final query = Person.where {
-  age > avg(age)
+    age > avg(age)
 }
 ----
 
@@ -330,7 +374,7 @@ You can apply additional criteria to any subquery by using the `of` method and p
 [source,groovy]
 ----
 def query = Person.where {
-  age > avg(age).of { lastName == "Simpson" } && firstName == "Homer"
+    age > avg(age).of { lastName == "Simpson" } && firstName == "Homer"
 }
 ----
 
@@ -363,7 +407,7 @@ Criteria and where queries can be seamlessly mixed:
 ----
 def results = Person.withCriteria {
     notIn "firstName", Person.where { age < 18 }.firstName
- }
+}
 ----
 
 Subqueries can be used with projections:
@@ -380,10 +424,11 @@ Correlated queries that span two domain classes can be used:
 ----
 def employees = Employee.where {
     region.continent in ['APAC', "EMEA"]
-    }.id()
-    def results = Sale.where {
+}.id()
+
+def results = Sale.where {
     employee in employees && total > 100000
-    }.employee.list()
+}.employee.list()
 ----
 
 And support for aliases (cross query references) using simple variable declarations has been added to where queries:
@@ -455,6 +500,7 @@ Since each `where` method call returns a <<detachedCriteria,DetachedCriteria>> i
 DetachedCriteria<Person> query = Person.where {
     lastName == 'Simpson'
 }
+
 int total = query.updateAll(lastName:"Bloggs")
 ----
 
@@ -467,5 +513,6 @@ To batch delete records you can use the `deleteAll` method:
 DetachedCriteria<Person> query = Person.where {
     lastName == 'Simpson'
 }
+
 int total = query.deleteAll()
 ----

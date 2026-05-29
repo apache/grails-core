@@ -43,6 +43,8 @@ class PlainGithubWorkflowSpec extends BeanContextSpec implements CommandOutputFi
         then:
         workflow
         workflow.contains("name: Java CI")
+        workflow.contains("gradle/actions/setup-gradle@v6.1.0")
+        workflow.contains("cache-provider: basic")
 
         where:
         buildTool | workflowName
