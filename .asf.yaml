@@ -70,8 +70,7 @@ github:
       branches:
         includes:
           - "~DEFAULT_BRANCH"
-          - "release/*"
-          - "rel/*"
+          - "*.x"
         excludes: []
       bypass_teams:
         - root
