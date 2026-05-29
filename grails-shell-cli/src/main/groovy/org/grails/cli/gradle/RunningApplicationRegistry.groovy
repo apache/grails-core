@@ -24,6 +24,8 @@ import groovy.transform.CompileStatic
 
 import org.gradle.tooling.CancellationTokenSource
 
+import grails.build.logging.GrailsConsole
+
 /**
  * Tracks the {@link CancellationTokenSource} of Grails applications started by the
  * CLI via the {@code run-app} command (an asynchronous Gradle {@code bootRun} build).
@@ -44,6 +46,10 @@ import org.gradle.tooling.CancellationTokenSource
 class RunningApplicationRegistry {
 
     private static final Set<CancellationTokenSource> RUNNING = ConcurrentHashMap.newKeySet()
+
+    // Monitor used to wake up awaitStop() the moment the last running build deregisters,
+    // instead of polling. Only deregister() can empty RUNNING, so only it needs to notify.
+    private static final Object MONITOR = new Object()
 
     private RunningApplicationRegistry() {
     }
@@ -68,6 +74,9 @@ class RunningApplicationRegistry {
     static void deregister(CancellationTokenSource tokenSource) {
         if (tokenSource != null) {
             RUNNING.remove(tokenSource)
+            synchronized (MONITOR) {
+                MONITOR.notifyAll()
+            }
         }
     }
 
@@ -94,8 +103,8 @@ class RunningApplicationRegistry {
             try {
                 tokenSource.cancel()
             }
-            catch (Throwable ignored) {
-                // best effort: continue cancelling the remaining applications
+            catch (Throwable e) {
+                GrailsConsole.getInstance().verbose("Failed to request cancellation of a running application: ${e.message}")
             }
         }
         return true
@@ -110,18 +119,21 @@ class RunningApplicationRegistry {
      */
     static boolean awaitStop(long timeoutMillis) {
         long deadline = System.currentTimeMillis() + timeoutMillis
-        while (!RUNNING.isEmpty()) {
-            if (System.currentTimeMillis() >= deadline) {
-                return false
+        synchronized (MONITOR) {
+            while (!RUNNING.isEmpty()) {
+                long remaining = deadline - System.currentTimeMillis()
+                if (remaining <= 0) {
+                    return false
+                }
+                try {
+                    MONITOR.wait(remaining)
+                }
+                catch (InterruptedException e) {
+                    Thread.currentThread().interrupt()
+                    return RUNNING.isEmpty()
+                }
             }
-            try {
-                Thread.sleep(100)
-            }
-            catch (InterruptedException e) {
-                Thread.currentThread().interrupt()
-                return RUNNING.isEmpty()
-            }
+            return true
         }
-        return true
     }
 }
