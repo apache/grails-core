@@ -52,4 +52,18 @@ class LogbackSpec extends ApplicationContextSpec implements CommandOutputFixture
         where:
         applicationType << ApplicationType.values().toList()
     }
+
+    @Unroll
+    void "test logback-spring.xml disables Jansi for #applicationType application"() {
+        when:
+        def output = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS))
+
+        then: "Jansi is disabled so its global System.out replacement does not break console logging after a Spring Boot DevTools restart (issue #15663)"
+        def logback = output.get("grails-app/conf/logback-spring.xml")
+        logback.contains("<withJansi>false</withJansi>")
+        !logback.contains("<withJansi>true</withJansi>")
+
+        where:
+        applicationType << ApplicationType.values().toList()
+    }
 }

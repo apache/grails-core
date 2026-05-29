@@ -17,14 +17,14 @@ specific language governing permissions and limitations
 under the License.
 *@
 
-@args (String projectName, String packageName, boolean jansi)
+@args (String projectName, String packageName)
 
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-        <withJansi>@jansi</withJansi>
+        <withJansi>false</withJansi>
         <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
             <level>${CONSOLE_LOG_THRESHOLD}</level>
         </filter>
