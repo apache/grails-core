@@ -89,10 +89,10 @@ jobs:
             echo "range=" >> "$GITHUB_OUTPUT"
           fi
 
-      # Pinned to v7.2.1 by commit SHA per the ASF security policy (matches
+      # Pinned to v7.3.1 by commit SHA per the ASF security policy (matches
       # the pinning convention already used by other ASF-approved actions in
-      # this repo). v7.2.1 is required because it ships PR #1593 - the bug
-      # fix for `initial-commits-since` being silently ignored when set only
+      # this repo). v7.2.1 or later is required because it ships PR #1593 - the
+      # bug fix for `initial-commits-since` being silently ignored when set only
       # in the release-drafter.yml config (not also as a workflow input).
       # Our release-drafter.yml relies on that exact config-only path to
       # bound history walking on brand-new release branches like 7.2.x.
@@ -109,7 +109,7 @@ jobs:
       #     --jq '.object.sha'
       - name: "📝 Update Release Draft"
         id: drafter
-        uses: release-drafter/release-drafter@563bf132657a13ded0b01fcb723c5a58cdd824e2 # v7.2.1
+        uses: release-drafter/release-drafter@e1247478eabc9f6d9cf5ec2b3547469b0e1d2767 # v7.3.1
         # Drafting release notes is a best-effort, non-critical task - a
         # transient GitHub API hiccup must not turn every PR check red. The
         # explicit verification step below catches the case where the action
