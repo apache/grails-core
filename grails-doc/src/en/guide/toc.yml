@@ -53,6 +53,7 @@ conf:
         title: Logging
         loggerName: Logger Names
         maskingRequestParametersFromStacktraceLogs: Masking Request Parameters From Stacktrace Logs
+        loggingFullStackTraces: Logging Full Stack Traces
         externalLoggingConfiguration: External Configuration File
     configGORM: GORM
     proxyConfig: Configuring an HTTP proxy

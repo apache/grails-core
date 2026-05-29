@@ -425,8 +425,10 @@ include(
         'grails-test-examples-issue-11102',
         'grails-test-examples-issue-11767',
         'grails-test-examples-issue-15228',
+        'grails-test-examples-issue-10279',
         'grails-test-examples-issue-698-domain-save-npe',
         'grails-test-examples-issue-views-182',
+        'grails-test-examples-jetty',
         'grails-test-examples-micronaut',
         'grails-test-examples-micronaut-groovy-only',
         'grails-test-examples-namespaces',
@@ -475,6 +477,7 @@ project(':grails-test-examples-plugins-loadafter').projectDir = file('grails-tes
 project(':grails-test-examples-plugins-issue11005').projectDir = file('grails-test-examples/plugins/issue11005')
 project(':grails-test-examples-issue-11767').projectDir = file('grails-test-examples/issue-11767')
 project(':grails-test-examples-issue-15228').projectDir = file('grails-test-examples/issue-15228')
+project(':grails-test-examples-issue-10279').projectDir = file('grails-test-examples/issue-10279')
 project(':grails-test-examples-plugins-exploded').projectDir = file('grails-test-examples/plugins/exploded')
 project(':grails-test-examples-plugins-issue-11767').projectDir = file('grails-test-examples/plugins/issue-11767')
 project(':grails-test-examples-plugins-micronaut-singleton').projectDir = file('grails-test-examples/plugins/micronaut-singleton')
@@ -485,6 +488,7 @@ project(':grails-test-examples-scaffolding-fields').projectDir = file('grails-te
 project(':grails-test-examples-views-functional-tests').projectDir = file('grails-test-examples/views-functional-tests')
 project(':grails-test-examples-views-functional-tests-plugin').projectDir = file('grails-test-examples/views-functional-tests-plugin')
 project(':grails-test-examples-test-phases').projectDir = file('grails-test-examples/test-phases')
+project(':grails-test-examples-jetty').projectDir = file('grails-test-examples/jetty')
 
 includeBuild('./grails-gradle') {
     name = 'grails-gradle'
