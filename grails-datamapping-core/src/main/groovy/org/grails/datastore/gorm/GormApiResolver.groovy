@@ -166,59 +166,47 @@ class PreferredDatastoreSelector {
         if (preferred == null) {
             return null
         }
-        if (qualifier != null) {
-            if (ConnectionSource.DEFAULT.equals(qualifier)) {
-                // For the DEFAULT qualifier, the preferred datastore itself is the active
-                // transaction's datastore — return it directly rather than routing through
-                // getDatastoreForConnection (which would return the parent and mismatch the
-                // session factory bound by the active transaction). Skip only if preferred
-                // doesn't know the entity (e.g., an unrelated single-datasource datastore).
-                if (className == null || preferred.mappingContext?.getPersistentEntity(className) != null) {
-                    return preferred
-                }
-                return null
-            }
-            if (preferred instanceof MultipleConnectionSourceCapableDatastore) {
-                try {
-                    Datastore ds = ((MultipleConnectionSourceCapableDatastore) preferred).getDatastoreForConnection(qualifier)
-                    if (ds != null) {
-                        return ds
-                    }
-                } catch (Throwable e) {
-                    // ignore
-                }
-            }
+        if (className != null && preferred.mappingContext?.getPersistentEntity(className) == null) {
             return null
         }
 
-        if (className != null && preferred.mappingContext.getPersistentEntity(className) == null) {
-            return null
-        }
-        if (preferred instanceof MultiTenantCapableDatastore) {
-            MultiTenantCapableDatastore mtds = (MultiTenantCapableDatastore) preferred
-            try {
-                Serializable tid = CurrentTenantHolder.get()
-                if (tid == null && entity != null && MultiTenant.isAssignableFrom(entity)) {
-                    tid = mtds.tenantResolver.resolveTenantIdentifier()
-                }
-                if (ConnectionSource.DEFAULT.equals(tid)) {
-                    return preferred
-                }
-                if (tid != null && !ConnectionSource.DEFAULT.equals(tid.toString())) {
-                    stateRegistry.setResolvingDatastoreDepth(depth + 1)
-                    try {
-                        return resolver.findDatastore(entity, tid.toString())
-                    } finally {
-                        stateRegistry.setResolvingDatastoreDepth(depth)
+        boolean isDefaultQualifier = qualifier == null || ConnectionSource.DEFAULT.equals(qualifier)
+        if (isDefaultQualifier) {
+            if (preferred instanceof MultiTenantCapableDatastore) {
+                MultiTenantCapableDatastore mtds = (MultiTenantCapableDatastore) preferred
+                try {
+                    Serializable tid = CurrentTenantHolder.get()
+                    if (tid == null && entity != null && MultiTenant.isAssignableFrom(entity)) {
+                        tid = mtds.tenantResolver.resolveTenantIdentifier()
+                    }
+                    if (tid != null && !ConnectionSource.DEFAULT.equals(tid.toString())) {
+                        stateRegistry.setResolvingDatastoreDepth(depth + 1)
+                        try {
+                            return resolver.findDatastore(entity, tid.toString())
+                        } finally {
+                            stateRegistry.setResolvingDatastoreDepth(depth)
+                        }
+                    }
+                } catch (Throwable e) {
+                    if (entity != null && MultiTenant.isAssignableFrom(entity) && e instanceof TenantNotFoundException) {
+                        throw e
                     }
                 }
-            } catch (Throwable e) {
-                if (entity != null && MultiTenant.isAssignableFrom(entity) && e instanceof TenantNotFoundException) {
-                    throw e
+            }
+            return preferred
+        }
+
+        if (preferred instanceof MultipleConnectionSourceCapableDatastore) {
+            try {
+                Datastore ds = ((MultipleConnectionSourceCapableDatastore) preferred).getDatastoreForConnection(qualifier)
+                if (ds != null) {
+                    return ds
                 }
+            } catch (Throwable e) {
+                // ignore
             }
         }
-        return preferred
+        return null
     }
 }
 
