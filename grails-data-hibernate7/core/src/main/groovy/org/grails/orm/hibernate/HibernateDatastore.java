@@ -741,6 +741,7 @@ public class HibernateDatastore extends AbstractDatastore
     @Override
     public void destroy() {
         if (!this.destroyed) {
+            org.grails.datastore.gorm.GormRegistry.getInstance().removeDatastore(this);
             try {
                 for (HibernateDatastore childDatastore : datastoresByConnectionSource.values()) {
                     if (childDatastore != this) {

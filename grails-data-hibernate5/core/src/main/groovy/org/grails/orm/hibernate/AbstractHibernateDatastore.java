@@ -330,6 +330,7 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
     @Override
     public void destroy() {
         if (!this.destroyed) {
+            org.grails.datastore.gorm.GormRegistry.getInstance().removeDatastore(this);
             super.destroy();
             AbstractHibernateGormInstanceApi.resetInsertActive();
             try {

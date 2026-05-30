@@ -685,24 +685,28 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
             }
         };
         DefaultConnectionSource<DataSource, DataSourceSettings> dataSourceConnectionSource = new DefaultConnectionSource<>(schemaName, dataSource, tenantSettings.getDataSource());
-        ConnectionSource<SessionFactory, HibernateConnectionSourceSettings> connectionSource = factory.create(schemaName, dataSourceConnectionSource, tenantSettings);
-        SingletonConnectionSources<SessionFactory, HibernateConnectionSourceSettings> singletonConnectionSources = new SingletonConnectionSources<>(connectionSource, connectionSources.getBaseConfiguration());
-        HibernateDatastore childDatastore = new HibernateDatastore(singletonConnectionSources, (HibernateMappingContext) mappingContext, eventPublisher) {
-            @Override
-            protected HibernateGormEnhancer initialize() {
-                return new HibernateGormEnhancer(this, transactionManager, getConnectionSources().getDefaultConnectionSource().getSettings());
-            }
-
-            @Override
-            public HibernateDatastore getDatastoreForConnection(String connectionName) {
-                String myName = getConnectionSources().getDefaultConnectionSource().getName();
-                if (connectionName.equals(myName)) {
-                    return this;
+        try {
+            ConnectionSource<SessionFactory, HibernateConnectionSourceSettings> connectionSource = factory.create(schemaName, dataSourceConnectionSource, tenantSettings);
+            SingletonConnectionSources<SessionFactory, HibernateConnectionSourceSettings> singletonConnectionSources = new SingletonConnectionSources<>(connectionSource, connectionSources.getBaseConfiguration());
+            HibernateDatastore childDatastore = new HibernateDatastore(singletonConnectionSources, (HibernateMappingContext) mappingContext, eventPublisher) {
+                @Override
+                protected HibernateGormEnhancer initialize() {
+                    return new HibernateGormEnhancer(this, transactionManager, getConnectionSources().getDefaultConnectionSource().getSettings());
                 }
-                return HibernateDatastore.this.getDatastoreForConnection(connectionName);
-            }
-        };
-        datastoresByConnectionSource.put(connectionSource.getName(), childDatastore);
+
+                @Override
+                public HibernateDatastore getDatastoreForConnection(String connectionName) {
+                    String myName = getConnectionSources().getDefaultConnectionSource().getName();
+                    if (connectionName.equals(myName)) {
+                        return this;
+                    }
+                    return HibernateDatastore.this.getDatastoreForConnection(connectionName);
+                }
+            };
+            datastoresByConnectionSource.put(connectionSource.getName(), childDatastore);
+        } finally {
+            TransactionSynchronizationManager.unbindResourceIfPossible(dataSource);
+        }
     }
 
     @Override

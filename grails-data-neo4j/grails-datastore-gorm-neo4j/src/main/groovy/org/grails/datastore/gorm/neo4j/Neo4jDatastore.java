@@ -581,6 +581,7 @@ public class Neo4jDatastore extends AbstractDatastore implements Closeable, Stat
     @Override
     @PreDestroy
     public void close() throws IOException {
+        org.grails.datastore.gorm.GormRegistry.getInstance().removeDatastore(this);
         try {
             try {
                 gormEnhancer.close();

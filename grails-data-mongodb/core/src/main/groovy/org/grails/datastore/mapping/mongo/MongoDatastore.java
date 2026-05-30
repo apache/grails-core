@@ -884,6 +884,7 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
     @Override
     @PreDestroy
     public void close() {
+        org.grails.datastore.gorm.GormRegistry.getInstance().removeDatastore(this);
         try {
             super.destroy();
         } catch (Exception e) {

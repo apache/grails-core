@@ -68,20 +68,6 @@ class GrailsHibernateTransactionManager extends HibernateTransactionManager {
     }
 
     @Override
-    protected boolean isExistingTransaction(Object transaction) {
-        boolean existing = super.isExistingTransaction(transaction)
-        if (existing && getDataSource() != null) {
-            org.springframework.jdbc.datasource.ConnectionHolder conHolder = (org.springframework.jdbc.datasource.ConnectionHolder) TransactionSynchronizationManager.getResource(getDataSource())
-            if (conHolder == null) {
-                // There is an existing transaction for the SessionFactory, BUT it is NOT for our DataSource!
-                // This happens in DATABASE multi-tenancy where multiple DataSources share one SessionFactory.
-                return false
-            }
-        }
-        return existing
-    }
-
-    @Override
     protected void doBegin(Object transaction, TransactionDefinition definition) {
         super.doBegin(transaction, definition)
 

@@ -174,6 +174,28 @@ class GormRegistryScalabilitySpec extends Specification {
 
         and: "the map size is unchanged — no null/empty entry was inserted"
         registry.datastoresByQualifier.size() == sizeBefore
+     }
+
+    void "datastore deregisters from GormRegistry on close"() {
+        given: "a temporary datastore registered in GormRegistry"
+        def tempDatastore = new HibernateDatastore(
+            DatastoreUtils.createPropertyResolver([
+                'dataSource.url': "jdbc:h2:mem:tempScalabilityDBH5;LOCK_TIMEOUT=10000",
+                'dataSource.dbCreate': 'update',
+                'dataSource.dialect': H2Dialect.name,
+            ]),
+            ScalabilityBook
+        )
+        GormRegistry registry = GormRegistry.instance
+
+        expect: "the datastore is registered"
+        registry.allDatastores.contains(tempDatastore)
+
+        when: "the datastore is closed"
+        tempDatastore.close()
+
+        then: "the datastore is removed from the GormRegistry"
+        !registry.allDatastores.contains(tempDatastore)
     }
 }
 

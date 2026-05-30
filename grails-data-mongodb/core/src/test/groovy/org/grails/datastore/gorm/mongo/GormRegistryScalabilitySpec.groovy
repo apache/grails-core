@@ -171,6 +171,26 @@ class GormRegistryScalabilitySpec extends Specification {
         and: "the map size is unchanged — no null/empty entry was inserted"
         registry.datastoresByQualifier.size() == sizeBefore
     }
+
+    void "datastore deregisters from GormRegistry on close"() {
+        given: "a temporary datastore registered in GormRegistry"
+        def tempDatastore = new MongoDatastore(
+            DatastoreUtils.createPropertyResolver([
+                "grails.mongodb.databaseName": "tempScalabilityDB"
+            ]),
+            ScalabilityBook
+        )
+        GormRegistry registry = GormRegistry.instance
+
+        expect: "the datastore is registered"
+        registry.allDatastores.contains(tempDatastore)
+
+        when: "the datastore is closed"
+        tempDatastore.close()
+
+        then: "the datastore is removed from the GormRegistry"
+        !registry.allDatastores.contains(tempDatastore)
+    }
 }
 
 // ---------------------------------------------------------------------------
