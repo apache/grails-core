@@ -31,6 +31,38 @@ dependencies {
     add('testRuntimeOnly', 'org.junit.platform:junit-platform-launcher')
 }
 
+/**
+ * Recursively checks if a project has a direct or transitive dependency on a target project.
+ * Used to detect modules that rely on GORM (grails-datamapping-core), which are prone to
+ * cross-test registry pollution when executed in parallel (maxParallelForks > 1).
+ *
+ * Uses Gradle 9 compatible path lookup (proj.project(pd.getPath())) because
+ * ProjectDependency.getDependencyProject() was removed in Gradle 9.
+ *
+ * @param proj the project to inspect
+ * @param targetProjectName the name of the target dependency project (e.g. 'grails-datamapping-core')
+ * @param visited set of already visited projects to prevent infinite recursion in cyclic dependency configurations
+ * @return true if the project depends on the target project
+ */
+@groovy.transform.CompileStatic
+boolean dependsOnProject(Project proj, String targetProjectName, Set<String> visited = new HashSet<String>()) {
+    if (proj.name == targetProjectName) return true
+    if (visited.contains(proj.name)) return false
+    visited.add(proj.name)
+    for (org.gradle.api.artifacts.Configuration config : proj.configurations) {
+        for (org.gradle.api.artifacts.Dependency dep : config.dependencies) {
+            if (dep instanceof org.gradle.api.artifacts.ProjectDependency) {
+                org.gradle.api.artifacts.ProjectDependency pd = (org.gradle.api.artifacts.ProjectDependency) dep
+                Project depProj = proj.project(pd.getPath())
+                if (dependsOnProject(depProj, targetProjectName, visited)) {
+                    return true
+                }
+            }
+        }
+    }
+    return false
+}
+
 // Disable build cache for Groovy compilation in CI to ensure AST transformations are always applied.
 // AST transformers are applied at compile time, and Gradle's incremental compilation might not detect
 // when a transformer itself changes, leading to stale bytecode.
@@ -79,7 +111,11 @@ tasks.withType(Test).configureEach {
         showStackTraces = true
     }
     excludes = ['**/*TestCase.class', '**/*$*.class']
-    maxParallelForks = configuredTestParallel
+    
+    // Selectively isolate GORM (grails-datamapping-core) dependent tests to prevent GormRegistry conflicts
+    def isGormProject = dependsOnProject(project, 'grails-datamapping-core')
+    maxParallelForks = isGormProject ? 1 : configuredTestParallel
+    
     maxHeapSize = isCiBuild ? '768m' : '1024m'
     forkEvery = hasProperty('forkEveryUnitTest') ? getProperty('forkEveryUnitTest') as long : (isCiBuild ? 50 : 100)
     if (System.getProperty('debug.tests')) {
