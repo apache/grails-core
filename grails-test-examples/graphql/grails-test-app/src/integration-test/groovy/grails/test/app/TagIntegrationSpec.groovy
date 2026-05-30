@@ -122,7 +122,9 @@ class TagIntegrationSpec extends Specification implements GraphQLSpec {
         System.setOut(new StringMessagePrintStream() {
             @Override
             protected void printed(String message) {
-                queries.add(message)
+                if (message != null && message.contains("Hibernate:")) {
+                    queries.add(message)
+                }
             }
         })
 

@@ -112,8 +112,10 @@ class UserRoleIntegrationSpec extends Specification implements GraphQLSpec {
         System.setOut(new StringMessagePrintStream() {
             @Override
             protected void printed(String message) {
-                query = message
-                outCount++
+                if (message != null && message.contains("Hibernate:")) {
+                    query = message
+                    outCount++
+                }
             }
         })
 
