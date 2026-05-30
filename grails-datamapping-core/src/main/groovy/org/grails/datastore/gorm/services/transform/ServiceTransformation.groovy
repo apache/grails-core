@@ -99,10 +99,8 @@ import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
 import org.grails.datastore.mapping.core.order.OrderedComparator
-import org.grails.datastore.mapping.reflect.AstAnnotationUtils
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 
-import static org.codehaus.groovy.ast.tools.GeneralUtils.*
 import static org.grails.datastore.mapping.reflect.AstUtils.ZERO_PARAMETERS
 
 import static org.apache.groovy.ast.tools.AnnotatedNodeUtils.markAsGenerated
@@ -112,6 +110,7 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.block
 import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.castX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.classX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.constX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.ifElseS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.notNullX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.param
@@ -121,7 +120,6 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.callD
 import static org.grails.datastore.mapping.reflect.AstUtils.COMPILE_STATIC_TYPE
-import static org.grails.datastore.mapping.reflect.AstUtils.ZERO_PARAMETERS
 import static org.grails.datastore.mapping.reflect.AstAnnotationUtils.addAnnotationIfNecessary
 import static org.grails.datastore.mapping.reflect.AstAnnotationUtils.findAnnotation
 import static org.grails.datastore.mapping.reflect.AstUtils.copyAnnotations
@@ -337,8 +335,6 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
                         }
 
                         def implementedAnn = new AnnotationNode(ClassHelper.make(Implemented))
-
-
 
                         Class implementedClass = implementer.getClass()
                         if (implementer instanceof AdaptedImplementer) {
