@@ -42,6 +42,7 @@ import org.grails.plugins.codecs.DefaultCodecLookup
 import org.grails.plugins.testing.GrailsMockHttpServletRequest
 import org.grails.plugins.testing.GrailsMockHttpServletResponse
 import org.grails.taglib.TagLibraryLookup
+import org.grails.taglib.TagLibraryMetaUtils
 import org.grails.testing.GrailsUnitTest
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.GrailsApplicationAttributes
@@ -52,13 +53,6 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
     private Set<Class> loadedCodecs = new HashSet<Class>()
     static Map<String, String> groovyPages = [:]
     GrailsWebRequest webRequest
-
-    /**
-     * When mocking tag libs, the LazyTagLibraryLookup will not be cleared by default. True forces it to be cleared.
-     */
-    boolean getPurgeTagLibMetaClass() {
-        false
-    }
 
     GrailsMockHttpServletRequest getRequest() {
         return (GrailsMockHttpServletRequest) getWebRequest().getCurrentRequest()
@@ -110,15 +104,19 @@ trait GrailsWebUnitTest implements GrailsUnitTest {
         GrailsTagLibClass tagLib = grailsApplication.addArtefact(TagLibArtefactHandler.TYPE, tagLibClass)
         final tagLookup = applicationContext.getBean(TagLibraryLookup)
 
-        defineBeans {
-            "${tagLib.fullName}"(tagLibClass) { bean ->
-                bean.autowire = true
+        if (!applicationContext.containsBean(tagLib.fullName)) {
+            defineBeans {
+                "${tagLib.fullName}"(tagLibClass) { bean ->
+                    bean.autowire = true
+                }
             }
         }
 
         tagLookup.registerTagLib(tagLib)
 
         def taglibObject = applicationContext.getBean(tagLib.fullName)
+        TagLibraryMetaUtils.enhanceTagLibMetaClass(tagLib, tagLookup)
+        TagLibraryMetaUtils.enhanceTagLibMetaClass(taglibObject.metaClass, tagLookup, tagLib.namespace)
         if (taglibObject instanceof TagLibrary) {
             ((TagLibrary) taglibObject).setTagLibraryLookup(tagLookup)
         }

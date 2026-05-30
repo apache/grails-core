@@ -24,18 +24,22 @@ import groovy.transform.CompileStatic
 import org.spockframework.runtime.extension.IMethodInterceptor
 import org.spockframework.runtime.extension.IMethodInvocation
 
-import org.grails.web.converters.configuration.ConvertersConfigurationHolder
+import grails.testing.web.UrlMappingsUnitTest
 
+/**
+ * Clears URL mapping artefacts and the cached holder bean after each feature method so that
+ * other specs running later in the same JVM (including specs that don't implement
+ * {@link UrlMappingsUnitTest}) start from a clean URL mappings registry.
+ */
 @CompileStatic
-class WebCleanupSpecInterceptor implements IMethodInterceptor {
+class UrlMappingCleanupInterceptor implements IMethodInterceptor {
 
     @Override
     void intercept(IMethodInvocation invocation) throws Throwable {
         try {
             invocation.proceed()
-        }
-        finally {
-            ConvertersConfigurationHolder.clear()
+        } finally {
+            ((UrlMappingsUnitTest) invocation.instance).cleanupUrlMappingsAfterFeature()
         }
     }
 }

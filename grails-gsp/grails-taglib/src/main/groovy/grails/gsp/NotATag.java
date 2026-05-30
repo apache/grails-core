@@ -16,26 +16,19 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+package grails.gsp;
 
-package org.grails.testing.spock
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-import groovy.transform.CompileStatic
-
-import org.spockframework.runtime.extension.IMethodInterceptor
-import org.spockframework.runtime.extension.IMethodInvocation
-
-import org.grails.web.converters.configuration.ConvertersConfigurationHolder
-
-@CompileStatic
-class WebCleanupSpecInterceptor implements IMethodInterceptor {
-
-    @Override
-    void intercept(IMethodInvocation invocation) throws Throwable {
-        try {
-            invocation.proceed()
-        }
-        finally {
-            ConvertersConfigurationHolder.clear()
-        }
-    }
+/**
+ * Marks a public method on a {@code TagLib} class as a helper that should not be
+ * exposed as a tag. Use this to opt out individual methods that would otherwise
+ * be picked up by the tag-method discovery convention.
+ */
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
+public @interface NotATag {
 }
