@@ -155,6 +155,10 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
                 task.enabled = testStylingEnabled.get()
             }
 
+            task.exclude { org.gradle.api.file.FileTreeElement element ->
+                element.getFile().getAbsolutePath().contains("/build/")
+            }
+
             // Redirect XML report output to a single directory to consolidate
             // reports across all subprojects into one known location
             task.reports.xml.outputLocation.set(
