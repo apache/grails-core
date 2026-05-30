@@ -78,13 +78,11 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
 
             createOrLoad(
                     toCreate.resolve(CHECKSTYLE_CONFIG_FILE_NAME),
-                    "${BASE_RESOURCE_PATH}/checkstyle/${CHECKSTYLE_CONFIG_FILE_NAME}",
-                    project
+                    "${BASE_RESOURCE_PATH}/checkstyle/${CHECKSTYLE_CONFIG_FILE_NAME}"
             )
             createOrLoad(
                     toCreate.resolve(CHECKSTYLE_SUPPRESSION_CONFIG_FILE_NAME),
-                    "${BASE_RESOURCE_PATH}/checkstyle/${CHECKSTYLE_SUPPRESSION_CONFIG_FILE_NAME}",
-                    project
+                    "${BASE_RESOURCE_PATH}/checkstyle/${CHECKSTYLE_SUPPRESSION_CONFIG_FILE_NAME}"
             )
 
             directory
@@ -100,25 +98,23 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
 
             createOrLoad(
                     toCreate.resolve(CODENARC_CONFIG_FILE_NAME),
-                    "${BASE_RESOURCE_PATH}/codenarc/${CODENARC_CONFIG_FILE_NAME}",
-                    project
+                    "${BASE_RESOURCE_PATH}/codenarc/${CODENARC_CONFIG_FILE_NAME}"
             )
 
             directory
         })
     }
 
-    private static void createOrLoad(Path expectedPath, String defaultResource, Project project) {
+   private static void createOrLoad(Path expectedPath, String defaultResource) {
         def defaultValue = GrailsCodeStylePlugin.getResourceAsStream(defaultResource)
         if (!defaultValue) {
             throw new IllegalStateException("Could not locate default configuration file: ${defaultResource}")
         }
+    
         String defaultText = defaultValue.text
         boolean missing = !Files.exists(expectedPath) || expectedPath.size() == 0
-        // Only rewrite when missing or the on-disk content differs from the bundled
-        // resource, so repeated builds across many subprojects don't churn the file.
+        
         if (missing || expectedPath.text != defaultText) {
-            project.logger.debug("Writing code style configuration to ${expectedPath}")
             expectedPath.text = defaultText
         }
     }
