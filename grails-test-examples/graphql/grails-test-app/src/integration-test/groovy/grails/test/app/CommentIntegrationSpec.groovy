@@ -114,8 +114,10 @@ class CommentIntegrationSpec extends Specification implements GraphQLSpec {
         System.setOut(new StringMessagePrintStream() {
             @Override
             protected void printed(String message) {
-                queries.add(message)
-                outCount++
+                if (message != null && message.contains("Hibernate:")) {
+                    queries.add(message)
+                    outCount++
+                }
             }
         })
 

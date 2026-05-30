@@ -299,12 +299,16 @@ class ActiveSessionDatastoreSelector {
                     }
                     if (className != null) {
                         Datastore defaultDs = registry.getDatastore(className, ConnectionSource.DEFAULT)
-                        if (defaultDs == ds) {
-                            return ds
-                        } else if (registry.isDatastoreRegisteredForEntity(className, ds)) {
+                        if (defaultDs == ds || registry.isDatastoreRegisteredForEntity(className, ds)) {
+                            if (shouldSkipActiveDatastore(ds, className, defaultDs)) {
+                                continue
+                            }
                             return ds
                         }
                     } else {
+                        if (shouldSkipActiveDatastore(ds, null, null)) {
+                            continue
+                        }
                         return ds
                     }
                 }
@@ -319,18 +323,42 @@ class ActiveSessionDatastoreSelector {
                 if (registeredDs.hasCurrentSession()) {
                     if (className != null) {
                         Datastore defaultDs = registry.getDatastore(className, ConnectionSource.DEFAULT)
-                        if (defaultDs == registeredDs) {
-                            return registeredDs
-                        } else if (registry.isDatastoreRegisteredForEntity(className, registeredDs)) {
+                        if (defaultDs == registeredDs || registry.isDatastoreRegisteredForEntity(className, registeredDs)) {
+                            if (shouldSkipActiveDatastore(registeredDs, className, defaultDs)) {
+                                continue
+                            }
                             return registeredDs
                         }
                     } else if (registry.allDatastores.size() == 1) {
+                        if (shouldSkipActiveDatastore(registeredDs, null, null)) {
+                            continue
+                        }
                         return registeredDs
                     }
                 }
             }
         }
         return null
+    }
+
+    private boolean shouldSkipActiveDatastore(Datastore ds, String className, Datastore defaultDs) {
+        if (ds instanceof MultiTenantCapableDatastore) {
+            MultiTenancySettings.MultiTenancyMode mode = ((MultiTenantCapableDatastore) ds).getMultiTenancyMode()
+            if (mode == MultiTenancySettings.MultiTenancyMode.DATABASE || mode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
+                // Only skip if it's the parent datastore (DEFAULT connection)
+                if (ConnectionSource.DEFAULT.equals(ds.getConnectionSources().getDefaultConnectionSource().getName())) {
+                    if (className != null) {
+                        PersistentEntity entity = ds.getMappingContext().getPersistentEntity(className)
+                        if (entity != null && entity.isMultiTenant()) {
+                            return true
+                        }
+                    } else if (className == null) {
+                        return true
+                    }
+                }
+            }
+        }
+        return false
     }
 }
 
