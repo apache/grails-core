@@ -31,7 +31,7 @@ Hibernate5/Hibernate7/Mongodb Functional Tests, Code Style, Code Analysis.
 
 ---
 
-## 1. Current CI status (as of commit `39eadadf00`, 2026-05-29)
+## 1. Current CI status (as of commit `96ee9018f6`, 2026-05-31)
 
 Pull the job matrix with `gh run list --branch 8.0.x-hibernate7.gorm-scaling-clean` then
 `gh run view <CI_run_id>`.
@@ -40,23 +40,20 @@ Pull the job matrix with `gh run list --branch 8.0.x-hibernate7.gorm-scaling-cle
 - **All `Build Grails-Core`** jobs (macOS, Ubuntu 21/25, Windows, *and* "Rerunning all Tasks") —
   the core unit + integration suite passes on every platform.
 - **All `Mongodb Functional Tests`** (Mongo 7/8, Java 21/25, indy on/off).
+- **All `Functional Tests`** (Java 21/25, indy on/off) — previously failing composite-id / query-counting issues are now resolved.
 - Build Gradle Plugins, Build Grails Forge, Validate Dependency Versions, CodeQL, RAT, publishGradle.
 
-### Red ❌ — three functional clusters remain
+### Red ❌ — two functional clusters + one style failure remain
 | CI job | Failing module(s)/specs | Theme |
 |--------|-------------------------|-------|
-| **Functional Tests** (Java 21/25, indy on/off) | `grails-test-examples-graphql-grails-test-app:integrationTest` → `CommentIntegrationSpec`, `TagIntegrationSpec`, `UserRoleIntegrationSpec` | composite-id query **over-counting** (`outCount == 2`, expected 1) + a query-log-capture assertion |
-| **Hibernate5 Functional Tests** (Java 21/25, indy on/off) | `database-per-tenant`, `schema-per-tenant`, `partitioned-multi-tenancy`, `grails-hibernate-groovy-proxy` (`ProxySpec`), `grails-data-hibernate5-core:test` (1) | multi-tenancy + groovy proxy |
-| **Hibernate7 Functional Tests** (Java 21/25, indy on/off) | `database-per-tenant`, `schema-per-tenant`, `multiple-datasources`, **`DataServiceDatasourceInheritanceSpec` (8)**, **`DataServiceMultiDataSourceSpec` (several)**, `DatabasePerTenantIntegrationSpec` | multi-tenancy + **multi-datasource DataService routing** |
+| **Hibernate5 Functional Tests** (Java 21, indy=true) | `PartitionedMultiTenancySpec > Test partitioned multi tenancy` (under `:grails-data-hibernate5-core:test`) | partitioned multi-tenancy / GORM scaling connection resolution |
+| **Hibernate7 Functional Tests** (Java 21/25, indy on/off) | `:grails-test-examples-hibernate7-grails-multiple-datasources:integrationTest` → `MultipleDataSourcesSpec > Test multiple data source persistence`<br> `:grails-data-hibernate7-core:test` → `SchemaMultiTenantSpec`, `SingleTenantSpec` | multi-tenancy + multi-datasource routing (`java.lang.IllegalArgumentException: Unknown entity type 'ds2.Book' ('Book' is not annotated '@Entity')`) |
+| **Code Style** | `:grails-datamapping-core:codenarcMain` | CodeNarc violations in core datamapping classes |
 
-### Code Style ✅ (Fixed and Committed)
-The code style issues are fully resolved. Pushing the commit containing the Spotless and Checkstyle configuration adjustments cleared all style violations across the workspace.
+### Code Style ⚠️ (Violations in Core Projects)
+While Forge and Gradle Plugin style checks are passing, the `Core Projects` job fails due to CodeNarc violations found in `:grails-datamapping-core:codenarcMain`.
 
-**Dominant theme:** the H5/H7 red clusters are overwhelmingly **multi-tenancy + multi-datasource
-routing in real Hibernate apps**. These are very likely a *single shared root cause* in how
-`DataService`/connection routing resolves a datastore under the single `GormRegistry`. Diagnose one
-representative spec (suggest `DataServiceMultiDataSourceSpec`) before fan-out — one fix probably
-clears most of them.
+**Dominant theme:** The H5/H7 red clusters continue to point to **multi-tenancy + multi-datasource routing/entity mapping under the GORM scaling registry**. The `MultipleDataSourcesSpec` failure throws `Unknown entity type 'ds2.Book' ('Book' is not annotated '@Entity')`, indicating a failure to find the entity in secondary data sources under the new `GormRegistry`.
 
 ---
 
@@ -262,6 +259,22 @@ The registry and AST logic must be verified across distinct modules, as they use
 * **Core Class**: `Neo4jDatastore`
 * **Characteristics**: Graph-based databases using Cypher.
 * **Registry Invariant**: Returns `this` in non-`DATABASE` modes, ensuring driver-level session routing.
+
+### 9d. Contrarian Loop: Critical Architectural Risks of the Proposed Resolution Plan
+
+Before implementing the planned fixes in Section 10, we must acknowledge the following critical counter-arguments, failure modes, and risks associated with them:
+
+#### 1. The Tenant-Bypass and Data Leakage Risk in AST Connection Routing Reversion
+* **The Counter-Argument**: Reverting `getTargetDatastore(connectionName)` to call `getDatastoreForConnection(connectionName)` directly assumes connection routing is completely independent of tenancy.
+* **The Risk**: In dynamic database-per-tenant multi-tenancy models, the `connectionName` and `tenantId` are often identical (e.g., `"tenant-1"`). If `getTargetDatastore` bypasses `getDatastoreForTenantId`, standard transactional scopes annotated with `@Transactional(connection="tenant-1")` will resolve directly to the raw connection-pool datastore. This bypasses the schema or discriminator isolation filters wrapped by the tenant-contextual datastore, causing silent wrong-tenant reads, writes, and database-level data contamination.
+
+#### 2. Stale Session Factories and Memory Leaks via Targeted Test Deregistration
+* **The Counter-Argument**: Replacing the global `GormRegistry.reset()` in test suites with targeted deregistration (`GormRegistry.getInstance().removeDatastore(datastore)`) prevents concurrency collisions in parallel environments.
+* **The Risk**: GORM caches static API wrappers (`GormStaticApi`, `GormInstanceApi`) on a per-entity basis globally using JVM ClassLoaders. Simply calling `removeDatastore` does not clear these cached references. Subsequent tests in the same JVM fork will attempt to resolve queries against the cached APIs, which still point to closed Hibernate `SessionFactory` instances, throwing stale session exceptions and leading to flaky, order-dependent test runs.
+
+#### 3. API Divergence and Maintenance Debt by Avoiding Core Changes
+* **The Counter-Argument**: Limiting modifications to the core `grails-datamapping-core` module is recommended to prevent regressing independent datastores (like MongoDB).
+* **The Risk**: Avoiding core modifications forces Hibernate 5 and Hibernate 7 to duplicate runtime routing workarounds or subclass compiler transformations. This increases code duplication, violates DRY, and leaves mock datastores (like `SimpleMapDatastore`) asserting incorrect tenant-routing behaviors in core unit tests, masking bugs until integration phases.
 
 ---
 
@@ -500,6 +513,45 @@ All remaining local verification failures have been diagnosed and resolved:
 
 ### 15c. GraphQL Composite ID Integration Tests
 * **Verification**: Once transaction context propagation and session cleanup were restored by resolving the StackOverflow and tenant registry issues, the `:grails-test-examples-graphql-grails-test-app` integration tests (`CommentIntegrationSpec`, `UserRoleIntegrationSpec`) passed successfully. Proper rollback behavior resolved the database pollution that was causing query results to over-count (`outCount == 2` vs `1`).
+
+## 16. Diagnostic & Ultimate Conclusions on Remaining CI Failures (2026-05-31)
+
+### 16a. Relational / Hibernate 7 Multi-Datasource Routing Failure (`MultipleDataSourcesSpec`)
+* **Root Cause**: GORM multi-datasource mapping fails because connection routing is routed through tenant-routing methods in the generated AST.
+  - In commit `4c158f4a78`, `getTargetDatastore(connectionName)` was modified to unconditionally invoke `getDatastoreForTenantId(connectionName)` on multi-tenant datastores.
+  - `connectionName` (e.g. `'secondary'`) represents a named datasource connection source rather than a tenant ID.
+  - Under multi-tenancy mode `NONE`, calling `getDatastoreForTenantId` falls back to the parent/default datastore.
+  - Consequently, operations on `ds2.Book` (which is configured on the `'secondary'` datasource) are routed to the mapping context of the default Hibernate datastore. Since the default mapping context does not recognize `ds2.Book`, it throws:
+    `java.lang.IllegalArgumentException: Unknown entity type 'ds2.Book' ('Book' is not annotated '@Entity')`
+* **Resolution**: Revert connection routing in `AbstractDatastoreMethodDecoratingTransformation` to route using `getDatastoreForConnection(connectionName)` directly, keeping connection routing clean and decoupled from tenancy.
+
+### 16b. Multi-Tenancy Concurrency Collisions in TCK / Functional Suites
+* **Root Cause**: Concurrency conflicts between process-wide singleton `GormRegistry` and parallel test execution tasks (`maxParallelForks > 1`).
+  - Spec teardowns/setups call `GormRegistry.reset()` to clean JVM-wide static registry states.
+  - When tests run in parallel, thread A's reset wipes out datastores and transaction managers registered by concurrent thread B, leading to downstream `Condition failed with Exception` in tenancy tests (`SchemaMultiTenantSpec`, `SingleTenantSpec`, `PartitionedMultiTenancySpec`).
+* **Resolution**:
+  1. Replace blanket `GormRegistry.reset()` calls in test fixtures with **targeted deregistration** (`GormRegistry.getInstance().removeDatastore(datastore)`).
+  2. Limit parallel forks (`maxParallelForks = 1`) on test-leak-prone functional modules.
+
+### 16c. Code Style Failures in `grails-datamapping-core`
+* **Root Cause**: CodeNarc style/formatting rule violations (e.g. spacing, unused imports) introduced during GormRegistry scaling fixes.
+* **Resolution**: Run targeted style fixes on `grails-datamapping-core` files or adjust CodeNarc rules/exclusions to tolerate AST and registry helper modifications.
+
+## 17. Proposed Unit Testing for Connection and Tenant Routing (2026-05-31)
+
+To mathematically prove both scenarios (connection/multi-datasource routing when multi-tenancy is `NONE`, and tenant-specific routing when multi-tenancy is `DATABASE`), we will implement two unit tests inside `TransactionalTransformSpec.groovy`:
+
+1. **Connection/Multi-Datasource Routing Test**:
+   - Compile a class annotated with `@Transactional(connection = "secondary")`.
+   - Inject a mock datastore supporting multiple connections.
+   - Execute the transactional method and assert that `getDatastoreForConnection("secondary")` is invoked on the datastore instead of routing to a tenant or default datastore.
+2. **Tenant Routing Test**:
+   - Compile a tenant-aware service.
+   - Inject a mock datastore running in `DATABASE` multi-tenancy mode.
+   - Set an active tenant ID in `CurrentTenantHolder`.
+   - Execute the transactional method and assert that `getDatastoreForTenantId(tenantId)` is invoked.
+
+
 
 
 
