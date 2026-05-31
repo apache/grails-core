@@ -56,33 +56,16 @@ abstract class GrailsDataTckManager {
 
     abstract Session createSession()
 
-    List<Class> domainClasses = [
-            Book,
-            ChildEntity,
-            City,
-            ClassWithListArgBeforeValidate,
-            ClassWithNoArgBeforeValidate,
-            ClassWithOverloadedBeforeValidate,
-            CommonTypes,
-            Country,
-            EnumThing,
-            Face,
-            Highway,
-            Location,
-            ModifyPerson,
-            Nose,
-            OptLockNotVersioned,
-            OptLockVersioned,
-            Person,
-            PersonEvent,
-            Pet,
-            PetType,
-            Plant,
-            PlantCategory,
-            Publication,
-            Task,
-            TestEntity
+    private List<Class> domainClasses = [
     ]
+
+    /**
+     * Returns an unmodifiable view of the domain classes list.
+     * @return An unmodifiable list of domain classes
+     */
+    List<Class> getDomainClasses() {
+        return Collections.unmodifiableList(domainClasses)
+    }
 
     /**
      * Adds all the specified classes to the domain classes list.

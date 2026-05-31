@@ -31,7 +31,7 @@ class DisjunctionQuerySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> 
     def birdType
 
     void setupSpec() {
-        manager.domainClasses += [Pet, PetType]
+        manager.addAllDomainClasses([Pet, PetType])
     }
 
     @Issue('GPMONGODB-380')

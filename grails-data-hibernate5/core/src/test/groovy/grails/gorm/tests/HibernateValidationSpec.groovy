@@ -32,8 +32,8 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  */
 class HibernateValidationSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
     void setupSpec() {
-        manager.domainClasses += [ClassWithListArgBeforeValidate, ClassWithNoArgBeforeValidate,
-                                 ClassWithOverloadedBeforeValidate]
+        manager.addAllDomainClasses([ClassWithListArgBeforeValidate, ClassWithNoArgBeforeValidate,
+                                 ClassWithOverloadedBeforeValidate])
     }
 
     void "Test that validate works without a bound Session"() {

@@ -26,7 +26,7 @@ import org.bson.types.ObjectId
 class EmbeddedHasManyWithBeforeUpdateSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses += [User, UserAddress]
+        manager.addAllDomainClasses([User, UserAddress])
     }
 
     void "Test embedded hasMany with beforeUpdate event"() {

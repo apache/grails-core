@@ -30,7 +30,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class GetAllSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses += [Pet, Person, PetType]
+        manager.addAllDomainClasses([Pet, Person, PetType])
     }
 
     void "test that 'null' returns null"() {

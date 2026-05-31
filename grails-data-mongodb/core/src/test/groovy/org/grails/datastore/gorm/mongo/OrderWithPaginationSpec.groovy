@@ -29,7 +29,7 @@ import spock.lang.Issue
 class OrderWithPaginationSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses += [Plant]
+        manager.addAllDomainClasses([Plant])
     }
 
     @Issue('GPMONGODB-241')

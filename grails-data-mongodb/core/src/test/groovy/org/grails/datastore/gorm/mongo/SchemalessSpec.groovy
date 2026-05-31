@@ -24,7 +24,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class SchemalessSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.domainClasses += [Plant]
+        manager.addAllDomainClasses([Plant])
     }
 
     def "Test attach additional data"() {

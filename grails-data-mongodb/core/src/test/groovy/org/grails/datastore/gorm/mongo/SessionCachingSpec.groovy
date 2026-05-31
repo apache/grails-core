@@ -27,7 +27,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
  */
 class SessionCachingSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.domainClasses += [Person]
+        manager.addAllDomainClasses([Person])
     }
 
     void "test cache used for get"() {

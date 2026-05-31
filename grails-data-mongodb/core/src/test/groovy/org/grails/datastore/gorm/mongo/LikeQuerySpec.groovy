@@ -25,7 +25,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class LikeQuerySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses += [Pet]
+        manager.addAllDomainClasses([Pet])
     }
 
     void "Test for like query"() {

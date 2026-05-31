@@ -29,7 +29,7 @@ import spock.lang.Issue
 class InListQuerySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses += [Pet, Person, PetType]
+        manager.addAllDomainClasses([Pet, Person, PetType])
     }
 
     @Issue('https://github.com/grails/grails-data-mongodb/issues/11')
