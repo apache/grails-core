@@ -52,10 +52,10 @@ public abstract class FeatureRepository implements CrudRepository<Feature, Long>
         return this.jdbcOperations
                 .prepareStatement(query("name", "feature"),
                         statement -> {
-            try (ResultSet resultSet = statement.executeQuery()) {
-                return resultSetToTotals(resultSet);
-            }
-        });
+                            try (ResultSet resultSet = statement.executeQuery()) {
+                                return resultSetToTotals(resultSet);
+                            }
+                        });
     }
 
     @ReadOnly

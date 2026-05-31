@@ -51,8 +51,8 @@ public class GrailsVersionProvider implements IVersionProvider {
 
     public String[] getVersion() {
         return new String[] {
-                "Grails Version: " + VersionInfo.getGrailsVersion(),
-                "JVM Version: " + Objects.requireNonNullElse(System.getProperty("java.version"), "<a valid java.home was not found>")
+            "Grails Version: " + VersionInfo.getGrailsVersion(),
+            "JVM Version: " + Objects.requireNonNullElse(System.getProperty("java.version"), "<a valid java.home was not found>")
         };
     }
 }

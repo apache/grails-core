@@ -89,23 +89,24 @@ public class GitHubCreateController implements GitHubCreateOperation {
     @Override
     @Get(uri = "/github/{type}/{name}{?features,gorm,servlet,build,reloading,javaVersion,code,state}", produces = MediaType.APPLICATION_JSON)
     @ApiResponses(value = {
-            @ApiResponse(
-                    responseCode = "200",
-                    description = "Created GitHub repository containing the generated application. In case " +
-                            "the configuration contains launcher URI the redirect to launcher is sent.",
-                    content = @Content(
-                            mediaType = MediaType.APPLICATION_JSON
-                    )
-            ),
-            @ApiResponse(
-                    responseCode = "307",
-                    description = "Redirects to GitHub OAuth API to obtain user authorisation code before creating " +
-                            "the GitHub repository."
-            ),
-            @ApiResponse(
-                    responseCode = "307",
-                    description = "Redirects back to launcher in case of successfully created GitHub repository."
-            )})
+        @ApiResponse(
+                responseCode = "200",
+                description = "Created GitHub repository containing the generated application. In case " +
+                        "the configuration contains launcher URI the redirect to launcher is sent.",
+                content = @Content(
+                        mediaType = MediaType.APPLICATION_JSON
+                )
+        ),
+        @ApiResponse(
+                responseCode = "307",
+                description = "Redirects to GitHub OAuth API to obtain user authorisation code before creating " +
+                        "the GitHub repository."
+        ),
+        @ApiResponse(
+                responseCode = "307",
+                description = "Redirects back to launcher in case of successfully created GitHub repository."
+        )
+    })
     public HttpResponse<GitHubCreateDTO> createApp(
             @NonNull ApplicationType type,
             @Pattern(regexp = "[\\w\\d-_\\.]+") String name,
@@ -156,14 +157,15 @@ public class GitHubCreateController implements GitHubCreateOperation {
      */
     @Get(uri = "/github{?error,error_description}", produces = MediaType.APPLICATION_JSON)
     @ApiResponses(value = {
-            @ApiResponse(
-                    responseCode = "307",
-                    description = "Forwarded GitHub OAuth error message."
-            ),
-            @ApiResponse(
-                    responseCode = "200",
-                    description = "Returns GitHub OAuth application callback error."
-            )})
+        @ApiResponse(
+                responseCode = "307",
+                description = "Forwarded GitHub OAuth error message."
+        ),
+        @ApiResponse(
+                responseCode = "200",
+                description = "Returns GitHub OAuth application callback error."
+        )
+    })
     public HttpResponse<String> handleCallback(
             @Nullable String error,
             @Nullable @QueryValue("error_description") String errorDescription) {

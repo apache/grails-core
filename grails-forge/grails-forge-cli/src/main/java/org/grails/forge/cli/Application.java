@@ -43,38 +43,37 @@ import org.grails.forge.cli.command.ServletImplCandidates;
 import org.grails.forge.cli.command.ServletImplConverter;
 import org.grails.forge.io.ConsoleOutput;
 
-
 @CommandLine.Command(name = "grails-forge-cli", description = {
-        "Grails Forge CLI command line interface for generating projects and services.",
-        "Application generation commands are:",
-        "",
-        "*  @|bold create-app|@ @|yellow NAME|@",
-        "*  @|bold create-webapp|@ @|yellow NAME|@",
-        "*  @|bold create-restapi|@ @|yellow NAME|@",
-        "*  @|bold create-plugin|@ @|yellow NAME|@",
-        "*  @|bold create-web-plugin|@ @|yellow NAME|@"
+    "Grails Forge CLI command line interface for generating projects and services.",
+    "Application generation commands are:",
+    "",
+    "*  @|bold create-app|@ @|yellow NAME|@",
+    "*  @|bold create-webapp|@ @|yellow NAME|@",
+    "*  @|bold create-restapi|@ @|yellow NAME|@",
+    "*  @|bold create-plugin|@ @|yellow NAME|@",
+    "*  @|bold create-web-plugin|@ @|yellow NAME|@"
 },
         synopsisHeading = "@|bold,underline Usage:|@ ",
         optionListHeading = "%n@|bold,underline Options:|@%n",
         commandListHeading = "%n@|bold,underline Commands:|@%n",
         subcommands = {
-                // Creation commands
-                CreateAppCommand.class,
-                CreateWebappCommand.class,
-                CreatePluginCommand.class,
-                CreateWebPluginCommand.class,
-                CreateRestApiCommand.class
+            // Creation commands
+            CreateAppCommand.class,
+            CreateWebappCommand.class,
+            CreatePluginCommand.class,
+            CreateWebPluginCommand.class,
+            CreateRestApiCommand.class
         })
 @Prototype
 @TypeHint({
-        Application.class,
-        GormImplCandidates.class,
-        GormImplConverter.class,
-        ServletImplCandidates.class,
-        ServletImplConverter.class,
-        CommonOptionsMixin.class,
-        DevelopmentReloadingCandidates.class,
-        DevelopmentReloadingConverter.class
+    Application.class,
+    GormImplCandidates.class,
+    GormImplConverter.class,
+    ServletImplCandidates.class,
+    ServletImplConverter.class,
+    CommonOptionsMixin.class,
+    DevelopmentReloadingCandidates.class,
+    DevelopmentReloadingConverter.class
 })
 public class Application extends BaseCommand implements Callable<Integer> {
 

@@ -50,7 +50,7 @@ public class Configuration extends LinkedHashMap<String, Object> {
      */
     public Configuration(@NonNull String sourceSet, @NonNull String fileName, @NonNull String templateKey, @Nullable String environment) {
         super();
-        this.path = environment != null && environment.equals("test") ? "src/" + sourceSet  + "/resources/" : "grails-app/conf/";
+        this.path = environment != null && environment.equals("test") ? "src/" + sourceSet + "/resources/" : "grails-app/conf/";
         this.fileName = fileName;
         this.templateKey = templateKey;
         this.environment = environment;

@@ -18,17 +18,17 @@
  */
 package org.grails.forge.feature.database;
 
+import java.util.Map;
+import java.util.Optional;
+
+import org.grails.forge.feature.Feature;
+
 import static org.grails.forge.feature.config.ConfigurationFeature.DEV_ENVIRONMENT_KEY;
 import static org.grails.forge.feature.config.ConfigurationFeature.ENVIRONMENTS_KEY;
 import static org.grails.forge.feature.config.ConfigurationFeature.PROD_ENVIRONMENT_KEY;
 import static org.grails.forge.feature.config.ConfigurationFeature.PROPERTIES_KEY;
 import static org.grails.forge.feature.config.ConfigurationFeature.TEST_ENVIRONMENT_KEY;
 import static org.grails.forge.feature.database.HibernateGorm.PREFIX;
-
-import java.util.Map;
-import java.util.Optional;
-
-import org.grails.forge.feature.Feature;
 
 /**
  * A feature that configures a datasource with a driver

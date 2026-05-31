@@ -46,7 +46,7 @@ public class EHCache implements CacheFeature {
 
     @Override
     public void apply(GeneratorContext generatorContext) {
-        Map<String, Object> config  = generatorContext.getConfiguration();
+        Map<String, Object> config = generatorContext.getConfiguration();
         config.put("grails.cache.ehcache.ehcacheXmlLocation", "classpath:ehcache.xml");
         config.put("grails.cache.ehcache.lockTimeout", 200);
         generatorContext.addDependency(Dependency.builder()

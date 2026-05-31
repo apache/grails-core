@@ -18,8 +18,6 @@
  */
 package org.grails.forge.cli;
 
-import static picocli.CommandLine.Help.Ansi.AUTO;
-
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
@@ -35,6 +33,8 @@ import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
 import picocli.CommandLine;
 import picocli.shell.jline3.PicocliJLineCompleter;
+
+import static picocli.CommandLine.Help.Ansi.AUTO;
 
 public class InteractiveShell {
 

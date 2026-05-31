@@ -34,7 +34,7 @@ import org.grails.forge.api.Linkable;
  */
 @Introspected
 @Schema(name = "Preview", description = "Previews the contents of the generated ZIP")
-public class PreviewDTO extends Linkable  {
+public class PreviewDTO extends Linkable {
 
     @JsonInclude
     private Map<String, String> contents;

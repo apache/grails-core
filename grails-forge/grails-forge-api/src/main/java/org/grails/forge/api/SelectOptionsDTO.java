@@ -172,7 +172,6 @@ public class SelectOptionsDTO {
                 new ServletImplDTO(ServletImpl.DEFAULT_OPTION, messageSource, messageContext)
         );
 
-
         return new SelectOptionsDTO(applicationOpts, jdkVersionOpts, languageOpts, developmentReloadingOpts, gormImplOpts, servletImplOpts);
 
     }

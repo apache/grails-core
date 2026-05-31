@@ -33,7 +33,6 @@ import picocli.CommandLine.Parameters;
 import grails.codegen.model.AbstractMemberDefinition;
 import grails.codegen.model.DomainFieldModifier;
 import grails.codegen.model.PropertyDefinition;
-
 import org.grails.forge.cli.CodeGenConfig;
 import org.grails.forge.io.ConsoleOutput;
 import org.grails.forge.io.FileSystemOutputHandler;
