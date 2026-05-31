@@ -70,9 +70,9 @@ class DefaultMappingConfigurationBuilder implements MappingConfigurationBuilder 
                 if (properties.containsKey(entry.key)) {
                     if (log.isDebugEnabled()) {
                         log.debug("Property '{}' is configured in both the mapping closure and via Entity.propertyConfigs " +
-                                "(typically a constraint evaluator or direct Entity.property() call). The mapping-side " +
-                                "configuration takes precedence; the propertyConfigs entry is being ignored to avoid " +
-                                "overwriting mapping-set fields such as index/indexAttributes. See grails-core#15680.",
+                                '(typically a constraint evaluator or direct Entity.property() call). The mapping-side ' +
+                                'configuration takes precedence; the propertyConfigs entry is being ignored to avoid ' +
+                                'overwriting mapping-set fields such as index/indexAttributes. See grails-core#15680.',
                                 entry.key)
                     }
                 } else {
