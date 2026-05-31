@@ -551,9 +551,11 @@ To mathematically prove both scenarios (connection/multi-datasource routing when
    - Set an active tenant ID in `CurrentTenantHolder`.
    - Execute the transactional method and assert that `getDatastoreForTenantId(tenantId)` is invoked.
 
+## 18. Next Steps & Implementation Verification (2026-05-31)
 
-
-
-
-
-
+### 18a. Execution of Unit Tests and Verification of Failure
+1. Import `org.grails.datastore.gorm.GormRegistry` and resolve any missing property/compilation errors in the proposed unit tests in `TransactionalTransformSpec.groovy`.
+2. Ensure that connection routing failure can be isolated and demonstrated when the AST routing incorrectly calls `getDatastoreForTenantId` for connection-qualified lookups when multi-tenancy is `NONE`.
+3. Verify the failure of the unit tests under the incorrect AST configuration.
+4. Implement/verify the routing fix in `AbstractDatastoreMethodDecoratingTransformation.groovy` by ensuring it uses `getDatastoreForConnection` directly.
+5. Verify that all unit tests in `TransactionalTransformSpec.groovy` pass successfully.
