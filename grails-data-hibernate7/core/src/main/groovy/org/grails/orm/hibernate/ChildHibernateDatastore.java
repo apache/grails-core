@@ -22,6 +22,8 @@ import java.util.Collections;
 import java.util.Map;
 
 import org.hibernate.SessionFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
@@ -38,6 +40,8 @@ import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
  * A datastore for a specific connection in a multiple data source setup.
  */
 public class ChildHibernateDatastore extends HibernateDatastore {
+
+    private static final Logger log = LoggerFactory.getLogger(ChildHibernateDatastore.class);
 
     private static final ThreadLocal<HibernateDatastore> PARENT_HOLDER = new ThreadLocal<>();
 
@@ -68,7 +72,7 @@ public class ChildHibernateDatastore extends HibernateDatastore {
     protected HibernateGormEnhancer initialize() {
         HibernateDatastore p = getPrimaryDatastore();
         Map<String, HibernateDatastore> datastoresMap = p != null ? p.datastoresByConnectionSource : Collections.emptyMap();
-        return new HibernateGormEnhancer(this, transactionManager, connectionSources.getDefaultConnectionSource().getSettings(), datastoresMap);
+        return new HibernateGormEnhancer(this, getTransactionManager(), connectionSources.getDefaultConnectionSource().getSettings(), datastoresMap);
     }
 
     @Override
@@ -110,6 +114,43 @@ public class ChildHibernateDatastore extends HibernateDatastore {
         throw new org.grails.datastore.mapping.core.exceptions.ConfigurationException(
                 "DataSource not found for name [" + connectionName +
                         "] in configuration. Please check your multiple data sources configuration and try again.");
+    }
+
+    private org.springframework.transaction.PlatformTransactionManager springTransactionManager;
+
+    @Override
+    public org.springframework.context.ConfigurableApplicationContext getApplicationContext() {
+        org.springframework.context.ConfigurableApplicationContext ctx = super.getApplicationContext();
+        if (ctx == null && parent != null) {
+            ctx = parent.getApplicationContext();
+        }
+        return ctx;
+    }
+
+    @Override
+    public org.springframework.transaction.PlatformTransactionManager getTransactionManager() {
+        if (springTransactionManager == null && getApplicationContext() != null) {
+            String name = getConnectionSources().getDefaultConnectionSource().getName();
+            String beanName = "transactionManager_" + name;
+            if (log.isDebugEnabled()) {
+                log.debug("ChildHibernateDatastore.getTransactionManager(): name=" + name + " beanName=" + beanName);
+            }
+            if (getApplicationContext() instanceof org.springframework.context.ConfigurableApplicationContext configurableApplicationContext) {
+                org.springframework.beans.factory.config.ConfigurableListableBeanFactory beanFactory = configurableApplicationContext.getBeanFactory();
+                boolean contains = beanFactory.containsBean(beanName);
+                boolean inCreation = beanFactory.isCurrentlyInCreation(beanName);
+                if (log.isDebugEnabled()) {
+                    log.debug("ChildHibernateDatastore.getTransactionManager(): contains=" + contains + " inCreation=" + inCreation);
+                }
+                if (contains && !inCreation) {
+                    springTransactionManager = beanFactory.getBean(beanName, org.springframework.transaction.PlatformTransactionManager.class);
+                    if (log.isDebugEnabled()) {
+                        log.debug("ChildHibernateDatastore.getTransactionManager(): springTransactionManager resolved: " + springTransactionManager);
+                    }
+                }
+            }
+        }
+        return springTransactionManager != null ? springTransactionManager : super.getTransactionManager();
     }
 
     @Override

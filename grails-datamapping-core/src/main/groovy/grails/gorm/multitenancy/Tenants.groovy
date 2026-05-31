@@ -287,6 +287,27 @@ class Tenants {
      */
     static <T> T withId(MultiTenantCapableDatastore multiTenantCapableDatastore, Serializable tenantId, Closure<T> callable) {
         log.debug('Tenants.withId called for datastore {} with tenantId {}', multiTenantCapableDatastore, tenantId)
+        org.grails.datastore.mapping.core.Datastore childDatastore = null
+        try {
+            childDatastore = multiTenantCapableDatastore.getDatastoreForTenantId(tenantId)
+        } catch (Throwable e) {
+            // ignore
+        }
+        if (childDatastore != null && childDatastore.hasCurrentSession()) {
+            return CurrentTenantHolder.withTenant(multiTenantCapableDatastore, tenantId) {
+                def i = callable.parameterTypes.length
+                switch (i) {
+                    case 0:
+                        return callable.call()
+                    case 1:
+                        return callable.call(tenantId)
+                    case 2:
+                        return callable.call(tenantId, childDatastore.getCurrentSession())
+                    default:
+                        throw new IllegalArgumentException('Provided closure accepts too many arguments')
+                }
+            }
+        }
         return CurrentTenantHolder.withTenant(multiTenantCapableDatastore, tenantId) {
             if (multiTenantCapableDatastore.getMultiTenancyMode().isSharedConnection()) {
                 def i = callable.parameterTypes.length

@@ -112,6 +112,8 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.castX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.classX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.constX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.ifElseS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.declS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.ifS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.notNullX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.param
 import static org.codehaus.groovy.ast.tools.GeneralUtils.params
@@ -694,11 +696,40 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
                 'findSingleTransactionManager'
         )
 
+        BlockStatement body = new BlockStatement()
+        ClassNode currentTenantHolderClassNode = ClassHelper.make(grails.gorm.multitenancy.CurrentTenantHolder)
+        ClassNode connectionSourceClassNode = ClassHelper.make(org.grails.datastore.mapping.core.connections.ConnectionSource)
+        VariableExpression tenantIdVar = varX('tenantId', ClassHelper.make(Serializable))
+        body.addStatement(
+            declS(tenantIdVar, callX(classX(currentTenantHolderClassNode), 'get'))
+        )
+        BlockStatement ifTenantActiveBody = new BlockStatement()
+        VariableExpression tmVar = varX('tm', transactionManagerClassNode)
+        ifTenantActiveBody.addStatement(
+            declS(tmVar, callX(registryExpr, 'findSingleTransactionManager', callX(tenantIdVar, 'toString')))
+        )
+        ifTenantActiveBody.addStatement(
+            ifS(notNullX(tmVar), returnS(tmVar))
+        )
+        
+        body.addStatement(
+            ifS(
+                notNullX(tenantIdVar),
+                ifElseS(
+                    callX(callX(tenantIdVar, 'toString'), 'equals', propX(classX(connectionSourceClassNode), 'DEFAULT')),
+                    new org.codehaus.groovy.ast.stmt.EmptyStatement(),
+                    ifTenantActiveBody
+                )
+            )
+        )
+
         // if (datastore != null) { return <datastoreTxManager> } else { return <fallbackTxManager> }
-        def body = ifElseS(
+        body.addStatement(
+            ifElseS(
                 notNullX(datastoreVar),
                 returnS(datastoreTxManager),
                 returnS(fallbackTxManager)
+            )
         )
 
         def methodNode = implClass.addMethod(

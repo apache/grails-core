@@ -451,8 +451,15 @@ public class HibernateTransactionManager extends AbstractPlatformTransactionMana
     @Override
     protected boolean isExistingTransaction(Object transaction) {
         HibernateTransactionObject txObject = (HibernateTransactionObject) transaction;
-        return (txObject.hasSpringManagedTransaction() ||
+        boolean existing = (txObject.hasSpringManagedTransaction() ||
                 (this.hibernateManagedSession && txObject.hasHibernateManagedTransaction()));
+        if (logger.isDebugEnabled()) {
+            logger.debug("isExistingTransaction: " + existing + 
+                         ", hasSpringManagedTransaction: " + txObject.hasSpringManagedTransaction() +
+                         ", sessionHolder: " + (txObject.hasSessionHolder() ? txObject.getSessionHolder() : "null") +
+                         ", transaction: " + (txObject.hasSessionHolder() && txObject.getSessionHolder().getTransaction() != null ? txObject.getSessionHolder().getTransaction() : "null"));
+        }
+        return existing;
     }
 
     @Override

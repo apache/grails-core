@@ -57,6 +57,7 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.param
 import static org.codehaus.groovy.ast.tools.GeneralUtils.params
 import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.castX
 import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.callD
 import static org.grails.datastore.mapping.reflect.AstUtils.ZERO_PARAMETERS
 import static org.grails.datastore.mapping.reflect.AstUtils.isSpockTest
@@ -120,11 +121,23 @@ abstract class AbstractDatastoreMethodDecoratingTransformation extends AbstractM
             // When $targetDatastore is explicitly set (e.g. by setTargetDatastore), it is the authoritative
             // parent multi-datasource datastore and must be used for connection routing. Falling back to the
             // API resolver can return a child datastore that doesn't know about sibling connections.
+            ClassNode multiTenantDatastoreClassNode = make('org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore')
+            Expression targetDatastoreExpr = varX(targetDatastoreField)
+            Expression lookupDefaultDatastoreExpr = datastoreLookupDefaultCall
+            org.codehaus.groovy.ast.stmt.Statement datastoreLookupCallWithTenant = ifElseS(
+                instanceofX(lookupDefaultDatastoreExpr, multiTenantDatastoreClassNode),
+                returnS(callD(castX(multiTenantDatastoreClassNode, lookupDefaultDatastoreExpr), 'getDatastoreForTenantId', varX(connectionNameParam))),
+                returnS(callD(lookupDefaultDatastoreExpr, METHOD_GET_DATASTORE_FOR_CONNECTION, varX(connectionNameParam)))
+            )
             MethodNode mn = declaringClassNode.addMethod(METHOD_GET_TARGET_DATASTORE, Modifier.PUBLIC, datastoreType, getTargetDatastoreParams, null,
                     ifElseS(
-                        notNullX(varX(targetDatastoreField)),
-                        returnS(callD(varX(targetDatastoreField), METHOD_GET_DATASTORE_FOR_CONNECTION, varX(connectionNameParam))),
-                        returnS(datastoreLookupCall)
+                        notNullX(targetDatastoreExpr),
+                        ifElseS(
+                            instanceofX(targetDatastoreExpr, multiTenantDatastoreClassNode),
+                            returnS(callD(castX(multiTenantDatastoreClassNode, targetDatastoreExpr), 'getDatastoreForTenantId', varX(connectionNameParam))),
+                            returnS(callD(targetDatastoreExpr, METHOD_GET_DATASTORE_FOR_CONNECTION, varX(connectionNameParam)))
+                        ),
+                        datastoreLookupCallWithTenant
                     )
             )
             markAsGenerated(declaringClassNode, mn)
@@ -181,6 +194,14 @@ abstract class AbstractDatastoreMethodDecoratingTransformation extends AbstractM
 
     protected void weaveSetTargetDatastoreBody(SourceUnit source, AnnotationNode annotationNode, ClassNode declaringClassNode, Expression datastoreVar, BlockStatement setTargetDatastoreBody) {
         // no-op
+    }
+
+    private static Expression instanceofX(Expression objectExpression, ClassNode type) {
+        return org.codehaus.groovy.ast.tools.GeneralUtils.binX(
+            objectExpression,
+            org.codehaus.groovy.ast.tools.GeneralUtils.INSTANCEOF,
+            classX(type)
+        )
     }
 
 }

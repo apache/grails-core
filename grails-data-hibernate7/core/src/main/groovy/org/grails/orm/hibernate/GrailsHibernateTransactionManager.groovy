@@ -89,4 +89,20 @@ class GrailsHibernateTransactionManager extends HibernateTransactionManager {
             }
         }
     }
+
+    @Override
+    protected void doRollback(org.springframework.transaction.support.DefaultTransactionStatus status) {
+        if (log.isDebugEnabled()) {
+            log.debug('GrailsHibernateTransactionManager(' + this.hashCode() + ').doRollback called. status=' + status)
+        }
+        super.doRollback(status)
+    }
+
+    @Override
+    protected void doCommit(org.springframework.transaction.support.DefaultTransactionStatus status) {
+        if (log.isDebugEnabled()) {
+            log.debug('GrailsHibernateTransactionManager(' + this.hashCode() + ').doCommit called. status=' + status)
+        }
+        super.doCommit(status)
+    }
 }

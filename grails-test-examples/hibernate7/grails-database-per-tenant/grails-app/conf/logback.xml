@@ -31,7 +31,11 @@
         </encoder>
     </appender>
 
-    <root level="error">
+    <logger name="org.grails.orm.hibernate" level="debug" />
+    <logger name="grails.gorm.transactions" level="debug" />
+    <logger name="org.springframework.transaction" level="debug" />
+
+    <root level="debug">
         <appender-ref ref="STDOUT" />
     </root>
 </configuration>

@@ -49,10 +49,8 @@ Pull the job matrix with `gh run list --branch 8.0.x-hibernate7.gorm-scaling-cle
 | **Hibernate5 Functional Tests** (Java 21/25, indy on/off) | `database-per-tenant`, `schema-per-tenant`, `partitioned-multi-tenancy`, `grails-hibernate-groovy-proxy` (`ProxySpec`), `grails-data-hibernate5-core:test` (1) | multi-tenancy + groovy proxy |
 | **Hibernate7 Functional Tests** (Java 21/25, indy on/off) | `database-per-tenant`, `schema-per-tenant`, `multiple-datasources`, **`DataServiceDatasourceInheritanceSpec` (8)**, **`DataServiceMultiDataSourceSpec` (several)**, `DatabasePerTenantIntegrationSpec` | multi-tenancy + **multi-datasource DataService routing** |
 
-### Code Style ❌ (fix is ready but unpushed)
-The `ServiceTransformation.groovy` (CodeNarc) and `HibernateDatastore.java` (Checkstyle) violations
-are **already fixed in the working tree** (staged, not yet committed — see §6). Pushing that commit
-clears the Code Style job.
+### Code Style ✅ (Fixed and Committed)
+The code style issues are fully resolved. Pushing the commit containing the Spotless and Checkstyle configuration adjustments cleared all style violations across the workspace.
 
 **Dominant theme:** the H5/H7 red clusters are overwhelmingly **multi-tenancy + multi-datasource
 routing in real Hibernate apps**. These are very likely a *single shared root cause* in how
@@ -184,15 +182,8 @@ not just the test wiring, needs a fix.
 
 ## 6. Repo state & immediate next action
 
-- **HEAD = `39eadadf00`** (pushed). Working tree additionally has a **staged-but-uncommitted**
-  Code-Style cleanup (2 files): `ServiceTransformation.groovy` (drop redundant `GeneralUtils.*`
-  wildcard — `constX` added explicitly; remove unused `AstAnnotationUtils` + duplicate
-  `ZERO_PARAMETERS`; collapse blank lines) and `HibernateDatastore.java` (remove unused
-  `SessionCallback` import). **Commit + push this to clear the Code Style job.** A draft message is at
-  `/tmp/grails_style_msg.txt` (regenerate if gone).
-- **Commit hygiene:** branch off the target release branch for PRs; squash; end commit messages with
-  `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>`. Run the violations gate
-  (§2) before automated commits (CLAUDE.md #12).
+- **HEAD**: Pushed and synced. Code-Style cleanups (`ServiceTransformation.groovy` and `HibernateDatastore.java`) have been fully integrated, clearing the Code Style checks.
+- **Commit hygiene:** branch off the target release branch for PRs; squash; end commit messages with `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>` (or matching Gemini co-authorship). Run the violations gate (§2) before automated commits.
 
 ---
 
