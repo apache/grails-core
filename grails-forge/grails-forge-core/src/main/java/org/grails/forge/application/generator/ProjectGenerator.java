@@ -18,16 +18,17 @@
  */
 package org.grails.forge.application.generator;
 
+import java.util.List;
+
 import io.micronaut.context.annotation.DefaultImplementation;
 import io.micronaut.core.annotation.Nullable;
+
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.OperatingSystem;
 import org.grails.forge.application.Project;
 import org.grails.forge.io.ConsoleOutput;
 import org.grails.forge.io.OutputHandler;
 import org.grails.forge.options.Options;
-
-import java.util.List;
 
 @DefaultImplementation(DefaultProjectGenerator.class)
 public interface ProjectGenerator {

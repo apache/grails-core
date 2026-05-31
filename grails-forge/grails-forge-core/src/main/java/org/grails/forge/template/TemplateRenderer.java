@@ -18,12 +18,12 @@
  */
 package org.grails.forge.template;
 
-import org.grails.forge.application.Project;
-import org.grails.forge.io.OutputHandler;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collections;
+
+import org.grails.forge.application.Project;
+import org.grails.forge.io.OutputHandler;
 
 public interface TemplateRenderer extends Closeable {
 

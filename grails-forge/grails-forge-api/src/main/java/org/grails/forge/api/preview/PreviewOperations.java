@@ -18,19 +18,20 @@
  */
 package org.grails.forge.api.preview;
 
+import java.io.IOException;
+import java.util.List;
+
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
 import io.swagger.v3.oas.annotations.Parameter;
-import org.grails.forge.api.RequestInfo;
+
 import org.grails.forge.api.DevelopmentReloading;
+import org.grails.forge.api.RequestInfo;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.options.BuildTool;
 import org.grails.forge.options.GormImpl;
 import org.grails.forge.options.JdkVersion;
 import org.grails.forge.options.ServletImpl;
-
-import java.io.IOException;
-import java.util.List;
 
 public interface PreviewOperations {
     /**

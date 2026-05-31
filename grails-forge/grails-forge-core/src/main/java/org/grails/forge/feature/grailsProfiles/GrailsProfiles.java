@@ -18,7 +18,11 @@
  */
 package org.grails.forge.feature.grailsProfiles;
 
+import java.util.Map;
+import java.util.Set;
+
 import jakarta.inject.Singleton;
+
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
@@ -27,9 +31,6 @@ import org.grails.forge.feature.Category;
 import org.grails.forge.feature.DefaultFeature;
 import org.grails.forge.feature.Feature;
 import org.grails.forge.options.Options;
-
-import java.util.Map;
-import java.util.Set;
 
 @Singleton
 public class GrailsProfiles implements DefaultFeature {
@@ -55,8 +56,6 @@ public class GrailsProfiles implements DefaultFeature {
 
     @Override
     public void apply(GeneratorContext generatorContext) {
-
-
         final Map<String, Object> config = generatorContext.getConfiguration();
         // Required by profile commands when package is not set
         config.put("grails.codegen.defaultPackage", generatorContext.getProject().getPackageName());

@@ -18,17 +18,19 @@
  */
 package org.grails.forge.feature.spring;
 
+import java.util.Set;
+
+import jakarta.inject.Singleton;
+
 import io.micronaut.context.annotation.Primary;
 import io.micronaut.core.annotation.NonNull;
-import jakarta.inject.Singleton;
+
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
 import org.grails.forge.feature.Feature;
 import org.grails.forge.options.Options;
 import org.grails.forge.options.ServletImpl;
-
-import java.util.Set;
 
 @Primary
 @Singleton

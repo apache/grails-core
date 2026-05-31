@@ -18,21 +18,23 @@
  */
 package org.grails.forge.util;
 
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+
+import jakarta.validation.constraints.NotNull;
+
 import io.micronaut.core.util.StringUtils;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.transport.PushResult;
 import org.eclipse.jgit.transport.RemoteRefUpdate;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
+
 import org.grails.forge.client.github.v3.GitHubRepository;
 import org.grails.forge.client.github.v3.GitHubUser;
-
-import jakarta.validation.constraints.NotNull;
-import java.io.IOException;
-import java.nio.file.Path;
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 /**
  * Utility class for GitHub operations.

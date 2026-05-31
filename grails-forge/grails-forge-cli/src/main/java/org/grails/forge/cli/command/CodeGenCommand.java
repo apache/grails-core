@@ -18,9 +18,16 @@
  */
 package org.grails.forge.cli.command;
 
+import java.io.IOException;
+import java.util.concurrent.Callable;
+
+import jakarta.inject.Inject;
+
 import io.micronaut.context.BeanContext;
 import io.micronaut.core.annotation.ReflectiveAccess;
 import io.micronaut.core.util.functional.ThrowingSupplier;
+import picocli.CommandLine;
+
 import org.grails.forge.application.Project;
 import org.grails.forge.cli.CodeGenConfig;
 import org.grails.forge.io.ConsoleOutput;
@@ -28,11 +35,6 @@ import org.grails.forge.io.FileSystemOutputHandler;
 import org.grails.forge.io.OutputHandler;
 import org.grails.forge.template.TemplateRenderer;
 import org.grails.forge.util.NameUtils;
-import jakarta.inject.Inject;
-import picocli.CommandLine;
-
-import java.io.IOException;
-import java.util.concurrent.Callable;
 
 public abstract class CodeGenCommand extends BaseCommand implements Callable<Integer> {
 

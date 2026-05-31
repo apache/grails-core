@@ -18,16 +18,18 @@
  */
 package org.grails.forge.feature.test;
 
-import io.micronaut.core.annotation.NonNull;
+import java.util.Set;
+
 import jakarta.inject.Singleton;
+
+import io.micronaut.core.annotation.NonNull;
+
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
 import org.grails.forge.feature.DefaultFeature;
 import org.grails.forge.feature.Feature;
 import org.grails.forge.options.Options;
-
-import java.util.Set;
 
 @Singleton
 public class Spock implements Feature, DefaultFeature {

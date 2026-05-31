@@ -18,8 +18,14 @@
  */
 package org.grails.forge.feature.view.json;
 
-import io.micronaut.core.annotation.NonNull;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.Set;
+
 import jakarta.inject.Singleton;
+
+import io.micronaut.core.annotation.NonNull;
+
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
@@ -27,14 +33,14 @@ import org.grails.forge.build.gradle.GradlePlugin;
 import org.grails.forge.feature.DefaultFeature;
 import org.grails.forge.feature.Feature;
 import org.grails.forge.feature.view.GrailsViews;
-import org.grails.forge.feature.view.json.templates.*;
+import org.grails.forge.feature.view.json.templates._errors;
+import org.grails.forge.feature.view.json.templates._object;
+import org.grails.forge.feature.view.json.templates.error;
+import org.grails.forge.feature.view.json.templates.index;
+import org.grails.forge.feature.view.json.templates.notFound;
 import org.grails.forge.feature.web.GrailsWeb;
 import org.grails.forge.options.Options;
 import org.grails.forge.template.RockerTemplate;
-
-import java.util.Arrays;
-import java.util.Map;
-import java.util.Set;
 
 @Singleton
 public class ViewJson extends GrailsViews implements DefaultFeature {

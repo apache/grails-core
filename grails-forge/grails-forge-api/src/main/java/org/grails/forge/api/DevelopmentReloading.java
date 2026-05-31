@@ -18,9 +18,9 @@
  */
 package org.grails.forge.api;
 
-import io.micronaut.core.annotation.NonNull;
-
 import java.util.Locale;
+
+import io.micronaut.core.annotation.NonNull;
 
 public enum DevelopmentReloading {
     DEVTOOLS,

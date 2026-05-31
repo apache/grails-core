@@ -18,15 +18,16 @@
  */
 package org.grails.forge.feature.validation;
 
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import jakarta.inject.Singleton;
+
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.feature.Feature;
 import org.grails.forge.feature.OneOfFeature;
 import org.grails.forge.options.Options;
-
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Singleton
 public class OneOfFeatureValidator implements FeatureValidator {

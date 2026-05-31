@@ -18,8 +18,15 @@
  */
 package org.grails.forge.application;
 
-import io.micronaut.core.annotation.Nullable;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Set;
+
 import jakarta.inject.Singleton;
+
+import io.micronaut.core.annotation.Nullable;
+
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.DefaultCoordinateResolver;
 import org.grails.forge.feature.AvailableFeatures;
@@ -28,12 +35,12 @@ import org.grails.forge.feature.Feature;
 import org.grails.forge.feature.FeatureContext;
 import org.grails.forge.feature.validation.FeatureValidator;
 import org.grails.forge.io.ConsoleOutput;
-import org.grails.forge.options.*;
-
-import java.util.Collections;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Set;
+import org.grails.forge.options.BuildTool;
+import org.grails.forge.options.DevelopmentReloading;
+import org.grails.forge.options.GormImpl;
+import org.grails.forge.options.Language;
+import org.grails.forge.options.Options;
+import org.grails.forge.options.ServletImpl;
 
 @Singleton
 public class ContextFactory {

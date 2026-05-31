@@ -18,11 +18,12 @@
  */
 package org.grails.forge.api.options;
 
-import org.grails.forge.api.JdkVersionDTO;
-import org.grails.forge.api.SelectOptionDTO;
+import java.util.List;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 
-import java.util.List;
+import org.grails.forge.api.JdkVersionDTO;
+import org.grails.forge.api.SelectOptionDTO;
 
 @Schema(name = "JdkVersionSelectOptions")
 public class JdkVersionSelectOptions extends SelectOptionDTO<JdkVersionDTO> {

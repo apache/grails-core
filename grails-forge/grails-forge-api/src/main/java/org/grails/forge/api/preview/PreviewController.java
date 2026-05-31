@@ -18,6 +18,11 @@
  */
 package org.grails.forge.api.preview;
 
+import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
 import io.micronaut.context.event.ApplicationEventPublisher;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.HttpStatus;
@@ -25,25 +30,25 @@ import io.micronaut.http.MediaType;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Get;
 import io.micronaut.http.exceptions.HttpStatusException;
+import io.swagger.v3.oas.annotations.Parameter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.grails.forge.api.DevelopmentReloading;
 import org.grails.forge.api.Relationship;
 import org.grails.forge.api.RequestInfo;
-import org.grails.forge.api.DevelopmentReloading;
 import org.grails.forge.api.create.AbstractCreateController;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.Project;
 import org.grails.forge.application.generator.ProjectGenerator;
 import org.grails.forge.io.ConsoleOutput;
 import org.grails.forge.io.MapOutputHandler;
-import org.grails.forge.options.*;
+import org.grails.forge.options.BuildTool;
+import org.grails.forge.options.GormImpl;
+import org.grails.forge.options.JdkVersion;
+import org.grails.forge.options.Options;
+import org.grails.forge.options.ServletImpl;
 import org.grails.forge.util.NameUtils;
-import io.swagger.v3.oas.annotations.Parameter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Previews an application contents.

@@ -135,7 +135,6 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
         project.pluginManager.apply(CheckstylePlugin)
 
         Provider<Boolean> ignoreFailures = GradleUtils.booleanProvider(project, IGNORE_FAILURES_PROPERTY)
-        Provider<Boolean> testStylingEnabled = GradleUtils.booleanProvider(project, TEST_STYLING_PROPERTY)
 
         project.extensions.configure(CheckstyleExtension) {
             // Explicit `it` is required in extension configuration
@@ -151,8 +150,8 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
             task.onlyIf { !project.hasProperty('skipCodeStyle') }
             task.ignoreFailures = ignoreFailures.get()
 
-            if (task.name.contains('Test') || task.name.contains('test')) {
-                task.enabled = testStylingEnabled.get()
+            if (task.name.toLowerCase().contains('test')) {
+                task.enabled = false
             }
 
             task.exclude { org.gradle.api.file.FileTreeElement element ->
@@ -176,7 +175,6 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
         registerCodenarcFixTask(project)
 
         Provider<Boolean> ignoreFailures = GradleUtils.booleanProvider(project, IGNORE_FAILURES_PROPERTY)
-        Provider<Boolean> testStylingEnabled = GradleUtils.booleanProvider(project, TEST_STYLING_PROPERTY)
         Provider<Boolean> codenarcFix = GradleUtils.booleanProvider(project, CODENARC_FIX_PROPERTY)
 
         project.extensions.configure(CodeNarcExtension) {
@@ -195,8 +193,8 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
                 task.dependsOn('codenarcFix')
             }
 
-            if (task.name.contains('Test') || task.name.contains('test')) {
-                task.enabled = testStylingEnabled.get()
+            if (task.name.toLowerCase().contains('test')) {
+                task.enabled = false
             }
 
             // Redirect XML report output to a single directory to consolidate

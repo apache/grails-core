@@ -18,7 +18,11 @@
  */
 package org.grails.forge.feature.config;
 
+import java.util.Set;
+import java.util.function.Function;
+
 import jakarta.inject.Singleton;
+
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.feature.DefaultFeature;
 import org.grails.forge.feature.Feature;
@@ -26,9 +30,6 @@ import org.grails.forge.feature.FeaturePhase;
 import org.grails.forge.options.Options;
 import org.grails.forge.template.Template;
 import org.grails.forge.template.YamlTemplate;
-
-import java.util.Set;
-import java.util.function.Function;
 
 @Singleton
 public class Yaml implements ConfigurationFeature, DefaultFeature {

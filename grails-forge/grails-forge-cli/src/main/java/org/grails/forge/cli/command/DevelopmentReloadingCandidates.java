@@ -18,11 +18,11 @@
  */
 package org.grails.forge.cli.command;
 
-import org.grails.forge.options.DevelopmentReloading;
-
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import org.grails.forge.options.DevelopmentReloading;
 
 public class DevelopmentReloadingCandidates extends ArrayList<String> {
 

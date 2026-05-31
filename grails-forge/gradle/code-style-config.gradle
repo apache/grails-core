@@ -31,21 +31,17 @@ extensions.configure(SpotlessExtension) {
     // Explicit `it` is required in extension configuration block
     it.java {
         target('src/main/java/**/*.java')
-        // Formatters:
-        licenseHeaderFile(rootProject.layout.projectDirectory.file('config/spotless.license.java'))
-    }
-    it.groovy {
-        target('src/main/groovy/**')
-        // Formatters:
-        licenseHeaderFile(rootProject.layout.projectDirectory.file('config/spotless.license.java'))
-    }
-    it.format('javaMisc') {
-        target(
-                'src/main/**/module-info.java',
-                'src/main/**/package-info.java',
+        importOrder(
+                'java',
+                'javax',
+                'groovy', 'org.apache.groovy', 'org.codehaus.groovy',
+                'jakarta',
+                '',
+                'io.spring', 'org.springframework',
+                'grails', 'org.apache.grails', 'org.grails'
         )
-        // Formatters:
-        licenseHeaderFile(rootProject.layout.projectDirectory.file('config/spotless.license.java'), '\\/\\*\\*')
+        removeUnusedImports()
+        licenseHeaderFile(rootProject.layout.projectDirectory.file('config/spotless.license.java'))
     }
 }
 

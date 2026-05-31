@@ -18,6 +18,11 @@
  */
 package org.grails.forge.analytics.postgres;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
+import jakarta.transaction.Transactional;
+
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.annotation.Body;
@@ -26,11 +31,8 @@ import io.micronaut.http.annotation.Get;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.scheduling.TaskExecutors;
 import io.micronaut.scheduling.annotation.ExecuteOn;
-import org.grails.forge.analytics.Generated;
 
-import jakarta.transaction.Transactional;
-import java.util.List;
-import java.util.stream.Collectors;
+import org.grails.forge.analytics.Generated;
 
 @Controller("/analytics")
 @ExecuteOn(TaskExecutors.IO)

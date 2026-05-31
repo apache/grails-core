@@ -18,20 +18,22 @@
  */
 package org.grails.forge.api.create.github;
 
+import java.net.URI;
+import java.util.UUID;
+
+import jakarta.inject.Singleton;
+import jakarta.validation.constraints.NotNull;
+
 import io.micronaut.context.annotation.Property;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.http.uri.UriBuilder;
-import org.grails.forge.api.RequestInfo;
-import org.grails.forge.api.GrailsForgeConfiguration;
-import org.grails.forge.client.github.oauth.GitHubOAuthClient;
-import org.grails.forge.client.github.v3.GitHubRepository;
-import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import jakarta.validation.constraints.NotNull;
-import java.net.URI;
-import java.util.UUID;
+import org.grails.forge.api.GrailsForgeConfiguration;
+import org.grails.forge.api.RequestInfo;
+import org.grails.forge.client.github.oauth.GitHubOAuthClient;
+import org.grails.forge.client.github.v3.GitHubRepository;
 
 /**
  * Redirect service.

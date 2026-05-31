@@ -18,6 +18,11 @@
  */
 package org.grails.forge.analytics.postgres;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.data.annotation.Id;
 import io.micronaut.data.jdbc.annotation.JdbcRepository;
@@ -25,11 +30,6 @@ import io.micronaut.data.jdbc.runtime.JdbcOperations;
 import io.micronaut.data.model.query.builder.sql.Dialect;
 import io.micronaut.data.repository.CrudRepository;
 import io.micronaut.transaction.annotation.ReadOnly;
-
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
 
 @JdbcRepository(dialect = Dialect.POSTGRES)
 public abstract class FeatureRepository implements CrudRepository<Feature, Long> {

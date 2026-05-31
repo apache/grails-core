@@ -18,10 +18,10 @@
  */
 package org.grails.forge.api;
 
+import java.util.Locale;
+
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.naming.Named;
-
-import java.util.Locale;
 
 /**
  * Relationship types.

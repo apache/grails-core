@@ -18,10 +18,15 @@
  */
 package org.grails.forge.cli.command;
 
+import java.io.IOException;
+
+import jakarta.inject.Inject;
+
 import io.micronaut.context.annotation.Parameter;
 import io.micronaut.core.annotation.ReflectiveAccess;
 import io.micronaut.core.util.functional.ThrowingSupplier;
-import jakarta.inject.Inject;
+import picocli.CommandLine;
+
 import org.grails.forge.application.Project;
 import org.grails.forge.cli.CodeGenConfig;
 import org.grails.forge.cli.command.templates.service;
@@ -31,9 +36,6 @@ import org.grails.forge.io.OutputHandler;
 import org.grails.forge.template.RenderResult;
 import org.grails.forge.template.RockerTemplate;
 import org.grails.forge.template.TemplateRenderer;
-import picocli.CommandLine;
-
-import java.io.IOException;
 
 @CommandLine.Command(name = CreateServiceCommand.NAME, description = "Creates a Service Class")
 public class CreateServiceCommand extends CodeGenCommand {

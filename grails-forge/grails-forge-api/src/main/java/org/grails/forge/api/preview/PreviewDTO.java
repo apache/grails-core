@@ -18,12 +18,13 @@
  */
 package org.grails.forge.api.preview;
 
+import java.util.Map;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.micronaut.core.annotation.Introspected;
-import org.grails.forge.api.Linkable;
 import io.swagger.v3.oas.annotations.media.Schema;
 
-import java.util.Map;
+import org.grails.forge.api.Linkable;
 
 /**
  * A preview of the contents.

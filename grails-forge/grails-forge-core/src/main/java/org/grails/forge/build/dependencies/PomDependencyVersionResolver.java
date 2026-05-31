@@ -18,18 +18,6 @@
  */
 package org.grails.forge.build.dependencies;
 
-import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.io.ResourceResolver;
-import io.micronaut.core.util.StringUtils;
-import jakarta.inject.Singleton;
-import org.w3c.dom.Document;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import org.xml.sax.SAXException;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -37,6 +25,20 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+
+import jakarta.inject.Singleton;
+
+import io.micronaut.core.annotation.NonNull;
+import io.micronaut.core.io.ResourceResolver;
+import io.micronaut.core.util.StringUtils;
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
 @Singleton
 public class PomDependencyVersionResolver implements CoordinateResolver {

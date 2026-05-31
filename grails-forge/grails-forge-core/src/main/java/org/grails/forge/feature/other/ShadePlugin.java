@@ -18,8 +18,10 @@
  */
 package org.grails.forge.feature.other;
 
-import io.micronaut.core.annotation.NonNull;
 import jakarta.inject.Singleton;
+
+import io.micronaut.core.annotation.NonNull;
+
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.gradle.GradlePlugin;

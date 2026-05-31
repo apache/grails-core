@@ -18,19 +18,25 @@
  */
 package org.grails.forge.feature.view.markup;
 
-import io.micronaut.core.annotation.NonNull;
+import java.util.Arrays;
+import java.util.Map;
+
 import jakarta.inject.Singleton;
+
+import io.micronaut.core.annotation.NonNull;
+
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
 import org.grails.forge.build.gradle.GradlePlugin;
 import org.grails.forge.feature.Feature;
 import org.grails.forge.feature.view.GrailsViews;
-import org.grails.forge.feature.view.markup.templates.*;
+import org.grails.forge.feature.view.markup.templates._errors;
+import org.grails.forge.feature.view.markup.templates._object;
+import org.grails.forge.feature.view.markup.templates.error;
+import org.grails.forge.feature.view.markup.templates.index;
+import org.grails.forge.feature.view.markup.templates.notFound;
 import org.grails.forge.feature.web.GrailsWeb;
 import org.grails.forge.template.RockerTemplate;
-
-import java.util.Arrays;
-import java.util.Map;
 
 @Singleton
 public class ViewMarkup extends GrailsViews implements Feature {

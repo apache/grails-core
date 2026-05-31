@@ -18,11 +18,12 @@
  */
 package org.grails.forge.feature.cache;
 
+import java.util.Map;
+
 import jakarta.inject.Singleton;
+
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
-
-import java.util.Map;
 
 @Singleton
 public class EHCache implements CacheFeature {

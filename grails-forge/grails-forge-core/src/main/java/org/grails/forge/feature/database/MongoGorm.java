@@ -18,8 +18,13 @@
  */
 package org.grails.forge.feature.database;
 
-import io.micronaut.core.annotation.Nullable;
+import java.util.Map;
+import java.util.Set;
+
 import jakarta.inject.Singleton;
+
+import io.micronaut.core.annotation.Nullable;
+
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
@@ -27,9 +32,6 @@ import org.grails.forge.feature.Feature;
 import org.grails.forge.feature.FeatureContext;
 import org.grails.forge.options.GormImpl;
 import org.grails.forge.options.Options;
-
-import java.util.Map;
-import java.util.Set;
 
 @Singleton
 public class MongoGorm extends GormOneOfFeature {

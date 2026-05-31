@@ -18,21 +18,23 @@
  */
 package org.grails.forge.api;
 
-import io.micronaut.context.BeanLocator;
-import io.micronaut.context.MessageSource;
-import io.micronaut.inject.qualifiers.Qualifiers;
-import jakarta.inject.Singleton;
-import org.grails.forge.application.ApplicationType;
-import org.grails.forge.feature.AvailableFeatures;
-import org.grails.forge.feature.DefaultFeature;
-import org.grails.forge.feature.Feature;
-import org.grails.forge.options.Options;
-
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
+
+import jakarta.inject.Singleton;
+
+import io.micronaut.context.BeanLocator;
+import io.micronaut.context.MessageSource;
+import io.micronaut.inject.qualifiers.Qualifiers;
+
+import org.grails.forge.application.ApplicationType;
+import org.grails.forge.feature.AvailableFeatures;
+import org.grails.forge.feature.DefaultFeature;
+import org.grails.forge.feature.Feature;
+import org.grails.forge.options.Options;
 
 /**
  * Implements the {@link FeatureOperations} interface.

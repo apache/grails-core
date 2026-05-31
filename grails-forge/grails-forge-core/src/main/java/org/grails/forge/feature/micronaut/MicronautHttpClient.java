@@ -18,8 +18,12 @@
  */
 package org.grails.forge.feature.micronaut;
 
-import io.micronaut.core.annotation.NonNull;
+import java.util.Optional;
+
 import jakarta.inject.Singleton;
+
+import io.micronaut.core.annotation.NonNull;
+
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Coordinate;
@@ -29,8 +33,6 @@ import org.grails.forge.feature.Category;
 import org.grails.forge.feature.Feature;
 import org.grails.forge.feature.FeatureContext;
 import org.grails.forge.options.JdkVersion;
-
-import java.util.Optional;
 
 @Singleton
 public class MicronautHttpClient implements Feature {

@@ -18,10 +18,10 @@
  */
 package org.grails.forge.api;
 
+import java.util.List;
+
 import io.micronaut.core.annotation.Introspected;
 import io.swagger.v3.oas.annotations.media.Schema;
-
-import java.util.List;
 
 /**
  * Models a list of features.

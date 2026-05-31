@@ -18,19 +18,20 @@
  */
 package org.grails.forge.build.gradle;
 
+import static org.grails.forge.build.gradle.GradleConfiguration.INTEGRATION_TEST_IMPLEMENTATION_TEST_FIXTURES;
+
+import java.util.Comparator;
+import java.util.Objects;
+
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.order.OrderUtil;
+
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Coordinate;
 import org.grails.forge.build.dependencies.Dependency;
 import org.grails.forge.build.dependencies.DependencyCoordinate;
 import org.grails.forge.template.Writable;
-
-import java.util.Comparator;
-import java.util.Objects;
-
-import static org.grails.forge.build.gradle.GradleConfiguration.INTEGRATION_TEST_IMPLEMENTATION_TEST_FIXTURES;
 
 public class GradleDependency extends DependencyCoordinate {
 

@@ -18,10 +18,10 @@
  */
 package org.grails.forge.template;
 
+import java.io.OutputStream;
+
 import com.fizzed.rocker.RockerModel;
 import com.fizzed.rocker.runtime.OutputStreamOutput;
-
-import java.io.OutputStream;
 
 public class RockerWritable implements Writable {
 

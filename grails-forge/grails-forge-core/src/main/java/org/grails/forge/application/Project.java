@@ -18,10 +18,10 @@
  */
 package org.grails.forge.application;
 
-import org.grails.forge.util.NameUtils;
-
 import java.util.HashMap;
 import java.util.Map;
+
+import org.grails.forge.util.NameUtils;
 
 public class Project extends ProjectIdentifier {
 

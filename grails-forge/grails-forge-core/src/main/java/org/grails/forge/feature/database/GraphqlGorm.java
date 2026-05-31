@@ -18,8 +18,10 @@
  */
 package org.grails.forge.feature.database;
 
-import io.micronaut.core.annotation.Nullable;
 import jakarta.inject.Singleton;
+
+import io.micronaut.core.annotation.Nullable;
+
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;

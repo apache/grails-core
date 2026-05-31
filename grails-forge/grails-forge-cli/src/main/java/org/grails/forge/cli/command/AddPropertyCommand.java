@@ -18,23 +18,26 @@
  */
 package org.grails.forge.cli.command;
 
-import grails.codegen.model.AbstractMemberDefinition;
-import grails.codegen.model.DomainFieldModifier;
-import grails.codegen.model.PropertyDefinition;
+import java.io.File;
+import java.io.IOException;
+
+import jakarta.inject.Inject;
+
 import io.micronaut.context.annotation.Parameter;
 import io.micronaut.core.annotation.ReflectiveAccess;
 import io.micronaut.core.util.functional.ThrowingSupplier;
-import jakarta.inject.Inject;
-import org.grails.forge.cli.CodeGenConfig;
-import org.grails.forge.io.ConsoleOutput;
-import org.grails.forge.io.FileSystemOutputHandler;
-import org.grails.forge.io.OutputHandler;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
-import java.io.File;
-import java.io.IOException;
+import grails.codegen.model.AbstractMemberDefinition;
+import grails.codegen.model.DomainFieldModifier;
+import grails.codegen.model.PropertyDefinition;
+
+import org.grails.forge.cli.CodeGenConfig;
+import org.grails.forge.io.ConsoleOutput;
+import org.grails.forge.io.FileSystemOutputHandler;
+import org.grails.forge.io.OutputHandler;
 
 /**
  * CLI command to add a property to an existing domain class.

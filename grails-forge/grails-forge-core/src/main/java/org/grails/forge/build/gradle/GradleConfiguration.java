@@ -18,13 +18,14 @@
  */
 package org.grails.forge.build.gradle;
 
+import java.util.Optional;
+
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.order.Ordered;
+
 import org.grails.forge.build.dependencies.Phase;
 import org.grails.forge.build.dependencies.Scope;
 import org.grails.forge.options.DevelopmentReloading;
-
-import java.util.Optional;
 
 public enum GradleConfiguration implements Ordered {
     CLASSPATH("classpath", -2),

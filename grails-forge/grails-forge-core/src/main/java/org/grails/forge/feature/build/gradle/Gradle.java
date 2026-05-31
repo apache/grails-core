@@ -18,7 +18,11 @@
  */
 package org.grails.forge.feature.build.gradle;
 
+import java.util.Set;
+import java.util.function.Function;
+
 import jakarta.inject.Singleton;
+
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Coordinate;
@@ -38,9 +42,6 @@ import org.grails.forge.options.Options;
 import org.grails.forge.template.BinaryTemplate;
 import org.grails.forge.template.RockerTemplate;
 import org.grails.forge.util.VersionInfo;
-
-import java.util.Set;
-import java.util.function.Function;
 
 @Singleton
 public class Gradle implements BuildFeature {

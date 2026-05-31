@@ -19,6 +19,7 @@
 package org.grails.forge.feature.github.workflows.plain;
 
 import jakarta.inject.Singleton;
+
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.feature.github.workflows.GitHubWorkflowFeature;
 import org.grails.forge.feature.github.workflows.plain.templates.plainGithubWorkflow;

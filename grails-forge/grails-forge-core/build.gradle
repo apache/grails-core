@@ -128,7 +128,7 @@ nohttp {
     source.exclude('**/pom.rocker.raw')
 }
 
-['processResources', 'sourcesJar', 'spotlessJavaMisc', 'checkstyleNohttp'].each { name ->
+['processResources', 'sourcesJar', 'checkstyleNohttp'].each { name ->
     tasks.named(name).configure {
         it.dependsOn(copyGrailsWrapper, grailsVersionInfoTask)
     }

@@ -18,6 +18,8 @@
  */
 package org.grails.forge.feature.reloading;
 
+import java.util.Set;
+
 import jakarta.inject.Singleton;
 
 import org.grails.forge.application.ApplicationType;
@@ -30,8 +32,6 @@ import org.grails.forge.feature.config.ConfigurationFeature;
 import org.grails.forge.feature.micronaut.GrailsMicronaut;
 import org.grails.forge.options.DevelopmentReloading;
 import org.grails.forge.options.Options;
-
-import java.util.Set;
 
 @Singleton
 public class SpringBootDevTools implements ReloadingFeature {

@@ -19,6 +19,7 @@
 package org.grails.forge.feature.migration;
 
 import jakarta.inject.Singleton;
+
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
 import org.grails.forge.feature.migration.templates.dbMigrationGradle;

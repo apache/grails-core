@@ -18,11 +18,12 @@
  */
 package org.grails.forge.api.options;
 
-import io.swagger.v3.oas.annotations.media.Schema;
-import org.grails.forge.api.SelectOptionDTO;
-import org.grails.forge.api.DevelopmentReloadingDTO;
-
 import java.util.List;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+
+import org.grails.forge.api.DevelopmentReloadingDTO;
+import org.grails.forge.api.SelectOptionDTO;
 
 @Schema(name = "DevelopmentReloadingSelectOptions")
 public class DevelopmentReloadingSelectOptions extends SelectOptionDTO<DevelopmentReloadingDTO> {

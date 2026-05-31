@@ -24,6 +24,7 @@ import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.naming.Described;
 import io.micronaut.core.naming.Named;
 import io.micronaut.core.order.Ordered;
+
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 

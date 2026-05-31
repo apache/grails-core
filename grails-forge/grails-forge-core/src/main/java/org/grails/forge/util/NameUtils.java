@@ -18,10 +18,6 @@
  */
 package org.grails.forge.util;
 
-import io.micronaut.core.util.StringUtils;
-import org.grails.forge.application.Project;
-import org.grails.forge.application.ProjectIdentifier;
-
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -30,6 +26,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import io.micronaut.core.util.StringUtils;
+
+import org.grails.forge.application.Project;
+import org.grails.forge.application.ProjectIdentifier;
 
 public final class NameUtils {
     public static final String MICRONAUT = "micronaut";

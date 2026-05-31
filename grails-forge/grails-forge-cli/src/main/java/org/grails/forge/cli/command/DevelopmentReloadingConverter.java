@@ -18,8 +18,9 @@
  */
 package org.grails.forge.cli.command;
 
-import org.grails.forge.options.DevelopmentReloading;
 import picocli.CommandLine;
+
+import org.grails.forge.options.DevelopmentReloading;
 
 public class DevelopmentReloadingConverter implements CommandLine.ITypeConverter<DevelopmentReloading> {
 

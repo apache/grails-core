@@ -18,10 +18,10 @@
  */
 package org.grails.forge.feature;
 
+import java.util.Set;
+
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.options.Options;
-
-import java.util.Set;
 
 /**
  * A default feature is one that should be applied to a

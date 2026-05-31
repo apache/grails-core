@@ -18,18 +18,24 @@
  */
 package org.grails.forge.api.diff;
 
-import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.annotation.Nullable;
-import org.grails.forge.api.RequestInfo;
-import org.grails.forge.application.ApplicationType;
-import org.grails.forge.options.*;
-import io.swagger.v3.oas.annotations.Parameter;
-import org.reactivestreams.Publisher;
+import java.io.IOException;
+import java.util.List;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import java.io.IOException;
-import java.util.List;
+
+import io.micronaut.core.annotation.NonNull;
+import io.micronaut.core.annotation.Nullable;
+import io.swagger.v3.oas.annotations.Parameter;
+import org.reactivestreams.Publisher;
+
+import org.grails.forge.api.RequestInfo;
+import org.grails.forge.application.ApplicationType;
+import org.grails.forge.options.BuildTool;
+import org.grails.forge.options.DevelopmentReloading;
+import org.grails.forge.options.GormImpl;
+import org.grails.forge.options.JdkVersion;
+import org.grails.forge.options.ServletImpl;
 
 /**
  * Operations for performing diffs.

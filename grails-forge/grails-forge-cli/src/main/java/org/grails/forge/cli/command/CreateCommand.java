@@ -18,9 +18,16 @@
  */
 package org.grails.forge.cli.command;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Callable;
+
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.ReflectiveAccess;
 import io.micronaut.core.util.StringUtils;
+import picocli.CommandLine;
+
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.ContextFactory;
 import org.grails.forge.application.Project;
@@ -28,14 +35,12 @@ import org.grails.forge.application.generator.ProjectGenerator;
 import org.grails.forge.feature.AvailableFeatures;
 import org.grails.forge.io.FileSystemOutputHandler;
 import org.grails.forge.io.OutputHandler;
-import org.grails.forge.options.*;
+import org.grails.forge.options.DevelopmentReloading;
+import org.grails.forge.options.GormImpl;
+import org.grails.forge.options.JdkVersion;
+import org.grails.forge.options.Options;
+import org.grails.forge.options.ServletImpl;
 import org.grails.forge.util.NameUtils;
-import picocli.CommandLine;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Callable;
 
 public abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
 

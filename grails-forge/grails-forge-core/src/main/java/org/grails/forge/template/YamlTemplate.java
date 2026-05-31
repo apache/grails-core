@@ -18,15 +18,15 @@
  */
 package org.grails.forge.template;
 
-import org.yaml.snakeyaml.DumperOptions;
-import org.yaml.snakeyaml.Yaml;
-
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
+
+import org.yaml.snakeyaml.DumperOptions;
+import org.yaml.snakeyaml.Yaml;
 
 public class YamlTemplate implements Template {
 

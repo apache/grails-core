@@ -18,13 +18,14 @@
  */
 package org.grails.forge.options;
 
-import io.micronaut.core.annotation.NonNull;
-import org.grails.forge.application.Project;
-import org.grails.forge.build.gradle.GradleDsl;
-
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
+
+import io.micronaut.core.annotation.NonNull;
+
+import org.grails.forge.application.Project;
+import org.grails.forge.build.gradle.GradleDsl;
 
 public enum BuildTool {
     GRADLE("build/libs", "build.gradle", "-*-all.jar");

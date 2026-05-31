@@ -18,9 +18,9 @@
  */
 package org.grails.forge.template;
 
-import com.fizzed.rocker.RockerModel;
-
 import java.io.OutputStream;
+
+import com.fizzed.rocker.RockerModel;
 
 public class RockerTemplate implements Template {
 

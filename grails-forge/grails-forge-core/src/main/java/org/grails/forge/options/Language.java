@@ -18,14 +18,15 @@
  */
 package org.grails.forge.options;
 
-import io.micronaut.core.annotation.NonNull;
-import org.grails.forge.defaults.IncludesDefaults;
-import org.grails.forge.defaults.LanguageDefaults;
-import org.grails.forge.feature.Feature;
-
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.Set;
+
+import io.micronaut.core.annotation.NonNull;
+
+import org.grails.forge.defaults.IncludesDefaults;
+import org.grails.forge.defaults.LanguageDefaults;
+import org.grails.forge.feature.Feature;
 
 public enum Language implements IncludesDefaults<LanguageDefaults> {
     GROOVY("groovy", new LanguageDefaults(DevelopmentReloading.DEVTOOLS, BuildTool.GRADLE));

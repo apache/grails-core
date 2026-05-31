@@ -18,6 +18,8 @@
  */
 package org.grails.forge.api;
 
+import java.util.List;
+
 import io.micronaut.context.MessageSource;
 import io.micronaut.core.annotation.Creator;
 import io.micronaut.core.annotation.Internal;
@@ -25,10 +27,9 @@ import io.micronaut.core.annotation.Introspected;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.naming.Described;
 import io.micronaut.core.naming.Named;
-import org.grails.forge.application.ApplicationType;
 import io.swagger.v3.oas.annotations.media.Schema;
 
-import java.util.List;
+import org.grails.forge.application.ApplicationType;
 
 /**
  * DTO objects for {@link ApplicationType}.

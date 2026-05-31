@@ -18,12 +18,20 @@
  */
 package org.grails.forge.api.create;
 
+import java.util.Collections;
+import java.util.List;
+
+import jakarta.validation.constraints.Pattern;
+
 import io.micronaut.context.event.ApplicationEventPublisher;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.annotation.Header;
 import io.micronaut.http.exceptions.HttpStatusException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.grails.forge.api.DevelopmentReloading;
 import org.grails.forge.api.UserAgentParser;
 import org.grails.forge.api.event.ApplicationGeneratingEvent;
@@ -33,14 +41,12 @@ import org.grails.forge.application.Project;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.application.generator.ProjectGenerator;
 import org.grails.forge.io.ConsoleOutput;
-import org.grails.forge.options.*;
+import org.grails.forge.options.BuildTool;
+import org.grails.forge.options.GormImpl;
+import org.grails.forge.options.JdkVersion;
+import org.grails.forge.options.Options;
+import org.grails.forge.options.ServletImpl;
 import org.grails.forge.util.NameUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import jakarta.validation.constraints.Pattern;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * Abstract implementation of a create controller.

@@ -18,11 +18,11 @@
  */
 package org.grails.forge.api;
 
-import org.grails.forge.application.ApplicationType;
-import org.grails.forge.options.Options;
-
 import java.util.List;
 import java.util.Locale;
+
+import org.grails.forge.application.ApplicationType;
+import org.grails.forge.options.Options;
 
 /**
  * API to expose information about features.

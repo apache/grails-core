@@ -18,11 +18,12 @@
  */
 package org.grails.forge.feature.spring;
 
+import java.util.Map;
+
 import jakarta.inject.Singleton;
+
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
-
-import java.util.Map;
 
 @Singleton
 public class SpringBootVirtualThreads implements SpringThreadingFeature {

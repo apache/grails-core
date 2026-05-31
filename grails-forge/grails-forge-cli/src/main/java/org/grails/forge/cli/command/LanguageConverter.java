@@ -18,8 +18,9 @@
  */
 package org.grails.forge.cli.command;
 
-import org.grails.forge.options.Language;
 import picocli.CommandLine;
+
+import org.grails.forge.options.Language;
 
 public class LanguageConverter implements CommandLine.ITypeConverter<Language> {
 

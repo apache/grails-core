@@ -18,11 +18,11 @@
  */
 package org.grails.forge.feature.validation;
 
+import java.util.Set;
+
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.feature.Feature;
 import org.grails.forge.options.Options;
-
-import java.util.Set;
 
 public interface FeatureValidator {
 

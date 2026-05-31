@@ -18,13 +18,6 @@
  */
 package org.grails.forge.io;
 
-import io.micronaut.core.util.StringUtils;
-import org.apache.commons.compress.archivers.zip.UnixStat;
-import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
-import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
-import org.grails.forge.application.Project;
-import org.grails.forge.template.Template;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -34,6 +27,14 @@ import java.nio.file.Paths;
 import java.nio.file.attribute.FileTime;
 import java.util.HashSet;
 import java.util.Set;
+
+import io.micronaut.core.util.StringUtils;
+import org.apache.commons.compress.archivers.zip.UnixStat;
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
+import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
+
+import org.grails.forge.application.Project;
+import org.grails.forge.template.Template;
 
 public class ZipOutputHandler implements OutputHandler {
 

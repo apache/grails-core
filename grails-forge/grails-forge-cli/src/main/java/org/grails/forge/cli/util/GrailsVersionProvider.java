@@ -18,11 +18,13 @@
  */
 package org.grails.forge.cli.util;
 
+import java.util.Objects;
+
 import jakarta.inject.Singleton;
-import org.grails.forge.util.VersionInfo;
+
 import picocli.CommandLine.IVersionProvider;
 
-import java.util.Objects;
+import org.grails.forge.util.VersionInfo;
 
 /**
  * Generates version information. Example usage:
