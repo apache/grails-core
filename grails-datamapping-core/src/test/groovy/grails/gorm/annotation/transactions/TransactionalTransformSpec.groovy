@@ -20,6 +20,7 @@ package grails.gorm.annotation.transactions
 
 import grails.gorm.transactions.NotTransactional
 import grails.gorm.transactions.Transactional
+import org.grails.datastore.gorm.GormRegistry
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
@@ -1048,6 +1049,102 @@ new SomeClass()
         then:
         noExceptionThrown()
     }
+
+    void "Test multi-datasource routing under Transactional annotation"() {
+        given:
+        Class testService = new GroovyShell().evaluate('''
+            import grails.gorm.transactions.Transactional
+
+            @Transactional(connection = "secondary")
+            class SecondaryTxService {
+                void performAction() {
+                }
+            }
+            SecondaryTxService
+        ''')
+
+        def instance = testService.newInstance()
+        
+        // We mock a datastore that supports multiple connections but has NO multi-tenancy
+        def mockDatastore = Mock(TestMultiConnectionDatastore)
+        def mockSecondaryDatastore = Mock(TestMultiConnectionDatastore)
+        def mockTxManager = Mock(PlatformTransactionManager)
+        def mockStatus = Mock(TransactionStatus)
+        
+        // Register in GormRegistry to prevent default datastore null check failure
+        GormRegistry.getInstance().registerDatastore("default", mockDatastore)
+        GormRegistry.getInstance().registerDatastore("secondary", mockSecondaryDatastore)
+        
+        instance.targetDatastore = mockDatastore
+
+        when:
+        def targetDs = instance.getTargetDatastore("secondary")
+
+        then:
+        targetDs == mockSecondaryDatastore
+        1 * mockDatastore.getDatastoreForConnection("secondary") >> mockSecondaryDatastore
+
+        when:
+        instance.performAction()
+
+        then:
+        1 * mockSecondaryDatastore.getTransactionManager() >> mockTxManager
+        1 * mockTxManager.getTransaction(_) >> mockStatus
+        _ * mockStatus.isRollbackOnly() >> false
+        _ * mockTxManager.commit(mockStatus)
+
+        cleanup:
+        GormRegistry.reset()
+    }
+
+    void "Test tenant routing under Transactional annotation with DATABASE multi-tenancy"() {
+        given:
+        Class testService = new GroovyShell().evaluate('''
+            import grails.gorm.transactions.Transactional
+
+            @Transactional
+            class TenantTxService {
+                void performAction() {
+                }
+            }
+            TenantTxService
+        ''')
+
+        def instance = testService.newInstance()
+        
+        // We mock a datastore configured in DATABASE multi-tenancy mode
+        def mockDatastore = Mock(TestMultiTenantDatastore)
+        def mockTenantDatastore = Mock(TransactionCapableDatastore)
+        def mockTenantTxManager = Mock(PlatformTransactionManager)
+        def mockStatus = Mock(TransactionStatus)
+        
+        // Register default datastore in GormRegistry
+        GormRegistry.getInstance().registerDatastore("default", mockDatastore)
+        // Register tenant datastore so findSingleTransactionManager("tenant-1") resolves it
+        GormRegistry.getInstance().registerDatastore("tenant-1", mockTenantDatastore)
+        
+        instance.targetDatastore = mockDatastore
+
+        when:
+        // Set the active tenant in context
+        grails.gorm.multitenancy.CurrentTenantHolder.set(mockDatastore, "tenant-1")
+        instance.performAction()
+
+        then:
+        // Verify that the runtime routes queries using the tenant ID
+        1 * mockTenantDatastore.getTransactionManager() >> mockTenantTxManager
+        1 * mockTenantTxManager.getTransaction(_) >> mockStatus
+        _ * mockStatus.isRollbackOnly() >> false
+        _ * mockTenantTxManager.commit(mockStatus)
+
+        cleanup:
+        grails.gorm.multitenancy.CurrentTenantHolder.remove(mockDatastore)
+        GormRegistry.reset()
+    }
+
+    static interface TestMultiConnectionDatastore extends org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore, org.grails.datastore.mapping.transactions.TransactionCapableDatastore {}
+
+    static interface TestMultiTenantDatastore extends org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore, org.grails.datastore.mapping.transactions.TransactionCapableDatastore {}
 }
 
 
