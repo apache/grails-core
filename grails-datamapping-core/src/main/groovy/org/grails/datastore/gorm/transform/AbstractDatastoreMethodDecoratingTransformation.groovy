@@ -121,23 +121,23 @@ abstract class AbstractDatastoreMethodDecoratingTransformation extends AbstractM
             // When $targetDatastore is explicitly set (e.g. by setTargetDatastore), it is the authoritative
             // parent multi-datasource datastore and must be used for connection routing. Falling back to the
             // API resolver can return a child datastore that doesn't know about sibling connections.
-            ClassNode multiTenantDatastoreClassNode = make('org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore')
+            ClassNode multipleConnectionDatastoreClassNode = make('org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore')
             Expression targetDatastoreExpr = varX(targetDatastoreField)
             Expression lookupDefaultDatastoreExpr = datastoreLookupDefaultCall
-            org.codehaus.groovy.ast.stmt.Statement datastoreLookupCallWithTenant = ifElseS(
-                instanceofX(lookupDefaultDatastoreExpr, multiTenantDatastoreClassNode),
-                returnS(callD(castX(multiTenantDatastoreClassNode, lookupDefaultDatastoreExpr), 'getDatastoreForTenantId', varX(connectionNameParam))),
+            org.codehaus.groovy.ast.stmt.Statement datastoreLookupCallWithConnection = ifElseS(
+                instanceofX(lookupDefaultDatastoreExpr, multipleConnectionDatastoreClassNode),
+                returnS(callD(castX(multipleConnectionDatastoreClassNode, lookupDefaultDatastoreExpr), METHOD_GET_DATASTORE_FOR_CONNECTION, varX(connectionNameParam))),
                 returnS(callD(lookupDefaultDatastoreExpr, METHOD_GET_DATASTORE_FOR_CONNECTION, varX(connectionNameParam)))
             )
             MethodNode mn = declaringClassNode.addMethod(METHOD_GET_TARGET_DATASTORE, Modifier.PUBLIC, datastoreType, getTargetDatastoreParams, null,
                     ifElseS(
                         notNullX(targetDatastoreExpr),
                         ifElseS(
-                            instanceofX(targetDatastoreExpr, multiTenantDatastoreClassNode),
-                            returnS(callD(castX(multiTenantDatastoreClassNode, targetDatastoreExpr), 'getDatastoreForTenantId', varX(connectionNameParam))),
+                            instanceofX(targetDatastoreExpr, multipleConnectionDatastoreClassNode),
+                            returnS(callD(castX(multipleConnectionDatastoreClassNode, targetDatastoreExpr), METHOD_GET_DATASTORE_FOR_CONNECTION, varX(connectionNameParam))),
                             returnS(callD(targetDatastoreExpr, METHOD_GET_DATASTORE_FOR_CONNECTION, varX(connectionNameParam)))
                         ),
-                        datastoreLookupCallWithTenant
+                        datastoreLookupCallWithConnection
                     )
             )
             markAsGenerated(declaringClassNode, mn)

@@ -73,6 +73,13 @@ class GormRegistry {
     }
 
     /**
+     * @return The default datastore
+     */
+    Datastore getDefaultDatastore() {
+        return datastoresByQualifier.get(ConnectionSource.DEFAULT)
+    }
+
+    /**
      * Resets the registry.
      */
     static void reset() {
@@ -159,7 +166,10 @@ class GormRegistry {
     PlatformTransactionManager findSingleTransactionManager(String qualifier) {
         Datastore ds = getDatastoreByString((String) null, qualifier)
         if (ds == null) {
-            throw new IllegalStateException('No GORM implementations configured. Ensure GORM has been initialized correctly')
+            if (defaultDatastore == null) {
+                throw new IllegalStateException('No GORM implementations configured. Ensure GORM has been initialized correctly')
+            }
+            return null
         }
         if (ds instanceof TransactionCapableDatastore) {
             return ((TransactionCapableDatastore) ds).transactionManager
@@ -179,7 +189,10 @@ class GormRegistry {
             ds = apiResolver.findDatastore(entityClass, qualifier)
         }
         if (ds == null) {
-            throw new IllegalStateException('No GORM implementations configured. Ensure GORM has been initialized correctly')
+            if (defaultDatastore == null) {
+                throw new IllegalStateException('No GORM implementations configured. Ensure GORM has been initialized correctly')
+            }
+            return null
         }
         if (ds instanceof TransactionCapableDatastore) {
             return ((TransactionCapableDatastore) ds).transactionManager

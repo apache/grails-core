@@ -340,7 +340,10 @@ public class SimpleMapDatastore extends AbstractDatastore implements Transaction
 
     @Override
     public Datastore getDatastoreForTenantId(Serializable tenantId) {
-        return getDatastoreForConnection(tenantId.toString());
+        if (getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DATABASE) {
+            return getDatastoreForConnection(tenantId.toString());
+        }
+        return this;
     }
 
     @Override

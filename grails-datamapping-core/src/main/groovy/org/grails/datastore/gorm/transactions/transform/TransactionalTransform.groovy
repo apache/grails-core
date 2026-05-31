@@ -23,6 +23,7 @@ import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.FieldNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.Parameter
+import org.codehaus.groovy.ast.expr.AttributeExpression
 import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.ListExpression
@@ -61,6 +62,7 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.assignS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.castX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.classX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.constX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.ctorX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.declS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.ifElseS
@@ -234,6 +236,9 @@ class TransactionalTransform extends AbstractDatastoreMethodDecoratingTransforma
         if (declaringClassNode.getNodeMetaData(APPLIED_MARKER) == APPLIED_MARKER) {
             return
         }
+        if (declaringClassNode.getMethod(GET_TRANSACTION_MANAGER_METHOD, ZERO_PARAMETERS) != null) {
+            return
+        }
 
         Expression connectionName = annotationNode.getMember('connection')
         if (connectionName == null) {
@@ -241,18 +246,24 @@ class TransactionalTransform extends AbstractDatastoreMethodDecoratingTransforma
         }
         boolean hasDataSourceProperty = connectionName != null
 
-        if (!hasOrInheritsProperty(declaringClassNode, PROPERTY_TRANSACTION_MANAGER)) {
+        ClassNode transactionManagerClassNode = make(PlatformTransactionManager)
+        Expression registryExpr = callX(classX(GormRegistry), 'getInstance')
 
-            ClassNode transactionManagerClassNode = make(PlatformTransactionManager)
-            Expression registryExpr = callX(classX(GormRegistry), 'getInstance')
-
+        Expression tmFieldExpr
+        FieldNode userField = declaringClassNode.getField(PROPERTY_TRANSACTION_MANAGER)
+        if (userField != null) {
+            tmFieldExpr = new AttributeExpression(varX('this'), constX(PROPERTY_TRANSACTION_MANAGER))
+        } else {
             String transactionManagerFieldName = '$' + PROPERTY_TRANSACTION_MANAGER
             FieldNode tmField = declaringClassNode.getDeclaredField(transactionManagerFieldName)
             if (tmField == null) {
                 tmField = declaringClassNode.addField(transactionManagerFieldName, Modifier.PRIVATE, transactionManagerClassNode, null)
                 markAsGenerated(declaringClassNode, tmField)
             }
+            tmFieldExpr = varX(tmField)
+        }
 
+        if (declaringClassNode.getMethod(GET_TRANSACTION_MANAGER_METHOD, ZERO_PARAMETERS) == null) {
             // resolved TM expression for the getter fallback
             Expression transactionManagerLookupExpr
             if (implementsInterface(declaringClassNode, 'org.grails.datastore.mapping.services.Service') ||
@@ -305,7 +316,7 @@ class TransactionalTransform extends AbstractDatastoreMethodDecoratingTransforma
             )
             
             getterBody.addStatement(
-                ifElseS(notNullX(varX(tmField)), returnS(varX(tmField)), returnS(transactionManagerLookupExpr))
+                ifElseS(notNullX(tmFieldExpr), returnS(tmFieldExpr), returnS(transactionManagerLookupExpr))
             )
 
             MethodNode getterNode = declaringClassNode.addMethod(GET_TRANSACTION_MANAGER_METHOD,
@@ -314,20 +325,20 @@ class TransactionalTransform extends AbstractDatastoreMethodDecoratingTransforma
                     ZERO_PARAMETERS, null,
                     getterBody)
             markAsGenerated(declaringClassNode, getterNode)
-
-            // Add setter: public void setTransactionManager(PlatformTransactionManager tm)
-            Parameter p = param(transactionManagerClassNode, PROPERTY_TRANSACTION_MANAGER)
-            if (declaringClassNode.getMethod(SET_TRANSACTION_MANAGER, params(p)) == null) {
-                MethodNode setterNode = declaringClassNode.addMethod(SET_TRANSACTION_MANAGER,
-                        Modifier.PUBLIC,
-                        VOID_TYPE,
-                        params(p),
-                        null,
-                        assignS(varX(tmField), varX(p)))
-                markAsGenerated(declaringClassNode, setterNode)
-            }
         }
-}
+
+        // Add setter: public void setTransactionManager(PlatformTransactionManager tm)
+        Parameter p = param(transactionManagerClassNode, PROPERTY_TRANSACTION_MANAGER)
+        if (declaringClassNode.getMethod(SET_TRANSACTION_MANAGER, params(p)) == null) {
+            MethodNode setterNode = declaringClassNode.addMethod(SET_TRANSACTION_MANAGER,
+                    Modifier.PUBLIC,
+                    VOID_TYPE,
+                    params(p),
+                    null,
+                    assignS(tmFieldExpr, varX(p)))
+            markAsGenerated(declaringClassNode, setterNode)
+        }
+    }
 
     MethodCallExpression buildDelegatingMethodCall(SourceUnit sourceUnit, AnnotationNode annotationNode, ClassNode classNode, MethodNode methodNode, MethodCallExpression originalMethodCall, BlockStatement newMethodBody) {
         String executeMethodName = isTestSetupOrCleanup(classNode, methodNode) ? METHOD_EXECUTE : getTransactionTemplateMethodName()
