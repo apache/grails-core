@@ -241,7 +241,7 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
                     try {
                         return baseResolver.resolveTenantIdentifier();
                     } catch (TenantNotFoundException e) {
-                        if (isGormRegistryLookup()) {
+                        if (isAllowedWithoutTenant()) {
                             return ConnectionSource.DEFAULT;
                         }
                         throw e;
@@ -255,7 +255,7 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
                     try {
                         return baseResolver.resolveTenantIdentifier();
                     } catch (TenantNotFoundException e) {
-                        if (isGormRegistryLookup()) {
+                        if (isAllowedWithoutTenant()) {
                             return ConnectionSource.DEFAULT;
                         }
                         throw e;
@@ -1082,10 +1082,10 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
         return this.autoTimestampEventListener;
     }
 
-    private static boolean isGormRegistryLookup() {
+    private static boolean isAllowedWithoutTenant() {
         for (StackTraceElement element : Thread.currentThread().getStackTrace()) {
-            String className = element.getClassName();
-            if (className.contains("GormRegistry") || className.contains("AbstractGormApiRegistry")) {
+            String methodName = element.getMethodName();
+            if ("eachTenant".equals(methodName) || "withTenant".equals(methodName)) {
                 return true;
             }
         }
