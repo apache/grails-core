@@ -217,14 +217,23 @@ ext {
     // grails-micronaut-bom project. Declared with `strictly` in the BOM project so
     // they win over Micronaut platform's higher versions when consumers use
     // enforcedPlatform(:grails-micronaut-bom).
-    else if (project.name == 'grails-micronaut-bom') {
+    else if (project.name in ['grails-micronaut-bom', 'grails-hibernate5-micronaut-bom']) {
         customBomVersions = [
+                'liquibase-hibernate.version': '4.27.0',
+                'liquibase.version'          : '4.27.0',
+                'hibernate.version'          : '5.6.15.Final',
                 'groovy.version'  : '5.0.5',
                 'spock.version'   : '2.4-groovy-5.0',
                 'protobuf.version': '4.30.2',
         ]
         combinedVersions += customBomVersions
         customBomDependencies = [
+                'liquibase'             : "org.liquibase:liquibase:${combinedVersions['liquibase.version']}",
+                'liquibase-cdi'         : "org.liquibase:liquibase-cdi:${combinedVersions['liquibase.version']}",
+                'liquibase-core'        : "org.liquibase:liquibase-core:${combinedVersions['liquibase.version']}",
+                'liquibase-hibernate'   : "org.liquibase.ext:liquibase-hibernate5:${combinedVersions['liquibase-hibernate.version']}",
+                'hibernate-core-jakarta': "org.hibernate:hibernate-core-jakarta:${combinedVersions['hibernate.version']}",
+                'hibernate-ehcache'     : "org.hibernate:hibernate-ehcache:${combinedVersions['hibernate.version']}",
                 'groovy'               : "org.apache.groovy:groovy:${combinedVersions['groovy.version']}",
                 'groovy-ant'           : "org.apache.groovy:groovy-ant:${combinedVersions['groovy.version']}",
                 'groovy-astbuilder'    : "org.apache.groovy:groovy-astbuilder:${combinedVersions['groovy.version']}",

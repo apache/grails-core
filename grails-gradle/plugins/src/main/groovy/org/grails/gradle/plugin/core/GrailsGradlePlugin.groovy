@@ -465,11 +465,11 @@ ${importStatements}
     }
 
     /**
-     * Validates that grails-micronaut-bom is applied as an enforcedPlatform when micronaut is used.
-     * The grails-micronaut-bom layers Micronaut-specific overrides (e.g. javaparser-core) on top
-     * of grails-bom; without enforcedPlatform, Micronaut's platform would override these versions
-     * via Gradle's conflict resolution. Regular Grails projects (without Micronaut) should continue
-     * to use the spring-managed versions via plain platform(:grails-bom).
+     * Validates that a Micronaut-compatible BOM is applied as an enforcedPlatform when micronaut is used.
+     * The grails-micronaut-bom (and its hibernate-specific variants) layers Micronaut-specific overrides
+     * (e.g. javaparser-core) on top of grails-bom; without enforcedPlatform, Micronaut's platform would
+     * override these versions via Gradle's conflict resolution. Regular Grails projects (without Micronaut)
+     * should continue to use the spring-managed versions via plain platform(:grails-bom).
      */
     @CompileStatic
     protected static void validateMicronautBom(Project project) {
@@ -478,8 +478,13 @@ ${importStatements}
             return
         }
 
+        Set<String> validMicronautBoms = [
+                'grails-micronaut-bom',
+                'grails-hibernate5-micronaut-bom',
+        ] as Set<String>
+
         for (Dependency dep : implConfig.dependencies) {
-            if (dep.name == 'grails-micronaut-bom' && dep instanceof ModuleDependency) {
+            if (dep.name in validMicronautBoms && dep instanceof ModuleDependency) {
                 Object categoryAttr = ((ModuleDependency) dep).attributes.getAttribute(
                         org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
                 )
@@ -490,10 +495,11 @@ ${importStatements}
         }
 
         throw new GradleException(
-                "Project '${project.name}' uses Micronaut but does not apply grails-micronaut-bom as an enforcedPlatform. " +
+                "Project '${project.name}' uses Micronaut but does not apply a Micronaut BOM as an enforcedPlatform. " +
                         "Micronaut's platform declares higher versions of javaparser-core and other libraries that would " +
-                        'override the grails-bom versions via conflict resolution. Change to:\n\n' +
-                        '    implementation enforcedPlatform(project(\':grails-micronaut-bom\'))\n'
+                        'override the grails-bom versions via conflict resolution. Change to one of:\n\n' +
+                        '    implementation enforcedPlatform("org.apache.grails:grails-micronaut-bom:$grailsVersion")\n' +
+                        '    implementation enforcedPlatform("org.apache.grails:grails-hibernate5-micronaut-bom:$grailsVersion")\n'
         )
     }
 
