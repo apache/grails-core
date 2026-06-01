@@ -69,3 +69,8 @@ etc/bin/results
 /local.properties
 local-tasks.gradle
 local-init.gradle
+.junie/
+.antigravitycli/
+.clinerules
+.cursorrules
+.windsurfrules
