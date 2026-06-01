@@ -225,7 +225,7 @@ class HibernateGormInstanceApi<D> extends AbstractHibernateGormInstanceApi<D> {
                             resetInsertActive()
                         }
                     } else {
-                        ((Session)session).update target
+                        ((Session)session).saveOrUpdate target
                     }
                 }
                 if (shouldFlush) {
