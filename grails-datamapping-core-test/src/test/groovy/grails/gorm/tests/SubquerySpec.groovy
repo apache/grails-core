@@ -29,6 +29,10 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
  */
 class SubquerySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
+    void setupSpec() {
+        manager.addAllDomainClasses([Person])
+    }
+
     def "Test subquery with projection and criteria with closure"() {
         given: "A bunch of people"
         createPeople()

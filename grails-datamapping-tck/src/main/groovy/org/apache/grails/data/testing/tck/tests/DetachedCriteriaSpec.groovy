@@ -25,6 +25,11 @@ import org.apache.grails.data.testing.tck.domains.Person
 
 class DetachedCriteriaSpec extends GrailsDataTckSpec {
 
+    @Override
+    void setupSpec() {
+        manager.addAllDomainClasses([Person])
+    }
+
     void 'Test the list method returns a PagedResultList with pagination arguments'() {
         given: 'A bunch of people'
         createPeople()

@@ -25,6 +25,11 @@ import org.apache.grails.data.testing.tck.domains.TestEntity
 
 class NullValueEqualSpec extends GrailsDataTckSpec {
 
+    @Override
+    void setupSpec() {
+        manager.addAllDomainClasses([TestEntity])
+    }
+
     void 'test null value in equal'() {
         when:
         new TestEntity(name: 'Fred', age: null).save(failOnError: true)

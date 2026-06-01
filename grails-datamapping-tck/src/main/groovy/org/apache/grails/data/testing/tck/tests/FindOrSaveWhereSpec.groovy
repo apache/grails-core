@@ -23,6 +23,11 @@ import org.apache.grails.data.testing.tck.domains.TestEntity
 
 class FindOrSaveWhereSpec extends GrailsDataTckSpec {
 
+    @Override
+    void setupSpec() {
+        manager.addAllDomainClasses([TestEntity])
+    }
+
     def "Test findOrSaveWhere returns a new instance if it doesn't exist in the database"() {
         when:
         def entity = TestEntity.findOrSaveWhere(name: 'Lake', age: 63)

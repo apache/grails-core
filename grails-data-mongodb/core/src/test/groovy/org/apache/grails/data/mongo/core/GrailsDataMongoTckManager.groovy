@@ -90,7 +90,7 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
 
     @Override
     Session createSession() {
-        def allClasses = getDomainClasses() as Class[]
+        def allClasses = getDomainClasses()
         def ctx = new GenericApplicationContext()
         ctx.refresh()
 

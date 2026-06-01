@@ -30,7 +30,7 @@ import org.apache.grails.data.testing.tck.domains.Practice
 class InheritanceSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Practice])
+        manager.addAllDomainClasses([City, Country, Location, Practice])
     }
 
     void 'Test inheritance with dynamic finder'() {

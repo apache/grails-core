@@ -28,6 +28,10 @@ import spock.lang.Issue
  */
 class SingleResultSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
+    void setupSpec() {
+        manager.addAllDomainClasses([TestEntity])
+    }
+
     @Issue('https://github.com/apache/grails-data-mapping/issues/872')
     void "test single result state"() {
         when:

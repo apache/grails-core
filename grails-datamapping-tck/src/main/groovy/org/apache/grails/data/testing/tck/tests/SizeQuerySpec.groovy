@@ -27,6 +27,11 @@ import org.apache.grails.data.testing.tck.domains.Person
  */
 class SizeQuerySpec extends GrailsDataTckSpec {
 
+    @Override
+    void setupSpec() {
+        manager.addAllDomainClasses([Country, Person])
+    }
+
     void 'Test sizeLe criterion'() {
         given: 'A country with only 1 resident'
         Person p = new Person(firstName: 'Fred', lastName: 'Flinstone')

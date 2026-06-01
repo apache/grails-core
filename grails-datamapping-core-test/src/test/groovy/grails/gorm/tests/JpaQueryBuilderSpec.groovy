@@ -30,6 +30,10 @@ import org.springframework.dao.InvalidDataAccessResourceUsageException
  */
 class JpaQueryBuilderSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
+    void setupSpec() {
+        manager.addAllDomainClasses([Person])
+    }
+
     void "Test update query with ilike criterion"() {
         given: "Some criteria"
         DetachedCriteria criteria = new DetachedCriteria(Person).build {

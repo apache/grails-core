@@ -20,11 +20,16 @@ package org.grails.datastore.gorm
 
 import org.apache.grails.data.testing.tck.domains.ChildEntity
 import org.apache.grails.data.testing.tck.domains.PlantCategory
+import org.apache.grails.data.testing.tck.domains.Plant
 import org.apache.grails.data.testing.tck.domains.TestEntity
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class QueryAssociationSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
+    void setupSpec() {
+        manager.addAllDomainClasses([ChildEntity, PlantCategory, Plant, TestEntity])
+    }
 
     void "Test query one-to-one association with disjunction"() {
         given:

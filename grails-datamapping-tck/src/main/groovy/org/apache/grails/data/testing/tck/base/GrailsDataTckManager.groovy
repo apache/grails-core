@@ -45,6 +45,7 @@ import org.apache.grails.data.testing.tck.domains.PlantCategory
 import org.apache.grails.data.testing.tck.domains.Publication
 import org.apache.grails.data.testing.tck.domains.Task
 import org.apache.grails.data.testing.tck.domains.TestEntity
+import org.grails.datastore.gorm.services.transform.ServiceTransformation
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
 
@@ -56,15 +57,15 @@ abstract class GrailsDataTckManager {
 
     abstract Session createSession()
 
-    private List<Class> domainClasses = [
+    private Set<Class> domainClasses = [
     ]
 
     /**
-     * Returns an unmodifiable view of the domain classes list.
-     * @return An unmodifiable list of domain classes
+     * Returns a defensive copy of the registered domain classes.
+     * Mutating this array will not affect the manager state.
      */
-    List<Class> getDomainClasses() {
-        return Collections.unmodifiableList(domainClasses)
+    Class[] getDomainClasses() {
+        return domainClasses as Class[]
     }
 
     /**
@@ -72,7 +73,13 @@ abstract class GrailsDataTckManager {
      * @param classes The classes to add
      */
     void addAllDomainClasses(Collection<Class> classes) {
-        domainClasses.addAll(classes)
+       registerDomainClasses(classes as Class[])
+    }
+
+    void registerDomainClasses(Class... classes) {
+        if (classes) {
+            domainClasses.addAll(classes)
+        }
     }
 
     void setupSpec() {
