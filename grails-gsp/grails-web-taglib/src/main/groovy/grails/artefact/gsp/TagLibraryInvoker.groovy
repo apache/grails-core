@@ -28,8 +28,10 @@ import grails.web.api.WebAttributes
 import org.grails.taglib.NamespacedTagDispatcher
 import org.grails.taglib.TagLibraryLookup
 import org.grails.taglib.TagLibraryMetaUtils
+import org.grails.taglib.TagMethodContext
 import org.grails.taglib.TagOutput
 import org.grails.taglib.encoder.WithCodecHelper
+import org.codehaus.groovy.runtime.InvokerHelper
 
 /**
  * A trait that adds the ability invoke tags to any class
@@ -74,6 +76,12 @@ trait TagLibraryInvoker extends WebAttributes {
      */
     Object methodMissing(String methodName, Object argsObject) {
         Object[] args = argsObject instanceof Object[] ? (Object[]) argsObject : [argsObject] as Object[]
+        if ('body' == methodName) {
+            Closure body = (Closure) TagMethodContext.currentBody()
+            if (body != null) {
+                return InvokerHelper.invokeMethod(body, 'call', args)
+            }
+        }
         if (shouldHandleMethodMissing(methodName, args)) {
             TagLibraryLookup lookup = getTagLibraryLookup()
             if (lookup) {

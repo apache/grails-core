@@ -59,6 +59,33 @@ trait UrlMappingsUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
     }
 
     /**
+     * Re-registers this spec's URL mappings and rebuilds the {@code grailsUrlMappingsHolder}
+     * bean so each feature method starts with only this spec's mappings active. Other specs
+     * running in the same JVM may register their own mappings or clear the registry; calling
+     * this restores the state expected by this spec.
+     */
+    void resetUrlMappingsForFeature() {
+        Class<T> typeUnderTest = getTypeUnderTest()
+        if (typeUnderTest != null) {
+            mockArtefact(typeUnderTest)
+        }
+    }
+
+    /**
+     * Clears any URL mapping artefacts registered by this spec so that subsequent specs in
+     * the same JVM start from a clean registry. The holder bean itself is left intact —
+     * destroying it would leave {@code linkGenerator} (held by tag libraries) pointing at a
+     * destroyed bean for any non-URL-mapping spec that runs next. The next
+     * {@link UrlMappingsUnitTest}-based spec rebuilds the holder via {@link #mockArtefact}.
+     */
+    @CompileDynamic
+    void cleanupUrlMappingsAfterFeature() {
+        if (grailsApplication instanceof grails.core.DefaultGrailsApplication) {
+            grailsApplication.@artefactInfo.remove(UrlMappingsArtefactHandler.TYPE)
+        }
+    }
+
+    /**
      * @return The {@link UrlMappingsHolder} bean
      */
     UrlMappingsHolder getUrlMappingsHolder() {
@@ -424,7 +451,21 @@ trait UrlMappingsUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWe
 
     @CompileDynamic
     void mockArtefact(Class<?> urlMappingsClass) {
+        // Clear any URL mapping artefacts registered by another spec so that this spec's
+        // reverse-mapping lookups don't see foreign mappings. addArtefact() only appends.
+        if (grailsApplication instanceof grails.core.DefaultGrailsApplication) {
+            grailsApplication.@artefactInfo.remove(UrlMappingsArtefactHandler.TYPE)
+        }
         grailsApplication.addArtefact(UrlMappingsArtefactHandler.TYPE, urlMappingsClass)
+
+        // Destroy the cached holder so that defineBeans rebuilds it from the freshly registered
+        // artefacts. Re-registering the bean definition alone does not evict the cached singleton
+        // from the bean factory, so without this another spec's holder may stay live after we
+        // redefine the bean definition.
+        def beanFactory = applicationContext.beanFactory
+        if (beanFactory.containsSingleton('grailsUrlMappingsHolder')) {
+            beanFactory.destroySingleton('grailsUrlMappingsHolder')
+        }
 
         defineBeans {
             grailsUrlMappingsHolder(UrlMappingsHolderFactoryBean) {
