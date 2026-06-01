@@ -20,32 +20,7 @@ package org.apache.grails.data.testing.tck.base
 
 import spock.lang.Specification
 
-import org.apache.grails.data.testing.tck.domains.Book
-import org.apache.grails.data.testing.tck.domains.ChildEntity
-import org.apache.grails.data.testing.tck.domains.City
-import org.apache.grails.data.testing.tck.domains.ClassWithListArgBeforeValidate
-import org.apache.grails.data.testing.tck.domains.ClassWithNoArgBeforeValidate
-import org.apache.grails.data.testing.tck.domains.ClassWithOverloadedBeforeValidate
-import org.apache.grails.data.testing.tck.domains.CommonTypes
-import org.apache.grails.data.testing.tck.domains.Country
-import org.apache.grails.data.testing.tck.domains.EnumThing
-import org.apache.grails.data.testing.tck.domains.Face
-import org.apache.grails.data.testing.tck.domains.Highway
-import org.apache.grails.data.testing.tck.domains.Location
-import org.apache.grails.data.testing.tck.domains.ModifyPerson
-import org.apache.grails.data.testing.tck.domains.Nose
-import org.apache.grails.data.testing.tck.domains.OptLockNotVersioned
-import org.apache.grails.data.testing.tck.domains.OptLockVersioned
-import org.apache.grails.data.testing.tck.domains.Person
-import org.apache.grails.data.testing.tck.domains.PersonEvent
-import org.apache.grails.data.testing.tck.domains.Pet
-import org.apache.grails.data.testing.tck.domains.PetType
-import org.apache.grails.data.testing.tck.domains.Plant
-import org.apache.grails.data.testing.tck.domains.PlantCategory
-import org.apache.grails.data.testing.tck.domains.Publication
-import org.apache.grails.data.testing.tck.domains.Task
-import org.apache.grails.data.testing.tck.domains.TestEntity
-import org.grails.datastore.gorm.services.transform.ServiceTransformation
+
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
 
@@ -69,13 +44,21 @@ abstract class GrailsDataTckManager {
     }
 
     /**
-     * Adds all the specified classes to the domain classes list.
-     * @param classes The classes to add
+     * @deprecated Use {@link #registerDomainClasses(Class...)} instead.
      */
+    @Deprecated
     void addAllDomainClasses(Collection<Class> classes) {
        registerDomainClasses(classes as Class[])
     }
 
+    /**
+     * Registers the domain classes that will be available when testing.
+     * Note: Direct callers of addAllDomainClasses have not been refactored because there are
+     * over 180 callers, and IntelliJ IDE does not support automatic inlining/refactoring of
+     * Groovy methods. Thus, addAllDomainClasses remains as a deprecated wrapper to avoid
+     * massive manual file modifications.
+     * @param classes The classes to register
+     */
     void registerDomainClasses(Class... classes) {
         if (classes) {
             domainClasses.addAll(classes)
