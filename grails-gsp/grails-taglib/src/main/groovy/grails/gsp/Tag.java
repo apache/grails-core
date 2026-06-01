@@ -16,26 +16,19 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+package grails.gsp;
 
-package org.grails.testing.spock
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-import groovy.transform.CompileStatic
-
-import org.spockframework.runtime.extension.IMethodInterceptor
-import org.spockframework.runtime.extension.IMethodInvocation
-
-import org.grails.web.converters.configuration.ConvertersConfigurationHolder
-
-@CompileStatic
-class WebCleanupSpecInterceptor implements IMethodInterceptor {
-
-    @Override
-    void intercept(IMethodInvocation invocation) throws Throwable {
-        try {
-            invocation.proceed()
-        }
-        finally {
-            ConvertersConfigurationHolder.clear()
-        }
-    }
+/**
+ * Marks a public TagLib method as an invokable GSP tag.
+ *
+ * @since 8.0
+ */
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
+public @interface Tag {
 }

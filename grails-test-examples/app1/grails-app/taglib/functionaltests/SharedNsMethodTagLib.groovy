@@ -16,26 +16,15 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+package functionaltests
 
-package org.grails.testing.spock
+import grails.gsp.Tag
 
-import groovy.transform.CompileStatic
+class SharedNsMethodTagLib {
+    static namespace = 'shared'
 
-import org.spockframework.runtime.extension.IMethodInterceptor
-import org.spockframework.runtime.extension.IMethodInvocation
-
-import org.grails.web.converters.configuration.ConvertersConfigurationHolder
-
-@CompileStatic
-class WebCleanupSpecInterceptor implements IMethodInterceptor {
-
-    @Override
-    void intercept(IMethodInvocation invocation) throws Throwable {
-        try {
-            invocation.proceed()
-        }
-        finally {
-            ConvertersConfigurationHolder.clear()
-        }
+    @Tag
+    def fromMethod(String one) {
+        out << "method-${one}"
     }
 }

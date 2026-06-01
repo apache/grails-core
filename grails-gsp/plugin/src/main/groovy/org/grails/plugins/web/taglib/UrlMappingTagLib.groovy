@@ -66,7 +66,7 @@ class UrlMappingTagLib implements TagLibrary {
      * @attr view The name of the view. Cannot be specified in combination with controller/action/id
      * @attr model A model to pass onto the included controller in the request
      */
-    Closure include = { Map attrs, body ->
+    def include(Map attrs, Closure body) {
         if (attrs.action && !attrs.controller) {
             def controller = request?.getAttribute(GrailsApplicationAttributes.CONTROLLER)
             def controllerName = ((GroovyObject) controller)?.getProperty('controllerName')
@@ -90,7 +90,7 @@ class UrlMappingTagLib implements TagLibrary {
         }
     }
 
-    Map appendClass(Map attrs, String cssClass) {
+    private Map appendClass(Map attrs, String cssClass) {
         attrs['class'] = [attrs['class'] ?: '', cssClass].join(' ').trim()
         attrs
     }
@@ -119,8 +119,8 @@ class UrlMappingTagLib implements TagLibrary {
      * @attr mapping The named URL mapping to use to rewrite the link
      * @attr fragment The link fragment (often called anchor tag) to use
      */
-    Closure paginate = { Map attrsMap ->
-        TypeConvertingMap attrs = (TypeConvertingMap) attrsMap
+    def paginate(Map attrs) {
+        attrs = (TypeConvertingMap) attrs
         def writer = out
         if (attrs.total == null) {
             throwTagError('Tag [paginate] is missing required attribute [total]')
@@ -277,7 +277,7 @@ class UrlMappingTagLib implements TagLibrary {
      * @attr params A map containing URL query parameters
      * @attr class CSS class name
      */
-    Closure sortableColumn = { Map attrs ->
+    def sortableColumn(Map attrs) {
         def writer = out
         if (!attrs.property) {
             throwTagError('Tag [sortableColumn] is missing required attribute [property]')

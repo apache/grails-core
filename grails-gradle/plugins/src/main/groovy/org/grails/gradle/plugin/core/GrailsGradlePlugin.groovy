@@ -240,6 +240,7 @@ class GrailsGradlePlugin implements Plugin<Project> {
                 c.groovyOptions.optimizationOptions.indy = indyEnabled
 
                 if (preserveParameterNames != null) {
+                    project.logger.info('Grails: Configuring Groovy compilation to preserve parameter names: {}', preserveParameterNames)
                     c.groovyOptions.parameters = preserveParameterNames
                 }
             }
