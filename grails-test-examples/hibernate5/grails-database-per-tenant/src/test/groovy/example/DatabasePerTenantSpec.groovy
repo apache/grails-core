@@ -27,8 +27,10 @@ import org.grails.datastore.mapping.config.Settings
  */
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
+import spock.lang.Isolated
 import spock.util.environment.RestoreSystemProperties
 
+@Isolated
 @RestoreSystemProperties
 class DatabasePerTenantSpec extends HibernateSpec {
     @Override
@@ -46,6 +48,7 @@ class DatabasePerTenantSpec extends HibernateSpec {
     }
 
     @Rollback("moreBooks")
+    @RestoreSystemProperties
     void "Test should rollback changes in a previous test"() {
         when:"When there is no tenant"
         Book.count()
@@ -62,6 +65,7 @@ class DatabasePerTenantSpec extends HibernateSpec {
         bookDataService.countBooks() == 1
     }
 
+     @RestoreSystemProperties
      void 'Test database per tenant'() {
         when:"When there is no tenant"
         Book.count()

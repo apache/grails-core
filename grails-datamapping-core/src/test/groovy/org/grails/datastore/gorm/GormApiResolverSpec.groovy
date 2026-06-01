@@ -18,7 +18,10 @@
  */
 package org.grails.datastore.gorm
 
+import grails.gorm.MultiTenant
 import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
+import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import spock.lang.Specification
@@ -152,6 +155,48 @@ class GormApiResolverSpec extends Specification {
         e.message.contains('No GORM implementation configured for type')
     }
 
+    void 'resolver skips active session datastore for multi-tenant entity if tenant is not resolved'() {
+        given:
+        GormRegistry registry = GormRegistry.instance
+        GormApiResolver resolver = registry.apiResolver
+        
+        Datastore activeDatastore = Mock(MultiTenantCapableDatastore) {
+            hasCurrentSession() >> true
+            getMultiTenancyMode() >> org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode.DATABASE
+            getTenantResolver() >> Mock(org.grails.datastore.mapping.multitenancy.TenantResolver) {
+                resolveTenantIdentifier() >> { throw new TenantNotFoundException("No tenant found") }
+            }
+            getMappingContext() >> Mock(org.grails.datastore.mapping.model.MappingContext) {
+                getPersistentEntity(TestMultiTenantEntity.name) >> Mock(org.grails.datastore.mapping.model.PersistentEntity) {
+                    isMultiTenant() >> true
+                }
+            }
+            getConnectionSources() >> Mock(org.grails.datastore.mapping.core.connections.ConnectionSources) {
+                getDefaultConnectionSource() >> Mock(ConnectionSource) {
+                    getName() >> 'someTenant'
+                }
+            }
+        }
+        registry.registerDatastoreByType(activeDatastore)
+
+        Datastore defaultDatastore = Mock(MultiTenantCapableDatastore) {
+            getMultiTenancyMode() >> org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode.DATABASE
+            getTenantResolver() >> Mock(org.grails.datastore.mapping.multitenancy.TenantResolver) {
+                resolveTenantIdentifier() >> { throw new TenantNotFoundException("No tenant found") }
+            }
+        }
+        registry.registerDatastore(ConnectionSource.DEFAULT, defaultDatastore)
+
+        when:
+        resolver.findDatastore(TestMultiTenantEntity, null)
+
+        then:
+        thrown(TenantNotFoundException)
+    }
+
     private static class TestEntity {
+    }
+
+    private static class TestMultiTenantEntity implements MultiTenant {
     }
 }

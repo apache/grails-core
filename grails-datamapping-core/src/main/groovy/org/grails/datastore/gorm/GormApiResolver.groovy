@@ -339,14 +339,31 @@ class ActiveSessionDatastoreSelector {
         if (ds instanceof MultiTenantCapableDatastore) {
             MultiTenancySettings.MultiTenancyMode mode = ((MultiTenantCapableDatastore) ds).getMultiTenancyMode()
             if (mode == MultiTenancySettings.MultiTenancyMode.DATABASE || mode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
-                // Only skip if it's the parent datastore (DEFAULT connection)
-                if (ConnectionSource.DEFAULT.equals(ds.getConnectionSources().getDefaultConnectionSource().getName())) {
-                    if (className != null) {
-                        PersistentEntity entity = ds.getMappingContext().getPersistentEntity(className)
-                        if (entity != null && entity.isMultiTenant()) {
+                if (className != null) {
+                    PersistentEntity entity = ds.getMappingContext().getPersistentEntity(className)
+                    if (entity != null && entity.isMultiTenant()) {
+                        Serializable resolvedTenantId = null
+                        try {
+                            resolvedTenantId = CurrentTenantHolder.get()
+                            if (resolvedTenantId == null) {
+                                resolvedTenantId = ((MultiTenantCapableDatastore) ds).getTenantResolver().resolveTenantIdentifier()
+                            }
+                        } catch (TenantNotFoundException e) {
                             return true
                         }
-                    } else if (className == null) {
+                        if (resolvedTenantId == null) {
+                            return true
+                        }
+                        String activeConnectionName = ds.getConnectionSources().getDefaultConnectionSource().getName()
+                        if (ConnectionSource.DEFAULT.equals(activeConnectionName)) {
+                            return true
+                        }
+                        if (!activeConnectionName.equals(resolvedTenantId.toString())) {
+                            return true
+                        }
+                    }
+                } else {
+                    if (ConnectionSource.DEFAULT.equals(ds.getConnectionSources().getDefaultConnectionSource().getName())) {
                         return true
                     }
                 }
