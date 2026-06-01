@@ -40,20 +40,20 @@ import org.gradle.api.provider.Provider
 @CompileStatic
 class GrailsCodeStylePlugin implements Plugin<Project> {
 
-    static String CHECKSTYLE_DIR_PROPERTY = 'grails.codestyle.dir.checkstyle'
-    static String CHECKSTYLE_ENABLED_PROPERTY = 'grails.codestyle.enabled.checkstyle'
+    static String CHECKSTYLE_DIR_PROPERTY = 'grails.code-style.dir.checkstyle'
+    static String CHECKSTYLE_ENABLED_PROPERTY = 'grails.code-style.enabled.checkstyle'
     static String CHECKSTYLE_CONFIG_FILE_NAME = 'checkstyle.xml'
     static String CHECKSTYLE_SUPPRESSION_CONFIG_FILE_NAME = 'checkstyle-suppressions.xml'
 
-    static String CODENARC_DIR_PROPERTY = 'grails.codestyle.dir.codenarc'
-    static String CODENARC_ENABLED_PROPERTY = 'grails.codestyle.enabled.codenarc'
+    static String CODENARC_DIR_PROPERTY = 'grails.code-style.dir.codenarc'
+    static String CODENARC_ENABLED_PROPERTY = 'grails.code-style.enabled.codenarc'
     static String CODENARC_CONFIG_FILE_NAME = 'codenarc.groovy'
 
-    static String CODENARC_FIX_PROPERTY = 'grails.codestyle.codenarc.fix'
+    static String CODENARC_FIX_PROPERTY = 'grails.code-style.codenarc.fix'
 
-    static String IGNORE_FAILURES_PROPERTY = 'grails.codestyle.ignoreFailures'
+    static String IGNORE_FAILURES_PROPERTY = 'grails.code-style.ignoreFailures'
 
-    static String TEST_STYLING_PROPERTY = 'grails.codestyle.enabled.tests'
+    static String TEST_STYLING_PROPERTY = 'grails.code-style.enabled.tests'
 
     static String BASE_RESOURCE_PATH = '/META-INF/org.apache.grails.buildsrc.grails-code-style'
 
@@ -71,7 +71,7 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
         gce.checkstyleDirectory.set(project.provider {
             def directory = project.hasProperty(CHECKSTYLE_DIR_PROPERTY) ?
                     project.rootProject.layout.projectDirectory.dir(project.property(CHECKSTYLE_DIR_PROPERTY) as String) :
-                    project.rootProject.layout.buildDirectory.get().dir('codestyle').dir('checkstyle')
+                    project.rootProject.layout.buildDirectory.get().dir('code-style').dir('checkstyle')
 
             def toCreate = directory.asFile.toPath()
             Files.createDirectories(toCreate)
@@ -91,7 +91,7 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
         gce.codenarcDirectory.set(project.provider {
             def directory = project.hasProperty(CODENARC_DIR_PROPERTY) ?
                     project.rootProject.layout.projectDirectory.dir(project.property(CODENARC_DIR_PROPERTY) as String) :
-                    project.rootProject.layout.buildDirectory.get().dir('codestyle').dir('codenarc')
+                    project.rootProject.layout.buildDirectory.get().dir('code-style').dir('codenarc')
 
             def toCreate = directory.asFile.toPath()
             Files.createDirectories(toCreate)
@@ -134,11 +134,11 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
     static void configureCheckstyle(Project project) {
         project.pluginManager.apply(CheckstylePlugin)
 
-        Provider<Boolean> ignoreFailures = GradleUtils.booleanProvider(project, IGNORE_FAILURES_PROPERTY)
+        def ignoreFailures = GradleUtils.booleanProvider(project, IGNORE_FAILURES_PROPERTY)
 
         project.extensions.configure(CheckstyleExtension) {
             // Explicit `it` is required in extension configuration
-            it.getConfigDirectory().set(project.extensions.getByType(GrailsCodeStyleExtension).checkstyleDirectory)
+            it.configDirectory.set(project.extensions.getByType(GrailsCodeStyleExtension).checkstyleDirectory)
             it.maxWarnings = 0
             it.showViolations = true
             it.ignoreFailures = ignoreFailures.get()
@@ -154,8 +154,10 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
                 task.enabled = false
             }
 
+            // Exclude build directory from Checkstyle task sources to ignore generated sources (e.g. for grails-forge)
+            // Checked via absolute path to ensure platform-independent separator handling
             task.exclude { org.gradle.api.file.FileTreeElement element ->
-                element.getFile().getAbsolutePath().contains("/build/")
+                element.file.absolutePath.contains(File.separator + 'build' + File.separator)
             }
 
             // Redirect XML report output to a single directory to consolidate
@@ -174,8 +176,8 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
 
         registerCodenarcFixTask(project)
 
-        Provider<Boolean> ignoreFailures = GradleUtils.booleanProvider(project, IGNORE_FAILURES_PROPERTY)
-        Provider<Boolean> codenarcFix = GradleUtils.booleanProvider(project, CODENARC_FIX_PROPERTY)
+        def ignoreFailures = GradleUtils.booleanProvider(project, IGNORE_FAILURES_PROPERTY)
+        def codenarcFix = GradleUtils.booleanProvider(project, CODENARC_FIX_PROPERTY)
 
         project.extensions.configure(CodeNarcExtension) {
             it.configFile = project.extensions.getByType(GrailsCodeStyleExtension)

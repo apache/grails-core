@@ -19,6 +19,7 @@
 package org.apache.grails.buildsrc
 
 import org.gradle.testkit.runner.GradleRunner
+import org.gradle.testkit.runner.TaskOutcome
 import spock.lang.Specification
 import spock.lang.TempDir
 import java.nio.file.Path
@@ -70,7 +71,7 @@ class Test{
                 .build()
 
         then: "task finished successfully"
-        result.task(':codenarcFix').outcome == org.gradle.testkit.runner.TaskOutcome.SUCCESS
+        result.task(':codenarcFix').outcome == TaskOutcome.SUCCESS
 
         and: "violations are fixed"
         def fixedContent = groovyFile.text
@@ -101,7 +102,7 @@ class Test {
                 .build()
 
         then: "task finished successfully"
-        result.task(':codenarcFix').outcome == org.gradle.testkit.runner.TaskOutcome.SUCCESS
+        result.task(':codenarcFix').outcome == TaskOutcome.SUCCESS
 
         and: "strings with single quotes are NOT changed to single quotes (which would break them)"
         def content = groovyFile.text
@@ -127,7 +128,7 @@ class Test {
                 .build()
 
         then: "task finished successfully"
-        result.task(':codenarcFix').outcome == org.gradle.testkit.runner.TaskOutcome.SUCCESS
+        result.task(':codenarcFix').outcome == TaskOutcome.SUCCESS
 
         and: "escaped quotes are NOT broken"
         groovyFile.text.contains('"\\"\\$it\\""')
@@ -153,7 +154,7 @@ class Test {
                 .build()
 
         then: "task finished successfully"
-        result.task(':codenarcFix').outcome == org.gradle.testkit.runner.TaskOutcome.SUCCESS
+        result.task(':codenarcFix').outcome == TaskOutcome.SUCCESS
 
         and: "method references are NOT broken"
         def content = groovyFile.text
@@ -184,7 +185,7 @@ class Test {
                 .build()
 
         then: "task finished successfully"
-        result.task(':codenarcFix').outcome == org.gradle.testkit.runner.TaskOutcome.SUCCESS
+        result.task(':codenarcFix').outcome == TaskOutcome.SUCCESS
 
         and: "adjacent GString boundaries are NOT fused"
         def content = groovyFile.text
@@ -212,7 +213,7 @@ class Test {
                 .build()
 
         then: "task finished successfully"
-        result.task(':codenarcFix').outcome == org.gradle.testkit.runner.TaskOutcome.SUCCESS
+        result.task(':codenarcFix').outcome == TaskOutcome.SUCCESS
 
         and: "double quotes inside single-quoted strings are NOT changed"
         def content = groovyFile.text

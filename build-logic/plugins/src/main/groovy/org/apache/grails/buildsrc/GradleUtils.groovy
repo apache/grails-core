@@ -40,7 +40,7 @@ class GradleUtils {
 
     static Provider<Boolean> booleanProvider(Project project, String name, boolean defaultValue = false) {
         project.providers.gradleProperty(name)
-                .map { String it -> it.trim().toBoolean() }
+                .map { it.trim().toBoolean() }
                 .orElse(defaultValue)
     }
 
