@@ -29,18 +29,8 @@ def java17moduleReflectionCompatibilityArguments = [
 dependencies {
     // https://docs.gradle.org/8.3/userguide/upgrading_version_8.html#test_framework_implementation_dependencies
     add('testRuntimeOnly', 'org.junit.platform:junit-platform-launcher')
-    // Required by Spock 2.4 to mock concrete classes (byte-buddy/objenesis are
-    // not transitive from spock-core in this configuration).
     add('testRuntimeOnly', 'net.bytebuddy:byte-buddy')
     add('testRuntimeOnly', 'org.objenesis:objenesis')
-}
-
-tasks.named('compileTestGroovy') {
-    options.forkOptions.jvmArgs += ['-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true']
-}
-
-tasks.named('compileGroovy') {
-    options.forkOptions.jvmArgs += ['-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true']
 }
 
 // Disable build cache for Groovy compilation in CI to ensure AST transformations are always applied.
@@ -61,7 +51,6 @@ tasks.withType(Test).configureEach {
     outputs.cacheIf { !isCiBuild && !doNotCacheTests }
     outputs.upToDateWhen { !doNotCacheTests }
 
-    systemProperty('spock.iKnowWhatImDoing.disableGroovyVersionCheck', 'true')
     onlyIf {
         ![
                 'onlyFunctionalTests',

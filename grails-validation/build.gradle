@@ -61,10 +61,6 @@ dependencies {
     // Testing
     testImplementation 'org.slf4j:slf4j-simple'
     testImplementation 'org.spockframework:spock-core'
-
-    // Required by Spock's class mocking
-    testRuntimeOnly 'net.bytebuddy:byte-buddy'
-    testRuntimeOnly 'org.objenesis:objenesis'
 }
 
 apply {

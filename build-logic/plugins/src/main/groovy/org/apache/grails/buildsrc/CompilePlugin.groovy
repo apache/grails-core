@@ -33,7 +33,6 @@ import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.compile.GroovyCompile
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.javadoc.Javadoc
-import org.gradle.api.tasks.testing.Test
 import org.gradle.external.javadoc.StandardJavadocDocletOptions
 
 import static org.apache.grails.buildsrc.GradleUtils.lookupPropertyByType
@@ -114,9 +113,6 @@ class CompilePlugin implements Plugin<Project> {
                 if (System.getenv('SUPPRESS_DEPRECATION_WARNINGS') == 'true') {
                     it.options.compilerArgs += ['-Xlint:-removal']
                 }
-            }
-            project.tasks.withType(Test).configureEach {
-                it.jvmArgs('-Dspock.iKnowWhatImDoing.disableGroovyVersionCheck=true')
             }
         }
     }
