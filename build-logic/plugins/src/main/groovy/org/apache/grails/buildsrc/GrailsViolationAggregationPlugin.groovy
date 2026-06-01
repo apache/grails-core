@@ -86,7 +86,7 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
 
         Provider<Directory> violationsDir = project.layout.buildDirectory.dir('reports/violations')
         Provider<Directory> styleXmlDir = project.layout.buildDirectory.dir('reports/codestyle')
-        Provider<Directory> analysisXmlDir = project.layout.buildDirectory.dir('reports/codeanalysis')
+        Provider<Directory> analysisXmlDir = project.layout.buildDirectory.dir('reports/code-analysis')
 
         TaskProvider<Task> styleTask = registerStyleAggregation(project, styleXmlDir, violationsDir)
         TaskProvider<Task> analysisTask = registerAnalysisAggregation(project, analysisXmlDir, violationsDir)

@@ -31,7 +31,7 @@ Activate this skill when:
 | Plugin | Applied to | Responsibility |
 |--------|-----------|----------------|
 | `org.apache.grails.gradle.grails-code-style` | Every subproject | Applies Checkstyle and CodeNarc; registers per-project `codeStyle` task; redirects XML reports to root `build/reports/codestyle/` |
-| `org.apache.grails.gradle.grails-code-analysis` | Every subproject | Applies PMD and SpotBugs (both opt-in); registers per-project `codeAnalysis` task; redirects XML reports to root `build/reports/codeanalysis/` |
+| `org.apache.grails.gradle.grails-code-analysis` | Every subproject | Applies PMD and SpotBugs (both opt-in); registers per-project `codeAnalysis` task; redirects XML reports to root `build/reports/code-analysis/` |
 | `org.apache.grails.gradle.grails-jacoco` | Every subproject | Applies JaCoCo; wires `jacocoTestReport` to run after each `test` task |
 | `org.apache.grails.gradle.grails-violation-aggregation` | **Root project only** | Registers `aggregateViolations` and `aggregateJacocoCoverage` tasks; writes Markdown summaries to `build/reports/violations/` |
 
@@ -54,7 +54,7 @@ Activate this skill when:
 ./gradlew :grails-core:codeStyle
 
 # Check a single module (analysis — must be enabled via properties)
-./gradlew :grails-core:codeAnalysis -Pgrails.codeanalysis.enabled.pmd=true
+./gradlew :grails-core:codeAnalysis -Pgrails.code-analysis.enabled.pmd=true
 
 # Full multi-module check + report
 ./gradlew aggregateViolations
@@ -63,10 +63,10 @@ Activate this skill when:
 ./gradlew aggregateViolations -Pgrails.codestyle.enabled.tests=true
 
 # Include test sources in analysis
-./gradlew aggregateViolations -Pgrails.codeanalysis.enabled.tests=true
+./gradlew aggregateViolations -Pgrails.code-analysis.enabled.tests=true
 
 # Ignore failures (collect reports without failing the build)
-./gradlew aggregateViolations -Pgrails.codestyle.ignoreFailures=true -Pgrails.codeanalysis.ignoreFailures=true
+./gradlew aggregateViolations -Pgrails.codestyle.ignoreFailures=true -Pgrails.code-analysis.ignoreFailures=true
 
 # Auto-fix some CodeNarc violations before running checks
 ./gradlew codenarcFix codeStyle
@@ -142,13 +142,13 @@ Common violations:
 
 ### PMD (Java/Groovy — opt-in)
 
-Enable: `-Pgrails.codeanalysis.enabled.pmd=true`
+Enable: `-Pgrails.code-analysis.enabled.pmd=true`
 
-Rule file: `build/codeanalysis/pmd/pmd.xml`.
+Rule file: `build/code-analysis/pmd/pmd.xml`.
 
 ### SpotBugs (Java bytecode — opt-in)
 
-Enable: `-Pgrails.codeanalysis.enabled.spotbugs=true`
+Enable: `-Pgrails.code-analysis.enabled.spotbugs=true`
 
 Runs at `Effort.MAX` / `Confidence.HIGH`. Only high-confidence bugs are reported.
 
@@ -185,18 +185,18 @@ All properties can be set in `gradle.properties` or passed as `-P` flags:
 
 | Property | Default | Description |
 |----------|---------|-------------|
-| `grails.codeanalysis.enabled.pmd` | `false` | Enable PMD |
-| `grails.codeanalysis.enabled.spotbugs` | `false` | Enable SpotBugs |
-| `grails.codeanalysis.enabled.tests` | `false` | Also analyse test source sets |
-| `grails.codeanalysis.ignoreFailures` | `false` | Collect reports without failing build |
-| `grails.codeanalysis.dir.pmd` | (auto) | Custom path to PMD config dir |
+| `grails.code-analysis.enabled.pmd` | `false` | Enable PMD |
+| `grails.code-analysis.enabled.spotbugs` | `false` | Enable SpotBugs |
+| `grails.code-analysis.enabled.tests` | `false` | Also analyse test source sets |
+| `grails.code-analysis.ignoreFailures` | `false` | Collect reports without failing build |
+| `grails.code-analysis.dir.pmd` | (auto) | Custom path to PMD config dir |
 | `skipCodeStyle` | unset | If present, all analysis tasks are also skipped |
 
 ---
 
 ## Fixing Violations Workflow
 
-1. Run `./gradlew aggregateViolations -Pgrails.codestyle.ignoreFailures=true -Pgrails.codeanalysis.ignoreFailures=true`
+1. Run `./gradlew aggregateViolations -Pgrails.codestyle.ignoreFailures=true -Pgrails.code-analysis.ignoreFailures=true`
 2. Open `build/reports/violations/CODENARC_VIOLATIONS.md` and `build/reports/violations/CHECKSTYLE_VIOLATIONS.md` to see all issues by module
 3. For CodeNarc, run `./gradlew codenarcFix` to auto-fix what it can
 4. Fix remaining violations manually using the table above
@@ -218,7 +218,7 @@ build/reports/codestyle/        ← XML inputs for style aggregation
     ├── grails-core-codenarcMain.xml
     └── ...
 
-build/reports/codeanalysis/     ← XML inputs for analysis aggregation (if enabled)
+build/reports/code-analysis/     ← XML inputs for analysis aggregation (if enabled)
 ├── pmd/
 └── spotbugs/
 

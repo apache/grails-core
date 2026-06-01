@@ -40,7 +40,7 @@ class GradleUtils {
 
     static Provider<Boolean> booleanProvider(Project project, String name, boolean defaultValue = false) {
         project.providers.gradleProperty(name)
-                .map { Boolean.parseBoolean(it as String) }
+                .map { String it -> it.trim().toBoolean() }
                 .orElse(defaultValue)
     }
 
@@ -57,7 +57,7 @@ class GradleUtils {
         }
         if (type && (type == Boolean || type == boolean.class)) {
             def v = findProperty(project, name)
-            return v == null ? null : Boolean.parseBoolean(v as String) as T
+            return v == null ? null : (v as String).trim().toBoolean() as T
         }
 
         findProperty(project, name) as T

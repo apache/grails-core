@@ -45,14 +45,14 @@ import com.github.spotbugs.snom.SpotBugsTask
 @CompileStatic
 class GrailsCodeAnalysisPlugin implements Plugin<Project> {
 
-    static String PMD_DIR_PROPERTY = 'grails.codeanalysis.dir.pmd'
-    static String PMD_ENABLED_PROPERTY = 'grails.codeanalysis.enabled.pmd'
+    static String PMD_DIR_PROPERTY = 'grails.code-analysis.dir.pmd'
+    static String PMD_ENABLED_PROPERTY = 'grails.code-analysis.enabled.pmd'
     static String PMD_CONFIG_FILE_NAME = 'pmd.xml'
 
-    static String SPOTBUGS_ENABLED_PROPERTY = 'grails.codeanalysis.enabled.spotbugs'
+    static String SPOTBUGS_ENABLED_PROPERTY = 'grails.code-analysis.enabled.spotbugs'
 
-    static String IGNORE_FAILURES_PROPERTY = 'grails.codeanalysis.ignoreFailures'
-    static String TEST_ANALYSIS_PROPERTY = 'grails.codeanalysis.enabled.tests'
+    static String IGNORE_FAILURES_PROPERTY = 'grails.code-analysis.ignoreFailures'
+    static String TEST_ANALYSIS_PROPERTY = 'grails.code-analysis.enabled.tests'
 
     static String BASE_RESOURCE_PATH = '/META-INF/org.apache.grails.buildsrc.grails-code-analysis'
 
@@ -78,7 +78,7 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
         gca.pmdDirectory.set(project.provider {
             def directory = project.hasProperty(PMD_DIR_PROPERTY) ?
                     project.rootProject.layout.projectDirectory.dir(project.property(PMD_DIR_PROPERTY) as String) :
-                    project.rootProject.layout.buildDirectory.get().dir('codeanalysis').dir('pmd')
+                    project.rootProject.layout.buildDirectory.get().dir('code-analysis').dir('pmd')
 
             def toCreate = directory.asFile.toPath()
             Files.createDirectories(toCreate)
