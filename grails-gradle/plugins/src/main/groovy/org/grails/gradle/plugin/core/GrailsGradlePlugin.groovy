@@ -239,6 +239,7 @@ class GrailsGradlePlugin implements Plugin<Project> {
                 c.groovyOptions.optimizationOptions.indy = indyEnabled
 
                 if (preserveParameterNames != null) {
+                    project.logger.info('Grails: Configuring Groovy compilation to preserve parameter names: {}', preserveParameterNames)
                     c.groovyOptions.parameters = preserveParameterNames
                 }
             }
@@ -538,11 +539,11 @@ ${importStatements}
     }
 
     /**
-     * Validates that grails-micronaut-bom is applied as an enforcedPlatform when micronaut is used.
-     * The grails-micronaut-bom layers Micronaut-specific overrides (e.g. javaparser-core) on top
-     * of grails-bom; without enforcedPlatform, Micronaut's platform would override these versions
-     * via Gradle's conflict resolution. Regular Grails projects (without Micronaut) should continue
-     * to use the spring-managed versions via plain platform(:grails-bom).
+     * Validates that a Micronaut-compatible BOM is applied as an enforcedPlatform when micronaut is used.
+     * The grails-micronaut-bom (and its hibernate-specific variants) layers Micronaut-specific overrides
+     * (e.g. javaparser-core) on top of grails-bom; without enforcedPlatform, Micronaut's platform would
+     * override these versions via Gradle's conflict resolution. Regular Grails projects (without Micronaut)
+     * should continue to use the spring-managed versions via plain platform(:grails-bom).
      */
     @CompileStatic
     protected static void validateMicronautBom(Project project) {
@@ -554,13 +555,18 @@ ${importStatements}
         // The Grails Gradle Plugin injects a regular platform(grails-bom) into each
         // declarable configuration via applyGrailsBom(), excluding code-quality and
         // annotation-processor classpaths (see isExcludedFromBomPlatform). For Micronaut
-        // projects the user must additionally declare an enforcedPlatform(grails-micronaut-bom)
+        // projects the user must additionally declare an enforcedPlatform on a Micronaut BOM
         // - a different BOM artifact that layers Micronaut-specific overrides on top of
-        // grails-bom. We scan all grails-micronaut-bom declarations on the 'implementation'
+        // grails-bom. We scan all Micronaut BOM declarations on the 'implementation'
         // configuration and accept the configuration as valid when at least one of them is
         // an enforcedPlatform.
+        Set<String> validMicronautBoms = [
+                'grails-micronaut-bom',
+                'grails-hibernate5-micronaut-bom',
+        ] as Set<String>
+
         for (Dependency dep : implConfig.dependencies) {
-            if (dep.name == 'grails-micronaut-bom' && dep instanceof ModuleDependency) {
+            if (dep.name in validMicronautBoms && dep instanceof ModuleDependency) {
                 Object categoryAttr = ((ModuleDependency) dep).attributes.getAttribute(
                         org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
                 )
@@ -571,10 +577,11 @@ ${importStatements}
         }
 
         throw new GradleException(
-                "Project '${project.name}' uses Micronaut but does not apply grails-micronaut-bom as an enforcedPlatform. " +
+                "Project '${project.name}' uses Micronaut but does not apply a Micronaut BOM as an enforcedPlatform. " +
                         "Micronaut's platform declares higher versions of javaparser-core and other libraries that would " +
-                        'override the grails-bom versions via conflict resolution. Change to:\n\n' +
-                        '    implementation enforcedPlatform(project(\':grails-micronaut-bom\'))\n'
+                        'override the grails-bom versions via conflict resolution. Change to one of:\n\n' +
+                        '    implementation enforcedPlatform("org.apache.grails:grails-micronaut-bom:$grailsVersion")\n' +
+                        '    implementation enforcedPlatform("org.apache.grails:grails-hibernate5-micronaut-bom:$grailsVersion")\n'
         )
     }
 
