@@ -28,7 +28,6 @@ import groovy.transform.builder.SimpleStrategy
 import groovy.util.logging.Slf4j
 
 import org.springframework.core.convert.ConversionFailedException
-import org.springframework.core.convert.ConverterNotFoundException
 import org.springframework.core.env.PropertyResolver
 import org.springframework.util.ReflectionUtils
 
@@ -364,11 +363,23 @@ abstract class ConfigurationBuilder<B, C> {
                         try {
                             value = propertyResolver.getProperty(propertyPathForArg, argType, fallBackValue)
                         } catch (ConversionFailedException e) {
-                            value = handleConversionException(e, argType, propertyPathForArg)
-                        } catch (ConverterNotFoundException e) {
-                            // Groovy 5 / Spring 6 - handle types with @Builder(builderStrategy = SimpleStrategy)
-                            // where Spring can't auto-convert from Map
-                            value = handleConverterNotFoundException(e, argType, propertyPathForArg, fallBackValue)
+                            if (argType.isEnum()) {
+                                value = propertyResolver.getProperty(propertyPathForArg, String)
+                                if (value != null) {
+                                    try {
+                                        value = Enum.valueOf((Class) argType, value.toUpperCase())
+                                    } catch (Throwable e2) {
+                                        // ignore e2 and throw original
+                                        throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $e.message", e)
+                                    }
+                                }
+                                else {
+                                    throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $e.message", e)
+                                }
+                            }
+                            else {
+                                throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $e.message", e)
+                            }
                         }
                         if (value != null) {
                             log.debug('Resolved value [{}] for setting [{}]', value, propertyPathForArg)
@@ -421,89 +432,5 @@ abstract class ConfigurationBuilder<B, C> {
      */
     protected void startBuild(Object builder, String configurationPath) {
         // no-op
-    }
-
-    /**
-     * Handle ConversionFailedException - for enums, try case-insensitive conversion
-     */
-    private Object handleConversionException(ConversionFailedException e, Class argType, String propertyPathForArg) {
-        if (argType.isEnum()) {
-            def value = propertyResolver.getProperty(propertyPathForArg, String)
-            if (value != null) {
-                try {
-                    return Enum.valueOf((Class) argType, value.toUpperCase())
-                } catch (Throwable e2) {
-                    // ignore e2 and throw original
-                    throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $e.message", e)
-                }
-            }
-            else {
-                throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $e.message", e)
-            }
-        }
-        else {
-            // Spring 7 may wrap ConverterNotFoundException in ConversionFailedException when
-            // converting Maps with non-standard value types. Try Map-based instantiation.
-            try {
-                def result = handleConverterNotFoundException(null, argType, propertyPathForArg, null)
-                if (result != null) {
-                    return result
-                }
-            } catch (Throwable ignored) {
-                // Fall through to original exception
-            }
-            throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $e.message", e)
-        }
-    }
-
-    /**
-     * Handle ConverterNotFoundException - for nested configuration types,
-     * try to instantiate and populate from Map. This handles Spring 7 compatibility where
-     * Spring can't auto-convert from LinkedHashMap to these types. This is independent of the
-     * Groovy version and is required regardless of @Builder annotation retention.
-     */
-    @CompileDynamic
-    private Object handleConverterNotFoundException(ConverterNotFoundException e, Class argType, String propertyPathForArg, Object fallBackValue) {
-        // Try to get the raw value as Object to avoid Spring 7 deep conversion,
-        // then manually populate the target type from the Map
-        try {
-            // Use Object.class to prevent Spring's MapToMapConverter from deep-converting values
-            def rawValue = propertyResolver.getProperty(propertyPathForArg, Object)
-            if (rawValue instanceof Map) {
-                Map mapValue = (Map) rawValue
-                if (!mapValue.isEmpty()) {
-                    try {
-                        def instance = argType.getDeclaredConstructor().newInstance()
-                        mapValue.each { key, val ->
-                            if (instance.hasProperty(key as String)) {
-                                instance[key as String] = val
-                            }
-                        }
-                        return instance
-                    } catch (Throwable e2) {
-                        log.debug('Failed to instantiate {} from Map: {}', argType, e2.message)
-                    }
-                }
-            }
-        } catch (Throwable e3) {
-            log.debug('Failed to get raw value for {}: {}', propertyPathForArg, e3.message)
-        }
-
-        // If we have a fallback value, return it
-        if (fallBackValue != null) {
-            return fallBackValue
-        }
-
-        // Try to instantiate the type with default constructor
-        try {
-            return argType.getDeclaredConstructor().newInstance()
-        } catch (Throwable e4) {
-            log.debug('Failed to instantiate {} with default constructor: {}', argType, e4.message)
-        }
-
-        if (e != null) {
-            throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $e.message", e)
-        }
-        return null
     }
 }
