@@ -60,7 +60,6 @@ class GrailsDataHibernate5TckManager extends GrailsDataTckManager {
     @Override
     void setup(Class<? extends Specification> spec) {
         cleanRegistry()
-        GormRegistry.reset()
         super.setup(spec)
         if (multiDataSourceDatastore != null) {
             multiDataSourceDatastore.registerAllEntitiesWithEnhancer()

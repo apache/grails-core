@@ -559,3 +559,54 @@ To mathematically prove both scenarios (connection/multi-datasource routing when
 3. Verify the failure of the unit tests under the incorrect AST configuration.
 4. Implement/verify the routing fix in `AbstractDatastoreMethodDecoratingTransformation.groovy` by ensuring it uses `getDatastoreForConnection` directly.
 5. Verify that all unit tests in `TransactionalTransformSpec.groovy` pass successfully.
+
+## 19. Consolidated Diagnosis & Decision on GormRegistry Pollution (2026-05-31)
+
+### 19a. The Root Cause of Standalone Spec Failures
+When running the full `:grails-data-hibernate7-core:test` suite, standalone specifications (such as `SchemaMultiTenantSpec` and `SingleTenantSpec`) fail with `TenantNotFoundException: No tenantId found` or reference the wrong `TenantResolver` (like `NoTenantResolver`). 
+1. **The Leak Mechanism**: Standard specs that do not extend `HibernateGormDatastoreSpec` instantiate a local `HibernateDatastore` (usually via an `@AutoCleanup` field). Upon instantiation, GORM enhances domain classes and registers static, instance, and validation API wrappers (`GormStaticApi`, `GormInstanceApi`, `GormValidationApi`) in the singleton `GormRegistry`.
+2. **Registry Lifecycle Disconnect**: When a spec finishes, `@AutoCleanup` calls `datastore.destroy()`. While this successfully calls `GormRegistry.removeDatastore(...)` to remove the datastore from qualifier maps, it **does not clear** the cached API wrappers for entity classes in `staticApiRegistry`, `instanceApiRegistry`, or `validationApiRegistry`.
+3. **API Re-use & Stale References**: When a subsequent spec runs using the same domain classes, it retrieves the cached API wrappers from the registry. These cached wrappers still hold hard references to the **destroyed datastore instance** from the previous spec. This leads to queries executing against closed Hibernate `SessionFactories` or resolving tenant lookups using stale resolver configurations.
+4. **Why Post-Cleanup is Insufficient**: Adding `cleanup() { GormRegistry.reset() }` only resets the registry *after* the current spec finishes. It does not protect the spec from pollution left behind by *prior* specifications (such as `MultipleDataSourceConnectionsSpec` or `SecondLevelCacheSpec`) that ran earlier in the suite and did not reset the registry.
+
+### 19b. The Solution & Decision
+To stop playing "whack-a-mole" with state leaks between specs:
+1. **Reset Before Initialization**: Move registry reset logic to the `setup()` method (before `new HibernateDatastore` is called) in all connection-routing and multi-tenancy specifications:
+   ```groovy
+   void setup() {
+       GormRegistry.reset()
+   }
+   ```
+   ## 19. Consolidated Diagnosis & Decision on GormRegistry Pollution (2026-05-31)
+
+### 19a. The Root Cause of Standalone Spec Failures
+When running the full `:grails-data-hibernate7-core:test` suite, standalone specifications (such as `SchemaMultiTenantSpec` and `SingleTenantSpec`) fail with `TenantNotFoundException: No tenantId found` or reference the wrong `TenantResolver` (like `NoTenantResolver`). 
+1. **The Leak Mechanism**: Standard specs that do not extend `HibernateGormDatastoreSpec` instantiate a local `HibernateDatastore` (usually via an `@AutoCleanup` field). Upon instantiation, GORM enhances domain classes and registers static, instance, and validation API wrappers (`GormStaticApi`, `GormInstanceApi`, `GormValidationApi`) in the singleton `GormRegistry`.
+2. **Registry Lifecycle Disconnect**: When a spec finishes, `@AutoCleanup` calls `datastore.destroy()`. While this successfully calls `GormRegistry.removeDatastore(...)` to remove the datastore from qualifier maps, it **originally did not clear** the cached API wrappers for entity classes in `staticApiRegistry`, `instanceApiRegistry`, or `validationApiRegistry`.
+3. **API Re-use & Stale References**: When a subsequent spec runs using the same domain classes, it retrieves the cached API wrappers from the registry. These cached wrappers still hold hard references to the **destroyed datastore instance** from the previous spec. This leads to queries executing against closed Hibernate `SessionFactories` or resolving tenant lookups using stale resolver configurations.
+4. **Why Post-Cleanup is Insufficient**: Wiping the registry in individual tests via `GormRegistry.reset()` in `cleanup()` is a "whack-a-mole" approach. It only cleans up after a spec finishes and does not protect it from pollution left by earlier specs that didn't clean up.
+
+### 19b. The Solution & Systematic Targeted Deregistration
+Instead of nuclear resets or custom `setup()` hacks in each test:
+1. **API Wrapper Deregistration on Datastore Destroy**: We implemented `void removeDatastore(Datastore datastore)` in `AbstractGormApiRegistry` to iterate over cached APIs and remove any entries that hold a reference to the destroyed datastore:
+   - `staticApiRegistry.removeDatastore(datastore)`
+   - `instanceApiRegistry.removeDatastore(datastore)`
+   - `validationApiRegistry.removeDatastore(datastore)`
+2. **Integration in GormRegistry**: Updated `GormRegistry.removeDatastore(datastore)` to automatically delegate to these API registries. This guarantees that when any `HibernateDatastore` is destroyed, all cached entity API wrappers pointing to it are purged dynamically, preventing any stale lookups or cross-spec leakage.
+
+## 20. Handoff Verification Plan (Resuming Post-Reset)
+Once the session is reset, follow these steps to verify compilation and execute the tests:
+1. **Verify Compilation**: Compile both core modules to ensure the registry changes compile correctly:
+   ```bash
+   ./gradlew :grails-datamapping-core:compileGroovy :grails-data-hibernate7-core:compileGroovy
+   ```
+2. **Verify Connections Specs in isolation/sequence**: Run only the connection specifications to confirm that the API wrapper cleanup prevents cross-test pollution:
+   ```bash
+   ./gradlew :grails-data-hibernate7-core:test --tests "org.grails.orm.hibernate.connections.*"
+   ```
+3. **Verify Full Test Suite**: Run the complete `:grails-data-hibernate7-core:test` suite:
+   ```bash
+   ./gradlew :grails-data-hibernate7-core:test
+   ```
+
+

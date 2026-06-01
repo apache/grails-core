@@ -166,8 +166,14 @@ class PreferredDatastoreSelector {
         if (preferred == null) {
             return null
         }
-        if (className != null && preferred.mappingContext?.getPersistentEntity(className) == null) {
-            return null
+        if (className != null) {
+            if (preferred.mappingContext?.getPersistentEntity(className) == null) {
+                return null
+            }
+            Datastore defaultDs = registry.getDatastore(className, ConnectionSource.DEFAULT)
+            if (defaultDs != null && defaultDs != preferred && !registry.isDatastoreRegisteredForEntity(className, preferred)) {
+                return null
+            }
         }
 
         boolean isDefaultQualifier = qualifier == null || ConnectionSource.DEFAULT.equals(qualifier)

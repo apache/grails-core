@@ -98,6 +98,8 @@ class GormRegistry {
         datastoresByType.clear()
         apiFactoriesByDatastoreType.clear()
         allDatastores.clear()
+        GormEnhancerRegistry.getInstance().clearPreferredDatastore()
+        GormEnhancerRegistry.getInstance().clearResolvingDatastoreDepth()
     }
 
     static <D> GormStaticApi<D> findStaticApi(Class<D> entity) {
@@ -225,6 +227,14 @@ class GormRegistry {
                 if (ds != null) {
                     return ds
                 }
+                if (ConnectionSource.DEFAULT.equals(normalizedQualifier) && !mappedDatastores.isEmpty()) {
+                    return mappedDatastores.values().iterator().next()
+                }
+                Datastore qualifierDs = datastoresByQualifier.get(normalizedQualifier)
+                if (qualifierDs != null && qualifierDs.getMappingContext()?.getPersistentEntity(normalizedClassName) != null) {
+                    return qualifierDs
+                }
+                return null
             }
         }
 
@@ -358,6 +368,10 @@ class GormRegistry {
                 if (eit.next().value == datastore) eit.remove()
             }
         }
+
+        staticApiRegistry.removeDatastore(datastore)
+        instanceApiRegistry.removeDatastore(datastore)
+        validationApiRegistry.removeDatastore(datastore)
     }
 
     /**

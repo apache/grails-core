@@ -125,7 +125,7 @@ class PartitionedMultiTenancySpec extends Specification {
         !MultiTenantAuthor.findByName("Stephen King")
         MultiTenantAuthor.findAll("from MultiTenantAuthor a").size() == 0
         MultiTenantAuthor.withTenant("moreBooks").count() == 2
-        MultiTenantAuthor.withTenant("moreBooks") { String tenantId, Session s ->
+        MultiTenantAuthor.withTenant("moreBooks") { String tenantId, s ->
             assert s != null
             MultiTenantAuthor.count() == 2
         }

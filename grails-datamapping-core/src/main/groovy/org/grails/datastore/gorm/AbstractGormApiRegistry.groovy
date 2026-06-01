@@ -20,7 +20,6 @@ package org.grails.datastore.gorm
 
 import groovy.transform.CompileStatic
 import org.grails.datastore.mapping.core.Datastore
-import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
@@ -55,45 +54,42 @@ abstract class AbstractGormApiRegistry<T extends AbstractDatastoreApi> {
     }
 
     T getDirect(String normalizedClassName, String normalizedQualifier) {
-        if (ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
-            return apis.get(normalizedClassName)
+        T defaultApi = apis.get(normalizedClassName)
+        if (defaultApi == null) {
+            return null
         }
 
-        Map<String, T> classQualifiedApis = qualifiedApis.computeIfAbsent(normalizedClassName, { new ConcurrentHashMap<String, T>() })
-        T api = classQualifiedApis.get(normalizedQualifier)
-        
-        if (api == null) {
-            T defaultApi = apis.get(normalizedClassName)
-            if (defaultApi != null) {
-                Datastore ds = registry.getDatastoreDirect(normalizedClassName, normalizedQualifier)
-                if (ds == null && defaultApi.getDatastore() instanceof MultipleConnectionSourceCapableDatastore) {
-                    Datastore defaultDatastore = defaultApi.getDatastore()
-                    boolean canResolveConnection = true
-                    if (defaultDatastore instanceof MultiTenantCapableDatastore) {
-                        MultiTenancySettings.MultiTenancyMode mode = ((MultiTenantCapableDatastore) defaultDatastore).getMultiTenancyMode()
-                        if (mode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR ||
-                                mode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
-                            canResolveConnection = false
-                        }
-                    }
-                    if (canResolveConnection) {
-                        ds = ((MultipleConnectionSourceCapableDatastore) defaultDatastore).getDatastoreForConnection(normalizedQualifier)
-                    } else {
-                        ds = defaultDatastore
-                    }
-                }
-                if (ds != null && ds != defaultApi.getDatastore()) {
-                    api = qualify(defaultApi, normalizedQualifier)
-                    if (api != null) {
-                        classQualifiedApis.put(normalizedQualifier, api)
-                    }
-                } else {
-                    return defaultApi
+        Datastore ds = registry.getDatastoreDirect(normalizedClassName, normalizedQualifier)
+        if (ds == null && defaultApi.getDatastore() instanceof MultipleConnectionSourceCapableDatastore) {
+            Datastore defaultDatastore = defaultApi.getDatastore()
+            boolean canResolveConnection = true
+            if (defaultDatastore instanceof MultiTenantCapableDatastore) {
+                MultiTenancySettings.MultiTenancyMode mode = ((MultiTenantCapableDatastore) defaultDatastore).getMultiTenancyMode()
+                if (mode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR ||
+                        mode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
+                    canResolveConnection = false
                 }
             }
+            if (canResolveConnection) {
+                ds = ((MultipleConnectionSourceCapableDatastore) defaultDatastore).getDatastoreForConnection(normalizedQualifier)
+            } else {
+                ds = defaultDatastore
+            }
         }
-        
-        return api
+
+        if (ds != null && ds != defaultApi.getDatastore()) {
+            Map<String, T> classQualifiedApis = qualifiedApis.computeIfAbsent(normalizedClassName, { new ConcurrentHashMap<String, T>() })
+            T api = classQualifiedApis.get(normalizedQualifier)
+            if (api == null) {
+                api = qualify(defaultApi, normalizedQualifier)
+                if (api != null) {
+                    classQualifiedApis.put(normalizedQualifier, api)
+                }
+            }
+            return api
+        }
+
+        return defaultApi
     }
 
     boolean containsKey(String className) {
@@ -111,6 +107,37 @@ abstract class AbstractGormApiRegistry<T extends AbstractDatastoreApi> {
     void clear() {
         apis.clear()
         qualifiedApis.clear()
+    }
+
+    void removeDatastore(Datastore datastore) {
+        if (datastore == null) return
+        Iterator<Map.Entry<String, T>> it = apis.entrySet().iterator()
+        while (it.hasNext()) {
+            try {
+                if (it.next().value.getDatastore() == datastore) {
+                    it.remove()
+                }
+            } catch (Exception e) {
+                it.remove()
+            }
+        }
+        Iterator<Map.Entry<String, Map<String, T>>> qit = qualifiedApis.entrySet().iterator()
+        while (qit.hasNext()) {
+            Map<String, T> classQualifiedApis = qit.next().value
+            Iterator<Map.Entry<String, T>> eit = classQualifiedApis.entrySet().iterator()
+            while (eit.hasNext()) {
+                try {
+                    if (eit.next().value.getDatastore() == datastore) {
+                        eit.remove()
+                    }
+                } catch (Exception e) {
+                    eit.remove()
+                }
+            }
+            if (classQualifiedApis.isEmpty()) {
+                qit.remove()
+            }
+        }
     }
 
     protected String className(Class entity) {

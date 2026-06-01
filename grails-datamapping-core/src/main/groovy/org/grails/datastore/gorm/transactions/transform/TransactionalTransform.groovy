@@ -78,7 +78,6 @@ import static org.grails.datastore.mapping.reflect.AstUtils.ZERO_ARGUMENTS
 import static org.grails.datastore.mapping.reflect.AstUtils.ZERO_PARAMETERS
 import static org.grails.datastore.mapping.reflect.AstUtils.copyParameters
 import static org.grails.datastore.mapping.reflect.AstUtils.findAnnotation
-import static org.grails.datastore.mapping.reflect.AstUtils.hasOrInheritsProperty
 import static org.grails.datastore.mapping.reflect.AstUtils.implementsInterface
 import static org.grails.datastore.mapping.reflect.AstUtils.nonGeneric
 import static org.grails.datastore.mapping.reflect.AstUtils.varThis
