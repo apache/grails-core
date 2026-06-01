@@ -514,16 +514,20 @@ includeBuild('./build-logic') {
 if (!skipMicronautProjects) {
     include(
             'grails-micronaut-bom',
+            'grails-hibernate5-micronaut-bom',
             'grails-hibernate7-micronaut-bom',
             'grails-micronaut',
             'grails-test-examples-issue-11767',
             'grails-test-examples-micronaut',
             'grails-test-examples-micronaut-groovy-only',
+            'grails-test-examples-micronaut-hibernate5',
             'grails-test-examples-micronaut-hibernate7',
             'grails-test-examples-plugins-issue-11767',
             'grails-test-examples-plugins-micronaut-singleton',
     )
     project(':grails-micronaut-bom').projectDir = file('grails-bom/micronaut')
+    project(':grails-hibernate5-micronaut-bom').projectDir = file('grails-bom/hibernate5-micronaut')
+    project(':grails-test-examples-micronaut-hibernate5').projectDir = file('grails-test-examples/micronaut-hibernate5')
     project(':grails-hibernate7-micronaut-bom').projectDir = file('grails-bom/hibernate7-micronaut')
     project(':grails-test-examples-micronaut-hibernate7').projectDir = file('grails-test-examples/micronaut-hibernate7')
     project(':grails-test-examples-issue-11767').projectDir = file('grails-test-examples/issue-11767')

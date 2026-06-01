@@ -152,6 +152,7 @@ def publishedProjects = [
 def skipMicronautProjects = providers.gradleProperty('skipMicronautProjects').isPresent()
 if (!skipMicronautProjects) {
     publishedProjects.addAll([
+            'grails-hibernate5-micronaut-bom',
             'grails-hibernate7-micronaut-bom',
             'grails-micronaut',
             'grails-micronaut-bom',

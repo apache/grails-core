@@ -71,7 +71,7 @@ class JavascriptTagLib implements ApplicationContextAware, TagLibrary {
      * @attr contextPath the context path to use (relative to the application context path). Defaults to "" or path to the plugin for a plugin view or template.
      * @attr base specifies the full base url to prepend to the library name
      */
-    Closure javascript = { attrs, body ->
+    Closure javascript = { Map attrs, body ->
         if (attrs.src) {
             javascriptInclude(attrs)
         } else {
@@ -121,7 +121,7 @@ class JavascriptTagLib implements ApplicationContextAware, TagLibrary {
      *
      * &lt;g:escapeJavascript&gt;This is some "text" to be escaped&lt;/g:escapeJavascript&gt;
      */
-    Closure escapeJavascript = { attrs, body ->
+    Closure escapeJavascript = { Map attrs, body ->
         if (body) {
             out << body()
         }

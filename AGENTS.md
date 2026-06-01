@@ -270,6 +270,11 @@ See `CONTRIBUTING.md` for full details.
 
 Please see the page of the [ASF Security Team](https://www.apache.org/security/) for further information and contact information.
 
+Security model: [SECURITY.md](./SECURITY.md) → [THREAT_MODEL.md](./THREAT_MODEL.md). Agents that
+scan this repository should consult `SECURITY.md` and the linked `THREAT_MODEL.md` for the project's
+threat model — in-scope / out-of-scope declarations, the security properties claimed and disclaimed,
+and known non-findings — before reporting issues.
+
 ## Resources
 
 - **Grails 7 Guide**: https://grails.apache.org/docs/latest/guide/single.html

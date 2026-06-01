@@ -49,6 +49,8 @@ import org.grails.taglib.GrailsTagException;
 import org.grails.taglib.GroovyPageAttributes;
 import org.grails.taglib.TagBodyClosure;
 import org.grails.taglib.TagLibraryLookup;
+import org.grails.taglib.TagMethodContext;
+import org.grails.taglib.TagMethodInvoker;
 import org.grails.taglib.TagOutput;
 import org.grails.taglib.encoder.OutputContext;
 import org.grails.taglib.encoder.OutputEncodingStack;
@@ -381,10 +383,13 @@ public abstract class GroovyPage extends Script {
             if (tagLib != null || (gspTagLibraryLookup != null && gspTagLibraryLookup.hasNamespace(tagNamespace))) {
                 if (tagLib != null) {
                     boolean returnsObject = gspTagLibraryLookup.doesTagReturnObject(tagNamespace, tagName);
-                    Object tagLibClosure = tagLib.getProperty(tagName);
+                    Object tagLibClosure = TagMethodInvoker.getClosureTagProperty(tagLib, tagName);
                     if (tagLibClosure instanceof Closure) {
                         Map<String, Object> encodeAsForTag = gspTagLibraryLookup.getEncodeAsForTag(tagNamespace, tagName);
                         invokeTagLibClosure(tagName, tagNamespace, (Closure) tagLibClosure, attrs, body, returnsObject, encodeAsForTag);
+                    } else if (TagMethodInvoker.hasInvokableTagMethod(tagLib, tagName)) {
+                        Map<String, Object> encodeAsForTag = gspTagLibraryLookup.getEncodeAsForTag(tagNamespace, tagName);
+                        invokeTagLibMethod(tagName, tagNamespace, tagLib, attrs, body, returnsObject, encodeAsForTag);
                     } else {
                         throw new GrailsTagException("Tag [" + tagName + "] does not exist in tag library [" + tagLib.getClass().getName() + "]", getGroovyPageFileName(), lineNumber);
                     }
@@ -471,6 +476,29 @@ public abstract class GroovyPage extends Script {
                     break;
             }
         } finally {
+            if (encodeAsPushedToStack) outputStack.pop();
+        }
+    }
+
+    private void invokeTagLibMethod(String tagName, String tagNamespace, GroovyObject tagLib, Map<?, ?> attrs, Closure<?> body,
+            boolean returnsObject, Map<String, Object> defaultEncodeAs) {
+        if (!(attrs instanceof GroovyPageAttributes)) {
+            attrs = new GroovyPageAttributes(attrs);
+        }
+        ((GroovyPageAttributes) attrs).setGspTagSyntaxCall(true);
+        boolean encodeAsPushedToStack = false;
+        try {
+            Map<String, Object> codecSettings = TagOutput.createCodecSettings(tagNamespace, tagName, attrs, defaultEncodeAs);
+            if (codecSettings != null) {
+                outputStack.push(WithCodecHelper.createOutputStackAttributesBuilder(codecSettings, outputContext.getGrailsApplication()).build());
+                encodeAsPushedToStack = true;
+            }
+            Closure<?> actualBody = body != null ? body : TagOutput.EMPTY_BODY_CLOSURE;
+            TagMethodContext.push(attrs, actualBody);
+            Object tagResult = TagMethodInvoker.invokeTagMethod(tagLib, tagName, attrs, actualBody);
+            outputTagResult(returnsObject, tagResult);
+        } finally {
+            TagMethodContext.pop();
             if (encodeAsPushedToStack) outputStack.pop();
         }
     }

@@ -22,17 +22,16 @@ import java.lang.reflect.ParameterizedType
 
 import groovy.transform.CompileStatic
 
+import grails.core.gsp.GrailsTagLibClass
 import grails.testing.web.GrailsWebUnitTest
 import org.grails.testing.ParameterizedGrailsUnitTest
+import org.grails.taglib.TagLibraryLookup
 
 @CompileStatic
 trait TagLibUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWebUnitTest {
 
+    private static final Map<Class<?>, Set<Class<?>>> MOCKED_TAG_LIB_CLASSES_BY_SPEC = [:].withDefault { [] as LinkedHashSet<Class<?>> }
     private boolean hasBeenMocked = false
-
-    boolean getPurgeTagLibMetaClass() {
-        true
-    }
 
     /**
      * Renders a template for the given contents and model
@@ -62,6 +61,17 @@ trait TagLibUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWebUnit
         mockTagLib(tagLibClass)
     }
 
+    Object mockTagLib(Class<?> tagLibClass) {
+        getMockedTagLibClasses().add(tagLibClass)
+        GrailsWebUnitTest.super.mockTagLib(tagLibClass)
+    }
+
+    void mockTagLibs(Class<?>... tagLibClasses) {
+        for (Class<?> tagLibClass in tagLibClasses) {
+            mockTagLib(tagLibClass)
+        }
+    }
+
     String getBeanName(Class<?> tagLibClass) {
         tagLibClass.name
     }
@@ -81,9 +91,37 @@ trait TagLibUnitTest<T> implements ParameterizedGrailsUnitTest<T>, GrailsWebUnit
     }
 
     private void ensureTaglibHasBeenMocked() {
-        if (!hasBeenMocked) {
-            mockTagLib(getTagLibTypeUnderTest())
+        if (!hasBeenMocked || !areMockedTagLibsRegistered()) {
+            Set<Class<?>> mockedTagLibClasses = getMockedTagLibClasses()
+            Class<?> tagLibTypeUnderTest = getTagLibTypeUnderTest()
+            if (tagLibTypeUnderTest != null) {
+                mockedTagLibClasses.add(tagLibTypeUnderTest)
+            }
+            for (Class<?> tagLibClass in mockedTagLibClasses) {
+                GrailsWebUnitTest.super.mockTagLib(tagLibClass)
+            }
             hasBeenMocked = true
         }
+    }
+
+    private boolean areMockedTagLibsRegistered() {
+        TagLibraryLookup tagLibraryLookup = applicationContext.getBean(TagLibraryLookup)
+        for (Class<?> tagLibClass in getMockedTagLibClasses()) {
+            GrailsTagLibClass grailsTagLibClass = (GrailsTagLibClass) grailsApplication.getArtefact('TagLib', tagLibClass.name)
+            if (grailsTagLibClass == null) {
+                return false
+            }
+            String namespace = grailsTagLibClass.namespace
+            if (!grailsTagLibClass.tagNames.every { String tagName ->
+                tagLibraryLookup.lookupTagLibrary(namespace, tagName) != null
+            }) {
+                return false
+            }
+        }
+        return true
+    }
+
+    private Set<Class<?>> getMockedTagLibClasses() {
+        MOCKED_TAG_LIB_CLASSES_BY_SPEC.get(getClass())
     }
 }

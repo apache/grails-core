@@ -20,12 +20,15 @@
 // tag::basic_declaration[]
 package demo
 
+import grails.gsp.Tag
+
 class SecondTagLib {
     static defaultEncodeAs = [taglib:'html']
 
     static namespace = 'two'
 
-    def sayHello = { attrs ->
+    @Tag
+    def sayHello() {
         out << 'Hello From SecondTagLib'
     }
 }
