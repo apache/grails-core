@@ -93,8 +93,8 @@ ext {
             'selenium.version'              : '4.38.0',
             'sitemesh.version'              : '2.6.0',
             'spock.version'                 : '2.3-groovy-4.0',
-            'starter-sitemesh.version'      : '3.2.2',
-            'spring-webmvc-sitemesh.version': '3.2.2',
+            'starter-sitemesh.version'      : '3.3.0-SNAPSHOT',
+            'spring-webmvc-sitemesh.version': '3.3.0-SNAPSHOT',
             // Spring Boot 4 no longer manages spring-retry; pin it here so the
             // grails-shell-cli SpringRetryCompilerAutoConfiguration's unversioned
             // reference resolves and consumer apps using @Retryable get a known version.
