@@ -206,9 +206,10 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
             });
         }
 
+        final TenantResolver baseResolver;
         if (multiTenancyMode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
-            final TenantResolver baseResolver = multiTenancySettings.getTenantResolver();
-            this.tenantResolver = new AllTenantsResolver() {
+            final TenantResolver schemaBaseResolver = multiTenancySettings.getTenantResolver();
+            baseResolver = new AllTenantsResolver() {
                 @Override
                 public Iterable<Serializable> resolveTenantIds() {
                     List<Serializable> ids = new ArrayList<>();
@@ -221,11 +222,48 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
 
                 @Override
                 public Serializable resolveTenantIdentifier() throws TenantNotFoundException {
-                    return baseResolver.resolveTenantIdentifier();
+                    return schemaBaseResolver.resolveTenantIdentifier();
                 }
             };
         } else {
-            this.tenantResolver = multiTenancySettings.getTenantResolver();
+            baseResolver = multiTenancySettings.getTenantResolver();
+        }
+
+        if (baseResolver instanceof AllTenantsResolver) {
+            this.tenantResolver = new AllTenantsResolver() {
+                @Override
+                public Iterable<Serializable> resolveTenantIds() {
+                    return ((AllTenantsResolver) baseResolver).resolveTenantIds();
+                }
+
+                @Override
+                public Serializable resolveTenantIdentifier() throws TenantNotFoundException {
+                    try {
+                        return baseResolver.resolveTenantIdentifier();
+                    } catch (TenantNotFoundException e) {
+                        if (isGormRegistryLookup()) {
+                            return ConnectionSource.DEFAULT;
+                        }
+                        throw e;
+                    }
+                }
+            };
+        } else if (baseResolver != null) {
+            this.tenantResolver = new TenantResolver() {
+                @Override
+                public Serializable resolveTenantIdentifier() throws TenantNotFoundException {
+                    try {
+                        return baseResolver.resolveTenantIdentifier();
+                    } catch (TenantNotFoundException e) {
+                        if (isGormRegistryLookup()) {
+                            return ConnectionSource.DEFAULT;
+                        }
+                        throw e;
+                    }
+                }
+            };
+        } else {
+            this.tenantResolver = null;
         }
 
         this.autoTimestampEventListener = new AutoTimestampEventListener(this);
@@ -990,7 +1028,7 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
     @Override
     public MongoDatastore getDatastoreForTenantId(Serializable tenantId) {
         if (getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DATABASE) {
-            return this.datastoresByConnectionSource.get(tenantId.toString());
+            return (MongoDatastore) getDatastoreForConnection(tenantId.toString());
         }
         return this;
     }
@@ -1042,5 +1080,15 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
 
     public AutoTimestampEventListener getAutoTimestampEventListener() {
         return this.autoTimestampEventListener;
+    }
+
+    private static boolean isGormRegistryLookup() {
+        for (StackTraceElement element : Thread.currentThread().getStackTrace()) {
+            String className = element.getClassName();
+            if (className.contains("GormRegistry") || className.contains("AbstractGormApiRegistry")) {
+                return true;
+            }
+        }
+        return false;
     }
 }
