@@ -41,6 +41,7 @@ class CookieTenantResolverSpec extends Specification {
         e.message == "Tenant could not be resolved outside a web request"
     }
 
+
     void "Test not tenant id found"() {
         setup:
         def request = new MockHttpServletRequest("GET", "/foo")

@@ -131,6 +131,7 @@ class ResourceProfileSpec extends Specification {
         deps[0].artifact.version == '2.0'
     }
 
+
     void "Test dependency exclusions"() {
         given:"A resource profile"
 

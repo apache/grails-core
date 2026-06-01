@@ -55,7 +55,6 @@ tasks.named('rat') {
             'grails-geb/src/main/templates/*.groovy', // template files that people are expected to use in the end application
             'grails-doc/src/en/ref/Versions/Grails BOM.adoc', // exclude generated data
             'grails-doc/src/en/ref/Versions/Grails BOM Hibernate5.adoc', // exclude generated data
-            'grails-doc/src/en/ref/Versions/Grails BOM Hibernate7.adoc', // exclude generated data
             'grails-doc/src/en/ref/Versions/Grails BOM Micronaut.adoc', // exclude generated data
             'grails-profiles/**/templates/**', // template files that people are expected to use in the end application
             'grails-profiles/**/commands/**', // template files that people are expected to use in the end application

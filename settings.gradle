@@ -424,7 +424,6 @@ include(
         'grails-test-examples-app5',
         'grails-test-examples-async-events-pubsub-demo',
         'grails-test-examples-cache',
-        'grails-test-examples-compile-static',
         'grails-test-examples-database-cleanup',
         'grails-test-examples-datasources',
         'grails-test-examples-demo33',
@@ -463,7 +462,6 @@ project(':grails-test-examples-app2').projectDir = file('grails-test-examples/ap
 project(':grails-test-examples-app3').projectDir = file('grails-test-examples/app3')
 project(':grails-test-examples-app4').projectDir = file('grails-test-examples/app4')
 project(':grails-test-examples-app5').projectDir = file('grails-test-examples/app5')
-project(':grails-test-examples-compile-static').projectDir = file('grails-test-examples/compile-static')
 project(':grails-test-examples-external-configuration').projectDir = file('grails-test-examples/external-configuration')
 project(':grails-test-examples-exploded').projectDir = file('grails-test-examples/exploded')
 project(':grails-test-examples-datasources').projectDir = file('grails-test-examples/datasources')
