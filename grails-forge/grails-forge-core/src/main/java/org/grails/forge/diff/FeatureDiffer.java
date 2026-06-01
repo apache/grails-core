@@ -18,18 +18,11 @@
  */
 package org.grails.forge.diff;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-
-import jakarta.inject.Singleton;
-
 import com.github.difflib.DiffUtils;
 import com.github.difflib.UnifiedDiffUtils;
 import com.github.difflib.patch.Patch;
 import io.micronaut.core.annotation.Nullable;
-
+import jakarta.inject.Singleton;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.OperatingSystem;
 import org.grails.forge.application.Project;
@@ -38,6 +31,11 @@ import org.grails.forge.application.generator.ProjectGenerator;
 import org.grails.forge.io.ConsoleOutput;
 import org.grails.forge.io.MapOutputHandler;
 import org.grails.forge.options.Options;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Methods for diffing projects and features.

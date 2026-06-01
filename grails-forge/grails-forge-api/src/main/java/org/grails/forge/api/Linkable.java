@@ -18,13 +18,13 @@
  */
 package org.grails.forge.api;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.micronaut.core.annotation.Introspected;
 import io.micronaut.core.annotation.ReflectiveAccess;
 import io.swagger.v3.oas.annotations.media.Schema;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * A linkable type.

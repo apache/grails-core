@@ -18,28 +18,21 @@
  */
 package org.grails.forge.feature.test;
 
-import java.util.stream.Stream;
-
-import jakarta.inject.Singleton;
-
 import io.micronaut.core.annotation.NonNull;
-
+import jakarta.inject.Singleton;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.Project;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
 import org.grails.forge.build.gradle.GradlePlugin;
-import org.grails.forge.feature.Category;
-import org.grails.forge.feature.Feature;
-import org.grails.forge.feature.FeatureContext;
-import org.grails.forge.feature.FeaturePhase;
-import org.grails.forge.feature.test.template.gebConfig;
+import org.grails.forge.feature.*;
 import org.grails.forge.feature.test.template.webdriverBinariesPlugin;
-import org.grails.forge.options.DefaultTestRockerModelProvider;
-import org.grails.forge.options.TestFramework;
-import org.grails.forge.options.TestRockerModelProvider;
+import org.grails.forge.options.*;
 import org.grails.forge.template.RockerTemplate;
 import org.grails.forge.template.RockerWritable;
+import org.grails.forge.feature.test.template.gebConfig;
+
+import java.util.stream.Stream;
 
 @Singleton
 public class GebWithWebDriverBinaries implements Feature {

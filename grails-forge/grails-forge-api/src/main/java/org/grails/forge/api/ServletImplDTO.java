@@ -26,7 +26,6 @@ import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.naming.Described;
 import io.micronaut.core.naming.Named;
 import io.swagger.v3.oas.annotations.media.Schema;
-
 import org.grails.forge.options.ServletImpl;
 
 /**

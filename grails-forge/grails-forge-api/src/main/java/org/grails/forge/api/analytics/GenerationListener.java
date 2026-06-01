@@ -18,20 +18,18 @@
  */
 package org.grails.forge.api.analytics;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
-import jakarta.inject.Singleton;
-
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.runtime.event.annotation.EventListener;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.grails.forge.analytics.Generated;
 import org.grails.forge.analytics.SelectedFeature;
 import org.grails.forge.api.event.ApplicationGeneratingEvent;
 import org.grails.forge.application.generator.GeneratorContext;
+import jakarta.inject.Singleton;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Singleton
 @Requires(beans = AnalyticsOperations.class)

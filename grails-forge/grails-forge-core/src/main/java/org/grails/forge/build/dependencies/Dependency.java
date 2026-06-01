@@ -18,12 +18,11 @@
  */
 package org.grails.forge.build.dependencies;
 
-import java.util.Objects;
-
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
-
 import org.grails.forge.template.Writable;
+
+import java.util.Objects;
 
 public final class Dependency {
 

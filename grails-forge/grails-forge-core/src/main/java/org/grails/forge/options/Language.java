@@ -18,15 +18,14 @@
  */
 package org.grails.forge.options;
 
-import java.util.Arrays;
-import java.util.Locale;
-import java.util.Set;
-
 import io.micronaut.core.annotation.NonNull;
-
 import org.grails.forge.defaults.IncludesDefaults;
 import org.grails.forge.defaults.LanguageDefaults;
 import org.grails.forge.feature.Feature;
+
+import java.util.Arrays;
+import java.util.Locale;
+import java.util.Set;
 
 public enum Language implements IncludesDefaults<LanguageDefaults> {
     GROOVY("groovy", new LanguageDefaults(DevelopmentReloading.DEVTOOLS, BuildTool.GRADLE));
@@ -69,7 +68,7 @@ public enum Language implements IncludesDefaults<LanguageDefaults> {
     }
 
     public String getIntegrationSrcDir() {
-        return "src/integration-test/" + getName();
+        return  "src/integration-test/" + getName();
     }
 
     public String getSourcePath(String path) {

@@ -18,18 +18,17 @@
  */
 package org.grails.forge.cli.command;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import io.micronaut.context.annotation.Prototype;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.ReflectiveAccess;
-import picocli.CommandLine;
-
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.ContextFactory;
 import org.grails.forge.application.RestApiAvailableFeatures;
 import org.grails.forge.application.generator.ProjectGenerator;
+import picocli.CommandLine;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @CommandLine.Command(name = CreateRestApiCommand.NAME, description = "Creates an REST API")
 @Prototype

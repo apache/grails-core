@@ -18,12 +18,12 @@
  */
 package org.grails.forge.feature.config;
 
-import java.util.function.Function;
-
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.feature.Category;
 import org.grails.forge.feature.OneOfFeature;
 import org.grails.forge.template.Template;
+
+import java.util.function.Function;
 
 public interface ConfigurationFeature extends OneOfFeature {
 

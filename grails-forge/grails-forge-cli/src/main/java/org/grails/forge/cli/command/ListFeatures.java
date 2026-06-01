@@ -18,16 +18,7 @@
  */
 package org.grails.forge.cli.command;
 
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.stream.Collectors;
-
 import io.micronaut.core.annotation.Nullable;
-
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.ContextFactory;
 import org.grails.forge.application.OperatingSystem;
@@ -37,6 +28,14 @@ import org.grails.forge.feature.Feature;
 import org.grails.forge.feature.FeatureContext;
 import org.grails.forge.io.ConsoleOutput;
 import org.grails.forge.options.Options;
+
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 public class ListFeatures {
 

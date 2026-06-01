@@ -18,17 +18,15 @@
  */
 package org.grails.forge.api.options;
 
-import jakarta.inject.Inject;
-import jakarta.inject.Singleton;
-
 import io.micronaut.context.MessageSource;
 import io.micronaut.context.i18n.ResourceBundleMessageSource;
 import io.micronaut.http.MediaType;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Get;
-
 import org.grails.forge.api.RequestInfo;
 import org.grails.forge.api.SelectOptionsDTO;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 
 /**
  * Gets Information about select options for the Grails Forge.

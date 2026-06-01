@@ -18,12 +18,12 @@
  */
 package org.grails.forge.build.dependencies;
 
-import java.util.Comparator;
-
 import io.micronaut.core.annotation.Introspected;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.order.OrderUtil;
+
+import java.util.Comparator;
 
 @Introspected
 public interface Coordinate {

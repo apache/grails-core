@@ -18,12 +18,12 @@
  */
 package org.grails.forge.build.dependencies;
 
-import java.util.Objects;
-
 import io.micronaut.core.annotation.Introspected;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.order.Ordered;
+
+import java.util.Objects;
 
 @Introspected
 public class DependencyCoordinate implements Coordinate, Ordered {

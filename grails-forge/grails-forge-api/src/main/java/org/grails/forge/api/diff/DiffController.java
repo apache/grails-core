@@ -18,14 +18,6 @@
  */
 package org.grails.forge.api.diff;
 
-import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
-
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.HttpStatus;
@@ -33,12 +25,6 @@ import io.micronaut.http.MediaType;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Get;
 import io.micronaut.http.exceptions.HttpStatusException;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import org.reactivestreams.Publisher;
-import reactor.core.publisher.Flux;
-
 import org.grails.forge.api.RequestInfo;
 import org.grails.forge.api.UserAgentParser;
 import org.grails.forge.application.ApplicationType;
@@ -47,13 +33,20 @@ import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.application.generator.ProjectGenerator;
 import org.grails.forge.diff.FeatureDiffer;
 import org.grails.forge.io.ConsoleOutput;
-import org.grails.forge.options.BuildTool;
-import org.grails.forge.options.DevelopmentReloading;
-import org.grails.forge.options.GormImpl;
-import org.grails.forge.options.JdkVersion;
-import org.grails.forge.options.Options;
-import org.grails.forge.options.ServletImpl;
+import org.grails.forge.options.*;
 import org.grails.forge.util.NameUtils;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import org.reactivestreams.Publisher;
+import reactor.core.publisher.Flux;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * A controller for performing Diffs.

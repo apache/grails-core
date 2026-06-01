@@ -18,11 +18,11 @@
  */
 package org.grails.forge.client.github.v3;
 
-import java.util.List;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.micronaut.core.annotation.Introspected;
+
+import java.util.List;
 
 /**
  * GitHub workflow runs.

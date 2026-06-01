@@ -18,13 +18,12 @@
  */
 package org.grails.forge.api;
 
-import java.util.Locale;
-import java.util.Objects;
-
 import io.micronaut.http.HttpParameters;
+import org.grails.forge.application.ApplicationType;
 import io.swagger.v3.oas.annotations.Hidden;
 
-import org.grails.forge.application.ApplicationType;
+import java.util.Locale;
+import java.util.Objects;
 
 /**
  * The server URL.

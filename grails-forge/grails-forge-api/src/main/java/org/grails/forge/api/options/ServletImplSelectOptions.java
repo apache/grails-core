@@ -18,12 +18,11 @@
  */
 package org.grails.forge.api.options;
 
-import java.util.List;
-
 import io.swagger.v3.oas.annotations.media.Schema;
-
 import org.grails.forge.api.SelectOptionDTO;
 import org.grails.forge.api.ServletImplDTO;
+
+import java.util.List;
 
 @Schema(name = "ServletImplSelectOptions")
 public class ServletImplSelectOptions extends SelectOptionDTO<ServletImplDTO> {

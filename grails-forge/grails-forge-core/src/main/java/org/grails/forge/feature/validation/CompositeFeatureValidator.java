@@ -18,16 +18,14 @@
  */
 package org.grails.forge.feature.validation;
 
-import java.util.List;
-import java.util.Set;
-
-import jakarta.inject.Singleton;
-
 import io.micronaut.context.annotation.Primary;
-
+import jakarta.inject.Singleton;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.feature.Feature;
 import org.grails.forge.options.Options;
+
+import java.util.List;
+import java.util.Set;
 
 @Primary
 @Singleton

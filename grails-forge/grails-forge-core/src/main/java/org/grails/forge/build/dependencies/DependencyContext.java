@@ -19,11 +19,10 @@
 package org.grails.forge.build.dependencies;
 
 
-import java.util.Collection;
-
 import io.micronaut.core.annotation.NonNull;
-
 import org.grails.forge.build.gradle.GradleRepository;
+
+import java.util.Collection;
 
 public interface DependencyContext {
 

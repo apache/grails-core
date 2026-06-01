@@ -18,12 +18,8 @@
  */
 package org.grails.forge.feature.test;
 
-import java.util.Set;
-
-import jakarta.inject.Singleton;
-
 import io.micronaut.core.annotation.NonNull;
-
+import jakarta.inject.Singleton;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.Project;
 import org.grails.forge.application.generator.GeneratorContext;
@@ -33,11 +29,10 @@ import org.grails.forge.feature.DefaultFeature;
 import org.grails.forge.feature.Feature;
 import org.grails.forge.feature.FeatureContext;
 import org.grails.forge.feature.FeaturePhase;
-import org.grails.forge.options.DefaultTestRockerModelProvider;
-import org.grails.forge.options.Options;
-import org.grails.forge.options.TestFramework;
-import org.grails.forge.options.TestRockerModelProvider;
+import org.grails.forge.options.*;
 import org.grails.forge.template.RockerTemplate;
+
+import java.util.Set;
 
 @Singleton
 public class GebWithTestcontainers implements DefaultFeature {

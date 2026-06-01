@@ -18,17 +18,10 @@
  */
 package org.grails.forge.application.generator;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.function.Function;
-
-import jakarta.inject.Singleton;
-
 import io.micronaut.context.BeanContext;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.inject.qualifiers.Qualifiers;
-
+import jakarta.inject.Singleton;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.ContextFactory;
 import org.grails.forge.application.OperatingSystem;
@@ -45,6 +38,11 @@ import org.grails.forge.template.RenderResult;
 import org.grails.forge.template.RockerTemplate;
 import org.grails.forge.template.Template;
 import org.grails.forge.template.TemplateRenderer;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.function.Function;
 
 @Singleton
 public class DefaultProjectGenerator implements ProjectGenerator {

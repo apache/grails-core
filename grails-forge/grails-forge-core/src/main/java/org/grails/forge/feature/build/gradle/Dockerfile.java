@@ -18,11 +18,11 @@
  */
 package org.grails.forge.feature.build.gradle;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class Dockerfile {
     @Nullable

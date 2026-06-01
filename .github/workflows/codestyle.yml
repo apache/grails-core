@@ -80,20 +80,24 @@ jobs:
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "🔎 Check Forge Projects"
         working-directory: grails-forge
-        run: ./gradlew aggregateStyleViolations --continue
-      - name: "📤 Upload Reports"
+        run: ./gradlew codeStyle
+      - name: "📤 Upload Failure Reports"
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: forge-reports
-          path: grails-forge/build/reports/violations/
+          path: grails-forge/build/reports/code-style/
       - name: "📋 Publish Code Style Report in Job Summary"
         if: always()
         run: |
           echo "## 🔎 Code Style Report - Forge Projects" >> $GITHUB_STEP_SUMMARY
-          for report in CODENARC_VIOLATIONS.md CHECKSTYLE_VIOLATIONS.md; do
-            file="grails-forge/build/reports/violations/$report"
-            [ -f "$file" ] && cat "$file" >> $GITHUB_STEP_SUMMARY || true
+          for file in grails-forge/build/reports/code-style/checkstyle/*.xml grails-forge/build/reports/code-style/codenarc/*.xml; do
+            [ -f "$file" ] || continue
+            if grep -q "<error " "$file" || grep -q "<Violation " "$file"; then
+              echo "### ❌ $(basename "$file" .xml)" >> $GITHUB_STEP_SUMMARY
+              grep "<error " "$file" | awk -F'"' '{print "- **Line " $2 "**: " $8}' >> $GITHUB_STEP_SUMMARY
+              grep "<Violation " "$file" | awk -F"'" '{print "- **Line " $6 "**: " $2}' >> $GITHUB_STEP_SUMMARY
+            fi
           done
   check_gradle_plugin_projects:
     name: "Gradle Plugin Projects"

@@ -18,12 +18,12 @@
  */
 package org.grails.forge.build.dependencies;
 
+import io.micronaut.core.annotation.NonNull;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-
-import io.micronaut.core.annotation.NonNull;
 
 public class Scope {
 

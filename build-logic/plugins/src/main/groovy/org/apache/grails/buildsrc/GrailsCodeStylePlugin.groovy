@@ -40,12 +40,14 @@ import org.gradle.api.provider.Provider
 @CompileStatic
 class GrailsCodeStylePlugin implements Plugin<Project> {
 
-    static String CHECKSTYLE_DIR_PROPERTY = 'grails.code-style.dir.checkstyle'
+    // The directory-override keys keep the legacy 'grails.codestyle.dir.*' names so existing
+    // project configuration (e.g. grails-forge's custom checkstyle dir) keeps working unchanged.
+    static String CHECKSTYLE_DIR_PROPERTY = 'grails.codestyle.dir.checkstyle'
     static String CHECKSTYLE_ENABLED_PROPERTY = 'grails.code-style.enabled.checkstyle'
     static String CHECKSTYLE_CONFIG_FILE_NAME = 'checkstyle.xml'
     static String CHECKSTYLE_SUPPRESSION_CONFIG_FILE_NAME = 'checkstyle-suppressions.xml'
 
-    static String CODENARC_DIR_PROPERTY = 'grails.code-style.dir.codenarc'
+    static String CODENARC_DIR_PROPERTY = 'grails.codestyle.dir.codenarc'
     static String CODENARC_ENABLED_PROPERTY = 'grails.code-style.enabled.codenarc'
     static String CODENARC_CONFIG_FILE_NAME = 'codenarc.groovy'
 
@@ -105,17 +107,13 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
         })
     }
 
-   private static void createOrLoad(Path expectedPath, String defaultResource) {
-        def defaultValue = GrailsCodeStylePlugin.getResourceAsStream(defaultResource)
-        if (!defaultValue) {
-            throw new IllegalStateException("Could not locate default configuration file: ${defaultResource}")
-        }
-    
-        String defaultText = defaultValue.text
-        boolean missing = !Files.exists(expectedPath) || expectedPath.size() == 0
-        
-        if (missing || expectedPath.text != defaultText) {
-            expectedPath.text = defaultText
+    private static void createOrLoad(Path expectedPath, String defaultResource) {
+        if (!Files.exists(expectedPath) || expectedPath.size() == 0) {
+            def defaultValue = GrailsCodeStylePlugin.getResourceAsStream(defaultResource)
+            if (!defaultValue) {
+                throw new IllegalStateException("Could not locate default configuration file: ${defaultResource}")
+            }
+            expectedPath.text = defaultValue.text
         }
     }
 

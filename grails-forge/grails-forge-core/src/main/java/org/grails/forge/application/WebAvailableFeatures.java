@@ -18,13 +18,12 @@
  */
 package org.grails.forge.application;
 
-import java.util.List;
-
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
-
 import org.grails.forge.feature.BaseAvailableFeatures;
 import org.grails.forge.feature.Feature;
+
+import java.util.List;
 
 @Named("web")
 @Singleton

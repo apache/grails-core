@@ -177,8 +177,8 @@ All properties can be set in `gradle.properties` or passed as `-P` flags:
 | `grails.code-style.enabled.tests` | `false` | Also check test source sets |
 | `grails.code-style.ignoreFailures` | `false` | Collect reports without failing build |
 | `grails.code-style.codenarc.fix` | `false` | Run `codenarcFix` before CodeNarc tasks |
-| `grails.code-style.dir.checkstyle` | (auto) | Custom path to Checkstyle config dir |
-| `grails.code-style.dir.codenarc` | (auto) | Custom path to CodeNarc config dir |
+| `grails.codestyle.dir.checkstyle` | (auto) | Custom path to Checkstyle config dir |
+| `grails.codestyle.dir.codenarc` | (auto) | Custom path to CodeNarc config dir |
 | `skipCodeStyle` | unset | If present, all style tasks are skipped |
 
 ### `grails-code-analysis` plugin (PMD + SpotBugs)

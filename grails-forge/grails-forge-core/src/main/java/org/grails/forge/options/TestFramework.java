@@ -18,11 +18,11 @@
  */
 package org.grails.forge.options;
 
+import io.micronaut.core.annotation.NonNull;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
-
-import io.micronaut.core.annotation.NonNull;
 
 public enum TestFramework {
     SPOCK;

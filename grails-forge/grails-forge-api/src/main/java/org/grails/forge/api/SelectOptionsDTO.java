@@ -18,27 +18,18 @@
  */
 package org.grails.forge.api;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
-
 import io.micronaut.context.MessageSource;
 import io.micronaut.core.annotation.Creator;
 import io.micronaut.core.annotation.Introspected;
 import io.swagger.v3.oas.annotations.media.Schema;
-
-import org.grails.forge.api.options.ApplicationTypeSelectOptions;
-import org.grails.forge.api.options.DevelopmentReloadingSelectOptions;
-import org.grails.forge.api.options.GormImplSelectOptions;
-import org.grails.forge.api.options.JdkVersionSelectOptions;
-import org.grails.forge.api.options.LanguageSelectOptions;
-import org.grails.forge.api.options.ServletImplSelectOptions;
+import org.grails.forge.api.options.*;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.options.DevelopmentReloading;
-import org.grails.forge.options.GormImpl;
-import org.grails.forge.options.JdkVersion;
-import org.grails.forge.options.Language;
-import org.grails.forge.options.ServletImpl;
+import org.grails.forge.options.*;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Aggregator for {@link SelectOptionDTO}.
@@ -171,6 +162,7 @@ public class SelectOptionsDTO {
                 servletImpls,
                 new ServletImplDTO(ServletImpl.DEFAULT_OPTION, messageSource, messageContext)
         );
+
 
         return new SelectOptionsDTO(applicationOpts, jdkVersionOpts, languageOpts, developmentReloadingOpts, gormImplOpts, servletImplOpts);
 

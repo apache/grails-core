@@ -18,11 +18,11 @@
  */
 package org.grails.forge.client.github.oauth;
 
-import jakarta.validation.constraints.NotNull;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.micronaut.core.annotation.Introspected;
+
+import jakarta.validation.constraints.NotNull;
 
 /**
  * @author Pavol Gressa

@@ -18,6 +18,9 @@
  */
 package org.grails.forge.util;
 
+import io.micronaut.core.annotation.NonNull;
+import org.grails.forge.options.JdkVersion;
+
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -28,10 +31,6 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Properties;
-
-import io.micronaut.core.annotation.NonNull;
-
-import org.grails.forge.options.JdkVersion;
 
 public class VersionInfo {
 

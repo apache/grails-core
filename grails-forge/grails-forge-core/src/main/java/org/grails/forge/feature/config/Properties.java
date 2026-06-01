@@ -18,14 +18,13 @@
  */
 package org.grails.forge.feature.config;
 
-import java.util.function.Function;
-
 import jakarta.inject.Singleton;
-
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.feature.FeaturePhase;
 import org.grails.forge.template.PropertiesTemplate;
 import org.grails.forge.template.Template;
+
+import java.util.function.Function;
 
 @Singleton
 public class Properties implements ConfigurationFeature {

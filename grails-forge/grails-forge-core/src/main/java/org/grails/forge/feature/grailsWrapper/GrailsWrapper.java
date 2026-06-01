@@ -18,10 +18,7 @@
  */
 package org.grails.forge.feature.grailsWrapper;
 
-import java.util.Set;
-
 import jakarta.inject.Singleton;
-
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.OperatingSystem;
 import org.grails.forge.application.generator.GeneratorContext;
@@ -30,6 +27,8 @@ import org.grails.forge.feature.DefaultFeature;
 import org.grails.forge.feature.Feature;
 import org.grails.forge.options.Options;
 import org.grails.forge.template.BinaryTemplate;
+
+import java.util.Set;
 
 @Singleton
 public class GrailsWrapper implements DefaultFeature {

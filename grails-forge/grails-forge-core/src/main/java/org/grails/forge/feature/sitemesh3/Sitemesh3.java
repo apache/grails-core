@@ -19,7 +19,6 @@
 package org.grails.forge.feature.sitemesh3;
 
 import jakarta.inject.Singleton;
-
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;

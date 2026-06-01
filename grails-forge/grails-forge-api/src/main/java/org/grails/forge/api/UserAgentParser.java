@@ -18,13 +18,12 @@
  */
 package org.grails.forge.api;
 
+import io.micronaut.core.util.StringUtils;
+import org.grails.forge.application.OperatingSystem;
+
 import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import io.micronaut.core.util.StringUtils;
-
-import org.grails.forge.application.OperatingSystem;
 
 public class UserAgentParser {
 

@@ -18,15 +18,11 @@
  */
 package org.grails.forge.cli.command;
 
-import java.io.IOException;
-
-import jakarta.inject.Inject;
-
 import io.micronaut.context.annotation.Parameter;
 import io.micronaut.core.annotation.ReflectiveAccess;
 import io.micronaut.core.util.functional.ThrowingSupplier;
-import picocli.CommandLine;
-
+import jakarta.inject.Inject;
+import java.io.IOException;
 import org.grails.forge.application.Project;
 import org.grails.forge.cli.CodeGenConfig;
 import org.grails.forge.cli.command.templates.job;
@@ -35,6 +31,7 @@ import org.grails.forge.io.ConsoleOutput;
 import org.grails.forge.io.OutputHandler;
 import org.grails.forge.template.RenderResult;
 import org.grails.forge.template.RockerTemplate;
+import picocli.CommandLine;
 
 @CommandLine.Command(name = CreateJobCommand.NAME, description = "Creates a new Quartz scheduled job")
 public class CreateJobCommand extends CodeGenCommand {

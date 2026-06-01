@@ -18,9 +18,9 @@
  */
 package org.grails.forge.options;
 
-import java.util.Locale;
-
 import io.micronaut.core.annotation.NonNull;
+
+import java.util.Locale;
 
 public enum DevelopmentReloading {
 

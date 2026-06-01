@@ -18,12 +18,12 @@
  */
 package org.grails.forge.cli;
 
-import java.util.Optional;
-
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.context.BeanContext;
 import io.micronaut.core.annotation.TypeHint;
 import picocli.CommandLine;
+
+import java.util.Optional;
 
 /**
  * Picocli factory implementation that uses a Micronaut BeanContext to obtain bean instances.

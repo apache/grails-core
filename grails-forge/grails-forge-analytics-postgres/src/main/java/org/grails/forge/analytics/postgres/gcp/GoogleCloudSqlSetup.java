@@ -18,14 +18,14 @@
  */
 package org.grails.forge.analytics.postgres.gcp;
 
-import jakarta.inject.Singleton;
-
 import io.micronaut.configuration.jdbc.hikari.DatasourceConfiguration;
 import io.micronaut.context.annotation.Property;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.context.env.Environment;
 import io.micronaut.context.event.BeanCreatedEvent;
 import io.micronaut.context.event.BeanCreatedEventListener;
+
+import jakarta.inject.Singleton;
 
 /**
  * Configuration for the Cloud SQL environment.
