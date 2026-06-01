@@ -39,10 +39,28 @@ import spock.util.environment.RestoreSystemProperties
 /**
  * Created by graemerocher on 07/07/2016.
  */
+import groovy.util.logging.Slf4j
+
 @RestoreSystemProperties
+@Slf4j
 class SingleTenantSpec extends Specification {
 
     @AutoCleanup HibernateDatastore datastore
+
+    void setup() {
+        org.grails.datastore.gorm.GormRegistry.reset()
+        org.grails.datastore.gorm.GormEnhancerRegistry.getInstance().clearPreferredDatastore()
+        org.grails.datastore.gorm.GormEnhancerRegistry.getInstance().clearResolvingDatastoreDepth()
+        
+        // Unbind any leaked transaction resources from previous specs in the same JVM fork
+        Map resources = new LinkedHashMap(org.springframework.transaction.support.TransactionSynchronizationManager.resourceMap)
+        for (key in resources.keySet()) {
+            try {
+                org.springframework.transaction.support.TransactionSynchronizationManager.unbindResource(key)
+            } catch (Throwable ignored) {
+            }
+        }
+    }
 
     void "Test a database per tenant multi tenancy"() {
         given:"A configuration for multiple data sources"

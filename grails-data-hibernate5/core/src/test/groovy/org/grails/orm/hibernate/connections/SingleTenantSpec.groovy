@@ -45,6 +45,19 @@ class SingleTenantSpec extends Specification {
     @AutoCleanup HibernateDatastore datastore
 
     void setup() {
+        org.grails.datastore.gorm.GormRegistry.reset()
+        org.grails.datastore.gorm.GormEnhancerRegistry.getInstance().clearPreferredDatastore()
+        org.grails.datastore.gorm.GormEnhancerRegistry.getInstance().clearResolvingDatastoreDepth()
+        
+        // Unbind any leaked transaction resources from previous specs in the same JVM fork
+        Map resources = new LinkedHashMap(org.springframework.transaction.support.TransactionSynchronizationManager.resourceMap)
+        for (key in resources.keySet()) {
+            try {
+                org.springframework.transaction.support.TransactionSynchronizationManager.unbindResource(key)
+            } catch (Throwable ignored) {
+            }
+        }
+
         Map config = [
                 "grails.gorm.multiTenancy.mode":"DATABASE",
                 "grails.gorm.multiTenancy.tenantResolverClass":SystemPropertyTenantResolver,

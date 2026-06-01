@@ -609,4 +609,24 @@ Once the session is reset, follow these steps to verify compilation and execute 
    ./gradlew :grails-data-hibernate7-core:test
    ```
 
+## 21. Current State & Codebase-MCP Search Preference (2026-06-01)
+
+### 21a. Current State Summary
+1. **Branch**: `8.0.x-hibernate7.gorm-scaling-clean` (1 commit ahead of origin).
+2. **Current Verification**:
+   - Ran `SingleTenantSpec` and `SchemaMultiTenantSpec` under `:grails-data-hibernate7-core:test` in isolation/sequence successfully.
+   - Identified that SLF4J outputs warnings about missing providers, causing NOP logging by default in the test runner. Therefore, debug/trace log outputs will not display in stdout/stderr unless an SLF4J provider is added to the test runtime classpath.
+   - Found that `TransactionSynchronizationManager` thread-bound resource map holds session factories and GORM dynamic behavior across spec lifecycles in the same JVM fork, leading to GORM API resolving closed resources or incorrect resolvers when running full suites concurrently.
+
+### 21b. Codebase-MCP Search Instructions
+1. **Search Preference**: When exploring code, searching files, tracing callers, or resolving class references, **ALWAYS** prefer using `codebase-memory-mcp` tools (such as `search_graph`, `trace_path`, `get_code_snippet`, and `query_graph`) over standard shell grep, glob, or find commands if codebase-mcp is available.
+2. **Priority Order**:
+   - `search_graph` — Find functions, classes, routes, variables by pattern.
+   - `trace_path` — Trace who calls a function or what it calls.
+   - `get_code_snippet` — Read specific function/class source code.
+   - `query_graph` — Run Cypher queries for complex patterns.
+   - `get_architecture` — High-level project summary.
+3. **Fallback**: Only use grep/glob when searching for literal strings, config properties, non-code files, or when the MCP server returns insufficient/unsupported output.
+
+
 
