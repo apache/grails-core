@@ -15,34 +15,12 @@
  *  limitations under the License.
  */
 
-// TODO: BOOT4 / GROOVY5 - Integration tests disabled due to known regressions.
-//
-// Modules applying this file have their integrationTest task disabled because of
-// known incompatibilities that the PR has not yet fixed. STILL BROKEN - workaround
-// only. Do NOT remove this apply without verifying each affected module's tests pass
-// on Groovy 5.0.x with -PgrailsIndy=false.
-//
-// Known blockers:
-//   - SiteMesh3: Decorator/layout not compatible with Spring Framework 7.
-//   - Groovy 5 + indy=false: Controller action methods that declare parameters
-//     (e.g. `def myAction(String foo)`, `@RequestParameter` annotated params,
-//     command objects) throw MissingPropertyException at runtime because the
-//     parameter resolves to a propertyMissing lookup on the controller (via
-//     TagLibraryInvoker$Trait$Helper) instead of the local parameter. Triggered
-//     after ControllerActionTransformer.wrapMethodBodyWithExceptionHandling wraps
-//     the original method body in a try/catch; appears to be a Groovy 5 callsite
-//     dispatch regression specific to -PgrailsIndy=false. Affected tests in app1
-//     include ForwardingSpec ('forwarding to a view'), InterceptorFunctionalSpec
-//     (after-redirect/forward/chain), AdvancedDataBindingSpec (@RequestParameter,
-//     type conversion), ChainingToNamespacedControllersFunctionalSpec, and
-//     CommandObjectSpec ('should display the correct title on the home page').
-//     Functional Tests (indy=true) PASS for these projects, so the workaround is
-//     intentionally broad rather than per-test. Needs upstream Apache Groovy fix
-//     or a ControllerActionTransformer redesign that preserves parameter scope
-//     under indy=false dispatch.
-//
-// Re-enable each module's integrationTest when its blocking dependency is updated.
-// Search for 'boot4-disabled-integration-test-config' to find all affected modules.
+// integrationTest is disabled for modules applying this file. Two blockers:
+//   - SiteMesh3 decorator/layout is not compatible with Spring Framework 7.
+//   - Groovy 5 + indy=false: controller action parameters resolve to propertyMissing
+//     on the controller instead of the local, throwing MissingPropertyException after
+//     ControllerActionTransformer wraps the method body. Functional tests (indy=true) pass.
+// Re-enable per module once its blocker is resolved.
 
 tasks.named('integrationTest') {
     enabled = false

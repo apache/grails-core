@@ -21,17 +21,20 @@ package org.grails.config
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
-import groovy.util.logging.Slf4j
 import org.codehaus.groovy.runtime.DefaultGroovyMethods
+
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 /**
  * @deprecated This class is deprecated to reduce complexity, improve performance, and increase maintainability. Use {@code config.getProperty(String key, Class<T> targetType)} instead.
  */
-@Slf4j
 @Deprecated
 @EqualsAndHashCode
 @CompileStatic
 class NavigableMap implements Map<String, Object>, Cloneable {
+
+    private static final Logger LOG = LoggerFactory.getLogger(NavigableMap)
 
     final NavigableMap rootConfig
     final List<String> path
@@ -171,17 +174,13 @@ class NavigableMap implements Map<String, Object>, Cloneable {
     }
 
     private static Object resolveConfigMapValue(Map map, Object... keys) {
-        // Use containsKey + get instead of `acc[key]` so we never mutate a ConfigObject
-        // by triggering its dynamic property creation on a missing key. Under Groovy 5,
-        // `acc[key]` on a ConfigObject inserts a new empty ConfigObject for any missing
-        // key, which then shows up in the merge iteration and recurses infinitely back
-        // into isSourceMapExcludedBySpringProfile -> resolveConfigMapValue. See PR #15557.
+        // Groovy 5: indexing a ConfigObject with a missing key inserts an empty ConfigObject,
+        // which then recurses infinitely via isSourceMapExcludedBySpringProfile. Use containsKey/get.
         keys.inject(map) { acc, key -> acc instanceof Map && acc.containsKey(key) ? acc.get(key) : null }
     }
 
     private static Object readWithoutCreating(Map map, Object key) {
-        // Same rationale as resolveConfigMapValue: avoid Groovy's `[]` operator on a
-        // ConfigObject because it creates an empty ConfigObject for missing keys.
+        // As in resolveConfigMapValue, avoid `[]` on a ConfigObject (it creates entries for missing keys).
         map.containsKey(key) ? map.get(key) : null
     }
 
@@ -479,7 +478,6 @@ class NavigableMap implements Map<String, Object>, Cloneable {
     /**
      * @deprecated This class should be avoided due to known performance reasons. Use {@code config.getProperty(String key, Class<T> targetType)} instead of dot based navigation.
      */
-    @Slf4j
     @Deprecated
     @CompileStatic
     static class NullSafeNavigator implements Map<String, Object> {
@@ -489,7 +487,9 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         NullSafeNavigator(NavigableMap parent, List<String> path) {
             this.parent = parent
             this.path = path
-            log.warn("Accessing config key '{}' through dot notation has known performance issues, consider using 'config.getProperty(key, targetClass)' instead.", path)
+            if (LOG.isWarnEnabled()) {
+                LOG.warn("Accessing config key '{}' through dot notation has known performance issues, consider using 'config.getProperty(key, targetClass)' instead.", path)
+            }
         }
 
         Object getAt(Object key) {
