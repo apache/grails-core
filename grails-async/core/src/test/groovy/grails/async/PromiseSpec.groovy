@@ -42,7 +42,7 @@ class PromiseSpec extends Specification {
             result == '*10*'
 
     }
-
+    
     void 'Test promise timeout handling'() {
         
         when: 'a promise that takes a while is created'
