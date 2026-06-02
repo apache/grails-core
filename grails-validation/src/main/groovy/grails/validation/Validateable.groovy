@@ -282,7 +282,14 @@ trait Validateable {
     }
 
     /**
-     * Resolves defaultNullable() via reflection to preserve trait static-method override semantics (Groovy 5).
+     * Resolves {@code defaultNullable()} via reflection to preserve trait static-method override semantics under
+     * Groovy 5. When an in-trait call such as {@code this.defaultNullable()} is compiled, Groovy 5's
+     * {@code TraitReceiverTransformer} rewrites it to a direct trait-helper static call, which loses the
+     * implementing class's override of {@code defaultNullable()} and always returns the trait default. A reflective
+     * {@code Class.getMethod('defaultNullable').invoke(null)} resolves the actual override on the concrete class,
+     * which is the only path that honours it.
+     *
+     * See https://issues.apache.org/jira/browse/GROOVY-11985 (open).
      * Reproducer: https://github.com/jamesfredley/groovy-trait-static-method-override-bug
      */
     private static boolean resolveDefaultNullable(Class<?> clazz) {

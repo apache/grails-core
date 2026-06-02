@@ -131,6 +131,16 @@ class BeanPropertyAccessorFactory implements GrailsApplicationAware {
         new Constrained(constraint ?: createDefaultConstraint(beanWrapper, propertyName))
     }
 
+    /**
+     * Resolves {@code defaultNullable()} via reflection rather than {@code metaClass.invokeStaticMethod}.
+     * Under Groovy 5, {@code Validateable}'s {@code TraitReceiverTransformer} rewrites the in-trait
+     * {@code defaultNullable()} call to a direct trait-helper static call, which loses the implementing class's
+     * override and always returns the trait default. A reflective {@code Class.getMethod('defaultNullable')}
+     * resolves the actual override declared on the concrete class. Mirrors {@code Validateable.resolveDefaultNullable}.
+     *
+     * See https://issues.apache.org/jira/browse/GROOVY-11985 (open).
+     * Reproducer: https://github.com/jamesfredley/groovy-trait-static-method-override-bug
+     */
     private static boolean resolveDefaultNullable(Class<?> clazz) {
         java.lang.reflect.Method m
         try {

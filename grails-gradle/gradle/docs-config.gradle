@@ -25,8 +25,7 @@ dependencies {
     // TODO: Remove jline:jline (JLine 2) when upgrading to Groovy 5 (groovy-groovysh 5.x uses JLine 3)
     add('documentation', 'jline:jline')
     add('documentation', 'com.github.javaparser:javaparser-core')
-    // grails-gradle subprojects target Gradle's embedded Groovy 4 (see gradleBomDependencyVersions['gradle-groovy.version']).
-    // Do NOT use the main Groovy version here - that is Groovy 5.x in Grails 8 and would override the gradle-groovy-bom platform.
+    // Use Gradle's embedded Groovy (gradle-groovy.version), not the project's main Groovy version.
     add('documentation', "org.apache.groovy:groovy:${gradleBomDependencyVersions['gradle-groovy.version']}")
     add('documentation', "org.apache.groovy:groovy-groovydoc:${gradleBomDependencyVersions['gradle-groovy.version']}")
     add('documentation', "org.apache.groovy:groovy-ant:${gradleBomDependencyVersions['gradle-groovy.version']}")

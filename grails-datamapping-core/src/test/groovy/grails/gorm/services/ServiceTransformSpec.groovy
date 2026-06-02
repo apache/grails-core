@@ -986,7 +986,6 @@ interface MyService {
 
         then:"A compilation error occurred"
         def e = thrown(MultipleCompilationErrorsException)
-        // Note: Groovy 5 changed the method signature format from 'void foo()' to 'foo():void'
         e.message.contains('No implementations possible for method') &&
         (e.message.contains("'void foo()'") || e.message.contains("'foo():void'")) &&
         e.message.contains('Please use an abstract class instead and provide an implementation')
