@@ -39,7 +39,7 @@ abstract class GrailsDataTckManager {
      * Mutating this array will not affect the manager state.
      */
     Class[] getDomainClasses() {
-        return domainClasses as Class[]
+        domainClasses as Class[]
     }
 
     /**
