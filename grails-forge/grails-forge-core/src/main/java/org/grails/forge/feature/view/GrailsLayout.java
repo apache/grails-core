@@ -16,53 +16,40 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.forge.feature.sitemesh3;
+package org.grails.forge.feature.view;
 
 import jakarta.inject.Singleton;
-import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
-import org.grails.forge.feature.DefaultFeature;
-import org.grails.forge.feature.Feature;
-import org.grails.forge.feature.view.GspLayout;
-import org.grails.forge.options.Options;
-
-import java.util.Set;
 
 /**
- * Default GSP layout decorator, backed by SiteMesh 3 ({@code grails-sitemesh3}).
- * Applied automatically to web applications unless another {@link GspLayout}
- * (e.g. {@code grails-layout}) is explicitly selected.
+ * Opt-in GSP layout decorator backed by the legacy SiteMesh 2 based
+ * {@code grails-layout} plugin. Mutually exclusive with {@code sitemesh3};
+ * selecting this feature replaces the default SiteMesh 3 decorator.
  */
 @Singleton
-public class Sitemesh3 extends GspLayout implements DefaultFeature {
+public class GrailsLayout extends GspLayout {
 
     @Override
     public String getName() {
-        return "sitemesh3";
+        return "grails-layout";
     }
 
     @Override
     public String getTitle() {
-        return "SiteMesh 3";
+        return "GSP SiteMesh 2 Layouts";
     }
 
     @Override
     public String getDescription() {
-        return "Adds support for SiteMesh 3 based GSP layouts";
-    }
-
-    @Override
-    public boolean shouldApply(ApplicationType applicationType, Options options, Set<Feature> selectedFeatures) {
-        return supports(applicationType) &&
-                selectedFeatures.stream().noneMatch(GspLayout.class::isInstance);
+        return "Adds support for legacy SiteMesh 2 based GSP layouts (grails-layout) instead of SiteMesh 3";
     }
 
     @Override
     public void apply(GeneratorContext generatorContext) {
         generatorContext.addDependency(Dependency.builder()
                 .groupId("org.apache.grails")
-                .artifactId("grails-sitemesh3")
+                .artifactId("grails-layout")
                 .implementation());
     }
 }
