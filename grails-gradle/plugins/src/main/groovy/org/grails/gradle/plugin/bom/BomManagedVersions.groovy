@@ -22,9 +22,9 @@ import java.util.function.Function
 
 import groovy.transform.CompileStatic
 import org.gradle.api.Project
-import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ConfigurationContainer
-import org.gradle.api.artifacts.DependencyResolveDetails
+import org.gradle.api.artifacts.DependencyConstraint
+import org.gradle.api.artifacts.MutableVersionConstraint
 import org.gradle.api.artifacts.dsl.DependencyHandler
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
@@ -37,16 +37,29 @@ import javax.xml.parsers.DocumentBuilderFactory
  * Lightweight replacement for the Spring Dependency Management plugin's
  * version property override feature.
  *
- * <p>Parses BOM POM files to build a mapping of Maven property names
- * (e.g., {@code slf4j.version}) to the artifacts they control. At
- * dependency resolution time, checks whether the user has overridden
- * any of these properties via {@code ext['property.name']} in
- * {@code build.gradle} or via {@code gradle.properties}, and applies
- * those overrides using Gradle's {@code ResolutionStrategy.eachDependency()}.</p>
+ * <p>Parses BOM POM files to determine the version every managed artifact
+ * resolves to, both with the BOM's default {@code <properties>} values and
+ * with the project's overrides applied (via {@code ext['property.name']} in
+ * {@code build.gradle} or via {@code gradle.properties}). Any artifact whose
+ * effective version differs from the BOM default becomes a version override.</p>
  *
- * <p>Gradle's native {@code platform()} mechanism handles the base
- * BOM import and default version management. This class only adds the
- * one feature Gradle lacks: property-based version customization
+ * <p>Overrides are applied as <strong>strict</strong> dependency constraints
+ * (see {@link #applyTo(DependencyHandler, String)}). A strict constraint wins
+ * over the {@code require} constraints contributed by Gradle's native
+ * {@code platform()} mechanism, so an override is honored even when it
+ * <em>downgrades</em> a managed version - a plain
+ * {@code ResolutionStrategy.eachDependency()} / {@code useVersion()} hook
+ * would lose to the platform's higher version during conflict resolution.</p>
+ *
+ * <p>Because the effective version is computed by re-resolving imported
+ * ({@code <scope>import</scope>}) BOMs with the project's property overrides
+ * applied, overriding a property that selects an imported BOM's version
+ * (for example {@code spring-boot.version}) re-imports that BOM and pulls in
+ * its updated managed-dependency set.</p>
+ *
+ * <p>Gradle's native {@code platform()} mechanism handles the base BOM import
+ * and default version management. This class only adds the one feature Gradle
+ * lacks: property-based version customization
  * (see <a href="https://github.com/gradle/gradle/issues/9160">Gradle #9160</a>).</p>
  *
  * <p>This is the underlying utility used by the
@@ -62,6 +75,9 @@ class BomManagedVersions {
 
     private static final Logger LOG = Logging.getLogger(BomManagedVersions)
     private static final int MAX_PROPERTY_INTERPOLATION_DEPTH = 10
+
+    /** A property resolver that never overrides anything (BOM defaults only). */
+    private static final Function<String, String> NO_OVERRIDES = { String name -> null } as Function<String, String>
 
     private final Map<String, String> versionOverrides = new LinkedHashMap<>()
 
@@ -90,8 +106,13 @@ class BomManagedVersions {
      * plain data carrier (a {@code Map<String, String>} of version overrides
      * inside {@link BomManagedVersions}) that holds no {@link Project}
      * reference, so it can be safely captured by per-configuration
-     * {@code eachDependency} closures and survive configuration-cache
-     * serialization.
+     * constraint declarations and survive configuration-cache serialization.
+     *
+     * <p>The override set is computed as the difference between two resolutions
+     * of the BOM tree: one using the BOM's default property values, and one
+     * using the project's property overrides. Any managed artifact whose
+     * effective version differs from its default version is recorded as an
+     * override.</p>
      *
      * @param configurations the project's configuration container, captured at apply/afterEvaluate time
      * @param dependencies the project's dependency handler, captured at apply/afterEvaluate time
@@ -105,40 +126,27 @@ class BomManagedVersions {
                                       Collection<String> bomCoordinatesList) {
         def instance = new BomManagedVersions()
 
-        def bomProperties = new LinkedHashMap<String, String>()
-        def propertyToArtifacts = new LinkedHashMap<String, List<String>>()
-        def processed = new HashSet<String>()
+        Map<String, String> defaultVersions = computeManagedVersions(
+                configurations, dependencies, bomCoordinatesList, NO_OVERRIDES)
+        Map<String, String> effectiveVersions = computeManagedVersions(
+                configurations, dependencies, bomCoordinatesList, propertyLookup)
 
-        for (String bomCoordinates : bomCoordinatesList) {
-            def parts = bomCoordinates?.split(':')
-            if (parts == null || parts.length != 3) {
-                LOG.warn('Invalid BOM coordinates: {}', bomCoordinates)
-                continue
-            }
-            processBom(configurations, dependencies, parts[0], parts[1], parts[2],
-                    bomProperties, propertyToArtifacts, processed)
-        }
+        for (def entry : effectiveVersions.entrySet()) {
+            def artifactKey = entry.key
+            def effectiveVersion = entry.value
+            def defaultVersion = defaultVersions.get(artifactKey)
 
-        for (def entry : propertyToArtifacts.entrySet()) {
-            def propertyName = entry.key
-            def overrideVersion = propertyLookup.apply(propertyName)
-            if (overrideVersion != null) {
-                def defaultVersion = bomProperties.get(propertyName)
-
-                if (overrideVersion != defaultVersion) {
-                    for (def artifactKey : entry.value) {
-                        instance.versionOverrides.put(artifactKey, overrideVersion)
-                    }
-                    LOG.lifecycle(
-                        'BOM version override: {} = {} (BOM default: {})',
-                        propertyName, overrideVersion, defaultVersion ?: 'unknown'
-                    )
-                }
+            if (effectiveVersion != null && effectiveVersion != defaultVersion) {
+                instance.versionOverrides.put(artifactKey, effectiveVersion)
+                LOG.info(
+                    'BOM version override: {} = {} (BOM default: {})',
+                    artifactKey, effectiveVersion, defaultVersion ?: 'unknown'
+                )
             }
         }
 
         if (!instance.versionOverrides.isEmpty()) {
-            LOG.info('BOM property overrides: {} version override(s) will be applied', instance.versionOverrides.size())
+            LOG.lifecycle('BOM property overrides: {} version override(s) will be applied', instance.versionOverrides.size())
         }
 
         return instance
@@ -176,22 +184,28 @@ class BomManagedVersions {
     }
 
     /**
-     * Applies version overrides to a Gradle configuration's resolution strategy.
+     * Applies the detected version overrides to the given configuration as
+     * strict dependency constraints.
      *
-     * @param configuration the configuration to apply overrides to
+     * <p>Strict constraints are used deliberately: a plain {@code platform()}
+     * contributes {@code require} constraints, and a soft override (e.g.
+     * {@code useVersion()}) would lose to a higher {@code require} version
+     * during conflict resolution. A strict constraint overrides {@code require},
+     * so the project's chosen version wins in both directions (upgrade and
+     * downgrade).</p>
+     *
+     * @param dependencies the project's dependency handler
+     * @param configurationName the name of the configuration to add constraints to
      */
-    void applyTo(Configuration configuration) {
+    void applyTo(DependencyHandler dependencies, String configurationName) {
         if (versionOverrides.isEmpty()) {
             return
         }
 
-        def overrides = this.versionOverrides
-        configuration.resolutionStrategy.eachDependency { DependencyResolveDetails details ->
-            def key = "${details.requested.group}:${details.requested.name}" as String
-            def override = overrides.get(key)
-            if (override != null) {
-                details.useVersion(override)
-                details.because('BOM version override via project property')
+        versionOverrides.each { String coordinate, String version ->
+            dependencies.constraints.add(configurationName, coordinate) { DependencyConstraint constraint ->
+                constraint.version { MutableVersionConstraint v -> v.strictly(version) }
+                constraint.because('BOM version override via project property')
             }
         }
     }
@@ -259,12 +273,42 @@ class BomManagedVersions {
         }
     }
 
+    /**
+     * Walks the BOM tree and returns the effective version of every managed
+     * artifact, resolving property references (and imported-BOM versions) with
+     * the supplied {@code propertyResolver} taking precedence over the BOM's
+     * own {@code <properties>} defaults.
+     */
+    private static Map<String, String> computeManagedVersions(
+        ConfigurationContainer configurations,
+        DependencyHandler dependencies,
+        Collection<String> bomCoordinatesList,
+        Function<String, String> propertyResolver
+    ) {
+        def bomProperties = new LinkedHashMap<String, String>()
+        def artifactVersions = new LinkedHashMap<String, String>()
+        def processed = new HashSet<String>()
+
+        for (String bomCoordinates : bomCoordinatesList) {
+            def parts = bomCoordinates?.split(':')
+            if (parts == null || parts.length != 3) {
+                LOG.warn('Invalid BOM coordinates: {}', bomCoordinates)
+                continue
+            }
+            processBom(configurations, dependencies, parts[0], parts[1], parts[2],
+                    propertyResolver, bomProperties, artifactVersions, processed)
+        }
+
+        return artifactVersions
+    }
+
     private static void processBom(
         ConfigurationContainer configurations,
         DependencyHandler dependencies,
         String group, String artifact, String version,
+        Function<String, String> propertyResolver,
         Map<String, String> bomProperties,
-        Map<String, List<String>> propertyToArtifacts,
+        Map<String, String> artifactVersions,
         Set<String> processed
     ) {
         def bomKey = "${group}:${artifact}:${version}" as String
@@ -283,7 +327,7 @@ class BomManagedVersions {
         }
 
         extractProperties(doc, bomProperties)
-        processManagedDependencies(doc, configurations, dependencies, bomProperties, propertyToArtifacts, processed)
+        processManagedDependencies(doc, configurations, dependencies, propertyResolver, bomProperties, artifactVersions, processed)
     }
 
     private static File resolvePomFile(ConfigurationContainer configurations,
@@ -343,8 +387,9 @@ class BomManagedVersions {
         Document doc,
         ConfigurationContainer configurations,
         DependencyHandler dependencies,
+        Function<String, String> propertyResolver,
         Map<String, String> bomProperties,
-        Map<String, List<String>> propertyToArtifacts,
+        Map<String, String> artifactVersions,
         Set<String> processed
     ) {
         def depMgmtNodes = doc.getElementsByTagName('dependencyManagement')
@@ -361,6 +406,16 @@ class BomManagedVersions {
         def dependenciesElement = (Element) dependenciesNodes.item(0)
         def depNodes = dependenciesElement.getElementsByTagName('dependency')
 
+        // Record this BOM's own managed versions first and defer imported BOMs, so a
+        // BOM's direct entries take precedence over the entries it imports (matching
+        // Maven's dependencyManagement resolution, where the importing POM wins).
+        // Every entry with a resolvable version is recorded - not just ${property}
+        // references - so that switching an imported BOM (e.g. via an overridden
+        // spring-boot.version) also picks up that BOM's hardcoded managed versions.
+        // The two-pass diff in resolve() discards versions that are identical with and
+        // without overrides, so recording literal versions never produces spurious
+        // overrides.
+        List<String[]> importedBoms = new ArrayList<>()
         for (int i = 0; i < depNodes.length; i++) {
             def dep = (Element) depNodes.item(i)
             def depGroupId = getChildText(dep, 'groupId')
@@ -373,20 +428,22 @@ class BomManagedVersions {
             }
 
             if ('import' == depScope) {
-                def resolvedVersion = interpolateProperties(depVersion, bomProperties)
-                if (resolvedVersion) {
-                    processBom(configurations, dependencies, depGroupId, depArtifactId, resolvedVersion,
-                        bomProperties, propertyToArtifacts, processed)
-                }
+                importedBoms.add([depGroupId, depArtifactId, depVersion] as String[])
                 continue
             }
 
-            if (depVersion && depVersion.contains('${')) {
-                def propertyName = extractPropertyName(depVersion)
-                if (propertyName) {
-                    def artifactKey = "${depGroupId}:${depArtifactId}" as String
-                    propertyToArtifacts.computeIfAbsent(propertyName) { new ArrayList<String>() }.add(artifactKey)
-                }
+            def resolvedVersion = resolveVersion(depVersion, propertyResolver, bomProperties)
+            if (resolvedVersion) {
+                def artifactKey = "${depGroupId}:${depArtifactId}" as String
+                artifactVersions.putIfAbsent(artifactKey, resolvedVersion)
+            }
+        }
+
+        for (String[] importedBom : importedBoms) {
+            def resolvedVersion = resolveVersion(importedBom[2], propertyResolver, bomProperties)
+            if (resolvedVersion) {
+                processBom(configurations, dependencies, importedBom[0], importedBom[1], resolvedVersion,
+                    propertyResolver, bomProperties, artifactVersions, processed)
             }
         }
     }
@@ -403,8 +460,17 @@ class BomManagedVersions {
         return null
     }
 
-    private static String interpolateProperties(String value, Map<String, String> properties) {
-        if (value == null || !value.contains('${')) {
+    /**
+     * Interpolates {@code ${property}} references in a version string. Each
+     * property is resolved using the {@code propertyResolver} first (so project
+     * overrides win), falling back to the BOM's own {@code <properties>}. Returns
+     * {@code null} when the value cannot be fully resolved.
+     */
+    private static String resolveVersion(String value, Function<String, String> propertyResolver, Map<String, String> bomProperties) {
+        if (value == null) {
+            return null
+        }
+        if (!value.contains('${')) {
             return value
         }
 
@@ -415,13 +481,16 @@ class BomManagedVersions {
             if (propertyName == null) {
                 break
             }
-            def resolved = properties.get(propertyName)
+            def resolved = propertyResolver.apply(propertyName)
+            if (resolved == null) {
+                resolved = bomProperties.get(propertyName)
+            }
             if (resolved == null) {
                 break
             }
             result = result.replace("\${${propertyName}}" as String, resolved)
         }
-        return result
+        return result.contains('${') ? null : result
     }
 
     private static String getChildText(Element parent, String childTagName) {

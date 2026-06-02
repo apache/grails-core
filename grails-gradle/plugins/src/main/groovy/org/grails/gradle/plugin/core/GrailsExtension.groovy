@@ -87,11 +87,30 @@ class GrailsExtension {
      * @deprecated The Spring Dependency Management plugin has been replaced with Gradle's native
      * {@code platform()} support plus lightweight property-based version overrides
      * supplied by the {@code org.apache.grails.gradle.bom-property-overrides} plugin.
-     * This property is no longer used. Set version overrides in {@code gradle.properties}
-     * or via {@code ext['property.name']} instead.
+     * Set version overrides in {@code gradle.properties} or via {@code ext['property.name']}
+     * instead. For backward compatibility, setting this property to {@code false} is still
+     * honored as {@code autoApplyBom = false} so existing opt-outs (which previously prevented
+     * the Spring Dependency Management BOM from being applied) continue to disable the
+     * automatic {@code platform(grails-bom)} application. New builds should set
+     * {@link #autoApplyBom} directly.
      */
     @Deprecated
     boolean springDependencyManagement = true
+
+    /**
+     * Backward-compatible setter for the deprecated {@link #springDependencyManagement} flag.
+     * Disabling it maps onto {@code autoApplyBom = false} so projects that still opt out via
+     * {@code grails { springDependencyManagement = false }} do not unexpectedly receive
+     * {@code platform(grails-bom)} after the migration away from the Spring Dependency
+     * Management plugin.
+     */
+    @Deprecated
+    void setSpringDependencyManagement(boolean enabled) {
+        this.@springDependencyManagement = enabled
+        if (!enabled) {
+            this.autoApplyBom.set(false)
+        }
+    }
 
     /**
      * Whether the Micronaut auto-setup should run when the `grails-micronaut` plugin is detected.

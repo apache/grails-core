@@ -504,7 +504,9 @@ ext['slf4j.version'] = '2.0.9'
 slf4j.version=2.0.9
 ----
 
-The `grails { springDependencyManagement = … }` flag on `GrailsExtension` is now a deprecated no-op retained for source compatibility; setting it logs a deprecation warning.
+The `grails { springDependencyManagement = … }` flag on `GrailsExtension` is deprecated.
+For backward compatibility, setting it to `false` is still honored and is equivalent to `autoApplyBom = false`: it suppresses the automatic `platform(grails-bom)` application, just as it previously prevented the Spring Dependency Management BOM from being applied.
+New builds should use `grails { autoApplyBom = false }` instead.
 
 **Two Spring DM features have no automatic migration.**
 If your `build.gradle` uses either of the patterns below, update it as follows:

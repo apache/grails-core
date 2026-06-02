@@ -62,12 +62,16 @@ import org.gradle.api.attributes.Category
  *       {@code <properties>} block and the
  *       {@code <dependencyManagement>} entries, and recursively follows
  *       {@code <scope>import</scope>} BOMs.</li>
- *   <li>For every property the BOM declares, checks whether the project
- *       has a property with the same name (via {@code gradle.properties}
- *       or {@code ext['property.name']}). If so, applies the override at
- *       resolution time using
- *       {@link Configuration#getResolutionStrategy()}'s
- *       {@code eachDependency} hook.</li>
+ *   <li>Computes each managed artifact's version twice - once with the BOM's
+ *       default properties and once with the project's property overrides
+ *       (from {@code gradle.properties} or {@code ext['property.name']})
+ *       applied, including to imported-BOM selector versions. Any artifact
+ *       whose effective version differs from its default version is recorded
+ *       as an override.</li>
+ *   <li>Applies each override as a <strong>strict</strong> dependency
+ *       constraint on the project's declarable configurations, so the override
+ *       wins over the {@code require} constraints contributed by
+ *       {@code platform()} even when it downgrades a managed version.</li>
  * </ol>
  *
  * <p>The plugin does <strong>not</strong> declare any platforms itself.
@@ -154,8 +158,14 @@ class BomPropertyOverridesPlugin implements Plugin<Project> {
             return
         }
 
+        // Apply overrides as strict constraints on every declarable configuration,
+        // mirroring where the platform(grails-bom) constraints are contributed.
+        // Resolvable/consumable configurations inherit the constraints through the
+        // declarable configurations they extend.
         configurations.configureEach { Configuration conf ->
-            managedVersions.applyTo(conf)
+            if (conf.canBeDeclared) {
+                managedVersions.applyTo(dependencies, conf.name)
+            }
         }
     }
 
