@@ -267,6 +267,25 @@ This affects any code path that goes through Micronaut's HTTP client, filters, o
 
 NOTE: The Grails Forge generator enforces this requirement: selecting any Micronaut feature with a JDK version below 25 will fail with `IllegalArgumentException` at generation time.
 
+===== 7.4 Hibernate-Specific Micronaut BOMs
+
+Grails 8 introduces a new BOM for projects that combine Micronaut integration with a specific Hibernate version:
+
+* `org.apache.grails:grails-hibernate5-micronaut-bom` -- For Micronaut projects using Hibernate 5. This is the default Micronaut BOM for Hibernate 5 users (analogous to how `grails-micronaut-bom` is the default). Use this when your Micronaut-enabled Grails application targets Hibernate 5.
+
+This BOM extends `grails-base-bom` and the Micronaut platform directly, and includes the appropriate Hibernate dependency versions alongside the Micronaut-specific overrides (Groovy 5, Spock 2.4, etc.). This ensures no version conflicts when consumed via `enforcedPlatform`.
+
+[source,groovy]
+.build.gradle - Hibernate 5 with Micronaut (default)
+----
+dependencies {
+    implementation enforcedPlatform("org.apache.grails:grails-hibernate5-micronaut-bom:$grailsVersion")
+    implementation 'org.apache.grails:grails-micronaut'
+}
+----
+
+The existing `grails-micronaut-bom` remains available and is equivalent to `grails-hibernate5-micronaut-bom` for backward compatibility. If the framework changes its default Hibernate version in the future, `grails-micronaut-bom` will track the new default while the Hibernate-specific BOM remains pinned to its version.
+
 ==== 8. Enum Serialization Default Changed
 
 As announced in the Grails 7.0.2 deprecation notice, the `SimpleEnumMarshaller` is now the default for JSON and XML enum serialization in Grails 8.
@@ -651,7 +670,170 @@ If your application contributed `HttpMessageConverter` beans through this class,
 Spring Framework 7 deprecated `org.springframework.lang.Nullable` and `org.springframework.lang.NonNull` in favor of the JSpecify annotations (`org.jspecify.annotations.Nullable`, `org.jspecify.annotations.NonNull`).
 The Spring annotations still work, so this is non-blocking, but new code should prefer the JSpecify equivalents.
 
-==== 20. Known Plugin Incompatibilities
+==== 20. Tag Library Test Cleanup Changes
+
+Grails 8 removes the `purgeTagLibMetaClass` test hook used by some web and TagLib unit tests.
+TagLib metaclass cleanup now happens automatically as part of the web test infrastructure, so test specs should delete any custom `purgeTagLibMetaClass` property or getter.
+
+If your tests use `TagLibUnitTest` and mock additional tag libraries with `mockTagLib(...)` or `mockTagLibs(...)`, those mocked tag libraries are rebuilt automatically between feature methods.
+No replacement flag is required.
+
+IMPORTANT: Mocked tag libraries are cleared after each feature method.
+If your tests call `mockTagLib` directly (for example, when implementing `GrailsWebUnitTest` instead of `TagLibUnitTest`), move the call from `setupSpec()` to `setup()` so the mock is re-applied before every feature.
+`TagLibUnitTest` handles this automatically, but `GrailsWebUnitTest` does not.
+
+[source,groovy]
+----
+// Before
+class MyTagLibSpec extends Specification implements TagLibUnitTest<MyTagLib> {
+    boolean getPurgeTagLibMetaClass() {
+        true
+    }
+}
+
+// After
+class MyTagLibSpec extends Specification implements TagLibUnitTest<MyTagLib> {
+}
+----
+
+==== 21. Method-based TagLib Handlers
+
+Grails 8 introduces method-based tag handler syntax as the recommended way to define tags. Closure-based handlers are still supported for backward compatibility.
+
+[source,groovy]
+----
+import grails.gsp.Tag
+
+class DemoTagLib {
+    static namespace = 'demo'
+
+    def greet(Map attrs) {
+        out << "Hello, ${attrs.name}!"
+    }
+
+    @Tag
+    def greeting(String name) {
+        out << "Hello, ${name}!"
+    }
+}
+----
+
+Method tags with the conventional signatures `def tag(Map attrs)`, `def tag(Closure body)`, and `def tag(Map attrs, Closure body)` are discovered automatically. Zero-argument method tags and method tags that bind named attributes directly to method parameters must use `@grails.gsp.Tag`; this avoids exposing ordinary public helper methods as tags.
+
+Grails Gradle application builds preserve Java and Groovy method parameter names by default (see §21.3 below). If you compile TagLib classes outside those plugins, enable Java `-parameters` and Groovy `groovyOptions.parameters = true` so `@Tag` methods can bind attributes by parameter name.
+
+To exclude a conventional public method from being exposed as a tag (for example, a helper that must remain public to satisfy an interface), annotate it with `@grails.gsp.NotATag`:
+
+[source,groovy]
+----
+import grails.gsp.NotATag
+
+class DemoTagLib {
+    def greet(Map attrs) {
+        out << "Hello, ${attrs.name}!"
+    }
+
+    @NotATag
+    def helper(Map attrs) { /* ... */ }
+}
+----
+
+The compile-time deprecation warning emitted for closure-based tag fields can be silenced by setting the system property `grails.taglib.warnDeprecatedClosures=false`.
+
+===== 21.1 Behavior change: tag method registration
+
+In Grails 7, the metaclass tag dispatchers registered for the taglib's own namespace did not override existing methods. Because method-based tags are now real methods on the TagLib class, those dispatchers must override methods of the same name so that function-style invocation (for example `tagLib.myTag(attrs)`) returns captured tag output rather than writing directly to `out`.
+
+If a TagLib intentionally defines a method that shares a name with a default-namespace tag in another TagLib, the locally defined method will be shadowed by the tag dispatcher. Rename the helper method or move it behind a different namespace if the previous behavior is required.
+
+This shadowing is not reported at runtime by default. To audit which TagLib methods are being overridden by tag dispatchers, enable `DEBUG` logging for `org.grails.taglib.TagLibraryMetaUtils` in `logback.xml` (or `logback-spring.xml`):
+
+[source,xml]
+----
+<logger name="org.grails.taglib.TagLibraryMetaUtils" level="DEBUG"/>
+----
+
+Each override is logged as `Registering tag dispatcher <namespace>:<tagName> over existing method <Class>.<method>(<paramTypes>)`. Inspect the output after application startup; any entry whose `<Class>` is one of your own TagLibs identifies a method that has been replaced by the dispatcher.
+
+===== 21.2 Behavior change: parameter-name binding for `Map` and `Closure` parameters
+
+Method-based tag handlers bind attributes to method parameters by parameter name. Two reserved names participate in this resolution:
+
+- A `Map`-typed parameter named `attrs` receives the full attributes map.
+- A `Closure`-typed parameter named `body` receives the tag body.
+
+In earlier iterations of the method-based handler implementation, a `Closure`-typed parameter was bound to the body regardless of its parameter name, while a `Map`-typed parameter required the literal name `attrs`. That asymmetry has been removed. Both reserved names are now applied consistently: a `Closure` parameter named anything other than `body` is treated as a normal named attribute (and must be supplied by name), just as a `Map` parameter named anything other than `attrs` is.
+
+If you have method-based tag handlers whose `Closure` parameter uses a name other than `body`, rename the parameter so the body binds as expected:
+
+[source,groovy]
+----
+import grails.gsp.Tag
+
+class DemoTagLib {
+
+    // Will NOT receive the tag body; `renderer` is treated as a named attribute.
+    @Tag
+    def before(Closure renderer) {
+        out << renderer.call()
+    }
+
+    // Receives the tag body.
+    @Tag
+    def after(Closure body) {
+        out << body.call()
+    }
+}
+----
+
+If parameter names are not preserved at compile time (see §21.3 below for the `preserveParameterNames` Gradle extension property), the first `Map` parameter is bound to `attrs` and the first `Closure` parameter is bound to `body` regardless of declared names, matching the behavior of closure-based tag handlers.
+
+===== 21.3 Grails Gradle Extension Preserves Parameter Names By Default
+
+In Grails 8, the Grails Gradle extension defaults `preserveParameterNames` to `true`.
+This configures Groovy compilation to retain method and constructor parameter names in generated class files.
+
+This behavior supports framework features that bind by parameter name, including method-based TagLib handlers annotated with `@grails.gsp.Tag`:
+
+[source,groovy]
+----
+import grails.gsp.Tag
+
+class DemoTagLib {
+    @Tag
+    def greeting(String name) {
+        out << "Hello, ${name}!"
+    }
+}
+----
+
+If you need the previous Groovy compiler behavior, disable it in `build.gradle`:
+
+[source,groovy]
+----
+grails {
+    preserveParameterNames = false
+}
+----
+
+NOTE: This Gradle extension property controls Groovy compilation only (`groovyOptions.parameters`). Java parameter-name preservation is enabled by the Spring Boot Gradle plugin, which adds `-parameters` to every `JavaCompile` task by default since Spring Boot 3.2. Grails 8 applications inherit this through the Spring Boot Gradle plugin and require no additional configuration for Java sources.
+
+If you compile TagLib classes outside the Grails Gradle plugin (for example, in a standalone Groovy module, a plain Spring Boot application that does not apply `org.springframework.boot`, or a build that disables the Spring Boot plugin's compiler configuration), enable parameter-name preservation explicitly so `@grails.gsp.Tag` methods can bind attributes by parameter name:
+
+[source,groovy]
+----
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs.add('-parameters')
+}
+
+tasks.withType(GroovyCompile).configureEach {
+    groovyOptions.parameters = true
+}
+----
+
+Without these flags, `Parameter.getName()` returns synthetic names such as `arg0`, the attribute lookup misses, and the call surfaces as `MissingMethodException` at runtime. The `@Tag`-annotated method itself produces no compile-time warning, because preservation is a property of the build, not of the source file.
+
+==== 22. Known Plugin Incompatibilities
 
 Some third-party plugins have not yet been updated for Spring Boot 4 / Spring Framework 7 compatibility.
 The following are known blockers at this time:
@@ -664,7 +846,7 @@ Applications using `grails-sitemesh3` should remain on the `grails-layout` plugi
 
 Check the https://github.com/apache/grails-core/issues[Grails issue tracker] for the latest status of plugin compatibility.
 
-===== 21. Custom JSON View Converters
+===== 23. Custom JSON View Converters
 
 JSON views now use Groovy's `groovy.json.JsonGenerator` implementation instead of the previous Grails-specific
 JSON generator infrastructure.
@@ -682,7 +864,7 @@ To migrate your custom converters:
 `src/main/resources/META-INF/services/groovy.json.JsonGenerator$Converter`
 (was previously `src/main/resources/META-INF/services/grails.plugin.json.builder.JsonGenerator$Converter`)
 
-===== 22 Rendering Enum values as JSON
+===== 23 Rendering Enum values as JSON
 
 It is no longer possible to render a single enum value as JSON using the `render(Number.ONE as JSON)` syntax.
 Previously, rendering an enum value would produce a JSON string with the type and name of the enum value like:
