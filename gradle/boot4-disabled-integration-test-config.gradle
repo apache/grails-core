@@ -15,12 +15,13 @@
  *  limitations under the License.
  */
 
-// integrationTest is disabled for modules applying this file. Two blockers:
-//   - SiteMesh3 decorator/layout is not compatible with Spring Framework 7.
-//   - Groovy 5 + indy=false: controller action parameters resolve to propertyMissing
-//     on the controller instead of the local, throwing MissingPropertyException after
-//     ControllerActionTransformer wraps the method body. Functional tests (indy=true) pass.
-// Re-enable per module once its blocker is resolved.
+// integrationTest is disabled for modules applying this file.
+// Blocker: Groovy 5 + indy=false drops the scope of controller action parameters/locals
+// after ControllerActionTransformer re-parents the body inside a TryCatchStatement, so they
+// resolve to propertyMissing on the controller and throw MissingPropertyException. Re-running
+// VariableScopeVisitor does not rebind them; this needs an upstream Groovy fix. indy=true passes.
+// Reproducer: https://github.com/jamesfredley/groovy5-controller-action-param-scope-bug
+// Re-enable once the upstream fix lands.
 
 tasks.named('integrationTest') {
     enabled = false
