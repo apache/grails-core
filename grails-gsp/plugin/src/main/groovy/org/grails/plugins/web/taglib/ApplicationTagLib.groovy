@@ -108,7 +108,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      *
      * @attr name REQUIRED the cookie name
      */
-    Closure cookie = { attrs ->
+    def cookie(Map attrs) {
         request.cookies.find { it.name == attrs.name }?.value
     }
 
@@ -119,7 +119,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      *
      * @attr name REQUIRED the header name
      */
-    Closure header = { attrs ->
+    def header(Map attrs) {
         attrs.name ? request.getHeader(attrs.name) : null
     }
 
@@ -132,7 +132,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      * @attr bean the name or the type of a bean in the applicationContext; the type can be an interface or superclass
      * @attr scope the scope name; defaults to pageScope
      */
-    Closure set = { attrs, body ->
+    def set(Map attrs, Closure body) {
         def var = attrs.var
         if (!var) throw new IllegalArgumentException('[var] attribute must be specified to for <g:set>!')
 
@@ -166,7 +166,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      * @attr absolute If set to "true" will prefix the link target address with the value of the grails.serverURL property from Config, or http://localhost:&lt;port&gt; if no value in Config and not running in production.
      * @attr plugin The plugin to look for the resource in
      */
-    Closure resource = { attrs ->
+    def resource(Map attrs) {
         if (!attrs.pluginContextPath && pageScope.pluginContextPath) {
             attrs.pluginContextPath = pageScope.pluginContextPath
         }
@@ -184,7 +184,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      * @attr plugin Optional the name of the grails plugin if the resource is not part of the application
      * @attr uri Optional app-relative URI path of the resource if not using dir/file attributes - only if Resources plugin is in use
      */
-    Closure img = { attrs ->
+    def img(Map attrs) {
         if (!attrs.uri && !attrs.dir) {
             attrs.dir = 'images'
         }
@@ -230,11 +230,10 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
         def linkAttrs
         if (attrs.params instanceof Map && attrs.params.containsKey('attrs')) {
             linkAttrs = attrs.params.remove('attrs').clone()
-        }
-        else {
+        } else {
             linkAttrs = [:]
         }
-        writer <<  '<a href="'
+        writer << '<a href="'
         writer << createLink(attrs).encodeAsHTML()
         writer << '"'
         if (elementId) {
@@ -271,13 +270,13 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
     }
 
     static LINK_WRITERS = [
-        js: { url, constants, attrs ->
-           return "<script src=\"${url}\"${getAttributesToRender(constants, attrs)}></script>"
-        },
+            js: { url, constants, attrs ->
+                return "<script src=\"${url}\"${getAttributesToRender(constants, attrs)}></script>"
+            },
 
-        link: { url, constants, attrs ->
-           return "<link href=\"${url}\"${getAttributesToRender(constants, attrs)}/>"
-        }
+            link: { url, constants, attrs ->
+                return "<link href=\"${url}\"${getAttributesToRender(constants, attrs)}/>"
+            }
     ]
 
     static getAttributesToRender(constants, attrs) {
@@ -292,16 +291,16 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
     }
 
     static SUPPORTED_TYPES = [
-        css: [type: 'text/css', rel: 'stylesheet', media: 'screen, projection'],
-        js: [type: 'text/javascript', writer: 'js'],
+            css: [type: 'text/css', rel: 'stylesheet', media: 'screen, projection'],
+            js: [type: 'text/javascript', writer: 'js'],
 
-        gif: [rel: 'shortcut icon'],
-        jpg: [rel: 'shortcut icon'],
-        png: [rel: 'shortcut icon'],
-        ico: [rel: 'shortcut icon'],
-        appleicon: [rel: 'apple-touch-icon']
+            gif: [rel: 'shortcut icon'],
+            jpg: [rel: 'shortcut icon'],
+            png: [rel: 'shortcut icon'],
+            ico: [rel: 'shortcut icon'],
+            appleicon: [rel: 'apple-touch-icon']
 
-        // @todo add feed link types here too
+            // @todo add feed link types here too
     ]
 
     /**
@@ -313,7 +312,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      * @attr plugin
      * @attr type
      */
-    Closure external = { attrs ->
+    def external(Map attrs) {
         if (!attrs.uri) {
             attrs.uri = resource(attrs).toString()
         }
@@ -325,7 +324,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      * @attr uri
      * @attr type
      */
-    protected renderResourceLink(attrs) {
+    private renderResourceLink(attrs) {
         def uri = attrs.remove('uri')
         def type = attrs.remove('type')
         if (!type) {
@@ -368,12 +367,12 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      * @attr mapping The named URL mapping to use to rewrite the link
      * @attr event Webflow _eventId parameter
      */
-    Closure createLink = { attrs ->
-        return doCreateLink(attrs instanceof  Map ? (Map) attrs : Collections.emptyMap())
+    def createLink(Map attrs) {
+        return doCreateLink(attrs instanceof Map ? (Map) attrs : Collections.emptyMap())
     }
 
     @CompileStatic
-    protected String doCreateLink(Map attrs) {
+    private String doCreateLink(Map attrs) {
         Map urlAttrs = attrs
         if (attrs.url instanceof Map) {
             urlAttrs = (Map) attrs.url
@@ -408,7 +407,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      * @attr name REQUIRED the tag name
      * @attr attrs tag attributes
      */
-    Closure withTag = { attrs, body ->
+    def withTag(Map attrs, Closure body) {
         def writer = out
         writer << "<${attrs.name}"
         attrs.attrs?.each { k, v ->
@@ -417,8 +416,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
                 writer << " $k=\""
                 v()
                 writer << '"'
-            }
-            else {
+            } else {
                 writer << " $k=\"$v\""
             }
         }
@@ -436,7 +434,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      * @attr REQUIRED in The collection to iterate over
      * @attr delimiter The value of the delimiter to use during the join. If no delimiter is specified then ", " (a comma followed by a space) will be used as the delimiter.
      */
-    Closure join = { attrs ->
+    def join(Map attrs) {
         def collection = attrs.'in'
         if (collection == null) {
             throwTagError('Tag ["join"] missing required attribute ["in"]')
@@ -453,7 +451,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      *
      * @attr name REQUIRED the metadata key
      */
-    Closure meta = { attrs ->
+    def meta(Map attrs) {
         if (!attrs.name) {
             throwTagError('Tag ["meta"] missing required attribute ["name"]')
         }
@@ -463,7 +461,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
     /**
      * Filters the url through the RequestDataValueProcessor bean if it is registered.
      */
-    String processedUrl(String link, request) {
+    private String processedUrl(String link, request) {
         if (requestDataValueProcessor == null) {
             return link
         }
@@ -471,7 +469,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
         return requestDataValueProcessor.processUrl(request, link)
     }
 
-    Closure applyCodec = { Map attrs, Closure body ->
+    def applyCodec(Map attrs, Closure body) {
         // encoding is handled in GroovyPage.invokeTag and GroovyPage.captureTagOutput
         body()
     }
@@ -492,7 +490,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      * @attr role ARIA role for alert divs (default: 'alert')
      * @attr dismissible Whether to show a close button (default: true)
      */
-    Closure flashMessages = { attrs ->
+    def flashMessages(Map attrs) {
         if (request.getAttribute('_flashRendered')) {
             return
         }
@@ -503,24 +501,24 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
 
         if (flash.message) {
             renderFlashAlert(
-                    attrs.messageClass ?: flashMessagesMessageClass,
-                    attrs.messageIcon ?: flashMessagesMessageIcon,
+                    (attrs.messageClass ?: flashMessagesMessageClass) as String,
+                    (attrs.messageIcon ?: flashMessagesMessageIcon) as String,
                     flash.message, dismissible, role)
             rendered = true
         }
 
         if (flash.error) {
             renderFlashAlert(
-                    attrs.errorClass ?: flashMessagesErrorClass,
-                    attrs.errorIcon ?: flashMessagesErrorIcon,
+                    (attrs.errorClass ?: flashMessagesErrorClass) as String,
+                    (attrs.errorIcon ?: flashMessagesErrorIcon) as String,
                     flash.error, dismissible, role)
             rendered = true
         }
 
         if (flash.warning) {
             renderFlashAlert(
-                    attrs.warningClass ?: flashMessagesWarningClass,
-                    attrs.warningIcon ?: flashMessagesWarningIcon,
+                    (attrs.warningClass ?: flashMessagesWarningClass) as String,
+                    (attrs.warningIcon ?: flashMessagesWarningIcon) as String,
                     flash.warning, dismissible, role)
             rendered = true
         }

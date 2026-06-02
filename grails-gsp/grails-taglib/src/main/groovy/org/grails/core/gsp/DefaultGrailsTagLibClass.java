@@ -34,6 +34,7 @@ import groovy.lang.MetaProperty;
 import grails.core.gsp.GrailsTagLibClass;
 import org.grails.core.AbstractInjectableGrailsClass;
 import org.grails.core.artefact.gsp.TagLibArtefactHandler;
+import org.grails.taglib.TagMethodInvoker;
 
 /**
  * Default implementation of a tag lib class.
@@ -70,6 +71,7 @@ public class DefaultGrailsTagLibClass extends AbstractInjectableGrailsClass impl
                 tags.add(prop.getName());
             }
         }
+        tags.addAll(TagMethodInvoker.getInvokableTagMethodNames(clazz));
 
         // Also scan declared fields via Java reflection to find Closure-typed tags
         // that may not be reported by the metaclass (e.g., when @CompileStatic is applied

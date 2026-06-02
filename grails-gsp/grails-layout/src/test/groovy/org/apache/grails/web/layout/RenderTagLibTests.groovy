@@ -30,6 +30,7 @@ import org.grails.core.io.MockStringResourceLoader
 import spock.lang.Specification
 
 class RenderTagLibTests  extends Specification implements UrlMappingsUnitTest<RenderTagLibTestUrlMappings> {
+
     void testPageProperty() {
 
         def template = '<g:pageProperty name="foo.bar" />'
