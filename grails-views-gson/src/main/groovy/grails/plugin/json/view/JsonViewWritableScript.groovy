@@ -74,7 +74,7 @@ abstract class JsonViewWritableScript extends AbstractWritableScript implements 
                     out.write(JsonOutput.COMMA)
                 }
             }
-            def jsonDelegate = new grails.plugin.json.builder.StreamingJsonBuilder.StreamingJsonDelegate(out, false, generator)
+            def jsonDelegate = new StreamingJsonBuilder.StreamingJsonDelegate(out, false, generator)
             callable.setDelegate(jsonDelegate)
             callable.call()
             if (!inline) {
@@ -85,7 +85,7 @@ abstract class JsonViewWritableScript extends AbstractWritableScript implements 
 
             this.root = callable
             if (inline) {
-                def jsonDelegate = new grails.plugin.json.builder.StreamingJsonBuilder.StreamingJsonDelegate(out, true, generator)
+                def jsonDelegate = new StreamingJsonBuilder.StreamingJsonDelegate(out, true, generator)
                 callable.setDelegate(jsonDelegate)
                 callable.call()
             }

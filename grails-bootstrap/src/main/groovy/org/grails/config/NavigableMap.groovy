@@ -21,20 +21,17 @@ package org.grails.config
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
+import groovy.util.logging.Slf4j
 import org.codehaus.groovy.runtime.DefaultGroovyMethods
-
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 
 /**
  * @deprecated This class is deprecated to reduce complexity, improve performance, and increase maintainability. Use {@code config.getProperty(String key, Class<T> targetType)} instead.
  */
+@Slf4j
 @Deprecated
 @EqualsAndHashCode
 @CompileStatic
 class NavigableMap implements Map<String, Object>, Cloneable {
-
-    private static final Logger LOG = LoggerFactory.getLogger(NavigableMap)
 
     final NavigableMap rootConfig
     final List<String> path
@@ -478,6 +475,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
     /**
      * @deprecated This class should be avoided due to known performance reasons. Use {@code config.getProperty(String key, Class<T> targetType)} instead of dot based navigation.
      */
+    @Slf4j
     @Deprecated
     @CompileStatic
     static class NullSafeNavigator implements Map<String, Object> {
@@ -487,9 +485,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         NullSafeNavigator(NavigableMap parent, List<String> path) {
             this.parent = parent
             this.path = path
-            if (LOG.isWarnEnabled()) {
-                LOG.warn("Accessing config key '{}' through dot notation has known performance issues, consider using 'config.getProperty(key, targetClass)' instead.", path)
-            }
+            log.warn("Accessing config key '{}' through dot notation has known performance issues, consider using 'config.getProperty(key, targetClass)' instead.", path)
         }
 
         Object getAt(Object key) {
