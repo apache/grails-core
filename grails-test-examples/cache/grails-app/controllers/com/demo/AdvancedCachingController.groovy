@@ -33,9 +33,9 @@ class AdvancedCachingController {
 
     // ========== null value endpoints ==========
 
-    def dataOrNull() {
+    def dataOrNull(String input) {
         try {
-            def data = advancedCachingService.getDataOrNull(params.input)
+            def data = advancedCachingService.getDataOrNull(input)
             render([data: data] as JSON)
         } catch (Exception e) {
             response.status = 500
@@ -45,9 +45,9 @@ class AdvancedCachingController {
 
     // ========== exception handling endpoints ==========
 
-    def dataOrThrow() {
+    def dataOrThrow(String input) {
         try {
-            def data = advancedCachingService.getDataOrThrow(params.input)
+            def data = advancedCachingService.getDataOrThrow(input)
             render([data: data] as JSON)
         } catch (Exception e) {
             response.status = 500
@@ -57,9 +57,9 @@ class AdvancedCachingController {
 
     // ========== collection endpoints ==========
 
-    def listData() {
+    def listData(String category) {
         try {
-            def data = advancedCachingService.getListData(params.category)
+            def data = advancedCachingService.getListData(category)
             render([data: data] as JSON)
         } catch (Exception e) {
             response.status = 500
@@ -67,9 +67,9 @@ class AdvancedCachingController {
         }
     }
 
-    def mapData() {
+    def mapData(String key) {
         try {
-            def data = advancedCachingService.getMapData(params.key)
+            def data = advancedCachingService.getMapData(key)
             render([data: data] as JSON)
         } catch (Exception e) {
             response.status = 500
@@ -79,9 +79,9 @@ class AdvancedCachingController {
 
     // ========== custom key caching endpoints ==========
 
-    def getDataByKey() {
+    def getDataByKey(String key) {
         try {
-            def data = advancedCachingService.getDataByKey(params.key)
+            def data = advancedCachingService.getDataByKey(key)
             render([data: data] as JSON)
         } catch (Exception e) {
             response.status = 500
@@ -111,8 +111,8 @@ class AdvancedCachingController {
         render([status: 'evicted'] as JSON)
     }
 
-    def evictByKey() {
-        advancedCachingService.evictByKey(params.key)
+    def evictByKey(String key) {
+        advancedCachingService.evictByKey(key)
         render([status: 'evicted'] as JSON)
     }
 

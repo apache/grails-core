@@ -69,47 +69,47 @@ class DemoController {
 		render "Value From Service Is \"${basicCachingService.resetData()}\""
 	}
 
-	def cachePut() {
-		def result = basicCachingService.getData(params.key, params.value)
+	def cachePut(String key, String value) {
+		def result = basicCachingService.getData(key, value)
 		render "Result: ${result}"
 	}
 
-	def cacheGet() {
-		def result = basicCachingService.getData(params.key)
+	def cacheGet(String key) {
+		def result = basicCachingService.getData(key)
 		render "Result: ${result}"
 	}
 
-	def cacheEvictAndGet() {
-		basicCachingService.getDataEvict(params.key)
-		def result = basicCachingService.getData(params.key)
+	def cacheEvictAndGet(String key) {
+		basicCachingService.getDataEvict(key)
+		def result = basicCachingService.getData(key)
 		render "Result: ${result}"
 	}
 
-	def cacheEvictAllAndGet() {
+	def cacheEvictAllAndGet(String key) {
 		basicCachingService.getDataEvictAll()
-		def result = basicCachingService.getData(params.key)
+		def result = basicCachingService.getData(key)
 		render "Result: ${result}"
 	}
 
-	def cacheClearAndGet() {
+	def cacheClearAndGet(String key) {
 		grailsCacheAdminService.clearCache('basic')
-		def result = basicCachingService.getData(params.key)
+		def result = basicCachingService.getData(key)
 		render "Result: ${result}"
 	}
 
-	def blockCache() {
-		[counter: params.int('counter')]
+	def blockCache(int counter) {
+		[counter: counter]
 	}
 
-	def renderTag() {
-		[counter: params.int('counter')]
+	def renderTag(int counter) {
+		[counter: counter]
 	}
 
-	def blockCacheTTL() {
-		[counter: params.int('counter'), ttl: params.int('ttl')]
+	def blockCacheTTL(int counter, int ttl) {
+		[counter: counter, ttl: ttl]
 	}
 
-	def renderTagTTL() {
-		[counter: params.int('counter'), ttl: params.int('ttl')]
+	def renderTagTTL(int counter, int ttl) {
+		[counter: counter, ttl: ttl]
 	}
 }

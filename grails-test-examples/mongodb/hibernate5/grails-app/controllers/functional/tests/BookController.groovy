@@ -34,8 +34,8 @@ class BookController {
      */
     def bindParams = ['title']
 
-    def index() {
-        params.max = Math.min(params.int('max', 10), 100)
+    def index(Integer max) {
+        params.max = Math.min(max ?: 10, 100)
         respond Book.list(params), model:[bookCount: Book.count(), coll:Book.getCollection()]
     }
 

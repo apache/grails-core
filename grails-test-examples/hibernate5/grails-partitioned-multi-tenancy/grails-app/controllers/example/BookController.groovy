@@ -43,8 +43,8 @@ class BookController {
         redirect(controller:"book")
     }
 
-    def index() {
-        params.max = Math.min(params.int('max', 10), 100)
+    def index(Integer max) {
+        params.max = Math.min(max ?: 10, 100)
         respond bookService.findBooks(params), model:[bookCount: bookService.countBooks()]
     }
 

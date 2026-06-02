@@ -38,11 +38,11 @@ class TeamController extends RestfulController {
         respond Composite.findByTeamAndPlayer(Team.load(1), Player.load(2))
     }
 
-    def deep() {
-        respond Team.get(params.long('id'))
+    def deep(Long id) {
+        respond Team.get(id)
     }
 
-    def hal() {
+    def hal(Long id) {
         respond Team.findById(params.id, [fetch:[players:'join']])
     }
 }
