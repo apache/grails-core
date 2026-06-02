@@ -25,7 +25,7 @@ import spock.lang.Tag
 
 @Integration
 @Tag('http-client')
-class CompileStaticControllerSpec extends Specification implements HttpClientSupport {
+class CompileStaticControllerIntegrationSpec extends Specification implements HttpClientSupport {
 
     void 'controller with @GrailsCompileStatic can call a default-namespace tag directly'() {
         when:
