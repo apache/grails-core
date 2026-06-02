@@ -426,6 +426,9 @@ class DataBindingTests extends Specification implements ControllerUnitTest<TestC
         b.author != null
         5 == b.author.id
         "Mocked 5" == b.author.name
+
+        cleanup:
+        GroovySystem.metaClassRegistry.removeMetaClass(Author)
     }
 
     void testMultiDBinding() {
