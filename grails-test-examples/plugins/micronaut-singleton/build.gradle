@@ -25,10 +25,6 @@ plugins {
 version = '0.1-SNAPSHOT'
 group = 'com.example.grails.plugins'
 
-// The Micronaut platform ships org.ow2.asm above what the grails-micronaut-bom pins; allow the
-// intentional platform override so validateDependencyVersions passes (apache/grails-core#15677).
-ext.allowedBomOverrides = ['org.ow2.asm:asm', 'org.ow2.asm:asm-util']
-
 apply plugin: 'org.apache.grails.gradle.grails-plugin'
 
 dependencies {

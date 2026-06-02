@@ -225,12 +225,12 @@ ext {
                 'liquibase-hibernate.version': '4.27.0',
                 'liquibase.version'          : '4.27.0',
                 'hibernate.version'          : '5.6.15.Final',
-                // Keep aligned with bomDependencyVersions['groovy.version']; the main bom now uses
-                // Groovy 5, so the micronaut bom must match to avoid validateDependencyVersions
-                // failures from transitive dependencies upgrading groovy-bom past the pinned version.
-                'groovy.version'  : '5.0.7-SNAPSHOT',
                 'spock.version'   : '2.4-groovy-5.0',
                 'protobuf.version': '4.30.2',
+                // The Micronaut platform ships org.ow2.asm 9.10.1, above the 9.9.1 inherited via grails-base-bom.
+                // Pin it here so enforcedPlatform(:grails-micronaut-bom) manages the version that actually resolves,
+                // rather than exempting it per-app via allowedBomOverrides (see #15677 / #15467).
+                'asm.version'     : '9.10.1',
         ]
         combinedVersions += customBomVersions
         customBomDependencies = [
@@ -271,6 +271,8 @@ ext {
                 'groovy-xml'           : "org.apache.groovy:groovy-xml:${combinedVersions['groovy.version']}",
                 'groovy-yaml'          : "org.apache.groovy:groovy-yaml:${combinedVersions['groovy.version']}",
                 'protobuf-java'        : "com.google.protobuf:protobuf-java:${combinedVersions['protobuf.version']}",
+                'asm'                  : "org.ow2.asm:asm:${combinedVersions['asm.version']}",
+                'asm-util'             : "org.ow2.asm:asm-util:${combinedVersions['asm.version']}",
                 'spock-core'           : "org.spockframework:spock-core:${combinedVersions['spock.version']}",
                 'spock-spring'         : "org.spockframework:spock-spring:${combinedVersions['spock.version']}",
         ]
