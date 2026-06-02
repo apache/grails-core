@@ -18,16 +18,15 @@
  */
 package org.grails.forge.cli.command;
 
-import java.util.Locale;
-
 import io.micronaut.context.env.CachedEnvironment;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.annotation.ReflectiveAccess;
-import picocli.CommandLine;
-
 import org.grails.forge.application.OperatingSystem;
 import org.grails.forge.cli.CommonOptionsMixin;
 import org.grails.forge.io.ConsoleOutput;
+import picocli.CommandLine;
+
+import java.util.Locale;
 
 public class BaseCommand implements ConsoleOutput {
 

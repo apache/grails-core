@@ -18,6 +18,11 @@
  */
 package org.grails.forge.build.gradle;
 
+import io.micronaut.core.annotation.NonNull;
+import org.grails.forge.template.Writable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -28,12 +33,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import io.micronaut.core.annotation.NonNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.grails.forge.template.Writable;
 
 public class GradleBuild {
     private static final Logger LOG = LoggerFactory.getLogger(GradleBuild.class);

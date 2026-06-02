@@ -18,33 +18,28 @@
  */
 package org.grails.forge.cli;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
 import io.micronaut.context.BeanContext;
 import io.micronaut.core.annotation.Introspected;
 import io.micronaut.core.beans.BeanIntrospection;
 import io.micronaut.inject.qualifiers.Qualifiers;
-import org.yaml.snakeyaml.Yaml;
-
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.feature.AvailableFeatures;
 import org.grails.forge.feature.DefaultFeature;
 import org.grails.forge.feature.Feature;
 import org.grails.forge.io.ConsoleOutput;
 import org.grails.forge.io.FileSystemOutputHandler;
-import org.grails.forge.options.DevelopmentReloading;
 import org.grails.forge.options.JdkVersion;
 import org.grails.forge.options.Language;
 import org.grails.forge.options.Options;
+import org.grails.forge.options.DevelopmentReloading;
+import org.yaml.snakeyaml.Yaml;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Introspected
 public class CodeGenConfig {

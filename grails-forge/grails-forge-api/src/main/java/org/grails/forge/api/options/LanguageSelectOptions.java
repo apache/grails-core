@@ -18,12 +18,11 @@
  */
 package org.grails.forge.api.options;
 
-import java.util.List;
-
-import io.swagger.v3.oas.annotations.media.Schema;
-
 import org.grails.forge.api.LanguageDTO;
 import org.grails.forge.api.SelectOptionDTO;
+import io.swagger.v3.oas.annotations.media.Schema;
+
+import java.util.List;
 
 @Schema(name = "LanguageSelectOptions")
 public class LanguageSelectOptions extends SelectOptionDTO<LanguageDTO> {

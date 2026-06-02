@@ -18,17 +18,16 @@
  */
 package org.grails.forge.netty.analytics;
 
-import java.util.concurrent.CompletableFuture;
-
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.http.client.annotation.Client;
-
 import org.grails.forge.analytics.Generated;
 import org.grails.forge.api.analytics.AnalyticsOperations;
+
+import java.util.concurrent.CompletableFuture;
 
 @Requires(property = AnalyticsClient.SERVICE_ANALYTICS)
 @Client("analytics")

@@ -21,7 +21,6 @@ package org.grails.forge.api;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.annotation.Get;
 import io.swagger.v3.oas.annotations.Parameter;
-
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.options.FeatureFilter;
 

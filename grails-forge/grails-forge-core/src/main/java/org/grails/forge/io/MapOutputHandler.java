@@ -18,13 +18,13 @@
  */
 package org.grails.forge.io;
 
+import org.grails.forge.template.Template;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
-
-import org.grails.forge.template.Template;
 
 public class MapOutputHandler implements OutputHandler {
 

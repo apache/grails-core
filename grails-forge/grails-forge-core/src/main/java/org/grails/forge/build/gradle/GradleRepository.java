@@ -18,13 +18,13 @@
  */
 package org.grails.forge.build.gradle;
 
+import io.micronaut.core.annotation.NonNull;
+import io.micronaut.core.order.Ordered;
+
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
-import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.order.Ordered;
 
 public interface GradleRepository extends Ordered {
     @NonNull

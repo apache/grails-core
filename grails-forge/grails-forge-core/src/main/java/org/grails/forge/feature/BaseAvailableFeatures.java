@@ -18,6 +18,9 @@
  */
 package org.grails.forge.feature;
 
+import io.micronaut.core.annotation.NonNull;
+import org.grails.forge.application.ApplicationType;
+
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -26,10 +29,6 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import io.micronaut.core.annotation.NonNull;
-
-import org.grails.forge.application.ApplicationType;
 
 public class BaseAvailableFeatures implements AvailableFeatures {
     private final Map<String, Feature> features;

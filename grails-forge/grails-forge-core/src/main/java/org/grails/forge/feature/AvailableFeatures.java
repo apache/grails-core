@@ -18,10 +18,10 @@
  */
 package org.grails.forge.feature;
 
+import io.micronaut.core.annotation.NonNull;
+
 import java.util.Optional;
 import java.util.stream.Stream;
-
-import io.micronaut.core.annotation.NonNull;
 
 public interface AvailableFeatures extends Iterable<String> {
 

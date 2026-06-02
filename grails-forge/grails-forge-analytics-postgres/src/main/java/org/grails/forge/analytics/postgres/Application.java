@@ -18,26 +18,20 @@
  */
 package org.grails.forge.analytics.postgres;
 
-import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.Objects;
-import java.util.Set;
-
-import jakarta.validation.constraints.NotBlank;
-
 import io.micronaut.core.annotation.Creator;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
-import io.micronaut.data.annotation.DateCreated;
-import io.micronaut.data.annotation.GeneratedValue;
-import io.micronaut.data.annotation.Id;
-import io.micronaut.data.annotation.MappedEntity;
-import io.micronaut.data.annotation.Relation;
-
+import io.micronaut.data.annotation.*;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.options.DevelopmentReloading;
 import org.grails.forge.options.GormImpl;
 import org.grails.forge.options.JdkVersion;
+
+import jakarta.validation.constraints.NotBlank;
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.Objects;
+import java.util.Set;
 
 /**
  * Models a generated application.

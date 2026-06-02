@@ -17,13 +17,36 @@
  *  under the License.
  */
 
+import com.diffplug.gradle.spotless.SpotlessExtension
 import io.spring.nohttp.gradle.NoHttpExtension
 
 apply plugin: 'checkstyle'
 apply plugin: 'codenarc'
+apply plugin: 'com.diffplug.spotless'
 apply plugin: 'io.spring.nohttp' // enforce https everywhere
 apply plugin: 'org.apache.grails.gradle.grails-code-style'
-apply plugin: 'org.apache.grails.gradle.grails-code-analysis'
+
+extensions.configure(SpotlessExtension) {
+    // Explicit `it` is required in extension configuration block
+    it.java {
+        target('src/main/java/**/*.java')
+        // Formatters:
+        licenseHeaderFile(rootProject.layout.projectDirectory.file('config/spotless.license.java'))
+    }
+    it.groovy {
+        target('src/main/groovy/**')
+        // Formatters:
+        licenseHeaderFile(rootProject.layout.projectDirectory.file('config/spotless.license.java'))
+    }
+    it.format('javaMisc') {
+        target(
+                'src/main/**/module-info.java',
+                'src/main/**/package-info.java',
+        )
+        // Formatters:
+        licenseHeaderFile(rootProject.layout.projectDirectory.file('config/spotless.license.java'), '\\/\\*\\*')
+    }
+}
 
 extensions.configure(NoHttpExtension) {
     // Explicit `it` is required in extension configuration block
@@ -35,3 +58,6 @@ extensions.configure(NoHttpExtension) {
     )
 }
 
+tasks.named('checkstyleMain') {
+    dependsOn('spotlessCheck')
+}

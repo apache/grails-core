@@ -100,8 +100,8 @@ class GrailsViolationAggregationPluginSpec extends Specification {
         srcFile.parentFile.mkdirs()
         srcFile.text = 'package com.example\nclass AppClass {}'
 
-        // Pre-populate XML reports in the standard consolidated location (build/reports/codestyle/)
-        def checkstyleDir = testProjectDir.resolve('build/reports/codestyle/checkstyle').toFile()
+        // Pre-populate XML reports in the standard consolidated location (build/reports/code-style/)
+        def checkstyleDir = testProjectDir.resolve('build/reports/code-style/checkstyle').toFile()
         checkstyleDir.mkdirs()
         new File(checkstyleDir, 'app-module-checkstyleMain.xml').text = """<?xml version="1.0" encoding="UTF-8"?>
 <checkstyle version="10.0">
@@ -110,7 +110,7 @@ class GrailsViolationAggregationPluginSpec extends Specification {
 </file>
 </checkstyle>
 """
-        def codenarcDir = testProjectDir.resolve('build/reports/codestyle/codenarc').toFile()
+        def codenarcDir = testProjectDir.resolve('build/reports/code-style/codenarc').toFile()
         codenarcDir.mkdirs()
         new File(codenarcDir, 'app-module-codenarcMain.xml').text = """<?xml version="1.0" encoding="UTF-8"?>
 <CodeNarc version="3.1.0">

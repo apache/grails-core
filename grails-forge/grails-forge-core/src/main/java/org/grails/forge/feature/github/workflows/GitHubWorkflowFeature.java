@@ -18,12 +18,12 @@
  */
 package org.grails.forge.feature.github.workflows;
 
-import java.util.Collections;
-import java.util.List;
-
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.feature.Category;
 import org.grails.forge.feature.Feature;
+
+import java.util.Collections;
+import java.util.List;
 
 /**
  * GitHub workflow feature.

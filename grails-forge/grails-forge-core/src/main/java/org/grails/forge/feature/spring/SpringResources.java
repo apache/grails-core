@@ -18,10 +18,7 @@
  */
 package org.grails.forge.feature.spring;
 
-import java.util.Set;
-
 import jakarta.inject.Singleton;
-
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.feature.Category;
@@ -30,6 +27,8 @@ import org.grails.forge.feature.Feature;
 import org.grails.forge.feature.spring.template.springResources;
 import org.grails.forge.options.Options;
 import org.grails.forge.template.RockerTemplate;
+
+import java.util.Set;
 
 @Singleton
 public class SpringResources implements DefaultFeature {

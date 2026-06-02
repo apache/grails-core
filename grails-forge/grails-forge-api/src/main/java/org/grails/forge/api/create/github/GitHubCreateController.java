@@ -18,11 +18,6 @@
  */
 package org.grails.forge.api.create.github;
 
-import java.net.URI;
-import java.util.List;
-
-import jakarta.validation.constraints.Pattern;
-
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
@@ -40,17 +35,20 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.grails.forge.api.DevelopmentReloading;
 import org.grails.forge.api.RequestInfo;
+import org.grails.forge.api.DevelopmentReloading;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.client.github.v3.GitHubRepository;
 import org.grails.forge.options.BuildTool;
 import org.grails.forge.options.GormImpl;
 import org.grails.forge.options.JdkVersion;
 import org.grails.forge.options.ServletImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import jakarta.validation.constraints.Pattern;
+import java.net.URI;
+import java.util.List;
 
 /**
  * GitHub create controller.
@@ -89,24 +87,23 @@ public class GitHubCreateController implements GitHubCreateOperation {
     @Override
     @Get(uri = "/github/{type}/{name}{?features,gorm,servlet,build,reloading,javaVersion,code,state}", produces = MediaType.APPLICATION_JSON)
     @ApiResponses(value = {
-        @ApiResponse(
-                responseCode = "200",
-                description = "Created GitHub repository containing the generated application. In case " +
-                        "the configuration contains launcher URI the redirect to launcher is sent.",
-                content = @Content(
-                        mediaType = MediaType.APPLICATION_JSON
-                )
-        ),
-        @ApiResponse(
-                responseCode = "307",
-                description = "Redirects to GitHub OAuth API to obtain user authorisation code before creating " +
-                        "the GitHub repository."
-        ),
-        @ApiResponse(
-                responseCode = "307",
-                description = "Redirects back to launcher in case of successfully created GitHub repository."
-        )
-    })
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Created GitHub repository containing the generated application. In case " +
+                            "the configuration contains launcher URI the redirect to launcher is sent.",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "307",
+                    description = "Redirects to GitHub OAuth API to obtain user authorisation code before creating " +
+                            "the GitHub repository."
+            ),
+            @ApiResponse(
+                    responseCode = "307",
+                    description = "Redirects back to launcher in case of successfully created GitHub repository."
+            )})
     public HttpResponse<GitHubCreateDTO> createApp(
             @NonNull ApplicationType type,
             @Pattern(regexp = "[\\w\\d-_\\.]+") String name,
@@ -157,15 +154,14 @@ public class GitHubCreateController implements GitHubCreateOperation {
      */
     @Get(uri = "/github{?error,error_description}", produces = MediaType.APPLICATION_JSON)
     @ApiResponses(value = {
-        @ApiResponse(
-                responseCode = "307",
-                description = "Forwarded GitHub OAuth error message."
-        ),
-        @ApiResponse(
-                responseCode = "200",
-                description = "Returns GitHub OAuth application callback error."
-        )
-    })
+            @ApiResponse(
+                    responseCode = "307",
+                    description = "Forwarded GitHub OAuth error message."
+            ),
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Returns GitHub OAuth application callback error."
+            )})
     public HttpResponse<String> handleCallback(
             @Nullable String error,
             @Nullable @QueryValue("error_description") String errorDescription) {

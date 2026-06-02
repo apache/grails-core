@@ -21,8 +21,10 @@ package org.apache.grails.buildsrc
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
+import com.github.spotbugs.snom.SpotBugsTask
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+import groovy.xml.XmlSlurper
 
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
@@ -39,9 +41,6 @@ import org.gradle.api.plugins.quality.Pmd
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.testing.jacoco.tasks.JacocoReport
-
-import com.github.spotbugs.snom.SpotBugsTask
-import groovy.xml.XmlSlurper
 
 /**
  * Root-only convention plugin that aggregates code-style violation XML reports and JaCoCo coverage
@@ -84,9 +83,9 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
             )
         }
 
-        Provider<Directory> violationsDir = project.layout.buildDirectory.dir('reports/violations')
-        Provider<Directory> styleXmlDir = project.layout.buildDirectory.dir('reports/codestyle')
-        Provider<Directory> analysisXmlDir = project.layout.buildDirectory.dir('reports/codeanalysis')
+        def violationsDir = project.layout.buildDirectory.dir('reports/violations')
+        def styleXmlDir = project.layout.buildDirectory.dir('reports/code-style')
+        def analysisXmlDir = project.layout.buildDirectory.dir('reports/code-analysis')
 
         TaskProvider<Task> styleTask = registerStyleAggregation(project, styleXmlDir, violationsDir)
         TaskProvider<Task> analysisTask = registerAnalysisAggregation(project, analysisXmlDir, violationsDir)
@@ -195,24 +194,57 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
         }
     }
 
-    @CompileDynamic
-    private static void parseStyleViolations(Directory styleXmlDir, Directory violationsDir,
-            boolean checkStyleTests, boolean codenarcEnabled, boolean checkstyleEnabled) {
+    private static XmlSlurper createSecureSlurper() {
         def slurper = new XmlSlurper()
         slurper.setFeature('http://apache.org/xml/features/disallow-doctype-decl', true)
         slurper.setFeature('http://apache.org/xml/features/nonvalidating/load-external-dtd', false)
         slurper.setFeature('http://xml.org/sax/features/external-general-entities', false)
         slurper.setFeature('http://xml.org/sax/features/external-parameter-entities', false)
         slurper.setFeature('http://xml.org/sax/features/namespaces', false)
+        return slurper
+    }
 
-        def getModule = { String fileName ->
-            def lastDash = fileName.lastIndexOf('-')
-            lastDash != -1 ? fileName.substring(0, lastDash) : fileName
-        }
+    private static String getModule(String fileName) {
+        def lastDash = fileName.lastIndexOf('-')
+        lastDash != -1 ? fileName.substring(0, lastDash) : fileName
+    }
 
-        def isTestFile = { String fileName ->
-            fileName.toLowerCase().contains('test') || fileName.toLowerCase().contains('integrationtest')
+    private static boolean isTestFile(String fileName) {
+        fileName.toLowerCase().contains('test') || fileName.toLowerCase().contains('integrationtest')
+    }
+
+    @CompileDynamic
+    private static void writeReport(Directory violationsDir, String fileName, List violations, String title) {
+        def outDir = violationsDir.asFile
+        outDir.mkdirs()
+        def reportFile = new File(outDir, fileName)
+        def out = new StringBuilder()
+        out.append("# ${title}\n")
+        out.append("Generated on: ${LocalDateTime.now().format(DateTimeFormatter.ofPattern('yyyy-MM-dd HH:mm:ss'))}\n\n")
+
+        if (violations.isEmpty()) {
+            out.append('No violations found! 🎉\n')
+        } else {
+            def uniqueViolations = violations.unique().sort { v -> "${v.module}:${v.className}:${v.line}" }
+            def groupedByModule = uniqueViolations.groupBy { it.module }.sort()
+            groupedByModule.each { module, modViolations ->
+                out.append("## Module: ${module}\n")
+                out.append('| Class | Tool | Violation | Line | Message |\n')
+                out.append('| :--- | :--- | :--- | :--- | :--- |\n')
+                modViolations.each { v ->
+                    out.append("| ${v.className} | ${v.tool} | ${v.type} | ${v.line} | ${v.message.replaceAll(/\|/, '\\|')} |\n")
+                }
+                out.append('\n')
+            }
         }
+        reportFile.text = out.toString()
+        LOGGER.lifecycle("Aggregated report generated: ${reportFile.absolutePath}")
+    }
+
+    @CompileDynamic
+    private static void parseStyleViolations(Directory styleXmlDir, Directory violationsDir,
+            boolean checkStyleTests, boolean codenarcEnabled, boolean checkstyleEnabled) {
+        def slurper = createSecureSlurper()
 
         def shouldSkipClass = { boolean includeTests, String className, String filePath = null ->
             if (includeTests) {
@@ -222,33 +254,6 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
                 return true
             }
             !filePath && (className.contains('Spec') || className.contains('Test') || className.contains('Tests'))
-        }
-
-        def writeReport = { String fileName, List violations, String title ->
-            def outDir = violationsDir.asFile
-            outDir.mkdirs()
-            def reportFile = new File(outDir, fileName)
-            def out = new StringBuilder()
-            out.append("# ${title}\n")
-            out.append("Generated on: ${LocalDateTime.now().format(DateTimeFormatter.ofPattern('yyyy-MM-dd HH:mm:ss'))}\n\n")
-
-            if (violations.isEmpty()) {
-                out.append('No violations found! 🎉\n')
-            } else {
-                def uniqueViolations = violations.unique().sort { v -> "${v.module}:${v.className}:${v.line}" }
-                def groupedByModule = uniqueViolations.groupBy { it.module }.sort()
-                groupedByModule.each { module, modViolations ->
-                    out.append("## Module: ${module}\n")
-                    out.append('| Class | Tool | Violation | Line | Message |\n')
-                    out.append('| :--- | :--- | :--- | :--- | :--- |\n')
-                    modViolations.each { v ->
-                        out.append("| ${v.className} | ${v.tool} | ${v.type} | ${v.line} | ${v.message.replaceAll(/\|/, '\\|')} |\n")
-                    }
-                    out.append('\n')
-                }
-            }
-            reportFile.text = out.toString()
-            LOGGER.lifecycle("Aggregated report generated: ${reportFile.absolutePath}")
         }
 
         // CodeNarc
@@ -284,7 +289,7 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
                 }
             }
         }
-        writeReport('CODENARC_VIOLATIONS.md', codenarcViolations, 'CodeNarc Violations Summary')
+        writeReport(violationsDir, 'CODENARC_VIOLATIONS.md', codenarcViolations, 'CodeNarc Violations Summary')
 
         // Checkstyle
         def checkstyleViolations = []
@@ -320,60 +325,19 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
                 }
             }
         }
-        writeReport('CHECKSTYLE_VIOLATIONS.md', checkstyleViolations, 'Checkstyle Violations Summary')
+        writeReport(violationsDir, 'CHECKSTYLE_VIOLATIONS.md', checkstyleViolations, 'Checkstyle Violations Summary')
     }
 
     @CompileDynamic
     private static void parseAnalysisViolations(Directory analysisXmlDir, Directory violationsDir,
             boolean checkAnalysisTests, boolean pmdEnabled, boolean spotbugsEnabled) {
-        def slurper = new XmlSlurper()
-        slurper.setFeature('http://apache.org/xml/features/disallow-doctype-decl', true)
-        slurper.setFeature('http://apache.org/xml/features/nonvalidating/load-external-dtd', false)
-        slurper.setFeature('http://xml.org/sax/features/external-general-entities', false)
-        slurper.setFeature('http://xml.org/sax/features/external-parameter-entities', false)
-        slurper.setFeature('http://xml.org/sax/features/namespaces', false)
-
-        def getModule = { String fileName ->
-            def lastDash = fileName.lastIndexOf('-')
-            lastDash != -1 ? fileName.substring(0, lastDash) : fileName
-        }
-
-        def isTestFile = { String fileName ->
-            fileName.toLowerCase().contains('test') || fileName.toLowerCase().contains('integrationtest')
-        }
+        def slurper = createSecureSlurper()
 
         def shouldSkipClass = { boolean includeTests, String className ->
             if (includeTests) {
                 return false
             }
             className.contains('Spec') || className.contains('Test') || className.contains('Tests')
-        }
-
-        def writeReport = { String fileName, List violations, String title ->
-            def outDir = violationsDir.asFile
-            outDir.mkdirs()
-            def reportFile = new File(outDir, fileName)
-            def out = new StringBuilder()
-            out.append("# ${title}\n")
-            out.append("Generated on: ${LocalDateTime.now().format(DateTimeFormatter.ofPattern('yyyy-MM-dd HH:mm:ss'))}\n\n")
-
-            if (violations.isEmpty()) {
-                out.append('No violations found! 🎉\n')
-            } else {
-                def uniqueViolations = violations.unique().sort { v -> "${v.module}:${v.className}:${v.line}" }
-                def groupedByModule = uniqueViolations.groupBy { it.module }.sort()
-                groupedByModule.each { module, modViolations ->
-                    out.append("## Module: ${module}\n")
-                    out.append('| Class | Tool | Violation | Line | Message |\n')
-                    out.append('| :--- | :--- | :--- | :--- | :--- |\n')
-                    modViolations.each { v ->
-                        out.append("| ${v.className} | ${v.tool} | ${v.type} | ${v.line} | ${v.message.replaceAll(/\|/, '\\|')} |\n")
-                    }
-                    out.append('\n')
-                }
-            }
-            reportFile.text = out.toString()
-            LOGGER.lifecycle("Aggregated report generated: ${reportFile.absolutePath}")
         }
 
         // PMD
@@ -404,7 +368,7 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
                 }
             }
         }
-        writeReport('PMD_VIOLATIONS.md', pmdViolations, 'PMD Violations Summary')
+        writeReport(violationsDir, 'PMD_VIOLATIONS.md', pmdViolations, 'PMD Violations Summary')
 
         // SpotBugs
         def spotbugsViolations = []
@@ -432,7 +396,7 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
                 }
             }
         }
-        writeReport('SPOTBUGS_VIOLATIONS.md', spotbugsViolations, 'SpotBugs Violations Summary')
+        writeReport(violationsDir, 'SPOTBUGS_VIOLATIONS.md', spotbugsViolations, 'SpotBugs Violations Summary')
     }
 
     @CompileDynamic

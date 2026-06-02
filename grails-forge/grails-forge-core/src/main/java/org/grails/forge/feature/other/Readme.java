@@ -18,16 +18,8 @@
  */
 package org.grails.forge.feature.other;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import jakarta.inject.Singleton;
-
 import io.micronaut.core.annotation.NonNull;
-
+import jakarta.inject.Singleton;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.feature.DefaultFeature;
@@ -39,6 +31,12 @@ import org.grails.forge.options.Options;
 import org.grails.forge.template.RockerWritable;
 import org.grails.forge.template.Template;
 import org.grails.forge.template.Writable;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Singleton
 public class Readme implements DefaultFeature {

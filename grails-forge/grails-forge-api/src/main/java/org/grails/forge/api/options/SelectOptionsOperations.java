@@ -18,10 +18,9 @@
  */
 package org.grails.forge.api.options;
 
-import io.swagger.v3.oas.annotations.Parameter;
-
 import org.grails.forge.api.RequestInfo;
 import org.grails.forge.api.SelectOptionsDTO;
+import io.swagger.v3.oas.annotations.Parameter;
 
 public interface SelectOptionsOperations {
     SelectOptionsDTO selectOptions(@Parameter(hidden = true) RequestInfo serverURL);

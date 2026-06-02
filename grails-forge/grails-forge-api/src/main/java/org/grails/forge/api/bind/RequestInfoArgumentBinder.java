@@ -18,20 +18,18 @@
  */
 package org.grails.forge.api.bind;
 
-import java.util.Locale;
-import java.util.Optional;
-
-import jakarta.inject.Singleton;
-
 import io.micronaut.core.convert.ArgumentConversionContext;
 import io.micronaut.core.io.socket.SocketUtils;
 import io.micronaut.core.type.Argument;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.bind.binders.TypedRequestArgumentBinder;
-
-import org.grails.forge.api.GrailsForgeConfiguration;
 import org.grails.forge.api.RequestInfo;
+import org.grails.forge.api.GrailsForgeConfiguration;
+import jakarta.inject.Singleton;
+
+import java.util.Locale;
+import java.util.Optional;
 
 /**
  * Binds the Server URL.
@@ -76,8 +74,8 @@ public class RequestInfoArgumentBinder implements TypedRequestArgumentBinder<Req
                 return "https://" + url + cp;
             }
         } else {
-            String hostname = request.getUri().getHost();
-            String host;
+           String hostname = request.getUri().getHost();
+           String host;
             if (hostname != null) {
                 host = hostname;
             } else {

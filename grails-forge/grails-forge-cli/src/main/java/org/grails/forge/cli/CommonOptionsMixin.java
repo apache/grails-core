@@ -19,10 +19,9 @@
 package org.grails.forge.cli;
 
 import io.micronaut.core.annotation.ReflectiveAccess;
+import org.grails.forge.cli.util.GrailsVersionProvider;
 import picocli.CommandLine;
 import picocli.CommandLine.Option;
-
-import org.grails.forge.cli.util.GrailsVersionProvider;
 
 /**
  * Mixin that adds help, version and other common options to a command. Example usage:

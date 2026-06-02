@@ -18,12 +18,11 @@
  */
 package org.grails.forge.api.analytics;
 
-import java.util.concurrent.CompletableFuture;
-
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.http.HttpStatus;
-
 import org.grails.forge.analytics.Generated;
+
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Interface to implement to provide analytics.

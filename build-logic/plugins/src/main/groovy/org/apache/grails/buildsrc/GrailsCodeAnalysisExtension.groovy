@@ -30,13 +30,13 @@ import org.gradle.api.model.ObjectFactory
 class GrailsCodeAnalysisExtension {
 
     /**
-     * Defaults to project.rootProject.buildDir/codeanalysis/pmd.
+     * Defaults to rootProject.layout.buildDirectory/code-analysis/pmd.
      * Directory for PMD configuration files (e.g. pmd.xml).
      */
     final DirectoryProperty pmdDirectory
 
     /**
-     * Defaults to rootProject.buildDir/reports/codeanalysis.
+     * Defaults to rootProject.layout.buildDirectory/reports/code-analysis.
      * PMD and SpotBugs XML reports will be written here.
      */
     final DirectoryProperty reportsDirectory
@@ -44,10 +44,10 @@ class GrailsCodeAnalysisExtension {
     @Inject
     GrailsCodeAnalysisExtension(ObjectFactory objects, Project project) {
         pmdDirectory = objects.directoryProperty().convention(
-                project.rootProject.layout.buildDirectory.dir('codeanalysis/pmd')
+                project.rootProject.layout.buildDirectory.dir('code-analysis/pmd')
         )
         reportsDirectory = objects.directoryProperty().convention(
-                project.rootProject.layout.buildDirectory.dir('reports/codeanalysis')
+                project.rootProject.layout.buildDirectory.dir('reports/code-analysis')
         )
     }
 }

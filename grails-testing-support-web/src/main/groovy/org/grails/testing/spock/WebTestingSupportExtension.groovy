@@ -36,6 +36,7 @@ class WebTestingSupportExtension extends AbstractGlobalExtension {
     WebCleanupInterceptor webCleanupInterceptor = new WebCleanupInterceptor()
     WebCleanupSpecInterceptor webCleanupSpecInterceptor = new WebCleanupSpecInterceptor()
     UrlMappingSetupSpecInterceptor urlMappingSetupSpecInterceptor = new UrlMappingSetupSpecInterceptor()
+    UrlMappingCleanupInterceptor urlMappingCleanupInterceptor = new UrlMappingCleanupInterceptor()
     InterceptorSetupSpecInterceptor interceptorSetupSpecInterceptor = new InterceptorSetupSpecInterceptor()
 
     void visitSpec(SpecInfo spec) {
@@ -48,6 +49,8 @@ class WebTestingSupportExtension extends AbstractGlobalExtension {
 
         if (UrlMappingsUnitTest.isAssignableFrom(spec.reflection)) {
             spec.addSetupSpecInterceptor(urlMappingSetupSpecInterceptor)
+            spec.addSetupInterceptor(urlMappingSetupSpecInterceptor)
+            spec.addCleanupInterceptor(urlMappingCleanupInterceptor)
         }
 
         if (InterceptorUnitTest.isAssignableFrom(spec.reflection)) {

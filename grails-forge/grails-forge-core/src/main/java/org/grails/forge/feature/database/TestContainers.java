@@ -18,13 +18,9 @@
  */
 package org.grails.forge.feature.database;
 
-import java.util.Optional;
-
-import jakarta.inject.Singleton;
-
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
-
+import jakarta.inject.Singleton;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
@@ -34,6 +30,8 @@ import org.grails.forge.feature.config.ApplicationConfiguration;
 import org.grails.forge.feature.config.Configuration;
 import org.grails.forge.feature.test.Spock;
 import org.grails.forge.template.StringTemplate;
+
+import java.util.Optional;
 
 @Singleton
 public class TestContainers implements Feature {

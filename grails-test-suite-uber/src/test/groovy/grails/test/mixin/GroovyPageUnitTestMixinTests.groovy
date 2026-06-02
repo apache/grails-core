@@ -28,7 +28,7 @@ import spock.lang.Specification
  */
 class GroovyPageUnitTestMixinTests extends Specification implements GrailsWebUnitTest {
 
-    void setupSpec() {
+    void setup() {
         mockTagLib(FooTagLib)
     }
 

@@ -18,14 +18,8 @@
  */
 package org.grails.forge.feature.view;
 
-import java.util.Arrays;
-import java.util.Map;
-import java.util.Set;
-
-import jakarta.inject.Singleton;
-
 import io.micronaut.core.annotation.NonNull;
-
+import jakarta.inject.Singleton;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
@@ -37,6 +31,10 @@ import org.grails.forge.feature.sitemesh3.Sitemesh3;
 import org.grails.forge.feature.web.GrailsWeb;
 import org.grails.forge.options.Options;
 import org.grails.forge.template.URLTemplate;
+
+import java.util.Arrays;
+import java.util.Map;
+import java.util.Set;
 
 @Singleton
 public class GrailsGsp implements DefaultFeature {

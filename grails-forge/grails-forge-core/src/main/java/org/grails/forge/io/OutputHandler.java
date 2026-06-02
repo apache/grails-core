@@ -18,10 +18,10 @@
  */
 package org.grails.forge.io;
 
+import org.grails.forge.template.Template;
+
 import java.io.Closeable;
 import java.io.IOException;
-
-import org.grails.forge.template.Template;
 
 public interface OutputHandler extends Closeable {
 

@@ -18,12 +18,6 @@
  */
 package org.grails.forge.feature;
 
-import java.util.ArrayList;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.feature.lang.LanguageFeature;
 import org.grails.forge.feature.reloading.ReloadingFeature;
@@ -32,6 +26,12 @@ import org.grails.forge.options.GormImpl;
 import org.grails.forge.options.JdkVersion;
 import org.grails.forge.options.Options;
 import org.grails.forge.util.VersionInfo;
+
+import java.util.ArrayList;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class Features extends ArrayList<String> {
 

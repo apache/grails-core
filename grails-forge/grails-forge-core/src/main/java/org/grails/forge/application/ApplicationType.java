@@ -18,10 +18,10 @@
  */
 package org.grails.forge.application;
 
-import java.util.Locale;
-
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.naming.Named;
+
+import java.util.Locale;
 
 public enum ApplicationType implements Named {
 

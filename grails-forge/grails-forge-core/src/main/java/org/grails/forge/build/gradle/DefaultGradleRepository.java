@@ -18,12 +18,12 @@
  */
 package org.grails.forge.build.gradle;
 
+import io.micronaut.core.annotation.NonNull;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
-
-import io.micronaut.core.annotation.NonNull;
 
 public class DefaultGradleRepository implements GradleRepository {
     private final int order;

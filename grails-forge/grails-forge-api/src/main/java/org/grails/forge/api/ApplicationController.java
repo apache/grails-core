@@ -18,16 +18,6 @@
  */
 package org.grails.forge.api;
 
-import java.io.OutputStream;
-import java.io.Writer;
-import java.net.URI;
-import java.nio.charset.Charset;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
-
 import io.micronaut.context.MessageSource;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.io.Writable;
@@ -37,6 +27,12 @@ import io.micronaut.http.MediaType;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Get;
 import io.micronaut.http.annotation.Produces;
+import org.grails.forge.application.ApplicationType;
+import org.grails.forge.application.OperatingSystem;
+import org.grails.forge.options.*;
+import org.grails.forge.template.RockerWritable;
+import org.grails.forge.template.api.grailsForgeApi;
+import org.grails.forge.util.VersionInfo;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.info.Info;
@@ -44,16 +40,15 @@ import io.swagger.v3.oas.annotations.info.License;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
-import org.grails.forge.application.ApplicationType;
-import org.grails.forge.application.OperatingSystem;
-import org.grails.forge.options.FeatureFilter;
-import org.grails.forge.options.GormImpl;
-import org.grails.forge.options.JdkVersion;
-import org.grails.forge.options.Options;
-import org.grails.forge.options.ServletImpl;
-import org.grails.forge.template.RockerWritable;
-import org.grails.forge.template.api.grailsForgeApi;
-import org.grails.forge.util.VersionInfo;
+import java.io.OutputStream;
+import java.io.Writer;
+import java.net.URI;
+import java.nio.charset.Charset;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Main interface on the Grails Application Forge API.

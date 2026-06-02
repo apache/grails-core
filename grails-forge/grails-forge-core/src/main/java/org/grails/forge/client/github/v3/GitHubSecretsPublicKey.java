@@ -47,3 +47,4 @@ public class GitHubSecretsPublicKey {
         return keyId;
     }
 }
+

@@ -18,15 +18,7 @@
  */
 package org.grails.forge.feature;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.ListIterator;
-import java.util.Set;
-
 import io.micronaut.core.annotation.Nullable;
-
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.OperatingSystem;
 import org.grails.forge.feature.reloading.ReloadingFeature;
@@ -34,6 +26,8 @@ import org.grails.forge.io.ConsoleOutput;
 import org.grails.forge.options.DevelopmentReloading;
 import org.grails.forge.options.JdkVersion;
 import org.grails.forge.options.Options;
+
+import java.util.*;
 
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.toSet;

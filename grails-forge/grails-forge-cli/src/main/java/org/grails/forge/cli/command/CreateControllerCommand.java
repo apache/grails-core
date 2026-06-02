@@ -18,15 +18,10 @@
  */
 package org.grails.forge.cli.command;
 
-import java.io.IOException;
-
-import jakarta.inject.Inject;
-
 import io.micronaut.context.annotation.Parameter;
 import io.micronaut.core.annotation.ReflectiveAccess;
 import io.micronaut.core.util.functional.ThrowingSupplier;
-import picocli.CommandLine;
-
+import jakarta.inject.Inject;
 import org.grails.forge.application.Project;
 import org.grails.forge.cli.CodeGenConfig;
 import org.grails.forge.cli.command.templates.controller;
@@ -36,6 +31,9 @@ import org.grails.forge.io.OutputHandler;
 import org.grails.forge.template.RenderResult;
 import org.grails.forge.template.RockerTemplate;
 import org.grails.forge.template.TemplateRenderer;
+import picocli.CommandLine;
+
+import java.io.IOException;
 
 @CommandLine.Command(name = CreateControllerCommand.NAME, description = "Creates a Grails Controller")
 public class CreateControllerCommand extends CodeGenCommand {

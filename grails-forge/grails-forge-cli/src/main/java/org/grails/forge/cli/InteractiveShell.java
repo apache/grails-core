@@ -18,9 +18,6 @@
  */
 package org.grails.forge.cli;
 
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
-
 import org.fusesource.jansi.AnsiConsole;
 import org.jline.reader.EndOfFileException;
 import org.jline.reader.LineReader;
@@ -33,6 +30,9 @@ import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
 import picocli.CommandLine;
 import picocli.shell.jline3.PicocliJLineCompleter;
+
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
 
 import static picocli.CommandLine.Help.Ansi.AUTO;
 

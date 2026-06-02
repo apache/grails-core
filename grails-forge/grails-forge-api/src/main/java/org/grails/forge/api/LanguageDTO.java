@@ -25,12 +25,11 @@ import io.micronaut.core.annotation.Introspected;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.naming.Described;
 import io.micronaut.core.naming.Named;
-import io.swagger.v3.oas.annotations.media.Schema;
-
 import org.grails.forge.defaults.IncludesDefaults;
 import org.grails.forge.defaults.LanguageDefaults;
 import org.grails.forge.options.Language;
 import org.grails.forge.util.NameUtils;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * DTO objects for {@link Language}.

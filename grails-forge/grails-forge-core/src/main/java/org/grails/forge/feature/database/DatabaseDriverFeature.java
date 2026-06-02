@@ -18,13 +18,13 @@
  */
 package org.grails.forge.feature.database;
 
-import java.util.Collections;
-import java.util.Map;
-
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.feature.Category;
 import org.grails.forge.feature.FeatureContext;
 import org.grails.forge.feature.OneOfFeature;
+
+import java.util.Collections;
+import java.util.Map;
 
 public abstract class DatabaseDriverFeature implements OneOfFeature {
 

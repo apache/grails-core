@@ -18,14 +18,14 @@
  */
 package org.grails.forge.api;
 
+import io.micronaut.context.annotation.ConfigurationProperties;
+import io.micronaut.context.env.Environment;
+import io.micronaut.core.annotation.Nullable;
+
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.util.Optional;
-
-import io.micronaut.context.annotation.ConfigurationProperties;
-import io.micronaut.context.env.Environment;
-import io.micronaut.core.annotation.Nullable;
 
 /**
  * Allows configuration of the the links exposed in URLs.

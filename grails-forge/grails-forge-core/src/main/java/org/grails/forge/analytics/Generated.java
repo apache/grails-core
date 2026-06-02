@@ -18,20 +18,16 @@
  */
 package org.grails.forge.analytics;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Objects;
-
 import io.micronaut.core.annotation.Creator;
 import io.micronaut.core.annotation.Introspected;
 import io.micronaut.core.annotation.NonNull;
-
 import org.grails.forge.application.ApplicationType;
-import org.grails.forge.options.DevelopmentReloading;
-import org.grails.forge.options.GormImpl;
-import org.grails.forge.options.JdkVersion;
-import org.grails.forge.options.ServletImpl;
+import org.grails.forge.options.*;
 import org.grails.forge.util.VersionInfo;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Objects;
 
 @Introspected
 public class Generated {

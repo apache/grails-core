@@ -18,14 +18,14 @@
  */
 package org.grails.forge.analytics.postgres;
 
-import java.util.Objects;
-
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.data.annotation.GeneratedValue;
 import io.micronaut.data.annotation.Id;
 import io.micronaut.data.annotation.MappedEntity;
 import io.micronaut.data.annotation.Relation;
+
+import java.util.Objects;
 
 /**
  * Models a selected application feature.

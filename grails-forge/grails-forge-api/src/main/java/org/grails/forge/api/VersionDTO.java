@@ -18,12 +18,11 @@
  */
 package org.grails.forge.api;
 
-import java.util.Map;
-
 import io.micronaut.core.annotation.Introspected;
+import org.grails.forge.util.VersionInfo;
 import io.swagger.v3.oas.annotations.media.Schema;
 
-import org.grails.forge.util.VersionInfo;
+import java.util.Map;
 
 /**
  * Information about the application.

@@ -18,13 +18,12 @@
  */
 package org.grails.forge.build.dependencies;
 
-import java.util.Arrays;
-import java.util.Optional;
-
-import jakarta.inject.Singleton;
-
 import io.micronaut.context.annotation.Primary;
 import io.micronaut.core.annotation.NonNull;
+import jakarta.inject.Singleton;
+
+import java.util.Arrays;
+import java.util.Optional;
 
 @Singleton
 @Primary

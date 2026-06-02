@@ -18,16 +18,14 @@
  */
 package org.grails.forge.build.gradle;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
-import jakarta.inject.Singleton;
-
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.order.OrderUtil;
-
+import jakarta.inject.Singleton;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.options.BuildTool;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Singleton
 public class GradleBuildCreator {

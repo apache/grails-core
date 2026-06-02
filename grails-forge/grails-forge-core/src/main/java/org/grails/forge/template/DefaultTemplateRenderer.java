@@ -18,12 +18,12 @@
  */
 package org.grails.forge.template;
 
+import org.grails.forge.io.OutputHandler;
+
 import java.io.IOException;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import org.grails.forge.io.OutputHandler;
 
 public class DefaultTemplateRenderer implements TemplateRenderer {
 

@@ -18,12 +18,8 @@
  */
 package org.grails.forge.feature.lang.groovy;
 
-import java.util.Set;
-
-import jakarta.inject.Singleton;
-
 import io.micronaut.core.annotation.Nullable;
-
+import jakarta.inject.Singleton;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.gradle.GradlePlugin;
@@ -33,6 +29,8 @@ import org.grails.forge.feature.grails.templates.applicationController;
 import org.grails.forge.feature.grails.templates.plugin;
 import org.grails.forge.options.Options;
 import org.grails.forge.template.RockerTemplate;
+
+import java.util.Set;
 
 @Singleton
 public class GrailsApplication implements GrailsApplicationFeature, DefaultFeature {
