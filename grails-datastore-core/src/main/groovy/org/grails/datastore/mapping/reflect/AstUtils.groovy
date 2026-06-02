@@ -245,18 +245,24 @@ class AstUtils {
     }
 
     static void processVariableScopes(SourceUnit source, ClassNode classNode, MethodNode methodNode) {
-        // Groovy 5 canonicalization throws NPE from VariableScopeVisitor (e.g. on DataServiceRoutingProductDataService).
-        // Swallow it - the transform has already produced valid bytecode.
-        try {
-            VariableScopeVisitor scopeVisitor = new VariableScopeVisitor(source)
-            if (methodNode == null) {
-                scopeVisitor.visitClass(classNode)
-            } else {
-                scopeVisitor.prepareVisit(classNode)
-                scopeVisitor.visitMethod(methodNode)
-            }
-        } catch (NullPointerException ignored) {
-            // Groovy 5 VariableScopeVisitor NPE - upstream bug, see comment above
+        VariableScopeVisitor scopeVisitor = new VariableScopeVisitor(source)
+        if (methodNode == null) {
+            scopeVisitor.visitClass(classNode)
+            return
+        }
+        scopeVisitor.prepareVisit(classNode)
+        if (methodNode.exceptions == null) {
+            // Groovy 5's VariableScopeVisitor reads the method's exceptions array without a null check, and AST
+            // transforms routinely create methods via ClassNode.addMethod(..., null, ...). MethodNode.exceptions is
+            // final, so recompute scopes on a proxy that shares the same parameters and code but carries an empty
+            // exceptions array, then copy the computed scope back onto the real method.
+            MethodNode proxy = new MethodNode(methodNode.name, methodNode.modifiers, methodNode.returnType,
+                    methodNode.parameters, ClassNode.EMPTY_ARRAY, methodNode.code)
+            proxy.declaringClass = methodNode.declaringClass
+            scopeVisitor.visitMethod(proxy)
+            methodNode.variableScope = proxy.variableScope
+        } else {
+            scopeVisitor.visitMethod(methodNode)
         }
     }
 

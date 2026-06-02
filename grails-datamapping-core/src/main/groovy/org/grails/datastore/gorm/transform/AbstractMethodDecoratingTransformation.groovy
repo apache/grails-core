@@ -36,7 +36,6 @@ import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.Statement
 import org.codehaus.groovy.ast.tools.GenericsUtils
-import org.codehaus.groovy.classgen.VariableScopeVisitor
 import org.codehaus.groovy.control.ErrorCollector
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.sc.StaticCompileTransformation
@@ -356,14 +355,8 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
         classNode.addMethod(renamedMethodNode)
 
         // Use a dummy source unit to process the variable scopes to avoid the issue where this is run twice producing an error.
-        // Groovy 5 VariableScopeVisitor NPE: see AstUtils.processVariableScopes for the upstream bug.
-        try {
-            VariableScopeVisitor scopeVisitor = new VariableScopeVisitor(new SourceUnit('dummy', 'dummy', source.getConfiguration(), source.getClassLoader(), new ErrorCollector(source.getConfiguration())))
-            scopeVisitor.prepareVisit(classNode)
-            scopeVisitor.visitMethod(renamedMethodNode)
-        } catch (NullPointerException ignored) {
-            // Groovy 5 VariableScopeVisitor NPE - upstream bug
-        }
+        SourceUnit dummySource = new SourceUnit('dummy', 'dummy', source.getConfiguration(), source.getClassLoader(), new ErrorCollector(source.getConfiguration()))
+        processVariableScopes(dummySource, classNode, renamedMethodNode)
 
         return renamedMethodNode
     }

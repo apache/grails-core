@@ -1507,18 +1507,24 @@ public class GrailsASTUtils {
     }
 
     public static void processVariableScopes(SourceUnit source, ClassNode classNode, MethodNode methodNode) {
-        // Groovy 5 VariableScopeVisitor NPE on certain Grails AST transformation outputs.
-        // See org.grails.datastore.mapping.reflect.AstUtils.processVariableScopes for context.
-        try {
-            VariableScopeVisitor scopeVisitor = new VariableScopeVisitor(source);
-            if (methodNode == null) {
-                scopeVisitor.visitClass(classNode);
-            } else {
-                scopeVisitor.prepareVisit(classNode);
-                scopeVisitor.visitMethod(methodNode);
-            }
-        } catch (NullPointerException ignored) {
-            // Groovy 5 VariableScopeVisitor NPE - upstream bug
+        VariableScopeVisitor scopeVisitor = new VariableScopeVisitor(source);
+        if (methodNode == null) {
+            scopeVisitor.visitClass(classNode);
+            return;
+        }
+        scopeVisitor.prepareVisit(classNode);
+        if (methodNode.getExceptions() == null) {
+            // Groovy 5's VariableScopeVisitor reads the method's exceptions array without a null check, and AST
+            // transforms routinely create methods via ClassNode.addMethod(..., null, ...). MethodNode.exceptions is
+            // final, so recompute scopes on a proxy that shares the same parameters and code but carries an empty
+            // exceptions array, then copy the computed scope back onto the real method.
+            MethodNode proxy = new MethodNode(methodNode.getName(), methodNode.getModifiers(), methodNode.getReturnType(),
+                    methodNode.getParameters(), ClassNode.EMPTY_ARRAY, methodNode.getCode());
+            proxy.setDeclaringClass(methodNode.getDeclaringClass());
+            scopeVisitor.visitMethod(proxy);
+            methodNode.setVariableScope(proxy.getVariableScope());
+        } else {
+            scopeVisitor.visitMethod(methodNode);
         }
     }
 
