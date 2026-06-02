@@ -90,7 +90,7 @@ class Project {
     }
 }
 ''')
-        manager.addAllDomainClasses(list)
+        manager.registerDomainClasses(list as Class[])
     }
 
     def setup() {
