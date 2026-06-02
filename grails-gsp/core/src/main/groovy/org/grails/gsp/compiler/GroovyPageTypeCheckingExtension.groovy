@@ -79,12 +79,7 @@ class GroovyPageTypeCheckingExtension extends GroovyTypeCheckingExtensionSupport
             if (currentScope.dynamicProperties.contains(objectExpression)) {
                 return makeDynamic(call)
             }
-            // Groovy 5+ (GROOVY-12041): when the compiled GSP page inherits
-            // getProperty(String) from its base class, the unresolvedVariable /
-            // unresolvedProperty callback no longer fires for a taglib namespace
-            // such as 'g', so the receiver is never recorded in dynamicProperties
-            // and the node-identity check above cannot match. Fall back to
-            // matching the receiver by name against the allowed taglib namespaces.
+            // GROOVY-12041: fall back to matching the receiver by name against allowed taglib namespaces.
             String namespaceName = null
             if (objectExpression instanceof VariableExpression) {
                 namespaceName = ((VariableExpression) objectExpression).name

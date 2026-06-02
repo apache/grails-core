@@ -400,10 +400,7 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
                         encodeEmbeddedCollectionUpdate(access, sets, new Document(), (Association) prop, v)
                     }
                     else {
-                        // Match the cast pattern used at lines 267-268 / 358-359: Groovy 5 STC rejects
-                        // calling `encode` through a capture-of `? extends PersistentProperty` receiver
-                        // with a plain `PersistentProperty` argument, so erase the wildcard via an
-                        // unchecked cast (functionally equivalent to the other call sites in this file).
+                        // Groovy 5 STC: erase the wildcard before encode.
                         def propKind = (Class<? extends PersistentProperty>) prop.getClass().superclass
                         def propertyEncoder = getPropertyEncoder(propKind)
                         ((PropertyEncoder<PersistentProperty>) propertyEncoder)?.encode(writer, prop, v, access, encoderContext, codecRegistry)

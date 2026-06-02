@@ -33,14 +33,10 @@ import grails.async.Promise
 @CompileStatic
 class BoundPromise<T> implements Promise<T> {
 
-    Object value
+    T value
 
     BoundPromise(T value) {
         this.value = value
-    }
-
-    BoundPromise(Throwable error) {
-        this.value = error
     }
 
     @Override
@@ -58,13 +54,11 @@ class BoundPromise<T> implements Promise<T> {
         return true
     }
 
-    @SuppressWarnings('unchecked')
     T get() throws Throwable {
-        Object v = value
-        if (v instanceof Throwable) {
-            throw v
+        if (value instanceof Throwable) {
+            throw (Throwable) value
         }
-        return (T) v
+        return value
     }
 
     T get(long timeout, TimeUnit units) throws Throwable {
@@ -77,33 +71,30 @@ class BoundPromise<T> implements Promise<T> {
         return this
     }
 
-    @SuppressWarnings('unchecked')
     Promise<T> onComplete(Closure<T> callable) {
-        Object v = value
-        if (v instanceof Throwable) {
-            return this
+        if (!(value instanceof Throwable)) {
+            return new BoundPromise<T>(callable.call(value))
         }
-        return new BoundPromise<T>(callable.call((T) v))
+        return this
     }
 
     Promise<T> onError(Closure<T> callable) {
-        Object v = value
-        if (!(v instanceof Throwable)) {
-            return this
+        if (value instanceof Throwable) {
+            return new BoundPromise<T>(callable.call(value))
         }
-        return new BoundPromise<T>(callable.call((Throwable) v))
+        return this
     }
 
-    @SuppressWarnings('unchecked')
     Promise<T> then(Closure<T> callable) {
-        Object v = value
-        if (v instanceof Throwable) {
-            return this
+        if (!(value instanceof Throwable)) {
+            try {
+                return new BoundPromise<T>(callable.call(value))
+            } catch (Throwable e) {
+                return new BoundPromise<T>((T) e)
+            }
         }
-        try {
-            return new BoundPromise<T>(callable.call((T) v))
-        } catch (Throwable e) {
-            return new BoundPromise<T>(e)
+        else {
+            return this
         }
     }
 

@@ -64,23 +64,25 @@ class GenerateControllerCommand implements GrailsApplicationCommand, CommandLine
             final Resource sourceClass = source(domainClassName)
             if (sourceClass) {
                 final Model model = model(sourceClass)
-                // Defense-in-depth: call the typed positional render(Resource, File, Model, boolean)
-                // overload directly so we cannot silently no-op even if a future change to
-                // render(Map) re-introduces the Groovy 5+ File truthiness trap (see
-                // TemplateRendererImpl.render(Map) and the upstream confirmation at
-                // https://github.com/jamesfredley/groovy5-compiledynamic-trait-bug/issues/1).
-                generateFile(sourceClass, model, 'scaffolding/Controller.groovy',
-                        "grails-app/controllers/${model.packagePath}/${model.convention('Controller')}.groovy",
-                        overwrite)
-                generateFile(sourceClass, model, 'scaffolding/Service.groovy',
-                        "grails-app/services/${model.packagePath}/${model.convention('Service')}.groovy",
-                        overwrite)
-                generateFile(sourceClass, model, 'scaffolding/Spec.groovy',
-                        "src/test/groovy/${model.packagePath}/${model.convention('ControllerSpec')}.groovy",
-                        overwrite)
-                generateFile(sourceClass, model, 'scaffolding/ServiceSpec.groovy',
-                        "src/test/groovy/${model.packagePath}/${model.convention('ServiceSpec')}.groovy",
-                        overwrite)
+                render(template: 'scaffolding/Controller.groovy',
+                        destination: file("grails-app/controllers/${model.packagePath}/${model.convention('Controller')}.groovy"),
+                        model: model,
+                        overwrite: overwrite)
+
+                render(template: 'scaffolding/Service.groovy',
+                        destination: file("grails-app/services/${model.packagePath}/${model.convention('Service')}.groovy"),
+                        model: model,
+                        overwrite: overwrite)
+
+                render(template: 'scaffolding/Spec.groovy',
+                        destination: file("src/test/groovy/${model.packagePath}/${model.convention('ControllerSpec')}.groovy"),
+                        model: model,
+                        overwrite: overwrite)
+
+                render(template: 'scaffolding/ServiceSpec.groovy',
+                        destination: file("src/test/groovy/${model.packagePath}/${model.convention('ServiceSpec')}.groovy"),
+                        model: model,
+                        overwrite: overwrite)
 
                 addStatus("Scaffolding complete for ${projectPath(sourceClass)}")
             } else {
@@ -90,20 +92,5 @@ class GenerateControllerCommand implements GrailsApplicationCommand, CommandLine
         }
         return failureCount ? FAILURE : SUCCESS
 
-    }
-
-    private void generateFile(Resource sourceClass, Model model, String templatePath,
-                              String destinationPath, boolean overwrite) {
-        Resource templateResource = templateRenderer.template(templatePath)
-        if (templateResource == null) {
-            throw new IllegalStateException(
-                "Scaffolding template [${templatePath}] could not be resolved for ${sourceClass?.filename}")
-        }
-        File destination = file(destinationPath)
-        if (destination == null) {
-            throw new IllegalStateException(
-                "Scaffolding destination [${destinationPath}] resolved to null File")
-        }
-        templateRenderer.render(templateResource, destination, model, overwrite)
     }
 }

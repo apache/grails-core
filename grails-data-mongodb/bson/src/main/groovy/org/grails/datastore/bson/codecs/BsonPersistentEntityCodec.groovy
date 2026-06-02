@@ -468,7 +468,7 @@ class BsonPersistentEntityCodec implements Codec {
      * @param type The property encoder type
      * @return The encoder or null if it doesn't exist
      */
-    protected <E extends PersistentProperty> PropertyEncoder<E> getPropertyEncoder(Class<E> type) {
+    protected <T extends PersistentProperty> PropertyEncoder<T> getPropertyEncoder(Class<T> type) {
         return ENCODERS.get(type)
     }
 
@@ -478,7 +478,7 @@ class BsonPersistentEntityCodec implements Codec {
      * @param type The property encoder type
      * @return The encoder or null if it doesn't exist
      */
-    protected <D extends PersistentProperty> PropertyDecoder<D> getPropertyDecoder(Class<D> type) {
+    protected <T extends PersistentProperty> PropertyDecoder<T> getPropertyDecoder(Class<T> type) {
         return DECODERS.get(type)
     }
 }

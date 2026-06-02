@@ -343,7 +343,7 @@ public abstract class AbstractGrailsArtefactTransformer implements GrailsArtefac
         if (fieldNode == null || !fieldNode.getDeclaringClass().equals(classNode)) {
             fieldNode = new FieldNode(apiProperty, Modifier.PRIVATE | Modifier.STATIC, implementationNode, classNode, initialValueExpression);
             classNode.addField(fieldNode);
-            
+
             String setterName = "set" + BeanUtils.capitalize(apiProperty);
             Parameter setterParameter = new Parameter(implementationNode, apiProperty);
             BlockStatement setterBody = new BlockStatement();

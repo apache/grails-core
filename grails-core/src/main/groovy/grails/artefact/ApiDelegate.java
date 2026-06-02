@@ -39,9 +39,7 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass;
 public @interface ApiDelegate {
 
     /**
-     * @return The super class to check for in the first argument of api methods.
-     *         Defaults to Object.class, which means the transformation will use
-     *         the owner class of the annotated field.
+     * @return The super class to check for in the first argument of api methods. Defaults to Object.class.
      */
     Class<?> value() default Object.class;
 }
