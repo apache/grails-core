@@ -19,8 +19,10 @@
 
 package grails.gsp.taglib.compiler;
 
+import groovy.lang.Closure;
 import org.codehaus.groovy.ast.AnnotationNode;
 import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.control.CompilePhase;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.transform.GroovyASTTransformation;
@@ -30,15 +32,43 @@ import org.grails.compiler.injection.ArtefactTypeAstTransformation;
 
 @GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
 public class TagLibArtefactTypeAstTransformation extends ArtefactTypeAstTransformation {
+
+    /**
+     * System property to silence the closure-based tag deprecation warning emitted at compile time.
+     * Set to {@code false} to suppress (default {@code true}).
+     */
+    public static final String WARN_DEPRECATED_CLOSURES_PROPERTY = "grails.taglib.warnDeprecatedClosures";
+
     private static final ClassNode MY_TYPE = new ClassNode(TagLib.class);
+    private static final ClassNode CLOSURE_TYPE = new ClassNode(Closure.class);
 
     @Override
     protected String resolveArtefactType(SourceUnit sourceUnit, AnnotationNode annotationNode, ClassNode classNode) {
+        addClosureTagDeprecationWarnings(sourceUnit, classNode);
         return "TagLibrary";
     }
 
     @Override
     protected ClassNode getAnnotationType() {
         return MY_TYPE;
+    }
+
+    protected void addClosureTagDeprecationWarnings(SourceUnit sourceUnit, ClassNode classNode) {
+        if (!Boolean.parseBoolean(System.getProperty(WARN_DEPRECATED_CLOSURES_PROPERTY, "true"))) {
+            return;
+        }
+        if (classNode.getPackageName() != null && classNode.getPackageName().startsWith("org.grails.plugins.web.taglib")) {
+            return;
+        }
+        for (FieldNode field : classNode.getFields()) {
+            if (field.isStatic()) {
+                continue;
+            }
+            if (field.getType() != null && CLOSURE_TYPE.equals(field.getType())) {
+                String message = "Closure-based tag definition [" + field.getName() + "] in TagLib [" + classNode.getName() + "] is deprecated. " +
+                        "Define tag handlers as methods instead.";
+                org.grails.compiler.injection.GrailsASTUtils.warning(sourceUnit, field, message);
+            }
+        }
     }
 }

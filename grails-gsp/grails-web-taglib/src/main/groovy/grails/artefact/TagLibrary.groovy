@@ -18,7 +18,6 @@
  */
 package grails.artefact
 
-import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.runtime.InvokerHelper
 
@@ -34,10 +33,14 @@ import grails.web.api.WebAttributes
 import org.grails.buffer.GrailsPrintWriter
 import org.grails.encoder.Encoder
 import org.grails.taglib.GrailsTagException
+import org.grails.taglib.GroovyPageAttributes
 import org.grails.taglib.TagLibraryLookup
 import org.grails.taglib.TagLibraryMetaUtils
+import org.grails.taglib.TagMethodContext
+import org.grails.taglib.TagMethodInvoker
 import org.grails.taglib.TagOutput
 import org.grails.taglib.TemplateVariableBinding
+import org.grails.taglib.encoder.OutputContextLookupHelper
 import org.grails.taglib.encoder.OutputEncodingStack
 import org.grails.taglib.encoder.WithCodecHelper
 import org.grails.web.servlet.mvc.GrailsWebRequest
@@ -63,14 +66,12 @@ trait TagLibrary implements WebAttributes, ServletAttributes, TagLibraryInvoker 
         }
     }
 
-    @CompileDynamic
-    def raw(Object value) {
-        if (rawEncoder == null) {
-            rawEncoder = WithCodecHelper.lookupEncoder(grailsApplication, 'Raw')
-            if (rawEncoder == null)
-                return InvokerHelper.invokeMethod(value, 'encodeAsRaw', null)
+    Object raw(Object value) {
+        Encoder encoder = WithCodecHelper.lookupEncoder(getGrailsApplication(), 'Raw')
+        if (encoder == null) {
+            return InvokerHelper.invokeMethod(value, 'encodeAsRaw', null)
         }
-        return rawEncoder.encode(value)
+        return encoder.encode(value)
     }
 
     /**
@@ -131,25 +132,49 @@ trait TagLibrary implements WebAttributes, ServletAttributes, TagLibraryInvoker 
      * @throws MissingPropertyException When no tag namespace or tag is found
      */
     Object propertyMissing(String name) {
+        if (name == 'attrs') {
+            def contextAttrs = TagMethodContext.currentAttrs()
+            if (contextAttrs != null) {
+                return contextAttrs
+            }
+        }
+        if (name == 'body') {
+            def contextBody = TagMethodContext.currentBody()
+            if (contextBody != null) {
+                return contextBody
+            }
+        }
         TagLibraryLookup gspTagLibraryLookup = getTagLibraryLookup()
         if (gspTagLibraryLookup != null) {
 
             Object result = gspTagLibraryLookup.lookupNamespaceDispatcher(name)
             if (result == null) {
-                String namespace = getTaglibNamespace()
-                GroovyObject tagLibrary = gspTagLibraryLookup.lookupTagLibrary(namespace, name)
+                String resolvedNamespace = getTaglibNamespace()
+                GroovyObject tagLibrary = gspTagLibraryLookup.lookupTagLibrary(resolvedNamespace, name)
                 if (tagLibrary == null) {
+                    resolvedNamespace = TagOutput.DEFAULT_NAMESPACE
                     tagLibrary = gspTagLibraryLookup.lookupTagLibrary(TagOutput.DEFAULT_NAMESPACE, name)
                 }
 
                 if (tagLibrary != null) {
-                    Object tagProperty = tagLibrary.getProperty(name)
+                    Object tagProperty = TagMethodInvoker.getClosureTagProperty(tagLibrary, name)
                     if (tagProperty instanceof Closure) {
                         result = ((Closure<?>) tagProperty).clone()
+                    } else if (TagMethodInvoker.hasInvokableTagMethod(tagLibrary, name)) {
+                        final String currentNamespace = resolvedNamespace
+                        result = { Map attrs = [:], Closure body = null ->
+                            Object output = TagOutput.captureTagOutput(gspTagLibraryLookup, currentNamespace, name, attrs, body, OutputContextLookupHelper.lookupOutputContext())
+                            boolean gspTagSyntaxCall = attrs instanceof GroovyPageAttributes && ((GroovyPageAttributes) attrs).isGspTagSyntaxCall()
+                            boolean returnsObject = gspTagLibraryLookup.doesTagReturnObject(currentNamespace, name)
+                            if (gspTagSyntaxCall && !returnsObject && output != null) {
+                                OutputEncodingStack.currentStack().taglibWriter.print(output)
+                                return null
+                            }
+                            output
+                        }
                     }
                 }
             }
-
             if (result != null && !Environment.isDevelopmentMode()) {
                 MetaClass mc = GrailsMetaClassUtils.getExpandoMetaClass(getClass())
 

@@ -249,7 +249,7 @@ class FormFieldsTagLib {
                 widgetAttrs.remove('class')
             }
             if (hasBody(body)) {
-                model.widget = raw(body(model + [attrs: widgetAttrs] + widgetAttrs))
+                model.widget = body(model + [attrs: widgetAttrs] + widgetAttrs)?.encodeAsRaw()
             } else {
                 model.widget = renderWidget(propertyAccessor, model, widgetAttrs, widgetFolder ?: templatesFolder, theme)
             }
@@ -381,7 +381,7 @@ class FormFieldsTagLib {
                 out << render(template: "/templates/_fields/$template", model: attrs + [domainClass: domainClass, domainProperties: properties]) { prop ->
                     BeanPropertyAccessor propertyAccessor = resolveProperty(bean, prop.name)
                     Map model = buildModel(propertyAccessor, attrs, 'HTML')
-                    out << raw(renderDisplayWidget(propertyAccessor, model, attrs, templatesFolder, theme))
+                    out << renderDisplayWidget(propertyAccessor, model, attrs, templatesFolder, theme)?.encodeAsRaw()
                 }
             }
         } else {
@@ -407,7 +407,7 @@ class FormFieldsTagLib {
             String widgetsFolderToUse = widgetFolder ?: templatesFolder
 
             if (hasBody(body)) {
-                model.widget = raw(body(model + [attrs: widgetAttrs] + widgetAttrs))
+                model.widget = body(model + [attrs: widgetAttrs] + widgetAttrs)?.encodeAsRaw()
                 model.value = body(model)
             } else {
                 model.widget = renderDisplayWidget(propertyAccessor, model, widgetAttrs, widgetsFolderToUse, theme)
@@ -418,7 +418,7 @@ class FormFieldsTagLib {
             if (template) {
                 out << render(template: template.path, plugin: template.plugin, model: model + [attrs: wrapperAttrs] + wrapperAttrs)
             } else {
-                out << raw(renderDisplayWidget(propertyAccessor, model, attrs, widgetsFolderToUse, theme))
+                out << renderDisplayWidget(propertyAccessor, model, attrs, widgetsFolderToUse, theme)?.encodeAsRaw()
             }
         }
 
@@ -674,7 +674,7 @@ class FormFieldsTagLib {
         message ?: defaultMessage
     }
 
-    protected CharSequence renderDefaultField(Map model, Map attrs = [:]) {
+    private CharSequence renderDefaultField(Map model, Map attrs = [:]) {
         List classes = [attrs['class'] ?: 'fieldcontain']
         if (model.invalid) classes << (attrs.remove('invalidClass') ?: 'error')
         if (model.required) classes << (attrs.remove('requiredClass') ?: 'required')
@@ -707,11 +707,11 @@ class FormFieldsTagLib {
         }
     }
 
-    CharSequence renderDefaultInput(Map model, Map attrs = [:]) {
+    private CharSequence renderDefaultInput(Map model, Map attrs = [:]) {
         renderDefaultInput(null, model, attrs)
     }
 
-    CharSequence renderDefaultInput(BeanPropertyAccessor propertyAccessor, Map model, Map attrs = [:]) {
+    private CharSequence renderDefaultInput(BeanPropertyAccessor propertyAccessor, Map model, Map attrs = [:]) {
         Constrained constrained = (Constrained) model.constraints
         attrs.name = (model.prefix ?: '') + model.property
         attrs.value = model.value
@@ -770,7 +770,7 @@ class FormFieldsTagLib {
         }
     }
 
-    CharSequence renderDateTimeInput(Map model, Map attrs) {
+    private CharSequence renderDateTimeInput(Map model, Map attrs) {
         attrs.precision = model.type in [java.sql.Time, LocalDateTime] ? 'minute' : 'day'
         if (!model.required) {
             attrs.noSelection = ['': '']
@@ -779,7 +779,7 @@ class FormFieldsTagLib {
         return g.datePicker(attrs)
     }
 
-    CharSequence renderStringInput(Map model, Map attrs) {
+    private CharSequence renderStringInput(Map model, Map attrs) {
         Constrained constrained = (Constrained) model.constraints
 
         if (!attrs.type) {
@@ -811,7 +811,7 @@ class FormFieldsTagLib {
         return g.field(attrs)
     }
 
-    CharSequence renderNumericInput(BeanPropertyAccessor propertyAccessor, Map model, Map attrs) {
+    private CharSequence renderNumericInput(BeanPropertyAccessor propertyAccessor, Map model, Map attrs) {
         Constrained constrained = (Constrained) model.constraints
 
         if (!attrs.type && constrained?.inList) {
@@ -837,7 +837,7 @@ class FormFieldsTagLib {
     }
 
     @CompileStatic
-    protected NumberFormat getNumberFormatter() {
+    private NumberFormat getNumberFormatter() {
         NumberFormat numberFormat = NumberFormat.getInstance(getLocale())
         // Normalize Unicode minus sign (U+2212) to ASCII hyphen-minus (U+002D)
         // for HTML compatibility (fixes grails-core#15178)
@@ -850,7 +850,7 @@ class FormFieldsTagLib {
     }
 
     @CompileStatic
-    protected Locale getLocale() {
+    private Locale getLocale() {
         def locale
         def request = GrailsWebRequest.lookup()?.currentRequest
         if (request instanceof HttpServletRequest) {
@@ -863,7 +863,7 @@ class FormFieldsTagLib {
     }
 
     @CompileStatic
-    protected String getDefaultNumberType(Map model) {
+    private String getDefaultNumberType(Map model) {
         Class modelType = (Class) model.type
 
         def typeName = modelType.simpleName.toLowerCase()

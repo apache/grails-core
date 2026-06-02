@@ -19,13 +19,13 @@ under the License.
 
 A taglib can be used in a GSP as an ordinary tag, or it might be used as a function in other taglibs or GSP expressions.
 
-Internally Grails intercepts calls to taglib closures.
+Internally Grails intercepts calls to tag handlers (method-based or closure-based).
 The "out" that is available in a taglib is mapped to a `java.io.Writer` implementation that writes to a buffer
 that "captures" the output of the taglib call. This buffer is the return value of a tag library call when it's 
 used as a function.
 
 If the tag is listed in the library's static `returnObjectForTags` array, then its return value will be written to 
-the output when it's used as a normal tag. The return value of the tag lib closure will be returned as-is 
+the output when it's used as a normal tag. The return value of the tag method/closure will be returned as-is 
 if it's used as a function in GSP expressions or other taglibs. 
 
 If the tag is not included in the returnObjectForTags array, then its return value will be discarded.
@@ -35,11 +35,11 @@ Example:
 [source,groovy]
 ----
 class ObjectReturningTagLib {
-	static namespace = "cms"
-	static returnObjectForTags = ['content'] 
+    static namespace = "cms"
+    static returnObjectForTags = ['content']
 
-	def content = { attrs, body ->
-		CmsContent.findByCode(attrs.code)?.content	
+    def content(Map attrs) {
+        CmsContent.findByCode(attrs.code)?.content
     }
 }
 ----
