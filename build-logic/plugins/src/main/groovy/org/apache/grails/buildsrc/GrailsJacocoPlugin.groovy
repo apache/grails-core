@@ -55,11 +55,11 @@ class GrailsJacocoPlugin implements Plugin<Project> {
         }
 
         project.tasks.withType(Test).configureEach {
-            it.finalizedBy 'jacocoTestReport'
+            it.finalizedBy('jacocoTestReport')
         }
 
         project.tasks.withType(JacocoReport).configureEach {
-            it.dependsOn project.tasks.withType(Test)
+            it.dependsOn(project.tasks.withType(Test))
             it.reports({ JacocoReportsContainer reports ->
                 reports.xml.required.set(true)
                 reports.html.required.set(true)
@@ -94,16 +94,19 @@ class GrailsJacocoPlugin implements Plugin<Project> {
                     reports.csv.required.set(false)
 
                 } as Action<JacocoReportsContainer>)
+                it.onlyIf { JacocoReport t ->
+                    !t.executionData.files.isEmpty()
                 }
-                task.onlyIf { JacocoReport t -> !t.executionData.files.isEmpty() }
             }
         }
 
         // Wire this subproject's test exec data into the aggregate.
         aggregateTask.configure { JacocoReport task ->
-            task.dependsOn project.tasks.withType(Test)
+            task.dependsOn(project.tasks.withType(Test))
             task.executionData.from(
-                project.fileTree(project.file('build/jacoco')) { include '*.exec' }
+                project.fileTree(project.file('build/jacoco')) {
+                    include('*.exec')
+                }
             )
         }
 
