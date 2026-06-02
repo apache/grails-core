@@ -520,14 +520,16 @@ If your `build.gradle` uses either of the patterns below, update it as follows:
 | `dependencies { implementation 'group:artifact:version' }` for a direct dependency, or `configurations.all { resolutionStrategy.force 'group:artifact:version' }` to force a transitive version
 
 | Version-range strings (e.g. `1.+`, `[1.0,2.0)`) embedded in BOM `<properties>` values, resolved by Spring DM's own resolver
-| Now passed through to Gradle's native `useVersion()`, which uses Gradle's range semantics. Concrete versions are unaffected. Only relevant if you consume a custom BOM whose `<properties>` block contains range strings.
+| Now applied as Gradle strict version constraints, which use Gradle's range semantics. Concrete versions are unaffected. Only relevant if you consume a custom BOM whose `<properties>` block contains range strings.
 |===
 
 **Behavioural difference to be aware of: conflict resolution.**
-Spring DM forced BOM-managed versions unconditionally, which could mask transitive version drift.
-Gradle's `platform()` participates in standard conflict resolution (highest-version-wins), so the BOM-pinned version is the version that wins *after* Gradle's conflict resolution.
-A `gradle.properties` override therefore pins the resolved version rather than overriding it after the fact.
-If you require Spring DM's "BOM wins always" behaviour for a given configuration, declare `enforcedPlatform("org.apache.grails:grails-bom:$grailsVersion")` instead of relying on the auto-applied non-enforced platform.
+The BOM's *default* managed versions are applied via a regular Gradle `platform()`, which participates in standard conflict resolution (highest-version-wins).
+A transitive dependency can therefore pull a non-overridden managed version higher than the BOM default.
+If you require Spring DM's "BOM wins always" behaviour for the default managed versions, declare `enforcedPlatform("org.apache.grails:grails-bom:$grailsVersion")` instead of relying on the auto-applied non-enforced platform.
+
+An *explicit* property override (`ext['…']` or `gradle.properties`) is applied as a strict constraint and always wins - including when it downgrades a version - so overrides behave as they did under Spring DM.
+Overriding a property that selects an imported BOM's version (for example `spring-boot.version`) re-imports that BOM at the overridden version and applies its updated managed set.
 
 NOTE: Projects that apply the `grails-micronaut` plugin already require `enforcedPlatform` for unrelated reasons (see section 7.2); those projects retain Spring DM's strict-version semantics automatically.
 
