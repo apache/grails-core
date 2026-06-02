@@ -259,16 +259,17 @@ abstract class ExtractDependenciesTask extends DefaultTask {
     }
 
     Properties populatePlatformDependencies(CoordinateVersionHolder bomCoordinates, List<CoordinateHolder> exclusionRules, Map<CoordinateHolder, ExtractedDependencyConstraint> constraints, boolean error = true, int level = 0) {
-        Dependency bomDependency = dependencyHandler.create("${bomCoordinates.coordinates}@pom")
-        Configuration dependencyConfiguration = configurationContainer.detachedConfiguration(bomDependency)
-        dependencyConfiguration.transitive = false
+        def bomDependency = dependencyHandler.create("${bomCoordinates.coordinates}@pom")
+        def dependencyConfiguration = configurationContainer.detachedConfiguration(bomDependency).tap {
+            transitive = false
+        }
         File bomPomFile = dependencyConfiguration.singleFile
 
-        Document doc = parsePom(bomPomFile)
-        Properties versionProperties = new Properties()
+        def doc = parsePom(bomPomFile)
+        def versionProperties = new Properties()
 
         // Parent POM populated first so its properties can be overridden by the child
-        CoordinateVersionHolder parentBom = readParentCoordinates(doc)
+        def parentBom = readParentCoordinates(doc)
         if (parentBom) {
             populatePlatformDependencies(parentBom, exclusionRules, constraints, false, level + 1)?.entrySet()?.each { Map.Entry<Object, Object> entry ->
                 versionProperties.put(entry.key, entry.value)
@@ -281,7 +282,7 @@ abstract class ExtractDependenciesTask extends DefaultTask {
         versionProperties.put('project.groupId', bomCoordinates.groupId)
         versionProperties.put('project.version', bomCoordinates.version)
 
-        List<ManagedDependency> managedDependencies = readManagedDependencies(doc)
+        def managedDependencies = readManagedDependencies(doc)
         if (managedDependencies.isEmpty()) {
             if (error) {
                 // only the boms we directly include need to error since we expect a dependency management;
@@ -291,13 +292,13 @@ abstract class ExtractDependenciesTask extends DefaultTask {
             return versionProperties
         }
 
-        for (ManagedDependency depItem : managedDependencies) {
-            CoordinateHolder baseCoordinates = new CoordinateHolder(
+        for (def depItem : managedDependencies) {
+            def baseCoordinates = new CoordinateHolder(
                     groupId: depItem.groupId,
                     artifactId: depItem.artifactId
             )
 
-            CoordinateHolder resolvedCoordinates = new CoordinateHolder(
+            def resolvedCoordinates = new CoordinateHolder(
                     groupId: resolveMavenProperty(baseCoordinates.coordinatesWithoutVersion, depItem.groupId, versionProperties),
                     artifactId: resolveMavenProperty(baseCoordinates.coordinatesWithoutVersion, depItem.artifactId, versionProperties)
             )
@@ -326,16 +327,16 @@ abstract class ExtractDependenciesTask extends DefaultTask {
                 continue
             }
 
-            String resolvedVersion = resolveMavenProperty(resolvedCoordinates.coordinatesWithoutVersion, depItem.version, versionProperties)
-            String propertyName = depItem.version?.contains('$') ? depItem.version : null
-            ExtractedDependencyConstraint constraint = new ExtractedDependencyConstraint(
+            def resolvedVersion = resolveMavenProperty(resolvedCoordinates.coordinatesWithoutVersion, depItem.version, versionProperties)
+            def propertyName = depItem.version?.contains('$') ? depItem.version : null
+            def constraint = new ExtractedDependencyConstraint(
                     groupId: resolvedCoordinates.groupId, artifactId: resolvedCoordinates.artifactId,
                     version: resolvedVersion, versionPropertyReference: propertyName, source: bomCoordinates.artifactId
             )
             constraints.put(resolvedCoordinates, constraint)
 
             if (depItem.scope == 'import') {
-                CoordinateVersionHolder resolvedBomCoordinates = new CoordinateVersionHolder(
+                def resolvedBomCoordinates = new CoordinateVersionHolder(
                         groupId: resolvedCoordinates.groupId,
                         artifactId: resolvedCoordinates.artifactId,
                         version: resolvedVersion
@@ -352,14 +353,14 @@ abstract class ExtractDependenciesTask extends DefaultTask {
      * XML parsing is hardened against XXE / XInclude attacks.
      */
     private static Document parsePom(File pomFile) {
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance()
-        factory.setNamespaceAware(false)
-        factory.setValidating(false)
-        factory.setXIncludeAware(false)
-        factory.setFeature('http://apache.org/xml/features/nonvalidating/load-external-dtd', false)
-        factory.setFeature('http://xml.org/sax/features/external-general-entities', false)
-        factory.setFeature('http://xml.org/sax/features/external-parameter-entities', false)
-        return factory.newDocumentBuilder().parse(pomFile)
+        DocumentBuilderFactory.newInstance().tap {
+            namespaceAware = false
+            validating = false
+            XIncludeAware = false
+            setFeature('http://apache.org/xml/features/nonvalidating/load-external-dtd', false)
+            setFeature('http://xml.org/sax/features/external-general-entities', false)
+            setFeature('http://xml.org/sax/features/external-parameter-entities', false)
+        }.newDocumentBuilder().parse(pomFile)
     }
 
     private static CoordinateVersionHolder readParentCoordinates(Document doc) {

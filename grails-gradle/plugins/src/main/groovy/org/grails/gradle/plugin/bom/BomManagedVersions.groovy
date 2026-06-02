@@ -23,8 +23,6 @@ import java.util.function.Function
 import groovy.transform.CompileStatic
 import org.gradle.api.Project
 import org.gradle.api.artifacts.ConfigurationContainer
-import org.gradle.api.artifacts.DependencyConstraint
-import org.gradle.api.artifacts.MutableVersionConstraint
 import org.gradle.api.artifacts.dsl.DependencyHandler
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
@@ -98,7 +96,7 @@ class BomManagedVersions {
                                       DependencyHandler dependencies,
                                       Function<String, String> propertyLookup,
                                       String bomCoordinates) {
-        return resolve(configurations, dependencies, propertyLookup, [bomCoordinates])
+        resolve(configurations, dependencies, propertyLookup, [bomCoordinates])
     }
 
     /**
@@ -126,9 +124,9 @@ class BomManagedVersions {
                                       Collection<String> bomCoordinatesList) {
         def instance = new BomManagedVersions()
 
-        Map<String, String> defaultVersions = computeManagedVersions(
+        def defaultVersions = computeManagedVersions(
                 configurations, dependencies, bomCoordinatesList, NO_OVERRIDES)
-        Map<String, String> effectiveVersions = computeManagedVersions(
+        def effectiveVersions = computeManagedVersions(
                 configurations, dependencies, bomCoordinatesList, propertyLookup)
 
         for (def entry : effectiveVersions.entrySet()) {
@@ -146,10 +144,13 @@ class BomManagedVersions {
         }
 
         if (!instance.versionOverrides.isEmpty()) {
-            LOG.lifecycle('BOM property overrides: {} version override(s) will be applied', instance.versionOverrides.size())
+            LOG.lifecycle(
+                'BOM property overrides: {} version override(s) will be applied',
+                instance.versionOverrides.size()
+            )
         }
 
-        return instance
+        instance
     }
 
     /**
@@ -162,7 +163,7 @@ class BomManagedVersions {
      * @param bomCoordinates the BOM coordinates in {@code group:artifact:version} format
      */
     static BomManagedVersions resolve(Project project, String bomCoordinates) {
-        return resolve(project, [bomCoordinates])
+        resolve(project, [bomCoordinates])
     }
 
     /**
@@ -175,7 +176,7 @@ class BomManagedVersions {
      * @param bomCoordinatesList list of BOM coordinates in {@code group:artifact:version} format
      */
     static BomManagedVersions resolve(Project project, Collection<String> bomCoordinatesList) {
-        return resolve(
+        resolve(
             project.configurations,
             project.dependencies,
             { String name -> project.hasProperty(name) ? project.property(name)?.toString() : null } as Function<String, String>,
@@ -203,9 +204,9 @@ class BomManagedVersions {
         }
 
         versionOverrides.each { String coordinate, String version ->
-            dependencies.constraints.add(configurationName, coordinate) { DependencyConstraint constraint ->
-                constraint.version { MutableVersionConstraint v -> v.strictly(version) }
-                constraint.because('BOM version override via project property')
+            dependencies.constraints.add(configurationName, coordinate) {
+                it.version { it.strictly(version) }
+                it.because('BOM version override via project property')
             }
         }
     }
@@ -214,7 +215,7 @@ class BomManagedVersions {
      * Returns whether any version overrides were detected.
      */
     boolean hasOverrides() {
-        return !versionOverrides.isEmpty()
+        !versionOverrides.isEmpty()
     }
 
     /**
@@ -222,7 +223,7 @@ class BomManagedVersions {
      * Keys are {@code group:artifact}, values are the override version strings.
      */
     Map<String, String> getOverrides() {
-        return Collections.unmodifiableMap(versionOverrides)
+        Collections.unmodifiableMap(versionOverrides)
     }
 
     /**
@@ -299,7 +300,7 @@ class BomManagedVersions {
                     propertyResolver, bomProperties, artifactVersions, processed)
         }
 
-        return artifactVersions
+        artifactVersions
     }
 
     private static void processBom(
@@ -490,7 +491,7 @@ class BomManagedVersions {
             }
             result = result.replace("\${${propertyName}}" as String, resolved)
         }
-        return result.contains('${') ? null : result
+        result.contains('${') ? null : result
     }
 
     private static String getChildText(Element parent, String childTagName) {
@@ -498,6 +499,6 @@ class BomManagedVersions {
         if (children.length == 0) {
             return null
         }
-        return children.item(0).textContent?.trim()
+        children.item(0).textContent?.trim()
     }
 }

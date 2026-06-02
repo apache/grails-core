@@ -417,7 +417,7 @@ ${importStatements}
         // any plugin that adds a configuration later is responsible for
         // declaring its own BOM coordination if it needs it.
         project.afterEvaluate {
-            GrailsExtension grailsExtension = project.extensions.findByType(GrailsExtension)
+            def grailsExtension = project.extensions.findByType(GrailsExtension)
             boolean autoApply = grailsExtension == null || grailsExtension.autoApplyBom.getOrElse(true)
             if (!autoApply) {
                 project.logger.info(
@@ -427,8 +427,8 @@ ${importStatements}
                 return
             }
 
-            String grailsVersion = (project.findProperty('grailsVersion') ?: BuildSettings.grailsVersion) as String
-            String bomCoordinates = "org.apache.grails:grails-bom:${grailsVersion}" as String
+            def grailsVersion = (project.findProperty('grailsVersion') ?: BuildSettings.grailsVersion) as String
+            def bomCoordinates = "org.apache.grails:grails-bom:${grailsVersion}" as String
 
             // Apply the BOM platform to all declarable project configurations, matching
             // the behavior of the Spring Dependency Management plugin which applied version
@@ -442,9 +442,9 @@ ${importStatements}
             // resolution to upgrade transitives and break the tools/processors - unlike
             // resolutionStrategy hooks, platform() constraints participate in version
             // conflict resolution.
-            project.configurations.each { Configuration conf ->
-                if (conf.canBeDeclared && !isExcludedFromBomPlatform(conf.name)) {
-                    project.dependencies.add(conf.name, project.dependencies.platform(bomCoordinates))
+            project.configurations.each {
+                if (it.canBeDeclared && !isExcludedFromBomPlatform(it.name)) {
+                    project.dependencies.add(it.name, project.dependencies.platform(bomCoordinates))
                 }
             }
 

@@ -179,7 +179,7 @@ class GrailsDependencyValidatorPlugin implements Plugin<Project> {
                 if (!BOM_PROJECT_NAMES.contains(dep.name)) {
                     continue
                 }
-                Project bomProject = project.rootProject.findProject(":${dep.name}" as String)
+                def bomProject = project.rootProject.findProject(":${dep.name}" as String)
                 if (bomProject == null) {
                     continue
                 }
@@ -199,7 +199,7 @@ class GrailsDependencyValidatorPlugin implements Plugin<Project> {
         if (!(dep instanceof ModuleDependency)) {
             return false
         }
-        Object categoryAttr = ((ModuleDependency) dep).attributes.getAttribute(Category.CATEGORY_ATTRIBUTE)
+        def categoryAttr = ((ModuleDependency) dep).attributes.getAttribute(Category.CATEGORY_ATTRIBUTE)
         if (categoryAttr == null) {
             return false
         }

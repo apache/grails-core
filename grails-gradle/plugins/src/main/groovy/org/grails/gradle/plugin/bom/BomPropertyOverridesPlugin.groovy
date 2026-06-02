@@ -23,7 +23,6 @@ import java.util.function.Function
 import groovy.transform.CompileStatic
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ConfigurationContainer
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ModuleDependency
@@ -162,9 +161,9 @@ class BomPropertyOverridesPlugin implements Plugin<Project> {
         // mirroring where the platform(grails-bom) constraints are contributed.
         // Resolvable/consumable configurations inherit the constraints through the
         // declarable configurations they extend.
-        configurations.configureEach { Configuration conf ->
-            if (conf.canBeDeclared) {
-                managedVersions.applyTo(dependencies, conf.name)
+        configurations.configureEach {
+            if (it.canBeDeclared) {
+                managedVersions.applyTo(dependencies, it.name)
             }
         }
     }
@@ -178,8 +177,8 @@ class BomPropertyOverridesPlugin implements Plugin<Project> {
     static Set<String> detectDeclaredBoms(ConfigurationContainer configurations) {
         def coordinates = new LinkedHashSet<String>()
 
-        configurations.each { Configuration conf ->
-            for (Dependency dep : conf.dependencies) {
+        configurations.each {
+            for (Dependency dep : it.dependencies) {
                 if (!(dep instanceof ModuleDependency)) {
                     continue
                 }
