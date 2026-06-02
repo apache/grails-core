@@ -47,7 +47,6 @@ abstract class GrailsDataTckManager {
         Collections.unmodifiableList(domainClasses)
     }
 
-
     @Deprecated
     void addAllDomainClasses(Collection<Class> classes) {
         if (classes) {
