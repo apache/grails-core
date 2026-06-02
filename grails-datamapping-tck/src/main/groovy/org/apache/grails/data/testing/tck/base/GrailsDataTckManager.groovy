@@ -44,7 +44,7 @@ abstract class GrailsDataTckManager {
      * @return An unmodifiable list of domain classes
      */
     List<Class> getDomainClasses() {
-        return Collections.unmodifiableList(domainClasses)
+        Collections.unmodifiableList(domainClasses)
     }
 
     /**
