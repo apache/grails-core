@@ -35,6 +35,7 @@ import org.springframework.context.support.DefaultMessageSourceResolvable
 import org.springframework.validation.Errors
 
 import grails.artefact.TagLibrary
+import grails.gsp.Tag
 import grails.gsp.TagLib
 import org.grails.encoder.CodecLookup
 import org.grails.encoder.Encoder
@@ -65,7 +66,7 @@ class ValidationTagLib implements TagLibrary {
      * @attr encodeAs The name of a codec to apply, i.e. HTML, JavaScript, URL etc
      * @attr locale override locale to use instead of the one detected
      */
-    Closure fieldError = { attrs, body ->
+    def fieldError(Map attrs, Closure body) {
         def bean = attrs.bean
         def field = attrs.field
         def encodeAs = attrs.encodeAs
@@ -91,7 +92,7 @@ class ValidationTagLib implements TagLibrary {
      * @attr valueMessagePrefix Setting this allows the value to be resolved from the I18n messages.
      *
      */
-    Closure fieldValue = { attrs, body ->
+    def fieldValue(Map attrs, Closure body) {
         def bean = attrs.bean
         String field = attrs.field?.toString()
         if (!bean || !field) {
@@ -130,7 +131,7 @@ class ValidationTagLib implements TagLibrary {
         return rejectedValue
     }
 
-    def extractErrors(attrs) {
+    private def extractErrors(Map attrs) {
         def model = attrs.model
         def checkList = []
         if (attrs.containsKey('bean')) {
@@ -186,7 +187,7 @@ class ValidationTagLib implements TagLibrary {
      * @attr field The field of the bean or model reference to check
      * @attr model The model reference to check for errors
      */
-    Closure hasErrors = { attrs, body ->
+    def hasErrors(Map attrs, Closure body) {
         def errorsList = extractErrors(attrs)
         if (errorsList) {
             out << body()
@@ -201,16 +202,16 @@ class ValidationTagLib implements TagLibrary {
      * @attr field The field of the bean or model reference to check
      * @attr model The model reference to check for errors
      */
-    Closure eachError = { attrs, body ->
+    def eachError(Map attrs, Closure body) {
         eachErrorInternal(attrs, body, true)
     }
 
-    def eachErrorInternal(attrs, body, boolean outputResult = false) {
+    private def eachErrorInternal(Map attrs, Closure body, boolean outputResult = false) {
         def errorsList = extractErrors(attrs)
         eachErrorInternalForList(attrs, errorsList, body, outputResult)
     }
 
-    def eachErrorInternalForList(attrs, errorsList, body, boolean outputResult = false) {
+    private def eachErrorInternalForList(Map attrs, errorsList, Closure body, boolean outputResult = false) {
         def var = attrs.var
         def field = attrs.field
 
@@ -290,12 +291,12 @@ class ValidationTagLib implements TagLibrary {
      * @attr encodeAs The name of a codec to apply, i.e. HTML, JavaScript, URL etc
      * @attr locale override locale to use instead of the one detected
      */
-    Closure message = { attrs ->
+    def message(Map attrs) {
         messageImpl(attrs)
     }
 
     @CompileStatic
-    def messageImpl(Map attrs) {
+    private def messageImpl(Map attrs) {
         Locale locale = FormatTagLib.resolveLocale(attrs.locale)
         def tagSyntaxCall = (attrs instanceof GroovyPageAttributes) ? attrs.isGspTagSyntaxCall() : false
 
@@ -383,7 +384,7 @@ class ValidationTagLib implements TagLibrary {
      * @attr form REQUIRED the HTML form name
      * @attr againstClass REQUIRED the domain class name
      */
-    Closure validate = { attrs, body ->
+    def validate(Map attrs, Closure body) {
         def form = attrs.form
         if (!form) {
             throwTagError('Tag [validate] is missing required attribute [form]')
@@ -465,6 +466,7 @@ class ValidationTagLib implements TagLibrary {
      * formatted according to the current user's locale during the
      * conversion to a string.
      */
+    @Tag
     def formatValue(value, String propertyPath = null, Boolean tagSyntaxCall = false) {
         def webRequest = GrailsWebRequest.lookup()
         PropertyEditorRegistry registry = webRequest.getPropertyEditorRegistry()
