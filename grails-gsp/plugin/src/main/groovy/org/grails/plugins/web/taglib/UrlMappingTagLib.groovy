@@ -66,7 +66,7 @@ class UrlMappingTagLib implements TagLibrary {
      * @attr view The name of the view. Cannot be specified in combination with controller/action/id
      * @attr model A model to pass onto the included controller in the request
      */
-    Closure include = { Map attrs, body ->
+    def include(Map attrs, Closure body) {
         if (attrs.action && !attrs.controller) {
             def controller = request?.getAttribute(GrailsApplicationAttributes.CONTROLLER)
             def controllerName = ((GroovyObject) controller)?.getProperty('controllerName')
@@ -90,7 +90,7 @@ class UrlMappingTagLib implements TagLibrary {
         }
     }
 
-    Map appendClass(Map attrs, String cssClass) {
+    private Map appendClass(Map attrs, String cssClass) {
         attrs['class'] = [attrs['class'] ?: '', cssClass].join(' ').trim()
         attrs
     }
@@ -119,8 +119,8 @@ class UrlMappingTagLib implements TagLibrary {
      * @attr mapping The named URL mapping to use to rewrite the link
      * @attr fragment The link fragment (often called anchor tag) to use
      */
-    Closure paginate = { Map attrsMap ->
-        TypeConvertingMap attrs = (TypeConvertingMap) attrsMap
+    def paginate(Map attrs) {
+        attrs = (TypeConvertingMap) attrs
         def writer = out
         if (attrs.total == null) {
             throwTagError('Tag [paginate] is missing required attribute [total]')
@@ -184,14 +184,14 @@ class UrlMappingTagLib implements TagLibrary {
         // display previous link when not on firststep unless omitPrev is true
         if (currentstep > firststep && !attrs.boolean('omitPrev')) {
             linkParams.offset = offset - max
-            writer << callLink(appendClass((Map) linkTagAttrs.clone(), 'prevLink')) {
+            writer << callLink(appendClass(new LinkedHashMap(linkTagAttrs), 'prevLink')) {
                 (attrs.prev ?: messageSource.getMessage('paginate.prev', null, messageSource.getMessage('default.paginate.prev', null, 'Previous', locale), locale))
             }
         }
 
         // display steps when steps are enabled and laststep is not firststep
         if (steps && laststep > firststep) {
-            Map stepAttrs = appendClass((Map) linkTagAttrs.clone(), 'step')
+            Map stepAttrs = appendClass(new LinkedHashMap(linkTagAttrs), 'step')
 
             // determine begin and endstep paging variables
             int beginstep = currentstep - (Math.round(maxsteps / 2.0d) as int) + (maxsteps % 2)
@@ -212,7 +212,7 @@ class UrlMappingTagLib implements TagLibrary {
             // display firststep link when beginstep is not firststep
             if (beginstep > firststep && !attrs.boolean('omitFirst')) {
                 linkParams.offset = 0
-                writer << callLink((Map) stepAttrs.clone()) { firststep.toString() }
+                writer << callLink(new LinkedHashMap(stepAttrs)) { firststep.toString() }
             }
             //show a gap if beginstep isn't immediately after firststep, and if were not omitting first or rev
             if (beginstep > firststep + 1 && (!attrs.boolean('omitFirst') || !attrs.boolean('omitPrev'))) {
@@ -226,7 +226,7 @@ class UrlMappingTagLib implements TagLibrary {
                 }
                 else {
                     linkParams.offset = (i - 1) * max
-                    writer << callLink((Map) stepAttrs.clone()) { i.toString() }
+                    writer << callLink(new LinkedHashMap(stepAttrs)) { i.toString() }
                 }
             }
 
@@ -237,14 +237,14 @@ class UrlMappingTagLib implements TagLibrary {
             // display laststep link when endstep is not laststep
             if (endstep < laststep && !attrs.boolean('omitLast')) {
                 linkParams.offset = (laststep - 1) * max
-                writer << callLink((Map) stepAttrs.clone()) { laststep.toString() }
+                writer << callLink(new LinkedHashMap(stepAttrs)) { laststep.toString() }
             }
         }
 
         // display next link when not on laststep unless omitNext is true
         if (currentstep < laststep && !attrs.boolean('omitNext')) {
             linkParams.offset = offset + max
-            writer << callLink(appendClass((Map) linkTagAttrs.clone(), 'nextLink')) {
+            writer << callLink(appendClass(new LinkedHashMap(linkTagAttrs), 'nextLink')) {
                 (attrs.next ? attrs.next : messageSource.getMessage('paginate.next', null, messageSource.getMessage('default.paginate.next', null, 'Next', locale), locale))
             }
         }
@@ -277,7 +277,7 @@ class UrlMappingTagLib implements TagLibrary {
      * @attr params A map containing URL query parameters
      * @attr class CSS class name
      */
-    Closure sortableColumn = { Map attrs ->
+    def sortableColumn(Map attrs) {
         def writer = out
         if (!attrs.property) {
             throwTagError('Tag [sortableColumn] is missing required attribute [property]')
