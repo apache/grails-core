@@ -47,12 +47,24 @@ abstract class GrailsDataTckManager {
         Collections.unmodifiableList(domainClasses)
     }
 
+
+    @Deprecated
+    void addAllDomainClasses(Collection<Class> classes) {
+        if (classes) {
+            registerDomainClasses(classes as Class[])
+        }
+
+    }
+
     /**
      * Adds all the specified classes to the domain classes list.
      * @param classes The classes to add
      */
-    void addAllDomainClasses(Collection<Class> classes) {
-        domainClasses.addAll(classes)
+    void registerDomainClasses(Class... classes) {
+        if (classes) {
+            domainClasses.addAll(classes)
+        }
+
     }
 
     void setupSpec() {
