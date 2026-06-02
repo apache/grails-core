@@ -26,8 +26,7 @@ class BootStrap {
     HibernateDatastore hibernateDatastore
 
     def init = {
-        // TODO: Re-enable when hibernate.configClass setting works with Groovy 5 configuration binding
-        // assert hibernateDatastore.connectionSources.defaultConnectionSource.settings.hibernate.getConfigClass() == CustomHibernateMappingContextConfiguration
+        assert hibernateDatastore.connectionSources.defaultConnectionSource.settings.hibernate.getConfigClass() == CustomHibernateMappingContextConfiguration
         Product.withTransaction {
             new Product(name: "MacBook", price: "1200.01").save()
         }
