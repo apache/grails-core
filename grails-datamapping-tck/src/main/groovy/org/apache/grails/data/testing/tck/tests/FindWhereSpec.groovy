@@ -25,7 +25,7 @@ class FindWhereSpec extends GrailsDataTckSpec {
 
     @Override
     void setupSpec() {
-        manager.addAllDomainClasses([TestEntity])
+        manager.registerDomainClasses(TestEntity)
     }
 
     def 'Test findWhere returns a matching Instance'() {

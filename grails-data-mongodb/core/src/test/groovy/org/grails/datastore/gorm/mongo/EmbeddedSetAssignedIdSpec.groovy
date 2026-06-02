@@ -29,7 +29,7 @@ import spock.lang.Ignore
  */
 class EmbeddedSetAssignedIdSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([Itemized, LineItem, SubItem, JobItem])
+        manager.registerDomainClasses(Itemized, LineItem, SubItem, JobItem)
     }
 
     void "Test saved nested embedded association graph"() {

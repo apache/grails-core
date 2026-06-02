@@ -29,7 +29,7 @@ class SizeQuerySpec extends GrailsDataTckSpec {
 
     @Override
     void setupSpec() {
-        manager.addAllDomainClasses([Country, Person])
+        manager.registerDomainClasses(Country, Person)
     }
 
     void 'Test sizeLe criterion'() {

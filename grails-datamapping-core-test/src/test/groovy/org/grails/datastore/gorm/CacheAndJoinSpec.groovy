@@ -25,7 +25,7 @@ import spock.lang.Issue
 
 class CacheAndJoinSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([Author, Book])
+        manager.registerDomainClasses(Author, Book)
     }
 
     @Issue('GRAILS-8758')

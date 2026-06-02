@@ -25,7 +25,7 @@ class FindByExampleSpec extends GrailsDataTckSpec {
 
     @Override
     void setupSpec() {
-        manager.addAllDomainClasses([Plant])
+        manager.registerDomainClasses(Plant)
     }
 
     def 'Test findAll by example'() {

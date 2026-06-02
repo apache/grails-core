@@ -28,7 +28,7 @@ class NotInListSpec extends GrailsDataTckSpec {
 
     @Override
     void setupSpec() {
-        manager.addAllDomainClasses([TestEntity])
+        manager.registerDomainClasses(TestEntity)
     }
 
     void 'test not in list returns the correct results'() {

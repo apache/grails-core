@@ -27,7 +27,7 @@ class NullValueEqualSpec extends GrailsDataTckSpec {
 
     @Override
     void setupSpec() {
-        manager.addAllDomainClasses([TestEntity])
+        manager.registerDomainClasses(TestEntity)
     }
 
     void 'test null value in equal'() {

@@ -24,7 +24,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class EmbeddedPropertyQuerySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([Book2, Author2])
+        manager.registerDomainClasses(Book2, Author2)
     }
 
     void "Test eq query of embedded properties"() {

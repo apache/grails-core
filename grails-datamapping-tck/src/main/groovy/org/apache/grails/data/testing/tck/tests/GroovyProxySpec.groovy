@@ -35,7 +35,7 @@ class GroovyProxySpec extends GrailsDataTckSpec {
 
     @Override
     void setupSpec() {
-        manager.addAllDomainClasses([Location])
+        manager.registerDomainClasses(Location)
     }
 
     void 'Test proxying of non-existent instance throws an exception'() {

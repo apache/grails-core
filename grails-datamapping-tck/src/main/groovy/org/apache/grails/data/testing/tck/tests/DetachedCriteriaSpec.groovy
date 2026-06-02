@@ -27,7 +27,7 @@ class DetachedCriteriaSpec extends GrailsDataTckSpec {
 
     @Override
     void setupSpec() {
-        manager.addAllDomainClasses([Person])
+        manager.registerDomainClasses(Person)
     }
 
     void 'Test the list method returns a PagedResultList with pagination arguments'() {

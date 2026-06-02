@@ -28,7 +28,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class LastUpdatedSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([LastUpdateMe])
+        manager.registerDomainClasses(LastUpdateMe)
     }
 
     void "Test lastUpdated and dateCreated"() {

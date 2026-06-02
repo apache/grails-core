@@ -29,7 +29,7 @@ class QueryAfterPropertyChangeSpec extends GrailsDataTckSpec {
 
     @Override
     void setupSpec() {
-        manager.addAllDomainClasses([Person])
+        manager.registerDomainClasses(Person)
     }
 
     void 'Test that an entity is de-indexed after a change to an indexed property'() {

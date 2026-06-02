@@ -25,7 +25,7 @@ class SaveAllSpec extends GrailsDataTckSpec {
 
     @Override
     void setupSpec() {
-        manager.addAllDomainClasses([Person])
+        manager.registerDomainClasses(Person)
     }
 
     def 'Test that many objects can be saved at once using multiple arguments'() {

@@ -28,7 +28,7 @@ import spock.lang.Issue
  */
 class EventsWithAbstractInheritanceSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([ConcreteEventDomain])
+        manager.registerDomainClasses(ConcreteEventDomain)
     }
 
     @Issue('https://github.com/apache/grails-data-mapping/issues/701')

@@ -24,7 +24,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class NotNullQuerySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([NullMe, NullOther])
+        manager.registerDomainClasses(NullMe, NullOther)
     }
 
     void "Test query of null value with dynamic finder"() {

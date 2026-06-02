@@ -28,7 +28,7 @@ import spock.lang.Issue
  */
 class InOperatorWithAssociationsSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([InAuthor, InBook])
+        manager.registerDomainClasses(InAuthor, InBook)
     }
 
     @Issue('https://github.com/apache/grails-core/issues/9279')

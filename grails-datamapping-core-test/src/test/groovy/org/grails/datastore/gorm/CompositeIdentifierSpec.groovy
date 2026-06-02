@@ -28,7 +28,7 @@ import spock.lang.PendingFeature
  */
 class CompositeIdentifierSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([User, Role, UserRole])
+        manager.registerDomainClasses(User, Role, UserRole)
     }
 
     @PendingFeature(reason = 'Composite ids not supported')

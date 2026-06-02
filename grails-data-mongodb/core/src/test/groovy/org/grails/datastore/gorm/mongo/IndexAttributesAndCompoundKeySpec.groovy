@@ -30,7 +30,7 @@ import spock.lang.Issue
  */
 class IndexAttributesAndCompoundKeySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([ServerStream])
+        manager.registerDomainClasses(ServerStream)
     }
 
     @Issue('GPMONGODB-359')

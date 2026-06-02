@@ -33,7 +33,7 @@ import spock.lang.Issue
 class BeforeUpdatePropertyPersistenceSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([UserWithBeforeUpdate, UserWithBeforeUpdateAndAutoTimestamp])
+        manager.registerDomainClasses(UserWithBeforeUpdate, UserWithBeforeUpdateAndAutoTimestamp)
     }
 
     @Issue('GRAILS-15139')

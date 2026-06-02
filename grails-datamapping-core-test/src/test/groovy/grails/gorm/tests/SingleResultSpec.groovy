@@ -29,7 +29,7 @@ import spock.lang.Issue
 class SingleResultSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([TestEntity])
+        manager.registerDomainClasses(TestEntity)
     }
 
     @Issue('https://github.com/apache/grails-data-mapping/issues/872')

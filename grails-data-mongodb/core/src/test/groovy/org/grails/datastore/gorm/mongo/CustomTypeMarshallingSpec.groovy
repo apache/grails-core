@@ -26,7 +26,7 @@ import org.bson.types.ObjectId
 
 class CustomTypeMarshallingSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([Person])
+        manager.registerDomainClasses(Person)
     }
 
     void "Test basic crud with custom types"() {

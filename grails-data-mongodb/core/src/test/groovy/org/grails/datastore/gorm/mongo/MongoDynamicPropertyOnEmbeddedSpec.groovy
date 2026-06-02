@@ -31,7 +31,7 @@ import spock.lang.Issue
 class MongoDynamicPropertyOnEmbeddedSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Container])
+        manager.registerDomainClasses(Container)
     }
 
     @Issue('GPMONGODB-290')

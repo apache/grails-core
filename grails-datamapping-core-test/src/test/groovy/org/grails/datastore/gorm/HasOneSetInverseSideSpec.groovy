@@ -26,7 +26,7 @@ import spock.lang.Issue
 class HasOneSetInverseSideSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([House, HouseAddress])
+        manager.registerDomainClasses(House, HouseAddress)
     }
 
     @Issue('GRAILS-8757')

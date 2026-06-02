@@ -32,7 +32,7 @@ class OneToManySpec extends GrailsDataTckSpec {
 
     @Override
     void setupSpec() {
-        manager.addAllDomainClasses([Country, Person, Pet, PetType])
+        manager.registerDomainClasses(Country, Person, Pet, PetType)
     }
 
     void 'test save and return unidirectional one to many'() {

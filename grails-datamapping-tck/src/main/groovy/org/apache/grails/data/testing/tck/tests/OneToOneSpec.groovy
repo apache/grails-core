@@ -29,7 +29,7 @@ class OneToOneSpec extends GrailsDataTckSpec {
 
     @Override
     void setupSpec() {
-        manager.addAllDomainClasses([Face, Nose, Person, Pet])
+        manager.registerDomainClasses(Face, Nose, Person, Pet)
     }
 
     def 'Test persist and retrieve unidirectional many-to-one'() {

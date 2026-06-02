@@ -24,7 +24,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class StatelessSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Volcano])
+        manager.registerDomainClasses(Volcano)
     }
 
     void "stateless and self-assigned ids can be used together"() {

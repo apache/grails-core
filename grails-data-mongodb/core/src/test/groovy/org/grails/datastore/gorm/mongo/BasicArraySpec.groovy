@@ -30,7 +30,7 @@ import org.bson.types.ObjectId
  */
 class BasicArraySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([Data])
+        manager.registerDomainClasses(Data)
     }
 
     void "Test that arrays are saved correctly"() {

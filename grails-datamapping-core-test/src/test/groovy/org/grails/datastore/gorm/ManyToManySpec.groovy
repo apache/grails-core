@@ -24,7 +24,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class ManyToManySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([Account, Invoice])
+        manager.registerDomainClasses(Account, Invoice)
     }
 
     void "Test save and load many-to-many association"() {

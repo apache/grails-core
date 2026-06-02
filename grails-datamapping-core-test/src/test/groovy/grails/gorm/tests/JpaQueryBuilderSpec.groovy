@@ -31,7 +31,7 @@ import org.springframework.dao.InvalidDataAccessResourceUsageException
 class JpaQueryBuilderSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Person])
+        manager.registerDomainClasses(Person)
     }
 
     void "Test update query with ilike criterion"() {

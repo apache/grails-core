@@ -28,7 +28,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class EmbeddedWhereClauseSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([PersonAttribute])
+        manager.registerDomainClasses(PersonAttribute)
     }
 
     void "Can construct data service where clause on embedded object"() {

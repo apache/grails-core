@@ -25,7 +25,7 @@ import spock.lang.Issue
 
 class DefaultSortOrderSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([SOBook])
+        manager.registerDomainClasses(SOBook)
     }
 
     @Issue('GPMONGODB-181')

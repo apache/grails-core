@@ -25,7 +25,7 @@ class DeleteAllSpec extends GrailsDataTckSpec {
 
     @Override
     void setupSpec() {
-        manager.addAllDomainClasses([Person])
+        manager.registerDomainClasses(Person)
     }
 
     def 'Test that many objects can be deleted at once using multiple arguments'() {

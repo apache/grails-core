@@ -27,7 +27,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
  */
 class ListOrderByHungarianNotationSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([ClassWithHungarianNotation])
+        manager.registerDomainClasses(ClassWithHungarianNotation)
     }
 
     void "test dynamic finder of properties with hungarian notation"() {

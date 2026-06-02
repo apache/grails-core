@@ -30,7 +30,7 @@ import org.bson.Document
 class BrokenManyToManyAssociationSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([ReferencingEntity, ReferencedEntity])
+        manager.registerDomainClasses(ReferencingEntity, ReferencedEntity)
     }
 
     def 'Perform a cascading delete on a broken many-to-many relationship'() {

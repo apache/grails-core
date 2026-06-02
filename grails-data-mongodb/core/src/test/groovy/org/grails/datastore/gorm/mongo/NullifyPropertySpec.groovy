@@ -29,7 +29,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class NullifyPropertySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Pet, Person])
+        manager.registerDomainClasses(Pet, Person)
     }
 
     void "Test nullify basic property"() {

@@ -29,7 +29,7 @@ class GormEnhancerSpec extends GrailsDataTckSpec {
 
     @Override
     void setupSpec() {
-        manager.addAllDomainClasses([TestEntity, ChildEntity])
+        manager.registerDomainClasses(TestEntity, ChildEntity)
     }
 
     void 'Test basic CRUD operations'() {

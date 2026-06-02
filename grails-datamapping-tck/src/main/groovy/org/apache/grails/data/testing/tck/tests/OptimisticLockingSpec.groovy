@@ -32,7 +32,7 @@ class OptimisticLockingSpec extends GrailsDataTckSpec {
 
     @Override
     void setupSpec() {
-        manager.addAllDomainClasses([OptLockVersioned, OptLockNotVersioned])
+        manager.registerDomainClasses(OptLockVersioned, OptLockNotVersioned)
     }
 
     void "Test versioning"() {

@@ -30,7 +30,7 @@ import spock.lang.Issue
 @Issue('https://github.com/apache/grails-core/issues/669')
 class MappedByNoneSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([Player, SoftballTeamPreference])
+        manager.registerDomainClasses(Player, SoftballTeamPreference)
     }
 
     void "Test that mapped by with a value of 'none' disables the mapping"() {

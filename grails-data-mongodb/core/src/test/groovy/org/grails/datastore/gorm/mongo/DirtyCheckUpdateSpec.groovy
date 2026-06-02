@@ -33,7 +33,7 @@ import spock.lang.Issue
 class DirtyCheckUpdateSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Bar])
+        manager.registerDomainClasses(Bar)
     }
 
     @Issue('GPMONGODB-334')

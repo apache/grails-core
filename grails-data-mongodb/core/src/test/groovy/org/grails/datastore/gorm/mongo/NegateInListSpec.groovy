@@ -25,7 +25,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class NegateInListSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Person])
+        manager.registerDomainClasses(Person)
     }
 
     void "Test negate in list query"() {

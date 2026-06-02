@@ -29,7 +29,7 @@ class ProxyLoadingSpec extends GrailsDataTckSpec {
 
     @Override
     void setupSpec() {
-        manager.addAllDomainClasses([TestEntity, ChildEntity])
+        manager.registerDomainClasses(TestEntity, ChildEntity)
     }
 
     void 'Test load proxied instance directly'() {

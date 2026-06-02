@@ -25,7 +25,7 @@ import org.bson.types.ObjectId
 
 class NegationEnumSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([HasEnum])
+        manager.registerDomainClasses(HasEnum)
     }
 
     void "Test negate with enum query"() {

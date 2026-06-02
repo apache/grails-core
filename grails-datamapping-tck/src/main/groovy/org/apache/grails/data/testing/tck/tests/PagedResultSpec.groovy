@@ -25,7 +25,7 @@ class PagedResultSpec extends GrailsDataTckSpec {
 
     @Override
     void setupSpec() {
-        manager.addAllDomainClasses([Person])
+        manager.registerDomainClasses(Person)
     }
 
     void 'Test that a getTotalCount will return 0 on empty result from the list() method'() {

@@ -29,7 +29,7 @@ class ListOrderBySpec extends GrailsDataTckSpec {
 
     @Override
     void setupSpec() {
-        manager.addAllDomainClasses([TestEntity, ChildEntity])
+        manager.registerDomainClasses(TestEntity, ChildEntity)
     }
 
     void 'Test listOrderBy property name method'() {

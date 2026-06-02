@@ -33,7 +33,7 @@ class RangeQuerySpec extends GrailsDataTckSpec {
 
     @Override
     void setupSpec() {
-        manager.addAllDomainClasses([ChildEntity, Person, Publication, TestEntity])
+        manager.registerDomainClasses(ChildEntity, Person, Publication, TestEntity)
     }
 
     void 'Test between query with dates'() {

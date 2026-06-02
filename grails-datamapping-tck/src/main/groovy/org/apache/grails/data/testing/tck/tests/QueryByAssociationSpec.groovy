@@ -29,7 +29,7 @@ class QueryByAssociationSpec extends GrailsDataTckSpec {
 
     @Override
     void setupSpec() {
-        manager.addAllDomainClasses([TestEntity, ChildEntity])
+        manager.registerDomainClasses(TestEntity, ChildEntity)
     }
 
     void 'Test query entity by single-ended association'() {

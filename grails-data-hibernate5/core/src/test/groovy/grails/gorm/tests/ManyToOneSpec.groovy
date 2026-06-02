@@ -27,7 +27,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
  */
 class ManyToOneSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([Foo, Bar])
+        manager.registerDomainClasses(Foo, Bar)
     }
 
     static {

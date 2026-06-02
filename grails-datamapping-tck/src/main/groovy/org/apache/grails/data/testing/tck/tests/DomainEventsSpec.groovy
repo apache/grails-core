@@ -33,7 +33,7 @@ class DomainEventsSpec extends GrailsDataTckSpec {
 
     @Override
     void setupSpec() {
-        manager.addAllDomainClasses([PersonEvent, ModifyPerson])
+        manager.registerDomainClasses(PersonEvent, ModifyPerson)
     }
 
     def setup() {

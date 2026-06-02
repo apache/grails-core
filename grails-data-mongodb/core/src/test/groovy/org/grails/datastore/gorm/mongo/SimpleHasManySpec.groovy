@@ -30,7 +30,7 @@ import spock.lang.Issue
 class SimpleHasManySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Book, Chapter])
+        manager.registerDomainClasses(Book, Chapter)
     }
 
     @Issue('GPMONGODB-337')

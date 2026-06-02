@@ -43,19 +43,7 @@ abstract class GrailsDataTckManager {
     }
 
     /**
-     * @deprecated Use {@link #registerDomainClasses(Class...)} instead.
-     */
-    @Deprecated
-    void addAllDomainClasses(Collection<Class> classes) {
-        registerDomainClasses(classes as Class[])
-    }
-
-    /**
      * Registers the domain classes that will be available when testing.
-     * Note: Direct callers of addAllDomainClasses have not been refactored because there are
-     * over 180 callers, and IntelliJ IDE does not support automatic inlining/refactoring of
-     * Groovy methods. Thus, addAllDomainClasses remains as a deprecated wrapper to avoid
-     * massive manual file modifications.
      * @param classes The classes to register
      */
     void registerDomainClasses(Class... classes) {

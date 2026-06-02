@@ -30,7 +30,7 @@ class OrderBySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     @Override
     void setupSpec() {
-        manager.addAllDomainClasses([TestEntity, ChildEntity])
+        manager.registerDomainClasses(TestEntity, ChildEntity)
     }
 
     def setup() {

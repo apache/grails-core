@@ -30,7 +30,7 @@ import org.bson.types.Decimal128
 class BigDecimalSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([BossMan])
+        manager.registerDomainClasses(BossMan)
     }
 
     void "test save and retrieve big decimal value"() {

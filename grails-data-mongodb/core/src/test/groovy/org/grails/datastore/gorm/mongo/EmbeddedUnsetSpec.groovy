@@ -26,7 +26,7 @@ import spock.lang.Issue
 class EmbeddedUnsetSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([EmbeddedPetOwner, EmbeddedPet])
+        manager.registerDomainClasses(EmbeddedPetOwner, EmbeddedPet)
     }
 
     @Issue('https://github.com/apache/grails-data-mapping/issues/718')

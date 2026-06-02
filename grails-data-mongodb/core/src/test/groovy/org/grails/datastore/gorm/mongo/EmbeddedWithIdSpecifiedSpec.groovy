@@ -25,7 +25,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class EmbeddedWithIdSpecifiedSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([SystemCustomer, PreorderTreeNode, MultiLevelKpi])
+        manager.registerDomainClasses(SystemCustomer, PreorderTreeNode, MultiLevelKpi)
     }
 
     void "Test that id is saved of embedded entity if specified"() {

@@ -30,7 +30,7 @@ import org.bson.types.ObjectId
 class MapOfDomainsSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Smartphones])
+        manager.registerDomainClasses(Smartphones)
     }
 
     void "Test that a map of embedded objects can be persisted"() {

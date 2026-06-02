@@ -28,7 +28,7 @@ import spock.lang.Issue
  */
 class CircularEmbeddedListSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([Tree])
+        manager.registerDomainClasses(Tree)
     }
 
     @Issue('GPMONGODB-350')
