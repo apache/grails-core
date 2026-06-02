@@ -149,11 +149,8 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
         if (!classNode.getSuperClass().equals(new ClassNode(Object.class))) {
             final Set<String> parentClassPropertyNames = getPropertyNamesToIncludeInWhiteListForParentClass(sourceUnit, classNode.getSuperClass());
             for (final String parentPropertyName : parentClassPropertyNames) {
-                // The id, version, dateCreated and lastUpdated properties of a domain class are never bound by default.
-                // A parent class may legitimately include these in its own whitelist when it is not itself recognised as
-                // a domain class (for example an abstract @DirtyCheck base class in src/main/groovy onto which GORM injects
-                // id and version). Such properties must not be inherited into a domain class' whitelist, otherwise the
-                // exclusion performed by shouldFieldBeInWhiteList is bypassed via the inherited bindable property names.
+                // A domain class never binds its special properties (id/version/dateCreated/lastUpdated) by
+                // default, so don't inherit them from a non-domain parent such as a @DirtyCheck base class.
                 if (isDomainClass && DOMAIN_CLASS_PROPERTIES_TO_EXCLUDE_BY_DEFAULT.contains(parentPropertyName)) {
                     continue;
                 }

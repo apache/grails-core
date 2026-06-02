@@ -31,7 +31,7 @@ import org.apache.grails.testing.http.client.HttpClientSupport
  * (including {@code id} and {@code version}) to a domain class that extends an abstract {@code @DirtyCheck}
  * base. The framework must not bind {@code id} or {@code version} by default.
  */
-@Integration(applicationClass = Application)
+@Integration
 @Tag('http-client')
 class DirtyCheckBindingSpec extends Specification implements HttpClientSupport {
 
