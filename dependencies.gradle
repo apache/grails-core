@@ -38,6 +38,10 @@ ext {
             'jline2.version'                : '2.14.6',
             'jna.version'                   : '5.18.1',
             'jquery.version'                : '3.7.1',
+            // maven-model is used by the docs-core ExtractDependenciesTask to parse BOM POMs
+            // the Maven-standard way. Spring Boot does not manage this artifact, so the version
+            // is pinned here. Use the Maven 3.x line, which provides MavenXpp3Reader.
+            'maven-model.version'           : '3.9.16',
             'objenesis.version'             : '3.4',
             'spring-boot.version'           : '4.1.0-RC1',
     ]
