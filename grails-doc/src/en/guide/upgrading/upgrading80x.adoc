@@ -877,3 +877,45 @@ Previously, rendering an enum value would produce a JSON string with the type an
 
 Rendering an enum value as JSON will now instead throw a `ConverterException`.
 See https://github.com/apache/grails-core/pull/15212[PR 15212] for more details on this change.
+
+==== 24. Apache Groovy 5 Behavior Changes
+
+Grails 8 upgrades from Apache Groovy 4 to Apache Groovy 5.
+Most applications need no changes, but a few stricter behaviors can affect application code.
+
+===== 24.1 Assigning a static field from a static closure requires the class name
+
+Under Groovy 5 with static compilation (`@CompileStatic` / `@GrailsCompileStatic`), assigning to a static field from inside a static closure - such as the `constraints`, `mapping`, or `namedQueries` blocks of a statically compiled class - no longer resolves an unqualified field name to the enclosing class's static field.
+Qualify the assignment with the class name:
+
+[source,groovy]
+----
+@GrailsCompileStatic
+class Book implements Validateable {
+    static boolean constraintsClosureCalled = false
+
+    static constraints = {
+        // Groovy 4: an unqualified assignment resolved to Book.constraintsClosureCalled
+        // Groovy 5: the field must be qualified with the class name
+        Book.constraintsClosureCalled = true
+    }
+}
+----
+
+Reading a static field is unaffected; only assignment from within the static closure needs the class-name qualifier.
+
+===== 24.2 Probing a `ConfigObject` for a missing key
+
+In Groovy 5, indexing a `groovy.util.ConfigObject` with the subscript operator for a key that does not exist creates and inserts an empty nested `ConfigObject` for that key, rather than reading back as a falsy value.
+Code that walks a configuration source with `[]` and expects a missing key to be `null` should test for the key explicitly before reading it:
+
+[source,groovy]
+----
+// Under Groovy 5 this inserts an empty entry for a missing key
+def value = configObject[key]
+
+// Probe without creating an entry
+def value = configObject.containsKey(key) ? configObject.get(key) : null
+----
+
+Grails applies this guard internally when resolving Spring profile activation keys; you only need it in application code that navigates a raw `ConfigObject` by subscript.
