@@ -25,7 +25,6 @@ import org.springframework.context.event.SmartApplicationListener
 
 import grails.gorm.DetachedCriteria
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import org.apache.grails.data.testing.tck.domains.Simples
 import org.apache.grails.data.testing.tck.domains.TestEntity
 import org.grails.datastore.mapping.query.event.AbstractQueryEvent
 import org.grails.datastore.mapping.query.event.PostQueryEvent

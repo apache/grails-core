@@ -20,7 +20,6 @@ package org.apache.grails.data.testing.tck.base
 
 import spock.lang.Specification
 
-
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
 
@@ -48,7 +47,7 @@ abstract class GrailsDataTckManager {
      */
     @Deprecated
     void addAllDomainClasses(Collection<Class> classes) {
-       registerDomainClasses(classes as Class[])
+        registerDomainClasses(classes as Class[])
     }
 
     /**
