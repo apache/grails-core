@@ -27,7 +27,7 @@ import org.grails.datastore.gorm.events.AutoTimestampEventListener
 
 class CustomAutoTimestampSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([AutoTimestampedChildEntity, AutoTimestampedParentEntity, Image, RecordCustom, RecordWithAliases])
+        manager.registerDomainClasses(AutoTimestampedChildEntity, AutoTimestampedParentEntity, Image, RecordCustom, RecordWithAliases)
     }
 
     void "Test when the auto timestamp properties are customized, they are correctly set"() {

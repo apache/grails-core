@@ -23,6 +23,11 @@ import org.apache.grails.data.testing.tck.domains.Person
 
 class SaveAllSpec extends GrailsDataTckSpec {
 
+    @Override
+    void setupSpec() {
+        manager.registerDomainClasses(Person)
+    }
+
     def 'Test that many objects can be saved at once using multiple arguments'() {
         given:
         def bob = new Person(firstName: 'Bob', lastName: 'Builder')

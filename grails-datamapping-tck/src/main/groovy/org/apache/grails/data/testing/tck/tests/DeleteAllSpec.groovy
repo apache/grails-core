@@ -23,6 +23,11 @@ import org.apache.grails.data.testing.tck.domains.Person
 
 class DeleteAllSpec extends GrailsDataTckSpec {
 
+    @Override
+    void setupSpec() {
+        manager.registerDomainClasses(Person)
+    }
+
     def 'Test that many objects can be deleted at once using multiple arguments'() {
         given:
         def bob = new Person(firstName: 'Bob', lastName: 'Builder').save(flush: true)
