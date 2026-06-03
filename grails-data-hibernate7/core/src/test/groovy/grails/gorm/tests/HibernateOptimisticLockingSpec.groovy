@@ -29,6 +29,10 @@ import org.grails.orm.hibernate.support.hibernate7.HibernateOptimisticLockingFai
  */
 class HibernateOptimisticLockingSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
 
+    void setupSpec() {
+        manager.registerDomainClasses(OptLockVersioned, OptLockNotVersioned)
+    }
+
     void "Test optimistic locking"() {
 
         given:
