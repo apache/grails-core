@@ -21,6 +21,7 @@ package org.grails.datastore.gorm
 import java.util.concurrent.ConcurrentHashMap
 
 import groovy.transform.CompileDynamic
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 
 import org.springframework.transaction.PlatformTransactionManager
@@ -33,7 +34,6 @@ import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.reflect.NameUtils
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
@@ -50,6 +50,7 @@ import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
  * @since 8.0.0
  */
 @Slf4j
+@CompileStatic
 class GormRegistry {
 
     private static final GormRegistry instance = new GormRegistry()
@@ -145,7 +146,7 @@ class GormRegistry {
     GormApiFactory getApiFactory(Datastore datastore) {
         GormApiFactory factory = apiFactoriesByDatastoreType.get(datastore.getClass())
         if (factory == null) {
-            for (entry in apiFactoriesByDatastoreType) {
+            for (Map.Entry<Class, GormApiFactory> entry in apiFactoriesByDatastoreType.entrySet()) {
                 if (entry.key.isInstance(datastore)) {
                     return entry.value
                 }
@@ -362,7 +363,7 @@ class GormRegistry {
             if (it.next().value == datastore) it.remove()
         }
 
-        for (entityMap in entityDatastores.values()) {
+        for (Map<String, Datastore> entityMap in entityDatastores.values()) {
             Iterator<Map.Entry<String, Datastore>> eit = entityMap.entrySet().iterator()
             while (eit.hasNext()) {
                 if (eit.next().value == datastore) eit.remove()
@@ -682,8 +683,6 @@ class GormRegistry {
         Datastore defaultDatastore = (Datastore) datastore
         List<String> qualifiers = connectionSourceNames ?: Collections.singletonList(ConnectionSource.DEFAULT)
         boolean multiTenantEntity = entity instanceof PersistentEntity && ((PersistentEntity) entity).isMultiTenant()
-        MultiTenancySettings.MultiTenancyMode multiTenancyMode = defaultDatastore instanceof MultiTenantCapableDatastore ?
-                ((MultiTenantCapableDatastore) defaultDatastore).getMultiTenancyMode() : null
 
         entityDatastores.remove(normalizedClassName)
 
@@ -723,7 +722,7 @@ class GormRegistry {
         }
 
         // If the entity does not explicitly include DEFAULT, route DEFAULT to the first explicit connection.
-        if (!qualifiers.collect { normalizeQualifier(it) }.contains(ConnectionSource.DEFAULT)) {
+        if (!qualifiers.collect { String it -> normalizeQualifier(it) }.contains(ConnectionSource.DEFAULT)) {
             registerEntityDatastore(normalizedClassName, ConnectionSource.DEFAULT, primaryDatastore)
         }
     }
