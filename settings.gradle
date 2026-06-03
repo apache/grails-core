@@ -182,14 +182,14 @@ include(
         // gsp
         'grails-gsp-core',
         'grails-gsp',
-        // TODO: 'grails-sitemesh3', // sitemesh3 does not support boot 4 at this time
+        'grails-sitemesh3',
         'grails-layout',
         'grails-taglib',
         'grails-web-gsp',
         'grails-web-gsp-taglib',
         'grails-web-jsp',
         'grails-web-taglib',
-        // TODO: 'grails-gsp-spring-boot', // sitemesh3 does not support boot4 at this time
+        'grails-gsp-spring-boot',
 
         'grails-datastore-core',
         'grails-datastore-web',
@@ -253,14 +253,14 @@ project(':grails-dependencies-assets').projectDir = file('grails-dependencies/as
 
 project(':grails-gsp-core').projectDir = file('grails-gsp/core')
 project(':grails-gsp').projectDir = file('grails-gsp/plugin')
-// TODO: project(':grails-sitemesh3').projectDir = file('grails-gsp/grails-sitemesh3')
+project(':grails-sitemesh3').projectDir = file('grails-gsp/grails-sitemesh3')
 project(':grails-layout').projectDir = file('grails-gsp/grails-layout')
 project(':grails-taglib').projectDir = file('grails-gsp/grails-taglib')
 project(':grails-web-gsp').projectDir = file('grails-gsp/grails-web-gsp')
 project(':grails-web-gsp-taglib').projectDir = file('grails-gsp/grails-web-gsp-taglib')
 project(':grails-web-jsp').projectDir = file('grails-gsp/grails-web-jsp')
 project(':grails-web-taglib').projectDir = file('grails-gsp/grails-web-taglib')
-// TODO: project(':grails-gsp-spring-boot').projectDir = file('grails-gsp/spring-boot')
+project(':grails-gsp-spring-boot').projectDir = file('grails-gsp/spring-boot')
 
 // Data Mapping - Documentation
 include 'grails-data-docs-guide-developer'

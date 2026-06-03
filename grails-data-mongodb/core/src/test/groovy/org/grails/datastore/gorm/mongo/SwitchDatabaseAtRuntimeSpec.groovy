@@ -28,7 +28,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class SwitchDatabaseAtRuntimeSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Person])
+        manager.registerDomainClasses(Person)
     }
 
     void setup() {
