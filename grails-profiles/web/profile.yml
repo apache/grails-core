@@ -44,7 +44,7 @@ dependencies:
     - scope: implementation
       coords: "org.apache.grails:grails-url-mappings"
     - scope: implementation
-      coords: "org.apache.grails:grails-sitemesh3"
+      coords: "org.apache.grails:grails-layout"
     - scope: implementation
       coords: "org.apache.grails:grails-interceptors"
     - scope: implementation
