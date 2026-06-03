@@ -29,7 +29,7 @@ import spock.lang.Issue
 @Issue('https://github.com/apache/grails-data-mapping/issues/937')
 class TablePerConcreteClassAndDateCreatedSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([Vehicle, Spaceship])
+        manager.registerDomainClasses(Vehicle, Spaceship)
     }
 
     void "should set the dateCreated automatically"() {

@@ -27,7 +27,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 @SuppressWarnings("GrMethodMayBeStatic")
 class DetachCriteriaSubquerySpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([User, Group, GroupAssignment, Organisation])
+        manager.registerDomainClasses(User, Group, GroupAssignment, Organisation)
     }
 
     void "test detached associated criteria in subquery"() {
