@@ -32,6 +32,6 @@ class LogoutPage extends Page {
 
     void logout() {
         logoutButton.click()
-        waitFor { title != pageTitle }
+        waitFor(30) { title != pageTitle }
     }
 }

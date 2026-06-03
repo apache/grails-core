@@ -75,6 +75,10 @@ gradlePlugin {
             id = 'org.apache.grails.gradle.grails-code-analysis'
             implementationClass = 'org.apache.grails.buildsrc.GrailsCodeAnalysisPlugin'
         }
+        register('grailsJacoco') {
+            id = 'org.apache.grails.gradle.grails-jacoco'
+            implementationClass = 'org.apache.grails.buildsrc.GrailsJacocoPlugin'
+        }
         register('grailsViolationAggregation') {
             id = 'org.apache.grails.gradle.grails-violation-aggregation'
             implementationClass = 'org.apache.grails.buildsrc.GrailsViolationAggregationPlugin'
