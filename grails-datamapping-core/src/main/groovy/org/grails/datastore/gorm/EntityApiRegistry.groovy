@@ -63,59 +63,31 @@ class EntityApiRegistry {
         registerEntityApis(cls.name, staticApi, instanceApi, validationApi)
     }
 
-    GormStaticApi getStaticApi(Class entityClass) {
-        return staticApiRegistry.get(registry.normalizeEntityKey(entityClass))
+    GormStaticApi getStaticApi(Class entityClass, String qualifier = null) {
+        qualifier == null ? staticApiRegistry.get(registry.normalizeEntityKey(entityClass)) : staticApiRegistry.get(registry.normalizeEntityKey(entityClass), registry.normalizeQualifier(qualifier))
     }
 
-    GormInstanceApi getInstanceApi(Class entityClass) {
-        return instanceApiRegistry.get(registry.normalizeEntityKey(entityClass))
+    GormInstanceApi getInstanceApi(Class entityClass, String qualifier = null) {
+        qualifier == null ? instanceApiRegistry.get(registry.normalizeEntityKey(entityClass)) : instanceApiRegistry.get(registry.normalizeEntityKey(entityClass), registry.normalizeQualifier(qualifier))
     }
 
-    GormValidationApi getValidationApi(Class entityClass) {
-        return validationApiRegistry.get(registry.normalizeEntityKey(entityClass))
+    GormValidationApi getValidationApi(Class entityClass, String qualifier = null) {
+        qualifier == null ? validationApiRegistry.get(registry.normalizeEntityKey(entityClass)) : validationApiRegistry.get(registry.normalizeEntityKey(entityClass), registry.normalizeQualifier(qualifier))
     }
 
-    GormStaticApi getStaticApi(Class entityClass, String qualifier) {
-        return staticApiRegistry.get(registry.normalizeEntityKey(entityClass), registry.normalizeQualifier(qualifier))
+    GormStaticApi getStaticApi(String className, String qualifier = null) {
+        qualifier == null ? staticApiRegistry.get(registry.normalizeEntityKey(className)) : staticApiRegistry.get(registry.normalizeEntityKey(className), registry.normalizeQualifier(qualifier))
     }
 
-    GormInstanceApi getInstanceApi(Class entityClass, String qualifier) {
-        return instanceApiRegistry.get(registry.normalizeEntityKey(entityClass), registry.normalizeQualifier(qualifier))
+    GormInstanceApi getInstanceApi(String className, String qualifier = null) {
+        qualifier == null ? instanceApiRegistry.get(registry.normalizeEntityKey(className)) : instanceApiRegistry.get(registry.normalizeEntityKey(className), registry.normalizeQualifier(qualifier))
     }
 
-    GormValidationApi getValidationApi(Class entityClass, String qualifier) {
-        return validationApiRegistry.get(registry.normalizeEntityKey(entityClass), registry.normalizeQualifier(qualifier))
+    GormValidationApi getValidationApi(String className, String qualifier = null) {
+        qualifier == null ? validationApiRegistry.get(registry.normalizeEntityKey(className)) : validationApiRegistry.get(registry.normalizeEntityKey(className), registry.normalizeQualifier(qualifier))
     }
 
-    GormStaticApi getStaticApi(String className) {
-        return staticApiRegistry.get(registry.normalizeEntityKey(className))
-    }
-
-    GormStaticApi getStaticApi(String className, String qualifier) {
-        return staticApiRegistry.get(registry.normalizeEntityKey(className), registry.normalizeQualifier(qualifier))
-    }
-
-    GormInstanceApi getInstanceApi(String className) {
-        return instanceApiRegistry.get(registry.normalizeEntityKey(className))
-    }
-
-    GormInstanceApi getInstanceApi(String className, String qualifier) {
-        return instanceApiRegistry.get(registry.normalizeEntityKey(className), registry.normalizeQualifier(qualifier))
-    }
-
-    GormValidationApi getValidationApi(String className) {
-        return validationApiRegistry.get(registry.normalizeEntityKey(className))
-    }
-
-    GormValidationApi getValidationApi(String className, String qualifier) {
-        return validationApiRegistry.get(registry.normalizeEntityKey(className), registry.normalizeQualifier(qualifier))
-    }
-
-    GormStaticApi resolveStaticApi(Class entityClass) {
-        return resolveStaticApi(entityClass, (String) null)
-    }
-
-    GormStaticApi resolveStaticApi(Class entityClass, String qualifier) {
+    GormStaticApi resolveStaticApi(Class entityClass, String qualifier = null) {
         String normalizedClassName = registry.normalizeEntityKey(entityClass)
         String normalizedQualifier = registry.normalizeQualifier(qualifier)
 
@@ -143,11 +115,7 @@ class EntityApiRegistry {
         return staticApiRegistry.getDirect(normalizedClassName, normalizedQualifier)
     }
 
-    GormInstanceApi resolveInstanceApi(Class entityClass) {
-        return resolveInstanceApi(entityClass, (String) null)
-    }
-
-    GormInstanceApi resolveInstanceApi(Class entityClass, String qualifier) {
+    GormInstanceApi resolveInstanceApi(Class entityClass, String qualifier = null) {
         String normalizedClassName = registry.normalizeEntityKey(entityClass)
         String normalizedQualifier = registry.normalizeQualifier(qualifier)
 
@@ -175,11 +143,7 @@ class EntityApiRegistry {
         return instanceApiRegistry.getDirect(normalizedClassName, normalizedQualifier)
     }
 
-    GormValidationApi resolveValidationApi(Class entityClass) {
-        return resolveValidationApi(entityClass, (String) null)
-    }
-
-    GormValidationApi resolveValidationApi(Class entityClass, String qualifier) {
+    GormValidationApi resolveValidationApi(Class entityClass, String qualifier = null) {
         String normalizedClassName = registry.normalizeEntityKey(entityClass)
         String normalizedQualifier = registry.normalizeQualifier(qualifier)
 

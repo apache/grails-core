@@ -277,75 +277,39 @@ class GormRegistry {
         datastoreDiscovery.isDatastoreRegisteredForEntity(className, datastore)
     }
 
-    GormStaticApi getStaticApi(Class entityClass) {
-        entityApiRegistry.getStaticApi(entityClass)
-    }
-
-    GormInstanceApi getInstanceApi(Class entityClass) {
-        entityApiRegistry.getInstanceApi(entityClass)
-    }
-
-    GormValidationApi getValidationApi(Class entityClass) {
-        entityApiRegistry.getValidationApi(entityClass)
-    }
-
-    GormStaticApi getStaticApi(Class entityClass, String qualifier) {
+    GormStaticApi getStaticApi(Class entityClass, String qualifier = null) {
         entityApiRegistry.getStaticApi(entityClass, qualifier)
     }
 
-    GormInstanceApi getInstanceApi(Class entityClass, String qualifier) {
+    GormInstanceApi getInstanceApi(Class entityClass, String qualifier = null) {
         entityApiRegistry.getInstanceApi(entityClass, qualifier)
     }
 
-    GormValidationApi getValidationApi(Class entityClass, String qualifier) {
+    GormValidationApi getValidationApi(Class entityClass, String qualifier = null) {
         entityApiRegistry.getValidationApi(entityClass, qualifier)
     }
 
-    GormStaticApi resolveStaticApi(Class entityClass) {
-        entityApiRegistry.resolveStaticApi(entityClass)
-    }
-
-    GormStaticApi resolveStaticApi(Class entityClass, String qualifier) {
+    GormStaticApi resolveStaticApi(Class entityClass, String qualifier = null) {
         entityApiRegistry.resolveStaticApi(entityClass, qualifier)
     }
 
-    GormInstanceApi resolveInstanceApi(Class entityClass) {
-        entityApiRegistry.resolveInstanceApi(entityClass)
-    }
-
-    GormInstanceApi resolveInstanceApi(Class entityClass, String qualifier) {
+    GormInstanceApi resolveInstanceApi(Class entityClass, String qualifier = null) {
         entityApiRegistry.resolveInstanceApi(entityClass, qualifier)
     }
 
-    GormValidationApi resolveValidationApi(Class entityClass) {
-        entityApiRegistry.resolveValidationApi(entityClass)
-    }
-
-    GormValidationApi resolveValidationApi(Class entityClass, String qualifier) {
+    GormValidationApi resolveValidationApi(Class entityClass, String qualifier = null) {
         entityApiRegistry.resolveValidationApi(entityClass, qualifier)
     }
 
-    GormStaticApi getStaticApi(String className) {
-        entityApiRegistry.getStaticApi(className)
-    }
-
-    GormStaticApi getStaticApi(String className, String qualifier) {
+    GormStaticApi getStaticApi(String className, String qualifier = null) {
         entityApiRegistry.getStaticApi(className, qualifier)
     }
 
-    GormInstanceApi getInstanceApi(String className) {
-        entityApiRegistry.getInstanceApi(className)
-    }
-
-    GormInstanceApi getInstanceApi(String className, String qualifier) {
+    GormInstanceApi getInstanceApi(String className, String qualifier = null) {
         entityApiRegistry.getInstanceApi(className, qualifier)
     }
 
-    GormValidationApi getValidationApi(String className) {
-        entityApiRegistry.getValidationApi(className)
-    }
-
-    GormValidationApi getValidationApi(String className, String qualifier) {
+    GormValidationApi getValidationApi(String className, String qualifier = null) {
         entityApiRegistry.getValidationApi(className, qualifier)
     }
 
