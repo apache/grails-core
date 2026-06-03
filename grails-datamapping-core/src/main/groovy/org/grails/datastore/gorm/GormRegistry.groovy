@@ -55,19 +55,19 @@ class GormRegistry {
 
     private static final GormRegistry instance = new GormRegistry()
     private final GormApiFactory defaultApiFactory = new DefaultGormApiFactory()
-    private final GormApiResolver apiResolver = new GormApiResolver(this)
-    private final GormStaticApiRegistry staticApiRegistry = new GormStaticApiRegistry(this)
-    private final GormInstanceApiRegistry instanceApiRegistry = new GormInstanceApiRegistry(this)
-    private final GormValidationApiRegistry validationApiRegistry = new GormValidationApiRegistry(this)
+    final GormApiResolver apiResolver = new GormApiResolver(this)
+    final GormStaticApiRegistry staticApiRegistry = new GormStaticApiRegistry(this)
+    final GormInstanceApiRegistry instanceApiRegistry = new GormInstanceApiRegistry(this)
+    final GormValidationApiRegistry validationApiRegistry = new GormValidationApiRegistry(this)
 
-    private final Map<String, Datastore> datastoresByQualifier = new ConcurrentHashMap<>()
+    final Map<String, Datastore> datastoresByQualifier = new ConcurrentHashMap<>()
     private final Map<String, Map<String, Datastore>> entityDatastores = new ConcurrentHashMap<>()
     private final Map<Class, String> normalizedEntityKeysByClass = new ConcurrentHashMap<>()
     private final Map<String, String> normalizedEntityKeysByName = new ConcurrentHashMap<>()
     private final Map<String, String> normalizedQualifiers = new ConcurrentHashMap<>()
-    private final Map<Class, Datastore> datastoresByType = new ConcurrentHashMap<>()
+    final Map<Class, Datastore> datastoresByType = new ConcurrentHashMap<>()
     private final Map<Class, GormApiFactory> apiFactoriesByDatastoreType = new ConcurrentHashMap<>()
-    private final Set<Datastore> allDatastores = Collections.newSetFromMap(new ConcurrentHashMap<Datastore, Boolean>())
+    final Set<Datastore> allDatastores = Collections.newSetFromMap(new ConcurrentHashMap<Datastore, Boolean>())
 
     static GormRegistry getInstance() {
         return instance
@@ -82,6 +82,7 @@ class GormRegistry {
 
     /**
      * Resets the registry.
+     * Nominally unused in core mapping runtime code, but heavily used by testing frameworks to reset state between spec executions.
      */
     static void reset() {
         instance.resetInstance()
@@ -135,10 +136,10 @@ class GormRegistry {
         instance.apiResolver.findDatastore(entity, qualifier)
     }
 
-    GormApiResolver getApiResolver() {
-        return apiResolver
-    }
-
+    /**
+     * Registers a custom GormApiFactory for a specific datastore type.
+     * Nominally unused within the core mapping module, but invoked dynamically by external datastore implementations (e.g. Hibernate, MongoDB) to customize API generation.
+     */
     void registerApiFactory(Class datastoreType, GormApiFactory factory) {
         apiFactoriesByDatastoreType.put(datastoreType, factory)
     }
@@ -158,6 +159,7 @@ class GormRegistry {
 
     /**
      * Finds a single transaction manager if only one datastore is registered.
+     * Nominally unused, but invoked at compile-time by transactional AST transformations.
      */
     PlatformTransactionManager findSingleTransactionManager() {
         return findSingleTransactionManager(ConnectionSource.DEFAULT)
@@ -165,6 +167,7 @@ class GormRegistry {
 
     /**
      * Finds a single transaction manager for a specific qualifier.
+     * Nominally unused, but invoked at compile-time by transactional AST transformations.
      */
     PlatformTransactionManager findSingleTransactionManager(String qualifier) {
         Datastore ds = getDatastoreByString((String) null, qualifier)
@@ -182,6 +185,7 @@ class GormRegistry {
 
     /**
      * Finds a transaction manager for a specific entity class and qualifier.
+     * Nominally unused, but invoked at compile-time by transactional/service AST transformations.
      */
     PlatformTransactionManager findTransactionManager(Class entityClass, String qualifier) {
         Datastore ds = getDatastore(entityClass, qualifier)
@@ -205,6 +209,7 @@ class GormRegistry {
 
     /**
      * Finds a transaction manager for a specific entity class.
+     * Nominally unused, but invoked at compile-time by transactional/service AST transformations.
      */
     PlatformTransactionManager findTransactionManager(Class entityClass) {
         return findTransactionManager(entityClass, ConnectionSource.DEFAULT)
@@ -257,6 +262,7 @@ class GormRegistry {
 
     /**
      * Finds a datastore for a specific entity class.
+     * Part of the public API for external integrations and manual datastore lookup.
      */
     Datastore getDatastore(Class entityClass) {
         return getDatastore(entityClass, ConnectionSource.DEFAULT)
@@ -314,6 +320,7 @@ class GormRegistry {
 
     /**
      * Registers a datastore by its type.
+     * Nominally unused in core mapping runtime code, but used by test suites and external integrations.
      */
     void registerDatastoreByType(Datastore datastore) {
         if (datastore == null) return
@@ -330,11 +337,19 @@ class GormRegistry {
         }
     }
 
+    /**
+     * Removes a datastore from discovery by its class type.
+     * Nominally unused in core mapping runtime code, but used by testing frameworks to clean up dynamic datastores.
+     */
     void removeDatastoreByType(Class datastoreType) {
         if (datastoreType == null) return
         datastoresByType.remove(datastoreType)
     }
 
+    /**
+     * Removes a datastore from discovery by its instance type.
+     * Nominally unused in core mapping runtime code, but used by testing frameworks to clean up dynamic datastores.
+     */
     void removeDatastoreByType(Datastore datastore) {
         if (datastore == null) return
         removeDatastoreByType(datastore.getClass())
@@ -343,6 +358,7 @@ class GormRegistry {
     /**
      * Removes a datastore from global discovery (allDatastores and datastoresByType)
      * but keeps it in datastoresByQualifier.
+     * Nominally unused in core mapping runtime code, but used by test suites to verify multi-datastore isolation.
      */
     void removeDatastoreFromDiscovery(Datastore datastore) {
         if (datastore == null) return
@@ -401,14 +417,6 @@ class GormRegistry {
             }
         }
         return false
-    }
-
-    Map<String, Datastore> getDatastoresByQualifier() {
-        return datastoresByQualifier
-    }
-
-    GormStaticApiRegistry getStaticApiRegistry() {
-        return staticApiRegistry
     }
 
     GormStaticApi getStaticApi(Class entityClass) {
@@ -503,10 +511,18 @@ class GormRegistry {
         return instanceApiRegistry.getDirect(normalizedClassName, normalizedQualifier)
     }
 
+    /**
+     * Resolves the validation API for the given entity class.
+     * Nominally unused in core mapping runtime code, but invoked at compile-time by GORM's AST transformations.
+     */
     GormValidationApi resolveValidationApi(Class entityClass) {
         return resolveValidationApi(entityClass, (String) null)
     }
 
+    /**
+     * Resolves the validation API for the given entity class and qualifier.
+     * Nominally unused in core mapping runtime code, but invoked at compile-time by GORM's AST transformations.
+     */
     GormValidationApi resolveValidationApi(Class entityClass, String qualifier) {
         String normalizedClassName = normalizeEntityKey(entityClass)
         String normalizedQualifier = normalizeQualifier(qualifier)
@@ -557,21 +573,6 @@ class GormRegistry {
 
     GormValidationApi getValidationApi(String className, String qualifier) {
         return validationApiRegistry.get(normalizeEntityKey(className), normalizeQualifier(qualifier))
-    }
-    GormInstanceApiRegistry getInstanceApiRegistry() {
-        return instanceApiRegistry
-    }
-
-    GormValidationApiRegistry getValidationApiRegistry() {
-        return validationApiRegistry
-    }
-
-    Set<Datastore> getAllDatastores() {
-        return allDatastores
-    }
-
-    Map<Class, Datastore> getDatastoresByType() {
-        return datastoresByType
     }
 
     private Map<String, Datastore> getInternalMap(Map<String, Map<String, Datastore>> rootMap, String key) {
@@ -653,8 +654,9 @@ class GormRegistry {
     /**
      * Register API objects for a persistent entity.
      * Creates and registers StaticApi, InstanceApi, and ValidationApi for the given entity.
+     * Part of the public API for external plugins and test environments.
      *
-     * @param entity The persistent entity
+     * @param className The entity class name
      * @param staticApi The static API implementation
      * @param instanceApi The instance API implementation
      * @param validationApi The validation API implementation
@@ -756,14 +758,17 @@ class GormRegistry {
     }
 
     /**
-     * Creates dynamic finders using the given resolver and mapping context
+     * Creates dynamic finders using the given resolver and mapping context.
      *
      * @param resolver The datastore resolver
      * @param mappingContext The mapping context
      * @return List of finder methods
      */
     List<FinderMethod> createDynamicFinders(DatastoreResolver resolver, MappingContext mappingContext) {
-        // Implementation provided by GormEnhancer or specialized factories
+        Datastore ds = resolver.resolve()
+        if (ds != null) {
+            return getApiFactory(ds).createDynamicFinders(resolver, mappingContext)
+        }
         return []
     }
 
@@ -803,7 +808,8 @@ class GormRegistry {
     }
 
     /**
-     * Register API objects for a persistent entity
+     * Register API objects for a persistent entity.
+     * Part of the public API for external plugins and test environments.
      */
     void registerEntityApis(Class cls, GormStaticApi staticApi, GormInstanceApi instanceApi, GormValidationApi validationApi) {
         registerEntityApis(cls.name, staticApi, instanceApi, validationApi)
@@ -863,27 +869,30 @@ class GormRegistry {
      * @param enhancer The GormEnhancer that provides API creation
      */
     void registerEntity(PersistentEntity persistentEntity, GormEnhancer enhancer) {
-        if (persistentEntity == null) return
+        if (!persistentEntity) {
+            throw new IllegalArgumentException('Argument [persistentEntity] cannot be null')
+        }
+        if (!enhancer) {
+            throw new IllegalArgumentException('Argument [enhancer] cannot be null')
+        }
 
         String className = persistentEntity.name
 
-        if (enhancer != null) {
-            // Always (re)register API singletons so classloader or datastore changes do not leave stale API instances.
-            final Class cls = persistentEntity.javaClass
-            DatastoreResolver resolver = createClassDatastoreResolver(cls)
-            Datastore datastore = enhancer.datastore
+        // Always (re)register API singletons so classloader or datastore changes do not leave stale API instances.
+        final Class cls = persistentEntity.javaClass
+        DatastoreResolver resolver = createClassDatastoreResolver(cls)
+        Datastore datastore = enhancer.datastore
 
-            GormStaticApi staticApi = createStaticApi(cls, datastore, resolver, ConnectionSource.DEFAULT)
-            GormInstanceApi instanceApi = createInstanceApi(cls, datastore, resolver, enhancer.failOnError, enhancer.markDirty)
-            GormValidationApi validationApi = createValidationApi(cls, datastore, resolver)
+        GormStaticApi staticApi = createStaticApi(cls, datastore, resolver, ConnectionSource.DEFAULT)
+        GormInstanceApi instanceApi = createInstanceApi(cls, datastore, resolver, enhancer.failOnError, enhancer.markDirty)
+        GormValidationApi validationApi = createValidationApi(cls, datastore, resolver)
 
-            registerEntityApis(className, staticApi, instanceApi, validationApi)
+        registerEntityApis(className, staticApi, instanceApi, validationApi)
 
-            // Register datastore mappings
-            Datastore datastoreForMappings = enhancer.datastore
-            List<String> qualifiers = enhancer.allQualifiers(datastore, persistentEntity)
-            registerEntityDatastores(className, datastoreForMappings, qualifiers, persistentEntity)
-        }
+        // Register datastore mappings
+        Datastore datastoreForMappings = enhancer.datastore
+        List<String> qualifiers = enhancer.allQualifiers(datastore, persistentEntity)
+        registerEntityDatastores(className, datastoreForMappings, qualifiers, persistentEntity)
     }
 
 }

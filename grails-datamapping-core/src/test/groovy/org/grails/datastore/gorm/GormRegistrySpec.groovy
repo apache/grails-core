@@ -270,6 +270,117 @@ class GormRegistrySpec extends Specification {
         TestEntity.metaClass = null
     }
 
+    void "findTransactionManager with qualifier returns transaction manager"() {
+        given:
+        def txManager = Stub(PlatformTransactionManager)
+        def datastore = Stub(TransactionCapableDatastore) {
+            getTransactionManager() >> txManager
+        }
+        def registry = GormRegistry.instance
+
+        when:
+        registry.registerDatastore("ds1", datastore)
+        registry.registerEntityDatastore(TestEntity.name, "ds1", datastore)
+
+        then:
+        registry.findTransactionManager(TestEntity, "ds1") == txManager
+    }
+
+    void "registerEntityApis and resolve APIs works as expected"() {
+        given:
+        def registry = GormRegistry.instance
+        def datastore = Stub(Datastore)
+        def validationApi = new GormValidationApi(TestEntity, datastore, registry)
+        def staticApi = new GormStaticApi(TestEntity, null, [], new DatastoreResolver() {
+            @Override Datastore resolve() { return datastore }
+        }, ConnectionSource.DEFAULT, registry)
+        def instanceApi = new GormInstanceApi(TestEntity, datastore, registry)
+
+        when:
+        registry.registerEntityApis(TestEntity, staticApi, instanceApi, validationApi)
+
+        then:
+        registry.resolveValidationApi(TestEntity) == validationApi
+        registry.resolveStaticApi(TestEntity) == staticApi
+        registry.resolveInstanceApi(TestEntity) == instanceApi
+    }
+
+    void "registerDatastoreByType registers datastore in discovery"() {
+        given:
+        def datastore = Stub(Datastore)
+        def registry = GormRegistry.instance
+
+        when:
+        registry.registerDatastoreByType(datastore)
+
+        then:
+        registry.allDatastores.contains(datastore)
+        registry.datastoresByType.get(datastore.getClass()) == datastore
+    }
+
+    void "removeDatastoreByType(Datastore) removes from type registry"() {
+        given:
+        def datastore = Stub(Datastore)
+        def registry = GormRegistry.instance
+
+        when:
+        registry.initializeDatastore(datastore)
+        registry.removeDatastoreByType(datastore)
+
+        then:
+        registry.allDatastores.contains(datastore)
+        !registry.datastoresByType.containsKey(datastore.getClass())
+    }
+
+    void "getDatastore with entity Class returns registered datastore"() {
+        given:
+        def datastore = Stub(Datastore)
+        def registry = GormRegistry.instance
+
+        when:
+        registry.initializeDatastore(datastore)
+        registry.registerEntityDatastore(TestEntity.name, ConnectionSource.DEFAULT, datastore)
+
+        then:
+        registry.getDatastore(TestEntity) == datastore
+    }
+
+    void "createDynamicFinders delegates to datastore api factory"() {
+        given:
+        def registry = GormRegistry.instance
+        def mappingContext = Stub(org.grails.datastore.mapping.model.MappingContext)
+        def datastore = Stub(Datastore) {
+            getMappingContext() >> mappingContext
+        }
+        def resolver = new DatastoreResolver() {
+            @Override Datastore resolve() { datastore }
+        }
+
+        when:
+        def finders = registry.createDynamicFinders(resolver, mappingContext)
+
+        then:
+        !finders.isEmpty()
+    }
+
+    void "registerEntity throws IllegalArgumentException for null arguments"() {
+        given:
+        def registry = GormRegistry.instance
+        def entity = Stub(PersistentEntity)
+
+        when:
+        registry.registerEntity(null, null)
+
+        then:
+        thrown(IllegalArgumentException)
+
+        when:
+        registry.registerEntity(entity, null)
+
+        then:
+        thrown(IllegalArgumentException)
+    }
+
     interface MixedDatastore extends MultiTenantCapableDatastore, MultipleConnectionSourceCapableDatastore, Datastore {}
     interface Datastore1 extends Datastore {}
     interface Datastore2 extends Datastore {}
