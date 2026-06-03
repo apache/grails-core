@@ -93,4 +93,26 @@ class VersionComparatorSpec extends Specification {
         then:
         sorted == ["6.9.9", "7.0.0-M1", "7.0.0-M2", "7.0.0-RC1", "7.0.0-RC2", "7.0.0-SNAPSHOT", "7.0.0"]
     }
+
+    @Unroll
+    def "throws an explicit InvalidVersionException when the #side version [#malformed] is malformed"() {
+        given:
+        def comparator = new VersionComparator()
+
+        when:
+        comparator.compare(version1, version2)
+
+        then:
+        InvalidVersionException e = thrown()
+        e.message.startsWith("Cannot compare versions, $side side [$malformed] is invalid:")
+
+        where:
+        side    | version1                  | version2                  | malformed
+        // Numeric component overflows int
+        "left"  | "99999999999999999.0.0"   | "7.0.0"                   | "99999999999999999.0.0"
+        "right" | "7.0.0"                   | "99999999999999999.0.0"   | "99999999999999999.0.0"
+        // Milestone/release candidate qualifier number overflows int
+        "left"  | "7.0.0-RC99999999999999999" | "7.0.0-RC1"             | "7.0.0-RC99999999999999999"
+        "right" | "7.0.0-M1"                | "7.0.0-M99999999999999999" | "7.0.0-M99999999999999999"
+    }
 }

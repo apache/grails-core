@@ -71,12 +71,24 @@ class VersionComparator implements Comparator<String> {
             return -1
         }
 
-        ParsedVersion v1 = parse(left)
-        ParsedVersion v2 = parse(right)
+        ParsedVersion v1
+        try {
+            v1 = parse(left)
+        }
+        catch (NumberFormatException e) {
+            throw new InvalidVersionException("Cannot compare versions, left side [$o1] is invalid: ${e.message}")
+        }
+        ParsedVersion v2
+        try {
+            v2 = parse(right)
+        }
+        catch (NumberFormatException e) {
+            throw new InvalidVersionException("Cannot compare versions, right side [$o2] is invalid: ${e.message}")
+        }
 
         int result = compareNumbers(v1.numbers, v2.numbers)
         if (result == 0) {
-            result = compareQualifiers(v1.qualifier, v2.qualifier)
+            result = compareQualifiers(v1, v2)
         }
         return result
     }
@@ -106,6 +118,9 @@ class VersionComparator implements Comparator<String> {
      * The first token that is not purely numeric ends the numeric section. A token of the form
      * {@code <digits>-<qualifier>} (for example {@code 0-RC1} from {@code 7.0.0-RC1}) contributes
      * its leading digits to the numeric section and the remainder becomes the qualifier.
+     *
+     * @throws NumberFormatException if a numeric component cannot be parsed as an {@code int};
+     *   callers are expected to translate this into an {@link InvalidVersionException}.
      */
     private static ParsedVersion parse(String version) {
         List<Integer> numbers = []
@@ -126,7 +141,12 @@ class VersionComparator implements Comparator<String> {
                 break
             }
         }
-        return new ParsedVersion(numbers, qualifier)
+        int tier = qualifierTier(qualifier)
+        // Only milestone and release candidate tiers use the trailing number for ordering.
+        // Parsing it here (inside parse) keeps any overflow inside the caller's try/catch so it
+        // is reported as an InvalidVersionException rather than a raw NumberFormatException.
+        int number = (tier == TIER_MILESTONE || tier == TIER_RELEASE_CANDIDATE) ? qualifierNumber(qualifier) : 0
+        return new ParsedVersion(numbers, qualifier, tier, number)
     }
 
     private static int compareNumbers(List<Integer> a, List<Integer> b) {
@@ -142,14 +162,12 @@ class VersionComparator implements Comparator<String> {
         return 0
     }
 
-    private static int compareQualifiers(String q1, String q2) {
-        int tier1 = qualifierTier(q1)
-        int tier2 = qualifierTier(q2)
-        if (tier1 != tier2) {
-            return Integer.compare(tier1, tier2)
+    private static int compareQualifiers(ParsedVersion v1, ParsedVersion v2) {
+        if (v1.qualifierTier != v2.qualifierTier) {
+            return Integer.compare(v1.qualifierTier, v2.qualifierTier)
         }
-        if (tier1 == TIER_MILESTONE || tier1 == TIER_RELEASE_CANDIDATE) {
-            return Integer.compare(qualifierNumber(q1), qualifierNumber(q2))
+        if (v1.qualifierTier == TIER_MILESTONE || v1.qualifierTier == TIER_RELEASE_CANDIDATE) {
+            return Integer.compare(v1.qualifierNumber, v2.qualifierNumber)
         }
         return 0
     }
@@ -191,10 +209,14 @@ class VersionComparator implements Comparator<String> {
 
         final List<Integer> numbers
         final String qualifier
+        final int qualifierTier
+        final int qualifierNumber
 
-        ParsedVersion(List<Integer> numbers, String qualifier) {
+        ParsedVersion(List<Integer> numbers, String qualifier, int qualifierTier, int qualifierNumber) {
             this.numbers = numbers
             this.qualifier = qualifier
+            this.qualifierTier = qualifierTier
+            this.qualifierNumber = qualifierNumber
         }
     }
 }
