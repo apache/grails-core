@@ -56,6 +56,7 @@ class GormRegistry {
     final GormInstanceApiRegistry instanceApiRegistry = entityApiRegistry.instanceApiRegistry
     final GormValidationApiRegistry validationApiRegistry = entityApiRegistry.validationApiRegistry
     final TransactionResolver transactionResolver = new TransactionResolver(this)
+    final DynamicFinderCreator dynamicFinderCreator = new DynamicFinderCreator(this)
 
     final DatastoreDiscovery datastoreDiscovery = new DatastoreDiscovery()
     final Map<String, Datastore> datastoresByQualifier = datastoreDiscovery.datastoresByQualifier
@@ -453,12 +454,7 @@ class GormRegistry {
      * @return List of finder methods
      */
     List<FinderMethod> createDynamicFinders(Datastore targetDatastore) {
-        createDynamicFinders(new DatastoreResolver() {
-            @Override
-            Datastore resolve() {
-                targetDatastore
-            }
-        }, targetDatastore.getMappingContext())
+        dynamicFinderCreator.createDynamicFinders(targetDatastore)
     }
 
     /**
@@ -469,24 +465,14 @@ class GormRegistry {
      * @return List of finder methods
      */
     List<FinderMethod> createDynamicFinders(DatastoreResolver resolver, MappingContext mappingContext) {
-        Datastore ds = resolver.resolve()
-        if (ds != null) {
-            return getApiFactory(ds).createDynamicFinders(resolver, mappingContext)
-        }
-        return []
+        dynamicFinderCreator.createDynamicFinders(resolver, mappingContext)
     }
 
     /**
      * Create a DatastoreResolver for a class and optional qualifier.
      */
     DatastoreResolver createClassDatastoreResolver(Class cls, String qualifier = ConnectionSource.DEFAULT) {
-        String normalizedQualifier = normalizeQualifier(qualifier)
-        return new DatastoreResolver() {
-            @Override
-            Datastore resolve() {
-                apiResolver.findDatastore(cls, normalizedQualifier)
-            }
-        }
+        dynamicFinderCreator.createClassDatastoreResolver(cls, qualifier)
     }
 
     /**
