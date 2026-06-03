@@ -318,22 +318,6 @@ class GormRegistry {
     }
 
     /**
-     * @deprecated Use {@code normalizeEntityKey(Class)}.
-     */
-    @Deprecated
-    String normalizeEntityKeyFromClass(Class entityClass) {
-        normalizeEntityKey(entityClass)
-    }
-
-    /**
-     * @deprecated Use {@code normalizeQualifier(String)}.
-     */
-    @Deprecated
-    String normalizeQualifierByString(String qualifier) {
-        normalizeQualifier(qualifier)
-    }
-
-    /**
      * Register API objects for a persistent entity.
      * Creates and registers StaticApi, InstanceApi, and ValidationApi for the given entity.
      * Part of the public API for external plugins and test environments.

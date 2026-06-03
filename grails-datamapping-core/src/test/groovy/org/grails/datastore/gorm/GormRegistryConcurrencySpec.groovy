@@ -84,7 +84,7 @@ class GormRegistryConcurrencySpec extends Specification {
                     startLatch.await()
                     for (int j = 0; j < iterationsPerThread; j++) {
                         // High contention normalization paths
-                        def normClass = registry.normalizeEntityKeyFromClass(ConcurrentEntity)
+                        def normClass = registry.normalizeEntityKey(ConcurrentEntity)
                         def normName = registry.normalizeEntityKey(" ${ConcurrentEntity.name} ")
                         def normQual = registry.normalizeQualifier(" secondary ")
                         
