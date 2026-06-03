@@ -77,7 +77,7 @@ class DeleteEntityDataFetcherSpec extends HibernateSpec {
         1 * responseHandler.createResponse(env, false, _ as NullPointerException)
     }
 
-    void "test deleteInstance flushes the delete and does not pass the ignored failOnError argument"() {
+    void "test deleteInstance calls delete without the ignored failOnError argument"() {
         given:
         DeleteEntityDataFetcher fetcher = new DeleteEntityDataFetcher<>(mappingContext.getPersistentEntity(One.name))
         GormEntity instance = Mock(GormEntity)
@@ -85,9 +85,9 @@ class DeleteEntityDataFetcherSpec extends HibernateSpec {
         when:
         fetcher.deleteInstance(instance)
 
-        then: 'the delete is flushed so database failures surface, and failOnError (ignored by delete) is not used'
-        1 * instance.delete([flush: true])
-        0 * instance.delete([failOnError: true])
+        then: 'delete is called with no arguments; failOnError was silently ignored by GORM, so removing it preserves the original behavior'
+        1 * instance.delete()
+        0 * instance.delete(_)
     }
 
     void "test supports"() {

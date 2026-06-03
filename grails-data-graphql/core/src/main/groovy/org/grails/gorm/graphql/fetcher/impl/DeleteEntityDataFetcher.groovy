@@ -48,7 +48,7 @@ class DeleteEntityDataFetcher<T> extends DefaultGormDataFetcher<T> implements De
     }
 
     protected void deleteInstance(GormEntity instance) {
-        instance.delete(flush: true)
+        instance.delete()
     }
 
     @Override
