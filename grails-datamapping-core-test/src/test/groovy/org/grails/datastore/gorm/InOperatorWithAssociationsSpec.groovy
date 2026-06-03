@@ -30,7 +30,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class InOperatorWithAssociationsSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([InAuthor, InBook])
+        manager.registerDomainClasses(InAuthor, InBook)
     }
 
     @Issue('https://github.com/apache/grails-core/issues/9279')

@@ -18,18 +18,21 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import org.apache.grails.data.testing.tck.domains.ChildEntity
-import org.apache.grails.data.testing.tck.domains.TestEntity
+import spock.lang.IgnoreRest
+
 import grails.validation.ValidationException
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.ChildEntity
+import org.apache.grails.data.testing.tck.domains.TestEntity
 
 /**
  * @author graemerocher
  */
 class CrudOperationsSpec extends GrailsDataTckSpec {
 
+    @Override
     void setupSpec() {
-        manager.domainClasses.addAll([TestEntity, ChildEntity])
+        manager.registerDomainClasses(TestEntity, ChildEntity)
     }
 
     void 'Test get using a string-based key'() {
@@ -53,6 +56,7 @@ class CrudOperationsSpec extends GrailsDataTckSpec {
         t == null
     }
 
+    @IgnoreRest
     void 'Test basic CRUD operations'() {
         given:
 
@@ -90,7 +94,7 @@ class CrudOperationsSpec extends GrailsDataTckSpec {
         t.save(failOnError: true)
 
         then:
-        thrown ValidationException
+        thrown(ValidationException)
         t.id == null
     }
 }

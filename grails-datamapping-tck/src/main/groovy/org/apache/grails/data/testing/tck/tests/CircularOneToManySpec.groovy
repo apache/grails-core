@@ -18,8 +18,8 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import org.apache.grails.data.testing.tck.domains.Task
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.Task
 
 /**
  * @author graemerocher
@@ -27,10 +27,10 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class CircularOneToManySpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Task])
+        manager.registerDomainClasses(Task)
     }
 
-    void "Test circular one-to-many"() {
+    void 'Test circular one-to-many'() {
         given:
         def parent = new Task(name: 'Root').save()
         def child = new Task(task: parent, name: 'Finish Job').save(flush: true)

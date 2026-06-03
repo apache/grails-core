@@ -40,9 +40,9 @@ import org.grails.datastore.mapping.model.PersistentEntity
 class ValidationSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.domainClasses.addAll([ClassWithListArgBeforeValidate, ClassWithNoArgBeforeValidate,
-                                     ClassWithOverloadedBeforeValidate, TestEntity, ChildEntity, Task])
-    }
+        manager.registerDomainClasses(ClassWithListArgBeforeValidate, ClassWithNoArgBeforeValidate,
+                                 ClassWithOverloadedBeforeValidate, TestEntity, ChildEntity, Task)
+     }
 
     // Hibernate did not originally have this test and it fails for it
     @PendingFeatureIf({ System.getProperty('hibernate5.gorm.suite') || System.getProperty('hibernate7.gorm.suite') })

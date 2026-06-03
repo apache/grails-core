@@ -18,23 +18,25 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
+import groovy.time.TimeCategory
+
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.ChildEntity
 import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.testing.tck.domains.Publication
 import org.apache.grails.data.testing.tck.domains.TestEntity
-import groovy.time.TimeCategory
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Abstract base test for querying ranges. Subclasses should do the necessary setup to configure GORM
  */
 class RangeQuerySpec extends GrailsDataTckSpec {
 
+    @Override
     void setupSpec() {
-        manager.domainClasses.addAll([Publication, TestEntity, Person, ChildEntity])
+        manager.registerDomainClasses(ChildEntity, Person, Publication, TestEntity)
     }
 
-    void "Test between query with dates"() {
+    void 'Test between query with dates'() {
         given:
         def now = new Date()
         use(TimeCategory) {
@@ -53,7 +55,7 @@ class RangeQuerySpec extends GrailsDataTckSpec {
         results.size() == 2
     }
 
-    void "Test between query"() {
+    void 'Test between query'() {
         given:
         int age = 40
         ['Bob', 'Fred', 'Barney', 'Frank', 'Joe', 'Ernie'].each { new TestEntity(name: it, age: age--, child: new ChildEntity(name: "$it Child")).save() }
@@ -81,7 +83,7 @@ class RangeQuerySpec extends GrailsDataTckSpec {
         4 == results.size()
     }
 
-    void "Test greater than or equal to and less than or equal to queries"() {
+    void 'Test greater than or equal to and less than or equal to queries'() {
         given:
 
         int age = 40

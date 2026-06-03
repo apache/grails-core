@@ -29,7 +29,7 @@ import org.apache.grails.data.testing.tck.domains.Person
 class TransactionalTransformOnServiceSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Person])
+        manager.registerDomainClasses(Person)
     }
 
     void "test transaction manager lookup with @Transactional and unassigned transaction manager"() {

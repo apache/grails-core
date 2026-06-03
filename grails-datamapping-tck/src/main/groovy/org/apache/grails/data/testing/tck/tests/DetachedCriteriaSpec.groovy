@@ -20,13 +20,14 @@ package org.apache.grails.data.testing.tck.tests
 
 import grails.gorm.DetachedCriteria
 import grails.gorm.PagedResultList
-import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.Person
 
 class DetachedCriteriaSpec extends GrailsDataTckSpec {
 
+    @Override
     void setupSpec() {
-        manager.domainClasses.addAll([Person])
+        manager.registerDomainClasses(Person)
     }
 
     void 'Test the list method returns a PagedResultList with pagination arguments'() {

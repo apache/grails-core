@@ -32,7 +32,7 @@ import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
 class DetachedCriteriaJpaEntitySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Todo])
+        manager.registerDomainClasses(Todo)
     }
 
     def "test a where query on a jpa entity"() {

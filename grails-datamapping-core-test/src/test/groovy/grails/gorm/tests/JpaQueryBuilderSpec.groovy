@@ -18,21 +18,20 @@
  */
 package grails.gorm.tests
 
-import org.springframework.dao.InvalidDataAccessResourceUsageException
-
 import grails.gorm.DetachedCriteria
+import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import org.apache.grails.data.testing.tck.domains.Person
 import org.grails.datastore.mapping.query.jpa.JpaQueryBuilder
+import org.springframework.dao.InvalidDataAccessResourceUsageException
 
 /**
  * Test for JPA builder
  */
 class JpaQueryBuilderSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
-    def setupSpec() {
-        manager.domainClasses.addAll([Person])
+    void setupSpec() {
+        manager.registerDomainClasses(Person)
     }
 
     void "Test update query with ilike criterion"() {

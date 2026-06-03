@@ -18,19 +18,20 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import org.apache.grails.data.testing.tck.domains.Book
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.Book
 
 /**
  * @author graemerocher
  */
 class NegationSpec extends GrailsDataTckSpec {
 
+    @Override
     void setupSpec() {
-        manager.domainClasses.addAll([Book])
+        manager.registerDomainClasses(Book)
     }
 
-    void "Test negation in dynamic finder"() {
+    void 'Test negation in dynamic finder'() {
         given:
         new Book(title: 'The Stand', author: 'Stephen King').save()
         new Book(title: 'The Shining', author: 'Stephen King').save()
@@ -49,7 +50,7 @@ class NegationSpec extends GrailsDataTckSpec {
         author.author == 'James Patterson'
     }
 
-    void "Test simple negation in criteria"() {
+    void 'Test simple negation in criteria'() {
         given:
         new Book(title: 'The Stand', author: 'Stephen King').save()
         new Book(title: 'The Shining', author: 'Stephen King').save()
@@ -68,7 +69,7 @@ class NegationSpec extends GrailsDataTckSpec {
         author.author == 'James Patterson'
     }
 
-    void "Test complex negation in criteria"() {
+    void 'Test complex negation in criteria'() {
         given:
         new Book(title: 'The Stand', author: 'Stephen King').save()
         new Book(title: 'The Shining', author: 'Stephen King').save()
@@ -78,17 +79,14 @@ class NegationSpec extends GrailsDataTckSpec {
         when:
         def results = Book.withCriteria {
             not {
-                or {
-                    eq 'title', 'The Stand'
-                    eq 'author', 'Stephen King'
-                }
-
+                eq('title', 'The Stand')
+                eq('author', 'James Patterson')
             }
         }
 
         then:
         results.size() == 2
         results.find { it.author == 'Stieg Larsson' } != null
-        results.find { it.author == 'James Patterson' } != null
+        results.find { it.author == 'Stephen King' && it.title == 'The Shining' } != null
     }
 }

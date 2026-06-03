@@ -31,7 +31,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class FindByDomainInListSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([BookAuthor, AuthorBook])
+        manager.registerDomainClasses(BookAuthor, AuthorBook)
     }
 
     void "Test fetch books by author"() {

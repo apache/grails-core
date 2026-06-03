@@ -28,7 +28,7 @@ import org.apache.grails.data.testing.tck.domains.ClassWithHungarianNotation
 class ListOrderByHungarianNotationSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([ClassWithHungarianNotation])
+        manager.registerDomainClasses(ClassWithHungarianNotation)
     }
 
 

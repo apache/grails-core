@@ -18,19 +18,18 @@
  */
 package grails.gorm.tests
 
-import spock.lang.Issue
-
+import org.apache.grails.data.testing.tck.domains.TestEntity
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import org.apache.grails.data.testing.tck.domains.TestEntity
+import spock.lang.Issue
 
 /**
  * Created by graemerocher on 16/02/2017.
  */
 class SingleResultSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
-    def setupSpec() {
-        manager.domainClasses.addAll([TestEntity])
+    void setupSpec() {
+        manager.registerDomainClasses(TestEntity)
     }
 
     @Issue('https://github.com/apache/grails-data-mapping/issues/872')
@@ -39,11 +38,11 @@ class SingleResultSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
         def query = manager.session.createQuery(TestEntity)
 
         then:
-        !query.uniqueResult
+        query.uniqueResult == false
 
         when:
         def result = query.singleResult()
         then:
-        query.uniqueResult
+        query.uniqueResult == true
     }
 }

@@ -27,7 +27,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class HasOneSetInverseSideSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([House, HouseAddress])
+        manager.registerDomainClasses(House, HouseAddress)
     }
 
     @Issue('GRAILS-8757')

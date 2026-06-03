@@ -37,7 +37,7 @@ import org.grails.datastore.mapping.model.PersistentEntity
 class CircularCascadeSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([SchoolPerson, ActivityValidate, SportValidate, TeamValidate, ArenaValidate])
+        manager.registerDomainClasses(SchoolPerson, ActivityValidate, SportValidate, TeamValidate, ArenaValidate)
     }
 
     @Issue('https://github.com/apache/grails-data-mapping/issues/967')

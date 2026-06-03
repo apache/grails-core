@@ -27,11 +27,12 @@ import org.apache.grails.data.testing.tck.domains.TestEntity
  */
 class OrderBySpec extends GrailsDataTckSpec {
 
+    @Override
     void setupSpec() {
-        manager.domainClasses.addAll([TestEntity, ChildEntity])
+        manager.registerDomainClasses(TestEntity, ChildEntity)
     }
 
-    void "Test order with criteria"() {
+    void 'Test order with criteria'() {
         given:
         def age = 40
 
@@ -41,7 +42,7 @@ class OrderBySpec extends GrailsDataTckSpec {
 
         when:
         def results = TestEntity.createCriteria().list {
-            order 'age'
+            order('age')
         }
         then:
         40 == results[0].age
@@ -50,7 +51,7 @@ class OrderBySpec extends GrailsDataTckSpec {
 
         when:
         results = TestEntity.createCriteria().list {
-            order 'age', 'desc'
+            order('age', 'desc')
         }
 
         then:
@@ -59,7 +60,7 @@ class OrderBySpec extends GrailsDataTckSpec {
         43 == results[2].age
     }
 
-    void "Test order by with list() method"() {
+    void 'Test order by with list() method'() {
         given:
         def age = 40
 
@@ -84,7 +85,7 @@ class OrderBySpec extends GrailsDataTckSpec {
         43 == results[2].age
     }
 
-    void "Test order by property name with dynamic finder"() {
+    void 'Test order by property name with dynamic finder'() {
         given:
         def age = 40
 

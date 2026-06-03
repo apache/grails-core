@@ -25,7 +25,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class CriteriaProjectedResultsSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Check])
+        manager.registerDomainClasses(Check)
     }
 
     void "Test single projection"() {

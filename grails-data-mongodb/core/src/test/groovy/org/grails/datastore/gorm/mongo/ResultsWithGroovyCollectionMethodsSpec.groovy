@@ -29,7 +29,7 @@ import spock.lang.Issue
 class ResultsWithGroovyCollectionMethodsSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses += [Plant]
+        manager.registerDomainClasses(Plant)
     }
 
     @Issue('GPMONGODB-316')

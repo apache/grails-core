@@ -30,7 +30,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class EnumHasManySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Animal])
+        manager.registerDomainClasses(Animal)
     }
 
     @Issue('GRAILS-9882')
