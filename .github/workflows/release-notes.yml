@@ -109,7 +109,7 @@ jobs:
       #     --jq '.object.sha'
       - name: "📝 Update Release Draft"
         id: drafter
-        uses: release-drafter/release-drafter@e1247478eabc9f6d9cf5ec2b3547469b0e1d2767 # v7.3.1
+        uses: release-drafter/release-drafter@693d20e7c1ce1a81d3a41962f85914253b518449 # v7.3.1
         # Drafting release notes is a best-effort, non-critical task - a
         # transient GitHub API hiccup must not turn every PR check red. The
         # explicit verification step below catches the case where the action
