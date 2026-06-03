@@ -30,6 +30,11 @@ import org.apache.grails.data.testing.tck.domains.TestEntity
  */
 class CrudOperationsSpec extends GrailsDataTckSpec {
 
+    @Override
+    void setupSpec() {
+        manager.registerDomainClasses(TestEntity, ChildEntity)
+    }
+
     void 'Test get using a string-based key'() {
         given:
         def t = new TestEntity(name: 'Bob', child: new ChildEntity(name: 'Child'))

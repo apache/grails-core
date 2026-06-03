@@ -23,6 +23,11 @@ import org.apache.grails.data.testing.tck.domains.TestEntity
 
 class FindWhereSpec extends GrailsDataTckSpec {
 
+    @Override
+    void setupSpec() {
+        manager.registerDomainClasses(TestEntity)
+    }
+
     def 'Test findWhere returns a matching Instance'() {
         given:
         def entityId = new TestEntity(name: 'David', age: 27).save().id

@@ -27,6 +27,11 @@ import org.apache.grails.data.testing.tck.domains.TestEntity
  */
 class CriteriaBuilderSpec extends GrailsDataTckSpec {
 
+    @Override
+    void setupSpec() {
+        manager.registerDomainClasses(TestEntity, ChildEntity)
+    }
+
     void 'Test count distinct projection'() {
         given:
         def age = 40
