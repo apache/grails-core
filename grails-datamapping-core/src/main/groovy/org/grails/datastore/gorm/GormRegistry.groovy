@@ -32,8 +32,6 @@ import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 
-import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
-
 /**
  * A registry of GORM API objects. This registry is used to decouple the API
  * objects from the static state in GormEnhancer.
@@ -57,6 +55,7 @@ class GormRegistry {
     final GormStaticApiRegistry staticApiRegistry = entityApiRegistry.staticApiRegistry
     final GormInstanceApiRegistry instanceApiRegistry = entityApiRegistry.instanceApiRegistry
     final GormValidationApiRegistry validationApiRegistry = entityApiRegistry.validationApiRegistry
+    final TransactionResolver transactionResolver = new TransactionResolver(this)
 
     final DatastoreDiscovery datastoreDiscovery = new DatastoreDiscovery()
     final Map<String, Datastore> datastoresByQualifier = datastoreDiscovery.datastoresByQualifier
@@ -150,7 +149,7 @@ class GormRegistry {
      * Nominally unused, but invoked at compile-time by transactional AST transformations.
      */
     PlatformTransactionManager findSingleTransactionManager() {
-        return findSingleTransactionManager(ConnectionSource.DEFAULT)
+        transactionResolver.findSingleTransactionManager()
     }
 
     /**
@@ -158,17 +157,7 @@ class GormRegistry {
      * Nominally unused, but invoked at compile-time by transactional AST transformations.
      */
     PlatformTransactionManager findSingleTransactionManager(String qualifier) {
-        Datastore ds = getDatastoreByString((String) null, qualifier)
-        if (ds == null) {
-            if (defaultDatastore == null) {
-                throw new IllegalStateException('No GORM implementations configured. Ensure GORM has been initialized correctly')
-            }
-            return null
-        }
-        if (ds instanceof TransactionCapableDatastore) {
-            return ((TransactionCapableDatastore) ds).transactionManager
-        }
-        return null
+        transactionResolver.findSingleTransactionManager(qualifier)
     }
 
     /**
@@ -176,23 +165,7 @@ class GormRegistry {
      * Nominally unused, but invoked at compile-time by transactional/service AST transformations.
      */
     PlatformTransactionManager findTransactionManager(Class entityClass, String qualifier) {
-        Datastore ds = getDatastore(entityClass, qualifier)
-        if (ds == null) {
-            // The qualifier may be a tenant ID rather than a registered datastore qualifier
-            // (e.g. DISCRIMINATOR / SCHEMA multi-tenancy). Fall back via the full resolver
-            // which understands the multi-tenancy mode and returns the correct datastore.
-            ds = apiResolver.findDatastore(entityClass, qualifier)
-        }
-        if (ds == null) {
-            if (defaultDatastore == null) {
-                throw new IllegalStateException('No GORM implementations configured. Ensure GORM has been initialized correctly')
-            }
-            return null
-        }
-        if (ds instanceof TransactionCapableDatastore) {
-            return ((TransactionCapableDatastore) ds).transactionManager
-        }
-        return null
+        transactionResolver.findTransactionManager(entityClass, qualifier)
     }
 
     /**
@@ -200,7 +173,7 @@ class GormRegistry {
      * Nominally unused, but invoked at compile-time by transactional/service AST transformations.
      */
     PlatformTransactionManager findTransactionManager(Class entityClass) {
-        return findTransactionManager(entityClass, ConnectionSource.DEFAULT)
+        transactionResolver.findTransactionManager(entityClass)
     }
 
     /**
