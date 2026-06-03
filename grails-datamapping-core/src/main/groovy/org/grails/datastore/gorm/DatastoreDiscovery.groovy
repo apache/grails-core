@@ -147,51 +147,12 @@ class DatastoreDiscovery {
     }
 
     /**
-     * Registers a datastore by its type.
-     * Nominally unused in core mapping runtime code, but used by test suites and external integrations.
-     */
-    void registerDatastoreByType(Datastore datastore) {
-        if (datastore == null) return
-        datastoresByType.put(datastore.getClass(), datastore)
-        allDatastores.add(datastore)
-    }
-
-    /**
      * Registers a datastore by qualifier only, without adding it to the global type-based discovery.
      */
     void registerDatastoreByQualifier(String qualifier, Datastore datastore) {
         if (qualifier != null && datastore != null) {
             datastoresByQualifier.put(normalizeQualifier(qualifier), datastore)
         }
-    }
-
-    /**
-     * Removes a datastore from discovery by its class type.
-     * Nominally unused in core mapping runtime code, but used by testing frameworks to clean up dynamic datastores.
-     */
-    void removeDatastoreByType(Class datastoreType) {
-        if (datastoreType == null) return
-        datastoresByType.remove(datastoreType)
-    }
-
-    /**
-     * Removes a datastore from discovery by its instance type.
-     * Nominally unused in core mapping runtime code, but used by testing frameworks to clean up dynamic datastores.
-     */
-    void removeDatastoreByType(Datastore datastore) {
-        if (datastore == null) return
-        removeDatastoreByType(datastore.getClass())
-    }
-
-    /**
-     * Removes a datastore from global discovery (allDatastores and datastoresByType)
-     * but keeps it in datastoresByQualifier.
-     * Nominally unused in core mapping runtime code, but used by test suites to verify multi-datastore isolation.
-     */
-    void removeDatastoreFromDiscovery(Datastore datastore) {
-        if (datastore == null) return
-        allDatastores.remove(datastore)
-        datastoresByType.remove(datastore.getClass())
     }
 
     /**

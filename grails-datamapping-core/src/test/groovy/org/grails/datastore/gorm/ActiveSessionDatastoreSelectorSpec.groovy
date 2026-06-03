@@ -52,7 +52,7 @@ class ActiveSessionDatastoreSelectorSpec extends Specification {
         Datastore activeDatastore = Mock(Datastore) {
             hasCurrentSession() >> true
         }
-        registry.registerDatastoreByType(activeDatastore)
+        registry.registerDatastore(ConnectionSource.DEFAULT, activeDatastore)
 
         expect:
         selector.select(registry, null).is(activeDatastore)

@@ -130,33 +130,7 @@ class GormRegistrySpec extends Specification {
         registry.getDatastore(TestEntity.name) == null
     }
 
-    void "removeDatastoreByType removes from type registry but keeps in allDatastores"() {
-        given:
-        def datastore = Stub(Datastore)
-        def registry = GormRegistry.instance
 
-        when:
-        registry.initializeDatastore(datastore)
-        registry.removeDatastoreByType(datastore.getClass())
-
-        then:
-        registry.allDatastores.contains(datastore)
-        !registry.datastoresByType.containsKey(datastore.getClass())
-    }
-
-    void "removeDatastoreFromDiscovery removes from type registry and allDatastores"() {
-        given:
-        def datastore = Stub(Datastore)
-        def registry = GormRegistry.instance
-
-        when:
-        registry.initializeDatastore(datastore)
-        registry.removeDatastoreFromDiscovery(datastore)
-
-        then:
-        !registry.allDatastores.contains(datastore)
-        !registry.datastoresByType.containsKey(datastore.getClass())
-    }
 
     void "removeDatastore removes from all registries"() {
         given:
@@ -305,32 +279,7 @@ class GormRegistrySpec extends Specification {
         registry.resolveInstanceApi(TestEntity) == instanceApi
     }
 
-    void "registerDatastoreByType registers datastore in discovery"() {
-        given:
-        def datastore = Stub(Datastore)
-        def registry = GormRegistry.instance
 
-        when:
-        registry.registerDatastoreByType(datastore)
-
-        then:
-        registry.allDatastores.contains(datastore)
-        registry.datastoresByType.get(datastore.getClass()) == datastore
-    }
-
-    void "removeDatastoreByType(Datastore) removes from type registry"() {
-        given:
-        def datastore = Stub(Datastore)
-        def registry = GormRegistry.instance
-
-        when:
-        registry.initializeDatastore(datastore)
-        registry.removeDatastoreByType(datastore)
-
-        then:
-        registry.allDatastores.contains(datastore)
-        !registry.datastoresByType.containsKey(datastore.getClass())
-    }
 
     void "getDatastore with entity Class returns registered datastore"() {
         given:

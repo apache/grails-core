@@ -48,8 +48,14 @@ class GormApiResolverSpec extends Specification {
         given:
         GormRegistry registry = GormRegistry.instance
         GormApiResolver resolver = registry.apiResolver
-        Datastore datastore = Mock(Datastore)
-        registry.registerDatastoreByType(datastore)
+        Datastore datastore = Mock(Datastore) {
+            getConnectionSources() >> Mock(org.grails.datastore.mapping.core.connections.ConnectionSources) {
+                getDefaultConnectionSource() >> Mock(ConnectionSource) {
+                    getName() >> ConnectionSource.DEFAULT
+                }
+            }
+        }
+        registry.registerDatastore(datastore)
 
         expect:
         resolver.findDatastoreByType(datastore.getClass()).is(datastore)
@@ -136,8 +142,13 @@ class GormApiResolverSpec extends Specification {
         GormApiResolver resolver = registry.apiResolver
         Datastore activeDatastore = Mock(Datastore) {
             hasCurrentSession() >> true
+            getConnectionSources() >> Mock(org.grails.datastore.mapping.core.connections.ConnectionSources) {
+                getDefaultConnectionSource() >> Mock(ConnectionSource) {
+                    getName() >> ConnectionSource.DEFAULT
+                }
+            }
         }
-        registry.registerDatastoreByType(activeDatastore)
+        registry.registerDatastore(activeDatastore)
 
         expect:
         resolver.findDatastore(null, null).is(activeDatastore)
@@ -177,7 +188,7 @@ class GormApiResolverSpec extends Specification {
                 }
             }
         }
-        registry.registerDatastoreByType(activeDatastore)
+        registry.registerDatastore(activeDatastore)
 
         Datastore defaultDatastore = Mock(MultiTenantCapableDatastore) {
             getMultiTenancyMode() >> org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode.DATABASE

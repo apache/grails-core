@@ -249,43 +249,10 @@ class GormRegistry {
     }
 
     /**
-     * Registers a datastore by its type.
-     * Nominally unused in core mapping runtime code, but used by test suites and external integrations.
-     */
-    void registerDatastoreByType(Datastore datastore) {
-        datastoreDiscovery.registerDatastoreByType(datastore)
-    }
-
-    /**
      * Registers a datastore by qualifier only, without adding it to the global type-based discovery.
      */
     void registerDatastoreByQualifier(String qualifier, Datastore datastore) {
         datastoreDiscovery.registerDatastoreByQualifier(qualifier, datastore)
-    }
-
-    /**
-     * Removes a datastore from discovery by its class type.
-     * Nominally unused in core mapping runtime code, but used by testing frameworks to clean up dynamic datastores.
-     */
-    void removeDatastoreByType(Class datastoreType) {
-        datastoreDiscovery.removeDatastoreByType(datastoreType)
-    }
-
-    /**
-     * Removes a datastore from discovery by its instance type.
-     * Nominally unused in core mapping runtime code, but used by testing frameworks to clean up dynamic datastores.
-     */
-    void removeDatastoreByType(Datastore datastore) {
-        datastoreDiscovery.removeDatastoreByType(datastore)
-    }
-
-    /**
-     * Removes a datastore from global discovery (allDatastores and datastoresByType)
-     * but keeps it in datastoresByQualifier.
-     * Nominally unused in core mapping runtime code, but used by test suites to verify multi-datastore isolation.
-     */
-    void removeDatastoreFromDiscovery(Datastore datastore) {
-        datastoreDiscovery.removeDatastoreFromDiscovery(datastore)
     }
 
     /**
