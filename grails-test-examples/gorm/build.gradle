@@ -61,6 +61,7 @@ dependencies {
     console 'org.apache.grails:grails-console'
 
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
+    integrationTestImplementation project(':grails-testing-support-http-client')
 }
 
 apply {
