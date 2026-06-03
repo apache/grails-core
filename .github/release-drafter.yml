@@ -130,7 +130,27 @@ categories:
 exclude-labels:
   - 'skip-changelog'
 change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
+# Multi-branch isolation:
+# - filter-by-commitish: only consider releases targeting this branch (e.g. 7.0.x)
+# - tag-prefix: only consider releases tagged with the "v" prefix (defense-in-depth)
+# - include-pre-releases: REQUIRED for Apache Grails - releases are marked
+#   prerelease=true on GitHub during the ASF vote process. Without this,
+#   release-drafter excludes them when finding the "last release", causing it
+#   to either bump from a stale baseline (e.g. v7.0.10 instead of v7.0.11) or,
+#   on branches where ALL releases are prereleases (e.g. 8.0.x at v8.0.0-M1),
+#   report "No last release" and fall back to walking unbounded git history,
+#   which exhausts the GitHub API rate limit and produces no draft at all.
 filter-by-commitish: true
+tag-prefix: v
+include-pre-releases: true
+# Bound API usage when no prior release matches the filters above (e.g. on a
+# brand-new release branch like 7.2.x before its first tag). Without this,
+# release-drafter walks the entire commit history and exhausts the rate limit.
+# - initial-commits-since: hard date floor used only when no last release is
+#   found. Set just before 7.1.1 / 7.0.11 / 8.0.0-M1 (all published 2026-04-30)
+#   so newly-cut branches walk only days, not years, of history. Bump this
+#   when forking a new release line to a date close to the fork point.
+initial-commits-since: '2026-04-29T00:00:00Z'
 version-resolver:
   major:
     labels:
