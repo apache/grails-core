@@ -33,7 +33,7 @@ import spock.lang.Requires
 })
 class ReadManyObjectsSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([ProfileDoc])
+        manager.registerDomainClasses(ProfileDoc)
     }
 
     void "Test that reading thousands of objects doesn't run out of memory"() {

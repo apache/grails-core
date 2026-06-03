@@ -33,6 +33,11 @@ import org.grails.datastore.gorm.proxy.GroovyProxyFactory
 // this test is ignored because Groovy proxies are not used with Hibernate
 class GroovyProxySpec extends GrailsDataTckSpec {
 
+    @Override
+    void setupSpec() {
+        manager.registerDomainClasses(Location)
+    }
+
     void 'Test proxying of non-existent instance throws an exception'() {
         setup:
         if (useGroovyProxyFactory) {

@@ -26,7 +26,7 @@ import spock.lang.Issue
 class AddToMethodWithBasicCollectionSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([BasicBook])
+        manager.registerDomainClasses(BasicBook)
     }
 
     @Issue('GRAILS-8779')

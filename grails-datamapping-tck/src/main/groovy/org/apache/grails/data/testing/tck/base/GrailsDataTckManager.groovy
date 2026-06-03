@@ -20,31 +20,6 @@ package org.apache.grails.data.testing.tck.base
 
 import spock.lang.Specification
 
-import org.apache.grails.data.testing.tck.domains.Book
-import org.apache.grails.data.testing.tck.domains.ChildEntity
-import org.apache.grails.data.testing.tck.domains.City
-import org.apache.grails.data.testing.tck.domains.ClassWithListArgBeforeValidate
-import org.apache.grails.data.testing.tck.domains.ClassWithNoArgBeforeValidate
-import org.apache.grails.data.testing.tck.domains.ClassWithOverloadedBeforeValidate
-import org.apache.grails.data.testing.tck.domains.CommonTypes
-import org.apache.grails.data.testing.tck.domains.Country
-import org.apache.grails.data.testing.tck.domains.EnumThing
-import org.apache.grails.data.testing.tck.domains.Face
-import org.apache.grails.data.testing.tck.domains.Highway
-import org.apache.grails.data.testing.tck.domains.Location
-import org.apache.grails.data.testing.tck.domains.ModifyPerson
-import org.apache.grails.data.testing.tck.domains.Nose
-import org.apache.grails.data.testing.tck.domains.OptLockNotVersioned
-import org.apache.grails.data.testing.tck.domains.OptLockVersioned
-import org.apache.grails.data.testing.tck.domains.Person
-import org.apache.grails.data.testing.tck.domains.PersonEvent
-import org.apache.grails.data.testing.tck.domains.Pet
-import org.apache.grails.data.testing.tck.domains.PetType
-import org.apache.grails.data.testing.tck.domains.Plant
-import org.apache.grails.data.testing.tck.domains.PlantCategory
-import org.apache.grails.data.testing.tck.domains.Publication
-import org.apache.grails.data.testing.tck.domains.Task
-import org.apache.grails.data.testing.tck.domains.TestEntity
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
 
@@ -56,33 +31,26 @@ abstract class GrailsDataTckManager {
 
     abstract Session createSession()
 
-    List<Class> domainClasses = [
-            Book,
-            ChildEntity,
-            City,
-            ClassWithListArgBeforeValidate,
-            ClassWithNoArgBeforeValidate,
-            ClassWithOverloadedBeforeValidate,
-            CommonTypes,
-            Country,
-            EnumThing,
-            Face,
-            Highway,
-            Location,
-            ModifyPerson,
-            Nose,
-            OptLockNotVersioned,
-            OptLockVersioned,
-            Person,
-            PersonEvent,
-            Pet,
-            PetType,
-            Plant,
-            PlantCategory,
-            Publication,
-            Task,
-            TestEntity
+    private Set<Class> domainClasses = [
     ]
+
+    /**
+     * Returns a defensive copy of the registered domain classes.
+     * Mutating this array will not affect the manager state.
+     */
+    Class[] getDomainClasses() {
+        domainClasses as Class[]
+    }
+
+    /**
+     * Registers the domain classes that will be available when testing.
+     * @param classes The classes to register
+     */
+    void registerDomainClasses(Class... classes) {
+        if (classes) {
+            domainClasses.addAll(classes)
+        }
+    }
 
     void setupSpec() {
         // noop
