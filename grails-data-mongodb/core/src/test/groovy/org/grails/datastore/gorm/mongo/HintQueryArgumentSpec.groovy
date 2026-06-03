@@ -29,7 +29,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class HintQueryArgumentSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses += [Person]
+        manager.registerDomainClasses(Person)
     }
 
     void "Test that hints work on criteria queries"() {

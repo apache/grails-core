@@ -27,7 +27,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class MongoGormEnhancerSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([MyMongoEntity])
+        manager.registerDomainClasses(MyMongoEntity)
     }
 
     def "Test is MongoEntity"() {
