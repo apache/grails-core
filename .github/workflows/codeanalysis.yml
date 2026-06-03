@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: "Code Style"
+name: "Code Analysis"
 on:
   push:
     branches:
@@ -45,59 +45,20 @@ jobs:
           cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "🔎 Check Core Projects"
-        run: ./gradlew aggregateStyleViolations --continue
+        run: ./gradlew aggregateAnalysisViolations --continue -Pgrails.code-analysis.enabled.pmd=true -Pgrails.code-analysis.enabled.spotbugs=true -Pgrails.code-analysis.ignoreFailures=true
       - name: "📤 Upload Reports"
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: core-reports
           path: build/reports/violations/
-      - name: "📋 Publish Code Style Report in Job Summary"
+      - name: "📋 Publish Code Analysis Report in Job Summary"
         if: always()
         run: |
-          echo "## 🔎 Code Style Report - Core Projects" >> $GITHUB_STEP_SUMMARY
-          for report in CODENARC_VIOLATIONS.md CHECKSTYLE_VIOLATIONS.md; do
+          echo "## 🔎 Code Analysis Report - Core Projects" >> $GITHUB_STEP_SUMMARY
+          for report in PMD_VIOLATIONS.md SPOTBUGS_VIOLATIONS.md; do
             file="build/reports/violations/$report"
             [ -f "$file" ] && cat "$file" >> $GITHUB_STEP_SUMMARY || true
-          done
-  check_forge_projects:
-    name: "Forge Projects"
-    runs-on: ubuntu-24.04
-    steps:
-      - name: "🌐 Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
-        run: curl -s https://api.ipify.org
-      - name: "📥 Checkout repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
-        with:
-          distribution: liberica
-          java-version: 21
-      - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
-        with:
-          cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
-          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
-      - name: "🔎 Check Forge Projects"
-        working-directory: grails-forge
-        run: ./gradlew codeStyle
-      - name: "📤 Upload Failure Reports"
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: forge-reports
-          path: grails-forge/build/reports/code-style/
-      - name: "📋 Publish Code Style Report in Job Summary"
-        if: always()
-        run: |
-          echo "## 🔎 Code Style Report - Forge Projects" >> $GITHUB_STEP_SUMMARY
-          for file in grails-forge/build/reports/code-style/checkstyle/*.xml grails-forge/build/reports/code-style/codenarc/*.xml; do
-            [ -f "$file" ] || continue
-            if grep -q "<error " "$file" || grep -q "<Violation " "$file"; then
-              echo "### ❌ $(basename "$file" .xml)" >> $GITHUB_STEP_SUMMARY
-              grep "<error " "$file" | awk -F'"' '{print "- **Line " $2 "**: " $8}' >> $GITHUB_STEP_SUMMARY
-              grep "<Violation " "$file" | awk -F"'" '{print "- **Line " $6 "**: " $2}' >> $GITHUB_STEP_SUMMARY
-            fi
           done
   check_gradle_plugin_projects:
     name: "Gradle Plugin Projects"
@@ -119,18 +80,18 @@ jobs:
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "🔎 Check Gradle Plugin Projects"
         working-directory: grails-gradle
-        run: ./gradlew aggregateStyleViolations --continue
+        run: ./gradlew aggregateAnalysisViolations --continue -Pgrails.code-analysis.enabled.pmd=true -Pgrails.code-analysis.enabled.spotbugs=true -Pgrails.code-analysis.ignoreFailures=true
       - name: "📤 Upload Reports"
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: gradle-plugin-reports
           path: grails-gradle/build/reports/violations/
-      - name: "📋 Publish Code Style Report in Job Summary"
+      - name: "📋 Publish Code Analysis Report in Job Summary"
         if: always()
         run: |
-          echo "## 🔎 Code Style Report - Gradle Plugin Projects" >> $GITHUB_STEP_SUMMARY
-          for report in CODENARC_VIOLATIONS.md CHECKSTYLE_VIOLATIONS.md; do
+          echo "## 🔎 Code Analysis Report - Gradle Plugin Projects" >> $GITHUB_STEP_SUMMARY
+          for report in PMD_VIOLATIONS.md SPOTBUGS_VIOLATIONS.md; do
             file="grails-gradle/build/reports/violations/$report"
             [ -f "$file" ] && cat "$file" >> $GITHUB_STEP_SUMMARY || true
           done

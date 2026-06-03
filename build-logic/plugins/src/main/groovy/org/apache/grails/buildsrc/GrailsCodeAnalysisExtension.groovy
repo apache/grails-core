@@ -27,36 +27,27 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.model.ObjectFactory
 
 @CompileStatic
-class GrailsCodeStyleExtension {
+class GrailsCodeAnalysisExtension {
 
     /**
-     * Defaults to rootProject.layout.buildDirectory/code-style/checkstyle.
-     * Default checkstyle files will be written here and used from this location.
+     * Defaults to rootProject.layout.buildDirectory/code-analysis/pmd.
+     * Directory for PMD configuration files (e.g. pmd.xml).
      */
-    final DirectoryProperty checkstyleDirectory
+    final DirectoryProperty pmdDirectory
 
     /**
-     * Defaults to rootProject.layout.buildDirectory/code-style/codenarc.
-     * Default codenarc files will be written here and used from this location.
-     */
-    final DirectoryProperty codenarcDirectory
-
-    /**
-     * Defaults to rootProject.layout.buildDirectory/reports/code-style.
-     * All Checkstyle and Codenarc reports will be written here.
+     * Defaults to rootProject.layout.buildDirectory/reports/code-analysis.
+     * PMD and SpotBugs XML reports will be written here.
      */
     final DirectoryProperty reportsDirectory
 
     @Inject
-    GrailsCodeStyleExtension(ObjectFactory objects, Project project) {
-        checkstyleDirectory = objects.directoryProperty().convention(
-                project.rootProject.layout.buildDirectory.dir('code-style/checkstyle')
-        )
-        codenarcDirectory = objects.directoryProperty().convention(
-                project.rootProject.layout.buildDirectory.dir('code-style/codenarc')
+    GrailsCodeAnalysisExtension(ObjectFactory objects, Project project) {
+        pmdDirectory = objects.directoryProperty().convention(
+                project.rootProject.layout.buildDirectory.dir('code-analysis/pmd')
         )
         reportsDirectory = objects.directoryProperty().convention(
-                project.rootProject.layout.buildDirectory.dir('reports/code-style')
+                project.rootProject.layout.buildDirectory.dir('reports/code-analysis')
         )
     }
 }
