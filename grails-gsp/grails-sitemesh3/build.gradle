@@ -23,7 +23,7 @@ plugins {
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.gradle.grails-plugin'
     id 'org.apache.grails.buildsrc.compile'
-    // TODO: id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.gradle.grails-code-style'
 }
