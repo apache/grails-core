@@ -31,11 +31,9 @@ import grails.gorm.multitenancy.CurrentTenantHolder
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
-import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
-import org.grails.datastore.mapping.reflect.NameUtils
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 
 /**
@@ -51,6 +49,7 @@ import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
  */
 @Slf4j
 @CompileStatic
+@SuppressWarnings(['unused', 'DuplicatedCode'])
 class GormRegistry {
 
     private static final GormRegistry instance = new GormRegistry()
@@ -60,14 +59,12 @@ class GormRegistry {
     final GormInstanceApiRegistry instanceApiRegistry = new GormInstanceApiRegistry(this)
     final GormValidationApiRegistry validationApiRegistry = new GormValidationApiRegistry(this)
 
-    final Map<String, Datastore> datastoresByQualifier = new ConcurrentHashMap<>()
-    private final Map<String, Map<String, Datastore>> entityDatastores = new ConcurrentHashMap<>()
-    private final Map<Class, String> normalizedEntityKeysByClass = new ConcurrentHashMap<>()
-    private final Map<String, String> normalizedEntityKeysByName = new ConcurrentHashMap<>()
-    private final Map<String, String> normalizedQualifiers = new ConcurrentHashMap<>()
-    final Map<Class, Datastore> datastoresByType = new ConcurrentHashMap<>()
+    final DatastoreDiscovery datastoreDiscovery = new DatastoreDiscovery()
+    final Map<String, Datastore> datastoresByQualifier = datastoreDiscovery.datastoresByQualifier
+    final Map<Class, Datastore> datastoresByType = datastoreDiscovery.datastoresByType
+    final Set<Datastore> allDatastores = datastoreDiscovery.allDatastores
+
     private final Map<Class, GormApiFactory> apiFactoriesByDatastoreType = new ConcurrentHashMap<>()
-    final Set<Datastore> allDatastores = Collections.newSetFromMap(new ConcurrentHashMap<Datastore, Boolean>())
 
     static GormRegistry getInstance() {
         return instance
@@ -77,7 +74,7 @@ class GormRegistry {
      * @return The default datastore
      */
     Datastore getDefaultDatastore() {
-        return datastoresByQualifier.get(ConnectionSource.DEFAULT)
+        return datastoreDiscovery.getDefaultDatastore()
     }
 
     /**
@@ -92,14 +89,8 @@ class GormRegistry {
         staticApiRegistry.clear()
         instanceApiRegistry.clear()
         validationApiRegistry.clear()
-        datastoresByQualifier.clear()
-        entityDatastores.clear()
-        normalizedEntityKeysByClass.clear()
-        normalizedEntityKeysByName.clear()
-        normalizedQualifiers.clear()
-        datastoresByType.clear()
+        datastoreDiscovery.clear()
         apiFactoriesByDatastoreType.clear()
-        allDatastores.clear()
         GormEnhancerRegistry.getInstance().clearPreferredDatastore()
         GormEnhancerRegistry.getInstance().clearResolvingDatastoreDepth()
     }
@@ -219,45 +210,21 @@ class GormRegistry {
      * Finds a datastore for a specific qualifier (connection name).
      */
     Datastore getDatastore(String qualifier) {
-        return getDatastoreByString((String) null, qualifier)
+        datastoreDiscovery.getDatastore(qualifier)
     }
 
     /**
      * Internal method to avoid redundant normalization.
      */
     Datastore getDatastoreDirect(String normalizedClassName, String normalizedQualifier) {
-        if (normalizedClassName != null) {
-            Map<String, Datastore> mappedDatastores = entityDatastores.get(normalizedClassName)
-            if (mappedDatastores != null) {
-                Datastore ds = mappedDatastores.get(normalizedQualifier)
-                if (ds != null) {
-                    return ds
-                }
-                if (ConnectionSource.DEFAULT.equals(normalizedQualifier) && !mappedDatastores.isEmpty()) {
-                    return mappedDatastores.values().iterator().next()
-                }
-                Datastore qualifierDs = datastoresByQualifier.get(normalizedQualifier)
-                if (qualifierDs != null && qualifierDs.getMappingContext()?.getPersistentEntity(normalizedClassName) != null) {
-                    return qualifierDs
-                }
-                return null
-            }
-        }
-
-        Datastore ds = datastoresByQualifier.get(normalizedQualifier)
-        if (ds == null && ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
-            if (allDatastores.size() == 1) {
-                return allDatastores.iterator().next()
-            }
-        }
-        return ds
+        datastoreDiscovery.getDatastoreDirect(normalizedClassName, normalizedQualifier)
     }
 
     /**
      * Internal method to avoid ambiguity.
      */
     Datastore getDatastoreByString(String className, String qualifier) {
-        return getDatastoreDirect(className != null ? normalizeEntityKey(className) : null, normalizeQualifier(qualifier))
+        datastoreDiscovery.getDatastoreByString(className, qualifier)
     }
 
     /**
@@ -265,21 +232,21 @@ class GormRegistry {
      * Part of the public API for external integrations and manual datastore lookup.
      */
     Datastore getDatastore(Class entityClass) {
-        return getDatastore(entityClass, ConnectionSource.DEFAULT)
+        datastoreDiscovery.getDatastore(entityClass)
     }
 
     /**
      * Finds a datastore for a specific entity class and qualifier.
      */
     Datastore getDatastore(Class entityClass, String qualifier) {
-        return getDatastoreByString(entityClass != null ? normalizeEntityKey(entityClass) : (String) null, qualifier)
+        datastoreDiscovery.getDatastore(entityClass, qualifier)
     }
 
     /**
      * Finds a datastore for an entity class name and qualifier.
      */
     Datastore getDatastore(String className, String qualifier) {
-        return getDatastoreByString(className, qualifier)
+        datastoreDiscovery.getDatastore(className, qualifier)
     }
 
     /**
@@ -296,26 +263,21 @@ class GormRegistry {
      * Registers a datastore for a qualifier. (O(N) part)
      */
     void registerDatastore(String qualifier, Datastore datastore) {
-        if (datastore == null) return
-        String normalizedQualifier = normalizeQualifier(qualifier)
-        datastoresByQualifier.put(normalizedQualifier, datastore)
-        allDatastores.add(datastore)
+        datastoreDiscovery.registerDatastore(qualifier, datastore)
     }
 
     /**
      * Initializes a datastore, registering its type and default qualifier.
      */
     void initializeDatastore(Datastore datastore) {
-        if (datastore == null) return
-        registerDatastore(ConnectionSource.DEFAULT, datastore)
-        datastoresByType.put(datastore.getClass(), datastore)
+        datastoreDiscovery.initializeDatastore(datastore)
     }
 
     /**
      * Registers a datastore.
      */
     void registerDatastore(Datastore datastore) {
-        initializeDatastore(datastore)
+        datastoreDiscovery.registerDatastore(datastore)
     }
 
     /**
@@ -323,18 +285,14 @@ class GormRegistry {
      * Nominally unused in core mapping runtime code, but used by test suites and external integrations.
      */
     void registerDatastoreByType(Datastore datastore) {
-        if (datastore == null) return
-        datastoresByType.put(datastore.getClass(), datastore)
-        allDatastores.add(datastore)
+        datastoreDiscovery.registerDatastoreByType(datastore)
     }
 
     /**
      * Registers a datastore by qualifier only, without adding it to the global type-based discovery.
      */
     void registerDatastoreByQualifier(String qualifier, Datastore datastore) {
-        if (qualifier != null && datastore != null) {
-            datastoresByQualifier.put(normalizeQualifier(qualifier), datastore)
-        }
+        datastoreDiscovery.registerDatastoreByQualifier(qualifier, datastore)
     }
 
     /**
@@ -342,8 +300,7 @@ class GormRegistry {
      * Nominally unused in core mapping runtime code, but used by testing frameworks to clean up dynamic datastores.
      */
     void removeDatastoreByType(Class datastoreType) {
-        if (datastoreType == null) return
-        datastoresByType.remove(datastoreType)
+        datastoreDiscovery.removeDatastoreByType(datastoreType)
     }
 
     /**
@@ -351,8 +308,7 @@ class GormRegistry {
      * Nominally unused in core mapping runtime code, but used by testing frameworks to clean up dynamic datastores.
      */
     void removeDatastoreByType(Datastore datastore) {
-        if (datastore == null) return
-        removeDatastoreByType(datastore.getClass())
+        datastoreDiscovery.removeDatastoreByType(datastore)
     }
 
     /**
@@ -361,31 +317,14 @@ class GormRegistry {
      * Nominally unused in core mapping runtime code, but used by test suites to verify multi-datastore isolation.
      */
     void removeDatastoreFromDiscovery(Datastore datastore) {
-        if (datastore == null) return
-        allDatastores.remove(datastore)
-        datastoresByType.remove(datastore.getClass())
+        datastoreDiscovery.removeDatastoreFromDiscovery(datastore)
     }
 
     /**
      * Completely removes a datastore from the registry.
      */
     void removeDatastore(Datastore datastore) {
-        if (datastore == null) return
-        allDatastores.remove(datastore)
-        datastoresByType.remove(datastore.getClass())
-
-        Iterator<Map.Entry<String, Datastore>> it = datastoresByQualifier.entrySet().iterator()
-        while (it.hasNext()) {
-            if (it.next().value == datastore) it.remove()
-        }
-
-        for (Map<String, Datastore> entityMap in entityDatastores.values()) {
-            Iterator<Map.Entry<String, Datastore>> eit = entityMap.entrySet().iterator()
-            while (eit.hasNext()) {
-                if (eit.next().value == datastore) eit.remove()
-            }
-        }
-
+        datastoreDiscovery.removeDatastore(datastore)
         staticApiRegistry.removeDatastore(datastore)
         instanceApiRegistry.removeDatastore(datastore)
         validationApiRegistry.removeDatastore(datastore)
@@ -395,28 +334,14 @@ class GormRegistry {
      * Removes a datastore for a specific entity.
      */
     void removeEntityDatastore(String className, Datastore datastore) {
-        if (className != null && datastore != null) {
-            Map<String, Datastore> entityMap = entityDatastores.get(className)
-            if (entityMap != null) {
-                Iterator<Map.Entry<String, Datastore>> eit = entityMap.entrySet().iterator()
-                while (eit.hasNext()) {
-                    if (eit.next().value == datastore) eit.remove()
-                }
-            }
-        }
+        datastoreDiscovery.removeEntityDatastore(className, datastore)
     }
 
     /**
      * Checks if a specific datastore is explicitly registered for an entity.
      */
     boolean isDatastoreRegisteredForEntity(String className, Datastore datastore) {
-        if (className != null && datastore != null) {
-            Map<String, Datastore> entityMap = entityDatastores.get(normalizeEntityKey(className))
-            if (entityMap != null && entityMap.values().contains(datastore)) {
-                return true
-            }
-        }
-        return false
+        datastoreDiscovery.isDatastoreRegisteredForEntity(className, datastore)
     }
 
     GormStaticApi getStaticApi(Class entityClass) {
@@ -453,7 +378,7 @@ class GormRegistry {
 
         if (MultiTenant.isAssignableFrom(entityClass)) {
             // Priority 1: Explicit qualifier that doesn't match default is likely a tenant ID
-            if (!ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
+            if (normalizedQualifier != ConnectionSource.DEFAULT) {
                 GormStaticApi api = staticApiRegistry.getDirect(normalizedClassName, normalizedQualifier)
                 if (api != null) return api
             }
@@ -470,7 +395,7 @@ class GormRegistry {
             
             // Priority 3: Fall back to default API instance if specialized one not found,
             // but keep the qualifier so the API can handle tenant binding
-            if (!ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
+            if (normalizedQualifier != ConnectionSource.DEFAULT) {
                 GormStaticApi api = staticApiRegistry.getDirect(normalizedClassName, ConnectionSource.DEFAULT)
                 if (api != null) return api
             }
@@ -488,7 +413,7 @@ class GormRegistry {
         String normalizedQualifier = normalizeQualifier(qualifier)
 
         if (MultiTenant.isAssignableFrom(entityClass)) {
-            if (!ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
+            if (normalizedQualifier != ConnectionSource.DEFAULT) {
                 GormInstanceApi api = instanceApiRegistry.getDirect(normalizedClassName, normalizedQualifier)
                 if (api != null) return api
             }
@@ -502,7 +427,7 @@ class GormRegistry {
                 }
             }
             
-            if (!ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
+            if (normalizedQualifier != ConnectionSource.DEFAULT) {
                 GormInstanceApi api = instanceApiRegistry.getDirect(normalizedClassName, ConnectionSource.DEFAULT)
                 if (api != null) return api
             }
@@ -528,7 +453,7 @@ class GormRegistry {
         String normalizedQualifier = normalizeQualifier(qualifier)
 
         if (MultiTenant.isAssignableFrom(entityClass)) {
-            if (!ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
+            if (normalizedQualifier != ConnectionSource.DEFAULT) {
                 GormValidationApi api = validationApiRegistry.getDirect(normalizedClassName, normalizedQualifier)
                 if (api != null) return api
             }
@@ -542,7 +467,7 @@ class GormRegistry {
                 }
             }
             
-            if (!ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
+            if (normalizedQualifier != ConnectionSource.DEFAULT) {
                 GormValidationApi api = validationApiRegistry.getDirect(normalizedClassName, ConnectionSource.DEFAULT)
                 if (api != null) return api
             }
@@ -575,48 +500,8 @@ class GormRegistry {
         return validationApiRegistry.get(normalizeEntityKey(className), normalizeQualifier(qualifier))
     }
 
-    private Map<String, Datastore> getInternalMap(Map<String, Map<String, Datastore>> rootMap, String key) {
-        Map<String, Datastore> map = rootMap.get(key)
-        if (map == null) {
-            map = new ConcurrentHashMap<String, Datastore>()
-            Map<String, Datastore> prior = rootMap.putIfAbsent(key, map)
-            if (prior != null) {
-                return prior
-            }
-        }
-        return map
-    }
-
     String normalizeEntityKey(Object entityKey) {
-        if (entityKey == null) {
-            return null
-        }
-        if (entityKey instanceof Class) {
-            Class entityClass = (Class) entityKey
-            String existing = normalizedEntityKeysByClass.get(entityClass)
-            if (existing != null) {
-                return existing
-            }
-            String computed = NameUtils.getClassName(entityClass)
-            String normalized = normalizeEntityKey(computed)
-            if (normalized == null) {
-                return null
-            }
-            String prior = normalizedEntityKeysByClass.putIfAbsent(entityClass, normalized)
-            return prior != null ? prior : normalized
-        } else {
-            String className = entityKey.toString()
-            String existing = normalizedEntityKeysByName.get(className)
-            if (existing != null) {
-                return existing
-            }
-            String normalized = className.trim()
-            if (normalized.isEmpty()) {
-                return null
-            }
-            String prior = normalizedEntityKeysByName.putIfAbsent(className, normalized)
-            return prior != null ? prior : normalized
-        }
+        datastoreDiscovery.normalizeEntityKey(entityKey)
     }
 
     /**
@@ -625,22 +510,6 @@ class GormRegistry {
     @Deprecated
     String normalizeEntityKeyFromClass(Class entityClass) {
         normalizeEntityKey(entityClass)
-    }
-
-    String normalizeQualifier(String qualifier) {
-        if (qualifier == null) {
-            return ConnectionSource.DEFAULT
-        }
-        String existing = normalizedQualifiers.get(qualifier)
-        if (existing != null) {
-            return existing
-        }
-        String normalized = qualifier.trim()
-        if (normalized.isEmpty() || ConnectionSource.OLD_DEFAULT.equalsIgnoreCase(normalized)) {
-            normalized = ConnectionSource.DEFAULT
-        }
-        String prior = normalizedQualifiers.putIfAbsent(qualifier, normalized)
-        return prior != null ? prior : normalized
     }
 
     /**
@@ -675,72 +544,26 @@ class GormRegistry {
      * @param entity The persistent entity (for entity-specific qualifier resolution)
      */
     void registerEntityDatastores(String className, Object datastore, List<String> connectionSourceNames, Object entity) {
-
-        if (datastore == null) return
-        String normalizedClassName = normalizeEntityKey(className)
-        if (normalizedClassName == null) {
-            return
-        }
-
-        Datastore defaultDatastore = (Datastore) datastore
-        List<String> qualifiers = connectionSourceNames ?: Collections.singletonList(ConnectionSource.DEFAULT)
-        boolean multiTenantEntity = entity instanceof PersistentEntity && ((PersistentEntity) entity).isMultiTenant()
-
-        entityDatastores.remove(normalizedClassName)
-
-        Datastore primaryDatastore = defaultDatastore
-
-        // Register datastores for each connection source. For each qualifier, attempt to resolve a
-        // connection-specific child datastore. If the resolution falls back to the parent (meaning
-        // the qualifier is a runtime tenant ID, not a datasource connection name), skip registration
-        // for non-DEFAULT qualifiers in multi-tenant mode so that we do not overwrite the correctly
-        // registered child datastores (e.g. those added by addTenantForSchemaInternal).
-        for (String connectionSourceName in qualifiers) {
-            String normalizedQualifier = normalizeQualifier(connectionSourceName)
-            Datastore qualifierDatastore = defaultDatastore
-            if (defaultDatastore instanceof MultipleConnectionSourceCapableDatastore &&
-                    !ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
-                try {
-                    Datastore resolved = ((MultipleConnectionSourceCapableDatastore) defaultDatastore)
-                            .getDatastoreForConnection(normalizedQualifier)
-                    if (resolved != null) {
-                        qualifierDatastore = resolved
-                    }
-                } catch (Throwable e) {
-                    // qualifier is not a datasource connection name; keep defaultDatastore
-                }
-            }
-            // Skip non-DEFAULT qualifiers that resolve back to the parent for multi-tenant entities.
-            // Those qualifiers are runtime tenant IDs handled at the session level, not datasource names.
-            if (multiTenantEntity && !ConnectionSource.DEFAULT.equals(normalizedQualifier) &&
-                    qualifierDatastore == defaultDatastore) {
-                continue
-            }
-            if (!ConnectionSource.DEFAULT.equals(normalizedQualifier) && primaryDatastore == defaultDatastore) {
-                primaryDatastore = qualifierDatastore
-            }
-            registerDatastoreByQualifier(normalizedQualifier, qualifierDatastore)
-            registerEntityDatastore(normalizedClassName, normalizedQualifier, qualifierDatastore)
-        }
-
-        // If the entity does not explicitly include DEFAULT, route DEFAULT to the first explicit connection.
-        if (!qualifiers.collect { String it -> normalizeQualifier(it) }.contains(ConnectionSource.DEFAULT)) {
-            registerEntityDatastore(normalizedClassName, ConnectionSource.DEFAULT, primaryDatastore)
-        }
+        datastoreDiscovery.registerEntityDatastores(className, datastore, connectionSourceNames, entity)
     }
 
     /**
      * Registers an entity-specific datastore override.
      */
     void registerEntityDatastore(String className, String qualifier, Datastore datastore) {
-        if (datastore != null) {
-            String normalizedClassName = normalizeEntityKey(className)
-            if (normalizedClassName == null) {
-                return
-            }
-            String normalizedQualifier = normalizeQualifier(qualifier)
-            getInternalMap(entityDatastores, normalizedClassName).put(normalizedQualifier, datastore)
-        }
+        datastoreDiscovery.registerEntityDatastore(className, qualifier, datastore)
+    }
+
+    String normalizeEntityKey(Class cls) {
+        datastoreDiscovery.normalizeEntityKey(cls)
+    }
+
+    String normalizeEntityKey(String className) {
+        datastoreDiscovery.normalizeEntityKey(className)
+    }
+
+    String normalizeQualifier(String qualifier) {
+        datastoreDiscovery.normalizeQualifier(qualifier)
     }
 
     /**
@@ -776,7 +599,6 @@ class GormRegistry {
      * Create a DatastoreResolver for a class and optional qualifier.
      */
     DatastoreResolver createClassDatastoreResolver(Class cls, String qualifier = ConnectionSource.DEFAULT) {
-        String normalizedClassName = normalizeEntityKey(cls)
         String normalizedQualifier = normalizeQualifier(qualifier)
         return new DatastoreResolver() {
             @Override
@@ -822,7 +644,7 @@ class GormRegistry {
      * @param datastore The datastore containing the entities
      */
     @CompileDynamic
-    void registerConstraints(Object datastore) {
+    static void registerConstraints(Object datastore) {
         if (datastore == null) return
         
         try {
