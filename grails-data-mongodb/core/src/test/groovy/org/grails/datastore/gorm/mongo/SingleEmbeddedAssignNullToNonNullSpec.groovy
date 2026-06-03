@@ -36,7 +36,7 @@ import org.bson.types.ObjectId
 class SingleEmbeddedAssignNullToNonNullSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([FramePogo, CropPogo, FrameEntity, CropEntity])
+        manager.registerDomainClasses(FramePogo, CropPogo, FrameEntity, CropEntity)
     }
 
     void "POGO embedded value: null→non-null assignment persists"() {

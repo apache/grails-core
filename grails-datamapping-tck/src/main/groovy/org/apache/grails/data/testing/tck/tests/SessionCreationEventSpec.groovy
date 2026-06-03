@@ -35,6 +35,11 @@ import org.grails.datastore.mapping.core.SessionCreationEvent
 @IgnoreIf({ System.getProperty('hibernate5.gorm.suite') || System.getProperty('hibernate6.gorm.suite')  || System.getProperty('mongodb.gorm.suite') })
 class SessionCreationEventSpec extends GrailsDataTckSpec {
 
+    @Override
+    void setupSpec() {
+        manager.registerDomainClasses(TestEntity)
+    }
+
     Listener listener
 
     def setup() {

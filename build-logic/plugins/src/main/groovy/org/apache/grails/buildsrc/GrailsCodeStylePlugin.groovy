@@ -21,49 +21,59 @@ package org.apache.grails.buildsrc
 import java.nio.file.Files
 import java.nio.file.Path
 
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.file.Directory
 import org.gradle.api.plugins.quality.Checkstyle
 import org.gradle.api.plugins.quality.CheckstyleExtension
 import org.gradle.api.plugins.quality.CheckstylePlugin
 import org.gradle.api.plugins.quality.CodeNarc
 import org.gradle.api.plugins.quality.CodeNarcExtension
 import org.gradle.api.plugins.quality.CodeNarcPlugin
+import org.gradle.api.provider.Provider
 
+/**
+ * Convention plugin for Grails code style enforcement (Checkstyle and CodeNarc).
+ */
 @CompileStatic
 class GrailsCodeStylePlugin implements Plugin<Project> {
 
+    // The directory-override keys keep the legacy 'grails.codestyle.dir.*' names so existing
+    // project configuration (e.g. grails-forge's custom checkstyle dir) keeps working unchanged.
     static String CHECKSTYLE_DIR_PROPERTY = 'grails.codestyle.dir.checkstyle'
+    static String CHECKSTYLE_ENABLED_PROPERTY = 'grails.code-style.enabled.checkstyle'
     static String CHECKSTYLE_CONFIG_FILE_NAME = 'checkstyle.xml'
     static String CHECKSTYLE_SUPPRESSION_CONFIG_FILE_NAME = 'checkstyle-suppressions.xml'
 
     static String CODENARC_DIR_PROPERTY = 'grails.codestyle.dir.codenarc'
+    static String CODENARC_ENABLED_PROPERTY = 'grails.code-style.enabled.codenarc'
     static String CODENARC_CONFIG_FILE_NAME = 'codenarc.groovy'
 
-    static String BASE_RESOURCE_PATH = '/META-INF/org.apache.grails.buildsrc.codestyle'
+    static String CODENARC_FIX_PROPERTY = 'grails.code-style.codenarc.fix'
+
+    static String IGNORE_FAILURES_PROPERTY = 'grails.code-style.ignoreFailures'
+
+    static String TEST_STYLING_PROPERTY = 'grails.code-style.enabled.tests'
+
+    static String BASE_RESOURCE_PATH = '/META-INF/org.apache.grails.buildsrc.grails-code-style'
 
     @Override
     void apply(Project project) {
         initExtension(project)
         configureCodeStyle(project)
-        doNotApplyStylingToTests(project)
     }
 
     private static void initExtension(Project project) {
         def gce = project.extensions.create('grailsCodeStyle', GrailsCodeStyleExtension)
 
-        // Unfortunately, the codenarc plugin is still using a non-lazy property.
-        // Rather than rewrite the plugin to use afterEvaluate,
-        // this plugin uses properties to override the configuration location by default
-
+        // We are trying to avoid afterEvaluate usage here, so use properties for enabling / disabling
 
         gce.checkstyleDirectory.set(project.provider {
             def directory = project.hasProperty(CHECKSTYLE_DIR_PROPERTY) ?
                     project.rootProject.layout.projectDirectory.dir(project.property(CHECKSTYLE_DIR_PROPERTY) as String) :
-                    project.rootProject.layout.buildDirectory.get().dir('codestyle').dir('checkstyle')
+                    project.rootProject.layout.buildDirectory.get().dir('code-style').dir('checkstyle')
 
             def toCreate = directory.asFile.toPath()
             Files.createDirectories(toCreate)
@@ -83,7 +93,7 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
         gce.codenarcDirectory.set(project.provider {
             def directory = project.hasProperty(CODENARC_DIR_PROPERTY) ?
                     project.rootProject.layout.projectDirectory.dir(project.property(CODENARC_DIR_PROPERTY) as String) :
-                    project.rootProject.layout.buildDirectory.get().dir('codestyle').dir('codenarc')
+                    project.rootProject.layout.buildDirectory.get().dir('code-style').dir('codenarc')
 
             def toCreate = directory.asFile.toPath()
             Files.createDirectories(toCreate)
@@ -107,23 +117,6 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
         }
     }
 
-    private static void doNotApplyStylingToTests(Project project) {
-        project.tasks.named('checkstyleTest') {
-            it.enabled = false // Do not check test sources at this time
-        }
-
-        project.afterEvaluate {
-            // Do not check test sources at this time
-            ['codenarcIntegrationTest', 'codenarcTest'].each { testTaskName ->
-                if (project.tasks.names.contains(testTaskName)) {
-                    project.tasks.named(testTaskName) {
-                        it.enabled = false
-                    }
-                }
-            }
-        }
-    }
-
     private static void configureCodeStyle(Project project) {
         configureCheckstyle(project)
         configureCodenarc(project)
@@ -131,31 +124,42 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
         project.tasks.register('codeStyle') {
             it.group = 'verification'
             it.description = 'Runs code style checks'
-            it.dependsOn(project.tasks.withType(Checkstyle))
             it.dependsOn(project.tasks.withType(CodeNarc))
+            it.dependsOn(project.tasks.withType(Checkstyle))
         }
     }
 
     static void configureCheckstyle(Project project) {
         project.pluginManager.apply(CheckstylePlugin)
 
+        def ignoreFailures = GradleUtils.booleanProvider(project, IGNORE_FAILURES_PROPERTY)
+
         project.extensions.configure(CheckstyleExtension) {
             // Explicit `it` is required in extension configuration
-            it.getConfigDirectory().set(project.extensions.getByType(GrailsCodeStyleExtension).checkstyleDirectory)
+            it.configDirectory.set(project.extensions.getByType(GrailsCodeStyleExtension).checkstyleDirectory)
             it.maxWarnings = 0
             it.showViolations = true
-            it.ignoreFailures = false
+            it.ignoreFailures = ignoreFailures.get()
             it.toolVersion = project.findProperty('checkstyleVersion')
         }
 
         project.tasks.withType(Checkstyle).configureEach { Checkstyle task ->
             task.group = 'verification'
             task.onlyIf { !project.hasProperty('skipCodeStyle') }
+            task.ignoreFailures = ignoreFailures.get()
+
+            if (task.name.toLowerCase().contains('test')) {
+                task.enabled = false
+            }
+
+            // Exclude build directory from Checkstyle task sources to ignore generated sources (e.g. for grails-forge)
+            // Checked via absolute path to ensure platform-independent separator handling
+            task.exclude { org.gradle.api.file.FileTreeElement element ->
+                element.file.absolutePath.contains(File.separator + 'build' + File.separator)
+            }
 
             // Redirect XML report output to a single directory to consolidate
-            // reports across all subprojects into one known location.
-            // Include the task name to avoid overlapping outputs when a project has
-            // multiple source sets (e.g. grails-cache has ast + main).
+            // reports across all subprojects into one known location
             task.reports.xml.outputLocation.set(
                     project.extensions.getByType(GrailsCodeStyleExtension)
                             .reportsDirectory.get()
@@ -168,20 +172,33 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
     static void configureCodenarc(Project project) {
         project.pluginManager.apply(CodeNarcPlugin)
 
+        registerCodenarcFixTask(project)
+
+        def ignoreFailures = GradleUtils.booleanProvider(project, IGNORE_FAILURES_PROPERTY)
+        def codenarcFix = GradleUtils.booleanProvider(project, CODENARC_FIX_PROPERTY)
+
         project.extensions.configure(CodeNarcExtension) {
             it.configFile = project.extensions.getByType(GrailsCodeStyleExtension)
-                    .codenarcDirectory.get().file(CODENARC_CONFIG_FILE_NAME).asFile
+                    .codenarcDirectory.file(CODENARC_CONFIG_FILE_NAME).get().asFile
+            it.ignoreFailures = ignoreFailures.get()
             it.toolVersion = project.findProperty('codenarcVersion')
         }
 
         project.tasks.withType(CodeNarc).configureEach { CodeNarc task ->
             task.group = 'verification'
             task.onlyIf { !project.hasProperty('skipCodeStyle') }
+            task.ignoreFailures = ignoreFailures.get()
+
+            if (codenarcFix.get()) {
+                task.dependsOn('codenarcFix')
+            }
+
+            if (task.name.toLowerCase().contains('test')) {
+                task.enabled = false
+            }
 
             // Redirect XML report output to a single directory to consolidate
-            // reports across all subprojects into one known location.
-            // Include the task name to avoid overlapping outputs when a project has
-            // multiple source sets.
+            // reports across all subprojects into one known location
             task.reports.xml.required.set(true)
             task.reports.xml.outputLocation.set(
                     project.extensions.getByType(GrailsCodeStyleExtension)
@@ -189,6 +206,62 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
                             .dir('codenarc')
                             .file("${project.name}-${task.name}.xml")
             )
+        }
+    }
+
+    @CompileDynamic
+    private static void registerCodenarcFixTask(Project project) {
+        project.tasks.register('codenarcFix') {
+            it.group = 'verification'
+            it.description = 'Automatically fixes some CodeNarc violations'
+            it.doLast {
+                project.fileTree(project.projectDir) {
+                    it.include 'src/**/*.groovy'
+                    it.include 'grails-app/**/*.groovy'
+                    it.include 'scripts/**/*.groovy'
+                    it.exclude '**/build/**'
+                }.each { file ->
+                    String content = file.text
+                    String original = content
+
+                    // 1. ClassStartsWithBlankLine
+                    content = content.replaceAll(/(class\s+[^{]+\{\n)([ \t]*[^ \s\n\/])/, '$1\n$2')
+
+                    // 2. SpaceAroundMapEntryColon
+                    // (?!:) prevents matching the first : in a :: method reference (e.g. String::trim)
+                    content = content.replaceAll(/([\[,]\s*(?:[\w\-.]+|'[^']+'|"[^"]+")):(?!:)([^\s\/])/, '$1: $2')
+                    content = content.replaceAll(/(\(\s*(?:[\w\-.]+|'[^']+'|"[^"]+")):(?!:)([^\s\/])/, '$1: $2')
+
+                    // 3. UnnecessaryGString
+                    // The alternation skips over single-quoted strings so their embedded double-quote
+                    // content is never touched. The (?<!}) lookbehind prevents fusing the closing "
+                    // of a GString with the opening " of an adjacent plain string (e.g. obj."${x}"("y")).
+                    content = content.replaceAll(/(?<!\\)'(?:[^'\\\n]|\\.)*'|(?<!\\)(?<!")(?<!})"([^"$\n\\]*)"(?!")/) { List<String> args ->
+                        if (args[1] == null) {
+                            return args[0]  // single-quoted string matched — leave it untouched
+                        }
+                        String inner = args[1]
+                        if (!inner.contains("'")) {
+                            return "'$inner'"
+                        }
+                        return args[0]
+                    }
+
+                    // 4. UnnecessarySemicolon
+                    content = content.replaceAll(/(?m);[ \t]*$/, '')
+
+                    // 5. SpaceBeforeOpeningBrace
+                    content = content.replaceAll(/(?<!\\)([\)\]\}\w])\{/, '$1 {')
+
+                    // 6. ConsecutiveBlankLines
+                    content = content.replaceAll(/\n{3,}/, '\n\n')
+
+                    if (content != original) {
+                        file.text = content
+                        project.logger.lifecycle("Fixed CodeNarc violations in ${file.path}")
+                    }
+                }
+            }
         }
     }
 }

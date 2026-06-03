@@ -31,6 +31,11 @@ import org.apache.grails.data.testing.tck.domains.TestEntity
  */
 class RangeQuerySpec extends GrailsDataTckSpec {
 
+    @Override
+    void setupSpec() {
+        manager.registerDomainClasses(ChildEntity, Person, Publication, TestEntity)
+    }
+
     void 'Test between query with dates'() {
         given:
         def now = new Date()
