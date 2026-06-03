@@ -83,6 +83,11 @@ dependencies {
     testImplementation project(':grails-testing-support-web')
     testImplementation 'net.bytebuddy:byte-buddy'
     testImplementation 'org.spockframework:spock-core'
+
+    testImplementation 'org.springframework:spring-web'
+    testImplementation "io.github.cjstehno.ersatz:ersatz:$ersatzVersion"
+    testImplementation "io.github.cjstehno.ersatz:ersatz-groovy:$ersatzVersion"
+    testRuntimeOnly 'tools.jackson.core:jackson-databind'
 }
 
 compileGsonViews {

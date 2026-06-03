@@ -20,12 +20,10 @@
 package org.grails.gorm.graphql.plugin.testing
 
 import groovy.json.JsonOutput
-import groovy.json.JsonSlurper
 import groovy.transform.TupleConstructor
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
-import org.springframework.http.converter.StringHttpMessageConverter
 import org.springframework.web.client.RestClient
 
 trait GraphQLSpec {
@@ -38,14 +36,8 @@ trait GraphQLSpec {
 
     GraphQLRequestHelper getGraphQL() {
         if (_graphql == null) {
-            StringHttpMessageConverter stringConverter = new StringHttpMessageConverter()
-            stringConverter.supportedMediaTypes = [MediaType.ALL]
             _graphql = new GraphQLRequestHelper(rest: RestClient.builder()
                     .baseUrl(getServerUrl())
-                    .messageConverters({ converters ->
-                        converters.clear()
-                        converters.add(stringConverter)
-                    })
                     .build())
         }
         _graphql
@@ -66,64 +58,55 @@ trait GraphQLSpec {
     static class GraphQLRequestHelper {
 
         private static final MediaType APPLICATION_GRAPHQL = MediaType.parseMediaType('application/graphql')
-        private static final JsonSlurper SLURPER = new JsonSlurper()
 
         RestClient rest
 
         ResponseEntity<Map> graphql(String requestBody) {
-            wrapJson(exchangeGraphql(requestBody))
+            graphql(requestBody, Map)
         }
 
-        // Overload that returns the raw body for callers asserting on the
-        // unparsed JSON payload (only String is supported - tests asserting on
-        // a structured body should use the no-class overload above which parses
-        // into a Map).
-        @SuppressWarnings('unchecked')
         def <T> ResponseEntity<T> graphql(String requestBody, Class<T> bodyType) {
-            if (bodyType != String) {
-                throw new IllegalArgumentException(
-                        "graphql(String, Class) only supports String.class; got ${bodyType.name}")
-            }
-            (ResponseEntity<T>) exchangeGraphql(requestBody)
-        }
-
-        private ResponseEntity<String> exchangeGraphql(String requestBody) {
             rest.post()
                     .uri('/graphql')
                     .contentType(APPLICATION_GRAPHQL)
+                    .accept(MediaType.APPLICATION_JSON)
                     .body(requestBody)
                     .retrieve()
-                    .toEntity(String)
+                    .toEntity(bodyType)
         }
 
         private ResponseEntity<Map> buildJsonRequest(Map<String, Object> data) {
-            wrapJson(rest.post()
+            rest.post()
                     .uri('/graphql')
                     .contentType(MediaType.APPLICATION_JSON)
-                    .body(JsonOutput.toJson(data))
+                    .accept(MediaType.APPLICATION_JSON)
+                    .body(data)
                     .retrieve()
-                    .toEntity(String))
+                    .toEntity(Map)
         }
 
         private ResponseEntity<Map> buildGetRequest(Map<String, Object> data) {
-            if (data.containsKey('variables')) {
-                data.put('variables', JsonOutput.toJson(data.variables))
+            // The GraphQL-over-HTTP GET protocol requires `variables` to be a
+            // URL-encoded JSON string query parameter, not an HTTP body, so it is
+            // JSON-encoded here rather than negotiated by a message converter.
+            Map<String, Object> queryParams = new LinkedHashMap<>(data)
+            if (queryParams.containsKey('variables')) {
+                queryParams.put('variables', JsonOutput.toJson(queryParams.get('variables')))
             }
-            wrapJson(rest.get()
-                    .uri('/', { uriBuilder ->
-                        data.each { key, value ->
-                            uriBuilder.queryParam(key, value)
+            rest.get()
+                    .uri('/graphql', { uriBuilder ->
+                        // Bind values as URI variables so the GraphQL query braces are encoded, not parsed as URI templates.
+                        Map<String, Object> uriVariables = [:]
+                        queryParams.eachWithIndex { entry, index ->
+                            String name = "value${index}"
+                            uriBuilder.queryParam(entry.key, '{' + name + '}')
+                            uriVariables[name] = entry.value
                         }
-                        uriBuilder.build()
+                        uriBuilder.build(uriVariables)
                     })
+                    .accept(MediaType.APPLICATION_JSON)
                     .retrieve()
-                    .toEntity(String))
-        }
-
-        private static ResponseEntity<Map> wrapJson(ResponseEntity<String> raw) {
-            String body = raw.body
-            Map parsed = (body == null || body.isEmpty()) ? null : (Map) SLURPER.parseText(body)
-            new ResponseEntity<Map>(parsed, raw.headers, raw.statusCode)
+                    .toEntity(Map)
         }
 
         ResponseEntity<Map> json(String query) {

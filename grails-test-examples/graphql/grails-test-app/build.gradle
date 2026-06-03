@@ -64,6 +64,8 @@ dependencies {
 
     testImplementation 'org.apache.grails:grails-testing-support-datamapping'
     testImplementation 'org.apache.grails:grails-testing-support-web'
+
+    integrationTestRuntimeOnly 'tools.jackson.core:jackson-databind'
 }
 
 apply {

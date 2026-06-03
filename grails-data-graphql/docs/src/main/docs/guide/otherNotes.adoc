@@ -137,6 +137,8 @@ include::{sourcedir}/examples/grails-docs-app/src/integration-test/groovy/demo/A
 
 === Testing and JSON Serialization
 
-The `GraphQLSpec` testing trait talks to a running application over HTTP and serializes request bodies and parses responses using Groovy's `groovy.json.JsonOutput` and `groovy.json.JsonSlurper`, not the JSON object mapper your application is configured with at runtime.
+The `GraphQLSpec` testing trait talks to a running application over HTTP using Spring's `org.springframework.web.client.RestClient`. JSON request bodies are serialized, and responses deserialized, by the `RestClient` Jackson message converter - the same JSON mechanism Spring uses elsewhere - rather than by hand.
 
-WARNING: The object mapper configured in your application determines how GraphQL responses are actually rendered in production. A customized object mapper (for example, with non-default date formats, property naming strategies, or custom serializers) can produce output that differs from the plain JSON parsed by `GraphQLSpec`. Assertions made through the trait may therefore not match the exact payload a client using your application's object mapper would receive. When these serialization details matter, assert against the raw response body and verify your object mapper configuration with a dedicated test.
+NOTE: `RestClient` only registers a JSON message converter when a JSON library is on the classpath. An application that renders JSON solely through JSON views, without otherwise depending on Jackson, must add `tools.jackson.core:jackson-databind` to its `integrationTestRuntimeOnly` configuration for the trait to serialize requests and parse responses.
+
+NOTE: Your application renders GraphQL responses with its configured object mapper, so customizing that object mapper (for example, with non-default date formats, property naming strategies, or custom serializers) changes the payloads your tests observe through the trait. When these serialization details matter, assert against the specific fields you care about and verify your object mapper configuration with a dedicated test.
