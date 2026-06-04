@@ -1,0 +1,79 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+If a domain class has no `DataSource` configuration, it defaults to the standard `'dataSource'`. Set the `datasource` property in the `mapping` block to configure a non-default `DataSource`. For example, if you want to use the `ZipCode` domain to use a `DataSource` called `'lookup'`, configure it like this:
+
+[source,groovy]
+----
+class ZipCode {
+
+   String code
+
+   static mapping = {
+      datasource 'lookup'
+   }
+}
+----
+
+A domain class can also use two or more configured `DataSource` instances. Use the `datasources` property with a list of names to configure more than one, for example:
+
+[source,groovy]
+----
+class ZipCode {
+
+   String code
+
+   static mapping = {
+      datasources(['lookup', 'auditing'])
+   }
+}
+----
+
+If a domain class uses the default `DataSource` and one or more others, you can use the `ConnectionSource.DEFAULT` constant to indicate that:
+
+[source,groovy]
+----
+import org.grails.datastore.mapping.core.connections.*
+
+class ZipCode {
+
+   String code
+
+   static mapping = {
+      datasources(['lookup', ConnectionSource.DEFAULT])
+   }
+}
+----
+
+If a domain class uses all configured `DataSource` instances use the value `ALL`:
+
+[source,groovy]
+----
+import org.grails.datastore.mapping.core.connections.*
+
+class ZipCode {
+
+   String code
+
+   static mapping = {
+      datasource ConnectionSource.ALL
+   }
+}
+----
+

@@ -26,6 +26,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
  * @author graemerocher
  */
 class BidirectionalOneToManyWithInheritanceSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
     void setupSpec() {
         manager.registerDomainClasses(ConfigurationItem, Documentation, ChangeRequest)
     }
@@ -49,6 +50,7 @@ class BidirectionalOneToManyWithInheritanceSpec extends GrailsDataTckSpec<Grails
 
 @Entity
 class ConfigurationItem {
+
     Long id
     Long version
     ConfigurationItem parent
@@ -65,12 +67,14 @@ class ConfigurationItem {
 
 @Entity
 class Documentation extends ConfigurationItem {
+
     Long id
     Long version
 }
 
 @Entity
 class ChangeRequest extends ConfigurationItem {
+
     Long id
     Long version
 }

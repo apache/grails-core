@@ -70,6 +70,14 @@ tasks.withType(Test).configureEach { Test it ->
             return false
         }
 
+        if (project.hasProperty('skipHibernate7Tests') && project.name.startsWith('grails-data-hibernate7')) {
+            return false
+        }
+
+        if (project.hasProperty('onlyHibernate7Tests') && !project.name.startsWith('grails-data-hibernate7')) {
+            return false
+        }
+
         if (project.hasProperty('skipHibernate5Tests') && project.name.startsWith('grails-data-hibernate5')) {
             return false
         }

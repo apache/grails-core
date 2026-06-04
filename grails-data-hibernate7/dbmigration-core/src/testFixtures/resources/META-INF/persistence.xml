@@ -1,0 +1,27 @@
+<persistence xmlns="http://java.sun.com/xml/ns/persistence"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="http://java.sun.com/xml/ns/persistence http://java.sun.com/xml/ns/persistence/persistence_1_0.xsd"
+             version="1.0">
+
+  <persistence-unit name="auction" transaction-type="RESOURCE_LOCAL">
+    <class>com.example.ejb3.auction.AuctionInfo</class>
+    <class>com.example.ejb3.auction.AuctionItem</class>
+    <class>com.example.ejb3.auction.Bid</class>
+    <class>com.example.ejb3.auction.BuyNow</class>
+    <class>com.example.ejb3.auction.User</class>
+    <class>com.example.ejb3.auction.Watcher</class>
+    <class>com.example.ejb3.auction.Item</class>
+    <class>com.example.ejb3.auction.AuditedItem</class>
+    <class>com.example.ejb3.auction.FirstTable</class>
+    <properties>
+      <property name="hibernate.cache.use_second_level_cache" value="false"/>
+      <property name="hibernate.archive.autodetection" value="false"/>
+      <property name="javax.persistence.jdbc.driver" value="org.hsqldb.jdbcDriver"/>
+      <property name="javax.persistence.jdbc.user" value="sa"/>
+      <property name="javax.persistence.jdbc.password" value=""/>
+      <property name="javax.persistence.jdbc.url" value="jdbc:hsqldb:."/>
+      <property name="hibernate.dialect" value="org.hibernate.dialect.HSQLDialect"/>
+      <property name="hibernate.max_fetch_depth" value="3"/>
+    </properties>
+  </persistence-unit>
+</persistence>

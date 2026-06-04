@@ -234,6 +234,7 @@ class CriteriaProjectedResultsSpec extends GrailsDataTckSpec<GrailsDataCoreTckMa
 
 @Entity
 class Check {
+
     Long id
     BigDecimal amount
     String descr

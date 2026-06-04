@@ -20,12 +20,8 @@ package grails.gorm.hibernate.mapping
 
 import org.grails.orm.hibernate.cfg.CompositeIdentity
 import org.grails.orm.hibernate.cfg.HibernateMappingBuilder
-
-/**
- * Created by graemerocher on 01/02/2017.
- */
-
 import org.grails.orm.hibernate.cfg.PropertyConfig
+
 import org.hibernate.FetchMode
 import org.junit.jupiter.api.Test
 
@@ -856,8 +852,8 @@ class HibernateMappingBuilderTests {
     void testUpdatablePropertyConfig() {
         def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
-            firstName updatable:true
-            lastName updatable:false
+            firstName updatable: true
+            lastName updatable: false
         }
         assertTrue mapping.getPropertyConfig('firstName').updatable
         assertFalse mapping.getPropertyConfig('lastName').updatable

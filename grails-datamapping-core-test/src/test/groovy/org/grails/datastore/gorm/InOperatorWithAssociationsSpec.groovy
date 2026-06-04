@@ -18,15 +18,17 @@
  */
 package org.grails.datastore.gorm
 
+import spock.lang.Issue
+
 import grails.persistence.Entity
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import spock.lang.Issue
 
 /**
  * @author graemerocher
  */
 class InOperatorWithAssociationsSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
     void setupSpec() {
         manager.registerDomainClasses(InAuthor, InBook)
     }
@@ -51,12 +53,14 @@ class InOperatorWithAssociationsSpec extends GrailsDataTckSpec<GrailsDataCoreTck
 
 @Entity
 class InAuthor {
+
     Long id
     String name
 }
 
 @Entity
 class InBook {
+
     Long id
     String name
     InAuthor author

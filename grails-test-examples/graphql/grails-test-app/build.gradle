@@ -53,7 +53,7 @@ dependencies {
     implementation 'org.apache.grails:grails-views-gson'
     implementation 'org.apache.grails:grails-data-mongodb-gson-templates'
 
-    implementation "org.hibernate:hibernate-core-jakarta:$hibernate5Version"
+    implementation 'org.hibernate:hibernate-core-jakarta'
     implementation 'com.graphql-java:graphql-java'
     implementation "io.micronaut.rxjava2:micronaut-rxjava2-http-client:$micronautRxjava2Version"
     // JSON mapper for the micronaut HTTP client used by the GraphQLSpec trait.

@@ -18,18 +18,20 @@
  */
 package grails.gorm.tests
 
+import spock.lang.Issue
+
 import grails.gorm.DetachedCriteria
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria
 import org.grails.datastore.mapping.query.Query
-import spock.lang.Issue
 
 /**
  * Created by graemerocher on 02/11/16.
  */
 class DetachedCriteriaAssociationQuerySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
     void setupSpec() {
         manager.registerDomainClasses(BookA, Genre)
     }
@@ -65,10 +67,12 @@ class DetachedCriteriaAssociationQuerySpec extends GrailsDataTckSpec<GrailsDataC
 
 @Entity
 class BookA {
+
     Genre genre
 }
 
 @Entity
 class Genre {
+
     String description
 }

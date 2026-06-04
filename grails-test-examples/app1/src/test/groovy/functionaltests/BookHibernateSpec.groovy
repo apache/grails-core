@@ -20,6 +20,10 @@
 package functionaltests
 
 class BookHibernateSpec extends grails.test.hibernate.HibernateSpec {
+
+    @Override
+    List<Class> getDomainClasses() { [Book] }
+
     def setup() {
         new Book(title: 'foo').save()
     }

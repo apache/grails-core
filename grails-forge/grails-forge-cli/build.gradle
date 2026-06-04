@@ -91,24 +91,25 @@ dependencies {
     implementation "info.picocli:picocli-shell-jline3:$picocliVersion"
     implementation 'jakarta.inject:jakarta.inject-api'
     implementation "org.fusesource.jansi:jansi:$jansiVersion"
-    implementation "org.slf4j:slf4j-nop:$slf4jVersion"
-    implementation "org.yaml:snakeyaml:$snakeyamlVersion"
+    implementation "org.slf4j:slf4j-nop"
+    implementation "org.yaml:snakeyaml"
 
     compileOnly 'com.google.code.findbugs:jsr305'
 
     testImplementation 'io.micronaut.picocli:micronaut-picocli'
     testImplementation "org.reflections:reflections:$reflectionsVersion"
-    testImplementation 'org.testcontainers:spock'
-    testCompileOnly 'io.micronaut:micronaut-inject-groovy'
+    testImplementation "org.testcontainers:spock"
+    if (project.hasProperty('micronautVersion')) {
+        testCompileOnly "io.micronaut:micronaut-inject-groovy:$micronautVersion"
+    }
 
     testImplementation 'org.apache.groovy:groovy'
-    testImplementation "org.spockframework:spock-core:$spockVersion", {
+    testImplementation "org.spockframework:spock-core", {
         exclude group: 'org.apache.groovy', module: 'groovy-all'
     }
 
-    testImplementation "cglib:cglib-nodep:$cglibVersion"
-    testImplementation "org.objenesis:objenesis:$objenesisVersion"
-    testRuntimeOnly "ch.qos.logback:logback-classic:$logbackClassicVersion"
+    testRuntimeOnly "ch.qos.logback:logback-classic"
+    testRuntimeOnly "org.objenesis:objenesis:$objenesisVersion"
     testImplementation 'org.apache.groovy:groovy-test'
 }
 
@@ -155,15 +156,5 @@ TaskProvider<Jar> jarTask = tasks.named('jar', Jar)
 jarTask.configure { Jar it ->
     it.manifest {
         attributes 'Main-Class': project.property('startMainClass')
-    }
-}
-
-configurations.configureEach {
-    resolutionStrategy {
-        eachDependency { DependencyResolveDetails details ->
-            if (details.requested.name == 'spock-core') {
-                details.useVersion(spockVersion)
-            }
-        }
     }
 }
