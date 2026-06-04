@@ -65,19 +65,11 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     protected final List<FinderMethod> finders
 
-    GormStaticApi(Class<D> persistentClass, MappingContext mappingContext, List<FinderMethod> finders) {
-        this(persistentClass, mappingContext, finders, null, ConnectionSource.DEFAULT, null)
-    }
-
     GormStaticApi(Class<D> persistentClass, MappingContext mappingContext, List<FinderMethod> finders, String qualifier) {
         this(persistentClass, mappingContext, finders, null, qualifier, null)
     }
 
-    GormStaticApi(Class<D> persistentClass, MappingContext mappingContext, List<FinderMethod> finders, DatastoreResolver resolver, String qualifier) {
-        this(persistentClass, mappingContext, finders, resolver, qualifier, null)
-    }
-
-    GormStaticApi(Class<D> persistentClass, MappingContext mappingContext, List<FinderMethod> finders, DatastoreResolver resolver, String qualifier, GormRegistry registry) {
+    GormStaticApi(Class<D> persistentClass, MappingContext mappingContext, List<FinderMethod> finders, DatastoreResolver resolver = null, String qualifier = ConnectionSource.DEFAULT, GormRegistry registry = null) {
         super(persistentClass, mappingContext, resolver, qualifier, registry)
         this.finders = finders
     }
