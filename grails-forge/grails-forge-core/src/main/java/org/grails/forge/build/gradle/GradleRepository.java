@@ -68,6 +68,17 @@ public interface GradleRepository extends Ordered {
             ));
             repositories.add(new DefaultGradleRepository(
                 repositories.size(),
+                "https://central.sonatype.com/repository/maven-snapshots",
+                null,
+                List.of(
+                    new VersionRegexRepoFilter(
+                        "org[.]sitemesh.*", ".*", ".*-SNAPSHOT"
+                    )
+                ),
+                List.of(VersionType.SNAPSHOT)
+            ));
+            repositories.add(new DefaultGradleRepository(
+                repositories.size(),
                 "https://repository.apache.org/content/groups/staging",
                 null,
                 List.of(

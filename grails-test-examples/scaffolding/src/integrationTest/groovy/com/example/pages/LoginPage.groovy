@@ -36,6 +36,6 @@ class LoginPage extends Page {
         this.username = username
         this.password = password
         loginButton.click()
-        waitFor { title != pageTitle }
+        waitFor(30) { title != pageTitle }
     }
 }

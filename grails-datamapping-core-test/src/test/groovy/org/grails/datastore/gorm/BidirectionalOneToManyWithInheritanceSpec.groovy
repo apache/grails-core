@@ -27,7 +27,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
  */
 class BidirectionalOneToManyWithInheritanceSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([ConfigurationItem, Documentation, ChangeRequest])
+        manager.registerDomainClasses(ConfigurationItem, Documentation, ChangeRequest)
     }
 
     void "Test a bidirectional one-to-many association with inheritance"() {
