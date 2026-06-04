@@ -34,6 +34,12 @@ import org.grails.datastore.mapping.query.event.PreQueryEvent
 class QueryEventsSpec extends GrailsDataTckSpec {
 
     SpecQueryEventListener listener
+
+    // The Hibernate TCK suites run this spec against a datastore that has no Spring
+    // application context (datastore.applicationContext is null), so the query-event
+    // listener cannot be registered. This flag records whether the listener was
+    // registered; when false the listener-dependent assertions below are skipped so
+    // the spec still exercises the query execution paths instead of being ignored.
     boolean contextAvailable = false
 
     void setupSpec() {
