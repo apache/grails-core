@@ -21,15 +21,15 @@ package org.grails.gradle.plugin.bom
 import java.util.function.Function
 
 import groovy.transform.CompileStatic
+import org.apache.maven.model.Dependency
+import org.apache.maven.model.Model
+import org.apache.maven.model.Parent
+import org.apache.maven.model.io.xpp3.MavenXpp3Reader
 import org.gradle.api.Project
 import org.gradle.api.artifacts.ConfigurationContainer
 import org.gradle.api.artifacts.dsl.DependencyHandler
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
-import org.w3c.dom.Document
-import org.w3c.dom.Element
-
-import javax.xml.parsers.DocumentBuilderFactory
 
 /**
  * Lightweight replacement for the Spring Dependency Management plugin's
@@ -54,6 +54,14 @@ import javax.xml.parsers.DocumentBuilderFactory
  * applied, overriding a property that selects an imported BOM's version
  * (for example {@code spring-boot.version}) re-imports that BOM and pulls in
  * its updated managed-dependency set.</p>
+ *
+ * <p>POMs are parsed with Maven's own {@code org.apache.maven:maven-model}
+ * library ({@link MavenXpp3Reader} into a {@link Model}) so that parent-POM
+ * inheritance, {@code <properties>} extraction and {@code <scope>import</scope>}
+ * resolution mirror upstream Maven rather than a bespoke XML approximation.
+ * Each POM's {@code <properties>} are scoped to that POM (and its parents),
+ * matching Maven's model rather than leaking property values across unrelated
+ * imported BOMs.</p>
  *
  * <p>Gradle's native {@code platform()} mechanism handles the base BOM import
  * and default version management. This class only adds the one feature Gradle
@@ -228,37 +236,26 @@ class BomManagedVersions {
 
     /**
      * Parses a BOM POM file and extracts the property-to-artifact mapping.
-     * This method does not follow imported BOMs recursively - it only processes
-     * the given file. Intended for testing and direct POM inspection.
+     * This method does not follow imported BOMs (or parent POMs) recursively -
+     * it only processes the given file. Intended for testing and direct POM
+     * inspection.
      *
      * @param pomFile the BOM POM file to parse
      * @param bomProperties output map to receive property name to default value mappings
      * @param propertyToArtifacts output map to receive property name to artifact coordinate mappings
      */
     static void parseBomFile(File pomFile, Map<String, String> bomProperties, Map<String, List<String>> propertyToArtifacts) {
-        def doc = parseXml(pomFile)
-        if (doc == null) {
+        def model = parseModel(pomFile)
+        if (model == null) {
             return
         }
-        extractProperties(doc, bomProperties)
+        extractProperties(model, bomProperties)
 
-        def depMgmtNodes = doc.getElementsByTagName('dependencyManagement')
-        if (depMgmtNodes.length == 0) {
-            return
-        }
-        def depMgmt = (Element) depMgmtNodes.item(0)
-        def dependenciesNodes = depMgmt.getElementsByTagName('dependencies')
-        if (dependenciesNodes.length == 0) {
-            return
-        }
-        def dependenciesElement = (Element) dependenciesNodes.item(0)
-        def depNodes = dependenciesElement.getElementsByTagName('dependency')
-
-        for (int i = 0; i < depNodes.length; i++) {
-            def dep = (Element) depNodes.item(i)
-            def depGroupId = getChildText(dep, 'groupId')
-            def depArtifactId = getChildText(dep, 'artifactId')
-            def depVersion = getChildText(dep, 'version')
+        def managed = managedDependencies(model)
+        for (Dependency dep : managed) {
+            def depGroupId = dep.groupId
+            def depArtifactId = dep.artifactId
+            def depVersion = dep.version
 
             if (!depGroupId || !depArtifactId || !depVersion) {
                 continue
@@ -277,7 +274,7 @@ class BomManagedVersions {
     /**
      * Walks the BOM tree and returns the effective version of every managed
      * artifact, resolving property references (and imported-BOM versions) with
-     * the supplied {@code propertyResolver} taking precedence over the BOM's
+     * the supplied {@code propertyResolver} taking precedence over each POM's
      * own {@code <properties>} defaults.
      */
     private static Map<String, String> computeManagedVersions(
@@ -286,7 +283,6 @@ class BomManagedVersions {
         Collection<String> bomCoordinatesList,
         Function<String, String> propertyResolver
     ) {
-        def bomProperties = new LinkedHashMap<String, String>()
         def artifactVersions = new LinkedHashMap<String, String>()
         def processed = new HashSet<String>()
 
@@ -297,7 +293,7 @@ class BomManagedVersions {
                 continue
             }
             processBom(configurations, dependencies, parts[0], parts[1], parts[2],
-                    propertyResolver, bomProperties, artifactVersions, processed)
+                    propertyResolver, artifactVersions, processed)
         }
 
         artifactVersions
@@ -308,7 +304,6 @@ class BomManagedVersions {
         DependencyHandler dependencies,
         String group, String artifact, String version,
         Function<String, String> propertyResolver,
-        Map<String, String> bomProperties,
         Map<String, String> artifactVersions,
         Set<String> processed
     ) {
@@ -322,13 +317,51 @@ class BomManagedVersions {
             return
         }
 
-        def doc = parseXml(pomFile)
-        if (doc == null) {
+        def model = parseModel(pomFile)
+        if (model == null) {
             return
         }
 
-        extractProperties(doc, bomProperties)
-        processManagedDependencies(doc, configurations, dependencies, propertyResolver, bomProperties, artifactVersions, processed)
+        // Build this BOM's property context, scoped to the BOM and its parent
+        // chain (parent properties first so the child can override them), then
+        // the Maven built-in project coordinates. Properties are NOT shared
+        // across unrelated imported BOMs - each imported BOM resolves its own
+        // managed versions against its own property scope, matching Maven.
+        def bomProperties = new LinkedHashMap<String, String>()
+        populateProperties(configurations, dependencies, model, bomProperties, new HashSet<String>())
+        bomProperties.put('project.groupId', group)
+        bomProperties.put('project.version', version)
+
+        processManagedDependencies(model, configurations, dependencies, propertyResolver, bomProperties, artifactVersions, processed)
+    }
+
+    /**
+     * Merges the {@code <properties>} of the given model and its parent POM
+     * chain into {@code bomProperties}. Parent properties are added first so a
+     * child POM's properties override an inherited value, matching Maven's
+     * parent-inheritance semantics.
+     */
+    private static void populateProperties(
+        ConfigurationContainer configurations,
+        DependencyHandler dependencies,
+        Model model,
+        Map<String, String> bomProperties,
+        Set<String> processedParents
+    ) {
+        Parent parent = model.parent
+        if (parent != null && parent.groupId && parent.artifactId && parent.version) {
+            def parentKey = "${parent.groupId}:${parent.artifactId}:${parent.version}" as String
+            if (processedParents.add(parentKey)) {
+                def parentPom = resolvePomFile(configurations, dependencies, parent.groupId, parent.artifactId, parent.version)
+                if (parentPom != null) {
+                    def parentModel = parseModel(parentPom)
+                    if (parentModel != null) {
+                        populateProperties(configurations, dependencies, parentModel, bomProperties, processedParents)
+                    }
+                }
+            }
+        }
+        extractProperties(model, bomProperties)
     }
 
     private static File resolvePomFile(ConfigurationContainer configurations,
@@ -347,45 +380,41 @@ class BomManagedVersions {
         }
     }
 
-    private static Document parseXml(File pomFile) {
+    private static Model parseModel(File pomFile) {
+        InputStream input = null
         try {
-            def factory = DocumentBuilderFactory.newInstance()
-            factory.setNamespaceAware(false)
-            factory.setValidating(false)
-            factory.setXIncludeAware(false)
-            factory.setFeature('http://apache.org/xml/features/nonvalidating/load-external-dtd', false)
-            factory.setFeature('http://xml.org/sax/features/external-general-entities', false)
-            factory.setFeature('http://xml.org/sax/features/external-parameter-entities', false)
-            return factory.newDocumentBuilder().parse(pomFile)
+            input = pomFile.newInputStream()
+            return new MavenXpp3Reader().read(input)
         }
         catch (Exception e) {
             LOG.warn('Failed to parse BOM POM: {} - {}', pomFile.name, e.message)
             return null
         }
+        finally {
+            input?.close()
+        }
     }
 
-    private static void extractProperties(Document doc, Map<String, String> bomProperties) {
-        def propertiesNodes = doc.getElementsByTagName('properties')
-        if (propertiesNodes.length == 0) {
-            return
-        }
-
-        def propertiesElement = (Element) propertiesNodes.item(0)
-        def children = propertiesElement.childNodes
-        for (int i = 0; i < children.length; i++) {
-            if (children.item(i) instanceof Element) {
-                def prop = (Element) children.item(i)
-                def name = prop.tagName
-                def value = prop.textContent?.trim()
-                if (name && value) {
-                    bomProperties.put(name, value)
-                }
+    private static void extractProperties(Model model, Map<String, String> bomProperties) {
+        for (Map.Entry<Object, Object> entry : model.properties.entrySet()) {
+            def name = entry.key?.toString()
+            def value = entry.value?.toString()?.trim()
+            if (name && value) {
+                bomProperties.put(name, value)
             }
         }
     }
 
+    private static List<Dependency> managedDependencies(Model model) {
+        def depMgmt = model.dependencyManagement
+        if (depMgmt == null) {
+            return Collections.<Dependency> emptyList()
+        }
+        depMgmt.dependencies ?: Collections.<Dependency> emptyList()
+    }
+
     private static void processManagedDependencies(
-        Document doc,
+        Model model,
         ConfigurationContainer configurations,
         DependencyHandler dependencies,
         Function<String, String> propertyResolver,
@@ -393,19 +422,10 @@ class BomManagedVersions {
         Map<String, String> artifactVersions,
         Set<String> processed
     ) {
-        def depMgmtNodes = doc.getElementsByTagName('dependencyManagement')
-        if (depMgmtNodes.length == 0) {
+        def managed = managedDependencies(model)
+        if (managed.isEmpty()) {
             return
         }
-
-        def depMgmt = (Element) depMgmtNodes.item(0)
-        def dependenciesNodes = depMgmt.getElementsByTagName('dependencies')
-        if (dependenciesNodes.length == 0) {
-            return
-        }
-
-        def dependenciesElement = (Element) dependenciesNodes.item(0)
-        def depNodes = dependenciesElement.getElementsByTagName('dependency')
 
         // Record this BOM's own managed versions first and defer imported BOMs, so a
         // BOM's direct entries take precedence over the entries it imports (matching
@@ -416,35 +436,29 @@ class BomManagedVersions {
         // The two-pass diff in resolve() discards versions that are identical with and
         // without overrides, so recording literal versions never produces spurious
         // overrides.
-        List<String[]> importedBoms = new ArrayList<>()
-        for (int i = 0; i < depNodes.length; i++) {
-            def dep = (Element) depNodes.item(i)
-            def depGroupId = getChildText(dep, 'groupId')
-            def depArtifactId = getChildText(dep, 'artifactId')
-            def depVersion = getChildText(dep, 'version')
-            def depScope = getChildText(dep, 'scope')
-
-            if (!depGroupId || !depArtifactId) {
+        List<Dependency> importedBoms = new ArrayList<>()
+        for (Dependency dep : managed) {
+            if (!dep.groupId || !dep.artifactId) {
                 continue
             }
 
-            if ('import' == depScope) {
-                importedBoms.add([depGroupId, depArtifactId, depVersion] as String[])
+            if ('import' == dep.scope) {
+                importedBoms.add(dep)
                 continue
             }
 
-            def resolvedVersion = resolveVersion(depVersion, propertyResolver, bomProperties)
+            def resolvedVersion = resolveVersion(dep.version, propertyResolver, bomProperties)
             if (resolvedVersion) {
-                def artifactKey = "${depGroupId}:${depArtifactId}" as String
+                def artifactKey = "${dep.groupId}:${dep.artifactId}" as String
                 artifactVersions.putIfAbsent(artifactKey, resolvedVersion)
             }
         }
 
-        for (String[] importedBom : importedBoms) {
-            def resolvedVersion = resolveVersion(importedBom[2], propertyResolver, bomProperties)
+        for (Dependency importedBom : importedBoms) {
+            def resolvedVersion = resolveVersion(importedBom.version, propertyResolver, bomProperties)
             if (resolvedVersion) {
-                processBom(configurations, dependencies, importedBom[0], importedBom[1], resolvedVersion,
-                    propertyResolver, bomProperties, artifactVersions, processed)
+                processBom(configurations, dependencies, importedBom.groupId, importedBom.artifactId, resolvedVersion,
+                    propertyResolver, artifactVersions, processed)
             }
         }
     }
@@ -492,13 +506,5 @@ class BomManagedVersions {
             result = result.replace("\${${propertyName}}" as String, resolved)
         }
         result.contains('${') ? null : result
-    }
-
-    private static String getChildText(Element parent, String childTagName) {
-        def children = parent.getElementsByTagName(childTagName)
-        if (children.length == 0) {
-            return null
-        }
-        children.item(0).textContent?.trim()
     }
 }
