@@ -505,8 +505,8 @@ slf4j.version=2.0.9
 ----
 
 The `grails { springDependencyManagement = … }` flag on `GrailsExtension` is deprecated.
-For backward compatibility, setting it to `false` is still honored and is equivalent to `autoApplyBom = false`: it suppresses the automatic `platform(grails-bom)` application, just as it previously prevented the Spring Dependency Management BOM from being applied.
-New builds should use `grails { autoApplyBom = false }` instead.
+For backward compatibility, setting it to `false` is still honored and is equivalent to `grails { bom = null }`: it suppresses the automatic Grails BOM `platform()` application, just as it previously prevented the Spring Dependency Management BOM from being applied.
+New builds should use `grails { bom = null }` instead.
 
 **Two Spring DM features have no automatic migration.**
 If your `build.gradle` uses either of the patterns below, update it as follows:
@@ -533,19 +533,32 @@ Overriding a property that selects an imported BOM's version (for example `sprin
 
 NOTE: Projects that apply the `grails-micronaut` plugin already require `enforcedPlatform` for unrelated reasons (see section 7.2); those projects retain Spring DM's strict-version semantics automatically.
 
-**Opting out of the auto-applied BOM.**
-The Grails Gradle plugin applies `grails-bom` automatically by default - this preserves the Grails 7 behaviour and is the right choice for the vast majority of applications.
-You can disable it if you intentionally want to manage Grails dependency versions yourself (for example, when consuming Grails modules from a different curated platform):
+**Selecting or opting out of the auto-applied BOM.**
+The Grails Gradle plugin applies a single Grails BOM automatically, selected by the `grails.bom` property. Its value is the BOM artifact name within the `org.apache.grails` group, which the plugin resolves as `org.apache.grails:$bom:$grailsVersion`.
+It defaults to `grails-bom`, which preserves the Grails 7 behaviour and is the right choice for the vast majority of applications.
+Exactly one Grails BOM is ever applied; the BOMs are split by integration (default / hibernate5 / micronaut), so the plugin never layers two of them.
+
+Select a different curated variant when your application needs it - for example the Micronaut variant, which the plugin applies as an `enforcedPlatform`:
 
 [source,groovy]
 .build.gradle
 ----
 grails {
-    autoApplyBom = false
+    bom = 'grails-micronaut-bom'
 }
 ----
 
-When disabled, the Grails Gradle plugin will not declare `platform("org.apache.grails:grails-bom:$grailsVersion")` on your configurations and will not apply the `org.apache.grails.gradle.bom-property-overrides` plugin.
+Set it to `null` to suppress the automatic BOM application entirely - for example when you intentionally want to manage Grails dependency versions yourself (consuming Grails modules from a different curated platform):
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    bom = null
+}
+----
+
+When set to `null`, the Grails Gradle plugin will not declare a Grails `platform()`/`enforcedPlatform()` on your configurations and will not apply the `org.apache.grails.gradle.bom-property-overrides` plugin.
 You are responsible for declaring the BOM yourself and, if you still want `gradle.properties` / `ext['...']` overrides, applying `id 'org.apache.grails.gradle.bom-property-overrides'` explicitly.
 
 ==== 15. Spring Boot Starter Renames

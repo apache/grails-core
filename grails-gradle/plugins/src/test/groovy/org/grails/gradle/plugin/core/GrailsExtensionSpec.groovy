@@ -25,16 +25,15 @@ import spock.lang.Specification
 /**
  * Unit-level tests for {@link GrailsExtension} using {@link ProjectBuilder}.
  *
- * <p>Focuses on the backward-compatible bridge between the deprecated
- * {@code springDependencyManagement} flag and the new {@link GrailsExtension#getAutoApplyBom}
- * property, which controls whether {@code platform(grails-bom)} is applied
- * automatically.</p>
+ * <p>Focuses on the {@link GrailsExtension#getBom} property - which BOM (if any) the
+ * Grails Gradle plugin applies automatically - and the backward-compatible bridge from
+ * the deprecated {@code springDependencyManagement} flag onto it.</p>
  *
  * @since 8.0
  */
 class GrailsExtensionSpec extends Specification {
 
-    def "autoApplyBom defaults to true"() {
+    def "bom defaults to grails-bom"() {
         given:
         Project project = ProjectBuilder.builder().build()
 
@@ -42,26 +41,66 @@ class GrailsExtensionSpec extends Specification {
         GrailsExtension extension = new GrailsExtension(project)
 
         then:
-        extension.autoApplyBom.get()
+        extension.bom.get() == GrailsExtension.DEFAULT_BOM
+        extension.bom.get() == 'grails-bom'
     }
 
-    def "deprecated springDependencyManagement = false disables autoApplyBom for backward compatibility"() {
+    def "bom can be set to a different curated variant"() {
         given:
         Project project = ProjectBuilder.builder().build()
         GrailsExtension extension = new GrailsExtension(project)
 
-        expect: 'autoApplyBom starts enabled'
-        extension.autoApplyBom.get()
+        when:
+        extension.bom = 'grails-micronaut-bom'
+
+        then:
+        extension.bom.get() == 'grails-micronaut-bom'
+    }
+
+    def "bom = null clears the property so no BOM is applied"() {
+        given:
+        Project project = ProjectBuilder.builder().build()
+        GrailsExtension extension = new GrailsExtension(project)
+
+        expect: 'the default is present'
+        extension.bom.getOrNull() == 'grails-bom'
+
+        when:
+        extension.bom = null
+
+        then:
+        extension.bom.getOrNull() == null
+    }
+
+    def "bom = blank clears the property so no BOM is applied"() {
+        given:
+        Project project = ProjectBuilder.builder().build()
+        GrailsExtension extension = new GrailsExtension(project)
+
+        when:
+        extension.bom = '   '
+
+        then:
+        extension.bom.getOrNull() == null
+    }
+
+    def "deprecated springDependencyManagement = false clears bom for backward compatibility"() {
+        given:
+        Project project = ProjectBuilder.builder().build()
+        GrailsExtension extension = new GrailsExtension(project)
+
+        expect: 'bom starts at the default'
+        extension.bom.getOrNull() == 'grails-bom'
 
         when: 'a project opts out using the legacy Grails 7 flag'
         extension.springDependencyManagement = false
 
         then: 'the BOM is no longer auto-applied'
         !extension.springDependencyManagement
-        !extension.autoApplyBom.get()
+        extension.bom.getOrNull() == null
     }
 
-    def "deprecated springDependencyManagement = true leaves autoApplyBom at its convention"() {
+    def "deprecated springDependencyManagement = true leaves bom at its default"() {
         given:
         Project project = ProjectBuilder.builder().build()
         GrailsExtension extension = new GrailsExtension(project)
@@ -71,19 +110,19 @@ class GrailsExtensionSpec extends Specification {
 
         then:
         extension.springDependencyManagement
-        extension.autoApplyBom.get()
+        extension.bom.getOrNull() == 'grails-bom'
     }
 
-    def "an explicit autoApplyBom = false is honored independently of the deprecated flag"() {
+    def "an explicit bom selection is honored independently of the deprecated flag"() {
         given:
         Project project = ProjectBuilder.builder().build()
         GrailsExtension extension = new GrailsExtension(project)
 
         when:
-        extension.autoApplyBom.set(false)
+        extension.bom = 'grails-hibernate5-bom'
 
         then:
-        !extension.autoApplyBom.get()
+        extension.bom.getOrNull() == 'grails-hibernate5-bom'
         extension.springDependencyManagement
     }
 }

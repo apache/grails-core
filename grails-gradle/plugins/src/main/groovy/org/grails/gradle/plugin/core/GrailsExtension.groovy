@@ -39,12 +39,22 @@ class GrailsExtension {
     Project project
     PluginDefiner pluginDefiner
 
+    /**
+     * The default Grails BOM artifact name applied when {@link #bom} is not
+     * overridden. Resolved as {@code org.apache.grails:grails-bom:$grailsVersion}.
+     */
+    static final String DEFAULT_BOM = 'grails-bom'
+
     GrailsExtension(Project project) {
         this.project = project
         this.pluginDefiner = new PluginDefiner(project)
         this.indy = project.objects.property(Boolean).convention(false)
         this.preserveParameterNames = project.objects.property(Boolean).convention(true)
-        this.autoApplyBom = project.objects.property(Boolean).convention(true)
+        this.bom = project.objects.property(String)
+        // Use set() rather than convention() so that clearing the value (bom = null,
+        // or the deprecated springDependencyManagement = false) results in no BOM being
+        // applied, instead of silently falling back to the convention.
+        this.bom.set(DEFAULT_BOM)
     }
 
     /**
@@ -89,26 +99,26 @@ class GrailsExtension {
      * supplied by the {@code org.apache.grails.gradle.bom-property-overrides} plugin.
      * Set version overrides in {@code gradle.properties} or via {@code ext['property.name']}
      * instead. For backward compatibility, setting this property to {@code false} is still
-     * honored as {@code autoApplyBom = false} so existing opt-outs (which previously prevented
+     * honored as {@code bom = null} so existing opt-outs (which previously prevented
      * the Spring Dependency Management BOM from being applied) continue to disable the
-     * automatic {@code platform(grails-bom)} application. New builds should set
-     * {@link #autoApplyBom} directly.
+     * automatic Grails BOM {@code platform()} application. New builds should set
+     * {@link #bom} directly.
      */
     @Deprecated
     boolean springDependencyManagement = true
 
     /**
      * Backward-compatible setter for the deprecated {@link #springDependencyManagement} flag.
-     * Disabling it maps onto {@code autoApplyBom = false} so projects that still opt out via
-     * {@code grails { springDependencyManagement = false }} do not unexpectedly receive
-     * {@code platform(grails-bom)} after the migration away from the Spring Dependency
-     * Management plugin.
+     * Disabling it clears {@link #bom} (equivalent to {@code grails { bom = null }}) so projects
+     * that still opt out via {@code grails { springDependencyManagement = false }} do not
+     * unexpectedly receive the Grails BOM {@code platform()} after the migration away from the
+     * Spring Dependency Management plugin.
      */
     @Deprecated
     void setSpringDependencyManagement(boolean enabled) {
         this.@springDependencyManagement = enabled
         if (!enabled) {
-            this.autoApplyBom.set(false)
+            this.bom.set((String) null)
         }
     }
 
@@ -147,30 +157,60 @@ class GrailsExtension {
     final Property<Boolean> preserveParameterNames
 
     /**
-     * Whether the Grails Gradle plugin should automatically apply the {@code grails-bom}
-     * as a Gradle {@code platform()} on every declarable project configuration
-     * (and apply the {@code org.apache.grails.gradle.bom-property-overrides} plugin
-     * for property-based version overrides).
+     * The Grails BOM that the Grails Gradle plugin automatically applies as a Gradle
+     * {@code platform()} (or {@code enforcedPlatform()} for the Micronaut variants) on every
+     * declarable project configuration, alongside the
+     * {@code org.apache.grails.gradle.bom-property-overrides} plugin for property-based
+     * version overrides.
      *
-     * <p>Defaults to {@code true}, which matches the behaviour of every Grails 7 release:
-     * the BOM is always applied so that the framework's curated managed-dependency set
-     * is the source of truth for the application.</p>
+     * <p>The value is the BOM <strong>artifact name</strong> within the
+     * {@code org.apache.grails} group; the plugin resolves it as
+     * {@code org.apache.grails:$bom:$grailsVersion}. Exactly one BOM is ever applied.</p>
      *
-     * <p>Disable this only when you intentionally want to manage Grails dependencies
-     * yourself - for example, when consuming Grails modules from a different curated
-     * platform and you need to declare the BOM by hand (and apply
-     * {@code org.apache.grails.gradle.bom-property-overrides} explicitly if you still
-     * want {@code gradle.properties} / {@code ext['...']} overrides).</p>
+     * <p>Defaults to {@code grails-bom}. Set it to a different curated variant when the
+     * application needs that BOM instead - for example:</p>
      *
      * <pre>
      * grails {
-     *     autoApplyBom = false
+     *     bom = 'grails-micronaut-bom'   // applied as an enforcedPlatform
      * }
      * </pre>
      *
+     * <p>Set it to {@code null} (or use the deprecated
+     * {@code grails { springDependencyManagement = false }}) to suppress the automatic BOM
+     * application entirely - for example when you want to declare the
+     * {@code platform()}/{@code enforcedPlatform()} by hand (and apply
+     * {@code org.apache.grails.gradle.bom-property-overrides} explicitly if you still
+     * want {@code gradle.properties} / {@code ext['...']} overrides):</p>
+     *
+     * <pre>
+     * grails {
+     *     bom = null
+     * }
+     * </pre>
+     *
+     * <p>The Micronaut variants ({@code grails-micronaut-bom},
+     * {@code grails-hibernate5-micronaut-bom}) are applied as an {@code enforcedPlatform}
+     * because the Micronaut platform would otherwise override their managed versions via
+     * conflict resolution. All other BOMs are applied as a regular {@code platform}.</p>
+     *
      * @since 8.0
      */
-    final Property<Boolean> autoApplyBom
+    final Property<String> bom
+
+    /**
+     * DSL setter for {@link #bom}. A {@code null} or blank value clears the property so that
+     * no BOM is applied automatically; any other value is used verbatim as the BOM artifact name.
+     */
+    void setBom(String value) {
+        String trimmed = value?.trim()
+        if (trimmed) {
+            this.bom.set(trimmed)
+        }
+        else {
+            this.bom.set((String) null)
+        }
+    }
 
     DependencyHandler getPlugins() {
         if (pluginDefiner == null) {

@@ -44,4 +44,21 @@ class BomPlatformFunctionalSpec extends GradleSpecification {
         result.output.contains('HAS_BOM_PROPERTY_OVERRIDES=true')
         result.output.contains('HAS_SPRING_DM=false')
     }
+
+    def "plugin does not inject grails-bom when the build already declares a Grails BOM by hand"() {
+        given: 'a project that declares the Micronaut BOM variant itself'
+        setupTestResourceProject('bom-platform-manual')
+
+        when:
+        def result = executeTask('inspectBomSetup')
+
+        then: 'the plugin does NOT add a second (grails-bom) platform - exactly one Grails BOM is applied'
+        result.output.contains('HAS_GRAILS_BOM=false')
+
+        and: 'the hand-declared Micronaut BOM remains'
+        result.output.contains('HAS_MICRONAUT_BOM=true')
+
+        and: 'property-based version overrides are still enabled for the declared BOM'
+        result.output.contains('HAS_BOM_PROPERTY_OVERRIDES=true')
+    }
 }

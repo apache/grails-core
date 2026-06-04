@@ -19,30 +19,30 @@
 package org.grails.gradle.plugin.core
 
 /**
- * Functional test verifying that {@code grails.autoApplyBom = false} suppresses
- * the automatic application of {@code platform(grails-bom)} and the
+ * Functional test verifying that {@code grails.bom = null} suppresses the automatic
+ * application of the Grails platform BOM and the
  * {@code org.apache.grails.gradle.bom-property-overrides} plugin.
  *
  * @since 8.0
- * @see GrailsExtension#getAutoApplyBom
+ * @see GrailsExtension#getBom
  * @see GrailsGradlePlugin#applyGrailsBom
  */
-class AutoApplyBomSpec extends GradleSpecification {
+class BomOptOutFunctionalSpec extends GradleSpecification {
 
-    def "autoApplyBom = false suppresses platform(grails-bom) and bom-property-overrides plugin"() {
+    def "grails.bom = null suppresses the platform BOM and bom-property-overrides plugin"() {
         given:
         setupTestResourceProject('auto-apply-bom-disabled')
 
         when:
         def result = executeTask('inspectBomSetup')
 
-        then: 'no platform(grails-bom) is added to implementation'
+        then: 'no Grails platform BOM is added to implementation'
         result.output.contains('HAS_PLATFORM_BOM=false')
 
         and: 'the bom-property-overrides plugin is NOT applied'
         result.output.contains('HAS_BOM_PROPERTY_OVERRIDES=false')
 
-        and: 'Spring DM is also not applied (regardless of autoApplyBom)'
+        and: 'Spring DM is also not applied (regardless of the bom setting)'
         result.output.contains('HAS_SPRING_DM=false')
     }
 }

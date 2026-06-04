@@ -3,7 +3,7 @@ plugins {
 }
 
 grails {
-    autoApplyBom = false
+    bom = null
 }
 
 tasks.register('inspectBomSetup') {

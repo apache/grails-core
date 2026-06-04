@@ -28,11 +28,9 @@ import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.DependencyConstraint
-import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.VersionConstraint
 import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.gradle.api.artifacts.result.ResolvedComponentResult
-import org.gradle.api.attributes.Category
 
 /**
  * Validates that transitive dependencies do not replace versions what the
@@ -162,17 +160,15 @@ class GrailsDependencyValidatorPlugin implements Plugin<Project> {
     /**
      * Scans the project's configurations to find which BOM project is in use.
      *
-     * <p>When multiple known BOMs are declared on the same project (for example,
-     * the {@code grails-app} plugin auto-injects {@code platform(grails-bom)} on
-     * every declarable configuration while a Micronaut project additionally
-     * declares {@code enforcedPlatform(grails-micronaut-bom)}), this method
-     * prefers an {@code enforcedPlatform} declaration over a regular
-     * {@code platform}. The enforced BOM is the one whose constraints actually
-     * win at resolution time, so it is the correct reference for the
-     * "expected" versions reported by the validator.</p>
+     * <p>Exactly one Grails BOM is expected on a project: the BOMs are split by
+     * integration (default / hibernate5 / micronaut), so a project selects a single
+     * variant. This method returns the path of the one declared Grails BOM, {@code null}
+     * when none is declared, and fails the build when more than one distinct Grails BOM
+     * is found (which indicates a misconfiguration - e.g. layering grails-bom and
+     * grails-micronaut-bom on the same project).</p>
      */
     static String detectBomPath(Project project) {
-        String regularPlatformBomPath = null
+        Set<String> bomPaths = new LinkedHashSet<>()
 
         for (Configuration config : project.configurations) {
             for (Dependency dep : config.dependencies) {
@@ -183,27 +179,22 @@ class GrailsDependencyValidatorPlugin implements Plugin<Project> {
                 if (bomProject == null) {
                     continue
                 }
-                if (isEnforcedPlatformDependency(dep)) {
-                    return bomProject.path
-                }
-                if (regularPlatformBomPath == null) {
-                    regularPlatformBomPath = bomProject.path
-                }
+                bomPaths.add(bomProject.path)
             }
         }
 
-        regularPlatformBomPath
-    }
+        if (bomPaths.isEmpty()) {
+            return null
+        }
+        if (bomPaths.size() > 1) {
+            throw new GradleException(
+                    "Project '${project.name}' declares more than one Grails BOM (${bomPaths.join(', ')}). " +
+                            'Exactly one Grails BOM may be applied; the BOMs are split by integration ' +
+                            '(default / hibernate5 / micronaut), so a project must select a single variant.'
+            )
+        }
 
-    private static boolean isEnforcedPlatformDependency(Dependency dep) {
-        if (!(dep instanceof ModuleDependency)) {
-            return false
-        }
-        def categoryAttr = ((ModuleDependency) dep).attributes.getAttribute(Category.CATEGORY_ATTRIBUTE)
-        if (categoryAttr == null) {
-            return false
-        }
-        categoryAttr.toString() == Category.ENFORCED_PLATFORM
+        bomPaths.first()
     }
 
     /**
