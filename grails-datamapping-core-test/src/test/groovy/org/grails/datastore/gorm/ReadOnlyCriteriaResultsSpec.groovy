@@ -18,12 +18,14 @@
  */
 package org.grails.datastore.gorm
 
+import spock.lang.Issue
+
 import grails.persistence.Entity
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import spock.lang.Issue
 
 class ReadOnlyCriteriaResultsSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
     void setupSpec() {
         manager.registerDomainClasses(FamilyMember)
     }
@@ -49,6 +51,7 @@ class ReadOnlyCriteriaResultsSpec extends GrailsDataTckSpec<GrailsDataCoreTckMan
 
 @Entity
 class FamilyMember {
+
     Long id
     String name
 }

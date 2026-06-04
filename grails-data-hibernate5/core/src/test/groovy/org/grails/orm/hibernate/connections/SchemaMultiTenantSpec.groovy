@@ -42,9 +42,9 @@ import java.sql.Connection
 @RestoreSystemProperties
 class SchemaMultiTenantSpec extends Specification {
 
-    void "Test a database per tenant multi tenancy"() {
-        given:"A configuration for multiple data sources"
-        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "")
+    @AutoCleanup HibernateDatastore datastore
+
+    void setup() {
         Map config = [
                 "grails.gorm.multiTenancy.mode":"SCHEMA",
                 "grails.gorm.multiTenancy.tenantResolverClass":MyResolver,
@@ -57,7 +57,13 @@ class SchemaMultiTenantSpec extends Specification {
                 'hibernate.hbm2ddl.auto': 'create',
         ]
 
-        HibernateDatastore datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config), SingleTenantAuthor )
+        datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config), SingleTenantAuthor )
+    }
+
+    void "Test a database per tenant multi tenancy"() {
+        given:"A configuration for multiple data sources"
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "")
+
         HibernateConnectionSource connectionSource = datastore.getConnectionSources().defaultConnectionSource
         def connection = connectionSource.dataSource.getConnection()
         connection.close()

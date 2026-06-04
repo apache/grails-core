@@ -1,0 +1,203 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'java'
+}
+
+def reportVariants = [
+        test           : [
+                taskName    : 'testAggregateTestReport',
+                markdownTask: 'markdownAggregateTestReport',
+                title       : 'Grails Unit Test Report',
+                phases      : ['test'],
+                reportDir   : 'reports/tests/test',
+                markdownFile: 'reports/tests/test.md',
+        ],
+        integrationTest: [
+                taskName    : 'integrationTestAggregateTestReport',
+                markdownTask: 'markdownIntegrationTestAggregateTestReport',
+                title       : 'Grails Integration Test Report',
+                phases      : ['integrationTest'],
+                reportDir   : 'reports/tests/integrationTest',
+                markdownFile: 'reports/tests/integrationTest.md',
+        ],
+        combined       : [
+                taskName    : 'combinedAggregateTestReport',
+                markdownTask: 'markdownCombinedAggregateTestReport',
+                title       : 'Grails Combined Test Report',
+                phases      : ['test', 'integrationTest'],
+                reportDir   : 'reports/tests/combined',
+                markdownFile: 'reports/tests/combined.md',
+        ],
+]
+
+def collectTestTasks = { List<String> phases ->
+    rootProject.subprojects
+            .findAll { it != project }
+            .collectMany { subproject ->
+                phases.collectMany { phase ->
+                    subproject.tasks.withType(Test).matching { it.name == phase }.toList()
+                }
+            }
+}
+
+def collectResults = { List<String> phases ->
+    def results = []
+    def xmlSlurper = new groovy.xml.XmlSlurper()
+    xmlSlurper.setFeature('http://apache.org/xml/features/nonvalidating/load-external-dtd', false)
+    xmlSlurper.setFeature('http://xml.org/sax/features/namespaces', false)
+
+    rootProject.subprojects.findAll { it != project }.each { subproject ->
+        phases.each { phase ->
+            def testResultsDir = subproject.layout.buildDirectory.dir("test-results/${phase}").get().asFile
+            if (!testResultsDir.directory) {
+                return
+            }
+
+            testResultsDir.eachFileMatch(~/TEST-.*\.xml/) { testResultFile ->
+                def suite = xmlSlurper.parse(testResultFile)
+                int tests = suite.@tests.text() as int
+                int failures = suite.@failures.text() as int
+                int errors = suite.@errors.text() as int
+                int skipped = suite.@skipped.text() as int
+
+                results << [
+                        project : subproject.path,
+                        phase   : phase,
+                        suite   : suite.@name.text(),
+                        tests   : tests,
+                        failures: failures,
+                        errors  : errors,
+                        skipped : skipped,
+                ]
+            }
+        }
+    }
+    results
+}
+
+def writeMarkdownReport = { Map variant, List results ->
+    def reportFile = layout.buildDirectory.file(variant.markdownFile).get().asFile
+    def totals = [
+            tests   : results.sum { it.tests } ?: 0,
+            failures: results.sum { it.failures } ?: 0,
+            errors  : results.sum { it.errors } ?: 0,
+            skipped : results.sum { it.skipped } ?: 0,
+    ]
+    def markdown = new StringBuilder()
+    markdown << "# ${variant.title}\n\n"
+    markdown << "HTML report: `${layout.buildDirectory.dir(variant.reportDir).get().asFile}/index.html`\n\n"
+    markdown << '## Summary\n\n'
+    markdown << '| Tests | Failures | Errors | Skipped |\n'
+    markdown << '| :--- | :--- | :--- | :--- |\n'
+    markdown << "| ${totals.tests} | ${totals.failures} | ${totals.errors} | ${totals.skipped} |\n\n"
+
+    if (results) {
+        markdown << '## Suites\n\n'
+        markdown << '| Project | Phase | Suite | Tests | Failures | Errors | Skipped |\n'
+        markdown << '| :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n'
+        results.sort { a, b -> a.project <=> b.project ?: a.phase <=> b.phase ?: a.suite <=> b.suite }.each { result ->
+            markdown << "| ${escapeMarkdown(result.project)} | ${escapeMarkdown(result.phase)} | ${escapeMarkdown(result.suite)} | ${result.tests} | ${result.failures} | ${result.errors} | ${result.skipped} |\n"
+        }
+    } else {
+        markdown << 'No test results were found. Run the aggregate report task with `--continue` after executing tests.\n'
+    }
+
+    reportFile.text = markdown.toString()
+    logger.lifecycle("Markdown aggregate test report: ${reportFile}")
+}
+
+reportVariants.each { name, variant ->
+    tasks.register(variant.taskName, TestReport) {
+        group = 'verification'
+        description = "Generates the ${name} aggregate HTML test report"
+        destinationDirectory.set(layout.buildDirectory.dir(variant.reportDir))
+    }
+
+    tasks.register(variant.markdownTask) {
+        group = 'verification'
+        description = "Generates the ${name} aggregate Markdown test report"
+        dependsOn tasks.named(variant.taskName, TestReport)
+        outputs.file(layout.buildDirectory.file(variant.markdownFile))
+
+        doLast {
+            writeMarkdownReport(variant, collectResults(variant.phases))
+        }
+    }
+}
+
+gradle.projectsEvaluated {
+    reportVariants.each { name, variant ->
+        def testTasks = collectTestTasks(variant.phases)
+        def htmlReportTask = tasks.named(variant.taskName, TestReport)
+        def markdownReportTask = tasks.named(variant.markdownTask)
+        tasks.named(variant.taskName, TestReport) {
+            mustRunAfter testTasks
+            testResults.from(testTasks.collect { it.binaryResultsDirectory.get().asFile })
+        }
+
+        if (name != 'combined') {
+            testTasks.each { testTask ->
+                testTask.finalizedBy markdownReportTask
+            }
+        }
+
+        tasks.register("${name}Tests") {
+            group = 'verification'
+            description = "Runs the ${name} test tasks included in aggregate reports"
+            dependsOn testTasks
+            finalizedBy htmlReportTask
+            finalizedBy markdownReportTask
+        }
+    }
+
+    tasks.named('test', Test) {
+        description = 'Runs unit tests included in aggregate reports'
+        dependsOn tasks.named('testTests')
+    }
+
+    tasks.register('integrationTest') {
+        group = 'verification'
+        description = 'Runs integration tests included in aggregate reports'
+        dependsOn tasks.named('integrationTestTests')
+    }
+
+    tasks.register('combined') {
+        group = 'verification'
+        description = 'Runs unit and integration tests included in aggregate reports'
+        dependsOn tasks.named('combinedTests')
+    }
+}
+
+tasks.named('check') {
+    reportVariants.each { name, variant ->
+        dependsOn tasks.named("${name}Tests")
+    }
+}
+
+String escapeMarkdown(String value) {
+    value.replace('|', '\\|').replace('\n', ' ')
+}
+
+// the java plugin is applied to this project, but we do not build a jar file since
+// the dependencies are only used for resolving the tests
+tasks.withType(Jar).configureEach {
+    enabled = false
+}

@@ -18,12 +18,14 @@
  */
 package org.grails.datastore.gorm
 
+import spock.lang.Issue
+
 import grails.persistence.Entity
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import spock.lang.Issue
 
 class BeforeUpdateEventSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
     void setupSpec() {
         manager.registerDomainClasses(BeforeUpdateAuthor, BeforeUpdateBook)
     }
@@ -68,12 +70,14 @@ class BeforeUpdateEventSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> 
 
 @Entity
 class BeforeUpdateBook {
+
     Long id
     static hasMany = [authors: BeforeUpdateAuthor]
 }
 
 @Entity
 class BeforeUpdateAuthor {
+
     Long id
     BeforeUpdateBook book
 

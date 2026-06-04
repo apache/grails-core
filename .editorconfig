@@ -24,3 +24,4 @@ indent_style = space
 insert_final_newline = true
 spaces_around_operators = true
 wildcard_import_limit = 999
+imports_layout = java.**, |, javax.**, |, groovy.**, org.apache.groovy.**, org.codehaus.groovy.**, |, jakarta.**, |, *, |, io.spring.**, org.springframework.**, |, grails.**, org.apache.grails.**, org.grails.**, |, $*

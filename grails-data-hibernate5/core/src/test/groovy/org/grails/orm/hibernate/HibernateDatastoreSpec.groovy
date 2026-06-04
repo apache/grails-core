@@ -19,6 +19,8 @@
 package org.grails.orm.hibernate
 
 import org.grails.orm.hibernate.cfg.Settings
+import spock.lang.AutoCleanup
+import spock.lang.Shared
 import spock.lang.Specification
 
 /**
@@ -26,10 +28,12 @@ import spock.lang.Specification
  */
 class HibernateDatastoreSpec extends Specification {
 
+    @Shared @AutoCleanup HibernateDatastore datastore
+
     void "test configure via map"() {
         when:"The map constructor is used"
         def config = Collections.singletonMap(Settings.SETTING_DB_CREATE,  "create-drop")
-        HibernateDatastore datastore = new HibernateDatastore(config, Book)
+        datastore = new HibernateDatastore(config, Book)
 
         then:"GORM is configured correctly"
         Book.withNewSession {

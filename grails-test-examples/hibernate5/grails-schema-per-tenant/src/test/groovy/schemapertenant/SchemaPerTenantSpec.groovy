@@ -32,6 +32,10 @@ import spock.util.environment.RestoreSystemProperties
 @RestoreSystemProperties
 class SchemaPerTenantSpec extends HibernateSpec implements GrailsUnitTest {
 
+    @Override
+    List<Class> getDomainClasses() { [Book] }
+
+
     BookService bookDataService = hibernateDatastore.getService(BookService)
 
     @Override

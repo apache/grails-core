@@ -1,0 +1,131 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+Although constraints are primarily for validation, it is important to understand that constraints can affect the way in which the database schema is generated.
+
+Where feasible, GORM uses a domain class's constraints to influence the database columns generated for the corresponding domain class properties.
+
+Consider the following example.  Suppose we have a domain model with the following properties:
+
+[source,groovy]
+----
+String name
+String description
+----
+
+By default, in MySQL, GORM would define these columns as
+
+[format="csv", options="header"]
+|===
+
+Column,Data Type
+name,varchar(255)
+description,varchar(255)
+|===
+
+But perhaps the business rules for this domain class state that a description can be up to 1000 characters in length.  If that were the case, we would likely define the column as follows _if_ we were creating the table with an SQL script.
+
+[format="csv", options="header"]
+|===
+
+Column,Data Type
+description,TEXT
+|===
+
+Chances are we would also want to have some application-based validation to make sure we don't exceed that 1000 character limit _before_ we persist any records.  In GORM, we achieve this validation with <<constraints,constraints>>.  We would add the following constraint declaration to the domain class.
+
+[source,groovy]
+----
+static constraints = {
+    description maxSize: 1000
+}
+----
+
+This constraint would provide both the application-based validation we want and it would also cause the schema to be generated as shown above.  Below is a description of the other constraints that influence schema generation.
+
+
+==== Constraints Affecting String Properties
+
+
+* `inList`
+* `maxSize`
+* `size`
+
+If either the `maxSize` or the `size` constraint is defined, Grails sets the maximum column length based on the constraint value.
+
+In general, it's not advisable to use both constraints on the same domain class property.  However, if both the `maxSize` constraint and the `size` constraint are defined, then GORM sets the column length to the minimum of the `maxSize` constraint and the upper bound of the size constraint.  (GORM uses the minimum of the two, because any length that exceeds that minimum will result in a validation error.)
+
+If the `inList` constraint is defined (and the `maxSize` and the `size` constraints are not defined), then GORM sets the maximum column length based on the length of the longest string in the list of valid values.  For example, given a list including values "Java", "Groovy", and "C++", GORM would set the column length to 6 (i.e., the number of characters in the string "Groovy").
+
+
+==== Constraints Affecting Numeric Properties
+
+
+* `min`
+* `max`
+* `range`
+
+If the `max`, `min`, or `range` constraint is defined, GORM attempts to set the column precision based on the constraint value.  (The success of this attempted influence is largely dependent on how Hibernate interacts with the underlying DBMS.)
+
+In general, it's not advisable to combine the pair `min`/`max` and `range` constraints together on the same domain class property.  However, if both of these constraints is defined, then GORM uses the minimum precision value from the constraints.  (GORM uses the minimum of the two, because any length that exceeds that minimum precision will result in a validation error.)
+
+* `scale`
+
+If the scale constraint is defined, then GORM attempts to set the column <<ref-constraints-scale,scale>> based on the constraint value.  This rule only applies to floating point numbers (i.e., `java.lang.Float`, `java.Lang.Double`, `java.lang.BigDecimal`, or subclasses of `java.lang.BigDecimal`). The success of this attempted influence is largely dependent on how Hibernate interacts with the underlying DBMS.
+
+The constraints define the minimum/maximum numeric values, and GORM derives the maximum number of digits for use in the precision. Keep in mind that specifying only one of `min`/`max` constraints will not affect schema generation (since there could be large negative value of property with max:100, for example), unless the specified constraint value requires more digits than default Hibernate column precision is (19 at the moment). For example:
+
+[source,groovy]
+----
+someFloatValue max: 1000000, scale: 3
+----
+
+would yield:
+
+[source,groovy]
+----
+someFloatValue DECIMAL(19, 3) // precision is default
+----
+
+but
+
+[source,groovy]
+----
+someFloatValue max: 12345678901234567890, scale: 5
+----
+
+would yield:
+[source,groovy]
+----
+someFloatValue DECIMAL(25, 5) // precision = digits in max + scale
+----
+
+and
+
+[source,groovy]
+----
+someFloatValue max: 100, min: -100000
+----
+
+would yield:
+
+[source,groovy]
+----
+someFloatValue DECIMAL(8, 2) // precision = digits in min + default scale
+----

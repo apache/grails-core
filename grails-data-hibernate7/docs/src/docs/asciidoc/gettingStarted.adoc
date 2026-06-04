@@ -1,0 +1,71 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+To use GORM {pluginVersion} for Hibernate in Grails 7 you can specify the following configuration in `build.gradle`:
+
+[source,groovy,subs="attributes"]
+----
+dependencies {
+    implementation "org.grails.plugins:hibernate5:{pluginVersion}"
+    runtimeOnly 'org.hibernate:hibernate-ehcache:5.6.15.Final', {
+    // exclude javax variant of hibernate-core
+    exclude group: 'org.hibernate', module: 'hibernate-core'
+    }
+    runtimeOnly 'org.jboss.spec.javax.transaction:jboss-transaction-api_1.3_spec:2.0.0.Final', {
+      // required for hibernate-ehcache to work with javax variant of hibernate-core excluded
+    }
+}
+----
+
+If you are using a version of Grails 3 earlier than 3.3 then you may need to enforce the GORM version. If you are using Grails 3.2.7 or above this can be done by modifying the `gormVersion` setting in `gradle.properties`:
+
+[source,properties,subs="attributes"]
+----
+gormVersion={version}
+----
+
+Otherwise if you are using an earlier version of Grails you can force the GORM version by adding the following block directly above the `dependencies` block:
+
+[source,groovy,subs="attributes"]
+.build.gradle
+----
+configurations.all {
+    resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+        if( details.requested.group == 'org.grails' &&
+            details.requested.name.startsWith('grails-datastore')) {
+            details.useVersion("{version}")
+        }
+    }
+}
+dependencies {
+    ...
+}
+----
+
+=== Common Problems
+
+If you receive an error that indicates a failure to resolve the `grails-datastore-simple` dependency you may need to add the following to `build.gradle` directly above the `dependencies` block:
+
+[source,groovy]
+.build.gradle
+----
+configurations.all {
+    exclude module:'grails-datastore-simple'
+}
+----

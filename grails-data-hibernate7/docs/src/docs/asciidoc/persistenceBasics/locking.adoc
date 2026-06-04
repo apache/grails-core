@@ -1,0 +1,105 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+
+==== Optimistic Locking
+
+
+By default GORM classes are configured for optimistic locking. Optimistic locking is a feature of Hibernate which involves storing a version value in a special `version` column in the database that is incremented after each update.
+
+The `version` column gets read into a `version` property that contains the current versioned state of persistent instance which you can access:
+
+[source,groovy]
+----
+def airport = Airport.get(10)
+
+println airport.version
+----
+
+When you perform updates Hibernate will automatically check the version property against the  version column in the database and if they differ will throw a https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/StaleObjectStateException.html[StaleObjectException]. This will roll back the transaction if one is active.
+
+This is useful as it allows a certain level of atomicity without resorting to pessimistic locking that has an inherit performance penalty. The downside is that you have to deal with this exception if you have highly concurrent writes. This requires flushing the session:
+
+[source,groovy]
+----
+def airport = Airport.get(10)
+
+try {
+    airport.name = "Heathrow"
+    airport.save(flush: true)
+}
+catch (org.springframework.dao.OptimisticLockingFailureException e) {
+    // deal with exception
+}
+----
+
+The way you deal with the exception depends on the application. You could attempt a programmatic merge of the data or go back to the user and ask them to resolve the conflict.
+
+Alternatively, if it becomes a problem you can resort to pessimistic locking.
+
+NOTE: The `version` will only be updated after flushing the session.
+
+
+==== Pessimistic Locking
+
+
+Pessimistic locking is equivalent to doing a SQL "SELECT * FOR UPDATE" statement and locking a row in the database. This has the implication that other read operations will be blocking until the lock is released.
+
+In GORM pessimistic locking is performed on an existing instance with the link:../api/org/grails/datastore/gorm/GormEntity.html#lock()[lock()] method:
+
+[source,groovy]
+----
+def airport = Airport.get(10)
+airport.lock() // lock for update
+airport.name = "Heathrow"
+airport.save()
+----
+
+GORM will automatically deal with releasing the lock for you once the transaction has been committed.
+
+However, in the above case what we are doing is "upgrading" from a regular SELECT to a SELECT..FOR UPDATE and another thread could still have updated the record in between the call to `get()` and the call to `lock()`.
+
+To get around this problem you can use the static link:../api/org/grails/datastore/gorm/GormEntity.html#lock(java.io.Serializable)[lock(id)] method that takes an id just like link:../api/org/grails/datastore/gorm/GormEntity.html#get(java.io.Serializable)[get(id)]:
+
+[source,groovy]
+----
+def airport = Airport.lock(10) // lock for update
+airport.name = "Heathrow"
+airport.save()
+----
+
+In this case only SELECT..FOR UPDATE is issued.
+
+As well as the link:../api/org/grails/datastore/gorm/GormEntity.html#lock(java.io.Serializable)[lock(id)] method you can also obtain a pessimistic locking using queries. For example using a dynamic finder:
+
+[source,java]
+----
+def airport = Airport.findByName("Heathrow", [lock: true])
+----
+
+Or using criteria:
+
+[source,java]
+----
+def airport = Airport.createCriteria().get {
+    eq('name', 'Heathrow')
+    lock true
+}
+----
+
