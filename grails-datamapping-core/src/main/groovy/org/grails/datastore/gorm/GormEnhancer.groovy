@@ -40,20 +40,22 @@ import org.grails.datastore.mapping.reflect.MetaClassUtils
  * @author Graeme Rocher
  */
 @CompileStatic
+@SuppressWarnings(['unused', 'GroovyUnusedDeclaration', 'GroovyAssignabilityCheck', 'MethodMayBeStatic', 'AccessToStaticFieldLockedOnInstance'])
 class GormEnhancer implements Closeable {
 
     private static final Logger log = LoggerFactory.getLogger(GormEnhancer)
     private static final GormEnhancerRegistry STATE_REGISTRY = GormEnhancerRegistry.getInstance()
 
-    private final GormRegistry registry
-    private final List<String> connectionSourceNames
-    final Datastore datastore
+    private GormRegistry registry
+    private List<String> connectionSourceNames
+    Datastore datastore
     boolean failOnError = false
     boolean markDirty = true
 
     /**
      * Whether to include external entities
      */
+    @SuppressWarnings(['unused', 'GrUnusedDeclaration'])
     boolean includeExternal = true
 
     /**
@@ -69,12 +71,25 @@ class GormEnhancer implements Closeable {
      * @param datastore The datastore (required)
      * @param transactionManager Retained for constructor compatibility
      * @param settings The connection source settings (required)
-     * @param registry The GORM registry (optional, defaults to singleton instance)
      */
     GormEnhancer(Datastore datastore,
-                 PlatformTransactionManager ignoredTransactionManager,
+                 @SuppressWarnings('unused') PlatformTransactionManager ignoredTransactionManager,
+                 ConnectionSourceSettings settings) {
+        this(datastore, ignoredTransactionManager, settings, GormRegistry.getInstance())
+    }
+
+    /**
+     * Construct a new GormEnhancer for the given arguments.
+     *
+     * @param datastore The datastore (required)
+     * @param transactionManager Retained for constructor compatibility
+     * @param settings The connection source settings (required)
+     * @param registry The GORM registry (required)
+     */
+    GormEnhancer(Datastore datastore,
+                 @SuppressWarnings('unused') PlatformTransactionManager ignoredTransactionManager,
                  ConnectionSourceSettings settings,
-                 GormRegistry registry = GormRegistry.getInstance()) {
+                 GormRegistry registry) {
         assert datastore != null, 'Datastore is required'
         assert settings != null, 'ConnectionSourceSettings is required'
         
@@ -158,6 +173,7 @@ class GormEnhancer implements Closeable {
         return qualifiers.unique()
     }
 
+    @SuppressWarnings(['unused', 'GrUnusedDeclaration'])
     List<String> getConnectionSourceNames() {
         return connectionSourceNames
     }
@@ -224,7 +240,7 @@ class GormEnhancer implements Closeable {
         def cls = e.javaClass
         ExpandoMetaClass mc = MetaClassUtils.getExpandoMetaClass(cls)
         
-        mc.static.methodMissing = { String name, args ->
+        mc.static.setProperty('methodMissing', { String name, args ->
             def api = registry.resolveStaticApi(cls)
             try {
                 return api.invokeMethod(name, args)
@@ -234,8 +250,8 @@ class GormEnhancer implements Closeable {
                 }
                 throw mme
             }
-        }
-        mc.static.propertyMissing = { String name ->
+        })
+        mc.static.setProperty('propertyMissing', { String name ->
             def api = registry.resolveStaticApi(cls)
             try {
                 return api.getProperty(name)
@@ -245,7 +261,7 @@ class GormEnhancer implements Closeable {
                 }
                 throw mpe
             }
-        }
+        })
     }
 
     @CompileDynamic
@@ -253,7 +269,7 @@ class GormEnhancer implements Closeable {
         Class cls = e.javaClass
         ExpandoMetaClass mc = MetaClassUtils.getExpandoMetaClass(cls)
         
-        mc.methodMissing = { String name, args ->
+        mc.setProperty('methodMissing', { String name, args ->
             def api = registry.resolveInstanceApi(cls)
             try {
                 return api.invokeMethod(name, args)
@@ -263,8 +279,8 @@ class GormEnhancer implements Closeable {
                 }
                 throw mme
             }
-        }
-        mc.propertyMissing = { String name ->
+        })
+        mc.setProperty('propertyMissing', { String name ->
             def api = registry.resolveInstanceApi(cls)
             try {
                 return api.getProperty(name)
@@ -274,10 +290,10 @@ class GormEnhancer implements Closeable {
                 }
                 throw mpe
             }
-        }
-        mc.propertyMissing = { String name, val ->
+        })
+        mc.setProperty('propertyMissing', { String name, val ->
             registry.resolveInstanceApi(cls).setProperty(name, val)
-        }
+        })
     }
 
 }
