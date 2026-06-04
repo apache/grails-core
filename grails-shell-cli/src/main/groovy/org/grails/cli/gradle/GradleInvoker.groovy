@@ -45,12 +45,7 @@ class GradleInvoker {
     Object invokeMethod(String name, Object args) {
         Object[] argArray = (Object[]) args
 
-        // Track only the long running application task launched by run-app so that
-        // stop-app can cancel it; this excludes transient builds such as compile or test
-        String taskName = name.split(' ')[0]
-        boolean trackForStop = taskName == 'bootRun' || taskName.endsWith(':bootRun')
-
-        GradleUtil.runBuildWithConsoleOutput(executionContext, trackForStop) { BuildLauncher buildLauncher ->
+        GradleUtil.runBuildWithConsoleOutput(executionContext) { BuildLauncher buildLauncher ->
             buildLauncher.forTasks(name.split(' '))
             List<String> arguments = []
             arguments << "-Dgrails.env=${Environment.current.name}".toString()

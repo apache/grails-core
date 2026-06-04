@@ -22,6 +22,16 @@ try {
         arguments << '--quiet'
     }
 
+    // Tell the forked application where to write its PID file so that stop-app can terminate it,
+    // even from a separate CLI invocation. The grails. prefix is stripped by GrailsGradlePlugin
+    // when forwarding the property into the forked JVM.
+    File pidFile = org.grails.cli.gradle.RunningApplicationProcess.pidFile(buildDir)
+    pidFile.parentFile?.mkdirs()
+    // Clear any stop marker left by a previous stop-app so a genuine startup failure is not
+    // mistaken for a deliberate shutdown.
+    org.grails.cli.gradle.RunningApplicationProcess.clearStopRequest(buildDir)
+    arguments << "-D${org.grails.cli.gradle.RunningApplicationProcess.PID_FILE_CLI_PROPERTY}=${pidFile.absolutePath}".toString()
+
     arguments.addAll commandLine.remainingArgs
 
     Integer port = flag('port')?.toInteger() ?: config.getProperty('server.port', Integer)
@@ -68,6 +78,11 @@ try {
         }
     }
 
+    if(org.grails.cli.gradle.RunningApplicationProcess.isRunning(pidFile)) {
+        console.error "An application started with run-app is already running for this project. Run 'stop-app' first."
+        return false
+    }
+
     console.updateStatus "Running application..."
 
     if(!org.grails.cli.GrailsCli.isInteractiveModeActive()) {
@@ -104,7 +119,7 @@ try {
             addShutdownHook {
                 if(Boolean.getBoolean("run-app.running")) {
                     try {
-                        org.grails.cli.gradle.RunningApplicationRegistry.stopAll()
+                        stopApp()
                     }
                     catch(e) {
                         // ignore
@@ -123,6 +138,12 @@ catch(org.gradle.tooling.BuildCancelledException e) {
     return true
 }
 catch(Throwable e) {
+    // A deliberate stop-app terminates the bootRun process, which surfaces here as a build
+    // failure; report it as a clean shutdown rather than a startup failure.
+    if(org.grails.cli.gradle.RunningApplicationProcess.isStopRequested(buildDir)) {
+        console.updateStatus("Application stopped")
+        return true
+    }
     console.error "Failed to start server", e
     return false
 }

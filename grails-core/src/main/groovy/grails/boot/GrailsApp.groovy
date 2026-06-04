@@ -29,6 +29,7 @@ import org.codehaus.groovy.control.CompilerConfiguration
 
 import org.springframework.boot.ResourceBanner
 import org.springframework.boot.SpringApplication
+import org.springframework.boot.context.ApplicationPidFileWriter
 import org.springframework.boot.web.context.WebServerApplicationContext
 import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.core.env.ConfigurableEnvironment
@@ -63,6 +64,16 @@ class GrailsApp extends SpringApplication {
 
     private static final String GRAILS_BANNER = 'grails-banner.txt'
     private static final String SPRING_PROFILES = 'spring.profiles.active'
+
+    /**
+     * System property holding the path of the PID file the application should write on startup.
+     * It is set by the CLI {@code run-app} command as {@code grails.cli.pid.file}; the
+     * {@code grails.} prefix is stripped when the property is forwarded into this forked JVM by
+     * {@code GrailsGradlePlugin}, so it is read here without the prefix. When present, the PID
+     * file lets {@code stop-app} terminate this process. It is never set for a normally deployed
+     * application, so production runs are unaffected.
+     */
+    private static final String CLI_PID_FILE_PROPERTY = 'cli.pid.file'
 
     private static boolean developmentModeActive = false
     private static DirectoryWatcher directoryWatcher
@@ -100,6 +111,11 @@ class GrailsApp extends SpringApplication {
 
     @Override
     ConfigurableApplicationContext run(String... args) {
+        String pidFilePath = System.getProperty(CLI_PID_FILE_PROPERTY)
+        if (pidFilePath) {
+            // Registered before super.run() so the writer receives the early startup event.
+            addListeners(new ApplicationPidFileWriter(pidFilePath))
+        }
         ConfigurableApplicationContext applicationContext = super.run(args)
         Environment environment = Environment.getCurrent()
 
