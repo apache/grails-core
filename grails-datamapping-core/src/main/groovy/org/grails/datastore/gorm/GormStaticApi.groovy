@@ -28,11 +28,10 @@ import org.springframework.transaction.support.DefaultTransactionDefinition
 import grails.gorm.CriteriaBuilder
 import grails.gorm.DetachedCriteria
 import grails.gorm.api.GormAllOperations
-import grails.gorm.api.GormInstanceOperations
-import grails.gorm.api.GormStaticOperations
 import grails.gorm.multitenancy.Tenants
 import grails.gorm.transactions.GrailsTransactionTemplate
 import org.grails.datastore.gorm.finders.FinderMethod
+import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.transactions.DefaultTransactionTemplateFactory
 import org.grails.datastore.gorm.transactions.TransactionTemplateFactory
 import org.grails.datastore.mapping.core.Datastore
@@ -44,7 +43,11 @@ import org.grails.datastore.mapping.core.connections.ConnectionSources
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.types.Simple
+import org.grails.datastore.mapping.model.types.Basic
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
+import org.grails.datastore.mapping.query.Query
+import org.grails.datastore.mapping.query.Restrictions
 import org.grails.datastore.mapping.query.api.BuildableCriteria
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 
@@ -148,6 +151,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     }
 
     @Override
+    @SuppressWarnings('deprecation')
     Object propertyMissing(String name) {
         for (FinderMethod fm : finders) {
             if (fm.isMethodMatch(name)) {
@@ -204,7 +208,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     }
 
     @Override
-    def <T1> T1 mutex(D instance, Closure<T1> callable) {
+    <T1> T1 mutex(D instance, Closure<T1> callable) {
         registry.findInstanceApi(persistentClass, null).mutex(instance, callable)
     }
 
@@ -330,8 +334,8 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     @Override
     List<D> list(Map params) {
         execute({ Session session ->
-            org.grails.datastore.mapping.query.Query q = session.createQuery(persistentClass)
-            org.grails.datastore.gorm.finders.DynamicFinder.populateArgumentsForCriteria(persistentClass, q, params)
+            Query q = session.createQuery(persistentClass)
+            DynamicFinder.populateArgumentsForCriteria(persistentClass, q, params)
             if (params?.containsKey('max')) {
                 return new grails.gorm.PagedResultList(q)
             }
@@ -401,12 +405,12 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     }
 
     @Override
-    def <T1> T1 withCriteria(Closure<T1> callable) {
+    <T1> T1 withCriteria(Closure<T1> callable) {
         createCriteria().list(callable)
     }
 
     @Override
-    def <T1> T1 withCriteria(Map builderArgs, Closure callable) {
+    <T1> T1 withCriteria(Map builderArgs, Closure callable) {
         createCriteria().list(builderArgs, callable)
     }
 
@@ -418,18 +422,18 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     }
 
     @Override
-    grails.gorm.DetachedCriteria<D> where(Closure callable) {
-        new grails.gorm.DetachedCriteria<D>(persistentClass).withConnection(qualifier).where(callable)
+    DetachedCriteria<D> where(Closure callable) {
+        new DetachedCriteria<D>(persistentClass).withConnection(qualifier).where(callable)
     }
 
     @Override
-    grails.gorm.DetachedCriteria<D> whereLazy(Closure callable) {
+    DetachedCriteria<D> whereLazy(Closure callable) {
         where(callable)
     }
 
     @Override
-    grails.gorm.DetachedCriteria<D> whereAny(Closure callable) {
-        new grails.gorm.DetachedCriteria<D>(persistentClass).or(callable)
+    DetachedCriteria<D> whereAny(Closure callable) {
+        new DetachedCriteria<D>(persistentClass).or(callable)
     }
 
     @Override
@@ -490,7 +494,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     D create() {
-        persistentClass.newInstance()
+        persistentClass.getDeclaredConstructor().newInstance()
     }
 
     @Override
@@ -513,7 +517,8 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
         execute({ Session session ->
             def query = session.createQuery(persistentClass)
             populateQueryByExample(session, query, example)
-            query.list(args)
+            DynamicFinder.populateArgumentsForCriteria(persistentClass, query, args)
+            query.list()
         } as SessionCallback<List<D>>)
     }
 
@@ -541,21 +546,21 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
         } as SessionCallback<D>)
     }
 
-    protected void populateQueryByExample(Session session, org.grails.datastore.mapping.query.Query query, D example) {
+    protected void populateQueryByExample(Session session, Query query, D example) {
         def pe = getGormPersistentEntity()
         def persister = session.getPersister(example)
         if (persister != null) {
             def id = persister.getObjectIdentifier(example)
             if (id != null) {
-                query.add(org.grails.datastore.mapping.query.Restrictions.eq(pe.identity.name, id))
+                query.add(Restrictions.eq(pe.identity.name, id))
             }
             else {
                 def ea = pe.mappingContext.createEntityAccess(pe, example)
                 for (prop in pe.persistentProperties) {
-                    if (prop instanceof org.grails.datastore.mapping.model.types.Simple || prop instanceof org.grails.datastore.mapping.model.types.Basic) {
+                    if (prop instanceof Simple || prop instanceof Basic) {
                         def val = ea.getProperty(prop.name)
                         if (val != null) {
-                            query.add(org.grails.datastore.mapping.query.Restrictions.eq(prop.name, val))
+                            query.add(Restrictions.eq(prop.name, val))
                         }
                     }
                 }
@@ -616,31 +621,31 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     }
 
     @Override
-    def <T1> T1 withSession(Closure<T1> callable) {
+    <T1> T1 withSession(Closure<T1> callable) {
         execute({ Session session ->
             callable.call(session)
         } as SessionCallback<T1>)
     }
 
     @Override
-    def <T1> T1 withDatastoreSession(Closure<T1> callable) {
+    <T1> T1 withDatastoreSession(Closure<T1> callable) {
         withSession(callable)
     }
 
     @Override
-    def <T1> T1 withTransaction(Closure<T1> callable) {
+    <T1> T1 withTransaction(Closure<T1> callable) {
         createTransactionTemplate().execute(callable)
     }
 
     @Override
-    def <T1> T1 withNewTransaction(Closure<T1> callable) {
+    <T1> T1 withNewTransaction(Closure<T1> callable) {
         DefaultTransactionDefinition definition = new DefaultTransactionDefinition()
         definition.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW)
         withTransaction(definition, callable)
     }
 
     @Override
-    def <T1> T1 withTransaction(Map transactionProperties, Closure<T1> callable) {
+    <T1> T1 withTransaction(Map transactionProperties, Closure<T1> callable) {
         DefaultTransactionDefinition definition = new DefaultTransactionDefinition()
         transactionProperties.each { k, v ->
             if (v instanceof CharSequence && !(v instanceof String)) {
@@ -648,7 +653,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
             }
             try {
                 definition[k as String] = v
-            } catch (MissingPropertyException mpe) {
+            } catch (MissingPropertyException ignored) {
                 throw new IllegalArgumentException("[${k}] is not a valid transaction property.")
             }
         }
@@ -656,7 +661,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     }
 
     @Override
-    def <T1> T1 withNewTransaction(Map transactionProperties, Closure<T1> callable) {
+    <T1> T1 withNewTransaction(Map transactionProperties, Closure<T1> callable) {
         DefaultTransactionDefinition definition = new DefaultTransactionDefinition()
         transactionProperties.each { k, v ->
             if (v instanceof CharSequence && !(v instanceof String)) {
@@ -664,7 +669,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
             }
             try {
                 definition[k as String] = v
-            } catch (MissingPropertyException mpe) {
+            } catch (MissingPropertyException ignored) {
                 throw new IllegalArgumentException("[${k}] is not a valid transaction property.")
             }
         }
@@ -673,7 +678,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     }
 
     @Override
-    def <T1> T1 withTransaction(org.springframework.transaction.TransactionDefinition definition, Closure<T1> callable) {
+    <T1> T1 withTransaction(TransactionDefinition definition, Closure<T1> callable) {
         createTransactionTemplate(definition).execute(callable)
     }
 
@@ -681,7 +686,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
         getTransactionTemplateFactory().createTransactionTemplate(getTransactionManager())
     }
 
-    protected GrailsTransactionTemplate createTransactionTemplate(org.springframework.transaction.TransactionDefinition definition) {
+    protected GrailsTransactionTemplate createTransactionTemplate(TransactionDefinition definition) {
         getTransactionTemplateFactory().createTransactionTemplate(getTransactionManager(), definition)
     }
 
@@ -690,7 +695,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     }
 
     @Override
-    def <T1> T1 withNewSession(Closure<T1> callable) {
+    <T1> T1 withNewSession(Closure<T1> callable) {
         Datastore ds = getDatastore()
         DatastoreUtils.executeWithNewSession(ds, { Session session ->
             callable.call(session)
@@ -698,7 +703,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     }
 
     @Override
-    def <T1> T1 withStatelessSession(Closure<T1> callable) {
+    <T1> T1 withStatelessSession(Closure<T1> callable) {
         Datastore ds = getDatastore()
         DatastoreUtils.executeWithNewSession(ds, { Session session ->
             callable.call(session)
@@ -826,17 +831,17 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     }
 
     @Override
-    grails.gorm.api.GormAllOperations<D> withTenant(Serializable tenantId) {
-        return (grails.gorm.api.GormAllOperations<D>) forQualifier(tenantId.toString())
+    GormAllOperations<D> withTenant(Serializable tenantId) {
+        return (GormAllOperations<D>) forQualifier(tenantId.toString())
     }
 
     @Override
-    def <T1> T1 withTenant(Serializable tenantId, Closure<T1> callable) {
-        withId(tenantId, callable)
+    <T1> T1 withTenant(Serializable tenantId, Closure<T1> callable) {
+        return (T1) withId(tenantId, callable)
     }
 
     @Override
-    grails.gorm.api.GormAllOperations<D> eachTenant(Closure callable) {
+    GormAllOperations<D> eachTenant(Closure callable) {
         Datastore ds = registry.getDatastore(persistentClass.name, ConnectionSource.DEFAULT)
         if (ds instanceof MultiTenantCapableDatastore) {
             Tenants.eachTenant((MultiTenantCapableDatastore) ds, callable)
@@ -845,15 +850,17 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
         throw new UnsupportedOperationException("eachTenant not supported for datastore: ${ds?.class?.simpleName}")
     }
 
-    def <T1> T1 withTenantTransaction(Serializable tenantId, Closure<T1> callable) {
-        withId(tenantId, callable)
+    @SuppressWarnings('unused')
+    <T1> T1 withTenantTransaction(Serializable tenantId, Closure<T1> callable) {
+        return (T1) withId(tenantId, callable)
     }
 
-    def <T1> T1 withTenantTransaction(Serializable tenantId, org.springframework.transaction.TransactionDefinition definition, Closure<T1> callable) {
-        withId(tenantId, callable)
+    @SuppressWarnings('unused')
+    <T1> T1 withTenantTransaction(Serializable tenantId, @SuppressWarnings('unused') TransactionDefinition definition, Closure<T1> callable) {
+        return (T1) withId(tenantId, callable)
     }
 
-    def <T1> T1 withId(Serializable tenantId, Closure<T1> callable) {
+    <T1> T1 withId(Serializable tenantId, Closure<T1> callable) {
         // For multi-tenancy, always resolve via the DEFAULT (root/parent) datastore.
         // Resolving the tenant-specific datastore and then calling withNewSession() on it
         // would fail because child datastores have empty datastoresByConnectionSource maps.
@@ -868,11 +875,11 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
         } as SessionCallback<T1>)
     }
 
-    def <T1> T1 withoutId(Closure<T1> callable) {
-        withId(ConnectionSource.DEFAULT, callable)
+    <T1> T1 withoutId(Closure<T1> callable) {
+        return (T1) withId(ConnectionSource.DEFAULT, callable)
     }
 
-    def <T1> T1 withNewSession(Serializable tenantId, Closure<T1> callable) {
+    <T1> T1 withNewSession(Serializable tenantId, Closure<T1> callable) {
         DatastoreResolver resolver = new DatastoreResolver() {
             @Override Datastore resolve() { registry.apiResolver.findDatastore(persistentClass, tenantId.toString()) }
         }
