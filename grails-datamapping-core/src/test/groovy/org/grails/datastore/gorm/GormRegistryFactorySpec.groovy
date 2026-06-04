@@ -37,7 +37,7 @@ class GormRegistryFactorySpec extends Specification {
         Datastore datastore = Mock(Datastore)
 
         expect:
-        registry.getApiFactory(datastore).is(registry.defaultApiFactory)
+        registry.getApiFactory(datastore) instanceof DefaultGormApiFactory
     }
 
     void 'registry returns custom factory for datastore type override'() {

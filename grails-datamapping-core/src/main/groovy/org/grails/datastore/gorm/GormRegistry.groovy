@@ -18,8 +18,6 @@
  */
 package org.grails.datastore.gorm
 
-import java.util.concurrent.ConcurrentHashMap
-
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -49,7 +47,6 @@ import org.grails.datastore.mapping.model.PersistentEntity
 class GormRegistry {
 
     private static final GormRegistry instance = new GormRegistry()
-    private final GormApiFactory defaultApiFactory = new DefaultGormApiFactory()
     final GormApiResolver apiResolver = new GormApiResolver(this)
     final EntityApiRegistry entityApiRegistry = new EntityApiRegistry(this)
     final GormStaticApiRegistry staticApiRegistry = entityApiRegistry.staticApiRegistry
@@ -63,7 +60,7 @@ class GormRegistry {
     final Map<Class, Datastore> datastoresByType = datastoreDiscovery.datastoresByType
     final Set<Datastore> allDatastores = datastoreDiscovery.allDatastores
 
-    private final Map<Class, GormApiFactory> apiFactoriesByDatastoreType = new ConcurrentHashMap<>()
+    final GormApiFactoryRegistry apiFactoryRegistry = new GormApiFactoryRegistry()
 
     static GormRegistry getInstance() {
         return instance
@@ -87,7 +84,7 @@ class GormRegistry {
     private void resetInstance() {
         entityApiRegistry.clear()
         datastoreDiscovery.clear()
-        apiFactoriesByDatastoreType.clear()
+        apiFactoryRegistry.clear()
         GormEnhancerRegistry.getInstance().clearPreferredDatastore()
         GormEnhancerRegistry.getInstance().clearResolvingDatastoreDepth()
     }
@@ -129,20 +126,11 @@ class GormRegistry {
      * Nominally unused within the core mapping module, but invoked dynamically by external datastore implementations (e.g. Hibernate, MongoDB) to customize API generation.
      */
     void registerApiFactory(Class datastoreType, GormApiFactory factory) {
-        apiFactoriesByDatastoreType.put(datastoreType, factory)
+        apiFactoryRegistry.registerApiFactory(datastoreType, factory)
     }
 
     GormApiFactory getApiFactory(Datastore datastore) {
-        GormApiFactory factory = apiFactoriesByDatastoreType.get(datastore.getClass())
-        if (factory == null) {
-            for (Map.Entry<Class, GormApiFactory> entry in apiFactoriesByDatastoreType.entrySet()) {
-                if (entry.key.isInstance(datastore)) {
-                    return entry.value
-                }
-            }
-            return defaultApiFactory
-        }
-        return factory
+        apiFactoryRegistry.getApiFactory(datastore)
     }
 
     /**
