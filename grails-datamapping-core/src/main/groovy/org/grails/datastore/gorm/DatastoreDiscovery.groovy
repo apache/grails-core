@@ -213,9 +213,9 @@ class DatastoreDiscovery {
      * @param connectionSourceNames The connection source names to register the datastore for
      * @param entity The persistent entity (for entity-specific qualifier resolution)
      */
-    void registerEntityDatastores(String className, Object datastore, List<String> connectionSourceNames, Object entity) {
+    void registerEntityDatastores(Object entityKey, Object datastore, List<String> connectionSourceNames, Object entity) {
         if (datastore == null) return
-        String normalizedClassName = normalizeEntityKey(className)
+        String normalizedClassName = normalizeEntityKey(entityKey)
         if (normalizedClassName == null) {
             return
         }
@@ -262,9 +262,9 @@ class DatastoreDiscovery {
     /**
      * Registers an entity-specific datastore override.
      */
-    void registerEntityDatastore(String className, String qualifier, Datastore datastore) {
+    void registerEntityDatastore(Object entityKey, String qualifier, Datastore datastore) {
         if (datastore != null) {
-            String normalizedClassName = normalizeEntityKey(className)
+            String normalizedClassName = normalizeEntityKey(entityKey)
             if (normalizedClassName == null) {
                 return
             }
@@ -303,14 +303,6 @@ class DatastoreDiscovery {
             String prior = normalizedEntityKeysByName.putIfAbsent(className, normalized)
             return prior != null ? prior : normalized
         }
-    }
-
-    String normalizeEntityKey(Class cls) {
-        normalizeEntityKey((Object) cls)
-    }
-
-    String normalizeEntityKey(String className) {
-        normalizeEntityKey((Object) className)
     }
 
     String normalizeQualifier(String qualifier) {

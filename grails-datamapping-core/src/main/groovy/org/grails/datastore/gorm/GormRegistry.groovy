@@ -340,23 +340,15 @@ class GormRegistry {
      * @param connectionSourceNames The connection source names to register the datastore for
      * @param entity The persistent entity (for entity-specific qualifier resolution)
      */
-    void registerEntityDatastores(String className, Object datastore, List<String> connectionSourceNames, Object entity) {
-        datastoreDiscovery.registerEntityDatastores(className, datastore, connectionSourceNames, entity)
+    void registerEntityDatastores(Object entityKey, Object datastore, List<String> connectionSourceNames, Object entity) {
+        datastoreDiscovery.registerEntityDatastores(entityKey, datastore, connectionSourceNames, entity)
     }
 
     /**
      * Registers an entity-specific datastore override.
      */
-    void registerEntityDatastore(String className, String qualifier, Datastore datastore) {
-        datastoreDiscovery.registerEntityDatastore(className, qualifier, datastore)
-    }
-
-    String normalizeEntityKey(Class cls) {
-        datastoreDiscovery.normalizeEntityKey(cls)
-    }
-
-    String normalizeEntityKey(String className) {
-        datastoreDiscovery.normalizeEntityKey(className)
+    void registerEntityDatastore(Object entityKey, String qualifier, Datastore datastore) {
+        datastoreDiscovery.registerEntityDatastore(entityKey, qualifier, datastore)
     }
 
     String normalizeQualifier(String qualifier) {
