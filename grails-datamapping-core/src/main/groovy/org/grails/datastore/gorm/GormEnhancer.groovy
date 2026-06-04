@@ -118,7 +118,7 @@ class GormEnhancer implements Closeable {
      * @param entity The entity
      * @return The qualifiers
      */
-    @CompileDynamic
+    @CompileStatic
     List<String> allQualifiers(Datastore datastore, PersistentEntity entity) {
         List<String> qualifiers = new ArrayList<>()
         qualifiers.addAll(ConnectionSourcesSupport.getConnectionSourceNames(entity))
@@ -135,7 +135,7 @@ class GormEnhancer implements Closeable {
             if (datastore == this.datastore) {
                 qualifiers.addAll(connectionSourceNames)
             } else {
-                def className = entity.name
+                String className = entity.name
                 for (String q in connectionSourceNames) {
                     if (registry.getDatastore(className, q) == datastore) {
                         qualifiers.add(q)
@@ -171,7 +171,7 @@ class GormEnhancer implements Closeable {
 
     static PersistentEntity findEntity(Class entity) {
         GormApiResolver resolver = GormRegistry.instance.apiResolver
-        Datastore ds = resolver.findDatastore(entity, null)
+        Datastore ds = resolver.findDatastore(entity)
         return ds?.mappingContext?.getPersistentEntity(entity.name)
     }
 
@@ -225,7 +225,7 @@ class GormEnhancer implements Closeable {
         ExpandoMetaClass mc = MetaClassUtils.getExpandoMetaClass(cls)
         
         mc.static.methodMissing = { String name, args ->
-            def api = registry.findStaticApi(cls, null)
+            def api = registry.resolveStaticApi(cls)
             try {
                 return api.invokeMethod(name, args)
             } catch (MissingMethodException mme) {
@@ -236,7 +236,7 @@ class GormEnhancer implements Closeable {
             }
         }
         mc.static.propertyMissing = { String name ->
-            def api = registry.findStaticApi(cls, null)
+            def api = registry.resolveStaticApi(cls)
             try {
                 return api.getProperty(name)
             } catch (MissingPropertyException mpe) {
@@ -254,7 +254,7 @@ class GormEnhancer implements Closeable {
         ExpandoMetaClass mc = MetaClassUtils.getExpandoMetaClass(cls)
         
         mc.methodMissing = { String name, args ->
-            def api = registry.findInstanceApi(cls, null)
+            def api = registry.resolveInstanceApi(cls)
             try {
                 return api.invokeMethod(name, args)
             } catch (MissingMethodException mme) {
@@ -265,7 +265,7 @@ class GormEnhancer implements Closeable {
             }
         }
         mc.propertyMissing = { String name ->
-            def api = registry.findInstanceApi(cls, null)
+            def api = registry.resolveInstanceApi(cls)
             try {
                 return api.getProperty(name)
             } catch (MissingPropertyException mpe) {
@@ -276,7 +276,7 @@ class GormEnhancer implements Closeable {
             }
         }
         mc.propertyMissing = { String name, val ->
-            registry.findInstanceApi(cls, null).setProperty(name, val)
+            registry.resolveInstanceApi(cls).setProperty(name, val)
         }
     }
 
