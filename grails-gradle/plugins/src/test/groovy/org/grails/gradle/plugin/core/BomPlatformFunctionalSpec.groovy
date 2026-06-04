@@ -58,6 +58,10 @@ class BomPlatformFunctionalSpec extends GradleSpecification {
         and: 'the hand-declared Micronaut BOM remains'
         result.output.contains('HAS_MICRONAUT_BOM=true')
 
+        and: 'a sibling configuration that did not declare a BOM still receives the Micronaut BOM (and not grails-bom)'
+        result.output.contains('SIBLING_HAS_MICRONAUT_BOM=true')
+        result.output.contains('SIBLING_HAS_GRAILS_BOM=false')
+
         and: 'property-based version overrides are still enabled for the declared BOM'
         result.output.contains('HAS_BOM_PROPERTY_OVERRIDES=true')
     }

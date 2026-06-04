@@ -42,6 +42,7 @@ import org.gradle.api.artifacts.DependencyResolveDetails
 import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.attributes.AttributeMatchingStrategy
+import org.gradle.api.attributes.Category
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.file.FileCollection
 import org.gradle.api.file.RegularFile
@@ -516,8 +517,8 @@ ${importStatements}
     ] as Set<String>
 
     /**
-     * Returns the distinct known Grails BOM artifact names declared by hand (as a {@code platform},
-     * {@code enforcedPlatform}, or plain dependency) on the project's declarable configurations.
+     * Returns the distinct known Grails BOM artifact names declared by hand as a {@code platform()}
+     * or {@code enforcedPlatform()} on the project's declarable configurations.
      */
     private static Set<String> declaredGrailsBoms(Project project) {
         Set<String> names = new LinkedHashSet<>()
@@ -526,7 +527,7 @@ ${importStatements}
                 continue
             }
             for (Dependency dependency : configuration.dependencies) {
-                if (dependency.group == 'org.apache.grails' && GRAILS_BOM_NAMES.contains(dependency.name)) {
+                if (isGrailsBomPlatform(dependency)) {
                     names.add(dependency.name)
                 }
             }
@@ -535,16 +536,34 @@ ${importStatements}
     }
 
     /**
-     * Returns whether the given configuration already declares a known Grails BOM by hand, so the
-     * plugin can avoid layering a second BOM on top of it.
+     * Returns whether the given configuration already declares a known Grails BOM as a
+     * {@code platform()} / {@code enforcedPlatform()} by hand, so the plugin can avoid layering a
+     * second BOM on top of it.
      */
     private static boolean configurationHasGrailsBom(Configuration configuration) {
         for (Dependency dependency : configuration.dependencies) {
-            if (dependency.group == 'org.apache.grails' && GRAILS_BOM_NAMES.contains(dependency.name)) {
+            if (isGrailsBomPlatform(dependency)) {
                 return true
             }
         }
         false
+    }
+
+    /**
+     * Returns whether the dependency is a known Grails BOM declared with platform semantics, i.e. a
+     * {@code platform()} or {@code enforcedPlatform()} declaration (carrying the {@code Category}
+     * attribute). A plain {@code org.apache.grails:*-bom} dependency does not import constraints and
+     * is therefore not treated as a declared BOM.
+     */
+    private static boolean isGrailsBomPlatform(Dependency dependency) {
+        if (dependency.group != 'org.apache.grails' || !GRAILS_BOM_NAMES.contains(dependency.name)) {
+            return false
+        }
+        if (!(dependency instanceof ModuleDependency)) {
+            return false
+        }
+        Category category = ((ModuleDependency) dependency).attributes.getAttribute(Category.CATEGORY_ATTRIBUTE)
+        category != null && (category.name == Category.REGULAR_PLATFORM || category.name == Category.ENFORCED_PLATFORM)
     }
 
     private static boolean isExcludedFromBomPlatform(String name) {

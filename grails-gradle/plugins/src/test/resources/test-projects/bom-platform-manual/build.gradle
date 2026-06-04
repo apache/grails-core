@@ -23,6 +23,19 @@ tasks.register('inspectBomSetup') {
         }
         println "HAS_MICRONAUT_BOM=${hasMicronautBom}"
 
+        // A sibling declarable configuration that does NOT declare a BOM by hand must still
+        // receive the single effective BOM (the Micronaut variant) via per-configuration injection.
+        def testImplDeps = configurations.testImplementation.allDependencies
+        def siblingHasMicronautBom = testImplDeps.any { dep ->
+            dep.group == 'org.apache.grails' && dep.name == 'grails-micronaut-bom'
+        }
+        println "SIBLING_HAS_MICRONAUT_BOM=${siblingHasMicronautBom}"
+
+        def siblingHasGrailsBom = testImplDeps.any { dep ->
+            dep.group == 'org.apache.grails' && dep.name == 'grails-bom'
+        }
+        println "SIBLING_HAS_GRAILS_BOM=${siblingHasGrailsBom}"
+
         def hasBomPropertyOverrides = project.plugins.findPlugin('org.apache.grails.gradle.bom-property-overrides') != null
         println "HAS_BOM_PROPERTY_OVERRIDES=${hasBomPropertyOverrides}"
     }
