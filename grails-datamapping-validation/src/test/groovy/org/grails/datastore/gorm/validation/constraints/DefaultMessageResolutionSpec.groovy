@@ -28,16 +28,18 @@ import spock.lang.Specification
 import spock.lang.Unroll
 
 /**
- * Reproduces the Groovy 5 {@link ConstrainedProperty} interface static-initialisation
- * regression and verifies that {@code AbstractConstraint.getDefaultMessage} still resolves
- * the correct default message when no Spring {@code MessageSource} is available.
+ * Regression guard for {@link ConstrainedProperty#DEFAULT_MESSAGES} on Groovy 5 (GROOVY-12063):
+ * verifies that {@code AbstractConstraint.getDefaultMessage} resolves the correct default message
+ * from the map when no Spring {@code MessageSource} is available.
  *
- * <p>On Groovy 5 the {@code ConstrainedProperty.DEFAULT_MESSAGES} map is initialised with
- * null values: its map initialiser runs before the {@code DEFAULT_*_MESSAGE} constants it
- * references are assigned, so {@code DEFAULT_MESSAGES.get(code)} returns null even though
- * {@code MESSAGE_BUNDLE} resolves the same code correctly. {@code AbstractConstraint} works
- * around this by falling back to {@code MESSAGE_BUNDLE} - this spec guards that fallback so
- * it is not removed again while the regression is present.</p>
+ * <p>{@code DEFAULT_MESSAGES} must be built with a Groovy map literal rather than an
+ * anonymous-{@code HashMap}-with-instance-initializer. On Groovy 5 the bareword references to the
+ * sibling {@code DEFAULT_*_MESSAGE} constants inside such an initializer compile to dynamic
+ * {@code getProperty} calls on {@code this} (the {@code HashMap}); because the receiver is a
+ * {@code Map}, the MOP resolves them as key lookups on the still-empty map, so every entry was
+ * captured as {@code null} and {@code DEFAULT_MESSAGES.get(code)} returned {@code null}. The map
+ * literal resolves the constants against the enclosing interface scope and is correct on every
+ * version; this spec fails if that regresses.</p>
  */
 class DefaultMessageResolutionSpec extends Specification {
 
@@ -50,16 +52,8 @@ class DefaultMessageResolutionSpec extends Specification {
         constraint.resolveDefaultMessage(code) != null
         constraint.resolveDefaultMessage(code) == ConstrainedProperty.MESSAGE_BUNDLE.getString(code)
 
-        where:
-        code << [
-                ConstrainedProperty.DEFAULT_BLANK_MESSAGE_CODE,
-                ConstrainedProperty.DEFAULT_NULL_MESSAGE_CODE,
-                ConstrainedProperty.DEFAULT_INVALID_EMAIL_MESSAGE_CODE,
-                ConstrainedProperty.DEFAULT_INVALID_URL_MESSAGE_CODE,
-                ConstrainedProperty.DEFAULT_INVALID_RANGE_MESSAGE_CODE,
-                ConstrainedProperty.DEFAULT_NOT_INLIST_MESSAGE_CODE,
-                ConstrainedProperty.DEFAULT_INVALID_VALIDATOR_MESSAGE_CODE
-        ]
+        where: "every code in the default error-message bundle is covered by DEFAULT_MESSAGES"
+        code << ConstrainedProperty.MESSAGE_BUNDLE.keySet()
     }
 
     static class TestConstraint extends AbstractConstraint {

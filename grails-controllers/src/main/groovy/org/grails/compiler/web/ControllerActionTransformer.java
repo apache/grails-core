@@ -400,19 +400,22 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
 
         MethodNode method = null;
         if (methodNode.getParameters().length > 0) {
-            // Workaround for an upstream Groovy 5 code-generation bug (this is not a Grails-side fix of
-            // the bug itself). For a parameterized action the transformer generates a zero-arg wrapper
-            // that binds the request parameters to LOCAL variables and then delegates to the original
-            // action via `this.action(p1, p2)`. Groovy's OptimizingStatementWriter emits that delegating
-            // call twice behind a `__$stMC` guard: a fast path that correctly loads the locals, and a
-            // slow path that instead re-resolves the very same locals as dynamic property reads
-            // (`this.getProperty("p1")`). The slow path is the one taken whenever the controller's
-            // metaclass is non-standard - i.e. in any live application (Spring Security, plugins, ...) -
-            // so under classic (indy=false) codegen the call throws MissingPropertyException at runtime
-            // even though the compiled fast path looks correct (which is why it cannot be reproduced from
-            // an isolated script). Tagging the controller with ClassNodeSkip suppresses the fast/slow
-            // fork so a single, correct path is emitted. Remove once the upstream OptimizingStatementWriter
-            // bug is fixed. Reproducer: https://github.com/jamesfredley/groovy5-controller-action-param-scope-bug
+            // Workaround for upstream Groovy 5 bug GROOVY-12062 (this is not a Grails-side fix of the
+            // bug itself). For a parameterized action the transformer generates a zero-arg wrapper that
+            // binds the request parameters to LOCAL variables and then delegates to the original action
+            // via `this.action(p1, p2)`, with the body wrapped in a try/catch/finally. Under classic
+            // (indy=false) codegen Groovy's OptimizingStatementWriter emits that delegating call twice
+            // behind a `__$stMC` guard: a fast path that correctly loads the locals, and a slow path that
+            // re-resolves the very same locals as dynamic property reads (`this.getProperty("p1")`). The
+            // non-empty finally block triggers a CompileStack scope restore that drops the locals between
+            // the two emissions, so the slow path's getVariable lookup misses and falls back to
+            // getProperty. The slow path is the one taken whenever the controller's metaclass is
+            // non-standard - i.e. in any live application (Spring Security, plugins, ...) - so the call
+            // throws MissingPropertyException at runtime even though the compiled fast path looks correct
+            // (which is why it cannot be reproduced from an isolated script). Tagging the controller with
+            // ClassNodeSkip suppresses the fast/slow fork so a single, correct path is emitted. Remove
+            // once GROOVY-12062 is fixed upstream.
+            // Reproducer: https://github.com/jamesfredley/groovy5-controller-action-param-scope-bug
             if (classNode.getNodeMetaData(OptimizingStatementWriter.ClassNodeSkip.class) == null) {
                 classNode.putNodeMetaData(OptimizingStatementWriter.ClassNodeSkip.class, new OptimizingStatementWriter.ClassNodeSkip());
             }
