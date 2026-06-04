@@ -27,6 +27,7 @@ import org.springframework.transaction.support.DefaultTransactionDefinition
 
 import grails.gorm.CriteriaBuilder
 import grails.gorm.DetachedCriteria
+import grails.gorm.PagedResultList
 import grails.gorm.api.GormAllOperations
 import grails.gorm.multitenancy.Tenants
 import grails.gorm.transactions.GrailsTransactionTemplate
@@ -337,7 +338,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
             Query q = session.createQuery(persistentClass)
             DynamicFinder.populateArgumentsForCriteria(persistentClass, q, params)
             if (params?.containsKey('max')) {
-                return new grails.gorm.PagedResultList(q)
+                return new PagedResultList(q)
             }
             q.list()
         } as SessionCallback<List<D>>)
