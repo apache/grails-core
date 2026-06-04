@@ -94,22 +94,19 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     PersistentEntity getGormPersistentEntity() {
-        PersistentEntity entity = qualifier != null ? registry.apiResolver.findEntity(persistentClass, qualifier) : null
-        if (entity == null) {
-            entity = super.getGormPersistentEntity()
-        }
-        if (entity == null) {
-            entity = registry.apiResolver.findEntity(persistentClass)
-        }
-        // Final fallback: resolve from the mapping context captured when this API was constructed.
-        // Entity metadata is identical across tenants/connections (only the datastore/session differs),
-        // so this stable reference is the most reliable source and avoids a null entity when runtime
-        // registry resolution is disturbed by cross-spec state — e.g. a qualified API created by
-        // withTenant(tenantId) for DISCRIMINATOR/SCHEMA multi-tenancy.
-        if (entity == null && mappingContext != null) {
-            entity = mappingContext.getPersistentEntity(persistentClass.name)
-        }
-        entity
+        // Resolve with fallback priority:
+        // 1. Entity by qualifier resolver
+        // 2. Superclass resolver
+        // 3. Unqualified registry resolver
+        // 4. Final fallback: resolve from the mapping context captured when this API was constructed.
+        //    Entity metadata is identical across tenants/connections (only the datastore/session differs),
+        //    so this stable reference is the most reliable source and avoids a null entity when runtime
+        //    registry resolution is disturbed by cross-spec state — e.g. a qualified API created by
+        //    withTenant(tenantId) for DISCRIMINATOR/SCHEMA multi-tenancy.
+        (qualifier != null ? registry.apiResolver.findEntity(persistentClass, qualifier) : null) ?:
+            super.getGormPersistentEntity() ?:
+            registry.apiResolver.findEntity(persistentClass) ?:
+            mappingContext?.getPersistentEntity(persistentClass.name)
     }
 
     @Override
