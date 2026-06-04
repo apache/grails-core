@@ -44,7 +44,7 @@ trait MultiTenant<D> extends Entity {
      */
     @Generated
     static <T> T withTenant(Serializable tenantId, Closure<T> callable) {
-        GormRegistry.instance.findStaticApi((Class<D>) this).withTenant(tenantId, callable)
+        GormRegistry.findStaticApi((Class<D>) this).withTenant(tenantId, callable)
     }
 
     /**
@@ -55,7 +55,7 @@ trait MultiTenant<D> extends Entity {
      */
     @Generated
     static <D> GormAllOperations eachTenant(Closure callable) {
-        GormRegistry.instance.findStaticApi((Class<D>) this, ConnectionSource.DEFAULT).eachTenant(callable)
+        GormRegistry.findStaticApi((Class<D>) this, ConnectionSource.DEFAULT).eachTenant(callable)
     }
 
     /**
@@ -66,6 +66,6 @@ trait MultiTenant<D> extends Entity {
      */
     @Generated
     static <D> GormAllOperations<D> withTenant(Serializable tenantId) {
-        (GormAllOperations<D>) GormRegistry.instance.findStaticApi((Class<D>) this).withTenant(tenantId)
+        (GormAllOperations<D>) GormRegistry.findStaticApi((Class<D>) this).withTenant(tenantId)
     }
 }
