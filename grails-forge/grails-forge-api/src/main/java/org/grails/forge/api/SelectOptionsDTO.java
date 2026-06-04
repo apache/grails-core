@@ -52,6 +52,8 @@ public class SelectOptionsDTO {
 
     private ServletImplSelectOptions servlet;
 
+    private GspLayoutImplSelectOptions gspLayout;
+
     SelectOptionsDTO() {
     }
 
@@ -61,13 +63,15 @@ public class SelectOptionsDTO {
                             LanguageSelectOptions lang,
                             DevelopmentReloadingSelectOptions reloading,
                             GormImplSelectOptions gorm,
-                            ServletImplSelectOptions servlet) {
+                            ServletImplSelectOptions servlet,
+                            GspLayoutImplSelectOptions gspLayout) {
         this.type = type;
         this.jdkVersion = jdkVersion;
         this.lang = lang;
         this.reloading = reloading;
         this.gorm = gorm;
         this.servlet = servlet;
+        this.gspLayout = gspLayout;
     }
 
     @Schema(description = "supported options for application type")
@@ -98,6 +102,11 @@ public class SelectOptionsDTO {
     @Schema(description = "supported options for Servlet Implementation")
     public ServletImplSelectOptions getServlet() {
         return servlet;
+    }
+
+    @Schema(description = "supported options for GSP Layout Implementation")
+    public GspLayoutImplSelectOptions getGspLayout() {
+        return gspLayout;
     }
 
     /**
@@ -163,8 +172,17 @@ public class SelectOptionsDTO {
                 new ServletImplDTO(ServletImpl.DEFAULT_OPTION, messageSource, messageContext)
         );
 
+        List<GspLayoutImplDTO> gspLayoutImpls = Arrays.stream(GspLayoutImpl.values())
+                .map(it -> new GspLayoutImplDTO(it, messageSource, messageContext))
+                .collect(Collectors.toList());
 
-        return new SelectOptionsDTO(applicationOpts, jdkVersionOpts, languageOpts, developmentReloadingOpts, gormImplOpts, servletImplOpts);
+        GspLayoutImplSelectOptions gspLayoutImplOpts = new GspLayoutImplSelectOptions(
+                gspLayoutImpls,
+                new GspLayoutImplDTO(GspLayoutImpl.DEFAULT_OPTION, messageSource, messageContext)
+        );
+
+
+        return new SelectOptionsDTO(applicationOpts, jdkVersionOpts, languageOpts, developmentReloadingOpts, gormImplOpts, servletImplOpts, gspLayoutImplOpts);
 
     }
 }

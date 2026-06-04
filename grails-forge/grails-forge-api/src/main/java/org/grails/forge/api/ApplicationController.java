@@ -235,6 +235,7 @@ public class ApplicationController implements ApplicationTypeOperations {
                 filter.getGorm() == null ? GormImpl.DEFAULT_OPTION : filter.getGorm(),
                 filter.getServlet() == null ? ServletImpl.DEFAULT_OPTION : filter.getServlet(),
                 filter.getJavaVersion() == null ? JdkVersion.DEFAULT_OPTION : filter.getJavaVersion(),
-                getOperatingSystem(requestInfo.getUserAgent()));
+                getOperatingSystem(requestInfo.getUserAgent()))
+                .withGspLayoutImpl(filter.getGspLayout() == null ? GspLayoutImpl.DEFAULT_OPTION : filter.getGspLayout());
     }
 }

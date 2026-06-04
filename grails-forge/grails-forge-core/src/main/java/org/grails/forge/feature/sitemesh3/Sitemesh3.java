@@ -22,20 +22,20 @@ import jakarta.inject.Singleton;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
-import org.grails.forge.feature.DefaultFeature;
 import org.grails.forge.feature.Feature;
 import org.grails.forge.feature.view.GspLayout;
+import org.grails.forge.options.GspLayoutImpl;
 import org.grails.forge.options.Options;
 
 import java.util.Set;
 
 /**
  * Default GSP layout decorator, backed by SiteMesh 3 ({@code grails-sitemesh3}).
- * Applied automatically to web applications unless another {@link GspLayout}
- * (e.g. {@code grails-layout}) is explicitly selected.
+ * Applied automatically to web applications unless the {@link GspLayoutImpl}
+ * option selects the legacy SiteMesh 2 based {@code grails-layout} decorator.
  */
 @Singleton
-public class Sitemesh3 extends GspLayout implements DefaultFeature {
+public class Sitemesh3 extends GspLayout {
 
     @Override
     public String getName() {
@@ -44,7 +44,7 @@ public class Sitemesh3 extends GspLayout implements DefaultFeature {
 
     @Override
     public String getTitle() {
-        return "SiteMesh 3";
+        return "GSP SiteMesh 3 Layouts";
     }
 
     @Override
@@ -55,7 +55,7 @@ public class Sitemesh3 extends GspLayout implements DefaultFeature {
     @Override
     public boolean shouldApply(ApplicationType applicationType, Options options, Set<Feature> selectedFeatures) {
         return supports(applicationType) &&
-                selectedFeatures.stream().noneMatch(GspLayout.class::isInstance);
+                options.getGspLayoutImpl() == GspLayoutImpl.SITEMESH3;
     }
 
     @Override

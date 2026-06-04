@@ -65,7 +65,8 @@ public class ContextFactory {
         Options newOptions = options
                 .withDevelopmentReloading(determineDevelopmentReloading(options.getDevelopmentReloading()))
                 .withGormImpl(determineGormImpl(options.getGormImpl()))
-                .withServletImpl(determineServletImpl(options.getServletImpl()));
+                .withServletImpl(determineServletImpl(options.getServletImpl()))
+                .withGspLayoutImpl(determineGspLayoutImpl(options.getGspLayoutImpl()));
 
         availableFeatures.getAllFeatures()
                 .filter(f -> f instanceof DefaultFeature)
@@ -118,6 +119,13 @@ public class ContextFactory {
             gormImpl = GormImpl.DEFAULT_OPTION;
         }
         return gormImpl;
+    }
+
+    GspLayoutImpl determineGspLayoutImpl(GspLayoutImpl gspLayoutImpl) {
+        if (gspLayoutImpl == null) {
+            gspLayoutImpl = GspLayoutImpl.DEFAULT_OPTION;
+        }
+        return gspLayoutImpl;
     }
 
     ServletImpl determineServletImpl(ServletImpl servletImpl) {

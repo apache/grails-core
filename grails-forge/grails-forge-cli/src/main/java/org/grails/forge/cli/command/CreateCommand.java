@@ -58,6 +58,10 @@ public abstract class CreateCommand extends BaseCommand implements Callable<Inte
     ServletImpl servletImpl;
 
     @ReflectiveAccess
+    @CommandLine.Option(names = {"--gsp-layout"}, paramLabel = "GSP Layout Implementation", description = "Which GSP layout (SiteMesh) implementation to configure. Possible values: ${COMPLETION-CANDIDATES}.", completionCandidates = GspLayoutImplCandidates.class, converter = GspLayoutImplConverter.class)
+    GspLayoutImpl gspLayoutImpl;
+
+    @ReflectiveAccess
     @CommandLine.Option(names = {"-i", "--inplace"}, description = "Create a service using the current directory")
     boolean inplace;
 
@@ -96,7 +100,7 @@ public abstract class CreateCommand extends BaseCommand implements Callable<Inte
     public Integer call() throws Exception {
         if (listFeatures) {
             new ListFeatures(availableFeatures,
-                    new Options(reloading, gormImpl, servletImpl, getJdkVersion(), getOperatingSystem()),
+                    new Options(reloading, gormImpl, servletImpl, getJdkVersion(), getOperatingSystem()).withGspLayoutImpl(getGspLayoutImpl()),
                     applicationType,
                     getOperatingSystem(),
                     contextFactory).output(this);
@@ -122,9 +126,14 @@ public abstract class CreateCommand extends BaseCommand implements Callable<Inte
     }
 
     public void generate(Project project, OutputHandler outputHandler) throws Exception {
-        Options options = new Options(reloading, gormImpl, servletImpl, getJdkVersion(), getOperatingSystem(), getAdditionalOptions());
+        Options options = new Options(reloading, gormImpl, servletImpl, getJdkVersion(), getOperatingSystem(), getAdditionalOptions())
+                .withGspLayoutImpl(getGspLayoutImpl());
 
         projectGenerator.generate(applicationType, project, options, getOperatingSystem(), getSelectedFeatures(), outputHandler, this);
+    }
+
+    private GspLayoutImpl getGspLayoutImpl() {
+        return gspLayoutImpl == null ? GspLayoutImpl.DEFAULT_OPTION : gspLayoutImpl;
     }
 
     private JdkVersion getJdkVersion() {

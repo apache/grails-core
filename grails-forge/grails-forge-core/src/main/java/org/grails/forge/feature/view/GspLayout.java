@@ -20,6 +20,7 @@ package org.grails.forge.feature.view;
 
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.feature.Category;
+import org.grails.forge.feature.DefaultFeature;
 import org.grails.forge.feature.OneOfFeature;
 
 /**
@@ -27,8 +28,12 @@ import org.grails.forge.feature.OneOfFeature;
  * ({@code grails-sitemesh3}) and the legacy SiteMesh 2 based {@code grails-layout}.
  * Because they share the same {@link #getFeatureClass()}, only one of them may be
  * selected for a given application (enforced by the one-of feature validator).
+ *
+ * <p>The choice is driven by the {@link org.grails.forge.options.GspLayoutImpl} option
+ * rather than by selecting a feature, so the members are not visible as standalone
+ * features. Each member applies based on the selected option (see {@code shouldApply}).
  */
-public abstract class GspLayout implements OneOfFeature {
+public abstract class GspLayout implements OneOfFeature, DefaultFeature {
 
     @Override
     public Class<?> getFeatureClass() {
@@ -43,5 +48,10 @@ public abstract class GspLayout implements OneOfFeature {
     @Override
     public String getCategory() {
         return Category.VIEW;
+    }
+
+    @Override
+    public boolean isVisible() {
+        return false;
     }
 }

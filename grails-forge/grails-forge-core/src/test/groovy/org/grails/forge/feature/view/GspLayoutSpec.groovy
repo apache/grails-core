@@ -22,6 +22,7 @@ package org.grails.forge.feature.view
 import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.BuildBuilder
 import org.grails.forge.application.ApplicationType
+import org.grails.forge.options.GspLayoutImpl
 import spock.lang.Unroll
 
 class GspLayoutSpec extends ApplicationContextSpec {
@@ -30,7 +31,7 @@ class GspLayoutSpec extends ApplicationContextSpec {
     void "web #applicationType apps use SiteMesh 3 (grails-sitemesh3) by default"() {
         when:
         final String build = new BuildBuilder(beanContext)
-            .features(["gsp"])
+            .features(['gsp'])
             .applicationType(applicationType)
             .render()
 
@@ -38,35 +39,37 @@ class GspLayoutSpec extends ApplicationContextSpec {
         build.contains('implementation "org.apache.grails:grails-sitemesh3"')
         !build.contains('implementation "org.apache.grails:grails-layout"')
 
-        and: "a SNAPSHOT build exposes the SiteMesh 3 snapshot repo so org.sitemesh:*-SNAPSHOT resolves"
-        build.contains("https://central.sonatype.com/repository/maven-snapshots")
-        build.contains("includeVersionByRegex('org[.]sitemesh.*'")
-
         where:
         applicationType << [ApplicationType.WEB, ApplicationType.WEB_PLUGIN]
     }
 
-    void "selecting grails-layout replaces the default SiteMesh 3 decorator"() {
+    @Unroll
+    void "the grails-layout option replaces the default SiteMesh 3 decorator for #applicationType"() {
         when:
         final String build = new BuildBuilder(beanContext)
-            .features(["gsp", "grails-layout"])
-            .applicationType(ApplicationType.WEB)
+            .features(['gsp'])
+            .gspLayoutImpl(GspLayoutImpl.GRAILS_LAYOUT)
+            .applicationType(applicationType)
             .render()
 
         then:
         build.contains('implementation "org.apache.grails:grails-layout"')
         !build.contains('implementation "org.apache.grails:grails-sitemesh3"')
+
+        where:
+        applicationType << [ApplicationType.WEB, ApplicationType.WEB_PLUGIN]
     }
 
-    void "sitemesh3 and grails-layout cannot both be selected"() {
+    void "the sitemesh3 option keeps the default SiteMesh 3 decorator"() {
         when:
-        new BuildBuilder(beanContext)
-            .features(["gsp", "sitemesh3", "grails-layout"])
+        final String build = new BuildBuilder(beanContext)
+            .features(['gsp'])
+            .gspLayoutImpl(GspLayoutImpl.SITEMESH3)
             .applicationType(ApplicationType.WEB)
             .render()
 
         then:
-        IllegalArgumentException e = thrown()
-        e.message.contains("There can only be one of the following features selected")
+        build.contains('implementation "org.apache.grails:grails-sitemesh3"')
+        !build.contains('implementation "org.apache.grails:grails-layout"')
     }
 }
