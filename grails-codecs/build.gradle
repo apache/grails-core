@@ -62,11 +62,10 @@ dependencies {
 
     // Testing
     testImplementation 'org.slf4j:slf4j-simple'
-    testImplementation('org.spockframework:spock-core') { transitive = false }
     // Required by Spock's Mocking
     testRuntimeOnly 'net.bytebuddy:byte-buddy'
     testImplementation 'org.objenesis:objenesis'
-    testImplementation 'io.leangen.geantyref:geantyref'
+    testImplementation 'org.spockframework:spock-core'
 }
 
 apply {

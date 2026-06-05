@@ -68,7 +68,6 @@ dependencies {
     }
     testImplementation project(':grails-datamapping-validation')
     testImplementation 'org.objenesis:objenesis'
-    testImplementation 'io.leangen.geantyref:geantyref'
 
     testCompileOnly 'jakarta.servlet:jakarta.servlet-api'
     testCompileOnly 'org.springframework:spring-test', {
@@ -83,7 +82,7 @@ dependencies {
     testRuntimeOnly 'org.springframework:spring-aspects'
 
     // Testing
-    testImplementation('org.spockframework:spock-core') { transitive = false }
+    testImplementation 'org.spockframework:spock-core'
 
     // Required by Spock's Mocking
     testRuntimeOnly 'net.bytebuddy:byte-buddy'
