@@ -33,5 +33,6 @@ import groovy.transform.CompileStatic
                            'org.grails.compiler.WhereQueryTypeCheckingExtension',
                            'org.grails.compiler.DynamicFinderTypeCheckingExtension',
                            'org.grails.compiler.DomainMappingTypeCheckingExtension',
+                           'org.grails.compiler.CriteriaTypeCheckingExtension',
                            'org.grails.compiler.RelationshipManagementMethodTypeCheckingExtension'])
 @interface GrailsCompileStatic {}
