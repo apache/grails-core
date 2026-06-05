@@ -63,10 +63,28 @@ class CriteriaTypeCheckingExtension extends TypeCheckingDSL {
         null
     }
 
+    private static final List<String> CRITERIA_TERMINALS =
+        ['list', 'listDistinct', 'get', 'count', 'scroll']
+
     protected boolean isCriteriaCall(MethodCall call) {
-        call instanceof MethodCallExpression &&
-            call.objectExpression instanceof ClassExpression &&
-            GrailsASTUtils.isDomainClass(call.objectExpression.type, null) &&
-            (call.method.value == 'withCriteria' || call.method.value == 'createCriteria')
+        if (!(call instanceof MethodCallExpression)) {
+            return false
+        }
+        // Domain.withCriteria { } / Domain.createCriteria() — the criteria closure is the direct argument.
+        if (call.objectExpression instanceof ClassExpression &&
+                GrailsASTUtils.isDomainClass(call.objectExpression.type, null) &&
+                (call.method.value == 'withCriteria' || call.method.value == 'createCriteria')) {
+            return true
+        }
+        // Domain.createCriteria().list/get/count/... { } — the closure is the argument to the terminal
+        // call chained on the builder, so its body must be type-checked in a criteria scope too.
+        if (call.method.value in CRITERIA_TERMINALS &&
+                call.objectExpression instanceof MethodCallExpression &&
+                call.objectExpression.method.value == 'createCriteria' &&
+                call.objectExpression.objectExpression instanceof ClassExpression &&
+                GrailsASTUtils.isDomainClass(call.objectExpression.objectExpression.type, null)) {
+            return true
+        }
+        false
     }
 }
