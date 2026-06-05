@@ -24,6 +24,7 @@ import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.GenericsType
 import org.codehaus.groovy.ast.expr.ClassExpression
 import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.classgen.GeneratorContext
@@ -91,7 +92,12 @@ class ScaffoldingServiceInjector implements GrailsArtefactClassInjector {
                 if (!domainClass) {
                     GrailsASTUtils.error(source, classNode, "Scaffolded service (${classNode.name}) with @Scaffold does not have domain class set.", true)
                 }
-                classNode.setSuperClass(GrailsASTUtils.nonGeneric(superClassNode, domainClass))
+                // Parameterize the superclass (GormService<Domain>) so inherited get()/list()/save()
+                // resolve to the domain type under static compilation, not the GormEntity upper bound.
+                ClassNode parameterizedSuper = superClassNode.getPlainNodeReference()
+                parameterizedSuper.setGenericsTypes(
+                    [new GenericsType(GrailsASTUtils.nonGeneric(domainClass))] as GenericsType[])
+                classNode.setSuperClass(parameterizedSuper)
                 def readOnlyExpression = (ConstantExpression) annotationNode.getMember('readOnly')
                 new ResourceTransform().addConstructor(classNode, domainClass, readOnlyExpression?.getValue()?.asBoolean() ?: false)
             } else if (!currentSuperClass.isDerivedFrom(superClassNode)) {
