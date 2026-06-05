@@ -58,6 +58,8 @@ import org.springframework.scripting.ScriptSource;
 import org.springframework.scripting.support.ResourceScriptSource;
 import org.springframework.util.Assert;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationRegistry;
 
@@ -117,6 +119,8 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
 
     private static final GroovyPageObservationConvention COMPILE_OBSERVATION_CONVENTION = new DefaultGroovyPageObservationConvention("gsp.compile");
     private ObservationRegistry observationRegistry = ObservationRegistry.NOOP;
+    private Counter cacheHits;
+    private Counter cacheMisses;
 
     private GroovyPageLocator groovyPageLocator = new DefaultGroovyPageLocator();
 
@@ -308,6 +312,7 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
     protected Template createTemplate(Resource resource, final String pageName, final boolean cacheable) throws IOException {
         GroovyPageMetaInfo meta;
         if (cacheable) {
+            recordCacheAccess(pageCache.containsKey(pageName));
             meta = CacheEntry.getValue(pageCache, pageName, -1, null,
                     new GroovyPagesTemplateEngineCallable(new GroovyPagesTemplateEngineCacheEntry(pageName)),
                     true, resource);
@@ -778,6 +783,20 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
         }
         this.observationRegistry = applicationContext.getBeanProvider(ObservationRegistry.class)
                 .getIfAvailable(() -> ObservationRegistry.NOOP);
+        MeterRegistry meterRegistry = applicationContext.getBeanProvider(MeterRegistry.class).getIfAvailable();
+        if (meterRegistry != null) {
+            this.cacheHits = Counter.builder("gsp.template.cache")
+                    .tag("result", "hit").description("GSP compiled-template cache hits").register(meterRegistry);
+            this.cacheMisses = Counter.builder("gsp.template.cache")
+                    .tag("result", "miss").description("GSP compiled-template cache misses").register(meterRegistry);
+        }
+    }
+
+    private void recordCacheAccess(boolean hit) {
+        Counter counter = hit ? this.cacheHits : this.cacheMisses;
+        if (counter != null) {
+            counter.increment();
+        }
     }
 
     /**
