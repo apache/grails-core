@@ -32,6 +32,9 @@ import org.apache.commons.logging.LogFactory;
 import org.springframework.core.io.Resource;
 import org.springframework.scripting.ScriptSource;
 
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
+
 import grails.util.Environment;
 import grails.util.GrailsUtil;
 import grails.web.pages.GroovyPagesUriService;
@@ -39,6 +42,10 @@ import org.grails.gsp.GroovyPageTemplate;
 import org.grails.gsp.GroovyPageWritable;
 import org.grails.gsp.GroovyPagesException;
 import org.grails.gsp.GroovyPagesTemplateEngine;
+import org.grails.web.gsp.observation.DefaultGroovyPageObservationConvention;
+import org.grails.web.gsp.observation.GroovyPageObservationContext;
+import org.grails.web.gsp.observation.GroovyPageObservationConvention;
+import org.grails.web.gsp.observation.GroovyPageObservationDocumentation;
 import org.grails.web.pages.GSPResponseWriter;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
 
@@ -68,8 +75,24 @@ public class GroovyPageView extends AbstractGrailsView {
     public static final String EXCEPTION_MODEL_KEY = "exception";
     private static boolean developmentMode = Environment.isDevelopmentMode();
 
+    private static final GroovyPageObservationConvention DEFAULT_OBSERVATION_CONVENTION = new DefaultGroovyPageObservationConvention();
+    private ObservationRegistry observationRegistry = ObservationRegistry.NOOP;
+    private GroovyPageObservationConvention observationConvention;
+
     @Override
     protected void renderTemplate(Map<String, Object> model, GrailsWebRequest webRequest, HttpServletRequest request,
+            HttpServletResponse response) {
+        if (this.observationRegistry.isNoop()) {
+            doRenderTemplate(model, webRequest, request, response);
+            return;
+        }
+        Observation observation = GroovyPageObservationDocumentation.GSP_VIEW.observation(
+                this.observationConvention, DEFAULT_OBSERVATION_CONVENTION,
+                () -> new GroovyPageObservationContext(getUrl()), this.observationRegistry);
+        observation.observe(() -> doRenderTemplate(model, webRequest, request, response));
+    }
+
+    protected void doRenderTemplate(Map<String, Object> model, GrailsWebRequest webRequest, HttpServletRequest request,
             HttpServletResponse response) {
         request.setAttribute(GroovyPagesUriService.RENDERING_VIEW_ATTRIBUTE, Boolean.TRUE);
         GSPResponseWriter out = null;
@@ -154,6 +177,24 @@ public class GroovyPageView extends AbstractGrailsView {
 
     public void setTemplateEngine(GroovyPagesTemplateEngine templateEngine) {
         this.templateEngine = templateEngine;
+    }
+
+    /**
+     * Sets the {@link ObservationRegistry} used to instrument GSP view rendering. Defaults to
+     * {@link ObservationRegistry#NOOP}, in which case rendering is not observed.
+     * @param observationRegistry the registry, or {@code null} for no-op
+     */
+    public void setObservationRegistry(ObservationRegistry observationRegistry) {
+        this.observationRegistry = (observationRegistry != null) ? observationRegistry : ObservationRegistry.NOOP;
+    }
+
+    /**
+     * Sets a custom {@link GroovyPageObservationConvention}. When {@code null} the
+     * {@link DefaultGroovyPageObservationConvention} is used.
+     * @param observationConvention the convention, or {@code null} for the default
+     */
+    public void setObservationConvention(GroovyPageObservationConvention observationConvention) {
+        this.observationConvention = observationConvention;
     }
 
     public boolean isExpired() {

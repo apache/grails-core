@@ -32,6 +32,7 @@ import org.apache.commons.logging.LogFactory;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.ApplicationContext;
 import org.springframework.core.Ordered;
 import org.springframework.scripting.ScriptSource;
 import org.springframework.util.Assert;
@@ -39,12 +40,15 @@ import org.springframework.web.servlet.View;
 import org.springframework.web.servlet.view.AbstractUrlBasedView;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
+import io.micrometer.observation.ObservationRegistry;
+
 import grails.util.CacheEntry;
 import grails.util.GrailsStringUtils;
 import grails.util.GrailsUtil;
 import org.grails.gsp.GroovyPagesTemplateEngine;
 import org.grails.gsp.io.GroovyPageScriptSource;
 import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator;
+import org.grails.web.gsp.observation.GroovyPageObservationConvention;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
 
 /**
@@ -66,6 +70,8 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
     private boolean allowGrailsViewCaching = !GrailsUtil.isDevelopmentEnv();
     private long cacheTimeout = -1;
     private boolean resolveJspView = false;
+    private volatile ObservationRegistry observationRegistry;
+    private GroovyPageObservationConvention observationConvention;
 
     /**
      * Constructor.
@@ -221,6 +227,8 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
         gspSpringView.setApplicationContext(getApplicationContext());
         gspSpringView.setTemplateEngine(templateEngine);
         gspSpringView.setScriptSource(scriptSource);
+        gspSpringView.setObservationRegistry(resolveObservationRegistry());
+        gspSpringView.setObservationConvention(this.observationConvention);
         try {
             gspSpringView.afterPropertiesSet();
             if (LOG.isDebugEnabled()) {
@@ -230,6 +238,38 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
             throw new RuntimeException("Error initializing GroovyPageView", e);
         }
         return gspSpringView;
+    }
+
+    /**
+     * Resolves the {@link ObservationRegistry} to apply to GSP views: an explicitly configured one
+     * if set, otherwise the registry bean from the application context, falling back to
+     * {@link ObservationRegistry#NOOP} when none is available.
+     */
+    private ObservationRegistry resolveObservationRegistry() {
+        ObservationRegistry registry = this.observationRegistry;
+        if (registry == null) {
+            ApplicationContext ctx = getApplicationContext();
+            registry = (ctx != null)
+                    ? ctx.getBeanProvider(ObservationRegistry.class).getIfAvailable(() -> ObservationRegistry.NOOP)
+                    : ObservationRegistry.NOOP;
+            this.observationRegistry = registry;
+        }
+        return registry;
+    }
+
+    /**
+     * Sets the {@link ObservationRegistry} used to instrument GSP view rendering. When left unset it
+     * is resolved from the application context (falling back to {@link ObservationRegistry#NOOP}).
+     */
+    public void setObservationRegistry(ObservationRegistry observationRegistry) {
+        this.observationRegistry = observationRegistry;
+    }
+
+    /**
+     * Sets a custom {@link GroovyPageObservationConvention} applied to GSP view observations.
+     */
+    public void setObservationConvention(GroovyPageObservationConvention observationConvention) {
+        this.observationConvention = observationConvention;
     }
 
     protected View createFallbackView(String viewName) throws Exception {
