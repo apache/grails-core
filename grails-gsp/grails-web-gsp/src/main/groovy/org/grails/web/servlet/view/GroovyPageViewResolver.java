@@ -48,7 +48,7 @@ import grails.util.GrailsUtil;
 import org.grails.gsp.GroovyPagesTemplateEngine;
 import org.grails.gsp.io.GroovyPageScriptSource;
 import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator;
-import org.grails.web.gsp.observation.GroovyPageObservationConvention;
+import org.grails.gsp.observation.GroovyPageObservationConvention;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
 
 /**

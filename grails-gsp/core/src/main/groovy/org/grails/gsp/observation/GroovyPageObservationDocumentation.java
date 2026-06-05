@@ -16,7 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.gsp.observation;
+package org.grails.gsp.observation;
 
 import io.micrometer.common.docs.KeyName;
 import io.micrometer.observation.Observation;
@@ -48,7 +48,12 @@ public enum GroovyPageObservationDocumentation implements ObservationDocumentati
     /**
      * Decoration of rendered content by a GSP layout (SiteMesh).
      */
-    GSP_LAYOUT;
+    GSP_LAYOUT,
+
+    /**
+     * Compilation of a GSP into its {@code GroovyPageMetaInfo} (happens on a template cache miss).
+     */
+    GSP_COMPILE;
 
     @Override
     public Class<? extends ObservationConvention<? extends Observation.Context>> getDefaultConvention() {

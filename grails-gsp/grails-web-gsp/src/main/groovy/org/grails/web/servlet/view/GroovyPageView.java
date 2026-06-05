@@ -42,10 +42,10 @@ import org.grails.gsp.GroovyPageTemplate;
 import org.grails.gsp.GroovyPageWritable;
 import org.grails.gsp.GroovyPagesException;
 import org.grails.gsp.GroovyPagesTemplateEngine;
-import org.grails.web.gsp.observation.DefaultGroovyPageObservationConvention;
-import org.grails.web.gsp.observation.GroovyPageObservationContext;
-import org.grails.web.gsp.observation.GroovyPageObservationConvention;
-import org.grails.web.gsp.observation.GroovyPageObservationDocumentation;
+import org.grails.gsp.observation.DefaultGroovyPageObservationConvention;
+import org.grails.gsp.observation.GroovyPageObservationContext;
+import org.grails.gsp.observation.GroovyPageObservationConvention;
+import org.grails.gsp.observation.GroovyPageObservationDocumentation;
 import org.grails.web.pages.GSPResponseWriter;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
 

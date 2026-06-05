@@ -37,10 +37,10 @@ import io.micrometer.observation.ObservationRegistry;
 import org.springframework.http.MediaType;
 import org.springframework.web.servlet.View;
 
-import org.grails.web.gsp.observation.DefaultGroovyPageObservationConvention;
-import org.grails.web.gsp.observation.GroovyPageObservationContext;
-import org.grails.web.gsp.observation.GroovyPageObservationConvention;
-import org.grails.web.gsp.observation.GroovyPageObservationDocumentation;
+import org.grails.gsp.observation.DefaultGroovyPageObservationConvention;
+import org.grails.gsp.observation.GroovyPageObservationContext;
+import org.grails.gsp.observation.GroovyPageObservationConvention;
+import org.grails.gsp.observation.GroovyPageObservationDocumentation;
 import org.grails.web.servlet.WrappedResponseHolder;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
 import org.grails.web.servlet.mvc.OutputAwareHttpServletResponse;

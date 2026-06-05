@@ -64,10 +64,10 @@ import org.grails.taglib.TemplateVariableBinding;
 import org.grails.taglib.encoder.OutputEncodingSettings;
 import org.grails.taglib.encoder.WithCodecHelper;
 import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator;
-import org.grails.web.gsp.observation.DefaultGroovyPageObservationConvention;
-import org.grails.web.gsp.observation.GroovyPageObservationContext;
-import org.grails.web.gsp.observation.GroovyPageObservationConvention;
-import org.grails.web.gsp.observation.GroovyPageObservationDocumentation;
+import org.grails.gsp.observation.DefaultGroovyPageObservationConvention;
+import org.grails.gsp.observation.GroovyPageObservationContext;
+import org.grails.gsp.observation.GroovyPageObservationConvention;
+import org.grails.gsp.observation.GroovyPageObservationDocumentation;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
 import org.grails.web.util.GrailsApplicationAttributes;
 

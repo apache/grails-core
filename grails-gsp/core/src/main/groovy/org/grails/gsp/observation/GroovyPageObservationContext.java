@@ -16,26 +16,32 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.gsp.observation;
+package org.grails.gsp.observation;
 
 import io.micrometer.observation.Observation;
-import io.micrometer.observation.ObservationConvention;
 
 /**
- * {@link ObservationConvention} for GSP view rendering instrumentation.
- *
- * <p>Implement this interface and register it as a bean (or set it on the
- * {@code GroovyPageViewResolver}) to customize the observation name and the
- * {@link io.micrometer.common.KeyValues} attached to GSP view observations.</p>
+ * Context that holds information for {@link io.micrometer.observation.Observation} instrumentation
+ * of Groovy Server Pages (GSP) rendering — the view, an included template, or a layout.
  *
  * @author Grails
  * @since 8.0
- * @see DefaultGroovyPageObservationConvention
+ * @see GroovyPageObservationDocumentation
  */
-public interface GroovyPageObservationConvention extends ObservationConvention<GroovyPageObservationContext> {
+public class GroovyPageObservationContext extends Observation.Context {
 
-    @Override
-    default boolean supportsContext(Observation.Context context) {
-        return context instanceof GroovyPageObservationContext;
+    private final String resource;
+
+    public GroovyPageObservationContext(String resource) {
+        this.resource = resource;
+    }
+
+    /**
+     * Return the name of the rendered resource — the view URI (e.g. {@code /book/show}), the
+     * template name, or the layout name, depending on the observation.
+     * @return the resource name, possibly {@code null}
+     */
+    public String getResource() {
+        return this.resource;
     }
 }

@@ -16,12 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.gsp.observation;
+package org.grails.gsp.observation;
 
 import io.micrometer.common.KeyValue;
 import io.micrometer.common.KeyValues;
 
-import static org.grails.web.gsp.observation.GroovyPageObservationDocumentation.LowCardinalityKeyNames;
+import static org.grails.gsp.observation.GroovyPageObservationDocumentation.LowCardinalityKeyNames;
 
 /**
  * Default {@link GroovyPageObservationConvention}.
