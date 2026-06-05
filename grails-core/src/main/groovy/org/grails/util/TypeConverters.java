@@ -38,7 +38,6 @@ import grails.util.GrailsStringUtils;
  *
  * @since 8.0
  */
-@SuppressWarnings({ "rawtypes", "unchecked" })
 public final class TypeConverters {
 
     public static final String DEFAULT_DATE_FORMAT = "yyyy-MM-dd HH:mm:ss.S";
@@ -206,7 +205,7 @@ public final class TypeConverters {
         return null;
     }
 
-    public static List toList(Object paramValues) {
+    public static List<Object> toList(Object paramValues) {
         if (paramValues == null) {
             return Collections.emptyList();
         }
@@ -214,7 +213,7 @@ public final class TypeConverters {
             return Arrays.asList((Object[]) paramValues);
         }
         if (paramValues instanceof Collection) {
-            return new ArrayList((Collection) paramValues);
+            return new ArrayList<>((Collection<?>) paramValues);
         }
         return Collections.singletonList(paramValues);
     }
