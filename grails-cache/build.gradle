@@ -54,8 +54,9 @@ dependencies {
 
     testImplementation project(':grails-testing-support-datamapping')
     testImplementation project(':grails-testing-support-web')
-    testImplementation 'org.mockito:mockito-core' // to allow for correct mocking with Mock()
     testImplementation 'org.spockframework:spock-core'
+
+    testRuntimeOnly 'net.bytebuddy:byte-buddy' // Required by Spock's mocking support
 }
 
 apply {
