@@ -24,6 +24,11 @@ on:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+# Exercise SiteMesh 3 by default in the test apps. The example/suite builds read this
+# flag to choose grails-sitemesh3 over the legacy grails-layout; unset it (or set it to
+# anything other than 'true') to fall back to SiteMesh 2.
+env:
+  SITEMESH3_TESTING_ENABLED: 'true'
 jobs:
   validateDependencies:
     name: 'Validate Dependency Versions'
