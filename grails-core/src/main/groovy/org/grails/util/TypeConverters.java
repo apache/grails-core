@@ -57,7 +57,7 @@ public final class TypeConverters {
                     return Byte.parseByte(string);
                 }
             }
-            catch (NumberFormatException e) {}
+            catch (NumberFormatException ignored) {}
         }
         return null;
     }
@@ -86,7 +86,7 @@ public final class TypeConverters {
                     return Integer.parseInt(string);
                 }
             }
-            catch (NumberFormatException e) {}
+            catch (NumberFormatException ignored) {}
         }
         return null;
     }
@@ -99,7 +99,7 @@ public final class TypeConverters {
             try {
                 return Long.parseLong(o.toString());
             }
-            catch (NumberFormatException e) {}
+            catch (NumberFormatException ignored) {}
         }
         return null;
     }
@@ -115,7 +115,7 @@ public final class TypeConverters {
                     return Short.parseShort(string);
                 }
             }
-            catch (NumberFormatException e) {}
+            catch (NumberFormatException ignored) {}
         }
         return null;
     }
@@ -131,7 +131,7 @@ public final class TypeConverters {
                     return Double.parseDouble(string);
                 }
             }
-            catch (NumberFormatException e) {}
+            catch (NumberFormatException ignored) {}
         }
         return null;
     }
@@ -147,7 +147,7 @@ public final class TypeConverters {
                     return Float.parseFloat(string);
                 }
             }
-            catch (NumberFormatException e) {}
+            catch (NumberFormatException ignored) {}
         }
         return null;
     }
@@ -163,7 +163,7 @@ public final class TypeConverters {
                     return GrailsStringUtils.toBoolean(string);
                 }
             }
-            catch (Exception e) {}
+            catch (Exception ignored) {}
         }
         return null;
     }
@@ -188,10 +188,11 @@ public final class TypeConverters {
             return (Date) value;
         }
         if (value != null) {
-            try {
-                return new SimpleDateFormat(format).parse(value.toString());
-            } catch (ParseException e) {
-                // ignore
+            String string = value.toString();
+            if (string != null) {
+                try {
+                    return new SimpleDateFormat(format).parse(string);
+                } catch (ParseException ignored) {}
             }
         }
         return null;

@@ -123,6 +123,29 @@ class TypeConvertingMapTests {
     }
 
     @Test
+    void testConvertersWithValueWhoseToStringReturnsNull() {
+        def value = new NullToString()
+
+        assert TypeConverters.toByte(value) == null
+        assert TypeConverters.toCharacter(value) == null
+        assert TypeConverters.toInteger(value) == null
+        assert TypeConverters.toLong(value) == null
+        assert TypeConverters.toShort(value) == null
+        assert TypeConverters.toDouble(value) == null
+        assert TypeConverters.toFloat(value) == null
+        assert TypeConverters.toBoolean(value) == null
+        assert TypeConverters.toStringValue(value) == null
+        assert TypeConverters.toDate(value) == null
+        assert TypeConverters.toInteger(value, 7) == 7
+        assert TypeConverters.toStringValue(value, 'fallback') == 'fallback'
+    }
+
+    static class NullToString {
+        @Override
+        String toString() { null }
+    }
+
+    @Test
     void testHashCode() {
         assert toTypeConverting(a: 1, b: 2).hashCode() == toTypeConverting(a: 1, b: 2).hashCode()
         assert toTypeConverting([:]).hashCode() == toTypeConverting([:]).hashCode()
