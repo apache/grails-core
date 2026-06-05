@@ -31,9 +31,16 @@ import com.opensymphony.sitemesh.Content;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
+
 import org.springframework.http.MediaType;
 import org.springframework.web.servlet.View;
 
+import org.grails.web.gsp.observation.DefaultGroovyPageObservationConvention;
+import org.grails.web.gsp.observation.GroovyPageObservationContext;
+import org.grails.web.gsp.observation.GroovyPageObservationConvention;
+import org.grails.web.gsp.observation.GroovyPageObservationDocumentation;
 import org.grails.web.servlet.WrappedResponseHolder;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
 import org.grails.web.servlet.mvc.OutputAwareHttpServletResponse;
@@ -47,6 +54,10 @@ public class EmbeddedGrailsLayoutView extends AbstractGrailsView {
     protected View innerView;
 
     public static final String GSP_GRAILS_LAYOUT_PAGE = EmbeddedGrailsLayoutView.class.getName() + ".GSP_GRAILS_LAYOUT_PAGE";
+
+    private static final GroovyPageObservationConvention DEFAULT_OBSERVATION_CONVENTION = new DefaultGroovyPageObservationConvention("gsp.layout");
+    private ObservationRegistry observationRegistry = ObservationRegistry.NOOP;
+    private GroovyPageObservationConvention observationConvention;
 
     public EmbeddedGrailsLayoutView(GroovyPageLayoutFinder groovyPageLayoutFinder, View innerView) {
         this.groovyPageLayoutFinder = groovyPageLayoutFinder;
@@ -85,7 +96,7 @@ public class EmbeddedGrailsLayoutView extends AbstractGrailsView {
                                 LOG.debug("Found layout. Rendering content for layout {} and model {}", decorator.getPage(), model);
                             }
 
-                            decorator.render(content, model, request, response, webRequest.getServletContext());
+                            renderWithLayout(decorator, content, model, request, response, webRequest);
                             return;
                         }
                         break;
@@ -101,6 +112,26 @@ public class EmbeddedGrailsLayoutView extends AbstractGrailsView {
             }
         }
 
+    }
+
+    private void renderWithLayout(SpringMVCViewDecorator decorator, Content content, Map<String, Object> model,
+            HttpServletRequest request, HttpServletResponse response, GrailsWebRequest webRequest) throws Exception {
+        if (this.observationRegistry.isNoop()) {
+            decorator.render(content, model, request, response, webRequest.getServletContext());
+            return;
+        }
+        Observation observation = GroovyPageObservationDocumentation.GSP_LAYOUT.observation(
+                this.observationConvention, DEFAULT_OBSERVATION_CONVENTION,
+                () -> new GroovyPageObservationContext(decorator.getPage()), this.observationRegistry);
+        observation.observeChecked(() -> decorator.render(content, model, request, response, webRequest.getServletContext()));
+    }
+
+    /**
+     * Sets the {@link ObservationRegistry} used to instrument GSP layout (SiteMesh) decoration. Defaults
+     * to {@link ObservationRegistry#NOOP}, in which case layout decoration is not observed.
+     */
+    public void setObservationRegistry(ObservationRegistry observationRegistry) {
+        this.observationRegistry = (observationRegistry != null) ? observationRegistry : ObservationRegistry.NOOP;
     }
 
     protected void beforeDecorating(Content content, Map<String, Object> model, GrailsWebRequest webRequest,
