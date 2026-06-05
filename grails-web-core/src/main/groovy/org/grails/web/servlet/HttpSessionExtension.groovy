@@ -20,6 +20,8 @@ package org.grails.web.servlet
 
 import groovy.transform.CompileStatic
 
+import org.grails.util.TypeConverters
+
 import jakarta.servlet.http.HttpSession
 
 /**
@@ -30,25 +32,119 @@ import jakarta.servlet.http.HttpSession
  * @author Graeme Rocher
  *
  * @since 3.0
- * 
+ *
  */
 @CompileStatic
 class HttpSessionExtension {
-    
+
     static getProperty(HttpSession session, String name) {
         def mp = session.class.metaClass.getMetaProperty(name)
         return mp ? mp.getProperty(session) : session.getAttribute(name)
     }
-    
+
     static propertyMissing(HttpSession session, String name, value) {
         session.setAttribute(name, value)
     }
-        
+
     static getAt(HttpSession session, String name) {
         getProperty(session, name)
     }
-    
+
     static propertyMissing(HttpSession session, String name) {
         getProperty(session, name)
+    }
+
+    static Byte 'byte'(HttpSession session, String name) {
+        TypeConverters.toByte(session.getAttribute(name))
+    }
+
+    static Byte 'byte'(HttpSession session, String name, Integer defaultValue) {
+        TypeConverters.toByte(session.getAttribute(name), defaultValue)
+    }
+
+    static Character 'char'(HttpSession session, String name) {
+        TypeConverters.toCharacter(session.getAttribute(name))
+    }
+
+    static Character 'char'(HttpSession session, String name, Character defaultValue) {
+        TypeConverters.toCharacter(session.getAttribute(name), defaultValue)
+    }
+
+    static Character 'char'(HttpSession session, String name, Integer defaultValue) {
+        TypeConverters.toCharacter(session.getAttribute(name), defaultValue)
+    }
+
+    static Short 'short'(HttpSession session, String name) {
+        TypeConverters.toShort(session.getAttribute(name))
+    }
+
+    static Short 'short'(HttpSession session, String name, Integer defaultValue) {
+        TypeConverters.toShort(session.getAttribute(name), defaultValue)
+    }
+
+    static Integer 'int'(HttpSession session, String name) {
+        TypeConverters.toInteger(session.getAttribute(name))
+    }
+
+    static Integer 'int'(HttpSession session, String name, Integer defaultValue) {
+        TypeConverters.toInteger(session.getAttribute(name), defaultValue)
+    }
+
+    static Long 'long'(HttpSession session, String name) {
+        TypeConverters.toLong(session.getAttribute(name))
+    }
+
+    static Long 'long'(HttpSession session, String name, Long defaultValue) {
+        TypeConverters.toLong(session.getAttribute(name), defaultValue)
+    }
+
+    static Double 'double'(HttpSession session, String name) {
+        TypeConverters.toDouble(session.getAttribute(name))
+    }
+
+    static Double 'double'(HttpSession session, String name, Double defaultValue) {
+        TypeConverters.toDouble(session.getAttribute(name), defaultValue)
+    }
+
+    static Float 'float'(HttpSession session, String name) {
+        TypeConverters.toFloat(session.getAttribute(name))
+    }
+
+    static Float 'float'(HttpSession session, String name, Float defaultValue) {
+        TypeConverters.toFloat(session.getAttribute(name), defaultValue)
+    }
+
+    static Boolean 'boolean'(HttpSession session, String name) {
+        TypeConverters.toBoolean(session.getAttribute(name))
+    }
+
+    // boolean default is presence-based (attribute set), which cannot be expressed from the value alone
+    static Boolean 'boolean'(HttpSession session, String name, Boolean defaultValue) {
+        Object value = session.getAttribute(name)
+        value != null ? TypeConverters.toBoolean(value) : defaultValue
+    }
+
+    static String string(HttpSession session, String name) {
+        TypeConverters.toStringValue(session.getAttribute(name))
+    }
+
+    static String string(HttpSession session, String name, String defaultValue) {
+        TypeConverters.toStringValue(session.getAttribute(name), defaultValue)
+    }
+
+    static List list(HttpSession session, String name) {
+        TypeConverters.toList(session.getAttribute(name))
+    }
+
+    static Date date(HttpSession session, String name) {
+        TypeConverters.toDate(session.getAttribute(name))
+    }
+
+    static Date date(HttpSession session, String name, String format) {
+        TypeConverters.toDate(session.getAttribute(name), format)
+    }
+
+    static Date date(HttpSession session, String name, Collection<String> formats) {
+        TypeConverters.toDate(session.getAttribute(name), formats)
     }
 }
