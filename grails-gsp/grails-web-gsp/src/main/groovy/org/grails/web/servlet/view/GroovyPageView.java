@@ -75,7 +75,7 @@ public class GroovyPageView extends AbstractGrailsView {
     public static final String EXCEPTION_MODEL_KEY = "exception";
     private static boolean developmentMode = Environment.isDevelopmentMode();
 
-    private static final GroovyPageObservationConvention DEFAULT_OBSERVATION_CONVENTION = new DefaultGroovyPageObservationConvention();
+    private static final GroovyPageObservationConvention DEFAULT_OBSERVATION_CONVENTION = new DefaultGroovyPageObservationConvention("gsp.view");
     private ObservationRegistry observationRegistry = ObservationRegistry.NOOP;
     private GroovyPageObservationConvention observationConvention;
 

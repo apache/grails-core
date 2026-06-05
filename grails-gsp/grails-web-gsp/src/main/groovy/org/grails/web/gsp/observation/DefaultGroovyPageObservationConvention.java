@@ -26,26 +26,24 @@ import static org.grails.web.gsp.observation.GroovyPageObservationDocumentation.
 /**
  * Default {@link GroovyPageObservationConvention}.
  *
- * <p>Names the observation {@code gsp.view} and attaches the {@code gsp.view} (view URI)
- * and {@code error} (exception simple name, or {@code "none"}) low-cardinality key values.</p>
+ * <p>Names the observation as configured ({@code gsp.view} / {@code gsp.template} / {@code gsp.layout})
+ * and attaches the {@code gsp.name} (rendered resource) and {@code error} (exception simple name, or
+ * {@code "none"}) low-cardinality key values.</p>
  *
  * @author Grails
  * @since 8.0
  */
 public class DefaultGroovyPageObservationConvention implements GroovyPageObservationConvention {
 
-    private static final String DEFAULT_NAME = "gsp.view";
-
     private static final KeyValue ERROR_NONE = LowCardinalityKeyNames.ERROR.withValue("none");
 
-    private static final String VIEW_UNKNOWN = "unknown";
+    private static final String UNKNOWN = "unknown";
 
     private final String name;
 
-    public DefaultGroovyPageObservationConvention() {
-        this(DEFAULT_NAME);
-    }
-
+    /**
+     * @param name the observation name (e.g. {@code gsp.view}, {@code gsp.template}, {@code gsp.layout})
+     */
     public DefaultGroovyPageObservationConvention(String name) {
         this.name = name;
     }
@@ -57,16 +55,16 @@ public class DefaultGroovyPageObservationConvention implements GroovyPageObserva
 
     @Override
     public String getContextualName(GroovyPageObservationContext context) {
-        return "gsp.view " + viewUri(context);
+        return this.name + " " + resource(context);
     }
 
     @Override
     public KeyValues getLowCardinalityKeyValues(GroovyPageObservationContext context) {
-        return KeyValues.of(view(context), error(context));
+        return KeyValues.of(name(context), error(context));
     }
 
-    protected KeyValue view(GroovyPageObservationContext context) {
-        return LowCardinalityKeyNames.VIEW.withValue(viewUri(context));
+    protected KeyValue name(GroovyPageObservationContext context) {
+        return LowCardinalityKeyNames.NAME.withValue(resource(context));
     }
 
     protected KeyValue error(GroovyPageObservationContext context) {
@@ -76,8 +74,8 @@ public class DefaultGroovyPageObservationConvention implements GroovyPageObserva
                 : ERROR_NONE;
     }
 
-    private static String viewUri(GroovyPageObservationContext context) {
-        String uri = context.getViewUri();
-        return (uri != null && !uri.isEmpty()) ? uri : VIEW_UNKNOWN;
+    private static String resource(GroovyPageObservationContext context) {
+        String resource = context.getResource();
+        return (resource != null && !resource.isEmpty()) ? resource : UNKNOWN;
     }
 }

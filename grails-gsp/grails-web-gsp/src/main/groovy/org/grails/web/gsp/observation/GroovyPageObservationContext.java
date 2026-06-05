@@ -22,7 +22,7 @@ import io.micrometer.observation.Observation;
 
 /**
  * Context that holds information for {@link io.micrometer.observation.Observation} instrumentation
- * of Groovy Server Pages (GSP) view rendering.
+ * of Groovy Server Pages (GSP) rendering — the view, an included template, or a layout.
  *
  * @author Grails
  * @since 8.0
@@ -30,17 +30,18 @@ import io.micrometer.observation.Observation;
  */
 public class GroovyPageObservationContext extends Observation.Context {
 
-    private final String viewUri;
+    private final String resource;
 
-    public GroovyPageObservationContext(String viewUri) {
-        this.viewUri = viewUri;
+    public GroovyPageObservationContext(String resource) {
+        this.resource = resource;
     }
 
     /**
-     * Return the URI of the GSP view being rendered (e.g. {@code /book/show}).
-     * @return the view URI, possibly {@code null}
+     * Return the name of the rendered resource — the view URI (e.g. {@code /book/show}), the
+     * template name, or the layout name, depending on the observation.
+     * @return the resource name, possibly {@code null}
      */
-    public String getViewUri() {
-        return this.viewUri;
+    public String getResource() {
+        return this.resource;
     }
 }

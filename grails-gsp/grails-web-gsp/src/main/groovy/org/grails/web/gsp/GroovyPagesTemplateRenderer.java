@@ -33,7 +33,11 @@ import java.util.concurrent.ConcurrentMap;
 import groovy.text.Template;
 import org.codehaus.groovy.runtime.InvokerHelper;
 
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
+
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.util.Assert;
 import org.springframework.util.ReflectionUtils;
@@ -60,6 +64,10 @@ import org.grails.taglib.TemplateVariableBinding;
 import org.grails.taglib.encoder.OutputEncodingSettings;
 import org.grails.taglib.encoder.WithCodecHelper;
 import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator;
+import org.grails.web.gsp.observation.DefaultGroovyPageObservationConvention;
+import org.grails.web.gsp.observation.GroovyPageObservationContext;
+import org.grails.web.gsp.observation.GroovyPageObservationConvention;
+import org.grails.web.gsp.observation.GroovyPageObservationDocumentation;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
 import org.grails.web.util.GrailsApplicationAttributes;
 
@@ -84,6 +92,9 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
     private Method generateViewMethod;
     private boolean reloadEnabled;
     private boolean cacheEnabled = !Environment.isDevelopmentMode();
+    private static final GroovyPageObservationConvention DEFAULT_OBSERVATION_CONVENTION = new DefaultGroovyPageObservationConvention("gsp.template");
+    private ObservationRegistry observationRegistry = ObservationRegistry.NOOP;
+    private GroovyPageObservationConvention observationConvention;
 
     public void afterPropertiesSet() throws Exception {
         if (scaffoldingTemplateGenerator != null) {
@@ -103,6 +114,22 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
         this.reloadEnabled = reloadEnabled;
     }
 
+    /**
+     * Sets the {@link ObservationRegistry} used to instrument GSP template rendering. Defaults to
+     * {@link ObservationRegistry#NOOP}, in which case template rendering is not observed.
+     */
+    @Autowired(required = false)
+    public void setObservationRegistry(ObservationRegistry observationRegistry) {
+        this.observationRegistry = (observationRegistry != null) ? observationRegistry : ObservationRegistry.NOOP;
+    }
+
+    /**
+     * Sets a custom {@link GroovyPageObservationConvention}. When {@code null} the default convention is used.
+     */
+    public void setObservationConvention(GroovyPageObservationConvention observationConvention) {
+        this.observationConvention = observationConvention;
+    }
+
     public void clearCache() {
         templateCache.clear();
     }
@@ -115,6 +142,18 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
             throw new GrailsTagException("Tag [render] is missing required attribute [template]");
         }
 
+        if (this.observationRegistry.isNoop()) {
+            doRender(templateName, webRequest, pageScope, attrs, body, out);
+            return;
+        }
+        Observation observation = GroovyPageObservationDocumentation.GSP_TEMPLATE.observation(
+                this.observationConvention, DEFAULT_OBSERVATION_CONVENTION,
+                () -> new GroovyPageObservationContext(templateName), this.observationRegistry);
+        observation.observeChecked(() -> doRender(templateName, webRequest, pageScope, attrs, body, out));
+    }
+
+    private void doRender(String templateName, GrailsWebRequest webRequest, TemplateVariableBinding pageScope,
+            Map<String, Object> attrs, Object body, Writer out) throws IOException {
         String uri = webRequest.getAttributes().getTemplateUri(templateName, webRequest.getRequest());
         String contextPath = getStringValue(attrs, "contextPath");
         String pluginName = getStringValue(attrs, "plugin");

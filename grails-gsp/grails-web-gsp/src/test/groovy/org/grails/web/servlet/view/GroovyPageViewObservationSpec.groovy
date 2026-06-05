@@ -79,7 +79,7 @@ class GroovyPageViewObservationSpec extends Specification {
 
         and:
         KeyValues kvs = recorded[0].lowCardinalityKeyValues
-        kvs.find { it.key == 'gsp.view' }?.value == '/book/show'
+        kvs.find { it.key == 'gsp.name' }?.value == '/book/show'
         kvs.find { it.key == 'error' }?.value == 'none'
     }
 

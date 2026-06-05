@@ -26,35 +26,49 @@ import io.micrometer.observation.docs.ObservationDocumentation;
 /**
  * Documented {@link io.micrometer.observation.Observation}s for Groovy Server Pages (GSP) rendering.
  *
+ * <p>Each observation shares the same {@link LowCardinalityKeyNames key names} ({@code gsp.name},
+ * {@code error}); the observation name ({@code gsp.view} / {@code gsp.template} / {@code gsp.layout})
+ * distinguishes what was rendered.</p>
+ *
  * @author Grails
  * @since 8.0
  */
 public enum GroovyPageObservationDocumentation implements ObservationDocumentation {
 
     /**
-     * Observation created around the rendering of a single GSP view.
+     * Rendering of a single GSP view.
      */
-    GSP_VIEW {
-        @Override
-        public Class<? extends ObservationConvention<? extends Observation.Context>> getDefaultConvention() {
-            return DefaultGroovyPageObservationConvention.class;
-        }
+    GSP_VIEW,
 
-        @Override
-        public KeyName[] getLowCardinalityKeyNames() {
-            return LowCardinalityKeyNames.values();
-        }
-    };
+    /**
+     * Rendering of an included GSP template (e.g. {@code <g:render template="..."/>}).
+     */
+    GSP_TEMPLATE,
+
+    /**
+     * Decoration of rendered content by a GSP layout (SiteMesh).
+     */
+    GSP_LAYOUT;
+
+    @Override
+    public Class<? extends ObservationConvention<? extends Observation.Context>> getDefaultConvention() {
+        return DefaultGroovyPageObservationConvention.class;
+    }
+
+    @Override
+    public KeyName[] getLowCardinalityKeyNames() {
+        return LowCardinalityKeyNames.values();
+    }
 
     public enum LowCardinalityKeyNames implements KeyName {
 
         /**
-         * URI of the GSP view being rendered.
+         * Name of the rendered resource (view URI, template name, or layout name).
          */
-        VIEW {
+        NAME {
             @Override
             public String asString() {
-                return "gsp.view";
+                return "gsp.name";
             }
         },
 
