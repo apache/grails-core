@@ -35,6 +35,7 @@ import com.mongodb.MongoCommandException;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoIterable;
 import com.mongodb.client.model.IndexOptions;
+import com.mongodb.connection.ClusterType;
 import org.bson.Document;
 import org.bson.codecs.Codec;
 import org.bson.codecs.configuration.CodecProvider;
@@ -133,6 +134,9 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
     protected final Map<PersistentEntity, String> mongoDatabases = new ConcurrentHashMap<>();
     protected final boolean stateless;
     protected final boolean codecEngine;
+    protected final boolean transactionsEnabled;
+    private volatile Boolean transactionsSupported;
+    private volatile boolean warnedTransactionsUnsupported = false;
     protected CodecRegistry codecRegistry;
     protected final ConfigurableApplicationEventPublisher eventPublisher;
     protected final PlatformTransactionManager transactionManager;
@@ -173,6 +177,7 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
         this.defaultFlushMode = settings.getFlushMode();
         this.stateless = settings.isStateless();
         this.codecEngine = settings.getEngine().equals(MongoConstants.CODEC_ENGINE);
+        this.transactionsEnabled = settings.isTransactional();
         codecRegistry = CodecRegistries.fromRegistries(
                 CodecRegistries.fromProviders(new CodecExtensions(), new PersistentEntityCodeRegistry()),
                 mappingContext.getCodecRegistry(),
@@ -669,6 +674,54 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      */
     public MongoClient getMongoClient() {
         return mongo;
+    }
+
+    /**
+     * Whether GORM should use real MongoDB multi-document transactions (a server-side
+     * {@code ClientSession}) for transactional operations. This is opt-in via
+     * {@code grails.mongodb.transactional} and additionally requires a replica set or sharded
+     * cluster; if a standalone topology is positively detected the feature is disabled (with a
+     * one-time warning) and GORM falls back to the legacy client-side flush behavior.
+     *
+     * @return {@code true} if server-side transactions should be used
+     * @since 8.0
+     */
+    public boolean isTransactionsEnabled() {
+        if (!transactionsEnabled) {
+            return false;
+        }
+        // Once the topology is positively known it does not change at runtime, so latch the result to
+        // avoid recomputing (and possibly flipping) on every transaction begin.
+        Boolean supported = transactionsSupported;
+        if (supported != null) {
+            return supported;
+        }
+        try {
+            ClusterType clusterType = mongo.getClusterDescription().getType();
+            switch (clusterType) {
+                case STANDALONE:
+                    transactionsSupported = Boolean.FALSE;
+                    if (!warnedTransactionsUnsupported) {
+                        warnedTransactionsUnsupported = true;
+                        LOG.warn("grails.mongodb.transactional is enabled but the connected MongoDB topology is standalone, " +
+                                "which does not support multi-document transactions. Falling back to flush-only transaction behavior.");
+                    }
+                    return false;
+                case REPLICA_SET:
+                case SHARDED:
+                case LOAD_BALANCED:
+                    transactionsSupported = Boolean.TRUE;
+                    return true;
+                default:
+                    // UNKNOWN: topology not discovered yet. Assume transactions are available for this
+                    // attempt without latching, so a later definitive determination can still apply.
+                    return true;
+            }
+        }
+        catch (RuntimeException e) {
+            LOG.debug("Could not determine MongoDB cluster topology for transaction support; assuming transactions are available: {}", e.getMessage(), e);
+            return true;
+        }
     }
 
     public String getDatabaseName(PersistentEntity entity) {
