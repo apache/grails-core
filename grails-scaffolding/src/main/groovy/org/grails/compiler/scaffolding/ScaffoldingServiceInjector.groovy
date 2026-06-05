@@ -92,11 +92,15 @@ class ScaffoldingServiceInjector implements GrailsArtefactClassInjector {
                 if (!domainClass) {
                     GrailsASTUtils.error(source, classNode, "Scaffolded service (${classNode.name}) with @Scaffold does not have domain class set.", true)
                 }
-                // Parameterize the superclass (GormService<Domain>) so inherited get()/list()/save()
+                // Parameterize the superclass (e.g. GormService<Domain>) so inherited get()/list()/save()
                 // resolve to the domain type under static compilation, not the GormEntity upper bound.
                 ClassNode parameterizedSuper = superClassNode.getPlainNodeReference()
                 parameterizedSuper.setGenericsTypes(
                     [new GenericsType(GrailsASTUtils.nonGeneric(domainClass))] as GenericsType[])
+                // Injection runs at CANONICALIZATION (after generics resolution), so the generic superclass
+                // signature is only emitted when the class node itself reports usesGenerics; otherwise it is
+                // written raw. Required - do not remove.
+                classNode.setUsingGenerics(true)
                 classNode.setSuperClass(parameterizedSuper)
                 def readOnlyExpression = (ConstantExpression) annotationNode.getMember('readOnly')
                 new ResourceTransform().addConstructor(classNode, domainClass, readOnlyExpression?.getValue()?.asBoolean() ?: false)
