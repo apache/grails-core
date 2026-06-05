@@ -20,6 +20,7 @@ package org.grails.util
 
 import grails.util.TypeConvertingMap
 import groovy.transform.CompileStatic
+import org.apache.grails.core.internal.util.TypeConverters
 import org.junit.jupiter.api.Test
 
 /**

@@ -30,7 +30,7 @@ import groovy.lang.GroovyObjectSupport;
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.codehaus.groovy.util.HashCodeHelper;
 
-import org.grails.util.TypeConverters;
+import org.apache.grails.core.internal.util.TypeConverters;
 
 /**
  * AbstractTypeConvertingMap is a Map with type conversion capabilities.

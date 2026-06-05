@@ -20,7 +20,7 @@ package org.grails.web.servlet
 
 import groovy.transform.CompileStatic
 
-import org.grails.util.TypeConverters
+import org.apache.grails.core.internal.util.TypeConverters
 
 import jakarta.servlet.http.HttpSession
 

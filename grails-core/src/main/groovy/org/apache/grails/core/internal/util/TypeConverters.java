@@ -16,7 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.util;
+package org.apache.grails.core.internal.util;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
