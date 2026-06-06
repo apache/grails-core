@@ -18,17 +18,18 @@
  */
 package org.grails.datastore.gorm
 
+import spock.lang.Issue
 
 import grails.persistence.Entity
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import spock.lang.Issue
 
 /**
  * @author graemerocher
  */
 @Issue('https://github.com/apache/grails-core/issues/2674')
 class FindByDomainInListSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
     void setupSpec() {
         manager.registerDomainClasses(BookAuthor, AuthorBook)
     }
@@ -55,6 +56,7 @@ class FindByDomainInListSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager>
 
 @Entity
 class BookAuthor {
+
     Long id
     String name
 
@@ -73,6 +75,6 @@ class AuthorBook {
     String title
 
     BookAuthor author
-    static belongsTo = [author:BookAuthor]
+    static belongsTo = [author: BookAuthor]
 }
 

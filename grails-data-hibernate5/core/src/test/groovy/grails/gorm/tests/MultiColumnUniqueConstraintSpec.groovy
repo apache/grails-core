@@ -32,15 +32,15 @@ class MultiColumnUniqueConstraintSpec extends GrailsDataTckSpec<GrailsDataHibern
 
     void "test generated unique constraints"() {
         expect:
-        new DomainOne(controller: 'project', action: 'update').save(flush:true)
-        new DomainOne(controller: 'project', action: 'delete').save(flush:true)
-        new DomainOne(controller: 'projectTask', action: 'update').save(flush:true)
+        new DomainOne(controller: 'project', action: 'update').save(flush: true)
+        new DomainOne(controller: 'project', action: 'delete').save(flush: true)
+        new DomainOne(controller: 'projectTask', action: 'update').save(flush: true)
     }
 
     void "test generated unique constraints violation"() {
         when:
-        new DomainOne(controller: 'project', action: 'update').save(flush:true)
-        new DomainOne(controller: 'project', action: 'update').save(flush:true, validate:false)
+        new DomainOne(controller: 'project', action: 'update').save(flush: true)
+        new DomainOne(controller: 'project', action: 'update').save(flush: true, validate: false)
 
         then:
         thrown DataIntegrityViolationException

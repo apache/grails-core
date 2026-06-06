@@ -27,7 +27,7 @@ import org.apache.grails.testing.http.client.HttpClientSupport
 
 /**
  * Integration tests for Grails content negotiation features.
- * 
+ *
  * Tests Accept header-based content negotiation, URL extension-based
  * format selection, respond method, withFormat, and various
  * content type handling scenarios.
@@ -74,7 +74,7 @@ class ContentNegotiationSpec extends Specification implements HttpClientSupport 
 
         then: "response is HTML"
         response.assertStatus(200).contentType.contains('text/html')
-        
+
         and: "content is HTML page"
         response.assertContains('<h1>Content Negotiation</h1>')
                 .assertContains('Hello World')
@@ -88,7 +88,7 @@ class ContentNegotiationSpec extends Specification implements HttpClientSupport 
 
         then: "response is JSON"
         response.assertStatus(200).contentType.contains('json')
-        
+
         and: "content is valid JSON with expected data"
         response.assertJsonContains([message: 'Hello World'])
     }
@@ -99,7 +99,7 @@ class ContentNegotiationSpec extends Specification implements HttpClientSupport 
 
         then: "response is XML"
         response.assertStatus(200).contentType.contains('xml')
-        
+
         and: "content is XML (Grails converter uses map/entry format)"
         response.assertContains('<entry key="message">')
     }
@@ -108,15 +108,15 @@ class ContentNegotiationSpec extends Specification implements HttpClientSupport 
 
     def "respond method returns JSON for Accept application/json"() {
         when: "calling respond action with Accept: application/json"
-        def response = http('/contentNegotiation/respond','Accept': 'application/json')
+        def response = http('/contentNegotiation/respond', 'Accept': 'application/json')
 
         then: "response is JSON"
         response.assertStatus(200).contentType.contains('json')
-        
+
         and: "content is valid JSON"
         response.assertJsonContains([
                 status: 'success',
-                data: [id: 1, name: 'Test Item']
+                data  : [id: 1, name: 'Test Item']
         ])
     }
 
@@ -136,7 +136,7 @@ class ContentNegotiationSpec extends Specification implements HttpClientSupport 
 
         then: "response is JSON array"
         response.assertStatus(200).contentType.contains('json')
-        
+
         and: "content is array with 3 items"
         with(response.jsonList()) {
             size() == 3
@@ -161,7 +161,7 @@ class ContentNegotiationSpec extends Specification implements HttpClientSupport 
 
         then: "response has explicit content type"
         response.assertStatus(200).contentType.contains('application/json')
-        
+
         and: "content is as specified"
         response.assertJson([explicit: true])
     }
@@ -174,12 +174,12 @@ class ContentNegotiationSpec extends Specification implements HttpClientSupport 
 
         then: "error response is returned"
         response.assertStatus(400)
-        
+
         and: "error body is JSON"
         response.assertJson([
-                error: true,
+                error  : true,
                 message: 'Something went wrong',
-                code: 'ERR_001'
+                code   : 'ERR_001'
         ])
     }
 
@@ -189,7 +189,7 @@ class ContentNegotiationSpec extends Specification implements HttpClientSupport 
 
         then: "error response is returned"
         response.assertStatus(400)
-        
+
         and: "error body contains XML elements (Grails converter uses entry key format)"
         response.assertContains('<entry key="error">true</entry>')
     }
@@ -202,11 +202,11 @@ class ContentNegotiationSpec extends Specification implements HttpClientSupport 
 
         then: "response is JSON"
         response.assertStatus(200)
-        
+
         and: "format is recorded in response"
         response.assertJson([
-            format: 'json',
-            value: 42
+                format: 'json',
+                value : 42
         ])
     }
 
@@ -226,7 +226,7 @@ class ContentNegotiationSpec extends Specification implements HttpClientSupport 
 
         then: "response status is OK"
         response.assertStatus(200)
-        
+
         and: "body is JSON"
         response.assertJson([status: 'ok'])
     }
@@ -239,11 +239,11 @@ class ContentNegotiationSpec extends Specification implements HttpClientSupport 
 
         then: "response is successful"
         response.assertStatus(200)
-        
+
         and: "response contains accept header info"
         response.assertJson([
                 acceptHeader: 'application/json',
-                negotiated: 'json'
+                negotiated  : 'json'
         ])
     }
 
@@ -255,11 +255,11 @@ class ContentNegotiationSpec extends Specification implements HttpClientSupport 
 
         then: "response uses default format (JSON)"
         response.assertStatus(200)
-        
+
         and: "response is valid JSON"
         response.assertJson([
                 format: 'unknown',
-                value: 42
+                value : 42
         ])
     }
 
@@ -284,7 +284,7 @@ class ContentNegotiationSpec extends Specification implements HttpClientSupport 
 
         then: "response is JSON"
         response.assertStatus(200).contentType.contains('json')
-        
+
         and: "content is valid"
         response.assertJsonContains([status: 'success'])
     }
@@ -295,7 +295,7 @@ class ContentNegotiationSpec extends Specification implements HttpClientSupport 
 
         then: "response is JSON array"
         response.assertStatus(200).contentType.contains('json')
-        
+
         and: "content is array"
         response.jsonList().size() == 3
     }

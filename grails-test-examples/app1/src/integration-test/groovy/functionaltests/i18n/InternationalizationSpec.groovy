@@ -26,7 +26,7 @@ import org.apache.grails.testing.http.client.HttpClientSupport
 
 /**
  * Comprehensive integration tests for internationalization (i18n) features.
- * 
+ *
  * Tests cover:
  * - Locale switching (English, German, French)
  * - Message resolution from property files
@@ -49,8 +49,8 @@ class InternationalizationSpec extends Specification implements HttpClientSuppor
 
         then:
         response.assertJson(200, [
-                code: 'app.welcome',
-                locale: 'en',
+                code   : 'app.welcome',
+                locale : 'en',
                 message: 'Welcome to the Application'
 
         ])
@@ -62,8 +62,8 @@ class InternationalizationSpec extends Specification implements HttpClientSuppor
 
         then:
         response.assertJson(200, [
-                code: 'app.welcome',
-                locale: 'de',
+                code   : 'app.welcome',
+                locale : 'de',
                 message: 'Willkommen in der Anwendung'
         ])
     }
@@ -74,8 +74,8 @@ class InternationalizationSpec extends Specification implements HttpClientSuppor
 
         then:
         response.assertJson(200, [
-                code: 'app.welcome',
-                locale: 'fr',
+                code   : 'app.welcome',
+                locale : 'fr',
                 message: "Bienvenue dans l'application"
         ])
     }
@@ -114,7 +114,7 @@ class InternationalizationSpec extends Specification implements HttpClientSuppor
 
         then:
         response.assertJsonContains(200, [
-                count: 0,
+                count  : 0,
                 message: 'You have no items.'
         ])
     }
@@ -125,7 +125,7 @@ class InternationalizationSpec extends Specification implements HttpClientSuppor
 
         then:
         response.assertJsonContains(200, [
-                count: 1,
+                count  : 1,
                 message: 'You have one item.'
         ])
     }
@@ -136,7 +136,7 @@ class InternationalizationSpec extends Specification implements HttpClientSuppor
 
         then:
         response.assertJsonContains(200, [
-                count: 5,
+                count  : 5,
                 message: 'You have 5 items.'
         ])
     }
@@ -252,10 +252,10 @@ class InternationalizationSpec extends Specification implements HttpClientSuppor
 
         then:
         response.assertJsonContains(200, [
-            messages: [
-                    paginate_prev: 'Vorherige',
-                    paginate_next: 'Nächste'
-            ]
+                messages: [
+                        paginate_prev: 'Vorherige',
+                        paginate_next: 'Nächste'
+                ]
         ])
     }
 
@@ -281,7 +281,7 @@ class InternationalizationSpec extends Specification implements HttpClientSuppor
         then:
         response.assertJsonContains(200, [
                 messages: [
-                        welcome: 'Welcome to the Application',
+                        welcome : 'Welcome to the Application',
                         greeting: 'Hello, User!',
                         farewell: 'Goodbye, User. See you soon!'
                 ]
@@ -295,7 +295,7 @@ class InternationalizationSpec extends Specification implements HttpClientSuppor
         then:
         response.assertJsonContains(200, [
                 messages: [
-                        welcome: 'Willkommen in der Anwendung',
+                        welcome : 'Willkommen in der Anwendung',
                         greeting: 'Hallo, User!',
                         farewell: 'Auf Wiedersehen, User. Bis bald!'
                 ]
@@ -311,7 +311,7 @@ class InternationalizationSpec extends Specification implements HttpClientSuppor
         then:
         response.assertJsonContains(200, [
                 language: 'de',
-                country: 'DE'
+                country : 'DE'
         ])
     }
 
@@ -331,7 +331,7 @@ class InternationalizationSpec extends Specification implements HttpClientSuppor
 
     def "test locale from Accept-Language header - French"() {
         when:
-        def response = http('/i18nTest/getLocaleFromHeader','Accept-Language': 'fr-FR')
+        def response = http('/i18nTest/getLocaleFromHeader', 'Accept-Language': 'fr-FR')
 
         then:
         response.assertStatus(200)
@@ -370,7 +370,7 @@ class InternationalizationSpec extends Specification implements HttpClientSuppor
 
         then: "special characters should be handled correctly"
         response.assertJsonContains(200, [
-                arg: 'élève',
+                arg    : 'élève',
                 message: 'Hello, élève!'
         ])
     }
