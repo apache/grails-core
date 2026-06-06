@@ -18,8 +18,6 @@
  */
 package org.grails.plugins.web.taglib
 
-import java.nio.CharBuffer
-
 import org.sitemesh.DecoratorSelector
 import org.sitemesh.SiteMeshContext
 import org.sitemesh.content.Content
@@ -35,9 +33,12 @@ import org.springframework.web.servlet.ViewResolver
 
 import grails.artefact.TagLibrary
 import grails.gsp.TagLib
+import org.grails.buffer.FastStringWriter
+import org.grails.buffer.StreamCharBuffer
 import org.grails.encoder.CodecLookup
 import org.grails.encoder.Encoder
 import org.grails.plugins.sitemesh3.GrailsSiteMeshViewContext
+import org.grails.plugins.sitemesh3.Sitemesh3CapturedPage
 import org.grails.web.util.WebUtils
 
 /**
@@ -76,15 +77,52 @@ class RenderSitemeshTagLib implements TagLibrary {
     // causing "request is not active anymore" errors.
     Closure applyLayout = { Map attrs, body ->
         String savedAttribute = request.getAttribute(WebUtils.LAYOUT_ATTRIBUTE)
+        // Save the request-scoped captured page (the one being decorated by the
+        // outer SiteMesh render) and push a fresh one for the duration of the
+        // body() render. The body of <g:applyLayout> is plain markup (e.g. the
+        // grails-fields embedded fieldset content) with no <g:capture*> taglibs,
+        // so its content must be wired into the page explicitly rather than
+        // relying on capture. Restoring the outer page afterwards prevents the
+        // body fragment from clobbering the outer page's body/title/properties.
+        Object savedCapturedPage = request.getAttribute(Sitemesh3CapturedPage.REQUEST_ATTRIBUTE)
         GrailsSiteMeshViewContext context = new GrailsSiteMeshViewContext(
                 'text/html', request, response, servletContext,
                 contentProcessor, new ResponseMetaData(), false,
                 viewResolver, request.getLocale())
         try {
-            Content content = contentProcessor.build(CharBuffer.wrap(body()), context)
+            Sitemesh3CapturedPage bodyPage = new Sitemesh3CapturedPage()
+            request.setAttribute(Sitemesh3CapturedPage.REQUEST_ATTRIBUTE, bodyPage)
+
+            Object renderedBody = body()
+            StreamCharBuffer bodyBuffer
+            if (renderedBody instanceof StreamCharBuffer) {
+                bodyBuffer = (StreamCharBuffer) renderedBody
+            } else {
+                FastStringWriter stringWriter = new FastStringWriter()
+                stringWriter.print(renderedBody)
+                bodyBuffer = stringWriter.buffer
+            }
+            bodyBuffer.setPreferSubChunkWhenWritingToOtherBuffer(true)
+            bodyPage.setBodyBuffer(bodyBuffer)
+
+            // Expose <g:applyLayout params="[...]"> entries as page properties so
+            // the layout can read them via <g:pageProperty name="..."/>. This
+            // mirrors SiteMesh 2's GrailsLayoutTagLib, which calls
+            // page.addProperty(k, v) for each params entry.
+            Map params = attrs.params instanceof Map ? (Map) attrs.params : null
+            if (params) {
+                params.each { k, v ->
+                    if (k != null && v != null) {
+                        bodyPage.addProperty(k.toString(), v.toString())
+                    }
+                }
+            }
+
+            Content content = bodyPage
             if (attrs.name) {
                 request.setAttribute(WebUtils.LAYOUT_ATTRIBUTE, attrs.name)
             }
+            boolean decorated = false
             String[] decoratorPaths = decoratorSelector.selectDecoratorPaths(content, context)
             for (String decoratorPath : decoratorPaths) {
                 Content next = context.decorate(decoratorPath, content)
@@ -92,11 +130,22 @@ class RenderSitemeshTagLib implements TagLibrary {
                     break
                 }
                 content = next
+                decorated = true
             }
-            if (content != null) {
+            if (decorated) {
                 content.getData().writeValueTo(out)
+            } else {
+                // No layout was resolved: emit the undecorated body verbatim,
+                // matching SiteMesh 2's GrailsLayoutTagLib which writes the raw
+                // content when no decorator is found.
+                out << bodyBuffer
             }
         } finally {
+            if (savedCapturedPage != null) {
+                request.setAttribute(Sitemesh3CapturedPage.REQUEST_ATTRIBUTE, savedCapturedPage)
+            } else {
+                request.removeAttribute(Sitemesh3CapturedPage.REQUEST_ATTRIBUTE)
+            }
             if (savedAttribute != null) {
                 request.setAttribute(WebUtils.LAYOUT_ATTRIBUTE, savedAttribute)
             } else {
