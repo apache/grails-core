@@ -40,7 +40,7 @@ class GroovyPagesTemplateEngineObservationSpec extends Specification {
     private SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry()
 
     /** Engine whose actual compilation returns a stub, wired with a recording registry + meter registry. */
-    private GroovyPagesTemplateEngine engine() {
+    private GroovyPagesTemplateEngine engine(Closure compileHook = null) {
         ObservationRegistry observationRegistry = ObservationRegistry.create()
         observationRegistry.observationConfig().observationHandler(new ObservationHandler<Observation.Context>() {
             @Override boolean supportsContext(Observation.Context context) { true }
@@ -50,6 +50,10 @@ class GroovyPagesTemplateEngineObservationSpec extends Specification {
         GroovyPagesTemplateEngine engine = new GroovyPagesTemplateEngine() {
             @Override
             protected GroovyPageMetaInfo buildPageMetaInfo(InputStream inputStream, Resource res, String pageName) {
+                // Let a test re-enter createTemplate mid-compile to exercise the reentrancy path.
+                if (compileHook != null) {
+                    compileHook.call(pageName)
+                }
                 return new GroovyPageMetaInfo()
             }
         }
@@ -100,5 +104,28 @@ class GroovyPagesTemplateEngineObservationSpec extends Specification {
         cacheCount('miss') == 1d
         cacheCount('hit') == 1d
         recorded.count { it.name == 'gsp.compile' } == 1
+    }
+
+    void "a reentrant cache hit during compilation does not mask the outer miss"() {
+        given: "an engine that, while compiling the outer page, re-renders an already-cached inner page"
+        Resource innerResource = gsp()
+        List<GroovyPagesTemplateEngine> engineRef = []
+        GroovyPagesTemplateEngine engine = engine({ String pageName ->
+            if (pageName == '/page/outer') {
+                engineRef[0].createTemplate(innerResource, '/layout/inner', true)
+            }
+        })
+        engineRef << engine
+
+        and: "the inner page is already cached, so its reentrant lookup will be a hit"
+        engine.createTemplate(innerResource, '/layout/inner', true)
+
+        when: "the outer page is compiled (a miss) and re-enters the cached inner lookup mid-compile"
+        engine.createTemplate(gsp(), '/page/outer', true)
+
+        then: "the outer compile is still counted as a miss; only the reentrant inner lookup is a hit"
+        cacheCount('miss') == 2d
+        cacheCount('hit') == 1d
+        recorded.count { it.name == 'gsp.compile' } == 2
     }
 }

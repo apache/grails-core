@@ -114,7 +114,7 @@ public class EmbeddedGrailsLayoutView extends AbstractGrailsView {
 
     }
 
-    private void renderWithLayout(SpringMVCViewDecorator decorator, Content content, Map<String, Object> model,
+    protected void renderWithLayout(SpringMVCViewDecorator decorator, Content content, Map<String, Object> model,
             HttpServletRequest request, HttpServletResponse response, GrailsWebRequest webRequest) throws Exception {
         if (this.observationRegistry.isNoop()) {
             decorator.render(content, model, request, response, webRequest.getServletContext());

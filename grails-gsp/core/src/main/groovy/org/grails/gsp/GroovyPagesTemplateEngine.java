@@ -121,9 +121,6 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
     private ObservationRegistry observationRegistry = ObservationRegistry.NOOP;
     private Counter cacheHits;
     private Counter cacheMisses;
-    // Set by buildPageMetaInfo (a compile) so the cacheable path can distinguish a true cache hit
-    // (no compile) from a miss/recompile accurately, rather than an inexact pageCache.containsKey() check.
-    private final ThreadLocal<Boolean> compiledOnThread = ThreadLocal.withInitial(() -> Boolean.FALSE);
 
     private GroovyPageLocator groovyPageLocator = new DefaultGroovyPageLocator();
 
@@ -158,7 +155,7 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
         @Override
         protected boolean hasExpired(long timeout, Object cacheRequestObject) {
             GroovyPageMetaInfo meta = getValue();
-            Resource resource = (Resource) cacheRequestObject;
+            Resource resource = ((PageCompileRequest) cacheRequestObject).resource;
             return meta == null || isGroovyPageReloadable(resource, meta);
         }
 
@@ -168,8 +165,26 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
             if (oldValue != null) {
                 oldValue.removePageMetaClass();
             }
-            Resource resource = (Resource) cacheRequestObject;
-            return buildPageMetaInfo(resource, pageName);
+            // updateValue is invoked by CacheEntry only on a cold/expired entry, so reaching here
+            // means this lookup actually compiled — record it on the per-call request (a cache miss).
+            PageCompileRequest request = (PageCompileRequest) cacheRequestObject;
+            request.compiled = true;
+            return buildPageMetaInfo(request.resource, pageName);
+        }
+    }
+
+    /**
+     * Per-{@code createTemplate} carrier passed through {@link CacheEntry} as the cache-request object.
+     * Holds the resource to (re)compile and a one-shot flag that {@code updateValue} sets when it
+     * actually compiles, letting the cacheable path record an accurate hit/miss without a thread-local
+     * side-channel (which mis-counted under reentrant compilation and lingered on pooled threads).
+     */
+    private static final class PageCompileRequest {
+        final Resource resource;
+        boolean compiled;
+
+        PageCompileRequest(Resource resource) {
+            this.resource = resource;
         }
     }
 
@@ -315,13 +330,13 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
     protected Template createTemplate(Resource resource, final String pageName, final boolean cacheable) throws IOException {
         GroovyPageMetaInfo meta;
         if (cacheable) {
-            this.compiledOnThread.set(Boolean.FALSE);
+            PageCompileRequest compileRequest = new PageCompileRequest(resource);
             meta = CacheEntry.getValue(pageCache, pageName, -1, null,
                     new GroovyPagesTemplateEngineCallable(new GroovyPagesTemplateEngineCacheEntry(pageName)),
-                    true, resource);
+                    true, compileRequest);
             // A hit is a cacheable lookup that did NOT recompile (CacheEntry served a live entry);
-            // buildPageMetaInfo flips the flag whenever it actually compiled (cold or expired).
-            recordCacheAccess(!this.compiledOnThread.get());
+            // updateValue sets compiled=true on the request whenever it actually compiled (cold or expired).
+            recordCacheAccess(!compileRequest.compiled);
         } else {
             meta = buildPageMetaInfo(resource, pageName);
         }
@@ -502,9 +517,6 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
     }
 
     protected GroovyPageMetaInfo buildPageMetaInfo(Resource resource, String pageName) throws IOException {
-        // Mark that a compile occurred on this thread so the cacheable createTemplate() path can
-        // count an accurate hit/miss (a recompile of an expired entry is a miss, not a hit).
-        this.compiledOnThread.set(Boolean.TRUE);
         if (this.observationRegistry.isNoop()) {
             return doBuildPageMetaInfo(resource, pageName);
         }
