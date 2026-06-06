@@ -26,14 +26,13 @@ import groovy.text.Template;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.springframework.core.io.Resource;
 import org.springframework.scripting.ScriptSource;
-
-import io.micrometer.observation.Observation;
-import io.micrometer.observation.ObservationRegistry;
 
 import grails.util.Environment;
 import grails.util.GrailsUtil;

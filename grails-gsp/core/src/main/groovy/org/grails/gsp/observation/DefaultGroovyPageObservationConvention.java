@@ -80,9 +80,9 @@ public class DefaultGroovyPageObservationConvention implements GroovyPageObserva
 
     protected KeyValue error(GroovyPageObservationContext context) {
         Throwable error = context.getError();
-        return (error != null)
-                ? LowCardinalityKeyNames.ERROR.withValue(error.getClass().getSimpleName())
-                : ERROR_NONE;
+        return (error != null) ?
+                LowCardinalityKeyNames.ERROR.withValue(error.getClass().getSimpleName()) :
+                ERROR_NONE;
     }
 
     private static String resource(GroovyPageObservationContext context) {

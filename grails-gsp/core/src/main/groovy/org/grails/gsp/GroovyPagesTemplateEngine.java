@@ -40,6 +40,10 @@ import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.control.CompilerConfiguration;
 import org.codehaus.groovy.runtime.IOGroovyMethods;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -58,11 +62,6 @@ import org.springframework.scripting.ScriptSource;
 import org.springframework.scripting.support.ResourceScriptSource;
 import org.springframework.util.Assert;
 
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.observation.Observation;
-import io.micrometer.observation.ObservationRegistry;
-
 import grails.config.Config;
 import grails.config.Settings;
 import grails.core.GrailsApplication;
@@ -75,16 +74,16 @@ import org.grails.core.artefact.DomainClassArtefactHandler;
 import org.grails.core.exceptions.DefaultErrorsPrinter;
 import org.grails.exceptions.ExceptionUtils;
 import org.grails.gsp.compiler.GroovyPageParser;
-import org.grails.gsp.observation.DefaultGroovyPageObservationConvention;
-import org.grails.gsp.observation.GroovyPageObservationContext;
-import org.grails.gsp.observation.GroovyPageObservationConvention;
-import org.grails.gsp.observation.GroovyPageObservationDocumentation;
 import org.grails.gsp.io.DefaultGroovyPageLocator;
 import org.grails.gsp.io.GroovyPageCompiledScriptSource;
 import org.grails.gsp.io.GroovyPageLocator;
 import org.grails.gsp.io.GroovyPageResourceScriptSource;
 import org.grails.gsp.io.GroovyPageScriptSource;
 import org.grails.gsp.jsp.TagLibraryResolver;
+import org.grails.gsp.observation.DefaultGroovyPageObservationConvention;
+import org.grails.gsp.observation.GroovyPageObservationContext;
+import org.grails.gsp.observation.GroovyPageObservationConvention;
+import org.grails.gsp.observation.GroovyPageObservationDocumentation;
 import org.grails.taglib.TagLibraryLookup;
 
 /**

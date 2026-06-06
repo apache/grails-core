@@ -27,6 +27,7 @@ import groovy.lang.GroovyObject;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import io.micrometer.observation.ObservationRegistry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -40,15 +41,13 @@ import org.springframework.web.servlet.View;
 import org.springframework.web.servlet.view.AbstractUrlBasedView;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
-import io.micrometer.observation.ObservationRegistry;
-
 import grails.util.CacheEntry;
 import grails.util.GrailsStringUtils;
 import grails.util.GrailsUtil;
 import org.grails.gsp.GroovyPagesTemplateEngine;
 import org.grails.gsp.io.GroovyPageScriptSource;
-import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator;
 import org.grails.gsp.observation.GroovyPageObservationConvention;
+import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
 
 /**
@@ -249,9 +248,9 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
         ObservationRegistry registry = this.observationRegistry;
         if (registry == null) {
             ApplicationContext ctx = getApplicationContext();
-            registry = (ctx != null)
-                    ? ctx.getBeanProvider(ObservationRegistry.class).getIfAvailable(() -> ObservationRegistry.NOOP)
-                    : ObservationRegistry.NOOP;
+            registry = (ctx != null) ?
+                    ctx.getBeanProvider(ObservationRegistry.class).getIfAvailable(() -> ObservationRegistry.NOOP) :
+                    ObservationRegistry.NOOP;
             // Benign race: two threads may both resolve and write the volatile field before it is set.
             // Resolution is idempotent (same context bean, or NOOP), so the duplicate is harmless and
             // avoiding it isn't worth synchronizing this hot path.

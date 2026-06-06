@@ -28,11 +28,10 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import com.opensymphony.module.sitemesh.RequestConstants;
 import com.opensymphony.sitemesh.Content;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationRegistry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.springframework.http.MediaType;
 import org.springframework.web.servlet.View;

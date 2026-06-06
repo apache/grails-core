@@ -30,7 +30,6 @@ import com.opensymphony.module.sitemesh.Factory;
 import com.opensymphony.module.sitemesh.factory.DefaultFactory;
 import com.opensymphony.sitemesh.ContentProcessor;
 import com.opensymphony.sitemesh.compatability.PageParser2ContentProcessor;
-
 import io.micrometer.observation.ObservationRegistry;
 
 import org.springframework.beans.factory.DisposableBean;
