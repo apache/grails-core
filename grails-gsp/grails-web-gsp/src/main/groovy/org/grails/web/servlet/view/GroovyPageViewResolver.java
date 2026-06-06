@@ -252,6 +252,9 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
             registry = (ctx != null)
                     ? ctx.getBeanProvider(ObservationRegistry.class).getIfAvailable(() -> ObservationRegistry.NOOP)
                     : ObservationRegistry.NOOP;
+            // Benign race: two threads may both resolve and write the volatile field before it is set.
+            // Resolution is idempotent (same context bean, or NOOP), so the duplicate is harmless and
+            // avoiding it isn't worth synchronizing this hot path.
             this.observationRegistry = registry;
         }
         return registry;
