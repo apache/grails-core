@@ -121,6 +121,9 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
     private ObservationRegistry observationRegistry = ObservationRegistry.NOOP;
     private Counter cacheHits;
     private Counter cacheMisses;
+    // Set by buildPageMetaInfo (a compile) so the cacheable path can distinguish a true cache hit
+    // (no compile) from a miss/recompile accurately, rather than an inexact pageCache.containsKey() check.
+    private final ThreadLocal<Boolean> compiledOnThread = ThreadLocal.withInitial(() -> Boolean.FALSE);
 
     private GroovyPageLocator groovyPageLocator = new DefaultGroovyPageLocator();
 
@@ -312,10 +315,13 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
     protected Template createTemplate(Resource resource, final String pageName, final boolean cacheable) throws IOException {
         GroovyPageMetaInfo meta;
         if (cacheable) {
-            recordCacheAccess(pageCache.containsKey(pageName));
+            this.compiledOnThread.set(Boolean.FALSE);
             meta = CacheEntry.getValue(pageCache, pageName, -1, null,
                     new GroovyPagesTemplateEngineCallable(new GroovyPagesTemplateEngineCacheEntry(pageName)),
                     true, resource);
+            // A hit is a cacheable lookup that did NOT recompile (CacheEntry served a live entry);
+            // buildPageMetaInfo flips the flag whenever it actually compiled (cold or expired).
+            recordCacheAccess(!this.compiledOnThread.get());
         } else {
             meta = buildPageMetaInfo(resource, pageName);
         }
@@ -496,6 +502,9 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
     }
 
     protected GroovyPageMetaInfo buildPageMetaInfo(Resource resource, String pageName) throws IOException {
+        // Mark that a compile occurred on this thread so the cacheable createTemplate() path can
+        // count an accurate hit/miss (a recompile of an expired entry is a miss, not a hit).
+        this.compiledOnThread.set(Boolean.TRUE);
         if (this.observationRegistry.isNoop()) {
             return doBuildPageMetaInfo(resource, pageName);
         }

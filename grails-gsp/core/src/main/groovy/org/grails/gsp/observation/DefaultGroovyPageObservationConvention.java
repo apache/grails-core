@@ -39,7 +39,18 @@ public class DefaultGroovyPageObservationConvention implements GroovyPageObserva
 
     private static final String UNKNOWN = "unknown";
 
+    private static final String DEFAULT_NAME = "gsp";
+
     private final String name;
+
+    /**
+     * Creates a convention with the generic {@code "gsp"} name. Exists so this class can satisfy
+     * {@link io.micrometer.observation.docs.ObservationDocumentation#getDefaultConvention()} via
+     * reflection; instrumentation sites always pass an explicitly-named instance.
+     */
+    public DefaultGroovyPageObservationConvention() {
+        this(DEFAULT_NAME);
+    }
 
     /**
      * @param name the observation name (e.g. {@code gsp.view}, {@code gsp.template}, {@code gsp.layout})
