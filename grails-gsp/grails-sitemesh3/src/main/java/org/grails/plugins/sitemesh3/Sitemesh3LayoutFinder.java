@@ -106,6 +106,19 @@ public class Sitemesh3LayoutFinder implements DecoratorSelector<SiteMeshContext>
         }
         HttpServletRequest request = ((WebAppContext) context).getRequest();
 
+        // A controller's "render template:" (or "render view:" with renderView
+        // disabled) renders the GSP directly and sets renderView=false. Such
+        // partial/template renders must not be decorated with a layout, matching
+        // SiteMesh 2 behaviour (see GrailsLayoutSelector). When an explicit
+        // layout was requested (layout: 'x') the LAYOUT_ATTRIBUTE is set and the
+        // checks below still apply it.
+        if (request.getAttribute(WebUtils.LAYOUT_ATTRIBUTE) == null) {
+            GrailsWebRequest webRequest = GrailsWebRequest.lookup(request);
+            if (webRequest != null && !webRequest.isRenderView()) {
+                return new String[0];
+            }
+        }
+
         Object layoutAttribute = request.getAttribute(WebUtils.LAYOUT_ATTRIBUTE);
         String layoutName = layoutAttribute == null ? null : layoutAttribute.toString();
 
