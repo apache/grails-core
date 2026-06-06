@@ -134,6 +134,14 @@ public class EmbeddedGrailsLayoutView extends AbstractGrailsView {
         this.observationRegistry = (observationRegistry != null) ? observationRegistry : ObservationRegistry.NOOP;
     }
 
+    /**
+     * Sets a custom {@link GroovyPageObservationConvention} for layout-decoration observations. When
+     * {@code null} the default convention is used.
+     */
+    public void setObservationConvention(GroovyPageObservationConvention observationConvention) {
+        this.observationConvention = observationConvention;
+    }
+
     protected void beforeDecorating(Content content, Map<String, Object> model, GrailsWebRequest webRequest,
                                     HttpServletRequest request, HttpServletResponse response) {
         applyMetaHttpEquivContentType(content, response);

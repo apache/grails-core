@@ -152,7 +152,7 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
         observation.observeChecked(() -> doRender(templateName, webRequest, pageScope, attrs, body, out));
     }
 
-    private void doRender(String templateName, GrailsWebRequest webRequest, TemplateVariableBinding pageScope,
+    protected void doRender(String templateName, GrailsWebRequest webRequest, TemplateVariableBinding pageScope,
             Map<String, Object> attrs, Object body, Writer out) throws IOException {
         String uri = webRequest.getAttributes().getTemplateUri(templateName, webRequest.getRequest());
         String contextPath = getStringValue(attrs, "contextPath");
