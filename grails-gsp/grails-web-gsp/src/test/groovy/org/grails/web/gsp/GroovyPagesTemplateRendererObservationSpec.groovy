@@ -76,10 +76,10 @@ class GroovyPagesTemplateRendererObservationSpec extends Specification {
         recorded[0].name == 'gsp.template'
         recorded[0].contextualName == 'gsp.template /shared/_card'
 
-        and:
-        KeyValues kvs = recorded[0].lowCardinalityKeyValues
-        kvs.find { it.key == 'gsp.name' }?.value == '/shared/_card'
-        kvs.find { it.key == 'error' }?.value == 'none'
+        and: "gsp.name is high-cardinality (span only); error is the low-cardinality metric tag"
+        recorded[0].highCardinalityKeyValues.find { it.key == 'gsp.name' }?.value == '/shared/_card'
+        recorded[0].lowCardinalityKeyValues.find { it.key == 'gsp.name' } == null
+        recorded[0].lowCardinalityKeyValues.find { it.key == 'error' }?.value == 'none'
     }
 
     void "no observation is recorded when the registry is NOOP (zero overhead)"() {

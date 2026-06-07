@@ -27,6 +27,7 @@ import groovy.lang.GroovyObject;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.observation.ObservationRegistry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -46,6 +47,7 @@ import grails.util.GrailsStringUtils;
 import grails.util.GrailsUtil;
 import org.grails.gsp.GroovyPagesTemplateEngine;
 import org.grails.gsp.io.GroovyPageScriptSource;
+import org.grails.gsp.observation.GroovyPageCacheMetrics;
 import org.grails.gsp.observation.GroovyPageObservationConvention;
 import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
@@ -71,6 +73,7 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
     private boolean resolveJspView = false;
     private volatile ObservationRegistry observationRegistry;
     private GroovyPageObservationConvention observationConvention;
+    private GroovyPageCacheMetrics cacheMetrics = GroovyPageCacheMetrics.NOOP;
 
     /**
      * Constructor.
@@ -99,6 +102,8 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
         }
 
         if (!allowGrailsViewCaching) {
+            // view caching disabled (development) → the View is rebuilt every time
+            cacheMetrics.record(false);
             return createGrailsView(viewName);
         }
 
@@ -124,6 +129,8 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
 
         View view = null;
         if (entry == null) {
+            // no cache entry yet → this lookup builds the View (a miss)
+            cacheMetrics.record(false);
             try {
                 return CacheEntry.getValue(viewCache, viewCacheKey, cacheTimeout, updater);
             }
@@ -134,6 +141,8 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
             }
         }
 
+        // existing entry served from cache (never expires by default) → a hit
+        cacheMetrics.record(true);
         try {
             view = entry.getValue(cacheTimeout, updater, true, null);
         } catch (WrappedInitializationException e) {
@@ -272,6 +281,16 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
      */
     public void setObservationConvention(GroovyPageObservationConvention observationConvention) {
         this.observationConvention = observationConvention;
+    }
+
+    /**
+     * Sets the {@link MeterRegistry} used to record view-resolver cache hits/misses as the
+     * {@code gsp.cache} counter ({@code cache=view}). This is one of the caches actually consulted on
+     * the request path in a deployed app. When unset, cache metrics are disabled.
+     */
+    @Autowired(required = false)
+    public void setMeterRegistry(MeterRegistry meterRegistry) {
+        this.cacheMetrics = GroovyPageCacheMetrics.forCache(meterRegistry, "view");
     }
 
     protected View createFallbackView(String viewName) throws Exception {

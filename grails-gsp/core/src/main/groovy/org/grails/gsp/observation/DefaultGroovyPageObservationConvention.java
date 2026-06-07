@@ -21,14 +21,17 @@ package org.grails.gsp.observation;
 import io.micrometer.common.KeyValue;
 import io.micrometer.common.KeyValues;
 
+import static org.grails.gsp.observation.GroovyPageObservationDocumentation.HighCardinalityKeyNames;
 import static org.grails.gsp.observation.GroovyPageObservationDocumentation.LowCardinalityKeyNames;
 
 /**
  * Default {@link GroovyPageObservationConvention}.
  *
- * <p>Names the observation as configured ({@code gsp.view} / {@code gsp.template} / {@code gsp.layout})
- * and attaches the {@code gsp.name} (rendered resource) and {@code error} (exception simple name, or
- * {@code "none"}) low-cardinality key values.</p>
+ * <p>Names the observation as configured ({@code gsp.view} / {@code gsp.template} / {@code gsp.layout}),
+ * attaches {@code error} (exception simple name, or {@code "none"}) as the only <em>low-cardinality</em>
+ * key value (the only one that becomes a metric tag), and {@code gsp.name} (the rendered resource) as a
+ * <em>high-cardinality</em> key value, so it appears on the span/trace but does not explode the metric's
+ * tag set on applications with many GSPs.</p>
  *
  * @author Grails
  * @since 8.0
@@ -71,11 +74,16 @@ public class DefaultGroovyPageObservationConvention implements GroovyPageObserva
 
     @Override
     public KeyValues getLowCardinalityKeyValues(GroovyPageObservationContext context) {
-        return KeyValues.of(name(context), error(context));
+        return KeyValues.of(error(context));
+    }
+
+    @Override
+    public KeyValues getHighCardinalityKeyValues(GroovyPageObservationContext context) {
+        return KeyValues.of(name(context));
     }
 
     protected KeyValue name(GroovyPageObservationContext context) {
-        return LowCardinalityKeyNames.NAME.withValue(resource(context));
+        return HighCardinalityKeyNames.NAME.withValue(resource(context));
     }
 
     protected KeyValue error(GroovyPageObservationContext context) {

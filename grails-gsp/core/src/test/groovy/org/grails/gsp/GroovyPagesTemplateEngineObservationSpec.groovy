@@ -18,8 +18,6 @@
  */
 package org.grails.gsp
 
-import io.micrometer.common.KeyValues
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.micrometer.observation.Observation
 import io.micrometer.observation.ObservationHandler
 import io.micrometer.observation.ObservationRegistry
@@ -31,16 +29,20 @@ import org.springframework.core.io.Resource
 import spock.lang.Specification
 
 /**
- * Tests the {@code gsp.compile} observation and {@code gsp.template.cache} hit/miss counters on
- * {@link GroovyPagesTemplateEngine}. The real GSP compilation is overridden so the test stays a unit.
+ * Tests the {@code gsp.compile} observation on {@link GroovyPagesTemplateEngine}. The real GSP
+ * compilation is overridden so the test stays a unit.
+ *
+ * <p>Note: GSP cache hit/miss is no longer instrumented here. The engine's runtime-compile cache is
+ * a development-only signal (a precompiled production deployment bypasses it), so the operational
+ * {@code gsp.cache} hit/miss counters live on the request-path caches in {@code GroovyPagesTemplateRenderer}
+ * and {@code GroovyPageViewResolver} instead.</p>
  */
 class GroovyPagesTemplateEngineObservationSpec extends Specification {
 
     private List<Observation.Context> recorded = []
-    private SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry()
 
-    /** Engine whose actual compilation returns a stub, wired with a recording registry + meter registry. */
-    private GroovyPagesTemplateEngine engine(Closure compileHook = null) {
+    /** Engine whose actual compilation returns a stub, wired with a recording observation registry. */
+    private GroovyPagesTemplateEngine engine() {
         ObservationRegistry observationRegistry = ObservationRegistry.create()
         observationRegistry.observationConfig().observationHandler(new ObservationHandler<Observation.Context>() {
             @Override boolean supportsContext(Observation.Context context) { true }
@@ -50,10 +52,6 @@ class GroovyPagesTemplateEngineObservationSpec extends Specification {
         GroovyPagesTemplateEngine engine = new GroovyPagesTemplateEngine() {
             @Override
             protected GroovyPageMetaInfo buildPageMetaInfo(InputStream inputStream, Resource res, String pageName) {
-                // Let a test re-enter createTemplate mid-compile to exercise the reentrancy path.
-                if (compileHook != null) {
-                    compileHook.call(pageName)
-                }
                 return new GroovyPageMetaInfo()
             }
         }
@@ -61,7 +59,6 @@ class GroovyPagesTemplateEngineObservationSpec extends Specification {
 
         GenericApplicationContext ctx = new GenericApplicationContext()
         ctx.getBeanFactory().registerSingleton('observationRegistry', observationRegistry)
-        ctx.getBeanFactory().registerSingleton('simpleMeterRegistry', meterRegistry)
         ctx.refresh()
         engine.setApplicationContext(ctx)
         return engine
@@ -69,11 +66,6 @@ class GroovyPagesTemplateEngineObservationSpec extends Specification {
 
     private Resource gsp() {
         new ByteArrayResource('<html><body>hi</body></html>'.bytes)
-    }
-
-    private double cacheCount(String result) {
-        def c = meterRegistry.find('gsp.template.cache').tag('result', result).counter()
-        c != null ? c.count() : 0d
     }
 
     void "compiling a page records a gsp.compile observation tagged with the page name"() {
@@ -85,47 +77,9 @@ class GroovyPagesTemplateEngineObservationSpec extends Specification {
         recorded[0].name == 'gsp.compile'
         recorded[0].contextualName == 'gsp.compile /book/show'
 
-        and:
-        KeyValues kvs = recorded[0].lowCardinalityKeyValues
-        kvs.find { it.key == 'gsp.name' }?.value == '/book/show'
-        kvs.find { it.key == 'error' }?.value == 'none'
-    }
-
-    void "the template cache records a miss then a hit for the same page"() {
-        given:
-        GroovyPagesTemplateEngine engine = engine()
-        Resource resource = gsp()
-
-        when: "the page is requested twice (cacheable)"
-        engine.createTemplate(resource, '/book/list', true)
-        engine.createTemplate(resource, '/book/list', true)
-
-        then: "first access misses (and compiles), second hits"
-        cacheCount('miss') == 1d
-        cacheCount('hit') == 1d
-        recorded.count { it.name == 'gsp.compile' } == 1
-    }
-
-    void "a reentrant cache hit during compilation does not mask the outer miss"() {
-        given: "an engine that, while compiling the outer page, re-renders an already-cached inner page"
-        Resource innerResource = gsp()
-        List<GroovyPagesTemplateEngine> engineRef = []
-        GroovyPagesTemplateEngine engine = engine({ String pageName ->
-            if (pageName == '/page/outer') {
-                engineRef[0].createTemplate(innerResource, '/layout/inner', true)
-            }
-        })
-        engineRef << engine
-
-        and: "the inner page is already cached, so its reentrant lookup will be a hit"
-        engine.createTemplate(innerResource, '/layout/inner', true)
-
-        when: "the outer page is compiled (a miss) and re-enters the cached inner lookup mid-compile"
-        engine.createTemplate(gsp(), '/page/outer', true)
-
-        then: "the outer compile is still counted as a miss; only the reentrant inner lookup is a hit"
-        cacheCount('miss') == 2d
-        cacheCount('hit') == 1d
-        recorded.count { it.name == 'gsp.compile' } == 2
+        and: "gsp.name is high-cardinality (span only); error is the low-cardinality metric tag"
+        recorded[0].highCardinalityKeyValues.find { it.key == 'gsp.name' }?.value == '/book/show'
+        recorded[0].lowCardinalityKeyValues.find { it.key == 'gsp.name' } == null
+        recorded[0].lowCardinalityKeyValues.find { it.key == 'error' }?.value == 'none'
     }
 }

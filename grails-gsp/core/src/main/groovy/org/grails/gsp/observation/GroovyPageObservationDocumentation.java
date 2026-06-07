@@ -26,9 +26,17 @@ import io.micrometer.observation.docs.ObservationDocumentation;
 /**
  * Documented {@link io.micrometer.observation.Observation}s for Groovy Server Pages (GSP) rendering.
  *
- * <p>Each observation shares the same {@link LowCardinalityKeyNames key names} ({@code gsp.name},
- * {@code error}); the observation name ({@code gsp.view} / {@code gsp.template} / {@code gsp.layout})
- * distinguishes what was rendered.</p>
+ * <p>The observation name ({@code gsp.view} / {@code gsp.template} / {@code gsp.layout}) distinguishes
+ * what was rendered. {@code error} is the only {@link LowCardinalityKeyNames low-cardinality} key, so it
+ * is the only one that becomes a <em>metric</em> tag. {@code gsp.name} (the rendered resource path) is a
+ * {@link HighCardinalityKeyNames high-cardinality} key — it is attached to the span/trace for drilldown
+ * but deliberately kept off the timer, because a real application has hundreds or thousands of distinct
+ * GSPs and tagging the metric per-resource would explode the time-series cardinality.</p>
+ *
+ * <p>Applicability across run modes: {@code gsp.view} / {@code gsp.template} / {@code gsp.layout} fire on
+ * every render and are meaningful in production. {@code gsp.compile} fires only when a GSP is compiled at
+ * runtime — expected in development, but on a precompiled (production) deployment it should essentially
+ * never appear, so its presence there is a useful signal that a view is <em>not</em> precompiled.</p>
  *
  * @author Grails
  * @since 8.0
@@ -51,7 +59,9 @@ public enum GroovyPageObservationDocumentation implements ObservationDocumentati
     GSP_LAYOUT,
 
     /**
-     * Compilation of a GSP into its {@code GroovyPageMetaInfo} (happens on a template cache miss).
+     * Runtime compilation of a GSP into its {@code GroovyPageMetaInfo}. Happens on a runtime
+     * template-compile cache miss — i.e. in development, or when a view is not precompiled. A
+     * precompiled production deployment should not emit this.
      */
     GSP_COMPILE;
 
@@ -65,17 +75,12 @@ public enum GroovyPageObservationDocumentation implements ObservationDocumentati
         return LowCardinalityKeyNames.values();
     }
 
-    public enum LowCardinalityKeyNames implements KeyName {
+    @Override
+    public KeyName[] getHighCardinalityKeyNames() {
+        return HighCardinalityKeyNames.values();
+    }
 
-        /**
-         * Name of the rendered resource (view URI, template name, or layout name).
-         */
-        NAME {
-            @Override
-            public String asString() {
-                return "gsp.name";
-            }
-        },
+    public enum LowCardinalityKeyNames implements KeyName {
 
         /**
          * Simple name of the exception thrown during rendering, or {@code "none"}.
@@ -84,6 +89,21 @@ public enum GroovyPageObservationDocumentation implements ObservationDocumentati
             @Override
             public String asString() {
                 return "error";
+            }
+        }
+    }
+
+    public enum HighCardinalityKeyNames implements KeyName {
+
+        /**
+         * Name of the rendered resource (view URI, template name, or layout name). High-cardinality:
+         * attached to the span for drilldown, but not to the metric, to avoid per-resource time-series
+         * explosion on applications with many GSPs.
+         */
+        NAME {
+            @Override
+            public String asString() {
+                return "gsp.name";
             }
         }
     }

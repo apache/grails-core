@@ -40,8 +40,6 @@ import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.control.CompilerConfiguration;
 import org.codehaus.groovy.runtime.IOGroovyMethods;
 
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationRegistry;
 import org.apache.commons.logging.Log;
@@ -118,8 +116,6 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
 
     private static final GroovyPageObservationConvention COMPILE_OBSERVATION_CONVENTION = new DefaultGroovyPageObservationConvention("gsp.compile");
     private ObservationRegistry observationRegistry = ObservationRegistry.NOOP;
-    private Counter cacheHits;
-    private Counter cacheMisses;
 
     private GroovyPageLocator groovyPageLocator = new DefaultGroovyPageLocator();
 
@@ -154,7 +150,7 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
         @Override
         protected boolean hasExpired(long timeout, Object cacheRequestObject) {
             GroovyPageMetaInfo meta = getValue();
-            Resource resource = ((PageCompileRequest) cacheRequestObject).resource;
+            Resource resource = (Resource) cacheRequestObject;
             return meta == null || isGroovyPageReloadable(resource, meta);
         }
 
@@ -164,26 +160,8 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
             if (oldValue != null) {
                 oldValue.removePageMetaClass();
             }
-            // updateValue is invoked by CacheEntry only on a cold/expired entry, so reaching here
-            // means this lookup actually compiled — record it on the per-call request (a cache miss).
-            PageCompileRequest request = (PageCompileRequest) cacheRequestObject;
-            request.compiled = true;
-            return buildPageMetaInfo(request.resource, pageName);
-        }
-    }
-
-    /**
-     * Per-{@code createTemplate} carrier passed through {@link CacheEntry} as the cache-request object.
-     * Holds the resource to (re)compile and a one-shot flag that {@code updateValue} sets when it
-     * actually compiles, letting the cacheable path record an accurate hit/miss without a thread-local
-     * side-channel (which mis-counted under reentrant compilation and lingered on pooled threads).
-     */
-    private static final class PageCompileRequest {
-        final Resource resource;
-        boolean compiled;
-
-        PageCompileRequest(Resource resource) {
-            this.resource = resource;
+            Resource resource = (Resource) cacheRequestObject;
+            return buildPageMetaInfo(resource, pageName);
         }
     }
 
@@ -329,13 +307,9 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
     protected Template createTemplate(Resource resource, final String pageName, final boolean cacheable) throws IOException {
         GroovyPageMetaInfo meta;
         if (cacheable) {
-            PageCompileRequest compileRequest = new PageCompileRequest(resource);
             meta = CacheEntry.getValue(pageCache, pageName, -1, null,
                     new GroovyPagesTemplateEngineCallable(new GroovyPagesTemplateEngineCacheEntry(pageName)),
-                    true, compileRequest);
-            // A hit is a cacheable lookup that did NOT recompile (CacheEntry served a live entry);
-            // updateValue sets compiled=true on the request whenever it actually compiled (cold or expired).
-            recordCacheAccess(!compileRequest.compiled);
+                    true, resource);
         } else {
             meta = buildPageMetaInfo(resource, pageName);
         }
@@ -803,20 +777,6 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
         }
         this.observationRegistry = applicationContext.getBeanProvider(ObservationRegistry.class)
                 .getIfAvailable(() -> ObservationRegistry.NOOP);
-        MeterRegistry meterRegistry = applicationContext.getBeanProvider(MeterRegistry.class).getIfAvailable();
-        if (meterRegistry != null) {
-            this.cacheHits = Counter.builder("gsp.template.cache")
-                    .tag("result", "hit").description("GSP compiled-template cache hits").register(meterRegistry);
-            this.cacheMisses = Counter.builder("gsp.template.cache")
-                    .tag("result", "miss").description("GSP compiled-template cache misses").register(meterRegistry);
-        }
-    }
-
-    private void recordCacheAccess(boolean hit) {
-        Counter counter = hit ? this.cacheHits : this.cacheMisses;
-        if (counter != null) {
-            counter.increment();
-        }
     }
 
     /**
