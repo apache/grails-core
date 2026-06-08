@@ -30,6 +30,7 @@ import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.core.style.ToStringCreator;
 import org.springframework.util.Assert;
+import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.Errors;
@@ -100,7 +101,7 @@ public abstract class AbstractConstraint implements Constraint {
         }
 
         // Skip blank values if desired.
-        if (skipBlankValues() && propertyValue instanceof String && StringUtils.isEmpty(propertyValue)) {
+        if (skipBlankValues() && propertyValue instanceof String && ObjectUtils.isEmpty(propertyValue)) {
             return;
         }
 

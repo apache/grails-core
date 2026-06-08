@@ -20,7 +20,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.codehaus.groovy.runtime.MetaClassHelper;
+import org.apache.groovy.util.BeanUtils;
 
 import org.grails.datastore.mapping.model.config.GormProperties;
 
@@ -158,6 +158,6 @@ public class NameUtils {
      * @return The class name
      */
     public static String capitalize(String name) {
-        return MetaClassHelper.capitalize(name);
+        return BeanUtils.capitalize(name);
     }
 }

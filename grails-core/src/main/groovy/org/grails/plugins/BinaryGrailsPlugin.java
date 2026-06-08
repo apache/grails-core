@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.URI;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -135,7 +136,7 @@ public class BinaryGrailsPlugin extends DefaultGrailsPlugin {
                 String urlString = descriptorResource.getURL().toString();
                 if (urlString.endsWith(PLUGIN_DESCRIPTOR_PATH)) {
                     urlString = urlString.substring(0, urlString.length() - PLUGIN_DESCRIPTOR_PATH.length());
-                    URL newUrl = new URL(urlString + RELATIVE_VIEWS_PROPERTIES);
+                    URL newUrl = URI.create(urlString + RELATIVE_VIEWS_PROPERTIES).toURL();
                     viewsPropertiesResource = new UrlResource(newUrl);
                 }
             } catch (IOException e) {

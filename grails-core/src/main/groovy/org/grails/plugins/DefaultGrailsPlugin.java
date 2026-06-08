@@ -20,6 +20,7 @@ package org.grails.plugins;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -673,9 +674,9 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
                 Class artefactClass = (Class) artefact;
                 if (ArtefactHandler.class.isAssignableFrom(artefactClass)) {
                     try {
-                        grailsApplication.registerArtefactHandler((ArtefactHandler) artefactClass.newInstance());
+                        grailsApplication.registerArtefactHandler((ArtefactHandler) artefactClass.getDeclaredConstructor().newInstance());
                     }
-                    catch (InstantiationException e) {
+                    catch (InstantiationException | InvocationTargetException | NoSuchMethodException e) {
                         LOG.error("Cannot instantiate an Artefact Handler:" + e.getMessage(), e);
                     }
                     catch (IllegalAccessException e) {

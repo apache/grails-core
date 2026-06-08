@@ -19,9 +19,9 @@ package org.grails.orm.hibernate.support.hibernate7;
 import java.sql.SQLException;
 
 import org.hibernate.JDBCException;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.dao.UncategorizedDataAccessException;
-import org.springframework.lang.Nullable;
 
 /**
  * Hibernate-specific subclass of UncategorizedDataAccessException,

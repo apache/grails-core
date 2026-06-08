@@ -21,6 +21,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -328,7 +330,12 @@ public class GrailsUpdater {
     }
 
     private static HttpURLConnection createHttpURLConnection(String mavenMetadataFileUrl) throws IOException {
-        final URL url = new URL(mavenMetadataFileUrl);
+        final URL url;
+        try {
+            url = new URI(mavenMetadataFileUrl).toURL();
+        } catch (URISyntaxException | IllegalArgumentException e) {
+            throw new IOException("Invalid Maven metadata URL: " + mavenMetadataFileUrl, e);
+        }
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestProperty("User-Agent", "Apache-Maven/3.9.6");
         conn.setInstanceFollowRedirects(true);

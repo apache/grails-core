@@ -19,8 +19,8 @@ package org.grails.orm.hibernate.support.hibernate5;
 import org.hibernate.HibernateException;
 import org.hibernate.UnresolvableObjectException;
 import org.hibernate.WrongClassException;
+import org.jspecify.annotations.Nullable;
 
-import org.springframework.lang.Nullable;
 import org.springframework.orm.ObjectRetrievalFailureException;
 import org.springframework.util.ReflectionUtils;
 

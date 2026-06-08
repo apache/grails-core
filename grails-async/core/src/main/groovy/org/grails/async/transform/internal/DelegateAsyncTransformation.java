@@ -20,9 +20,7 @@ package org.grails.async.transform.internal;
 
 import java.beans.Introspector;
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import groovy.lang.Closure;
@@ -173,28 +171,14 @@ public class DelegateAsyncTransformation implements ASTTransformation, Transform
     }
 
     private static ClassNode alignReturnType(final ClassNode receiver, final ClassNode originalReturnType) {
-        ClassNode copiedReturnType = originalReturnType.getPlainNodeReference();
-
-        List<GenericsType> redirectTypes = new ArrayList<>();
-        if (receiver.redirect().getGenericsTypes() != null) {
-            Collections.addAll(redirectTypes, receiver.redirect().getGenericsTypes());
+        if (!originalReturnType.isUsingGenerics()) {
+            return originalReturnType.getPlainNodeReference();
         }
-        if (!redirectTypes.isEmpty()) {
-            GenericsType[] redirectReceiverTypes = redirectTypes.toArray(new GenericsType[0]);
-
-            GenericsType[] receiverParameterizedTypes = receiver.getGenericsTypes();
-            if (receiverParameterizedTypes == null) {
-                receiverParameterizedTypes = redirectReceiverTypes;
-            }
-
-            if (originalReturnType.isUsingGenerics()) {
-                GenericsType[] alignmentTypes = originalReturnType.getGenericsTypes();
-                GenericsType[] genericsTypes = GenericsUtils.alignGenericTypes(redirectReceiverTypes, receiverParameterizedTypes, alignmentTypes);
-                copiedReturnType.setGenericsTypes(genericsTypes);
-            }
-        }
-
-        return copiedReturnType;
+        var genericsSpec = GenericsUtils.createGenericsSpec(receiver);
+        var correctedReturnType = GenericsUtils.correctToGenericsSpecRecurse(genericsSpec, originalReturnType);
+        return correctedReturnType == null
+            ? originalReturnType.getPlainNodeReference()
+            : correctedReturnType;
     }
 
     protected DelegateAsyncTransactionalMethodTransformer lookupAsyncTransactionalMethodTransformer() {

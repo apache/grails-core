@@ -137,7 +137,7 @@ public class GrailsConsoleAntBuilder extends AntBuilder {
             }
 
             if (null != targetName) {
-                console.verbose(StringUtils.LINE_SEP + targetName + ":");
+                console.verbose(System.lineSeparator() + targetName + ":");
                 targetName = null;
             }
         }

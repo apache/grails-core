@@ -18,8 +18,7 @@ package org.grails.orm.hibernate.support.hibernate5;
 
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
-
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Callback interface for Hibernate code. To be used with {@link HibernateTemplate}'s

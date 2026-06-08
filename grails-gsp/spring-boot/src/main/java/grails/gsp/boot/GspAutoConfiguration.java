@@ -157,7 +157,7 @@ public class GspAutoConfiguration {
                     if (rootPath.endsWith("/")) {
                         rootPath = rootPath.substring(0, rootPath.length() - 1);
                     }
-                    if (!StringUtils.isEmpty(rootPath)) {
+                    if (StringUtils.hasLength(rootPath)) {
                         rootPaths.add(rootPath);
                     }
                 }

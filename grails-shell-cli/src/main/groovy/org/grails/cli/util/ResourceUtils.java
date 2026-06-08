@@ -20,6 +20,7 @@ package org.grails.cli.util;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -159,7 +160,7 @@ public abstract class ResourceUtils {
             }
             try {
                 // Try to parse the location as a URL...
-                URL url = new URL(location);
+                URL url = URI.create(location).toURL();
                 return new UrlResource(url);
             }
             catch (MalformedURLException ex) {
