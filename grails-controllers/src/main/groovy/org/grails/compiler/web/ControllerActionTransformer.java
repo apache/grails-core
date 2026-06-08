@@ -71,7 +71,6 @@ import org.codehaus.groovy.ast.stmt.Statement;
 import org.codehaus.groovy.ast.stmt.ThrowStatement;
 import org.codehaus.groovy.ast.stmt.TryCatchStatement;
 import org.codehaus.groovy.classgen.GeneratorContext;
-import org.codehaus.groovy.classgen.asm.OptimizingStatementWriter;
 import org.codehaus.groovy.control.CompilationUnit;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
@@ -400,26 +399,6 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
 
         MethodNode method = null;
         if (methodNode.getParameters().length > 0) {
-            // Workaround for upstream Groovy 5 bug GROOVY-12062 (this is not a Grails-side fix of the
-            // bug itself). For a parameterized action the transformer generates a zero-arg wrapper that
-            // binds the request parameters to LOCAL variables and then delegates to the original action
-            // via `this.action(p1, p2)`, with the body wrapped in a try/catch/finally. Under classic
-            // (indy=false) codegen Groovy's OptimizingStatementWriter emits that delegating call twice
-            // behind a `__$stMC` guard: a fast path that correctly loads the locals, and a slow path that
-            // re-resolves the very same locals as dynamic property reads (`this.getProperty("p1")`). The
-            // non-empty finally block triggers a CompileStack scope restore that drops the locals between
-            // the two emissions, so the slow path's getVariable lookup misses and falls back to
-            // getProperty. The slow path is the one taken whenever the controller's metaclass is
-            // non-standard - i.e. in any live application (Spring Security, plugins, ...) - so the call
-            // throws MissingPropertyException at runtime even though the compiled fast path looks correct
-            // (which is why it cannot be reproduced from an isolated script). Tagging the controller with
-            // ClassNodeSkip suppresses the fast/slow fork so a single, correct path is emitted. Remove
-            // once GROOVY-12062 is fixed upstream.
-            // Reproducer: https://github.com/jamesfredley/groovy5-controller-action-param-scope-bug
-            if (classNode.getNodeMetaData(OptimizingStatementWriter.ClassNodeSkip.class) == null) {
-                classNode.putNodeMetaData(OptimizingStatementWriter.ClassNodeSkip.class, new OptimizingStatementWriter.ClassNodeSkip());
-            }
-
             final BlockStatement methodCode = new BlockStatement();
 
             final BlockStatement codeToHandleAllowedMethods = getCodeToHandleAllowedMethods(classNode, methodNode.getName());
