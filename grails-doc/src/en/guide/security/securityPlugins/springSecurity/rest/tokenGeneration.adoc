@@ -1,0 +1,125 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+By default, the plugin generates JWT tokens. Note that when using JWT, you can't plug any other token generator. For
+more information about how this plugin uses JWT's, check the <<rest-jwt>> section.
+
+[[rest-tokenGeneration]]
+== JWT
+
+=== Claims
+
+It is possible, to include additional claims in the JWT generated. To do so, you can plug one or more implementations of the interface
+{baseGroovyApiUrl}grails/plugin/springsecurity/rest/token/generation/jwt/CustomClaimProvider.html[CustomClaimProvider],
+and register them in Spring.
+
+The plugin comes prepackaged with a
+{baseGroovyApiUrl}grails/plugin/springsecurity/rest/token/generation/jwt/IssuerClaimProvider.html[IssuerClaimProvider],
+that sets the `iss` field of the JWT claim set, and which value is configurable using the following configuration property:
+`grails.plugin.springsecurity.rest.token.generation.jwt.issuer`.
+
+Customising the JWT to include additional claims is a piece of cake. First, create the claim provider:
+
+[source,groovy]
+----
+class BookListClaimProvider implements CustomClaimProvider {
+
+    @Override
+    void provideCustomClaims(JWTClaimsSet.Builder builder, UserDetails details, String principal, Integer expiration) {
+        builder.claim('books', Book.findAllByAuthor(details.username).collect { it.name })
+    }
+
+}
+----
+
+Then, register it in Spring via `resources.groovy`, or using the `@Bean` annotation in a method of the `Application` class
+(or any `@Configuration` class):
+
+[source,groovy]
+----
+@Bean
+CustomClaimProvider bookListClaimProvider() {
+    new BookListClaimProvider()
+}
+----
+
+=== Algorithms
+
+This plugin uses http://connect2id.com/products/nimbus-jose-jwt[Nimbus JOSE+JWT] library to generate and parse JWT's,
+and the signing / encryption algorithms are configurable, as long as they are supported in Nimbus.
+
+If using signed JWT's, the relevant configuration is the following:
+
+.Signed JWT configuration options
+|===
+| *Config key*  | *Possible values* | *Default value*
+
+|`grails.plugin.springsecurity.rest.token.generation.jwt.algorithm`
+|Any http://static.javadoc.io/com.nimbusds/nimbus-jose-jwt/4.26.1/com/nimbusds/jose/JWSAlgorithm.html[`JWSAlgorithm`]
+|`HS256`
+
+|`grails.plugin.springsecurity.rest.token.storage.jwt.secret`
+|At least 256 bits (32 characters)
+|`null`
+|===
+
+When using encrypted JWT's, those are the possible configuration options:
+
+.Encrypted JWT configuration options
+|===
+| *Config key*  | *Possible values* | *Default value*
+
+|`grails.plugin.springsecurity.rest.token.generation.jwt.jweAlgorithm`
+|Any http://static.javadoc.io/com.nimbusds/nimbus-jose-jwt/4.26.1/com/nimbusds/jose/JWEAlgorithm.html[`JWEAlgorithm`]
+|`RSA-OAEP`
+
+|`grails.plugin.springsecurity.rest.token.generation.jwt.encryptionMethod`
+|Any http://static.javadoc.io/com.nimbusds/nimbus-jose-jwt/4.26.1/com/nimbusds/jose/EncryptionMethod.html[`EncryptionMethod`]
+|`A128GCM`
+|===
+
+
+
+== Memcached, GORM, Redis, Grails Cache
+
+If you are not using JWT, but any stateful strategy like Memcached or GORM, the following strategies are available:
+
+* {baseGroovyApiUrl}grails/plugin/springsecurity/rest/token/generation/SecureRandomTokenGenerator.html[Using java.security.SecureRandom].
+* {baseGroovyApiUrl}grails/plugin/springsecurity/rest/token/generation/UUIDTokenGenerator.html[Using java.util.UUID].
+
+The strategy used is configurable:
+
+.Token generation configuration options
+[cols="80,20"]
+|===
+| *Config key*  | *Default value*
+
+|`grails.plugin.springsecurity.rest.token.generation.useSecureRandom`
+|`true`
+
+|`grails.plugin.springsecurity.rest.token.generation.useUUID`
+|`false`
+|===
+
+Both of them generate tokens of 32 alphanumeric characters.
+
+That should be enough for most of the human beings. But if you still want to provide your own implementation,
+simply write a class implementing
+link:{baseGroovyApiUrl}grails/plugin/springsecurity/rest/token/generation/TokenGenerator.html[TokenGenerator]
+and wire it up in `resources.groovy` as `tokenGenerator`.

@@ -173,26 +173,19 @@ include(
         //'grails-datamapping-rx',
 
         // Spring Security
+        // Note: Spring Security documentation is now part of grails-doc (grails-doc/src/en/guide/security).
         'grails-spring-security-acl',
-        'grails-spring-security-acl-docs',
         'grails-spring-security-cas',
-        'grails-spring-security-cas-docs',
         'grails-spring-security-core',
-        'grails-spring-security-core-docs',
-        'grails-spring-security-docs',
         'grails-spring-security-ldap',
-        'grails-spring-security-ldap-docs',
         'grails-spring-security-oauth2',
-        'grails-spring-security-oauth2-docs',
         'grails-spring-security-rest',
-        'grails-spring-security-rest-docs',
         'grails-spring-security-rest-gorm',
         'grails-spring-security-rest-grailscache',
         'grails-spring-security-rest-memcached',
         'grails-spring-security-rest-redis',
         'grails-spring-security-rest-testapp-profile',
         'grails-spring-security-ui',
-        'grails-spring-security-ui-docs',
 
         // Testing Support
         'grails-testing-support-core',
@@ -395,25 +388,17 @@ project(':grails-profiles-web-plugin').projectDir = file('grails-profiles/web-pl
 
 // Spring Security
 project(':grails-spring-security-acl').projectDir = new File(settingsDir, 'grails-spring-security/acl/plugin')
-project(':grails-spring-security-acl-docs').projectDir = new File(settingsDir, 'grails-spring-security/acl/docs')
 project(':grails-spring-security-cas').projectDir = new File(settingsDir, 'grails-spring-security/cas/plugin')
-project(':grails-spring-security-cas-docs').projectDir = new File(settingsDir, 'grails-spring-security/cas/docs')
 project(':grails-spring-security-core').projectDir = new File(settingsDir, 'grails-spring-security/core/plugin')
-project(':grails-spring-security-core-docs').projectDir = new File(settingsDir, 'grails-spring-security/core/docs')
-project(':grails-spring-security-docs').projectDir = new File(settingsDir, 'grails-spring-security/docs')
 project(':grails-spring-security-ldap').projectDir = new File(settingsDir, 'grails-spring-security/ldap/plugin')
-project(':grails-spring-security-ldap-docs').projectDir = new File(settingsDir, 'grails-spring-security/ldap/docs')
 project(':grails-spring-security-oauth2').projectDir = new File(settingsDir, 'grails-spring-security/oauth2/plugin')
-project(':grails-spring-security-oauth2-docs').projectDir = new File(settingsDir, 'grails-spring-security/oauth2/docs')
 project(':grails-spring-security-rest').projectDir = new File(settingsDir, 'grails-spring-security/rest/core')
-project(':grails-spring-security-rest-docs').projectDir = new File(settingsDir, 'grails-spring-security/rest/docs')
 project(':grails-spring-security-rest-gorm').projectDir = new File(settingsDir, 'grails-spring-security/gorm')
 project(':grails-spring-security-rest-grailscache').projectDir = new File(settingsDir, 'grails-spring-security/grailscache')
 project(':grails-spring-security-rest-memcached').projectDir = new File(settingsDir, 'grails-spring-security/memcached')
 project(':grails-spring-security-rest-redis').projectDir = new File(settingsDir, 'grails-spring-security/redis')
 project(':grails-spring-security-rest-testapp-profile').projectDir = new File(settingsDir, 'grails-spring-security/testapp-profile')
 project(':grails-spring-security-ui').projectDir = new File(settingsDir, 'grails-spring-security/ui/plugin')
-project(':grails-spring-security-ui-docs').projectDir = new File(settingsDir, 'grails-spring-security/ui/docs')
 
 // Spring Security Functional Tests
 include(

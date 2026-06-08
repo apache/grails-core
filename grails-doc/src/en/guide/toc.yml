@@ -321,7 +321,15 @@ security:
   authentication: Authentication
   securityPlugins:
     title: Security Plugins
-    springSecurity: Spring Security
+    springSecurity:
+      title: Spring Security
+      springSecurityCore: Core Plugin
+      springSecurityAcl: ACL Plugin
+      springSecurityCas: CAS Plugin
+      springSecurityLdap: LDAP Plugin
+      springSecurityOauth2: OAuth2 Plugin
+      springSecurityRest: REST Plugin
+      springSecurityUi: UI Plugin
 plugins:
   title: Plugins
   creatingAndInstallingPlugins: Creating and Installing Plugins

@@ -1,0 +1,113 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[rest-configuration]]
+== Installing the plugin
+
+Just proceed as with any other Grails 3 plugin:
+
+[source,groovy,subs="attributes+"]
+.`build.gradle`
+----
+dependencies {
+
+    //Other dependencies
+
+    implementation "org.apache.grails:grails-spring-security-rest:{version}"
+
+}
+----
+
+Note that the default token storage system is JWT. If you want a different one, you need to install an additional
+artifact. For instance, for Memcached:
+
+[source,groovy,subs="attributes+"]
+.`build.gradle`
+----
+
+ext.springSecurityRestVersion = '{version}'
+
+dependencies {
+
+    //Other dependencies
+
+    implementation "org.apache.grails:grails-spring-security-rest:${springSecurityRestVersion}"
+    implementation "org.apache.grails:grails-spring-security-rest-memcached:${springSecurityRestVersion}"
+
+}
+----
+
+The Maven coordinates are the following:
+
+. Grails Cache: `org.apache.grails:grails-spring-security-rest-grailscache`.
+. Memcached: `org.apache.grails:grails-spring-security-rest-memcached`.
+. GORM: `org.apache.grails:grails-spring-security-rest-gorm`.
+. Redis: `org.apache.grails:grails-spring-security-rest-redis`.
+
+Note that configuration properties such as `grails.plugin.springsecurity.rest.token.storage.useMemcached` are no longer
+used. Every submodule of the above list will automatically configure the token store appropriately
+
+If you want your own token storage system, you need to implement
+link:{baseGroovyApiUrl}grails/plugin/springsecurity/rest/token/storage/TokenStorageService.html[TokenStorageService]
+and register it in `resources.groovy` as `tokenStorageService`.
+
+== Plugin configuration
+
+This plugin is compatible by default with Spring Security core traditional, form-based authentication. The important thing
+to remember is: you have to separate the filter chains, so different filters are applied on each case.
+
+The stateless, token-based approach of this plugin is incompatible with the HTTP session-based approach of Spring Security,
+core, so the trick is to identify what URL patterns have to be stateless, and what others have to be stateful (if any).
+
+To configure the chains properly, you can use the `grails.plugin.springsecurity.filterChain.chainMap` property:
+
+[source,groovy]
+.Listing {counter:listing}. `grails.plugin.springsecurity.filterChain.chainMap`
+----
+grails.plugin.springsecurity.filterChain.chainMap = [
+        //Stateless chain
+        [
+                pattern: '/**',
+                filters: 'JOINED_FILTERS,-anonymousAuthenticationFilter,-exceptionTranslationFilter,-authenticationProcessingFilter,-securityContextPersistenceFilter,-rememberMeAuthenticationFilter'
+        ],
+
+        //Traditional, stateful chain
+        [
+                pattern: '/stateful/**',
+                filters: 'JOINED_FILTERS,-restTokenValidationFilter,-restExceptionTranslationFilter'
+        ]
+]
+----
+
+To understand this syntax, please read the
+https://apache.github.io/grails-spring-security/latest/index.html#filters[Spring Security Core documentation].
+Long story short: `JOINED_FILTERS` refers to all the configured filters. The minus (`-`) notation means all the previous values
+but the neglected one.
+
+So the first chain applies all the filters except the stateful ones. The second one applies all the filters but the stateless ones.
+
+[NOTE]
+====
+Make sure that the stateless chain applies not only to your REST controllers, but also to the URL's where this plugin
+filters are listening: by default, `/api/login` for authentication, `/api/logout` for
+logout and `/api/validate` for token validation.
+====
+
+The difference is that, in a traditional form-based authentication, Spring Security will respond with an HTTP 302 redirect
+to the login controller. That doesn't work for an API, so in the stateless approach, an HTTP 401 response will be sent back.

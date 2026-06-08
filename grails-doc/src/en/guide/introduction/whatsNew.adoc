@@ -89,5 +89,16 @@ With the removal of Micronaut, and the fixes to the asset pipeline plugin, Grail
 
 The `g:form` tag now automatically provides csrf protection when Spring Security CSRF is enabled.
 
+=== Spring Security Plugins Merged into Grails
+
+The Spring Security plugins &#8212; *Core*, *ACL*, *CAS*, *LDAP*, *OAuth2*, *REST*, and *UI* &#8212; were previously developed and released independently from the https://github.com/apache/grails-spring-security[grails-spring-security] repository.
+As of Grails 7 their source has been merged into Grails core, and their reference documentation is now published as part of this guide under the xref:security.adoc#springSecurity[Security > Spring Security] section.
+
+The plugins now share the Grails version and are managed by the Grails BOM, so you no longer need to specify individual plugin versions. They are published under the `org.apache.grails` group (for example, `org.grails.plugins:spring-security-core` is now `org.apache.grails:grails-spring-security`). The underlying Spring Security framework has also been upgraded from 5.8.x to 6.x.
+
+For dependency-coordinate mappings and Spring Security 6.x migration details, see the xref:upgrading#upgrading60x[Upgrading the Spring Security Plugins] section.
+
+NOTE: Documentation for earlier, independently-versioned releases &#8212; including the historical version selector &#8212; remains available at the https://apache.github.io/grails-spring-security/[legacy Spring Security plugin documentation site].
+
 
 
