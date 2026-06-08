@@ -60,7 +60,8 @@ class DefaultValidatorRegistry implements ValidatorRegistry, ConstraintRegistry,
         // Default to true if not explicitly configured
         boolean cacheAnnotations = connectionSourceSettings.cacheAutoTimestampAnnotations != null ?
             connectionSourceSettings.cacheAutoTimestampAnnotations : true
-        this.constraintsEvaluator = new DefaultConstraintEvaluator(constraintRegistry, mappingContext, defaultConstraintsMap, cacheAnnotations)
+        boolean defaultNullable = connectionSourceSettings.default.nullable
+        this.constraintsEvaluator = new DefaultConstraintEvaluator(constraintRegistry, mappingContext, defaultConstraintsMap, cacheAnnotations, defaultNullable)
         this.mappingContext = mappingContext
     }
 

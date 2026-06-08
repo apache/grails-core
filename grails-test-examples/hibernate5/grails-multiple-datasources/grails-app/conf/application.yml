@@ -67,3 +67,10 @@ dataSources:
     driverClassName: org.h2.Driver
     dbCreate: create-drop
     url: jdbc:h2:mem:devDb2;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+
+---
+# Grails 8 is nullable-by-default; this example asserts required-by-default validation, so opt out.
+grails:
+    gorm:
+        default:
+            nullable: false

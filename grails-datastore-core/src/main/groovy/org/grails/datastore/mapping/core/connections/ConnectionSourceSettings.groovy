@@ -124,6 +124,12 @@ class ConnectionSourceSettings implements Settings {
          * The default constraints
          */
         Closure constraints
+
+        /**
+         * Whether an unconstrained persistent property is nullable by default (Grails 8 default: true).
+         * Set {@code grails.gorm.default.nullable = false} to restore the legacy required-by-default behaviour.
+         */
+        boolean nullable = true
     }
 
     /**

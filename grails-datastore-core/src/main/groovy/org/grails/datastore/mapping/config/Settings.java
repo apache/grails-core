@@ -55,6 +55,10 @@ public interface Settings {
      */
     String SETTING_DEFAULT_CONSTRAINTS = PREFIX + '.' + "default.constraints";
     /**
+     * Whether an unconstrained persistent property is nullable by default (Grails 8 default: true)
+     */
+    String SETTING_DEFAULT_NULLABLE = PREFIX + '.' + "default.nullable";
+    /**
      * The custom types
      */
     String SETTING_CUSTOM_TYPES = PREFIX + '.' + "custom.types";
