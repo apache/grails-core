@@ -1,2 +1,2 @@
-plugin-ui/plugin/src/main/templates/views/*
-plugin-core/docs/src/docs/configurationProperties.adoc
+ui/plugin/src/main/templates/views/*
+core/docs/src/docs/configurationProperties.adoc

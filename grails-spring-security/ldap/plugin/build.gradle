@@ -1,0 +1,62 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+	id 'groovy'
+	id 'java-library'
+	id 'project-report'
+	id 'org.apache.grails.buildsrc.properties'
+	id 'org.apache.grails.buildsrc.dependency-validator'
+	id 'org.apache.grails.buildsrc.compile'
+	id 'org.apache.grails.buildsrc.publish'
+	id 'org.apache.grails.buildsrc.sbom'
+	id 'org.apache.grails.gradle.grails-code-style'
+	id 'org.apache.grails.gradle.grails-plugin'
+}
+
+version = projectVersion
+group = 'org.apache.grails'
+
+dependencies {
+	implementation platform(project(':grails-bom'))
+
+	api project(':grails-spring-security-core')
+	api 'org.springframework.security:spring-security-ldap', {
+		['apacheds-core', 'apacheds-core-entry', 'apacheds-protocol-ldap', 'apacheds-protocol-shared',
+		 'apacheds-server-jndi', 'commons-logging', 'fest-assert', 'jcl-over-slf4j', 'junit',
+		 'ldapsdk', 'logback-classic', 'mockito-core', 'shared-ldap', 'slf4j-api', 'spring-beans',
+		 'spring-context', 'spring-core', 'spring-ldap-core', 'spring-security-core',
+		 'spring-test', 'spring-tx'].each { exclude module: it }
+	}
+	api 'org.springframework.ldap:spring-ldap-core', {
+		['commons-lang', 'gsbase', 'junit', 'mockito-core', 'powermock-api-mockito',
+		 'powermock-api-support', 'powermock-core', 'powermock-module-junit4',
+		 'powermock-module-junit4-common', 'powermock-reflect', 'slf4j-log4j12', 'spring-beans',
+		 'spring-core', 'spring-data-commons', 'spring-test', 'spring-tx'].each { exclude module: it }
+	}
+
+	runtimeOnly project(':grails-web-boot')
+
+	testImplementation project(':grails-testing-support-web')
+}
+
+apply {
+	from rootProject.layout.projectDirectory.file('gradle/groovydoc-config.gradle')
+	from rootProject.layout.projectDirectory.file('gradle/spring-security-test-config.gradle')
+}

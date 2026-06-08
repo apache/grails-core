@@ -1,0 +1,132 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'groovy'
+    id 'java-library'
+    id 'project-report'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-plugin'
+}
+
+version = projectVersion
+group = 'org.apache.grails'
+
+dependencies {
+
+    implementation platform(project(':grails-bom'))
+
+    api project(':grails-spring-security-core'), {
+        // api: NullAuthenticationEventPublisher, SecurityEventListener
+        // impl: BeanTypeResolver, @Secured(runtime), SecurityFilterPosition, SpringSecurityUtils
+    }
+    api "com.nimbusds:nimbus-jose-jwt", {
+        // api: EncryptionMethod, JOSEException, JWEAlgorithm, JWSAlgorithm, JWSSigner, JWT, JWTClaimsSet
+        // impl: EncryptedJWT, EncryptionMethod, JWEHeader, JWSHeader, JWTParser, MACSigner, MACVerifier, PlainJWT, RSADecrypter, RSAEncrypter, SignedJWT
+    }
+    api project(':grails-web-url-mappings'), {
+        // api: LinkGenerator
+    }
+    api "org.pac4j:pac4j-core", {
+        // api: CallContext, CommonProfile, IndirectClient, UserProfile
+        // impl: Credentials, RedirectionAction, WebContext
+    }
+    api 'org.springframework:spring-beans', {
+        // api: InitializingBean
+        // impl: BeanWrapperImpl
+    }
+    api 'org.springframework:spring-context', {
+        // api: ApplicationContextAware, ApplicationEvent, ApplicationEventPublisher, ApplicationListener
+    }
+    api 'org.springframework:spring-web', {
+        // api: GenericFilterBean
+        // impl: HttpStatus, MediaType
+    }
+    api 'org.springframework.security:spring-security-core', {
+        // api: AbstractAuthenticationToken, AccessDeniedException, Authentication, AuthenticationDetailsSource, AuthenticationEventPublisher,
+        //      AuthenticationException, AuthenticationFailureHandler, AuthenticationManager, AuthenticationProvider,
+        //      AuthenticationSuccessHandler, DefaultAuthenticationEventPublisher, GrantedAuthority, User, UserDetails,
+        //      UserDetailsChecker, UserDetailsService, UsernameNotFoundException, UsernamePasswordAuthenticationToken
+        // impl: SecurityContextHolder, SimpleGrantedAuthority
+    }
+    api 'org.springframework.security:spring-security-crypto', {
+        // api: PasswordEncoder
+        // impl: Argon2PasswordEncoder, BCryptPasswordEncoder, DelegatingPasswordEncoder, LdapShaPasswordEncoder,
+        //       Md4PasswordEncoder, MessageDigestPasswordEncoder, NoOpPasswordEncoder, Pbkdf2PasswordEncoder,
+        //       StandardPasswordEncoder, SCryptPasswordEncoder
+    }
+    api 'org.springframework.security:spring-security-web', {
+        // api: AccessDeniedHandlerImpl, AuthenticationEntryPoint, RequestMatcher
+        // impl: ExceptionTranslationFilter, Http403ForbiddenEntryPoint, NullRequestCache
+    }
+
+    implementation "org.apache.commons:commons-lang3", {
+        // impl: RandomStringUtils
+    }
+    implementation "com.google.guava:guava", {
+        // impl: CacheBuilder, LoadingCache
+    }
+    implementation 'commons-codec:commons-codec', {
+        // impl: Base64
+    }
+    implementation project(':grails-codecs'), {
+        // impl: URLCodec
+    }
+    implementation project(':grails-converters'), {
+        // impl: JSON
+    }
+    implementation "org.pac4j:pac4j-jakartaee", {
+        // impl: JEEContext, JEESessionStore
+    }
+    implementation 'org.springframework:spring-core', {
+        // impl: Assert
+    }
+
+    runtimeOnly project(':grails-services'), {
+        // Project has services
+    }
+
+    compileOnly 'org.apache.groovy:groovy' // Provided as this is a Grails plugin
+    compileOnly project(':grails-core') // Provided as this is a Grails plugin
+    compileOnly project(':grails-controllers'), {
+        // ControllerTraitInjector
+    }
+    compileOnly 'jakarta.servlet:jakarta.servlet-api', { // Provided by Tomcat
+        // api: FilterChain, HttpServletResponse, HttpServletRequest, ServletException, ServletRequest, ServletResponse
+    }
+
+    testImplementation "org.pac4j:pac4j-oauth", {
+        // impl: CasOAuthWrapperClient
+    }
+    testImplementation project(':grails-testing-support-datamapping')
+    testImplementation project(':grails-testing-support-web')
+    testImplementation 'org.spockframework:spock-core'
+
+    testRuntimeOnly 'net.bytebuddy:byte-buddy'
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/groovydoc-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/spring-security-test-config.gradle')
+}

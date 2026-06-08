@@ -31,9 +31,9 @@ apply from: rootProject.layout.projectDirectory.file('gradle/reproducible-config
 
 // Spring Security + GORM are resolved from the BOM for LDAP doc link generation.
 dependencies {
-    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
+    implementation platform(project(':grails-bom'))
     implementation 'org.springframework.security:spring-security-core'
-    implementation 'org.apache.grails.data:grails-datamapping-core'
+    implementation project(':grails-datamapping-core')
     implementation 'org.apache.groovy:groovy'
 }
 
@@ -68,11 +68,11 @@ logger.lifecycle('Resolved GORM version for Guide links: {}', resolvedGormVersio
 
 ext {
     coreDocsDir = rootProject.layout.projectDirectory.dir('plugin-core/docs/src/docs')
-    aclDocsDir = rootProject.layout.projectDirectory.dir('plugin-acl/docs/src/docs')
-    casDocsDir = rootProject.layout.projectDirectory.dir('plugin-cas/docs/src/docs')
-    ldapDocsDir = rootProject.layout.projectDirectory.dir('plugin-ldap/docs/src/docs')
-    oauth2DocsDir = rootProject.layout.projectDirectory.dir('plugin-oauth2/docs/src/docs')
-    restDocsDir = rootProject.layout.projectDirectory.dir('plugin-rest/docs/src/docs')
+    aclDocsDir = rootProject.layout.projectDirectory.dir('grails-spring-security-acl/docs/src/docs')
+    casDocsDir = rootProject.layout.projectDirectory.dir('grails-spring-security-cas/docs/src/docs')
+    ldapDocsDir = rootProject.layout.projectDirectory.dir('grails-spring-security-ldap/docs/src/docs')
+    oauth2DocsDir = rootProject.layout.projectDirectory.dir('grails-spring-security-oauth2/docs/src/docs')
+    restDocsDir = rootProject.layout.projectDirectory.dir('grails-spring-security-rest/docs/src/docs')
     uiDocsDir = rootProject.layout.projectDirectory.dir('plugin-ui/docs/src/docs')
 
     combinedAttributes = [
@@ -154,7 +154,7 @@ def guideDocs = tasks.register('guideDocs', Copy) {
     dependsOn('asciidoctor')
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
     into(layout.buildDirectory.dir('docs'))
-    ['plugin-core', 'plugin-acl', 'plugin-cas', 'plugin-ldap', 'plugin-oauth2', 'plugin-rest', 'plugin-ui'].each { pluginDir ->
+    ['plugin-core', 'grails-spring-security-acl', 'grails-spring-security-cas', 'grails-spring-security-ldap', 'grails-spring-security-oauth2', 'grails-spring-security-rest', 'plugin-ui'].each { pluginDir ->
         from(rootProject.layout.projectDirectory.dir(pluginDir).dir("docs/src/docs")) {
             include('**/*.png', '**/*.jpg', '**/*.gif', '**/*.svg')
         }
