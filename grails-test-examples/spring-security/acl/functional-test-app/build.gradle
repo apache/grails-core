@@ -18,15 +18,18 @@
  */
 
 plugins {
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.gradle.grails-web'
 }
 
+version = '0.1'
 group = 'misc.functional.test.app'
 
 dependencies {
-
-    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
-    implementation project(':acl-plugin')
+    implementation platform(project(':grails-bom'))
+    implementation 'org.apache.grails:grails-spring-security-acl'
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails:grails-rest-transforms'
     implementation 'org.apache.grails:grails-web-boot'
@@ -55,7 +58,8 @@ dependencies {
     integrationTestImplementation 'org.spockframework:spock-core'
 }
 
-apply from: rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
-apply from: rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
-apply from: rootProject.layout.projectDirectory.file('gradle/examples-config.gradle')
-apply from: rootProject.layout.projectDirectory.file('gradle/reproducible-config.gradle')
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/spring-security-test-config.gradle')
+}

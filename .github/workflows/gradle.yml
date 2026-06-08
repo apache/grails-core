@@ -265,6 +265,41 @@ jobs:
           -PskipCodeStyle
           -PskipHibernate5Tests
           -PskipMongodbTests
+          -PonlySpringSecurityTests
+  security:
+    name: "Spring Security Tests"
+    if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        java: [ 17, 21, 25 ]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: liberica
+          java-version: ${{ matrix.java }}
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        with:
+          cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
+      - name: "🔍 Setup TestLens"
+        uses: testlens-app/setup-testlens@d96a555133c275a00949d2cc77b70fe9a4242ebf # v1.9.2
+      - name: "🏃 Run Functional Tests"
+        run: >
+          ./gradlew bootJar check
+          --continue
+          --rerun-tasks
+          --stacktrace
+          -PgebAtCheckWaiting
+          -PonlySpringSecurityTests
+          -PskipCodeStyle
   mongodbFunctional:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: "Mongodb Functional Tests"

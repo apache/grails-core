@@ -1,0 +1,105 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+	id 'groovy'
+	id 'java-library'
+	id 'project-report'
+	id 'org.apache.grails.buildsrc.properties'
+	id 'org.apache.grails.buildsrc.dependency-validator'
+	id 'org.apache.grails.buildsrc.compile'
+	id 'org.apache.grails.buildsrc.publish'
+	id 'org.apache.grails.buildsrc.sbom'
+	id 'org.apache.grails.gradle.grails-code-style'
+	id 'org.apache.grails.gradle.grails-plugin'
+	id 'org.apache.grails.gradle.grails-gsp'
+}
+
+version = projectVersion
+group = 'org.apache.grails'
+
+dependencies {
+
+	implementation platform(project(':grails-bom'))
+
+	api project(':grails-spring-security-core'), {
+		// api: GrailsUserDetailsService, SpringSecurityService
+		// impl: GormUserDetailsService, GrailsUser, ReflectionUtils, @Secured(runtime), SecurityContextHolder,
+		//       SpringSecurityUtils
+	}
+	api 'com.github.scribejava:scribejava-core', {
+		// api: DefaultApi20, OAuth2AccessToken, OAuth20Service, Response
+		// impl: OAuthRequest, ServiceBuilder, Verb
+	}
+	api project(':grails-bootstrap'), {
+		// api: ConsoleLogger
+		// impl: GrailsConsole, Model
+	}
+	api 'org.springframework.security:spring-security-core', {
+		// api: AbstractAuthenticationToken, AuthenticationManager, GrantedAuthority
+		// impl: AuthenticationException, UserDetails, UsernamePasswordAuthenticationToken
+	}
+	api project(':grails-taglib'), {
+		// api: GrailsTagException
+	}
+
+	implementation 'commons-validator:commons-validator', {
+		// impl: UrlValidator
+	}
+	implementation 'jline:jline', {
+		// comp: ConsoleReader
+	}
+	implementation project(':grails-datamapping-core'), {
+		// impl: @Transactional(runtime)
+	}
+	implementation project(':grails-controllers'), {
+		// impl: ControllerTraitInjector
+	}
+	implementation project(':grails-converters'), {
+		// impl: JSON
+	}
+	implementation 'org.springframework:spring-webmvc', {
+		// impl: ModelAndView
+	}
+
+	runtimeOnly project(':grails-services')
+
+	compileOnly project(':grails-core'), { // Provided as this is a Grails plugin
+		// api: GrailsApplication, GrailsApplicationCommand, GrailsAutoConfiguration, Plugin
+		// impl: Holders
+		// comp: @PluginSource(source)
+	}
+	compileOnly 'org.slf4j:slf4j-api', {
+		// impl: @Slf4j(source)
+	}
+	compileOnly 'org.slf4j:slf4j-nop', {
+		// Remove warning about missing slf4j implementation during gsp compilation
+	}
+	compileOnly 'org.apache.groovy:groovy' // Provided as this is a Grails plugin
+
+	integrationTestImplementation project(':grails-testing-support-web')
+	integrationTestImplementation 'org.spockframework:spock-core'
+
+	integrationTestRuntimeOnly 'net.bytebuddy:byte-buddy'
+}
+
+apply {
+	from rootProject.layout.projectDirectory.file('gradle/groovydoc-config.gradle')
+	from rootProject.layout.projectDirectory.file('gradle/spring-security-test-config.gradle')
+}

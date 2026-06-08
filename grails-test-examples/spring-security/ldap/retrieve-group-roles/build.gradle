@@ -18,15 +18,19 @@
  */
 
 plugins {
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.gradle.grails-web'
     id 'cloud.wondrify.asset-pipeline'
 }
 
+version = '0.1'
 group = 'misc.functional.test.app'
 
 dependencies {
-
-    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
+    implementation platform(project(':grails-bom'))
+    implementation 'org.apache.grails:grails-spring-security-ldap'
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails:grails-rest-transforms'
     implementation 'org.apache.grails:grails-web-boot'
@@ -38,7 +42,7 @@ dependencies {
     implementation 'org.webjars:jquery:3.3.1'
 
     // to not depend on an external ldap server
-    implementation "com.unboundid:unboundid-ldapsdk:$unboundidLdapSdkVersion"
+    implementation 'com.unboundid:unboundid-ldapsdk'
 
     runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
     runtimeOnly 'com.h2database:h2'
@@ -58,15 +62,11 @@ dependencies {
     }
     integrationTestImplementation 'org.apache.grails:grails-testing-support-web'
     integrationTestImplementation 'org.spockframework:spock-core'
-
-    implementation project(':ldap-plugin')
 }
 
-assets.excludes = ['webjars/**']
-
 apply {
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/examples-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/reproducible-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/spring-security-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-webjar-asset-config.gradle')
 }

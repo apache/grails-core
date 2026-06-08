@@ -28,7 +28,7 @@ configurations.register('documentation') {
 }
 
 dependencies {
-    add('documentation', platform("org.apache.grails:grails-bom:$grailsVersion"))
+    add('documentation', platform(project(':grails-bom')))
     add('documentation', 'com.github.javaparser:javaparser-core')
     add('documentation', 'org.apache.groovy:groovy')
     add('documentation', 'org.apache.groovy:groovy-groovydoc')

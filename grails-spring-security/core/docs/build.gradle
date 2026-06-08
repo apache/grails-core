@@ -1,0 +1,139 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+import groovy.json.JsonSlurper
+
+plugins {
+    id 'groovy' // For groovydoc task
+}
+
+apply from: rootProject.layout.projectDirectory.file('gradle/groovydoc-config.gradle')
+apply from: rootProject.layout.projectDirectory.file('gradle/reproducible-config.gradle')
+
+// because the groovy plugin is being applied, a version of groovy must be provided
+dependencies {
+    implementation platform(project(':grails-bom'))
+    implementation 'org.apache.groovy:groovy'
+}
+
+tasks.withType(Groovydoc).configureEach {
+    it.docTitle = "Grails Spring Security Core Plugin - ${projectVersion}"
+    it.windowTitle = "spring-security-core ${projectVersion} API"
+    it.source = rootProject.findProject(':grails-spring-security-core').files('src/main/groovy')
+    it.destinationDir = rootProject.layout.buildDirectory.dir('docs/grails-spring-security-core/groovydoc').get().asFile
+}
+
+def configurationMetadataFile = rootProject.layout.projectDirectory.file(
+        'plugin-core/plugin/src/main/resources/META-INF/spring-configuration-metadata.json'
+)
+def configurationPropertiesFile = layout.projectDirectory.file('src/docs/configurationProperties.adoc')
+
+tasks.register('generateConfigurationProperties') {
+    inputs.file(configurationMetadataFile)
+    outputs.file(configurationPropertiesFile)
+    doLast {
+        def metadata = new JsonSlurper().parse(configurationMetadataFile.asFile)
+        def groupsByName = (metadata.groups ?: []).collectEntries { group ->
+            [(group.name): group]
+        }
+        def propertiesByGroup = (metadata.properties ?: []).groupBy { property ->
+            property.group ?: 'grails.plugin.springsecurity.miscellaneous'
+        }
+        def orderedGroupNames = [
+                'grails.plugin.springsecurity.general',
+                'grails.plugin.springsecurity.domain-classes',
+                'grails.plugin.springsecurity.authentication',
+                'grails.plugin.springsecurity.login-logout',
+                'grails.plugin.springsecurity.password-encoding',
+                'grails.plugin.springsecurity.remember-me',
+                'grails.plugin.springsecurity.session',
+                'grails.plugin.springsecurity.url-mapping',
+                'grails.plugin.springsecurity.basic-digest-auth',
+                'grails.plugin.springsecurity.switch-user',
+                'grails.plugin.springsecurity.port-channel',
+                'grails.plugin.springsecurity.x509',
+                'grails.plugin.springsecurity.miscellaneous'
+        ]
+
+        configurationPropertiesFile.asFile.text = ''
+        configurationPropertiesFile.asFile << '''////
+ Licensed to the Apache Software Foundation (ASF) under one or more
+ contributor license agreements.  See the NOTICE file distributed with
+ this work for additional information regarding copyright ownership.
+ The ASF licenses this file to You under the Apache License, Version 2.0
+ (the "License"); you may not use this file except in compliance with
+ the License.  You may obtain a copy of the License at
+
+     https://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+////
+
+[[configuration-properties]]
+== Configuration Properties
+
+This page is generated from `spring-configuration-metadata.json`. For IDE auto-completion of these properties, ensure the plugin JAR is on your classpath.
+'''
+
+        orderedGroupNames.each { groupName ->
+            def group = groupsByName[groupName]
+            def properties = propertiesByGroup[groupName] ?: []
+            if (!properties) {
+                return
+            }
+
+            def heading = group?.description ?: groupName
+            configurationPropertiesFile.asFile << """
+
+=== ${heading}
+
+[cols=\"3,5,2\", options=\"header\"]
+|===
+|Property |Description |Default
+"""
+
+            properties.sort { it.name }.each { property ->
+                def defaultValue = property.containsKey('defaultValue') ? property.defaultValue : ''
+                def defaultText
+                if (defaultValue == null) {
+                    defaultText = '-'
+                } else if (defaultValue instanceof CharSequence && defaultValue.toString().isEmpty()) {
+                    defaultText = '`""`'
+                } else if (defaultValue instanceof List && ((List) defaultValue).isEmpty()) {
+                    defaultText = '`[]`'
+                } else {
+                    defaultText = "`${defaultValue}`"
+                }
+                configurationPropertiesFile.asFile << """
+|`${property.name}`
+|${property.description}
+|${defaultText}
+"""
+            }
+
+            configurationPropertiesFile.asFile << """
+|===
+"""
+        }
+    }
+}
