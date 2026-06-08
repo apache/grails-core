@@ -1,7 +1,6 @@
-
                                  Apache License
                            Version 2.0, January 2004
-                        http://www.apache.org/licenses/
+                        https://www.apache.org/licenses/
 
    TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
 
@@ -201,54 +200,15 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 
---------------------------------------------------------------------------
-
-Public Domain
-
-The following classes within this product:
-
-    org.grails.web.json.JSONArray
-    org.grails.web.json.JSONElement
-    org.grails.web.json.JSONException
-    org.grails.web.json.JSONObject
-    org.grails.web.json.JSONTokener
-    org.grails.web.json.JSONWriter
-
-Originally from https://github.com/stleary/JSON-java
-
---------------------------------------------------------------------------
-
-The following files are licensed under the Eclipse Public License 2.0:
-
-    grails-gsp/grails-web-jsp/src/main/resources/org/grails/gsp/jsp/web-jsptaglibrary_3_0.xsd
-
-See licenses/LICENSE-EPL2.txt for the full license terms.
-
---------------------------------------------------------------------------
-
-The following files are licensed under the CDDL 1.0:
-
-    grails-gsp/grails-web-jsp/src/main/resources/org/grails/gsp/jsp/web-app_4_0.xsd
-    grails-gsp/grails-web-jsp/src/main/resources/org/grails/gsp/jsp/web-app_5_0.xsd
-    grails-gsp/grails-web-jsp/src/main/resources/org/grails/gsp/jsp/web-app_6_0.xsd
-
-See licenses/LICENSE-CDDL.txt for the full license terms.
-
---------------------------------------------------------------------------
-
-This product includes software developed by the OpenSymphony Group (http://www.opensymphony.com/). It uses Sitemesh2,
-licensed under the OpenSymphony Software License, Version 1.1.
-
-See licenses/LICENSE-opensymphony.txt for the full license terms.
 
 --------------------------------------------------------------------------
 
 The following files are licensed under the MIT:
 
-    grails-spring-security/plugin-ui/plugin/grails-app/assets/javascripts/jquery/jquery.jdMenu.js
-    grails-spring-security/plugin-ui/plugin/grails-app/assets/javascripts/jquery/jquery.positionBy.js
-    grails-spring-security/plugin-ui/plugin/grails-app/assets/stylesheets/jquery.jdMenu.slate.css
-    grails-spring-security/plugin-ui/plugin/grails-app/assets/stylesheets/jquery.jdMenu.css
+    grails-app/assets/javascripts/jquery/jquery.jdMenu.js
+    grails-app/assets/javascripts/jquery/jquery.positionBy.js
+    grails-app/assets/stylesheets/jquery.jdMenu.slate.css
+    grails-app/assets/stylesheets/jquery.jdMenu.css
 
 See licenses/LICENSE-MIT.txt for the full license terms.
 

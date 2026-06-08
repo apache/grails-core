@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-[![Java CI](https://github.com/apache/grails-spring-security/actions/workflows/gradle.yml/badge.svg)](https://github.com/apache/grails-spring-security/actions/workflows/gradle.yml)
-
 Grails Spring Security
 ======================
 
