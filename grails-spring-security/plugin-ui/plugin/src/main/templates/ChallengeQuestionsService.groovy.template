@@ -1,0 +1,18 @@
+package  ${packageName}
+
+import grails.gorm.services.Service
+
+@Service(${saClassName})
+interface ${saClassName}Service {
+
+    ${saClassName} get(Serializable id)
+
+    List<${saClassName}> list(Map args)
+
+    Long count()
+
+    void delete(Serializable id)
+
+    ${saClassName} save(${saClassName} ${camelCaseSaName})
+
+}

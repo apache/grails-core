@@ -1,0 +1,126 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-salt]]
+=== Salted Passwords
+
+The Spring Security plugin uses hashed passwords and a digest algorithm that you specify. For enhanced protection against dictionary attacks, you should use a salt in addition to digest hashing.
+
+[NOTE]
+====
+Note that if you use bcrypt (the default setting) or pbkdf2, do not configure a salt (e.g. the `dao.reflectionSaltSourceProperty` property or a custom `saltSource` bean) because these algorithms use their own internally.
+====
+
+There are two approaches to using salted passwords in the plugin - defining a property in the `UserDetails` class to access by reflection, or by directly implementing {apidocs}org/springframework/security/authentication/dao/SaltSource.html[SaltSource] yourself.
+
+==== dao.reflectionSaltSourceProperty
+Set the `dao.reflectionSaltSourceProperty` configuration property:
+
+[source,groovy]
+----
+grails.plugin.springsecurity.dao.reflectionSaltSourceProperty = 'username'
+----
+
+This property belongs to the `UserDetails` class. By default it is an instance of `grails.plugin.springsecurity.userdetails.GrailsUser`, which extends the standard Spring Security {apidocs}org/springframework/security/core/userdetails/User.html[User class] and not your "`person`" domain class. This limits the available properties unless you use a custom UserDetailsService (<<core-userDetailsService>>).
+
+As long as the username does not change, this approach works well for the salt. If you choose a property that the user can change, the user cannot log in again after changing it unless you re-hash the password with the new value. So it's best to use a property that doesn't change.
+
+Another option is to generate a random salt when creating users and store this in the database by adding a new property to the "`person`" class. This approach requires a custom `UserDetailsService` because you need a custom `UserDetails` implementation that also has a "`salt`" property, but this is more flexible and works in cases where users can change their username.
+
+==== SystemWideSaltSource and Custom SaltSource
+
+Spring Security supplies a simple `SaltSource` implementation, {apidocs}org/springframework/security/authentication/dao/SystemWideSaltSource.html[SystemWideSaltSource], which uses the same salt for each user. It's less robust than using a different value for each user but still better than no salt at all.
+
+An example override of the salt source bean using SystemWideSaltSource would look like this:
+
+[source,groovy]
+.Listing {counter:listing}. Configuring `SystemWideSaltSource` as the `saltSource` bean in `application.groovy`
+----
+import org.springframework.security.authentication.dao.SystemWideSaltSource
+
+beans = {
+   saltSource(SystemWideSaltSource) {
+      systemWideSalt = 'the_salt_value'
+   }
+}
+----
+
+To have full control over the process, you can implement the `SaltSource` interface and replace the plugin's implementation with your own by defining a bean in `grails-app/conf/spring/resources.groovy` with the name `saltSource`:
+
+[source,groovy]
+.Listing {counter:listing}. Configuring a custom implementation of the `saltSource` bean in `application.groovy`
+----
+import com.foo.bar.MySaltSource
+
+beans = {
+   saltSource(MySaltSource) {
+      // set properties
+   }
+}
+----
+
+==== Hashing Passwords
+
+Regardless of the implementation, you need to be aware of what value to use for a salt when creating or updating users, for example, in a `save` or `update` action in a `UserController`. When hashing the password, use the two-parameter version of `springSecurityService.encodePassword()`:
+
+[source,groovy]
+.Listing {counter:listing}. Explicitly hashing passwords
+----
+class UserController {
+
+   def springSecurityService
+
+   def save(User user) {
+      user.password = springSecurityService.encodePassword(
+            params.password, user.username)
+      if (!user.save(flush: true)) {
+         render view: 'create', model: [userInstance: user]
+         return
+      }
+
+      flash.message = "The user was created"
+      redirect action: show, id: user.id
+   }
+
+   def update(User user) {
+
+      if (params.password) {
+         params.password = springSecurityService.encodePassword(
+                    params.password, user.username)
+      }
+      if (!user.save(flush: true)) {
+         render view: 'edit', model: [userInstance: user]
+         return
+      }
+
+      if (springSecurityService.loggedIn &&
+               springSecurityService.principal.username == user.username) {
+         springSecurityService.reauthenticate user.username
+      }
+
+      flash.message = "The user was updated"
+      redirect action: show, id: user.id
+   }
+}
+----
+
+[NOTE]
+====
+If you are encoding the password in the User domain class (using `beforeInsert` and `encodePassword`) then don't call `springSecurityService.encodePassword()` in your controller since you'll double-hash the password and users won't be able to log in. It's best to encapsulate the password handling logic in the domain class. In newer versions of the plugin (version 1.2 and higher) code is auto-generated in the user class so you'll need to adjust that password hashing for your salt approach.
+====

@@ -1,0 +1,68 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+== Introduction
+
+The Grails Spring Security plugins provide production-ready authentication and authorization for https://grails.apache.org[Apache Grails] applications.
+Built on https://spring.io/projects/spring-security[Spring Security], these plugins offer sensible defaults with extensive configuration options, enabling you to secure your Grails applications quickly while retaining full flexibility for customization.
+
+=== About This Documentation
+
+Starting with Grails 7, all Spring Security plugin documentation is combined into a single reference guide.
+This document covers the *Core* plugin and all official extension plugins:
+
+* **Core** -- The foundation plugin providing authentication, authorization, domain classes, request mappings, and security infrastructure.
+* **ACL** -- Access Control List support for fine-grained domain object security.
+* **CAS** -- Central Authentication Service (CAS) single sign-on integration.
+* **LDAP** -- Lightweight Directory Access Protocol authentication and user lookup.
+* **OAuth2** -- OAuth 2.0 provider integration for delegated authentication.
+* **REST** -- Stateless token-based authentication for RESTful APIs, with support for JWT, GORM, Memcached, Redis, and Grails Cache token storage backends.
+* **UI** -- Administrative user interface for managing users, roles, and request mappings.
+
+=== Repository
+
+All plugins are developed in a single repository at https://github.com/apache/grails-spring-security[github.com/apache/grails-spring-security].
+Prior to Grails 7, each extension plugin was maintained in its own separate repository.
+The consolidation into a mono-repository simplifies dependency management, ensures consistent versioning, and makes it easier to contribute.
+
+=== Getting Started
+
+If you are new to Grails Spring Security, start with the <<core-introduction,Core Plugin Introduction>> section, which covers installation, configuration, and a quick-start tutorial.
+Once you have the core plugin working, you can add any combination of extension plugins to meet your application's needs.
+
+=== Compatibility
+
+[cols="1,1,1",options="header"]
+|===
+| Plugin Version | Grails Version | Spring Security Version
+
+| 7.0.x
+| 7.0.x
+| 6.x
+
+| 6.0.x
+| 6.x
+| 5.8.x
+
+| 5.x
+| 5.x
+| 5.x
+|===
+
+For information on upgrading from previous versions, see the <<upgrading-from-previous-versions,Upgrading>> section.

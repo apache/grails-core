@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta name="layout" content="\${layoutUi}" />
+        <s2ui:title messageCode='default.edit.label' entityNameMessageCode='${camelCaseSaName}.label' entityNameDefault='${saClassName}'/>
+    </head>
+    <body>
+        <div id="edit-${camelCaseSaName}" class="body" role="main">
+            <g:hasErrors bean="\${this.${camelCaseSaName}}">
+            <ul class="errors" role="alert">
+                <g:eachError bean="\${this.${camelCaseSaName}}" var="error">
+                <li <g:if test="\${error in org.springframework.validation.FieldError}">data-field-id="\${error.field}"</g:if>><g:message error="\${error}"/></li>
+                </g:eachError>
+            </ul>
+            </g:hasErrors>
+             <s2ui:formContainer type='update' beanType='${camelCaseSaName}' focus='myQuestion1'>
+                <s2ui:form useToken="true">
+                    <div class="dialog">
+                        <br/>
+                        <table>
+                            <tbody>
+                                <% for(int i=1; i <= numberOfQuestions.toInteger(); i++) {  %>
+                                    <s2ui:textFieldRow name='myQuestion${i}' size='50' labelCodeDefault='myQuestion${i}'/>
+                                        <s2ui:textFieldRow name='myAnswer${i}' size='50' labelCodeDefault='myAnswer${i}'/>
+                                <%  } %>
+                                <s2ui:selectRow name='${userPropName}.id' from='\${users}' labelCodeDefault='${userPropName}' optionValue='\${lookupProp}' />
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style='float:left; margin-top: 10px;'>
+                        <s2ui:submitButton/>
+                            <s2ui:deleteButton/>
+                    </div>
+                </s2ui:form>
+            </s2ui:formContainer>
+            <s2ui:deleteButtonForm instanceId='\${${camelCaseSaName}.id}' useToken="true"/>
+        </div>
+    </body>
+</html>

@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<!--
+
+     Licensed to the Apache Software Foundation (ASF) under one
+     or more contributor license agreements.  See the NOTICE file
+     distributed with this work for additional information
+     regarding copyright ownership.  The ASF licenses this file
+     to you under the Apache License, Version 2.0 (the
+     "License"); you may not use this file except in compliance
+     with the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing,
+     software distributed under the License is distributed on an
+     "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+     KIND, either express or implied.  See the License for the
+     specific language governing permissions and limitations
+     under the License.
+
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grails Spring Security Plugins - Documentation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #1a9f6c;
+            --primary-dark: #158259;
+            --text-color: #1f2937;
+            --text-muted: #6b7280;
+            --bg-color: #f9fafb;
+            --card-bg: #ffffff;
+            --border-color: #e5e7eb;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #1a9f6c 0%, #0d7a52 100%);
+            color: white;
+            padding: 4rem 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            opacity: 0.5;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .hero h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.025em;
+        }
+
+        .hero .subtitle {
+            font-size: 1.125rem;
+            opacity: 0.9;
+            font-weight: 400;
+        }
+
+        .github-link {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            color: white;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: background-color 0.2s ease;
+        }
+
+        .github-link:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .github-link svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-color);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 1.5rem;
+            background: var(--primary-color);
+            border-radius: 2px;
+        }
+
+        .section-subtitle {
+            font-size: 0.9375rem;
+            color: var(--text-muted);
+            margin-top: -1rem;
+            margin-bottom: 1.5rem;
+            padding-left: 1.25rem;
+        }
+
+        .docs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .doc-card {
+            background: var(--card-bg);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .doc-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .doc-card h3 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-color);
+            margin-bottom: 0.25rem;
+        }
+
+        .doc-card p {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+        }
+
+        .version-badge {
+            display: inline-block;
+            font-size: 0.75rem;
+            font-weight: 500;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            margin-bottom: 1rem;
+        }
+
+        .version-badge.snapshot {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .version-badge.latest {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .version-badge.combined {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .version-badge.historical {
+            background: #f3f4f6;
+            color: #4b5563;
+        }
+
+        .links {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.625rem 1rem;
+            background: var(--bg-color);
+            border-radius: 0.5rem;
+            text-decoration: none;
+            color: var(--text-color);
+            font-weight: 500;
+            font-size: 0.9375rem;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .link:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .link:hover svg {
+            stroke: white;
+        }
+
+        .link svg {
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+            stroke: var(--text-muted);
+            transition: stroke 0.2s ease;
+        }
+
+        .link-small {
+            font-size: 0.8125rem;
+            padding: 0.5rem 0.875rem;
+        }
+
+        .plugin-links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.5rem;
+        }
+
+        .plugin-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            background: var(--bg-color);
+            border-radius: 0.5rem;
+            text-decoration: none;
+            color: var(--text-color);
+            font-weight: 500;
+            font-size: 0.8125rem;
+            transition: background-color 0.2s ease, color 0.2s ease;
+            text-align: center;
+        }
+
+        .plugin-link:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .divider-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .history-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 3rem;
+        }
+
+        .history-card {
+            background: var(--card-bg);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .history-card:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .history-card h4 {
+            font-size: 0.9375rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .footer a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* SVG icon definitions used inline */
+        .icon-book, .icon-code, .icon-download, .icon-archive {
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 640px) {
+            .hero {
+                padding: 3rem 1.5rem;
+            }
+
+            .hero h1 {
+                font-size: 1.875rem;
+            }
+
+            .github-link {
+                position: relative;
+                top: auto;
+                right: auto;
+                margin-top: 1.5rem;
+                display: inline-flex;
+            }
+
+            .container {
+                padding: 2rem 1rem;
+            }
+
+            .docs-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .history-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .plugin-links {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="hero">
+        <a href="https://github.com/apache/grails-spring-security" class="github-link">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+            </svg>
+            View on GitHub
+        </a>
+        <div class="hero-content">
+            <h1>Grails Spring Security</h1>
+            <p class="subtitle">Production-ready authentication and authorization for Apache Grails applications</p>
+        </div>
+    </header>
+
+    <main class="container">
+
+        <!-- ============================================ -->
+        <!-- Current Documentation                        -->
+        <!-- ============================================ -->
+
+        <h2 class="section-title">Documentation</h2>
+
+        <div class="docs-grid">
+
+            <!-- Latest Release Card -->
+            <div class="doc-card">
+                <span class="version-badge latest">Latest Release</span>
+                <h3>Grails 7 (7.0.x)</h3>
+                <p>Stable documentation for the current release</p>
+                <div class="links">
+                    <a href="/grails-spring-security/7.0.x/guide/index.html" class="link">
+                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                        </svg>
+                        User Guide
+                    </a>
+                </div>
+                <div class="divider-label">API Reference (Groovydoc)</div>
+                <div class="plugin-links">
+                    <a href="/grails-spring-security/7.0.x/core-plugin/groovydoc/index.html" class="plugin-link">Core</a>
+                    <a href="/grails-spring-security/7.0.x/acl-plugin/groovydoc/index.html" class="plugin-link">ACL</a>
+                    <a href="/grails-spring-security/7.0.x/cas-plugin/groovydoc/index.html" class="plugin-link">CAS</a>
+                    <a href="/grails-spring-security/7.0.x/ldap-plugin/groovydoc/index.html" class="plugin-link">LDAP</a>
+                    <a href="/grails-spring-security/7.0.x/oauth2-plugin/groovydoc/index.html" class="plugin-link">OAuth2</a>
+                    <a href="/grails-spring-security/7.0.x/rest-plugin/groovydoc/index.html" class="plugin-link">REST</a>
+                    <a href="/grails-spring-security/7.0.x/ui-plugin/groovydoc/index.html" class="plugin-link">UI</a>
+                </div>
+            </div>
+
+            <!-- Snapshot Card -->
+            <div class="doc-card">
+                <span class="version-badge snapshot">Snapshot</span>
+                <h3>Development Version</h3>
+                <p>Latest development documentation (unreleased)</p>
+                <div class="links">
+                    <a href="/grails-spring-security/snapshot/guide/index.html" class="link">
+                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                        </svg>
+                        User Guide
+                    </a>
+                </div>
+                <div class="divider-label">API Reference (Groovydoc)</div>
+                <div class="plugin-links">
+                    <a href="/grails-spring-security/snapshot/core-plugin/groovydoc/index.html" class="plugin-link">Core</a>
+                    <a href="/grails-spring-security/snapshot/acl-plugin/groovydoc/index.html" class="plugin-link">ACL</a>
+                    <a href="/grails-spring-security/snapshot/cas-plugin/groovydoc/index.html" class="plugin-link">CAS</a>
+                    <a href="/grails-spring-security/snapshot/ldap-plugin/groovydoc/index.html" class="plugin-link">LDAP</a>
+                    <a href="/grails-spring-security/snapshot/oauth2-plugin/groovydoc/index.html" class="plugin-link">OAuth2</a>
+                    <a href="/grails-spring-security/snapshot/rest-plugin/groovydoc/index.html" class="plugin-link">REST</a>
+                    <a href="/grails-spring-security/snapshot/ui-plugin/groovydoc/index.html" class="plugin-link">UI</a>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ============================================ -->
+        <!-- Historical Documentation                     -->
+        <!-- ============================================ -->
+
+        <h2 class="section-title">Historical Documentation</h2>
+        <p class="section-subtitle">Previous versions documented the Core plugin only. Extension plugins were maintained in separate repositories.</p>
+
+        <div class="history-grid">
+
+            <div class="history-card">
+                <span class="version-badge historical">Grails 6</span>
+                <h4>6.0.x</h4>
+                <div class="links">
+                    <a href="/grails-spring-security/6.0.x/index.html" class="link link-small">
+                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                        </svg>
+                        User Guide
+                    </a>
+                </div>
+            </div>
+
+            <div class="history-card">
+                <span class="version-badge historical">Grails 5</span>
+                <h4>5.3.x</h4>
+                <div class="links">
+                    <a href="/grails-spring-security/5.3.x/index.html" class="link link-small">
+                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                        </svg>
+                        User Guide
+                    </a>
+                    <a href="/grails-spring-security/5.3.x/spring-security-core.pdf" class="link link-small">
+                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        PDF
+                    </a>
+                </div>
+            </div>
+
+            <div class="history-card">
+                <span class="version-badge historical">Grails 4</span>
+                <h4>4.0.x</h4>
+                <div class="links">
+                    <a href="/grails-spring-security/4.0.x/index.html" class="link link-small">
+                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                        </svg>
+                        User Guide
+                    </a>
+                    <a href="/grails-spring-security/4.0.x/spring-security-core.pdf" class="link link-small">
+                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        PDF
+                    </a>
+                </div>
+            </div>
+
+            <div class="history-card">
+                <span class="version-badge historical">Grails 3</span>
+                <h4>3.2.x</h4>
+                <div class="links">
+                    <a href="/grails-spring-security/3.2.x/index.html" class="link link-small">
+                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                        </svg>
+                        User Guide
+                    </a>
+                    <a href="/grails-spring-security/3.2.x/spring-security-core.pdf" class="link link-small">
+                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        PDF
+                    </a>
+                </div>
+            </div>
+
+            <div class="history-card">
+                <span class="version-badge historical">Legacy</span>
+                <h4>2.0.x</h4>
+                <div class="links">
+                    <a href="/grails-spring-security/2.0.x/index.html" class="link link-small">
+                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                        </svg>
+                        User Guide
+                    </a>
+                    <a href="/grails-spring-security/2.0.x/guide/single.pdf" class="link link-small">
+                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        PDF
+                    </a>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <footer class="footer">
+        <p>Built by the <a href="https://grails.apache.org">Apache Grails</a> team &middot;
+           <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a></p>
+    </footer>
+</body>
+</html>

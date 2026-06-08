@@ -1,0 +1,199 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-requestMappings]]
+== Configuring Request Mappings to Secure URLs
+
+You can choose among the following approaches to configuring request mappings for secure application URLs. The goal is to map URL patterns to the roles required to access those URLs.
+
+* `@Secured` annotations (default approach) - <<core-securedAnnotations>>
+* A simple Map in `application.groovy` - <<core-configGroovyMap>>
+* `Requestmap` domain class instances stored in the database - <<core-requestmapInstances>>
+
+You can only use one method at a time. You configure it with the `securityConfigType` attribute; the value has to be an `SecurityConfigType` enum value or the name of the enum as a String.
+
+=== Pessimistic Lockdown
+
+Many applications are mostly public, with some pages only accessible to authenticated users with various roles. In this case, it might make sense to leave URLs open by default and restrict access on a case-by-case basis. However, if your application is primarily secure, you can use a pessimistic lockdown approach to deny access to all URLs that do not have an applicable URL pass:[&lt;==&gt;] Role request mapping. But the pessimistic approach is safer; if you forget to restrict access to a URL using the optimistic approach, it might take a while to discover that unauthorized users can access the URL, but if you forget to allow access when using the pessimistic approach, no user can access it and the error should be quickly discovered.
+
+The pessimistic approach is the default, and there are two configuration options that apply. If `rejectIfNoRule` is `true` (the default) then any URL that has no request mappings (an annotation, entry in `controllerAnnotations.staticRules` or `interceptUrlMap`, or a `Requestmap` instance) will be denied to all users. The other option is `fii.rejectPublicInvocations` and if it is `true` (the default) then un-mapped URLs will trigger an `IllegalArgumentException` and will show the error page. This is uglier, but more useful because it's very clear that there is a misconfiguration. When `fii.rejectPublicInvocations` is `false` but `rejectIfNoRule` is `true` you just see the "`Sorry, you're not authorized to view this page.`" error 403 message.
+
+Note that the two settings are mutually exclusive. If `rejectIfNoRule` is `true` then `fii.rejectPublicInvocations` is ignored because the request will transition to the login page or the error 403 page. If you want the more obvious error page, set `fii.rejectPublicInvocations` to `true` and `rejectIfNoRule` to `false` to allow that check to occur.
+
+To reject un-mapped URLs with a 403 error code, use these settings (or none since `rejectIfNoRule` defaults to `true`)
+
+[source,groovy]
+.Listing {counter:listing}. Enabling `rejectIfNoRule`
+----
+grails.plugin.springsecurity.rejectIfNoRule = true
+grails.plugin.springsecurity.fii.rejectPublicInvocations = false
+----
+
+and to reject with the error 500 page, use these (optionally omit `rejectPublicInvocations` since it defaults to `true`):
+
+[source,groovy]
+.Listing {counter:listing}. Enabling `fii.rejectPublicInvocations`
+----
+grails.plugin.springsecurity.rejectIfNoRule = false
+grails.plugin.springsecurity.fii.rejectPublicInvocations = true
+----
+
+Note that if you set `rejectIfNoRule` or `rejectPublicInvocations` to `true` you'll need to configure the `staticRules` map to include URLs that can't otherwise be guarded:
+
+[source,groovy]
+.Listing {counter:listing}. Example `controllerAnnotations.staticRules` configuration when using `rejectIfNoRule` or `fii.rejectPublicInvocations`
+----
+grails.plugin.springsecurity.controllerAnnotations.staticRules = [
+   [pattern: '/',               access: ['permitAll']],
+   [pattern: '/error',          access: ['permitAll']],
+   [pattern: '/index',          access: ['permitAll']],
+   [pattern: '/index.gsp',      access: ['permitAll']],
+   [pattern: '/shutdown',       access: ['permitAll']],
+   [pattern: '/assets/**',      access: ['permitAll']],
+   [pattern: '/**/js/**',       access: ['permitAll']],
+   [pattern: '/**/css/**',      access: ['permitAll']],
+   [pattern: '/**/images/**',   access: ['permitAll']],
+   [pattern: '/**/favicon.ico', access: ['permitAll']]
+]
+----
+
+[NOTE]
+====
+Note that the syntax of the `staticRules` block has changed from previous versions of the plugin where the keys were URL patterns and the values were access rules (roles, expressions, etc.) To avoid issues in configuration parsing and to allow optionally specifying the HTTP method associated with one or more of the rules, the `staticRules` block is now specified as a `List` of ``Map``s. Each `Map` defines one combination of url pattern and access rules (and optionally HTTP method). If there are multiple access rules, specify them as a `List` of ``String``s; if there is only one access rule, its value can be a `String` or a single-element `List`.
+
+The preceding `staticRules` example includes the default mappings defined when running the <<core-s2-quickstart>> script. Here's a more complete example using all configuration options:
+
+[source,groovy]
+----
+grails.plugin.springsecurity.controllerAnnotations.staticRules = [
+   [pattern: '/',               access: ['permitAll']],
+   [pattern: '/error',          access: ['permitAll']],
+   [pattern: '/index',          access: ['permitAll']],
+   [pattern: '/index.gsp',      access: ['permitAll']],
+   [pattern: '/shutdown',       access: ['permitAll']],
+   [pattern: '/assets/**',      access: ['permitAll']],
+   [pattern: '/**/js/**',       access: ['permitAll']],
+   [pattern: '/**/css/**',      access: ['permitAll']],
+   [pattern: '/**/images/**',   access: ['permitAll']],
+   [pattern: '/**/favicon.ico', access: ['permitAll']],
+
+   [pattern: '/user/**',        access: 'ROLE_USER'],
+   [pattern: '/admin/**',       access: ['ROLE_ADMIN', 'IS_AUTHENTICATED_FULLY']],
+   [pattern: '/thing/register', access: 'isAuthenticated()', httpMethod: 'PUT']
+]
+----
+
+Now in addition to the default mappings, we require an authentication with `ROLE_USER` for any URL starting with `/user`, a "`fully authenticated`" authentication (i.e. an explicit login was performed without using remember-me) with `ROLE_ADMIN` for any URL starting with `/admin`, and finally to access the URL `/thing/register` the user must be authenticated with any role(s) but must use a PUT request.
+====
+
+This is needed when using annotations; if you use the `grails.plugin.springsecurity.interceptUrlMap` map in `application.groovy` you'll need to add these URLs too, and likewise when using `Requestmap` instances. If you don't use annotations, you must add rules for the login and logout controllers also. You can add Requestmaps manually, or in BootStrap.groovy, for example:
+
+[source,groovy]
+.Listing {counter:listing}. Creating default requestmap instances when using `rejectIfNoRule` or `fii.rejectPublicInvocations`
+----
+for (String url in [
+      '/', '/error', '/index', '/index.gsp', '/**/favicon.ico', '/shutdown',
+      '/**/js/**', '/**/css/**', '/**/images/**',
+      '/login', '/login.*', '/login/*',
+      '/logout', '/logout.*', '/logout/*']) {
+   new Requestmap(url: url, configAttribute: 'permitAll').save()
+}
+springSecurityService.clearCachedRequestmaps()
+----
+
+The analogous interceptUrlMap settings would be:
+
+[source,groovy]
+.Listing {counter:listing}. Example `interceptUrlMap` configuration when using `rejectIfNoRule` or `fii.rejectPublicInvocations`
+----
+grails.plugin.springsecurity.interceptUrlMap = [
+   [pattern: '/',               access: ['permitAll']],
+   [pattern: '/error',          access: ['permitAll']],
+   [pattern: '/index',          access: ['permitAll']],
+   [pattern: '/index.gsp',      access: ['permitAll']],
+   [pattern: '/shutdown',       access: ['permitAll']],
+   [pattern: '/assets/**',      access: ['permitAll']],
+   [pattern: '/**/js/**',       access: ['permitAll']],
+   [pattern: '/**/css/**',      access: ['permitAll']],
+   [pattern: '/**/images/**',   access: ['permitAll']],
+   [pattern: '/**/favicon.ico', access: ['permitAll']],
+   [pattern: '/login/**',       access: ['permitAll']],
+   [pattern: '/logout/**',      access: ['permitAll']]
+]
+----
+
+In addition, when you enable the switch-user feature, you'll have to specify access rules for the associated URLs, e.g.
+
+[source,groovy]
+----
+[pattern: '/login/impersonate', access: ['ROLE_ADMIN']],
+[pattern: '/logout/impersonate', access: ['permitAll']]
+----
+
+=== URLs and Authorities
+
+In each approach you configure a mapping for a URL pattern to the role(s) that are required to access those URLs, for example, `/admin/user/pass:[**]` requires `ROLE_ADMIN`. In addition, you can combine the role(s) with SpEL expressions and/or tokens such as IS_AUTHENTICATED_ANONYMOUSLY, IS_AUTHENTICATED_REMEMBERED, and IS_AUTHENTICATED_FULLY. One or more voters (<<voters>>) will process any tokens and enforce a rule based on them:
+
+* IS_AUTHENTICATED_ANONYMOUSLY
+** signifies that anyone can access this URL. By default the `AnonymousAuthenticationFilter` ensures an "`anonymous`" `Authentication` with no roles so that every user has an authentication. The token accepts any authentication, even anonymous.
+** The SpEL expression `permitAll` is equivalent to `IS_AUTHENTICATED_ANONYMOUSLY` and is typically more intuitive to use
+* IS_AUTHENTICATED_REMEMBERED
+** requires the user to be authenticated through a remember-me cookie or an explicit login.
+** The SpEL expression `isAuthenticated() or isRememberMe()` is equivalent to `IS_AUTHENTICATED_REMEMBERED` and is typically more intuitive to use
+* IS_AUTHENTICATED_FULLY
+** requires the user to be fully authenticated with an explicit login.
+** The SpEL expression `isFullyAuthenticated()` is equivalent to `IS_AUTHENTICATED_FULLY` and is typically more intuitive to use
+
+With `IS_AUTHENTICATED_FULLY` you can implement a security scheme whereby users can check a remember-me checkbox during login and be auto-authenticated each time they return to your site, but must still log in with a password for some parts of the site. For example, allow regular browsing and adding items to a shopping cart with only a cookie, but require an explicit login to check out or view purchase history.
+
+For more information on `IS_AUTHENTICATED_FULLY`, `IS_AUTHENTICATED_REMEMBERED`, and `IS_AUTHENTICATED_ANONYMOUSLY`, see the Javadoc for {apidocs}org/springframework/security/access/vote/AuthenticatedVoter.html[AuthenticatedVoter]
+
+[WARNING]
+====
+The plugin isn't compatible with Grails `<g:actionSubmit>` tags. These are used in the autogenerated GSPs that are created for you, and they enable having multiple submit buttons, each with its own action, inside a single form. The problem from the security perspective is that the form posts to the default action of the controller, and Grails figures out the handler action to use based on the `action` attribute of the `actionSubmit` tag. So for example you can guard the `/person/delete` with a restrictive role, but given this typical edit form:
+
+[source,html]
+----
+<g:form>
+   ...
+   <g:actionSubmit class="save" action="update" value='Update' />
+   <g:actionSubmit class="delete" action="delete" value="'Delete' />
+</g:form>
+----
+
+both actions will be allowed if the user has permission to access the `/person/index` url, which would often be the case.
+
+The workaround is to create separate forms without using `actionSubmit` and explicitly set the `action` on the `<g:form>` tags, which will result in form submissions to the expected urls and properly guarded urls.
+====
+
+=== Comparing the Approaches
+
+Each approach has its advantages and disadvantages. Annotations and the `application.groovy` Map are less flexible because they are configured once in the code and you can update them only by restarting the application (in prod mode anyway). In practice this limitation is minor, because security mappings for most applications are unlikely to change at runtime.
+
+On the other hand, storing `Requestmap` entries enables runtime-configurability. This approach gives you a core set of rules populated at application startup that you can edit, add to, and delete as needed. However, it separates the security rules from the application code, which is less convenient than having the rules defined in `grails-app/conf/application.groovy` or in the applicable controllers using annotations.
+
+URLs must be mapped in lowercase if you use the `Requestmap` or `grails-app/conf/application.groovy` map approaches. For example, if you have a FooBarController, its urls will be of the form /fooBar/list, /fooBar/create, and so on, but these must be mapped as /foobar/, /foobar/list, /foobar/create. This mapping is handled automatically for you if you use annotations.
+
+include::requestMappings/securedAnnotations.adoc[]
+
+include::requestMappings/configGroovyMap.adoc[]
+
+include::requestMappings/requestmapInstances.adoc[]
+
+include::requestMappings/expressions.adoc[]

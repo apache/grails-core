@@ -1,0 +1,85 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[ui-introduction]]
+== Introduction to the Spring Security UI Plugin
+
+The Spring Security UI plugin provides CRUD screens and other user management workflows.
+
+The CRUD screens are protected from cross-site request forgery (CSRF) attacks through the use of the `useToken` attribute
+in forms. For more details, refer to the
+https://docs.grails.org/latest/guide/theWebLayer.html#formtokens[Handling Duplicate Form Submissions] section in the
+https://docs.grails.org/latest/guide[Grails Core documentation].
+
+Non-default functionality is available only if the feature is available. This includes:
+
+* ACL Controllers and Views, which are enabled if the https://github.com/apache/grails-spring-security[ACL Plugin] is installed.
+* Requestmaps support, which is available if `grails.plugin.springsecurity.securityConfigType` is set to `"Requestmap"` or `SecurityConfigType.Requestmap` in `application.groovy`.
+* Persistent cookies support, which is enabled if it has been configured with the `s2-create-persistent-token` script.
+
+=== Installation
+
+Add an entry in the `dependencies` block of your `build.gradle` file, changing the version as needed:
+
+[source,groovy]
+[subs="attributes"]
+.`build.gradle`
+----
+implementation 'org.apache.grails:grails-spring-security-ui:{projectVersion}'
+----
+
+Also be sure to update the version when new releases are available.
+
+=== Release History
+
+For later releases - see the https://github.com/apache/grails-spring-security/releases[GitHub release page].
+
+* Apr 9, 2019
+** 4.0.0.M1 release
+* Feb 14, 2018
+** 3.1.2 release
+* Sep 27, 2017
+** 3.1.1 release
+* Sep 26, 2017
+** 3.1.0 release
+* Jul 28, 2017
+** 3.0.2 release
+* Jul 27, 2017
+** 3.0.1 release
+* April 15, 2016
+** 3.0.0.M2 release
+* December 21, 2015
+** 3.0.0.M1 release
+* December 21, 2015
+** 1.0-RC3 release
+* May 20, 2014
+** 1.0-RC2 release
+* November 11, 2013
+** 1.0-RC1 release
+** https://jira.grails.org/secure/ReleaseNote.jspa?projectId=10233&amp;version=13069[JIRA Issues]
+* February 12, 2012
+** 0.2 release
+** https://jira.grails.org/secure/ReleaseNote.jspa?projectId=10233&amp;version=12709[JIRA Issues]
+* September 14, 2010
+** 0.1.2 release
+** https://jira.grails.org/secure/ReleaseNote.jspa?projectId=10233&amp;version=11921[JIRA Issues]
+* July 27, 2010
+** 0.1.1 release
+* July 26, 2010
+** initial 0.1 release

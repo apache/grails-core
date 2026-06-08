@@ -1,0 +1,144 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-authorityGroupClass]]
+=== Group Class
+
+The plugin provides you the option of creating an access inheritance level between "`person`" and "`authority`": the "`group`". The next three classes you will read about (including this one) are only used in a "`person`"/"`group`"/"`authority`" implementation. Rather than granting authorities directly to a "`person`", you can create a "`group`", map authorities to it, and then map a "`person`" to that "`group`". For applications that have a one or more groups of users who need the same level of access, having one or more "`group`" instances makes managing changes to access levels easier because the authorities that make up that access level are encapsulated in the "`group`", and a single change will affect all of the users.
+
+If you run the <<core-s2-quickstart>> script with the group name specified and use `com.mycompany.myapp` as your package and `RoleGroup` and `Role` as your class names, you'll generate this class:
+
+[source, groovy]
+.`RoleGroup.groovy`
+----
+package com.mycompany.myapp
+
+import grails.gorm.DetachedCriteria
+import groovy.transform.ToString
+
+import org.codehaus.groovy.util.HashCodeHelper
+import grails.compiler.GrailsCompileStatic
+
+@GrailsCompileStatic
+@ToString(cache=true, includeNames=true, includePackage=false)
+class RoleGroupRole implements Serializable {
+
+    private static final long serialVersionUID = 1
+
+    RoleGroup roleGroup
+    Role role
+
+    @Override
+    boolean equals(other) {
+        if (other instanceof RoleGroupRole) {
+            other.roleId == role?.id && other.roleGroupId == roleGroup?.id
+        }
+    }
+
+    @Override
+    int hashCode() {
+        int hashCode = HashCodeHelper.initHash()
+        if (roleGroup) {
+            hashCode = HashCodeHelper.updateHash(hashCode, roleGroup.id)
+        }
+        if (role) {
+            hashCode = HashCodeHelper.updateHash(hashCode, role.id)
+        }
+        hashCode
+    }
+
+    static RoleGroupRole get(long roleGroupId, long roleId) {
+        criteriaFor(roleGroupId, roleId).get()
+    }
+
+    static boolean exists(long roleGroupId, long roleId) {
+        criteriaFor(roleGroupId, roleId).count()
+    }
+
+    private static DetachedCriteria criteriaFor(long roleGroupId, long roleId) {
+        RoleGroupRole.where {
+            roleGroup == RoleGroup.load(roleGroupId) &&
+                    role == Role.load(roleId)
+        }
+    }
+
+    static RoleGroupRole create(RoleGroup roleGroup, Role role, boolean flush = false) {
+        def instance = new RoleGroupRole(roleGroup: roleGroup, role: role)
+        instance.save(flush: flush)
+        instance
+    }
+
+    static boolean remove(RoleGroup rg, Role r) {
+        if (rg != null && r != null) {
+            RoleGroupRole.where { roleGroup == rg && role == r }.deleteAll()
+        }
+    }
+
+    static int removeAll(Role r) {
+        r == null ? 0 : RoleGroupRole.where { role == r }.deleteAll() as int
+    }
+
+    static int removeAll(RoleGroup rg) {
+        rg == null ? 0 : RoleGroupRole.where { roleGroup == rg }.deleteAll() as int
+    }
+
+    static constraints = {
+        role validator: { Role r, RoleGroupRole rg ->
+            if (rg.roleGroup?.id) {
+                RoleGroupRole.withNewSession {
+                    if (RoleGroupRole.exists(rg.roleGroup.id, r.id)) {
+                        return ['roleGroup.exists']
+                    }
+                }
+            }
+        }
+    }
+
+    static mapping = {
+        id composite: ['roleGroup', 'role']
+        version false
+    }
+}
+----
+
+When running the <<core-s2-quickstart>> script with the group name specified, the "`person`" class will be generated differently to accommodate the use of groups. Assuming you use `com.mycompany.myapp` as your package and `User` and `RoleGroup` as your class names, the `getAuthorities()` method will be generated like so:
+
+[source,groovy]
+.Listing {counter:listing}. The generated `getAuthorities()` method when using role groups
+----
+Set<RoleGroup> getAuthorities() {
+    (UserRoleGroup.findAllByUser(this) as List<UserRoleGroup>)*.roleGroup as Set<RoleGroup>
+}
+----
+
+The plugin assumes the attribute `authorities` will provide the "`authority`" collection for each class, but you can change the property names in `grails-app/conf/application.groovy`. You also must ensure that the property `useRoleGroups` is set to `true` in order for `GormUserDetailsService` to properly retrieve the `authorities`.
+
+.RoleGroup configuration options
+[cols="30,30,40"]
+|====================
+| *Property* | *Default Value* | *Meaning*
+
+|useRoleGroups
+|`false`
+|Whether to use "`authority group`" implementation when loading user authorities
+
+|authority.groupAuthorityNameField
+|_none_ (the <<core-s2-quickstart>> script uses the name "`authorities`")
+|RoleGroup class role collection property
+|====================

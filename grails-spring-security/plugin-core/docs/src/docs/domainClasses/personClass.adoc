@@ -1,0 +1,161 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-personClass]]
+=== Person Class
+
+Spring Security uses an {apidocs}org/springframework/security/core/Authentication.html[Authentication] object to determine whether the current user is allowed to perform a secured action, such as accessing a URL, manipulating a secured domain object, invoking a secured method, and so on. This object is created during login. Typically overlap occurs between the need for authentication data and the need to represent a user in the application in ways that are unrelated to security. The mechanism for populating the authentication is completely pluggable in Spring Security; you only need to provide an implementation of {apidocs}org/springframework/security/core/userdetails/UserDetailsService.html[UserDetailsService] and implement its one method, `loadUserByUsername(String username)`.
+
+By default the plugin uses a Grails "`person`" domain class to manage this data. `username`, `enabled`, and `password` are the default names of the core required properties. You can easily plug in your own implementation (<<core-userDetailsService>>), and rename the class, package, and properties. In addition, you should define an `authorities` property to retrieve roles; this can be a property or a `getAuthorities()` method, and it can be defined through a traditional GORM many-to-many or a custom mapping.
+
+Assuming you choose `com.mycompany.myapp` as your package, and `User` as your class name, you'll generate this class:
+
+[source, groovy]
+.`User.groovy`
+----
+package com.mycompany.myapp
+
+import groovy.transform.EqualsAndHashCode
+import groovy.transform.ToString
+import grails.compiler.GrailsCompileStatic
+
+@GrailsCompileStatic
+@EqualsAndHashCode(includes = 'username')
+@ToString(includes = 'username', includeNames = true, includePackage = false)
+class User implements Serializable {
+
+	private static final long serialVersionUID = 1
+
+	String username
+	String password
+	boolean enabled = true
+	boolean accountExpired
+	boolean accountLocked
+	boolean passwordExpired
+
+	Set<Role> getAuthorities() {
+		(UserRole.findAllByUser(this) as List<UserRole>)*.role as Set<Role>
+	}
+
+	static constraints = {
+		password blank: false, password: true
+		username blank: false, unique: true
+	}
+
+	static mapping = {
+		password column: '`password`'
+	}
+}
+----
+
+Optionally, you can add other properties such as `email`, `firstName`, and `lastName`, convenience methods, and so on:
+
+[source,groovy]
+.`User.groovy`
+----
+package com.mycompany.myapp
+
+import groovy.transform.EqualsAndHashCode
+import groovy.transform.ToString
+import grails.compiler.GrailsCompileStatic
+
+@GrailsCompileStatic
+@EqualsAndHashCode(includes='username')
+@ToString(includes='username', includeNames=true, includePackage=false)
+class User implements Serializable {
+
+	private static final long serialVersionUID = 1
+
+	String username
+	String password
+	boolean enabled = true
+    String email // <1>
+    String firstName // <1>
+    String lastName // <1>
+	boolean accountExpired
+	boolean accountLocked
+	boolean passwordExpired
+
+    def someMethod() { // <2>
+        ...
+    }
+
+
+	Set<Role> getAuthorities() {
+		(UserRole.findAllByUser(this) as List<UserRole>)*.role as Set<Role>
+	}
+
+	static constraints = {
+		password blank: false, password: true
+		username blank: false, unique: true
+	}
+
+	static mapping = {
+		password column: '`password`'
+	}
+}
+----
+<1> Other properties
+<2> Convenience methods
+
+The `getAuthorities()` method is analagous to defining `static hasMany = [authorities: Authority]` in a traditional many-to-many mapping. This way `GormUserDetailsService` can call `user.authorities` during login to retrieve the roles without the overhead of a bidirectional many-to-many mapping.
+
+The class and property names are configurable using these configuration attributes:
+
+.User class property names
+[cols="30,30,40"]
+|====================
+| *Property* | *Default Value* | *Meaning*
+
+|userLookup.userDomainClassName
+|_none_
+|User class name
+
+|userLookup.usernamePropertyName
+|"`username`"
+|User class username property
+
+|userLookup.passwordPropertyName
+|"`password`"
+|User class password property
+
+|userLookup.authoritiesPropertyName
+|"`authorities`"
+|User class role collection property
+
+|userLookup.enabledPropertyName
+|"`enabled`"
+|User class enabled property
+
+|userLookup.accountExpiredPropertyName
+|"`accountExpired`"
+|User class account expired property
+
+|userLookup.accountLockedPropertyName
+|"`accountLocked`"
+|User class account locked property
+
+|userLookup.passwordExpiredPropertyName
+|"`passwordExpired`"
+|User class password expired property
+
+|userLookup.authorityJoinClassName
+|_none_
+|User/Role many-many join class name
+|====================

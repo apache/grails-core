@@ -1,0 +1,58 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[acl-history]]
+== History
+* Apr 18, 2019
+** 4.0.0.M2 release
+* Apr 8, 2019
+** 4.0.0.M1 release
+* Feb 15, 2018
+** 3.2.1 release
+* Dec 4, 2017
+** 3.2.0 release
+* May 4, 2017
+** 3.1.1 release
+* December 20, 2015
+** 3.0.1 release
+* December 8, 2015
+** 3.0.0 release
+* August 25, 2015
+** 3.0.0.M1 release
+* November 17, 2014
+** 2.0-RC2 release
+* October 08, 2013
+** 2.0-RC1 release
+* August 20, 2012
+** 1.1.1 release
+* February 16, 2011
+** 1.1 release
+* February 7, 2011
+** 1.0.2 release
+* August 1, 2010
+** 1.0.1 release
+* July 27, 2010
+** 1.0 release
+* May 22, 2010
+** initial 0.1 release
+
+
+include::history/authors.adoc[]
+
+include::history/previouswork.adoc[]

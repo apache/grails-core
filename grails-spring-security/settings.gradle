@@ -1,0 +1,129 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'com.gradle.develocity' version '4.1'
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.3'
+}
+
+def isCI = System.getenv().containsKey('CI')
+def isLocal = !isCI
+def isReproducibleBuild = System.getenv('SOURCE_DATE_EPOCH') != null
+if (isReproducibleBuild) {
+    gradle.settingsEvaluated {
+        logger.warn('*************** Remote Build Cache Disabled due to Reproducible Build ********************')
+        logger.warn('Build date will be set to (SOURCE_DATE_EPOCH={})', System.getenv('SOURCE_DATE_EPOCH'))
+    }
+}
+
+develocity {
+    server = 'https://develocity.apache.org'
+    buildScan {
+        tag('grails')
+        tag('grails-spring-security')
+        publishing.onlyIf { it.authenticated }
+        uploadInBackground = isLocal
+    }
+}
+
+buildCache {
+    local { enabled = (isLocal && !isReproducibleBuild) || (isCI && isReproducibleBuild) }
+    remote(develocity.buildCache) {
+        push = isCI
+        enabled = !isReproducibleBuild
+    }
+}
+
+rootProject.name = 'grails-spring-security.ROOT'
+
+include 'acl-plugin'
+include 'acl-docs'
+include 'acl-examples-functional-test-app'
+include 'acl-examples-integration-test-app'
+project(':acl-plugin').projectDir = new File(settingsDir, 'plugin-acl/plugin')
+project(':acl-docs').projectDir = new File(settingsDir, 'plugin-acl/docs')
+project(':acl-examples-functional-test-app').projectDir = new File(settingsDir, 'plugin-acl/examples/functional-test-app')
+project(':acl-examples-integration-test-app').projectDir = new File(settingsDir, 'plugin-acl/examples/integration-test-app')
+
+include 'cas-plugin'
+include 'cas-docs'
+include 'cas-examples-spring-security-cas-test1'
+project(':cas-plugin').projectDir = new File(settingsDir, 'plugin-cas/plugin')
+project(':cas-docs').projectDir = new File(settingsDir, 'plugin-cas/docs')
+project(':cas-examples-spring-security-cas-test1').projectDir = new File(settingsDir, 'plugin-cas/examples/spring-security-cas-test1')
+
+include 'core-plugin'
+include 'core-docs'
+include 'core-examples-functional-test-app'
+include 'core-examples-integration-test-app'
+include 'core-examples-misc-group'
+include 'core-examples-misc-hierarchical-roles'
+project(':core-plugin').projectDir = new File(settingsDir, 'plugin-core/plugin')
+project(':core-docs').projectDir = new File(settingsDir, 'plugin-core/docs')
+project(':core-examples-functional-test-app').projectDir = new File(settingsDir, 'plugin-core/examples/functional-test-app')
+project(':core-examples-integration-test-app').projectDir = new File(settingsDir, 'plugin-core/examples/integration-test-app')
+project(':core-examples-misc-group').projectDir = new File(settingsDir, 'plugin-core/examples/misc-functional-test-app/grails-spring-security-group')
+project(':core-examples-misc-hierarchical-roles').projectDir = new File(settingsDir, 'plugin-core/examples/misc-functional-test-app/grails-spring-security-hierarchical-roles')
+
+include 'ldap-plugin'
+include 'ldap-docs'
+include 'ldap-examples-custom-user-details-context-mapper'
+include 'ldap-examples-functional-test-app'
+include 'ldap-examples-retrieve-db-roles'
+include 'ldap-examples-retrieve-group-roles'
+project(':ldap-plugin').projectDir = new File(settingsDir, 'plugin-ldap/plugin')
+project(':ldap-docs').projectDir = new File(settingsDir, 'plugin-ldap/docs')
+project(':ldap-examples-custom-user-details-context-mapper').projectDir = new File(settingsDir, 'plugin-ldap/examples/custom-user-details-context-mapper')
+project(':ldap-examples-functional-test-app').projectDir = new File(settingsDir, 'plugin-ldap/examples/functional-test-app')
+project(':ldap-examples-retrieve-db-roles').projectDir = new File(settingsDir, 'plugin-ldap/examples/retrieve-db-roles')
+project(':ldap-examples-retrieve-group-roles').projectDir = new File(settingsDir, 'plugin-ldap/examples/retrieve-group-roles')
+
+include 'oauth2-plugin'
+include 'oauth2-docs'
+project(':oauth2-plugin').projectDir = new File(settingsDir, 'plugin-oauth2/plugin')
+project(':oauth2-docs').projectDir = new File(settingsDir, 'plugin-oauth2/docs')
+
+include 'spring-security-rest'
+include 'spring-security-rest-gorm'
+include 'spring-security-rest-grailscache'
+include 'spring-security-rest-memcached'
+include 'spring-security-rest-redis'
+include 'spring-security-rest-testapp-profile'
+include 'rest-docs'
+project(':spring-security-rest').projectDir = new File(settingsDir, 'plugin-rest/spring-security-rest')
+project(':spring-security-rest-gorm').projectDir = new File(settingsDir, 'plugin-rest/spring-security-rest-gorm')
+project(':spring-security-rest-grailscache').projectDir = new File(settingsDir, 'plugin-rest/spring-security-rest-grailscache')
+project(':spring-security-rest-memcached').projectDir = new File(settingsDir, 'plugin-rest/spring-security-rest-memcached')
+project(':spring-security-rest-redis').projectDir = new File(settingsDir, 'plugin-rest/spring-security-rest-redis')
+project(':spring-security-rest-testapp-profile').projectDir = new File(settingsDir, 'plugin-rest/spring-security-rest-testapp-profile')
+project(':rest-docs').projectDir = new File(settingsDir, 'plugin-rest/docs')
+
+include 'ui-plugin'
+include 'ui-docs'
+include 'ui-examples-extended'
+include 'ui-examples-simple'
+include 'ui-examples-common'
+project(':ui-plugin').projectDir = new File(settingsDir, 'plugin-ui/plugin')
+project(':ui-docs').projectDir = new File(settingsDir, 'plugin-ui/docs')
+project(':ui-examples-extended').projectDir = new File(settingsDir, 'plugin-ui/examples/extended')
+project(':ui-examples-simple').projectDir = new File(settingsDir, 'plugin-ui/examples/simple')
+project(':ui-examples-common').projectDir = new File(settingsDir, 'plugin-ui/examples/common')
+
+include 'docs'
+project(':docs').projectDir = new File(settingsDir, 'docs')

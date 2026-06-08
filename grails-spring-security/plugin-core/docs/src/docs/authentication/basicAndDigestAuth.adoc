@@ -1,0 +1,132 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-basicAndDigestAuth]]
+=== Basic and Digest Authentication
+
+To use https://en.wikipedia.org/wiki/Basic_access_authentication[HTTP Basic Authentication] in your application, set the `useBasicAuth` attribute to `true`. Also change the `basic.realmName` default value to one that suits your application, for example:
+
+[source,groovy]
+.Listing {counter:listing}. Basic Authentication example settings
+----
+grails.plugin.springsecurity.useBasicAuth = true
+grails.plugin.springsecurity.basic.realmName = "Ralph's Bait and Tackle"
+----
+
+.Basic Authentication configuration options
+[cols="30,30,40"]
+|====================
+| *Property* | *Default* | *Description*
+
+|useBasicAuth
+|`false`
+|Whether to use Basic authentication
+
+|basic.realmName
+|"`Grails Realm`"
+|Realm name displayed in the browser authentication popup
+
+|basic.credentialsCharset
+|"`UTF-8`"
+|The character set used to decode Base64-encoded data
+|====================
+
+With this authentication in place, users are prompted with the standard browser login dialog instead of being redirected to a login page.
+
+If you don't want all of your URLs guarded by Basic authentication, you can partition the URL patterns and apply Basic authentication to some, but regular form login to others. For example, if you have a web service that uses Basic authentication for `/webservice/pass:[**]` URLs, you would configure that using the `chainMap` config attribute:
+
+[source,groovy]
+.Listing {counter:listing}. Example filter chain mappings for Basic authentication
+----
+grails.plugin.springsecurity.filterChain.chainMap = [
+   [pattern: '/webservice/**', filters: 'JOINED_FILTERS,-exceptionTranslationFilter'],
+   [pattern: '/**',            filters: 'JOINED_FILTERS,-basicAuthenticationFilter,-basicExceptionTranslationFilter']
+]
+----
+
+In this example we're using the `JOINED_FILTERS` keyword instead of explicitly listing the filter names. Specifying `JOINED_FILTERS` means to use all of the filters that were configured using the various config options. In each case we also specify that we want to exclude one or more filters by prefixing their names with `-`.
+
+For the `/webservice/pass:[**]` URLs, we want all filters except for the standard `ExceptionTranslationFilter` since we want to use just the one configured for Basic Auth. And for the `/pass:[**]` URLs (everything else) we want everything except for the Basic authentication filter and its configured `ExceptionTranslationFilter`.
+
+https://en.wikipedia.org/wiki/Digest_access_authentication[Digest Authentication] is similar to Basic but is more secure because it does not send your password in obfuscated cleartext. Digest resembles Basic in practice - you get the same browser popup dialog when you authenticate. But because the credential transfer is genuinely hashed (instead of just Base64-encoded as with Basic authentication) you do not need SSL to guard your logins.
+
+.Digest Authentication configuration options
+[cols="30,30,40"]
+|====================
+| *Property* | *Default Value* | *Meaning*
+
+|useDigestAuth
+|`false`
+|Whether to use Digest authentication
+
+|digest.realmName
+|"`Grails Realm`"
+|Realm name displayed in the browser popup
+
+|digest.key
+|"`changeme`"
+|Key used to build the nonce for authentication; it should be changed but that's not required
+
+|digest.nonceValiditySeconds
+|`300`
+|How long a nonce stays valid
+
+|digest.passwordAlreadyEncoded
+|`false`
+|Whether you are managing the password hashing yourself
+
+|digest.createAuthenticatedToken
+|`false`
+|If `true`, creates an authenticated `UsernamePasswordAuthenticationToken` to avoid loading the user from the database twice. However, this process skips the `isAccountNonExpired()`, `isAccountNonLocked()`, `isCredentialsNonExpired()`, and `isEnabled()` checks, so it is not advised.
+
+|digest.useCleartextPasswords
+|`false`
+|If `true`, a cleartext password encoder is used (not recommended). If `false`, passwords hashed by `DigestAuthPasswordEncoder` are stored in the database
+|====================
+
+Digest authentication has a problem in that by default you store cleartext passwords in your database. This is because the browser hashes your password along with the username and Realm name, and this is compared to the password hashed using the same algorithm during authentication. The browser does not know about your `MessageDigest` algorithm or salt source, so to hash them the same way you need to load a cleartext password from the database.
+
+The plugin does provide an alternative, although it has no configuration options (in particular the digest algorithm cannot be changed). If `digest.useCleartextPasswords` is `false` (the default), then the `passwordEncoder` bean is replaced with an instance of `grails.plugin.springsecurity.authentication.encoding.DigestAuthPasswordEncoder`. This encoder uses the same approach as the browser, that is, it combines your password along with your username and Realm name essentially as a salt, and hashes with MD5. MD5 is not recommended in general, but given the typical size of the salt it is reasonably safe to use.
+
+The only required attribute is `useDigestAuth`, which you must set to `true`, but you probably also want to change the realm name:
+
+[source,groovy]
+----
+grails.plugin.springsecurity.useDigestAuth = true
+grails.plugin.springsecurity.digest.realmName = "Ralph's Bait and Tackle"
+----
+
+Digest authentication cannot be applied to a subset of URLs like Basic authentication can. This is due to the password encoding issues. So you cannot use the `chainMap` attribute here - all URLs will be guarded.
+
+[NOTE]
+====
+Note that since the Digest authentication password encoder is different from the typical encoders you must pass the username as the "`salt`" value. The code in the generated User class assumes you're not using a salt value, so you'll need to change the code in `encodePassword()` from
+
+[source,groovy]
+----
+password = springSecurityService.encodePassword(password)
+----
+
+to
+
+[source,groovy]
+----
+password = springSecurityService.encodePassword(password, username)
+----
+====

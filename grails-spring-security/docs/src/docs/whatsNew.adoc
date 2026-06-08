@@ -1,0 +1,52 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+== What's New
+
+=== Mono-Repository
+
+All Grails Spring Security plugins - Core, ACL, CAS, LDAP, OAuth2, REST, and UI - are now developed and released from a single repository.
+This means all plugins share the same version number and are guaranteed to be compatible with each other within a release.
+
+=== Apache Software Foundation
+
+The plugins have transitioned to the Apache Software Foundation.
+The group ID has changed from `org.grails.plugins` to `org.apache.grails`, and artifact names have been updated.
+See the <<upgrading-from-previous-versions,Upgrading>> section for a full mapping of old to new coordinates.
+
+=== Unified Versioning
+
+All plugins now share a single version (`{projectVersion}`), aligned with the Grails BOM.
+You no longer need to manage individual plugin versions - the Grails BOM handles version resolution automatically when using a Grails Gradle plugin.
+
+=== Spring Security 6.x
+
+The underlying Spring Security framework has been upgraded to version 6.x (from 5.8.x in the Grails 6 era).
+This brings the latest security enhancements, bug fixes, and alignment with the Spring Boot 3.x ecosystem.
+
+=== Combined Documentation
+
+This documentation is the first combined reference guide covering all Spring Security plugins in one place.
+Previously, each plugin had its own separate documentation site.
+Individual plugin guides are still available for quick reference, but this combined guide is the primary documentation going forward.
+
+=== Grails 7 Compatibility
+
+All plugins are built against Grails 7 and require Java 17 as the baseline.
+They leverage the new Grails BOM, unified Gradle plugin infrastructure, and the Apache Groovy 4.x runtime.

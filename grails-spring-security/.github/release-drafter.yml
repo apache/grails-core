@@ -1,0 +1,141 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name-template: $RESOLVED_VERSION
+tag-template: v$RESOLVED_VERSION
+pull-request:
+  title-templates:
+    fix: '🐛 $TITLE (#$NUMBER)'
+    feat: '🚀 $TITLE (#$NUMBER)'
+    default: '$TITLE (#$NUMBER)'
+autolabeler:
+  - label: 'bug'
+    branch:
+      - '/fix\/.+/'
+    title:
+      - '/fix/i'
+  - label: 'feature'
+    branch:
+      - '/feature\/.+/'
+    title:
+      - '/feat/i'
+  - label: 'documentation'
+    branch:
+      - '/docs\/.+/'
+    title:
+      - '/docs/i'
+  - label: 'maintenance'
+    branch:
+      - '/(chore|refactor|style|test|ci|perf|build|deps)\/.+/'
+    title:
+      - '/(chore|refactor|style|test|ci|perf|build|deps)/i'
+  - label: 'chore'
+    branch:
+      - '/chore\/.+/'
+    title:
+      - '/chore/i'
+  - label: 'refactor'
+    branch:
+      - '/refactor\/.+/'
+    title:
+      - '/refactor/i'
+  - label: 'style'
+    branch:
+      - '/style\/.+/'
+    title:
+      - '/style/i'
+  - label: 'test'
+    branch:
+      - '/test\/.+/'
+    title:
+      - '/test/i'
+  - label: 'ci'
+    branch:
+      - '/ci\/.+/'
+    title:
+      - '/ci/i'
+  - label: 'perf'
+    branch:
+      - '/perf\/.+/'
+    title:
+      - '/perf/i'
+  - label: 'build'
+    branch:
+      - '/build\/.+/'
+    title:
+      - '/build/i'
+  - label: 'deps'
+    branch:
+      - '/deps\/.+/'
+    title:
+      - '/deps/i'
+  - label: 'revert'
+    branch:
+      - '/revert\/.+/'
+    title:
+      - '/revert/i'
+categories:
+  - title: '🚀 Features'
+    labels:
+      - 'feat'
+      - "type: enhancement"
+      - "type: new feature"
+      - "type: major"
+  - title: '🐛 Bug Fixes'
+    labels:
+      - 'fix'
+      - "type: improvement"
+      - "type: bug"
+      - "type: minor"
+  - title: '📚 Documentation'
+    labels:
+      - 'docs'
+  - title: '🔧 Maintenance'
+    labels:
+      - 'chore'
+      - 'refactor'
+      - 'style'
+      - 'test'
+      - 'ci'
+      - 'perf'
+      - 'build'
+      - 'deps'
+      - "type: dependency upgrade"
+      - "dependencies"
+      - "type: ci"
+      - "type: build"
+  - title: '⏪ Reverts'
+    labels:
+      - 'revert'
+change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
+version-resolver:
+  major:
+    labels:
+      - 'type: major'
+  minor:
+    labels:
+      - 'type: minor'
+  patch:
+    labels:
+      - 'type: patch'
+  default: patch
+template: |
+  ## What's Changed
+
+  $CHANGES
+
+  ## Contributors
+
+  $CONTRIBUTORS

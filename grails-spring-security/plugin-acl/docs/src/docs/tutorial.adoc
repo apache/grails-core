@@ -1,0 +1,605 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[acl-tutorial]]
+== Tutorial
+
+First create a test application:
+
+....
+$ grails create-app acltest
+$ cd acltest
+....
+
+Add a dependency for the plugin by adding it to the `dependencies` block in build.gradle:
+
+[source,groovy]
+[subs="attributes"]
+----
+dependencies {
+   ...
+   implementation 'org.grails.plugins:spring-security-acl:{project-version}'
+   ...
+}
+----
+
+and run the `compile` command to resolve the dependencies:
+
+....
+$ grails compile
+....
+
+This will transitively install the https://github.com/apache/grails-spring-security[Spring Security Core] plugin, so you'll need to configure that by running the `s2-quickstart` script:
+
+....
+$ grails s2-quickstart com.testacl User Role
+....
+
+The ACL support uses domain classes and includes them in the JAR file, but to allow customizing them (e.g. to enable Hibernate 2^nd^-level caching) there's a script that copies the domain classes into your application, <<acl-s2-create-acl-domains>>. There's no need to run this script if the default configuration is sufficient.
+
+Note that you cannot change the domain class names or packages since the plugin references them by name. Grails allows you to override plugin artifacts by creating (or copying and modifying existing) classes with the same name and package in your application.
+
+For portability, the domain class mappings are configured to generate the same DDL as is required by the standard Spring Security JDBC implementation.
+
+We'll need a domain class to test with, so create a `Report` domain class:
+
+....
+$ grails create-domain-class com.testacl.Report
+....
+
+and add a `name` property for testing:
+
+[source,groovy]
+----
+package com.testacl
+
+class Report {
+   String name
+}
+----
+
+Next we'll create a service to test ACLs:
+
+....
+$ grails create-service com.testacl.Report
+....
+
+and add some methods that work with ``Report``s:
+
+[source,groovy]
+----
+package com.testacl
+
+import static org.springframework.security.acls.domain.BasePermission.ADMINISTRATION
+
+import org.springframework.security.access.prepost.PostFilter
+import org.springframework.security.access.prepost.PreAuthorize
+import org.springframework.security.acls.domain.DefaultPermissionFactory
+import org.springframework.security.acls.model.AccessControlEntry
+import org.springframework.security.acls.model.MutableAcl
+import org.springframework.security.acls.model.Permission
+import org.springframework.security.acls.model.Sid
+import org.springframework.security.core.parameters.P
+
+import grails.compiler.GrailsCompileStatic
+import grails.plugin.springsecurity.SpringSecurityService
+import grails.plugin.springsecurity.acl.AclService
+import grails.plugin.springsecurity.acl.AclUtilService
+import grails.gorm.transactions.Transactional
+
+@GrailsCompileStatic
+class ReportService {
+
+   DefaultPermissionFactory aclPermissionFactory
+   AclService aclService
+   AclUtilService aclUtilService
+   SpringSecurityService springSecurityService
+
+   void addPermission(Report report, String username, int permission) {
+      addPermission report, username, aclPermissionFactory.buildFromMask(permission)
+   }
+
+   @PreAuthorize('hasPermission(#report, admin)')
+   @Transactional
+   void addPermission(@P("report") Report report, String username, Permission permission) {
+      aclUtilService.addPermission report, username, permission
+   }
+
+   @Transactional
+   @PreAuthorize('hasRole("ROLE_USER")')
+   Report create(String name) {
+      Report report = new Report(name: name).save(failOnError: true)
+
+      // Grant the current principal administrative permission
+      addPermission report, springSecurityService.authentication.name, ADMINISTRATION
+
+      report
+   }
+
+   @PreAuthorize('hasPermission(#id, "com.testacl.Report", read) or hasPermission(#id, "com.testacl.Report", admin)')
+   Report get(@P("id") long id) {
+      Report.get id
+   }
+
+   @PreAuthorize('hasRole("ROLE_USER")')
+   @PostFilter('hasPermission(filterObject, read) or hasPermission(filterObject, admin)')
+   List<Report> list(Map params) {
+      Report.list params
+   }
+
+   int count() {
+      Report.count()
+   }
+
+   @Transactional
+   @PreAuthorize('hasPermission(#report, write) or hasPermission(#report, admin)')
+   void update(@P("report") Report report, String name) {
+      report.name = name
+   }
+
+   @Transactional
+   @PreAuthorize('hasPermission(#report, delete) or hasPermission(#report, admin)')
+   void delete(@P("report") Report report) {
+      report.delete()
+
+      // Delete the ACL information as well
+      aclUtilService.deleteAcl report
+   }
+
+   @Transactional
+   @PreAuthorize('hasPermission(#report, admin)')
+   void deletePermission(@P("report") Report report, Sid recipient, Permission permission) {
+      MutableAcl acl = (MutableAcl)aclUtilService.readAcl(report)
+
+      // Remove all permissions associated with this particular
+      // recipient (string equality to KISS)
+      acl.entries.eachWithIndex { AccessControlEntry entry, int i ->
+         if (entry.sid == recipient && entry.permission == permission) {
+            acl.deleteAce i
+         }
+      }
+
+      aclService.updateAcl acl
+   }
+}
+----
+
+The configuration specifies these rules:
+
+* `addPermission` requires that the authenticated user have admin permission on the report instance to grant a permission to someone else
+* `create` requires that the authenticated user have `ROLE_USER`
+* `get` requires that the authenticated user have read or admin permission on the specified Report
+* `list` requires that the authenticated user have ROLE_USER and read or admin permission on each returned Report; instances that don't have granted permissions will be removed from the returned List
+* `count` has no restrictions
+* `update` requires that the authenticated user have write or admin permission on the report instance to edit it
+* `delete` requires that the authenticated user have delete or admin permission on the report instance to edit it
+* `deletePermission` requires that the authenticated user have admin permission on the report instance to delete a grant
+
+To test this out we'll need some users; create a service to create users and their grants:
+
+....
+$ grails create-service com.testacl.SampleData
+....
+
+and add this code:
+
+[source,groovy]
+----
+package com.testacl
+
+import static org.springframework.security.acls.domain.BasePermission.ADMINISTRATION
+import static org.springframework.security.acls.domain.BasePermission.READ
+import static org.springframework.security.acls.domain.BasePermission.WRITE
+
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.core.authority.AuthorityUtils
+import org.springframework.security.core.context.SecurityContextHolder as SCH
+
+import grails.gorm.transactions.Transactional
+
+@Transactional
+class SampleDataService {
+
+   def aclService
+   def aclUtilService
+   def objectIdentityRetrievalStrategy
+
+   void createSampleData() {
+      createUsers()
+      loginAsAdmin()
+      grantPermissions()
+
+      // logout
+      SCH.clearContext()
+   }
+
+   private void loginAsAdmin() {
+      // have to be authenticated as an admin to create ACLs
+      SCH.context.authentication = new UsernamePasswordAuthenticationToken(
+         'admin', 'admin123',
+         AuthorityUtils.createAuthorityList('ROLE_ADMIN'))
+   }
+
+   private void createUsers() {
+      def roleAdmin = new Role(authority: 'ROLE_ADMIN').save()
+      def roleUser = new Role(authority: 'ROLE_USER').save()
+
+      3.times {
+         long id = it + 1
+         def user = new User("user$id", "password$id").save()
+         UserRole.create user, roleUser
+      }
+
+      def admin = new User('admin', 'admin123').save()
+
+      UserRole.create admin, roleUser
+      UserRole.create admin, roleAdmin
+   }
+
+   private void grantPermissions() {
+      def reports = []
+      100.times {
+         long id = it + 1
+         def report = new Report(name: "report$id").save()
+         reports << report
+         aclService.createAcl(
+                 objectIdentityRetrievalStrategy.getObjectIdentity(report))
+      }
+
+      // grant user 1 admin on 11,12 and read on 1-67
+      aclUtilService.addPermission reports[10], 'user1', ADMINISTRATION
+      aclUtilService.addPermission reports[11], 'user1', ADMINISTRATION
+      67.times {
+         aclUtilService.addPermission reports[it], 'user1', READ
+      }
+
+      // grant user 2 read on 1-5, write on 5
+      5.times {
+         aclUtilService.addPermission reports[it], 'user2', READ
+      }
+      aclUtilService.addPermission reports[4], 'user2', WRITE
+
+      // user 3 has no grants
+
+      // grant admin admin on all
+      for (report in reports) {
+         aclUtilService.addPermission report, 'admin', ADMINISTRATION
+      }
+
+      // grant user 1 ownership on 1,2 to allow the user to grant
+      aclUtilService.changeOwner reports[0], 'user1'
+      aclUtilService.changeOwner reports[1], 'user1'
+   }
+}
+----
+
+and configure BootStrap.groovy to call the service at startup:
+
+[source,groovy]
+----
+class BootStrap {
+
+   def sampleDataService
+
+   def init = {
+      sampleDataService.createSampleData()
+   }
+}
+----
+
+To have a UI to test with, let's create a `Report` controller and GSPs:
+
+....
+$ grails generate-all com.testacl.Report
+....
+
+But to use the controller, it will have to be reworked to use `ReportService`. It's a good idea to put all create/edit/delete code in a transactional service, but in this case we need to move all database access to the service to ensure that appropriate access checks are made:
+
+[source,groovy]
+----
+package com.testacl
+
+import org.springframework.dao.DataIntegrityViolationException
+
+import grails.plugin.springsecurity.annotation.Secured
+
+@Secured('ROLE_USER')
+class ReportController {
+
+   def reportService
+
+   def index() {
+      params.max = Math.min(params.max ? params.int('max') : 10, 100)
+      [reportList: reportService.list(params),
+       reportCount: reportService.count()]
+   }
+
+   def create() {
+      [report: new Report(params)]
+   }
+
+   def save() {
+      def report = reportService.create(params.name)
+      if (!renderWithErrors('create', report)) {
+         redirectShow "Report $report.id created", report.id
+      }
+   }
+
+   def show() {
+      def report = findInstance()
+      if (!report) return
+
+      [report: report]
+   }
+
+   def edit() {
+      def report = findInstance()
+      if (!report) return
+
+      [report: report]
+   }
+
+   def update() {
+      def report = findInstance()
+      if (!report) return
+
+      reportService.update report, params.name
+      if (!renderWithErrors('edit', report)) {
+         redirectShow "Report $report.id updated", report.id
+      }
+   }
+
+   def delete() {
+      def report = findInstance()
+      if (!report) return
+
+      try {
+         reportService.delete report
+         flash.message = "Report $params.id deleted"
+         redirect action: 'list'
+      }
+      catch (DataIntegrityViolationException e) {
+         redirectShow "Report $params.id could not be deleted", params.id
+      }
+   }
+
+   def grant() {
+
+      def report = findInstance()
+      if (!report) return
+
+      if (!request.post) {
+         return [report: report]
+      }
+
+      reportService.addPermission(report, params.recipient,
+              params.int('permission'))
+
+      redirectShow "Permission $params.permission granted on Report $report.id " +
+              "to $params.recipient", report.id
+   }
+
+   private Report findInstance() {
+      def report = reportService.get(params.long('id'))
+      if (!report) {
+         flash.message = "Report not found with id $params.id"
+         redirect action: 'list'
+      }
+      report
+   }
+
+   private void redirectShow(message, id) {
+      flash.message = message
+      redirect action: 'show', id: id
+   }
+
+   private boolean renderWithErrors(String view, Report report) {
+      if (report.hasErrors()) {
+         render view: view, model: [report: report]
+         return true
+      }
+      false
+   }
+}
+----
+
+Note that the controller is annotated to require either `ROLE_USER` or `ROLE_ADMIN`. Since services have nothing to do with HTTP, when access is blocked you cannot be redirected to the login page as when you try to access a URL that requires an authentication. So you need to configure URLs with similar role requirements to give the user a chance to attempt a login before calling secured service methods.
+
+Finally, we'll make a few adjustments so errors are handled gracefully.
+
+First, edit `grails-app/controllers/UrlMappings.groovy` and add some error code mappings:
+
+[source,groovy]
+----
+import org.springframework.security.access.AccessDeniedException
+import org.springframework.security.acls.model.NotFoundException
+
+class UrlMappings {
+
+   static mappings = {
+
+      ...
+
+      "403"(controller: 'errors', action: 'error403')
+      "404"(controller: 'errors', action: 'error404')
+      "500"(controller: 'errors', action: 'error500')
+      "500"(controller: 'errors', action: 'error403',
+            exception: AccessDeniedException)
+      "500"(controller: 'errors', action: 'error403',
+            exception: NotFoundException)
+   }
+}
+----
+
+Then create the `ErrorsController` that these reference:
+
+....
+$ grails create-controller com.testacl.Errors
+....
+
+and add this code:
+
+[source,groovy]
+----
+package com.testacl
+
+import grails.plugin.springsecurity.annotation.Secured
+
+@Secured('permitAll')
+class ErrorsController {
+
+   def error403() {}
+
+   def error404() {
+      render view: '/notFound'
+   }
+
+   def error500() {
+      render view: '/error'
+   }
+}
+----
+
+and we'll need to create the GSP for the `error403` action in `grails-app/views/errors/error403.gsp`:
+
+[source,html]
+----
+<html>
+<head>
+<title>Access denied!</title>
+<meta name='layout' content='main' />
+</head>
+
+<body>
+<h1>Access Denied</h1>
+<p>We're sorry, but you are not authorized
+   to perform the requested operation.</p>
+</body>
+</html>
+----
+
+=== actionSubmit issues
+
+Grails has a convenient feature where it supports multiple submit actions per form via the `<g:actionSubmit>` tag. This is done by posting to the `index` action but with a special parameter that indicates which action to invoke. This is a problem in general for security since any URL rules for edit, delete, save, etc. will be bypassed. It's an even more significant issue with ACLs because of the way that the access denied exception interacts with the `actionSubmit` processing. If you don't make any adjustments for this, your users will see a blank page when they attempt to submit a form and the action is disallowed. The solution is to remove `actionSubmit` buttons and replace them with regular submit buttons. This requires one form per button, and without adjusting the CSS the buttons will look differently than if they were in-line `actionSubmit` buttons, but that is fixable with the appropriate CSS changes.
+
+[NOTE]
+====
+Note that this is not an issue when using the generated GSPs in Grails 3 because they've been reworked to use the fields plugin, but if you have an older application that you've upgraded or if you have GSPs that don't use the newer approach, you will need to avoid using `actionSubmit`.
+====
+
+It's simple to adjust the `actionSubmit` buttons and you'll need to change them in `show.gsp` and `edit.gsp`; `list.gsp` (or `index.gsp`) and `show.gsp` don't need any changes. In `show.gsp`, replace the two actionSubmit buttons with these two forms (maintain the g:message tags; the strings are hard-coded here to reduce clutter):
+
+[source,xml]
+----
+<div class="buttons">
+    <g:form action='edit'>
+        <g:hiddenField name="id" value="${reportInstance?.id}" />
+        <span class="button">
+            <g:submitButton class="edit" name="Edit" />
+        </span>
+    </g:form>
+    <g:form action='delete'>
+        <g:hiddenField name="id" value="${reportInstance?.id}" />
+        <span class="button">
+            <g:submitButton class="delete" name="Delete"
+                            onclick="return confirm('Are you sure?');" />
+        </span>
+    </g:form>
+</div>
+----
+
+In `grails-app/views/report/edit.gsp`, change the `<form>` tag to
+
+[source,xml]
+----
+<g:form action='update'>
+----
+
+and convert the update button to a regular submit button:
+
+[source,xml]
+----
+<div class="buttons">
+    <span class="button"><g:submitButton class="save" name="Update" /></span>
+</div>
+----
+
+and move the delete button out of the form into its own form just below the main form:
+
+[source,xml]
+----
+<g:form action='delete'>
+    <g:hiddenField name="id" value="${reportInstance?.id}" />
+    <div class="buttons">
+        <span class="button">
+            <g:submitButton class="delete" name="Delete"
+                            onclick="return confirm('Are you sure?');" />
+        </span>
+    </div>
+</g:form>
+----
+
+`list.gsp` (or `index.gsp`) and `show.gsp` are fine as they are.
+
+Finally, to make it easier to log out (by default POST is required, so typical link that uses GET won't work), add this to `grails-app/views/layouts/main.gsp` before the `<g:layoutBody/>` tag:
+
+[source,xml]
+----
+<sec:ifLoggedIn>
+
+<g:form controller='logout'>
+   Logged in as <sec:username/> - <g:submitButton name='logout' value='Logout'/>
+</g:form>
+
+</sec:ifLoggedIn>
+<sec:ifNotLoggedIn>
+
+<g:link controller='login' action='auth'>Login</g:link>
+
+</sec:ifNotLoggedIn>
+----
+
+and you'll see a link to login if not authenticated, and a button to click to logout if you are.
+
+=== Testing
+
+Now start the app:
+
+....
+$ grails run-app
+....
+
+and open http://localhost:8080/report.
+
+[NOTE]
+====
+If you see the error `NoSuchMethodError: org.springframework.cache.ehcache.EhCacheFactoryBean.setMaxEntriesLocalHeap(J)V` when starting the app, comment out the `implementation 'org.hibernate:hibernate-ehcache'` dependency and disable the second-level cache in `application.yml` with `use_second_level_cache: false`, and restart.
+====
+
+Login as user1/password1 and you should see the first page of results. But if you click on page 7 or higher, you'll see that you can only see a subset of the ``Report``s. This illustrates one issue with using ACLs to restrict view access to instances; you would have to add joins in your query to the ACL database tables to get an accurate count of the total number of visible instances.
+
+Click on any of the report instance links (e.g. http://localhost:8080/report/show/63) to verify that you can view the instance. You can test that you have no view access to the filtered instances by navigating to http://localhost:8080/report/show/83.
+
+Verify that user1 has admin permission on report #11 by editing it and deleting it.
+
+Verify that user1 doesn't have admin permission on report #13 by trying to editing or delete it and you should see the error page when you submit the form.
+
+Logout (by navigating to http://localhost:8080/logout) and login as user2/password2. You should only see the first five reports. Verify that you can edit #5 but not any of the others, and that you can't delete any.
+
+Finally. logout and login as admin/admin123. You should be able to view, edit, and delete all instances.

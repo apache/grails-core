@@ -1,0 +1,214 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+import grails.doc.dropdown.SoftwareVersion
+import grails.doc.git.FetchTagsTask
+import grails.doc.dropdown.CreateReleaseDropDownTask
+import org.asciidoctor.gradle.jvm.AsciidoctorTask
+
+plugins {
+    id 'groovy'
+}
+
+apply plugin: 'org.asciidoctor.jvm.convert'
+apply from: rootProject.layout.projectDirectory.file('gradle/reproducible-config.gradle')
+
+// Spring Security + GORM are resolved from the BOM for LDAP doc link generation.
+dependencies {
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
+    implementation 'org.springframework.security:spring-security-core'
+    implementation 'org.apache.grails.data:grails-datamapping-core'
+    implementation 'org.apache.groovy:groovy'
+}
+
+String getGrailsDocumentationVersion(String version) {
+    if (version.endsWith('-SNAPSHOT')) {
+        return 'snapshot'
+    }
+    return version
+}
+
+// NOTE: This resolves dependencies at configuration time, which means any Gradle command
+// at the root level will trigger resolution for this project. Ideally this would be deferred
+// to task execution time, but the Asciidoctor plugin requires attributes at configuration time.
+ext {
+    resolvedSpringSecurityVersion = configurations.compileClasspath
+            .resolvedConfiguration
+            .resolvedArtifacts
+            .find {
+                it.moduleVersion.id.group == 'org.springframework.security' &&
+                        it.moduleVersion.id.name == 'spring-security-core'
+            }.moduleVersion.id.version
+    resolvedGormVersion = configurations.compileClasspath
+            .resolvedConfiguration
+            .resolvedArtifacts
+            .find {
+                it.moduleVersion.id.group == 'org.apache.grails.data' &&
+                        it.moduleVersion.id.name == 'grails-datamapping-core'
+            }.moduleVersion.id.version
+}
+logger.lifecycle('Resolved Spring Security version for Guide links: {}', resolvedSpringSecurityVersion)
+logger.lifecycle('Resolved GORM version for Guide links: {}', resolvedGormVersion)
+
+ext {
+    coreDocsDir = rootProject.layout.projectDirectory.dir('plugin-core/docs/src/docs')
+    aclDocsDir = rootProject.layout.projectDirectory.dir('plugin-acl/docs/src/docs')
+    casDocsDir = rootProject.layout.projectDirectory.dir('plugin-cas/docs/src/docs')
+    ldapDocsDir = rootProject.layout.projectDirectory.dir('plugin-ldap/docs/src/docs')
+    oauth2DocsDir = rootProject.layout.projectDirectory.dir('plugin-oauth2/docs/src/docs')
+    restDocsDir = rootProject.layout.projectDirectory.dir('plugin-rest/docs/src/docs')
+    uiDocsDir = rootProject.layout.projectDirectory.dir('plugin-ui/docs/src/docs')
+
+    combinedAttributes = [
+            copyright                         : 'Apache License, Version 2.0',
+            docinfo1                          : 'true',
+            doctype                           : 'book',
+            encoding                          : 'utf-8',
+            icons                             : 'font',
+            id                                : "grails-spring-security-combined:${projectVersion}",
+            idprefix                          : '',
+            idseparator                       : '-',
+            lang                              : 'en',
+            linkattrs                         : true,
+            numbered                          : '',
+            producer                          : 'Asciidoctor',
+            revnumber                         : projectVersion,
+            projectVersion                    : projectVersion,
+            version                           : projectVersion,
+            setanchors                        : true,
+            'source-highlighter'              : 'prettify',
+            toc                               : 'left',
+            toc2                              : '',
+            toclevels                         : '3',
+            'experimental'                    : 'true',
+            'compat-mode'                     : '',
+            'threeZeroXProjectVersion'        : '3.0.1',
+            // Cross-project include directories
+            'core-docs-dir'                   : coreDocsDir.asFile.absolutePath,
+            'acl-docs-dir'                    : aclDocsDir.asFile.absolutePath,
+            'cas-docs-dir'                    : casDocsDir.asFile.absolutePath,
+            'ldap-docs-dir'                   : ldapDocsDir.asFile.absolutePath,
+            'oauth2-docs-dir'                 : oauth2DocsDir.asFile.absolutePath,
+            'rest-docs-dir'                   : restDocsDir.asFile.absolutePath,
+            'ui-docs-dir'                     : uiDocsDir.asFile.absolutePath,
+            // REST-specific
+            'sourcedir'                       : "${rootProject.findProject(':spring-security-rest').projectDir}/src/main/groovy",
+            'baseGroovyApiUrl'                : "https://apache.github.io/grails-spring-security/${projectVersion}/rest-plugin/groovydoc/",
+            // LDAP-specific
+            'customUserDetailsContextMapperPath': "${rootProject.findProject(':ldap-examples-custom-user-details-context-mapper').projectDir}",
+            'functionalTestAppPath'           : "${rootProject.findProject(':ldap-examples-functional-test-app').projectDir}",
+            'projectUrl'                      : 'https://github.com/apache/grails-spring-security',
+            'gormDetailedLink'                : "https://gorm.grails.org/${getGrailsDocumentationVersion(resolvedGormVersion)}/hibernate/manual/index.html",
+            'gormSummaryLink'                 : "https://docs.grails.org/${getGrailsDocumentationVersion(grailsVersion)}/guide/GORM.html",
+            'grailsDocBase'                   : "https://docs.grails.org/${getGrailsDocumentationVersion(grailsVersion)}",
+            'grailsSpringSecurityCoreVersion' : projectVersion,
+            'grailsSpringSecurityCoreLink'    : "https://apache.github.io/grails-spring-security/${getGrailsDocumentationVersion(projectVersion)}/guide/index.html",
+            'springSecurityLdapLink'          : "https://docs.spring.io/spring-security/reference/${resolvedSpringSecurityVersion}/servlet/authentication/passwords/ldap.html",
+            'springSecurityLdapApiLink'        : "https://docs.spring.io/spring-security/site/docs/${resolvedSpringSecurityVersion}/api",
+            // Used by index.adoc header links
+            'springSecurityVersion'           : resolvedSpringSecurityVersion,
+            'springFrameworkVersion'          : '6.2.x',
+    ]
+}
+
+tasks.named('asciidoctor', AsciidoctorTask) {
+    dependsOn(':core-docs:generateConfigurationProperties')
+    sourceDir(layout.projectDirectory.file('src/docs'))
+    sources { include('index.adoc') }
+    outputDir = layout.buildDirectory.file('docs')
+    attributes(combinedAttributes)
+    baseDirFollowsSourceDir()
+    jvm {
+        jvmArgs('--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED', '--add-opens', 'java.base/java.io=ALL-UNNAMED')
+    }
+    // Declare inputs for all plugin doc sources so Gradle knows to rebuild when they change
+    inputs.dir(coreDocsDir)
+    inputs.dir(aclDocsDir)
+    inputs.dir(casDocsDir)
+    inputs.dir(ldapDocsDir)
+    inputs.dir(oauth2DocsDir)
+    inputs.dir(restDocsDir)
+    inputs.dir(uiDocsDir)
+    inputs.dir(sourceDir)
+    outputs.dir(outputDir)
+}
+
+def guideDocs = tasks.register('guideDocs', Copy) {
+    group = 'documentation'
+    dependsOn('asciidoctor')
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    into(layout.buildDirectory.dir('docs'))
+    ['plugin-core', 'plugin-acl', 'plugin-cas', 'plugin-ldap', 'plugin-oauth2', 'plugin-rest', 'plugin-ui'].each { pluginDir ->
+        from(rootProject.layout.projectDirectory.dir(pluginDir).dir("docs/src/docs")) {
+            include('**/*.png', '**/*.jpg', '**/*.gif', '**/*.svg')
+        }
+    }
+    from(layout.projectDirectory.dir('src/docs')) {
+        include('**/*.png', '**/*.jpg', '**/*.gif', '**/*.svg')
+    }
+}
+
+def fetchTagsTask = tasks.register('fetchTags', FetchTagsTask)
+
+def createReleaseDropdown = tasks.register('createReleaseDropdown', CreateReleaseDropDownTask) {
+    filesToAddDropdowns = layout.buildDirectory.files('docs-modified/index.html')
+    sourceDocsDirectory = layout.buildDirectory.dir('docs')
+    modifiedPagesDirectory = layout.buildDirectory.dir('docs-modified')
+    githubSlug = 'apache/grails-spring-security'
+    docBaseUrl = "https://apache.github.io/grails-spring-security"
+    versionHtml = '<span id="revnumber">version ' + project.version + '</span>'
+    additionalPath = "guide/"
+    minimumVersion = SoftwareVersion.build('7.0.0-SNAPSHOT')
+    dependsOn(fetchTagsTask)
+    dependsOn(guideDocs)
+}
+
+tasks.register('copyGuide', Copy) {
+    dependsOn(createReleaseDropdown)
+    from(layout.buildDirectory.dir('docs-modified'))
+    into(rootProject.layout.buildDirectory.dir('docs/guide'))
+}
+
+tasks.register('copyGhPages', Copy) {
+    group = 'documentation'
+    description = 'Copy the landing page to the root docs directory'
+    from(project.layout.projectDirectory.dir('src/docs')) {
+        include 'index.tmpl'
+        rename('index.tmpl', 'ghpages.html')
+    }
+    into(rootProject.layout.buildDirectory.dir('docs'))
+}
+
+tasks.register('aggregateDocs') {
+    group = 'documentation'
+    description = 'Aggregate all documentation into the root docs directory'
+    // Combined guide
+    dependsOn('copyGuide')
+    // Groovydocs from each plugin's docs subproject
+    dependsOn(':core-docs:groovydoc')
+    dependsOn(':acl-docs:groovydoc')
+    dependsOn(':cas-docs:groovydoc')
+    dependsOn(':ldap-docs:groovydoc')
+    dependsOn(':oauth2-docs:groovydoc')
+    dependsOn(':rest-docs:groovydoc')
+    dependsOn(':ui-docs:groovydoc')
+
+    // Landing page
+    dependsOn('copyGhPages')
+}

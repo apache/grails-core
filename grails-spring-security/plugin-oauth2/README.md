@@ -1,0 +1,93 @@
+<!--
+SPDX-License-Identifier: Apache-2.0
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+Spring Security OAuth2 Plugin
+=======
+
+Main differences with the Grails 2 plugin:
+
+- No more dependency on https://github.com/antony/grails-oauth-scribe but some code of that plugin was ported in this
+- Relies on [Scribejava](https://github.com/scribejava/scribejava) to do most of the OAuth logic
+- Simplest code as possible
+- Easy to extend
+
+Documentation
+------------
+[User Guide](https://apache.github.io/grails-spring-security/latest/oauth2-plugin/guide)
+
+Installation
+------------
+For Grails 5.3+
+
+Add the following dependencies in `build.gradle`
+```groovy
+dependencies {
+...
+    implementation 'org.apache.grails:grails-spring-security:{revnumber}'
+    implementation 'org.apache.grails:grails-spring-security-oauth2:{revnumber}'
+...
+}
+```
+You will also need at least one provider extension, i.e the `grails-spring-security-oauth2-google` plugin
+Change the version to reflect the actual version you would like to use.
+
+You can configure the following parameters in your `application.yml`. This is fully optional
+```yaml
+grails:
+  plugin:
+    springsecurity:
+      oauth2:
+        active: true    #whether the whole plugin is active or not
+        registration:
+          # The URI that is called to aks the user to either create a new account or link to an existing account
+          askToLinkOrCreateAccountUri: '/oauth2/ask'
+          # A list of role names that should be automatically granted to an OAuth User. The roles will be created if they do not exist 
+          roleNames: [ 'ROLE_USER' ]
+```
+
+Once you have an User domain class, initialize this plugin by using the init script `grails init-oauth2 <domain-class-package> <user-class-name> <oauthid-class-name>`
+In example: `grails init-oauth2 com.yourapp User OAuthID`
+That will create the domain class `com.yourapp.oAuthID`
+
+Finally add:
+```groovy
+static hasMany = [oAuthIDs: OAuthID]
+```
+to your user domain class.
+
+Extensions
+----------
+
+List of known extension
+* [Google](https://github.com/grails-plugins/grails-spring-security-oauth2-google)
+* [Facebook](https://github.com/MatrixCrawler/grails-spring-security-oauth2-facebook)
+* [Github](https://github.com/rpalcolea/grails-spring-security-oauth2-github)
+* [Okta](https://github.com/oktadev/okta-grails-example)
+
+
+How to create a new provider plugin
+-----------------------------------
+1. Create a new plugin with `grails create-plugin spring-security-oauth2-myProvider`
+2. Add the following plugins as dependency in `build.gradle`:
+    * `compileOnly 'org.apache.grails:grails-spring-security:{revnumber}'`
+    * `compileOnly 'org.apache.grails:grails-spring-security-oauth2:{revnumber}'`
+3. Create a service in your plugin that extends `OAuth2AbstractProviderService` and implement the abstract methods. You can override the other methods for fine-tuning if needed.
+
+
+License
+-------
+
+Apache 2

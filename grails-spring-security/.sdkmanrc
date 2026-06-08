@@ -1,0 +1,4 @@
+java=17.0.17-librca
+gradle=8.14.4
+# This is here to support the test app generation in the *rest projects
+grails=7.0.7

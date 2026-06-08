@@ -1,0 +1,129 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-configGroovyMap]]
+=== Static Map
+
+To use a static map to secure URLs, first specify `securityConfigType="InterceptUrlMap"`:
+
+[source,groovy]
+.Listing {counter:listing}. Specifying `securityConfigType` as "`InterceptUrlMap`" in `application.groovy`
+----
+grails.plugin.springsecurity.securityConfigType = "InterceptUrlMap"
+----
+
+Or in `application.yml`:
+
+[source,yaml]
+.Listing {counter:listing}. Specifying `securityConfigType` as "`InterceptUrlMap`" in `application.yml`
+----
+grails:
+    plugin:
+        springsecurity:
+            securityConfigType: InterceptUrlMap
+----
+
+Then define the URL mappings. In `application.groovy`:
+
+[source,groovy]
+.Listing {counter:listing}. Example `interceptUrlMap` in `application.groovy`
+----
+grails.plugin.springsecurity.interceptUrlMap = [
+   [pattern: '/',               access: ['permitAll']],
+   [pattern: '/error',          access: ['permitAll']],
+   [pattern: '/index',          access: ['permitAll']],
+   [pattern: '/index.gsp',      access: ['permitAll']],
+   [pattern: '/shutdown',       access: ['permitAll']],
+   [pattern: '/assets/**',      access: ['permitAll']],
+   [pattern: '/**/js/**',       access: ['permitAll']],
+   [pattern: '/**/css/**',      access: ['permitAll']],
+   [pattern: '/**/images/**',   access: ['permitAll']],
+   [pattern: '/**/favicon.ico', access: ['permitAll']],
+   [pattern: '/login',          access: ['permitAll']],
+   [pattern: '/login/**',       access: ['permitAll']],
+   [pattern: '/logout',         access: ['permitAll']],
+   [pattern: '/logout/**',      access: ['permitAll']]
+]
+----
+
+Or equivalently in `application.yml`:
+
+[source,yaml]
+.Listing {counter:listing}. Example `interceptUrlMap` in `application.yml`
+----
+grails:
+    plugin:
+        springsecurity:
+            interceptUrlMap:
+                - { pattern: '/',               access: ['permitAll'] }
+                - { pattern: '/error',          access: ['permitAll'] }
+                - { pattern: '/index',          access: ['permitAll'] }
+                - { pattern: '/index.gsp',      access: ['permitAll'] }
+                - { pattern: '/shutdown',       access: ['permitAll'] }
+                - { pattern: '/assets/**',      access: ['permitAll'] }
+                - { pattern: '/**/js/**',       access: ['permitAll'] }
+                - { pattern: '/**/css/**',      access: ['permitAll'] }
+                - { pattern: '/**/images/**',   access: ['permitAll'] }
+                - { pattern: '/**/favicon.ico', access: ['permitAll'] }
+                - { pattern: '/login',          access: ['permitAll'] }
+                - { pattern: '/login/**',       access: ['permitAll'] }
+                - { pattern: '/logout',         access: ['permitAll'] }
+                - { pattern: '/logout/**',      access: ['permitAll'] }
+----
+
+Add any custom mappings as needed, e.g.
+
+[source,groovy]
+.Listing {counter:listing}. Custom `interceptUrlMap` mappings in `application.groovy`
+----
+grails.plugin.springsecurity.interceptUrlMap = [
+   ...
+   [pattern: '/secure/**',  access: ['ROLE_ADMIN']],
+   [pattern: '/finance/**', access: ['ROLE_FINANCE', 'IS_AUTHENTICATED_FULLY']]
+]
+----
+
+[source,yaml]
+.Listing {counter:listing}. Custom `interceptUrlMap` mappings in `application.yml`
+----
+grails:
+    plugin:
+        springsecurity:
+            interceptUrlMap:
+                - { pattern: '/secure/**',  access: ['ROLE_ADMIN'] }
+                - { pattern: '/finance/**', access: ['ROLE_FINANCE', 'IS_AUTHENTICATED_FULLY'] }
+----
+
+When using this approach, make sure that you order the rules correctly. The first applicable rule is used, so for example if you have a controller that has one set of rules but an action that has stricter access rules, e.g.
+
+[source,groovy]
+.Listing {counter:listing}. Incorrect `interceptUrlMap` order
+----
+[pattern: '/secure/**',               access: ['ROLE_ADMIN', 'ROLE_SUPERUSER']],
+[pattern: '/secure/reallysecure/**',  access: ['ROLE_SUPERUSER']]
+----
+
+then this would fail - it wouldn't restrict access to `/secure/reallysecure/list` to a user with `ROLE_SUPERUSER` since the first URL pattern matches, so the second would be ignored. The correct mapping would be
+
+[source,groovy]
+.Listing {counter:listing}. Correct `interceptUrlMap` order
+----
+[pattern: '/secure/reallysecure/**', access: ['ROLE_SUPERUSER']],
+[pattern: '/secure/**',              access: ['ROLE_ADMIN', 'ROLE_SUPERUSER']]
+----

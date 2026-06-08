@@ -1,0 +1,302 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-springSecurityService]]
+=== SpringSecurityService
+
+`grails.plugin.springsecurity.SpringSecurityService` provides security utility functions. It is a regular Grails service, so you use dependency injection to inject it into a controller, service, taglib, and so on:
+
+[source,groovy]
+----
+def springSecurityService
+----
+
+==== getCurrentUser()
+Retrieves a domain class instance for the currently authenticated user. During authentication a user/person domain class instance is retrieved to get the user's password, roles, etc. and the id of the instance is saved. This method uses the id and the domain class to re-load the instance, or the username if the `UserDetails` instance is not a `GrailsUser`.
+
+If you do not need domain class data other than the id, you should use the `loadCurrentUser` method instead.
+
+Example:
+
+[source,groovy]
+.Listing {counter:listing}. Example using `getCurrentUser()`
+----
+class SomeController {
+
+   def springSecurityService
+
+   def someAction() {
+      def user = springSecurityService.currentUser
+      ...
+   }
+}
+----
+
+==== loadCurrentUser()
+Often it is not necessary to retrieve the entire domain class instance, for example when using it in a query where only the id is needed as a foreign key. This method uses the GORM `load` method to create a proxy instance. This will never be null, but can be invalid if the id doesn't correspond to a row in the database, although this is very unlikely in this scenario because the instance would have been there during authentication.
+
+If you need other data than just the id, use the `getCurrentUser` method instead.
+
+Example:
+
+[source,groovy]
+.Listing {counter:listing}. Example using `loadCurrentUser()`
+----
+class SomeController {
+
+   def springSecurityService
+
+   def someAction(Long id) {
+      def user = springSecurityService.isLoggedIn() ?
+            springSecurityService.loadCurrentUser() :
+            null
+      if (user) {
+         CreditCard card = CreditCard.findByIdAndUser(id, user)
+         ...
+      }
+      ...
+   }
+}
+----
+
+==== isLoggedIn()
+Checks whether there is a currently logged-in user.
+
+Example:
+
+[source,groovy]
+.Listing {counter:listing}. Example using `isLoggedIn()`
+----
+class SomeController {
+
+   def springSecurityService
+
+   def someAction() {
+      if (springSecurityService.isLoggedIn()) {
+         ...
+      }
+      else {
+         ...
+      }
+   }
+}
+----
+
+==== getAuthentication()
+
+Retrieves the current user's {apidocs}org/springframework/security/core/Authentication.html[Authentication]. If authenticated, this will typically be a {apidocs}org/springframework/security/authentication/UsernamePasswordAuthenticationToken.html[UsernamePasswordAuthenticationToken].
+
+If not authenticated and the {apidocs}org/springframework/security/web/authentication/AnonymousAuthenticationFilter.html[AnonymousAuthenticationFilter] is active (true by default) then the anonymous user's authentication will be returned. This will be an instance of `grails.plugin.springsecurity.authentication.GrailsAnonymousAuthenticationToken` with a standard `org.springframework.security.core.userdetails.User` instance as its Principal. The authentication will have a single granted role, `ROLE_ANONYMOUS`.
+
+Example:
+
+[source,groovy]
+.Listing {counter:listing}. Example using `getAuthentication()`
+----
+class SomeController {
+
+   def springSecurityService
+
+   def someAction() {
+      def auth = springSecurityService.authentication
+      String username = auth.username
+      def authorities = auth.authorities // a Collection of GrantedAuthority
+      boolean authenticated = auth.authenticated
+      ...
+   }
+}
+----
+
+==== getPrincipal()
+
+Retrieves the currently logged in user's `Principal`. If authenticated, the principal will be a `grails.plugin.springsecurity.userdetails.GrailsUser`, unless you have created a custom `UserDetailsService`, in which case it will be whatever implementation of {apidocs}org/springframework/security/core/userdetails/UserDetails.html[UserDetails] you use there.
+
+If not authenticated and the {apidocs}org/springframework/security/web/authentication/AnonymousAuthenticationFilter.html[AnonymousAuthenticationFilter] is active (true by default) then a standard `org.springframework.security.core.userdetails.User` is used.
+
+Example:
+
+[source,groovy]
+.Listing {counter:listing}. Example using `getPrincipal()`
+----
+class SomeController {
+
+   def springSecurityService
+
+   def someAction() {
+      def principal = springSecurityService.principal
+      String username = principal.username
+      def authorities = principal.authorities // a Collection of GrantedAuthority
+      boolean enabled = principal.enabled
+      ...
+   }
+}
+----
+
+==== encodePassword()
+Hashes a password with the configured hashing scheme. By default the plugin uses bcrypt, but you can configure the scheme with the `grails.plugin.springsecurity.password.algorithm` attribute in `application.groovy`. The supported values are '`bcrypt`' to use bcrypt, '`pbkdf2`' to use https://en.wikipedia.org/wiki/PBKDF2[PBKDF2], or any message digest algorithm that is supported in your JDK; see https://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html[this Java page] for the available algorithms.
+
+[WARNING]
+====
+You are *strongly* discouraged from using MD5 or SHA-1 algorithms because of their well-known vulnerabilities. You should also use a salt for your passwords, which greatly increases the computational complexity of computing passwords if your database gets compromised. See <<core-salt>>.
+====
+
+Example:
+
+[source,groovy]
+.Listing {counter:listing}. Example using `encodePassword()`
+----
+class PersonController {
+
+   def springSecurityService
+
+   def updateAction(Person person) {
+
+      params.salt = person.salt
+      if (person.password != params.password) {
+         params.password = springSecurityService.encodePassword(password, salt)
+         def salt = ... // e.g. randomly generated using some utility method
+         params.salt = salt
+      }
+      person.properties = params
+      if (!person.save(flush: true)) {
+         render view: 'edit', model: [person: person]
+         return
+      }
+      redirect action: 'show', id: person.id
+   }
+}
+----
+
+[NOTE]
+====
+If you are hashing the password in an PersistenceEventListener or in the User domain class (using `beforeInsert` and `encodePassword`) then don't call `springSecurityService.encodePassword()` in your controller since you'll double-hash the password and users won't be able to log in. It's best to encapsulate the password handling logic in a single point.
+====
+
+==== updateRole()
+Updates a role and, if you use `Requestmap` instances to secure URLs, updates the role name in all affected `Requestmap` definitions if the name was changed.
+
+Example:
+
+[source,groovy]
+.Listing {counter:listing}. Example using `updateRole()`
+----
+class RoleController {
+
+   def springSecurityService
+
+   def update(Role role) {
+      if (!springSecurityService.updateRole(role, params)) {
+         render view: 'edit', model: [roleInstance: role]
+         return
+      }
+
+      flash.message = "The role was updated"
+      redirect action: show, id: role.id
+   }
+}
+----
+
+==== deleteRole()
+Deletes a role and, if you use `Requestmap` instances to secure URLs, removes the role from all affected `Requestmap` definitions. If a ``Requestmap``'s config attribute is only the role name (for example, `[pattern: '/foo/bar', access: 'ROLE_FOO']`), it is deleted.
+
+Example:
+
+[source,groovy]
+.Listing {counter:listing}. Example using `deleteRole()`
+----
+class RoleController {
+
+   def springSecurityService
+
+   def delete(Role role) {
+      try {
+         springSecurityService.deleteRole role
+         flash.message = "The role was deleted"
+         redirect action: list
+      }
+      catch (DataIntegrityViolationException e) {
+         flash.message = "Unable to delete the role"
+         redirect action: show, id: params.id
+      }
+   }
+}
+----
+
+==== clearCachedRequestmaps()
+Flushes the Requestmaps cache and triggers a complete reload. If you use `Requestmap` instances to secure URLs, the plugin loads and caches all `Requestmap` instances as a performance optimization. This action saves database activity because the requestmaps are checked for each request. Do not allow the cache to become stale. When you create, edit or delete a `Requestmap`, flush the cache. Both `updateRole()` and `deleteRole()` call clearCachedRequestmaps()for you. Call this method when you create a new `Requestmap` or do other `Requestmap` work that affects the cache.
+
+Example:
+
+[source,groovy]
+.Listing {counter:listing}. Example using `clearCachedRequestmaps()`
+----
+class RequestmapController {
+
+   def springSecurityService
+
+   def save(Requestmap requestmap) {
+      if (!requestmap.save(flush: true)) {
+         render view: 'create', model: [requestmapInstance: requestmap]
+         return
+      }
+
+      springSecurityService.clearCachedRequestmaps()
+      flash.message = "Requestmap created"
+      redirect action: show, id: requestmap.id
+   }
+}
+----
+
+==== reauthenticate()
+
+Rebuilds an {apidocs}org/springframework/security/core/Authentication.html[Authentication] for the given username and registers it in the security context. You typically use this method after updating a user's authorities or other data that is cached in the `Authentication` or `Principal`. It also removes the user from the user cache to force a refresh at next login.
+
+Example:
+
+[source,groovy]
+.Listing {counter:listing}. Example using `reauthenticate()`
+----
+class UserController {
+
+   def springSecurityService
+
+   def update(User user) {
+
+      params.salt = user.salt
+      if (params.password) {
+         params.password = springSecurityService.encodePassword(params.password, salt)
+         def salt = ... // e.g. randomly generated using some utility method
+         params.salt = salt
+      }
+      user.properties = params
+      if (!user.save(flush: true)) {
+         render view: 'edit', model: [userInstance: user]
+         return
+      }
+
+      if (springSecurityService.loggedIn &&
+             springSecurityService.principal.username == user.username) {
+         springSecurityService.reauthenticate user.username
+      }
+
+      flash.message = "The user was updated"
+      redirect action: show, id: user.id
+   }
+}
+----

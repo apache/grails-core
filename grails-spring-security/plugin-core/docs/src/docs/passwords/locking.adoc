@@ -1,0 +1,246 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-locking]]
+=== Account Locking and Forcing Password Change
+
+Spring Security supports four ways of disabling a user account. When you attempt to log in, the `UserDetailsService` implementation creates an instance of `UserDetails` that uses these accessor methods:
+
+* `isAccountNonExpired()`
+* `isAccountNonLocked()`
+* `isCredentialsNonExpired()`
+* `isEnabled()`
+
+If you use the <<core-s2-quickstart>> script to create a user domain class, it creates a class with corresponding properties to manage this state.
+
+When an accessor returns `true` for `accountExpired`, `accountLocked`, or `passwordExpired` or returns `false` for `enabled`, a corresponding exception is thrown:
+
+.Account locked and disabled exceptions
+[cols="30,30,40"]
+|====================
+| *Accessor* | *Property* | *Exception*
+
+|`isAccountNonExpired()`
+|`accountExpired`
+|{apidocs}org/springframework/security/authentication/AccountExpiredException.html[AccountExpiredException]
+
+|`isAccountNonLocked()`
+|`accountLocked`
+|{apidocs}org/springframework/security/authentication/LockedException.html[LockedException]
+
+|`isCredentialsNonExpired()`
+|`passwordExpired`
+|{apidocs}org/springframework/security/authentication/CredentialsExpiredException.html[CredentialsExpiredException]
+
+|`isEnabled()`
+|`enabled`
+|{apidocs}org/springframework/security/authentication/DisabledException.html[DisabledException]
+|====================
+
+You can configure exception mappings in `application.groovy` to associate a URL to any or all of these exceptions to determine where to redirect after a failure, for example:
+
+[source,groovy]
+.Listing {counter:listing}. Example `grails.plugin.springsecurity.failureHandler.exceptionMappings` configuration
+----
+import org.springframework.security.authentication.LockedException
+import org.springframework.security.authentication.DisabledException
+import org.springframework.security.authentication.AccountExpiredException
+import org.springframework.security.authentication.CredentialsExpiredException
+
+grails.plugin.springsecurity.failureHandler.exceptionMappings = [
+   [exception: LockedException.name,             url: '/user/accountLocked'],
+   [exception: DisabledException.name,           url: '/user/accountDisabled'],
+   [exception: AccountExpiredException.name,     url: '/user/accountExpired'],
+   [exception: CredentialsExpiredException.name, url: '/user/passwordExpired']
+]
+----
+
+Without a mapping for a particular exception, the user is redirected to the standard login fail page (by default `/login/authfail`), which displays an error message from this table:
+
+.Login failure messages
+[cols="50,50"]
+|====================
+| *Property* | *Default*
+
+|errors.login.disabled
+|"`Sorry, your account is disabled.`"
+
+|errors.login.expired
+|"`Sorry, your account has expired.`"
+
+|errors.login.passwordExpired
+|"`Sorry, your password has expired.`"
+
+|errors.login.locked
+|"`Sorry, your account is locked.`"
+
+|errors.login.fail
+|"`Sorry, we were not able to find a user with that username and password.`"
+|====================
+
+You can customize these messages by setting the corresponding property in `application.groovy`, for example:
+
+[source,groovy]
+----
+grails.plugin.springsecurity.errors.login.locked = "None shall pass."
+----
+
+You can use this functionality to manually lock a user's account or expire the password, but you can automate the process. For example, use the https://grails.org/plugin/quartz[Quartz plugin] to periodically expire everyone's password and force them to go to a page where they update it. Keep track of the date when users change their passwords and use a Quartz job to expire their passwords once the password is older than a fixed max age.
+
+Here's an example for a password expired workflow. You'd need a simple action to display a password reset form (similar to the login form):
+
+[source,groovy]
+.Listing {counter:listing}. Adding a `passwordExpired()` controller action
+----
+def passwordExpired() {
+   [username: session['SPRING_SECURITY_LAST_USERNAME']]
+}
+----
+
+and the form would look something like this:
+
+[source,html]
+.Listing {counter:listing}. Sample GSP code for a password reset page
+----
+<div id='login'>
+   <div class='inner'>
+      <g:if test='${flash.message}'>
+      <div class='login_message'>${flash.message}</div>
+      </g:if>
+      <div class='fheader'>Please update your password..</div>
+      <g:form action='updatePassword' id='passwordResetForm' class='cssform' autocomplete='off'>
+         <p>
+            <label for='username'>Username</label>
+            <span class='text_'>${username}</span>
+         </p>
+         <p>
+            <label for='password'>Current Password</label>
+            <g:passwordField name='password' class='text_' />
+         </p>
+         <p>
+            <label for='password'>New Password</label>
+            <g:passwordField name='password_new' class='text_' />
+         </p>
+         <p>
+            <label for='password'>New Password (again)</label>
+            <g:passwordField name='password_new_2' class='text_' />
+         </p>
+         <p>
+            <input type='submit' value='Reset' />
+         </p>
+      </g:form>
+   </div>
+</div>
+----
+
+It's important that you not allow the user to specify the username (it's available in the HTTP session) but that you require the current password, otherwise it would be simple to forge a password reset.
+
+The GSP form would submit to an action like this one:
+
+
+[source,groovy]
+.Listing {counter:listing}. Adding an `updatePassword()` controller action
+----
+def updatePassword(String password, String password_new, String password_new_2) {
+   String username = session['SPRING_SECURITY_LAST_USERNAME']
+   if (!username) {
+      flash.message = 'Sorry, an error has occurred'
+      redirect controller: 'login', action: 'auth'
+      return
+   }
+
+   if (!password || !password_new || !password_new_2 || password_new != password_new_2) {
+      flash.message = 'Please enter your current password and a valid new password'
+      render view: 'passwordExpired', model: [username: session['SPRING_SECURITY_LAST_USERNAME']]
+      return
+   }
+
+   User user = User.findByUsername(username)
+   if (!passwordEncoder.matches(password, user.password)) {
+      flash.message = 'Current password is incorrect'
+      render view: 'passwordExpired', model: [username: session['SPRING_SECURITY_LAST_USERNAME']]
+      return
+   }
+
+   if (passwordEncoder.matches(password_new, user.password)) {
+      flash.message = 'Please choose a different password from your current one'
+      render view: 'passwordExpired', model: [username: session['SPRING_SECURITY_LAST_USERNAME']]
+      return
+   }
+
+   user.password = password_new
+   user.passwordExpired = false
+   user.save() // if you have password constraints check them here
+
+   redirect controller: 'login', action: 'auth'
+}
+----
+
+==== User Cache
+If the `cacheUsers` configuration property is set to `true`, Spring Security caches `UserDetails` instances to save trips to the database (the default is `false`). This optimization is minor, because typically only two small queries occur during login -- one to load the user, and one to load the authorities.
+
+If you enable this feature, you must remove any cached instances after making a change that affects login. If you do not remove cached instances, even though a user's account is locked or disabled, logins succeed because the database is bypassed. By removing the cached data, you force at trip to the database to retrieve the latest updates.
+
+Here is a sample Quartz job that demonstrates how to find and disable users with passwords that are too old:
+
+[source,groovy]
+.`ExpirePasswordsJob.groovy`
+----
+package com.mycompany.myapp
+
+class ExpirePasswordsJob {
+
+   static triggers = {
+      cron name: 'myTrigger', cronExpression: '0 0 0 * * ?' // midnight daily
+   }
+
+   def userCache
+
+   void execute() {
+
+      def users = User.executeQuery(
+            'from User u where u.passwordChangeDate <= :cutoffDate',
+            [cutoffDate: new Date() - 180])
+
+      for (user in users) {
+         // flush each separately so one failure doesn't rollback all of the others
+         try {
+            user.passwordExpired = true
+            user.save(flush: true)
+            userCache.removeUserFromCache user.username
+         }
+         catch (e) {
+            log.error "problem expiring password for user $user.username : $e.message", e
+         }
+      }
+   }
+}
+----
+
+[NOTE]
+====
+If your application includes a dependency for `org.hibernate:hibernate-ehcache` (to provide an Ehcache-based 2nd-level cache implementation) you might have a conflict with the Ehcache dependency. `hibernate-ehcache` has a dependency for `ehcache-core`, but this plugin has a dependency for `ehcache`, so you will end up with both jars in your classpath. `hibernate-ehcache` works fine with the full `ehcache` jar, so you can avoid this problem by excluding `ehcache-core` in `build.gradle`:
+
+[source,groovy]
+----
+implementation 'org.hibernate:hibernate-ehcache', {
+   exclude module: 'ehcache-core'
+}
+----
+====

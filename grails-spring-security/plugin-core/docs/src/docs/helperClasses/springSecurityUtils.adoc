@@ -1,0 +1,81 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-springSecurityUtils]]
+=== SpringSecurityUtils
+
+`grails.plugin.springsecurity.SpringSecurityUtils` is a utility class with static methods that you can call directly without using dependency injection. It is primarily an internal class but can be called from application code.
+
+==== authoritiesToRoles()
+Extracts role names from an array or `Collection` of {apidocs}org/springframework/security/core/GrantedAuthority.html[GrantedAuthority].
+
+==== getPrincipalAuthorities()
+Retrieves the currently logged-in user's authorities. It is empty (but never `null`) if the user is not logged in.
+
+==== parseAuthoritiesString()
+Splits a comma-delimited String containing role names into a `List` of {apidocs}org/springframework/security/core/GrantedAuthority.html[GrantedAuthority].
+
+==== ifAllGranted()
+Checks whether the current user has all specified roles (a comma-delimited String of role names). Primarily used by `SecurityTagLib.ifAllGranted`.
+
+==== ifNotGranted()
+Checks whether the current user has none of the specified roles (a comma-delimited String of role names). Primarily used by `SecurityTagLib.ifNotGranted`.
+
+==== ifAnyGranted()
+Checks whether the current user has any of the specified roles (a comma-delimited String of role names). Primarily used by `SecurityTagLib.ifAnyGranted`.
+
+==== getSecurityConfig()
+Retrieves the security part of the `Configuration` (from `grails-app/conf/application.groovy` merged with the plugin's default configuration).
+
+==== loadSecondaryConfig()
+Used by dependent plugins to add configuration attributes.
+
+==== reloadSecurityConfig()
+Forces a reload of the security configuration.
+
+==== isAjax()
+Checks whether the request was triggered by an Ajax call. The standard way is to determine whether `X-Requested-With` request header is set and has the value `XMLHttpRequest`. In addition, you can configure the name of the header with the `grails.plugin.springsecurity.ajaxHeader` configuration attribute, but this is not recommended because all major JavaScript toolkits use the standard name. Further, you can register a closure in `application.groovy` with the name `ajaxCheckClosure` that will be used to check if a request is an Ajax request. It is passed the request as its single argument, e.g.
+
+[source,groovy]
+.Listing {counter:listing}. Customizing Ajax detection with `grails.plugin.springsecurity.ajaxCheckClosure`
+----
+grails.plugin.springsecurity.ajaxCheckClosure = { request ->
+   // return true or false
+}
+----
+
+You can also force the request to be treated as Ajax by appending `&ajax=true` to your request query string.
+
+==== registerProvider()
+Used by dependent plugins to register an {apidocs}org/springframework/security/authentication/AuthenticationProvider.html[AuthenticationProvider] bean name.
+
+==== registerFilter()
+Used by dependent plugins to register a filter bean name in a specified position in the filter chain.
+
+==== isSwitched()
+Checks whether the current user switched from another user.
+
+==== getSwitchedUserOriginalUsername()
+Gets the original user's username if the current user switched from another user.
+
+==== doWithAuth()
+
+Executes a Closure with the current authentication. The one-parameter version which takes just a Closure assumes that there's an authentication in the HTTP Session and that the Closure is running in a separate thread from the web request, so the `SecurityContext` and `Authentication` aren't available to the standard `ThreadLocal`. This is primarily of use when you explicitly launch a new thread from a controller action or service called in request scope, not from a Quartz job which isn't associated with an authentication in any thread.
+
+The two-parameter version takes a username and a Closure to authenticate as. This is will authenticate as the specified user and execute the closure with that authentication. It restores the authentication to the one that was active if it exists, or clears the context otherwise. This is similar to run-as and switch-user but is only local to the Closure.
