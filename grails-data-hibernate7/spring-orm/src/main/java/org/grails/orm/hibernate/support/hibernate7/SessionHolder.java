@@ -19,8 +19,8 @@ package org.grails.orm.hibernate.support.hibernate7;
 import org.hibernate.FlushMode;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
-
 import org.jspecify.annotations.Nullable;
+
 import org.springframework.orm.jpa.EntityManagerHolder;
 
 /**

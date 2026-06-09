@@ -183,7 +183,7 @@ public class DataBindingUtils {
             final T newObject;
             try {
                 newObject = targetType.getDeclaredConstructor().newInstance();
-            } catch(NoSuchMethodException | InvocationTargetException ex) {
+            } catch (NoSuchMethodException | InvocationTargetException ex) {
                 throw new InstantiationException(
                     "Could not instantiate class [" + targetType.getName() + "]: " + ex.getMessage()
                 );

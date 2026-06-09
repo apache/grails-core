@@ -257,7 +257,7 @@ public class GrailsDomainBinder implements MetadataContributor {
         else {
             try {
                 namingStrategy = (NamingStrategy) namingStrategyClass.getDeclaredConstructor().newInstance();
-            } catch(NoSuchMethodException | InvocationTargetException e) {
+            } catch (NoSuchMethodException | InvocationTargetException e) {
                 throw new InstantiationException("Failed to instantiate naming strategy [" + strategy + "]: " + e.getMessage());
             }
         }

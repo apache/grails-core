@@ -176,9 +176,9 @@ public class DelegateAsyncTransformation implements ASTTransformation, Transform
         }
         var genericsSpec = GenericsUtils.createGenericsSpec(receiver);
         var correctedReturnType = GenericsUtils.correctToGenericsSpecRecurse(genericsSpec, originalReturnType);
-        return correctedReturnType == null
-            ? originalReturnType.getPlainNodeReference()
-            : correctedReturnType;
+        return correctedReturnType == null ?
+            originalReturnType.getPlainNodeReference() :
+            correctedReturnType;
     }
 
     protected DelegateAsyncTransactionalMethodTransformer lookupAsyncTransactionalMethodTransformer() {
