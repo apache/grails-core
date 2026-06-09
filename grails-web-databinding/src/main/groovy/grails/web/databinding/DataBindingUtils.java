@@ -184,9 +184,8 @@ public class DataBindingUtils {
             try {
                 newObject = targetType.getDeclaredConstructor().newInstance();
             } catch(NoSuchMethodException | InvocationTargetException ex) {
-                throw new IllegalStateException(
-                    "Could not instantiate class [" + targetType.getName() + "]",
-                    ex
+                throw new InstantiationException(
+                    "Could not instantiate class [" + targetType.getName() + "]: " + ex.getMessage()
                 );
             }
 

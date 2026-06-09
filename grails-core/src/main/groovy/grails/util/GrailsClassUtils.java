@@ -956,7 +956,9 @@ public class GrailsClassUtils {
         try {
             return ClassUtils.forName(className, ClassUtils.getDefaultClassLoader()).getDeclaredConstructor().newInstance();
         } catch (InvocationTargetException | NoSuchMethodException e) {
-            throw new InstantiationException();
+            throw new InstantiationException(
+                "Could not instantiate class [" + className + "]: " + e.getMessage()
+            );
         }
     }
 
