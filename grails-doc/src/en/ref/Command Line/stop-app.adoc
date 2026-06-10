@@ -51,12 +51,6 @@ $ grails stop-app
 === Description
 
 
-When an application is started with `run-app`, it runs as a forked Gradle `bootRun` process which writes its process id to a `run-app.pid` file in the project `build` directory. The `stop-app` command reads that file and asks the operating system to stop the process, then removes the file.
-
-Because the running process is tracked through a file on disk rather than in-memory state, `stop-app` can stop the application even when it was forked into a separate process or when `stop-app` is run from a different `grails` invocation than the one that started it.
-
-This is a CLI only mechanism: it does not require the Spring Boot Actuator shutdown endpoint to be enabled, nor does it rely on JMX.
-
-On Unix-like systems the application is shut down gracefully, allowing its shutdown hooks to run; on operating systems without a graceful signal equivalent (such as Windows) the process is terminated on a best effort basis.
+Use `stop-app` to stop the application for the current project after it has been started with `run-app`. The command can be run from interactive mode or as a separate command from another terminal.
 
 If no application started by `run-app` is running for the project, `stop-app` reports that the application is not running.
