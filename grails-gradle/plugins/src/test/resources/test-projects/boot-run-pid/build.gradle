@@ -1,0 +1,10 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+tasks.register('inspectBootRunPid') {
+    doLast {
+        def task = tasks.named('bootRun').get()
+        println "PID_FILE=${task.systemProperties['cli.pid.file']}"
+    }
+}

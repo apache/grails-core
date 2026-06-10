@@ -133,4 +133,29 @@ class GrailsGradlePluginToolchainSpec extends GradleSpecification {
         result.output.contains('MIN_HEAP=512m')
         result.output.contains('MAX_HEAP=2g')
     }
+
+    def "bootRun supplies default run-app PID file"() {
+        given:
+        setupTestResourceProject('boot-run-pid')
+
+        when:
+        def result = executeTask('inspectBootRunPid')
+
+        then:
+        String defaultPidPath = "${File.separator}build${File.separator}run-app.pid".toString()
+        result.output.readLines().any { it.endsWith(defaultPidPath) }
+    }
+
+    def "bootRun keeps CLI supplied run-app PID file"() {
+        given:
+        setupTestResourceProject('boot-run-pid')
+        File pidFile = new File('from-cli.pid').absoluteFile
+        String pidFileProperty = "-Dgrails.cli.pid.file=${pidFile.absolutePath}".toString()
+
+        when:
+        def result = executeTask('inspectBootRunPid', [pidFileProperty])
+
+        then:
+        result.output.contains("PID_FILE=${pidFile.absolutePath}".toString())
+    }
 }
