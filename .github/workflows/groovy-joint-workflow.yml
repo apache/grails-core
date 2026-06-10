@@ -28,11 +28,6 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 permissions:
   contents: read
-# Exercise SiteMesh 3 by default in the test apps. The example/suite builds read this
-# flag to choose grails-sitemesh3 over the legacy grails-layout; unset it (or set it to
-# anything other than 'true') to fall back to SiteMesh 2.
-env:
-  SITEMESH3_TESTING_ENABLED: 'true'
 jobs:
   build_groovy:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}

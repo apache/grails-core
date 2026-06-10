@@ -31,11 +31,11 @@ apply plugin: 'org.apache.grails.gradle.grails-gsp'
 dependencies {
     implementation platform(project(':grails-bom'))
 
-    if(System.getenv('SITEMESH3_TESTING_ENABLED') == 'true') {
-        api 'org.apache.grails:grails-sitemesh3'
+    if(System.getenv('SITEMESH2_TESTING_ENABLED') == 'true') {
+        api 'org.apache.grails:grails-layout'
     }
     else {
-        api 'org.apache.grails:grails-layout'
+        api 'org.apache.grails:grails-sitemesh3'
     }
     api 'org.apache.grails:grails-dependencies-starter-web'
     api 'com.h2database:h2'
