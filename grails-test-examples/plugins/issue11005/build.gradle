@@ -31,10 +31,9 @@ group = 'com.example.grails.plugins'
 dependencies {
     implementation platform(project(':grails-bom'))
 
-    if(System.getenv('SITEMESH2_TESTING_ENABLED') == 'true') {
+    if (System.getenv('SITEMESH2_TESTING_ENABLED') == 'true') {
         implementation 'org.apache.grails:grails-layout'
-    }
-    else {
+    } else {
         implementation 'org.apache.grails:grails-sitemesh3'
     }
     api 'org.apache.grails:grails-dependencies-starter-web'

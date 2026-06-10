@@ -31,10 +31,9 @@ apply plugin: 'org.apache.grails.gradle.grails-gsp'
 dependencies {
     implementation platform(project(':grails-bom'))
 
-    if(System.getenv('SITEMESH2_TESTING_ENABLED') == 'true') {
+    if (System.getenv('SITEMESH2_TESTING_ENABLED') == 'true') {
         api 'org.apache.grails:grails-layout'
-    }
-    else {
+    } else {
         api 'org.apache.grails:grails-sitemesh3'
     }
     api 'org.apache.grails:grails-dependencies-starter-web'

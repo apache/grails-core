@@ -39,10 +39,9 @@ dependencies {
 
     implementation 'org.apache.grails:grails-dependencies-starter-web'
     implementation 'com.h2database:h2'
-    if(System.getenv('SITEMESH2_TESTING_ENABLED') == 'true') {
+    if (System.getenv('SITEMESH2_TESTING_ENABLED') == 'true') {
         implementation 'org.apache.grails:grails-layout'
-    }
-    else {
+    } else {
         implementation 'org.apache.grails:grails-sitemesh3'
     }
 

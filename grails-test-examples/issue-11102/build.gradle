@@ -42,10 +42,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.boot:spring-boot-starter-tomcat'
     implementation 'org.apache.grails:grails-web-boot'
-    if(System.getenv('SITEMESH2_TESTING_ENABLED') == 'true') {
+    if (System.getenv('SITEMESH2_TESTING_ENABLED') == 'true') {
         implementation 'org.apache.grails:grails-layout'
-    }
-    else {
+    } else {
         implementation 'org.apache.grails:grails-sitemesh3'
     }
     implementation 'org.apache.grails:grails-logging'

@@ -47,10 +47,9 @@ dependencies {
     implementation 'org.apache.grails:grails-services'
     implementation 'org.apache.grails:grails-url-mappings'
     implementation 'org.apache.grails:grails-web-boot'
-    if(System.getenv('SITEMESH2_TESTING_ENABLED') == 'true') {
+    if (System.getenv('SITEMESH2_TESTING_ENABLED') == 'true') {
         implementation 'org.apache.grails:grails-layout'
-    }
-    else {
+    } else {
         implementation 'org.apache.grails:grails-sitemesh3'
     }
 

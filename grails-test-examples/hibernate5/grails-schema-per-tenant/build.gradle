@@ -36,10 +36,9 @@ dependencies {
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails:grails-rest-transforms'
     implementation 'org.apache.grails:grails-gsp'
-    if(System.getenv('SITEMESH2_TESTING_ENABLED') == 'true') {
+    if (System.getenv('SITEMESH2_TESTING_ENABLED') == 'true') {
         implementation 'org.apache.grails:grails-layout'
-    }
-    else {
+    } else {
         implementation 'org.apache.grails:grails-sitemesh3'
     }
 
