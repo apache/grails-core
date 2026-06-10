@@ -48,7 +48,6 @@ class BuildBuilder implements ProjectFixture, ContextFixture {
     private JdkVersion jdkVersion
     private GormImpl gormImpl
     private ServletImpl servletImpl
-    private GspLayoutImpl gspLayoutImpl
     private OperatingSystem operatingSystem
     private Project project
     private ApplicationContext ctx
@@ -58,7 +57,6 @@ class BuildBuilder implements ProjectFixture, ContextFixture {
         this.ctx = ctx
         this.gormImpl = GormImpl.DEFAULT_OPTION
         this.servletImpl = ServletImpl.DEFAULT_OPTION
-        this.gspLayoutImpl = GspLayoutImpl.DEFAULT_OPTION
         this.operatingSystem = OperatingSystem.DEFAULT
     }
 
@@ -100,11 +98,6 @@ class BuildBuilder implements ProjectFixture, ContextFixture {
         this
     }
 
-    BuildBuilder gspLayoutImpl(GspLayoutImpl gspLayoutImpl) {
-        this.gspLayoutImpl = gspLayoutImpl
-        this
-    }
-
     BuildBuilder project(Project project) {
         this.project = project
         this
@@ -118,7 +111,6 @@ class BuildBuilder implements ProjectFixture, ContextFixture {
         JdkVersion jdkVersion = this.jdkVersion ?: JdkVersion.DEFAULT_OPTION
 
         final Options options = new Options(reloading, gormImpl, servletImpl, jdkVersion, operatingSystem)
-                .withGspLayoutImpl(gspLayoutImpl ?: GspLayoutImpl.DEFAULT_OPTION)
         Features features = getFeatures(featureNames, options, type)
 
         GradleBuild build = gradleBuild(options, features, project, type)

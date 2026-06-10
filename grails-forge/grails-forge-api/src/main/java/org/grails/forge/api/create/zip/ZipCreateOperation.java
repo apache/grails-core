@@ -27,7 +27,6 @@ import org.grails.forge.api.DevelopmentReloading;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.options.BuildTool;
 import org.grails.forge.options.GormImpl;
-import org.grails.forge.options.GspLayoutImpl;
 import org.grails.forge.options.ServletImpl;
 import org.grails.forge.options.JdkVersion;
 
@@ -64,7 +63,6 @@ public interface ZipCreateOperation {
             @Nullable DevelopmentReloading reloading,
             @Nullable GormImpl gorm,
             @Nullable ServletImpl servlet,
-            @Nullable GspLayoutImpl gspLayout,
             @Nullable JdkVersion javaVersion,
             @Nullable @Header(HttpHeaders.USER_AGENT) String userAgent
     );

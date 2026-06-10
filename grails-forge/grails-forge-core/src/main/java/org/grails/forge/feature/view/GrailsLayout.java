@@ -19,20 +19,13 @@
 package org.grails.forge.feature.view;
 
 import jakarta.inject.Singleton;
-import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
-import org.grails.forge.feature.Feature;
-import org.grails.forge.options.GspLayoutImpl;
-import org.grails.forge.options.Options;
-
-import java.util.Set;
 
 /**
  * Opt-in GSP layout decorator backed by the legacy SiteMesh 2 based
  * {@code grails-layout} plugin. Mutually exclusive with {@code sitemesh3};
- * applied when the {@link GspLayoutImpl} option selects {@code grails-layout}
- * instead of the default SiteMesh 3 decorator.
+ * selecting this feature replaces the default SiteMesh 3 decorator.
  */
 @Singleton
 public class GrailsLayout extends GspLayout {
@@ -50,12 +43,6 @@ public class GrailsLayout extends GspLayout {
     @Override
     public String getDescription() {
         return "Adds support for legacy SiteMesh 2 based GSP layouts (grails-layout) instead of SiteMesh 3";
-    }
-
-    @Override
-    public boolean shouldApply(ApplicationType applicationType, Options options, Set<Feature> selectedFeatures) {
-        return supports(applicationType) &&
-                options.getGspLayoutImpl() == GspLayoutImpl.GRAILS_LAYOUT;
     }
 
     @Override

@@ -22,7 +22,6 @@ package org.grails.forge.feature.view
 import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.BuildBuilder
 import org.grails.forge.application.ApplicationType
-import org.grails.forge.options.GspLayoutImpl
 import spock.lang.Unroll
 
 class GspLayoutSpec extends ApplicationContextSpec {
@@ -43,33 +42,27 @@ class GspLayoutSpec extends ApplicationContextSpec {
         applicationType << [ApplicationType.WEB, ApplicationType.WEB_PLUGIN]
     }
 
-    @Unroll
-    void "the grails-layout option replaces the default SiteMesh 3 decorator for #applicationType"() {
+    void "selecting grails-layout replaces the default SiteMesh 3 decorator"() {
         when:
         final String build = new BuildBuilder(beanContext)
-            .features(['gsp'])
-            .gspLayoutImpl(GspLayoutImpl.GRAILS_LAYOUT)
-            .applicationType(applicationType)
+            .features(['gsp', 'grails-layout'])
+            .applicationType(ApplicationType.WEB)
             .render()
 
         then:
         build.contains('implementation "org.apache.grails:grails-layout"')
         !build.contains('implementation "org.apache.grails:grails-sitemesh3"')
-
-        where:
-        applicationType << [ApplicationType.WEB, ApplicationType.WEB_PLUGIN]
     }
 
-    void "the sitemesh3 option keeps the default SiteMesh 3 decorator"() {
+    void "sitemesh3 is the silent default and is not a selectable feature"() {
         when:
-        final String build = new BuildBuilder(beanContext)
-            .features(['gsp'])
-            .gspLayoutImpl(GspLayoutImpl.SITEMESH3)
+        new BuildBuilder(beanContext)
+            .features(['gsp', 'sitemesh3'])
             .applicationType(ApplicationType.WEB)
             .render()
 
         then:
-        build.contains('implementation "org.apache.grails:grails-sitemesh3"')
-        !build.contains('implementation "org.apache.grails:grails-layout"')
+        IllegalArgumentException e = thrown()
+        e.message.contains('The requested feature does not exist: sitemesh3')
     }
 }

@@ -29,8 +29,6 @@ public class FeatureFilter {
     private GormImpl gorm;
     @JsonProperty("servlet")
     private ServletImpl servlet;
-    @JsonProperty("gspLayout")
-    private GspLayoutImpl gspLayout;
     @JsonProperty("javaVersion")
     private JdkVersion javaVersion;
 
@@ -56,14 +54,6 @@ public class FeatureFilter {
 
     public void setServlet(ServletImpl servlet) {
         this.servlet = servlet;
-    }
-
-    public GspLayoutImpl getGspLayout() {
-        return gspLayout;
-    }
-
-    public void setGspLayout(GspLayoutImpl gspLayout) {
-        this.gspLayout = gspLayout;
     }
 
     public JdkVersion getJavaVersion() {

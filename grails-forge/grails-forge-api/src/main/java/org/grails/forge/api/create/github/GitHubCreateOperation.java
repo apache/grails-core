@@ -20,13 +20,14 @@ package org.grails.forge.api.create.github;
 
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
+import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpResponse;
+import io.micronaut.http.annotation.Header;
 import org.grails.forge.api.RequestInfo;
 import org.grails.forge.api.DevelopmentReloading;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.options.BuildTool;
 import org.grails.forge.options.GormImpl;
-import org.grails.forge.options.GspLayoutImpl;
 import org.grails.forge.options.JdkVersion;
 import org.grails.forge.options.ServletImpl;
 
@@ -51,10 +52,10 @@ public interface GitHubCreateOperation {
      * @param reloading   The development reloading option
      * @param gorm        The GORM
      * @param servlet     The Servlet
-     * @param gspLayout   The GSP layout implementation
      * @param javaVersion The java version
      * @param code        The GitHub code
      * @param state       An unguessable random string. It is used to protect against cross-site request forgery attacks.
+     * @param userAgent   The browser user-agent
      * @param requestInfo The request info
      * @return An information about newly created GitHub repository
      */
@@ -66,10 +67,10 @@ public interface GitHubCreateOperation {
             @Nullable DevelopmentReloading reloading,
             @Nullable GormImpl gorm,
             @Nullable ServletImpl servlet,
-            @Nullable GspLayoutImpl gspLayout,
             @Nullable JdkVersion javaVersion,
             @NonNull String code,
             @NonNull String state,
+            @Nullable @Header(HttpHeaders.USER_AGENT) String userAgent,
             @NonNull RequestInfo requestInfo
     );
 }

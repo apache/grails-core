@@ -34,7 +34,6 @@ public class Options implements ConvertibleValues<Object> {
     private final BuildTool buildTool;
     private final GormImpl gormImpl;
     private final ServletImpl servletImpl;
-    private final GspLayoutImpl gspLayoutImpl;
     private final JdkVersion javaVersion;
     private final ConvertibleValuesMap<Object> additionalOptions;
 
@@ -45,22 +44,10 @@ public class Options implements ConvertibleValues<Object> {
                    OperatingSystem operatingSystem,
                    Map<String, Object> additionalOptions) {
 
-        this(reloading, gormImpl, servletImpl, GspLayoutImpl.DEFAULT_OPTION, javaVersion, operatingSystem, additionalOptions);
-    }
-
-    public Options(DevelopmentReloading reloading,
-                   GormImpl gormImpl,
-                   ServletImpl servletImpl,
-                   GspLayoutImpl gspLayoutImpl,
-                   JdkVersion javaVersion,
-                   OperatingSystem operatingSystem,
-                   Map<String, Object> additionalOptions) {
-
         this.reloading = reloading;
         this.buildTool = BuildTool.DEFAULT_OPTION;
         this.gormImpl = gormImpl;
         this.servletImpl = servletImpl;
-        this.gspLayoutImpl = gspLayoutImpl;
         this.javaVersion = javaVersion;
         this.operatingSystem = operatingSystem;
         this.additionalOptions = new ConvertibleValuesMap<>(additionalOptions);
@@ -130,10 +117,6 @@ public class Options implements ConvertibleValues<Object> {
         return servletImpl;
     }
 
-    public GspLayoutImpl getGspLayoutImpl() {
-        return gspLayoutImpl;
-    }
-
     @Override
     public Set<String> names() {
         return additionalOptions.names();
@@ -154,26 +137,22 @@ public class Options implements ConvertibleValues<Object> {
     }
 
     public Options withOperatingSystem(OperatingSystem operatingSystem) {
-        return new Options(reloading, gormImpl, servletImpl, gspLayoutImpl, javaVersion, operatingSystem, additionalOptions.asMap());
+        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, additionalOptions.asMap());
     }
 
     public Options withDevelopmentReloading(DevelopmentReloading reloading) {
-        return new Options(reloading, gormImpl, servletImpl, gspLayoutImpl, javaVersion, operatingSystem, additionalOptions.asMap());
+        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, additionalOptions.asMap());
     }
 
     public Options withGormImpl(GormImpl gormImpl) {
-        return new Options(reloading, gormImpl, servletImpl, gspLayoutImpl, javaVersion, operatingSystem, additionalOptions.asMap());
+        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, additionalOptions.asMap());
     }
 
     public Options withServletImpl(ServletImpl servletImpl) {
-        return new Options(reloading, gormImpl, servletImpl, gspLayoutImpl, javaVersion, operatingSystem, additionalOptions.asMap());
-    }
-
-    public Options withGspLayoutImpl(GspLayoutImpl gspLayoutImpl) {
-        return new Options(reloading, gormImpl, servletImpl, gspLayoutImpl, javaVersion, operatingSystem, additionalOptions.asMap());
+        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, additionalOptions.asMap());
     }
 
     public Options withJavaVersion(JdkVersion javaVersion) {
-        return new Options(reloading, gormImpl, servletImpl, gspLayoutImpl, javaVersion, operatingSystem, additionalOptions.asMap());
+        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, additionalOptions.asMap());
     }
 }
