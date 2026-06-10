@@ -42,7 +42,7 @@ class NullValueEqualSpec extends GrailsDataTckSpec {
         TestEntity.countByAge(null) == 2
     }
 
-    @IgnoreIf({ System.getProperty('hibernate5.gorm.suite') })
+    @IgnoreIf({ System.getProperty('hibernate5.gorm.suite') || System.getProperty('hibernate7.gorm.suite') })
     void 'test null value in not equal'() {
         when:
         new TestEntity(name: 'Fred', age: null).save(failOnError: true)

@@ -55,19 +55,18 @@ dependencies {
 
     testImplementation project(':grails-forge-cli')
     testImplementation project(':grails-forge-core')
-    testImplementation "ch.qos.logback:logback-classic:$logbackClassicVersion"
+    testImplementation "ch.qos.logback:logback-classic"
     testImplementation 'io.micronaut.picocli:micronaut-picocli'
 
     testCompileOnly 'io.micronaut:micronaut-inject-groovy'
 
     testImplementation 'org.apache.groovy:groovy'
-    testImplementation "org.spockframework:spock-core:$spockVersion", {
+    testImplementation "org.spockframework:spock-core", {
         exclude group: 'org.apache.groovy', module: 'groovy-all'
     }
 
-    testImplementation "cglib:cglib-nodep:$cglibVersion"
-    testImplementation "org.objenesis:objenesis:$objenesisVersion"
-    testRuntimeOnly "ch.qos.logback:logback-classic:$logbackClassicVersion"
+    testRuntimeOnly "ch.qos.logback:logback-classic"
+    testRuntimeOnly "org.objenesis:objenesis:$objenesisVersion"
     testImplementation 'org.apache.groovy:groovy-test'
 }
 

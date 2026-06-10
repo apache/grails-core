@@ -34,8 +34,9 @@ import spock.lang.Specification
  */
 class CompositeIdWithDeepOneToManyMappingSpec extends Specification {
 
-    @AutoCleanup @Shared HibernateDatastore datastore = new HibernateDatastore(GrandParent, Parent, Child)
-    @Shared PlatformTransactionManager transactionManager = datastore.transactionManager
+    @Shared @AutoCleanup HibernateDatastore datastore = new HibernateDatastore(GrandParent, Parent, Child)
+    @Shared
+    PlatformTransactionManager transactionManager = datastore.transactionManager
 
     @Rollback
     @Issue('https://github.com/apache/grails-data-mapping/issues/660')
@@ -44,8 +45,8 @@ class CompositeIdWithDeepOneToManyMappingSpec extends Specification {
         def grandParent = new GrandParent(luckyNumber: 7, name: "Fred")
         def parent = new Parent(name: "Bob")
         grandParent.addToParents(parent)
-        parent.addToChildren(name:"Chuck")
-        grandParent.save(flush:true)
+        parent.addToChildren(name: "Chuck")
+        grandParent.save(flush: true)
 
         then:
         Parent.count == 1
@@ -59,7 +60,7 @@ class CompositeIdWithDeepOneToManyMappingSpec extends Specification {
 class Child implements Serializable {
     String name
 
-    static belongsTo= [parent: Parent]
+    static belongsTo = [parent: Parent]
 
     static mapping = MappingBuilder.define {
         composite('parent', 'name')
@@ -71,10 +72,10 @@ class Parent implements Serializable {
     String name
     Collection<Child> children
 
-    static belongsTo= [grandParent: GrandParent]
-    static hasMany= [children: Child]
+    static belongsTo = [grandParent: GrandParent]
+    static hasMany = [children: Child]
 
-    static mapping= MappingBuilder.define {
+    static mapping = MappingBuilder.define {
         composite('grandParent', 'name')
     }
 }
@@ -85,9 +86,9 @@ class GrandParent implements Serializable {
     Integer luckyNumber
     Collection<Parent> parents
 
-    static hasMany= [parents: Parent]
+    static hasMany = [parents: Parent]
 
-    static mapping= MappingBuilder.define {
+    static mapping = MappingBuilder.define {
         composite('name', 'luckyNumber')
     }
 }

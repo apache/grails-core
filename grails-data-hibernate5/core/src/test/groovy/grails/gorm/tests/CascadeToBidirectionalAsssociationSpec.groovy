@@ -19,6 +19,10 @@
 
 package grails.gorm.tests
 
+import grails.gorm.tests.entities.Club
+import grails.gorm.tests.entities.Contract
+import grails.gorm.tests.entities.Player
+import grails.gorm.tests.entities.Team
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue

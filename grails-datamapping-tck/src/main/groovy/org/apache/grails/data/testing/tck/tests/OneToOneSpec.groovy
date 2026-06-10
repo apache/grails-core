@@ -50,7 +50,7 @@ class OneToOneSpec extends GrailsDataTckSpec {
         pet.owner.firstName == 'Fred'
     }
 
-    def 'Test persist and retrieve one-to-one with inverse key'() {
+    def "Test persist and retrieve one-to-one with inverse key"() {
         given: 'A domain model with a one-to-one'
         def face = new Face(name: 'Joe')
         def nose = new Nose(hasFreckles: true, face: face)

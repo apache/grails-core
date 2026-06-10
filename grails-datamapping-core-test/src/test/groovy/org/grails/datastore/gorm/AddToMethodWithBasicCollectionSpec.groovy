@@ -18,10 +18,11 @@
  */
 package org.grails.datastore.gorm
 
+import spock.lang.Issue
+
 import grails.persistence.Entity
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import spock.lang.Issue
 
 class AddToMethodWithBasicCollectionSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
@@ -31,20 +32,20 @@ class AddToMethodWithBasicCollectionSpec extends GrailsDataTckSpec<GrailsDataCor
 
     @Issue('GRAILS-8779')
     void "Test that the addTo* method works with basic collections"() {
-         when:"A book is saved with a basic collection"
-            def book = new BasicBook(title: "DGG")
-            book.addToAuthors("Graeme")
+        when: "A book is saved with a basic collection"
+        def book = new BasicBook(title: "DGG")
+        book.addToAuthors("Graeme")
                 .addToAuthors("Jeff")
-                .save(flush:true)
+                .save(flush: true)
 
-         manager.session.clear()
+        manager.session.clear()
 
-            book = BasicBook.get(book.id)
-        then:"The model is saved correctly"
-            book.title == "DGG"
-            book.authors.size() == 2
-            book.authors.contains "Graeme"
-            book.authors.contains "Jeff"
+        book = BasicBook.get(book.id)
+        then: "The model is saved correctly"
+        book.title == "DGG"
+        book.authors.size() == 2
+        book.authors.contains "Graeme"
+        book.authors.contains "Jeff"
     }
 }
 
@@ -52,7 +53,7 @@ class AddToMethodWithBasicCollectionSpec extends GrailsDataTckSpec<GrailsDataCor
 class BasicBook {
 
     Long id
-    static hasMany = [authors:String]
+    static hasMany = [authors: String]
 
     Set<String> authors
     String title
