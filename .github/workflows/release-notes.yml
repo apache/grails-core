@@ -13,41 +13,159 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Maintains one draft GitHub Release per active release branch (7.0.x, 7.1.x,
+# 7.2.x, 8.0.x, ...). Each branch produces an independent draft because the
+# release-drafter config in .github/release-drafter.yml combines
+# `filter-by-commitish: true`, `filter-by-range: ~MAJOR.MINOR.0`, and
+# `tag-prefix: v` so that drafts created on one branch never leak into another.
+#
+# Companion config: .github/release-drafter.yml
 name: "Release - Drafter"
 on:
-  issues:
-    types: [closed,reopened]
+  # Runs on every push to a release branch so the draft for that branch is
+  # always up to date with the latest merged PRs.
   push:
     branches:
       - '[0-9]+.[0-9]+.x'
+  # Runs on PRs whose BASE branch is a release branch so the autolabeler can
+  # apply labels (bug/feature/docs/...) and the draft picks up new PRs as soon
+  # as they are opened. Feature-to-feature PRs (e.g. fix/foo -> feat/bar)
+  # are intentionally excluded - they cannot affect any release.
   pull_request:
     types: [opened, reopened, synchronize, labeled]
+    branches:
+      - '[0-9]+.[0-9]+.x'
+  # Manual recovery: rerun against any branch (e.g. to recreate a draft after
+  # one was accidentally deleted, or to seed an initial draft on a new branch).
   workflow_dispatch:
-# queue jobs and only allow 1 run per branch due to the likelihood of hitting GitHub resource limits
+
+# Per-branch concurrency. Critically: this group MUST NOT collide with the
+# `release-pipeline-${branch}` group used by .github/workflows/release.yml.
+# The release pipeline has manual approval gates (`environment: release`,
+# `environment: docs`, `environment: sdkman`) which routinely keep a release
+# run in `waiting` state for HOURS or DAYS until a maintainer approves the
+# next stage. When the drafter shared that group, every push to a release
+# branch queued behind those waiting runs - producing drafter runs of
+# 1400-2000+ minutes that ultimately got cancelled, leaving drafts stale.
+#
+# Drafter and release.yml never touch the same release object: the drafter
+# maintains a DRAFT for the *next* version (e.g. v7.0.12), while release.yml
+# uploads assets to the *current published* tag (e.g. v7.0.11). Splitting the
+# concurrency groups is therefore safe.
+#
+# `cancel-in-progress: true`: if multiple pushes land on the same branch in
+# quick succession, only the latest matters - the latest run sees every PR
+# the older one would have seen, so cancelling pending runs is correct.
 concurrency:
-  group: release-pipeline-${{ github.event.pull_request.base.ref || github.ref_name }}
-  cancel-in-progress: false
+  group: release-drafter-${{ github.event.pull_request.base.ref || github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   update_release_draft:
+    name: "Update Release Draft"
     permissions:
-      # write permission is required to create a github release
+      # Required to create or update the draft GitHub Release
       contents: write
-      # write permission is required for autolabeler
+      # Required for the autolabeler to add labels to PRs
       pull-requests: write
     runs-on: ubuntu-latest
     steps:
+      # release-drafter's `filter-by-range` keeps the action looking only at
+      # releases whose tag falls inside this branch's MAJOR.MINOR series. This
+      # is what prevents 7.0.x's draft from being computed against 7.1.x's
+      # tags (or vice versa). It is derived dynamically from the branch name
+      # so this workflow file works identically on every release branch.
       - name: "🔢 Derive semver range from branch"
         id: version
         run: |
+          set -euo pipefail
           BRANCH="${{ github.event.pull_request.base.ref || github.ref_name }}"
-          if [[ "$BRANCH" =~ ^[0-9]+\.[0-9]+\.x$ ]]; then
-            echo "range=~${BRANCH%.x}.0" >> "$GITHUB_OUTPUT"
+          if [[ "$BRANCH" =~ ^([0-9]+)\.([0-9]+)\.x$ ]]; then
+            RANGE="~${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.0"
+            echo "Branch $BRANCH -> filter-by-range $RANGE"
+            echo "range=$RANGE" >> "$GITHUB_OUTPUT"
+          else
+            echo "Branch $BRANCH is not a release branch; skipping range filter (will only match the configured prerelease/commitish filters)"
+            echo "range=" >> "$GITHUB_OUTPUT"
           fi
+
+      # Pinned to v7.3.1 by commit SHA per the ASF security policy (matches
+      # the pinning convention already used by other ASF-approved actions in
+      # this repo). v7.2.1 or later is required because it ships PR #1593 - the
+      # bug fix for `initial-commits-since` being silently ignored when set only
+      # in the release-drafter.yml config (not also as a workflow input).
+      # Our release-drafter.yml relies on that exact config-only path to
+      # bound history walking on brand-new release branches like 7.2.x.
+      #
+      # Earlier minor releases also contributed key options we depend on:
+      # - v7.1.0 (PR #1451): adds the `initial-commits-since` config option.
+      # - v7.0.0 (PR #1470): adds the `history-limit` config option.
+      #
+      # Bump checklist: when updating, verify the new tag is signed, read the
+      # release notes for any breaking changes to the config schema, and
+      # update both the SHA and the `# v...` comment together. Resolve the
+      # commit SHA via:
+      #   gh api repos/release-drafter/release-drafter/git/tags/<tag-sha> \
+      #     --jq '.object.sha'
       - name: "📝 Update Release Draft"
-        uses: release-drafter/release-drafter@5de93583980a40bd78603b6dfdcda5b4df377b32 # v7.2.0
+        id: drafter
+        uses: release-drafter/release-drafter@e1247478eabc9f6d9cf5ec2b3547469b0e1d2767 # v7.3.1
+        # Drafting release notes is a best-effort, non-critical task - a
+        # transient GitHub API hiccup must not turn every PR check red. The
+        # explicit verification step below catches the case where the action
+        # silently produced no draft (e.g. rate-limit exhaustion).
         continue-on-error: true
         with:
+          # Explicit `commitish` is critical on `pull_request` events: without
+          # it, release-drafter would default to `refs/pull/N/merge` (a
+          # virtual ref) which the GitHub API rejects when creating a release,
+          # producing the "Validation Failed: target_commitish invalid" error
+          # historically seen on PRs (see INFRA-27602).
           commitish: ${{ github.event.pull_request.base.ref || github.ref_name }}
           filter-by-range: ${{ steps.version.outputs.range }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Surface failures that `continue-on-error` would otherwise hide. The
+      # release-drafter action exposes the resulting release id as an output;
+      # an empty value means it failed to create or update a draft. We log a
+      # loud warning (visible in the workflow summary and as a GitHub Actions
+      # annotation) but do NOT fail the job - PR checks must stay green for
+      # transient API issues, while still alerting maintainers something is
+      # wrong if drafts go missing for multiple consecutive runs.
+      - name: "🔎 Verify draft was created or updated"
+        if: always()
+        env:
+          DRAFT_ID: ${{ steps.drafter.outputs.id }}
+          DRAFT_TAG: ${{ steps.drafter.outputs.tag_name }}
+          DRAFT_NAME: ${{ steps.drafter.outputs.name }}
+          DRAFT_URL: ${{ steps.drafter.outputs.html_url }}
+          DRAFT_OUTCOME: ${{ steps.drafter.outcome }}
+          BRANCH: ${{ github.event.pull_request.base.ref || github.ref_name }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## Release Drafter Result"
+            echo ""
+            echo "- Branch: \`${BRANCH}\`"
+            echo "- Step outcome: \`${DRAFT_OUTCOME}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [[ -z "${DRAFT_ID:-}" ]]; then
+            {
+              echo "- Status: ⚠️ **No draft created/updated**"
+              echo ""
+              echo "release-drafter ran but did not produce a draft release id."
+              echo "Common causes: GitHub API rate limit exhausted, no prior"
+              echo "release matched the commitish/range/tag-prefix filters, or"
+              echo "the action errored. Check the previous step's logs."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning title=Release draft missing::release-drafter produced no draft for branch ${BRANCH}. Step outcome was '${DRAFT_OUTCOME}'. See workflow summary."
+          else
+            {
+              echo "- Status: ✅ Draft maintained"
+              echo "- Tag: \`${DRAFT_TAG}\`"
+              echo "- Name: ${DRAFT_NAME}"
+              echo "- URL: ${DRAFT_URL}"
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "Draft ${DRAFT_TAG} (id ${DRAFT_ID}) maintained for branch ${BRANCH}: ${DRAFT_URL}"
+          fi

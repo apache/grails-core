@@ -360,7 +360,7 @@ class WebDriverContainerHolder {
     }
 
     private DockerImageName createDockerImageName(String browserName) {
-        // If a template is provided (e.g. via grails.geb.container.image.template in local.properties),
+        // If a template is provided (via the `grails.geb.container.image.template` system property),
         // use it to resolve the image. This allows for architecture-specific overrides (like ARM64).
         if (settings.containerImageTemplate) {
             return DockerImageName.parse(

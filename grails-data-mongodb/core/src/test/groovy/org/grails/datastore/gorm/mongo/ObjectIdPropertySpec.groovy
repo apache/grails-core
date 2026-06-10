@@ -18,19 +18,18 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.types.ObjectId
 
 /**
  * Created by graemerocher on 29/02/16.
  */
-class ObjectIdPropertySpec extends MongoDatastoreSpec {
+class ObjectIdPropertySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([ObjectIdPerson])
+        manager.registerDomainClasses(ObjectIdPerson)
     }
 
     void "test save and retrieve object id"() {

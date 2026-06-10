@@ -26,8 +26,9 @@ import org.apache.grails.data.testing.tck.domains.TestEnum
 
 class EnumSpec extends GrailsDataTckSpec {
 
+    @Override
     void setupSpec() {
-        manager.addAllDomainClasses([EnumThing])
+        manager.registerDomainClasses(EnumThing)
     }
 
     void "Test save()"() {

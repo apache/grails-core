@@ -100,8 +100,8 @@ class GrailsViolationAggregationPluginSpec extends Specification {
         srcFile.parentFile.mkdirs()
         srcFile.text = 'package com.example\nclass AppClass {}'
 
-        // Pre-populate XML reports in the standard consolidated location (build/reports/codestyle/)
-        def checkstyleDir = testProjectDir.resolve('build/reports/codestyle/checkstyle').toFile()
+        // Pre-populate XML reports in the standard consolidated location (build/reports/code-style/)
+        def checkstyleDir = testProjectDir.resolve('build/reports/code-style/checkstyle').toFile()
         checkstyleDir.mkdirs()
         new File(checkstyleDir, 'app-module-checkstyleMain.xml').text = """<?xml version="1.0" encoding="UTF-8"?>
 <checkstyle version="10.0">
@@ -110,7 +110,7 @@ class GrailsViolationAggregationPluginSpec extends Specification {
 </file>
 </checkstyle>
 """
-        def codenarcDir = testProjectDir.resolve('build/reports/codestyle/codenarc').toFile()
+        def codenarcDir = testProjectDir.resolve('build/reports/code-style/codenarc').toFile()
         codenarcDir.mkdirs()
         new File(codenarcDir, 'app-module-codenarcMain.xml').text = """<?xml version="1.0" encoding="UTF-8"?>
 <CodeNarc version="3.1.0">
@@ -152,57 +152,6 @@ class GrailsViolationAggregationPluginSpec extends Specification {
         codenarcMd.contains('EmptyClass')
     }
 
-    def "aggregateJacocoCoverage writes report to build/reports/violations/JACOCO_COVERAGE.md"() {
-        given: "a root project with a subproject that has a JaCoCo CSV report"
-        testProjectDir.resolve('settings.gradle').toFile().text = "include 'app-module'"
-        testProjectDir.resolve('build.gradle').toFile().text = """
-            plugins {
-                id 'org.apache.grails.gradle.grails-violation-aggregation'
-            }
-        """
-        def moduleDir = testProjectDir.resolve('app-module')
-        moduleDir.toFile().mkdirs()
-        moduleDir.resolve('build.gradle').toFile().text = """
-            plugins {
-                id 'groovy'
-                id 'org.apache.grails.gradle.grails-jacoco'
-            }
-            repositories { mavenCentral() }
-        """
-
-        def csvDir = moduleDir.resolve('build/reports/jacoco/test').toFile()
-        csvDir.mkdirs()
-        new File(csvDir, 'jacocoTestReport.csv').text = [
-                'GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,COMPLEXITY_MISSED,COMPLEXITY_COVERED,METHOD_MISSED,METHOD_COVERED',
-                'app-module,com.example,AppClass,1,9,0,0,0,1,0,1,0,1',
-                'app-module,org.grails.orm.hibernate.support.hibernate7,FilteredClass,5,5,0,0,0,1,0,1,0,1',
-        ].join('\n')
-
-        when: "running aggregateJacocoCoverage"
-        def result = GradleRunner.create()
-                .withProjectDir(testProjectDir.toFile())
-                .withArguments('aggregateJacocoCoverage', '--stacktrace')
-                .withPluginClasspath()
-                .build()
-
-        then: "task succeeds"
-        result.task(':aggregateJacocoCoverage').outcome == TaskOutcome.SUCCESS
-
-        and: "report lands in build/reports/violations/JACOCO_COVERAGE.md — NOT in the repo root"
-        def report = testProjectDir.resolve('build/reports/violations/JACOCO_COVERAGE.md').toFile()
-        report.exists()
-        !testProjectDir.resolve('JACOCO_COVERAGE.md').toFile().exists()
-        !testProjectDir.resolve('JACOCO_COVERAGE_VIOLATIONS.md').toFile().exists()
-
-        and: "report contains coverage data"
-        def text = report.text
-        text.contains('## Module: app-module')
-        text.contains('com.example.AppClass')
-
-        and: "hibernate7 support classes are filtered out"
-        !text.contains('FilteredClass')
-    }
-
     def "aggregateJacocoCoverage handles no csv reports gracefully"() {
         given: "root project with no subproject csv reports"
         testProjectDir.resolve('settings.gradle').toFile().text = ''
@@ -224,5 +173,69 @@ class GrailsViolationAggregationPluginSpec extends Specification {
 
         and: "no report file is created"
         !testProjectDir.resolve('build/reports/violations/JACOCO_COVERAGE.md').toFile().exists()
+    }
+
+    def "aggregateJacocoCoverage excludes the default hibernate7 support classes"() {
+        given: "a root project with a jacoco csv containing an h7 support class and a normal class"
+        testProjectDir.resolve('settings.gradle').toFile().text = ''
+        testProjectDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'org.apache.grails.gradle.grails-violation-aggregation'
+            }
+        """
+        writeJacocoCsv([
+                'app,org.grails.orm.hibernate.support.hibernate7,HibernateSupport,10,0',
+                'app,org.example.kept,KeptClass,0,20',
+        ])
+
+        when:
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('aggregateJacocoCoverage', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+
+        then: "task succeeds and the report drops the colliding h7 class but keeps the normal one"
+        result.task(':aggregateJacocoCoverage').outcome == TaskOutcome.SUCCESS
+        def report = testProjectDir.resolve('build/reports/violations/JACOCO_COVERAGE.md').toFile()
+        report.exists()
+        def text = report.text
+        text.contains('org.example.kept.KeptClass')
+        !text.contains('org.grails.orm.hibernate.support.hibernate7.HibernateSupport')
+    }
+
+    def "aggregateJacocoCoverage exclusion prefixes are configurable via property"() {
+        given: "a root project and a custom exclusion prefix that keeps the h7 class and drops a custom one"
+        testProjectDir.resolve('settings.gradle').toFile().text = ''
+        testProjectDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'org.apache.grails.gradle.grails-violation-aggregation'
+            }
+        """
+        writeJacocoCsv([
+                'app,org.grails.orm.hibernate.support.hibernate7,HibernateSupport,10,0',
+                'app,com.example.skip,SkipMe,5,5',
+                'app,org.example.kept,KeptClass,0,20',
+        ])
+
+        when:
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('aggregateJacocoCoverage', '-Pgrails.jacoco.aggregation.excludedClassPrefixes=com.example.skip', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+
+        then: "the custom prefix is dropped while the default h7 class is now retained"
+        result.task(':aggregateJacocoCoverage').outcome == TaskOutcome.SUCCESS
+        def text = testProjectDir.resolve('build/reports/violations/JACOCO_COVERAGE.md').toFile().text
+        text.contains('org.example.kept.KeptClass')
+        text.contains('org.grails.orm.hibernate.support.hibernate7.HibernateSupport')
+        !text.contains('com.example.skip.SkipMe')
+    }
+
+    private void writeJacocoCsv(List<String> dataRows) {
+        def csv = testProjectDir.resolve('build/reports/jacoco/test/jacocoTestReport.csv').toFile()
+        csv.parentFile.mkdirs()
+        csv.text = (['GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED'] + dataRows).join('\n') + '\n'
     }
 }

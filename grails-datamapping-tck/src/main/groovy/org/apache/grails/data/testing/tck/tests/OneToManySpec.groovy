@@ -20,28 +20,25 @@
 package org.apache.grails.data.testing.tck.tests
 
 import grails.gorm.transactions.Rollback
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.ChildPersister
 import org.apache.grails.data.testing.tck.domains.Country
-import org.apache.grails.data.testing.tck.domains.Face
-import org.apache.grails.data.testing.tck.domains.Location
-import org.apache.grails.data.testing.tck.domains.Nose
+import org.apache.grails.data.testing.tck.domains.Owner_Default_Uni_P
 import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.testing.tck.domains.Pet
 import org.apache.grails.data.testing.tck.domains.PetType
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import org.apache.grails.data.testing.tck.domains.ChildPersister
-import org.apache.grails.data.testing.tck.domains.Owner_Default_Uni_P
-import org.apache.grails.data.testing.tck.domains.SimpleCountry
 
 /**
  * @author graemerocher
  */
 class OneToManySpec extends GrailsDataTckSpec {
 
+    @Override
     void setupSpec() {
-        manager.addAllDomainClasses([Owner_Default_Uni_P, ChildPersister, Location, Country, Person, Pet, PetType, SimpleCountry, Face, Nose])
+        manager.registerDomainClasses(Country, Person, Pet, PetType, Owner_Default_Uni_P, ChildPersister)
     }
 
-    void "test save and return unidirectional one to many Country "() {
+    void 'test save and return unidirectional one to many'() {
         given:
         Person p = new Person(firstName: 'Fred', lastName: 'Flinstone')
         Country c = new Country(name: 'Dinoville')
@@ -54,7 +51,6 @@ class OneToManySpec extends GrailsDataTckSpec {
         c = Country.findByName('Dinoville')
 
         then:
-        Person.count() == 1
         c != null
         c.residents != null
         c.residents.size() == 1
@@ -74,26 +70,20 @@ class OneToManySpec extends GrailsDataTckSpec {
     }
 
     @Rollback
-    void "test unidirectional default cascade Owner_Default_Uni_P  persists child"() {
-        when: 'A new owner is saved after adding a child'
+    void 'test unidirectional default cascade persists child'() {
+        when: 'a new owner is saved after adding a child'
         def owner = new Owner_Default_Uni_P(name: 'Owner')
         owner.addToChildren(new ChildPersister(title: 'Child'))
         owner.save(flush: true)
-        if (owner.hasErrors()) {
-            println "Errors saving owner: ${owner.errors}"
-        }
 
-        then: 'The owner is saved without errors and both owner and child exist'
-
+        then: 'the owner is saved without errors and both owner and child exist'
         !owner.errors.hasErrors()
         Owner_Default_Uni_P.count() == 1
         ChildPersister.count() == 1
-        def owner2 = Owner_Default_Uni_P.findByName('Owner')
-        owner2.children.size() == 1
-
+        Owner_Default_Uni_P.findByName('Owner').children.size() == 1
     }
 
-    void "test save and return bidirectional one to many"() {
+    void 'test save and return bidirectional one to many'() {
         given:
         Person p = new Person(firstName: 'Fred', lastName: 'Flinstone')
         p.addToPets(new Pet(name: 'Dino', type: new PetType(name: 'Dinosaur')))
@@ -132,7 +122,7 @@ class OneToManySpec extends GrailsDataTckSpec {
         p.pets.every { it instanceof Pet } == true
     }
 
-    void "test update inverse side of bidirectional one to many collection"() {
+    void 'test update inverse side of bidirectional one to many collection'() {
         given:
         Person p = new Person(firstName: 'Fred', lastName: 'Flinstone').save()
         new Pet(name: 'Dino', type: new PetType(name: 'Dinosaur'), owner: p).save()
@@ -156,7 +146,7 @@ class OneToManySpec extends GrailsDataTckSpec {
         pet.type.name == 'Dinosaur'
     }
 
-    void "test update inverse side of bidirectional one to many happens before flushing the session"() {
+    void 'test update inverse side of bidirectional one to many happens before flushing the session'() {
 
         if (manager.session.datastore.getClass().name.contains('Hibernate')) {
             return
@@ -182,7 +172,7 @@ class OneToManySpec extends GrailsDataTckSpec {
         person.pets.size() == 2
     }
 
-    void "Test persist of association with proxy"() {
+    void 'Test persist of association with proxy'() {
         given: 'A domain model with a many-to-one'
         def person = new Person(firstName: 'Fred', lastName: 'Flintstone')
         person.save(flush: true)

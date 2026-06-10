@@ -24,7 +24,6 @@ import spock.lang.*
 
 class FormTagLibResourceTests extends Specification implements UrlMappingsUnitTest<TestFormTagUrlMappings> {
 
-
     def testResourceSave() {
         when:
         def template = '<g:form resource="book" action="save"/>'
@@ -131,5 +130,4 @@ class TestFormTagUrlMappings {
     }
 
 }
-
 

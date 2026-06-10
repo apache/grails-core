@@ -18,20 +18,19 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import com.mongodb.WriteConcern
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.types.ObjectId
 import spock.lang.Issue
 
 /**
  * Created by graemerocher on 25/03/14.
  */
-class IndexAttributesAndCompoundKeySpec extends MongoDatastoreSpec {
+class IndexAttributesAndCompoundKeySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([ServerStream])
+        manager.registerDomainClasses(ServerStream)
     }
 
     @Issue('GPMONGODB-359')

@@ -30,11 +30,13 @@ import org.grails.datastore.mapping.core.OptimisticLockingException
  */
 class OptimisticLockingSpec extends GrailsDataTckSpec {
 
-    def setupSpec() {
-        manager.addAllDomainClasses([OptLockVersioned, OptLockNotVersioned])
+    @Override
+    void setupSpec() {
+        manager.registerDomainClasses(OptLockVersioned, OptLockNotVersioned)
     }
 
     void "Test versioning"() {
+
         given:
         def o = new OptLockVersioned(name: 'locked')
 
@@ -63,8 +65,9 @@ class OptimisticLockingSpec extends GrailsDataTckSpec {
     }
 
     // hibernate has a customized version of this
-    @IgnoreIf({ System.getProperty('hibernate5.gorm.suite') == 'true' || System.getProperty('hibernate7.gorm.suite') == 'true' })
+    @IgnoreIf({ System.getProperty('hibernate5.gorm.suite') || System.getProperty('hibernate7.gorm.suite') })
     void "Test optimistic locking"() {
+
         given:
         def o = new OptLockVersioned(name: 'locked').save(flush: true)
         manager.session.clear()

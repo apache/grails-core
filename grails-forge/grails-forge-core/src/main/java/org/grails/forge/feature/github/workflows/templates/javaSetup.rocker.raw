@@ -24,9 +24,9 @@ under the License.
 JdkVersion jdkVersion
 )
 
-      - uses: actions/checkout@@v4
+      - uses: actions/checkout@@v6.0.2
       - name: Set up JDK @jdkVersion.majorVersion()
-        uses: actions/setup-java@@v4
+        uses: actions/setup-java@@v5.2.0
         with:
           distribution: 'liberica'
           java-version: @jdkVersion.majorVersion()

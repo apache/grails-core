@@ -18,20 +18,19 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import grails.persistence.Entity
 import groovy.transform.EqualsAndHashCode
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.types.ObjectId
 
 /**
  * Created by graemerocher on 22/04/14.
  */
-class MapOfDomainsSpec extends MongoDatastoreSpec {
+class MapOfDomainsSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Smartphones])
+        manager.registerDomainClasses(Smartphones)
     }
 
     void "Test that a map of embedded objects can be persisted"() {

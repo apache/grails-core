@@ -26,7 +26,7 @@ import org.grails.datastore.mapping.model.types.Association
 class HasManyDefaultMappedBySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([MyDomain, ChildDomain])
+        manager.registerDomainClasses(MyDomain, ChildDomain)
     }
 
     void "Test that has-many with multiple potential matches for the other side matches correctly"() {

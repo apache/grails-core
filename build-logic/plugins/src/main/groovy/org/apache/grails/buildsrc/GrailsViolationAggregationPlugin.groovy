@@ -21,8 +21,10 @@ package org.apache.grails.buildsrc
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
+import com.github.spotbugs.snom.SpotBugsTask
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+import groovy.xml.XmlSlurper
 
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
@@ -32,16 +34,12 @@ import org.gradle.api.file.Directory
 import org.gradle.api.file.FileCollection
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
-import org.gradle.api.plugins.AppliedPlugin
 import org.gradle.api.plugins.quality.Checkstyle
 import org.gradle.api.plugins.quality.CodeNarc
 import org.gradle.api.plugins.quality.Pmd
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.testing.jacoco.tasks.JacocoReport
-
-import com.github.spotbugs.snom.SpotBugsTask
-import groovy.xml.XmlSlurper
 
 /**
  * Root-only convention plugin that aggregates code-style violation XML reports and JaCoCo coverage
@@ -59,7 +57,22 @@ import groovy.xml.XmlSlurper
 @CompileStatic
 class GrailsViolationAggregationPlugin implements Plugin<Project> {
 
+    private static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter.ofPattern('yyyy-MM-dd HH:mm:ss')
     private static final Logger LOGGER = Logging.getLogger(GrailsViolationAggregationPlugin)
+
+    /**
+     * Comma-separated list of fully-qualified class-name prefixes to exclude from the aggregated
+     * JaCoCo coverage report. Configure via {@code -Pgrails.jacoco.aggregation.excludedClassPrefixes=...}
+     * or in {@code gradle.properties}.
+     *
+     * <p>Defaults to {@link #DEFAULT_JACOCO_EXCLUDED_CLASS_PREFIXES}: the Hibernate 7 support classes
+     * share fully-qualified names with their Hibernate 5 counterparts, and JaCoCo cannot aggregate
+     * coverage for two different classes with the same name (it fails with
+     * "Can't add different class with same name"). Excluding one variant keeps the aggregate valid.
+     */
+    static final String JACOCO_EXCLUDED_CLASS_PREFIXES_PROPERTY = 'grails.jacoco.aggregation.excludedClassPrefixes'
+
+    static final String DEFAULT_JACOCO_EXCLUDED_CLASS_PREFIXES = 'org.grails.orm.hibernate.support.hibernate7.'
 
     @Override
     void apply(Project project) {
@@ -70,12 +83,12 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
             )
         }
 
-        Provider<Directory> violationsDir = project.layout.buildDirectory.dir('reports/violations')
-        Provider<Directory> styleXmlDir = project.layout.buildDirectory.dir('reports/codestyle')
-        Provider<Directory> analysisXmlDir = project.layout.buildDirectory.dir('reports/codeanalysis')
+        def violationsDir = project.layout.buildDirectory.dir('reports/violations')
+        def styleXmlDir = project.layout.buildDirectory.dir('reports/code-style')
+        def analysisXmlDir = project.layout.buildDirectory.dir('reports/code-analysis')
 
-        TaskProvider<Task> styleTask = registerStyleAggregation(project, styleXmlDir, violationsDir)
-        TaskProvider<Task> analysisTask = registerAnalysisAggregation(project, analysisXmlDir, violationsDir)
+        def styleTask = registerStyleAggregation(project, styleXmlDir, violationsDir)
+        def analysisTask = registerAnalysisAggregation(project, analysisXmlDir, violationsDir)
         registerJacocoAggregation(project, violationsDir)
 
         project.tasks.register('aggregateViolations') { Task task ->
@@ -88,29 +101,29 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
     private static TaskProvider<Task> registerStyleAggregation(Project root, Provider<Directory> styleXmlDir, Provider<Directory> violationsDir) {
         // Wire property flags as Providers — values are resolved at task execution time, not at apply() time,
         // and Providers are configuration-cache safe to capture in task actions
-        Provider<Boolean> checkStyleTests = GradleUtils.booleanProvider(root, GrailsCodeStylePlugin.TEST_STYLING_PROPERTY)
-        Provider<Boolean> codenarcEnabled = GradleUtils.booleanProvider(root, GrailsCodeStylePlugin.CODENARC_ENABLED_PROPERTY, true)
-        Provider<Boolean> checkstyleEnabled = GradleUtils.booleanProvider(root, GrailsCodeStylePlugin.CHECKSTYLE_ENABLED_PROPERTY, true)
+        def checkStyleTests = GradleUtils.booleanProvider(root, GrailsCodeStylePlugin.TEST_STYLING_PROPERTY)
+        def codenarcEnabled = GradleUtils.booleanProvider(root, GrailsCodeStylePlugin.CODENARC_ENABLED_PROPERTY, true)
+        def checkstyleEnabled = GradleUtils.booleanProvider(root, GrailsCodeStylePlugin.CHECKSTYLE_ENABLED_PROPERTY, true)
 
-        TaskProvider<Task> aggregateTask = root.tasks.register('aggregateStyleViolations') { Task task ->
-            task.group = 'verification'
-            task.description = 'Aggregates CodeNarc and Checkstyle violation reports into build/reports/violations/'
-            task.outputs.file(root.file('build/reports/violations/CODENARC_VIOLATIONS.md'))
-            task.outputs.file(root.file('build/reports/violations/CHECKSTYLE_VIOLATIONS.md'))
-            task.doLast {
+        def aggregateTask = root.tasks.register('aggregateStyleViolations') {
+            it.group = 'verification'
+            it.description = 'Aggregates CodeNarc and Checkstyle violation reports into build/reports/violations/'
+            it.outputs.file(root.file('build/reports/violations/CODENARC_VIOLATIONS.md'))
+            it.outputs.file(root.file('build/reports/violations/CHECKSTYLE_VIOLATIONS.md'))
+            it.doLast {
                 parseStyleViolations(styleXmlDir.get(), violationsDir.get(),
                     checkStyleTests.get(), codenarcEnabled.get(), checkstyleEnabled.get())
             }
         }
         root.subprojects { Project sub ->
-            sub.pluginManager.withPlugin('codenarc') { AppliedPlugin p ->
-                aggregateTask.configure { Task task ->
-                    task.dependsOn(sub.tasks.withType(CodeNarc))
+            sub.pluginManager.withPlugin('codenarc') {
+                aggregateTask.configure {
+                    it.dependsOn(sub.tasks.withType(CodeNarc))
                 }
             }
-            sub.pluginManager.withPlugin('checkstyle') { AppliedPlugin p ->
-                aggregateTask.configure { Task task ->
-                    task.dependsOn(sub.tasks.withType(Checkstyle))
+            sub.pluginManager.withPlugin('checkstyle') {
+                aggregateTask.configure {
+                    it.dependsOn(sub.tasks.withType(Checkstyle))
                 }
             }
         }
@@ -118,29 +131,29 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
     }
 
     private static TaskProvider<Task> registerAnalysisAggregation(Project root, Provider<Directory> analysisXmlDir, Provider<Directory> violationsDir) {
-        Provider<Boolean> checkAnalysisTests = GradleUtils.booleanProvider(root, GrailsCodeAnalysisPlugin.TEST_ANALYSIS_PROPERTY)
-        Provider<Boolean> pmdEnabled = GradleUtils.booleanProvider(root, GrailsCodeAnalysisPlugin.PMD_ENABLED_PROPERTY)
-        Provider<Boolean> spotbugsEnabled = GradleUtils.booleanProvider(root, GrailsCodeAnalysisPlugin.SPOTBUGS_ENABLED_PROPERTY)
+        def checkAnalysisTests = GradleUtils.booleanProvider(root, GrailsCodeAnalysisPlugin.TEST_ANALYSIS_PROPERTY)
+        def pmdEnabled = GradleUtils.booleanProvider(root, GrailsCodeAnalysisPlugin.PMD_ENABLED_PROPERTY)
+        def spotbugsEnabled = GradleUtils.booleanProvider(root, GrailsCodeAnalysisPlugin.SPOTBUGS_ENABLED_PROPERTY)
 
-        TaskProvider<Task> aggregateTask = root.tasks.register('aggregateAnalysisViolations') { Task task ->
-            task.group = 'verification'
-            task.description = 'Aggregates PMD and SpotBugs violation reports into build/reports/violations/'
-            task.outputs.file(root.file('build/reports/violations/PMD_VIOLATIONS.md'))
-            task.outputs.file(root.file('build/reports/violations/SPOTBUGS_VIOLATIONS.md'))
-            task.doLast {
+        def aggregateTask = root.tasks.register('aggregateAnalysisViolations') {
+            it.group = 'verification'
+            it.description = 'Aggregates PMD and SpotBugs violation reports into build/reports/violations/'
+            it.outputs.file(root.file('build/reports/violations/PMD_VIOLATIONS.md'))
+            it.outputs.file(root.file('build/reports/violations/SPOTBUGS_VIOLATIONS.md'))
+            it.doLast {
                 parseAnalysisViolations(analysisXmlDir.get(), violationsDir.get(),
                     checkAnalysisTests.get(), pmdEnabled.get(), spotbugsEnabled.get())
             }
         }
         root.subprojects { Project sub ->
-            sub.pluginManager.withPlugin('pmd') { AppliedPlugin p ->
-                aggregateTask.configure { Task task ->
-                    task.dependsOn(sub.tasks.withType(Pmd))
+            sub.pluginManager.withPlugin('pmd') {
+                aggregateTask.configure {
+                    it.dependsOn(sub.tasks.withType(Pmd))
                 }
             }
-            sub.pluginManager.withPlugin('com.github.spotbugs') { AppliedPlugin p ->
-                aggregateTask.configure { Task task ->
-                    task.dependsOn(sub.tasks.withType(SpotBugsTask))
+            sub.pluginManager.withPlugin('com.github.spotbugs') {
+                aggregateTask.configure {
+                    it.dependsOn(sub.tasks.withType(SpotBugsTask))
                 }
             }
         }
@@ -149,43 +162,90 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
 
     private static void registerJacocoAggregation(Project root, Provider<Directory> violationsDir) {
         // Collect all potential CSV paths at configuration time — Project must not be referenced from task actions
-        FileCollection jacocoCsvFiles = root.files(
-            root.allprojects.collect { Project p -> p.file('build/reports/jacoco/test/jacocoTestReport.csv') }
+        def jacocoCsvFiles = root.files(
+            root.allprojects.collect { it.file('build/reports/jacoco/test/jacocoTestReport.csv') }
         )
 
-        TaskProvider<Task> aggregateTask = root.tasks.register('aggregateJacocoCoverage') { Task task ->
-            task.group = 'verification'
-            task.description = 'Aggregates JaCoCo coverage reports from all subprojects into build/reports/violations/'
-            task.inputs.files(jacocoCsvFiles).optional(true)
-            task.outputs.file(root.file('build/reports/violations/JACOCO_COVERAGE.md'))
-            task.doLast {
-                parseJacocoCoverage(jacocoCsvFiles, violationsDir.get())
+        // Resolve the excluded class-name prefixes as a Provider so the value is captured
+        // configuration-cache-safely and read at task execution time.
+        def excludedClassPrefixes = root.providers
+            .gradleProperty(JACOCO_EXCLUDED_CLASS_PREFIXES_PROPERTY)
+            .orElse(DEFAULT_JACOCO_EXCLUDED_CLASS_PREFIXES)
+            .map {
+                it.split(',')*.trim().findAll()
+            }
+
+        def aggregateTask = root.tasks.register('aggregateJacocoCoverage') {
+            it.group = 'verification'
+            it.description = 'Aggregates JaCoCo coverage reports from all subprojects into build/reports/violations/'
+            it.inputs.files(jacocoCsvFiles).optional(true)
+            it.inputs.property('excludedClassPrefixes', excludedClassPrefixes)
+            it.outputs.file(root.file('build/reports/violations/JACOCO_COVERAGE.md'))
+            it.doLast {
+                parseJacocoCoverage(jacocoCsvFiles, violationsDir.get(), excludedClassPrefixes.get())
             }
         }
         root.subprojects { Project sub ->
-            sub.pluginManager.withPlugin('jacoco') { AppliedPlugin p ->
-                aggregateTask.configure { Task task ->
-                    task.dependsOn(sub.tasks.withType(JacocoReport))
+            sub.pluginManager.withPlugin('jacoco') {
+                aggregateTask.configure {
+                    it.dependsOn(sub.tasks.withType(JacocoReport))
                 }
             }
         }
     }
 
+    private static XmlSlurper createSecureSlurper() {
+        new XmlSlurper().tap {
+            setFeature('http://apache.org/xml/features/disallow-doctype-decl', true)
+            setFeature('http://apache.org/xml/features/nonvalidating/load-external-dtd', false)
+            setFeature('http://xml.org/sax/features/external-general-entities', false)
+            setFeature('http://xml.org/sax/features/external-parameter-entities', false)
+            setFeature('http://xml.org/sax/features/namespaces', false)
+        }
+    }
+
+    private static String resolveModule(String fileName) {
+        int lastDash = fileName.lastIndexOf('-')
+        lastDash != -1 ? fileName.substring(0, lastDash) : fileName
+    }
+
+    private static boolean isTestFile(String fileName) {
+        fileName.toLowerCase().contains('test') || fileName.toLowerCase().contains('integrationtest')
+    }
+
+    @CompileDynamic
+    private static void writeReport(Directory violationsDir, String fileName, List violations, String title) {
+        def reportFile = new File(
+                violationsDir.asFile.tap { it.mkdirs() },
+                fileName
+        )
+        def text = new StringBuilder()
+        text.append("# ${title}\n")
+        text.append("Generated on: ${LocalDateTime.now().format(TIMESTAMP_FORMAT)}\n\n")
+
+        if (violations.isEmpty()) {
+            text.append('No violations found! 🎉\n')
+        } else {
+            def uniqueViolations = violations.unique().sort { v -> "${v.module}:${v.className}:${v.line}" }
+            def groupedByModule = uniqueViolations.groupBy { it.module }.sort()
+            groupedByModule.each { module, modViolations ->
+                text.append("## Module: ${module}\n")
+                text.append('| Class | Tool | Violation | Line | Message |\n')
+                text.append('| :--- | :--- | :--- | :--- | :--- |\n')
+                modViolations.each { v ->
+                    text.append("| ${v.className} | ${v.tool} | ${v.type} | ${v.line} | ${v.message.replaceAll(/\|/, '\\|')} |\n")
+                }
+                text.append('\n')
+            }
+        }
+        reportFile.text = text
+        LOGGER.lifecycle('Aggregated report generated: {}', reportFile.absolutePath)
+    }
+
     @CompileDynamic
     private static void parseStyleViolations(Directory styleXmlDir, Directory violationsDir,
             boolean checkStyleTests, boolean codenarcEnabled, boolean checkstyleEnabled) {
-        def slurper = new XmlSlurper()
-        slurper.setFeature('http://apache.org/xml/features/nonvalidating/load-external-dtd', false)
-        slurper.setFeature('http://xml.org/sax/features/namespaces', false)
-
-        def getModule = { String fileName ->
-            def lastDash = fileName.lastIndexOf('-')
-            lastDash != -1 ? fileName.substring(0, lastDash) : fileName
-        }
-
-        def isTestFile = { String fileName ->
-            fileName.toLowerCase().contains('test') || fileName.toLowerCase().contains('integrationtest')
-        }
+        def slurper = createSecureSlurper()
 
         def shouldSkipClass = { boolean includeTests, String className, String filePath = null ->
             if (includeTests) {
@@ -197,33 +257,6 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
             !filePath && (className.contains('Spec') || className.contains('Test') || className.contains('Tests'))
         }
 
-        def writeReport = { String fileName, List violations, String title ->
-            def outDir = violationsDir.asFile
-            outDir.mkdirs()
-            def reportFile = new File(outDir, fileName)
-            def out = new StringBuilder()
-            out.append("# ${title}\n")
-            out.append("Generated on: ${LocalDateTime.now().format(DateTimeFormatter.ofPattern('yyyy-MM-dd HH:mm:ss'))}\n\n")
-
-            if (violations.isEmpty()) {
-                out.append('No violations found! 🎉\n')
-            } else {
-                def uniqueViolations = violations.unique().sort { v -> "${v.module}:${v.className}:${v.line}" }
-                def groupedByModule = uniqueViolations.groupBy { it.module }.sort()
-                groupedByModule.each { module, modViolations ->
-                    out.append("## Module: ${module}\n")
-                    out.append('| Class | Tool | Violation | Line | Message |\n')
-                    out.append('| :--- | :--- | :--- | :--- | :--- |\n')
-                    modViolations.each { v ->
-                        out.append("| ${v.className} | ${v.tool} | ${v.type} | ${v.line} | ${v.message.replaceAll(/\|/, '\\|')} |\n")
-                    }
-                    out.append('\n')
-                }
-            }
-            reportFile.text = out.toString()
-            LOGGER.lifecycle("Aggregated report generated: ${reportFile.absolutePath}")
-        }
-
         // CodeNarc
         def codenarcViolations = []
         def codenarcDir = styleXmlDir.dir('codenarc').asFile
@@ -232,14 +265,16 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
                 if (file.size() == 0 || (!checkStyleTests && isTestFile(file.name))) {
                     return
                 }
-                def module = getModule(file.name)
+                def module = resolveModule(file.name)
                 def xml = slurper.parse(file)
                 xml.Package.each { pkg ->
                     pkg.File.each { f ->
                         def pkgName = pkg.@name.text()
                         def fileName = f.@name.text()
                         def className = pkgName ? "${pkgName}.${fileName}" : fileName
-                        className = className.replace('.groovy', '').replace('.java', '')
+                        className = className
+                                .replace('.groovy', '')
+                                .replace('.java', '')
                         if (shouldSkipClass(checkStyleTests, className, f.@name.text())) {
                             return
                         }
@@ -257,7 +292,7 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
                 }
             }
         }
-        writeReport('CODENARC_VIOLATIONS.md', codenarcViolations, 'CodeNarc Violations Summary')
+        writeReport(violationsDir, 'CODENARC_VIOLATIONS.md', codenarcViolations, 'CodeNarc Violations Summary')
 
         // Checkstyle
         def checkstyleViolations = []
@@ -267,16 +302,19 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
                 if (file.size() == 0 || (!checkStyleTests && isTestFile(file.name))) {
                     return
                 }
-                def module = getModule(file.name)
+                def module = resolveModule(file.name)
                 def xml = slurper.parse(file)
                 xml.file.each { f ->
-                    def filePath = f.@name.text()
+                    String filePath = f.@name.text()
                     def className = filePath.contains('src/main/groovy/') ? filePath.split('src/main/groovy/')[1] :
                                     filePath.contains('src/main/java/')   ? filePath.split('src/main/java/')[1] :
                                     filePath.contains('src/test/groovy/') ? filePath.split('src/test/groovy/')[1] :
                                     filePath.contains('src/test/java/')   ? filePath.split('src/test/java/')[1] :
                                     filePath.split('/').last()
-                    className = className.replace('.groovy', '').replace('.java', '').replace('/', '.')
+                    className = className
+                            .replace('.groovy', '')
+                            .replace('.java', '')
+                            .replace('/', '.')
                     if (shouldSkipClass(checkStyleTests, className)) {
                         return
                     }
@@ -293,57 +331,19 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
                 }
             }
         }
-        writeReport('CHECKSTYLE_VIOLATIONS.md', checkstyleViolations, 'Checkstyle Violations Summary')
+        writeReport(violationsDir, 'CHECKSTYLE_VIOLATIONS.md', checkstyleViolations, 'Checkstyle Violations Summary')
     }
 
     @CompileDynamic
     private static void parseAnalysisViolations(Directory analysisXmlDir, Directory violationsDir,
             boolean checkAnalysisTests, boolean pmdEnabled, boolean spotbugsEnabled) {
-        def slurper = new XmlSlurper()
-        slurper.setFeature('http://apache.org/xml/features/nonvalidating/load-external-dtd', false)
-        slurper.setFeature('http://xml.org/sax/features/namespaces', false)
-
-        def getModule = { String fileName ->
-            def lastDash = fileName.lastIndexOf('-')
-            lastDash != -1 ? fileName.substring(0, lastDash) : fileName
-        }
-
-        def isTestFile = { String fileName ->
-            fileName.toLowerCase().contains('test') || fileName.toLowerCase().contains('integrationtest')
-        }
+        def slurper = createSecureSlurper()
 
         def shouldSkipClass = { boolean includeTests, String className ->
             if (includeTests) {
                 return false
             }
             className.contains('Spec') || className.contains('Test') || className.contains('Tests')
-        }
-
-        def writeReport = { String fileName, List violations, String title ->
-            def outDir = violationsDir.asFile
-            outDir.mkdirs()
-            def reportFile = new File(outDir, fileName)
-            def out = new StringBuilder()
-            out.append("# ${title}\n")
-            out.append("Generated on: ${LocalDateTime.now().format(DateTimeFormatter.ofPattern('yyyy-MM-dd HH:mm:ss'))}\n\n")
-
-            if (violations.isEmpty()) {
-                out.append('No violations found! 🎉\n')
-            } else {
-                def uniqueViolations = violations.unique().sort { v -> "${v.module}:${v.className}:${v.line}" }
-                def groupedByModule = uniqueViolations.groupBy { it.module }.sort()
-                groupedByModule.each { module, modViolations ->
-                    out.append("## Module: ${module}\n")
-                    out.append('| Class | Tool | Violation | Line | Message |\n')
-                    out.append('| :--- | :--- | :--- | :--- | :--- |\n')
-                    modViolations.each { v ->
-                        out.append("| ${v.className} | ${v.tool} | ${v.type} | ${v.line} | ${v.message.replaceAll(/\|/, '\\|')} |\n")
-                    }
-                    out.append('\n')
-                }
-            }
-            reportFile.text = out.toString()
-            LOGGER.lifecycle("Aggregated report generated: ${reportFile.absolutePath}")
         }
 
         // PMD
@@ -354,7 +354,7 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
                 if (file.size() == 0 || (!checkAnalysisTests && isTestFile(file.name))) {
                     return
                 }
-                def module = getModule(file.name)
+                def module = resolveModule(file.name)
                 def xml = slurper.parse(file)
                 xml.file.each { f ->
                     f.violation.each { v ->
@@ -374,7 +374,7 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
                 }
             }
         }
-        writeReport('PMD_VIOLATIONS.md', pmdViolations, 'PMD Violations Summary')
+        writeReport(violationsDir, 'PMD_VIOLATIONS.md', pmdViolations, 'PMD Violations Summary')
 
         // SpotBugs
         def spotbugsViolations = []
@@ -384,7 +384,7 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
                 if (file.size() == 0 || (!checkAnalysisTests && isTestFile(file.name))) {
                     return
                 }
-                def module = getModule(file.name)
+                def module = resolveModule(file.name)
                 def xml = slurper.parse(file)
                 xml.BugInstance.each { b ->
                     def className = b.Class.@classname.text()
@@ -402,15 +402,15 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
                 }
             }
         }
-        writeReport('SPOTBUGS_VIOLATIONS.md', spotbugsViolations, 'SpotBugs Violations Summary')
+        writeReport(violationsDir, 'SPOTBUGS_VIOLATIONS.md', spotbugsViolations, 'SpotBugs Violations Summary')
     }
 
     @CompileDynamic
-    private static void parseJacocoCoverage(FileCollection csvFiles, Directory violationsDir) {
+    private static void parseJacocoCoverage(FileCollection csvFiles, Directory violationsDir, List<String> excludedClassPrefixes) {
         def jacocoCoverage = []
         csvFiles.each { File csvReport ->
             if (csvReport.exists()) {
-                LOGGER.debug("Processing JaCoCo report: ${csvReport.absolutePath}")
+                LOGGER.debug('Processing JaCoCo report: {}', csvReport.absolutePath)
                 csvReport.splitEachLine(',') { fields ->
                     if (fields.size() < 5 || fields[0] == 'GROUP') {
                         return
@@ -442,26 +442,31 @@ class GrailsViolationAggregationPlugin implements Plugin<Project> {
             return
         }
 
-        jacocoCoverage.removeIf { it.className.startsWith('org.grails.orm.hibernate.support.hibernate7.') }
+        // Drop classes whose fully-qualified names collide across Hibernate variants (see
+        // JACOCO_EXCLUDED_CLASS_PREFIXES_PROPERTY) so the aggregate report stays valid.
+        if (excludedClassPrefixes) {
+            jacocoCoverage.removeIf { entry -> excludedClassPrefixes.any { prefix -> entry.className.startsWith(prefix) } }
+        }
 
-        def outDir = violationsDir.asFile
-        outDir.mkdirs()
-        def reportFile = new File(outDir, 'JACOCO_COVERAGE.md')
-        def out = new StringBuilder()
-        out.append('# JaCoCo Coverage Report\n')
-        out.append("Generated on: ${LocalDateTime.now().format(DateTimeFormatter.ofPattern('yyyy-MM-dd HH:mm:ss'))}\n\n")
+        def reportFile = new File(
+                violationsDir.asFile.tap { it.mkdirs() },
+                'JACOCO_COVERAGE.md'
+        )
+        def text = new StringBuilder()
+        text.append('# JaCoCo Coverage Report\n')
+        text.append("Generated on: ${LocalDateTime.now().format(TIMESTAMP_FORMAT)}\n\n")
 
         def groupedByModule = jacocoCoverage.groupBy { it.module }.sort()
         groupedByModule.each { module, coverageList ->
-            out.append("## Module: ${module}\n")
-            out.append('| Class | % Instructions Covered |\n')
-            out.append('| :--- | :--- |\n')
+            text.append("## Module: ${module}\n")
+            text.append('| Class | % Instructions Covered |\n')
+            text.append('| :--- | :--- |\n')
             coverageList.sort { it.percent }.each { c ->
-                out.append("| ${c.className} | ${c.percent}% |\n")
+                text.append("| ${c.className} | ${c.percent}% |\n")
             }
-            out.append('\n')
+            text.append('\n')
         }
-        reportFile.text = out.toString()
-        LOGGER.lifecycle("Aggregated JaCoCo report generated: ${reportFile.absolutePath}")
+        reportFile.text = text
+        LOGGER.lifecycle('Aggregated JaCoCo report generated: {}', reportFile.absolutePath)
     }
 }

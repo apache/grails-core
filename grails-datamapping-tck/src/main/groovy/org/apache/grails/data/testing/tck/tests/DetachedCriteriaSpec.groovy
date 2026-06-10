@@ -20,13 +20,14 @@ package org.apache.grails.data.testing.tck.tests
 
 import grails.gorm.DetachedCriteria
 import grails.gorm.PagedResultList
-import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.Person
 
 class DetachedCriteriaSpec extends GrailsDataTckSpec {
 
+    @Override
     void setupSpec() {
-        manager.addAllDomainClasses([Person])
+        manager.registerDomainClasses(Person)
     }
 
     void 'Test the list method returns a PagedResultList with pagination arguments'() {
@@ -36,7 +37,7 @@ class DetachedCriteriaSpec extends GrailsDataTckSpec {
         when: 'A detached criteria instance is created and the list method used with the max parameter'
         def criteria = new DetachedCriteria(Person)
         criteria.with {
-            eq 'lastName', 'Simpson'
+            eq('lastName', 'Simpson')
         }
         def results = criteria.list(max: 2)
 
@@ -49,7 +50,7 @@ class DetachedCriteriaSpec extends GrailsDataTckSpec {
         when: 'A detached criteria instance is created and the list method used with the max parameter'
         criteria = new DetachedCriteria(Person)
         criteria.with {
-            eq 'lastName', 'Simpson'
+            eq('lastName', 'Simpson')
         }
         results = criteria.list(offset: 2, max: 4)
 
@@ -96,7 +97,7 @@ class DetachedCriteriaSpec extends GrailsDataTckSpec {
         when: 'A detached criteria instance is created that uses a property projection'
         def criteria = new DetachedCriteria(Person)
         criteria.with {
-            eq 'lastName', 'Simpson'
+            eq('lastName', 'Simpson')
         }
         criteria = criteria.property('firstName')
 
@@ -108,7 +109,7 @@ class DetachedCriteriaSpec extends GrailsDataTckSpec {
         when: 'A detached criteria instance is created that uses a property projection using property missing'
         criteria = new DetachedCriteria(Person)
         criteria.with {
-            eq 'lastName', 'Simpson'
+            eq('lastName', 'Simpson')
         }
         criteria = criteria.firstName
 
@@ -144,7 +145,7 @@ class DetachedCriteriaSpec extends GrailsDataTckSpec {
         when: 'A detached criteria instance is created matching the last name'
         def criteria = new DetachedCriteria(Person)
         criteria.with {
-            eq 'lastName', 'Simpson'
+            eq('lastName', 'Simpson')
         }
 
         then: 'The count method returns the right results'
@@ -157,7 +158,7 @@ class DetachedCriteriaSpec extends GrailsDataTckSpec {
 
         when: 'A detached criteria is created that deletes all matching records'
         def criteria = new DetachedCriteria(Person).build {
-            eq 'lastName', 'Simpson'
+            eq('lastName', 'Simpson')
         }
         int total = criteria.updateAll(lastName: 'Bloggs')
         then: 'The number of deletions is correct'
@@ -173,7 +174,7 @@ class DetachedCriteriaSpec extends GrailsDataTckSpec {
 
         when: 'A detached criteria is created that deletes all matching records'
         def criteria = new DetachedCriteria(Person).build {
-            eq 'lastName', 'Simpson'
+            eq('lastName', 'Simpson')
         }
         int total = criteria.deleteAll()
 
@@ -188,7 +189,7 @@ class DetachedCriteriaSpec extends GrailsDataTckSpec {
 
         when: 'A detached criteria is created that matches the last name and then iterated over'
         def criteria = new DetachedCriteria(Person).build {
-            eq 'lastName', 'Simpson'
+            eq('lastName', 'Simpson')
         }
         int total = 0
         criteria.each {
@@ -206,7 +207,7 @@ class DetachedCriteriaSpec extends GrailsDataTckSpec {
         when: 'A detached criteria instance is created matching the last name'
         def criteria = new DetachedCriteria(Person)
         criteria.with {
-            eq 'lastName', 'Simpson'
+            eq('lastName', 'Simpson')
         }
 
         def result = criteria.findByFirstNameLike('B%')
@@ -223,11 +224,11 @@ class DetachedCriteriaSpec extends GrailsDataTckSpec {
         when: 'A detached criteria instance is created matching the last name'
         def criteria = new DetachedCriteria(Person)
         criteria.with {
-            eq 'lastName', 'Simpson'
+            eq('lastName', 'Simpson')
         }
 
         def result = criteria.get {
-            like 'firstName', 'B%'
+            like('firstName', 'B%')
         }
         then: 'The list method returns the right results'
         result != null
@@ -241,11 +242,11 @@ class DetachedCriteriaSpec extends GrailsDataTckSpec {
         when: 'A detached criteria instance is created matching the last name'
         def criteria = new DetachedCriteria(Person)
         criteria.with {
-            eq 'lastName', 'Simpson'
+            eq('lastName', 'Simpson')
         }
 
         def results = criteria.list {
-            like 'firstName', 'B%'
+            like('firstName', 'B%')
         }
         then: 'The list method returns the right results'
         results.size() == 1
@@ -266,11 +267,11 @@ class DetachedCriteriaSpec extends GrailsDataTckSpec {
         when: 'A detached criteria instance is created matching the last name and count is called with additional criteria'
         def criteria = new DetachedCriteria(Person)
         criteria.with {
-            eq 'lastName', 'Simpson'
+            eq('lastName', 'Simpson')
         }
 
         def result = criteria.count {
-            like 'firstName', 'B%'
+            like('firstName', 'B%')
         }
         then: 'The count method returns the right results'
         result == 1
@@ -284,7 +285,7 @@ class DetachedCriteriaSpec extends GrailsDataTckSpec {
         when: 'A detached criteria instance is created matching the last name'
         def criteria = new DetachedCriteria(Person)
         criteria.with {
-            eq 'lastName', 'Simpson'
+            eq('lastName', 'Simpson')
         }
 
         def result = criteria.count()
@@ -300,7 +301,7 @@ class DetachedCriteriaSpec extends GrailsDataTckSpec {
         when: 'A detached criteria instance is created matching the last name'
         def criteria = new DetachedCriteria(Person)
         criteria.with {
-            eq 'lastName', 'Simpson'
+            eq('lastName', 'Simpson')
         }
 
         def results = criteria.list()
@@ -316,7 +317,7 @@ class DetachedCriteriaSpec extends GrailsDataTckSpec {
         when: 'A detached criteria instance is created matching the last name'
         def criteria = new DetachedCriteria(Person)
         criteria = criteria.build {
-            eq 'lastName', 'Simpson'
+            eq('lastName', 'Simpson')
         }
 
         def results = criteria.list(max: 2)

@@ -18,15 +18,14 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class BasicCollectionTypeSpec extends MongoDatastoreSpec {
+class BasicCollectionTypeSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([MyCollections])
+        manager.registerDomainClasses(MyCollections)
     }
 
     def "Test persist basic collection types"() {

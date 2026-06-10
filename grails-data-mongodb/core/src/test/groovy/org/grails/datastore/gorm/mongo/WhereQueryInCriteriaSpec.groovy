@@ -18,17 +18,16 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Ignore
 import spock.lang.Shared
 
-class WhereQueryInCriteriaSpec extends MongoDatastoreSpec {
+class WhereQueryInCriteriaSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([InCritOwner, InCritDog])
+        manager.registerDomainClasses(InCritOwner, InCritDog)
     }
 
     @Shared

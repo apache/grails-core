@@ -18,16 +18,15 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
-class IsNullSpec extends MongoDatastoreSpec {
+class IsNullSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Elephant, Trunk])
+        manager.registerDomainClasses(Elephant, Trunk)
     }
 
     @Issue('GPMONGODB-164')

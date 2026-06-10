@@ -18,15 +18,14 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class EmbeddedWithCustomFieldMappingSpec extends MongoDatastoreSpec {
+class EmbeddedWithCustomFieldMappingSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([EWCFMPerson, EWCFMPet])
+        manager.registerDomainClasses(EWCFMPerson, EWCFMPet)
     }
 
     void "Test that embedded collections map to the correct underlying attributes"() {

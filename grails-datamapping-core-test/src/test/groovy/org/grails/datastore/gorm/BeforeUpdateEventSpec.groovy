@@ -27,7 +27,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class BeforeUpdateEventSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([BeforeUpdateAuthor, BeforeUpdateBook])
+        manager.registerDomainClasses(BeforeUpdateAuthor, BeforeUpdateBook)
     }
 
     @Issue('GRAILS-8916')

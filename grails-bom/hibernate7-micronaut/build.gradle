@@ -75,9 +75,13 @@ dependencies {
     // Re-export the Micronaut platform so consumers inherit Micronaut's managed versions
     // transitively. Exclude Groovy since we declare the required version explicitly via
     // customBomDependencies. Exclude Spock since the base BOM manages that version.
+    // Exclude Jackson 3 (tools.jackson) since spring-boot-dependencies manages that version,
+    // and Micronaut can lag behind Spring Boot's patch bumps (e.g. SB 4.0.6 ships
+    // jackson-bom 3.1.2 while micronaut-platform 5.0.0-M2 still pins 3.1.0).
     api(platform("io.micronaut.platform:micronaut-platform:$micronautPlatformVersion")) {
         exclude group: 'org.apache.groovy'
         exclude group: 'org.spockframework'
+        exclude group: 'tools.jackson'
     }
 
     constraints {

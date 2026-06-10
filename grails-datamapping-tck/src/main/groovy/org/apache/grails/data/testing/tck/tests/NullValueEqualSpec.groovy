@@ -18,17 +18,19 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import org.apache.grails.data.testing.tck.domains.TestEntity
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.IgnoreIf
+
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.TestEntity
 
 class NullValueEqualSpec extends GrailsDataTckSpec {
 
+    @Override
     void setupSpec() {
-        manager.addAllDomainClasses([TestEntity])
+        manager.registerDomainClasses(TestEntity)
     }
 
-    void "test null value in equal"() {
+    void 'test null value in equal'() {
         when:
         new TestEntity(name: 'Fred', age: null).save(failOnError: true)
         new TestEntity(name: 'Bob', age: 11).save(failOnError: true)
@@ -40,8 +42,8 @@ class NullValueEqualSpec extends GrailsDataTckSpec {
         TestEntity.countByAge(null) == 2
     }
 
-    @IgnoreIf({ System.getProperty('hibernate5.gorm.suite') })
-    void "test null value in not equal"() {
+    @IgnoreIf({ System.getProperty('hibernate5.gorm.suite') || System.getProperty('hibernate7.gorm.suite') })
+    void 'test null value in not equal'() {
         when:
         new TestEntity(name: 'Fred', age: null).save(failOnError: true)
         new TestEntity(name: 'Bob', age: 11).save(failOnError: true)

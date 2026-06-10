@@ -18,9 +18,10 @@
  */
 package org.apache.grails.data.testing.tck.base
 
+import spock.lang.Specification
+
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
-import spock.lang.Specification
 
 abstract class GrailsDataTckManager {
 
@@ -30,23 +31,29 @@ abstract class GrailsDataTckManager {
 
     abstract Session createSession()
 
-    private List<Class> domainClasses = [
+    private Set<Class> domainClasses = [
     ]
 
     /**
-     * Returns an unmodifiable view of the domain classes list.
-     * @return An unmodifiable list of domain classes
+     * Returns a defensive copy of the registered domain classes.
+     * Mutating this array will not affect the manager state.
      */
-    List<Class> getDomainClasses() {
-        return Collections.unmodifiableList(domainClasses)
+    Class[] getDomainClasses() {
+        domainClasses as Class[]
     }
 
     /**
-     * Adds all the specified classes to the domain classes list.
-     * @param classes The classes to add
+     * Registers the domain classes that will be available when testing.
+     * @param classes The classes to register
      */
+    void registerDomainClasses(Class... classes) {
+        if (classes) {
+            domainClasses.addAll(classes)
+        }
+    }
+
     void addAllDomainClasses(Collection<Class> classes) {
-        domainClasses.addAll(classes)
+        registerDomainClasses(*classes)
     }
 
     void setupSpec() {

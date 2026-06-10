@@ -18,20 +18,21 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.ChildEntity
 import org.apache.grails.data.testing.tck.domains.TestEntity
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * @author graemerocher
  */
 class ListOrderBySpec extends GrailsDataTckSpec {
 
+    @Override
     void setupSpec() {
-        manager.addAllDomainClasses([TestEntity, ChildEntity])
+        manager.registerDomainClasses(TestEntity, ChildEntity)
     }
 
-    void "Test listOrderBy property name method"() {
+    void 'Test listOrderBy property name method'() {
         given:
         def child = new ChildEntity(name: 'Child')
         new TestEntity(age: 30, name: 'Bob', child: child).save()

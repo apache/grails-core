@@ -34,7 +34,7 @@ class FindByMethodSpec extends GrailsDataTckSpec {
 
     @Override
     void setupSpec() {
-        manager.addAllDomainClasses([Person, TckBook, Highway])
+        manager.registerDomainClasses(Person, TckBook, Highway)
     }
 
     void 'Test Using AND Multiple Times In A Dynamic Finder'() {

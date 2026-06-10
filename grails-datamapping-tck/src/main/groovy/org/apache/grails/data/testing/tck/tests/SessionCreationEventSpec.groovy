@@ -32,10 +32,16 @@ import org.grails.datastore.mapping.core.SessionCreationEvent
 class SessionCreationEventSpec extends GrailsDataTckSpec {
 
     Listener listener
+
+    // The Hibernate TCK suites run this spec against a datastore that has no Spring
+    // application context (datastore.applicationContext is null), so the session-creation
+    // event listener cannot be registered. This flag records whether the listener was
+    // registered; when false the listener-dependent assertions below are skipped so the
+    // spec still exercises the session-creation paths instead of being ignored.
     boolean contextAvailable = false
 
     void setupSpec() {
-        manager.addAllDomainClasses([TestEntity])
+        manager.registerDomainClasses(TestEntity)
     }
 
     def setup() {

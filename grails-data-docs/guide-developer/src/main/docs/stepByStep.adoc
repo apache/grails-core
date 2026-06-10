@@ -151,7 +151,7 @@ package org.grails.datastore.gorm
 import org.junit.runners.Suite.SuiteClasses
 import org.junit.runners.Suite
 import org.junit.runner.RunWith
-import grails.gorm.specs.*
+import grails.gorm.tests.*
 
 /**
  * @author graemerocher

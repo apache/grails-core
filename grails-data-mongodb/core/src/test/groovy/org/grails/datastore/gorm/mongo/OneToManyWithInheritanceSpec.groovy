@@ -18,16 +18,15 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import grails.mongodb.MongoEntity
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class OneToManyWithInheritanceSpec extends MongoDatastoreSpec {
+class OneToManyWithInheritanceSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Animal, Donkey, Carrot])
+        manager.registerDomainClasses(Animal, Donkey, Carrot)
     }
 
     void "Test that a one-to-many with inheritances behaves correctly"() {

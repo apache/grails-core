@@ -19,33 +19,52 @@
 package org.apache.grails.data.testing.tck.tests
 
 import grails.persistence.Entity
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.Face
 import org.apache.grails.data.testing.tck.domains.Nose
 import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.testing.tck.domains.Pet
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.mapping.model.types.OneToOne
 
 class OneToOneSpec extends GrailsDataTckSpec {
 
+    @Override
     void setupSpec() {
-        manager.addAllDomainClasses([Face, Nose, Person, Pet, OwnerEntity, OwnedEntity])
+        manager.registerDomainClasses(Face, Nose, Person, Pet, OwnerEntity, OwnedEntity)
     }
 
-    def "Test persist and retrieve unidirectional many-to-one"() {
+    def 'Test persist and retrieve unidirectional many-to-one'() {
         given: 'A domain model with a many-to-one'
-        def oneToManyEntity = new OwnerEntity()
-        def manyToOneEntity = new OwnedEntity(oneToMany: oneToManyEntity)
-        oneToManyEntity.save()
-        manyToOneEntity.save(flush: true)
+        def person = new Person(firstName: 'Fred', lastName: 'Flintstone')
+        def pet = new Pet(name: 'Dino', owner: person)
+        person.save()
+        pet.save(flush: true)
         manager.session.clear()
 
         when: 'The association is queried'
-        manyToOneEntity = OwnedEntity.list()[0]
+        pet = Pet.findByName('Dino')
 
         then: 'The domain model is valid'
-        manyToOneEntity != null
-        manyToOneEntity.oneToMany.id == oneToManyEntity.id
+        pet != null
+        pet.name == 'Dino'
+        pet.ownerId == person.id
+        pet.owner.firstName == 'Fred'
+    }
+
+    def 'Test persist and retrieve local unidirectional many-to-one'() {
+        given: 'a domain model with a many-to-one'
+        def owner = new OwnerEntity()
+        def owned = new OwnedEntity(owner: owner)
+        owner.save()
+        owned.save(flush: true)
+        manager.session.clear()
+
+        when: 'the association is queried'
+        owned = OwnedEntity.list()[0]
+
+        then: 'the domain model is valid'
+        owned != null
+        owned.owner.id == owner.id
     }
 
     def "Test persist and retrieve one-to-one with inverse key"() {
@@ -83,14 +102,12 @@ class OneToOneSpec extends GrailsDataTckSpec {
 
 @Entity
 class OwnerEntity {
-
 }
 
 @Entity
 class OwnedEntity {
 
-    OwnerEntity oneToMany
+    OwnerEntity owner
 
-    static belongsTo = [oneToMany: OwnerEntity]
-
+    static belongsTo = [owner: OwnerEntity]
 }

@@ -18,14 +18,13 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class BasicCollectionsSpec extends MongoDatastoreSpec {
+class BasicCollectionsSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([Linguist, Increment])
+        manager.registerDomainClasses(Linguist, Increment)
     }
 
     void "Test that a Locale can be used inside a collection"() {
