@@ -33,6 +33,7 @@ def publishedProjects = [
         'grails-base-bom',
         'grails-bom',
         'grails-hibernate5-bom',
+        'grails-hibernate7-bom',
         'grails-bootstrap',
         'grails-cache',
         'grails-codecs',
@@ -117,8 +118,15 @@ def publishedProjects = [
         'grails-data-hibernate5',
         'grails-data-hibernate5-core',
         'grails-data-hibernate5-dbmigration',
-        'grails-data-hibernate5-spring-boot',
         'grails-data-hibernate5-spring-orm',
+        'grails-data-hibernate5-spring-boot',
+        // hibernate7
+        'grails-data-hibernate7',
+        'grails-data-hibernate7-core',
+        'grails-data-hibernate7-dbmigration',
+        'grails-data-hibernate7-dbmigration-core',
+        'grails-data-hibernate7-spring-boot',
+        'grails-data-hibernate7-spring-orm',
         // mongodb
         'grails-data-mongodb',
         'grails-data-mongodb-bson',
@@ -145,6 +153,7 @@ def skipMicronautProjects = providers.gradleProperty('skipMicronautProjects').is
 if (!skipMicronautProjects) {
     publishedProjects.addAll([
             'grails-hibernate5-micronaut-bom',
+            'grails-hibernate7-micronaut-bom',
             'grails-micronaut',
             'grails-micronaut-bom',
     ])

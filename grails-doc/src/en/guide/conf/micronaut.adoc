@@ -48,6 +48,7 @@ The `grails-micronaut-bom` layers Micronaut-specific dependency overrides on top
 If your project targets a specific Hibernate version, use the corresponding Hibernate-specific Micronaut BOM instead of the generic `grails-micronaut-bom`:
 
 * `org.apache.grails:grails-hibernate5-micronaut-bom` -- Micronaut + Hibernate 5 (the default).
+* `org.apache.grails:grails-hibernate7-micronaut-bom` -- Micronaut + Hibernate 7. See link:{versionsRef}Grails%20BOM%20Hibernate7%20Micronaut.html[Grails Hibernate 7 Micronaut BOM Dependencies].
 
 [source,groovy]
 .build.gradle - Hibernate 5 with Micronaut
@@ -58,9 +59,18 @@ dependencies {
 }
 ----
 
+[source,groovy]
+.build.gradle - Hibernate 7 with Micronaut
+----
+dependencies {
+    implementation enforcedPlatform("org.apache.grails:grails-hibernate7-micronaut-bom:$grailsVersion")
+    implementation 'org.apache.grails:grails-micronaut'
+}
+----
+
 The generic `grails-micronaut-bom` remains available and currently tracks the Hibernate 5 default. If the framework changes its default Hibernate version in the future, `grails-micronaut-bom` will follow the new default while the Hibernate-specific BOMs remain pinned.
 
-When the `grails-micronaut` plugin is present, the Grails Gradle plugin will automatically apply the required annotation processors to your project and validate that a Micronaut-compatible BOM (`grails-micronaut-bom` or `grails-hibernate5-micronaut-bom`) is applied as `enforcedPlatform`. The validation fails the build at configuration time with an actionable error if no such BOM is applied or it is applied as plain `platform(...)`.
+When the `grails-micronaut` plugin is present, the Grails Gradle plugin will automatically apply the required annotation processors to your project and validate that a Micronaut-compatible BOM (`grails-micronaut-bom`, `grails-hibernate5-micronaut-bom`, or `grails-hibernate7-micronaut-bom`) is applied as `enforcedPlatform`. The validation fails the build at configuration time with an actionable error if no such BOM is applied or it is applied as plain `platform(...)`.
 
 ==== Disabling the Micronaut Auto-Setup
 

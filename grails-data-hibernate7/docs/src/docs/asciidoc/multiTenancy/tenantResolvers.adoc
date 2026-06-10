@@ -1,0 +1,104 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+As mentioned previously the link:../api/org/grails/datastore/mapping/multitenancy/TenantResolver.html[TenantResolver] interface is how you define the value of the link:../api/grails/gorm/multitenancy/Tenants.html#currentId()[current tenant].
+
+This section will cover a few more details about implementing `TenantResolver` instances.
+
+==== Specifying the Tenant Resolver
+
+As already mentioned you can specify the `TenantResolver` via configuration using the `grails.gorm.tenantResolverClass` setting:
+
+[source,yaml]
+----
+grails:
+    gorm:
+        multiTenancy:
+            mode: DATABASE
+            tenantResolverClass: org.grails.datastore.mapping.multitenancy.web.SubDomainTenantResolver
+----
+
+However, if you are using Grails or Spring Boot then the `TenantResolver` can also be specified as a Spring bean and it will automatically be injected, this allows you to use dependency injection to configure the dependencies of the resolver.
+
+==== Built-in Tenant Resolvers
+
+The following table contains all of the `TenantResolver` implementations that ship with GORM and are usable out of the box. The package name has been shorted from `org.grails.datastore.mapping` to `o.g.d.m` for brevity:
+
+[format="csv", options="header"]
+|===
+name,description
+`o.g.d.m.multitenancy.resolvers.FixedTenantResolver`, Resolves against a fixed tenant id
+`o.g.d.m.multitenancy.resolvers.SystemPropertyTenantResolver`, Resolves the tenant id from a system property called `gorm.tenantId`
+`o.g.d.m.multitenancy.web.SubDomainTenantResolver`, Resolves the tenant id from the subdomain via DNS
+`o.g.d.m.multitenancy.web.CookieTenantResolver`, Resolves the current tenant from an HTTP cookie named `gorm.tenantId` by default
+`o.g.d.m.multitenancy.web.SessionTenantResolver`, Resolves the current tenant from the HTTP session using the attribute `gorm.tenantId` by default
+`o.g.d.m.multitenancy.web.HttpHeaderTenantResolver`, Resolves the current tenant from the request HTTP Header using the header name `gorm.tenantId` by default
+|===
+
+The tenant resolvers in the `org.grails.datastore.mapping.multitenancy.web` package require the `grails-datastore-web` dependency:
+
+[source,groovy,subs="attributes"]
+.build.gradle
+----
+compile "org.grails:grails-datastore-web:{version}"
+----
+
+==== The AllTenantsResolver interface
+
+If you are using discriminator-based multi-tenancy then you may need to implement the link:../api/org/grails/datastore/mapping/multitenancy/AllTenantsResolver.html[AllTenantsResolver] interface in your `TenantResolver` implementation if you want to at any point iterate over all available tenants.
+
+Typically with discriminator-based multi-tenancy the tenants are identified by some other domain class property. So for example an implementation would look like:
+
+[source,groovy]
+----
+Iterable<Serializable> resolveTenantIds() {
+    new DetachedCriteria(Company)
+            .distinct('name')
+            .list()
+}
+----
+
+The above example uses the distinct names of each `Company` domain class to resolve all of the tenant identifiers.
+
+
+==== Implementing Web Tenant Resolvers
+
+If you wish to implement your own tenant resolver for Grails or Spring Boot then it is possible do so using the `RequestContextHolder` class without needing to inject any dependencies. For example the `SubDomainTenantResolver` implementation is as follows:
+
+[source,groovy]
+----
+Serializable resolveTenantIdentifier() {
+
+    RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes()
+    if(requestAttributes instanceof ServletWebRequest) {
+
+        String subdomain = ((ServletWebRequest)requestAttributes).getRequest().getRequestURL().toString();
+        subdomain = subdomain.substring(subdomain.indexOf("/") + 2);
+        if( subdomain.indexOf(".") > -1 ) {
+            return subdomain.substring(0, subdomain.indexOf("."))
+        }
+        else {
+            return ConnectionSource.DEFAULT
+        }
+    }
+    throw new TenantNotFoundException("Tenant could not be resolved outside a web request")
+}
+----
+
+NOTE: If the tenant id is not found a `TenantNotFoundException` should be thrown.

@@ -49,7 +49,7 @@ dependencies {
     api 'org.springframework:spring-beans'
     api 'org.springframework:spring-context'
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
-    api "org.hibernate:hibernate-core-jakarta:${hibernate5Version}", {
+    api 'org.hibernate:hibernate-core-jakarta', {
         exclude group: 'commons-logging', module: 'commons-logging'
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }

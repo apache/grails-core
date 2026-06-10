@@ -52,7 +52,7 @@ dependencies {
         documentation "org.apache.grails.data:$it"
     }
     rootProject.subprojects
-            .findAll { it.findProperty('gormApiDocs') }
+            .findAll { it.findProperty('gormApiDocs') && !it.path.contains('hibernate7') }
             .each { documentation project(":$it.name") }
 }
 
@@ -73,25 +73,24 @@ tasks.named('asciidoctor', AsciidoctorTask) { AsciidoctorTask it ->
     }
 
     it.attributes = [
-            'experimental': 'true',
-            'compat-mode': 'true',
-            'toc': 'left',
-            'icons': 'font',
-            'reproducible': '',
-            'version': projectVersion,
-            'pluginVersion': projectVersion,
-            'groupId': project.group,
-            'artifactId': project.name,
+            'experimental'              : 'true',
+            'compat-mode'               : 'true',
+            'toc'                       : 'left',
+            'icons'                     : 'font',
+            'reproducible'              : '',
+            'version'                   : projectVersion,
+            'pluginVersion'             : projectVersion,
+            'groupId'                   : project.group,
+            'artifactId'                : project.name,
             'migrationPluginExamplesDir': project.layout.projectDirectory.dir('src/docs/asciidoc/databaseMigration').asFile.relativePath(rootProject.findProject(':grails-data-hibernate5-dbmigration').layout.projectDirectory.asFile),
-            'migrationPluginGroupId': rootProject.findProject(':grails-data-hibernate5-dbmigration').group,
-            'migrationPluginArtifactId': rootProject.findProject(':grails-data-hibernate5-dbmigration').name,
-            'liquibaseHibernate5Version': liquibaseHibernate5Version
+            'migrationPluginGroupId'    : rootProject.findProject(':grails-data-hibernate5-dbmigration').group,
+            'migrationPluginArtifactId' : rootProject.findProject(':grails-data-hibernate5-dbmigration').name,
     ]
 }
 
 tasks.withType(Groovydoc).configureEach {
     it.dependsOn(rootProject.subprojects
-            .findAll { it.findProperty('gormApiDocs') }
+            .findAll { it.findProperty('gormApiDocs') && !it.path.contains('hibernate7') }
             .collect { ":${it.name}:groovydoc" })
 
     it.docTitle = "GORM for Hibernate 5 - $project.version"
@@ -101,7 +100,7 @@ tasks.withType(Groovydoc).configureEach {
     }.sum()
 
     rootProject.subprojects
-            .findAll { it.findProperty('gormApiDocs') }
+            .findAll { it.findProperty('gormApiDocs') && !it.path.contains('hibernate7') }
             .each { sourceFiles += it.files('src/main/groovy') }
 
     it.source = sourceFiles

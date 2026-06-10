@@ -53,6 +53,7 @@ class QueryNonIndexedPropertySpec extends GrailsDataTckSpec<GrailsDataCoreTckMan
 
 @Entity
 class Company {
+
     Long id
     String name
     CompanyAddress address
@@ -60,6 +61,7 @@ class Company {
 
 @Entity
 class CompanyAddress {
+
     Long id
     String postCode
 }

@@ -26,7 +26,7 @@ import org.apache.grails.testing.http.client.HttpClientSupport
 
 /**
  * Comprehensive integration tests for Grails codec functionality.
- * 
+ *
  * Tests cover:
  * - HTML encoding/decoding (XSS prevention)
  * - URL encoding/decoding
@@ -47,7 +47,7 @@ class SecurityCodecsSpec extends Specification implements HttpClientSupport {
     def "test HTML encoding escapes dangerous tags"() {
         when:
         def response = http(
-            '/codecTest/encodeHtml?input=%3Cscript%3Ealert(%22XSS%22)%3C/script%3E'
+                '/codecTest/encodeHtml?input=%3Cscript%3Ealert(%22XSS%22)%3C/script%3E'
         )
 
         then: "script tags should be HTML encoded"
@@ -111,8 +111,8 @@ class SecurityCodecsSpec extends Specification implements HttpClientSupport {
 
         then: "text should be Base64 encoded and decodable"
         response.assertJson(200, [
-                input: 'Hello, World!',
-                encoded: 'SGVsbG8sIFdvcmxkIQ==',
+                input      : 'Hello, World!',
+                encoded    : 'SGVsbG8sIFdvcmxkIQ==',
                 decodedBack: 'Hello, World!'
         ])
     }
@@ -124,8 +124,8 @@ class SecurityCodecsSpec extends Specification implements HttpClientSupport {
         then: "binary data should be correctly Base64 encoded"
         response.assertJson(200, [
                 originalBytes: [72, 101, 108, 108, 111], // "Hello" in ASCII
-                encoded: 'SGVsbG8=',
-                decodedBytes: [72, 101, 108, 108, 111]
+                encoded      : 'SGVsbG8=',
+                decodedBytes : [72, 101, 108, 108, 111]
         ])
     }
 
@@ -208,8 +208,8 @@ class SecurityCodecsSpec extends Specification implements HttpClientSupport {
 
         then: "text should be Hex encoded and decodable"
         response.assertJson(200, [
-                input: 'Hello',
-                hexEncoded: '48656c6c6f', // "Hello" in hex
+                input      : 'Hello',
+                hexEncoded : '48656c6c6f', // "Hello" in hex
                 decodedBack: 'Hello'
         ])
     }
@@ -239,8 +239,8 @@ class SecurityCodecsSpec extends Specification implements HttpClientSupport {
 
         then: "raw content should be preserved"
         response.assertJson(200, [
-                input: '<b>Bold</b>',
-                raw: '<b>Bold</b>',
+                input   : '<b>Bold</b>',
+                raw     : '<b>Bold</b>',
                 rawClass: 'java.lang.String'
         ])
     }
@@ -321,8 +321,8 @@ class SecurityCodecsSpec extends Specification implements HttpClientSupport {
 
         then: "same input should always produce same hash"
         response.assertJsonContains(200, [
-                md5Consistent: true,
-                sha1Consistent: true,
+                md5Consistent   : true,
+                sha1Consistent  : true,
                 sha256Consistent: true
         ])
     }

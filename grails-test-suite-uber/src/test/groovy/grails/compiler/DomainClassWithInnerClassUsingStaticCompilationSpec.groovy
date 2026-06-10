@@ -52,7 +52,6 @@ class SomeClass implements Validateable {
 
     static boolean constraintsClosureCalled = false
     static boolean mappingClosureCalled = false
-    static boolean namedQueriesClosureCalled = false
 
     static constraints = {
         constraintsClosureCalled = true
@@ -60,9 +59,5 @@ class SomeClass implements Validateable {
 
     static mapping = {
         mappingClosureCalled = true
-    }
-
-    static namedQueries = {
-        namedQueriesClosureCalled = true
     }
 }

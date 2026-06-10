@@ -1,0 +1,233 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+It is critical that you understand how cascading updates and deletes work when using GORM. The key part to remember is the `belongsTo` setting which controls which class "owns" a relationship.
+
+Whether it is a one-to-one, one-to-many or many-to-many, defining `belongsTo` will result in updates cascading from the owning class to its dependant (the other side of the relationship), and for many-/one-to-one and one-to-many relationships deletes will also cascade.
+
+If you _do not_ define `belongsTo` then no cascades will happen and you will have to manually save each object (except in the case of the one-to-many, in which case saves will cascade automatically if a new instance is in a `hasMany` collection).
+
+Here is an example:
+
+[source,groovy]
+----
+class Airport {
+    String name
+    static hasMany = [flights: Flight]
+}
+----
+
+[source,groovy]
+----
+class Flight {
+    String number
+    static belongsTo = [airport: Airport]
+}
+----
+
+If I now create an `Airport` and add some ``Flight``s to it I can save the `Airport` and have the updates cascaded down to each flight, hence saving the whole object graph:
+
+[source,groovy]
+----
+new Airport(name: "Gatwick")
+        .addToFlights(new Flight(number: "BA3430"))
+        .addToFlights(new Flight(number: "EZ0938"))
+        .save()
+----
+
+Conversely if I later delete the `Airport` all `Flight` instances associated with it will also be deleted:
+
+[source,groovy]
+----
+def airport = Airport.findByName("Gatwick")
+airport.delete()
+----
+
+The above examples are called transitive persistence and are controlled via the `belongsTo` and the cascade policy. If I were to remove `belongsTo` then the above cascading deletion code *would not work*.
+
+===== Unidirectional Many-To-One without belongsTo
+
+For example, consider the following domain model:
+
+
+[source,groovy]
+----
+class Location {
+    String city
+}
+
+class Author {
+    String name
+    Location location
+}
+----
+
+It looks simple, right? And it is. Just set the location property to a Location instance and you have linked an author to a location. But see what happens when we run the following code:
+
+[source,groovy]
+----
+def a = new Author(name: "Niall Ferguson", location: new Location(city: "Boston"))
+a.save()
+----
+
+An exception is thrown. If you look at the ultimate “caused by” exception, you’ll see the message `“not-null property references a null or transient value: Author.location”`. What’s going on?
+
+A transient instance is one that isn’t attached to a Hibernate session. As you can see from the code, we are setting the Author.location property to a new Location instance, not one retrieved from the database. Hence the instance is transient. The obvious fix is to make the Location instance persistent by saving it:
+
+[source,groovy]
+----
+def l = new Location(city: "Boston")
+l.save()
+
+def a = new Author(name: "Niall Ferguson", location: l)
+a.save()
+----
+
+Another option is to alter the cascade policy for the association. There are two ways to do that. One way is to define `belongsTo` on the `Location` class:
+
+[source,groovy]
+----
+class Location {
+    String city
+
+    static belongsTo = Author
+}
+----
+
+Note that this above syntax does not make the association bidirectional since no property is defined. A bidirectional example would be:
+
+[source,groovy]
+----
+class Location {
+    String city
+
+    static belongsTo = [author:Author]
+}
+----
+
+Alternatively if you prefer that the `Location` class has nothing to do with the `Author` class you can define the cascade policy in `Author`:
+
+[source,groovy]
+----
+class Author {
+    String name
+    Location location
+
+    static mapping = {
+        location cascade:'save-update'
+    }
+}
+----
+
+The above example will configure the cascade policy to cascade saves and updates, but not deletes.
+
+===== Bidirectional one-to-many with belongsTo
+
+
+[source,groovy]
+----
+class A { static hasMany = [bees: B] }
+----
+
+[source,groovy]
+----
+class B { static belongsTo = [a: A] }
+----
+
+In the case of a bidirectional one-to-many where the many side defines a `belongsTo` then the cascade strategy is set to "ALL" for the one side and "NONE" for the many side.
+
+What this means is that whenever an instance of `A` is saved or updated. So will any instances of `B`. And, critically, whenever any instance of `A` is *deleted* so will all the associated instances of `B`!
+
+
+===== Unidirectional One-to-Many
+
+
+[source,groovy]
+----
+class A { static hasMany = [bees: B] }
+----
+
+[source,groovy]
+----
+class B {  }
+----
+
+In the case of a unidirectional one-to-many where the many side defines no belongsTo then the cascade strategy is set to "SAVE-UPDATE".
+
+Since the `belongsTo` is not defined, this means that saves and updates will be cascaded from `A` to `B`, however deletes *will not* cascade!
+
+Only when you define `belongsTo` in `B` or alter the cascading strategy of `A` will deletes be cascaded.
+
+===== Bidirectional One-to-Many, no belongsTo
+
+
+[source,groovy]
+----
+class A { static hasMany = [bees: B] }
+----
+
+[source,groovy]
+----
+class B { A a }
+----
+
+In the case of a bidirectional one-to-many where the many side does not define a `belongsTo` then the cascade strategy is set to "SAVE-UPDATE" for the one side and "NONE" for the many side.
+
+So exactly like the previous case of a undirectional One-to-Many, without `belongsTo` definition no delete operations will be cascaded, but crucially saves and updates will by default. If you do not want saves and updates to cacade then *you must* alter the cascade policy of `A`:
+
+
+[source,groovy]
+----
+class A {
+    static hasMany = [bees: B]
+    static mapping = {
+        bees cascade:"none"
+    }
+}
+----
+
+===== Unidirectional Many-to-One with belongsTo
+
+
+[source,groovy]
+----
+class A {  }
+----
+
+[source,groovy]
+----
+class B { static belongsTo = [a: A] }
+----
+
+In the case of a unidirectional many-to-one association that defines a `belongsTo` then the cascade strategy is set to "ALL" for the owning side of the relationship (A->B) and "NONE" from the side that defines the `belongsTo` (B->A)
+
+You may be wondering why this association is a many-to-one and not a one-to-one. The reason is because it is possible to have multiple instances of `B` associated to the same instance of `A`. If you wish to define this association as a true one-to-one association a `unique` constraint is required:
+
+
+[source,groovy]
+----
+class B {
+    static belongsTo = [a: A]
+    static constraints = {
+        a unique:true
+    }
+}
+----
+
+Note that if you need further control over cascading behaviour, you can use the <<ormdsl,ORM DSL>>.
