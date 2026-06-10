@@ -42,6 +42,7 @@ import org.grails.forge.client.github.v3.GitHubRepository;
 import org.grails.forge.options.BuildTool;
 import org.grails.forge.options.GormImpl;
 import org.grails.forge.options.JdkVersion;
+import org.grails.forge.options.GspLayoutImpl;
 import org.grails.forge.options.ServletImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,7 +86,7 @@ public class GitHubCreateController implements GitHubCreateOperation {
      * @return A json containing the generated application details.
      */
     @Override
-    @Get(uri = "/github/{type}/{name}{?features,gorm,servlet,build,reloading,javaVersion,code,state}", produces = MediaType.APPLICATION_JSON)
+    @Get(uri = "/github/{type}/{name}{?features,gorm,servlet,gspLayout,build,reloading,javaVersion,code,state}", produces = MediaType.APPLICATION_JSON)
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
@@ -112,6 +113,7 @@ public class GitHubCreateController implements GitHubCreateOperation {
             @Nullable DevelopmentReloading reloading,
             @Nullable GormImpl gorm,
             @Nullable ServletImpl servlet,
+            @Nullable GspLayoutImpl gspLayout,
             @Nullable JdkVersion javaVersion,
             @Nullable String code,
             @Nullable String state,
@@ -123,7 +125,7 @@ public class GitHubCreateController implements GitHubCreateOperation {
                 return HttpResponse.temporaryRedirect(redirectService.constructOAuthRedirectUrl(requestInfo));
             } else {
                 GitHubRepository repository = gitHubCreateService.creatApp(
-                        type, name, features, build, reloading, gorm, servlet, javaVersion, code, state, userAgent);
+                        type, name, features, build, reloading, gorm, servlet, gspLayout, javaVersion, code, state, userAgent);
 
                 if (launcherURI == null) {
                     return HttpResponse.ok(new GitHubCreateDTO(repository.getUrl(), repository.getCloneUrl(), repository.getHtmlUrl()));

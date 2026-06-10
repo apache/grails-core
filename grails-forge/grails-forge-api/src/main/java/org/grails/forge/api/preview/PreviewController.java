@@ -77,7 +77,7 @@ public class PreviewController extends AbstractCreateController implements Previ
      * @param servlet The Servlet (optional, defaults to Embedded Tomcat)
      * @return A preview of the application contents.
      */
-    @Get(uri = "/{type}/{name}{?features,gorm,servlet,build,reloading,javaVersion}", produces = MediaType.APPLICATION_JSON)
+    @Get(uri = "/{type}/{name}{?features,gorm,servlet,gspLayout,build,reloading,javaVersion}", produces = MediaType.APPLICATION_JSON)
     @Override
     public PreviewDTO previewApp(
             ApplicationType type,
@@ -87,6 +87,7 @@ public class PreviewController extends AbstractCreateController implements Previ
             @Nullable DevelopmentReloading reloading,
             @Nullable GormImpl gorm,
             @Nullable ServletImpl servlet,
+            @Nullable GspLayoutImpl gspLayout,
             @Nullable JdkVersion javaVersion,
             @Parameter(hidden = true) RequestInfo requestInfo) throws IOException {
         try {
@@ -99,7 +100,8 @@ public class PreviewController extends AbstractCreateController implements Previ
                             gorm == null ? GormImpl.DEFAULT_OPTION : gorm,
                             servlet == null ? ServletImpl.DEFAULT_OPTION : servlet,
                             javaVersion == null ? JdkVersion.DEFAULT_OPTION : javaVersion,
-                            getOperatingSystem(requestInfo.getUserAgent())),
+                            getOperatingSystem(requestInfo.getUserAgent()))
+                            .withGspLayoutImpl(gspLayout != null ? gspLayout : GspLayoutImpl.DEFAULT_OPTION),
                     getOperatingSystem(requestInfo.getUserAgent()),
                     features == null ? Collections.emptyList() : features,
                     outputHandler,

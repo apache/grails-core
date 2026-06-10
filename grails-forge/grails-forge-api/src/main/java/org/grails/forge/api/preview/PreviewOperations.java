@@ -26,6 +26,7 @@ import org.grails.forge.api.DevelopmentReloading;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.options.BuildTool;
 import org.grails.forge.options.GormImpl;
+import org.grails.forge.options.GspLayoutImpl;
 import org.grails.forge.options.JdkVersion;
 import org.grails.forge.options.ServletImpl;
 
@@ -43,6 +44,7 @@ public interface PreviewOperations {
      * @param reloading   The development reloading
      * @param gorm        The GORM
      * @param servlet     The Servlet
+     * @param gspLayout   The GSP layout implementation
      * @param javaVersion The java version
      * @param requestInfo The request info
      * @return An HTTP response that emits a writable
@@ -56,6 +58,7 @@ public interface PreviewOperations {
             @Nullable DevelopmentReloading reloading,
             @Nullable GormImpl gorm,
             @Nullable ServletImpl servlet,
+            @Nullable GspLayoutImpl gspLayout,
             @Nullable JdkVersion javaVersion,
             @Parameter(hidden = true) RequestInfo requestInfo) throws IOException;
 }

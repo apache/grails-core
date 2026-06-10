@@ -48,6 +48,7 @@ public interface DiffOperations {
      * @param reloading   The development reloading
      * @param gorm        The GORM implementation
      * @param servlet     The Servlet implementation
+     * @param gspLayout   The GSP layout implementation
      * @param javaVersion The java version
      * @param requestInfo The request info
      * @return An HTTP response that emits a writable
@@ -61,6 +62,7 @@ public interface DiffOperations {
             @Nullable DevelopmentReloading reloading,
             @Nullable GormImpl gorm,
             @Nullable ServletImpl servlet,
+            @Nullable GspLayoutImpl gspLayout,
             @Nullable JdkVersion javaVersion,
             @Parameter(hidden = true) RequestInfo requestInfo) throws IOException;
 
@@ -74,6 +76,7 @@ public interface DiffOperations {
      * @param reloading        The reloading framework
      * @param gorm        The GORM implementation
      * @param servlet     The Servlet implementation
+     * @param gspLayout   The GSP layout implementation
      * @param javaVersion The java version
      * @param requestInfo The request info
      * @return An HTTP response that emits a writable
@@ -87,6 +90,7 @@ public interface DiffOperations {
             @Nullable DevelopmentReloading reloading,
             @Nullable GormImpl gorm,
             @Nullable ServletImpl servlet,
+            @Nullable GspLayoutImpl gspLayout,
             @Nullable JdkVersion javaVersion,
             @Parameter(hidden = true) RequestInfo requestInfo) throws IOException;
 }

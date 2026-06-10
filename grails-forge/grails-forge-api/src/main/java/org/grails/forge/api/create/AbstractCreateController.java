@@ -73,6 +73,7 @@ public abstract class AbstractCreateController {
             @Nullable DevelopmentReloading reloading,
             @Nullable GormImpl gorm,
             @Nullable ServletImpl servlet,
+            @Nullable GspLayoutImpl gspLayout,
             @Nullable JdkVersion javaVersion,
             @Nullable @Header(HttpHeaders.USER_AGENT) String userAgent) {
         Project project;
@@ -93,7 +94,8 @@ public abstract class AbstractCreateController {
                             gormImpl == null ? GormImpl.DEFAULT_OPTION : gormImpl,
                             servletImpl == null ? ServletImpl.DEFAULT_OPTION : servletImpl,
                             javaVersion == null ? JdkVersion.DEFAULT_OPTION : javaVersion,
-                            getOperatingSystem(userAgent)),
+                            getOperatingSystem(userAgent))
+                            .withGspLayoutImpl(gspLayout != null ? gspLayout : GspLayoutImpl.DEFAULT_OPTION),
                     getOperatingSystem(userAgent),
                     features != null ? features : Collections.emptyList(),
                     ConsoleOutput.NOOP
