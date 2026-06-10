@@ -169,6 +169,34 @@ class Sitemesh3LayoutFinderSpec extends Specification {
         paths.length == 0
     }
 
+    void 'NONE layout suppresses decoration'() {
+        given:
+        request.setAttribute(WebUtils.LAYOUT_ATTRIBUTE, WebUtils.NONE_LAYOUT)
+        Content content = contentWithMetaLayout('ignored')
+
+        when:
+        String[] paths = finder.selectDecoratorPaths(content, context)
+
+        then:
+        0 * locator.findViewByPath(_)
+        paths.length == 0
+    }
+
+    void 'meta layout still applies when the response carries an error status'() {
+        given: 'an error-dispatched render (e.g. a custom 404 page) bound to the request'
+        GrailsWebRequest webRequest = new GrailsWebRequest(request, response, servletContext)
+        RequestContextHolder.setRequestAttributes(webRequest)
+        response.setStatus(404)
+        Content content = contentWithMetaLayout('main')
+
+        when:
+        String[] paths = finder.selectDecoratorPaths(content, context)
+
+        then:
+        1 * locator.findViewByPath('/layouts/main') >> Mock(GroovyPageScriptSource)
+        paths == ['/layouts/main'] as String[]
+    }
+
     private Content contentWithMetaLayout(String layout) {
         Content content = new InMemoryContent()
         ContentProperty root = content.getExtractedProperties()

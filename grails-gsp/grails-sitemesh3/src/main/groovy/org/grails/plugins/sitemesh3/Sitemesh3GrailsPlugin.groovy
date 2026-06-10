@@ -103,6 +103,11 @@ class Sitemesh3GrailsPlugin extends Plugin {
                 layoutCacheExpirationMillis = config.getProperty('grails.sitemesh.layout.cache.interval', Long, 5000L)
             }
 
+            // Unwraps the SiteMesh view for "render template:" partials so
+            // they are never decorated with a layout (the SiteMesh 2 plugin
+            // does the same with its GrailsLayoutRenderViewMutator).
+            grailsRenderViewMutator(Sitemesh3RenderViewMutator)
+
             // Replace the filter registration from
             // org.sitemesh.autoconfigure.SiteMeshAutoConfiguration with a no-op
             // filter bean under the same name. SiteMeshAutoConfiguration is

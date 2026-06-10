@@ -18,6 +18,8 @@
  */
 package org.grails.plugins.web.taglib
 
+import java.nio.CharBuffer
+
 import org.sitemesh.DecoratorSelector
 import org.sitemesh.SiteMeshContext
 import org.sitemesh.content.Content
@@ -79,11 +81,13 @@ class RenderSitemeshTagLib implements TagLibrary {
         String savedAttribute = request.getAttribute(WebUtils.LAYOUT_ATTRIBUTE)
         // Save the request-scoped captured page (the one being decorated by the
         // outer SiteMesh render) and push a fresh one for the duration of the
-        // body() render. The body of <g:applyLayout> is plain markup (e.g. the
-        // grails-fields embedded fieldset content) with no <g:capture*> taglibs,
-        // so its content must be wired into the page explicitly rather than
-        // relying on capture. Restoring the outer page afterwards prevents the
-        // body fragment from clobbering the outer page's body/title/properties.
+        // body() render. The body of <g:applyLayout> may be a full GSP document
+        // (whose <head>/<body> the compile-time capture taglibs record into the
+        // fresh page) or plain markup with no capture taglibs at all (e.g. the
+        // grails-fields embedded fieldset content, or the already-decorated
+        // output of a nested <g:applyLayout>). Restoring the outer page
+        // afterwards prevents the body fragment from clobbering the outer
+        // page's body/title/properties.
         Object savedCapturedPage = request.getAttribute(Sitemesh3CapturedPage.REQUEST_ATTRIBUTE)
         GrailsSiteMeshViewContext context = new GrailsSiteMeshViewContext(
                 'text/html', request, response, servletContext,
@@ -103,7 +107,28 @@ class RenderSitemeshTagLib implements TagLibrary {
                 bodyBuffer = stringWriter.buffer
             }
             bodyBuffer.setPreferSubChunkWhenWritingToOtherBuffer(true)
-            bodyPage.setBodyBuffer(bodyBuffer)
+
+            Content content
+            if (bodyPage.isUsed()) {
+                // The body was a full GSP document: the compile-time capture
+                // taglibs have already populated bodyPage with its
+                // <head>/<title>/<body>. Only fall back to the whole markup
+                // when no <body> tag was present; never overwrite a captured
+                // body with the full document (that would nest the document
+                // inside the layout's <g:layoutBody> output).
+                if (bodyPage.getBodyBuffer() == null) {
+                    bodyPage.setBodyBuffer(bodyBuffer)
+                }
+                content = bodyPage
+            } else {
+                // No capture taglib ran while rendering the body: it is raw
+                // markup — plain text, or the already-decorated output of a
+                // nested <g:applyLayout>. Parse it so a full HTML document
+                // contributes its head/title/body to the decoration chain
+                // (SiteMesh 2 parses in the same situation). Markup without a
+                // <body> tag falls back to the whole fragment as the body.
+                content = contentProcessor.build(CharBuffer.wrap(bodyBuffer.toString()), context)
+            }
 
             // Expose <g:applyLayout params="[...]"> entries as page properties so
             // the layout can read them via <g:pageProperty name="..."/>. This
@@ -113,12 +138,11 @@ class RenderSitemeshTagLib implements TagLibrary {
             if (params) {
                 params.each { k, v ->
                     if (k != null && v != null) {
-                        bodyPage.addProperty(k.toString(), v.toString())
+                        addContentProperty(content, k.toString(), v.toString())
                     }
                 }
             }
 
-            Content content = bodyPage
             if (attrs.name) {
                 request.setAttribute(WebUtils.LAYOUT_ATTRIBUTE, attrs.name)
             }
@@ -152,6 +176,18 @@ class RenderSitemeshTagLib implements TagLibrary {
                 request.removeAttribute(WebUtils.LAYOUT_ATTRIBUTE)
             }
         }
+    }
+
+    private void addContentProperty(Content content, String name, String value) {
+        if (content instanceof Sitemesh3CapturedPage) {
+            ((Sitemesh3CapturedPage) content).addProperty(name, value)
+            return
+        }
+        ContentProperty property = content.getExtractedProperties()
+        for (String part : name.split('\\.')) {
+            property = property.getChild(part)
+        }
+        property.setValue(value)
     }
 
     private ContentProperty getContentProperty(String name) {

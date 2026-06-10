@@ -26,8 +26,11 @@ import org.sitemesh.DecoratorSelector
 import org.sitemesh.SiteMeshContext
 import org.sitemesh.content.ContentProcessor
 
+import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.web.servlet.View
 import org.springframework.web.servlet.ViewResolver
+import org.springframework.web.servlet.view.InternalResourceView
 import org.springframework.web.servlet.view.RedirectView
 
 import spock.lang.Specification
@@ -77,6 +80,22 @@ class GrailsSiteMeshViewResolverSpec extends Specification {
 
         then:
         result.is(redirect)
+    }
+
+    void "JSP inner views are rendered via include so the response survives decoration"() {
+        given: 'a JSP view resolved through the SiteMesh resolver'
+        InternalResourceView jspView = new InternalResourceView('/WEB-INF/grails-app/views/demo/hello.jsp')
+        inner.resolveViewName('/demo/hello', Locale.ENGLISH) >> jspView
+        MockHttpServletRequest request = new MockHttpServletRequest()
+        MockHttpServletResponse response = new MockHttpServletResponse()
+
+        when:
+        View result = resolver().resolveViewName('/demo/hello', Locale.ENGLISH)
+        result.render([:], request, response)
+
+        then: 'the JSP is dispatched with include semantics, not a forward'
+        response.includedUrl == '/WEB-INF/grails-app/views/demo/hello.jsp'
+        response.forwardedUrl == null
     }
 
     void "null inner view yields null"() {
