@@ -22,12 +22,10 @@ import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.NonNull;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.util.StringUtils;
-import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.MediaType;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Get;
-import io.micronaut.http.annotation.Header;
 import io.micronaut.http.annotation.QueryValue;
 import io.micronaut.scheduling.TaskExecutors;
 import io.micronaut.scheduling.annotation.ExecuteOn;
@@ -117,7 +115,6 @@ public class GitHubCreateController implements GitHubCreateOperation {
             @Nullable JdkVersion javaVersion,
             @Nullable String code,
             @Nullable String state,
-            @Nullable @Header(HttpHeaders.USER_AGENT) String userAgent,
             @Parameter(hidden = true) @NonNull RequestInfo requestInfo) {
         URI launcherURI = redirectService.getLauncherURI();
         try {
@@ -125,7 +122,7 @@ public class GitHubCreateController implements GitHubCreateOperation {
                 return HttpResponse.temporaryRedirect(redirectService.constructOAuthRedirectUrl(requestInfo));
             } else {
                 GitHubRepository repository = gitHubCreateService.creatApp(
-                        type, name, features, build, reloading, gorm, servlet, gspLayout, javaVersion, code, state, userAgent);
+                        type, name, features, build, reloading, gorm, servlet, gspLayout, javaVersion, code, state, requestInfo.getUserAgent());
 
                 if (launcherURI == null) {
                     return HttpResponse.ok(new GitHubCreateDTO(repository.getUrl(), repository.getCloneUrl(), repository.getHtmlUrl()));
