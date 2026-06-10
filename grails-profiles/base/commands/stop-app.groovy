@@ -3,6 +3,14 @@ import org.grails.cli.gradle.RunningApplicationProcess
 description("Stops the running Grails application") {
     usage "grails stop-app"
     synonyms 'stop'
+    flag name:'port', description:'No longer supported. Stops the run-app process for the current project.'
+    flag name:'host', description:'No longer supported. Stops the run-app process for the current project.'
+}
+
+if (commandLine.hasOption('port') || commandLine.hasOption('host')) {
+    console.error 'The --port and --host options are no longer supported. ' +
+            'stop-app stops the application started by run-app for the current project.'
+    return false
 }
 
 System.setProperty("run-app.running", "false")
