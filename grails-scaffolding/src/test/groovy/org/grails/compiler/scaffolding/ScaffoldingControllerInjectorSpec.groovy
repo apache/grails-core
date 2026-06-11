@@ -125,6 +125,33 @@ class WidgetController {
         parameterized.actualTypeArguments[0].name == 'com.example.Widget'
     }
 
+    void 'a custom base with multiple type parameters keeps the raw superclass instead of a malformed signature'() {
+        given: 'a base whose generic arity does not match the single domain argument'
+        gcl.parseClass('''
+package com.example
+import grails.rest.RestfulController
+import org.grails.datastore.gorm.GormEntity
+class MultiParamController<T extends GormEntity<T>, S> extends RestfulController<T> {
+    MultiParamController(Class<T> resource, boolean readOnly) {
+        super(resource, readOnly)
+    }
+}
+''')
+
+        when:
+        def controllerClass = parseScaffoldController('WidgetController', '''
+package com.example
+import grails.plugin.scaffolding.annotation.Scaffold
+@Scaffold(MultiParamController<Widget, String>)
+class WidgetController {
+}
+''')
+
+        then: 'the declared base is kept, written raw - and superclass reflection does not throw'
+        controllerClass.superclass.name == 'com.example.MultiParamController'
+        controllerClass.genericSuperclass == controllerClass.superclass
+    }
+
     void 'the parameterized superclass narrows inherited resource hooks to the domain type under static compilation'() {
         when: 'a statically-compiled scaffolded controller overrides the hooks and narrows the super results'
         def controllerClass = parseScaffoldController('WidgetController', '''

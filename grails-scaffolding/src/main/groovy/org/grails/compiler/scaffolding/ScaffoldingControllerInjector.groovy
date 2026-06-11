@@ -120,16 +120,24 @@ class ScaffoldingControllerInjector implements GrailsArtefactClassInjector {
                     }
                 }
                 // Parameterize the superclass (e.g. RestfulController<Domain>) so inherited actions and
-                // super.* calls resolve to the domain type under static compilation, not the GormEntity
-                // upper bound. Mirrors ScaffoldingServiceInjector.
-                ClassNode parameterizedSuper = superClassNode.getPlainNodeReference()
-                parameterizedSuper.setGenericsTypes(
-                    [new GenericsType(GrailsASTUtils.nonGeneric(domainClass))] as GenericsType[])
-                // Injection runs at CANONICALIZATION (after generics resolution), so the generic superclass
-                // signature is only emitted when the class node itself reports usesGenerics; otherwise it is
-                // written raw. Required - do not remove.
-                classNode.setUsingGenerics(true)
-                classNode.setSuperClass(parameterizedSuper)
+                // super.* calls
+                // resolve to the domain type under static compilation, not the GormEntity
+                // upper bound. Mirrors ScaffoldingServiceInjector. Only single-type-parameter bases are parameterized — a
+                // base declaring zero or multiple type parameters would get a malformed generic
+                // signature from a single domain argument, so those keep the previous raw form.
+                GenericsType[] declaredTypeParams = superClassNode.redirect().genericsTypes
+                if (declaredTypeParams != null && declaredTypeParams.length == 1) {
+                    ClassNode parameterizedSuper = superClassNode.getPlainNodeReference()
+                    parameterizedSuper.setGenericsTypes(
+                        [new GenericsType(GrailsASTUtils.nonGeneric(domainClass))] as GenericsType[])
+                    // Injection runs at CANONICALIZATION (after generics resolution), so the generic superclass
+                    // signature is only emitted when the class node itself reports usesGenerics; otherwise it is
+                    // written raw. Required - do not remove.
+                    classNode.setUsingGenerics(true)
+                    classNode.setSuperClass(parameterizedSuper)
+                } else {
+                    classNode.setSuperClass(GrailsASTUtils.nonGeneric(superClassNode, domainClass))
+                }
                 def readOnlyExpression = (ConstantExpression) annotationNode?.getMember('readOnly')
                 new ResourceTransform().addConstructor(classNode, domainClass, readOnlyExpression?.getValue()?.asBoolean() ?: false)
             } else if (!currentSuperClass.isDerivedFrom(superClassNode)) {
