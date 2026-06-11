@@ -35,9 +35,12 @@ boolean isHibernateSpecificProject = isHibernate5LabeledProject || isHibernate7L
 boolean isMongoProject = project.name.startsWith('grails-test-examples-mongodb')
 boolean isGeneralFunctionalTest = !isHibernateSpecificProject && !isMongoProject
 
-// General functional test projects that use Hibernate 5-specific GORM APIs and cannot run
-// under Hibernate 7 via dependency substitution.
-// Their H7-compatible equivalents live in grails-test-examples/hibernate7/.
+// General functional test projects that cannot run under Hibernate 7 via dependency substitution.
+// The datasources project has partial H7-compatible coverage in
+// grails-test-examples/hibernate7/grails-multiple-datasources, but still includes H5-only
+// coverage that needs explicit H7 duplicates before the general project can be enabled.
+// The views and scaffolding projects boot with H7 substitution, but their functional specs
+// currently fail on association rendering and unique-constraint behavior under Hibernate 7.
 List<String> h7IncompatibleProjects = [
         'grails-test-examples-datasources',
         'grails-test-examples-views-functional-tests',
@@ -46,7 +49,7 @@ List<String> h7IncompatibleProjects = [
 
 // Redirect the default grails-bom to grails-hibernate7-bom for general functional tests when
 // running with -PhibernateVersion=7, so consumers get the Hibernate 7 version constraints
-// (hibernate.version=7.2.5.Final and related). The default grails-bom and grails-hibernate5-bom
+// (hibernate.version=7.2.7.Final and related). The default grails-bom and grails-hibernate5-bom
 // ship the Hibernate 5 constraints.
 def redirectBomToH7 = isGeneralFunctionalTest && targetHibernateVersion == '7' && !(project.name in h7IncompatibleProjects)
 
