@@ -533,7 +533,84 @@ Spring Security is moving toward the fluent `HttpSecurity` configuration API for
 If your application references `DEFAULT_FILTER_ORDER` for custom filter positioning, replace it with the concrete value `-100` (computed as `OrderedFilter.REQUEST_WRAPPER_FILTER_MAX_ORDER - 100`).
 Longer term, consider migrating to the fluent `HttpSecurity` API for filter chain configuration.
 
-==== 14. Spring Boot Starter Renames
+==== 14. Spring Dependency Management Plugin Replaced by Gradle Platforms
+
+Grails 8 standardizes on Gradle's native `platform()` dependency management and **no longer applies the `io.spring.dependency-management` plugin**.
+The Grails Gradle Plugin now adds `grails-bom` as a Gradle `platform()` on every declarable project configuration, and a new bundled plugin (`org.apache.grails.gradle.bom-property-overrides`, applied automatically by the Grails Gradle Plugin) preserves the property-based version-override workflow that Spring DM provided.
+
+**No action is required for most applications.**
+The standard `gradle.properties` and `ext['…']` override forms continue to work exactly as before:
+
+[source,groovy]
+.build.gradle
+----
+ext['slf4j.version'] = '2.0.9'
+----
+
+[source,properties]
+.gradle.properties
+----
+slf4j.version=2.0.9
+----
+
+The `grails { springDependencyManagement = … }` flag on `GrailsExtension` is deprecated.
+For backward compatibility, setting it to `false` is still honored and is equivalent to `grails { bom = null }`: it suppresses the automatic Grails BOM `platform()` application, just as it previously prevented the Spring Dependency Management BOM from being applied.
+New builds should use `grails { bom = null }` instead.
+
+**Two Spring DM features have no automatic migration.**
+If your `build.gradle` uses either of the patterns below, update it as follows:
+
+[cols="2,3", options="header"]
+|===
+| Spring DM pattern (Grails 7)
+| Grails 8 replacement
+
+| `dependencyManagement { dependencies { dependency 'group:artifact:version' } }` to pin arbitrary non-BOM dependency versions
+| `dependencies { implementation 'group:artifact:version' }` for a direct dependency, or `configurations.all { resolutionStrategy.force 'group:artifact:version' }` to force a transitive version
+
+| Version-range strings (e.g. `1.+`, `[1.0,2.0)`) embedded in BOM `<properties>` values, resolved by Spring DM's own resolver
+| Now applied as Gradle strict version constraints, which use Gradle's range semantics. Concrete versions are unaffected. Only relevant if you consume a custom BOM whose `<properties>` block contains range strings.
+|===
+
+**Behavioural difference to be aware of: conflict resolution.**
+The BOM's *default* managed versions are applied via a regular Gradle `platform()`, which participates in standard conflict resolution (highest-version-wins).
+A transitive dependency can therefore pull a non-overridden managed version higher than the BOM default.
+If you require Spring DM's "BOM wins always" behaviour for the default managed versions, declare `enforcedPlatform("org.apache.grails:grails-bom:$grailsVersion")` instead of relying on the auto-applied non-enforced platform.
+
+An *explicit* property override (`ext['…']` or `gradle.properties`) is applied as a strict constraint and always wins - including when it downgrades a version - so overrides behave as they did under Spring DM.
+Overriding a property that selects an imported BOM's version (for example `spring-boot.version`) re-imports that BOM at the overridden version and applies its updated managed set.
+
+NOTE: Projects that apply the `grails-micronaut` plugin already require `enforcedPlatform` for unrelated reasons (see section 7.2); those projects retain Spring DM's strict-version semantics automatically.
+
+**Selecting or opting out of the auto-applied BOM.**
+The Grails Gradle plugin applies a single Grails BOM automatically, selected by the `grails.bom` property. Its value is the BOM artifact name within the `org.apache.grails` group, which the plugin resolves as `org.apache.grails:$bom:$grailsVersion`.
+It defaults to `grails-bom`, which preserves the Grails 7 behaviour and is the right choice for the vast majority of applications.
+Exactly one Grails BOM is ever applied; the BOMs are split by integration (default / hibernate5 / micronaut), so the plugin never layers two of them.
+
+Select a different curated variant when your application needs it - for example the Micronaut variant, which the plugin applies as an `enforcedPlatform`:
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    bom = 'grails-micronaut-bom'
+}
+----
+
+Set it to `null` to suppress the automatic BOM application entirely - for example when you intentionally want to manage Grails dependency versions yourself (consuming Grails modules from a different curated platform):
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    bom = null
+}
+----
+
+When set to `null`, the Grails Gradle plugin will not declare a Grails `platform()`/`enforcedPlatform()` on your configurations and will not apply the `org.apache.grails.gradle.bom-property-overrides` plugin.
+You are responsible for declaring the BOM yourself and, if you still want `gradle.properties` / `ext['...']` overrides, applying `id 'org.apache.grails.gradle.bom-property-overrides'` explicitly.
+
+==== 15. Spring Boot Starter Renames
 
 Spring Boot 4 renamed several starters as part of its modularization effort.
 If your `build.gradle` references any of the following, update the artifact id:
@@ -579,7 +656,7 @@ implementation 'org.springframework.boot:spring-boot-starter-aspectj'
 NOTE: If you want a faster, lower-friction migration that pulls in *all* Spring Boot modules without picking starters individually, Spring Boot 4 ships `spring-boot-starter-classic` (and `spring-boot-starter-test-classic`) as a transitional fallback.
 This is intended as a stopgap; new code should target the modular starters.
 
-==== 15. WAR Deployment Uses spring-boot-starter-tomcat-runtime
+==== 16. WAR Deployment Uses spring-boot-starter-tomcat-runtime
 
 For WAR deployment to an external Servlet container, Spring Boot 4 introduced a dedicated `spring-boot-starter-tomcat-runtime` artifact that contributes only the integration classes needed to start under an external container, without bundling the embedded Tomcat distribution into the WAR.
 
@@ -600,7 +677,7 @@ providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat-runtime'
 The Grails deployment guides have been updated to reflect this idiom.
 Embedded Tomcat usage (the default for `grails run-app` and bootable WARs) continues to use `spring-boot-starter-tomcat` unchanged.
 
-==== 16. Test Infrastructure Changes
+==== 17. Test Infrastructure Changes
 
 Spring Boot 4 made several breaking changes to its test infrastructure.
 Most Grails tests use `GrailsUnitTest`, `GrailsWebUnitTest`, and `Integration` and are unaffected, but if your application uses `@SpringBootTest` directly the following apply.
@@ -656,7 +733,7 @@ If your test infrastructure registers it explicitly, remove the registration; Sp
 Update the import.
 A new `RestTestClient` and corresponding `@AutoConfigureRestTestClient` annotation are also available as a fluent alternative.
 
-==== 17. DevTools Live Reload Disabled by Default
+==== 18. DevTools Live Reload Disabled by Default
 
 Spring Boot 4 changed the default of `spring.devtools.livereload.enabled` from `true` to `false`.
 If you rely on browser live reload during development, opt in explicitly under the development environment so non-development environments still honor the new Spring Boot 4 default:
@@ -674,7 +751,7 @@ NOTE: Apps generated by the Grails Forge with the `spring-boot-devtools` reloadi
 You can opt out by changing the value to `false` or by deleting the `application-development.yml` block after generation.
 Existing Grails 7 applications that opt in to devtools must add this configuration manually.
 
-==== 18. Spring Retry No Longer Managed
+==== 19. Spring Retry No Longer Managed
 
 Spring Boot 4 removed `spring-retry` from its managed dependencies.
 Spring for Apache Kafka and Spring AMQP have moved off Spring Retry to Spring Framework's new retry support; if you used Spring Retry transitively through those projects you may not need it any more.
@@ -690,7 +767,7 @@ implementation 'org.springframework.retry:spring-retry'
 NOTE: The `grails-bom` pins a known-good Spring Retry version (`2.0.x`), so you do not need to specify a version when using `enforcedPlatform("org.apache.grails:grails-bom:$grailsVersion")`.
 Override the BOM-managed version in your build if you need a newer release.
 
-==== 19. Other Default Behavior Changes
+==== 20. Other Default Behavior Changes
 
 Spring Boot 4 made several smaller default-behavior changes that you may notice but rarely require code changes:
 
@@ -719,7 +796,7 @@ If your application contributed `HttpMessageConverter` beans through this class,
 Spring Framework 7 deprecated `org.springframework.lang.Nullable` and `org.springframework.lang.NonNull` in favor of the JSpecify annotations (`org.jspecify.annotations.Nullable`, `org.jspecify.annotations.NonNull`).
 The Spring annotations still work, so this is non-blocking, but new code should prefer the JSpecify equivalents.
 
-==== 20. Tag Library Test Cleanup Changes
+==== 21. Tag Library Test Cleanup Changes
 
 Grails 8 removes the `purgeTagLibMetaClass` test hook used by some web and TagLib unit tests.
 TagLib metaclass cleanup now happens automatically as part of the web test infrastructure, so test specs should delete any custom `purgeTagLibMetaClass` property or getter.
@@ -745,7 +822,7 @@ class MyTagLibSpec extends Specification implements TagLibUnitTest<MyTagLib> {
 }
 ----
 
-==== 21. Method-based TagLib Handlers
+==== 22. Method-based TagLib Handlers
 
 Grails 8 introduces method-based tag handler syntax as the recommended way to define tags. Closure-based handlers are still supported for backward compatibility.
 
@@ -769,7 +846,7 @@ class DemoTagLib {
 
 Method tags with the conventional signatures `def tag(Map attrs)`, `def tag(Closure body)`, and `def tag(Map attrs, Closure body)` are discovered automatically. Zero-argument method tags and method tags that bind named attributes directly to method parameters must use `@grails.gsp.Tag`; this avoids exposing ordinary public helper methods as tags.
 
-Grails Gradle application builds preserve Java and Groovy method parameter names by default (see §21.3 below). If you compile TagLib classes outside those plugins, enable Java `-parameters` and Groovy `groovyOptions.parameters = true` so `@Tag` methods can bind attributes by parameter name.
+Grails Gradle application builds preserve Java and Groovy method parameter names by default (see §22.3 below). If you compile TagLib classes outside those plugins, enable Java `-parameters` and Groovy `groovyOptions.parameters = true` so `@Tag` methods can bind attributes by parameter name.
 
 To exclude a conventional public method from being exposed as a tag (for example, a helper that must remain public to satisfy an interface), annotate it with `@grails.gsp.NotATag`:
 
@@ -789,7 +866,7 @@ class DemoTagLib {
 
 The compile-time deprecation warning emitted for closure-based tag fields can be silenced by setting the system property `grails.taglib.warnDeprecatedClosures=false`.
 
-===== 21.1 Behavior change: tag method registration
+===== 22.1 Behavior change: tag method registration
 
 In Grails 7, the metaclass tag dispatchers registered for the taglib's own namespace did not override existing methods. Because method-based tags are now real methods on the TagLib class, those dispatchers must override methods of the same name so that function-style invocation (for example `tagLib.myTag(attrs)`) returns captured tag output rather than writing directly to `out`.
 
@@ -804,7 +881,7 @@ This shadowing is not reported at runtime by default. To audit which TagLib meth
 
 Each override is logged as `Registering tag dispatcher <namespace>:<tagName> over existing method <Class>.<method>(<paramTypes>)`. Inspect the output after application startup; any entry whose `<Class>` is one of your own TagLibs identifies a method that has been replaced by the dispatcher.
 
-===== 21.2 Behavior change: parameter-name binding for `Map` and `Closure` parameters
+===== 22.2 Behavior change: parameter-name binding for `Map` and `Closure` parameters
 
 Method-based tag handlers bind attributes to method parameters by parameter name. Two reserved names participate in this resolution:
 
@@ -835,9 +912,9 @@ class DemoTagLib {
 }
 ----
 
-If parameter names are not preserved at compile time (see §21.3 below for the `preserveParameterNames` Gradle extension property), the first `Map` parameter is bound to `attrs` and the first `Closure` parameter is bound to `body` regardless of declared names, matching the behavior of closure-based tag handlers.
+If parameter names are not preserved at compile time (see §22.3 below for the `preserveParameterNames` Gradle extension property), the first `Map` parameter is bound to `attrs` and the first `Closure` parameter is bound to `body` regardless of declared names, matching the behavior of closure-based tag handlers.
 
-===== 21.3 Grails Gradle Extension Preserves Parameter Names By Default
+===== 22.3 Grails Gradle Extension Preserves Parameter Names By Default
 
 In Grails 8, the Grails Gradle extension defaults `preserveParameterNames` to `true`.
 This configures Groovy compilation to retain method and constructor parameter names in generated class files.
@@ -882,7 +959,7 @@ tasks.withType(GroovyCompile).configureEach {
 
 Without these flags, `Parameter.getName()` returns synthetic names such as `arg0`, the attribute lookup misses, and the call surfaces as `MissingMethodException` at runtime. The `@Tag`-annotated method itself produces no compile-time warning, because preservation is a property of the build, not of the source file.
 
-==== 22. Known Plugin Incompatibilities
+==== 23. Known Plugin Incompatibilities
 
 Some third-party plugins have not yet been updated for Spring Boot 4 / Spring Framework 7 compatibility.
 The following are known blockers at this time:
@@ -895,7 +972,7 @@ Applications using `grails-sitemesh3` should remain on the `grails-layout` plugi
 
 Check the https://github.com/apache/grails-core/issues[Grails issue tracker] for the latest status of plugin compatibility.
 
-===== 23. Custom JSON View Converters
+==== 24. Custom JSON View Converters
 
 JSON views now use Groovy's `groovy.json.JsonGenerator` implementation instead of the previous Grails-specific
 JSON generator infrastructure.
@@ -913,7 +990,7 @@ To migrate your custom converters:
 `src/main/resources/META-INF/services/groovy.json.JsonGenerator$Converter`
 (was previously `src/main/resources/META-INF/services/grails.plugin.json.builder.JsonGenerator$Converter`)
 
-===== 23 Rendering Enum values as JSON
+==== 25. Rendering Enum values as JSON
 
 It is no longer possible to render a single enum value as JSON using the `render(Number.ONE as JSON)` syntax.
 Previously, rendering an enum value would produce a JSON string with the type and name of the enum value like:

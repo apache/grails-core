@@ -209,7 +209,7 @@ ext {
                     ExtractedDependencyConstraint extractedConstraint = propertyNameCalculator.calculate(groupId, artifactId, inlineVersion, isBom)
                     if (extractedConstraint?.versionPropertyReference) {
                         // use the property reference instead of the hard coded version so that it can be
-                        // overriden by the spring boot dependency management plugin
+                        // overridden by project properties (gradle.properties or ext['property.name'])
                         dep.version[0].value = extractedConstraint.versionPropertyReference
 
                         // Add an entry in the <properties> node with the actual version number

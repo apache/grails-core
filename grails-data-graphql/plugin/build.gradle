@@ -84,8 +84,10 @@ dependencies {
     compileOnly "io.micronaut.rxjava2:micronaut-rxjava2-http-client:$micronautRxjava2Version"
 
     testImplementation project(':grails-testing-support-web')
-    testImplementation 'net.bytebuddy:byte-buddy'
     testImplementation 'org.spockframework:spock-core'
+
+    testRuntimeOnly 'net.bytebuddy:byte-buddy' // Required by Spock's mocking support
+    testRuntimeOnly 'org.objenesis:objenesis' // Required by Spock for mocking classes without default constructor
 }
 
 compileGsonViews {

@@ -85,7 +85,7 @@ export GRADLE_OPTS="-Xms2G -Xmx5G"
 | Groovy | 4.0.x |
 | Spring Boot | 4.0.x |
 | Spring Framework | 7.0.x |
-| Spock | 2.3-groovy-4.0 |
+| Spock | 2.4-groovy-4.0 |
 | Gradle | 8.14.x |
 | Jakarta EE | 10 |
 
