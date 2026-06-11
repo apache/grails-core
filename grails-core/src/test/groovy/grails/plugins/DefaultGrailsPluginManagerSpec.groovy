@@ -59,16 +59,28 @@ class DefaultGrailsPluginManagerSpec extends Specification {
         compatible == expectedCompatible
 
         where:
-        grailsVersion | pluginGrailsVersion        || expectedCompatible
-        "1.0"         | "3.3.1 > *"                || false
-        "2.5"         | "3.0.1"                    || false
-        "3.0.0"       | "3.3.10 > *"               || false
-        "3.3.10"      | "4.0.0 > *"                || false
-        "4.0.1"       | "3.0.0.BUILD-SNAPSHOT > *" || true
-        "4.0.1"       | "4.0.1"                    || true
-        "4.0.1"       | "3.0.1"                    || false
-        "4.0.1"       | "3.3.1 > *"                || true
-        "4.0.1"       | "3.3.10 > *"               || true
+        grailsVersion    | pluginGrailsVersion        || expectedCompatible
+        "1.0"            | "3.3.1 > *"                || false
+        "2.5"            | "3.0.1"                    || false
+        "3.0.0"          | "3.3.10 > *"               || false
+        "3.3.10"         | "4.0.0 > *"                || false
+        "4.0.1"          | "3.0.0.BUILD-SNAPSHOT > *" || true
+        "4.0.1"          | "4.0.1"                    || true
+        "4.0.1"          | "3.0.1"                    || false
+        "4.0.1"          | "3.3.1 > *"                || true
+        "4.0.1"          | "3.3.10 > *"               || true
+
+        // Milestone, release candidate and snapshot versions on both the application and the plugin (#14058)
+        "7.0.0-M2"       | "7.0.0-M1 > *"             || true
+        "7.0.0-M1"       | "7.0.0-M2 > *"             || false
+        "7.0.0-RC1"      | "7.0.0-M1 > *"             || true
+        "7.0.0-M1"       | "7.0.0-RC1 > *"            || false
+        "7.0.0"          | "7.0.0-RC1 > *"            || true
+        "7.0.0-RC1"      | "7.0.0 > *"                || false
+        "7.0.0-SNAPSHOT" | "7.0.0-SNAPSHOT > *"       || true
+        "7.0.5-M1"       | "7.0.3 > *"                || true
+        "7.0.0-M1"       | "7.0.0-M1"                 || true
+        "7.0.0-M2"       | "7.0.0-M1"                 || false
     }
 
     def stubGrailsApplicationWithVersion(def version) {
