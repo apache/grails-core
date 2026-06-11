@@ -155,7 +155,7 @@ class Sitemesh3LayoutFinderSpec extends Specification {
         paths == ['/layouts/application'] as String[]
     }
 
-    void 'returns empty when nothing matches and no default'() {
+    void 'returns empty when nothing matches, no default and no application layout'() {
         given:
         bindController(new ConventionController(), 'sample', '/sample/edit')
         Content content = emptyContent()
@@ -166,6 +166,39 @@ class Sitemesh3LayoutFinderSpec extends Specification {
         then:
         1 * locator.findViewByPath('/layouts/sample/edit') >> null
         1 * locator.findViewByPath('/layouts/sample') >> null
+        1 * locator.findViewByPath('/layouts/application') >> null
+        paths.length == 0
+    }
+
+    void 'falls back to the implicit application layout when no default is configured'() {
+        given:
+        bindController(new ConventionController(), 'sample', '/sample/edit')
+        Content content = emptyContent()
+
+        when:
+        String[] paths = finder.selectDecoratorPaths(content, context)
+
+        then:
+        1 * locator.findViewByPath('/layouts/sample/edit') >> null
+        1 * locator.findViewByPath('/layouts/sample') >> null
+        1 * locator.findViewByPath('/layouts/application') >> Mock(GroovyPageScriptSource)
+        paths == ['/layouts/application'] as String[]
+    }
+
+    void 'a configured default that is missing does not fall back to the application layout'() {
+        given: 'SiteMesh 2 parity: the explicit default replaces the implicit fallback'
+        finder.defaultDecoratorName = 'custom'
+        bindController(new ConventionController(), 'sample', '/sample/edit')
+        Content content = emptyContent()
+
+        when:
+        String[] paths = finder.selectDecoratorPaths(content, context)
+
+        then:
+        1 * locator.findViewByPath('/layouts/sample/edit') >> null
+        1 * locator.findViewByPath('/layouts/sample') >> null
+        1 * locator.findViewByPath('/layouts/custom') >> null
+        0 * locator.findViewByPath('/layouts/application')
         paths.length == 0
     }
 

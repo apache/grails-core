@@ -73,7 +73,11 @@ class Sitemesh3GrailsPlugin extends Plugin {
         { ->
             ConfigurableEnvironment configurableEnvironment = grailsApplication.mainContext.environment as ConfigurableEnvironment
             def propertySources = configurableEnvironment.getPropertySources()
-            String defaultLayout = grailsApplication.getConfig().getProperty('grails.sitemesh.default.layout')
+            // The SiteMesh 3 specific key wins; fall back to the SiteMesh 2
+            // plugin's grails.views.layout.default so existing apps keep
+            // their configured default layout when switching.
+            String defaultLayout = grailsApplication.getConfig().getProperty('grails.sitemesh.default.layout') ?:
+                    grailsApplication.getConfig().getProperty('grails.views.layout.default')
             propertySources.addFirst(getDefaultPropertySource(configurableEnvironment, defaultLayout))
             (grailsApplication as DefaultGrailsApplication).config = new PropertySourcesConfig(propertySources)
 
