@@ -45,6 +45,8 @@ class GrailsSiteMeshViewResolverBeanPostProcessorSpec extends Specification {
         ContentProcessor cp = Mock(ContentProcessor)
         DecoratorSelector<SiteMeshContext> ds = Mock(DecoratorSelector)
         ServletContext sc = Mock(ServletContext)
+        beanFactory.containsBean('contentProcessor') >> true
+        beanFactory.containsBean('decoratorSelector') >> true
         beanFactory.getBean('contentProcessor', ContentProcessor) >> cp
         beanFactory.getBean('decoratorSelector', DecoratorSelector) >> ds
         beanFactory.getBean('servletContext', ServletContext) >> sc
@@ -61,11 +63,30 @@ class GrailsSiteMeshViewResolverBeanPostProcessorSpec extends Specification {
 
     void "beans with a non-matching name are returned untouched"() {
         given:
+        beanFactory.containsBean(_ as String) >> true
         GrailsSiteMeshViewResolverBeanPostProcessor pp = new GrailsSiteMeshViewResolverBeanPostProcessor()
         pp.setBeanFactory(beanFactory)
         ViewResolver other = new InternalResourceViewResolver()
 
         expect:
         pp.postProcessAfterInitialization(other, 'someOther').is(other)
+    }
+
+    void "the view resolver is left unwrapped when the SiteMesh beans are not in the context"() {
+        given: "a context without the plugin's contentProcessor/decoratorSelector beans, like a unit-test context"
+        beanFactory.containsBean('contentProcessor') >> hasContentProcessor
+        beanFactory.containsBean('decoratorSelector') >> hasDecoratorSelector
+        GrailsSiteMeshViewResolverBeanPostProcessor pp = new GrailsSiteMeshViewResolverBeanPostProcessor()
+        pp.setBeanFactory(beanFactory)
+        ViewResolver resolver = new InternalResourceViewResolver()
+
+        expect:
+        pp.postProcessAfterInitialization(resolver, 'jspViewResolver').is(resolver)
+
+        where:
+        hasContentProcessor | hasDecoratorSelector
+        false               | false
+        true                | false
+        false               | true
     }
 }
