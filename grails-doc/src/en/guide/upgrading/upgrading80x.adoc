@@ -680,7 +680,51 @@ If your application contributed `HttpMessageConverter` beans through this class,
 Spring Framework 7 deprecated `org.springframework.lang.Nullable` and `org.springframework.lang.NonNull` in favor of the JSpecify annotations (`org.jspecify.annotations.Nullable`, `org.jspecify.annotations.NonNull`).
 The Spring annotations still work, so this is non-blocking, but new code should prefer the JSpecify equivalents.
 
-==== 20. Tag Library Test Cleanup Changes
+==== 20. GORM Properties Are Nullable by Default
+
+Grails 8 changes the validation default so that an *unconstrained persistent (domain) property is nullable by default* rather than required.
+This aligns Grails with the rest of the JVM persistence/validation ecosystem (JPA/Hibernate, Spring Data, Micronaut Data and Jakarta Bean Validation), all of which treat an unconstrained property as valid when `null`.
+
+Previously every domain property without an explicit constraint had an implicit `nullable: false` applied, so `save()` failed validation when the property was `null`.
+From Grails 8 such a property is optional unless you declare otherwise:
+
+[source,groovy]
+----
+class Book {
+    String title    // Grails 7: required, Grails 8: nullable
+
+    static constraints = {
+        title nullable: false   // declare explicitly to keep it required
+    }
+}
+----
+
+This is a *validation-layer* change only.
+Column/DDL nullability is governed separately by the mapping layer and is unaffected.
+Command objects are also unaffected: `Validateable` command-object fields remain required by default.
+
+To restore the legacy required-by-default behaviour for an entire application, set the new `grails.gorm.default.nullable` property to `false`:
+
+[source,yaml]
+.application.yml
+----
+grails:
+    gorm:
+        default:
+            nullable: false
+----
+
+The existing `grails.gorm.default.constraints` wildcard form also works:
+
+[source,groovy]
+.application.groovy
+----
+grails.gorm.default.constraints = {
+    '*'(nullable: false)
+}
+----
+
+==== 21. Tag Library Test Cleanup Changes
 
 Grails 8 removes the `purgeTagLibMetaClass` test hook used by some web and TagLib unit tests.
 TagLib metaclass cleanup now happens automatically as part of the web test infrastructure, so test specs should delete any custom `purgeTagLibMetaClass` property or getter.
@@ -706,7 +750,7 @@ class MyTagLibSpec extends Specification implements TagLibUnitTest<MyTagLib> {
 }
 ----
 
-==== 21. Method-based TagLib Handlers
+==== 22. Method-based TagLib Handlers
 
 Grails 8 introduces method-based tag handler syntax as the recommended way to define tags. Closure-based handlers are still supported for backward compatibility.
 
@@ -843,7 +887,7 @@ tasks.withType(GroovyCompile).configureEach {
 
 Without these flags, `Parameter.getName()` returns synthetic names such as `arg0`, the attribute lookup misses, and the call surfaces as `MissingMethodException` at runtime. The `@Tag`-annotated method itself produces no compile-time warning, because preservation is a property of the build, not of the source file.
 
-==== 22. Known Plugin Incompatibilities
+==== 23. Known Plugin Incompatibilities
 
 Some third-party plugins have not yet been updated for Spring Boot 4 / Spring Framework 7 compatibility.
 The following are known blockers at this time:
