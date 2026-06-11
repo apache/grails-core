@@ -1,0 +1,39 @@
+plugins {
+    id 'java'
+    id 'org.apache.grails.gradle.bom-property-overrides'
+}
+
+repositories {
+    maven {
+        url = uri("${projectDir}/maven-repo")
+    }
+}
+
+dependencies {
+    implementation platform('org.example:test-bom:1.0.0')
+    implementation 'org.example:mylib'
+    implementation 'org.example:childlib'
+}
+
+// mylib's BOM default is 2.0.0; this override is a DOWNGRADE that must win over
+// the platform's require(2.0.0) constraint. A plain useVersion() hook would lose
+// to conflict resolution here - the strict-constraint application is what makes
+// the downgrade win.
+ext['mylib.version'] = '1.0.0'
+
+// childbom.version selects which child-bom test-bom imports. Overriding it must
+// re-import child-bom:2.0.0 and pull in its updated childlib managed version
+// (regression coverage for imported-BOM property overrides).
+ext['childbom.version'] = '2.0.0'
+
+tasks.register('printVersions') {
+    def runtimeClasspath = configurations.runtimeClasspath
+    doLast {
+        runtimeClasspath.incoming.resolutionResult.allComponents.each { component ->
+            def id = component.moduleVersion
+            if (id != null) {
+                println "RESOLVED=${id.group}:${id.name}:${id.version}"
+            }
+        }
+    }
+}
