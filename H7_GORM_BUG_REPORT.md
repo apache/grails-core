@@ -32,7 +32,7 @@ Before those fixes, running `grails-test-examples-gorm` with `-PhibernateVersion
 
 **Description:** H7 intentionally rejects `executeQuery("from Book where inStock = true")` when no parameters are passed. The same tightening was already applied to `executeUpdate`. Callers must use `executeQuery('...', [:])` or a GString with interpolated params.
 
-> This is by design. The test bodies need to adopt the parameterized form — not a GORM bug.
+> This is by design. The test bodies need to adopt the parameterized form - not a GORM bug.
 
 ---
 
@@ -72,7 +72,7 @@ Before those fixes, running `grails-test-examples-gorm` with `-PhibernateVersion
 | **Spec** | `GormDataServicesSpec` |
 | **Errors** | `Incorrect query result type: query produces 'java.lang.Double' but type 'java.lang.Long' was given` / `query produces 'java.lang.Integer' but type 'java.lang.Long' was given` |
 
-**Description:** `HibernateHqlQuery.buildQuery()` always calls `session.createQuery(hql, ctx.targetClass())`. For aggregate HQL (`select avg(b.price) ...`, `select max(b.pageCount) ...`), the query does not return an entity, but `ctx.targetClass()` returns the entity class (e.g., `Book`). H7's `SqmQueryImpl` enforces strict result-type alignment — `avg()` produces `Double`, `max(pageCount)` produces `Integer`, neither is coercible to the bound entity type.
+**Description:** `HibernateHqlQuery.buildQuery()` always calls `session.createQuery(hql, ctx.targetClass())`. For aggregate HQL (`select avg(b.price) ...`, `select max(b.pageCount) ...`), the query does not return an entity, but `ctx.targetClass()` returns the entity class (e.g., `Book`). H7's `SqmQueryImpl` enforces strict result-type alignment: `avg()` produces `Double`, `max(pageCount)` produces `Integer`, neither is coercible to the bound entity type.
 
 **Expected fix:** `HibernateHqlQuery.buildQuery()` must detect non-entity HQL (aggregates / projections) and call the untyped `session.createQuery(hql)` in those cases, letting GORM handle result casting downstream.
 
