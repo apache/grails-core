@@ -105,6 +105,15 @@ class RunningApplicationProcess {
 
     /**
      * @param buildDir the project build directory
+     * @param pidFilePath the configured PID file path, or {@code null} to use the default
+     * @return the PID file used to track the application started by {@code run-app}
+     */
+    static File pidFile(File buildDir, String pidFilePath) {
+        pidFilePath ? new File(pidFilePath).absoluteFile : pidFile(buildDir)
+    }
+
+    /**
+     * @param buildDir the project build directory
      * @return the marker file used to signal that a {@code stop-app} shutdown is in progress
      */
     static File stopMarker(File buildDir) {

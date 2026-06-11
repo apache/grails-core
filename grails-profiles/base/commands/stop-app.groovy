@@ -15,7 +15,9 @@ if (commandLine.hasOption('port') || commandLine.hasOption('host')) {
 
 System.setProperty("run-app.running", "false")
 
-File pidFile = RunningApplicationProcess.pidFile(buildDir)
+String configuredPidFilePath = commandLine.systemProperties[RunningApplicationProcess.PID_FILE_CLI_PROPERTY] ?:
+        System.getProperty(RunningApplicationProcess.PID_FILE_CLI_PROPERTY)
+File pidFile = RunningApplicationProcess.pidFile(buildDir, configuredPidFilePath)
 
 console.updateStatus "Stopping application..."
 

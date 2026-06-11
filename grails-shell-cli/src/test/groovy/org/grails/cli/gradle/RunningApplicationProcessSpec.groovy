@@ -68,6 +68,19 @@ class RunningApplicationProcessSpec extends Specification {
         RunningApplicationProcess.pidFile(buildDir) == new File(buildDir, RunningApplicationProcess.PID_FILE_NAME)
     }
 
+    void "pidFile resolves configured PID file path"() {
+        given:
+        File pidFile = new File(buildDir, 'custom/run-app.pid')
+
+        expect:
+        RunningApplicationProcess.pidFile(buildDir, pidFile.path) == pidFile.absoluteFile
+    }
+
+    void "pidFile falls back to the build directory when no path is configured"() {
+        expect:
+        RunningApplicationProcess.pidFile(buildDir, null) == RunningApplicationProcess.pidFile(buildDir)
+    }
+
     void "readPid returns null when the PID file is missing"() {
         expect:
         RunningApplicationProcess.readPid(new File(buildDir, 'missing.pid')) == null
@@ -178,6 +191,25 @@ class RunningApplicationProcessSpec extends Specification {
         then:
         result == RunningApplicationProcess.StopResult.STOPPED
         !pidFile.exists()
+        !process.isAlive()
+    }
+
+    void "stop terminates a running process from a configured PID file path"() {
+        given:
+        Process process = spawnLongLivedProcess()
+        File configuredPidFile = new File(buildDir, 'custom/run-app.pid')
+        configuredPidFile.parentFile.mkdirs()
+        configuredPidFile.text = process.pid().toString()
+
+        expect:
+        RunningApplicationProcess.isRunning(RunningApplicationProcess.pidFile(buildDir, configuredPidFile.path))
+
+        when:
+        def result = RunningApplicationProcess.stop(RunningApplicationProcess.pidFile(buildDir, configuredPidFile.path), 15000)
+
+        then:
+        result == RunningApplicationProcess.StopResult.STOPPED
+        !configuredPidFile.exists()
         !process.isAlive()
     }
 }

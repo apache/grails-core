@@ -25,7 +25,9 @@ try {
     // Tell the forked application where to write its PID file so that stop-app can terminate it,
     // even from a separate CLI invocation. The grails. prefix is stripped by GrailsGradlePlugin
     // when forwarding the property into the forked JVM.
-    File pidFile = org.grails.cli.gradle.RunningApplicationProcess.pidFile(buildDir)
+    String configuredPidFilePath = commandLine.systemProperties[org.grails.cli.gradle.RunningApplicationProcess.PID_FILE_CLI_PROPERTY] ?:
+            System.getProperty(org.grails.cli.gradle.RunningApplicationProcess.PID_FILE_CLI_PROPERTY)
+    File pidFile = org.grails.cli.gradle.RunningApplicationProcess.pidFile(buildDir, configuredPidFilePath)
     pidFile.parentFile?.mkdirs()
     // Clear any stop marker left by a previous stop-app so a genuine startup failure is not
     // mistaken for a deliberate shutdown.
@@ -38,7 +40,9 @@ try {
     String host = flag('host') ?: config.getProperty('server.address', String)
 
     commandLine.systemProperties.each { key, value ->
-        arguments << "-D${key}=$value".toString()
+        if (key != org.grails.cli.gradle.RunningApplicationProcess.PID_FILE_CLI_PROPERTY) {
+            arguments << "-D${key}=$value".toString()
+        }
     }
 
     if(port) {
