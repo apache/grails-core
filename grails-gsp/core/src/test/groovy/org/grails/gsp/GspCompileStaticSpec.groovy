@@ -153,8 +153,7 @@ out.print(messageClosure('World'))
         t.metaInfo.compilationException.message.contains('Cannot find matching method java.util.Date#getTimeTypo()')
     }
 
-    // Note: In Groovy 5, the type checking extension behavior changed and undeclared variables
-    // in GSP templates may not trigger compilation errors. This is a known limitation.
+    // GROOVY-12041: undeclared GSP variables are not reported through this type-checking extension path on Groovy 5.
     @IgnoreIf({ instance.isGroovy5OrLater() })
     def "should fail compilation when using invalid property"() {
         given:
