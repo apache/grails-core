@@ -81,6 +81,34 @@ class RunningApplicationProcessSpec extends Specification {
         RunningApplicationProcess.pidFile(buildDir, null) == RunningApplicationProcess.pidFile(buildDir)
     }
 
+    void "pidFile prefers command line path over JVM system and application config paths"() {
+        given:
+        File commandLinePidFile = new File(buildDir, 'command-line/run-app.pid')
+        File systemPidFile = new File(buildDir, 'system/run-app.pid')
+        File configPidFile = new File(buildDir, 'config/run-app.pid')
+
+        expect:
+        RunningApplicationProcess.pidFile(buildDir, commandLinePidFile.path, systemPidFile.path, configPidFile.path) ==
+                commandLinePidFile.absoluteFile
+    }
+
+    void "pidFile falls back to JVM system path before application config path"() {
+        given:
+        File systemPidFile = new File(buildDir, 'system/run-app.pid')
+        File configPidFile = new File(buildDir, 'config/run-app.pid')
+
+        expect:
+        RunningApplicationProcess.pidFile(buildDir, null, systemPidFile.path, configPidFile.path) == systemPidFile.absoluteFile
+    }
+
+    void "pidFile falls back to application config path"() {
+        given:
+        File configPidFile = new File(buildDir, 'config/run-app.pid')
+
+        expect:
+        RunningApplicationProcess.pidFile(buildDir, null, null, configPidFile.path) == configPidFile.absoluteFile
+    }
+
     void "readPid returns null when the PID file is missing"() {
         expect:
         RunningApplicationProcess.readPid(new File(buildDir, 'missing.pid')) == null

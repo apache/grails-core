@@ -114,6 +114,17 @@ class RunningApplicationProcess {
 
     /**
      * @param buildDir the project build directory
+     * @param commandLinePidFilePath the PID file path supplied for the current command
+     * @param systemPidFilePath the PID file path supplied to the CLI JVM
+     * @param configPidFilePath the PID file path supplied in application configuration
+     * @return the configured PID file, or the default under the build directory
+     */
+    static File pidFile(File buildDir, String commandLinePidFilePath, String systemPidFilePath, String configPidFilePath) {
+        pidFile(buildDir, commandLinePidFilePath ?: systemPidFilePath ?: configPidFilePath)
+    }
+
+    /**
+     * @param buildDir the project build directory
      * @return the marker file used to signal that a {@code stop-app} shutdown is in progress
      */
     static File stopMarker(File buildDir) {
