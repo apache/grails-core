@@ -30,7 +30,7 @@ ext {
             'commons-text.version'          : '1.15.0',
             'directory-watcher.version'     : '0.19.1',
             'gradle-groovy.version'         : '4.0.32',
-            'gradle-spock.version'          : '2.3-groovy-4.0',
+            'gradle-spock.version'          : '2.4-groovy-4.0',
             'grails-publish-plugin.version' : '1.0.0-M1',
             'jansi.version'                 : '2.4.2',
             'javaparser-core.version'       : '3.28.2',
@@ -38,6 +38,7 @@ ext {
             'jline2.version'                : '2.14.6',
             'jna.version'                   : '5.18.1',
             'jquery.version'                : '3.7.1',
+            'maven-model.version'           : '3.9.16',
             'objenesis.version'             : '3.4',
             'spring-boot.version'           : '4.1.0-RC1',
     ]

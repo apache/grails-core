@@ -17,16 +17,34 @@
  *  under the License.
  */
 
+// This is a Spring Boot application (NOT a Grails application) that renders views with
+// Grails GSP. End-user Spring Boot applications are not expected to adopt the Grails Gradle
+// plugins for dependency management, so this example manages dependency versions with the
+// legacy io.spring.dependency-management plugin importing the published grails-bom - which
+// itself imports spring-boot-dependencies and additionally manages the Grails-specific
+// libraries (e.g. SiteMesh) that the Grails GSP modules depend on. This is exactly how a
+// Spring Boot build consuming Grails libraries would manage versions, and is regression
+// coverage that such an application can keep using the Spring Dependency Management plugin
+// now that Grails 8 no longer applies that plugin automatically.
 plugins {
     id 'java'
     id 'war'
     id 'org.springframework.boot'
-    id 'io.spring.dependency-management'
-    id "groovy"
+    id 'groovy'
     id 'org.apache.grails.buildsrc.dependency-validator'
 }
 
+// grails-gsp compiles the GSP templates at build time. It is a build-time view-compilation
+// helper and does not provide dependency management - version management here is entirely
+// the responsibility of the Spring Dependency Management plugin below.
 apply plugin: 'org.apache.grails.gradle.grails-gsp'
+apply plugin: 'io.spring.dependency-management'
+
+dependencyManagement {
+    imports {
+        mavenBom "org.apache.grails:grails-bom:${projectVersion}"
+    }
+}
 
 jar {
     processResources.exclude('**/*.gsp')
@@ -37,7 +55,6 @@ compileGroovyPages {
 }
 
 dependencies {
-    implementation platform(project(':grails-bom'))
     implementation project(':grails-gsp-spring-boot')
 
     implementation 'org.hibernate.validator:hibernate-validator' // validation
@@ -46,4 +63,10 @@ dependencies {
 
     implementation 'org.apache.tomcat.embed:tomcat-embed-jasper' // jsp
     implementation 'org.apache.tomcat.embed:tomcat-embed-el'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
 }

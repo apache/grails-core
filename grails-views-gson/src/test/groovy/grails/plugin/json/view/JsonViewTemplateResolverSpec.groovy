@@ -80,7 +80,6 @@ class JsonViewTemplateResolverSpec extends Specification {
         // resolveView(viewName, request, response) and buildQualifiers use the request/response passed
         // directly, so there is no need to stub GrailsWebRequest's final getRequest()/getResponse().
         webRequest.getCurrentRequest() >> request
-
         def templateResolver = Mock(TemplateResolver)
         viewResolver.templateResolver = templateResolver
 

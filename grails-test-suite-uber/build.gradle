@@ -67,6 +67,7 @@ dependencies {
         exclude module: 'grails-rest-transforms'
     }
     testImplementation project(':grails-datamapping-validation')
+    testImplementation 'org.spockframework:spock-core'
 
     testCompileOnly 'jakarta.servlet:jakarta.servlet-api'
     testCompileOnly 'org.springframework:spring-test', {
@@ -79,9 +80,6 @@ dependencies {
     testRuntimeOnly 'org.aspectj:aspectjweaver'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
     testRuntimeOnly 'org.springframework:spring-aspects'
-
-    // Testing
-    testImplementation 'org.spockframework:spock-core'
 }
 
 def isolatedTestPatterns = [

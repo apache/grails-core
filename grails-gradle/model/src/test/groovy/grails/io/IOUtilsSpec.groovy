@@ -32,7 +32,7 @@ class IOUtilsSpec extends Specification {
     void "Test findJarResource finds a JAR resource"() {
         expect:
         IOUtils.findJarResource(Specification)
-        IOUtils.findJarResource(Specification).path.endsWith('spock-core-2.3-groovy-4.0.jar!/')
+        IOUtils.findJarResource(Specification).path.endsWith('spock-core-2.4-groovy-4.0.jar!/')
     }
 
     void 'findRootResourcesURL - appends / if not present'() {

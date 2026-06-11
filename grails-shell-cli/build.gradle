@@ -108,6 +108,8 @@ dependencies {
     testImplementation 'org.slf4j:slf4j-simple'
     testImplementation 'org.spockframework:spock-core'
 
+    testRuntimeOnly 'net.bytebuddy:byte-buddy' // Required by Spock's mocking support
+
     // any project that should be included in the end distribution should be included here
     // historically these were the included projects so we have trimmed them back down to pre7.0
     shellCliDependencies project(':grails-codecs-core')

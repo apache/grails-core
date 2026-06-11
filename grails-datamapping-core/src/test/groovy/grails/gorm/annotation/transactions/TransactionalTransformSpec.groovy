@@ -197,6 +197,11 @@ import grails.gorm.transactions.Transactional
         mySpec.getDeclaredMethod('$spock_feature_0_0', Object, Object, Object)
         mySpec.getDeclaredMethod('$tt__$spock_feature_0_0', Object, Object, Object, TransactionStatus)
 
+        // Do not invoke the transformed Spock feature method directly here: Spock 2.4
+        // requires an active iteration context for closures that reference data variables,
+        // so a reflective call outside Spock's runner throws IllegalStateException. The
+        // GroovyShell compilation above plus the transformed method signature checks
+        // already cover this regression (@Rollback must produce a valid, well-formed spec).
     }
 
     @Issue('https://github.com/apache/grails-core/issues/9646')
@@ -227,7 +232,11 @@ import grails.gorm.transactions.Transactional
         mySpec.getDeclaredMethod('$spock_feature_0_0')
         mySpec.getDeclaredMethod('$tt__$spock_feature_0_0', TransactionStatus)
 
-
+        // Do not invoke the transformed Spock feature method directly here: Spock 2.4
+        // requires an active iteration context for closures containing conditions, so a
+        // reflective call outside Spock's runner throws IllegalStateException. The
+        // GroovyShell compilation above plus the transformed method signature checks
+        // already cover this regression (@Rollback must produce a valid, well-formed spec).
     }
 
     void "Test @Rollback when applied to JUnit specifications"() {
