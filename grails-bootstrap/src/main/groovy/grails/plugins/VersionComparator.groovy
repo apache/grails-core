@@ -18,79 +18,79 @@
  */
 package grails.plugins
 
+import java.util.regex.Matcher
+import java.util.regex.Pattern
+
 import groovy.transform.CompileStatic
 
 /**
- * A comparator capable of sorting versions from from newest to oldest
+ * A comparator that orders versions from oldest to newest, following the standard
+ * {@link Comparator} contract (a negative result means the first version is older).
+ *
+ * <p>Versions are compared by their numeric components first (major, minor, patch, ...),
+ * padding the shorter side with zeros so that {@code 7.0} and {@code 7.0.0} are equal.
+ * When the numeric components are equal the version qualifier is used as a tie-breaker
+ * following the same ordering as {@code org.grails.datastore.mapping.core.grailsversion.GrailsVersion}:</p>
+ *
+ * <pre>
+ * 7.0.0-M1 &lt; 7.0.0-M2 &lt; 7.0.0-RC1 &lt; 7.0.0-RC2 &lt; 7.0.0-SNAPSHOT &lt; 7.0.0
+ * </pre>
+ *
+ * <p>In other words a milestone is older than a release candidate, a release candidate is
+ * older than a snapshot, and any qualified (pre-release) version is older than the final
+ * release of the same number. Both the dotted ({@code 7.0.0.M1}) and hyphenated
+ * ({@code 7.0.0-M1}) qualifier forms are treated as equivalent. Unrecognised qualifiers are
+ * treated as a final release to preserve backwards compatible behaviour.</p>
  */
 @CompileStatic
 class VersionComparator implements Comparator<String> {
 
+    private static final String SNAPSHOT = 'SNAPSHOT'
+    private static final String RELEASE_CANDIDATE = 'RC'
+    private static final String MILESTONE = 'M'
+
     static private final List<String> SNAPSHOT_SUFFIXES = ['-SNAPSHOT', '.BUILD-SNAPSHOT'].asImmutable()
 
+    private static final Pattern DIGITS = ~/\d+/
+    private static final Pattern NUMERIC_PREFIX = ~/(\d+)-(.+)/
+    private static final Pattern TRAILING_DIGITS = ~/(\d+)$/
+
+    private static final int TIER_FINAL = 4
+    private static final int TIER_SNAPSHOT = 3
+    private static final int TIER_RELEASE_CANDIDATE = 2
+    private static final int TIER_MILESTONE = 1
+
     int compare(String o1, String o2) {
-        int result = 0
-        if (o1 == '*') {
-            result = 1
+        String left = o1?.trim()
+        String right = o2?.trim()
+
+        if (left == '*') {
+            return 1
         }
-        else if (o2 == '*') {
-            result = -1
-        }
-        else {
-            def nums1
-            try {
-                def tokens = deSnapshot(o1).split(/\./)
-                tokens = tokens.findAll { String it -> it.trim() ==~ /\d+/ }
-                nums1 = tokens*.toInteger()
-            }
-            catch (NumberFormatException e) {
-                throw new InvalidVersionException("Cannot compare versions, left side [$o1] is invalid: ${e.message}")
-            }
-            def nums2
-            try {
-                def tokens = deSnapshot(o2).split(/\./)
-                tokens = tokens.findAll { String it -> it.trim() ==~ /\d+/ }
-                nums2 = tokens*.toInteger()
-            }
-            catch (NumberFormatException e) {
-                throw new InvalidVersionException("Cannot compare versions, right side [$o2] is invalid: ${e.message}")
-            }
-            boolean bigRight = nums2.size() > nums1.size()
-            boolean bigLeft = nums1.size() > nums2.size()
-            for (int i in 0..<nums1.size()) {
-                if (nums2.size() > i) {
-                    result = nums1[i].compareTo(nums2[i])
-                    if (result != 0) {
-                        break
-                    }
-                    if (i == (nums1.size() - 1) && bigRight) {
-                        if (nums2[i + 1] != 0)
-                            result = -1
-                        break
-                    }
-                }
-                else if (bigLeft) {
-                    if (nums1[i] != 0)
-                        result = 1
-                    break
-                }
-            }
+        if (right == '*') {
+            return -1
         }
 
+        ParsedVersion v1
+        try {
+            v1 = parse(left)
+        }
+        catch (NumberFormatException e) {
+            throw new InvalidVersionException("Cannot compare versions, left side [$o1] is invalid: ${e.message}")
+        }
+        ParsedVersion v2
+        try {
+            v2 = parse(right)
+        }
+        catch (NumberFormatException e) {
+            throw new InvalidVersionException("Cannot compare versions, right side [$o2] is invalid: ${e.message}")
+        }
+
+        int result = compareNumbers(v1.numbers, v2.numbers)
         if (result == 0) {
-            // Versions are equal, but one may be a snapshot.
-            // A snapshot version is considered less than a non snapshot version
-            def o1IsSnapshot = isSnapshot(o1)
-            def o2IsSnapshot = isSnapshot(o2)
-
-            if (o1IsSnapshot && !o2IsSnapshot) {
-                result = -1
-            } else if (!o1IsSnapshot && o2IsSnapshot) {
-                result = 1
-            }
+            result = compareQualifiers(v1, v2)
         }
-
-        result
+        return result
     }
 
     boolean equals(obj) { false }
@@ -111,5 +111,112 @@ class VersionComparator implements Comparator<String> {
     @CompileStatic
     protected boolean isSnapshot(String version) {
         SNAPSHOT_SUFFIXES.any { String it -> version?.endsWith(it) }
+    }
+
+    /**
+     * Splits a version into its leading numeric components and an optional trailing qualifier.
+     * The first token that is not purely numeric ends the numeric section. A token of the form
+     * {@code <digits>-<qualifier>} (for example {@code 0-RC1} from {@code 7.0.0-RC1}) contributes
+     * its leading digits to the numeric section and the remainder becomes the qualifier.
+     *
+     * @throws NumberFormatException if a numeric component cannot be parsed as an {@code int};
+     *   callers are expected to translate this into an {@link InvalidVersionException}.
+     */
+    private static ParsedVersion parse(String version) {
+        List<Integer> numbers = []
+        String qualifier = null
+        if (version) {
+            for (String token : version.split(/\./)) {
+                if (DIGITS.matcher(token).matches()) {
+                    numbers.add(Integer.parseInt(token))
+                    continue
+                }
+                Matcher matcher = NUMERIC_PREFIX.matcher(token)
+                if (matcher.matches()) {
+                    numbers.add(Integer.parseInt(matcher.group(1)))
+                    qualifier = normalizeQualifier(matcher.group(2))
+                } else {
+                    qualifier = normalizeQualifier(token)
+                }
+                break
+            }
+        }
+        int tier = qualifierTier(qualifier)
+        // Only milestone and release candidate tiers use the trailing number for ordering.
+        // Parsing it here (inside parse) keeps any overflow inside the caller's try/catch so it
+        // is reported as an InvalidVersionException rather than a raw NumberFormatException.
+        int number = (tier == TIER_MILESTONE || tier == TIER_RELEASE_CANDIDATE) ? qualifierNumber(qualifier) : 0
+        return new ParsedVersion(numbers, qualifier, tier, number)
+    }
+
+    private static int compareNumbers(List<Integer> a, List<Integer> b) {
+        int max = Math.max(a.size(), b.size())
+        for (int i = 0; i < max; i++) {
+            int left = i < a.size() ? a.get(i) : 0
+            int right = i < b.size() ? b.get(i) : 0
+            int result = Integer.compare(left, right)
+            if (result != 0) {
+                return result
+            }
+        }
+        return 0
+    }
+
+    private static int compareQualifiers(ParsedVersion v1, ParsedVersion v2) {
+        if (v1.qualifierTier != v2.qualifierTier) {
+            return Integer.compare(v1.qualifierTier, v2.qualifierTier)
+        }
+        if (v1.qualifierTier == TIER_MILESTONE || v1.qualifierTier == TIER_RELEASE_CANDIDATE) {
+            return Integer.compare(v1.qualifierNumber, v2.qualifierNumber)
+        }
+        return 0
+    }
+
+    private static String normalizeQualifier(String qualifier) {
+        if (qualifier == null) {
+            return null
+        }
+        String upper = qualifier.toUpperCase()
+        return upper.contains(SNAPSHOT) ? SNAPSHOT : upper
+    }
+
+    private static int qualifierTier(String qualifier) {
+        if (qualifier == null) {
+            return TIER_FINAL
+        }
+        if (qualifier.contains(SNAPSHOT)) {
+            return TIER_SNAPSHOT
+        }
+        if (qualifier.startsWith(RELEASE_CANDIDATE)) {
+            return TIER_RELEASE_CANDIDATE
+        }
+        if (qualifier.startsWith(MILESTONE)) {
+            return TIER_MILESTONE
+        }
+        return TIER_FINAL
+    }
+
+    private static int qualifierNumber(String qualifier) {
+        if (qualifier == null) {
+            return 0
+        }
+        Matcher matcher = TRAILING_DIGITS.matcher(qualifier)
+        return matcher.find() ? Integer.parseInt(matcher.group(1)) : 0
+    }
+
+    @CompileStatic
+    private static class ParsedVersion {
+
+        final List<Integer> numbers
+        final String qualifier
+        final int qualifierTier
+        final int qualifierNumber
+
+        ParsedVersion(List<Integer> numbers, String qualifier, int qualifierTier, int qualifierNumber) {
+            this.numbers = numbers
+            this.qualifier = qualifier
+            this.qualifierTier = qualifierTier
+            this.qualifierNumber = qualifierNumber
+        }
     }
 }
