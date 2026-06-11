@@ -387,6 +387,7 @@ generateConfigReference.configure { Task it ->
 
         List<String> preferredOrder = [
                 'Core Properties',
+                'Command Line',
                 'Web & Controllers',
                 'CORS',
                 'Views & GSP',
