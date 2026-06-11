@@ -200,7 +200,7 @@ class ResourceTransform implements ASTTransformation, CompilationUnitAware, Tran
                     newControllerClassNode.addField(urlMappingsField)
                     final urlMappingsSetterParam = new Parameter(urlMappingsClassNode, 'um')
                     final controllerMethodAnnotation = new AnnotationNode(new ClassNode(ControllerMethod).getPlainNodeReference())
-                    MethodNode urlMappingsSetter = new MethodNode('setUrlMappings', PUBLIC, VOID_CLASS_NODE, [urlMappingsSetterParam] as Parameter[], null, new ExpressionStatement(new BinaryExpression(new VariableExpression(urlMappingsField.name), Token.newSymbol(Types.EQUAL, 0, 0), new VariableExpression(urlMappingsSetterParam))))
+                    MethodNode urlMappingsSetter = new MethodNode('setUrlMappings', PUBLIC, VOID_CLASS_NODE, [urlMappingsSetterParam] as Parameter[], ClassNode.EMPTY_ARRAY, new ExpressionStatement(new BinaryExpression(new VariableExpression(urlMappingsField.name), Token.newSymbol(Types.EQUAL, 0, 0), new VariableExpression(urlMappingsSetterParam))))
                     final autowiredAnnotation = new AnnotationNode(AUTOWIRED_CLASS_NODE)
                     autowiredAnnotation.addMember('required', ConstantExpression.FALSE)
 
@@ -239,7 +239,7 @@ class ResourceTransform implements ASTTransformation, CompilationUnitAware, Tran
                     def addMappingsMethodCall = applyDefaultMethodTarget(new MethodCallExpression(urlMappingsVar, 'addMappings', urlMappingsClosure), urlMappingsClassNode)
                     methodBody.addStatement(new IfStatement(new BooleanExpression(urlMappingsVar), new ExpressionStatement(addMappingsMethodCall), new EmptyStatement()))
 
-                    def initialiseUrlMappingsMethod = new MethodNode('initializeUrlMappings', PUBLIC, VOID_CLASS_NODE, ZERO_PARAMETERS, null, methodBody)
+                    def initialiseUrlMappingsMethod = new MethodNode('initializeUrlMappings', PUBLIC, VOID_CLASS_NODE, ZERO_PARAMETERS, ClassNode.EMPTY_ARRAY, methodBody)
                     initialiseUrlMappingsMethod.addAnnotation(new AnnotationNode(new ClassNode(PostConstruct).getPlainNodeReference()))
                     initialiseUrlMappingsMethod.addAnnotation(controllerMethodAnnotation)
                     newControllerClassNode.addMethod(initialiseUrlMappingsMethod)

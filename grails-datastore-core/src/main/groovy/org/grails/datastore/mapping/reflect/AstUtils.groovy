@@ -252,18 +252,17 @@ class AstUtils {
         }
         scopeVisitor.prepareVisit(classNode)
         if (methodNode.exceptions == null) {
-            // Groovy 5's VariableScopeVisitor reads the method's exceptions array without a null check, and AST
-            // transforms routinely create methods via ClassNode.addMethod(..., null, ...). MethodNode.exceptions is
-            // final, so recompute scopes on a proxy that shares the same parameters and code but carries an empty
-            // exceptions array, then copy the computed scope back onto the real method.
+            // Groovy 5 VariableScopeVisitor requires a non-null exception array. MethodNode.exceptions is final,
+            // and original method nodes can still arrive here with null, so visit an equivalent proxy and copy the
+            // computed scope back.
             MethodNode proxy = new MethodNode(methodNode.name, methodNode.modifiers, methodNode.returnType,
                     methodNode.parameters, ClassNode.EMPTY_ARRAY, methodNode.code)
             proxy.declaringClass = methodNode.declaringClass
             scopeVisitor.visitMethod(proxy)
             methodNode.variableScope = proxy.variableScope
-        } else {
-            scopeVisitor.visitMethod(methodNode)
+            return
         }
+        scopeVisitor.visitMethod(methodNode)
     }
 
     /**

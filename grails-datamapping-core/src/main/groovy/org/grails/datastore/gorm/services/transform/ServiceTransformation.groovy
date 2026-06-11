@@ -115,6 +115,7 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.callD
 import static org.grails.datastore.mapping.reflect.AstUtils.COMPILE_STATIC_TYPE
+import static org.grails.datastore.mapping.reflect.AstUtils.EMPTY_CLASS_ARRAY
 import static org.grails.datastore.mapping.reflect.AstUtils.ZERO_PARAMETERS
 import static org.grails.datastore.mapping.reflect.AstUtils.addAnnotationIfNecessary
 import static org.grails.datastore.mapping.reflect.AstUtils.copyAnnotations
@@ -327,7 +328,7 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
                                 Modifier.PUBLIC,
                                 GenericsUtils.makeClassSafeWithGenerics(method.returnType, method.returnType.genericsTypes),
                                 copyParameters(method.parameters),
-                                method.exceptions,
+                                method.exceptions == null ? EMPTY_CLASS_ARRAY : method.exceptions,
                                 new BlockStatement())
                         methodImpl.setDeclaringClass(impl)
                         if (Modifier.isProtected(method.modifiers)) {

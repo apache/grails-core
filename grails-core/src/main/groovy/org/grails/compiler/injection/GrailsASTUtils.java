@@ -1514,18 +1514,17 @@ public class GrailsASTUtils {
         }
         scopeVisitor.prepareVisit(classNode);
         if (methodNode.getExceptions() == null) {
-            // Groovy 5's VariableScopeVisitor reads the method's exceptions array without a null check, and AST
-            // transforms routinely create methods via ClassNode.addMethod(..., null, ...). MethodNode.exceptions is
-            // final, so recompute scopes on a proxy that shares the same parameters and code but carries an empty
-            // exceptions array, then copy the computed scope back onto the real method.
+            // Groovy 5 VariableScopeVisitor requires a non-null exception array. MethodNode.exceptions is final,
+            // and original method nodes can still arrive here with null, so visit an equivalent proxy and copy the
+            // computed scope back.
             MethodNode proxy = new MethodNode(methodNode.getName(), methodNode.getModifiers(), methodNode.getReturnType(),
                     methodNode.getParameters(), ClassNode.EMPTY_ARRAY, methodNode.getCode());
             proxy.setDeclaringClass(methodNode.getDeclaringClass());
             scopeVisitor.visitMethod(proxy);
             methodNode.setVariableScope(proxy.getVariableScope());
-        } else {
-            scopeVisitor.visitMethod(methodNode);
+            return;
         }
+        scopeVisitor.visitMethod(methodNode);
     }
 
     public static boolean isGetterMethod(MethodNode md) {
