@@ -64,6 +64,18 @@ github:
       wait_timer: 0
   description: "Grails - the Web Application Framework"
   homepage: https://grails.apache.org/
+  rulesets:
+    - name: "Default Branch Protection"
+      type: branch
+      branches:
+        includes:
+          - "~DEFAULT_BRANCH"
+          - "*.x"
+        excludes: []
+      bypass_teams:
+        - root
+      restrict_deletion: true
+      restrict_force_push: true
 notifications:
   # GitHub related
   commits: commits@grails.apache.org
