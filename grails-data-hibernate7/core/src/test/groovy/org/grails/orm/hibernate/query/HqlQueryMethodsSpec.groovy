@@ -19,6 +19,7 @@
 package org.grails.orm.hibernate.query
 
 import org.grails.orm.hibernate.query.HibernateQueryArgument
+import jakarta.persistence.LockModeType
 import spock.lang.Specification
 import org.hibernate.query.QueryFlushMode
 
@@ -64,9 +65,12 @@ class HqlQueryMethodsSpec extends Specification {
         def delegate = Mock(HqlQueryDelegate)
         def settings = [
             (HibernateQueryArgument.FLUSH_MODE.value()): "COMMIT",
-            (HibernateQueryArgument.MAX.value()): 10,
-            (HibernateQueryArgument.OFFSET.value()): 5,
-            (HibernateQueryArgument.READ_ONLY.value()): true
+            (HibernateQueryArgument.MAX.value()): '10',
+            (HibernateQueryArgument.OFFSET.value()): '5',
+            (HibernateQueryArgument.FETCH_SIZE.value()): '50',
+            (HibernateQueryArgument.TIMEOUT.value()): '30',
+            (HibernateQueryArgument.READ_ONLY.value()): 'true',
+            (HibernateQueryArgument.CACHE.value()): 'true'
         ]
 
         when:
@@ -76,7 +80,27 @@ class HqlQueryMethodsSpec extends Specification {
         1 * delegate.setQueryFlushMode(QueryFlushMode.NO_FLUSH)
         1 * delegate.setMaxResults(10)
         1 * delegate.setFirstResult(5)
+        1 * delegate.setFetchSize(50)
+        1 * delegate.setTimeout(30)
         1 * delegate.setReadOnly(true)
+        1 * delegate.setCacheable(true)
+    }
+
+    void "test populateQuerySettings applies lock and disables cache"() {
+        given:
+        def delegate = Mock(HqlQueryDelegate)
+        def settings = [
+            (HibernateQueryArgument.LOCK.value()): 'true',
+            (HibernateQueryArgument.CACHE.value()): 'true'
+        ]
+
+        when:
+        queryMethods.populateQuerySettings(delegate, settings)
+
+        then:
+        1 * delegate.setLockMode(LockModeType.PESSIMISTIC_WRITE)
+        1 * delegate.setCacheable(false)
+        0 * delegate.setCacheable(true)
     }
 
     void "test populateParameters with named parameters"() {
@@ -96,13 +120,14 @@ class HqlQueryMethodsSpec extends Specification {
     void "test populateParameters filters internal settings"() {
         given:
         def delegate = Mock(HqlQueryDelegate)
-        def ctx = new HqlQueryContext("hql", Object, [(HibernateQueryArgument.MAX.value()): 10, title: "GORM"], [], [:], [:], false, false)
+        def ctx = new HqlQueryContext("hql", Object, [(HibernateQueryArgument.MAX.value()): 10, (HibernateQueryArgument.LOCK.value()): true, title: "GORM"], [], [:], [:], false, false)
 
         when:
         HqlQueryMethods.populateParameters(delegate, ctx)
 
         then:
         0 * delegate.setParameter(HibernateQueryArgument.MAX.value(), _)
+        0 * delegate.setParameter(HibernateQueryArgument.LOCK.value(), _)
         1 * delegate.setParameter("title", "GORM")
     }
 

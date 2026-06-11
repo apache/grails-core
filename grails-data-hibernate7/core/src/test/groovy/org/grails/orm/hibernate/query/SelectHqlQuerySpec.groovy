@@ -141,6 +141,17 @@ class SelectHqlQuerySpec extends HibernateGormDatastoreSpec {
         results.size() == 1
     }
 
+    void "createHqlQuery exposes converted max and offset args"() {
+        when:
+        def query = buildHqlQuery("from SelectHqlQuerySpecBook order by title", [:], null, [max: '2', offset: '1'])
+        def results = query.list()
+
+        then:
+        query.max == 2
+        query.offset == 1
+        results.size() == 2
+    }
+
     void "createHqlQuery with empty query string defaults to full entity query"() {
         when:
         def results = buildHqlQuery("").list()

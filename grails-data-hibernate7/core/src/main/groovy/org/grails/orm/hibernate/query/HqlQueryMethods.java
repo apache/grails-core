@@ -25,6 +25,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import jakarta.persistence.LockModeType;
+
 public interface HqlQueryMethods {
 
     Set<String> INTERNAL_SETTINGS = Set.of(
@@ -34,7 +36,8 @@ public interface HqlQueryMethods {
         HibernateQueryArgument.READ_ONLY.value(),
         HibernateQueryArgument.FETCH_SIZE.value(),
         HibernateQueryArgument.MAX.value(),
-        HibernateQueryArgument.OFFSET.value()
+        HibernateQueryArgument.OFFSET.value(),
+        HibernateQueryArgument.LOCK.value()
     );
 
     default void populateQuerySettings(HqlQueryDelegate d, Map<String, Object> args) {
@@ -43,14 +46,40 @@ public interface HqlQueryMethods {
             d.setQueryFlushMode(GrailsQueryFlushMode.mapToHibernateQueryFlushMode(args.get(HibernateQueryArgument.FLUSH_MODE.value())));
         }
         if (args.containsKey(HibernateQueryArgument.MAX.value())) {
-            d.setMaxResults((Integer) args.get(HibernateQueryArgument.MAX.value()));
+            d.setMaxResults(toInteger(args.get(HibernateQueryArgument.MAX.value())));
         }
         if (args.containsKey(HibernateQueryArgument.OFFSET.value())) {
-            d.setFirstResult((Integer) args.get(HibernateQueryArgument.OFFSET.value()));
+            d.setFirstResult(toInteger(args.get(HibernateQueryArgument.OFFSET.value())));
+        }
+        if (args.containsKey(HibernateQueryArgument.FETCH_SIZE.value())) {
+            d.setFetchSize(toInteger(args.get(HibernateQueryArgument.FETCH_SIZE.value())));
+        }
+        if (args.containsKey(HibernateQueryArgument.TIMEOUT.value())) {
+            d.setTimeout(toInteger(args.get(HibernateQueryArgument.TIMEOUT.value())));
         }
         if (args.containsKey(HibernateQueryArgument.READ_ONLY.value())) {
-            d.setReadOnly((Boolean) args.get(HibernateQueryArgument.READ_ONLY.value()));
+            d.setReadOnly(toBoolean(args.get(HibernateQueryArgument.READ_ONLY.value())));
         }
+        if (toBoolean(args.get(HibernateQueryArgument.LOCK.value()))) {
+            d.setLockMode(LockModeType.PESSIMISTIC_WRITE);
+            d.setCacheable(false);
+        } else if (args.containsKey(HibernateQueryArgument.CACHE.value())) {
+            d.setCacheable(toBoolean(args.get(HibernateQueryArgument.CACHE.value())));
+        }
+    }
+
+    static int toInteger(Object value) {
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        return Integer.parseInt(value.toString());
+    }
+
+    static boolean toBoolean(Object value) {
+        if (value instanceof Boolean bool) {
+            return bool;
+        }
+        return value != null && Boolean.parseBoolean(value.toString());
     }
 
     default void populateHints(HqlQueryDelegate d, Map<String, Object> hints) {
