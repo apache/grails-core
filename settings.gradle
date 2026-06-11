@@ -507,7 +507,7 @@ includeBuild('./build-logic') {
 
 // Grails-Micronaut "island" - kept on its own dependency graph because the Micronaut
 // platform pins Groovy 5 / Spock 2.4-groovy-5.0, which is incompatible with the
-// Groovy 4 / Spock 2.3-groovy-4.0 stack the rest of grails-core targets. Skipping
+// Groovy 4 / Spock 2.4-groovy-4.0 stack the rest of grails-core targets. Skipping
 // these projects (via -PskipMicronautProjects) keeps Micronaut's version overrides
 // from leaking into builds where Groovy 4 is in play (notably the joint validation
 // build that swaps in an apache/groovy 4.x snapshot).

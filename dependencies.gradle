@@ -30,7 +30,7 @@ ext {
             'commons-text.version'          : '1.15.0',
             'directory-watcher.version'     : '0.19.1',
             'gradle-groovy.version'         : '4.0.32',
-            'gradle-spock.version'          : '2.3-groovy-4.0',
+            'gradle-spock.version'          : '2.4-groovy-4.0',
             'grails-publish-plugin.version' : '1.0.0-M1',
             'jansi.version'                 : '2.4.2',
             'javaparser-core.version'       : '3.28.0',
@@ -92,7 +92,7 @@ ext {
             'rxjava3.version'               : '3.1.12',
             'selenium.version'              : '4.38.0',
             'sitemesh.version'              : '2.6.0',
-            'spock.version'                 : '2.3-groovy-4.0',
+            'spock.version'                 : '2.4-groovy-4.0',
             'starter-sitemesh.version'      : '3.3.0-SNAPSHOT',
             'spring-webmvc-sitemesh.version': '3.3.0-SNAPSHOT',
             // Spring Boot 4 no longer manages spring-retry; pin it here so the
