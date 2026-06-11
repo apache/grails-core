@@ -42,8 +42,8 @@ dependencies {
     implementation 'org.apache.grails:grails-data-hibernate5-spring-boot'
     implementation 'org.apache.grails.data:grails-data-hibernate5-core'
     implementation 'org.apache.grails.data:grails-datamapping-core'
-    implementation "org.hibernate:hibernate-core-jakarta:$hibernate5Version"
-    implementation("org.hibernate:hibernate-ehcache:$hibernate5Version") {
+    implementation 'org.hibernate:hibernate-core-jakarta'
+    implementation('org.hibernate:hibernate-ehcache') {
         // Exclude javax variant of hibernate-core
         exclude group: 'org.hibernate', module: 'hibernate-core'
     }

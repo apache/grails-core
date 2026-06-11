@@ -60,9 +60,9 @@ dependencies {
     testImplementation 'com.h2database:h2'
     testImplementation 'org.apache.tomcat:tomcat-jdbc'
     testImplementation 'org.slf4j:slf4j-api'
-    testImplementation 'org.objenesis:objenesis'
-    testImplementation 'net.bytebuddy:byte-buddy'
     testImplementation 'org.spockframework:spock-core'
+
+    testRuntimeOnly 'org.objenesis:objenesis' // Required by Spock for mocking classes without default constructor
 }
 
 apply {

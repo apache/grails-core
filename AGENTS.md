@@ -51,6 +51,9 @@ export GRADLE_OPTS="-Xms2G -Xmx5G"
 8. **No internal APIs in docs** - Only document public APIs; never reference internal or package-private classes and methods in user-facing documentation
 9. **Test via public APIs** - Tests must exercise behavior through the same APIs an end user calls; never invoke internal implementations, package-private methods, or bypass the public surface directly
 10. **Always review and extend tests** - Review existing unit and functional tests before making changes; every code change must include new or enhanced tests that cover the affected behavior
+11. **Every code touch must update all tests for the changed class** - When a class is modified, find and update every test that covers it — unit, integration, and TCK. Do not leave any existing test out of sync with the new code.
+12. **Clean violations before commit** - Before every automated commit, run `./gradlew clean aggregateViolations :grails-test-report:check --continue` from the root and ensure that `build/reports/violations/CHECKSTYLE_VIOLATIONS.md`, `build/reports/violations/CODENARC_VIOLATIONS.md`, `build/reports/violations/PMD_VIOLATIONS.md`, and `build/reports/violations/SPOTBUGS_VIOLATIONS.md` report no issues. Also review the test result reports under `grails-test-report/build/reports/tests/` and ensure there are no failures. The aggregate reports are wired as test finalizers and will be attempted after failures, but `--continue` is required for comprehensive full-suite reports.
+13. **Mandatory test coverage** - Any class touched in a commit MUST be covered with tests that verify all behavior. You must run ALL tests in the affected module(s) and ensure they pass before committing.
 
 ## Available Skills
 
@@ -58,6 +61,10 @@ export GRADLE_OPTS="-Xms2G -Xmx5G"
 > - Writing Grails code → Read `.agents/skills/grails-developer/SKILL.md`
 > - Writing Groovy code → Read `.agents/skills/groovy-developer/SKILL.md`
 > - Writing Java code → Read `.agents/skills/java-developer/SKILL.md`
+> - Writing Hibernate code → Read `.agents/skills/hibernate-developer/SKILL.md`
+> - Fixing style/analysis violations → Read `.agents/skills/violation-fixer/SKILL.md`
+> - Fixing broken test → Read `.agents/skills/test-fixer/SKILL.md`
+> - Indexing code -> Read `.agents/skills/codebase-memory/SKILL.md`
 >
 > Use your file reading capability to load the skill content before proceeding with any code changes.
 
@@ -66,6 +73,9 @@ export GRADLE_OPTS="-Xms2G -Xmx5G"
 | **grails-developer** | `.agents/skills/grails-developer/SKILL.md` | Grails 7 apps, GORM, controllers, views |
 | **groovy-developer** | `.agents/skills/groovy-developer/SKILL.md` | Groovy 4 syntax, closures, DSLs, Spock |
 | **java-developer** | `.agents/skills/java-developer/SKILL.md` | Java 17 features, Groovy interop |
+| **hibernate-developer** | `.agents/skills/hibernate-developer/SKILL.md` | Hibernate 7 mapping, binders, generators |
+| **violation-fixer** | `.agents/skills/violation-fixer/SKILL.md` | Fix style/analysis violations (CodeNarc, Checkstyle, PMD, SpotBugs) |
+| **test-fixer** | `.agents/skills/test-fixer/SKILL.md` | Aggregate and fix test failures |
 
 ## Technology Stack
 
@@ -75,7 +85,7 @@ export GRADLE_OPTS="-Xms2G -Xmx5G"
 | Groovy | 4.0.x |
 | Spring Boot | 4.0.x |
 | Spring Framework | 7.0.x |
-| Spock | 2.3-groovy-4.0 |
+| Spock | 2.4-groovy-4.0 |
 | Gradle | 8.14.x |
 | Jakarta EE | 10 |
 
@@ -229,8 +239,10 @@ class MyService { }
 1. **Fork & branch** from the target release branch (e.g., `7.0.x`)
 2. **Run tests** before submitting: `./gradlew build --rerun-tasks`
 3. **Run code style checks**: `./gradlew codeStyle`
-4. **Squash commits** into a single meaningful commit message
-5. **Reference issues** in PR description (e.g., "Fixes #1234")
+4. **Clean violations**: Before committing, run `./gradlew clean aggregateViolations` from the root and ensure that `build/reports/violations/CHECKSTYLE_VIOLATIONS.md`, `build/reports/violations/CODENARC_VIOLATIONS.md`, `build/reports/violations/PMD_VIOLATIONS.md`, and `build/reports/violations/SPOTBUGS_VIOLATIONS.md` have no issues.
+5. **Verify test coverage**: Ensure any touched class is covered by tests verifying all behavior. You must run ALL tests in the affected module(s) and ensure they pass before submission.
+6. **Squash commits** into a single meaningful commit message
+6. **Reference issues** in PR description (e.g., "Fixes #1234")
 
 ### Review Process
 

@@ -26,7 +26,7 @@ import org.apache.grails.testing.http.client.HttpClientSupport
 
 /**
  * Comprehensive integration tests for advanced data binding features.
- * 
+ *
  * Tests cover:
  * - Map-based binding with nested objects
  * - @BindUsing annotation
@@ -51,21 +51,21 @@ class AdvancedDataBindingSpec extends Specification implements HttpClientSupport
     def "test basic map-based binding"() {
         when:
         def response = http(
-            '/advancedDataBinding/bindEmployee?firstName=John&lastName=Doe&salary=50000'
+                '/advancedDataBinding/bindEmployee?firstName=John&lastName=Doe&salary=50000'
         )
 
         then:
         response.assertJsonContains(200, [
                 firstName: 'John',
-                lastName: 'Doe',
-                salary: 50000
+                lastName : 'Doe',
+                salary   : 50000
         ])
     }
 
     def "test nested object binding"() {
         when:
         def response = http(
-            '/advancedDataBinding/bindEmployee?firstName=Jane&homeAddress.street=123+Main+St&homeAddress.city=Springfield&homeAddress.state=IL'
+                '/advancedDataBinding/bindEmployee?firstName=Jane&homeAddress.street=123+Main+St&homeAddress.city=Springfield&homeAddress.state=IL'
         )
 
         then:
@@ -84,12 +84,12 @@ class AdvancedDataBindingSpec extends Specification implements HttpClientSupport
     def "test @BindUsing annotation lowercases and trims email"() {
         when:
         def response = http(
-            '/advancedDataBinding/bindWithBindUsing?email=John.Doe%40Example.COM'
+                '/advancedDataBinding/bindWithBindUsing?email=John.Doe%40Example.COM'
         )
 
         then:
         response.assertJson(200, [
-                email: 'john.doe@example.com',
+                email        : 'john.doe@example.com',
                 originalEmail: 'John.Doe@Example.COM'
         ])
     }
@@ -97,7 +97,7 @@ class AdvancedDataBindingSpec extends Specification implements HttpClientSupport
     def "test @BindUsing with mixed case email"() {
         when:
         def response = http(
-            '/advancedDataBinding/bindWithBindUsing?email=TEST.User%40DOMAIN.org'
+                '/advancedDataBinding/bindWithBindUsing?email=TEST.User%40DOMAIN.org'
         )
 
         then:
@@ -112,7 +112,7 @@ class AdvancedDataBindingSpec extends Specification implements HttpClientSupport
 
         then:
         response.assertJsonContains(200, [
-                hireDate: '2020-01-15',
+                hireDate     : '2020-01-15',
                 hireDateInput: '01152020'
         ])
     }
@@ -120,12 +120,12 @@ class AdvancedDataBindingSpec extends Specification implements HttpClientSupport
     def "test @BindingFormat for date parsing - yyyy-MM-dd format"() {
         when:
         def response = http(
-            '/advancedDataBinding/bindWithDateFormat?birthDate=1990-05-20',
+                '/advancedDataBinding/bindWithDateFormat?birthDate=1990-05-20',
         )
 
         then:
         response.assertJsonContains(200, [
-                birthDate: '1990-05-20',
+                birthDate     : '1990-05-20',
                 birthDateInput: '1990-05-20'
         ])
     }
@@ -133,12 +133,12 @@ class AdvancedDataBindingSpec extends Specification implements HttpClientSupport
     def "test multiple date formats in same request"() {
         when:
         def response = http(
-            '/advancedDataBinding/bindWithDateFormat?hireDate=03012021&birthDate=1985-12-25',
+                '/advancedDataBinding/bindWithDateFormat?hireDate=03012021&birthDate=1985-12-25',
         )
 
         then:
         response.assertJsonContains(200, [
-                hireDate: '2021-03-01',
+                hireDate : '2021-03-01',
                 birthDate: '1985-12-25'
         ])
     }
@@ -148,7 +148,7 @@ class AdvancedDataBindingSpec extends Specification implements HttpClientSupport
     def "test binding to List collection"() {
         when:
         def response = http(
-            '/advancedDataBinding/bindTeamWithMembers?name=Engineering&members%5B0%5D.name=Alice&members%5B0%5D.role=Lead&members%5B1%5D.name=Bob&members%5B1%5D.role=Developer',
+                '/advancedDataBinding/bindTeamWithMembers?name=Engineering&members%5B0%5D.name=Alice&members%5B0%5D.role=Lead&members%5B1%5D.name=Bob&members%5B1%5D.role=Developer',
         )
 
         then:
@@ -166,7 +166,7 @@ class AdvancedDataBindingSpec extends Specification implements HttpClientSupport
     def "test binding to List with gaps in indices"() {
         when:
         def response = http(
-            '/advancedDataBinding/bindTeamWithMembers?name=QA&members%5B0%5D.name=Carol&members%5B2%5D.name=Dave',
+                '/advancedDataBinding/bindTeamWithMembers?name=QA&members%5B0%5D.name=Carol&members%5B2%5D.name=Dave',
         )
 
         then: "only non-null members are returned"
@@ -185,7 +185,7 @@ class AdvancedDataBindingSpec extends Specification implements HttpClientSupport
     def "test binding to Map collection"() {
         when:
         def response = http(
-            '/advancedDataBinding/bindProjectWithContributors?name=GrailsCore&contributors%5Blead%5D.name=John&contributors%5Blead%5D.expertise=Architecture&contributors%5Bdev%5D.name=Jane&contributors%5Bdev%5D.expertise=Testing',
+                '/advancedDataBinding/bindProjectWithContributors?name=GrailsCore&contributors%5Blead%5D.name=John&contributors%5Blead%5D.expertise=Architecture&contributors%5Bdev%5D.name=Jane&contributors%5Bdev%5D.expertise=Testing',
         )
 
         then:
@@ -204,14 +204,14 @@ class AdvancedDataBindingSpec extends Specification implements HttpClientSupport
     def "test @RequestParameter maps different parameter names"() {
         when:
         def response = http(
-            '/advancedDataBinding/bindWithRequestParameter?firstName=Robert&lastName=Smith&age=30',
+                '/advancedDataBinding/bindWithRequestParameter?firstName=Robert&lastName=Smith&age=30',
         )
 
         then:
         response.assertJson(200, [
-                givenName: 'Robert',
+                givenName : 'Robert',
                 familyName: 'Smith',
-                age: 30
+                age       : 30
         ])
     }
 
@@ -220,7 +220,7 @@ class AdvancedDataBindingSpec extends Specification implements HttpClientSupport
     def "test bindData with include - only specified properties bound"() {
         when:
         def response = http(
-            '/advancedDataBinding/bindWithIncludeExclude?firstName=Test&lastName=User&email=test%40example.com&salary=100000',
+                '/advancedDataBinding/bindWithIncludeExclude?firstName=Test&lastName=User&email=test%40example.com&salary=100000',
         )
 
         then:
@@ -238,7 +238,7 @@ class AdvancedDataBindingSpec extends Specification implements HttpClientSupport
     def "test selective property binding using subscript operator"() {
         when:
         def response = http(
-            '/advancedDataBinding/bindSelectiveProperties?firstName=Selective&lastName=Test&email=should.not.bind%40test.com&salary=999',
+                '/advancedDataBinding/bindSelectiveProperties?firstName=Selective&lastName=Test&email=should.not.bind%40test.com&salary=999',
         )
 
         then:
@@ -256,15 +256,15 @@ class AdvancedDataBindingSpec extends Specification implements HttpClientSupport
     def "test using grailsWebDataBinder directly"() {
         when:
         def response = http(
-            '/advancedDataBinding/bindUsingDirectBinder?firstName=Direct&lastName=Binder&email=DIRECT%40TEST.COM',
+                '/advancedDataBinding/bindUsingDirectBinder?firstName=Direct&lastName=Binder&email=DIRECT%40TEST.COM',
         )
 
         then:
         response.assertJson(200, [
                 firstName: 'Direct',
-                lastName: 'Binder',
+                lastName : 'Binder',
                 // Email should be lowercased due to @BindUsing
-                email: 'direct@test.com'
+                email    : 'direct@test.com'
         ])
     }
 
@@ -273,7 +273,7 @@ class AdvancedDataBindingSpec extends Specification implements HttpClientSupport
     def "test command object binding with validation - valid data"() {
         when:
         def response = http(
-            '/advancedDataBinding/bindCommandObject?firstName=Valid&lastName=User&email=valid%40email.com',
+                '/advancedDataBinding/bindCommandObject?firstName=Valid&lastName=User&email=valid%40email.com',
         )
 
         then:
@@ -290,7 +290,7 @@ class AdvancedDataBindingSpec extends Specification implements HttpClientSupport
     def "test command object binding with validation - invalid data"() {
         when:
         def response = http(
-            '/advancedDataBinding/bindCommandObject?firstName=&lastName=&email=invalid-email',
+                '/advancedDataBinding/bindCommandObject?firstName=&lastName=&email=invalid-email',
         )
 
         then:
@@ -305,15 +305,15 @@ class AdvancedDataBindingSpec extends Specification implements HttpClientSupport
     def "test nested command object binding"() {
         when:
         def response = http(
-            '/advancedDataBinding/bindNestedCommandObject?name=Contact+Person&address.street=456+Oak+Ave&address.city=Portland',
+                '/advancedDataBinding/bindNestedCommandObject?name=Contact+Person&address.street=456+Oak+Ave&address.city=Portland',
         )
 
         then:
         response.assertJsonContains(200, [
-                name: 'Contact Person',
+                name   : 'Contact Person',
                 address: [
                         street: '456 Oak Ave',
-                        city: 'Portland'
+                        city  : 'Portland'
                 ]
         ])
     }
@@ -326,15 +326,15 @@ class AdvancedDataBindingSpec extends Specification implements HttpClientSupport
                 firstName: 'JsonFirst',
                 lastName: 'JsonLast',
                 email: 'json@test.com'
-            ]
+        ]
         )
 
         then:
         response.assertJson(200, [
-            firstName: 'JsonFirst',
-            lastName: 'JsonLast',
-            email: 'json@test.com',
-            valid: true
+                firstName: 'JsonFirst',
+                lastName : 'JsonLast',
+                email    : 'json@test.com',
+                valid    : true
         ])
     }
 
@@ -343,18 +343,18 @@ class AdvancedDataBindingSpec extends Specification implements HttpClientSupport
     def "test binding multiple command objects"() {
         when:
         def response = http(
-            '/advancedDataBinding/bindMultipleCommandObjects?employee.firstName=Multi&employee.lastName=Test&address.street=789+Pine+Rd&address.city=Seattle',
+                '/advancedDataBinding/bindMultipleCommandObjects?employee.firstName=Multi&employee.lastName=Test&address.street=789+Pine+Rd&address.city=Seattle',
         )
 
         then:
         response.assertJson(200, [
                 employee: [
                         firstName: 'Multi',
-                        lastName: 'Test'
+                        lastName : 'Test'
                 ],
-                address: [
+                address : [
                         street: '789 Pine Rd',
-                        city: 'Seattle'
+                        city  : 'Seattle'
                 ]
         ])
     }
@@ -364,14 +364,14 @@ class AdvancedDataBindingSpec extends Specification implements HttpClientSupport
     def "test empty string converts to null"() {
         when:
         def response = http(
-            '/advancedDataBinding/bindEmptyStrings?firstName=&lastName=HasValue',
+                '/advancedDataBinding/bindEmptyStrings?firstName=&lastName=HasValue',
         )
 
         then:
         response.assertJsonContains(200, [
                 firstNameIsNull: true,
-                lastName: 'HasValue',
-                lastNameIsNull: false
+                lastName       : 'HasValue',
+                lastNameIsNull : false
         ])
     }
 
@@ -380,12 +380,12 @@ class AdvancedDataBindingSpec extends Specification implements HttpClientSupport
     def "test string trimming during binding"() {
         when:
         def response = http(
-            '/advancedDataBinding/bindWithTrimming?firstName=+++Trimmed+++',
+                '/advancedDataBinding/bindWithTrimming?firstName=+++Trimmed+++',
         )
 
         then:
         response.assertJsonContains(200, [
-                firstName: 'Trimmed',
+                firstName      : 'Trimmed',
                 firstNameLength: 7
         ])
     }
@@ -395,12 +395,12 @@ class AdvancedDataBindingSpec extends Specification implements HttpClientSupport
     def "test valid type conversion"() {
         when:
         def response = http(
-            '/advancedDataBinding/bindWithTypeConversion?salary=75000&firstName=TypeTest',
+                '/advancedDataBinding/bindWithTypeConversion?salary=75000&firstName=TypeTest',
         )
 
         then:
         response.assertJsonContains(200, [
-                salary: 75000,
+                salary   : 75000,
                 firstName: 'TypeTest'
         ])
     }
@@ -410,20 +410,20 @@ class AdvancedDataBindingSpec extends Specification implements HttpClientSupport
     def "test binding with special characters in values"() {
         when:
         def response = http(
-            '/advancedDataBinding/bindEmployee?firstName=O%27Brien&lastName=M%C3%BCller',
+                '/advancedDataBinding/bindEmployee?firstName=O%27Brien&lastName=M%C3%BCller',
         )
 
         then:
         response.assertJsonContains(200, [
                 firstName: "O'Brien",
-                lastName: 'Müller'
+                lastName : 'Müller'
         ])
     }
 
     def "test binding with unicode characters"() {
         when:
         def response = http(
-            '/advancedDataBinding/bindEmployee?firstName=%E6%97%A5%E6%9C%AC%E8%AA%9E',
+                '/advancedDataBinding/bindEmployee?firstName=%E6%97%A5%E6%9C%AC%E8%AA%9E',
         )
 
         then:
@@ -433,7 +433,7 @@ class AdvancedDataBindingSpec extends Specification implements HttpClientSupport
     def "test binding with null parameter values"() {
         when:
         def response = http(
-            '/advancedDataBinding/bindEmployee?firstName=TestNull',
+                '/advancedDataBinding/bindEmployee?firstName=TestNull',
         )
 
         then:

@@ -39,10 +39,12 @@ class AbstractNonGormParentClassSpec extends GrailsDataTckSpec {
 }
 
 abstract class Common {
+
     String foo
 }
 
 @Entity
 class ConcreteFoo extends Common {
+
     String bar
 }

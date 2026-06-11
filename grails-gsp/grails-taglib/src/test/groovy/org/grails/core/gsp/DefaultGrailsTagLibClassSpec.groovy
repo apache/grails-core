@@ -76,6 +76,7 @@ class DefaultGrailsTagLibClassSpec extends Specification {
 }
 
 class DynamicSampleTagLib {
+
     static returnObjectForTags = ['myTag']
 
     Closure myTag = { attrs -> "hello" }
@@ -86,6 +87,7 @@ class DynamicSampleTagLib {
 
 @CompileStatic
 class CompileStaticSampleTagLib {
+
     Closure staticTag = { Map attrs -> "compiled" }
     Closure anotherStaticTag = { Map attrs, body -> }
     String nonClosureField = "not a tag"
@@ -94,15 +96,18 @@ class CompileStaticSampleTagLib {
 
 @CompileStatic
 class ParentCompileStaticTagLib {
+
     Closure parentTag = { Map attrs -> "parent" }
 }
 
 @CompileStatic
 class ChildCompileStaticTagLib extends ParentCompileStaticTagLib {
+
     Closure childTag = { Map attrs -> "child" }
 }
 
 class CustomNamespaceTagLib {
+
     static String namespace = 'custom'
     Closure myTag = { attrs -> }
 }

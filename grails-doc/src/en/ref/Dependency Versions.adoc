@@ -19,4 +19,18 @@ under the License.
 
 == Dependency Versions for grails-bom
 
-Grails applications rely on a set of dependencies managed through a Bill of Materials (BOM). The application bom is `grails-bom`. This BOM serves as a centralized location to declare and manage versions of dependencies used within a Grails applications. Understanding these dependencies and their versions is crucial for effective project management and dependency resolution.
+Grails applications rely on a set of dependencies managed through a Bill of Materials (BOM). The application BOM is `org.apache.grails:grails-bom`. This BOM serves as a centralized location to declare and manage versions of dependencies used within Grails applications. Understanding these dependencies and their versions is crucial for effective project management and dependency resolution.
+
+=== BOM Variants
+
+The Grails BOM is published in three variants to support different Hibernate versions:
+
+[cols="1,2,2", options="header"]
+|===
+| Variant | Coordinates | Description
+| **Default** | `org.apache.grails:grails-bom` | The default BOM, uses Hibernate 5 compatible dependency versions (link:{versionsRef}Grails%20BOM.html[view dependencies])
+| **Hibernate 5** | `org.apache.grails:grails-hibernate5-bom` | Explicit Hibernate 5 BOM with Hibernate 5 compatible Liquibase versions (link:{versionsRef}Grails%20BOM%20Hibernate5.html[view dependencies])
+| **Hibernate 7** | `org.apache.grails:grails-hibernate7-bom` | Hibernate 7 BOM with Hibernate 7 compatible Liquibase versions (link:{versionsRef}Grails%20BOM%20Hibernate7.html[view dependencies])
+|===
+
+The primary difference between the variants is the Liquibase dependency versions and the Liquibase Hibernate extension used (`liquibase-hibernate5` vs `liquibase-hibernate7`).

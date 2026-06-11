@@ -37,9 +37,9 @@ class CompositeIdCriteria extends Specification {
 
   @Issue("https://github.com/grails/grails-data-hibernate5/issues/234")
   def "test that composite to-many properties can be queried using JPA"() {
-    Author _author = new Author(name:"Author").save()
-    Book _book = new Book(title:"Book").save()
-    CompositeIdToMany compositeIdToMany = new CompositeIdToMany(author:_author, book:_book).save(failOnError:true, flush:true)
+    Author _author = new Author(name: "Author").save()
+    Book _book = new Book(title: "Book").save()
+    CompositeIdToMany compositeIdToMany = new CompositeIdToMany(author: _author, book: _book).save(failOnError: true, flush: true)
 
     def criteriaBuilder = datastore.sessionFactory.criteriaBuilder
     def criteriaQuery = criteriaBuilder.createQuery()
@@ -53,7 +53,7 @@ class CompositeIdCriteria extends Specification {
   }
 
   def "test that composite can be queried using JPA"() {
-    CompositeIdSimple compositeIdSimple = new CompositeIdSimple(name:"name", age:2l).save(failOnError:true, flush:true)
+    CompositeIdSimple compositeIdSimple = new CompositeIdSimple(name: "name", age: 2l).save(failOnError: true, flush: true)
 
     def criteriaBuilder = datastore.sessionFactory.criteriaBuilder
     def criteriaQuery = criteriaBuilder.createQuery()
@@ -68,9 +68,9 @@ class CompositeIdCriteria extends Specification {
 
   @Issue("https://github.com/apache/grails-data-mapping/issues/1351")
   def "test that composite to-many can be used in criteria"() {
-    Author _author = new Author(name:"Author").save()
-    Book _book = new Book(title:"Book").save()
-    CompositeIdToMany compositeIdToMany = new CompositeIdToMany(author:_author, book:_book).save(failOnError:true, flush:true)
+    Author _author = new Author(name: "Author").save()
+    Book _book = new Book(title: "Book").save()
+    CompositeIdToMany compositeIdToMany = new CompositeIdToMany(author: _author, book: _book).save(failOnError: true, flush: true)
 
     expect:
     CompositeIdToMany.createCriteria().list {

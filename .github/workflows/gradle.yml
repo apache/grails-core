@@ -18,6 +18,7 @@ on:
   push:
     branches:
       - '[0-9]+.[0-9]+.x'
+      - '8.0.x-hibernate7.*'
   pull_request:
   workflow_dispatch:
 # Queue jobs - cancel in-progress PR runs when new commits pushed, but allow branch builds to complete
@@ -287,6 +288,7 @@ jobs:
           -PonlyFunctionalTests
           -PskipCodeStyle
           -PskipHibernate5Tests
+          -PskipHibernate7Tests
           -PskipMongodbTests
   mongodbFunctional:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
@@ -370,6 +372,44 @@ jobs:
           --stacktrace
           -PgrailsIndy=${{ matrix.indy }}
           -PonlyHibernate5Tests
+          -PskipCodeStyle
+  hibernate7Functional:
+    if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
+    name: "Hibernate7 Functional Tests (Java ${{ matrix.java }}, indy=${{ matrix.indy }})"
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        java: [ 21, 25 ]
+        indy: [ false ]
+        include:
+          - java: 21
+            indy: true
+    steps:
+      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
+      - name: "📥 Checkout the repository"
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: liberica
+          java-version: ${{ matrix.java }}
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        with:
+          cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: "🏃 Run Functional Tests"
+        env:
+          GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: >
+          ./gradlew bootJar check
+          --continue
+          --rerun-tasks
+          --stacktrace
+          -PgrailsIndy=${{ matrix.indy }}
+          -PonlyHibernate7Tests
           -PskipCodeStyle
   publishGradle:
     if: github.repository_owner == 'apache' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')

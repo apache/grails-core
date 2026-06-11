@@ -1,0 +1,92 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+Try performing some basic CRUD (Create/Read/Update/Delete) operations.
+
+
+==== Create
+
+
+To create a domain class use Map constructor to set its properties and call the `save()` method:
+
+[source,groovy]
+----
+def p = new Person(name: "Fred", age: 40, lastVisit: new Date())
+p.save()
+----
+
+The link:../api/org/grails/datastore/gorm/GormEntity.html#save()[save()] method will persist your class to the database using the underlying Hibernate ORM layer.
+
+The `save()` method is defined by the link:../api/org/grails/datastore/gorm/GormEntity.html[GormEntity] trait.
+
+==== Read
+
+GORM transparently adds an implicit `id` property to your domain class which you can use for retrieval:
+
+[source,groovy]
+----
+def p = Person.get(1)
+assert 1 == p.id
+----
+
+This uses the static link:../api/org/grails/datastore/gorm/GormEntity.html#get(java.io.Serializable)[get(id)] method that expects a database identifier to read the `Person` object back from the database.
+
+You can also load an object in a read-only state by using the `read(id)` method:
+
+[source,groovy]
+----
+def p = Person.read(1)
+----
+
+In this case the underlying Hibernate engine will not do any dirty checking and the object will not be persisted. Note that if you explicitly call the `save()` method then the object is placed back into a read-write state.
+
+In addition, you can also load a proxy for an instance by using the `load(id)` method:
+
+[source,java]
+----
+def p = Person.load(1)
+----
+
+This incurs no database access until a method other than getId() is called. Hibernate then initializes the proxied instance, or
+throws an exception if no record is found for the specified id.
+
+
+==== Update
+
+
+To update an instance, change some properties and then call `save()` again:
+
+[source,groovy]
+----
+def p = Person.get(1)
+p.name = "Bob"
+p.save()
+----
+
+
+==== Delete
+
+
+To delete an instance use the link:../api/org/grails/datastore/gorm/GormEntity.html#delete()[delete()] method:
+
+[source,groovy]
+----
+def p = Person.get(1)
+p.delete()
+----
