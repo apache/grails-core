@@ -28,7 +28,6 @@ import org.sitemesh.webmvc.SiteMeshViewResolver;
 
 import org.springframework.web.servlet.View;
 import org.springframework.web.servlet.ViewResolver;
-import org.springframework.web.servlet.view.InternalResourceView;
 
 /**
  * Grails-flavoured {@link SiteMeshViewResolver} that wraps each inner view
@@ -52,15 +51,9 @@ public class GrailsSiteMeshViewResolver extends SiteMeshViewResolver {
 
     @Override
     protected SiteMeshView createSiteMeshView(View innerView) {
-        if (innerView instanceof InternalResourceView) {
-            // JSP views render through RequestDispatcher.forward() by default.
-            // Recent Tomcat versions (suspendWrappedResponseAfterForward, on by
-            // default) suspend the underlying response once a forward returns,
-            // even when the view was handed SiteMesh's buffering wrapper — so
-            // the decorated page written afterwards would be discarded.
-            // Rendering the JSP via include leaves the response usable.
-            ((InternalResourceView) innerView).setAlwaysInclude(true);
-        }
+        // Forward-based JSP inner views are switched to include dispatch by
+        // SiteMeshViewResolver.prepareForBufferedRender (keyed on
+        // DispatchMode) before this hook runs.
         return new GrailsSiteMeshView(innerView, contentProcessor, decoratorSelector, servletContext,
                 getInnerViewResolver());
     }

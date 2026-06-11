@@ -82,14 +82,17 @@ class GrailsSiteMeshViewResolverSpec extends Specification {
         result.is(redirect)
     }
 
-    void "JSP inner views are rendered via include so the response survives decoration"() {
-        given: 'a JSP view resolved through the SiteMesh resolver'
+    void "JSP inner views are rendered via include on containers where forward is unsafe"() {
+        given: 'a container where forward dispatch suspends the buffered response'
+        servletContext.getServerInfo() >> 'Apache Tomcat/11.0.5'
+
+        and: 'a JSP view resolved through the SiteMesh resolver'
         InternalResourceView jspView = new InternalResourceView('/WEB-INF/grails-app/views/demo/hello.jsp')
         inner.resolveViewName('/demo/hello', Locale.ENGLISH) >> jspView
         MockHttpServletRequest request = new MockHttpServletRequest()
         MockHttpServletResponse response = new MockHttpServletResponse()
 
-        when:
+        when: 'the view is resolved (upstream prepareForBufferedRender runs) and rendered'
         View result = resolver().resolveViewName('/demo/hello', Locale.ENGLISH)
         result.render([:], request, response)
 

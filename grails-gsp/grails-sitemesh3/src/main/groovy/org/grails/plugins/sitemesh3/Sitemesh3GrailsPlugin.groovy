@@ -18,13 +18,6 @@
  */
 package org.grails.plugins.sitemesh3
 
-import jakarta.servlet.DispatcherType
-import jakarta.servlet.Filter
-import jakarta.servlet.FilterChain
-import jakarta.servlet.ServletRequest
-import jakarta.servlet.ServletResponse
-
-import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.core.env.ConfigurableEnvironment
 import org.springframework.core.env.MapPropertySource
 import org.springframework.core.env.PropertySource
@@ -107,30 +100,6 @@ class Sitemesh3GrailsPlugin extends Plugin {
             // they are never decorated with a layout (the SiteMesh 2 plugin
             // does the same with its GrailsLayoutRenderViewMutator).
             grailsRenderViewMutator(Sitemesh3RenderViewMutator)
-
-            // Replace the filter registration from
-            // org.sitemesh.autoconfigure.SiteMeshAutoConfiguration with a no-op
-            // filter bean under the same name. SiteMeshAutoConfiguration is
-            // @ConditionalOnMissingBean(name = "sitemesh") so registering this
-            // bean disables the upstream filter-based integration entirely.
-            // Decoration is done by the Spring MVC view resolver chain.
-            sitemesh(FilterRegistrationBean) { bean ->
-                bean.autowire = false
-                filter = new NoopSitemeshFilter()
-                enabled = false
-                dispatcherTypes = EnumSet.of(DispatcherType.REQUEST)
-            }
-        }
-    }
-
-    // This class is never invoked (the FilterRegistrationBean has enabled = false).
-    // It exists solely so we can register a bean named "sitemesh" and satisfy
-    // SiteMeshAutoConfiguration's @ConditionalOnMissingBean(name = "sitemesh")
-    // guard — preventing the upstream filter-based integration from activating.
-    static class NoopSitemeshFilter implements Filter {
-        @Override
-        void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) {
-            chain.doFilter(request, response)
         }
     }
 }
