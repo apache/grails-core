@@ -85,9 +85,9 @@ List results = Book.executeQuery(
     ['%Groovy%', 'Tech'])
 ----
 
-=== Pagination and Sorting
+=== Query Settings
 
-All `findAll` and `executeQuery` overloads accept a settings map as the last argument:
+`find`, `findAll`, and `executeQuery` overloads accept a settings map as the last argument. Use it for pagination and Hibernate query settings such as `cache`, `readOnly`, `fetchSize`, `timeout`, `flushMode`, and `lock`:
 
 [source,groovy]
 ----
@@ -99,7 +99,14 @@ List results = Book.executeQuery(
     "from Book b where b.genre = :genre",
     [genre: 'Tech'],
     [max: 5, offset: 0, cache: true])
+
+List locked = Book.findAll(
+    "from Book b where b.genre = :genre",
+    [genre: 'Tech'],
+    [lock: true])
 ----
+
+When `lock: true` is used, GORM requests a pessimistic write lock and disables query caching for that query.
 
 === Bulk Updates and Deletes
 
