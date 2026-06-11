@@ -84,7 +84,6 @@ import static java.lang.reflect.Modifier.PRIVATE
 import static java.lang.reflect.Modifier.PUBLIC
 import static java.lang.reflect.Modifier.STATIC
 import static org.grails.compiler.injection.GrailsASTUtils.VOID_CLASS_NODE
-import static org.grails.compiler.injection.GrailsASTUtils.ZERO_PARAMETERS
 import static org.grails.compiler.injection.GrailsASTUtils.applyDefaultMethodTarget
 import static org.grails.compiler.injection.GrailsASTUtils.buildThisExpression
 import static org.grails.compiler.injection.GrailsASTUtils.nonGeneric
@@ -239,7 +238,7 @@ class ResourceTransform implements ASTTransformation, CompilationUnitAware, Tran
                     def addMappingsMethodCall = applyDefaultMethodTarget(new MethodCallExpression(urlMappingsVar, 'addMappings', urlMappingsClosure), urlMappingsClassNode)
                     methodBody.addStatement(new IfStatement(new BooleanExpression(urlMappingsVar), new ExpressionStatement(addMappingsMethodCall), new EmptyStatement()))
 
-                    def initialiseUrlMappingsMethod = new MethodNode('initializeUrlMappings', PUBLIC, VOID_CLASS_NODE, ZERO_PARAMETERS, ClassNode.EMPTY_ARRAY, methodBody)
+                    def initialiseUrlMappingsMethod = new MethodNode('initializeUrlMappings', PUBLIC, VOID_CLASS_NODE, Parameter.EMPTY_ARRAY, ClassNode.EMPTY_ARRAY, methodBody)
                     initialiseUrlMappingsMethod.addAnnotation(new AnnotationNode(new ClassNode(PostConstruct).getPlainNodeReference()))
                     initialiseUrlMappingsMethod.addAnnotation(controllerMethodAnnotation)
                     newControllerClassNode.addMethod(initialiseUrlMappingsMethod)
@@ -268,7 +267,7 @@ class ResourceTransform implements ASTTransformation, CompilationUnitAware, Tran
     ConstructorNode addConstructor(ClassNode controllerClassNode, ClassNode domainClassNode, boolean readOnly) {
         BlockStatement constructorBody = new BlockStatement()
         constructorBody.addStatement(new ExpressionStatement(new ConstructorCallExpression(ClassNode.SUPER, new TupleExpression(new ClassExpression(domainClassNode), new ConstantExpression(readOnly, true)))))
-        ConstructorNode constructorNode = controllerClassNode.addConstructor(Modifier.PUBLIC, ZERO_PARAMETERS, ClassNode.EMPTY_ARRAY, constructorBody)
+        ConstructorNode constructorNode = controllerClassNode.addConstructor(Modifier.PUBLIC, Parameter.EMPTY_ARRAY, ClassNode.EMPTY_ARRAY, constructorBody)
         AnnotatedNodeUtils.markAsGenerated(controllerClassNode, constructorNode)
         return constructorNode
     }

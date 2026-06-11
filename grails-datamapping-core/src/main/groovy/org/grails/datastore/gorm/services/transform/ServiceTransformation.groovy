@@ -115,8 +115,6 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.callD
 import static org.grails.datastore.mapping.reflect.AstUtils.COMPILE_STATIC_TYPE
-import static org.grails.datastore.mapping.reflect.AstUtils.EMPTY_CLASS_ARRAY
-import static org.grails.datastore.mapping.reflect.AstUtils.ZERO_PARAMETERS
 import static org.grails.datastore.mapping.reflect.AstUtils.addAnnotationIfNecessary
 import static org.grails.datastore.mapping.reflect.AstUtils.copyAnnotations
 import static org.grails.datastore.mapping.reflect.AstUtils.copyParameters
@@ -251,12 +249,12 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
                 Parameter datastoreParam = param(datastoreType, 'd')
                 MethodNode datastoreSetterNode = impl.addMethod('setDatastore', Modifier.PUBLIC, ClassHelper.VOID_TYPE, params(
                         datastoreParam
-                ), null, body)
+                ), ClassNode.EMPTY_ARRAY, body)
                 markAsGenerated(impl, datastoreSetterNode)
                 body.addStatement(
                         assignS(datastoreFieldVar, varX(datastoreParam))
                 )
-                MethodNode datastoreGetterNode = impl.addMethod('getDatastore', Modifier.PUBLIC, datastoreType.plainNodeReference, ZERO_PARAMETERS, null,
+                MethodNode datastoreGetterNode = impl.addMethod('getDatastore', Modifier.PUBLIC, datastoreType.plainNodeReference, Parameter.EMPTY_ARRAY, ClassNode.EMPTY_ARRAY,
                         returnS(datastoreFieldVar)
                 )
                 markAsGenerated(impl, datastoreGetterNode)
@@ -328,7 +326,7 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
                                 Modifier.PUBLIC,
                                 GenericsUtils.makeClassSafeWithGenerics(method.returnType, method.returnType.genericsTypes),
                                 copyParameters(method.parameters),
-                                method.exceptions == null ? EMPTY_CLASS_ARRAY : method.exceptions,
+                                method.exceptions == null ? ClassNode.EMPTY_ARRAY : method.exceptions,
                                 new BlockStatement())
                         methodImpl.setDeclaringClass(impl)
                         if (Modifier.isProtected(method.modifiers)) {
@@ -611,7 +609,7 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
                 'getTransactionManager',
                 Modifier.PUBLIC,
                 transactionManagerClassNode,
-                ZERO_PARAMETERS, null,
+                Parameter.EMPTY_ARRAY, ClassNode.EMPTY_ARRAY,
                 body
         )
         markAsGenerated(implClass, methodNode)

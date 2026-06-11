@@ -94,7 +94,7 @@ trait InterfaceProjectionBuilder {
             FieldNode field = innerClassNode.addField(
                     '$target', Modifier.PUBLIC, targetDomainClass.plainNodeReference, null
             )
-            methodTarget = innerClassNode.addMethod('$setTarget', Modifier.PUBLIC, ClassHelper.VOID_TYPE, params, null, block(
+            methodTarget = innerClassNode.addMethod('$setTarget', Modifier.PUBLIC, ClassHelper.VOID_TYPE, params, ClassNode.EMPTY_ARRAY, block(
                     assignS(varX(field), varX(domainClassParam))
             ))
             markAsGenerated(innerClassNode, methodTarget)

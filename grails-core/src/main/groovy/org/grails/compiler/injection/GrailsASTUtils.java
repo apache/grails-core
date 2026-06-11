@@ -126,6 +126,11 @@ public class GrailsASTUtils {
     public static final ClassNode INTEGER_CLASS_NODE = new ClassNode(Integer.class).getPlainNodeReference();
     private static final ClassNode COMPILESTATIC_CLASS_NODE = ClassHelper.make(CompileStatic.class);
     private static final ClassNode TYPECHECKINGMODE_CLASS_NODE = ClassHelper.make(TypeCheckingMode.class);
+
+    /**
+     * @deprecated Use Parameter.EMPTY_ARRAY instead.
+     */
+    @Deprecated(forRemoval = true, since = "8.0")
     public static final Parameter[] ZERO_PARAMETERS = new Parameter[0];
     public static final ArgumentListExpression ZERO_ARGUMENTS = new ArgumentListExpression();
 
@@ -339,7 +344,7 @@ public class GrailsASTUtils {
 
         MethodNode methodNode = new MethodNode(methodName,
                 Modifier.PUBLIC, returnType, copyParameters(parameterTypes, genericsPlaceholders),
-                GrailsArtefactClassInjector.EMPTY_CLASS_ARRAY, methodBody);
+                ClassNode.EMPTY_ARRAY, methodBody);
         copyAnnotations(declaredMethod, methodNode);
         if (shouldAddMarkerAnnotation(markerAnnotation, methodNode)) {
             methodNode.addAnnotation(markerAnnotation);
@@ -408,7 +413,7 @@ public class GrailsASTUtils {
      */
     public static Parameter[] getRemainingParameterTypes(Parameter[] parameters) {
         if (parameters.length == 0) {
-            return GrailsArtefactClassInjector.ZERO_PARAMETERS;
+            return Parameter.EMPTY_ARRAY;
         }
 
         Parameter[] newParameters = new Parameter[parameters.length - 1];
@@ -479,7 +484,7 @@ public class GrailsASTUtils {
 
         ClassNode returnType = replaceGenericsPlaceholders(delegateMethod.getReturnType(), genericsPlaceholders);
         MethodNode methodNode = new MethodNode(declaredMethodName, Modifier.PUBLIC | Modifier.STATIC, returnType,
-                copyParameters(parameterTypes, genericsPlaceholders), GrailsArtefactClassInjector.EMPTY_CLASS_ARRAY,
+                copyParameters(parameterTypes, genericsPlaceholders), ClassNode.EMPTY_ARRAY,
                 methodBody);
         copyAnnotations(delegateMethod, methodNode);
         if (shouldAddMarkerAnnotation(markerAnnotation, methodNode)) {
@@ -1510,21 +1515,10 @@ public class GrailsASTUtils {
         VariableScopeVisitor scopeVisitor = new VariableScopeVisitor(source);
         if (methodNode == null) {
             scopeVisitor.visitClass(classNode);
-            return;
+        } else {
+            scopeVisitor.prepareVisit(classNode);
+            scopeVisitor.visitMethod(methodNode);
         }
-        scopeVisitor.prepareVisit(classNode);
-        if (methodNode.getExceptions() == null) {
-            // Groovy 5 VariableScopeVisitor requires a non-null exception array. MethodNode.exceptions is final,
-            // and original method nodes can still arrive here with null, so visit an equivalent proxy and copy the
-            // computed scope back.
-            MethodNode proxy = new MethodNode(methodNode.getName(), methodNode.getModifiers(), methodNode.getReturnType(),
-                    methodNode.getParameters(), ClassNode.EMPTY_ARRAY, methodNode.getCode());
-            proxy.setDeclaringClass(methodNode.getDeclaringClass());
-            scopeVisitor.visitMethod(proxy);
-            methodNode.setVariableScope(proxy.getVariableScope());
-            return;
-        }
-        scopeVisitor.visitMethod(methodNode);
     }
 
     public static boolean isGetterMethod(MethodNode md) {

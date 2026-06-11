@@ -80,7 +80,15 @@ class AstUtils {
     public static final ClassNode TYPE_CHECKED_TYPE = ClassHelper.make(TypeChecked)
     public static final Object TRANSFORM_APPLIED_MARKER = new Object()
     public static final String DOMAIN_TYPE = 'Domain'
+    /**
+     * @deprecated Use Parameter.EMPTY_ARRAY instead.
+     */
+    @Deprecated(forRemoval = true, since = '8.0')
     public static final Parameter[] ZERO_PARAMETERS = new Parameter[0]
+    /**
+     * @deprecated Use ClassNode.EMPTY_ARRAY instead.
+     */
+    @Deprecated(forRemoval = true, since = '8.0')
     public static final ClassNode[] EMPTY_CLASS_ARRAY = new ClassNode[0]
     public static final Token ASSIGNMENT_OPERATOR = Token.newSymbol(Types.ASSIGNMENT_OPERATOR, 0, 0)
     public static final ArgumentListExpression ZERO_ARGUMENTS = new ArgumentListExpression()
@@ -248,21 +256,10 @@ class AstUtils {
         VariableScopeVisitor scopeVisitor = new VariableScopeVisitor(source)
         if (methodNode == null) {
             scopeVisitor.visitClass(classNode)
-            return
+        } else {
+            scopeVisitor.prepareVisit(classNode)
+            scopeVisitor.visitMethod(methodNode)
         }
-        scopeVisitor.prepareVisit(classNode)
-        if (methodNode.exceptions == null) {
-            // Groovy 5 VariableScopeVisitor requires a non-null exception array. MethodNode.exceptions is final,
-            // and original method nodes can still arrive here with null, so visit an equivalent proxy and copy the
-            // computed scope back.
-            MethodNode proxy = new MethodNode(methodNode.name, methodNode.modifiers, methodNode.returnType,
-                    methodNode.parameters, ClassNode.EMPTY_ARRAY, methodNode.code)
-            proxy.declaringClass = methodNode.declaringClass
-            scopeVisitor.visitMethod(proxy)
-            methodNode.variableScope = proxy.variableScope
-            return
-        }
-        scopeVisitor.visitMethod(methodNode)
     }
 
     /**

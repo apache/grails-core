@@ -165,7 +165,7 @@ public class DelegateAsyncTransformation implements ASTTransformation, Transform
                     }
                     MethodCallExpression delegateMethodCall = new MethodCallExpression(new VariableExpression(fieldName), m.getName(), arguments);
                     promiseBody.addStatement(new ExpressionStatement(delegateMethodCall));
-                    MethodNode newMethodNode = new MethodNode(m.getName(), Modifier.PUBLIC, promiseNode, parameters, null, methodBody);
+                    MethodNode newMethodNode = new MethodNode(m.getName(), Modifier.PUBLIC, promiseNode, parameters, ClassNode.EMPTY_ARRAY, methodBody);
                     classNode.addMethod(newMethodNode);
                 }
             }

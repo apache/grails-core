@@ -57,7 +57,6 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
 import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.paramsForArgs
 import static org.grails.datastore.mapping.reflect.AstUtils.COMPILE_STATIC_TYPE
-import static org.grails.datastore.mapping.reflect.AstUtils.EMPTY_CLASS_ARRAY
 import static org.grails.datastore.mapping.reflect.AstUtils.TYPE_CHECKED_TYPE
 import static org.grails.datastore.mapping.reflect.AstUtils.addAnnotationIfNecessary
 import static org.grails.datastore.mapping.reflect.AstUtils.copyParameters
@@ -325,7 +324,7 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
                 renamedMethodName,
                 Modifier.PROTECTED, resolveReturnTypeForNewMethod(methodNode),
                 newParameters,
-                EMPTY_CLASS_ARRAY,
+                ClassNode.EMPTY_ARRAY,
                 body
         )
 

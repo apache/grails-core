@@ -24,6 +24,7 @@ import org.apache.groovy.ast.tools.AnnotatedNodeUtils
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.ListExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
@@ -120,7 +121,7 @@ class ApplicationClassInjector implements GrailsArtefactClassInjector {
                 ]
                 classNode.addStaticInitializerStatements(statements, true)
 
-                def packageNamesMethod = classNode.getMethod('packageNames', GrailsASTUtils.ZERO_PARAMETERS)
+                def packageNamesMethod = classNode.getMethod('packageNames', Parameter.EMPTY_ARRAY)
 
                 if (packageNamesMethod == null || packageNamesMethod.declaringClass != classNode) {
                     def collectionClassNode = GrailsASTUtils.replaceGenericsPlaceholders(ClassHelper.make(Collection), [E: ClassHelper.make(String)])
@@ -135,7 +136,7 @@ class ApplicationClassInjector implements GrailsArtefactClassInjector {
                             GrailsASTUtils.error(source, classNode, "Do not place Groovy sources in common package names such as 'org', 'com', 'io' or 'net' as this can result in performance degradation of classpath scanning")
                         }
                         packageNamesBody.addStatement(new ReturnStatement(new ExpressionStatement(new ListExpression(packageNames.toList()))))
-                        AnnotatedNodeUtils.markAsGenerated(classNode, classNode.addMethod('packageNames', Modifier.PUBLIC, collectionClassNode, ZERO_PARAMETERS, null, packageNamesBody))
+                        AnnotatedNodeUtils.markAsGenerated(classNode, classNode.addMethod('packageNames', Modifier.PUBLIC, collectionClassNode, Parameter.EMPTY_ARRAY, ClassNode.EMPTY_ARRAY, packageNamesBody))
                     }
                 }
 
