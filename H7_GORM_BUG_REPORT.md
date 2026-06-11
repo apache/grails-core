@@ -1,11 +1,28 @@
-## H7 `gorm` Functional Test Failures — Bug Report
+<!--
+SPDX-License-Identifier: Apache-2.0
 
-Running `grails-test-examples-gorm` with `-PhibernateVersion=7` produces 13 failures across 4 specs.
-Below are the 5 distinct root causes.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+## Historical H7 `gorm` Functional Test Failures - Bug Report
+
+This historical report captured the `grails-test-examples-gorm` failures that drove the Hibernate 7 fixes in this branch. Some entries below have since been fixed by this branch, so treat this file as triage rationale rather than current expected test status.
+
+Before those fixes, running `grails-test-examples-gorm` with `-PhibernateVersion=7` produced 13 failures across 4 specs. Below are the 5 distinct root causes.
 
 ---
 
-### Bug 1 (Intentional) — `executeQuery` / `executeUpdate` plain String blocked
+### Bug 1 (Intentional) - `executeQuery` / `executeUpdate` plain String blocked
 
 | | |
 |---|---|
@@ -19,7 +36,7 @@ Below are the 5 distinct root causes.
 
 ---
 
-### Bug 2 — `DetachedCriteria.get()` throws `NonUniqueResultException` instead of returning first result
+### Bug 2 - `DetachedCriteria.get()` throws `NonUniqueResultException` instead of returning first result
 
 | | |
 |---|---|
@@ -33,7 +50,7 @@ Below are the 5 distinct root causes.
 
 ---
 
-### Bug 3 — `Found two representations of same collection: gorm.Author.books`
+### Bug 3 - `Found two representations of same collection: gorm.Author.books`
 
 | | |
 |---|---|
@@ -47,7 +64,7 @@ Below are the 5 distinct root causes.
 
 ---
 
-### Bug 4 — `@Query` aggregate functions fail with type mismatch
+### Bug 4 - `@Query` aggregate functions fail with type mismatch
 
 | | |
 |---|---|
@@ -61,7 +78,7 @@ Below are the 5 distinct root causes.
 
 ---
 
-### Bug 5 — `where { pageCount > price * 10 }` fails with `CoercionException`
+### Bug 5 - `where { pageCount > price * 10 }` fails with `CoercionException`
 
 | | |
 |---|---|
