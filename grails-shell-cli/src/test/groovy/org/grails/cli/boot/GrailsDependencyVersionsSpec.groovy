@@ -150,8 +150,8 @@ class GrailsDependencyVersionsSpec extends Specification {
         versions.find('org.apache.grails', 'grails-core').version == '7.0.11'
     }
 
-    def "addDependencyManagement does not recurse into third-party imported BOMs"() {
-        given: "A BOM that imports both a Grails BOM and third-party BOMs"
+    def "addDependencyManagement recurses into third-party imported BOMs so Spring Boot managed versions are surfaced"() {
+        given: "A Grails base BOM that imports spring-boot-dependencies and pins its own Groovy"
         String grailsBaseBomXml = '''\
             <project>
                 <dependencyManagement>
@@ -160,6 +160,118 @@ class GrailsDependencyVersionsSpec extends Specification {
                             <groupId>org.apache.grails.profiles</groupId>
                             <artifactId>web</artifactId>
                             <version>7.0.11</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.apache.groovy</groupId>
+                            <artifactId>groovy</artifactId>
+                            <version>4.0.32</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.springframework.boot</groupId>
+                            <artifactId>spring-boot-dependencies</artifactId>
+                            <version>4.1.0</version>
+                            <type>pom</type>
+                            <scope>import</scope>
+                        </dependency>
+                    </dependencies>
+                </dependencyManagement>
+            </project>
+        '''
+
+        String springBootBomXml = '''\
+            <project>
+                <dependencyManagement>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.mongodb</groupId>
+                            <artifactId>mongodb-driver-sync</artifactId>
+                            <version>5.8.0</version>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.apache.groovy</groupId>
+                            <artifactId>groovy</artifactId>
+                            <version>5.0.6</version>
+                        </dependency>
+                    </dependencies>
+                </dependencyManagement>
+            </project>
+        '''
+
+        String parentBomXml = '''\
+            <project>
+                <dependencyManagement>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.apache.grails</groupId>
+                            <artifactId>grails-base-bom</artifactId>
+                            <version>7.0.11</version>
+                            <type>pom</type>
+                            <scope>import</scope>
+                        </dependency>
+                        <dependency>
+                            <groupId>org.apache.grails</groupId>
+                            <artifactId>grails-web-mvc</artifactId>
+                            <version>7.0.11</version>
+                        </dependency>
+                    </dependencies>
+                </dependencyManagement>
+            </project>
+        '''
+
+        URI grailsBaseBomUri = writePom('grails-base-bom.pom', grailsBaseBomXml)
+        URI springBootBomUri = writePom('spring-boot-dependencies.pom', springBootBomXml)
+        URI parentBomUri = writePom('grails-bom.pom', parentBomXml)
+
+        GrapeEngine grape = Mock(GrapeEngine)
+
+        when: "GrailsDependencyVersions is constructed"
+        def versions = new GrailsDependencyVersions(grape, [group: 'org.apache.grails', module: 'grails-bom', version: '7.0.11', type: 'pom'])
+
+        then: "The parent and Grails base BOMs are resolved"
+        1 * grape.resolve(null, { it.module == 'grails-bom' }) >> [parentBomUri]
+        1 * grape.resolve(null, { it.module == 'grails-base-bom' }) >> [grailsBaseBomUri]
+
+        and: "The third-party Spring Boot BOM is now resolved too"
+        1 * grape.resolve(null, { it.module == 'spring-boot-dependencies' && it.type == 'pom' }) >> [springBootBomUri]
+
+        and: "Versions managed only by Spring Boot are surfaced"
+        versions.find('org.mongodb', 'mongodb-driver-sync') != null
+        versions.find('org.mongodb', 'mongodb-driver-sync').version == '5.8.0'
+
+        and: "Grails' own pinned version wins over the Spring Boot managed version"
+        versions.find('org.apache.groovy', 'groovy').version == '4.0.32'
+
+        and: "Grails dependencies remain available"
+        versions.find('org.apache.grails', 'grails-web-mvc') != null
+        versions.find('org.apache.grails.profiles', 'web') != null
+    }
+
+    def "addDependencyManagement resolves a repeated third-party BOM import only once"() {
+        given: "Both the parent and base Grails BOMs import the same spring-boot-dependencies"
+        String grailsBaseBomXml = '''\
+            <project>
+                <dependencyManagement>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.springframework.boot</groupId>
+                            <artifactId>spring-boot-dependencies</artifactId>
+                            <version>4.1.0</version>
+                            <type>pom</type>
+                            <scope>import</scope>
+                        </dependency>
+                    </dependencies>
+                </dependencyManagement>
+            </project>
+        '''
+
+        String springBootBomXml = '''\
+            <project>
+                <dependencyManagement>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.mongodb</groupId>
+                            <artifactId>mongodb-driver-sync</artifactId>
+                            <version>5.8.0</version>
                         </dependency>
                     </dependencies>
                 </dependencyManagement>
@@ -180,21 +292,9 @@ class GrailsDependencyVersionsSpec extends Specification {
                         <dependency>
                             <groupId>org.springframework.boot</groupId>
                             <artifactId>spring-boot-dependencies</artifactId>
-                            <version>3.5.0</version>
+                            <version>4.1.0</version>
                             <type>pom</type>
                             <scope>import</scope>
-                        </dependency>
-                        <dependency>
-                            <groupId>org.apache.groovy</groupId>
-                            <artifactId>groovy-bom</artifactId>
-                            <version>4.0.30</version>
-                            <type>pom</type>
-                            <scope>import</scope>
-                        </dependency>
-                        <dependency>
-                            <groupId>org.apache.grails</groupId>
-                            <artifactId>grails-web-mvc</artifactId>
-                            <version>7.0.11</version>
                         </dependency>
                     </dependencies>
                 </dependencyManagement>
@@ -202,6 +302,7 @@ class GrailsDependencyVersionsSpec extends Specification {
         '''
 
         URI grailsBaseBomUri = writePom('grails-base-bom.pom', grailsBaseBomXml)
+        URI springBootBomUri = writePom('spring-boot-dependencies.pom', springBootBomXml)
         URI parentBomUri = writePom('grails-bom.pom', parentBomXml)
 
         GrapeEngine grape = Mock(GrapeEngine)
@@ -209,19 +310,82 @@ class GrailsDependencyVersionsSpec extends Specification {
         when: "GrailsDependencyVersions is constructed"
         def versions = new GrailsDependencyVersions(grape, [group: 'org.apache.grails', module: 'grails-bom', version: '7.0.11', type: 'pom'])
 
-        then: "The parent BOM is resolved"
+        then: "The parent and base BOMs are each resolved once"
         1 * grape.resolve(null, { it.module == 'grails-bom' }) >> [parentBomUri]
-
-        and: "The Grails base BOM is resolved"
         1 * grape.resolve(null, { it.module == 'grails-base-bom' }) >> [grailsBaseBomUri]
 
-        and: "Third-party BOMs are never resolved"
-        0 * grape.resolve(null, { it.module == 'spring-boot-dependencies' })
-        0 * grape.resolve(null, { it.module == 'groovy-bom' })
+        and: "The duplicated spring-boot-dependencies import is resolved exactly once"
+        1 * grape.resolve(null, { it.module == 'spring-boot-dependencies' }) >> [springBootBomUri]
 
-        and: "Dependencies from both Grails BOMs are available"
-        versions.find('org.apache.grails', 'grails-web-mvc') != null
-        versions.find('org.apache.grails.profiles', 'web') != null
+        and: "Its managed version is available"
+        versions.find('org.mongodb', 'mongodb-driver-sync').version == '5.8.0'
+    }
+
+    def "addDependencyManagement resolves BOMs imported transitively by a third-party BOM"() {
+        given: "A parent BOM importing spring-boot-dependencies, which itself imports junit-bom"
+        String junitBomXml = '''\
+            <project>
+                <dependencyManagement>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.junit.jupiter</groupId>
+                            <artifactId>junit-jupiter-api</artifactId>
+                            <version>6.0.3</version>
+                        </dependency>
+                    </dependencies>
+                </dependencyManagement>
+            </project>
+        '''
+
+        String springBootBomXml = '''\
+            <project>
+                <dependencyManagement>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.junit</groupId>
+                            <artifactId>junit-bom</artifactId>
+                            <version>6.0.3</version>
+                            <type>pom</type>
+                            <scope>import</scope>
+                        </dependency>
+                    </dependencies>
+                </dependencyManagement>
+            </project>
+        '''
+
+        String parentBomXml = '''\
+            <project>
+                <dependencyManagement>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.springframework.boot</groupId>
+                            <artifactId>spring-boot-dependencies</artifactId>
+                            <version>4.1.0</version>
+                            <type>pom</type>
+                            <scope>import</scope>
+                        </dependency>
+                    </dependencies>
+                </dependencyManagement>
+            </project>
+        '''
+
+        URI junitBomUri = writePom('junit-bom.pom', junitBomXml)
+        URI springBootBomUri = writePom('spring-boot-dependencies.pom', springBootBomXml)
+        URI parentBomUri = writePom('grails-bom.pom', parentBomXml)
+
+        GrapeEngine grape = Mock(GrapeEngine)
+
+        when: "GrailsDependencyVersions is constructed"
+        def versions = new GrailsDependencyVersions(grape, [group: 'org.apache.grails', module: 'grails-bom', version: '7.0.11', type: 'pom'])
+
+        then: "The parent BOM and the BOMs it transitively imports are all resolved"
+        1 * grape.resolve(null, { it.module == 'grails-bom' }) >> [parentBomUri]
+        1 * grape.resolve(null, { it.module == 'spring-boot-dependencies' }) >> [springBootBomUri]
+        1 * grape.resolve(null, { it.module == 'junit-bom' }) >> [junitBomUri]
+
+        and: "A version managed only by the nested third-party BOM is surfaced"
+        versions.find('org.junit.jupiter', 'junit-jupiter-api') != null
+        versions.find('org.junit.jupiter', 'junit-jupiter-api').version == '6.0.3'
     }
 
     def "addDependencyManagement gracefully handles unresolvable imported Grails BOMs"() {

@@ -42,6 +42,7 @@ class GrailsDependencyVersions implements DependencyManagement {
     protected Map<String, String> artifactToGroupAndArtifact = [:]
     protected List<Dependency> dependencies = []
     protected Map<String, String> versionProperties = [:]
+    private final Set<String> resolvedBoms = [] as Set<String>
     private GrapeEngine grapeEngine
 
     GrailsDependencyVersions() {
@@ -85,27 +86,53 @@ class GrailsDependencyVersions implements DependencyManagement {
 
     @CompileDynamic
     void addDependencyManagement(GPathResult pom) {
-        versionProperties = pom.properties.'*'.collectEntries { [(it.name()): it.text()] }
+        // Capture this POM's <properties> in a local map so that ${...} version references are
+        // resolved against the POM that declared them, and so recursing into an imported BOM
+        // cannot clobber the property table mid-iteration. Merge into the shared map with
+        // first-writer-wins precedence so Grails' own versions win over imported BOM versions.
+        Map<String, String> localProperties = pom.properties.'*'.collectEntries { [(it.name()): it.text()] }
+        localProperties.each { String key, String value -> versionProperties.putIfAbsent(key, value) }
+
+        List<Map<String, String>> grailsImports = []
+        List<Map<String, String>> thirdPartyImports = []
+
         pom.dependencyManagement.dependencies.dependency.each { dep ->
             String groupId = dep.groupId.text()
             String artifactId = dep.artifactId.text()
-            String version = versionLookup(dep.version.text())
+            String version = versionLookup(dep.version.text(), localProperties)
             String scope = dep.scope.text()
             String type = dep.type.text()
 
-            // Recursively resolve imported Grails BOMs (e.g. grails-base-bom) to pick up their managed dependencies.
-            // Only follow Grails BOMs to avoid recursing into third-party BOMs like spring-boot-dependencies.
-            if ((scope == 'import' && type == 'pom') && groupId == 'org.apache.grails') {
-                resolveImportedBom(groupId, artifactId, version)
-            } else if (scope != 'import') {
+            if (scope == 'import' && type == 'pom') {
+                // Defer all imported BOMs (Grails BOMs such as grails-base-bom AND third-party BOMs
+                // such as spring-boot-dependencies). They are resolved after this POM's direct
+                // constraints so the importing BOM's versions take precedence.
+                Map<String, String> coords = [group: groupId, module: artifactId, version: version]
+                if (groupId == 'org.apache.grails') {
+                    grailsImports << coords
+                } else {
+                    thirdPartyImports << coords
+                }
+            } else if (scope != 'import' && version && !version.startsWith('${')) {
                 addDependency(groupId, artifactId, version)
             }
+        }
+
+        // Resolve Grails BOM imports before third-party ones so that Grails-managed versions
+        // (e.g. an intentionally pinned Groovy) win over the versions a third-party BOM declares.
+        for (Map<String, String> coords : (grailsImports + thirdPartyImports)) {
+            resolveImportedBom(coords['group'], coords['module'], coords['version'])
         }
     }
 
     @CompileDynamic
     private void resolveImportedBom(String groupId, String artifactId, String version) {
-        if (grapeEngine == null) {
+        if (grapeEngine == null || !version) {
+            return
+        }
+        // Cycle / duplicate-import protection: spring-boot-dependencies is imported by both
+        // grails-bom and grails-base-bom, so the same BOM can be reached more than once.
+        if (!resolvedBoms.add("$groupId:$artifactId:$version".toString())) {
             return
         }
         try {
@@ -142,12 +169,22 @@ class GrailsDependencyVersions implements DependencyManagement {
      * @return the version with lookup from properties when required
      */
     String versionLookup(String version) {
+        versionLookup(version, versionProperties)
+    }
+
+    String versionLookup(String version, Map<String, String> properties) {
         version?.startsWith('${') && version?.endsWith('}') ?
-                versionProperties[version[2..-2]] : version
+                properties[version[2..-2]] : version
     }
 
     protected void addDependency(String group, String artifactId, String version) {
         def groupAndArtifactId = "$group:$artifactId".toString()
+        // First writer wins: a constraint declared by (or imported earlier into) the Grails BOM
+        // must not be overwritten by a later third-party BOM (e.g. spring-boot-dependencies)
+        // that manages the same artifact at a different version.
+        if (groupAndArtifactToDependency.containsKey(groupAndArtifactId)) {
+            return
+        }
         artifactToGroupAndArtifact[artifactId] = groupAndArtifactId
 
         def dep = new Dependency(group, artifactId, version)

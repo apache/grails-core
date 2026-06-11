@@ -26,7 +26,6 @@ ext {
             'asciidoctor-gradle-jvm.version': '4.0.5',
             'asciidoctorj.version'          : '3.0.0',
             'asset-pipeline-gradle.version' : '5.1.0-M4',
-            'byte-buddy.version'            : '1.18.10',
             'commons-text.version'          : '1.15.0',
             'directory-watcher.version'     : '0.19.1',
             'gradle-groovy.version'         : '4.0.32',
@@ -57,7 +56,6 @@ ext {
             'asciidoctor-gradle-jvm'  : "org.asciidoctor:asciidoctor-gradle-jvm:${gradleBomDependencyVersions['asciidoctor-gradle-jvm.version']}",
             'asciidoctorj'            : "org.asciidoctor:asciidoctorj:${gradleBomDependencyVersions['asciidoctorj.version']}",
             'asset-pipeline-gradle'   : "cloud.wondrify:asset-pipeline-gradle:${gradleBomDependencyVersions['asset-pipeline-gradle.version']}",
-            'byte-buddy'              : "net.bytebuddy:byte-buddy:${gradleBomDependencyVersions['byte-buddy.version']}",
             'commons-text'            : "org.apache.commons:commons-text:${gradleBomDependencyVersions['commons-text.version']}",
             'directory-watcher'       : "io.methvin:directory-watcher:${gradleBomDependencyVersions['directory-watcher.version']}",
             'grails-publish-plugin'   : "org.apache.grails.gradle:grails-publish:${gradleBomDependencyVersions['grails-publish-plugin.version']}",
@@ -76,21 +74,19 @@ ext {
             'asset-pipeline-bom.version'    : '5.1.0-M4',
             'bootstrap-icons.version'       : '1.13.1',
             'bootstrap.version'             : '5.3.8',
-            'commons-codec.version'         : '1.21.0',
-            'commons-lang3.version'         : '3.20.0',
             'geb-spock.version'             : '8.0.1',
+            // Pinned deliberately as a drift tripwire even though it matches Spring Boot's
+            // managed version: graphql-java-extended-scalars (below) is NOT managed by Spring
+            // Boot and must be upgraded in lockstep with graphql-java. Keeping this pin makes
+            // the dependency validator flag any Spring Boot graphql-java bump so we re-check
+            // extended-scalars compatibility. See https://github.com/apache/grails-core/issues/15674
             'graphql-java.version'          : '25.0',
             'graphql-java-extended-scalars.version': '24.0',
             'groovy.version'                : '4.0.32',
             'hibernate-groovy-proxy.version': '1.1',
-            'jakarta-servlet-api.version'   : '6.1.0',
-            'jakarta-validation.version': '3.1.1',
             'jquery.version'                : '3.7.1',
-            'junit.version'                 : '6.0.3',
-            'mongodb.version'               : '5.8.0',
             'rxjava.version'                : '1.3.8',
             'rxjava2.version'               : '2.2.21',
-            'rxjava3.version'               : '3.1.12',
             'selenium.version'              : '4.38.0',
             'sitemesh.version'              : '2.6.0',
             'spock.version'                 : '2.4-groovy-4.0',
@@ -106,7 +102,6 @@ ext {
     bomPlatformDependencies = [
             'asset-pipeline-bom': "cloud.wondrify:asset-pipeline-bom:${bomDependencyVersions['asset-pipeline-bom.version']}",
             'groovy-bom'        : "org.apache.groovy:groovy-bom:${bomDependencyVersions['groovy.version']}",
-            'junit-bom'         : "org.junit:junit-bom:${bomDependencyVersions['junit.version']}",
             'selenium-bom'      : "org.seleniumhq.selenium:selenium-bom:${bomDependencyVersions['selenium.version']}",
             'spock-bom'         : "org.spockframework:spock-bom:${bomDependencyVersions['spock.version']}",
     ]
@@ -115,9 +110,6 @@ ext {
     bomDependencies = [
             'bootstrap'                : "org.webjars.npm:bootstrap:${bomDependencyVersions['bootstrap.version']}",
             'bootstrap-icons'          : "org.webjars.npm:bootstrap-icons:${bomDependencyVersions['bootstrap-icons.version']}",
-            'byte-buddy-agent'         : "net.bytebuddy:byte-buddy-agent:${gradleBomDependencyVersions['byte-buddy.version']}",
-            'commons-codec'            : "commons-codec:commons-codec:${bomDependencyVersions['commons-codec.version']}",
-            'commons-lang3'            : "org.apache.commons:commons-lang3:${bomDependencyVersions['commons-lang3.version']}",
             'geb-spock'                : "org.apache.groovy.geb:geb-spock:${bomDependencyVersions['geb-spock.version']}",
             'graphql-java'             : "com.graphql-java:graphql-java:${bomDependencyVersions['graphql-java.version']}",
             'graphql-java-extended-scalars': "com.graphql-java:graphql-java-extended-scalars:${bomDependencyVersions['graphql-java-extended-scalars.version']}",
@@ -152,28 +144,9 @@ ext {
             'groovy-xml'               : "org.apache.groovy:groovy-xml:${bomDependencyVersions['groovy.version']}",
             'groovy-yaml'              : "org.apache.groovy:groovy-yaml:${bomDependencyVersions['groovy.version']}",
             'hibernate-groovy-proxy'      : "org.yakworks:hibernate-groovy-proxy:${bomDependencyVersions['hibernate-groovy-proxy.version']}",
-            'jakarta-servlet-api'         : "jakarta.servlet:jakarta.servlet-api:${bomDependencyVersions['jakarta-servlet-api.version']}",
-            'jakarta-validation'      : "jakarta.validation:jakarta.validation-api:${bomDependencyVersions['jakarta-validation.version']}",
             'jquery'                   : "org.webjars.npm:jquery:${bomDependencyVersions['jquery.version']}",
-            'junit-jupiter'               : "org.junit.jupiter:junit-jupiter:${bomDependencyVersions['junit.version']}", // boot & spock conflict
-            'junit-jupiter-api'           : "org.junit.jupiter:junit-jupiter-api:${bomDependencyVersions['junit.version']}", // boot & spock conflict
-            'junit-jupiter-engine'        : "org.junit.jupiter:junit-jupiter-engine:${bomDependencyVersions['junit.version']}", // boot & spock conflict
-            'junit-jupiter-params'        : "org.junit.jupiter:junit-jupiter-params:${bomDependencyVersions['junit.version']}", // boot & spock conflict
-            'junit-platform-commons'      : "org.junit.platform:junit-platform-commons:${bomDependencyVersions['junit.version']}", // boot & spock conflict
-            'junit-platform-engine'       : "org.junit.platform:junit-platform-engine:${bomDependencyVersions['junit.version']}", // boot & spock conflict
-            'junit-platform-launcher'     : "org.junit.platform:junit-platform-launcher:${bomDependencyVersions['junit.version']}", // boot & spock conflict
-            'junit-platform-runner'       : "org.junit.platform:junit-platform-runner:${bomDependencyVersions['junit.version']}", // boot & spock conflict
-            'junit-platform-suite'        : "org.junit.platform:junit-platform-suite:${bomDependencyVersions['junit.version']}", // boot & spock conflict
-            'junit-platform-suite-api'    : "org.junit.platform:junit-platform-suite-api:${bomDependencyVersions['junit.version']}", // boot & spock conflict
-            'junit-platform-suite-commons': "org.junit.platform:junit-platform-suite-commons:${bomDependencyVersions['junit.version']}", // boot & spock conflict
-            'junit-platform-suite-engine' : "org.junit.platform:junit-platform-suite-engine:${bomDependencyVersions['junit.version']}", // boot & spock conflict
-            'mongodb-bson'             : "org.mongodb:bson:${bomDependencyVersions['mongodb.version']}",
-            'mongodb-driver-core'      : "org.mongodb:mongodb-driver-core:${bomDependencyVersions['mongodb.version']}",
-            'mongodb-driver-sync'      : "org.mongodb:mongodb-driver-sync:${bomDependencyVersions['mongodb.version']}",
-            'mongodb-record-codec'     : "org.mongodb:bson-record-codec:${bomDependencyVersions['mongodb.version']}",
             'rxjava'                   : "io.reactivex:rxjava:${bomDependencyVersions['rxjava.version']}",
             'rxjava2'                  : "io.reactivex.rxjava2:rxjava:${bomDependencyVersions['rxjava2.version']}",
-            'rxjava3'                  : "io.reactivex.rxjava3:rxjava:${bomDependencyVersions['rxjava3.version']}",
             'sitemesh'                 : "opensymphony:sitemesh:${bomDependencyVersions['sitemesh.version']}",
             'spock-core'               : "org.spockframework:spock-core:${bomDependencyVersions['spock.version']}",
             'spock-spring'             : "org.spockframework:spock-spring:${bomDependencyVersions['spock.version']}",
