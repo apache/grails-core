@@ -25,6 +25,8 @@ import org.sitemesh.SiteMeshContext
 import org.sitemesh.content.ContentProcessor
 
 import org.springframework.beans.factory.BeanFactory
+import org.springframework.context.ApplicationEvent
+import org.springframework.context.ApplicationListener
 import org.springframework.web.servlet.ViewResolver
 import org.springframework.web.servlet.view.InternalResourceViewResolver
 
@@ -33,6 +35,11 @@ import spock.lang.Specification
 class GrailsSiteMeshViewResolverBeanPostProcessorSpec extends Specification {
 
     BeanFactory beanFactory = Mock(BeanFactory)
+
+    static class ListenerViewResolver extends InternalResourceViewResolver implements ApplicationListener<ApplicationEvent> {
+        @Override
+        void onApplicationEvent(ApplicationEvent event) { }
+    }
 
     void "target bean name defaults to jspViewResolver and wrapper class is GrailsSiteMeshViewResolver"() {
         expect:
@@ -70,6 +77,17 @@ class GrailsSiteMeshViewResolverBeanPostProcessorSpec extends Specification {
 
         expect:
         pp.postProcessAfterInitialization(other, 'someOther').is(other)
+    }
+
+    void "a resolver that is an ApplicationListener, like SiteMesh 2's layout resolver, is left unwrapped"() {
+        given:
+        beanFactory.containsBean(_ as String) >> true
+        GrailsSiteMeshViewResolverBeanPostProcessor pp = new GrailsSiteMeshViewResolverBeanPostProcessor()
+        pp.setBeanFactory(beanFactory)
+        ViewResolver listenerResolver = new ListenerViewResolver()
+
+        expect:
+        pp.postProcessAfterInitialization(listenerResolver, 'jspViewResolver').is(listenerResolver)
     }
 
     void "the view resolver is left unwrapped when the SiteMesh beans are not in the context"() {
