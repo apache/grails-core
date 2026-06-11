@@ -63,8 +63,46 @@ class HttpServletRequestExtensionSpec extends Specification {
             StaticCaller.readName(request) == 'anonymous'
     }
 
+
+    void "Test the Class-typed getAttribute returns the attribute only when it is an instance of the requested type"() {
+        given:
+            HttpServletRequest request = new MockHttpServletRequest()
+            request.setAttribute('principal', new StringBuilder('alice'))
+            request.setAttribute('count', 42)
+
+        expect: 'a matching type returns the typed attribute'
+            request.getAttribute('principal', StringBuilder).toString() == 'alice'
+            request.getAttribute('count', Integer) == 42
+
+        and: 'a supertype of the stored attribute matches too'
+            request.getAttribute('principal', CharSequence).toString() == 'alice'
+
+        and: 'absent and wrong-typed attributes read as null - no coercion is attempted'
+            request.getAttribute('missing', StringBuilder) == null
+            request.getAttribute('count', String) == null
+
+        and: 'the Class-typed overload resolves to the requested type under static compilation'
+            StaticCaller.readPrincipal(request).toString() == 'alice'
+    }
+
+    void "Test the Class-typed getAttribute honors the default for absent and wrong-typed attributes"() {
+        given:
+            HttpServletRequest request = new MockHttpServletRequest()
+            request.setAttribute('count', 42)
+
+        expect:
+            request.getAttribute('missing', String, 'fallback') == 'fallback'
+            request.getAttribute('count', String, 'fallback') == 'fallback'
+            request.getAttribute('count', Integer, 7) == 42
+    }
+
     @CompileStatic
     static class StaticCaller {
+        static StringBuilder readPrincipal(HttpServletRequest request) {
+            StringBuilder principal = request.getAttribute('principal', StringBuilder)
+            principal
+        }
+
         static Integer readPage(HttpServletRequest request) {
             request.int('page', 1)
         }

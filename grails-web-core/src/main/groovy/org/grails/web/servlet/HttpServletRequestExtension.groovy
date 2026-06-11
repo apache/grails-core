@@ -251,4 +251,22 @@ class HttpServletRequestExtension {
     static Date date(HttpServletRequest request, String name, Collection<String> formats) {
         TypeConverters.toDate(request.getAttribute(name), formats)
     }
+    /**
+     * Null-safe, typed read of an attribute. Returns the attribute when it is an
+     * instance of {@code type}; otherwise {@code null}. No coercion is attempted —
+     * use the named converters ({@code string}, {@code int}, ...) for type conversion.
+     */
+    static <T> T getAttribute(HttpServletRequest request, String name, Class<T> type) {
+        Object value = request.getAttribute(name)
+        type.isInstance(value) ? type.cast(value) : null
+    }
+
+    /**
+     * Null-safe, typed read of an attribute with a default. Returns {@code defaultValue}
+     * when the attribute is absent or is not an instance of {@code type}.
+     */
+    static <T> T getAttribute(HttpServletRequest request, String name, Class<T> type, T defaultValue) {
+        T value = getAttribute(request, name, type)
+        value != null ? value : defaultValue
+    }
 }

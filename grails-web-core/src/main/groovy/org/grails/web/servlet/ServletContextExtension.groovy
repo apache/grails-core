@@ -134,4 +134,22 @@ class ServletContextExtension {
     static Date date(ServletContext context, String name, Collection<String> formats) {
         TypeConverters.toDate(context.getAttribute(name), formats)
     }
+    /**
+     * Null-safe, typed read of an attribute. Returns the attribute when it is an
+     * instance of {@code type}; otherwise {@code null}. No coercion is attempted —
+     * use the named converters ({@code string}, {@code int}, ...) for type conversion.
+     */
+    static <T> T getAttribute(ServletContext context, String name, Class<T> type) {
+        Object value = context.getAttribute(name)
+        type.isInstance(value) ? type.cast(value) : null
+    }
+
+    /**
+     * Null-safe, typed read of an attribute with a default. Returns {@code defaultValue}
+     * when the attribute is absent or is not an instance of {@code type}.
+     */
+    static <T> T getAttribute(ServletContext context, String name, Class<T> type, T defaultValue) {
+        T value = getAttribute(context, name, type)
+        value != null ? value : defaultValue
+    }
 }

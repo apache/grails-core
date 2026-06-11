@@ -147,4 +147,22 @@ class HttpSessionExtension {
     static Date date(HttpSession session, String name, Collection<String> formats) {
         TypeConverters.toDate(session.getAttribute(name), formats)
     }
+    /**
+     * Null-safe, typed read of an attribute. Returns the attribute when it is an
+     * instance of {@code type}; otherwise {@code null}. No coercion is attempted —
+     * use the named converters ({@code string}, {@code int}, ...) for type conversion.
+     */
+    static <T> T getAttribute(HttpSession session, String name, Class<T> type) {
+        Object value = session.getAttribute(name)
+        type.isInstance(value) ? type.cast(value) : null
+    }
+
+    /**
+     * Null-safe, typed read of an attribute with a default. Returns {@code defaultValue}
+     * when the attribute is absent or is not an instance of {@code type}.
+     */
+    static <T> T getAttribute(HttpSession session, String name, Class<T> type, T defaultValue) {
+        T value = getAttribute(session, name, type)
+        value != null ? value : defaultValue
+    }
 }

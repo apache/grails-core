@@ -59,8 +59,46 @@ class ServletContextExtensionSpec extends Specification {
             StaticCaller.readAppName(context) == 'grails'
     }
 
+
+    void "Test the Class-typed getAttribute returns the attribute only when it is an instance of the requested type"() {
+        given:
+            ServletContext context = new MockServletContext()
+            context.setAttribute('principal', new StringBuilder('alice'))
+            context.setAttribute('count', 42)
+
+        expect: 'a matching type returns the typed attribute'
+            context.getAttribute('principal', StringBuilder).toString() == 'alice'
+            context.getAttribute('count', Integer) == 42
+
+        and: 'a supertype of the stored attribute matches too'
+            context.getAttribute('principal', CharSequence).toString() == 'alice'
+
+        and: 'absent and wrong-typed attributes read as null - no coercion is attempted'
+            context.getAttribute('missing', StringBuilder) == null
+            context.getAttribute('count', String) == null
+
+        and: 'the Class-typed overload resolves to the requested type under static compilation'
+            StaticCaller.readPrincipal(context).toString() == 'alice'
+    }
+
+    void "Test the Class-typed getAttribute honors the default for absent and wrong-typed attributes"() {
+        given:
+            ServletContext context = new MockServletContext()
+            context.setAttribute('count', 42)
+
+        expect:
+            context.getAttribute('missing', String, 'fallback') == 'fallback'
+            context.getAttribute('count', String, 'fallback') == 'fallback'
+            context.getAttribute('count', Integer, 7) == 42
+    }
+
     @CompileStatic
     static class StaticCaller {
+        static StringBuilder readPrincipal(ServletContext context) {
+            StringBuilder principal = context.getAttribute('principal', StringBuilder)
+            principal
+        }
+
         static Integer readMaxUploads(ServletContext context) {
             context.int('maxUploads', 1)
         }
