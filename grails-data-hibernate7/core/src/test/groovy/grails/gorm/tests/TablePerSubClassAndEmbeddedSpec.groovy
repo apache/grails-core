@@ -18,12 +18,14 @@
  */
 package grails.gorm.tests
 
+import groovy.lang.GroovyClassLoader
+
 import grails.gorm.DetachedCriteria
 import grails.gorm.annotation.Entity
+import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria
 import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
-import spock.lang.Ignore
 
 /**
  * Created by graemerocher on 04/11/16.

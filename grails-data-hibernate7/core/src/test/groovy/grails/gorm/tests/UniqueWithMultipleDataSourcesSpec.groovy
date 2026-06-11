@@ -19,11 +19,11 @@
 package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
+import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
-import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.hibernate.dialect.H2Dialect
-import spock.lang.*
+import spock.lang.Issue
 
 /**
  * Created by graemerocher on 17/02/2017.
