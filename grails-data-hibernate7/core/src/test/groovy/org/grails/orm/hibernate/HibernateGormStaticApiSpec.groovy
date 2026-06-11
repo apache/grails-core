@@ -22,7 +22,7 @@ package org.grails.orm.hibernate
 
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.entities.Club
+import grails.gorm.tests.entities.Club
 
 class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
 
@@ -183,6 +183,50 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
 
         then:
         instances.size() == 2
+    }
+
+    void "Test findWhere matches null values"() {
+        given:
+        new HibernateGormStaticApiEntity(name: "null-test", nullableName: null).save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: "other", nullableName: "present").save(flush: true, failOnError: true)
+
+        when:
+        def instance = HibernateGormStaticApiEntity.findWhere(nullableName: null)
+
+        then:
+        instance.name == 'null-test'
+    }
+
+    void "Test findAllWhere matches null values"() {
+        given:
+        new HibernateGormStaticApiEntity(name: "null-test-1", nullableName: null).save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: "null-test-2", nullableName: null).save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: "other", nullableName: "present").save(flush: true, failOnError: true)
+
+        when:
+        def instances = HibernateGormStaticApiEntity.findAllWhere(nullableName: null)
+
+        then:
+        instances.size() == 2
+        instances*.name.containsAll(['null-test-1', 'null-test-2'])
+    }
+
+    void "Test findWhere rejects unsafe property names"() {
+        when:
+        HibernateGormStaticApiEntity.findWhere(['name) or 1=1 or (name': 'test'])
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains('not a valid property')
+    }
+
+    void "Test findAllWhere rejects unsafe null-valued property names"() {
+        when:
+        HibernateGormStaticApiEntity.findAllWhere(['nullableName) is null or 1=1 or (nullableName': null])
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains('not a valid property')
     }
 
     void "Test findAll with HQL using named params"() {
@@ -513,6 +557,22 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         def instances = HibernateGormStaticApiEntity.getAll([e3.id, e1.id, e2.id])
 
         then: "results are in the same order as the requested ids"
+        instances.size() == 3
+        instances[0].id == e3.id
+        instances[1].id == e1.id
+        instances[2].id == e2.id
+    }
+
+    void "Test getAll preserves input order for convertible ids"() {
+        given:
+        def e1 = new HibernateGormStaticApiEntity(name: "first").save(failOnError: true)
+        def e2 = new HibernateGormStaticApiEntity(name: "second").save(failOnError: true)
+        def e3 = new HibernateGormStaticApiEntity(name: "third").save(flush: true, failOnError: true)
+
+        when: "ids are supplied as strings in reverse order"
+        def instances = HibernateGormStaticApiEntity.getAll([e3.id.toString(), e1.id.toString(), e2.id.toString()])
+
+        then: "results are ordered by the converted requested ids"
         instances.size() == 3
         instances[0].id == e3.id
         instances[1].id == e1.id
@@ -877,10 +937,14 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
 @Entity
 class HibernateGormStaticApiEntity {
     String name
+    String nullableName
+
+    static constraints = {
+        nullableName nullable: true
+    }
 }
 
 @Entity
 class HibernateGormStaticApiMultiTenantEntity implements grails.gorm.MultiTenant<HibernateGormStaticApiMultiTenantEntity> {
     String name
 }
-

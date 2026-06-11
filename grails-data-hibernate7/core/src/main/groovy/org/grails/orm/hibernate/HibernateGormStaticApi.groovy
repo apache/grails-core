@@ -60,6 +60,7 @@ import org.grails.orm.hibernate.query.HibernateHqlQueryCreator
 import org.grails.orm.hibernate.query.HibernatePagedResultList
 import org.grails.orm.hibernate.query.MutationHqlQuery
 import org.grails.orm.hibernate.query.HibernateQuery
+import org.grails.orm.hibernate.query.HibernateQueryArgument
 import org.grails.orm.hibernate.query.HqlListQueryBuilder
 import org.grails.orm.hibernate.query.HqlQueryContext
 import org.grails.orm.hibernate.support.HibernateRuntimeUtils
@@ -353,7 +354,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         if (!queryMap) return null
         Map coercedMap = queryMap.collectEntries { k, v -> [k.toString(), v] }
         String hql = buildWhereHql(coercedMap)
-        doSingleInternal(hql, coercedMap, [], args, false)
+        doSingleInternal(hql, buildWhereParams(coercedMap), [], buildFindWhereArgs(args), false)
     }
 
     @Override
@@ -361,12 +362,32 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         if (!queryMap) return null
         Map coercedMap = queryMap.collectEntries { k, v -> [k.toString(), v] }
         String hql = buildWhereHql(coercedMap)
-        doListInternal(hql, coercedMap, [], args, false)
+        doListInternal(hql, buildWhereParams(coercedMap), [], args, false)
     }
 
     private String buildWhereHql(Map queryMap) {
-        String whereClause = queryMap.keySet().collect { Object key -> "$key = :$key" }.join(' and ')
+        String whereClause = queryMap.collect { Object key, Object value ->
+            String propertyName = validateWherePropertyName(key.toString())
+            value == null ? "$propertyName is null" : "$propertyName = :$propertyName"
+        }.join(' and ')
         return "from ${persistentEntity.name} where $whereClause"
+    }
+
+    private String validateWherePropertyName(String propertyName) {
+        if (persistentEntity.getPropertyByName(propertyName) == null) {
+            throw new IllegalArgumentException("Property [$propertyName] is not a valid property of ${persistentEntity.name}")
+        }
+        return propertyName
+    }
+
+    private static Map buildWhereParams(Map queryMap) {
+        queryMap.findAll { Object key, Object value -> value != null }
+    }
+
+    private static Map buildFindWhereArgs(Map args) {
+        Map queryArgs = args ? new LinkedHashMap(args) : [:]
+        queryArgs[HibernateQueryArgument.MAX.value()] = 1
+        return queryArgs
     }
 
     @Override
@@ -392,7 +413,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         List convertedIds = ids.collect { HibernateRuntimeUtils.convertValueToType(it, idType, conversionService) }
         List<D> results = doListInternal("from $entity where $idName in (:ids)" as String, [ids: convertedIds], [], [:], false)
         Map<Object, D> byId = results.collectEntries { [(it[idName]): it] }
-        ids.collect { byId[it] }
+        convertedIds.collect { byId[it] }
     }
 
     @Override
