@@ -1805,15 +1805,16 @@ class Widget implements Comparable<Widget> {
         timeZone(nullable: true)
     }
 
-    // Manual Comparable implementation (replaces @Sortable which conflicts with @Entity in Groovy 5)
+    // Groovy 5 still NPEs during canonicalization when @Sortable is combined with @Entity.
     @Override
     int compareTo(Widget other) {
-        int result = this.isBindable <=> other.isBindable
+        int result = isBindable <=> other.isBindable
         if (result == 0) {
-            result = this.isNotBindable <=> other.isNotBindable
+            result = isNotBindable <=> other.isNotBindable
         }
         return result
     }
+
 }
 
 @Entity
@@ -1838,15 +1839,16 @@ class ParentWidget implements Validateable, Comparable<ParentWidget> {
         timeZone(nullable: true)
     }
 
-    // Manual Comparable implementation (replaces @Sortable which conflicts with @Entity in Groovy 5)
+    // Groovy 5 still NPEs during canonicalization when @Sortable is combined with @Entity.
     @Override
     int compareTo(ParentWidget other) {
-        int result = this.isBindable <=> other.isBindable
+        int result = isBindable <=> other.isBindable
         if (result == 0) {
-            result = this.isNotBindable <=> other.isNotBindable
+            result = isNotBindable <=> other.isNotBindable
         }
         return result
     }
+
 }
 
 @Entity
