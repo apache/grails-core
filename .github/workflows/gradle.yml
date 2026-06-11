@@ -235,15 +235,17 @@ jobs:
           path: grails-forge/tmp1/cli/**/*
           if-no-files-found: 'error'
   functional:
-    name: "Functional Tests (Java ${{ matrix.java }}, indy=${{ matrix.indy }})"
+    name: "Functional Tests (Java ${{ matrix.java }}, Hibernate ${{ matrix.hibernate-version }}, indy=${{ matrix.indy }})"
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     strategy:
       fail-fast: false
       matrix:
         java: [ 21, 25 ]
+        hibernate-version: [ '5', '7' ]
         indy: [ false ]
         include:
           - java: 21
+            hibernate-version: '5'
             indy: true
     runs-on: ubuntu-24.04
     steps:
@@ -264,6 +266,8 @@ jobs:
       - name: "🔍 Setup TestLens"
         uses: testlens-app/setup-testlens@d96a555133c275a00949d2cc77b70fe9a4242ebf # v1.9.2
       - name: "🏃 Run Functional Tests"
+        env:
+          GITHUB_MAVEN_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: >
           ./gradlew bootJar check
           --continue
@@ -276,6 +280,8 @@ jobs:
           -PskipHibernate5Tests
           -PskipHibernate7Tests
           -PskipMongodbTests
+          -PhibernateVersion=${{ matrix.hibernate-version }}
+          -PskipHibernate${{ matrix.hibernate-version == '5' && '7' || '5' }}Tests
   mongodbFunctional:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: "Mongodb Functional Tests (Java ${{ matrix.java }}, MongoDB ${{ matrix.mongodb-version }}, indy=${{ matrix.indy }})"
@@ -436,7 +442,7 @@ jobs:
           name: grails-gradle-artifacts.txt
           path: grails-gradle/build/grails-gradle-artifacts.txt
   publish:
-    needs: [ publishGradle, build, functional, hibernate5Functional, mongodbFunctional ]
+    needs: [ publishGradle, build, functional, mongodbFunctional ]
     if: >-
       ${{ always() && 
           github.repository_owner == 'apache' && 
@@ -444,7 +450,6 @@ jobs:
           needs.publishGradle.result == 'success' && 
           (needs.build.result == 'success' || needs.build.result == 'skipped') && 
           (needs.functional.result == 'success' || needs.functional.result == 'skipped') && 
-          (needs.hibernate5Functional.result == 'success' || needs.hibernate5Functional.result == 'skipped') && 
           (needs.mongodbFunctional.result == 'success' || needs.mongodbFunctional.result == 'skipped') 
       }}
     runs-on: ubuntu-24.04
