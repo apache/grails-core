@@ -20,6 +20,7 @@ package grails.artefact.gsp
 
 import groovy.transform.CompileStatic
 
+import org.grails.taglib.GroovyPageAttributes
 import org.grails.taglib.TagLibraryLookup
 
 import spock.lang.Specification
@@ -40,6 +41,24 @@ class ControllerTagLibraryInvokerMessageSpec extends Specification {
         tagLib.invokedName == 'message'
         tagLib.invokedAttrs.code == 'default.created.message'
         tagLib.invokedAttrs.args == ['Book', '1']
+
+        and: 'the tag sees function-call semantics, exactly as dynamic controller dispatch produced'
+        tagLib.invokedAttrs instanceof GroovyPageAttributes
+        !((GroovyPageAttributes) tagLib.invokedAttrs).gspTagSyntaxCall
+    }
+
+    void 'a no-arg message() call routes through the same dispatch with empty attributes'() {
+        given:
+        RecordingTagLib tagLib = new RecordingTagLib()
+        DefaultNamespaceInvoker invoker = new DefaultNamespaceInvoker()
+        invoker.tagLibraryLookup = new StubTagLibraryLookup(tagLibsByNamespace: [g: tagLib])
+
+        when: 'the single-Map-parameter method is invoked without arguments'
+        def result = invoker.message()
+
+        then: 'dispatch succeeds with empty attributes, matching the previous methodMissing behavior'
+        result == 'resolved'
+        tagLib.invokedAttrs.isEmpty()
     }
 
     void 'message(Map) prefers the declared taglib namespace and falls back to the default'() {

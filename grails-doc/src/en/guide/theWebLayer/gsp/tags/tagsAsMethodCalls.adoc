@@ -69,3 +69,12 @@ For tags that use a <<namespaces,custom namespace>>, use that prefix for the met
 ----
 def editor = ckeditor.editor(name: "text", width: "100%", height: "400")
 ----
+
+In controllers, most tag invocations dispatch dynamically, so they require dynamically compiled code. The `message` tag — the most common tag called from controllers — is the exception: it is declared as a real method on the controller, so the canonical idiom compiles under static compilation (`@CompileStatic` / `@GrailsCompileStatic`) as-is:
+
+[source,groovy]
+----
+flash.message = message(code: 'default.created.message', args: [classMessageArguments(book), book.id])
+----
+
+Note that this applies to controllers only — classes that implement the `TagLibraryInvoker` trait directly still dispatch `message` dynamically.
