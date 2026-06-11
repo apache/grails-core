@@ -109,6 +109,9 @@ class HttpSessionExtensionSpec extends Specification {
             session.getAttribute('missing', StringBuilder) == null
             session.getAttribute('count', String) == null
 
+        and: 'primitive class literals are normalized to their wrappers'
+            session.getAttribute('count', int) == 42
+
         and: 'the Class-typed overload resolves to the requested type under static compilation'
             StaticCaller.readPrincipal(session).toString() == 'alice'
     }

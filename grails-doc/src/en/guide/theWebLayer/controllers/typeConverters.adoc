@@ -98,4 +98,4 @@ Theme theme = session.getAttribute('theme', Theme, Theme.DEFAULT)
 UserDetails user = request.getAttribute('apiUser', UserDetails)
 ----
 
-Unlike the named converters, no coercion is attempted: the attribute is returned only when it is an instance of the requested type, and reads as absent otherwise (so the default also applies when the stored value has an unexpected type). Use the named converters when you want type conversion, and the `Class`-typed read when you want a type-safe retrieval.
+Unlike the named converters, no coercion is attempted: the attribute is returned only when it is an instance of the requested type, and reads as absent otherwise (so the default also applies when the stored value has an unexpected type). Primitive class literals (`int`, `boolean`, ...) are normalized to their wrapper types. Use the named converters when you want type conversion, and the `Class`-typed read when you want a type-safe retrieval.

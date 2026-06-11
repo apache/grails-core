@@ -21,6 +21,7 @@ package org.grails.web.servlet
 import groovy.transform.CompileStatic
 
 import org.apache.grails.core.internal.util.TypeConverters
+import org.springframework.util.ClassUtils
 
 import jakarta.servlet.http.HttpSession
 
@@ -154,7 +155,8 @@ class HttpSessionExtension {
      */
     static <T> T getAttribute(HttpSession session, String name, Class<T> type) {
         Object value = session.getAttribute(name)
-        type.isInstance(value) ? type.cast(value) : null
+        Class<T> resolvedType = (Class<T>) ClassUtils.resolvePrimitiveIfNecessary(type)
+        resolvedType.isInstance(value) ? resolvedType.cast(value) : null
     }
 
     /**

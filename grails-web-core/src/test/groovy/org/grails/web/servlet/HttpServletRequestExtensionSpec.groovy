@@ -81,6 +81,9 @@ class HttpServletRequestExtensionSpec extends Specification {
             request.getAttribute('missing', StringBuilder) == null
             request.getAttribute('count', String) == null
 
+        and: 'primitive class literals are normalized to their wrappers'
+            request.getAttribute('count', int) == 42
+
         and: 'the Class-typed overload resolves to the requested type under static compilation'
             StaticCaller.readPrincipal(request).toString() == 'alice'
     }

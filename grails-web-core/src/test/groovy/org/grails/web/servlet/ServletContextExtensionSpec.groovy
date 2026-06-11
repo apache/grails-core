@@ -77,6 +77,9 @@ class ServletContextExtensionSpec extends Specification {
             context.getAttribute('missing', StringBuilder) == null
             context.getAttribute('count', String) == null
 
+        and: 'primitive class literals are normalized to their wrappers'
+            context.getAttribute('count', int) == 42
+
         and: 'the Class-typed overload resolves to the requested type under static compilation'
             StaticCaller.readPrincipal(context).toString() == 'alice'
     }

@@ -21,6 +21,7 @@ package org.grails.web.servlet
 import groovy.transform.CompileStatic
 
 import org.apache.grails.core.internal.util.TypeConverters
+import org.springframework.util.ClassUtils
 
 import jakarta.servlet.ServletContext
 
@@ -141,7 +142,8 @@ class ServletContextExtension {
      */
     static <T> T getAttribute(ServletContext context, String name, Class<T> type) {
         Object value = context.getAttribute(name)
-        type.isInstance(value) ? type.cast(value) : null
+        Class<T> resolvedType = (Class<T>) ClassUtils.resolvePrimitiveIfNecessary(type)
+        resolvedType.isInstance(value) ? resolvedType.cast(value) : null
     }
 
     /**
