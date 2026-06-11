@@ -52,6 +52,7 @@ import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
 import org.grails.datastore.mapping.proxy.ProxyHandler
+import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.query.api.BuildableCriteria as GrailsCriteria
 import org.grails.datastore.mapping.query.event.PostQueryEvent
 import org.grails.datastore.mapping.query.event.PreQueryEvent
@@ -352,41 +353,56 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     @Override
     D findWhere(Map queryMap, Map args) {
         if (!queryMap) return null
-        Map coercedMap = queryMap.collectEntries { k, v -> [k.toString(), v] }
-        String hql = buildWhereHql(coercedMap)
-        doSingleInternal(hql, buildWhereParams(coercedMap), [], buildFindWhereArgs(args), false)
+        executeSingleHqlQuery(prepareWhereHqlQuery(queryMap, buildFindWhereArgs(args)))
     }
 
     @Override
     List<D> findAllWhere(Map queryMap, Map args) {
         if (!queryMap) return null
-        Map coercedMap = queryMap.collectEntries { k, v -> [k.toString(), v] }
-        String hql = buildWhereHql(coercedMap)
-        doListInternal(hql, buildWhereParams(coercedMap), [], args, false)
+        executeListHqlQuery(prepareWhereHqlQuery(queryMap, buildQuerySettings(args)))
     }
 
-    private String buildWhereHql(Map queryMap) {
-        String whereClause = queryMap.collect { Object key, Object value ->
-            String propertyName = validateWherePropertyName(key.toString())
+    private GormQuery prepareWhereHqlQuery(Map queryMap, Map<String, Object> querySettings) {
+        Map<String, Object> coercedMap = buildQuerySettings(queryMap)
+        return prepareHqlQuery(
+                buildWhereHql(coercedMap),
+                false,
+                false,
+                buildWhereParams(coercedMap),
+                Collections.emptyList(),
+                querySettings
+        )
+    }
+
+    private String buildWhereHql(Map<String, Object> queryMap) {
+        String whereClause = queryMap.collect { String key, Object value ->
+            String propertyName = validateWherePropertyName(key)
             value == null ? "$propertyName is null" : "$propertyName = :$propertyName"
         }.join(' and ')
         return "from ${persistentEntity.name} where $whereClause"
     }
 
     private String validateWherePropertyName(String propertyName) {
-        if (persistentEntity.getPropertyByName(propertyName) == null) {
+        PersistentProperty property = persistentEntity.getPropertyByName(propertyName)
+        if (property == null || property.name != propertyName) {
             throw new IllegalArgumentException("Property [$propertyName] is not a valid property of ${persistentEntity.name}")
         }
         return propertyName
     }
 
-    private static Map buildWhereParams(Map queryMap) {
-        queryMap.findAll { Object key, Object value -> value != null }
+    private static Map<String, Object> buildWhereParams(Map<String, Object> queryMap) {
+        queryMap.findAll { String key, Object value -> value != null } as Map<String, Object>
     }
 
-    private static Map buildFindWhereArgs(Map args) {
-        Map queryArgs = args ? new LinkedHashMap(args) : [:]
+    private static Map<String, Object> buildFindWhereArgs(Map args) {
+        Map<String, Object> queryArgs = buildQuerySettings(args)
         queryArgs[HibernateQueryArgument.MAX.value()] = 1
+        return queryArgs
+    }
+
+    private static Map<String, Object> buildQuerySettings(Map args) {
+        Map<String, Object> queryArgs = new LinkedHashMap<>()
+        args?.each { Object key, Object value -> queryArgs[key.toString()] = value }
         return queryArgs
     }
 
@@ -425,8 +441,12 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
                                    Map namedParams,
                                    Collection positionalParams,
                                    Map args
-                                   , boolean isNative) {
-        def hqlQuery = prepareHqlQuery(hql, isNative, false, namedParams, positionalParams, args)
+                                    , boolean isNative) {
+        GormQuery hqlQuery = prepareHqlQuery(hql, isNative, false, namedParams, positionalParams, args)
+        executeListHqlQuery(hqlQuery)
+    }
+
+    protected List<D> executeListHqlQuery(GormQuery hqlQuery) {
         firePreQueryEvent()
         def ds = (List<D>) hqlQuery.list()
         firePostQueryEvent(ds)
@@ -439,7 +459,12 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
                                Collection positionalParams,
                                Map args, Map hints = [:], boolean isNative
     ) {
-        def hqlQuery = prepareHqlQuery(hql, isNative, false, namedParams, positionalParams, args)
+        GormQuery hqlQuery = prepareHqlQuery(hql, isNative, false, namedParams, positionalParams, args)
+        executeSingleHqlQuery(hqlQuery)
+    }
+
+    @SuppressWarnings('GroovyAssignabilityCheck')
+    private D executeSingleHqlQuery(GormQuery hqlQuery) {
         firePreQueryEvent()
         def sm = hqlQuery.singleResult()
         firePostQueryEvent(sm)

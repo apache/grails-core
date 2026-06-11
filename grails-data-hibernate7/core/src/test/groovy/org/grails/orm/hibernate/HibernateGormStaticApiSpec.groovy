@@ -23,11 +23,12 @@ package org.grails.orm.hibernate
 import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.gorm.annotation.Entity
 import grails.gorm.tests.entities.Club
+import org.hibernate.jpa.AvailableHints
 
 class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([HibernateGormStaticApiEntity, Club, HibernateGormStaticApiMultiTenantEntity])
+        manager.addAllDomainClasses([HibernateGormStaticApiEntity, HibernateGormStaticApiMappedPropertyEntity, Club, HibernateGormStaticApiMultiTenantEntity])
     }
 
     void "Test that HibernateGormStaticApi uses the shared template from the datastore"() {
@@ -227,6 +228,34 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         then:
         def e = thrown(IllegalArgumentException)
         e.message.contains('not a valid property')
+    }
+
+    void "Test findWhere rejects mapped column names"() {
+        when:
+        HibernateGormStaticApiMappedPropertyEntity.findWhere(name_col: 'test')
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains('not a valid property')
+    }
+
+    void "Test findWhere applies JPA hints from args"() {
+        given:
+        def entity = new HibernateGormStaticApiEntity(name: "hint-test").save(flush: true, failOnError: true)
+        def entityId = entity.id
+        session.clear()
+
+        when:
+        def instance = HibernateGormStaticApiEntity.findWhere([name: 'hint-test'], [(AvailableHints.HINT_READ_ONLY): true])
+        instance.name = "modified"
+        session.flush()
+
+        and: "the instance is reloaded from the database"
+        session.clear()
+        def reloadedInstance = HibernateGormStaticApiEntity.get(entityId)
+
+        then:
+        reloadedInstance.name == "hint-test"
     }
 
     void "Test findAll with HQL using named params"() {
@@ -941,6 +970,15 @@ class HibernateGormStaticApiEntity {
 
     static constraints = {
         nullableName nullable: true
+    }
+}
+
+@Entity
+class HibernateGormStaticApiMappedPropertyEntity {
+    String name
+
+    static mapping = {
+        name column: 'name_col'
     }
 }
 

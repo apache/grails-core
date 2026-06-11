@@ -19,6 +19,7 @@
 package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
+import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
 import jakarta.persistence.Enumerated
 import jakarta.persistence.EnumType
