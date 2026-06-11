@@ -58,7 +58,7 @@ dependencies {
         exclude module: 'asm'
     }
 
-    testRuntimeOnly 'net.bytebuddy:byte-buddy'
+    testRuntimeOnly 'org.objenesis:objenesis' // Required by Spock for mocking classes without default constructor
 }
 
 apply {

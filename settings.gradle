@@ -455,6 +455,7 @@ include(
         'grails-test-examples-config-report',
         'grails-test-examples-scaffolding',
         'grails-test-examples-scaffolding-fields',
+        'grails-test-examples-spring-dependency-management',
         'grails-test-examples-test-phases',
         'grails-test-examples-views-functional-tests',
         'grails-test-examples-views-functional-tests-plugin',
@@ -496,6 +497,7 @@ project(':grails-test-examples-scaffolding-fields').projectDir = file('grails-te
 project(':grails-test-examples-views-functional-tests').projectDir = file('grails-test-examples/views-functional-tests')
 project(':grails-test-examples-views-functional-tests-plugin').projectDir = file('grails-test-examples/views-functional-tests-plugin')
 project(':grails-test-examples-test-phases').projectDir = file('grails-test-examples/test-phases')
+project(':grails-test-examples-spring-dependency-management').projectDir = file('grails-test-examples/spring-dependency-management')
 project(':grails-test-examples-jetty').projectDir = file('grails-test-examples/jetty')
 
 includeBuild('./grails-gradle') {
@@ -507,7 +509,7 @@ includeBuild('./build-logic') {
 
 // Grails-Micronaut "island" - kept on its own dependency graph because the Micronaut
 // platform pins Groovy 5 / Spock 2.4-groovy-5.0, which is incompatible with the
-// Groovy 4 / Spock 2.3-groovy-4.0 stack the rest of grails-core targets. Skipping
+// Groovy 4 / Spock 2.4-groovy-4.0 stack the rest of grails-core targets. Skipping
 // these projects (via -PskipMicronautProjects) keeps Micronaut's version overrides
 // from leaking into builds where Groovy 4 is in play (notably the joint validation
 // build that swaps in an apache/groovy 4.x snapshot).
