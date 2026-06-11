@@ -57,7 +57,9 @@ dependencies {
     api 'org.apache.ant:ant'
     api 'org.fusesource.jansi:jansi'
     api 'org.jline:jline'
-    api "org.gradle:gradle-tooling-api:$gradleToolingApiVersion"
+    api("org.gradle:gradle-tooling-api:$gradleToolingApiVersion") {
+        exclude group: 'org.slf4j', module: 'slf4j-api'
+    }
     
     compileOnly 'org.springframework.boot:spring-boot'
     compileOnly 'org.springframework.boot:spring-boot-loader-tools'
