@@ -26,6 +26,7 @@ import org.hibernate.mapping.BasicValue
 import org.hibernate.mapping.Column
 import org.hibernate.mapping.Property
 import org.hibernate.mapping.Table
+import org.hibernate.type.Type
 import spock.lang.Subject
 
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIdentityGenerator
@@ -44,8 +45,11 @@ class GrailsIdentityGeneratorSpec extends HibernateGormDatastoreSpec {
         def column = new Column("test_id")
         value.addColumn(column)
         hibernateProperty.setValue(value)
-        
+
         context.getProperty() >> hibernateProperty
+        context.getType() >> Stub(Type) {
+            getReturnedClass() >> Long
+        }
         
         when:
         @Subject
@@ -66,8 +70,11 @@ class GrailsIdentityGeneratorSpec extends HibernateGormDatastoreSpec {
         def column = new Column("test_id2")
         value.addColumn(column)
         hibernateProperty.setValue(value)
-        
+
         context.getProperty() >> hibernateProperty
+        context.getType() >> Stub(Type) {
+            getReturnedClass() >> Long
+        }
         
         when:
         @Subject
