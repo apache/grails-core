@@ -47,6 +47,8 @@ apply plugin: 'org.apache.grails.gradle.grails-gsp'
 // would instead declare it in its own plugins {} block with a version.
 apply plugin: 'io.spring.dependency-management'
 
+apply from: rootProject.layout.projectDirectory.file('dependencies.gradle')
+
 grails {
     // Opt out of the native platform(grails-bom) injection; Spring DM manages versions instead.
     bom = null
@@ -54,7 +56,12 @@ grails {
 
 dependencyManagement {
     imports {
-        mavenBom "org.apache.grails:grails-bom:${projectVersion}"
+        mavenBom("org.apache.grails:grails-bom:${projectVersion}") {
+            bomProperties([
+                    'groovy.version': bomDependencyVersions['groovy.version'],
+                    'spock.version' : bomDependencyVersions['spock.version'],
+            ])
+        }
     }
 }
 
