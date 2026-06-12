@@ -23,10 +23,8 @@ import jakarta.annotation.Nonnull;
 import org.hibernate.MappingException;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.BasicValue;
-import org.hibernate.mapping.PrimaryKey;
 import org.hibernate.mapping.Property;
 import org.hibernate.mapping.RootClass;
-import org.hibernate.mapping.Table;
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleIdentityProperty;
@@ -75,8 +73,6 @@ public class SimpleIdBinder {
             // set identifier property
             rootClass.setIdentifierProperty(prop);
 
-            Table pkTable = id.getTable();
-            pkTable.setPrimaryKey(new PrimaryKey(pkTable));
             return;
         }
         throw new MappingException("Invalid simple id binding for entity [" + persistentEntity.getName() + "]");
