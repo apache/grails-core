@@ -99,6 +99,10 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
         persistentClass.setIdentifier(identifier)
         identifier.getColumns() >> [new Column("part_a_col"), new Column("part_b_col")]
         value.getColumns() >> [new Column("ref_table_nested_entity_col_part_a_col"), new Column("ref_table_nested_entity_col_part_b_col")]
+
+        // sortOrIndexForeignKeyColumns and getReferencedIdentifierColumns are now on the entity mock
+        refDomainClass.sortOrIndexForeignKeyColumns(value) >> {}
+        refDomainClass.getReferencedIdentifierColumns(propertyNames) >> [new Column("part_a_col"), new Column("part_b_col")]
         value.createForeignKeyOfEntity("RefDomain", _ as List<Column>) >> null
 
         when:
@@ -151,6 +155,9 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
         persistentClass.setIdentifier(identifier)
         identifier.getColumns() >> [new Column("prop1"), new Column("prop2")]
         value.getColumns() >> [new Column("prop1"), new Column("prop2")]
+
+        refDomainClass.sortOrIndexForeignKeyColumns(value) >> {}
+        refDomainClass.getReferencedIdentifierColumns(_ as String[]) >> [new Column("prop1"), new Column("prop2")]
         value.createForeignKeyOfEntity("RefDomain", _ as List<Column>) >> null
 
         when:

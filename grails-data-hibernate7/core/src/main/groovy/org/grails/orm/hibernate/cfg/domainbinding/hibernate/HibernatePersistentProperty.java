@@ -26,6 +26,7 @@ import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Property;
 import org.hibernate.mapping.SimpleValue;
 import org.hibernate.mapping.Table;
+import org.hibernate.mapping.ToOne;
 import org.hibernate.usertype.UserCollectionType;
 
 import org.grails.datastore.mapping.model.PersistentProperty;
@@ -265,5 +266,24 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
             return qualify(path, getName());
         }
         return getName();
+    }
+
+    /**
+     * Marks {@code value} as sorted when the Hibernate value type requires it. Called after binding
+     * so that column ordering aligns with the referenced composite identifier.
+     * <p>
+     * The default handles both {@link ToOne} and {@link DependantValue} — the two value types that
+     * require sorted columns for composite foreign keys — because these can be produced by different
+     * property types (e.g. a {@link HibernateToManyProperty} can produce a {@link DependantValue}
+     * as its collection key). Subtypes may override to add property-specific behaviour.
+     *
+     * @param value the Hibernate {@link SimpleValue} produced for this property
+     */
+    default void markValueSorted(SimpleValue value) {
+        if (value instanceof ToOne toOne) {
+            toOne.setSorted(true);
+        } else if (value instanceof DependantValue dv) {
+            dv.setSorted(true);
+        }
     }
 }
