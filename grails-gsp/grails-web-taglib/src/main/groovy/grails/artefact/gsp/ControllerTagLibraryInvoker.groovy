@@ -57,10 +57,12 @@ trait ControllerTagLibraryInvoker extends TagLibraryInvoker {
         TagLibraryLookup lookup = getTagLibraryLookup()
         if (lookup) {
             String namespace = getTaglibNamespace()
-            if (lookup.lookupTagLibrary(namespace, 'message') == null) {
+            GroovyObject tagLibrary = lookup.lookupTagLibrary(namespace, 'message')
+            if (tagLibrary == null && namespace != TagOutput.DEFAULT_NAMESPACE) {
                 namespace = TagOutput.DEFAULT_NAMESPACE
+                tagLibrary = lookup.lookupTagLibrary(namespace, 'message')
             }
-            if (lookup.lookupTagLibrary(namespace, 'message') != null) {
+            if (tagLibrary != null) {
                 return TagOutput.captureTagOutput(lookup, namespace, 'message', attrs, null,
                         OutputContextLookupHelper.lookupOutputContext())
             }

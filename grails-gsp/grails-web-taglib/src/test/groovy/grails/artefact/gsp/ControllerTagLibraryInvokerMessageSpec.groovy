@@ -42,6 +42,9 @@ class ControllerTagLibraryInvokerMessageSpec extends Specification {
         tagLib.invokedAttrs.code == 'default.created.message'
         tagLib.invokedAttrs.args == ['Book', '1']
 
+        and: 'the dispatch decision costs a single registry lookup'
+        ((StubTagLibraryLookup) invoker.tagLibraryLookup).lookupCount <= 2
+
         and: 'the tag sees function-call semantics, exactly as dynamic controller dispatch produced'
         tagLib.invokedAttrs instanceof GroovyPageAttributes
         !((GroovyPageAttributes) tagLib.invokedAttrs).gspTagSyntaxCall
@@ -133,9 +136,11 @@ class StaticController implements ControllerTagLibraryInvoker {
 
 class StubTagLibraryLookup extends TagLibraryLookup {
     Map<String, GroovyObject> tagLibsByNamespace = [:]
+    int lookupCount = 0
 
     @Override
     GroovyObject lookupTagLibrary(String namespace, String tagName) {
+        lookupCount++
         tagName == 'message' ? tagLibsByNamespace[namespace] : null
     }
 
