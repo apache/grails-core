@@ -181,4 +181,54 @@ class BasicValueCreatorSpec extends HibernateGormDatastoreSpec {
         then:
         1 * grailsSequenceWrapper.getGenerator("custom", _, mappedId, domainClass, jdbcEnvironment, namingStrategy) >> Mock(Generator)
     }
+
+    def "should use buildPropertyIdentity when domainClass identity is null"() {
+        given:
+        def mockGenerator = Mock(Generator)
+        def domainClass = Mock(HibernatePersistentEntity)
+        domainClass.getHibernateIdentity() >> null
+        
+        HibernateSimpleIdentity propertyIdentity = new HibernateSimpleIdentity()
+        propertyIdentity.setGenerator("custom")
+        
+        def identityProperty = Mock(HibernateSimpleIdentityProperty)
+        identityProperty.getGeneratorName() >> "custom"
+        identityProperty.getHibernateOwner() >> domainClass
+        identityProperty.getTable() >> table
+        identityProperty.buildPropertyIdentity() >> Optional.of(propertyIdentity)
+        def context = Mock(GeneratorCreationContext)
+
+        when:
+        BasicValue id = creator.bindBasicValue(identityProperty)
+        def generatorCreator = id.getCustomIdGeneratorCreator()
+        Generator generator = generatorCreator.createGenerator(context)
+
+        then:
+        1 * grailsSequenceWrapper.getGenerator("custom", _, propertyIdentity, domainClass, jdbcEnvironment, namingStrategy) >> mockGenerator
+        generator == mockGenerator
+    }
+
+    def "should handle empty buildPropertyIdentity when domainClass identity is null"() {
+        given:
+        def mockGenerator = Mock(Generator)
+        def domainClass = Mock(HibernatePersistentEntity)
+        domainClass.getHibernateIdentity() >> null
+        
+        def identityProperty = Mock(HibernateSimpleIdentityProperty)
+        identityProperty.getGeneratorName() >> "custom"
+        identityProperty.getHibernateOwner() >> domainClass
+        identityProperty.getTable() >> table
+        identityProperty.buildPropertyIdentity() >> Optional.empty()
+        def context = Mock(GeneratorCreationContext)
+
+        when:
+        BasicValue id = creator.bindBasicValue(identityProperty)
+        def generatorCreator = id.getCustomIdGeneratorCreator()
+        Generator generator = generatorCreator.createGenerator(context)
+
+        then:
+        1 * grailsSequenceWrapper.getGenerator("custom", _, null, domainClass, jdbcEnvironment, namingStrategy) >> mockGenerator
+        generator == mockGenerator
+    }
 }
+

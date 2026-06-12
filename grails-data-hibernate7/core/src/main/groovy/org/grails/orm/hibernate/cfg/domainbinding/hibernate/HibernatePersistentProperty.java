@@ -18,7 +18,10 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.hibernate.mapping.DependantValue;
@@ -33,6 +36,7 @@ import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
+import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity;
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
 
@@ -266,6 +270,30 @@ public interface HibernatePersistentProperty extends PersistentProperty<Property
             return qualify(path, getName());
         }
         return getName();
+    }
+
+    /**
+     * Builds a {@link HibernateSimpleIdentity} from this property's own mapped form, for use
+     * when the owning entity has no explicit simple identity configured. Returns
+     * {@link Optional#empty()} when the mapped form is absent, {@code typeParams} is {@code null},
+     * or {@code typeParams} is empty.
+     *
+     * @return an {@link Optional} containing the constructed identity, or empty if the property
+     *         carries no generator type parameters
+     */
+    default Optional<HibernateSimpleIdentity> buildPropertyIdentity() {
+        PropertyConfig mappedForm = getHibernateMappedForm();
+        Properties typeParams = mappedForm != null ? mappedForm.getTypeParams() : null;
+        if (typeParams == null || typeParams.isEmpty()) {
+            return Optional.empty();
+        }
+        Map<String, String> params = new LinkedHashMap<>();
+        typeParams.forEach((key, value) -> params.put(key.toString(), value.toString()));
+        HibernateSimpleIdentity identity = new HibernateSimpleIdentity();
+        identity.setName(getName());
+        identity.setType(getType());
+        identity.setParams(params);
+        return Optional.of(identity);
     }
 
     /**
