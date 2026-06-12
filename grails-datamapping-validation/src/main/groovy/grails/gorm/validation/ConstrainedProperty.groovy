@@ -68,9 +68,7 @@ interface ConstrainedProperty extends Constrained {
     String DEFAULT_INVALID_VALIDATOR_MESSAGE = MESSAGE_BUNDLE.getString(DEFAULT_INVALID_VALIDATOR_MESSAGE_CODE)
     String DEFAULT_NOT_UNIQUE_MESSAGE = MESSAGE_BUNDLE.getString(DEFAULT_NOT_UNIQUE_MESSAGE_CODE)
 
-    // GROOVY-12063: build from a Groovy map literal first so DEFAULT_* constants resolve against the interface scope,
-    // then copy to an immutable HashMap-backed map.
-    Map<String, String> DEFAULT_MESSAGES = Collections.unmodifiableMap(new HashMap<String, String>([
+    Map<String, String> DEFAULT_MESSAGES = [
             (DEFAULT_BLANK_MESSAGE_CODE): DEFAULT_BLANK_MESSAGE,
             (DEFAULT_DOESNT_MATCH_MESSAGE_CODE): DEFAULT_DOESNT_MATCH_MESSAGE,
             (DEFAULT_INVALID_CREDIT_CARD_MESSAGE_CODE): DEFAULT_INVALID_CREDIT_CARD_MESSAGE,
@@ -87,7 +85,7 @@ interface ConstrainedProperty extends Constrained {
             (DEFAULT_NULL_MESSAGE_CODE): DEFAULT_NULL_MESSAGE,
             (DEFAULT_INVALID_VALIDATOR_MESSAGE_CODE): DEFAULT_INVALID_VALIDATOR_MESSAGE,
             (DEFAULT_NOT_UNIQUE_MESSAGE_CODE): DEFAULT_NOT_UNIQUE_MESSAGE
-    ]))
+    ].asUnmodifiable()
 
     String CREDIT_CARD_CONSTRAINT = 'creditCard'
     String EMAIL_CONSTRAINT = 'email'
