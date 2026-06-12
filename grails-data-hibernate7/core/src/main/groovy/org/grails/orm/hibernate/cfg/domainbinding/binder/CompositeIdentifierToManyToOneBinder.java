@@ -18,6 +18,7 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -27,6 +28,11 @@ import java.util.stream.Stream;
 
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
+import org.hibernate.mapping.Column;
+import org.hibernate.mapping.Component;
+import org.hibernate.mapping.DependantValue;
+import org.hibernate.mapping.KeyValue;
+import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.SimpleValue;
 import org.hibernate.mapping.ToOne;
 
@@ -103,9 +109,18 @@ public class CompositeIdentifierToManyToOneBinder {
                     .forEach(columns::add);
         }
         simpleValueBinder.bindSimpleValue(property, null, value, path);
+        KeyValue referencedIdentifier = getReferencedIdentifier(refDomainClass);
+        int[] originalOrder = sortReferencedCompositeIdentifier(referencedIdentifier);
+        sortOrIndexColumns(value, originalOrder);
+        if (referencedIdentifier != null && value.createForeignKeyOfEntity(
+                refDomainClass.getName(), getReferencedColumns(propertyNames, referencedIdentifier, originalOrder)) != null) {
+            value.disableForeignKey();
+        }
         if (value instanceof ToOne toOne) {
-            toOne.sortProperties();
             toOne.setSorted(true);
+        }
+        else if (value instanceof DependantValue dependantValue) {
+            dependantValue.setSorted(true);
         }
     }
 
@@ -141,6 +156,45 @@ public class CompositeIdentifierToManyToOneBinder {
         ColumnConfig cc = new ColumnConfig();
         cc.setName(name);
         return cc;
+    }
+
+    private KeyValue getReferencedIdentifier(GrailsHibernatePersistentEntity refDomainClass) {
+        PersistentClass persistentClass = refDomainClass.getPersistentClass();
+        return persistentClass != null ? persistentClass.getIdentifier() : null;
+    }
+
+    private int[] sortReferencedCompositeIdentifier(KeyValue identifier) {
+        return identifier instanceof Component component ? component.sortProperties() : null;
+    }
+
+    private void sortOrIndexColumns(SimpleValue value, int[] originalOrder) {
+        if (originalOrder != null) {
+            value.sortColumns(originalOrder);
+            return;
+        }
+        List<Column> columns = value.getColumns();
+        for (int i = 0; i < columns.size(); i++) {
+            columns.get(i).setTypeIndex(i);
+        }
+    }
+
+    private List<Column> getReferencedColumns(
+            String[] propertyNames, KeyValue identifier, int[] originalOrder) {
+        if (!(identifier instanceof Component component)) {
+            return identifier.getColumns();
+        }
+        List<Column> referencedColumns = Arrays.stream(propertyNames)
+                .flatMap(propertyName -> component.getProperty(propertyName).getValue().getColumns().stream())
+                .collect(Collectors.toCollection(ArrayList::new));
+        return originalOrder != null ? sortedColumns(referencedColumns, originalOrder) : referencedColumns;
+    }
+
+    private List<Column> sortedColumns(List<Column> columns, int[] originalOrder) {
+        List<Column> sortedColumns = new ArrayList<>(columns);
+        for (int i = 0; i < originalOrder.length; i++) {
+            sortedColumns.set(originalOrder[i], columns.get(i));
+        }
+        return sortedColumns;
     }
 
     private String join(String... parts) {
