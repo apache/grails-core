@@ -395,6 +395,8 @@ class HibernateEventListenerSpec extends HibernateGormDatastoreSpec {
         def mockSessionFactory = Mock(org.hibernate.engine.spi.SessionFactoryImplementor)
         def mockPersister = Mock(org.hibernate.persister.entity.EntityPersister)
         mockPersister.getFactory() >> mockSessionFactory
+        mockEventSource.asEventSource() >> mockEventSource
+        mockEventSource.getFactory() >> mockSessionFactory
         mockEventSource.getSessionFactory() >> mockSessionFactory
 
         when: "Calling onPersistEvent"
