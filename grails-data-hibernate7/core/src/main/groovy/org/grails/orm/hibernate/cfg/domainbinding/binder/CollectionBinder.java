@@ -163,7 +163,7 @@ public class CollectionBinder {
         String catalogName = tableForManyCalculator.getJoinTableCatalog(property);
 
         collection.setCollectionTable(
-                mappings.addTable(schemaName, catalogName, tableName, null, false, metadataBuildingContext));
+                mappings.addTable(schemaName, catalogName, tableName, null, false, metadataBuildingContext, false));
         collection.setInverse(property.isBidirectional() && !property.isOwningSide());
     }
 

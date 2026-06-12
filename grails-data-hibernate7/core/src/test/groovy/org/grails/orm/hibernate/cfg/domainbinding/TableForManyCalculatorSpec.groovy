@@ -48,7 +48,7 @@ class TableForManyCalculatorSpec extends HibernateGormDatastoreSpec {
         def namingStrategy = getGrailsDomainBinder().getNamingStrategy()
         def backticksRemover = new BackticksRemover()
         def collector = Mock(InFlightMetadataCollector)
-        collector.addTable(_, _, _, _, _, _) >> { schema, catalog, name, sub, isAbstract, context ->
+        collector.addTable(_, _, _, _, _, _, _) >> { schema, catalog, name, sub, isAbstract, context, isView ->
             return new org.hibernate.mapping.Table("test", name)
         }
 
@@ -186,7 +186,7 @@ class TableForManyCalculatorSpec extends HibernateGormDatastoreSpec {
         def namingStrategy = getGrailsDomainBinder().getNamingStrategy()
         def backticksRemover = new BackticksRemover()
         def collector = Mock(InFlightMetadataCollector)
-        collector.addTable(_, _, _, _, _, _) >> { a, b, name, d, e, f -> new org.hibernate.mapping.Table("test", name) }
+        collector.addTable(_, _, _, _, _, _, _) >> { a, b, name, d, e, f, isView -> new org.hibernate.mapping.Table("test", name) }
         def calculator = new TableForManyCalculator(namingStrategy, collector, backticksRemover)
 
         def ownerEntity = Mock(GrailsHibernatePersistentEntity)
@@ -214,7 +214,7 @@ class TableForManyCalculatorSpec extends HibernateGormDatastoreSpec {
         def namingStrategy = getGrailsDomainBinder().getNamingStrategy()
         def backticksRemover = new BackticksRemover()
         def collector = Mock(InFlightMetadataCollector)
-        collector.addTable(_, _, _, _, _, _) >> { a, b, name, d, e, f -> new org.hibernate.mapping.Table("test", name) }
+        collector.addTable(_, _, _, _, _, _, _) >> { a, b, name, d, e, f, isView -> new org.hibernate.mapping.Table("test", name) }
         def calculator = new TableForManyCalculator(namingStrategy, collector, backticksRemover)
 
         def ownerEntity = Mock(GrailsHibernatePersistentEntity)
@@ -241,7 +241,7 @@ class TableForManyCalculatorSpec extends HibernateGormDatastoreSpec {
         def namingStrategy = getGrailsDomainBinder().getNamingStrategy()
         def backticksRemover = new BackticksRemover()
         def collector = Mock(InFlightMetadataCollector)
-        collector.addTable(_, _, _, _, _, _) >> { a, b, name, d, e, f -> new org.hibernate.mapping.Table("test", name) }
+        collector.addTable(_, _, _, _, _, _, _) >> { a, b, name, d, e, f, isView -> new org.hibernate.mapping.Table("test", name) }
         def calculator = new TableForManyCalculator(namingStrategy, collector, backticksRemover)
 
         def ownerEntity = Mock(GrailsHibernatePersistentEntity)

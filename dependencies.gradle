@@ -223,10 +223,8 @@ ext {
                 // Spring Boot 4.1 can select Hibernate ORM 7.4.x through Spring Dependency
                 // Management, and Hibernate ORM 7.4.x requires hibernate-models 1.1.x.
                 'hibernate-models.version'      : '1.1.1',
-                // Aligned with Spring Boot 4.0.5's managed Hibernate version to avoid a
-                // version-constraint conflict when consumers import both grails-hibernate7-bom
-                // (via grails-data-hibernate7) and spring-boot-dependencies (via grails-base-bom).
-                'hibernate.version'             : '7.2.7.Final',
+                'hibernate-tools.version'       : '7.3.8.Final',
+                'hibernate.version'             : '7.4.1.Final',
                 'jandex.version'                : '3.2.3',
                 'liquibase-hibernate.version'   : '4.27.0',
                 'liquibase-test-harness.version': '1.0.11',
@@ -244,8 +242,8 @@ ext {
                 'hibernate-envers'      : "org.hibernate.orm:hibernate-envers:${combinedVersions['hibernate.version']}",
                 'hibernate-jcache'      : "org.hibernate.orm:hibernate-jcache:${combinedVersions['hibernate.version']}",
                 'hibernate-models'      : "org.hibernate.models:hibernate-models:${combinedVersions['hibernate-models.version']}",
-                'hibernate-tools-orm'   : "org.hibernate.tool:hibernate-tools-orm:${combinedVersions['hibernate.version']}",
-                'hibernate-tools-utils' : "org.hibernate.tool:hibernate-tools-utils:${combinedVersions['hibernate.version']}",
+                'hibernate-tools-orm'   : "org.hibernate.tool:hibernate-tools-orm:${combinedVersions['hibernate-tools.version']}",
+                'hibernate-tools-utils' : "org.hibernate.tool:hibernate-tools-utils:${combinedVersions['hibernate-tools.version']}",
                 'jandex'                : "io.smallrye:jandex:${combinedVersions['jandex.version']}",
                 'liquibase'             : "org.liquibase:liquibase:${combinedVersions['liquibase.version']}",
                 'liquibase-cdi'         : "org.liquibase:liquibase-cdi:${combinedVersions['liquibase.version']}",
@@ -319,7 +317,8 @@ ext {
                 'cache-ri-impl.version'         : '1.1.1',
                 'groovy.version'                : '5.0.5',
                 'hibernate-models.version'      : '1.1.1',
-                'hibernate.version'             : '7.2.7.Final',
+                'hibernate-tools.version'       : '7.3.8.Final',
+                'hibernate.version'             : '7.4.1.Final',
                 'jandex.version'                : '3.2.3',
                 'liquibase-hibernate.version'   : '4.27.0',
                 'liquibase-test-harness.version': '1.0.11',
@@ -365,8 +364,8 @@ ext {
                 'hibernate-envers'      : "org.hibernate.orm:hibernate-envers:${combinedVersions['hibernate.version']}",
                 'hibernate-jcache'      : "org.hibernate.orm:hibernate-jcache:${combinedVersions['hibernate.version']}",
                 'hibernate-models'      : "org.hibernate.models:hibernate-models:${combinedVersions['hibernate-models.version']}",
-                'hibernate-tools-orm'   : "org.hibernate.tool:hibernate-tools-orm:${combinedVersions['hibernate.version']}",
-                'hibernate-tools-utils' : "org.hibernate.tool:hibernate-tools-utils:${combinedVersions['hibernate.version']}",
+                'hibernate-tools-orm'   : "org.hibernate.tool:hibernate-tools-orm:${combinedVersions['hibernate-tools.version']}",
+                'hibernate-tools-utils' : "org.hibernate.tool:hibernate-tools-utils:${combinedVersions['hibernate-tools.version']}",
                 'jandex'                : "io.smallrye:jandex:${combinedVersions['jandex.version']}",
                 'liquibase'             : "org.liquibase:liquibase:${combinedVersions['liquibase.version']}",
                 'liquibase-cdi'         : "org.liquibase:liquibase-cdi:${combinedVersions['liquibase.version']}",
