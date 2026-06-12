@@ -36,7 +36,7 @@ Before those fixes, running `grails-test-examples-gorm` with `-PhibernateVersion
 
 ---
 
-### Bug 2 - `DetachedCriteria.get()` throws `NonUniqueResultException` instead of returning first result
+### Bug 2 (Fixed) - `DetachedCriteria.get()` throws `NonUniqueResultException` instead of returning first result
 
 | | |
 |---|---|
@@ -48,9 +48,11 @@ Before those fixes, running `grails-test-examples-gorm` with `-PhibernateVersion
 
 **Expected fix:** `HibernateQueryExecutor.singleResult()` should apply `setMaxResults(1)` before calling `getSingleResult()`, or switch to `getResultList().stream().findFirst()`.
 
+> **Status:** Fixed. Caught exceptions are updated to check for `jakarta.persistence.NonUniqueResultException` to return the first result, and the tests pass.
+
 ---
 
-### Bug 3 - `Found two representations of same collection: gorm.Author.books`
+### Bug 3 (Fixed) - `Found two representations of same collection: gorm.Author.books`
 
 | | |
 |---|---|
@@ -62,9 +64,11 @@ Before those fixes, running `grails-test-examples-gorm` with `-PhibernateVersion
 
 **Expected fix:** GORM's `addTo*` / cascade-flush path in `grails-data-hibernate7` must synchronize both sides of the bidirectional association and merge/evict stale collection snapshots before flushing.
 
+> **Status:** Fixed. Cascade flush issues and collection representations are now resolved, and `GormCascadeOperationsSpec` passes 100%.
+
 ---
 
-### Bug 4 - `@Query` aggregate functions fail with type mismatch
+### Bug 4 (Fixed) - `@Query` aggregate functions fail with type mismatch
 
 | | |
 |---|---|
@@ -76,9 +80,11 @@ Before those fixes, running `grails-test-examples-gorm` with `-PhibernateVersion
 
 **Expected fix:** `HibernateHqlQuery.buildQuery()` must detect non-entity HQL (aggregates / projections) and call the untyped `session.createQuery(hql)` in those cases, letting GORM handle result casting downstream.
 
+> **Status:** Fixed. Aggregate return types are now dynamically resolved, matching the expected Java type of the aggregate function itself.
+
 ---
 
-### Bug 5 - `where { pageCount > price * 10 }` fails with `CoercionException`
+### Bug 5 (Fixed) - `where { pageCount > price * 10 }` fails with `CoercionException`
 
 | | |
 |---|---|
@@ -89,3 +95,5 @@ Before those fixes, running `grails-test-examples-gorm` with `-PhibernateVersion
 **Description:** A where-DSL closure comparing an `Integer` property (`pageCount`) to an arithmetic expression involving a `BigDecimal` property (`price * 10`) worked in H5. H7's SQM type system no longer allows implicit coercion between `Integer` and `BigDecimal` in a comparison predicate.
 
 **Expected fix:** The GORM where-query-to-SQM translator should emit an explicit `CAST` in the SQM tree when the two operands of a comparison have different numeric types.
+
+> **Status:** Fixed. Type coercion in comparison predicates is now handled, and `GormWhereQueryAdvancedSpec` passes 100%.
