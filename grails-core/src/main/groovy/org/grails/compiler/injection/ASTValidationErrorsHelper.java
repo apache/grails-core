@@ -47,7 +47,6 @@ import org.codehaus.groovy.syntax.Types;
 
 import org.springframework.validation.Errors;
 
-import grails.compiler.ast.GrailsArtefactClassInjector;
 import grails.validation.ValidationErrors;
 
 /**
