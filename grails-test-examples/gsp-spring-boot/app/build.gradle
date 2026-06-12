@@ -40,9 +40,16 @@ plugins {
 apply plugin: 'org.apache.grails.gradle.grails-gsp'
 apply plugin: 'io.spring.dependency-management'
 
+apply from: rootProject.layout.projectDirectory.file('dependencies.gradle')
+
 dependencyManagement {
     imports {
-        mavenBom "org.apache.grails:grails-bom:${projectVersion}"
+        mavenBom("org.apache.grails:grails-bom:${projectVersion}") {
+            // Needed to align the Groovy version between the Spring DM plugin and the Grails BOM,
+            // otherwise the Spring DM plugin will ignore the versions declared in the BOM and use its own default
+            // versions instead, which are older and incompatible with the Grails GSP plugin.
+            bomProperty('groovy.version', bomDependencyVersions['groovy.version'] as String)
+        }
     }
 }
 
