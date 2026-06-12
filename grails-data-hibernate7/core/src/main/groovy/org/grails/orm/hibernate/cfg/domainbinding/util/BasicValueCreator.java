@@ -18,7 +18,10 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.util;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
@@ -28,6 +31,7 @@ import org.hibernate.mapping.BasicValue;
 
 import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
+import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceWrapper;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
@@ -69,18 +73,38 @@ public class BasicValueCreator {
         BasicValue basicValue = new BasicValue(metadataBuildingContext, property.getTable());
         Optional.ofNullable(property.getGeneratorName()).ifPresent(generator ->
                 basicValue.setCustomIdGeneratorCreator(context -> createGenerator(
+                        property,
                         property.getHibernateOwner(),
-                        context.getValue() == null ? new GeneratorCreationContextWrapper(context, basicValue) : context,
+                        new GeneratorCreationContextWrapper(context, basicValue),
                         generator)));
         return basicValue;
     }
 
     private Generator createGenerator(
+            HibernatePersistentProperty property,
             GrailsHibernatePersistentEntity domainClass,
             GeneratorCreationContext context,
             String generatorName) {
         HibernateSimpleIdentity mappedId = domainClass.getHibernateIdentity() instanceof HibernateSimpleIdentity id ? id : null;
+        if (mappedId == null) {
+            mappedId = createPropertyMappedId(property);
+        }
         return grailsSequenceWrapper.getGenerator(
                 generatorName, context, mappedId, domainClass, jdbcEnvironment, namingStrategy);
+    }
+
+    private HibernateSimpleIdentity createPropertyMappedId(HibernatePersistentProperty property) {
+        PropertyConfig mappedForm = property.getHibernateMappedForm();
+        Properties typeParams = mappedForm != null ? mappedForm.getTypeParams() : null;
+        if (typeParams == null || typeParams.isEmpty()) {
+            return null;
+        }
+        Map<String, String> params = new LinkedHashMap<>();
+        typeParams.forEach((key, value) -> params.put(key.toString(), value.toString()));
+        HibernateSimpleIdentity mappedId = new HibernateSimpleIdentity();
+        mappedId.setName(property.getName());
+        mappedId.setType(property.getType());
+        mappedId.setParams(params);
+        return mappedId;
     }
 }

@@ -288,10 +288,7 @@ public class PredicateGenerator {
         } else if (junction instanceof Query.Disjunction) {
             return criteriaBuilder.or(predicates);
         } else if (junction instanceof Query.Negation) {
-            if (predicates.length > 1) {
-                throw new IllegalArgumentException("Negation does not support multiple predicates in this context. Use conjunction or disjunction within negation.");
-            }
-            return criteriaBuilder.not(criteriaBuilder.and(predicates));
+            return criteriaBuilder.not(criteriaBuilder.or(predicates));
         }
         throw new IllegalArgumentException("Unsupported junction: " + junction);
     }

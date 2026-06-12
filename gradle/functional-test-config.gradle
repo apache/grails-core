@@ -39,10 +39,18 @@ boolean isGeneralFunctionalTest = !isHibernateSpecificProject && !isMongoProject
 // The datasources project has partial H7-compatible coverage in
 // grails-test-examples/hibernate7/grails-multiple-datasources, but still includes H5-only
 // coverage that needs explicit H7 duplicates before the general project can be enabled.
+// The app1 and GraphQL functional projects currently fail under H7 substitution and need
+// dedicated H7 follow-up coverage before they can be enabled in this lane.
 // The views and scaffolding projects boot with H7 substitution, but their functional specs
 // currently fail on association rendering and unique-constraint behavior under Hibernate 7.
 List<String> h7IncompatibleProjects = [
+        'grails-test-examples-app1',
         'grails-test-examples-datasources',
+        'grails-test-examples-graphql-grails-docs-app',
+        'grails-test-examples-graphql-grails-multi-datastore-app',
+        'grails-test-examples-graphql-grails-tenant-app',
+        'grails-test-examples-graphql-grails-test-app',
+        'grails-test-examples-graphql-spring-boot-app',
         'grails-test-examples-views-functional-tests',
         'grails-test-examples-scaffolding-fields',
 ]

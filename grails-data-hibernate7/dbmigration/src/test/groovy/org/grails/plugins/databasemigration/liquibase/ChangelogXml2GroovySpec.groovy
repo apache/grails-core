@@ -96,6 +96,6 @@ class ChangelogXml2GroovySpec extends Specification {
         String groovy = ChangelogXml2Groovy.convert(xml)
 
         then:
-        groovy.trim() == "databaseChangeLog = {\n}"
+        groovy.trim().replace('\r\n', '\n').replace('\r', '\n') == "databaseChangeLog = {\n}"
     }
 }

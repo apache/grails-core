@@ -87,6 +87,9 @@ class TestSaveOrUpdateEventListener extends AbstractPersistenceEventListener {
     protected void onPersistenceEvent(AbstractPersistenceEvent event) {
         TestPlayer player = (TestPlayer) event.entityObject
         player.attributes = ['test0', 'test1', 'test2']
+        if (event.getEntityAccess() != null) {
+            event.getEntityAccess().setProperty('attributes', player.attributes)
+        }
         isExecuted = true
     }
 

@@ -28,6 +28,7 @@ import java.util.stream.Stream;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.mapping.SimpleValue;
+import org.hibernate.mapping.ToOne;
 
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.HibernateCompositeIdentity;
@@ -102,6 +103,10 @@ public class CompositeIdentifierToManyToOneBinder {
                     .forEach(columns::add);
         }
         simpleValueBinder.bindSimpleValue(property, null, value, path);
+        if (value instanceof ToOne toOne) {
+            toOne.sortProperties();
+            toOne.setSorted(true);
+        }
     }
 
     /**

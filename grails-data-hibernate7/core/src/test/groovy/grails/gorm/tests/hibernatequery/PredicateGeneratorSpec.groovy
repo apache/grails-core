@@ -338,7 +338,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
         predicates.length == 1
     }
 
-    def "test getPredicates with Negation throws when multiple predicates"() {
+    def "test getPredicates with Negation supports multiple predicates"() {
         given:
         def negation = new Query.Negation()
         negation.add(new Query.Equals("firstName", "Alice"))
@@ -346,10 +346,10 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
         List criteria = [negation]
 
         when:
-        predicateGenerator.getPredicates(query, root, criteria, fromProvider, personEntity)
+        def predicates = predicateGenerator.getPredicates(query, root, criteria, fromProvider, personEntity)
 
         then:
-        thrown(RuntimeException)
+        predicates.length == 1
     }
 
     def "test getPredicates with invalid property throws ConfigurationException"() {
