@@ -80,6 +80,12 @@ class ServletContextExtensionSpec extends Specification {
         and: 'primitive class literals are normalized to their wrappers'
             context.getAttribute('count', int) == 42
 
+        when: 'a null type is passed'
+            context.getAttribute('count', (Class) null)
+
+        then: 'the contract violation is reported clearly rather than as a bare NPE'
+            thrown(IllegalArgumentException)
+
         and: 'the Class-typed overload resolves to the requested type under static compilation'
             StaticCaller.readPrincipal(context).toString() == 'alice'
     }

@@ -141,6 +141,9 @@ class ServletContextExtension {
      * use the named converters ({@code string}, {@code int}, ...) for type conversion.
      */
     static <T> T getAttribute(ServletContext context, String name, Class<T> type) {
+        if (type == null) {
+            throw new IllegalArgumentException('type must not be null - use getAttribute(name) for an untyped read')
+        }
         Object value = context.getAttribute(name)
         Class<T> resolvedType = (Class<T>) ClassUtils.resolvePrimitiveIfNecessary(type)
         resolvedType.isInstance(value) ? resolvedType.cast(value) : null

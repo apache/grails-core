@@ -84,6 +84,12 @@ class HttpServletRequestExtensionSpec extends Specification {
         and: 'primitive class literals are normalized to their wrappers'
             request.getAttribute('count', int) == 42
 
+        when: 'a null type is passed'
+            request.getAttribute('count', (Class) null)
+
+        then: 'the contract violation is reported clearly rather than as a bare NPE'
+            thrown(IllegalArgumentException)
+
         and: 'the Class-typed overload resolves to the requested type under static compilation'
             StaticCaller.readPrincipal(request).toString() == 'alice'
     }
