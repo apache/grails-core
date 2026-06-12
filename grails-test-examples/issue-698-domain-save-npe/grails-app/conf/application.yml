@@ -99,7 +99,6 @@ environments:
                 defaultTransactionIsolation: 2 # TRANSACTION_READ_COMMITTED
 
 ---
-# Grails 8 is nullable-by-default; this example asserts required-by-default validation, so opt out.
 grails:
     gorm:
         default:

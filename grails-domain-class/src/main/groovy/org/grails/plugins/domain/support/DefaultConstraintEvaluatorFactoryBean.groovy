@@ -29,7 +29,6 @@ import org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluato
 import org.grails.datastore.gorm.validation.constraints.eval.DefaultConstraintEvaluator
 import org.grails.datastore.gorm.validation.constraints.registry.ConstraintRegistry
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstraintRegistry
-import org.grails.datastore.mapping.config.Settings
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.validation.ConstraintEvalUtils
 
@@ -51,10 +50,9 @@ class DefaultConstraintEvaluatorFactoryBean implements FactoryBean<ConstraintsEv
     ConstraintsEvaluator getObject() throws Exception {
         ConstraintRegistry registry = new DefaultConstraintRegistry(messageSource)
 
-        boolean cacheAutoTimestampAnnotations = grailsApplication.config.getProperty(Settings.SETTING_AUTO_TIMESTAMP_CACHE_ANNOTATIONS, Boolean, true)
-        boolean defaultNullable = grailsApplication.config.getProperty(Settings.SETTING_DEFAULT_NULLABLE, Boolean, true)
         new DefaultConstraintEvaluator(registry, grailsDomainClassMappingContext,
-                ConstraintEvalUtils.getDefaultConstraints(grailsApplication.config), cacheAutoTimestampAnnotations, defaultNullable)
+                ConstraintEvalUtils.getDefaultConstraints(grailsApplication.config), true,
+                ConstraintEvalUtils.getDefaultNullable(grailsApplication.config))
     }
 
     @Override

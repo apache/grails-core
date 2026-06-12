@@ -120,7 +120,6 @@ environments:
                defaultTransactionIsolation: 2
 
 ---
-# Grails 8 is nullable-by-default; this example asserts required-by-default validation, so opt out.
 grails:
     gorm:
         default:
