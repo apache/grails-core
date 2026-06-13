@@ -34,22 +34,17 @@ plugins {
     id 'org.apache.grails.buildsrc.dependency-validator'
 }
 
-// grails-gsp compiles the GSP templates at build time. It is a build-time view-compilation
-// helper and does not provide dependency management - version management here is entirely
-// the responsibility of the Spring Dependency Management plugin below.
 apply plugin: 'org.apache.grails.gradle.grails-gsp'
 apply plugin: 'io.spring.dependency-management'
 
+// Keep Groovy aligned with the Grails BOM, including the Groovy used for GSP compilation.
 apply from: rootProject.layout.projectDirectory.file('dependencies.gradle')
+ext.set('groovy.version', bomDependencyVersions['groovy.version'] as String)
 
+// Use the Grails BOM for versions of transitive Grails/GSP/SiteMesh dependencies.
 dependencyManagement {
     imports {
-        mavenBom("org.apache.grails:grails-bom:${projectVersion}") {
-            // Needed to align the Groovy version between the Spring DM plugin and the Grails BOM,
-            // otherwise the Spring DM plugin will ignore the versions declared in the BOM and use its own default
-            // versions instead, which are older and incompatible with the Grails GSP plugin.
-            bomProperty('groovy.version', bomDependencyVersions['groovy.version'] as String)
-        }
+        mavenBom("org.apache.grails:grails-bom:${projectVersion}")
     }
 }
 
