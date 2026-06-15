@@ -105,6 +105,38 @@ class HttpServletRequestExtensionSpec extends Specification {
             request.getAttribute('count', Integer, 7) == 42
     }
 
+    void "Class-typed getAttribute matches proxied values — both JVM proxy mechanisms"() {
+        given:
+            HttpServletRequest request = new MockHttpServletRequest()
+
+            // (1) Interface proxy: a JDK dynamic proxy's runtime-generated class *implements* the
+            // requested interface, so isInstance(interface) is true — the non-obvious runtime case.
+            CharSequence jdkProxy = (CharSequence) java.lang.reflect.Proxy.newProxyInstance(
+                    getClass().classLoader, [CharSequence] as Class[],
+                    { Object proxy, java.lang.reflect.Method method, Object[] args ->
+                        method.name == 'toString' ? 'proxied' : null } as java.lang.reflect.InvocationHandler)
+            request.setAttribute('jdkProxy', jdkProxy)
+
+            // (2) Subclass proxy: CGLIB / ByteBuddy / Hibernate-lazy proxies *extend* the target
+            // class. isInstance walks the class hierarchy the same way whether the subclass is
+            // generated at runtime or declared here, so a plain subclass exercises the same path.
+            ProxiedBase subclassProxy = new ProxiedSubclass()
+            request.setAttribute('subclassProxy', subclassProxy)
+
+        expect: 'isInstance is true for the proxied interface and the proxied superclass'
+            request.getAttribute('jdkProxy', CharSequence).is(jdkProxy)
+            request.getAttribute('subclassProxy', ProxiedBase).is(subclassProxy)
+
+        and: 'null (not an unsafe cast) when the value is not actually an instance of the requested type'
+            request.getAttribute('jdkProxy', StringBuilder) == null
+    }
+
+    static class ProxiedBase {
+    }
+
+    static class ProxiedSubclass extends ProxiedBase {
+    }
+
     @CompileStatic
     static class StaticCaller {
         static StringBuilder readPrincipal(HttpServletRequest request) {
