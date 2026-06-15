@@ -18,7 +18,7 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.orm.hibernate.cfg.PropertyConfig
 import java.beans.PropertyDescriptor

@@ -19,7 +19,7 @@
 
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.persistence.Entity
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy

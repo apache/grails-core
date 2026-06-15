@@ -19,7 +19,7 @@
 package org.grails.orm.hibernate.cfg
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler
 import org.hibernate.proxy.HibernateProxy

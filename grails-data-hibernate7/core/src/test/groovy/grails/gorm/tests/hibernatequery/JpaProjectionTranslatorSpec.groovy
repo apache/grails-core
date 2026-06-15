@@ -16,9 +16,9 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.gorm.specs.hibernatequery
+package grails.gorm.tests.hibernatequery
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import jakarta.persistence.criteria.Expression
 import jakarta.persistence.criteria.Root
 import org.grails.datastore.mapping.query.Query

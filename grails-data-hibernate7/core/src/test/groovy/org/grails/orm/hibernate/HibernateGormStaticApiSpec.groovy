@@ -20,9 +20,9 @@
 package org.grails.orm.hibernate
 
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.entities.Club
+import grails.gorm.tests.entities.Club
 
 class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
 

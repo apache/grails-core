@@ -18,7 +18,7 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.persistence.Entity
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGeneratorEnum
 import spock.lang.Shared

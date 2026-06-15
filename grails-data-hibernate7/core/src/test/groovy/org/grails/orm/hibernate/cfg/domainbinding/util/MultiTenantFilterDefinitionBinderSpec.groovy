@@ -19,7 +19,7 @@
 
 package org.grails.orm.hibernate.cfg.domainbinding.util
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.model.config.GormProperties
 import org.hibernate.mapping.BasicValue
 import org.hibernate.mapping.Property

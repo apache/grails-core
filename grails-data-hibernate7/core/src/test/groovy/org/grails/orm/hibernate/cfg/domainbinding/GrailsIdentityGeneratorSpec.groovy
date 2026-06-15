@@ -19,7 +19,7 @@
 
 package org.grails.orm.hibernate.cfg.domainbinding
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
 import org.hibernate.generator.GeneratorCreationContext
 import org.hibernate.mapping.BasicValue

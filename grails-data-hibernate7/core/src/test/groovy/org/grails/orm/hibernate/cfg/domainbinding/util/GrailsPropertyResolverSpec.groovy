@@ -19,7 +19,7 @@
 
 package org.grails.orm.hibernate.cfg.domainbinding.util
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.hibernate.MappingException
 import org.hibernate.mapping.Component
 import org.hibernate.mapping.PersistentClass

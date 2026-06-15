@@ -18,7 +18,7 @@
  */
 package org.grails.orm.hibernate.support
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.datastore.gorm.bootstrap.support.InstanceFactoryBean
 import org.grails.datastore.mapping.config.Settings
 import org.grails.datastore.mapping.core.connections.ConnectionSource

@@ -16,10 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.gorm.specs.detachedcriteria
+package grails.gorm.tests.detachedcriteria
 
 import grails.gorm.DetachedCriteria
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
 import grails.gorm.transactions.Transactional
 import org.hibernate.SessionFactory

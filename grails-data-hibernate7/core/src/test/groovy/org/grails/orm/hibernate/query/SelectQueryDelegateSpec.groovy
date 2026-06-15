@@ -18,7 +18,7 @@
  */
 package org.grails.orm.hibernate.query
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.persistence.Entity
 import jakarta.persistence.LockModeType
 import org.hibernate.query.QueryFlushMode

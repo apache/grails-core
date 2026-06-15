@@ -18,7 +18,7 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.persistence.Entity
 
 class HibernateManyToManyPropertySpec extends HibernateGormDatastoreSpec {

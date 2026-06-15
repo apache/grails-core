@@ -17,10 +17,10 @@
  *  under the License.
  */
 
-package grails.gorm.specs.hibernatequery
+package grails.gorm.tests.hibernatequery
 
 import grails.gorm.DetachedCriteria
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.apache.grails.data.testing.tck.domains.CommonTypes
 import org.apache.grails.data.testing.tck.domains.EagerOwner
 import org.apache.grails.data.testing.tck.domains.Face

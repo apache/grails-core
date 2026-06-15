@@ -19,7 +19,7 @@
 package grails.gorm.tests.hasmany
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
 import org.grails.datastore.mapping.proxy.ProxyHandler
 

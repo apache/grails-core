@@ -20,7 +20,7 @@
 package grails.orm
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.query.api.BuildableCriteria
 
 /**

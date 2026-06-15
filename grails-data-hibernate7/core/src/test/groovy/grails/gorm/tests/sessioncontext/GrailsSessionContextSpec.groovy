@@ -16,9 +16,9 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.gorm.specs.sessioncontext
+package grails.gorm.tests.sessioncontext
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import jakarta.transaction.Status
 import jakarta.transaction.Transaction
 import jakarta.transaction.TransactionManager

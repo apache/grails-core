@@ -17,7 +17,7 @@
  *  under the License.
  */
 
-package grails.gorm.specs.multitenancy
+package grails.gorm.tests.multitenancy
 
 import grails.gorm.MultiTenant
 import grails.gorm.annotation.Entity

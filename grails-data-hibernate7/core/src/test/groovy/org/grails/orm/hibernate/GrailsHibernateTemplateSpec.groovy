@@ -20,7 +20,7 @@ package org.grails.orm.hibernate
 
 import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.HibernateEntity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import jakarta.persistence.PersistenceException
 import org.grails.orm.hibernate.support.hibernate7.TransactionResources
 import org.hibernate.FlushMode

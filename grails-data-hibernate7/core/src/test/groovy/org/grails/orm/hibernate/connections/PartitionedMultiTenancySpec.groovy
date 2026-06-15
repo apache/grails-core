@@ -27,7 +27,7 @@ import grails.gorm.hibernate.mapping.MappingBuilder
 import org.grails.orm.hibernate.connections.MultiTenantAuthorService
 import grails.gorm.multitenancy.Tenant
 import grails.gorm.multitenancy.Tenants
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.mapping.multitenancy.AllTenantsResolver
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings

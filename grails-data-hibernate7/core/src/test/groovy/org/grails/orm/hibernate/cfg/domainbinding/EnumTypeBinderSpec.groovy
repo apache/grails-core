@@ -20,7 +20,7 @@ package org.grails.orm.hibernate.cfg.domainbinding
 
 import org.hibernate.type.descriptor.WrapperOptions
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.persistence.Entity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty

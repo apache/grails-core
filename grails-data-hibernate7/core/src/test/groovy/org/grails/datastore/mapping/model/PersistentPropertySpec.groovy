@@ -19,7 +19,7 @@
 
 package org.grails.datastore.mapping.model
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.persistence.Entity
 import spock.lang.Issue
 

@@ -20,7 +20,7 @@ package grails.gorm.tests.dirtychecking
 
 import grails.gorm.annotation.Entity
 import grails.gorm.dirty.checking.DirtyCheck
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
 import spock.lang.Issue
 

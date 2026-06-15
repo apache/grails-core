@@ -16,7 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.gorm.specs
+package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
 import org.testcontainers.mariadb.MariaDBContainer

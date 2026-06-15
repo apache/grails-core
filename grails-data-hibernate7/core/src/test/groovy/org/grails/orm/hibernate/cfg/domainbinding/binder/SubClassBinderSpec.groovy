@@ -21,7 +21,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder
 
 import org.hibernate.mapping.SingleTableSubclass
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.MappingCacheHolder
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.util.MultiTenantFilterBinder

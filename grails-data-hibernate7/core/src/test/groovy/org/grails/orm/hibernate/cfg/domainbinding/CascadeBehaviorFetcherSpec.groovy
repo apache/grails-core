@@ -28,7 +28,7 @@ import org.hibernate.MappingException
 import spock.lang.Shared
 import spock.lang.Unroll
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehaviorFetcher
 
 import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.ALL

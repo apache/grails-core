@@ -19,7 +19,7 @@
 package grails.gorm.tests.compositeid
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
 import jakarta.annotation.Nonnull
 import org.grails.datastore.mapping.core.Session
