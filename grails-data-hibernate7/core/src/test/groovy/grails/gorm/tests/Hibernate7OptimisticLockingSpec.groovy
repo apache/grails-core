@@ -27,8 +27,8 @@ import org.springframework.dao.OptimisticLockingFailureException
  */
 class Hibernate7OptimisticLockingSpec extends HibernateGormDatastoreSpec {
 
-    def setupSpec() {
-        manager.addAllDomainClasses([OptLockVersioned, OptLockNotVersioned])
+    void setupSpec() {
+        manager.registerDomainClasses(OptLockVersioned, OptLockNotVersioned)
     }
 
     void "Test versioning"() {
@@ -57,10 +57,6 @@ class Hibernate7OptimisticLockingSpec extends HibernateGormDatastoreSpec {
         then:
         o.name == 'Fred'
         o.version == 1
-    }
-
-    void setupSpec() {
-        manager.registerDomainClasses(OptLockVersioned, OptLockNotVersioned)
     }
 
     void "Test optimistic locking"() {
