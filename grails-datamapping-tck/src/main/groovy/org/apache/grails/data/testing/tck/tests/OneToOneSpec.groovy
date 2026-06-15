@@ -102,6 +102,7 @@ class OneToOneSpec extends GrailsDataTckSpec {
 
 @Entity
 class OwnerEntity {
+
 }
 
 @Entity
