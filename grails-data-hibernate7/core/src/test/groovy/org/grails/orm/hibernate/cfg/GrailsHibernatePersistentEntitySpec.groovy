@@ -32,7 +32,7 @@ import org.hibernate.MappingException
 class GrailsHibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([
+        manager.registerDomainClasses(
                 Simple,
                 CustomDiscriminator,
                 NumericDiscriminator,
@@ -44,7 +44,7 @@ class GrailsHibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
                 CustomTableEntity,
                 CustomTableNameEntity,
                 DerivedPropertyEntity
-        ])
+        )
     }
 
     void "test getTableName"() {

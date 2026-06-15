@@ -32,7 +32,7 @@ import spock.lang.Ignore
 class TablePerSubClassAndEmbeddedSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([Company, Vendor])
+        manager.registerDomainClasses(Company, Vendor)
     }
 
     @Rollback

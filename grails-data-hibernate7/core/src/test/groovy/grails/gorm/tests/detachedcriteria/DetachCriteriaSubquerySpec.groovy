@@ -28,7 +28,7 @@ import spock.lang.Ignore
 class DetachCriteriaSubquerySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([User, Group, GroupAssignment, Organisation])
+        manager.registerDomainClasses(User, Group, GroupAssignment, Organisation)
     }
 
     void "test detached associated criteria in subquery"() {

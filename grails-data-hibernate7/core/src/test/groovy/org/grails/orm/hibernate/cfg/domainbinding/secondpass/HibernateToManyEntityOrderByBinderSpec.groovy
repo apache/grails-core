@@ -39,14 +39,14 @@ class HibernateToManyEntityOrderByBinderSpec extends HibernateGormDatastoreSpec 
 
 
     void setupSpec() {
-        manager.addAllDomainClasses([
+        manager.registerDomainClasses(
             COBOwnerEntity,
             COBAssociatedItem,
             COBUnidirectionalOwner,
             COBBaseItem,
             COBSubItem,
             COBHierarchyOwner,
-        ])
+        )
     }
 
     private HibernateToManyEntityProperty propertyFor(Class ownerClass, String name = "items") {

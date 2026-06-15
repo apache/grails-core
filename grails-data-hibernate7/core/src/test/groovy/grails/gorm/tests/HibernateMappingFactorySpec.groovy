@@ -41,10 +41,10 @@ import java.beans.PropertyDescriptor
 class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([MappingFactoryBook, MappingFactoryAuthor, MappingFactoryTag,
+        manager.registerDomainClasses(MappingFactoryBook, MappingFactoryAuthor, MappingFactoryTag,
                                      MappingFactoryArticle, MappingFactoryEnumBook,
                                      MappingFactoryPerson, MappingFactoryPassport,
-                                     MappingFactoryLibrary])
+                                     MappingFactoryLibrary)
     }
 
     // --- unit-style tests (standalone factory) ---

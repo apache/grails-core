@@ -26,7 +26,7 @@ import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller
 class HibernateCustomPropertySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([HCPTestEntity])
+        manager.registerDomainClasses(HCPTestEntity)
     }
 
     def "HibernateCustomProperty instantiation and behavior"() {

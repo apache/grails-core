@@ -30,7 +30,7 @@ import java.lang.reflect.Method
 class MutationQueryDelegateSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([MutationQueryDelegateTestBook])
+        manager.registerDomainClasses(MutationQueryDelegateTestBook)
     }
 
     void setup() {

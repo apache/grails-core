@@ -26,7 +26,7 @@ import spock.lang.Unroll
 class HibernateDetachedCriteriaSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([HDCProduct])
+        manager.registerDomainClasses(HDCProduct)
     }
 
     @Unroll

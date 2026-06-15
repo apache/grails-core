@@ -26,11 +26,11 @@ import spock.lang.Shared
 class HibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([
+        manager.registerDomainClasses(
             LazyBook, LazyAuthor, ExplicitNonLazy, JoinFetchEntity, EnumEntity,
             GeneratorDefaultEntity, GeneratorUuid2Entity, CompositeKeyEntity,
             HPPSManyA, HPPSManyB, HPPSClassTyped, HPPSStringTyped
-        ])
+        )
     }
 
     def "test isLazy for standard property"() {

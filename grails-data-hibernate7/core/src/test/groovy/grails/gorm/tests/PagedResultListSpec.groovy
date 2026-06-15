@@ -25,7 +25,7 @@ import org.grails.orm.hibernate.query.HibernatePagedResultList
 class PagedResultListSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([PRLBook])
+        manager.registerDomainClasses(PRLBook)
     }
 
     void "test PagedResultList totalCount with HQL query"() {

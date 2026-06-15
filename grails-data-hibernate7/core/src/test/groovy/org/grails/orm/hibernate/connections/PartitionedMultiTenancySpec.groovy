@@ -56,7 +56,7 @@ import org.hibernate.dialect.H2Dialect
 class PartitionedMultiTenancySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([MultiTenantAuthor, MultiTenantBook, MultiTenantPublisher])
+        manager.registerDomainClasses(MultiTenantAuthor, MultiTenantBook, MultiTenantPublisher)
         manager.grailsConfig = [
                 'dataSource.url'                              : "jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
                 'dataSource.dbCreate'                         : 'update',

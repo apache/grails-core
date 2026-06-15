@@ -28,7 +28,7 @@ import org.hibernate.mapping.RootClass
 class HibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([HPESimple, HPEComposite])
+        manager.registerDomainClasses(HPESimple, HPEComposite)
     }
 
     def "getIdentity returns null if identity is not HibernatePersistentProperty"() {

@@ -55,10 +55,10 @@ class ClosureEventTriggeringInterceptorSpec extends HibernateGormDatastoreSpec {
 
     @Override
     void setupSpec() {
-        manager.addAllDomainClasses([
+        manager.registerDomainClasses(
             InterceptorBook,
             TimestampedBook,
-        ])
+        )
     }
 
     // -------------------------------------------------------------------------

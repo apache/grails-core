@@ -26,7 +26,7 @@ import java.lang.annotation.RetentionPolicy
 class HibernateSimplePropertySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([HSPEntity])
+        manager.registerDomainClasses(HSPEntity)
     }
 
     def "HibernateSimpleProperty instantiation and basic behavior"() {

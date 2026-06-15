@@ -38,7 +38,7 @@ class HibernateDatastoreSchemaMultiTenancySpec extends HibernateGormDatastoreSpe
                 'grails.gorm.multiTenancy.mode': MultiTenancySettings.MultiTenancyMode.SCHEMA,
                 'grails.gorm.multiTenancy.tenantResolver': new SystemPropertyTenantResolver()
         ]
-        manager.addAllDomainClasses([SchemaBook])
+        manager.registerDomainClasses(SchemaBook)
     }
 
     void "test schema multi-tenancy"() {

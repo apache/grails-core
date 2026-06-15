@@ -30,7 +30,7 @@ import org.hibernate.Hibernate
 class DetachedCriteriaJoinSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([Team, Club])
+        manager.registerDomainClasses(Team, Club)
     }
 
     def "check if count works as expected"() {

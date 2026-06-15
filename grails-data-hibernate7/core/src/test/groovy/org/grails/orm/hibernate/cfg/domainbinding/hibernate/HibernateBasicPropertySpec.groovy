@@ -31,7 +31,7 @@ import java.lang.annotation.RetentionPolicy
 class HibernateBasicPropertySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([HBPPerson])
+        manager.registerDomainClasses(HBPPerson)
     }
 
     def "test getCollection throws exception if not initialized"() {

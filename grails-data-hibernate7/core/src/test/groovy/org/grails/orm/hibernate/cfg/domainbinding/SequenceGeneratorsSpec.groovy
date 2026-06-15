@@ -27,12 +27,12 @@ import spock.lang.Unroll
 class SequenceGeneratorsSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([EntityWithIdentity,
+        manager.registerDomainClasses(EntityWithIdentity,
                                      EntityWithNative,
                                      EntityWithSequence,
                                      EntityWithTable,
                                      EntityWithUUID,
-                                     EntityWithAssigned])
+                                     EntityWithAssigned)
     }
 
 

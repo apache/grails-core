@@ -31,7 +31,7 @@ import org.grails.datastore.gorm.GormEntity
 class JpaProjectionTranslatorSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([JpaProjectionTranslatorSpecPerson])
+        manager.registerDomainClasses(JpaProjectionTranslatorSpecPerson)
     }
 
     def "translate PropertyProjection"() {

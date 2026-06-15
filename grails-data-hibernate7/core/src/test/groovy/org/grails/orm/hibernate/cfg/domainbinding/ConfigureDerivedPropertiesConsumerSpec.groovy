@@ -31,7 +31,7 @@ class ConfigureDerivedPropertiesConsumerSpec extends HibernateGormDatastoreSpec 
     HibernatePersistentProperty titleProperty
 
     def setupSpec() {
-        manager.addAllDomainClasses([CDPCBook])
+        manager.registerDomainClasses(CDPCBook)
     }
 
     def setup() {

@@ -52,10 +52,6 @@ abstract class GrailsDataTckManager {
         }
     }
 
-    void addAllDomainClasses(Collection<Class> classes) {
-        registerDomainClasses(*classes)
-    }
-
     void setupSpec() {
         // noop
     }

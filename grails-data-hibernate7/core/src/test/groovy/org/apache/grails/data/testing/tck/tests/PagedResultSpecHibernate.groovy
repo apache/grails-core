@@ -24,7 +24,7 @@ import org.apache.grails.data.testing.tck.domains.Person
 class PagedResultSpecHibernate extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Person])
+        manager.registerDomainClasses(Person)
     }
 
     void "Test that a getTotalCount will return 0 on empty result from the list() method"() {

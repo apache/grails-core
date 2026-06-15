@@ -30,7 +30,7 @@ import org.grails.datastore.mapping.query.Query
 class SelectHqlQuerySpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([SelectHqlQuerySpecBook, SelectHqlQuerySpecAuthor])
+        manager.registerDomainClasses(SelectHqlQuerySpecBook, SelectHqlQuerySpecAuthor)
     }
 
     def setup() {

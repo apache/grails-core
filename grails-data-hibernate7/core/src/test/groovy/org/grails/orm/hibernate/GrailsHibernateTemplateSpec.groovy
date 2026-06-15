@@ -35,7 +35,7 @@ class GrailsHibernateTemplateSpec extends HibernateGormDatastoreSpec {
 
     @Override
     void setupSpec() {
-        manager.addAllDomainClasses([TemplateBook])
+        manager.registerDomainClasses(TemplateBook)
     }
 
     void setup() {

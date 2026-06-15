@@ -38,7 +38,7 @@ class ToManyEntityMultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec
     ToManyEntityMultiTenantFilterBinder binder
 
     void setupSpec() {
-        manager.addAllDomainClasses([
+        manager.registerDomainClasses(
             CMTBBidirectionalOwner,
             CMTBBidirectionalItem,
             CMTBUnidirectionalOwner,
@@ -47,7 +47,7 @@ class ToManyEntityMultiTenantFilterBinderSpec extends HibernateGormDatastoreSpec
             CMTBNonTenantItem,
             CMTBManyToManyOwner,
             CMTBManyToManyItem,
-        ])
+        )
         manager.grailsConfig = [
             "grails.gorm.multiTenancy.mode"               : MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR,
             "grails.gorm.multiTenancy.tenantResolverClass": SystemPropertyTenantResolver,

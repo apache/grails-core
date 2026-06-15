@@ -34,7 +34,7 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
 
 
     void setupSpec() {
-        manager.addAllDomainClasses([JpaCriteriaQueryCreatorSpecPerson, JpaCriteriaQueryCreatorSpecPet])
+        manager.registerDomainClasses(JpaCriteriaQueryCreatorSpecPerson, JpaCriteriaQueryCreatorSpecPet)
     }
 
     def "test createQuery"() {

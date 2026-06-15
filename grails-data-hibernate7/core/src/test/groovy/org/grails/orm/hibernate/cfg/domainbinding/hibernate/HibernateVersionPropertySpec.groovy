@@ -25,7 +25,7 @@ import java.beans.PropertyDescriptor
 class HibernateVersionPropertySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([HVPEntity])
+        manager.registerDomainClasses(HVPEntity)
     }
 
     def "HibernateVersionProperty instantiation and behavior"() {

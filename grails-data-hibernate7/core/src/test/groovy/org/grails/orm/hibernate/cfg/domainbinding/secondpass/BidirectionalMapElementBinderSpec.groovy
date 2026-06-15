@@ -38,10 +38,10 @@ class BidirectionalMapElementBinderSpec extends HibernateGormDatastoreSpec {
     BidirectionalMapElementBinder binder
 
     void setupSpec() {
-        manager.addAllDomainClasses([
+        manager.registerDomainClasses(
             BBMEOwner,
             BBMEItem,
-        ])
+        )
     }
 
     void setup() {

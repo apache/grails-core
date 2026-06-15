@@ -37,7 +37,7 @@ class HibernateProxyHandler5Spec extends  GrailsDataTckSpec<GrailsDataHibernate5
     @Shared HibernateProxyHandler proxyHandler = new HibernateProxyHandler()
 
     void setupSpec() {
-        manager.addAllDomainClasses([Location, Person, Pet])
+        manager.registerDomainClasses(Location, Person, Pet)
     }
 
     void "test isInitialized for a non-proxied object"() {

@@ -29,7 +29,7 @@ import java.beans.PropertyDescriptor
 class HibernateOneToManyPropertySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([HOTMPBook, HOTMPAuthor])
+        manager.registerDomainClasses(HOTMPBook, HOTMPAuthor)
     }
 
     void "test getReferencedEntityName returns the correct entity name"() {

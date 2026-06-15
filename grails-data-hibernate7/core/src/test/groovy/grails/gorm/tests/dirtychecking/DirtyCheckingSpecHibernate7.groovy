@@ -23,7 +23,7 @@ import grails.gorm.tests.HibernateGormDatastoreSpec
 class DirtyCheckingSpecHibernate7 extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([DirtyCheckingTestBookHibernate7])
+        manager.registerDomainClasses(DirtyCheckingTestBookHibernate7)
     }
 
     void "When marking whole class dirty, then derived and transient properties are still not dirty"() {

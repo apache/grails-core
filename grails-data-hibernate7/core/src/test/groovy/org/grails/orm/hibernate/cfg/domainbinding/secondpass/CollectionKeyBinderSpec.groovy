@@ -41,7 +41,7 @@ class CollectionKeyBinderSpec extends HibernateGormDatastoreSpec {
     CollectionKeyBinder binder
 
     void setupSpec() {
-        manager.addAllDomainClasses([
+        manager.registerDomainClasses(
             CKBBidOwner,
             CKBBidItem,
             CKBManyToManyOwner,
@@ -52,7 +52,7 @@ class CollectionKeyBinderSpec extends HibernateGormDatastoreSpec {
             CKBJoinKeyItem,
             CKBCompositeOwner,
             CKBCompositeItem
-        ])
+        )
     }
 
     void setup() {

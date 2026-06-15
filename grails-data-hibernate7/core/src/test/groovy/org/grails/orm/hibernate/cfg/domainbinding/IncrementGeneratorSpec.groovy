@@ -35,7 +35,7 @@ import org.hibernate.mapping.Property
 class IncrementGeneratorSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([EntityWithIncrement])
+        manager.registerDomainClasses(EntityWithIncrement)
     }
 
     @Rollback

@@ -113,7 +113,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
     }
 
     void setupSpec() {
-        manager.addAllDomainClasses([
+        manager.registerDomainClasses(
             PropertyBinderSpecSimpleBook,
             PropertyBinderSpecEnumBook,
             PropertyBinderSpecAuthor,
@@ -127,7 +127,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
             PropertyBinderSpecFKOwner,
             PropertyBinderSpecFKChild,
             PropertyBinderSpecTenantEntity
-        ])
+        )
     }
 
     void "Test bind simple property"() {

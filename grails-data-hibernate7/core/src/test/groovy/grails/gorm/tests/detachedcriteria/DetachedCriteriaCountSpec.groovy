@@ -28,7 +28,7 @@ import spock.lang.Issue
 class DetachedCriteriaCountSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([CountItem])
+        manager.registerDomainClasses(CountItem)
     }
 
     private void createTestData() {

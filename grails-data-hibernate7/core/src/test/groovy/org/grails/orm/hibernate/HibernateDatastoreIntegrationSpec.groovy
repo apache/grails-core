@@ -61,7 +61,7 @@ class HibernateDatastoreIntegrationSpec extends HibernateGormDatastoreSpec {
             'grails.hibernate.cache.queries' : false,
             'grails.hibernate.osiv.readonly' : false,
         ]
-        manager.addAllDomainClasses([DatastoreBook])
+        manager.registerDomainClasses(DatastoreBook)
         println "================================================"
     }
 

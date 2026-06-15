@@ -28,7 +28,7 @@ import org.grails.orm.hibernate.query.HibernateQuery
 class HibernateSessionSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([HSBook])
+        manager.registerDomainClasses(HSBook)
     }
 
     // -------------------------------------------------------------------------

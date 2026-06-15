@@ -26,7 +26,7 @@ import org.grails.datastore.mapping.query.Query
 class MutationHqlQuerySpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([MutationHqlQuerySpecBook])
+        manager.registerDomainClasses(MutationHqlQuerySpecBook)
     }
 
     def setup() {

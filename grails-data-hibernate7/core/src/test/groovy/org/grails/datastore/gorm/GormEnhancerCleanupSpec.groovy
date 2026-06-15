@@ -23,7 +23,7 @@ import java.util.concurrent.ConcurrentHashMap
 class GormEnhancerCleanupSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([CleanupEntity])
+        manager.registerDomainClasses(CleanupEntity)
     }
 
     void "Test that GormEnhancer.close() removes datastore from DATASTORES registry"() {

@@ -31,13 +31,13 @@ class ClosureEventListenerSpec extends HibernateGormDatastoreSpec {
 
     @Override
     void setupSpec() {
-        manager.addAllDomainClasses([
+        manager.registerDomainClasses(
             EventBook,
             ValidatedBook,
             MutatingBook,
             LegacyLoadBook,
             NoEventBook
-        ])
+        )
     }
 
     void cleanup() {

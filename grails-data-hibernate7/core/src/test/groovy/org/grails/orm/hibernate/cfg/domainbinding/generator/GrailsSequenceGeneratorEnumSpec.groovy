@@ -58,7 +58,7 @@ class GrailsSequenceGeneratorEnumSpec extends HibernateGormDatastoreSpec {
             'hibernate.dialect'           : 'org.hibernate.dialect.PostgreSQLDialect',
             'hibernate.hbm2ddl.auto'      : 'create',
         ]
-        manager.addAllDomainClasses([GrailsSequenceGeneratorEnumSpecEntity])
+        manager.registerDomainClasses(GrailsSequenceGeneratorEnumSpecEntity)
     }
 
     /**

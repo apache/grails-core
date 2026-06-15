@@ -36,7 +36,7 @@ import org.grails.datastore.mapping.core.connections.ConnectionSource
 class HibernateMappingContextSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([MappingContextBook, MappingContextAuthor, MappingContextAddress])
+        manager.registerDomainClasses(MappingContextBook, MappingContextAuthor, MappingContextAddress)
     }
 
     // --- unit-style tests (no datastore required) ---

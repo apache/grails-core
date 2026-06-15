@@ -28,7 +28,7 @@ import java.lang.reflect.Method
 class SelectQueryDelegateSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([SelectQueryDelegateTestBook])
+        manager.registerDomainClasses(SelectQueryDelegateTestBook)
     }
 
     void setup() {

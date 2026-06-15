@@ -27,7 +27,7 @@ import java.lang.annotation.RetentionPolicy
 class HibernateCustomEnumPropertySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([HCEPEntity])
+        manager.registerDomainClasses(HCEPEntity)
     }
 
     def "HibernateCustomEnumProperty instantiation and behavior"() {

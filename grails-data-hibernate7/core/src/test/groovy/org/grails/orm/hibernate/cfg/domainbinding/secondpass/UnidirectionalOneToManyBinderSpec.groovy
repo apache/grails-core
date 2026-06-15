@@ -44,9 +44,9 @@ class UnidirectionalOneToManyBinderSpec extends HibernateGormDatastoreSpec {
     UnidirectionalOneToManyBinder binder
 
     def setupSpec() {
-        manager.addAllDomainClasses([
+        manager.registerDomainClasses(
                 UniOwner, UniPet
-        ])
+        )
     }
 
     def setup() {

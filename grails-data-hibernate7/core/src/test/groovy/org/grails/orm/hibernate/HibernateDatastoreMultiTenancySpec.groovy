@@ -41,7 +41,7 @@ class HibernateDatastoreMultiTenancySpec extends HibernateGormDatastoreSpec {
                 'grails.gorm.multiTenancy.mode': MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR,
                 'grails.gorm.multiTenancy.tenantResolver': new SystemPropertyTenantResolver()
         ]
-        manager.addAllDomainClasses([MultiTenantBook])
+        manager.registerDomainClasses(MultiTenantBook)
     }
 
     void "test discriminator multi-tenancy filter"() {

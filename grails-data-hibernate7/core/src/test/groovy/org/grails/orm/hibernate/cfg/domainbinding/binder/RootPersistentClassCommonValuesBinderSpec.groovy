@@ -41,7 +41,7 @@ class RootPersistentClassCommonValuesBinderSpec extends HibernateGormDatastoreSp
     GrailsDomainBinder gormDomainBinder
 
     void setup() {
-        manager.addAllDomainClasses([TestEntity, AbstractTestEntity, CachedEntity, ReadOnlyCachedEntity, NonLazyCachedEntity])
+        manager.registerDomainClasses(TestEntity, AbstractTestEntity, CachedEntity, ReadOnlyCachedEntity, NonLazyCachedEntity)
         
         gormDomainBinder = getGrailsDomainBinder()
         metadataBuildingContext = gormDomainBinder.getMetadataBuildingContext()

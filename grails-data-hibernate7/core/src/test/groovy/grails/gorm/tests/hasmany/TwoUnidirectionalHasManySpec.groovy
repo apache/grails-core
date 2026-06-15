@@ -36,7 +36,7 @@ import spock.lang.PendingFeature
 class TwoUnidirectionalHasManySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([EcmMask, EcmUser, EcmMaskJpa, JpaUser])
+        manager.registerDomainClasses(EcmMask, EcmUser, EcmMaskJpa, JpaUser)
     }
 
     @Rollback

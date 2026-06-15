@@ -36,7 +36,7 @@ import java.sql.ResultSet
 class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([EnumEntityDomain, FooWithEnum])
+        manager.registerDomainClasses(EnumEntityDomain, FooWithEnum)
     }
 
     @Rollback

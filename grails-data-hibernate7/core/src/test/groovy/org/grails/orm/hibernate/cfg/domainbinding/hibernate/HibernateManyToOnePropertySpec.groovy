@@ -25,7 +25,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOnePr
 class HibernateManyToOnePropertySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([HMTOPBook, HMTOPAuthor])
+        manager.registerDomainClasses(HMTOPBook, HMTOPAuthor)
     }
 
     void "test getReferencedEntityName returns the correct entity name"() {

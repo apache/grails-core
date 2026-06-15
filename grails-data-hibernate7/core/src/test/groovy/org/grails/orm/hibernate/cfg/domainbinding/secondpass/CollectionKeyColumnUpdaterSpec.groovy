@@ -34,13 +34,13 @@ class CollectionKeyColumnUpdaterSpec extends HibernateGormDatastoreSpec {
     CollectionKeyBinder collectionKeyBinder = Mock(CollectionKeyBinder)
 
     void setupSpec() {
-        manager.addAllDomainClasses([
+        manager.registerDomainClasses(
             CKCUOwnerOne,
             CKCUItemOne,
             CKCUOwnerMany,
             CKCUItemMany1,
             CKCUItemMany2
-        ])
+        )
     }
 
     void setup() {

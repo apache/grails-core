@@ -64,9 +64,9 @@ class GrailsSequenceStyleGeneratorSpec extends HibernateGormDatastoreSpec {
     }
 
     void setupSpec() {
-        manager.addAllDomainClasses([
+        manager.registerDomainClasses(
             SequenceStyleGeneratorSpecEntity
-        ])
+        )
     }
 
     def "test constructor logic with default parameters"() {

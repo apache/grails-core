@@ -173,14 +173,14 @@ class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
     }
 
     void setupSpec() {
-        manager.addAllDomainClasses([
+        manager.registerDomainClasses(
             org.apache.grails.data.testing.tck.domains.Pet,
             org.apache.grails.data.testing.tck.domains.Person,
             org.apache.grails.data.testing.tck.domains.PetType,
             MapSPBAuthor,
             MapSPBBook,
             MapSPBOwner
-        ])
+        )
     }
 
     void "Test bind map"() {

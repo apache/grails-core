@@ -38,7 +38,7 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
     @Shared oracle = new OracleContainer("gvenzl/oracle-free:slim-faststart")
 
     void setupSpec() {
-        manager.addAllDomainClasses([RlikeFoo])
+        manager.registerDomainClasses(RlikeFoo)
     }
 
     void "test rlike works with #db"() {

@@ -26,7 +26,7 @@ import org.grails.datastore.mapping.core.connections.ConnectionSource
 class HibernateGormEnhancerSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([HGESimple])
+        manager.registerDomainClasses(HGESimple)
     }
 
     def "test findStaticApi"() {

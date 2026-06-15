@@ -28,7 +28,7 @@ import org.grails.orm.hibernate.HibernateDatastore
 class HibernateCriteriaBuilderDirectSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([CriteriaTestEntity, CriteriaTestChild])
+        manager.registerDomainClasses(CriteriaTestEntity, CriteriaTestChild)
     }
 
     HibernateCriteriaBuilder c

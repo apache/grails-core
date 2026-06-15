@@ -32,7 +32,7 @@ import org.grails.datastore.gorm.GormEntity
 class AddToManagedEntitySpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([CascadeAuthor, CascadeBook])
+        manager.registerDomainClasses(CascadeAuthor, CascadeBook)
     }
 
     void cleanup() {

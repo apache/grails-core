@@ -31,7 +31,7 @@ import jakarta.validation.constraints.NotBlank
 class BeanValidationSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([Bean])
+        manager.registerDomainClasses(Bean)
     }
 
     @Rollback

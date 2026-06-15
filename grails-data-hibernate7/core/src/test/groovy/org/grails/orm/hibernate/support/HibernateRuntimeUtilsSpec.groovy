@@ -35,7 +35,7 @@ class HibernateRuntimeUtilsSpec extends HibernateGormDatastoreSpec {
     @Shared ConversionService conversionService
 
     void setupSpec() {
-        manager.addAllDomainClasses([HibernateRuntimeUtilsSpecProfile, HibernateRuntimeUtilsSpecAccount])
+        manager.registerDomainClasses(HibernateRuntimeUtilsSpecProfile, HibernateRuntimeUtilsSpecAccount)
         def factory = new ConversionServiceFactoryBean()
         factory.afterPropertiesSet()
         conversionService = factory.object

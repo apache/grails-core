@@ -46,7 +46,7 @@ class PredicateGeneratorSpec extends HibernateGormDatastoreSpec {
     GrailsHibernatePersistentEntity personEntity
 
     void setupSpec() {
-        manager.addAllDomainClasses([PredicateGeneratorSpecPerson, PredicateGeneratorSpecPet, PredicateGeneratorSpecFace, PredicateGeneratorSpecNullableAgeEntity])
+        manager.registerDomainClasses(PredicateGeneratorSpecPerson, PredicateGeneratorSpecPet, PredicateGeneratorSpecFace, PredicateGeneratorSpecNullableAgeEntity)
     }
 
     void setup() {

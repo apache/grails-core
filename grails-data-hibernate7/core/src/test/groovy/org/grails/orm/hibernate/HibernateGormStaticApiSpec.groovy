@@ -27,7 +27,7 @@ import grails.gorm.tests.entities.Club
 class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([HibernateGormStaticApiEntity, Club, HibernateGormStaticApiMultiTenantEntity])
+        manager.registerDomainClasses(HibernateGormStaticApiEntity, Club, HibernateGormStaticApiMultiTenantEntity)
     }
 
     void "Test that HibernateGormStaticApi uses the shared template from the datastore"() {

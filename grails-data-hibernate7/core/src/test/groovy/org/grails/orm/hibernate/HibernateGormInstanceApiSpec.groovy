@@ -29,7 +29,7 @@ import org.grails.orm.hibernate.query.SelectHqlQuery
 class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([PersonInstanceApi, BookInstanceApi, ConstrainedPerson, ConstrainedBook, HGIAuthor, HGIBook])
+        manager.registerDomainClasses(PersonInstanceApi, BookInstanceApi, ConstrainedPerson, ConstrainedBook, HGIAuthor, HGIBook)
     }
 
     void "Test that HibernateGormInstanceApi uses the shared template from the datastore"() {

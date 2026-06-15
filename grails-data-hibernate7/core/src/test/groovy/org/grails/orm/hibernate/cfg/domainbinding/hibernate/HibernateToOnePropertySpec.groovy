@@ -28,7 +28,7 @@ import org.grails.orm.hibernate.cfg.PropertyConfig
 class HibernateToOnePropertySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([HTOPAuthor, HTOPBook, HTOPProfile, HTOPAddress])
+        manager.registerDomainClasses(HTOPAuthor, HTOPBook, HTOPProfile, HTOPAddress)
     }
 
     // ─── HibernateManyToOneProperty Tests ────────────────────────────────────

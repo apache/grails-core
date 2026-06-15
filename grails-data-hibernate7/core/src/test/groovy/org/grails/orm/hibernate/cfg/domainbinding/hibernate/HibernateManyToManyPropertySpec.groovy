@@ -24,7 +24,7 @@ import grails.persistence.Entity
 class HibernateManyToManyPropertySpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([HMMPA, HMMPB])
+        manager.registerDomainClasses(HMMPA, HMMPB)
     }
 
     def "test HibernateManyToManyProperty basic methods"() {

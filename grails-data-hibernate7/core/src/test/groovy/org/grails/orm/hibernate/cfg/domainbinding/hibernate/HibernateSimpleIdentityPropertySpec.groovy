@@ -24,7 +24,7 @@ import grails.gorm.tests.HibernateGormDatastoreSpec
 class HibernateSimpleIdentityPropertySpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([HSIPSimpleEntity, HSIPAssignedEntity])
+        manager.registerDomainClasses(HSIPSimpleEntity, HSIPAssignedEntity)
     }
 
     def "name-and-type constructor creates property with given name and type"() {

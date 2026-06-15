@@ -26,7 +26,7 @@ import spock.lang.Issue
 class HibernatePagedResultListSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([HPBook])
+        manager.registerDomainClasses(HPBook)
     }
 
     void "test HibernatePagedResultList totalCount with HQL query"() {

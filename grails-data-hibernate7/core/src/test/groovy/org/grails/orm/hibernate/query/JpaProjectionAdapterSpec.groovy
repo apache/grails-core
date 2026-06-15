@@ -31,7 +31,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
 class JpaProjectionAdapterSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([AdapterTestEntity])
+        manager.registerDomainClasses(AdapterTestEntity)
     }
 
     void "test adapt single property projection"() {

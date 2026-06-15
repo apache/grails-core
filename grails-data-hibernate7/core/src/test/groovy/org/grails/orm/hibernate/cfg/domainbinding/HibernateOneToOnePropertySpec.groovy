@@ -28,7 +28,7 @@ import org.hibernate.type.ForeignKeyDirection
 class HibernateOneToOnePropertySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([OneToOneFace, OneToOneNose, OneToOneLeft, OneToOneRight])
+        manager.registerDomainClasses(OneToOneFace, OneToOneNose, OneToOneLeft, OneToOneRight)
     }
 
     void "getHibernateInverseSide returns HibernateOneToOneProperty"() {

@@ -30,7 +30,7 @@ import spock.lang.Issue
 class MultipleDataSourcesWithEventsSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([EventsBook, SecondaryBook])
+        manager.registerDomainClasses(EventsBook, SecondaryBook)
         manager.grailsConfig = [
                 'dataSource': [
                         'url'        : "jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",

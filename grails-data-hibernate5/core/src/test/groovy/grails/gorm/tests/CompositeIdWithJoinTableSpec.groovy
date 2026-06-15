@@ -28,7 +28,7 @@ import static grails.gorm.hibernate.mapping.MappingBuilder.define
  */
 class CompositeIdWithJoinTableSpec extends HibernateGormDatastoreSpec {
     def setupSpec() {
-        manager.addAllDomainClasses([CompositeIdParent, CompositeIdChild])
+        manager.registerDomainClasses(CompositeIdParent, CompositeIdChild)
     }
 
     //    @Rollback

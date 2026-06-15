@@ -31,7 +31,7 @@ import org.hibernate.query.criteria.JpaExpression
 class JpaQueryContextSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([JpaQueryContextSpecPerson])
+        manager.registerDomainClasses(JpaQueryContextSpecPerson)
     }
 
     def "getRoot returns the assigned root"() {

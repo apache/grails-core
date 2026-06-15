@@ -38,12 +38,12 @@ class ManyToOneElementBinderSpec extends HibernateGormDatastoreSpec {
     ManyToOneElementBinder binder
 
     void setupSpec() {
-        manager.addAllDomainClasses([
+        manager.registerDomainClasses(
             MTMEOwner,
             MTMEItem,
             MTMEBase,
             MTMESubtype,
-        ])
+        )
     }
 
     void setup() {

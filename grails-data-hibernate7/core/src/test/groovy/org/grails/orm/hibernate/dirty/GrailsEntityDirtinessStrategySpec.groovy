@@ -30,7 +30,7 @@ import org.hibernate.persister.entity.EntityPersister
 class GrailsEntityDirtinessStrategySpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([DSBook, DSEmbeddedEntity])
+        manager.registerDomainClasses(DSBook, DSEmbeddedEntity)
     }
 
     def "canDirtyCheck returns true for DirtyCheckable"() {

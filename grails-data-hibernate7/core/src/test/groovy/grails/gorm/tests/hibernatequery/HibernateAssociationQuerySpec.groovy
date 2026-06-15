@@ -34,7 +34,7 @@ class HibernateAssociationQuerySpec extends HibernateGormDatastoreSpec {
     Person bob
 
     def setupSpec() {
-        manager.addAllDomainClasses([Person, Pet])
+        manager.registerDomainClasses(Person, Pet)
     }
 
     def setup() {

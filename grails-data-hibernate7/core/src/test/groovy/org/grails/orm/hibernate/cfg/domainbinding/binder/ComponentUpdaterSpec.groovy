@@ -40,7 +40,7 @@ class ComponentUpdaterSpec extends HibernateGormDatastoreSpec {
     ComponentUpdater updater
 
     def setupSpec() {
-        manager.addAllDomainClasses([CUPerson, CUAddress])
+        manager.registerDomainClasses(CUPerson, CUAddress)
     }
 
     def setup() {

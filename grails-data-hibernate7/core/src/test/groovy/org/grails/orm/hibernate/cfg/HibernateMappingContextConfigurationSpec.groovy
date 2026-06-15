@@ -451,7 +451,7 @@ class HibernateMappingContextConfigurationSpec extends Specification {
 class HibernateMappingContextConfigurationIntegrationSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([HmccTestBook, HmccTestAuthor])
+        manager.registerDomainClasses(HmccTestBook, HmccTestAuthor)
     }
 
     def "buildSessionFactory produces a working session factory via HibernateDatastore"() {

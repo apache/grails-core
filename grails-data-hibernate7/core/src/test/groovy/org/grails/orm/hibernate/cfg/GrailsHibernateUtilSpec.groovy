@@ -32,7 +32,7 @@ class GrailsHibernateUtilSpec extends HibernateGormDatastoreSpec {
     HibernateProxyHandler proxyHandlerMock = Mock(HibernateProxyHandler)
 
     void setupSpec() {
-        manager.addAllDomainClasses([GHUBook, GHUAuthor, GHUAnnotatedEntity])
+        manager.registerDomainClasses(GHUBook, GHUAuthor, GHUAnnotatedEntity)
     }
 
     def setup() {

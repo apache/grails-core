@@ -35,7 +35,7 @@ import org.hibernate.proxy.HibernateProxy
 class ByteBuddyGroovyInterceptorSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Location])
+        manager.registerDomainClasses(Location)
     }
 
     private Long savedId

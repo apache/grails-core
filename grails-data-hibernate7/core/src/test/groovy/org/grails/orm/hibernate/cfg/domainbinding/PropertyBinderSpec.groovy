@@ -37,7 +37,7 @@ class PropertyBinderSpec extends HibernateGormDatastoreSpec {
     @Shared PropertyBinder binder = new PropertyBinder(new CascadeBehaviorFetcher())
 
     void setupSpec() {
-        manager.addAllDomainClasses([PBEntity, PBAuthor])
+        manager.registerDomainClasses(PBEntity, PBAuthor)
     }
 
     void "test property binding with real objects"() {

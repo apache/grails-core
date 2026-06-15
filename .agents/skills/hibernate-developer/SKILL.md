@@ -88,7 +88,7 @@ Keep these module-specific expectations in mind:
 When touching `grails-data-hibernate7`, test through real Hibernate wiring rather than assuming mocks are enough.
 
 - Use `HibernateGormDatastoreSpec` for Hibernate 7 integration and domain-binding specifications.
-- Prefer `manager.addAllDomainClasses([...])` in `setupSpec()` to register entities for specs.
+- Prefer `manager.registerDomainClasses(...)` in `setupSpec()` to register entities for specs.
 - Define test entities as top-level classes in the same Groovy spec file.
 - Ensure test domain class names are globally unique within the package to avoid collisions during parallel execution.
 - Prefer real entities over heavy mocking for binder logic.

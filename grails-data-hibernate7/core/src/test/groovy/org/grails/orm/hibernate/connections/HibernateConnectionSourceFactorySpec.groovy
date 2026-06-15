@@ -42,7 +42,7 @@ import org.springframework.context.support.StaticMessageSource
 class HibernateConnectionSourceFactorySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([Foo])
+        manager.registerDomainClasses(Foo)
     }
 
     private static Map<String, String> h2Config() {

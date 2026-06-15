@@ -24,7 +24,7 @@ import grails.persistence.Entity
 class HibernateCompositeIdentityPropertySpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([HCIPSimpleEntity, HCIPCompositeEntity])
+        manager.registerDomainClasses(HCIPSimpleEntity, HCIPCompositeEntity)
     }
 
     def "two-arg constructor creates property with empty parts array"() {
