@@ -391,7 +391,7 @@ class MappingFactoryMetadata {
 class MappingFactoryCustomIdEntity implements HibernateEntity<MappingFactoryCustomIdEntity> {
     String name
     static mapping = {
-        id generator: 'grails.gorm.specs.FactoryCustomType', type: 'uuid-binary'
+        id generator: 'grails.gorm.tests.FactoryCustomType', type: 'uuid-binary'
     }
 }
 
