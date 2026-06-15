@@ -36,7 +36,7 @@ ext {
             'javaparser-core.version'       : '3.28.2',
             'jline.version'                 : '3.30.6',
             'jline2.version'                : '2.14.6',
-            'jna.version'                   : '5.18.1',
+            'jna.version'                   : '5.19.1',
             'jquery.version'                : '3.7.1',
             'maven-model.version'           : '3.9.16',
             'objenesis.version'             : '3.4',
