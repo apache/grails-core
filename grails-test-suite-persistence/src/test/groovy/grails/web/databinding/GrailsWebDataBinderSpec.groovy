@@ -18,6 +18,8 @@
  */
 package grails.web.databinding
 
+import groovy.transform.Sortable
+
 import grails.databinding.BindUsing
 import grails.databinding.BindingFormat
 import grails.databinding.DataBindingSource
@@ -1785,8 +1787,9 @@ class Author {
 }
 
 @Entity
+@Sortable(includes = ['isBindable', 'isNotBindable'])
 @SuppressWarnings('unused')
-class Widget implements Comparable<Widget> {
+class Widget {
 
     String isBindable
     String isNotBindable
@@ -1804,22 +1807,12 @@ class Widget implements Comparable<Widget> {
         isNotBindable(bindable: false)
         timeZone(nullable: true)
     }
-
-    // Groovy 5 still NPEs during canonicalization when @Sortable is combined with @Entity.
-    @Override
-    int compareTo(Widget other) {
-        int result = isBindable <=> other.isBindable
-        if (result == 0) {
-            result = isNotBindable <=> other.isNotBindable
-        }
-        return result
-    }
-
 }
 
 @Entity
+@Sortable(includes = ['isBindable', 'isNotBindable'])
 @SuppressWarnings('unused')
-class ParentWidget implements Validateable, Comparable<ParentWidget> {
+class ParentWidget implements Validateable {
 
     String isBindable
     String isNotBindable
@@ -1838,17 +1831,6 @@ class ParentWidget implements Validateable, Comparable<ParentWidget> {
         isNotBindable(bindable: false)
         timeZone(nullable: true)
     }
-
-    // Groovy 5 still NPEs during canonicalization when @Sortable is combined with @Entity.
-    @Override
-    int compareTo(ParentWidget other) {
-        int result = isBindable <=> other.isBindable
-        if (result == 0) {
-            result = isNotBindable <=> other.isNotBindable
-        }
-        return result
-    }
-
 }
 
 @Entity
