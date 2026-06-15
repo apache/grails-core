@@ -18,6 +18,7 @@
  */
 package org.grails.compiler
 
+import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.expr.ArgumentListExpression
 import org.codehaus.groovy.ast.expr.Expression
@@ -26,6 +27,7 @@ import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.expr.PropertyExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.transform.stc.GroovyTypeCheckingExtensionSupport
+import org.codehaus.groovy.transform.stc.StaticTypesMarker
 import org.grails.core.artefact.ControllerArtefactHandler
 
 /**
@@ -67,6 +69,15 @@ import org.grails.core.artefact.ControllerArtefactHandler
  * without error. Type-safety for method calls on <em>declared</em> fields and
  * local variables is fully preserved.
  *
+ * <p><strong>Composition with other extensions:</strong> because this is a catch-all
+ * handler for unresolved calls in controllers, it must run <em>after</em> any other
+ * type-checking extension that resolves DSL-style calls (e.g. a criteria extension).
+ * When another extension has already resolved a call — flagged on the node via
+ * {@code StaticTypesMarker.DYNAMIC_RESOLUTION} — this extension defers and leaves the
+ * call unhandled, rather than contributing a second candidate method node (which would
+ * make the call ambiguous). For this to work it is registered last in
+ * {@code GrailsCompileStatic}.
+ *
  * @since 8.0
  */
 class ControllerTagLibTypeCheckingExtension extends GroovyTypeCheckingExtensionSupport.TypeCheckingDSL {
@@ -106,6 +117,7 @@ class ControllerTagLibTypeCheckingExtension extends GroovyTypeCheckingExtensionS
 
         methodNotFound { ClassNode receiver, String name, ArgumentListExpression argList, ClassNode[] argTypes, MethodCall call ->
             if (!currentScope?.isController) return null
+            if (isAlreadyResolved(call)) return null
             if (isThisReceiver(call)) return makeDynamic(call)
             if (call instanceof MethodCallExpression && call.objectExpression in currentScope.dynamicNamespaceProperties) return makeDynamic(call)
             null
@@ -117,5 +129,9 @@ class ControllerTagLibTypeCheckingExtension extends GroovyTypeCheckingExtensionS
     private boolean isThisReceiver(Expression expr) {
         if (!(expr instanceof MethodCallExpression || expr instanceof PropertyExpression)) return false
         expr.implicitThis || (expr.objectExpression instanceof VariableExpression && expr.objectExpression.thisExpression)
+    }
+
+    private boolean isAlreadyResolved(MethodCall call) {
+        call instanceof ASTNode && ((ASTNode) call).getNodeMetaData(StaticTypesMarker.DYNAMIC_RESOLUTION) != null
     }
 }

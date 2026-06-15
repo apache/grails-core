@@ -89,4 +89,47 @@ class ControllerTagLibTypeCheckingExtensionSpec extends Specification {
         then: 'compilation fails — static type checking is preserved for declared locals'
         thrown(MultipleCompilationErrorsException)
     }
+
+    void 'tag extension defers to another extension that resolves the same unrecognised call'() {
+        given:
+        def gcl = new GroovyClassLoader(getClass().classLoader)
+
+        when: 'a controller is compiled with both the catch-all tag extension and another extension that resolves unrecognised calls'
+        def c = gcl.parseClass('''
+            import groovy.transform.CompileStatic
+
+            @CompileStatic(extensions = [
+                'org.grails.compiler.StubDslTypeCheckingExtension',
+                'org.grails.compiler.ControllerTagLibTypeCheckingExtension'
+            ])
+            class JobController {
+                def index() {
+                    someDslMethod 'scope', 'asc'
+                }
+            }
+        ''')
+
+        then: 'no "Reference to method is ambiguous" error — the catch-all defers instead of producing a second candidate node'
+        c
+    }
+
+    void 'tag extension still resolves tag calls when no other extension claims them'() {
+        given:
+        def gcl = new GroovyClassLoader(getClass().classLoader)
+
+        when: 'a controller invokes an unresolved call with only the tag extension active'
+        def c = gcl.parseClass('''
+            import groovy.transform.CompileStatic
+
+            @CompileStatic(extensions = ['org.grails.compiler.ControllerTagLibTypeCheckingExtension'])
+            class BookController {
+                def index() {
+                    link(controller: 'home')
+                }
+            }
+        ''')
+
+        then: 'compilation succeeds — the tag call is made dynamic'
+        c
+    }
 }
