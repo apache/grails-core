@@ -21,9 +21,7 @@ package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
 import grails.gorm.transactions.Rollback
-import jakarta.annotation.Nonnull
 
-//import org.jetbrains.annotations.NotNull
 import spock.lang.Issue
 
 /**
