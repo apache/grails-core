@@ -24,6 +24,7 @@ import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.GenericsType
 import org.codehaus.groovy.ast.expr.ClassExpression
 import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.classgen.GeneratorContext
@@ -91,7 +92,24 @@ class ScaffoldingServiceInjector implements GrailsArtefactClassInjector {
                 if (!domainClass) {
                     GrailsASTUtils.error(source, classNode, "Scaffolded service (${classNode.name}) with @Scaffold does not have domain class set.", true)
                 }
-                classNode.setSuperClass(GrailsASTUtils.nonGeneric(superClassNode, domainClass))
+                // Parameterize the superclass (e.g. GormService<Domain>) so inherited get()/list()/save()
+                // resolve to the domain type under static compilation, not the GormEntity
+                // upper bound. Only single-type-parameter bases are parameterized — a
+                // base declaring zero or multiple type parameters would get a malformed generic
+                // signature from a single domain argument, so those keep the previous raw form.
+                GenericsType[] declaredTypeParams = superClassNode.redirect().genericsTypes
+                if (declaredTypeParams != null && declaredTypeParams.length == 1) {
+                    ClassNode parameterizedSuper = superClassNode.getPlainNodeReference()
+                    parameterizedSuper.setGenericsTypes(
+                        [new GenericsType(GrailsASTUtils.nonGeneric(domainClass))] as GenericsType[])
+                    // Injection runs at CANONICALIZATION (after generics resolution), so the generic superclass
+                    // signature is only emitted when the class node itself reports usesGenerics; otherwise it is
+                    // written raw. Required - do not remove.
+                    classNode.setUsingGenerics(true)
+                    classNode.setSuperClass(parameterizedSuper)
+                } else {
+                    classNode.setSuperClass(GrailsASTUtils.nonGeneric(superClassNode, domainClass))
+                }
                 def readOnlyExpression = (ConstantExpression) annotationNode.getMember('readOnly')
                 new ResourceTransform().addConstructor(classNode, domainClass, readOnlyExpression?.getValue()?.asBoolean() ?: false)
             } else if (!currentSuperClass.isDerivedFrom(superClassNode)) {

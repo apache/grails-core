@@ -403,6 +403,14 @@ class DemoSpec extends Specification implements HttpClientSupport {
         response.assertJsonContains([title: 'Grails in Action'])
     }
 
+    void 'Posting form data'() {
+        when: 'you post a map it is turned into an application/x-www-form-urlencoded payload'
+        def response = httpPostForm('/api/search', [query: 'grails core', tag: ['web', 'testing']])
+
+        then:
+        response.assertStatus(200)
+    }
+
     void 'Posting and verifying XML'() {
         when: 'you can post XML using a builder'
         def response = httpPostXml('/api/books') {
@@ -456,6 +464,15 @@ class DemoSpec extends Specification implements HttpClientSupport {
 `HttpClientSupport` uses the JDK `HttpClient` under the hood and applies default request and connect timeouts of
 60 seconds and a redirect policy of always following redirects. You can use helpers `newHttpRequestWith(Closure configurer)`
 and `newHttpClientWith(Closure configurer)` to customize your own client and requests starting from the defaults.
+
+`httpPostForm(...)` sends `application/x-www-form-urlencoded` request bodies. Pass a `Map` of form fields, and the
+helper will URL-encode each entry using UTF-8. Scalar values are encoded once, while `Collection` and array values are
+encoded as repeated keys in insertion order:
+
+[source,groovy]
+----
+httpPostForm('/search', [query: 'grails core', tag: ['web', 'testing']])
+----
 
 Additional request helper methods available include `httpDelete()`, `httpHead()`, `httpOptions()`, `httpPatch()`,
 `httpPut()`, `httpTrace()`, and many assertion methods on responses.
