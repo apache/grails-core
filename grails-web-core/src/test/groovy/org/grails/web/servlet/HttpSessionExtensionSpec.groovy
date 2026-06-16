@@ -91,8 +91,55 @@ class HttpSessionExtensionSpec extends Specification {
             StaticCaller.readTimeZone(session) == 'America/Los_Angeles'
     }
 
+
+    void "Test the Class-typed getAttribute returns the attribute only when it is an instance of the requested type"() {
+        given:
+            HttpSession session = new MockHttpSession()
+            session.setAttribute('principal', new StringBuilder('alice'))
+            session.setAttribute('count', 42)
+
+        expect: 'a matching type returns the typed attribute'
+            session.getAttribute('principal', StringBuilder).toString() == 'alice'
+            session.getAttribute('count', Integer) == 42
+
+        and: 'a supertype of the stored attribute matches too'
+            session.getAttribute('principal', CharSequence).toString() == 'alice'
+
+        and: 'absent and wrong-typed attributes read as null - no coercion is attempted'
+            session.getAttribute('missing', StringBuilder) == null
+            session.getAttribute('count', String) == null
+
+        and: 'primitive class literals are normalized to their wrappers'
+            session.getAttribute('count', int) == 42
+
+        when: 'a null type is passed'
+            session.getAttribute('count', (Class) null)
+
+        then: 'the contract violation is reported clearly rather than as a bare NPE'
+            thrown(IllegalArgumentException)
+
+        and: 'the Class-typed overload resolves to the requested type under static compilation'
+            StaticCaller.readPrincipal(session).toString() == 'alice'
+    }
+
+    void "Test the Class-typed getAttribute honors the default for absent and wrong-typed attributes"() {
+        given:
+            HttpSession session = new MockHttpSession()
+            session.setAttribute('count', 42)
+
+        expect:
+            session.getAttribute('missing', String, 'fallback') == 'fallback'
+            session.getAttribute('count', String, 'fallback') == 'fallback'
+            session.getAttribute('count', Integer, 7) == 42
+    }
+
     @CompileStatic
     static class StaticCaller {
+        static StringBuilder readPrincipal(HttpSession session) {
+            StringBuilder principal = session.getAttribute('principal', StringBuilder)
+            principal
+        }
+
         static Integer readAge(HttpSession session) {
             session.int('age')
         }
