@@ -36,3 +36,10 @@ The Grails Gradle extension now defaults `preserveParameterNames` to `true`, so 
 
 Tag library unit tests also clean up and rebuild TagLib metadata automatically between features.
 Tests that use `TagLibUnitTest` no longer need to manage `purgeTagLibMetaClass`, and specs that mock additional tag libraries continue to work across feature methods.
+
+==== Test HTTP Client Form Requests
+
+Integration tests that implement `HttpClientSupport` can now use `httpPostForm(...)` to send `application/x-www-form-urlencoded`
+request bodies. The helper URL-encodes form fields using UTF-8, and repeated values in a `Collection` or array are encoded as
+repeated keys in insertion order.
+
