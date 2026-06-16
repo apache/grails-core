@@ -123,6 +123,16 @@ httpPutJson('/products/1', jsonGenerator, [
 The same `JsonGenerator` overload pattern is available on `httpPostJson(...)`, `httpPutJson(...)`, and
 `httpPatchJson(...)`, including the variants that accept request headers and an explicit `HttpClient`.
 
+### Form data
+
+`httpPostForm(...)` sends `application/x-www-form-urlencoded` request bodies. Pass a `Map` of form fields and the
+helper will URL-encode each entry using UTF-8. Scalar values are encoded once, while `Collection` and array values are
+encoded as repeated keys in insertion order:
+
+```groovy
+httpPostForm('/search', [query: 'grails core', tag: ['web', 'testing']])
+```
+
 ### XML formatting
 
 XML request bodies can be generated with Groovy MarkupBuilder DSL. For the `http[Post|Patch|Put]Xml` methods,

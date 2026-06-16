@@ -67,7 +67,7 @@ dependencies {
         exclude module: 'grails-rest-transforms'
     }
     testImplementation project(':grails-datamapping-validation')
-    testImplementation 'org.objenesis:objenesis'
+    testImplementation 'org.spockframework:spock-core'
 
     testCompileOnly 'jakarta.servlet:jakarta.servlet-api'
     testCompileOnly 'org.springframework:spring-test', {
@@ -80,12 +80,6 @@ dependencies {
     testRuntimeOnly 'org.aspectj:aspectjweaver'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
     testRuntimeOnly 'org.springframework:spring-aspects'
-
-    // Testing
-    testImplementation('org.spockframework:spock-core') { transitive = false }
-
-    // Required by Spock's Mocking
-    testRuntimeOnly 'net.bytebuddy:byte-buddy'
 }
 
 def isolatedTestPatterns = [
