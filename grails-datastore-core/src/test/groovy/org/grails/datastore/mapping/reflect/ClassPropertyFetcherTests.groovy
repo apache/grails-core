@@ -114,7 +114,7 @@ class ClassPropertyFetcherTests  {
     }
 }
 
-// Groovy 5 still leaves the trait setter abstract when this type parameter is bounded with Serializable.
+// Groovy 5 still leaves the trait setter abstract when this type parameter is bounded with Serializable (GROOVY-12091, open).
 // Keep the unbounded form until the upstream trait generics bug is fixed.
 trait TestTrait<T> {
     T from
