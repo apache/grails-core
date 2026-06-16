@@ -21,6 +21,7 @@ package org.grails.web.servlet
 import groovy.transform.CompileStatic
 
 import org.apache.grails.core.internal.util.TypeConverters
+import org.springframework.util.ClassUtils
 
 import jakarta.servlet.http.HttpServletRequest
 
@@ -250,5 +251,27 @@ class HttpServletRequestExtension {
 
     static Date date(HttpServletRequest request, String name, Collection<String> formats) {
         TypeConverters.toDate(request.getAttribute(name), formats)
+    }
+    /**
+     * Null-safe, typed read of an attribute. Returns the attribute when it is an
+     * instance of {@code type}; otherwise {@code null}. No coercion is attempted —
+     * use the named converters ({@code string}, {@code int}, ...) for type conversion.
+     */
+    static <T> T getAttribute(HttpServletRequest request, String name, Class<T> type) {
+        if (type == null) {
+            throw new IllegalArgumentException('type must not be null - use getAttribute(name) for an untyped read')
+        }
+        Object value = request.getAttribute(name)
+        Class<T> resolvedType = (Class<T>) ClassUtils.resolvePrimitiveIfNecessary(type)
+        resolvedType.isInstance(value) ? resolvedType.cast(value) : null
+    }
+
+    /**
+     * Null-safe, typed read of an attribute with a default. Returns {@code defaultValue}
+     * when the attribute is absent or is not an instance of {@code type}.
+     */
+    static <T> T getAttribute(HttpServletRequest request, String name, Class<T> type, T defaultValue) {
+        T value = getAttribute(request, name, type)
+        value != null ? value : defaultValue
     }
 }
