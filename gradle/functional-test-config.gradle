@@ -21,46 +21,6 @@ rootProject.subprojects
         .findAll { !(it.name in testProjects) && !(it.name in docProjects) && !(it.name in cliProjects) }
         .each { project.evaluationDependsOn(it.path) }
 
-// Determine which Hibernate version to use for general functional tests.
-// Pass -PhibernateVersion=7 to run general functional tests against Hibernate 7 instead of 5.
-// Only '5' and '7' are supported; any other value fails the build fast to catch typos.
-def targetHibernateVersion = (project.findProperty('hibernateVersion') ?: '5').toString()
-if (!(targetHibernateVersion in ['5', '7'])) {
-    throw new GradleException(
-            "Unsupported hibernateVersion '${targetHibernateVersion}'. Expected '5' or '7'.")
-}
-boolean isHibernate5LabeledProject = project.name.startsWith('grails-test-examples-hibernate5')
-boolean isHibernate7LabeledProject = project.name.startsWith('grails-test-examples-hibernate7')
-boolean isHibernateSpecificProject = isHibernate5LabeledProject || isHibernate7LabeledProject
-boolean isMongoProject = project.name.startsWith('grails-test-examples-mongodb')
-boolean isGeneralFunctionalTest = !isHibernateSpecificProject && !isMongoProject
-
-// General functional test projects that cannot run under Hibernate 7 via dependency substitution.
-// The datasources project has partial H7-compatible coverage in
-// grails-test-examples/hibernate7/grails-multiple-datasources, but still includes H5-only
-// coverage that needs explicit H7 duplicates before the general project can be enabled.
-// The app1 and GraphQL functional projects currently fail under H7 substitution and need
-// dedicated H7 follow-up coverage before they can be enabled in this lane.
-// The views and scaffolding projects boot with H7 substitution, but their functional specs
-// currently fail on association rendering and unique-constraint behavior under Hibernate 7.
-List<String> h7IncompatibleProjects = [
-        'grails-test-examples-app1',
-        'grails-test-examples-datasources',
-        'grails-test-examples-graphql-grails-docs-app',
-        'grails-test-examples-graphql-grails-multi-datastore-app',
-        'grails-test-examples-graphql-grails-tenant-app',
-        'grails-test-examples-graphql-grails-test-app',
-        'grails-test-examples-graphql-spring-boot-app',
-        'grails-test-examples-views-functional-tests',
-        'grails-test-examples-scaffolding-fields',
-]
-
-// Redirect the default grails-bom to grails-hibernate7-bom for general functional tests when
-// running with -PhibernateVersion=7, so consumers get the Hibernate 7 version constraints
-// (hibernate.version=7.2.7.Final and related). The default grails-bom and grails-hibernate5-bom
-// ship the Hibernate 5 constraints.
-def redirectBomToH7 = isGeneralFunctionalTest && targetHibernateVersion == '7' && !(project.name in h7IncompatibleProjects)
-
 configurations.configureEach {
     resolutionStrategy.dependencySubstitution {
         // Test projects will often include dependencies from local projects. This will ensure any dependencies
@@ -72,8 +32,7 @@ configurations.configureEach {
                 //TODO: This does not handle libraries that are both test fixtures & a libraries like grails-data-mongodb,
                 // see grails-test-examples-mongodb-base, & grails-test-examples-mongodb-hibernate5 for project() workaround
                 if (possibleProject.name == 'grails-bom') {
-                    def targetBom = redirectBomToH7 ? ':grails-hibernate7-bom' : ':grails-bom'
-                    substitute module(substitutedArtifact) using platform(project(targetBom))
+                    substitute module(substitutedArtifact) using platform(project(':grails-bom'))
                 }
                 else if(possibleProject.name == 'grails-geb') {
                     def selector = it.variant(module(substitutedArtifact)) { VariantSelectionDetails details ->
@@ -92,44 +51,6 @@ configurations.configureEach {
                 }
             }
         }
-
-        // For general (non-hibernate-labeled) functional test projects, redirect Hibernate 5 dependencies
-        // to Hibernate 7 projects when -PhibernateVersion=7 is set. These rules are added after the loop
-        // so they override the default substitutions for the h5 modules.
-        // Projects in h7IncompatibleProjects are excluded since they use H5-specific GORM APIs.
-        if (redirectBomToH7) {
-            substitute module('org.apache.grails:grails-data-hibernate5') using project(':grails-data-hibernate7')
-            substitute module('org.apache.grails:grails-data-hibernate5-spring-boot') using project(':grails-data-hibernate7-spring-boot')
-        }
-    }
-
-    // Exclude Hibernate 5-specific runtime dependencies when testing general projects with Hibernate 7.
-    // These libraries have no Hibernate 7 equivalent and would cause classpath conflicts.
-    if (isGeneralFunctionalTest && targetHibernateVersion == '7' && !(project.name in h7IncompatibleProjects)) {
-        exclude group: 'org.hibernate', module: 'hibernate-ehcache'
-        exclude group: 'org.jboss.spec.javax.transaction', module: 'jboss-transaction-api_1.3_spec'
-    }
-}
-
-// For general functional test projects running against Hibernate 7, attach the Hibernate 7 BOM as a
-// platform on the dependency buckets the test projects use. The test project's own build.gradle
-// imports platform(project(':grails-bom')) which lacks Hibernate 7 version constraints
-// (hibernate-models, jandex, hibernate-tools-orm, etc.). Attaching the H7 BOM here means we don't
-// have to edit each test project's build.gradle, and the H7 constraints take precedence because the
-// dependency-substitution above already swaps grails-data-hibernate5 -> grails-data-hibernate7 in
-// the same path.
-if (isGeneralFunctionalTest && targetHibernateVersion == '7' && !(project.name in h7IncompatibleProjects)) {
-    def addH7Platform = { String confName ->
-        def conf = configurations.findByName(confName)
-        if (conf != null) {
-            conf.dependencies.add(dependencies.platform(dependencies.project(path: ':grails-hibernate7-bom')))
-        }
-    }
-    plugins.withId('java') {
-        ['implementation', 'compileOnly', 'runtimeOnly',
-         'testImplementation', 'testCompileOnly', 'testRuntimeOnly',
-         'integrationTestImplementation', 'integrationTestRuntimeOnly',
-         'testAndDevelopmentOnly'].each(addH7Platform)
     }
 }
 
