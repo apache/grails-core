@@ -19,7 +19,7 @@
 
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.ColumnConfig
 import org.grails.orm.hibernate.cfg.PropertyConfig
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
@@ -173,14 +173,14 @@ class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
     }
 
     void setupSpec() {
-        manager.addAllDomainClasses([
+        manager.registerDomainClasses(
             org.apache.grails.data.testing.tck.domains.Pet,
             org.apache.grails.data.testing.tck.domains.Person,
             org.apache.grails.data.testing.tck.domains.PetType,
             MapSPBAuthor,
             MapSPBBook,
             MapSPBOwner
-        ])
+        )
     }
 
     void "Test bind map"() {

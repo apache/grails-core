@@ -19,7 +19,7 @@
 package grails.gorm.tests.hasmany
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
 import jakarta.persistence.CascadeType
 import jakarta.persistence.Entity as JpaEntity
@@ -36,7 +36,7 @@ import spock.lang.PendingFeature
 class TwoUnidirectionalHasManySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([EcmMask, EcmUser, EcmMaskJpa, JpaUser])
+        manager.registerDomainClasses(EcmMask, EcmUser, EcmMaskJpa, JpaUser)
     }
 
     @Rollback

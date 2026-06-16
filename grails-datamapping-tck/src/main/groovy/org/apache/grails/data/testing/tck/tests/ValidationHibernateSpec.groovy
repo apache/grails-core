@@ -43,8 +43,8 @@ import org.grails.datastore.mapping.model.PersistentEntity
 class ValidationHibernateSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([ClassWithListArgBeforeValidate, ClassWithNoArgBeforeValidate,
-                                     ClassWithOverloadedBeforeValidate, TestEntity, Task])
+        manager.registerDomainClasses(ClassWithListArgBeforeValidate, ClassWithNoArgBeforeValidate,
+                                     ClassWithOverloadedBeforeValidate, TestEntity, Task)
     }
 
     @Rollback

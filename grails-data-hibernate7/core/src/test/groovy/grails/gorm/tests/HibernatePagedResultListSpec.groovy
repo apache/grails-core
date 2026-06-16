@@ -16,7 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.gorm.specs
+package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.HibernateEntity
@@ -26,7 +26,7 @@ import spock.lang.Issue
 class HibernatePagedResultListSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([HPBook])
+        manager.registerDomainClasses(HPBook)
     }
 
     void "test HibernatePagedResultList totalCount with HQL query"() {

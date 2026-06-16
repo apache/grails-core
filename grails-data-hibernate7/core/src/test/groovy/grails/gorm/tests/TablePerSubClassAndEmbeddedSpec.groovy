@@ -22,7 +22,6 @@ import groovy.lang.GroovyClassLoader
 
 import grails.gorm.DetachedCriteria
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria
 import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
@@ -34,7 +33,7 @@ import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
 class TablePerSubClassAndEmbeddedSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([Company, Vendor])
+        manager.registerDomainClasses(Company, Vendor)
     }
 
     @Rollback

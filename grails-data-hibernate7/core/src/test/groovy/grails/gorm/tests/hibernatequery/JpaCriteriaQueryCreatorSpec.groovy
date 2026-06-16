@@ -16,13 +16,13 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.gorm.specs.hibernatequery
+package grails.gorm.tests.hibernatequery
 
 import org.hibernate.query.criteria.HibernateCriteriaBuilder
 import spock.lang.Shared
 
 import grails.gorm.DetachedCriteria
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.query.Query
 import org.hibernate.query.criteria.JpaCriteriaQuery
 import org.grails.orm.hibernate.query.JpaCriteriaQueryCreator
@@ -34,7 +34,7 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
 
 
     void setupSpec() {
-        manager.addAllDomainClasses([JpaCriteriaQueryCreatorSpecPerson, JpaCriteriaQueryCreatorSpecPet])
+        manager.registerDomainClasses(JpaCriteriaQueryCreatorSpecPerson, JpaCriteriaQueryCreatorSpecPet)
     }
 
     def "test createQuery"() {

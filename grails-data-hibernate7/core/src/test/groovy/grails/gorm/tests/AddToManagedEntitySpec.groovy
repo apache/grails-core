@@ -16,7 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.gorm.specs
+package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.HibernateEntity
@@ -32,7 +32,7 @@ import org.grails.datastore.gorm.GormEntity
 class AddToManagedEntitySpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([CascadeAuthor, CascadeBook])
+        manager.registerDomainClasses(CascadeAuthor, CascadeBook)
     }
 
     void cleanup() {

@@ -19,7 +19,7 @@
 
 package org.grails.orm.hibernate.cfg.domainbinding.collectionType
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import spock.lang.Subject
 import spock.lang.Unroll
 

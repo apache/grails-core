@@ -19,7 +19,7 @@
 package grails.gorm.tests.validation
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
 import spock.lang.Issue
 
@@ -31,7 +31,7 @@ import spock.lang.Issue
 class UniqueWithHasOneSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([Foo, Bar])
+        manager.registerDomainClasses(Foo, Bar)
     }
 
     @Rollback

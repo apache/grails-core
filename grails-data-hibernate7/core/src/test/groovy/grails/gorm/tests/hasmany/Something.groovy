@@ -17,7 +17,7 @@
  *  under the License.
  */
 
-package grails.gorm.specs.hasmany
+package grails.gorm.tests.hasmany
 
 import grails.gorm.tests.hasmany.Book
 

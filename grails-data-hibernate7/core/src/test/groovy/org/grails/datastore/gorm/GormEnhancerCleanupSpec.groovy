@@ -15,7 +15,7 @@
 package org.grails.datastore.gorm
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.core.Datastore
 import spock.lang.Specification
 import java.util.concurrent.ConcurrentHashMap
@@ -23,7 +23,7 @@ import java.util.concurrent.ConcurrentHashMap
 class GormEnhancerCleanupSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([CleanupEntity])
+        manager.registerDomainClasses(CleanupEntity)
     }
 
     void "Test that GormEnhancer.close() removes datastore from DATASTORES registry"() {

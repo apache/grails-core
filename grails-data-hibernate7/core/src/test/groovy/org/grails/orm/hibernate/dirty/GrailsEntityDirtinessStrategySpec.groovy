@@ -20,7 +20,7 @@ package org.grails.orm.hibernate.dirty
 
 import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.HibernateEntity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import org.hibernate.CustomEntityDirtinessStrategy
 import org.hibernate.Session
@@ -30,7 +30,7 @@ import org.hibernate.persister.entity.EntityPersister
 class GrailsEntityDirtinessStrategySpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([DSBook, DSEmbeddedEntity])
+        manager.registerDomainClasses(DSBook, DSEmbeddedEntity)
     }
 
     def "canDirtyCheck returns true for DirtyCheckable"() {

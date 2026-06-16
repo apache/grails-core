@@ -19,13 +19,13 @@
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import java.beans.PropertyDescriptor
 
 class HibernateVersionPropertySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([HVPEntity])
+        manager.registerDomainClasses(HVPEntity)
     }
 
     def "HibernateVersionProperty instantiation and behavior"() {

@@ -18,7 +18,7 @@
  */
 package org.grails.orm.hibernate.proxy
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.testing.tck.domains.Location
 import org.hibernate.Hibernate
@@ -35,7 +35,7 @@ import org.hibernate.proxy.HibernateProxy
 class ByteBuddyGroovyInterceptorSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Location])
+        manager.registerDomainClasses(Location)
     }
 
     private Long savedId

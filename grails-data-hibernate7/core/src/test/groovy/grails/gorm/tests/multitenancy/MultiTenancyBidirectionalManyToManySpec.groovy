@@ -20,10 +20,6 @@ package grails.gorm.tests.multitenancy
 
 import grails.gorm.transactions.Rollback
 
-import grails.gorm.specs.multitenancy.Department
-import grails.gorm.specs.multitenancy.DepartmentService
-import grails.gorm.specs.multitenancy.User
-import grails.gorm.specs.multitenancy.UserService
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver

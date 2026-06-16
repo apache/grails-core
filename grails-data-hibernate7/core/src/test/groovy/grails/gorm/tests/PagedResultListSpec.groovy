@@ -15,7 +15,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package grails.gorm.specs
+package grails.gorm.tests
 
 import grails.gorm.PagedResultList
 import grails.gorm.annotation.Entity
@@ -25,7 +25,7 @@ import org.grails.orm.hibernate.query.HibernatePagedResultList
 class PagedResultListSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([PRLBook])
+        manager.registerDomainClasses(PRLBook)
     }
 
     void "test PagedResultList totalCount with HQL query"() {

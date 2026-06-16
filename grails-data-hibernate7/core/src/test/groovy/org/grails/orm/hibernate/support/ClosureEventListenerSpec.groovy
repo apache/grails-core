@@ -20,7 +20,7 @@ package org.grails.orm.hibernate.support
 
 import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.HibernateEntity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
 import grails.validation.ValidationException
 import org.grails.orm.hibernate.support.hibernate7.HibernateSystemException
@@ -31,13 +31,13 @@ class ClosureEventListenerSpec extends HibernateGormDatastoreSpec {
 
     @Override
     void setupSpec() {
-        manager.addAllDomainClasses([
+        manager.registerDomainClasses(
             EventBook,
             ValidatedBook,
             MutatingBook,
             LegacyLoadBook,
             NoEventBook
-        ])
+        )
     }
 
     void cleanup() {

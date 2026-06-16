@@ -19,7 +19,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.hibernate.MappingException
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.PersistentEntity

@@ -19,7 +19,7 @@
 package grails.gorm.tests.validation
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
 import groovy.transform.EqualsAndHashCode
 import org.springframework.dao.DuplicateKeyException
@@ -32,7 +32,7 @@ import spock.lang.Issue
 class UniqueWithinGroupSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([Thing])
+        manager.registerDomainClasses(Thing)
     }
 
     @Rollback

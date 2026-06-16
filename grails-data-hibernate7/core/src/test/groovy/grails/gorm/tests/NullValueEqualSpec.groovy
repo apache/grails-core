@@ -17,7 +17,7 @@
  *  under the License.
  */
 
-package grails.gorm.specs
+package grails.gorm.tests
 
 import org.apache.grails.data.testing.tck.domains.ChildEntity
 import org.apache.grails.data.testing.tck.domains.TestEntity
@@ -26,7 +26,7 @@ import spock.lang.IgnoreIf
 class NullValueEqualSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([TestEntity])
+        manager.registerDomainClasses(TestEntity)
     }
 
     void "test null value in equal"() {

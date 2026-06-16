@@ -21,7 +21,7 @@ package org.grails.orm.hibernate.cfg.domainbinding
 
 import org.hibernate.mapping.Column
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.persistence.Entity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
@@ -37,7 +37,7 @@ class PropertyBinderSpec extends HibernateGormDatastoreSpec {
     @Shared PropertyBinder binder = new PropertyBinder(new CascadeBehaviorFetcher())
 
     void setupSpec() {
-        manager.addAllDomainClasses([PBEntity, PBAuthor])
+        manager.registerDomainClasses(PBEntity, PBAuthor)
     }
 
     void "test property binding with real objects"() {

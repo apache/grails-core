@@ -20,7 +20,7 @@
 package org.grails.orm.hibernate.cfg
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.model.types.TenantId
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
@@ -32,7 +32,7 @@ import org.hibernate.MappingException
 class GrailsHibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([
+        manager.registerDomainClasses(
                 Simple,
                 CustomDiscriminator,
                 NumericDiscriminator,
@@ -44,7 +44,7 @@ class GrailsHibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
                 CustomTableEntity,
                 CustomTableNameEntity,
                 DerivedPropertyEntity
-        ])
+        )
     }
 
     void "test getTableName"() {

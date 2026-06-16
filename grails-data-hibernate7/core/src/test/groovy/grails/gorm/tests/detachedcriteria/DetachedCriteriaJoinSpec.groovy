@@ -16,10 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.gorm.specs.detachedcriteria
+package grails.gorm.tests.detachedcriteria
 
 import grails.gorm.DetachedCriteria
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.tests.entities.Club
 import grails.gorm.tests.entities.Team
 import jakarta.persistence.criteria.JoinType
@@ -30,7 +30,7 @@ import org.hibernate.Hibernate
 class DetachedCriteriaJoinSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([Team, Club])
+        manager.registerDomainClasses(Team, Club)
     }
 
     def "check if count works as expected"() {

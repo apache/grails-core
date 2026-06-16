@@ -19,7 +19,7 @@
 
 package org.grails.orm.hibernate.support
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.persistence.Entity
 import org.grails.datastore.mapping.validation.ValidationErrors
 import org.hibernate.Filter
@@ -35,7 +35,7 @@ class HibernateRuntimeUtilsSpec extends HibernateGormDatastoreSpec {
     @Shared ConversionService conversionService
 
     void setupSpec() {
-        manager.addAllDomainClasses([HibernateRuntimeUtilsSpecProfile, HibernateRuntimeUtilsSpecAccount])
+        manager.registerDomainClasses(HibernateRuntimeUtilsSpecProfile, HibernateRuntimeUtilsSpecAccount)
         def factory = new ConversionServiceFactoryBean()
         factory.afterPropertiesSet()
         conversionService = factory.object

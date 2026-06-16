@@ -18,7 +18,7 @@
  */
 package org.grails.orm.hibernate.query
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.persistence.Entity
 import jakarta.persistence.LockModeType
 import org.hibernate.query.QueryFlushMode
@@ -28,7 +28,7 @@ import java.lang.reflect.Method
 class SelectQueryDelegateSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([SelectQueryDelegateTestBook])
+        manager.registerDomainClasses(SelectQueryDelegateTestBook)
     }
 
     void setup() {

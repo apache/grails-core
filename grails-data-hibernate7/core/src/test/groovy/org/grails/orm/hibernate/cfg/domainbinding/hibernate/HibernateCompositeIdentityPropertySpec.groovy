@@ -18,13 +18,13 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.persistence.Entity
 
 class HibernateCompositeIdentityPropertySpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([HCIPSimpleEntity, HCIPCompositeEntity])
+        manager.registerDomainClasses(HCIPSimpleEntity, HCIPCompositeEntity)
     }
 
     def "two-arg constructor creates property with empty parts array"() {

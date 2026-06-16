@@ -20,7 +20,7 @@
 package org.grails.orm.hibernate
 
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.annotation.Entity
 import grails.gorm.tests.entities.Club
 import org.hibernate.jpa.AvailableHints
@@ -28,7 +28,7 @@ import org.hibernate.jpa.AvailableHints
 class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([HibernateGormStaticApiEntity, HibernateGormStaticApiMappedPropertyEntity, Club, HibernateGormStaticApiMultiTenantEntity])
+        manager.registerDomainClasses(HibernateGormStaticApiEntity, HibernateGormStaticApiMappedPropertyEntity, Club, HibernateGormStaticApiMultiTenantEntity)
     }
 
     void "Test that HibernateGormStaticApi uses the shared template from the datastore"() {

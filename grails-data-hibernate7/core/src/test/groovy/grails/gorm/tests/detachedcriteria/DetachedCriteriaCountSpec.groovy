@@ -16,19 +16,19 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.gorm.specs.detachedcriteria
+package grails.gorm.tests.detachedcriteria
 
 import grails.gorm.DetachedCriteria
 import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.HibernateEntity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
 import spock.lang.Issue
 
 class DetachedCriteriaCountSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([CountItem])
+        manager.registerDomainClasses(CountItem)
     }
 
     private void createTestData() {

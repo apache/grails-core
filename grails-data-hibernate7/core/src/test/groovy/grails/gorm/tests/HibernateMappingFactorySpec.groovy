@@ -16,7 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.gorm.specs
+package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.HibernateEntity
@@ -41,10 +41,10 @@ import java.beans.PropertyDescriptor
 class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([MappingFactoryBook, MappingFactoryAuthor, MappingFactoryTag,
+        manager.registerDomainClasses(MappingFactoryBook, MappingFactoryAuthor, MappingFactoryTag,
                                      MappingFactoryArticle, MappingFactoryEnumBook,
                                      MappingFactoryPerson, MappingFactoryPassport,
-                                     MappingFactoryLibrary])
+                                     MappingFactoryLibrary)
     }
 
     // --- unit-style tests (standalone factory) ---
@@ -391,7 +391,7 @@ class MappingFactoryMetadata {
 class MappingFactoryCustomIdEntity implements HibernateEntity<MappingFactoryCustomIdEntity> {
     String name
     static mapping = {
-        id generator: 'grails.gorm.specs.FactoryCustomType', type: 'uuid-binary'
+        id generator: 'grails.gorm.tests.FactoryCustomType', type: 'uuid-binary'
     }
 }
 

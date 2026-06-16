@@ -26,7 +26,7 @@ import spock.lang.IgnoreIf
 class RLikeSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([RlikeFoo])
+        manager.registerDomainClasses(RlikeFoo)
     }
 
     void "test rlike works"() {

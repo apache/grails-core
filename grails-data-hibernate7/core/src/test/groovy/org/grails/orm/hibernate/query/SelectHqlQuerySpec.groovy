@@ -20,7 +20,7 @@
 package org.grails.orm.hibernate.query
 
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.persistence.Entity
 import org.hibernate.FlushMode
 import spock.lang.Unroll
@@ -30,7 +30,7 @@ import org.grails.datastore.mapping.query.Query
 class SelectHqlQuerySpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([SelectHqlQuerySpecBook, SelectHqlQuerySpecAuthor])
+        manager.registerDomainClasses(SelectHqlQuerySpecBook, SelectHqlQuerySpecAuthor)
     }
 
     def setup() {

@@ -19,7 +19,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneValuesBinder
@@ -78,7 +78,7 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
     }
 
     def setupSpec() {
-        manager.addAllDomainClasses([Person, Pet, CBManyToManyA, CBManyToManyB])
+        manager.registerDomainClasses(Person, Pet, CBManyToManyA, CBManyToManyB)
     }
 
     void "test bindCollection delegates configuration to property.setCollection"() {

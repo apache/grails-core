@@ -19,7 +19,7 @@
 package org.grails.orm.hibernate.connections
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.hibernate.dialect.H2Dialect
@@ -30,7 +30,7 @@ import spock.lang.Issue
 class MultipleDataSourcesWithEventsSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([EventsBook, SecondaryBook])
+        manager.registerDomainClasses(EventsBook, SecondaryBook)
         manager.grailsConfig = [
                 'dataSource': [
                         'url'        : "jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",

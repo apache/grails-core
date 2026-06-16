@@ -20,9 +20,7 @@
 package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
-import jakarta.annotation.Nonnull
 
 import spock.lang.Issue
 
@@ -32,7 +30,7 @@ import spock.lang.Issue
 class CompositeIdWithManyToOneAndSequenceSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([Tooth, ToothDisease])
+        manager.registerDomainClasses(Tooth, ToothDisease)
     }
 
     @Rollback

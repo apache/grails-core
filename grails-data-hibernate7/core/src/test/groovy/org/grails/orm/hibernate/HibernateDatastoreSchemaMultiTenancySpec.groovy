@@ -21,7 +21,7 @@ package org.grails.orm.hibernate
 import grails.gorm.MultiTenant
 import grails.gorm.annotation.Entity
 import grails.gorm.multitenancy.Tenants
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
 import org.grails.orm.hibernate.cfg.Settings
@@ -38,7 +38,7 @@ class HibernateDatastoreSchemaMultiTenancySpec extends HibernateGormDatastoreSpe
                 'grails.gorm.multiTenancy.mode': MultiTenancySettings.MultiTenancyMode.SCHEMA,
                 'grails.gorm.multiTenancy.tenantResolver': new SystemPropertyTenantResolver()
         ]
-        manager.addAllDomainClasses([SchemaBook])
+        manager.registerDomainClasses(SchemaBook)
     }
 
     void "test schema multi-tenancy"() {

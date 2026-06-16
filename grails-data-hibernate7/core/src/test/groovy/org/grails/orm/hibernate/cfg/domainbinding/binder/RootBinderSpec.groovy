@@ -20,7 +20,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder
 
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity

@@ -20,7 +20,7 @@ package org.grails.orm.hibernate.cfg
 
 import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.HibernateEntity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.engine.types.AbstractMappingAwareCustomTypeMarshaller
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
@@ -36,7 +36,7 @@ import org.grails.datastore.mapping.core.connections.ConnectionSource
 class HibernateMappingContextSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([MappingContextBook, MappingContextAuthor, MappingContextAddress])
+        manager.registerDomainClasses(MappingContextBook, MappingContextAuthor, MappingContextAddress)
     }
 
     // --- unit-style tests (no datastore required) ---

@@ -20,7 +20,7 @@ package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.HibernateEntity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty
 import org.hibernate.FetchMode
 import org.hibernate.type.ForeignKeyDirection
@@ -28,7 +28,7 @@ import org.hibernate.type.ForeignKeyDirection
 class HibernateOneToOnePropertySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([OneToOneFace, OneToOneNose, OneToOneLeft, OneToOneRight])
+        manager.registerDomainClasses(OneToOneFace, OneToOneNose, OneToOneLeft, OneToOneRight)
     }
 
     void "getHibernateInverseSide returns HibernateOneToOneProperty"() {

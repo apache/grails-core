@@ -20,7 +20,7 @@
 package grails.orm
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.query.api.BuildableCriteria
 
 /**
@@ -46,7 +46,7 @@ import org.grails.datastore.mapping.query.api.BuildableCriteria
 class HibernateCriteriaBuilderSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([CriteriaAccount, CriteriaTransaction])
+        manager.registerDomainClasses(CriteriaAccount, CriteriaTransaction)
     }
 
     BuildableCriteria c

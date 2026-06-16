@@ -21,7 +21,7 @@ package org.grails.orm.hibernate.proxy
 
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.Location
@@ -37,7 +37,7 @@ class HibernateProxyHandler5Spec extends  GrailsDataTckSpec<GrailsDataHibernate5
     @Shared HibernateProxyHandler proxyHandler = new HibernateProxyHandler()
 
     void setupSpec() {
-        manager.addAllDomainClasses([Location, Person, Pet])
+        manager.registerDomainClasses(Location, Person, Pet)
     }
 
     void "test isInitialized for a non-proxied object"() {

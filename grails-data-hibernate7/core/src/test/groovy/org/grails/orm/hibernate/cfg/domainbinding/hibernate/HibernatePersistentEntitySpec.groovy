@@ -19,7 +19,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
 import org.grails.orm.hibernate.cfg.Mapping
 import org.hibernate.MappingException
@@ -28,7 +28,7 @@ import org.hibernate.mapping.RootClass
 class HibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([HPESimple, HPEComposite])
+        manager.registerDomainClasses(HPESimple, HPEComposite)
     }
 
     def "getIdentity returns null if identity is not HibernatePersistentProperty"() {

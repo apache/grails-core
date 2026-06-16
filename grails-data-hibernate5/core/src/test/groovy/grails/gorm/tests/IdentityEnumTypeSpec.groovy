@@ -19,7 +19,6 @@
 package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
 import jakarta.persistence.Enumerated
 import jakarta.persistence.EnumType
@@ -37,7 +36,7 @@ import java.sql.ResultSet
 class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([EnumEntityDomain, FooWithEnum])
+        manager.registerDomainClasses(EnumEntityDomain, FooWithEnum)
     }
 
     @Rollback

@@ -19,7 +19,7 @@
 package org.grails.orm.hibernate.query
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import jakarta.persistence.Tuple
 import jakarta.persistence.criteria.CriteriaQuery
 import jakarta.persistence.criteria.Root
@@ -31,7 +31,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
 class JpaProjectionAdapterSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([AdapterTestEntity])
+        manager.registerDomainClasses(AdapterTestEntity)
     }
 
     void "test adapt single property projection"() {

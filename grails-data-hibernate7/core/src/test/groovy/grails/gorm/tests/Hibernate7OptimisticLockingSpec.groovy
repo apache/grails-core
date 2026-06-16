@@ -18,7 +18,6 @@
  */
 package grails.gorm.tests
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
 import org.apache.grails.data.testing.tck.domains.OptLockNotVersioned
 import org.apache.grails.data.testing.tck.domains.OptLockVersioned
 import org.springframework.dao.OptimisticLockingFailureException
@@ -27,6 +26,10 @@ import org.springframework.dao.OptimisticLockingFailureException
  * @author Burt Beckwith
  */
 class Hibernate7OptimisticLockingSpec extends HibernateGormDatastoreSpec {
+
+    void setupSpec() {
+        manager.registerDomainClasses(OptLockVersioned, OptLockNotVersioned)
+    }
 
     void "Test versioning"() {
         given:
@@ -54,10 +57,6 @@ class Hibernate7OptimisticLockingSpec extends HibernateGormDatastoreSpec {
         then:
         o.name == 'Fred'
         o.version == 1
-    }
-
-    void setupSpec() {
-        manager.registerDomainClasses(OptLockVersioned, OptLockNotVersioned)
     }
 
     void "Test optimistic locking"() {

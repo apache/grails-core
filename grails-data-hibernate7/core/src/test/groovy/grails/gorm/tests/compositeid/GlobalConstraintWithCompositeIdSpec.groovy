@@ -19,7 +19,7 @@
 package grails.gorm.tests.compositeid
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
 import jakarta.annotation.Nonnull
 import org.grails.datastore.mapping.core.Session
@@ -34,7 +34,7 @@ import spock.lang.Issue
 class GlobalConstraintWithCompositeIdSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([ParentB, ChildB, DomainB])
+        manager.registerDomainClasses(ParentB, ChildB, DomainB)
         manager.grailsConfig = [
                 'dataSource.url'               : "jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
                 'dataSource.dbCreate'            : 'create-drop',

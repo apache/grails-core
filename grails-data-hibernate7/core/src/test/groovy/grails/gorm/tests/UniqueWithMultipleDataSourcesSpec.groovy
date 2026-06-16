@@ -19,7 +19,6 @@
 package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.hibernate.dialect.H2Dialect
@@ -31,7 +30,7 @@ import spock.lang.Issue
 class UniqueWithMultipleDataSourcesSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([Abc])
+        manager.registerDomainClasses(Abc)
         manager.grailsConfig = [
                 'dataSource': [
                         'url'        : "jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",

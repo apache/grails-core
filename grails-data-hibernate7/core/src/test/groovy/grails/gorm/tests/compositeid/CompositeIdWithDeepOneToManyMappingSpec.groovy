@@ -21,7 +21,7 @@ package grails.gorm.tests.compositeid
 
 import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.mapping.MappingBuilder
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
 import jakarta.annotation.Nonnull
 import spock.lang.Issue
@@ -33,7 +33,7 @@ class CompositeIdWithDeepOneToManyMappingSpec extends HibernateGormDatastoreSpec
 
     @Override
     def setupSpec() {
-        manager.addAllDomainClasses([GrandParent, Parent, Child])
+        manager.registerDomainClasses(GrandParent, Parent, Child)
     }
 
     @Rollback

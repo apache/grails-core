@@ -19,7 +19,7 @@
 
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.persistence.Entity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder
@@ -44,9 +44,9 @@ class UnidirectionalOneToManyBinderSpec extends HibernateGormDatastoreSpec {
     UnidirectionalOneToManyBinder binder
 
     def setupSpec() {
-        manager.addAllDomainClasses([
+        manager.registerDomainClasses(
                 UniOwner, UniPet
-        ])
+        )
     }
 
     def setup() {

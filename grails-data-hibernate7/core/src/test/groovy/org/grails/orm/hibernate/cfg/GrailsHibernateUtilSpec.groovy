@@ -19,7 +19,7 @@
 package org.grails.orm.hibernate.cfg
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler
 import org.hibernate.proxy.HibernateProxy
@@ -32,7 +32,7 @@ class GrailsHibernateUtilSpec extends HibernateGormDatastoreSpec {
     HibernateProxyHandler proxyHandlerMock = Mock(HibernateProxyHandler)
 
     void setupSpec() {
-        manager.addAllDomainClasses([GHUBook, GHUAuthor, GHUAnnotatedEntity])
+        manager.registerDomainClasses(GHUBook, GHUAuthor, GHUAnnotatedEntity)
     }
 
     def setup() {

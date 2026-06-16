@@ -1,4 +1,4 @@
-package grails.gorm.specs.dirtychecking
+package grails.gorm.tests.dirtychecking
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one
  *  or more contributor license agreements.  See the NOTICE file
@@ -18,12 +18,12 @@ package grails.gorm.specs.dirtychecking
  *  under the License.
  */
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 
 class DirtyCheckingSpecHibernate7 extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([DirtyCheckingTestBookHibernate7])
+        manager.registerDomainClasses(DirtyCheckingTestBookHibernate7)
     }
 
     void "When marking whole class dirty, then derived and transient properties are still not dirty"() {

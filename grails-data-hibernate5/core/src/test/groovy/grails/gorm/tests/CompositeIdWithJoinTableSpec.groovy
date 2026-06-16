@@ -20,9 +20,6 @@
 package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
-
-import jakarta.annotation.Nonnull
 
 import static grails.gorm.hibernate.mapping.MappingBuilder.define
 
@@ -31,7 +28,7 @@ import static grails.gorm.hibernate.mapping.MappingBuilder.define
  */
 class CompositeIdWithJoinTableSpec extends HibernateGormDatastoreSpec {
     def setupSpec() {
-        manager.addAllDomainClasses([CompositeIdParent, CompositeIdChild])
+        manager.registerDomainClasses(CompositeIdParent, CompositeIdChild)
     }
 
     //    @Rollback
@@ -71,7 +68,7 @@ class CompositeIdParent implements Serializable, Comparable<CompositeIdParent> {
     }
 
     @Override
-    int compareTo(@Nonnull CompositeIdParent o) {
+    int compareTo(CompositeIdParent o) {
         this.name <=> o.name ?: this.last <=> o.last
     }
 }

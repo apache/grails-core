@@ -17,7 +17,7 @@
  *  under the License.
  */
 
-package grails.gorm.specs.proxy
+package grails.gorm.tests.proxy
 
 import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
@@ -30,7 +30,7 @@ import org.grails.datastore.gorm.proxy.GroovyProxyFactory
 class Hibernate7GroovyProxySpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Location])
+        manager.registerDomainClasses(Location)
     }
     void "Test creation and behavior of Groovy proxies"() {
         given:

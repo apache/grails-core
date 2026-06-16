@@ -18,7 +18,7 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.persistence.Entity
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsSequenceGeneratorEnum
 import spock.lang.Shared
@@ -26,11 +26,11 @@ import spock.lang.Shared
 class HibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([
+        manager.registerDomainClasses(
             LazyBook, LazyAuthor, ExplicitNonLazy, JoinFetchEntity, EnumEntity,
             GeneratorDefaultEntity, GeneratorUuid2Entity, CompositeKeyEntity,
             HPPSManyA, HPPSManyB, HPPSClassTyped, HPPSStringTyped
-        ])
+        )
     }
 
     def "test isLazy for standard property"() {

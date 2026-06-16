@@ -16,10 +16,10 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.gorm.specs.hibernatequery
+package grails.gorm.tests.hibernatequery
 
 import grails.gorm.DetachedCriteria
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import jakarta.persistence.criteria.Expression
 import jakarta.persistence.criteria.From
 import jakarta.persistence.criteria.Path
@@ -31,7 +31,7 @@ import org.hibernate.query.criteria.JpaExpression
 class JpaQueryContextSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([JpaQueryContextSpecPerson])
+        manager.registerDomainClasses(JpaQueryContextSpecPerson)
     }
 
     def "getRoot returns the assigned root"() {

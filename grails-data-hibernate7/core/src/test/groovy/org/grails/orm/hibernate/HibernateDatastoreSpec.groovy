@@ -19,7 +19,7 @@
 package org.grails.orm.hibernate
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
 import org.grails.orm.hibernate.cfg.Settings

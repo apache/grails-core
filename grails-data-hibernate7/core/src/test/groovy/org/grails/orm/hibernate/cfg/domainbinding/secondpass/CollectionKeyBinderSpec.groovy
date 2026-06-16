@@ -19,7 +19,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder
@@ -41,7 +41,7 @@ class CollectionKeyBinderSpec extends HibernateGormDatastoreSpec {
     CollectionKeyBinder binder
 
     void setupSpec() {
-        manager.addAllDomainClasses([
+        manager.registerDomainClasses(
             CKBBidOwner,
             CKBBidItem,
             CKBManyToManyOwner,
@@ -52,7 +52,7 @@ class CollectionKeyBinderSpec extends HibernateGormDatastoreSpec {
             CKBJoinKeyItem,
             CKBCompositeOwner,
             CKBCompositeItem
-        ])
+        )
     }
 
     void setup() {

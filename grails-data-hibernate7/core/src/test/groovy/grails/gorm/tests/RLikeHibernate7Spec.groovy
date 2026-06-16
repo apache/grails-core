@@ -16,7 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.gorm.specs
+package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
 import org.testcontainers.mariadb.MariaDBContainer
@@ -38,7 +38,7 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
     @Shared oracle = new OracleContainer("gvenzl/oracle-free:slim-faststart")
 
     void setupSpec() {
-        manager.addAllDomainClasses([RlikeFoo])
+        manager.registerDomainClasses(RlikeFoo)
     }
 
     void "test rlike works with #db"() {

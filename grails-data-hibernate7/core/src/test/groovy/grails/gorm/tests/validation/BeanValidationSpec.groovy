@@ -20,7 +20,7 @@
 package grails.gorm.tests.validation
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
 import jakarta.validation.constraints.Digits
 import jakarta.validation.constraints.NotBlank
@@ -31,7 +31,7 @@ import jakarta.validation.constraints.NotBlank
 class BeanValidationSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([Bean])
+        manager.registerDomainClasses(Bean)
     }
 
     @Rollback
