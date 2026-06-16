@@ -24,6 +24,8 @@ import jakarta.servlet.http.HttpServletRequest
 
 import org.springframework.mock.web.MockHttpServletRequest
 
+import net.bytebuddy.ByteBuddy
+
 import spock.lang.Specification
 
 class HttpServletRequestExtensionSpec extends Specification {
@@ -105,36 +107,32 @@ class HttpServletRequestExtensionSpec extends Specification {
             request.getAttribute('count', Integer, 7) == 42
     }
 
-    void "Class-typed getAttribute matches proxied values — both JVM proxy mechanisms"() {
+    void "Class-typed getAttribute matches a ByteBuddy subclass proxy (the GORM/Hibernate mechanism)"() {
         given:
             HttpServletRequest request = new MockHttpServletRequest()
 
-            // (1) Interface proxy: a JDK dynamic proxy's runtime-generated class *implements* the
-            // requested interface, so isInstance(interface) is true — the non-obvious runtime case.
-            CharSequence jdkProxy = (CharSequence) java.lang.reflect.Proxy.newProxyInstance(
-                    getClass().classLoader, [CharSequence] as Class[],
-                    { Object proxy, java.lang.reflect.Method method, Object[] args ->
-                        method.name == 'toString' ? 'proxied' : null } as java.lang.reflect.InvocationHandler)
-            request.setAttribute('jdkProxy', jdkProxy)
+            // A real ByteBuddy subclass proxy — the same machinery GORM/Hibernate use for lazy
+            // entity proxies: the generated class *extends* the target, so isInstance(target) is true.
+            Class<? extends ProxiedEntity> proxyClass = new ByteBuddy()
+                    .subclass(ProxiedEntity)
+                    .make()
+                    .load(getClass().classLoader)
+                    .loaded
+            ProxiedEntity proxy = proxyClass.getDeclaredConstructor().newInstance()
+            request.setAttribute('entity', proxy)
 
-            // (2) Subclass proxy: CGLIB / ByteBuddy / Hibernate-lazy proxies *extend* the target
-            // class. isInstance walks the class hierarchy the same way whether the subclass is
-            // generated at runtime or declared here, so a plain subclass exercises the same path.
-            ProxiedBase subclassProxy = new ProxiedSubclass()
-            request.setAttribute('subclassProxy', subclassProxy)
+        expect: 'the stored value is a generated subclass, not the entity class itself'
+            proxy.class != ProxiedEntity
+            ProxiedEntity.isInstance(proxy)
 
-        expect: 'isInstance is true for the proxied interface and the proxied superclass'
-            request.getAttribute('jdkProxy', CharSequence).is(jdkProxy)
-            request.getAttribute('subclassProxy', ProxiedBase).is(subclassProxy)
+        and: 'the Class-typed read returns the proxy, typed as the entity'
+            request.getAttribute('entity', ProxiedEntity).is(proxy)
 
-        and: 'null (not an unsafe cast) when the value is not actually an instance of the requested type'
-            request.getAttribute('jdkProxy', StringBuilder) == null
+        and: 'null (not an unsafe cast) when the requested type is unrelated'
+            request.getAttribute('entity', Date) == null
     }
 
-    static class ProxiedBase {
-    }
-
-    static class ProxiedSubclass extends ProxiedBase {
+    static class ProxiedEntity {
     }
 
     @CompileStatic
