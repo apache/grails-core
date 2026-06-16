@@ -35,12 +35,17 @@ import org.apache.grails.testing.http.client.HttpClientSupport
 @Tag('http-client')
 class DirtyCheckBindingSpec extends Specification implements HttpClientSupport {
 
-    private static final String FORM = 'application/x-www-form-urlencoded'
-
     @Issue('https://github.com/apache/grails-core/issues/15681')
     void 'bindData over HTTP does not bind id or version on a domain extending a @DirtyCheck base'() {
         when: 'a form submission posts id, version and a regular property'
-        def response = httpPost('/dirtyCheckBinding/bind', 'id=99&version=5&description=Opening+balance', FORM)
+        def response = httpPostForm(
+                '/dirtyCheckBinding/bind',
+                [
+                        id: 99,
+                        version: 5,
+                        description: 'Opening balance'
+                ]
+        )
 
         then: 'the request succeeds'
         response.assertStatus(200)
@@ -56,12 +61,19 @@ class DirtyCheckBindingSpec extends Specification implements HttpClientSupport {
     @Issue('https://github.com/apache/grails-core/issues/15681')
     void 'binding only a regular property over HTTP leaves id and version null'() {
         when:
-        def response = httpPost('/dirtyCheckBinding/bind', 'description=Closing+balance', FORM)
+        def response = httpPostForm(
+                '/dirtyCheckBinding/bind',
+                [
+                        description: 'Closing balance'
+                ]
+        )
 
         then:
-        response.assertStatus(200)
-        response.assertContains('description=Closing balance')
-        response.assertContains('id=null')
-        response.assertContains('version=null')
+        with(response) {
+            assertStatus(200)
+            assertContains('description=Closing balance')
+            assertContains('id=null')
+            assertContains('version=null')
+        }
     }
 }

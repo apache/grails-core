@@ -53,3 +53,49 @@ for (name in params.list('name')) {
     println name
 }
 ----
+
+
+=== Type Conversion of Attributes
+
+
+The same convenience methods are also available on the `session`, `request`, `flash` and `servletContext` objects for converting attribute values. This is especially useful under static compilation (for example in a class annotated with `@CompileStatic` or `@GrailsCompileStatic`), where dynamic attribute access such as `session.userTimeZoneId` does not compile and the explicit alternative requires a cast:
+
+[source,groovy]
+----
+// returns an Integer, or null if the attribute is absent or not convertible
+def page = request.int('page')
+
+// returns the attribute as an Integer, or the supplied default if absent
+def page = request.int('page', 1)
+
+// String, Boolean, Long, Date and the other converters are available too
+String timeZoneId = session.string('userTimeZoneId', 'America/Los_Angeles')
+Boolean active = session.boolean('active', false)
+
+// flash and servletContext attributes work the same way
+String notice = flash.string('notice')
+int maxUploads = servletContext.int('maxUploads', 10)
+----
+
+As with `params`, each method is null-safe and safe from parsing errors, and each accepts an optional default value as a second argument that is returned when the attribute is absent or cannot be converted.
+
+NOTE: The `string` method returns the first element when the underlying attribute is an array, mirroring the single-value semantics of the other converters. Use the `list` method to obtain every value.
+
+
+=== Typed Reads of Attributes
+
+
+Attributes often hold richer objects than the scalar types covered by the named converters — a security principal, a domain instance, a token. For these, `session`, `request` and `servletContext` offer a `Class`-typed overload of `getAttribute` that returns the attribute typed as requested, so no cast is needed under static compilation:
+
+[source,groovy]
+----
+// returns the attribute typed as CsrfToken, or null when absent
+CsrfToken token = session.getAttribute('_csrf', CsrfToken)
+
+// with a default, returned when the attribute is absent
+Theme theme = session.getAttribute('theme', Theme, Theme.DEFAULT)
+
+UserDetails user = request.getAttribute('apiUser', UserDetails)
+----
+
+Unlike the named converters, no coercion is attempted: the attribute is returned only when it is an instance of the requested type, and reads as absent otherwise (so the default also applies when the stored value has an unexpected type). Primitive class literals (`int`, `boolean`, ...) are normalized to their wrapper types. Use the named converters when you want type conversion, and the `Class`-typed read when you want a type-safe retrieval.
