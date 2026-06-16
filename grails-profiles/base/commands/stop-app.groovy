@@ -15,16 +15,14 @@ if (commandLine.hasOption('port') || commandLine.hasOption('host')) {
 
 System.setProperty("run-app.running", "false")
 
-File pidFile = RunningApplicationProcess.pidFile(
-        buildDir,
-        commandLine.systemProperties[RunningApplicationProcess.PID_FILE_CLI_PROPERTY] as String,
-        System.getProperty(RunningApplicationProcess.PID_FILE_CLI_PROPERTY),
-        config.getProperty(RunningApplicationProcess.PID_FILE_CLI_PROPERTY, String))
+File pidFile = RunningApplicationProcess.pidFile(buildDir)
 
 console.updateStatus "Stopping application..."
 
-// Record that this is a deliberate stop before terminating the process, so a foreground run-app
-// blocked on the bootRun build reports a clean shutdown rather than a startup failure.
+// Record that this is a deliberate stop before terminating the process. stop-app signals only the
+// forked application JVM (not the Gradle bootRun process), so the bootRun build ends with a
+// non-zero exit rather than finishing cleanly like a Ctrl+C of the whole build. The marker is how a
+// foreground run-app blocked on that build tells a deliberate stop apart from a real startup failure.
 RunningApplicationProcess.requestStop(buildDir)
 
 switch (RunningApplicationProcess.stop(pidFile, 30000)) {

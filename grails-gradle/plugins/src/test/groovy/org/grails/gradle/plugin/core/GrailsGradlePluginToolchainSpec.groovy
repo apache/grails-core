@@ -146,7 +146,7 @@ class GrailsGradlePluginToolchainSpec extends GradleSpecification {
         result.output.readLines().any { it.endsWith(defaultPidPath) }
     }
 
-    def "bootRun keeps CLI supplied run-app PID file"() {
+    def "bootRun ignores a CLI supplied run-app PID file and uses the hard-coded location"() {
         given:
         setupTestResourceProject('boot-run-pid')
         File pidFile = new File('from-cli.pid').absoluteFile
@@ -156,6 +156,8 @@ class GrailsGradlePluginToolchainSpec extends GradleSpecification {
         def result = executeTask('inspectBootRunPid', [pidFileProperty])
 
         then:
-        result.output.contains("PID_FILE=${pidFile.absolutePath}".toString())
+        String defaultPidPath = "${File.separator}build${File.separator}run-app.pid".toString()
+        result.output.readLines().any { it.endsWith(defaultPidPath) }
+        !result.output.contains(pidFile.absolutePath)
     }
 }

@@ -90,7 +90,7 @@ import javax.inject.Inject
 class GrailsGradlePlugin extends GroovyPlugin {
 
     public static final String APPLICATION_CONTEXT_COMMAND_CLASS = 'grails.dev.commands.ApplicationCommand'
-    private static final String CLI_PID_FILE_PROPERTY = 'cli.pid.file'
+    private static final String CLI_PID_FILE_PROPERTY = 'grails.cli.pid.file'
     private static final String RUN_APP_PID_FILE_NAME = 'run-app.pid'
 
     List<Class<Plugin>> basePluginClasses = [IntegrationTestGradlePlugin] as List<Class<Plugin>>
@@ -598,18 +598,14 @@ class GrailsGradlePlugin extends GroovyPlugin {
     }
 
     protected void configureBootRunPidFile(Project project) {
-        project.afterEvaluate {
+        Provider<RegularFile> pidFile = project.layout.buildDirectory.file(RUN_APP_PID_FILE_NAME)
+        project.pluginManager.withPlugin('org.springframework.boot') {
             project.tasks.withType(BootRun).configureEach { BootRun task ->
-                Provider<RegularFile> defaultPidFile = project.layout.buildDirectory.file(RUN_APP_PID_FILE_NAME)
-
-                if (!task.systemProperties[CLI_PID_FILE_PROPERTY]) {
-                    task.systemProperty(CLI_PID_FILE_PROPERTY, defaultPidFile.get().asFile.absolutePath)
-                }
-
-                task.doFirst {
-                    Object configuredPidFile = task.systemProperties[CLI_PID_FILE_PROPERTY]
-                    new File(configuredPidFile.toString()).parentFile?.mkdirs()
-                }
+                // The path is resolved lazily at execution time via a CommandLineArgumentProvider
+                // (see GrailsAppBaseDirProvider) so it stays configuration-cache safe and does not
+                // force the build directory provider during configuration. The forked application
+                // reads this hard-coded location so stop-app can locate and terminate it.
+                task.jvmArgumentProviders.add(new RunAppPidFileProvider(CLI_PID_FILE_PROPERTY, pidFile))
             }
         }
     }

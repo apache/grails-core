@@ -22,19 +22,11 @@ try {
         arguments << '--quiet'
     }
 
-    // Tell the forked application where to write its PID file so that stop-app can terminate it,
-    // even from a separate CLI invocation. The grails. prefix is stripped by GrailsGradlePlugin
-    // when forwarding the property into the forked JVM.
-    File pidFile = org.grails.cli.gradle.RunningApplicationProcess.pidFile(
-            buildDir,
-            commandLine.systemProperties[org.grails.cli.gradle.RunningApplicationProcess.PID_FILE_CLI_PROPERTY] as String,
-            System.getProperty(org.grails.cli.gradle.RunningApplicationProcess.PID_FILE_CLI_PROPERTY),
-            config.getProperty(org.grails.cli.gradle.RunningApplicationProcess.PID_FILE_CLI_PROPERTY, String))
-    pidFile.parentFile?.mkdirs()
-    // Clear any stop marker left by a previous stop-app so a genuine startup failure is not
-    // mistaken for a deliberate shutdown.
+    // bootRun (configured by GrailsGradlePlugin) tells the forked application to write its PID to
+    // build/run-app.pid, which stop-app reads to terminate it. Clear any stop marker left by a
+    // previous stop-app so a genuine startup failure is not mistaken for a deliberate shutdown.
+    File pidFile = org.grails.cli.gradle.RunningApplicationProcess.pidFile(buildDir)
     org.grails.cli.gradle.RunningApplicationProcess.clearStopRequest(buildDir)
-    arguments << "-D${org.grails.cli.gradle.RunningApplicationProcess.PID_FILE_CLI_PROPERTY}=${pidFile.absolutePath}".toString()
 
     arguments.addAll commandLine.remainingArgs
 
@@ -42,9 +34,7 @@ try {
     String host = flag('host') ?: config.getProperty('server.address', String)
 
     commandLine.systemProperties.each { key, value ->
-        if (key != org.grails.cli.gradle.RunningApplicationProcess.PID_FILE_CLI_PROPERTY) {
-            arguments << "-D${key}=$value".toString()
-        }
+        arguments << "-D${key}=$value".toString()
     }
 
     if(port) {

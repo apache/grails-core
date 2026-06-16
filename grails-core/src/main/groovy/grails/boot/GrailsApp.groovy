@@ -67,13 +67,12 @@ class GrailsApp extends SpringApplication {
 
     /**
      * System property holding the path of the PID file the application should write on startup.
-     * It is set by the CLI {@code run-app} command as {@code grails.cli.pid.file}; the
-     * {@code grails.} prefix is stripped when the property is forwarded into this forked JVM by
-     * {@code GrailsGradlePlugin}, so it is read here without the prefix. When present, the PID
-     * file lets {@code stop-app} terminate this process. It is never set for a normally deployed
-     * application, so production runs are unaffected.
+     * It is set by {@code GrailsGradlePlugin} on the {@code bootRun} task as
+     * {@code grails.cli.pid.file}. When present, the PID file lets the CLI {@code stop-app} command
+     * terminate this process. It is never set for a normally deployed application, so production
+     * runs are unaffected.
      */
-    private static final String CLI_PID_FILE_PROPERTY = 'cli.pid.file'
+    private static final String CLI_PID_FILE_PROPERTY = 'grails.cli.pid.file'
 
     private static boolean developmentModeActive = false
     private static DirectoryWatcher directoryWatcher

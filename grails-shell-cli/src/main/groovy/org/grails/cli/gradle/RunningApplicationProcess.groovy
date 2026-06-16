@@ -28,12 +28,13 @@ import groovy.transform.CompileStatic
 /**
  * Locates and stops the Grails application started by the CLI {@code run-app} command.
  *
- * <p>When {@code run-app} launches an application it runs it as a forked Gradle
- * {@code bootRun} JVM and asks that JVM to write its own process id to a project local
- * PID file (via Spring Boot's {@code ApplicationPidFileWriter}). Because the contract is a
- * file on disk - and not in-memory state - {@code stop-app} can terminate the application
- * even when it was forked into a separate process or when {@code grails stop-app} is run
- * from a different CLI invocation than the one that started it.</p>
+ * <p>{@code run-app} launches an application as a forked Gradle {@code bootRun} JVM. The
+ * {@code GrailsGradlePlugin} configures that {@code bootRun} task to tell the application to write
+ * its own process id to a project local PID file (via Spring Boot's
+ * {@code ApplicationPidFileWriter}). Because the contract is a file on disk - and not in-memory
+ * state - {@code stop-app} can terminate the application even when it was forked into a separate
+ * process or when {@code grails stop-app} is run from a different CLI invocation than the one that
+ * started it.</p>
  *
  * <p>Stopping is performed with {@link ProcessHandle#destroy()}, which requests a graceful
  * shutdown (a {@code SIGTERM} on Unix-like systems, allowing the JVM shutdown hooks and
@@ -58,19 +59,6 @@ class RunningApplicationProcess {
      * process is terminated.
      */
     static final String STOP_MARKER_NAME = 'run-app.stopping'
-
-    /**
-     * The system property, set by {@code run-app} on the Gradle build, that tells the forked
-     * application where to write its PID file. The {@code grails.} prefix is stripped by
-     * {@code GrailsGradlePlugin} when the property is forwarded into the forked JVM, so the
-     * application itself reads {@link #PID_FILE_APP_PROPERTY}.
-     */
-    static final String PID_FILE_CLI_PROPERTY = 'grails.cli.pid.file'
-
-    /**
-     * The system property, as seen by the forked application JVM, that holds the PID file path.
-     */
-    static final String PID_FILE_APP_PROPERTY = 'cli.pid.file'
 
     /**
      * The forked application writes its PID file after it starts, so a live process described by
@@ -101,26 +89,6 @@ class RunningApplicationProcess {
      */
     static File pidFile(File buildDir) {
         new File(buildDir, PID_FILE_NAME)
-    }
-
-    /**
-     * @param buildDir the project build directory
-     * @param pidFilePath the configured PID file path, or {@code null} to use the default
-     * @return the PID file used to track the application started by {@code run-app}
-     */
-    static File pidFile(File buildDir, String pidFilePath) {
-        pidFilePath ? new File(pidFilePath).absoluteFile : pidFile(buildDir)
-    }
-
-    /**
-     * @param buildDir the project build directory
-     * @param commandLinePidFilePath the PID file path supplied for the current command
-     * @param systemPidFilePath the PID file path supplied to the CLI JVM
-     * @param configPidFilePath the PID file path supplied in application configuration
-     * @return the configured PID file, or the default under the build directory
-     */
-    static File pidFile(File buildDir, String commandLinePidFilePath, String systemPidFilePath, String configPidFilePath) {
-        pidFile(buildDir, commandLinePidFilePath ?: systemPidFilePath ?: configPidFilePath)
     }
 
     /**
