@@ -21,6 +21,7 @@ package org.apache.grails.testing.http.client
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.lang.reflect.Array
 import java.time.Duration
 
 import groovy.json.JsonGenerator
@@ -407,6 +408,25 @@ trait HttpClientSupport {
             HttpClient client
     ) {
         httpPost(headers, pathOrUrl, XmlUtils.toXml(format, body), APPLICATION_XML, client)
+    }
+
+    /**
+     * POST form data as {@code application/x-www-form-urlencoded} (UTF-8).
+     *
+     * @param headers optional request headers
+     * @param pathOrUrl relative path or absolute URL
+     * @param formData form fields to encode into the request body; collection and array values are encoded as
+     * repeated keys
+     * @param client optional {@link HttpClient} instance to use
+     * @return response with String body
+     */
+    TestHttpResponse httpPostForm(
+            Map<String, String> headers = EMPTY,
+            CharSequence pathOrUrl,
+            Map<String, ?> formData,
+            HttpClient client = null
+    ) {
+        httpPost(headers, pathOrUrl, encodeFormData(formData), 'application/x-www-form-urlencoded', client)
     }
 
     // endregion
@@ -1155,6 +1175,31 @@ trait HttpClientSupport {
 
     private void setDefaultRequestConfig(HttpRequest.Builder builder) {
         builder.timeout(Duration.ofSeconds(60))
+    }
+
+    private String encodeFormData(Map<String, ?> formData) {
+        formData.collectMany {
+            encodeFormValues(it.key, it.value)
+        }.join('&')
+    }
+
+    private List<String> encodeFormValues(String key, Object value) {
+        if (value == null) {
+            value = ''
+        }
+        if (value instanceof Iterable) {
+            return value.collect { encodeFormEntry(key, it) }
+        }
+        if (value.class.array) {
+            return (0..<Array.getLength(value)).collect {
+                encodeFormEntry(key, Array.get(value, it))
+            }
+        }
+        [encodeFormEntry(key, value)]
+    }
+
+    private String encodeFormEntry(String key, Object value) {
+        "${URLEncoder.encode(key, 'UTF-8')}=${URLEncoder.encode(value?.toString() ?: '', 'UTF-8')}"
     }
 
     private void warn(String[] lines) {
