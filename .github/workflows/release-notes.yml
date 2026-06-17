@@ -81,6 +81,52 @@ jobs:
       pull-requests: write
     runs-on: ubuntu-latest
     steps:
+      # Seed an initial version for release branches that have no published
+      # release yet (e.g. 7.2.x before its first tag). release-drafter falls
+      # back to its default 0.1.0 when it finds no "last release", which on
+      # such a branch produces a misleading v0.1.0 draft. We detect that case
+      # and pass the branch's own MAJOR.MINOR.0 as the `version` input so the
+      # draft reads e.g. v7.2.0 instead.
+      #
+      # This is self-correcting: the moment the branch publishes ANY release,
+      # the lookup below finds it and we stop seeding, letting release-drafter
+      # resolve the next version normally (e.g. 7.2.0 -> 7.2.1). Branches that
+      # already have a release (7.0.x, 7.1.x, 8.0.x) get an empty seed, which
+      # release-drafter treats as "no override" - identical to current
+      # behaviour. Best-effort: any lookup failure also yields an empty seed.
+      - name: "🔢 Seed initial version for release-less branches"
+        id: seed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -uo pipefail
+          BRANCH="${{ github.event.pull_request.base.ref || github.ref_name }}"
+          if [[ ! "$BRANCH" =~ ^([0-9]+)\.([0-9]+)\.x$ ]]; then
+            echo "Branch $BRANCH is not a release branch; no version seed."
+            echo "version=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          SEED="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.0"
+          # Mirror release-drafter's "last release" lookup: a non-draft release
+          # whose target_commitish (with refs/heads/ stripped, as the action
+          # does) equals this branch and whose tag starts with the "v" prefix.
+          # Prereleases count, matching include-pre-releases: true.
+          matches="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
+            --jq ".[] | select(.draft == false) | select((.target_commitish | sub(\"^refs/heads/\"; \"\")) == \"${BRANCH}\") | select(.tag_name | startswith(\"v\")) | .tag_name" 2>/dev/null)"
+          if [[ $? -ne 0 ]]; then
+            echo "::warning title=Version seed skipped::Could not list releases for ${BRANCH}; leaving version unset (release-drafter default)."
+            echo "version=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          count="$(printf '%s\n' "$matches" | grep -c . || true)"
+          if [[ "${count:-0}" -gt 0 ]]; then
+            echo "Branch $BRANCH already has $count matching release(s); release-drafter will resolve the next version. No seed."
+            echo "version=" >> "$GITHUB_OUTPUT"
+          else
+            echo "Branch $BRANCH has no published release; seeding initial version $SEED (draft becomes v$SEED instead of v0.1.0)."
+            echo "version=$SEED" >> "$GITHUB_OUTPUT"
+          fi
+
       # Pinned to v7.3.1 by commit SHA per the ASF security policy (matches
       # the pinning convention already used by other ASF-approved actions in
       # this repo). v7.2.1 or later is required because it ships PR #1593 - the
@@ -114,6 +160,11 @@ jobs:
           # producing the "Validation Failed: target_commitish invalid" error
           # historically seen on PRs (see INFRA-27602).
           commitish: ${{ github.event.pull_request.base.ref || github.ref_name }}
+          # Empty for branches that already have a release (release-drafter
+          # treats an empty version as "no override" and resolves the next
+          # version itself). On a release-less branch this is MAJOR.MINOR.0 so
+          # the draft reads e.g. v7.2.0 instead of the default v0.1.0.
+          version: ${{ steps.seed.outputs.version }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
