@@ -16,8 +16,19 @@
 # Maintains one draft GitHub Release per active release branch (7.0.x, 7.1.x,
 # 7.2.x, 8.0.x, ...). Each branch produces an independent draft because the
 # release-drafter config in .github/release-drafter.yml combines
-# `filter-by-commitish: true`, `filter-by-range: ~MAJOR.MINOR.0`, and
-# `tag-prefix: v` so that drafts created on one branch never leak into another.
+# `filter-by-commitish: true` (a release's target_commitish must equal the
+# branch) with `tag-prefix: v`, so drafts created on one branch never leak
+# into another.
+#
+# NOTE: do NOT reintroduce a `filter-by-range: ~MAJOR.MINOR.0` filter here.
+# When a release branch has no published release inside its own MAJOR.MINOR
+# range (e.g. 7.2.x before its first tag, or any newly-cut branch),
+# release-drafter falls back to its default version 0.1.0. That 0.1.0 draft
+# does NOT satisfy `~MAJOR.MINOR.0`, so on the next run the range filter hides
+# the draft the action itself just created - it reports "No draft release
+# found" and creates ANOTHER 0.1.0 draft, repeating on every push and flooding
+# the releases page with untagged-* drafts. `filter-by-commitish` alone gives
+# full per-branch isolation without this failure mode.
 #
 # Companion config: .github/release-drafter.yml
 name: "Release - Drafter"
@@ -70,25 +81,6 @@ jobs:
       pull-requests: write
     runs-on: ubuntu-latest
     steps:
-      # release-drafter's `filter-by-range` keeps the action looking only at
-      # releases whose tag falls inside this branch's MAJOR.MINOR series. This
-      # is what prevents 7.0.x's draft from being computed against 7.1.x's
-      # tags (or vice versa). It is derived dynamically from the branch name
-      # so this workflow file works identically on every release branch.
-      - name: "🔢 Derive semver range from branch"
-        id: version
-        run: |
-          set -euo pipefail
-          BRANCH="${{ github.event.pull_request.base.ref || github.ref_name }}"
-          if [[ "$BRANCH" =~ ^([0-9]+)\.([0-9]+)\.x$ ]]; then
-            RANGE="~${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.0"
-            echo "Branch $BRANCH -> filter-by-range $RANGE"
-            echo "range=$RANGE" >> "$GITHUB_OUTPUT"
-          else
-            echo "Branch $BRANCH is not a release branch; skipping range filter (will only match the configured prerelease/commitish filters)"
-            echo "range=" >> "$GITHUB_OUTPUT"
-          fi
-
       # Pinned to v7.3.1 by commit SHA per the ASF security policy (matches
       # the pinning convention already used by other ASF-approved actions in
       # this repo). v7.2.1 or later is required because it ships PR #1593 - the
@@ -122,7 +114,6 @@ jobs:
           # producing the "Validation Failed: target_commitish invalid" error
           # historically seen on PRs (see INFRA-27602).
           commitish: ${{ github.event.pull_request.base.ref || github.ref_name }}
-          filter-by-range: ${{ steps.version.outputs.range }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -156,7 +147,7 @@ jobs:
               echo ""
               echo "release-drafter ran but did not produce a draft release id."
               echo "Common causes: GitHub API rate limit exhausted, no prior"
-              echo "release matched the commitish/range/tag-prefix filters, or"
+              echo "release matched the commitish/tag-prefix filters, or"
               echo "the action errored. Check the previous step's logs."
             } >> "$GITHUB_STEP_SUMMARY"
             echo "::warning title=Release draft missing::release-drafter produced no draft for branch ${BRANCH}. Step outcome was '${DRAFT_OUTCOME}'. See workflow summary."
