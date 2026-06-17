@@ -674,6 +674,10 @@ class Player {
     String name
     @SuppressWarnings('unused')
     static belongsTo = [team: Team]
+
+    static constraints = {
+        name nullable: false
+    }
 }
 
 @Entity

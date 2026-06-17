@@ -61,6 +61,14 @@ class ConstraintEvalUtils {
         return defaultConstraintsMap
     }
 
+    /**
+     * Whether an unconstrained persistent property is nullable by default (Grails 8).
+     * Set {@code grails.gorm.default.nullable = false} to restore the legacy required-by-default behaviour.
+     */
+    static boolean getDefaultNullable(Config config) {
+        config.getProperty(Settings.GORM_DEFAULT_NULLABLE, Boolean, true)
+    }
+
     static void clearDefaultConstraints() {
         defaultConstraintsMap =  null
         configId = null

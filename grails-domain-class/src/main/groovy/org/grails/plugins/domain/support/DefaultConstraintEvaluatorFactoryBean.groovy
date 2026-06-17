@@ -50,7 +50,9 @@ class DefaultConstraintEvaluatorFactoryBean implements FactoryBean<ConstraintsEv
     ConstraintsEvaluator getObject() throws Exception {
         ConstraintRegistry registry = new DefaultConstraintRegistry(messageSource)
 
-        new DefaultConstraintEvaluator(registry, grailsDomainClassMappingContext, ConstraintEvalUtils.getDefaultConstraints(grailsApplication.config))
+        new DefaultConstraintEvaluator(registry, grailsDomainClassMappingContext,
+                ConstraintEvalUtils.getDefaultConstraints(grailsApplication.config), true,
+                ConstraintEvalUtils.getDefaultNullable(grailsApplication.config))
     }
 
     @Override
