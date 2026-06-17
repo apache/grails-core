@@ -118,3 +118,9 @@ environments:
                testOnReturn: false
                jdbcInterceptors: ConnectionState
                defaultTransactionIsolation: 2
+
+---
+grails:
+    gorm:
+        default:
+            nullable: false
