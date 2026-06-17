@@ -72,6 +72,28 @@ public record HqlQueryContext(
     // ─── Factory ─────────────────────────────────────────────────────────────
 
     /**
+     * Guards the no-params single-argument query overloads (find, findAll, executeQuery,
+     * executeUpdate) against plain-String calls that have no bound parameters and are therefore
+     * vulnerable to HQL/SQL injection.
+     *
+     * <p>Pass the method name so the error message can point the caller to the correct fix.
+     *
+     * @throws UnsupportedOperationException when {@code query} is a plain {@link String} rather
+     *                                        than a Groovy {@link GString}
+     */
+    public static void guardAgainstUnsafeString(CharSequence query, String method) {
+        if (!(query instanceof GString)) {
+            throw new UnsupportedOperationException(
+                method + "(CharSequence) only accepts a Groovy GString with interpolated parameters " +
+                "(e.g. " + method + "(\"from Foo where bar = ${value}\")). " +
+                "Use the parameterized overload " + method + "(CharSequence, Map) or " +
+                method + "(CharSequence, Collection, Map) " +
+                "to pass a plain String query safely."
+            );
+        }
+    }
+
+    /**
      * Resolves the final HQL string, the result target class, and expands any {@link GString} into
      * named parameters. No {@code Session} is required.
      */

@@ -295,28 +295,32 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         findAllWithNativeSql(query, args)
     }
 
-    // The single-argument CharSequence overloads accept a plain String (executed as written, as
-    // on Hibernate 5) or a Groovy GString. A GString is never interpolated into the query text:
-    // HqlQueryContext expands every ${value} into a bound named parameter (see
-    // buildNamedParameterQueryFromGString), so the idiomatic Groovy form
-    // executeQuery("from Foo where bar = ${userInput}") is injection-safe by binding, not escaping.
+    // The single-argument CharSequence overloads require a Groovy GString so that every
+    // interpolated value is automatically extracted into a bound named parameter by
+    // HqlQueryContext.buildNamedParameterQueryFromGString, making the idiomatic form
+    // executeQuery("from Foo where bar = ${userInput}") injection-safe by binding.
+    // Passing a plain String is rejected to prevent silent injection vulnerabilities.
     @Override
     List<D> findAll(CharSequence query) {
+        HqlQueryContext.guardAgainstUnsafeString(query, 'findAll')
         doListInternal(query, [:], [], [:], false)
     }
 
     @Override
     List executeQuery(CharSequence query) {
+        HqlQueryContext.guardAgainstUnsafeString(query, 'executeQuery')
         doListInternal(query, [:], [], [:], false)
     }
 
     @Override
     Integer executeUpdate(CharSequence query) {
+        HqlQueryContext.guardAgainstUnsafeString(query, 'executeUpdate')
         doInternalExecuteUpdate(query, [:], [], [:])
     }
 
     @Override
     D find(CharSequence query) {
+        HqlQueryContext.guardAgainstUnsafeString(query, 'find')
         doSingleInternal(query, [:], [], [:], false)
     }
 

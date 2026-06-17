@@ -195,6 +195,37 @@ class HqlQueryContextSpec extends Specification {
         "select b from Book b"          | false
         "select count(b.id) from Book b"| true
     }
+
+    @Unroll
+    void "guardAgainstUnsafeString rejects plain String for #method"() {
+        given:
+        String userInput = "'; DROP TABLE books; --"
+        String unsafeQuery = "from HqlQueryContextSpecBook where title = '" + userInput + "'"
+
+        when:
+        HqlQueryContext.guardAgainstUnsafeString(unsafeQuery, method)
+
+        then:
+        def ex = thrown(UnsupportedOperationException)
+        ex.message.startsWith("${method}(CharSequence)")
+        ex.message.contains("Groovy GString")
+        ex.message.contains("${method}(CharSequence, Map)")
+
+        where:
+        method << ["find", "findAll", "executeQuery", "executeUpdate"]
+    }
+
+    void "guardAgainstUnsafeString accepts GString safely"() {
+        given:
+        String title = "The Hobbit"
+        GString safeQuery = "from HqlQueryContextSpecBook where title = ${title}"
+
+        when:
+        HqlQueryContext.guardAgainstUnsafeString(safeQuery, "find")
+
+        then:
+        noExceptionThrown()
+    }
 }
 
 @Entity
