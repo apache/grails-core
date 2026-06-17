@@ -87,11 +87,11 @@ trait Validateable {
      * @return The map of applied constraints
      */
     @Generated
+    @CompileDynamic
     static Map<String, Constrained> getConstraintsMap() {
         if (constraintsMapInternal == null) {
             org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator evaluator = findConstraintsEvaluator()
-            boolean isDefaultNullable = resolveDefaultNullable(this)
-            Map<String, ConstrainedProperty> evaluatedConstraints = evaluator.evaluate(this, isDefaultNullable)
+            Map<String, ConstrainedProperty> evaluatedConstraints = evaluator.evaluate(this, this.defaultNullable())
 
             Map<String, Constrained> finalConstraints = [:]
             for (entry in evaluatedConstraints) {
@@ -199,8 +199,7 @@ trait Validateable {
         boolean shouldInherit = Boolean.valueOf(params?.inherit?.toString() ?: 'true')
         org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator evaluator = findConstraintsEvaluator()
 
-        boolean isDefaultNullable = resolveDefaultNullable(this.class)
-        Map<String, ConstrainedProperty> constraints = evaluator.evaluate(this.class, isDefaultNullable, !shouldInherit, adHocConstraintsClosures)
+        Map<String, ConstrainedProperty> constraints = evaluator.evaluate(this.class, this.defaultNullable(), !shouldInherit, adHocConstraintsClosures)
 
         ValidationErrors localErrors = doValidate(constraints, fieldsToValidate)
 
@@ -279,35 +278,5 @@ trait Validateable {
     @Generated
     static boolean defaultNullable() {
         false
-    }
-
-    /**
-     * Resolves {@code defaultNullable()} via reflection to preserve trait static-method override semantics under
-     * Groovy 5. When an in-trait call such as {@code this.defaultNullable()} is compiled, Groovy 5's
-     * {@code TraitReceiverTransformer} rewrites it to a direct trait-helper static call, which loses the
-     * implementing class's override of {@code defaultNullable()} and always returns the trait default. A reflective
-     * {@code Class.getMethod('defaultNullable').invoke(null)} resolves the actual override on the concrete class,
-     * which is the only path that honours it.
-     *
-     * See https://issues.apache.org/jira/browse/GROOVY-11985 (open).
-     * Reproducer: https://github.com/jamesfredley/groovy-trait-static-method-override-bug
-     */
-    private static boolean resolveDefaultNullable(Class<?> clazz) {
-        java.lang.reflect.Method m
-        try {
-            m = clazz.getMethod('defaultNullable')
-        } catch (NoSuchMethodException ignored) {
-            return false
-        }
-        try {
-            return m.invoke(null) as boolean
-        } catch (IllegalAccessException ignored) {
-            return false
-        } catch (java.lang.reflect.InvocationTargetException e) {
-            Throwable cause = e.cause ?: e
-            if (cause instanceof RuntimeException) throw (RuntimeException) cause
-            if (cause instanceof Error) throw (Error) cause
-            throw new RuntimeException(cause)
-        }
     }
 }

@@ -125,39 +125,10 @@ class BeanPropertyAccessorFactory implements GrailsApplicationAware {
 
     private Constrained resolveConstraints(BeanWrapper beanWrapper, String propertyName) {
         Class<?> type = beanWrapper.wrappedClass
-        boolean defaultNullable = Validateable.isAssignableFrom(type) ? resolveDefaultNullable(type) : false
+        boolean defaultNullable = Validateable.isAssignableFrom(type) ? type.metaClass.invokeStaticMethod(type, 'defaultNullable') : false
         ConstrainedProperty constraint = constraintsEvaluator.evaluate(type, defaultNullable)[propertyName]
 
         new Constrained(constraint ?: createDefaultConstraint(beanWrapper, propertyName))
-    }
-
-    /**
-     * Resolves {@code defaultNullable()} via reflection rather than {@code metaClass.invokeStaticMethod}.
-     * Under Groovy 5, {@code Validateable}'s {@code TraitReceiverTransformer} rewrites the in-trait
-     * {@code defaultNullable()} call to a direct trait-helper static call, which loses the implementing class's
-     * override and always returns the trait default. A reflective {@code Class.getMethod('defaultNullable')}
-     * resolves the actual override declared on the concrete class. Mirrors {@code Validateable.resolveDefaultNullable}.
-     *
-     * See https://issues.apache.org/jira/browse/GROOVY-11985 (open).
-     * Reproducer: https://github.com/jamesfredley/groovy-trait-static-method-override-bug
-     */
-    private static boolean resolveDefaultNullable(Class<?> clazz) {
-        java.lang.reflect.Method m
-        try {
-            m = clazz.getMethod('defaultNullable')
-        } catch (NoSuchMethodException ignored) {
-            return false
-        }
-        try {
-            return m.invoke(null) as boolean
-        } catch (IllegalAccessException ignored) {
-            return false
-        } catch (java.lang.reflect.InvocationTargetException e) {
-            Throwable cause = e.cause ?: e
-            if (cause instanceof RuntimeException) throw (RuntimeException) cause
-            if (cause instanceof Error) throw (Error) cause
-            throw new RuntimeException(cause)
-        }
     }
 
     private static ConstrainedProperty createDefaultConstraint(BeanWrapper beanWrapper, String propertyName) {
