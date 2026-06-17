@@ -184,3 +184,5 @@ Hibernate can automatically create the database tables required for your domain 
 * any other value - does nothing
 
 Setting the `dbCreate` setting to "none" is recommended once your schema is relatively stable and definitely when your application and database are deployed in production. Database changes are then managed through proper migrations, either with SQL scripts or a migration tool like https://www.red-gate.com/products/flyway/community/[Flyway] or https://www.liquibase.com/community[Liquibase]. The  link:{hibernate5Guide}#databaseMigration[Database Migration] plugin uses Liquibase.
+
+NOTE: If you are migrating from Hibernate 5 to Hibernate 7, some column types change in generated DDL (for example `char` now maps to `varchar(1)`, and timestamp precision changes on some databases). Review the link:upgrading.html#_hibernate_5_to_hibernate_7_migration[Hibernate 5 to Hibernate 7 Migration] guide before enabling `dbCreate = 'update'` against an existing database.
