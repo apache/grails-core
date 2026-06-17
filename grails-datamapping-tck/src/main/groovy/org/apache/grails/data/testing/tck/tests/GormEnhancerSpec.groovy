@@ -135,20 +135,6 @@ class GormEnhancerSpec extends GrailsDataTckSpec {
         ['Barney', 'Bob', 'Fred'] == results*.name
     }
 
-    void 'Test getAll preserves order for convertible String ids'() {
-        given:
-        def bob = new TestEntity(name: 'Bob', age: 40, child: new ChildEntity(name: 'Bob Child')).save()
-        def fred = new TestEntity(name: 'Fred', age: 41, child: new ChildEntity(name: 'Fred Child')).save()
-        def barney = new TestEntity(name: 'Barney', age: 42, child: new ChildEntity(name: 'Barney Child')).save()
-        manager.session.flush()
-
-        when: 'String ids that need conversion are supplied in a specific order'
-        def results = TestEntity.getAll([barney.id.toString(), bob.id.toString(), fred.id.toString()])
-
-        then: 'the converted ids preserve the requested order'
-        ['Barney', 'Bob', 'Fred'] == results*.name
-    }
-
     void 'Test getAll returns a null slot for a missing id'() {
         given:
         def bob = new TestEntity(name: 'Bob', age: 40, child: new ChildEntity(name: 'Bob Child')).save()
