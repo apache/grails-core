@@ -414,6 +414,68 @@ class GrailsDependencyVersionsSpec extends Specification {
         versions.find('org.junit.jupiter', 'junit-jupiter-api').version == junitApiVersion
     }
 
+    def "versionProperties keeps the Grails BOM value when a recursed third-party BOM declares the same property"() {
+        given: "A Grails BOM that declares groovy.version and imports a Spring Boot BOM declaring a conflicting groovy.version"
+        // CreateAppCommand stamps a newly created app's build from versionProperties (e.g.
+        // groovy.version, gorm.version, grails-gradle-plugins.version). Recursing into
+        // spring-boot-dependencies - which declares its own groovy.version - means the Grails
+        // value must still win, otherwise `grails create-app` would stamp the wrong Groovy.
+        String grailsGroovyVersion = '1.0.0'
+        String springBootGroovyVersion = '2.0.0'
+        String springBootVersion = '3.0.0'
+        String springBootBomXml = """\
+            <project>
+                <properties>
+                    <groovy.version>${springBootGroovyVersion}</groovy.version>
+                </properties>
+                <dependencyManagement>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.apache.groovy</groupId>
+                            <artifactId>groovy</artifactId>
+                            <version>\${groovy.version}</version>
+                        </dependency>
+                    </dependencies>
+                </dependencyManagement>
+            </project>
+        """
+
+        String parentBomXml = """\
+            <project>
+                <properties>
+                    <groovy.version>${grailsGroovyVersion}</groovy.version>
+                </properties>
+                <dependencyManagement>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.springframework.boot</groupId>
+                            <artifactId>spring-boot-dependencies</artifactId>
+                            <version>${springBootVersion}</version>
+                            <type>pom</type>
+                            <scope>import</scope>
+                        </dependency>
+                    </dependencies>
+                </dependencyManagement>
+            </project>
+        """
+
+        URI springBootBomUri = writePom('spring-boot-dependencies.pom', springBootBomXml)
+        URI parentBomUri = writePom('grails-bom.pom', parentBomXml)
+
+        GrapeEngine grape = Mock(GrapeEngine)
+
+        when: "GrailsDependencyVersions is constructed"
+        def versions = new GrailsDependencyVersions(grape, [group: 'org.apache.grails', module: 'grails-bom', version: grailsGroovyVersion, type: 'pom'])
+
+        then: "The parent BOM and the imported Spring Boot BOM are resolved"
+        1 * grape.resolve(null, { it.module == 'grails-bom' }) >> [parentBomUri]
+        1 * grape.resolve(null, { it.module == 'spring-boot-dependencies' && it.type == 'pom' }) >> [springBootBomUri]
+
+        and: "versionProperties keeps the Grails-declared groovy.version (first-writer-wins)"
+        versions.versionProperties['groovy.version'] == grailsGroovyVersion
+        versions.versionProperties['groovy.version'] != springBootGroovyVersion
+    }
+
     def "addDependencyManagement gracefully handles unresolvable imported Grails BOMs"() {
         given: "A BOM that imports a Grails BOM which cannot be resolved"
         String missingBomVersion = '1.0.0'

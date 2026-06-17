@@ -114,12 +114,21 @@ class GrailsDependencyVersions implements DependencyManagement {
                     thirdPartyImports << coords
                 }
             } else if (scope != 'import' && version && !version.startsWith('${')) {
+                // Skip deps whose version property did not resolve: versionLookup returns null for
+                // an unresolved ${...} reference, which is the meaningful guard here. The
+                // startsWith('${') check is nearly dead - it only catches a malformed reference
+                // with no closing brace, which versionLookup leaves untouched.
                 addDependency(groupId, artifactId, version)
             }
         }
 
         // Resolve Grails BOM imports before third-party ones so that Grails-managed versions
         // (e.g. an intentionally pinned Groovy) win over the versions a third-party BOM declares.
+        // Precedence among the third-party imports themselves is only POM declaration order and is
+        // otherwise undefined; the conflict-prone artifacts (Groovy, Spock) stay correct solely
+        // because they are declared as direct constraints above, which first-writer-wins applies
+        // before any import is followed. Do not move such a pin into a BOM import without
+        // restoring an equivalent direct constraint, or it may silently regress.
         for (Map<String, String> coords : (grailsImports + thirdPartyImports)) {
             resolveImportedBom(coords['group'], coords['module'], coords['version'])
         }
@@ -142,7 +151,11 @@ class GrailsDependencyVersions implements DependencyManagement {
                 addDependencyManagement(importedPom)
             }
         } catch (Exception e) {
-            // If the imported BOM cannot be resolved, skip it
+            // If the imported BOM cannot be resolved, skip it. The blast radius of this is now
+            // wider than when only Grails BOMs were followed: Spring Boot's managed versions exist
+            // *only* behind this recursed third-party import, so a swallowed failure here silently
+            // drops every Spring Boot-managed version at once. Logging is not idiomatic in this
+            // module, so the failure is intentionally left silent.
         }
     }
 
