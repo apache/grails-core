@@ -22,8 +22,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -88,7 +90,18 @@ public class ChainedTransactionManager implements PlatformTransactionManager {
 
         this.synchronizationManager = synchronizationManager;
         this.transactionManagers = new ArrayList<>();
-        this.transactionManagers.addAll(Arrays.asList(transactionManagers));
+        // A single PlatformTransactionManager instance can be exposed under more than one bean
+        // name (for example the primary data source manager aliased by an additional
+        // transactionManager_<dataSource> bean). Registering the same instance twice would make
+        // MultiTransactionStatus - which is keyed by manager instance - commit or roll back that
+        // instance more than once, throwing "Transaction is already completed". Dedupe by identity
+        // while preserving the configured order.
+        Set<PlatformTransactionManager> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+        for (PlatformTransactionManager transactionManager : transactionManagers) {
+            if (seen.add(transactionManager)) {
+                this.transactionManagers.add(transactionManager);
+            }
+        }
     }
 
     /*
