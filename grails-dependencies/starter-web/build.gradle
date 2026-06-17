@@ -50,7 +50,7 @@ def configurations = [
                 ':grails-events',
                 ':grails-gsp',
                 ':grails-interceptors',
-                System.getenv('SITEMESH3_TESTING_ENABLED') == 'true' ? ':grails-sitemesh3' : ':grails-layout',
+                System.getenv('SITEMESH2_TESTING_ENABLED') == 'true' ? ':grails-layout' : ':grails-sitemesh3',
                 ':grails-logging',
                 ':grails-rest-transforms',
                 ':grails-services',

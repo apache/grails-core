@@ -73,19 +73,37 @@ buildCache {
 
 rootProject.name = 'grails.core.ROOT'
 
-// Presence-based toggle (matches project convention: skipFunctionalTests, skipCodeStyle, etc.).
-// When -PskipMicronautProjects is passed (regardless of value), the Grails-Micronaut "island"
-// is excluded from the build graph entirely:
+// Grails-Micronaut "island" toggle.
+//
+// The island is excluded from the build graph entirely when skipped:
 //   * grails-micronaut (Grails plugin that re-exports the Micronaut platform)
 //   * grails-micronaut-bom (overrides Groovy/Spock to Groovy 5 / Spock 2.4-groovy-5.0)
-//   * the five grails-test-examples that consume grails-micronaut-bom
+//   * the grails-test-examples that consume grails-micronaut-bom
 //
-// Used by .github/workflows/groovy-joint-workflow.yml so the joint Groovy 4 snapshot
-// build does not try to compile Spock specs against a Groovy-5-only Spock artifact.
+// The island builds against the Micronaut 5 platform, whose GA artifacts target JVM 25
+// bytecode and declare org.gradle.jvm.version=25. A build JDK older than 25 cannot resolve
+// or compile them, so by default the island is auto-excluded on a sub-25 JDK and auto-included
+// on JDK 25+. This lets a plain `./gradlew build` work on the Grails 8 baseline (JDK 21) and
+// transparently pick up the island when run on JDK 25+.
+//
+// Two presence-based overrides (matching project convention: skipFunctionalTests, skipCodeStyle):
+//   -PskipMicronautProjects    force-exclude the island on ANY JDK. Used by
+//                              groovy-joint-workflow.yml, where the island's Groovy 5 /
+//                              Spock 2.4-groovy-5.0 pin clashes with the Groovy 4.x snapshot
+//                              that build swaps in - a reason independent of the JDK (#15613).
+//   -PincludeMicronautProjects force-include the island on a sub-25 JDK. Escape hatch for
+//                              making the :grails-micronaut tasks addressable on an older JDK
+//                              (e.g. to inspect the project graph). Note the island still
+//                              cannot compile the JVM-25 Micronaut platform on a sub-25 JDK.
+// -PskipMicronautProjects wins if both are present.
+//
 // Consumers that reference :grails-micronaut-bom (e.g. grails-doc:generateBomDocumentation)
 // must guard those references with findProject(':grails-micronaut-bom') != null.
 // See https://github.com/apache/grails-core/issues/15613.
-def skipMicronautProjects = providers.gradleProperty('skipMicronautProjects').isPresent()
+def explicitlySkipMicronaut = providers.gradleProperty('skipMicronautProjects').isPresent()
+def explicitlyIncludeMicronaut = providers.gradleProperty('includeMicronautProjects').isPresent()
+def buildJdkSupportsMicronaut = Runtime.version().feature() >= 25
+def skipMicronautProjects = explicitlySkipMicronaut || (!buildJdkSupportsMicronaut && !explicitlyIncludeMicronaut)
 
 include(
         'grails-bootstrap',
@@ -437,7 +455,7 @@ include(
         'grails-test-examples-geb-gebconfig',
         'grails-test-examples-gorm',
         'grails-test-examples-gsp-layout',
-        // TODO: 'grails-test-examples-gsp-sitemesh3',
+        'grails-test-examples-gsp-sitemesh3',
         'grails-test-examples-gsp-spring-boot',
         'grails-test-examples-hyphenated',
         'grails-test-examples-issue-11102',
@@ -476,7 +494,7 @@ project(':grails-test-examples-geb-gebconfig').projectDir = file('grails-test-ex
 project(':grails-test-examples-namespaces').projectDir = file('grails-test-examples/namespaces')
 project(':grails-test-examples-gorm').projectDir = file('grails-test-examples/gorm')
 project(':grails-test-examples-gsp-layout').projectDir = file('grails-test-examples/gsp-layout')
-//TODO: project(':grails-test-examples-gsp-sitemesh3').projectDir = file('grails-test-examples/gsp-sitemesh3')
+project(':grails-test-examples-gsp-sitemesh3').projectDir = file('grails-test-examples/gsp-sitemesh3')
 project(':grails-test-examples-gsp-spring-boot').projectDir = file('grails-test-examples/gsp-spring-boot/app')
 project(':grails-test-examples-issue-698-domain-save-npe').projectDir = file('grails-test-examples/issue-698-domain-save-npe')
 project(':grails-test-examples-hyphenated').projectDir = file('grails-test-examples/hyphenated')

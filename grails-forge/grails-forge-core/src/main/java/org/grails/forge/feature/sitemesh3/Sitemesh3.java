@@ -22,14 +22,22 @@ import jakarta.inject.Singleton;
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
-import org.grails.forge.feature.Category;
+import org.grails.forge.feature.DefaultFeature;
 import org.grails.forge.feature.Feature;
+import org.grails.forge.feature.view.GspLayout;
+import org.grails.forge.options.Options;
 
+import java.util.Set;
+
+/**
+ * Default GSP layout decorator, backed by SiteMesh 3 ({@code grails-sitemesh3}).
+ * Applied automatically to web applications unless another {@link GspLayout}
+ * (e.g. {@code grails-layout}) is explicitly selected. Not visible: SiteMesh 3
+ * is silently the default, mirroring how the legacy {@code grails-layout} was
+ * silently the default before it.
+ */
 @Singleton
-public class Sitemesh3 implements Feature {
-
-    public Sitemesh3() {
-    }
+public class Sitemesh3 extends GspLayout implements DefaultFeature {
 
     @Override
     public String getName() {
@@ -38,12 +46,23 @@ public class Sitemesh3 implements Feature {
 
     @Override
     public String getTitle() {
-        return "Sitemesh 3";
+        return "GSP SiteMesh 3 Layouts";
     }
 
     @Override
     public String getDescription() {
-        return "Adds support for Sitemesh3 based layouts instead of Sitemesh 2";
+        return "Adds support for SiteMesh 3 based GSP layouts";
+    }
+
+    @Override
+    public boolean isVisible() {
+        return false;
+    }
+
+    @Override
+    public boolean shouldApply(ApplicationType applicationType, Options options, Set<Feature> selectedFeatures) {
+        return supports(applicationType) &&
+                selectedFeatures.stream().noneMatch(GspLayout.class::isInstance);
     }
 
     @Override
@@ -52,15 +71,5 @@ public class Sitemesh3 implements Feature {
                 .groupId("org.apache.grails")
                 .artifactId("grails-sitemesh3")
                 .implementation());
-    }
-
-    @Override
-    public boolean supports(ApplicationType applicationType) {
-        return true;
-    }
-
-    @Override
-    public String getCategory() {
-        return Category.VIEW;
     }
 }

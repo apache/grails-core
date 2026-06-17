@@ -50,11 +50,10 @@ dependencies {
     testImplementation 'tools.jackson.core:jackson-databind'
     testImplementation project(':grails-data-hibernate5-core')
     testImplementation project(':grails-gsp')
-    if(System.getenv('SITEMESH3_TESTING_ENABLED') == 'true') {
-        implementation project(':grails-sitemesh3')
-    }
-    else {
+    if (System.getenv('SITEMESH2_TESTING_ENABLED') == 'true') {
         implementation project(':grails-layout')
+    } else {
+        implementation project(':grails-sitemesh3')
     }
     testImplementation project(':grails-testing-support-datamapping'), {
         // This is a local project dependency
