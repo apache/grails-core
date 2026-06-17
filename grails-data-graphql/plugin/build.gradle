@@ -72,20 +72,21 @@ dependencies {
         // api: HttpServletRequest/Response in GraphqlController
     }
 
-    // GraphQLSpec test trait imports types from io.micronaut.http.* and
-    // io.micronaut.rxjava2.http.client.* so the rxjava2 client (which transitively
-    // pulls micronaut-http-client and micronaut-http) is required to compile the
-    // trait. The trait is only useful from integration tests; the runtime
-    // dependency is therefore deferred to consumers (the example apps already
-    // declare it as `implementation`). Keeping it `compileOnly` here avoids
-    // shipping an unused micronaut HTTP client on every Grails app's runtime
-    // classpath - test dependencies must not leak onto the production classpath
-    // post Grails 7.
-    compileOnly "io.micronaut.rxjava2:micronaut-rxjava2-http-client:$micronautRxjava2Version"
+    // GraphQLSpec test trait talks to the running app over HTTP via
+    // org.springframework.web.client.RestClient (Spring Boot 4 / Spring 7). The
+    // trait is only useful from integration tests, and every Grails app already
+    // has spring-web on its runtime classpath via grails-web-boot, so the
+    // dependency stays `compileOnly` to avoid shipping anything new on the
+    // production classpath.
+    compileOnly 'org.springframework:spring-web'
 
     testImplementation project(':grails-testing-support-web')
     testImplementation 'org.spockframework:spock-core'
 
+    testImplementation 'org.springframework:spring-web'
+    testImplementation "io.github.cjstehno.ersatz:ersatz:$ersatzVersion"
+    testImplementation "io.github.cjstehno.ersatz:ersatz-groovy:$ersatzVersion"
+    testRuntimeOnly 'tools.jackson.core:jackson-databind'
     testRuntimeOnly 'net.bytebuddy:byte-buddy' // Required by Spock's mocking support
     testRuntimeOnly 'org.objenesis:objenesis' // Required by Spock for mocking classes without default constructor
 }
