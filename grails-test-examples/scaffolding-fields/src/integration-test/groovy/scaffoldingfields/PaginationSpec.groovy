@@ -94,20 +94,20 @@ class PaginationSpec extends ContainerGebSpec {
         given: "on employee list page"
         def page = to EmployeeListPage
         waitFor(10) { page.tableRows.size() > 0 }
-        def initialFirstRowText = page.tableRows.first().text()
 
         when: "clicking on a sortable column header"
-        def sortLink = $('th a').find { it.displayed }
-        sortLink?.click()
+        // Wait for the sortable header link to render before clicking; otherwise an
+        // empty navigator yields a no-op click and the sort navigation never happens.
+        def sortLink = waitFor(10) { $('th a').find { it.displayed } }
+        sortLink.click()
 
-        then: "page reloads with sorted data"
-        waitFor(10) { at EmployeeListPage }
-
-        and: "URL contains sort parameter"
-        currentUrl.contains('sort=')
+        then: "the page reloads with the sort parameter applied"
+        // Poll the URL rather than asserting it bare: `at EmployeeListPage` can be
+        // satisfied before the sort navigation has actually completed.
+        waitFor(10) { currentUrl.contains('sort=') }
 
         and: "data table is still displayed with records"
-        page.tableRows.size() > 0
+        waitFor(10) { page.tableRows.size() > 0 }
     }
 
     def "clicking same column header toggles sort direction"() {
@@ -116,22 +116,20 @@ class PaginationSpec extends ContainerGebSpec {
         waitFor(10) { page.tableRows.size() > 0 }
 
         and: "initial sort is applied by clicking column header"
-        def sortLink = $('th a').find { it.displayed }
-        def sortLinkText = sortLink?.text()
-        sortLink?.click()
+        def sortLink = waitFor(10) { $('th a').find { it.displayed } }
+        def sortLinkText = sortLink.text()
+        sortLink.click()
         waitFor(10) { currentUrl.contains('sort=') }
-        def firstSortUrl = currentUrl
-        def firstRowAfterSort = page.tableRows.first().text()
 
         when: "clicking the same column header again"
-        // Find the same column header link after page reload
-        def sameSortLink = $('th a', text: contains(sortLinkText)).find { it.displayed } ?: $('th a').first()
-        sameSortLink?.click()
+        // Re-find the link after the reload (the previous reference is now stale).
+        def sameSortLink = waitFor(10) { $('th a', text: contains(sortLinkText)).find { it.displayed } ?: $('th a').first() }
+        sameSortLink.click()
 
-        then: "sort order changes (URL or data should be different)"
+        then: "the page reloads and still displays data"
         waitFor(10) { page.tableRows.size() > 0 }
 
-        and: "page still displays data"
+        and: "the list table is shown"
         at EmployeeListPage
         page.dataTable.displayed
     }
@@ -139,27 +137,25 @@ class PaginationSpec extends ContainerGebSpec {
     def "sort order indicator is visible on sorted column"() {
         given: "on employee list page"
         def page = to EmployeeListPage
+        waitFor(10) { page.tableRows.size() > 0 }
 
         when: "sorting by a column"
-        def sortLink = $('th a').find { it.displayed }
-        sortLink?.click()
+        def sortLink = waitFor(10) { $('th a').find { it.displayed } }
+        sortLink.click()
         waitFor(10) { currentUrl.contains('sort=') }
 
         then: "page shows sorted results"
         at EmployeeListPage
-        page.tableRows.size() > 0
-
-        and: "URL indicates sort is applied"
-        currentUrl.contains('sort=')
+        waitFor(10) { page.tableRows.size() > 0 }
     }
 
     def "sorting by different columns works correctly"() {
         given: "on employee list page sorted by first column"
         def page = to EmployeeListPage
-        def firstSortLink = $('th a').find { it.displayed }
-        firstSortLink?.click()
+        waitFor(10) { page.tableRows.size() > 0 }
+        def firstSortLink = waitFor(10) { $('th a').find { it.displayed } }
+        firstSortLink.click()
         waitFor(10) { currentUrl.contains('sort=') }
-        def sortedByFirstColumn = currentUrl
 
         when: "sorting by a different column"
         def allSortLinks = $('th a').findAll { it.displayed }
@@ -170,7 +166,7 @@ class PaginationSpec extends ContainerGebSpec {
 
         then: "page shows sorted results"
         at EmployeeListPage
-        page.tableRows.size() > 0
+        waitFor(10) { page.tableRows.size() > 0 }
     }
 
     // ==================== PAGINATION CONTROLS ====================

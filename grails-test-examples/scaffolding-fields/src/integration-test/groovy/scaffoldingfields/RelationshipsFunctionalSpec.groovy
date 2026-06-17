@@ -109,14 +109,16 @@ class RelationshipsFunctionalSpec extends ContainerGebSpec {
     def "Show page displays belongsTo association as link or text"() {
         when: "navigating to an employee show page with department"
         go '/employee/show/1'
-        waitFor(10) { $('body').displayed }
 
-        then: "department information is displayed"
-        def pageContent = $('body').text()
-        pageContent.contains('Department') || pageContent.contains('department')
-
-        and: "the associated department name is visible"
-        pageContent.contains('Engineering') || pageContent.contains('Marketing') || pageContent.contains('Sales')
+        then: "the department label and the associated department name are both rendered"
+        // Poll the rendered content rather than capturing the body once: the layout's
+        // "Skip to content" shell is present before the GSP body content is merged in,
+        // so a single early capture can miss the association value.
+        waitFor(10) {
+            def pageContent = $('body').text()
+            (pageContent.contains('Department') || pageContent.contains('department')) &&
+                    (pageContent.contains('Engineering') || pageContent.contains('Marketing') || pageContent.contains('Sales'))
+        }
     }
 
     def "Edit page preserves belongsTo selection"() {
