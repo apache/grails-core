@@ -22,7 +22,7 @@ package org.grails.gsp
 import grails.core.gsp.GrailsTagLibClass
 import org.grails.core.gsp.DefaultGrailsTagLibClass
 import org.grails.taglib.TagLibraryLookup
-import spock.lang.IgnoreIf
+import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 
 
@@ -153,8 +153,9 @@ out.print(messageClosure('World'))
         t.metaInfo.compilationException.message.contains('Cannot find matching method java.util.Date#getTimeTypo()')
     }
 
-    // GROOVY-12041: undeclared GSP variables are not reported through this type-checking extension path on Groovy 5.
-    @IgnoreIf({ instance.isGroovy5OrLater() })
+    // GROOVY-12041 (open): undeclared GSP variables are not reported through this type-checking extension path on
+    // Groovy 5. Tracked as pending so the test starts failing - prompting removal of this guard - once GROOVY-12041 lands.
+    @PendingFeatureIf({ instance.isGroovy5OrLater() })
     def "should fail compilation when using invalid property"() {
         given:
         def template = '''<%@ model="Date date"%>${somename}'''
@@ -164,7 +165,8 @@ out.print(messageClosure('World'))
         t.metaInfo.compilationException.message.contains('The variable [somename] is undeclared.')
     }
 
-    @IgnoreIf({ instance.isGroovy5OrLater() })
+    // GROOVY-12041 (open): see above - same undeclared-variable check that the Groovy 5 STC extension path no longer reports.
+    @PendingFeatureIf({ instance.isGroovy5OrLater() })
     def "should fail compilation when calling method on invalid property"() {
         given:
         def template = '''<%@ model="Date date"%>${somename.somemethod([a: 1])}'''
