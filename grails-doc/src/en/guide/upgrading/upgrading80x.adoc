@@ -965,12 +965,56 @@ Previously, rendering an enum value would produce a JSON string with the type an
 Rendering an enum value as JSON will now instead throw a `ConverterException`.
 See https://github.com/apache/grails-core/pull/15212[PR 15212] for more details on this change.
 
-==== 24. Apache Groovy 5 Behavior Changes
+==== 26. GORM Properties Are Nullable by Default
+
+Grails 8 changes the validation default so that an *unconstrained persistent (domain) property is nullable by default* rather than required.
+This aligns Grails with the rest of the JVM persistence/validation ecosystem (JPA/Hibernate, Spring Data, Micronaut Data and Jakarta Bean Validation), all of which treat an unconstrained property as valid when `null`.
+
+Previously every domain property without an explicit constraint had an implicit `nullable: false` applied, so `save()` failed validation when the property was `null`.
+From Grails 8 such a property is optional unless you declare otherwise:
+
+[source,groovy]
+----
+class Book {
+    String title    // Grails 7: required, Grails 8: nullable
+
+    static constraints = {
+        title nullable: false   // declare explicitly to keep it required
+    }
+}
+----
+
+This is a *validation-layer* change only.
+Column/DDL nullability is governed separately by the mapping layer and is unaffected.
+Command objects are also unaffected: `Validateable` command-object fields remain required by default.
+
+To restore the legacy required-by-default behaviour for an entire application, set the new `grails.gorm.default.nullable` property to `false`:
+
+[source,yaml]
+.application.yml
+----
+grails:
+    gorm:
+        default:
+            nullable: false
+----
+
+The existing `grails.gorm.default.constraints` wildcard form also works:
+
+[source,groovy]
+.application.groovy
+----
+grails.gorm.default.constraints = {
+    '*'(nullable: false)
+}
+----
+
+==== 27. Apache Groovy 5 Behavior Changes
 
 Grails 8 upgrades from Apache Groovy 4 to Apache Groovy 5.
 Most applications need no changes, but a few stricter behaviors can affect application code.
 
-===== 24.1 Assigning a static field from a static closure requires the class name
+===== 27.1 Assigning a static field from a static closure requires the class name
 
 Under Groovy 5 with static compilation (`@CompileStatic` / `@GrailsCompileStatic`), assigning to a static field from inside a static closure - such as the `constraints`, `mapping`, or `namedQueries` blocks of a statically compiled class - no longer resolves an unqualified field name to the enclosing class's static field.
 Qualify the assignment with the class name:
@@ -991,7 +1035,7 @@ class Book implements Validateable {
 
 Reading a static field is unaffected; only assignment from within the static closure needs the class-name qualifier.
 
-===== 24.2 Probing a `ConfigObject` for a missing key
+===== 27.2 Probing a `ConfigObject` for a missing key
 
 In Groovy 5, indexing a `groovy.util.ConfigObject` with the subscript operator for a key that does not exist creates and inserts an empty nested `ConfigObject` for that key, rather than reading back as a falsy value.
 Code that walks a configuration source with `[]` and expects a missing key to be `null` should test for the key explicitly before reading it:

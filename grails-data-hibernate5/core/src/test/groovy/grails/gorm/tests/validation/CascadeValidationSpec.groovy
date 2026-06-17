@@ -61,6 +61,9 @@ class Business {
             people: Person
     ]
 
+    static constraints = {
+        name nullable: false
+    }
 }
 @Entity
 abstract class Person {

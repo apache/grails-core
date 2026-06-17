@@ -200,6 +200,8 @@ class Author {
     ]
 
     static constraints = {
+        name(nullable: false)   // explicit now that properties are nullable by default — this spec
+                                // uses the null-name error to detect that root beforeValidate didn't run
         publisher(nullable: true)
         ownedPublisher(nullable: true)
         defaultPublisher(nullable: true)
