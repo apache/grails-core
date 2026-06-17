@@ -34,7 +34,6 @@ dependencies {
 
     implementation 'org.apache.grails:grails-dependencies-starter-web'
     implementation 'com.h2database:h2'
-    implementation 'org.apache.grails:grails-layout'
     implementation 'org.apache.grails:grails-data-hibernate7'
     runtimeOnly 'org.hibernate:hibernate-ehcache', {
         exclude group: 'org.hibernate', module: 'hibernate-core'

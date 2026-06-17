@@ -18,6 +18,9 @@ grails:
     profile: web
     codegen:
         defaultPackage: gorm
+    gorm:
+        default:
+            nullable: false
 info:
     app:
         name: '@info.app.name@'
