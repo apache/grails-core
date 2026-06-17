@@ -489,8 +489,8 @@ class GormCriteriaQueriesSpec extends Specification {
     // ============================================
 
     void "test basic HQL query"() {
-        when: "executing HQL query with no parameters (use Map overload for plain strings)"
-        def results = Book.executeQuery("from Book where inStock = true", [:])
+        when: "executing a plain String HQL query with no parameters"
+        def results = Book.executeQuery("from Book where inStock = true")
 
         then: "results returned"
         results.size() == 6

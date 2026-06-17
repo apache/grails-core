@@ -302,24 +302,39 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         new HibernateGormStaticApiEntity(name: "test1").save(failOnError: true)
         new HibernateGormStaticApiEntity(name: "test2").save(flush: true, failOnError: true)
 
-        when:
+        when: "a plain String HQL query is executed (no params map required, as on Hibernate 5)"
         String hql = "select name from HibernateGormStaticApiEntity"
-        HibernateGormStaticApiEntity.executeQuery(hql)
+        def names = HibernateGormStaticApiEntity.executeQuery(hql)
 
-        then:
-        thrown(UnsupportedOperationException)
+        then: "the query runs and returns the projected values"
+        names.size() == 2
+        names.containsAll(['test1', 'test2'])
     }
 
     void "Test executeUpdate with plain String"() {
         given:
         new HibernateGormStaticApiEntity(name: "test").save(flush: true, failOnError: true)
 
-        when:
+        when: "a plain String HQL update is executed"
         String hql = "update HibernateGormStaticApiEntity set name = 'updated'"
-        HibernateGormStaticApiEntity.executeUpdate(hql)
+        int updated = HibernateGormStaticApiEntity.executeUpdate(hql)
 
-        then:
-        thrown(UnsupportedOperationException)
+        then: "the update runs and reports the affected row count"
+        updated == 1
+        HibernateGormStaticApiEntity.findByName('updated') != null
+    }
+
+    void "Test executeQuery with a GString binds interpolated values as parameters (injection-safe)"() {
+        given:
+        new HibernateGormStaticApiEntity(name: "test1").save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: "test2").save(flush: true, failOnError: true)
+
+        when: "a GString carrying a SQL-injection-style value is interpolated into the query"
+        String malicious = "missing' or '1'='1"
+        def results = HibernateGormStaticApiEntity.executeQuery("from HibernateGormStaticApiEntity where name = ${malicious}")
+
+        then: "the value is bound as a parameter rather than interpolated, so the injection matches no rows"
+        results.isEmpty()
     }
 
 

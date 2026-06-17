@@ -34,7 +34,6 @@ import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateAssociation;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover;
 
@@ -98,20 +97,19 @@ public class ListSecondPassBinder {
         PersistentClass referenced = mappings.getEntityBinding(entityName);
 
         if (referenced != null) {
-            boolean isManyToMany = property instanceof HibernateManyToManyProperty;
             boolean compositeIdProperty = inverseSide.isCompositeIdProperty();
 
             if (!compositeIdProperty) {
-                addBackref(property, list, referenced, isManyToMany);
+                addBackref(property, list, referenced);
             }
 
             if (shouldAddIndexBackref(list, compositeIdProperty)) {
-                addIndexBackref(property, list, referenced, isManyToMany);
+                addIndexBackref(property, list, referenced);
             }
         }
     }
 
-    private void addBackref(HibernateToManyProperty property, List list, PersistentClass referenced, boolean isManyToMany) {
+    private void addBackref(HibernateToManyProperty property, List list, PersistentClass referenced) {
         Backref prop = new Backref();
         final PersistentEntity owner = property.getOwner();
         prop.setEntityName(owner.getName());
@@ -125,9 +123,7 @@ public class ListSecondPassBinder {
         prop.setName(name);
         prop.setSelectable(false);
         prop.setUpdatable(false);
-        if (isManyToMany) {
-            prop.setInsertable(false);
-        }
+        prop.setInsertable(false);
         prop.setCollectionRole(list.getRole());
         prop.setValue(list.getKey());
 
@@ -145,14 +141,12 @@ public class ListSecondPassBinder {
         return (!list.getKey().isNullable() && !list.isInverse()) || compositeIdProperty;
     }
 
-    private void addIndexBackref(HibernateToManyProperty property, List list, PersistentClass referenced, boolean isManyToMany) {
+    private void addIndexBackref(HibernateToManyProperty property, List list, PersistentClass referenced) {
         IndexBackref ib = new IndexBackref();
         ib.setName(UNDERSCORE + property.getName() + "IndexBackref");
         ib.setUpdatable(false);
         ib.setSelectable(false);
-        if (isManyToMany) {
-            ib.setInsertable(false);
-        }
+        ib.setInsertable(false);
         ib.setCollectionRole(list.getRole());
         ib.setEntityName(list.getOwner().getEntityName());
         ib.setValue(list.getIndex());

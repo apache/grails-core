@@ -295,39 +295,29 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         findAllWithNativeSql(query, args)
     }
 
+    // The single-argument CharSequence overloads accept a plain String (executed as written, as
+    // on Hibernate 5) or a Groovy GString. A GString is never interpolated into the query text:
+    // HqlQueryContext expands every ${value} into a bound named parameter (see
+    // buildNamedParameterQueryFromGString), so the idiomatic Groovy form
+    // executeQuery("from Foo where bar = ${userInput}") is injection-safe by binding, not escaping.
     @Override
     List<D> findAll(CharSequence query) {
-        requireGString(query, 'findAll')
         doListInternal(query, [:], [], [:], false)
     }
 
     @Override
     List executeQuery(CharSequence query) {
-        requireGString(query, 'executeQuery')
         doListInternal(query, [:], [], [:], false)
     }
 
     @Override
     Integer executeUpdate(CharSequence query) {
-        requireGString(query, 'executeUpdate')
         doInternalExecuteUpdate(query, [:], [], [:])
     }
 
     @Override
     D find(CharSequence query) {
-        requireGString(query, 'find')
         doSingleInternal(query, [:], [], [:], false)
-    }
-
-    private static void requireGString(CharSequence query, String method) {
-        if (!(query instanceof GString)) {
-            throw new UnsupportedOperationException(
-                    "${method}(CharSequence) only accepts a Groovy GString with interpolated parameters " +
-                            "(e.g. ${method}(\"from Foo where bar = \${value}\")). " +
-                            "Use the parameterized overload ${method}(CharSequence, Map) or ${method}(CharSequence, Collection, Map) " +
-                            'to pass a plain String query safely.'
-            )
-        }
     }
 
     @Override

@@ -77,9 +77,9 @@ If you are migrating an application from Hibernate 5 or the Grails Hibernate 5 p
 | Several Hibernate 5 annotations or enum constants were removed or renamed.
 | Replace direct uses of `CascadeType.SAVE_UPDATE`, `@org.hibernate.annotations.Where`, `@Proxy`, and `@LazyCollection`. The GORM ORM DSL `cascade: 'save-update'` string continues to work.
 
-| HQL string safety
-| Single-argument GORM HQL overloads are reserved for Groovy `GString` values so interpolated values can be bound safely.
-| Pass a `GString` with interpolated values, or use the named-parameter or positional-parameter overload with an explicit params map or list. See <<querying-hql,HQL Queries>>.
+| HQL string safety (no migration required)
+| Single-argument GORM HQL overloads accept a plain `String` exactly as on Hibernate 5. When a Groovy `GString` is passed, its interpolated values are bound as named parameters rather than interpolated into the query text, so the idiomatic form is injection-safe by binding.
+| No change is required. For dynamic values, prefer the `GString` form (auto-bound) or an explicit named/positional params map or list. See <<querying-hql,HQL Queries>>.
 
 | H5-specific cache setup
 | Hibernate 5 cache integrations and region-factory classes are not valid Hibernate 7 cache configuration.
