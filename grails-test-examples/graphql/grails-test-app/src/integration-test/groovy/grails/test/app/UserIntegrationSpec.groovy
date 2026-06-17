@@ -50,7 +50,7 @@ class UserIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """)
-        Map obj = resp.body()
+        Map obj = resp.body
 
         then:
         obj.data == null
@@ -78,7 +78,7 @@ class UserIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """)
-        obj = resp.body()
+        obj = resp.body
 
         then:
         obj.data == null
@@ -104,7 +104,7 @@ class UserIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """)
-        Map obj = resp.body()
+        Map obj = resp.body
 
         then:
         obj.data == null
@@ -132,7 +132,7 @@ class UserIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """)
-        obj = resp.body()
+        obj = resp.body
 
         then:
         obj.data == null
@@ -177,7 +177,7 @@ class UserIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """)
-        Map obj = resp.body().data.userCreate
+        Map obj = resp.body.data.userCreate
         managerId = obj.id as Long
 
         then:
@@ -231,7 +231,7 @@ class UserIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """)
-        Map obj = resp.body().data.userCreate
+        Map obj = resp.body.data.userCreate
         subordinateId = obj.id as Long
 
         then:
@@ -282,7 +282,7 @@ class UserIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """)
-        Map obj = resp.body().data.userUpdate
+        Map obj = resp.body.data.userUpdate
 
         then:
         obj.id == subordinateId
@@ -320,7 +320,7 @@ class UserIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """)
-        List obj = resp.body().data.userList
+        List obj = resp.body.data.userList
 
         then:
         JSONObject subordinate = obj.find { it.id == subordinateId }
@@ -372,7 +372,7 @@ class UserIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """)
-        Map json = resp.body()
+        Map json = resp.body
         JSONObject obj = json.data.user
 
         then:
@@ -397,7 +397,7 @@ class UserIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """)
-        Map obj = resp.body().data.userDelete
+        Map obj = resp.body.data.userDelete
 
         then:
         !obj.success
@@ -412,7 +412,7 @@ class UserIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """)
-        Map obj = resp.body().data.userDelete
+        Map obj = resp.body.data.userDelete
 
         then:
         obj.success
@@ -427,7 +427,7 @@ class UserIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """)
-        Map obj = resp.body().data.userDelete
+        Map obj = resp.body.data.userDelete
 
         then:
         obj.success
