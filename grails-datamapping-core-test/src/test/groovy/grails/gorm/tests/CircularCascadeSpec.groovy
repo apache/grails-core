@@ -133,10 +133,18 @@ class SportValidate {
 class TeamValidate {
 
     String name
+
+    static constraints = {
+        name nullable: false
+    }
 }
 
 @Entity
 class ArenaValidate {
 
     String name
+
+    static constraints = {
+        name nullable: false
+    }
 }

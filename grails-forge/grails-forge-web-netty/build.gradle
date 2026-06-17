@@ -16,6 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+import org.gradle.api.tasks.JavaExec
 
 plugins {
     id 'org.apache.grails.buildsrc.properties'
@@ -59,8 +60,9 @@ tasks.named('test', Test) {
 application {
     mainClass = 'org.grails.forge.netty.Application'
 }
-tasks.named('run') {
+tasks.named('run', JavaExec) {
     classpath += configurations.developmentOnly
+    environment 'CORS_ALLOWED_ORIGIN', 'http://localhost:3000'
 }
 graalvmNative.toolchainDetection = false
 graalvmNative {

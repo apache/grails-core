@@ -223,6 +223,12 @@
             "defaultValue": {}
         },
         {
+            "name": "grails.gorm.default.nullable",
+            "type": "java.lang.Boolean",
+            "description": "Whether an unconstrained persistent property is nullable by default (Grails 8). Set to false to restore the legacy required-by-default behaviour.",
+            "defaultValue": true
+        },
+        {
             "name": "grails.gorm.custom.types",
             "type": "java.util.Map<java.lang.String,java.lang.Object>",
             "description": "Map of custom GORM types.",
