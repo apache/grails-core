@@ -18,6 +18,7 @@
  */
 package org.grails.plugins.databasemigration.liquibase
 
+import grails.gorm.annotation.Entity
 import liquibase.database.DatabaseConnection
 import liquibase.database.jvm.JdbcConnection
 import liquibase.snapshot.DatabaseSnapshot
@@ -25,52 +26,36 @@ import liquibase.snapshot.JdbcDatabaseSnapshot
 import liquibase.structure.DatabaseObject
 
 import org.grails.orm.hibernate.HibernateDatastore
-import org.hibernate.boot.Metadata
-import org.hibernate.boot.MetadataSources
-import org.hibernate.boot.internal.MetadataBuilderImpl
-import org.hibernate.boot.registry.StandardServiceRegistryBuilder
 import org.hibernate.dialect.H2Dialect
 import spock.lang.Specification
 
 class GormDatabaseSpec extends Specification {
 
-    protected Metadata createRealMetadata() {
-        def serviceRegistry = new StandardServiceRegistryBuilder()
-                .applySetting("hibernate.dialect", H2Dialect.class.getName())
-                .build()
-        return new MetadataBuilderImpl(
-                new MetadataSources(serviceRegistry)
-        ).build()
-    }
-
     def "test GormDatabase initialization and properties"() {
         given:
         def dialect = new H2Dialect()
-        Metadata metadata = createRealMetadata()
-        HibernateDatastore datastore = Mock {
-            getMetadata() >> metadata
-        }
+        HibernateDatastore datastore = new HibernateDatastore(GormDatabaseSpecBook)
 
         when:
-        GormDatabase gormDb = Spy(GormDatabase, constructorArgs: [dialect, datastore])
-        gormDb.getMetadata() >> metadata
+        GormDatabase gormDb = new GormDatabase(dialect, datastore)
 
         then:
         gormDb.getDialect().getClass() == dialect.getClass()
-        gormDb.getMetadata() == metadata
+        gormDb.getMetadata() == datastore.getMetadata()
         gormDb.getGormDatastore() == datastore
         gormDb.getShortName() == 'GORM'
         gormDb.getDefaultDatabaseProductName() == 'getDefaultDatabaseProductName'
         gormDb.supportsAutoIncrement()
         !gormDb.isCorrectDatabaseImplementation(Mock(DatabaseConnection))
+
+        cleanup:
+        datastore.destroy()
     }
 
     def "test GormDatabase connection and snapshot"() {
         given:
         def dialect = new H2Dialect()
-        Metadata metadata = createRealMetadata()
-        HibernateDatastore datastore = Mock()
-        datastore.getMetadata() >> metadata
+        HibernateDatastore datastore = new HibernateDatastore(GormDatabaseSpecBook)
 
         when:
         GormDatabase gormDb = new GormDatabase(dialect, datastore)
@@ -85,5 +70,13 @@ class GormDatabaseSpec extends Specification {
         then: "it returns a DatabaseSnapshot"
         snapshot instanceof DatabaseSnapshot
         snapshot.database == gormDb
+
+        cleanup:
+        datastore.destroy()
     }
+}
+
+@Entity
+class GormDatabaseSpecBook {
+    String title
 }

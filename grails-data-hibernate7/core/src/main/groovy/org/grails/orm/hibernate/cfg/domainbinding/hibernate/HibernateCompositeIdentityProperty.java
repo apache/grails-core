@@ -48,3 +48,4 @@ public class HibernateCompositeIdentityProperty extends HibernateIdentityPropert
         return parts;
     }
 }
+

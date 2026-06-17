@@ -52,6 +52,7 @@ import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
 import org.grails.datastore.mapping.proxy.ProxyHandler
+import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.query.api.BuildableCriteria as GrailsCriteria
 import org.grails.datastore.mapping.query.event.PostQueryEvent
 import org.grails.datastore.mapping.query.event.PreQueryEvent
@@ -60,6 +61,7 @@ import org.grails.orm.hibernate.query.HibernateHqlQueryCreator
 import org.grails.orm.hibernate.query.HibernatePagedResultList
 import org.grails.orm.hibernate.query.MutationHqlQuery
 import org.grails.orm.hibernate.query.HibernateQuery
+import org.grails.orm.hibernate.query.HibernateQueryArgument
 import org.grails.orm.hibernate.query.HqlListQueryBuilder
 import org.grails.orm.hibernate.query.HqlQueryContext
 import org.grails.orm.hibernate.support.HibernateRuntimeUtils
@@ -293,39 +295,29 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         findAllWithNativeSql(query, args)
     }
 
+    // The single-argument CharSequence overloads accept a plain String (executed as written, as
+    // on Hibernate 5) or a Groovy GString. A GString is never interpolated into the query text:
+    // HqlQueryContext expands every ${value} into a bound named parameter (see
+    // buildNamedParameterQueryFromGString), so the idiomatic Groovy form
+    // executeQuery("from Foo where bar = ${userInput}") is injection-safe by binding, not escaping.
     @Override
     List<D> findAll(CharSequence query) {
-        requireGString(query, 'findAll')
         doListInternal(query, [:], [], [:], false)
     }
 
     @Override
     List executeQuery(CharSequence query) {
-        requireGString(query, 'executeQuery')
         doListInternal(query, [:], [], [:], false)
     }
 
     @Override
     Integer executeUpdate(CharSequence query) {
-        requireGString(query, 'executeUpdate')
         doInternalExecuteUpdate(query, [:], [], [:])
     }
 
     @Override
     D find(CharSequence query) {
-        requireGString(query, 'find')
         doSingleInternal(query, [:], [], [:], false)
-    }
-
-    private static void requireGString(CharSequence query, String method) {
-        if (!(query instanceof GString)) {
-            throw new UnsupportedOperationException(
-                    "${method}(CharSequence) only accepts a Groovy GString with interpolated parameters " +
-                            "(e.g. ${method}(\"from Foo where bar = \${value}\")). " +
-                            "Use the parameterized overload ${method}(CharSequence, Map) or ${method}(CharSequence, Collection, Map) " +
-                            'to pass a plain String query safely.'
-            )
-        }
     }
 
     @Override
@@ -351,22 +343,57 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     @Override
     D findWhere(Map queryMap, Map args) {
         if (!queryMap) return null
-        Map coercedMap = queryMap.collectEntries { k, v -> [k.toString(), v] }
-        String hql = buildWhereHql(coercedMap)
-        doSingleInternal(hql, coercedMap, [], args, false)
+        executeSingleHqlQuery(prepareWhereHqlQuery(queryMap, buildFindWhereArgs(args)))
     }
 
     @Override
     List<D> findAllWhere(Map queryMap, Map args) {
         if (!queryMap) return null
-        Map coercedMap = queryMap.collectEntries { k, v -> [k.toString(), v] }
-        String hql = buildWhereHql(coercedMap)
-        doListInternal(hql, coercedMap, [], args, false)
+        executeListHqlQuery(prepareWhereHqlQuery(queryMap, buildQuerySettings(args)))
     }
 
-    private String buildWhereHql(Map queryMap) {
-        String whereClause = queryMap.keySet().collect { Object key -> "$key = :$key" }.join(' and ')
+    private GormQuery prepareWhereHqlQuery(Map queryMap, Map<String, Object> querySettings) {
+        Map<String, Object> coercedMap = buildQuerySettings(queryMap)
+        return prepareHqlQuery(
+                buildWhereHql(coercedMap),
+                false,
+                false,
+                buildWhereParams(coercedMap),
+                Collections.emptyList(),
+                querySettings
+        )
+    }
+
+    private String buildWhereHql(Map<String, Object> queryMap) {
+        String whereClause = queryMap.collect { String key, Object value ->
+            String propertyName = validateWherePropertyName(key)
+            value == null ? "$propertyName is null" : "$propertyName = :$propertyName"
+        }.join(' and ')
         return "from ${persistentEntity.name} where $whereClause"
+    }
+
+    private String validateWherePropertyName(String propertyName) {
+        PersistentProperty property = persistentEntity.getPropertyByName(propertyName)
+        if (property == null || property.name != propertyName) {
+            throw new IllegalArgumentException("Property [$propertyName] is not a valid property of ${persistentEntity.name}")
+        }
+        return propertyName
+    }
+
+    private static Map<String, Object> buildWhereParams(Map<String, Object> queryMap) {
+        queryMap.findAll { String key, Object value -> value != null } as Map<String, Object>
+    }
+
+    private static Map<String, Object> buildFindWhereArgs(Map args) {
+        Map<String, Object> queryArgs = buildQuerySettings(args)
+        queryArgs[HibernateQueryArgument.MAX.value()] = 1
+        return queryArgs
+    }
+
+    private static Map<String, Object> buildQuerySettings(Map args) {
+        Map<String, Object> queryArgs = new LinkedHashMap<>()
+        args?.each { Object key, Object value -> queryArgs[key.toString()] = value }
+        return queryArgs
     }
 
     @Override
@@ -392,7 +419,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         List convertedIds = ids.collect { HibernateRuntimeUtils.convertValueToType(it, idType, conversionService) }
         List<D> results = doListInternal("from $entity where $idName in (:ids)" as String, [ids: convertedIds], [], [:], false)
         Map<Object, D> byId = results.collectEntries { [(it[idName]): it] }
-        ids.collect { byId[it] }
+        convertedIds.collect { byId[it] }
     }
 
     @Override
@@ -404,8 +431,12 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
                                    Map namedParams,
                                    Collection positionalParams,
                                    Map args
-                                   , boolean isNative) {
-        def hqlQuery = prepareHqlQuery(hql, isNative, false, namedParams, positionalParams, args)
+                                    , boolean isNative) {
+        GormQuery hqlQuery = prepareHqlQuery(hql, isNative, false, namedParams, positionalParams, args)
+        executeListHqlQuery(hqlQuery)
+    }
+
+    protected List<D> executeListHqlQuery(GormQuery hqlQuery) {
         firePreQueryEvent()
         def ds = (List<D>) hqlQuery.list()
         firePostQueryEvent(ds)
@@ -418,7 +449,12 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
                                Collection positionalParams,
                                Map args, Map hints = [:], boolean isNative
     ) {
-        def hqlQuery = prepareHqlQuery(hql, isNative, false, namedParams, positionalParams, args)
+        GormQuery hqlQuery = prepareHqlQuery(hql, isNative, false, namedParams, positionalParams, args)
+        executeSingleHqlQuery(hqlQuery)
+    }
+
+    @SuppressWarnings('GroovyAssignabilityCheck')
+    private D executeSingleHqlQuery(GormQuery hqlQuery) {
         firePreQueryEvent()
         def sm = hqlQuery.singleResult()
         firePostQueryEvent(sm)

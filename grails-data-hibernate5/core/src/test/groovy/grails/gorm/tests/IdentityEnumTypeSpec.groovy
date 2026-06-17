@@ -25,13 +25,13 @@ import jakarta.persistence.EnumType
 import org.grails.orm.hibernate.cfg.IdentityEnumType
 import org.hibernate.HibernateException
 import org.hibernate.MappingException
-import org.hibernate.type.descriptor.WrapperOptions
+import org.hibernate.engine.spi.SharedSessionContractImplementor
 
 import javax.sql.DataSource
 import java.sql.ResultSet
 
 /**
- * Tests for IdentityEnumType in Hibernate 7.
+ * Tests for IdentityEnumType in Hibernate 5.
  */
 class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
 
@@ -65,8 +65,6 @@ class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
         FooWithEnum.first().mySuperValue == XEnum.X__TWO
     }
 
-    // ── Direct unit tests for IdentityEnumType ────────────────────────────────
-
     def "setParameterValues initializes enumClass"() {
         given:
         def type = new IdentityEnumType()
@@ -78,7 +76,7 @@ class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
 
         then:
         type.returnedClass() == IdentityStatusEnum
-        type.getSqlType() != 0
+        type.sqlTypes()[0] != 0
     }
 
     def "setParameterValues throws MappingException for enum without getId method"() {
@@ -160,13 +158,14 @@ class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
         props.setProperty(IdentityEnumType.PARAM_ENUM_CLASS, IdentityStatusEnum.name)
         type.setParameterValues(props)
         def rs = Mock(java.sql.ResultSet)
-        def options = Mock(WrapperOptions)
+        def session = manager.sessionFactory.currentSession as SharedSessionContractImplementor
 
         when:
-        def res = type.nullSafeGet(rs, 1, options)
+        def res = type.nullSafeGet(rs, ['status'] as String[], session, null)
 
         then:
-        1 * rs.getString(1) >> null
+        1 * rs.getString('status') >> null
+        1 * rs.wasNull() >> true
         res == null
     }
 
@@ -177,14 +176,14 @@ class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
         props.setProperty(IdentityEnumType.PARAM_ENUM_CLASS, IdentityStatusEnum.name)
         type.setParameterValues(props)
         def rs = Mock(java.sql.ResultSet)
-        def options = Mock(WrapperOptions)
+        def session = manager.sessionFactory.currentSession as SharedSessionContractImplementor
 
         when:
-        def res = type.nullSafeGet(rs, 1, options)
+        def res = type.nullSafeGet(rs, ['status'] as String[], session, null)
 
         then:
-        1 * rs.getString(1) >> "A"
-        (0..1) * rs.wasNull() >> false
+        1 * rs.getString('status') >> "A"
+        2 * rs.wasNull() >> false
         res == IdentityStatusEnum.ACTIVE
     }
 
@@ -195,10 +194,10 @@ class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
         props.setProperty(IdentityEnumType.PARAM_ENUM_CLASS, IdentityStatusEnum.name)
         type.setParameterValues(props)
         def st = Mock(java.sql.PreparedStatement)
-        def options = Mock(WrapperOptions)
+        def session = manager.sessionFactory.currentSession as SharedSessionContractImplementor
 
         when:
-        type.nullSafeSet(st, null, 1, options)
+        type.nullSafeSet(st, null, 1, session)
 
         then:
         1 * st.setNull(1, _)
@@ -211,10 +210,10 @@ class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
         props.setProperty(IdentityEnumType.PARAM_ENUM_CLASS, IdentityStatusEnum.name)
         type.setParameterValues(props)
         def st = Mock(java.sql.PreparedStatement)
-        def options = Mock(WrapperOptions)
+        def session = manager.sessionFactory.currentSession as SharedSessionContractImplementor
 
         when:
-        type.nullSafeSet(st, IdentityStatusEnum.INACTIVE, 1, options)
+        type.nullSafeSet(st, IdentityStatusEnum.INACTIVE, 1, session)
 
         then:
         1 * st.setString(1, "I")

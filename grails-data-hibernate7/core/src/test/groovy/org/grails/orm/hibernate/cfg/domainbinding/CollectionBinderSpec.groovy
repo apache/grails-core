@@ -54,7 +54,7 @@ class CollectionBinderSpec extends HibernateGormDatastoreSpec {
             getMetadataBuildingOptions() >> mbc.getMetadataCollector().getMetadataBuildingOptions()
             getBootstrapContext() >> mbc.getMetadataCollector().getBootstrapContext()
             getDatabase() >> mbc.getMetadataCollector().getDatabase()
-            addTable(_, _, _, _, _, _) >> { schema, catalog, name, sub, isAbstract, context ->
+            addTable(_, _, _, _, _, _, _) >> { schema, catalog, name, sub, isAbstract, context, isView ->
                 return new Table("test", name).with {
                     setSchema(schema)
                     setCatalog(catalog)

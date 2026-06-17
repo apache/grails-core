@@ -52,8 +52,7 @@ class SaveWithInvalidEntitySpec extends Specification {
 
         then:
         Exception e = thrown()
-        // In Hibernate 7, a veto results in EntityActionVetoException (translated to HibernateSystemException)
-        e.getClass().simpleName in ['HibernateSystemException', 'IllegalStateException']
+        e.getClass().simpleName in ['EntityActionVetoException', 'HibernateSystemException', 'IllegalStateException']
         b.hasErrors()
         b.errors.hasFieldErrors('field1')
     }

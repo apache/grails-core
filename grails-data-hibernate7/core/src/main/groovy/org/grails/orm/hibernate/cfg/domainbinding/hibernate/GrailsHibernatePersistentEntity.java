@@ -18,6 +18,8 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
@@ -30,7 +32,11 @@ import jakarta.annotation.Nonnull;
 
 import org.hibernate.FetchMode;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
+import org.hibernate.mapping.Column;
+import org.hibernate.mapping.Component;
+import org.hibernate.mapping.KeyValue;
 import org.hibernate.mapping.PersistentClass;
+import org.hibernate.mapping.SimpleValue;
 
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
@@ -365,5 +371,63 @@ public interface GrailsHibernatePersistentEntity extends PersistentEntity {
                     return config.getLazy();
                 })
                 .orElseGet(() -> property instanceof HibernateAssociation);
+    }
+
+    /**
+     * Sorts or indexes the columns of {@code value} to align with this entity's composite
+     * identifier order. When the identifier is a {@link Component} with an established sort order,
+     * delegates to {@link SimpleValue#sortColumns(int[])}. Otherwise assigns sequential
+     * {@link Column#setTypeIndex(int)} values so Hibernate can correlate them.
+     *
+     * @param value the foreign-key {@link SimpleValue} whose columns should be aligned
+     */
+    default void sortOrIndexForeignKeyColumns(SimpleValue value) {
+        PersistentClass pc = getPersistentClass();
+        KeyValue identifier = pc != null ? pc.getIdentifier() : null;
+        int[] originalOrder = identifier instanceof Component c ? c.sortProperties() : null;
+        if (originalOrder != null) {
+            value.sortColumns(originalOrder);
+        } else {
+            List<Column> cols = value.getColumns();
+            for (int i = 0; i < cols.size(); i++) {
+                cols.get(i).setTypeIndex(i);
+            }
+        }
+    }
+
+    /**
+     * Returns the identifier columns for the given {@code propertyNames} in the order that aligns
+     * with the sorted foreign-key layout produced by {@link #sortOrIndexForeignKeyColumns}.
+     * <p>
+     * When the identifier is a {@link Component}, columns are gathered per property name and then
+     * reordered according to the same permutation used during {@link Component#sortProperties()}.
+     * When the identifier is a plain {@link KeyValue}, its columns are returned directly.
+     *
+     * @param propertyNames composite identity property names in the caller's declared order
+     * @return identifier columns aligned with the foreign-key column layout, or an empty list if
+     *         this entity has no persistent class or identifier
+     */
+    default List<Column> getReferencedIdentifierColumns(String[] propertyNames) {
+        PersistentClass pc = getPersistentClass();
+        KeyValue identifier = pc != null ? pc.getIdentifier() : null;
+        if (identifier == null) {
+            return List.of();
+        }
+        if (!(identifier instanceof Component component)) {
+            return identifier.getColumns();
+        }
+        int[] originalOrder = component.sortProperties();
+        List<Column> referencedColumns = Arrays.stream(propertyNames)
+                .flatMap(name -> component.getProperty(name).getValue().getColumns().stream())
+                .collect(Collectors.toCollection(ArrayList::new));
+        return originalOrder != null ? sortedByPermutation(referencedColumns, originalOrder) : referencedColumns;
+    }
+
+    private static List<Column> sortedByPermutation(List<Column> columns, int[] permutation) {
+        List<Column> result = new ArrayList<>(columns);
+        for (int i = 0; i < permutation.length; i++) {
+            result.set(permutation[i], columns.get(i));
+        }
+        return result;
     }
 }

@@ -23,3 +23,4 @@ package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
  * HibernateOneToOneProperty}). Parallel to {@link HibernateToManyProperty}.
  */
 public interface HibernateToOneProperty extends HibernateAssociation {}
+

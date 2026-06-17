@@ -46,6 +46,9 @@ def book = Book.get(999)    // null
 // Get multiple by IDs
 def books = Book.getAll(1, 2, 3)
 
+// The returned list preserves the supplied id order
+def books = Book.getAll(3, 1, 2)
+
 // Load a proxy (no immediate SELECT)
 def book = Book.load(1)
 
@@ -59,6 +62,10 @@ def books = Book.list(max: 10, offset: 0, sort: 'title', order: 'asc')
 def book  = Book.findByTitle('Groovy in Action')
 def books = Book.findAllByAuthor('Dierk König')
 def count = Book.countByAuthor('Dierk König')
+
+// Property-map queries; null values match null properties
+def unreleased = Book.findWhere(releaseDate: null)
+def matching = Book.findAllWhere(author: 'Dierk König', releaseDate: null)
 ----
 
 === Update

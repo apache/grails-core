@@ -436,7 +436,7 @@ jobs:
           name: grails-gradle-artifacts.txt
           path: grails-gradle/build/grails-gradle-artifacts.txt
   publish:
-    needs: [ publishGradle, build, functional, hibernate5Functional, mongodbFunctional ]
+    needs: [ publishGradle, build, functional, hibernate5Functional, hibernate7Functional, mongodbFunctional ]
     if: >-
       ${{ always() && 
           github.repository_owner == 'apache' && 
@@ -444,7 +444,8 @@ jobs:
           needs.publishGradle.result == 'success' && 
           (needs.build.result == 'success' || needs.build.result == 'skipped') && 
           (needs.functional.result == 'success' || needs.functional.result == 'skipped') && 
-          (needs.hibernate5Functional.result == 'success' || needs.hibernate5Functional.result == 'skipped') && 
+          (needs.hibernate5Functional.result == 'success' || needs.hibernate5Functional.result == 'skipped') &&
+          (needs.hibernate7Functional.result == 'success' || needs.hibernate7Functional.result == 'skipped') &&
           (needs.mongodbFunctional.result == 'success' || needs.mongodbFunctional.result == 'skipped') 
       }}
     runs-on: ubuntu-24.04

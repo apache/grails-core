@@ -47,15 +47,22 @@ List results = Book.findAll(
     "from Book b where b.title like ${title} and b.genre = ${genre}")
 ----
 
-WARNING: The single-argument overloads (`find`, `findAll`, `executeQuery`, `executeUpdate`) only accept a Groovy `GString`. Passing a plain `String` throws `UnsupportedOperationException` to prevent accidental injection via string concatenation.
+NOTE: The single-argument overloads accept either a plain `String` (executed as written, exactly as on Hibernate 5) or a Groovy `GString`. A `GString` is never interpolated into the query text — every `${value}` is extracted and bound as a named parameter — so the idiomatic interpolated form above is injection-safe by binding rather than escaping.
 
 [source,groovy]
 ----
-// ❌ BLOCKED — throws UnsupportedOperationException at runtime
+// ✅ SAFE — a static plain String contains no untrusted input
+List results = Book.findAll("from Book where active = true")
+
+// ✅ SAFE — the GString value is bound as :p0, never interpolated into the query
+List results = Book.findAll("from Book where title = ${userInput}")
+
+// ⚠️ UNSAFE — manually concatenating untrusted input into a plain String is an
+// injection risk in any ORM; never build queries this way
 String hql = "from Book where title = '" + userInput + "'"
 Book.findAll(hql)
 
-// ✅ Use the parameterized overload for plain String queries
+// ✅ Instead use the GString form above, or the parameterized overload
 Book.findAll("from Book where title = :title", [title: userInput])
 ----
 
@@ -85,9 +92,9 @@ List results = Book.executeQuery(
     ['%Groovy%', 'Tech'])
 ----
 
-=== Pagination and Sorting
+=== Query Settings
 
-All `findAll` and `executeQuery` overloads accept a settings map as the last argument:
+`find`, `findAll`, and `executeQuery` overloads accept a settings map as the last argument. Use it for pagination and Hibernate query settings such as `cache`, `readOnly`, `fetchSize`, `timeout`, `flushMode`, and `lock`:
 
 [source,groovy]
 ----
@@ -99,7 +106,14 @@ List results = Book.executeQuery(
     "from Book b where b.genre = :genre",
     [genre: 'Tech'],
     [max: 5, offset: 0, cache: true])
+
+List locked = Book.findAll(
+    "from Book b where b.genre = :genre",
+    [genre: 'Tech'],
+    [lock: true])
 ----
+
+When `lock: true` is used, GORM requests a pessimistic write lock and disables query caching for that query.
 
 === Bulk Updates and Deletes
 

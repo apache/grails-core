@@ -201,14 +201,14 @@ class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.setEntityName(authorEntity.name)
         rootClass.setClassName(authorEntity.name)
         rootClass.setJpaEntityName(authorEntity.name)
-        rootClass.setTable(collector.addTable(null, null, "MAPSPB_AUTHOR", null, false, metadataBuildingContext))
+        rootClass.setTable(collector.addTable(null, null, "MAPSPB_AUTHOR", null, false, metadataBuildingContext, false))
         collector.addEntityBinding(rootClass)
 
         def bookRootClass = new RootClass(metadataBuildingContext)
         bookRootClass.setEntityName(bookEntity.name)
         bookRootClass.setClassName(bookEntity.name)
         bookRootClass.setJpaEntityName(bookEntity.name)
-        bookRootClass.setTable(collector.addTable(null, null, "MAPSPB_BOOK", null, false, metadataBuildingContext))
+        bookRootClass.setTable(collector.addTable(null, null, "MAPSPB_BOOK", null, false, metadataBuildingContext, false))
         collector.addEntityBinding(bookRootClass)
 
         def persistentClasses = [
@@ -251,14 +251,14 @@ class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.setEntityName(authorEntity.name)
         rootClass.setClassName(authorEntity.name)
         rootClass.setJpaEntityName(authorEntity.name)
-        rootClass.setTable(collector.addTable(null, null, "MAPSPB_AUTHOR", null, false, metadataBuildingContext))
+        rootClass.setTable(collector.addTable(null, null, "MAPSPB_AUTHOR", null, false, metadataBuildingContext, false))
         collector.addEntityBinding(rootClass)
 
         def bookRootClass = new RootClass(metadataBuildingContext)
         bookRootClass.setEntityName(bookEntity.name)
         bookRootClass.setClassName(bookEntity.name)
         bookRootClass.setJpaEntityName(bookEntity.name)
-        bookRootClass.setTable(collector.addTable(null, null, "MAPSPB_BOOK", null, false, metadataBuildingContext))
+        bookRootClass.setTable(collector.addTable(null, null, "MAPSPB_BOOK", null, false, metadataBuildingContext, false))
         collector.addEntityBinding(bookRootClass)
 
         def persistentClasses = [
@@ -302,7 +302,7 @@ class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.setEntityName(ownerEntity.name)
         rootClass.setClassName(ownerEntity.name)
         rootClass.setJpaEntityName(ownerEntity.name)
-        rootClass.setTable(collector.addTable(null, null, "MAPSPB_OWNER", null, false, metadataBuildingContext))
+        rootClass.setTable(collector.addTable(null, null, "MAPSPB_OWNER", null, false, metadataBuildingContext, false))
         collector.addEntityBinding(rootClass)
 
         def map = new org.hibernate.mapping.Map(metadataBuildingContext, rootClass)
@@ -339,7 +339,7 @@ class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.setEntityName(ownerEntity.name)
         rootClass.setClassName(ownerEntity.name)
         rootClass.setJpaEntityName(ownerEntity.name)
-        rootClass.setTable(collector.addTable(null, null, "MAPSPB_OWNER2", null, false, metadataBuildingContext))
+        rootClass.setTable(collector.addTable(null, null, "MAPSPB_OWNER2", null, false, metadataBuildingContext, false))
         collector.addEntityBinding(rootClass)
 
         def map = new org.hibernate.mapping.Map(metadataBuildingContext, rootClass)
@@ -415,7 +415,7 @@ class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         rootClass.setEntityName(ownerEntity.name)
         rootClass.setClassName(ownerEntity.name)
         rootClass.setJpaEntityName(ownerEntity.name)
-        rootClass.setTable(collector.addTable(null, null, "MAPSPB_OWNER3", null, false, metadataBuildingContext))
+        rootClass.setTable(collector.addTable(null, null, "MAPSPB_OWNER3", null, false, metadataBuildingContext, false))
         collector.addEntityBinding(rootClass)
 
         def map = new org.hibernate.mapping.Map(metadataBuildingContext, rootClass)

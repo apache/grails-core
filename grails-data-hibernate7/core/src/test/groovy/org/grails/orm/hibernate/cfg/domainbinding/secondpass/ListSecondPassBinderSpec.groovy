@@ -103,7 +103,7 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         def rootClass = new RootClass(binder.getMetadataBuildingContext())
         rootClass.setEntityName(domainClass.name)
         rootClass.setJpaEntityName(domainClass.simpleName)
-        rootClass.setTable(collector.addTable(null, null, domainClass.simpleName.toUpperCase(), null, false, binder.getMetadataBuildingContext()))
+        rootClass.setTable(collector.addTable(null, null, domainClass.simpleName.toUpperCase(), null, false, binder.getMetadataBuildingContext(), false))
         
         properties.each { propName ->
             def p = new Property()
@@ -177,7 +177,7 @@ class ListSecondPassBinderSpec extends HibernateGormDatastoreSpec {
 
         def list = new org.hibernate.mapping.List(binder.getMetadataBuildingContext(), ownerRoot)
         list.setRole("${LSBManyToManyA.name}.others".toString())
-        list.setCollectionTable(collector.addTable(null, null, "JOIN_TABLE", null, false, binder.getMetadataBuildingContext()))
+        list.setCollectionTable(collector.addTable(null, null, "JOIN_TABLE", null, false, binder.getMetadataBuildingContext(), false))
         list.setKey(new DependantValue(binder.getMetadataBuildingContext(), list.getCollectionTable(), null))
         list.setElement(new ManyToOne(binder.getMetadataBuildingContext(), list.getCollectionTable()))
         ((ManyToOne)list.getElement()).setReferencedEntityName(LSBManyToManyB.name)

@@ -27,6 +27,7 @@ import java.util.stream.Stream;
 
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
+import org.hibernate.mapping.Column;
 import org.hibernate.mapping.SimpleValue;
 
 import org.grails.orm.hibernate.cfg.ColumnConfig;
@@ -102,6 +103,13 @@ public class CompositeIdentifierToManyToOneBinder {
                     .forEach(columns::add);
         }
         simpleValueBinder.bindSimpleValue(property, null, value, path);
+        refDomainClass.sortOrIndexForeignKeyColumns(value);
+        List<Column> referencedColumns = refDomainClass.getReferencedIdentifierColumns(propertyNames);
+        if (!referencedColumns.isEmpty() &&
+                value.createForeignKeyOfEntity(refDomainClass.getName(), referencedColumns) != null) {
+            value.disableForeignKey();
+        }
+        property.markValueSorted(value);
     }
 
     /**

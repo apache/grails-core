@@ -1005,7 +1005,7 @@ Rendering an enum value as JSON will now instead throw a `ConverterException`.
 See https://github.com/apache/grails-core/pull/15212[PR 15212] for more details on this change.
 
 [[_hibernate_5_to_hibernate_7_migration]]
-==== 23. Hibernate 5 to Hibernate 7 Migration
+==== 26. Hibernate 5 to Hibernate 7 Migration
 
 Grails 8 supports both Hibernate 5 (the default) and Hibernate 7.
 If you are upgrading from Grails 7 and also want to migrate from Hibernate 5 to Hibernate 7, apply the `grails-hibernate7-bom` and the Hibernate 7 plugin in addition to the standard Grails 8 upgrade steps.
@@ -1021,7 +1021,7 @@ dependencies {
 
 The following sections cover every breaking change introduced between Hibernate ORM 5.6.x (used by Grails 7) and Hibernate ORM 7.0.x, and what you need to do in your Grails application.
 
-===== 23.1 Hibernate Session API Removals
+===== 26.1 Hibernate Session API Removals
 
 Hibernate 7 removed long-deprecated Hibernate-specific session methods in favour of the standard JPA equivalents.
 GORM's dynamic methods (`save()`, `delete()`, `get()`, `load()`, `merge()`, etc.) are **not** affected — these go through GORM's own persistence API and have been updated internally.
@@ -1052,7 +1052,7 @@ You are only affected if your code calls the Hibernate `Session` or `StatelessSe
 | `session.find(Class, id)`
 |===
 
-===== 23.2 Removed Hibernate Annotations
+===== 26.2 Removed Hibernate Annotations
 
 The following Hibernate-specific annotations were removed in Hibernate 7.
 Where a replacement exists, migrate before upgrading.
@@ -1087,7 +1087,7 @@ Where a replacement exists, migrate before upgrading.
 NOTE: Grails domain classes that use the `mapping { }` DSL are not affected by annotation removals.
 These annotations only apply if you are using Hibernate annotations directly on Java or Groovy classes.
 
-===== 23.3 CascadeType.SAVE_UPDATE Removed
+===== 26.3 CascadeType.SAVE_UPDATE Removed
 
 `CascadeType.SAVE_UPDATE` (a Hibernate-specific cascade type) was removed in Hibernate 7.
 Persisting a transient entity that has detached associations now throws `EntityExistsException` instead of silently merging.
@@ -1097,14 +1097,14 @@ If your domain mapping or annotated classes used `cascade = CascadeType.SAVE_UPD
 Also note that automatic `cascade=PERSIST` on `@Id` and `@MapsId` associations was removed.
 If you relied on this implicit behaviour, add an explicit `cascade = CascadeType.PERSIST` to the `@ManyToOne` or `@OneToOne` carrying `@MapsId`.
 
-===== 23.4 Detached Entity Operations
+===== 26.4 Detached Entity Operations
 
 Calling `refresh()` or `lock()` on a detached entity now throws `IllegalArgumentException` (JPA specification compliance).
 In Hibernate 5 and 6 this was silently permitted.
 
 If your code calls `entity.refresh()` or `entity.lock()` after the Hibernate session has been closed or the entity has been evicted, you must either re-attach the entity first (via `session.merge()`) or reload it before refreshing.
 
-===== 23.5 Native Query Temporal Type Changes
+===== 26.5 Native Query Temporal Type Changes
 
 Native SQL queries (via `executeQuery`, `withCriteria`, or a raw `Session.createNativeQuery`) now return `java.time` types (`LocalDate`, `LocalTime`, `LocalDateTime`) instead of the legacy `java.sql` types (`java.sql.Date`, `java.sql.Time`, `java.sql.Timestamp`).
 
@@ -1119,7 +1119,7 @@ hibernate:
             prefer_jdbc_datetime_types: true
 ----
 
-===== 23.6 StatelessSession Now Uses Second-Level Cache by Default
+===== 26.6 StatelessSession Now Uses Second-Level Cache by Default
 
 `StatelessSession` in Hibernate 7 participates in the second-level cache by default (it did not in Hibernate 5/6).
 If you use `withStatelessSession` for bulk operations where cache bypass was intentional, disable caching explicitly:
@@ -1132,7 +1132,7 @@ YourDomain.withStatelessSession { StatelessSession session ->
 }
 ----
 
-===== 23.7 DDL Schema Changes
+===== 26.7 DDL Schema Changes
 
 If you use `dbCreate = 'create-drop'` or `dbCreate = 'update'` in development, or generate a schema with the `schema-export` command, be aware of the following DDL differences in Hibernate 7.
 
@@ -1165,7 +1165,7 @@ If you use `dbCreate = 'create-drop'` or `dbCreate = 'update'` in development, o
 
 WARNING: If you have an existing production database, validate the schema diff before enabling `dbCreate = 'update'` or running Liquibase migrations after the Hibernate 7 upgrade.
 
-===== 23.8 Hibernate 6 Intermediate Changes
+===== 26.8 Hibernate 6 Intermediate Changes
 
 Hibernate 7 builds on Hibernate 6, which itself introduced breaking changes relative to Hibernate 5.
 The changes in Hibernate 6 that are most likely to affect a Grails application are listed here for completeness.

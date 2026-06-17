@@ -19,6 +19,8 @@
 
 package grails.gorm.tests.hasmany
 
+import grails.gorm.tests.hasmany.Book
+
 class Something {
 
     public static void main(String[] args) {

@@ -22,34 +22,37 @@ under the License.
 
 === Grails 8 / Hibernate 7
 
-==== Query API — Breaking Changes for Injection Safety
+==== Query API — Injection Safety
 
-As part of the Grails 8 / Hibernate 7 security hardening, several GORM query methods now enforce safe parameterization at runtime.
+The Grails 8 / Hibernate 7 query API keeps the Hibernate 5 calling conventions while making the idiomatic Groovy query form injection-safe by default. There is no breaking change here: the methods that accepted a plain `String` on Hibernate 5 still do.
 
-===== Single-argument HQL overloads require GString
+===== Single-argument HQL overloads
 
-The following single-argument overloads now throw `UnsupportedOperationException` when passed a plain `String`:
+The single-argument overloads continue to accept a plain `String`, exactly as on Hibernate 5:
 
 * `find(CharSequence)`
 * `findAll(CharSequence)`
 * `executeQuery(CharSequence)`
 * `executeUpdate(CharSequence)`
 
-These overloads are retained for GString use only. GORM extracts GString interpolations as named JDBC parameters, preventing HQL injection. Passing a pre-evaluated `String` bypasses this protection and is no longer permitted.
-
-*Migration*: Choose one of the following patterns:
+When a Groovy `GString` is passed instead, GORM extracts every `${value}` interpolation and binds it as a named parameter rather than interpolating it into the query text, so the idiomatic interpolated form is injection-safe by binding:
 
 [source,groovy]
 ----
-// Option 1: GString interpolation (GORM binds ${value} as :p0)
+// Plain String — executed as written (no params map required)
+Book.findAll("from Book where active = true")
+
+// GString — ${params.title} is bound as :p0, never interpolated (injection-safe)
 Book.findAll("from Book where title = ${params.title}")
 
-// Option 2: Named parameters with plain String
+// Named parameters with a plain String
 Book.findAll("from Book where title = :title", [title: params.title])
 
-// Option 3: Positional parameters
+// Positional parameters
 Book.executeQuery("from Book where title like ?1", [params.title + '%'])
 ----
+
+As in any ORM, manually concatenating untrusted input into a plain `String` (for example `"... where title = '" + userInput + "'"`) remains an injection risk and should be avoided in favour of the GString or parameterized forms above.
 
 ===== `findWithSql` / `findAllWithSql` renamed
 

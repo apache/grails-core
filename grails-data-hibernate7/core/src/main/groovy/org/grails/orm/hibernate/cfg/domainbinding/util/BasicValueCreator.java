@@ -69,17 +69,22 @@ public class BasicValueCreator {
         BasicValue basicValue = new BasicValue(metadataBuildingContext, property.getTable());
         Optional.ofNullable(property.getGeneratorName()).ifPresent(generator ->
                 basicValue.setCustomIdGeneratorCreator(context -> createGenerator(
+                        property,
                         property.getHibernateOwner(),
-                        context.getValue() == null ? new GeneratorCreationContextWrapper(context, basicValue) : context,
+                        new GeneratorCreationContextWrapper(context, basicValue),
                         generator)));
         return basicValue;
     }
 
     private Generator createGenerator(
+            HibernatePersistentProperty property,
             GrailsHibernatePersistentEntity domainClass,
             GeneratorCreationContext context,
             String generatorName) {
         HibernateSimpleIdentity mappedId = domainClass.getHibernateIdentity() instanceof HibernateSimpleIdentity id ? id : null;
+        if (mappedId == null) {
+            mappedId = property.buildPropertyIdentity().orElse(null);
+        }
         return grailsSequenceWrapper.getGenerator(
                 generatorName, context, mappedId, domainClass, jdbcEnvironment, namingStrategy);
     }

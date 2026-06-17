@@ -58,5 +58,6 @@ public class BidirectionalOneToManyLinker {
             key.addColumn(mappingColumn);
             key.getTable().addColumn(mappingColumn);
         }
+        key.sortProperties();
     }
 }
