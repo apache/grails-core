@@ -408,6 +408,51 @@ class HttpClientSupportSpec extends Specification {
         'custom' | HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build()
     }
 
+    void 'form request helper encodes multi-value data and forwards headers'() {
+        given:
+        server.expectations {
+            POST('/form/post-default') {
+                called(1)
+                decoder('application/x-www-form-urlencoded', Decoders.utf8String)
+                body('name=Post+Default&tag=red&tag=blue&description=R%26D%2FQA', 'application/x-www-form-urlencoded')
+                responder {
+                    body('hello')
+                }
+            }
+            POST('/form/post-header-client') {
+                called(1)
+                header('X-Req', 'F1')
+                decoder('application/x-www-form-urlencoded', Decoders.utf8String)
+                body('name=Post+Header+Client&description=R%26D%2FQA', 'application/x-www-form-urlencoded')
+                responder {
+                    body('hello')
+                }
+            }
+        }
+
+        and:
+        def testClient = new TestClient(server.httpUrl)
+        def customClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build()
+        def multiValueFormData = [name: 'Post Default', tag: ['red', 'blue'], description: 'R&D/QA']
+
+        when:
+        def postResponse = testClient.httpPostForm(
+                '/form/post-default',
+                multiValueFormData
+        )
+        def postHeaderResponse = testClient.httpPostForm(
+                'X-Req': 'F1',
+                '/form/post-header-client',
+                [name: 'Post Header Client', description: 'R&D/QA'],
+                customClient
+        )
+
+        then:
+        postResponse.assertEquals(200, 'hello')
+        postHeaderResponse.assertEquals(200, 'hello')
+        server.verify()
+    }
+
     @Unroll
     void 'post with MultipartBody sends multipart content type and payload bytes with #label client'(HttpClient client) {
         given:

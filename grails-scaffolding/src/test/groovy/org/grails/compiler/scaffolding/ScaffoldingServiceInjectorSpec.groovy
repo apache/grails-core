@@ -125,6 +125,33 @@ class WidgetService {
         parameterized.actualTypeArguments[0].name == 'com.example.Widget'
     }
 
+    void 'a custom base with multiple type parameters keeps the raw superclass instead of a malformed signature'() {
+        given: 'a base whose generic arity does not match the single domain argument'
+        gcl.parseClass('''
+package com.example
+import grails.plugin.scaffolding.GormService
+import org.grails.datastore.gorm.GormEntity
+class MultiParamRepository<T extends GormEntity<T>, S> extends GormService<T> {
+    MultiParamRepository(Class<T> resource, boolean readOnly) {
+        super(resource, readOnly)
+    }
+}
+''')
+
+        when:
+        def serviceClass = parseScaffoldService('WidgetService', '''
+package com.example
+import grails.plugin.scaffolding.annotation.Scaffold
+@Scaffold(MultiParamRepository<Widget, String>)
+class WidgetService {
+}
+''')
+
+        then: 'the declared base is kept, written raw - and superclass reflection does not throw'
+        serviceClass.superclass.name == 'com.example.MultiParamRepository'
+        serviceClass.genericSuperclass == serviceClass.superclass
+    }
+
     void 'the parameterized superclass narrows inherited get()/list()/save() to the domain type under static compilation'() {
         given:
         parseScaffoldService('WidgetService', '''
