@@ -24,6 +24,8 @@ import jakarta.servlet.http.HttpServletRequest
 
 import org.springframework.mock.web.MockHttpServletRequest
 
+import net.bytebuddy.ByteBuddy
+
 import spock.lang.Specification
 
 class HttpServletRequestExtensionSpec extends Specification {
@@ -63,8 +65,83 @@ class HttpServletRequestExtensionSpec extends Specification {
             StaticCaller.readName(request) == 'anonymous'
     }
 
+
+    void "Test the Class-typed getAttribute returns the attribute only when it is an instance of the requested type"() {
+        given:
+            HttpServletRequest request = new MockHttpServletRequest()
+            request.setAttribute('principal', new StringBuilder('alice'))
+            request.setAttribute('count', 42)
+
+        expect: 'a matching type returns the typed attribute'
+            request.getAttribute('principal', StringBuilder).toString() == 'alice'
+            request.getAttribute('count', Integer) == 42
+
+        and: 'a supertype of the stored attribute matches too'
+            request.getAttribute('principal', CharSequence).toString() == 'alice'
+
+        and: 'absent and wrong-typed attributes read as null - no coercion is attempted'
+            request.getAttribute('missing', StringBuilder) == null
+            request.getAttribute('count', String) == null
+
+        and: 'primitive class literals are normalized to their wrappers'
+            request.getAttribute('count', int) == 42
+
+        when: 'a null type is passed'
+            request.getAttribute('count', (Class) null)
+
+        then: 'the contract violation is reported clearly rather than as a bare NPE'
+            thrown(IllegalArgumentException)
+
+        and: 'the Class-typed overload resolves to the requested type under static compilation'
+            StaticCaller.readPrincipal(request).toString() == 'alice'
+    }
+
+    void "Test the Class-typed getAttribute honors the default for absent and wrong-typed attributes"() {
+        given:
+            HttpServletRequest request = new MockHttpServletRequest()
+            request.setAttribute('count', 42)
+
+        expect:
+            request.getAttribute('missing', String, 'fallback') == 'fallback'
+            request.getAttribute('count', String, 'fallback') == 'fallback'
+            request.getAttribute('count', Integer, 7) == 42
+    }
+
+    void "Class-typed getAttribute matches a ByteBuddy subclass proxy (the GORM/Hibernate mechanism)"() {
+        given:
+            HttpServletRequest request = new MockHttpServletRequest()
+
+            // A real ByteBuddy subclass proxy — the same machinery GORM/Hibernate use for lazy
+            // entity proxies: the generated class *extends* the target, so isInstance(target) is true.
+            Class<? extends ProxiedEntity> proxyClass = new ByteBuddy()
+                    .subclass(ProxiedEntity)
+                    .make()
+                    .load(getClass().classLoader)
+                    .loaded
+            ProxiedEntity proxy = proxyClass.getDeclaredConstructor().newInstance()
+            request.setAttribute('entity', proxy)
+
+        expect: 'the stored value is a generated subclass, not the entity class itself'
+            proxy.class != ProxiedEntity
+            ProxiedEntity.isInstance(proxy)
+
+        and: 'the Class-typed read returns the proxy, typed as the entity'
+            request.getAttribute('entity', ProxiedEntity).is(proxy)
+
+        and: 'null (not an unsafe cast) when the requested type is unrelated'
+            request.getAttribute('entity', Date) == null
+    }
+
+    static class ProxiedEntity {
+    }
+
     @CompileStatic
     static class StaticCaller {
+        static StringBuilder readPrincipal(HttpServletRequest request) {
+            StringBuilder principal = request.getAttribute('principal', StringBuilder)
+            principal
+        }
+
         static Integer readPage(HttpServletRequest request) {
             request.int('page', 1)
         }
