@@ -38,7 +38,7 @@ import org.springframework.context.annotation.Bean;
 @AutoConfiguration
 @AutoConfigureBefore(name = "org.sitemesh.autoconfigure.SiteMeshViewResolverAutoConfiguration")
 @ConditionalOnClass(SiteMeshViewResolverBeanPostProcessor.class)
-@ConditionalOnProperty(name = "sitemesh.integration", havingValue = "view-resolver")
+@ConditionalOnProperty(name = "sitemesh.integration", havingValue = "view-resolver", matchIfMissing = true)
 public class Sitemesh3AutoConfiguration {
 
     @Bean

@@ -55,7 +55,9 @@ import org.grails.web.util.WebUtils;
  *   <li>Controller's {@code static layout = 'x'} property</li>
  *   <li>{@code /layouts/<controllerName>/<actionUri>.gsp}</li>
  *   <li>{@code /layouts/<controllerName>.gsp}</li>
- *   <li>Configured default (e.g. {@code grails.sitemesh.default.layout})</li>
+ *   <li>The configured default, or — when none is configured — the
+ *       implicit {@code application} layout, matching the SiteMesh 2
+ *       plugin's GroovyPageLayoutFinder</li>
  * </ol>
  *
  * <p>Results are cached by (controllerName, actionUri) outside of the
@@ -102,7 +104,7 @@ public class Sitemesh3LayoutFinder implements DecoratorSelector<SiteMeshContext>
     @Override
     public String[] selectDecoratorPaths(Content content, SiteMeshContext context) {
         if (!(context instanceof WebAppContext)) {
-            return toArray(resolveByName(defaultDecoratorName));
+            return toArray(resolveDefaultDecorator());
         }
         HttpServletRequest request = ((WebAppContext) context).getRequest();
 
@@ -119,7 +121,7 @@ public class Sitemesh3LayoutFinder implements DecoratorSelector<SiteMeshContext>
 
         GroovyObject controller = (GroovyObject) request.getAttribute(GrailsApplicationAttributes.CONTROLLER);
         if (controller == null) {
-            return toArray(resolveByName(defaultDecoratorName));
+            return toArray(resolveDefaultDecorator());
         }
 
         GrailsWebRequest webRequest = GrailsWebRequest.lookup(request);
@@ -130,7 +132,7 @@ public class Sitemesh3LayoutFinder implements DecoratorSelector<SiteMeshContext>
         String actionUri = webRequest != null ? webRequest.getAttributes().getControllerActionUri(request) : null;
 
         if (controllerName == null || actionUri == null) {
-            return toArray(resolveByName(defaultDecoratorName));
+            return toArray(resolveDefaultDecorator());
         }
 
         LayoutCacheKey cacheKey = null;
@@ -176,7 +178,15 @@ public class Sitemesh3LayoutFinder implements DecoratorSelector<SiteMeshContext>
         if (resolved != null) {
             return resolved;
         }
-        return resolveByName(defaultDecoratorName);
+        return resolveDefaultDecorator();
+    }
+
+    // Mirrors SiteMesh 2's GroovyPageLayoutFinder: when no default layout is
+    // configured the implicit "application" layout is tried; a configured
+    // default is used as-is (and does NOT additionally fall back to
+    // "application" when missing).
+    private String resolveDefaultDecorator() {
+        return resolveByName(defaultDecoratorName != null ? defaultDecoratorName : "application");
     }
 
     private String resolveByName(String name) {

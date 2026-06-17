@@ -35,7 +35,6 @@ dependencies {
 
     implementation 'org.apache.grails:grails-dependencies-starter-web'
     implementation 'com.h2database:h2'
-    implementation 'org.apache.grails:grails-layout'
     implementation 'org.apache.grails:grails-data-hibernate5'
     implementation 'org.apache.grails:grails-scaffolding'
     implementation 'org.apache.grails:grails-fields'
