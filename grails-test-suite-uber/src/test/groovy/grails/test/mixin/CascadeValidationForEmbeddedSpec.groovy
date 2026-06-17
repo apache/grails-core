@@ -62,6 +62,6 @@ class CompanyAddress {
     String country
 
     static constraints = {
-        country(blank:false)
+        country(blank:false, nullable: false)
     }
 }

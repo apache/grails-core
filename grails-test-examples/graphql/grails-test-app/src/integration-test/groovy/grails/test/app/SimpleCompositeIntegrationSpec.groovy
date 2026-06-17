@@ -45,7 +45,7 @@ class SimpleCompositeIntegrationSpec extends Specification implements GraphQLSpe
                 }
             }
         """)
-        Map obj = resp.body().data.simpleCompositeCreate
+        Map obj = resp.body.data.simpleCompositeCreate
 
         then:
         obj.title == 'x'
@@ -66,7 +66,7 @@ class SimpleCompositeIntegrationSpec extends Specification implements GraphQLSpe
                 }
             }
         """)
-        Map obj = resp.body().data.simpleCompositeUpdate
+        Map obj = resp.body.data.simpleCompositeUpdate
 
         then:
         obj.title == 'x'
@@ -85,7 +85,7 @@ class SimpleCompositeIntegrationSpec extends Specification implements GraphQLSpe
                 }
             }
         """)
-        Map obj = resp.body().data.simpleComposite
+        Map obj = resp.body.data.simpleComposite
 
         then:
         obj.title == 'x'
@@ -104,7 +104,7 @@ class SimpleCompositeIntegrationSpec extends Specification implements GraphQLSpe
                 }
             }
         """)
-        List obj = resp.body().data.simpleCompositeList
+        List obj = resp.body.data.simpleCompositeList
 
         then:
         obj.size() == 1
@@ -122,7 +122,7 @@ class SimpleCompositeIntegrationSpec extends Specification implements GraphQLSpe
                 }
             }
         """)
-        Map obj = resp.body().data.simpleCompositeDelete
+        Map obj = resp.body.data.simpleCompositeDelete
 
         then:
         obj.success

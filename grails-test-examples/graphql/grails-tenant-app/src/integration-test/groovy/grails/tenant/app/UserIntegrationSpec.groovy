@@ -45,7 +45,7 @@ class UserIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """)
-        Map obj = resp.body().data.userCreate
+        Map obj = resp.body.data.userCreate
 
         then: "The company is supplied via multi-tenancy"
         obj.id == 1
@@ -77,7 +77,7 @@ class UserIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """)
-        Map obj = resp.body().data
+        Map obj = resp.body.data
 
         then: "The company is supplied via multi-tenancy"
         obj.john.name == 'John'
@@ -98,7 +98,7 @@ class UserIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """)
-        List obj = resp.body().data.userList
+        List obj = resp.body.data.userList
 
         then: "The list is filtered by the company"
         obj.size() == 1
@@ -117,7 +117,7 @@ class UserIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """)
-        List obj = resp.body().data.userList
+        List obj = resp.body.data.userList
 
         then: "The list is filtered by the company"
         obj.size() == 2

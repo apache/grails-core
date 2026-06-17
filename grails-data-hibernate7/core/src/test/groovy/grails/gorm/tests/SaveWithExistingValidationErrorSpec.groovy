@@ -66,5 +66,6 @@ class ObjectB {
     String name
 
     static constraints = {
+        name nullable: false
     }
 }

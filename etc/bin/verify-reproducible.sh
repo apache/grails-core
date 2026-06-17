@@ -58,13 +58,36 @@ else
 fi
 
 killall -e java || true
+
+# JDK 21 (default) pass: grails-gradle composite (no Micronaut island), root
+# (Micronaut island skipped), grails-forge composite (transitively pulls in
+# the root build via includeBuild('..'), island skipped there too).
 cd grails-gradle
-./gradlew publishToMavenLocal --rerun-tasks -PskipTests --no-build-cache
+./gradlew publishToMavenLocal --rerun-tasks -PskipTests --no-build-cache --no-daemon
 cd ..
-./gradlew publishToMavenLocal --rerun-tasks -PskipTests --no-build-cache
+./gradlew publishToMavenLocal --rerun-tasks -PskipTests --no-build-cache --no-daemon -PskipMicronautProjects
 cd grails-forge
-./gradlew publishToMavenLocal --rerun-tasks -PskipTests --no-build-cache
+./gradlew publishToMavenLocal --rerun-tasks -PskipTests --no-build-cache --no-daemon -PskipMicronautProjects
 cd ..
+
+# JDK 25 pass: the Grails-Micronaut "island" only (grails-micronaut,
+# grails-micronaut-bom). Micronaut 5 platform GA targets JVM 25 bytecode so
+# these two artifacts cannot be reproduced on JDK 21. The verification
+# container provides ${JDK_25_HOME}; for local verification outside the
+# container, install Liberica JDK matching $JAVA_VERSION_MICRONAUT in
+# release.yml and export JDK_25_HOME before running this script.
+if [[ -z "${JDK_25_HOME:-}" ]]; then
+  echo "❌ JDK_25_HOME is not set; the Grails-Micronaut island requires a separate Liberica JDK 25 install."
+  echo "   In the verification container this is set automatically. Outside the container, install Liberica JDK"
+  echo "   matching JAVA_VERSION_MICRONAUT in .github/workflows/release.yml and export JDK_25_HOME=/path/to/jdk."
+  exit 1
+fi
+killall -e java || true
+echo "Switching to JDK 25 at ${JDK_25_HOME} for the Micronaut island..."
+JAVA_HOME="${JDK_25_HOME}" PATH="${JDK_25_HOME}/bin:${PATH}" \
+  ./gradlew :grails-micronaut:publishToMavenLocal :grails-micronaut-bom:publishToMavenLocal \
+  --rerun-tasks -PskipTests --no-build-cache --no-daemon
+killall -e java || true
 echo "Generating Checksums for Built Jars"
 "${SCRIPT_DIR}/generate-build-artifact-hashes.groovy" "${DOWNLOAD_LOCATION}/grails" > "${DOWNLOAD_LOCATION}/grails/etc/bin/results/second.txt"
 if [ -e "${DOWNLOAD_LOCATION}/grails/etc/bin/results/second.txt" ] && [ ! -s "${DOWNLOAD_LOCATION}/grails/etc/bin/results/second.txt" ]; then

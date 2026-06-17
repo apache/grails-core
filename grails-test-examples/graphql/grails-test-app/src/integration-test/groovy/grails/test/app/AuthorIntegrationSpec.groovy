@@ -50,7 +50,7 @@ class AuthorIntegrationSpec extends Specification implements GraphQLSpec {
             }
         """)
 
-        def obj = resp.body().data.authorCreate
+        def obj = resp.body.data.authorCreate
 
         then:
         obj.id == 1
@@ -82,7 +82,7 @@ class AuthorIntegrationSpec extends Specification implements GraphQLSpec {
         """)
 
 
-        def obj = resp.body().data.authorCreate
+        def obj = resp.body.data.authorCreate
 
         then:
         obj.id == 2
@@ -108,7 +108,7 @@ class AuthorIntegrationSpec extends Specification implements GraphQLSpec {
         """)
 
 
-        def obj = resp.body().data.authorCreate.errors
+        def obj = resp.body.data.authorCreate.errors
 
         then:
         obj.size() == 1
@@ -130,7 +130,7 @@ class AuthorIntegrationSpec extends Specification implements GraphQLSpec {
               }
             }
         """)
-        def json = resp.body()
+        def json = resp.body
         println json.toString()
         def authors = json.data.authorList
         def author1 = authors[0]
@@ -166,7 +166,7 @@ class AuthorIntegrationSpec extends Specification implements GraphQLSpec {
             }
         """)
 
-        def author = resp.body().data.author
+        def author = resp.body.data.author
 
         then:
         author.id == 2
@@ -197,7 +197,7 @@ class AuthorIntegrationSpec extends Specification implements GraphQLSpec {
             }
         """)
 
-        def obj = resp.body().data.authorUpdate
+        def obj = resp.body.data.authorUpdate
 
         then:
         obj.id == 1
@@ -218,7 +218,7 @@ class AuthorIntegrationSpec extends Specification implements GraphQLSpec {
         """)
 
         then:
-        resp.body().data.authorDelete.success == true
+        resp.body.data.authorDelete.success == true
     }
 
     void cleanupSpec() {
