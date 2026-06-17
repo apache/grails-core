@@ -89,12 +89,8 @@ public class ChainedTransactionManager implements PlatformTransactionManager {
 
         this.synchronizationManager = synchronizationManager;
         this.transactionManagers = new ArrayList<>();
-        // A single PlatformTransactionManager instance can be exposed under more than one bean
-        // name (for example the primary data source manager aliased by an additional
-        // transactionManager_<dataSource> bean). Registering the same instance twice would make
-        // MultiTransactionStatus - which is keyed by manager instance - commit or roll back that
-        // instance more than once, throwing "Transaction is already completed". Dedupe by identity
-        // while preserving the configured order.
+        // Dedupe by identity, preserving order: the same manager can be registered under several
+        // bean names, and committing one instance twice throws "Transaction is already completed".
         Set<PlatformTransactionManager> seen = Collections.newSetFromMap(new IdentityHashMap<>());
         for (PlatformTransactionManager transactionManager : transactionManagers) {
             if (seen.add(transactionManager)) {
