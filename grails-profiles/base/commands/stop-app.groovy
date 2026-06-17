@@ -19,14 +19,20 @@ File pidFile = RunningApplicationProcess.pidFile(buildDir)
 
 console.updateStatus "Stopping application..."
 
-// Record that this is a deliberate stop before terminating the process. stop-app signals only the
-// forked application JVM (not the Gradle bootRun process), so the bootRun build ends with a
-// non-zero exit rather than finishing cleanly like a Ctrl+C of the whole build. The marker is how a
-// foreground run-app blocked on that build tells a deliberate stop apart from a real startup failure.
+// Record a deliberate stop before terminating the process. This marker has nothing to do with how
+// the application is shut down - that is always a graceful ProcessHandle.destroy() (SIGTERM on
+// Unix), so JVM shutdown hooks and Spring's orderly shutdown still run. It exists only to classify
+// the message a foreground, blocking `grails run-app` prints: because stop-app terminates the forked
+// application JVM (not the Gradle bootRun process), that build returns a non-zero child exit, which
+// would otherwise be reported as a startup failure. The marker is cleared at the start of the next
+// run-app, so it can never mask a genuine failure.
 RunningApplicationProcess.requestStop(buildDir)
 
 switch (RunningApplicationProcess.stop(pidFile, 30000)) {
     case RunningApplicationProcess.StopResult.STOPPED:
+        // Leave the marker in place: a foreground run-app blocked on the bootRun build may not have
+        // observed the terminated process yet, and clearing it here would race that check. It is
+        // cleared by the next run-app instead.
         console.updateStatus "Application stopped."
         return true
     case RunningApplicationProcess.StopResult.STILL_RUNNING:

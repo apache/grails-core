@@ -110,11 +110,7 @@ class GrailsApp extends SpringApplication {
 
     @Override
     ConfigurableApplicationContext run(String... args) {
-        String pidFilePath = System.getProperty(CLI_PID_FILE_PROPERTY)
-        if (pidFilePath) {
-            // Registered before super.run() so the writer receives the early startup event.
-            addListeners(new ApplicationPidFileWriter(pidFilePath))
-        }
+        configureCliPidFileWriter()
         ConfigurableApplicationContext applicationContext = super.run(args)
         Environment environment = Environment.getCurrent()
 
@@ -130,6 +126,22 @@ class GrailsApp extends SpringApplication {
 
         printRunStatus(applicationContext)
         return applicationContext
+    }
+
+    /**
+     * Registers a Spring Boot {@link ApplicationPidFileWriter} when the CLI has supplied a PID file
+     * path through the {@code grails.cli.pid.file} system property, so the forked development
+     * application writes its own process id to the location the {@code stop-app} command reads.
+     *
+     * <p>The writer is registered before {@code super.run()} so it receives the early
+     * {@code ApplicationPreparedEvent} that triggers the write. The property is only present on the
+     * CLI/Gradle {@code run-app} path, so a normally deployed application is unaffected.</p>
+     */
+    protected void configureCliPidFileWriter() {
+        String pidFilePath = System.getProperty(CLI_PID_FILE_PROPERTY)
+        if (pidFilePath) {
+            addListeners(new ApplicationPidFileWriter(pidFilePath))
+        }
     }
 
     @Override

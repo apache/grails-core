@@ -53,6 +53,6 @@ $ grails stop-app
 
 Use `stop-app` to stop the application for the current project after it has been started with `run-app`. The command can be run from interactive mode or as a separate command from another terminal.
 
-The `--host` and `--port` options are no longer supported. `stop-app` stops the application started by `run-app` for the current project.
+On Linux and macOS the application is shut down gracefully, so JVM shutdown hooks and Spring's orderly shutdown run. On Windows the application is terminated on a best-effort basis and a graceful shutdown is not guaranteed.
 
 If no application started by `run-app` is running for the project, `stop-app` reports that the application is not running.

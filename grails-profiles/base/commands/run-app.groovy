@@ -74,6 +74,9 @@ try {
         }
     }
 
+    // Best-effort guard against starting a second app for this project. The forked app writes its
+    // PID only after it has started, so two run-app invocations launched in quick succession can
+    // both pass this check; with the default fixed port the second simply fails on a port conflict.
     if(org.grails.cli.gradle.RunningApplicationProcess.isRunning(pidFile)) {
         console.error "An application started with run-app is already running for this project. Run 'stop-app' first."
         return false

@@ -54,9 +54,16 @@ class RunningApplicationProcess {
 
     /**
      * The name of the marker file, relative to the project build directory, that {@code stop-app}
-     * writes to signal a deliberate shutdown. It lets a foreground {@code run-app} that is blocked
-     * on the {@code bootRun} build report a clean stop rather than a startup failure when its
-     * process is terminated.
+     * writes to signal a deliberate shutdown.
+     *
+     * <p>This marker is purely a message-classification hint and has nothing to do with how the
+     * application is shut down (that is always a graceful {@code ProcessHandle.destroy()}). It exists
+     * only for a foreground, blocking {@code grails run-app}: because {@code stop-app} terminates the
+     * forked application JVM rather than the Gradle process, the {@code bootRun} build returns a
+     * non-zero child exit, which would otherwise be reported as a startup failure. The marker lets
+     * that {@code run-app} report a clean stop instead. It is an empty file - only its presence
+     * matters - and it is cleared at the start of the next {@code run-app} so it can never mask a
+     * genuine startup failure.</p>
      */
     static final String STOP_MARKER_NAME = 'run-app.stopping'
 
@@ -104,13 +111,15 @@ class RunningApplicationProcess {
      * {@code run-app} blocked on the {@code bootRun} build can distinguish an intentional stop
      * from a startup failure when its process is terminated.
      *
+     * <p>The marker is an empty file; only its presence is meaningful (see {@link #isStopRequested}).</p>
+     *
      * @param buildDir the project build directory
      */
     static void requestStop(File buildDir) {
         File marker = stopMarker(buildDir)
         try {
             marker.parentFile?.mkdirs()
-            marker.setText(Long.toString(System.currentTimeMillis()), 'UTF-8')
+            marker.createNewFile()
         }
         catch (Exception ignored) {
             // Best effort: a missing marker only affects the message shown by a foreground run-app.

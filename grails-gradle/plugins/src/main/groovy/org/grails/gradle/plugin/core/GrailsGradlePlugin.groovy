@@ -598,13 +598,19 @@ class GrailsGradlePlugin extends GroovyPlugin {
     }
 
     protected void configureBootRunPidFile(Project project) {
+        // Producer side of the run-app PID contract: the forked app writes its PID to 'run-app.pid'
+        // under the Gradle build directory. The CLI stop-app command resolves the PID file
+        // independently of Gradle, via BuildSettings.TARGET_DIR (the conventional <projectDir>/build).
+        // These two locations coincide only for the DEFAULT Gradle build directory; because this uses
+        // project.layout.buildDirectory, customizing it (layout.buildDirectory) would write the PID
+        // file where stop-app does not look, so that customization is not supported for stop-app.
         Provider<RegularFile> pidFile = project.layout.buildDirectory.file(RUN_APP_PID_FILE_NAME)
         project.pluginManager.withPlugin('org.springframework.boot') {
             project.tasks.withType(BootRun).configureEach { BootRun task ->
                 // The path is resolved lazily at execution time via a CommandLineArgumentProvider
                 // (see GrailsAppBaseDirProvider) so it stays configuration-cache safe and does not
                 // force the build directory provider during configuration. The forked application
-                // reads this hard-coded location so stop-app can locate and terminate it.
+                // reads this location so stop-app can locate and terminate it.
                 task.jvmArgumentProviders.add(new RunAppPidFileProvider(CLI_PID_FILE_PROPERTY, pidFile))
             }
         }

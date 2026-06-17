@@ -18,6 +18,7 @@
  */
 package org.grails.cli.gradle
 
+import java.time.Instant
 import java.util.concurrent.TimeUnit
 
 import spock.lang.Specification
@@ -125,6 +126,41 @@ class RunningApplicationProcessSpec extends Specification {
 
         expect:
         RunningApplicationProcess.isRunning(pidFile)
+    }
+
+    void "isRunning treats a PID file written long before the live process as a recycled PID"() {
+        given: "a live process recorded in the PID file"
+        Process process = spawnLongLivedProcess()
+        File pidFile = RunningApplicationProcess.pidFile(buildDir)
+        pidFile.text = process.pid().toString()
+
+        and: "the live process exposes a start time, which the recycled-PID guard relies on"
+        Optional<Instant> startInstant = ProcessHandle.of(process.pid())
+                .flatMap { ProcessHandle handle -> handle.info().startInstant() }
+        assert startInstant.present
+
+        and: "the PID file is backdated so the live process started well after the file was written"
+        assert pidFile.setLastModified(startInstant.get().toEpochMilli() - 3_600_000L)
+
+        expect: "the guard interprets the id as recycled and reports the app as not running"
+        !RunningApplicationProcess.isRunning(pidFile)
+    }
+
+    void "stop does not terminate a process whose PID looks recycled"() {
+        given:
+        Process process = spawnLongLivedProcess()
+        File pidFile = RunningApplicationProcess.pidFile(buildDir)
+        pidFile.text = process.pid().toString()
+
+        and: "the live process exposes a start time, which the recycled-PID guard relies on"
+        Optional<Instant> startInstant = ProcessHandle.of(process.pid())
+                .flatMap { ProcessHandle handle -> handle.info().startInstant() }
+        assert startInstant.present
+        assert pidFile.setLastModified(startInstant.get().toEpochMilli() - 3_600_000L)
+
+        expect:
+        RunningApplicationProcess.stop(pidFile, 5000) == RunningApplicationProcess.StopResult.NOT_RUNNING
+        process.isAlive()
     }
 
     void "stop returns NOT_RUNNING and removes a stale PID file"() {

@@ -134,30 +134,47 @@ class GrailsGradlePluginToolchainSpec extends GradleSpecification {
         result.output.contains('MAX_HEAP=2g')
     }
 
-    def "bootRun supplies default run-app PID file"() {
+    def "bootRun supplies the default run-app PID file under the project build directory"() {
         given:
-        setupTestResourceProject('boot-run-pid')
+        def runner = setupTestResourceProject('boot-run-pid')
 
         when:
         def result = executeTask('inspectBootRunPid')
 
         then:
-        String defaultPidPath = "${File.separator}build${File.separator}run-app.pid".toString()
-        result.output.readLines().any { it.endsWith(defaultPidPath) }
+        pidFileFromOutput(result.output)?.canonicalFile ==
+                new File(runner.projectDir, "build${File.separator}run-app.pid").canonicalFile
+    }
+
+    def "bootRun supplies the default run-app PID file for a grails-web application"() {
+        given:
+        def runner = setupTestResourceProject('boot-run-pid-web')
+
+        when:
+        def result = executeTask('inspectBootRunPid')
+
+        then:
+        pidFileFromOutput(result.output)?.canonicalFile ==
+                new File(runner.projectDir, "build${File.separator}run-app.pid").canonicalFile
     }
 
     def "bootRun ignores a CLI supplied run-app PID file and uses the hard-coded location"() {
         given:
-        setupTestResourceProject('boot-run-pid')
-        File pidFile = new File('from-cli.pid').absoluteFile
-        String pidFileProperty = "-Dgrails.cli.pid.file=${pidFile.absolutePath}".toString()
+        def runner = setupTestResourceProject('boot-run-pid')
+        File cliPidFile = new File('from-cli.pid').absoluteFile
+        String pidFileProperty = "-Dgrails.cli.pid.file=${cliPidFile.absolutePath}".toString()
 
         when:
         def result = executeTask('inspectBootRunPid', [pidFileProperty])
 
         then:
-        String defaultPidPath = "${File.separator}build${File.separator}run-app.pid".toString()
-        result.output.readLines().any { it.endsWith(defaultPidPath) }
-        !result.output.contains(pidFile.absolutePath)
+        pidFileFromOutput(result.output)?.canonicalFile ==
+                new File(runner.projectDir, "build${File.separator}run-app.pid").canonicalFile
+        !result.output.contains(cliPidFile.absolutePath)
+    }
+
+    private static File pidFileFromOutput(String output) {
+        String line = output.readLines().find { it.startsWith('PID_FILE=') }
+        line ? new File(line.substring('PID_FILE='.length())) : null
     }
 }
