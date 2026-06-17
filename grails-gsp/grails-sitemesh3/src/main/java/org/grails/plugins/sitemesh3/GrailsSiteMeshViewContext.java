@@ -21,6 +21,7 @@ package org.grails.plugins.sitemesh3;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Locale;
+import java.util.Map;
 
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
@@ -54,6 +55,13 @@ import org.springframework.web.servlet.ViewResolver;
  */
 public class GrailsSiteMeshViewContext extends SiteMeshViewContext {
 
+    // Model handed to the layout view render. SiteMesh 2's <g:applyLayout>
+    // renders the decorator template with the supplied model
+    // (template.make(viewModel)); callers that need the same behavior set
+    // this before decorating. Defaults to an empty map so the standard
+    // decoration path is unchanged.
+    private Map<String, ?> viewModel = Collections.emptyMap();
+
     public GrailsSiteMeshViewContext(String contentType,
                                      HttpServletRequest request,
                                      HttpServletResponse response,
@@ -65,6 +73,10 @@ public class GrailsSiteMeshViewContext extends SiteMeshViewContext {
                                      Locale locale) {
         super(contentType, request, response, servletContext, contentProcessor, metaData,
                 includeErrorPages, viewResolver, locale);
+    }
+
+    public void setViewModel(Map<String, ?> viewModel) {
+        this.viewModel = viewModel != null ? viewModel : Collections.emptyMap();
     }
 
     @Override
@@ -89,7 +101,7 @@ public class GrailsSiteMeshViewContext extends SiteMeshViewContext {
             try {
                 View view = getViewResolver().resolveViewName(path, getLocale());
                 if (view != null) {
-                    view.render(Collections.emptyMap(), request, response);
+                    view.render(viewModel, request, response);
                     return;
                 }
             } catch (IOException | ServletException e) {

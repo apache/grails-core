@@ -20,6 +20,10 @@ package org.grails.plugins.sitemesh3;
 
 import org.sitemesh.webmvc.SiteMeshViewResolverBeanPostProcessor;
 
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.BeanFactory;
+import org.springframework.context.ApplicationListener;
+
 /**
  * {@link SiteMeshViewResolverBeanPostProcessor} preconfigured to wrap
  * Grails' {@code gspViewResolver} bean with a
@@ -41,5 +45,31 @@ public class GrailsSiteMeshViewResolverBeanPostProcessor extends SiteMeshViewRes
     public GrailsSiteMeshViewResolverBeanPostProcessor() {
         setTargetViewResolverBeanName(TARGET_VIEW_RESOLVER_BEAN_NAME);
         setSiteMeshViewResolverClass(GrailsSiteMeshViewResolver.class);
+    }
+
+    /**
+     * Contexts can include this post-processor (via {@code Sitemesh3AutoConfiguration})
+     * without the SiteMesh plugin beans being registered — the unit-test context built
+     * by grails-testing-support registers all Grails auto-configurations but never runs
+     * the plugin's {@code doWithSpring}. Decoration is impossible without those beans,
+     * so leave the view resolver unwrapped instead of failing the context.
+     *
+     * <p>Resolvers implementing {@link ApplicationListener} are also left unwrapped.
+     * When the legacy grails-layout module is on the classpath its post-processor
+     * installs the SiteMesh 2 {@code GrailsLayoutViewResolver} (an
+     * {@code ApplicationListener}) as {@code jspViewResolver}; that resolver already
+     * decorates, and wrapping it would additionally break Spring's event listener
+     * retrieval, which expects the instance to match the definition's listener type.
+     */
+    @Override
+    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+        BeanFactory beanFactory = getBeanFactory();
+        if (beanFactory == null ||
+                !beanFactory.containsBean(getContentProcessorBeanName()) ||
+                !beanFactory.containsBean(getDecoratorSelectorBeanName()) ||
+                bean instanceof ApplicationListener) {
+            return bean;
+        }
+        return super.postProcessAfterInitialization(bean, beanName);
     }
 }
