@@ -102,3 +102,9 @@ environments:
                 defaultTransactionIsolation: 2 # TRANSACTION_READ_COMMITTED
 
 book.listExcludes.vendor: ConfigVendor
+
+---
+grails:
+    gorm:
+        default:
+            nullable: false

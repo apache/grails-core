@@ -292,13 +292,14 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
     }
 
     def isNotNull() {
-        new Person(firstName: "Fred", age: 52).save(flush: true)
+        def face = new Face(name: "Smile").save(flush: true)
+        def fred = new Person(firstName: "Fred", lastName: "Rogers", age: 52, face: face).save(flush: true)
         given:
-        hibernateQuery.isNotNull("lastName")
+        hibernateQuery.isNotNull("face")
         when:
-        def newBob = hibernateQuery.singleResult()
+        def newFred = hibernateQuery.singleResult()
         then:
-        oldBob == newBob
+        fred == newFred
     }
 
     def allEq() {
