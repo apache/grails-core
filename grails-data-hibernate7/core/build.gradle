@@ -39,7 +39,6 @@ ext {
 }
 
 dependencies {
-    // TODO: Clarify and clean up dependencies
     implementation platform(project(':grails-hibernate7-bom'))
 
     api 'org.slf4j:slf4j-api'
@@ -101,9 +100,7 @@ dependencies {
 
 
     testImplementation 'com.h2database:h2'
-    testImplementation 'org.junit.platform:junit-platform-suite', {
-        // api: SelectClasses, Suite
-    }
+    testImplementation 'org.junit.platform:junit-platform-suite'
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.apache.groovy:groovy-sql'
