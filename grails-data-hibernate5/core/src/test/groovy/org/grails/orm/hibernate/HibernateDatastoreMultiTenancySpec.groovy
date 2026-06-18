@@ -24,7 +24,9 @@ import grails.gorm.multitenancy.Tenants
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
+import spock.util.environment.RestoreSystemProperties
 
+@RestoreSystemProperties
 class HibernateDatastoreMultiTenancySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
@@ -62,9 +64,6 @@ class HibernateDatastoreMultiTenancySpec extends HibernateGormDatastoreSpec {
         then:
         result.size() == 1
         result[0].tenantId == "tenant2"
-
-        cleanup:
-        System.clearProperty(SystemPropertyTenantResolver.PROPERTY_NAME)
     }
 
     void "test getDatastoreForConnection throws exception for invalid connection"() {
@@ -81,9 +80,6 @@ class HibernateDatastoreMultiTenancySpec extends HibernateGormDatastoreSpec {
 
         expect:
         datastore.resolveTenantIdentifier() == "tenant1"
-
-        cleanup:
-        System.clearProperty(SystemPropertyTenantResolver.PROPERTY_NAME)
     }
 }
 

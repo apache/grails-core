@@ -34,7 +34,7 @@ class CompositeIdWithManyToOneAndSequenceSpec extends HibernateGormDatastoreSpec
     }
 
     @Rollback
-    @Issue('https://github.com/grails/grails-data-mapping/issues/835')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/835')
     void "Test composite id one to many and sequence"() {
 
         when:"a one to many association is created"

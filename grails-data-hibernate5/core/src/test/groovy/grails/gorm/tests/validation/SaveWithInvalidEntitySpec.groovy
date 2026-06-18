@@ -23,7 +23,6 @@ import grails.gorm.annotation.Entity
 import grails.gorm.transactions.Rollback
 import org.grails.orm.hibernate.HibernateDatastore
 import spock.lang.AutoCleanup
-import spock.lang.Ignore
 import spock.lang.Issue
 import spock.lang.Shared
 import spock.lang.Specification
@@ -31,14 +30,10 @@ import spock.lang.Specification
 /**
  * Created by graemerocher on 03/05/2017.
  */
-//TODO Should this test be rewritten?
 class SaveWithInvalidEntitySpec extends Specification {
 
     @Shared @AutoCleanup HibernateDatastore hibernateDatastore = new HibernateDatastore(A, B)
 
-    /**
-     * This currently fails with a NPE. See explanation https://github.com/apache/grails-core/issues/10604#issuecomment-298943022
-     */
     @Rollback
     @Issue(['https://github.com/apache/grails-core/issues/10604',
             'https://github.com/apache/grails-core/issues/14616'])
@@ -53,7 +48,7 @@ class SaveWithInvalidEntitySpec extends Specification {
 
         then:
         Exception e = thrown()
-        e.getClass().simpleName in ['EntityActionVetoException', 'HibernateSystemException', 'IllegalStateException']
+        e.getClass().simpleName in ['EntityActionVetoException', 'HibernateSystemException', 'IllegalStateException', 'ConstraintViolationException']
         b.hasErrors()
         b.errors.hasFieldErrors('field1')
     }

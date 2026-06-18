@@ -202,7 +202,7 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
         if (hibSession == null) {
             throw new IllegalStateException("Could not obtain native Hibernate Session from Session#getNativeInterface()");
         }
-        return (T) hibSession.getReference(type, key);
+        return hibSession.getReference(type, key);
     }
 
     @Override

@@ -18,15 +18,16 @@
  */
 package grails.gorm.tests
 
+import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.OptLockNotVersioned
 import org.apache.grails.data.testing.tck.domains.OptLockVersioned
-import org.springframework.dao.OptimisticLockingFailureException
+import org.grails.orm.hibernate.support.hibernate5.HibernateOptimisticLockingFailureException
 
 /**
  * @author Burt Beckwith
  */
-class Hibernate5OptimisticLockingSpec extends GrailsDataTckSpec {
+class Hibernate5OptimisticLockingSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
     void setupSpec() {
         manager.registerDomainClasses(OptLockVersioned, OptLockNotVersioned)
@@ -69,36 +70,29 @@ class Hibernate5OptimisticLockingSpec extends GrailsDataTckSpec {
 
         when:
         OptLockVersioned.withTransaction {
-            try {
-                o = OptLockVersioned.get(o.id)
+            o = OptLockVersioned.get(o.id)
 
-                Thread.start {
-                    OptLockVersioned.withTransaction { s ->
-                        def reloaded = OptLockVersioned.get(o.id)
-                        assert reloaded
-                        assert reloaded != o
-                        reloaded.name += ' in new session'
-                        reloaded.save(flush: true)
-                        assert reloaded.version == 1
-                        assert o.version == 0
-                    }
-
-                }.join()
-
-                o.name += ' in main session'
-                o.save(flush: true)
-
-                manager.session.clear()
-                o = OptLockVersioned.get(o.id)
-            } catch (Throwable e) {
-                System.getProperties().each { key, value ->
-                    println "${key}: ${value}"
+            Thread.start {
+                OptLockVersioned.withTransaction { s ->
+                    def reloaded = OptLockVersioned.get(o.id)
+                    assert reloaded
+                    assert reloaded != o
+                    reloaded.name += ' in new session'
+                    reloaded.save(flush: true)
+                    assert reloaded.version == 1
+                    assert o.version == 0
                 }
-                throw e
-            }
+
+            }.join()
+
+            o.name += ' in main session'
+            o.save(flush: true)
+
+            manager.session.clear()
+            o = OptLockVersioned.get(o.id)
         }
         then:
-        thrown OptimisticLockingFailureException
+        thrown HibernateOptimisticLockingFailureException
     }
 
     void "Test optimistic locking disabled with 'version false'"() {

@@ -42,7 +42,7 @@ class SubclassMultipleListCollectionSpec extends Specification {
     }
 
     @Rollback
-    @Issue(['https://github.com/grails/grails-data-mapping/issues/882',
+    @Issue(['https://github.com/apache/grails-data-mapping/issues/882',
             'https://github.com/apache/grails-core/issues/14624'])
     void "test inheritance with multiple list collections"() {
         when:

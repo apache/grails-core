@@ -31,7 +31,6 @@ class CompositeIdWithJoinTableSpec extends HibernateGormDatastoreSpec {
         manager.registerDomainClasses(CompositeIdParent, CompositeIdChild)
     }
 
-    //    @Rollback
     void "test composite id with join table"() {
         when: "A parent with a composite id and a join table is saved"
         new CompositeIdParent(name: "Test", last: "Test 2")

@@ -23,7 +23,7 @@ import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.persistence.Entity
 import spock.lang.Issue
 
-@Issue('https://github.com/grails/grails-data-mapping/issues/1299')
+@Issue('https://github.com/apache/grails-data-mapping/issues/1299')
 class PersistentPropertySpec extends HibernateGormDatastoreSpec {
 
     void "test isUnidirectionalOneToMany"() {

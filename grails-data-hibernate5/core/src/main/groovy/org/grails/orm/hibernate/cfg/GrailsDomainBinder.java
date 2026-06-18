@@ -499,7 +499,7 @@ public class GrailsDomainBinder implements MetadataContributor {
             }
         } else {
             if (hasJoinKeyMapping(propConfig)) {
-                List<ColumnConfig> keys = propConfig.getJoinTable().getKeys();
+                var keys = propConfig.getJoinTable().getKeys();
                 bindSimpleValue("long", key, false, keys.getFirst().getName(), mappings);
             } else {
                 bindDependentKeyValue(property, key, mappings, sessionFactoryBeanName);
@@ -2393,7 +2393,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                     final ColumnConfig columnConfig = new ColumnConfig();
                     columnConfig.setName(namingStrategy.propertyToColumnName(property.getName()) +
                             UNDERSCORE + FOREIGN_KEY_SUFFIX);
-                    List<ColumnConfig> keys = new ArrayList<>();
+                    var keys = new ArrayList<>();
                     keys.add(columnConfig);
                     jt.setKeys(keys);
                     pc.setJoinTable(jt);
