@@ -25,6 +25,7 @@ plugins {
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-jacoco'
 }
 
 version = projectVersion
@@ -74,6 +75,13 @@ dependencies {
     testImplementation project(':grails-testing-support-datamapping')
     testImplementation project(':grails-testing-support-web')
     testImplementation 'com.h2database:h2'
+
+    // Liquibase uses JUL for logging -> redirect it to SLF4J to reliably capture its output
+    testRuntimeOnly 'org.slf4j:jul-to-slf4j'
+}
+
+tasks.named('test', Test) {
+    systemProperty("java.util.logging.config.file", "src/test/resources/logging.properties")
 }
 
 tasks.named('jar', Jar) {

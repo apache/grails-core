@@ -29,6 +29,11 @@ import org.apache.grails.data.testing.tck.domains.TestEntity
  */
 class WithTransactionSpec extends GrailsDataTckSpec {
 
+    @Override
+    void setupSpec() {
+        manager.registerDomainClasses(TestEntity, ChildEntity)
+    }
+
     void 'Test save() with transaction'() {
         given:
         TestEntity.withTransaction {

@@ -38,11 +38,13 @@ import org.hibernate.dialect.H2Dialect
 import spock.lang.AutoCleanup
 import spock.lang.Shared
 import spock.lang.Specification
+import spock.util.environment.RestoreSystemProperties
 
 /**
  * Created by graemerocher on 11/07/2016.
  */
 @Rollback
+@RestoreSystemProperties
 class PartitionedMultiTenancySpec extends Specification {
 
     @Shared @AutoCleanup HibernateDatastore datastore

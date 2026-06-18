@@ -23,8 +23,9 @@ import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class EmbeddedNonEntityAssociationSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
     void setupSpec() {
-        manager.domainClasses.addAll([Being])
+        manager.registerDomainClasses(Being)
     }
 
     void "Test persistence of embedded entities"() {
@@ -47,6 +48,7 @@ class EmbeddedNonEntityAssociationSpec extends GrailsDataTckSpec<GrailsDataCoreT
 
 @Entity
 class Being {
+
     Long id
     String name
     ResidentialAddress address
@@ -58,5 +60,6 @@ class Being {
 }
 
 class ResidentialAddress {
+
     String postCode
 }

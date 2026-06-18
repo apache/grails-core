@@ -27,20 +27,20 @@ import spock.lang.Issue
 @Issue('https://github.com/apache/grails-data-mapping/issues/617')
 class MultiColumnUniqueConstraintSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([DomainOne, Task1, TaskLink])
+        manager.registerDomainClasses(DomainOne, Task1, TaskLink)
     }
 
     void "test generated unique constraints"() {
         expect:
-        new DomainOne(controller: 'project', action: 'update').save(flush:true)
-        new DomainOne(controller: 'project', action: 'delete').save(flush:true)
-        new DomainOne(controller: 'projectTask', action: 'update').save(flush:true)
+        new DomainOne(controller: 'project', action: 'update').save(flush: true)
+        new DomainOne(controller: 'project', action: 'delete').save(flush: true)
+        new DomainOne(controller: 'projectTask', action: 'update').save(flush: true)
     }
 
     void "test generated unique constraints violation"() {
         when:
-        new DomainOne(controller: 'project', action: 'update').save(flush:true)
-        new DomainOne(controller: 'project', action: 'update').save(flush:true, validate:false)
+        new DomainOne(controller: 'project', action: 'update').save(flush: true)
+        new DomainOne(controller: 'project', action: 'update').save(flush: true, validate: false)
 
         then:
         thrown DataIntegrityViolationException

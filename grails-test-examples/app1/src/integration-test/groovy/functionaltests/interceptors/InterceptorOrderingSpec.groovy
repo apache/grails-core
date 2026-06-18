@@ -110,7 +110,7 @@ class InterceptorOrderingSpec extends Specification implements HttpClientSupport
         response.assertJson(200, [
                 blocked: true,
                 message: 'Request blocked by interceptor',
-                reason: 'testing'
+                reason : 'testing'
         ])
     }
 
@@ -120,7 +120,7 @@ class InterceptorOrderingSpec extends Specification implements HttpClientSupport
 
         then: "controller action should execute"
         response.assertJson(200, [
-                action: 'blocked',
+                action : 'blocked',
                 message: 'This should not be seen if blocked'
         ])
     }
@@ -200,8 +200,8 @@ class InterceptorOrderingSpec extends Specification implements HttpClientSupport
 
         then:
         response.assertJson(200, [
-            action: 'slowAction',
-            delay: 50
+                action: 'slowAction',
+                delay : 50
         ])
 
         // Check that timing interceptor's before phase ran and recorded start time
@@ -238,7 +238,7 @@ class InterceptorOrderingSpec extends Specification implements HttpClientSupport
 
         then:
         response.assertJson(200, [
-                data: 'testValue',
+                data               : 'testValue',
                 interceptorModified: false
         ])
     }

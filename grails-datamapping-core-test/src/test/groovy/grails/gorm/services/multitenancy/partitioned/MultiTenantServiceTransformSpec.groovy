@@ -18,19 +18,22 @@
  */
 package grails.gorm.services.multitenancy.partitioned
 
+import spock.lang.AutoCleanup
+import spock.lang.Shared
+import spock.lang.Specification
+import spock.util.environment.RestoreSystemProperties
+
 import org.grails.datastore.mapping.config.Settings
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
 import org.grails.datastore.mapping.simple.SimpleMapDatastore
-import spock.lang.AutoCleanup
-import spock.util.environment.RestoreSystemProperties
-import spock.lang.Shared
-import spock.lang.Specification
 
 @RestoreSystemProperties
 class MultiTenantServiceTransformSpec extends Specification {
 
-    @Shared @AutoCleanup SimpleMapDatastore datastore = new SimpleMapDatastore(
+    @Shared
+    @AutoCleanup
+    SimpleMapDatastore datastore = new SimpleMapDatastore(
             [(Settings.SETTING_MULTI_TENANCY_MODE)   : MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR,
              (Settings.SETTING_MULTI_TENANT_RESOLVER): new SystemPropertyTenantResolver(),
              (Settings.SETTING_DB_CREATE)            : "create-drop"
@@ -38,7 +41,8 @@ class MultiTenantServiceTransformSpec extends Specification {
             this.getClass().getPackage()
     )
 
-    @Shared def gcl
+    @Shared
+    def gcl
 
     void setupSpec() {
         gcl = new GroovyClassLoader()

@@ -58,6 +58,12 @@ class GrailsGebSettings {
     int implicitlyWait
     int pageLoadTimeout
     int scriptTimeout
+    /**
+     * A template for the Docker image to use for Geb containers. 
+     * Supports ${browser} and ${version} placeholders. 
+     * Useful for parameterizing the image based on architecture (e.g. ARM64).
+     */
+    String containerImageTemplate
 
     boolean atCheckWaiting
     Number timeout
@@ -67,6 +73,7 @@ class GrailsGebSettings {
         tracingEnabled = getBooleanProperty('grails.geb.tracing.enabled', false)
         recordingDirectoryName = System.getProperty('grails.geb.recording.directory', 'build/gebContainer/recordings')
         reportingDirectoryName = System.getProperty('grails.geb.reporting.directory', 'build/gebContainer/reports')
+        containerImageTemplate = System.getProperty('grails.geb.container.image.template')
         recordingMode = VncRecordingMode.valueOf(
                 System.getProperty('grails.geb.recording.mode', DEFAULT_RECORDING_MODE.name())
         )

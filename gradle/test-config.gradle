@@ -53,6 +53,7 @@ tasks.withType(Test).configureEach {
         ![
                 'onlyFunctionalTests',
                 'onlyHibernate5Tests',
+                'onlyHibernate7Tests',
                 'onlyMongodbTests',
                 'skipCoreTests',
                 'skipTests'
@@ -63,6 +64,13 @@ tasks.withType(Test).configureEach {
 
     useJUnitPlatform()
     jvmArgs += java17moduleReflectionCompatibilityArguments
+//    develocity {
+//        testRetry {
+//            maxRetries = configuredTestParallel == 1 ? 1 : 2
+//            maxFailures = 20
+//            failOnPassedAfterRetry = true
+//        }
+//    }
     testLogging {
         events('passed', 'skipped', 'failed')
         showExceptions = true
@@ -80,6 +88,13 @@ tasks.withType(Test).configureEach {
     afterSuite {
         System.out.print('.')
         System.out.flush()
+    }
+    // Bridge Geb-specific properties (e.g. from local.properties) to the Test JVM
+    // to allow local overrides of Docker images and other settings.
+    project.properties.each { key, value ->
+        if (key.toString().startsWith('grails.geb.')) {
+            systemProperty key, value
+        }
     }
 }
 

@@ -36,7 +36,7 @@ dependencies {
     implementation 'io.micronaut.data:micronaut-data-jdbc'
     implementation 'io.micronaut.flyway:micronaut-flyway'
     implementation 'io.micronaut.sql:micronaut-jdbc-hikari'
-    implementation "org.postgresql:postgresql"
+    implementation 'org.postgresql:postgresql'
 
     // Flyway 10.x split the PostgreSQL DatabaseType implementation out of
     // flyway-core into a dedicated module. Without it, Flyway's
@@ -45,12 +45,12 @@ dependencies {
     // analytics service crashes during datasource initialization on
     // Cloud Run, causing the deploy revision to fail its startup probe.
     runtimeOnly 'org.flywaydb:flyway-database-postgresql'
-    runtimeOnly "ch.qos.logback:logback-classic"
+    runtimeOnly 'ch.qos.logback:logback-classic'
     runtimeOnly 'io.micronaut:micronaut-jackson-databind'
 
     testCompileOnly 'io.micronaut:micronaut-inject-groovy'
 
-    testImplementation "ch.qos.logback:logback-classic:$logbackClassicVersion"
+    testImplementation 'ch.qos.logback:logback-classic'
     testImplementation 'io.micronaut:micronaut-http-client'
     testImplementation 'org.testcontainers:postgresql'
 }

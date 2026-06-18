@@ -23,7 +23,7 @@ in [Appendix: Release Setup Requirements & History](#appendix-release-setup-requ
 
 ## Prerequisites
 
-Prior to starting the release process, ensure that any other dependent library is set to a non-snapshot version in `dependencies.gradle`. Per the [Apache Release Policy](https://www.apache.org/legal/release-policy.html), all dependencies must be official releases and cannot be snapshots. The build will fail if any snapshot dependencies are present. The verification process will also now check for SNAPSHOT versions.
+Prior to starting the release process, ensure that any other dependent library is set to a non-snapshot version in `dependencies.gradle`. Per the [Apache Release Policy](https://www.apache.org/legal/release-policy.html), all dependencies must be official releases and cannot be snapshots. The build will fail if any snapshot dependencies are present. The verification process will also now check for SNAPSHOT versions. Additionally, `./gradlew validateDependencyVersions` is run during the release workflow and verification to ensure all BOM dependency versions resolve correctly.
 
 Due to a limitation with GitHub, private groups cannot be used as approvers for an environment.  For this reason, prior to performing the release, add GitHub username to asf.yaml in the environment section for approvers. Only 6 approvers may exist on a given environment.
 
@@ -136,11 +136,20 @@ Example:
 ```
 
 ### Manual Verification: Reproducible Jar Files
-After all jar files are verified to be signed by a valid Grails key, we need to build a local copy to ensure the file was built with the right code base. The `very-reproducible.sh` script handles this check, but if the bootstrap needs to be manually bootstrapped, perform the following step: 
+After all jar files are verified to be signed by a valid Grails key, we need to build a local copy to ensure the file was built with the right code base. The `verify-reproducible.sh` script handles this check, but if the bootstrap needs to be manually bootstrapped, perform the following step: 
 
     gradle -p gradle-bootstrap
 
 Further details on the building can be found in the [INSTALL](INSTALL) document.  Otherwise, run the `verify-reproducible.sh` shell script to compare the published jar files to a locally built version of them. 
+
+#### Dual-JDK requirement for the Grails-Micronaut island
+
+Grails 8 release artifacts come from TWO different JDKs and therefore TWO different reproducibility pins:
+
+- **Primary JDK (`$JAVA_VERSION` in `release.yml`, also in `.sdkmanrc` and the primary `FROM` in `etc/bin/Dockerfile`)**: builds every published artifact EXCEPT the Grails-Micronaut "island" (`grails-micronaut`, `grails-micronaut-bom`).
+- **Secondary JDK (`$JAVA_VERSION_MICRONAUT` in `release.yml`, installed alongside the primary in `etc/bin/Dockerfile` and exposed as `$JDK_25_HOME`)**: builds the two Micronaut island artifacts. The Micronaut 5 platform GA targets JVM 25 bytecode, so these two JARs cannot be reproduced on the primary JDK.
+
+The verify script understands both. Inside the verification container, `JDK_25_HOME` is already set so `verify-reproducible.sh` "just works". Outside the container, manual verifiers MUST install Liberica JDK matching `$JAVA_VERSION_MICRONAUT` from `release.yml` (for example via `sdk install java <version>-librca`) and export `JDK_25_HOME=/path/to/jdk25` before running the script - otherwise the script fails fast with a clear error.
 
 If there are any jar file differences, confirm they are relevant by following the following steps: 
 1. Extract the differing jar file using the `etc/bin/extract-build-artifact.sh <jarfilepath from diff.txt>`
@@ -155,6 +164,14 @@ There is a dockerfile checked into to assist building in an environment like Git
 The license audit can be triggered by running the gradle task `rat`. This will ensure that license requirements are met:
 
     ./gradlew rat
+
+### Manual Verification: Validating Dependency Versions
+
+To ensure that all dependencies declared in the BOM resolve correctly and no version mismatches exist, run:
+
+    ./gradlew validateDependencyVersions
+
+This task is also run automatically during the `publish` job of the release workflow, so any dependency resolution issues will fail the build before artifacts are staged.
 
 ### Manual Verification: Binary Distribution Verification
 
@@ -184,6 +201,10 @@ Verifies the wrapper distribution signature via the command:
 Extracts the zip file and verifies the contents:
 * Ensure the `LICENSE` & `NOTICE` files are present to ensure license compliance.
 
+Generates applications using the wrapper and verifies all dependencies resolve:
+* Creates a shell app and a forge app against the staging repository.
+* Runs `./gradlew dependencies` in each generated app to confirm all dependencies resolve successfully. The build will fail if any dependency is marked as `FAILED`.
+
 #### Manual Verification: Verify Grails Delegating CLI Binary Distribution
 
 The following are the Grails distribution artifacts:
@@ -205,6 +226,10 @@ Verifies the cli distribution signature via the command:
 
 Extracts the zip file and verifies the contents:
 * Ensure the `LICENSE` & `NOTICE` files are present to ensure license compliance.
+
+Generates applications using the CLIs and verifies all dependencies resolve:
+* Creates a shell app via `grails-shell-cli` and a forge app via `grails-forge-cli` against the staging repository.
+* Runs `./gradlew dependencies` in each generated app to confirm all dependencies resolve successfully. The build will fail if any dependency is marked as `FAILED`.
 
 ## 3. Verifying the CLIs are Functional
 
@@ -288,7 +313,7 @@ an example call to the checked in script to move the distributions.
 After moving the distributions, you will receive an email from the ASF reporter. Click the link in the email to mark the
 release as published or go to https://reporter.apache.org/addrelease.html?grails. The `release` job in the `Release` workflow has a step to remind you of this.
 
-For example, if the release is out of core with version `7.0.0-M4`, then the release name with be `CORE-7.0.0-M4`. Enter
+For example, if the release is out of core with version `7.0.0-M4`, then the release name will be `CORE-7.0.0-M4`. Enter
 the date you moved the distribution artifacts and report the release.
 
 ### Deploy the release to Grails Forge
@@ -383,7 +408,13 @@ Setup the key for validity:
 # Appendix: Verification from a Container
 
 The Grails image is officially built on linux in a GitHub action using an Ubuntu container. To run a linux container
-locally, you can use the following command (substitute `<git-tag-of-release` with the tag name):
+locally, you can use the following command (substitute `<git-tag-of-release>` with the tag name):
+
+The verification container ships with BOTH JDKs needed for full reproducible verification: the primary Liberica JDK
+(`$JAVA_VERSION`, default on `PATH`/`JAVA_HOME`) and the secondary Liberica JDK 25 for the Grails-Micronaut "island"
+(installed at `$JDK_25_HOME`). `verify-reproducible.sh` uses both automatically - no manual JDK switching required
+inside the container. Both pins live in `etc/bin/Dockerfile` and must stay synced with
+`$JAVA_VERSION` / `$JAVA_VERSION_MICRONAUT` in `.github/workflows/release.yml`.
 
 **macOS/Linux**
 ```bash
@@ -477,6 +508,14 @@ The Grails Development Team created several shell scripts that test reproducibil
 To test reproducibility locally, running etc/bin/test-reproducible-builds.sh will execute the necessary gradle commands
 to build the three gradle projects Grails uses. The artifacts are then saved off, and built again. Finally, the hashes
 are generated to ensure the artifacts are the same.
+
+Note that Grails 8 release artifacts come from TWO pinned JDKs: the primary one (used for everything except the
+Grails-Micronaut island) and a secondary Liberica JDK 25 (used only for `grails-micronaut` and `grails-micronaut-bom`,
+because Micronaut 5 platform GA targets JVM 25 bytecode). Both pins live in `.github/workflows/release.yml`
+(`JAVA_VERSION` and `JAVA_VERSION_MICRONAUT` respectively) and are installed side-by-side in `etc/bin/Dockerfile`. The
+verify scripts switch `JAVA_HOME` to `$JDK_25_HOME` for the island and back to the default for everything else. Anyone
+bumping either pin must also bump the matching pin in the Dockerfile so the verification container can reproduce the
+new artifacts.
 
 Some common gotchas with Java build reproducibility problems:
 

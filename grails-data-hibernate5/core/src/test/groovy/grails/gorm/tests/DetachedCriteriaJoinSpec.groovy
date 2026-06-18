@@ -19,6 +19,10 @@
 package grails.gorm.tests
 
 import grails.gorm.DetachedCriteria
+import grails.gorm.tests.entities.Club
+import grails.gorm.tests.entities.Contract
+import grails.gorm.tests.entities.Player
+import grails.gorm.tests.entities.Team
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.gorm.finders.DynamicFinder
@@ -29,7 +33,7 @@ import jakarta.persistence.criteria.JoinType
 
 class DetachedCriteriaJoinSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([Team, Club, Player, Contract])
+        manager.registerDomainClasses(Team, Club, Player, Contract)
     }
 
     def "check if count works as expected"() {

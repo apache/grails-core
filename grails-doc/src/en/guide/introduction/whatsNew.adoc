@@ -61,3 +61,10 @@ class BookController {
 ----
 
 The new `ControllerTagLibTypeCheckingExtension` (bundled with `@GrailsCompileStatic`) recognises controller classes by convention and marks tag dispatch points as permissible dynamic calls, while leaving the rest of the controller fully type-checked.
+
+==== Test HTTP Client Form Requests
+
+Integration tests that implement `HttpClientSupport` can now use `httpPostForm(...)` to send `application/x-www-form-urlencoded`
+request bodies. The helper URL-encodes form fields using UTF-8, and repeated values in a `Collection` or array are encoded as
+repeated keys in insertion order.
+

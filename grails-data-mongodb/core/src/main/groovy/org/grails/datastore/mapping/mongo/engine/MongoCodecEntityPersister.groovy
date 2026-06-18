@@ -128,8 +128,11 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
             // don't bother with query if list of keys is empty
             return []
         } else {
+            // Coerce each key to the storage type so {_id: {$in: [...]}} uses BSON values
+            // that actually match on disk when 'storedAs' differs from the declared type.
+            def coercedIds = idList.collect { coerceIdToStoredType(it, pe) }
             createQuery()
-                    .in(pe.identity.name, idList)
+                    .in(pe.identity.name, coercedIds)
                     .list()
 
         }
@@ -153,7 +156,7 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
             return null
         } else {
             MongoCollection mongoCollection = getMongoCollection(pe)
-            Document idQuery = createIdQuery(key)
+            Document idQuery = createIdQuery(coerceIdToStoredType(key, pe))
             o = mongoCollection
                     .withDocumentClass(persistentEntity.javaClass)
                     .withCodecRegistry(mongoDatastore.codecRegistry)
@@ -173,6 +176,24 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
 
     protected Document createIdQuery(Object key) {
         new Document(AbstractMongoObectEntityPersister.MONGO_ID_FIELD, key)
+    }
+
+    /**
+     * Coerce an identifier value to the {@code storedAs} type declared in the entity's id
+     * mapping, so that point-lookup queries target the BSON type actually on disk.
+     * See {@code IdentityMapping#getStoredAs()}.
+     *
+     * <p>Exercised end-to-end (via {@code retrieveEntity}/{@code retrieveAllEntities}) by
+     * {@code StringIdWithObjectIdStorageSpec}, specifically:
+     * <ul>
+     *   <li>"with storedAs ObjectId, point lookup by hex string works" — happy path, String&nbsp;&rarr;&nbsp;ObjectId</li>
+     *   <li>"with storedAs ObjectId, batch getAll resolves all ids (coerces each key in the in-list filter)"</li>
+     *   <li>"with storedAs ObjectId, point lookup of a non-hex id matches the BSON String the encoder wrote" — null-return fallback</li>
+     *   <li>"with storedAs ObjectId, legacy documents written directly as BSON ObjectId are fully accessible"</li>
+     * </ul>
+     */
+    protected Object coerceIdToStoredType(Object key, PersistentEntity entity) {
+        MongoIdCoercion.coerceIdToStoredType(key, entity)
     }
 
     @Override

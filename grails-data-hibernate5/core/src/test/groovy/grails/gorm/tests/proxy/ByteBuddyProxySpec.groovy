@@ -18,8 +18,8 @@
  */
 package grails.gorm.tests.proxy
 
-import grails.gorm.tests.Club
-import grails.gorm.tests.Team
+import grails.gorm.tests.entities.Club
+import grails.gorm.tests.entities.Team
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.mapping.reflect.ClassUtils
@@ -33,7 +33,7 @@ import spock.lang.Shared
  */
 class ByteBuddyProxySpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([Team, Club])
+        manager.registerDomainClasses(Team, Club)
     }
 
     @Shared

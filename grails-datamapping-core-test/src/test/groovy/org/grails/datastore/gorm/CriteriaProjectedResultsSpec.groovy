@@ -25,7 +25,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class CriteriaProjectedResultsSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Check])
+        manager.registerDomainClasses(Check)
     }
 
     void "Test single projection"() {
@@ -234,6 +234,7 @@ class CriteriaProjectedResultsSpec extends GrailsDataTckSpec<GrailsDataCoreTckMa
 
 @Entity
 class Check {
+
     Long id
     BigDecimal amount
     String descr

@@ -18,40 +18,37 @@
  */
 package org.apache.grails.data.mongo.core
 
-import groovy.util.logging.Slf4j
-
 import com.mongodb.BasicDBObject
 import com.mongodb.client.MongoClient
-import org.bson.Document
-import org.slf4j.LoggerFactory
-import org.testcontainers.containers.MongoDBContainer
-import org.testcontainers.containers.output.Slf4jLogConsumer
-
-import org.springframework.context.support.GenericApplicationContext
-import org.springframework.context.support.StaticMessageSource
-import org.springframework.validation.Validator
-
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
 import grails.gorm.validation.PersistentEntityValidator
+import groovy.util.logging.Slf4j
 import org.apache.grails.data.testing.tck.base.GrailsDataTckManager
 import org.apache.grails.testing.mongo.AbstractMongoGrailsExtension
+import org.bson.Document
 import org.grails.datastore.bson.query.BsonQuery
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.mongo.Birthday
 import org.grails.datastore.gorm.validation.constraints.eval.DefaultConstraintEvaluator
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstraintRegistry
-import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
+import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
+import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
 import org.grails.datastore.mapping.engine.types.AbstractMappingAwareCustomTypeMarshaller
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
+import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.mongo.MongoDatastore
 import org.grails.datastore.mapping.mongo.config.MongoSettings
-import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
-import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
 import org.grails.datastore.mapping.query.Query
+import org.slf4j.LoggerFactory
+import org.springframework.context.support.GenericApplicationContext
+import org.springframework.context.support.StaticMessageSource
+import org.springframework.validation.Validator
+import org.testcontainers.containers.MongoDBContainer
+import org.testcontainers.containers.output.Slf4jLogConsumer
 
 @Slf4j
 class GrailsDataMongoTckManager extends GrailsDataTckManager {
@@ -90,7 +87,7 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
 
     @Override
     Session createSession() {
-        def allClasses = getDomainClasses() as Class[]
+        def allClasses = domainClasses
         def ctx = new GenericApplicationContext()
         ctx.refresh()
 
@@ -126,7 +123,7 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
                 return null
             }
         })
-        mappingContext.addPersistentEntities(allClasses as Class[])
+        mappingContext.addPersistentEntities(allClasses)
         mongoClient = mongoDatastore.getMongoClient()
 
         grailsApplication = new DefaultGrailsApplication(allClasses, getClass().getClassLoader())

@@ -28,7 +28,7 @@ import org.apache.grails.data.testing.tck.domains.SimpleWidgetWithNonStandardId
 class FirstAndLastMethodSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.domainClasses.addAll([SimpleWidget, PersonWithCompositeKey, SimpleWidgetWithNonStandardId])
+        manager.registerDomainClasses(SimpleWidget, PersonWithCompositeKey, SimpleWidgetWithNonStandardId)
     }
 
     void "Test first and last method with empty datastore"() {
@@ -163,7 +163,7 @@ class FirstAndLastMethodSpec extends GrailsDataTckSpec {
     }
 
     @PendingFeatureIf(
-            value = { System.getProperty('hibernate5.gorm.suite') },
+            value = { System.getProperty('hibernate5.gorm.suite') || System.getProperty('hibernate7.gorm.suite') },
             reason = 'Was previously @Ignore'
     )
     void "Test first and last method with composite key"() {

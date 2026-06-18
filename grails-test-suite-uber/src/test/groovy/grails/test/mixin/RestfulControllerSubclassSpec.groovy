@@ -171,6 +171,10 @@ class Bottom extends Middle<Album> {
 class Album {
     String title
     String artist
+
+    static constraints = {
+        title nullable: false
+    }
 }
 
 @Artefact('Controller')

@@ -58,8 +58,9 @@ class CompilePlugin implements Plugin<Project> {
     }
 
     private static void configureJavaVersion(Project project) {
+        Integer javaVersion = lookupPropertyByType(project, 'javaVersion', Integer)
         project.tasks.withType(JavaCompile).configureEach {
-            it.options.release.set(lookupPropertyByType(project, 'javaVersion', Integer))
+            it.options.release.set(javaVersion)
         }
     }
 

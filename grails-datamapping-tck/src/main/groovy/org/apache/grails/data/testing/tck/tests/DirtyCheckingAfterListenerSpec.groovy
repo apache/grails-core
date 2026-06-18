@@ -37,7 +37,7 @@ import org.grails.datastore.mapping.engine.event.PreUpdateEvent
 class DirtyCheckingAfterListenerSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.domainClasses.addAll([TestPlayer])
+        manager.registerDomainClasses(TestPlayer)
     }
 
     TestSaveOrUpdateEventListener listener
@@ -54,7 +54,7 @@ class DirtyCheckingAfterListenerSpec extends GrailsDataTckSpec {
         }
     }
 
-    @PendingFeatureIf({ !Boolean.getBoolean('hibernate5.gorm.suite') && !Boolean.getBoolean('hibernate6.gorm.suite') && !Boolean.getBoolean('mongodb.gorm.suite') })
+    @PendingFeatureIf({ !Boolean.getBoolean('hibernate5.gorm.suite') && !Boolean.getBoolean('hibernate7.gorm.suite') && !Boolean.getBoolean('mongodb.gorm.suite') })
     void 'test state change from listener update the object'() {
 
         when:

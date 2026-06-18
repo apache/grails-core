@@ -38,12 +38,29 @@ class SharedPropertyPlugin implements Plugin<Project> {
 
     @Override
     void apply(Project project) {
+        Directory rootDirectory = findRootGrailsCoreDir(project)
         populateParentProperties(
                 project.layout.projectDirectory,
-                findRootGrailsCoreDir(project),
+                rootDirectory,
                 project.extensions.extraProperties,
                 project
         )
+        populateLocalProperties(rootDirectory, project.extensions.extraProperties, project)
+    }
+
+    void populateLocalProperties(Directory rootDirectory, ExtraPropertiesExtension ext, Project project) {
+        def localPropertiesFile = rootDirectory.file('local.properties').asFile
+        if (localPropertiesFile.exists()) {
+            project.logger.info('Using local property overrides from grails-core/local.properties')
+            localPropertiesFile.withInputStream {
+                Properties localProperties = new Properties()
+                localProperties.load(it)
+
+                for (String key : localProperties.stringPropertyNames()) {
+                    ext.set(key, localProperties.getProperty(key))
+                }
+            }
+        }
     }
 
     void populateParentProperties(Directory projectDirectory, Directory rootDirectory, ExtraPropertiesExtension ext, Project project) {

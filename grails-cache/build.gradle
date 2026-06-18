@@ -26,6 +26,7 @@ plugins {
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-jacoco'
 }
 
 version = projectVersion
@@ -53,10 +54,9 @@ dependencies {
 
     testImplementation project(':grails-testing-support-datamapping')
     testImplementation project(':grails-testing-support-web')
-    testImplementation 'org.spockframework:spock-core', {
-        exclude group: 'org.apache.groovy'
-    }
-    testImplementation 'org.mockito:mockito-core' // to allow for correct mocking with Mock()
+    testImplementation 'org.spockframework:spock-core'
+
+    testRuntimeOnly 'net.bytebuddy:byte-buddy' // Required by Spock's mocking support
 }
 
 apply {

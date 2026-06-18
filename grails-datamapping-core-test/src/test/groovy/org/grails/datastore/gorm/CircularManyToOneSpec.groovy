@@ -23,8 +23,9 @@ import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class CircularManyToOneSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
     void setupSpec() {
-        manager.domainClasses.addAll([TreeNode])
+        manager.registerDomainClasses(TreeNode)
     }
 
     void "Test that a circular many-to-one persists correctly"() {
@@ -57,6 +58,7 @@ class CircularManyToOneSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> 
 
 @Entity
 class TreeNode {
+
     Long id
     TreeNode parent
     String name

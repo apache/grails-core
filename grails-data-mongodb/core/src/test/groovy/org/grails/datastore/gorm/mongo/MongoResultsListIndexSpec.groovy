@@ -28,7 +28,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class MongoResultsListIndexSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses += [Person]
+        manager.registerDomainClasses(Person)
     }
 
     void "Test that indexing into results works with MongoDB"() {

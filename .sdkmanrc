@@ -1,6 +1,12 @@
-# Keep java version synced with .github/workflows/release.yml and etc/bin/Dockerfile
+# Keep java version synced with .github/workflows/release.yml ($JAVA_VERSION) and etc/bin/Dockerfile (primary JDK).
+# This is the default JDK for all of grails-core EXCEPT the Grails-Micronaut "island"
+# (grails-micronaut, grails-micronaut-bom), which is built against Micronaut 5 / JVM 25
+# bytecode. The release workflow installs a secondary Liberica JDK pinned via
+# $JAVA_VERSION_MICRONAUT in release.yml; for local verification, install that JDK 25
+# alongside this one (sdk install java <version>-librca) and follow the dual-JDK
+# instructions in RELEASE.md "Manual Verification: Reproducible Jar Files".
 java=21.0.7-librca
 # Keep gradle version synced with gradle.properties (gradleToolingApiVersion).
 # Update the gradle-bootstrap project to propagate the version to all gradle-wrapper.properties files.
-gradle=9.4.1
+gradle=9.5.1
 

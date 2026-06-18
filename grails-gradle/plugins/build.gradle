@@ -26,6 +26,7 @@ plugins {
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-jacoco'
 }
 
 version = projectVersion
@@ -55,7 +56,14 @@ dependencies {
     implementation "${gradleBomDependencies['grails-publish-plugin']}"
     implementation 'org.springframework.boot:spring-boot-gradle-plugin'
     implementation 'org.springframework.boot:spring-boot-loader-tools'
-    implementation 'io.spring.gradle:dependency-management-plugin'
+
+    // Maven's own model library, used by BomManagedVersions to parse BOM POMs the
+    // Maven-standard way instead of with hand-rolled XML parsing (matching the
+    // docs-core ExtractDependenciesTask). The version is pinned in dependencies.gradle
+    // (Spring Boot does not manage this artifact) and declared inline here so it is not
+    // published as a managed constraint in the consumer-facing grails-bom. Its only
+    // runtime transitive is org.codehaus.plexus:plexus-utils.
+    implementation "org.apache.maven:maven-model:${gradleBomDependencyVersions['maven-model.version']}"
 
     // Testing - Gradle TestKit is auto-added by java-gradle-plugin
     testImplementation('org.spockframework:spock-core') { transitive = false }
@@ -136,12 +144,15 @@ gradlePlugin {
             id = 'org.apache.grails.gradle.grails-integration-test'
             implementationClass = 'org.grails.gradle.plugin.core.IntegrationTestGradlePlugin'
         }
-    }
-}
-
-tasks.withType(Copy) {
-    configure {
-        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+        bomPropertyOverrides {
+            displayName = 'Grails BOM Property Overrides Plugin'
+            description = 'Enables Maven-style property-based version overrides for any Gradle platform() BOM. ' +
+                    'Apply this plugin and override versions via gradle.properties or ext[\'property.name\']. ' +
+                    'Auto-detects declared platform() BOMs by default, or accepts an explicit list via the ' +
+                    'bomPropertyOverrides extension.'
+            id = 'org.apache.grails.gradle.bom-property-overrides'
+            implementationClass = 'org.grails.gradle.plugin.bom.BomPropertyOverridesPlugin'
+        }
     }
 }
 

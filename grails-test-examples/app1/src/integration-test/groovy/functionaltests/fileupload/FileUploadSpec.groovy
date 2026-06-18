@@ -50,9 +50,9 @@ class FileUploadSpec extends Specification implements HttpClientSupport {
         then:
         response.assertJson(200, [
                 contentType: 'text/plain',
-                filename: 'test.txt',
-                size: content.bytes.length,
-                success: true
+                filename   : 'test.txt',
+                size       : content.bytes.length,
+                success    : true
         ])
     }
 
@@ -83,9 +83,9 @@ class FileUploadSpec extends Specification implements HttpClientSupport {
 
         then:
         response.assertJsonContains(200, [
-                success: true,
+                success    : true,
                 description: 'My test file',
-                category: 'documents'
+                category   : 'documents'
         ])
     }
 
@@ -169,7 +169,7 @@ class FileUploadSpec extends Specification implements HttpClientSupport {
 
         then:
         response.assertJsonContains(200, [
-                success: true,
+                success  : true,
                 validated: true
         ])
     }
@@ -185,7 +185,7 @@ class FileUploadSpec extends Specification implements HttpClientSupport {
 
         then:
         response.assertJsonContains(200, [
-                success: true,
+                success  : true,
                 validated: true,
                 extension: 'json'
         ])
@@ -203,8 +203,8 @@ class FileUploadSpec extends Specification implements HttpClientSupport {
 
         then:
         response.assertJsonContains(200, [
-                    success: true,
-                    extension :'csv'
+                success  : true,
+                extension: 'csv'
         ])
     }
 
@@ -223,10 +223,10 @@ class FileUploadSpec extends Specification implements HttpClientSupport {
         then:
         response.assertJsonContains(200, [
                 originalFilename: 'document.txt',
-                basename: 'document',
-                extension: 'txt',
-                size: content.bytes.length,
-                isEmpty: false
+                basename        : 'document',
+                extension       : 'txt',
+                size            : content.bytes.length,
+                isEmpty         : false
         ])
     }
 
@@ -242,8 +242,8 @@ class FileUploadSpec extends Specification implements HttpClientSupport {
         then:
         response.assertJsonContains(200, [
                 originalFilename: 'README',
-                basename: 'README',
-                extension: ''
+                basename        : 'README',
+                extension       : ''
         ])
     }
 
@@ -260,9 +260,9 @@ class FileUploadSpec extends Specification implements HttpClientSupport {
 
         then:
         response.assertJsonContains(200, [
-                success: true,
+                success          : true,
                 accessedViaParams: true,
-                filename: 'params-test.txt'
+                filename         : 'params-test.txt'
         ])
     }
 
@@ -281,7 +281,7 @@ class FileUploadSpec extends Specification implements HttpClientSupport {
         then:
         response.assertJsonContains(200, [
                 success: true,
-                size: 1000
+                size   : 1000
         ])
     }
 
@@ -297,9 +297,9 @@ class FileUploadSpec extends Specification implements HttpClientSupport {
 
         then:
         response.assertJson(200, [
-                success: true,
+                success : true,
                 filename: 'users.json',
-                content: jsonContent
+                content : jsonContent
         ])
     }
 
@@ -315,9 +315,9 @@ class FileUploadSpec extends Specification implements HttpClientSupport {
 
         then:
         response.assertJson(200, [
-                success: true,
+                success : true,
                 filename: 'data.xml',
-                content: xmlContent
+                content : xmlContent
         ])
     }
 }

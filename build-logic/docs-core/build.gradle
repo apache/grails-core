@@ -47,8 +47,11 @@ dependencies {
     api 'org.grails:grails-gdoc-engine:1.0.1'
     api 'org.yaml:snakeyaml:2.4'
 
+    // Maven's own model library, used by ExtractDependenciesTask to parse BOM POMs the
+    // Maven-standard way instead of with hand-rolled XML parsing.
+    api "org.apache.maven:maven-model:${gradleBomDependencyVersions['maven-model.version']}"
+
     api "org.asciidoctor:asciidoctorj:${gradleBomDependencyVersions['asciidoctorj.version']}"
-    implementation "org.springframework.boot:spring-boot-gradle-plugin:${gradleBomDependencyVersions['spring-boot.version']}"
 
     testImplementation platform("org.spockframework:spock-bom:${gradleBomDependencyVersions['gradle-spock.version']}")
     testImplementation('org.spockframework:spock-core') {
@@ -97,6 +100,7 @@ tasks.withType(Test).configureEach {
         ![
                 'onlyFunctionalTests',
                 'onlyHibernate5Tests',
+                'onlyHibernate7Tests',
                 'onlyMongodbTests',
                 'skipCoreTests',
                 'skipTests'

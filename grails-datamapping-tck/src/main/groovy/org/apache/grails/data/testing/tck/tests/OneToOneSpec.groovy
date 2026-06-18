@@ -27,6 +27,11 @@ import org.grails.datastore.mapping.model.types.OneToOne
 
 class OneToOneSpec extends GrailsDataTckSpec {
 
+    @Override
+    void setupSpec() {
+        manager.registerDomainClasses(Face, Nose, Person, Pet)
+    }
+
     def 'Test persist and retrieve unidirectional many-to-one'() {
         given: 'A domain model with a many-to-one'
         def person = new Person(firstName: 'Fred', lastName: 'Flintstone')
@@ -45,7 +50,7 @@ class OneToOneSpec extends GrailsDataTckSpec {
         pet.owner.firstName == 'Fred'
     }
 
-    def 'Test persist and retrieve one-to-one with inverse key'() {
+    def "Test persist and retrieve one-to-one with inverse key"() {
         given: 'A domain model with a one-to-one'
         def face = new Face(name: 'Joe')
         def nose = new Nose(hasFreckles: true, face: face)

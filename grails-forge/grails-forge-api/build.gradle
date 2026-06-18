@@ -55,7 +55,7 @@ dependencies {
     implementation 'io.swagger.core.v3:swagger-annotations'
     implementation 'io.projectreactor:reactor-core'
 
-    testImplementation "ch.qos.logback:logback-classic:$logbackClassicVersion"
+    testImplementation "ch.qos.logback:logback-classic"
     testImplementation 'io.micronaut:micronaut-http-client'
     testImplementation 'io.micronaut:micronaut-http-server-netty'
     testImplementation 'io.micronaut.test:micronaut-test-spock'
@@ -64,13 +64,12 @@ dependencies {
     testCompileOnly 'io.micronaut:micronaut-inject-groovy'
 
     testImplementation 'org.apache.groovy:groovy'
-    testImplementation "org.spockframework:spock-core:$spockVersion", {
+    testImplementation "org.spockframework:spock-core", {
         exclude group: 'org.apache.groovy', module: 'groovy-all'
     }
 
-    testImplementation "cglib:cglib-nodep:$cglibVersion"
-    testImplementation "org.objenesis:objenesis:$objenesisVersion"
-    testRuntimeOnly "ch.qos.logback:logback-classic:$logbackClassicVersion"
+    testRuntimeOnly "ch.qos.logback:logback-classic"
+    testRuntimeOnly "org.objenesis:objenesis:$objenesisVersion"
     testImplementation 'org.apache.groovy:groovy-test'
 }
 
@@ -81,12 +80,3 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/doc-config.gradle')
 }
 
-configurations.configureEach {
-    resolutionStrategy {
-        eachDependency { DependencyResolveDetails details ->
-            if (details.requested.name == 'spock-core') {
-                details.useVersion(spockVersion)
-            }
-        }
-    }
-}

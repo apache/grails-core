@@ -26,6 +26,7 @@ plugins {
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-jacoco'
 }
 
 version = projectVersion
@@ -33,8 +34,8 @@ group = 'org.apache.grails.data'
 
 ext {
     gormApiDocs = true
-    pomTitle = 'Grails GORM'
-    pomDescription = 'GORM - Grails Data Access Framework'
+    pomTitle = 'Grails GORM Hibernate 5'
+    pomDescription = 'GORM - Grails Data Access Framework - Hibernate 5'
 }
 
 dependencies {

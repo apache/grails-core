@@ -33,7 +33,7 @@ def publishedProjects = [
         'grails-base-bom',
         'grails-bom',
         'grails-hibernate5-bom',
-        'grails-micronaut-bom',
+        'grails-hibernate7-bom',
         'grails-bootstrap',
         'grails-cache',
         'grails-codecs',
@@ -64,17 +64,17 @@ def publishedProjects = [
         'grails-geb',
         'grails-gsp',
         'grails-gsp-core',
+        'grails-gsp-spring-boot',
         'grails-i18n',
         'grails-interceptors',
         'grails-layout',
         'grails-logging',
-        'grails-micronaut',
         'grails-mimetypes',
         'grails-rest-transforms',
         'grails-scaffolding',
         'grails-services',
         'grails-shell-cli',
-        // TODO: 'grails-sitemesh3', // Sitemesh3 has not been updated to support boot 4
+        'grails-sitemesh3',
         'grails-spring',
         'grails-taglib',
         'grails-test-core',
@@ -119,8 +119,15 @@ def publishedProjects = [
         'grails-data-hibernate5',
         'grails-data-hibernate5-core',
         'grails-data-hibernate5-dbmigration',
-        'grails-data-hibernate5-spring-boot',
         'grails-data-hibernate5-spring-orm',
+        'grails-data-hibernate5-spring-boot',
+        // hibernate7
+        'grails-data-hibernate7',
+        'grails-data-hibernate7-core',
+        'grails-data-hibernate7-dbmigration',
+        'grails-data-hibernate7-dbmigration-core',
+        'grails-data-hibernate7-spring-boot',
+        'grails-data-hibernate7-spring-orm',
         // mongodb
         'grails-data-mongodb',
         'grails-data-mongodb-bson',
@@ -128,6 +135,9 @@ def publishedProjects = [
         'grails-data-mongodb-ext',
         'grails-data-mongodb-gson-templates',
         'grails-data-mongodb-spring-boot',
+        // graphql
+        'grails-data-graphql',
+        'grails-data-graphql-core',
         // wrapper
         'grails-wrapper',
         // profiles
@@ -139,6 +149,16 @@ def publishedProjects = [
         'grails-profiles-web',
         'grails-profiles-web-plugin',
 ]
+
+def skipMicronautProjects = providers.gradleProperty('skipMicronautProjects').isPresent()
+if (!skipMicronautProjects) {
+    publishedProjects.addAll([
+            'grails-hibernate5-micronaut-bom',
+            'grails-hibernate7-micronaut-bom',
+            'grails-micronaut',
+            'grails-micronaut-bom',
+    ])
+}
 
 subprojects {
     if (name in publishedProjects) {

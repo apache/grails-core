@@ -24,8 +24,18 @@ http://www.oracle.com/webfolder/technetwork/jsc/xml/ns/javaee/index.html
 This product includes software developed by the OpenSymphony Group (http://www.opensymphony.com/). It uses Sitemesh2,
 licensed under the OpenSymphony Software License, Version 1.1. See licenses/LICENSE-opensymphony.txt for the full license terms.
 
+Liquibase Hibernate Integration
+This product includes software developed by Liquibase.org (http://www.liquibase.org) and its contributors.
+Licensed under Apache License, Version 2.0.
+
 Spring Framework ORM Hibernate 5 Support
 This product includes software from the Spring Framework project (https://spring.io/projects/spring-framework),
 vendored from Spring Framework 6.2.x. These classes were removed in Spring Framework 7.0.
 Copyright 2002-2024 the original author or authors.
+Licensed under the Apache License, Version 2.0.
+
+Roboto Font
+This product bundles the Roboto font (https://fonts.google.com/specimen/Roboto), used by the
+GORM documentation website under grails-data-docs/data-mapping-website/.
+Font data copyright Google 2012.
 Licensed under the Apache License, Version 2.0.

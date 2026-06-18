@@ -18,6 +18,7 @@
  */
 package grails.gorm.tests
 
+import grails.gorm.tests.entities.Club
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
@@ -28,7 +29,7 @@ import spock.lang.Issue
  */
 class DeleteAllWhereSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([Club])
+        manager.registerDomainClasses(Club)
     }
 
     @Issue('https://github.com/apache/grails-data-mapping/issues/969')

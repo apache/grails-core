@@ -551,12 +551,23 @@ public abstract class MappingFactory<R extends Entity, T extends Property> {
                 return ValueGenerator.AUTO;
             }
 
+            @Override
+            public Class<?> getStoredAs() {
+                // Read from the underlying property so backend-specific hooks (e.g. Mongo's
+                // global default applied in createIdentity) are observable, even for domains
+                // without an explicit `static mapping` block.
+                Property mappedForm = getMappedForm();
+                return mappedForm != null ? mappedForm.getStoredAs() : null;
+            }
+
             public ClassMapping getClassMapping() {
                 return classMapping;
             }
 
             public Property getMappedForm() {
-                return classMapping.getEntity().getIdentity().getMapping().getMappedForm();
+                // Null-safe for composite-key entities, which have null getIdentity().
+                PersistentProperty identity = classMapping.getEntity().getIdentity();
+                return identity != null ? identity.getMapping().getMappedForm() : null;
             }
         };
     }
@@ -578,6 +589,14 @@ public abstract class MappingFactory<R extends Entity, T extends Property> {
             @Override
             public ValueGenerator getGenerator() {
                 return generator != null ? ValueGenerator.valueOf(generator) : ValueGenerator.AUTO;
+            }
+
+            @Override
+            public Class<?> getStoredAs() {
+                // Read dynamically from the underlying property so downstream hooks (e.g. Mongo's
+                // global default applied in createIdentity) remain observable even when they run
+                // after this IdentityMapping has been constructed.
+                return property != null ? property.getStoredAs() : null;
             }
 
             public ClassMapping getClassMapping() {

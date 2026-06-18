@@ -26,6 +26,7 @@ plugins {
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-jacoco'
 }
 
 version = projectVersion
@@ -49,8 +50,8 @@ dependencies {
 
     testImplementation 'org.apache.groovy:groovy'
     testImplementation 'org.postgresql:postgresql'
-    testImplementation 'org.testcontainers:postgresql:1.20.1'
-    testImplementation 'org.testcontainers:testcontainers:1.20.1'
+    testImplementation 'org.testcontainers:testcontainers-postgresql'
+    testImplementation 'org.testcontainers:testcontainers'
     testImplementation 'org.slf4j:slf4j-simple'
     testRuntimeOnly 'net.bytebuddy:byte-buddy'
 }

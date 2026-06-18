@@ -23,8 +23,9 @@ import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class ManyToManySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
     void setupSpec() {
-        manager.domainClasses.addAll([Account, Invoice])
+        manager.registerDomainClasses(Account, Invoice)
     }
 
     void "Test save and load many-to-many association"() {
@@ -48,6 +49,7 @@ class ManyToManySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
 @Entity
 class Account {
+
     Long id
     Set invoices
     static hasMany = [invoices: Invoice]
@@ -55,6 +57,7 @@ class Account {
 
 @Entity
 class Invoice {
+
     Long id
     static belongsTo = [Account]
     Set accounts
