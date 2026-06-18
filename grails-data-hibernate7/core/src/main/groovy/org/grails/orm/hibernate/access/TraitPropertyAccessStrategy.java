@@ -23,9 +23,6 @@ import java.lang.reflect.Method;
 
 import org.codehaus.groovy.transform.trait.Traits;
 
-import org.checkerframework.checker.initialization.qual.Initialized;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.UnknownKeyFor;
 import org.hibernate.MappingException;
 import org.hibernate.property.access.spi.Getter;
 import org.hibernate.property.access.spi.GetterFieldImpl;
@@ -57,12 +54,8 @@ public class TraitPropertyAccessStrategy implements PropertyAccessStrategy {
         return traitClass.getName().replace('.', '_') + "__" + fieldName;
     }
 
-    @java.lang.Override
-    public @UnknownKeyFor @NonNull @Initialized PropertyAccess buildPropertyAccess(
-            java.lang.@UnknownKeyFor @NonNull @Initialized Class<@UnknownKeyFor @NonNull @Initialized ?>
-                    containerJavaType,
-            java.lang.@UnknownKeyFor @NonNull @Initialized String propertyName,
-            @UnknownKeyFor @Initialized boolean setterRequired) {
+    @Override
+    public PropertyAccess buildPropertyAccess(Class<?> containerJavaType, String propertyName, boolean setterRequired) {
         Method readMethod = ReflectionUtils.findMethod(containerJavaType, NameUtils.getGetterName(propertyName));
         if (readMethod == null) {
             // See https://issues.apache.org/jira/browse/GROOVY-11512

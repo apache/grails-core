@@ -21,10 +21,9 @@ package org.grails.orm.hibernate.cfg.domainbinding.util;
 import java.util.Optional;
 import java.util.function.Function;
 
-/** The backticks remover class. */
+/** Removes matching leading and trailing backticks from mapping names. */
 public class BackticksRemover implements Function<String, String> {
 
-    /** The backtick. */
     public static final String BACKTICK = "`";
 
     @Override

@@ -55,8 +55,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator;
  * Handles the binding Grails domain classes and properties to the Hibernate runtime meta model.
  * Based on the HbmBinder code in Hibernate core and influenced by AnnotationsBinder.
  *
- * @author Graeme Rocher
- * @since 0.1
+ * @since 8.0
  */
 public class GrailsDomainBinder implements AdditionalMappingContributor, TypeContributor {
 

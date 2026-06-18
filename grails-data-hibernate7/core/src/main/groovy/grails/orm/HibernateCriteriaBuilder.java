@@ -121,11 +121,6 @@ import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
 @Slf4j
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 public class HibernateCriteriaBuilder extends GroovyObjectSupport implements BuildableCriteria, ProjectionList {
-    /*
-     * Define constants which may be used inside of criteria queries
-     * to refer to standard Hibernate Type instances.
-     */
-
     private final SessionFactory sessionFactory;
     private final boolean participate;
     private final org.hibernate.query.criteria.HibernateCriteriaBuilder cb;
