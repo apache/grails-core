@@ -40,7 +40,7 @@ class PaymentIntegrationSpec extends Specification implements GraphQLSpec {
             }
         """)
 
-        Map result = resp.body()
+        Map result = resp.body
 
         then:
         result.errors.size() == 1
@@ -65,7 +65,7 @@ class PaymentIntegrationSpec extends Specification implements GraphQLSpec {
               }
             }
         """)
-        Map obj = resp.body().data.creditCardPaymentCreate
+        Map obj = resp.body.data.creditCardPaymentCreate
 
         then:
         obj.id
@@ -85,7 +85,7 @@ class PaymentIntegrationSpec extends Specification implements GraphQLSpec {
               }
             }
         """)
-        Map obj = resp.body().data.creditCardPayment
+        Map obj = resp.body.data.creditCardPayment
 
         then:
         obj.id
@@ -104,7 +104,7 @@ class PaymentIntegrationSpec extends Specification implements GraphQLSpec {
               }
             }
         """)
-        Map json = resp.body()
+        Map json = resp.body
         obj = json.data.payment
 
         then:
@@ -122,7 +122,7 @@ class PaymentIntegrationSpec extends Specification implements GraphQLSpec {
               }
             }
         """)
-        obj = resp.body()
+        obj = resp.body
 
         then: 'An error is returned'
         obj.data == null
@@ -153,7 +153,7 @@ class PaymentIntegrationSpec extends Specification implements GraphQLSpec {
               }
             }
         """)
-        List obj = resp.body().data.creditCardPaymentList
+        List obj = resp.body.data.creditCardPaymentList
 
         then:
         obj.size() == 2
@@ -169,7 +169,7 @@ class PaymentIntegrationSpec extends Specification implements GraphQLSpec {
               }
             }
         """)
-        obj = resp.body().data.paymentList
+        obj = resp.body.data.paymentList
 
         then:
         obj.size() == 2
@@ -191,7 +191,7 @@ class PaymentIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """)
-        Map obj = resp.body().data.creditCardPaymentUpdate
+        Map obj = resp.body.data.creditCardPaymentUpdate
 
         then:
         obj.id == 1
@@ -210,7 +210,7 @@ class PaymentIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """)
-        obj = resp.body()
+        obj = resp.body
 
         then: 'An error is thrown'
         obj.data == null
@@ -229,7 +229,7 @@ class PaymentIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """)
-        obj = resp.body().data.paymentUpdate
+        obj = resp.body.data.paymentUpdate
 
         then:
         obj.amount == new BigDecimal('2')
@@ -244,7 +244,7 @@ class PaymentIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """)
-        Map obj = resp.body().data.creditCardPaymentDelete
+        Map obj = resp.body.data.creditCardPaymentDelete
 
         then:
         obj.success
@@ -257,7 +257,7 @@ class PaymentIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """)
-        obj = resp.body().data.paymentDelete
+        obj = resp.body.data.paymentDelete
 
         then:
         obj.success

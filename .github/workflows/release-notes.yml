@@ -16,8 +16,19 @@
 # Maintains one draft GitHub Release per active release branch (7.0.x, 7.1.x,
 # 7.2.x, 8.0.x, ...). Each branch produces an independent draft because the
 # release-drafter config in .github/release-drafter.yml combines
-# `filter-by-commitish: true`, `filter-by-range: ~MAJOR.MINOR.0`, and
-# `tag-prefix: v` so that drafts created on one branch never leak into another.
+# `filter-by-commitish: true` (a release's target_commitish must equal the
+# branch) with `tag-prefix: v`, so drafts created on one branch never leak
+# into another.
+#
+# NOTE: do NOT reintroduce a `filter-by-range: ~MAJOR.MINOR.0` filter here.
+# When a release branch has no published release inside its own MAJOR.MINOR
+# range (e.g. 7.2.x before its first tag, or any newly-cut branch),
+# release-drafter falls back to its default version 0.1.0. That 0.1.0 draft
+# does NOT satisfy `~MAJOR.MINOR.0`, so on the next run the range filter hides
+# the draft the action itself just created - it reports "No draft release
+# found" and creates ANOTHER 0.1.0 draft, repeating on every push and flooding
+# the releases page with untagged-* drafts. `filter-by-commitish` alone gives
+# full per-branch isolation without this failure mode.
 #
 # Companion config: .github/release-drafter.yml
 name: "Release - Drafter"
@@ -70,23 +81,50 @@ jobs:
       pull-requests: write
     runs-on: ubuntu-latest
     steps:
-      # release-drafter's `filter-by-range` keeps the action looking only at
-      # releases whose tag falls inside this branch's MAJOR.MINOR series. This
-      # is what prevents 7.0.x's draft from being computed against 7.1.x's
-      # tags (or vice versa). It is derived dynamically from the branch name
-      # so this workflow file works identically on every release branch.
-      - name: "🔢 Derive semver range from branch"
-        id: version
+      # Seed an initial version for release branches that have no published
+      # release yet (e.g. 7.2.x before its first tag). release-drafter falls
+      # back to its default 0.1.0 when it finds no "last release", which on
+      # such a branch produces a misleading v0.1.0 draft. We detect that case
+      # and pass the branch's own MAJOR.MINOR.0 as the `version` input so the
+      # draft reads e.g. v7.2.0 instead.
+      #
+      # This is self-correcting: the moment the branch publishes ANY release,
+      # the lookup below finds it and we stop seeding, letting release-drafter
+      # resolve the next version normally (e.g. 7.2.0 -> 7.2.1). Branches that
+      # already have a release (7.0.x, 7.1.x, 8.0.x) get an empty seed, which
+      # release-drafter treats as "no override" - identical to current
+      # behaviour. Best-effort: any lookup failure also yields an empty seed.
+      - name: "🔢 Seed initial version for release-less branches"
+        id: seed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
           BRANCH="${{ github.event.pull_request.base.ref || github.ref_name }}"
-          if [[ "$BRANCH" =~ ^([0-9]+)\.([0-9]+)\.x$ ]]; then
-            RANGE="~${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.0"
-            echo "Branch $BRANCH -> filter-by-range $RANGE"
-            echo "range=$RANGE" >> "$GITHUB_OUTPUT"
+          if [[ ! "$BRANCH" =~ ^([0-9]+)\.([0-9]+)\.x$ ]]; then
+            echo "Branch $BRANCH is not a release branch; no version seed."
+            echo "version=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          SEED="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.0"
+          # Mirror release-drafter's "last release" lookup: a non-draft release
+          # whose target_commitish (with refs/heads/ stripped, as the action
+          # does) equals this branch and whose tag starts with the "v" prefix.
+          # Prereleases count, matching include-pre-releases: true.
+          matches="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
+            --jq ".[] | select(.draft == false) | select((.target_commitish | sub(\"^refs/heads/\"; \"\")) == \"${BRANCH}\") | select(.tag_name | startswith(\"v\")) | .tag_name" 2>/dev/null)"
+          if [[ $? -ne 0 ]]; then
+            echo "::warning title=Version seed skipped::Could not list releases for ${BRANCH}; leaving version unset (release-drafter default)."
+            echo "version=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          count="$(printf '%s\n' "$matches" | grep -c . || true)"
+          if [[ "${count:-0}" -gt 0 ]]; then
+            echo "Branch $BRANCH already has $count matching release(s); release-drafter will resolve the next version. No seed."
+            echo "version=" >> "$GITHUB_OUTPUT"
           else
-            echo "Branch $BRANCH is not a release branch; skipping range filter (will only match the configured prerelease/commitish filters)"
-            echo "range=" >> "$GITHUB_OUTPUT"
+            echo "Branch $BRANCH has no published release; seeding initial version $SEED (draft becomes v$SEED instead of v0.1.0)."
+            echo "version=$SEED" >> "$GITHUB_OUTPUT"
           fi
 
       # Pinned to v7.3.1 by commit SHA per the ASF security policy (matches
@@ -122,7 +160,11 @@ jobs:
           # producing the "Validation Failed: target_commitish invalid" error
           # historically seen on PRs (see INFRA-27602).
           commitish: ${{ github.event.pull_request.base.ref || github.ref_name }}
-          filter-by-range: ${{ steps.version.outputs.range }}
+          # Empty for branches that already have a release (release-drafter
+          # treats an empty version as "no override" and resolves the next
+          # version itself). On a release-less branch this is MAJOR.MINOR.0 so
+          # the draft reads e.g. v7.2.0 instead of the default v0.1.0.
+          version: ${{ steps.seed.outputs.version }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -156,7 +198,7 @@ jobs:
               echo ""
               echo "release-drafter ran but did not produce a draft release id."
               echo "Common causes: GitHub API rate limit exhausted, no prior"
-              echo "release matched the commitish/range/tag-prefix filters, or"
+              echo "release matched the commitish/tag-prefix filters, or"
               echo "the action errored. Check the previous step's logs."
             } >> "$GITHUB_STEP_SUMMARY"
             echo "::warning title=Release draft missing::release-drafter produced no draft for branch ${BRANCH}. Step outcome was '${DRAFT_OUTCOME}'. See workflow summary."

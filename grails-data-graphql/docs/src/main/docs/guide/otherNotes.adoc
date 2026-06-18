@@ -134,3 +134,11 @@ And here is the expected response:
 ----
 include::{sourcedir}/examples/grails-docs-app/src/integration-test/groovy/demo/AuthorIntegrationSpec.groovy[tags=createResponse]
 ----
+
+=== Testing and JSON Serialization
+
+The `GraphQLSpec` testing trait talks to a running application over HTTP using Spring's `org.springframework.web.client.RestClient`. JSON request bodies are serialized, and responses deserialized, by the `RestClient` Jackson message converter - the same JSON mechanism Spring uses elsewhere - rather than by hand.
+
+NOTE: `RestClient` only registers a JSON message converter when a JSON library is on the classpath. An application that renders JSON solely through JSON views, without otherwise depending on Jackson, must add `tools.jackson.core:jackson-databind` to its `integrationTestRuntimeOnly` configuration for the trait to serialize requests and parse responses.
+
+NOTE: Your application renders GraphQL responses with its configured object mapper, so customizing that object mapper (for example, with non-default date formats, property naming strategies, or custom serializers) changes the payloads your tests observe through the trait. When these serialization details matter, assert against the specific fields you care about and verify your object mapper configuration with a dedicated test.

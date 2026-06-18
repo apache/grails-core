@@ -42,7 +42,7 @@ class BarIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """)
-        Map obj = resp.body().data.barCreate
+        Map obj = resp.body.data.barCreate
 
         then: 'bar is created in the Mongo datastore with a valid ObjectId'
         new ObjectId((String) obj.id)

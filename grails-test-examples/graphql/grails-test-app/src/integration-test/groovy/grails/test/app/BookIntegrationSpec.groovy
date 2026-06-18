@@ -36,7 +36,7 @@ class BookIntegrationSpec extends Specification implements GraphQLSpec {
             }
         """)
 
-        def result = resp.body()
+        def result = resp.body
 
         then:
         result.errors.size() == 1
