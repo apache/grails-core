@@ -14,7 +14,7 @@ Licensed to the Apache Software Foundation (ASF) under one or more contributor l
 - Provide repository-specific guidance for the `grails-data-hibernate7` project.
 - Help with Hibernate 7 migration work in domain binding, mapping metadata, identifiers, generators, collections, and second-pass binding.
 - Guide changes around `GrailsDomainBinder`, `GrailsPropertyBinder`, `IdentityBinder`, `VersionBinder`, collection binders, and related utilities.
-- Keep changes aligned with the testing constraints and migration status documented in `grails-data-hibernate7/AGENTS.md`.
+- Keep changes aligned with the testing constraints and migration status used by the Hibernate 7 modules in this repository.
 
 ## When to Use Me
 
@@ -90,7 +90,7 @@ When touching `grails-data-hibernate7`, test through real Hibernate wiring rathe
 - Use `HibernateGormDatastoreSpec` for Hibernate 7 integration and domain-binding specifications.
 - Prefer `manager.registerDomainClasses(...)` in `setupSpec()` to register entities for specs.
 - Define test entities as top-level classes in the same Groovy spec file.
-- Ensure test domain class names are globally unique within the package to avoid collisions during parallel execution.
+- Ensure test domain class names are globally unique within the package to avoid shared mapping metadata collisions when specs run in parallel.
 - Prefer real entities over heavy mocking for binder logic.
 
 ## Change Workflow
@@ -116,4 +116,4 @@ When touching `grails-data-hibernate7`, test through real Hibernate wiring rathe
 
 ## Source of Truth
 
-This skill is derived from `grails-data-hibernate7/AGENTS.md`. When the module guidance changes, update this skill so agents can load the same rules directly from `.agents/skills/hibernate-developer/SKILL.md`.
+This skill is the repository guidance for Hibernate 7 module work. When module conventions change, update this skill directly so agents load the current rules from `.agents/skills/hibernate-developer/SKILL.md`.
