@@ -28,19 +28,10 @@ import spock.lang.Unroll
 
 class GrailsHibernateUtilSpec extends HibernateGormDatastoreSpec {
 
-    @Shared HibernateProxyHandler originalProxyHandler = GrailsHibernateUtil.proxyHandler
     HibernateProxyHandler proxyHandlerMock = Mock(HibernateProxyHandler)
 
     void setupSpec() {
         manager.registerDomainClasses(GHUBook, GHUAuthor, GHUAnnotatedEntity)
-    }
-
-    def setup() {
-        GrailsHibernateUtil.setProxyHandler(proxyHandlerMock)
-    }
-
-    def cleanup() {
-        GrailsHibernateUtil.setProxyHandler(originalProxyHandler)
     }
 
     @Unroll
@@ -97,7 +88,7 @@ class GrailsHibernateUtilSpec extends HibernateGormDatastoreSpec {
         def unwrapped = new Object()
 
         when:
-        def result = GrailsHibernateUtil.unwrapIfProxy(obj)
+        def result = GrailsHibernateUtil.unwrapIfProxy(obj, proxyHandlerMock)
 
         then:
         1 * proxyHandlerMock.unwrap(obj) >> unwrapped
@@ -110,7 +101,7 @@ class GrailsHibernateUtilSpec extends HibernateGormDatastoreSpec {
         def unwrapped = new Object()
 
         when:
-        def result = GrailsHibernateUtil.unwrapProxy(proxy)
+        def result = GrailsHibernateUtil.unwrapProxy(proxy, proxyHandlerMock)
 
         then:
         1 * proxyHandlerMock.unwrap(proxy) >> unwrapped
@@ -123,8 +114,8 @@ class GrailsHibernateUtilSpec extends HibernateGormDatastoreSpec {
         def proxy = Mock(HibernateProxy)
 
         when:
-        def result = GrailsHibernateUtil.getAssociationProxy(book, "title")
-        def initialized = GrailsHibernateUtil.isInitialized(book, "title")
+        def result = GrailsHibernateUtil.getAssociationProxy(book, "title", proxyHandlerMock)
+        def initialized = GrailsHibernateUtil.isInitialized(book, "title", proxyHandlerMock)
 
         then:
         1 * proxyHandlerMock.getAssociationProxy(book, "title") >> proxy
