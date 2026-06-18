@@ -21,7 +21,6 @@ package org.grails.orm.hibernate.proxy
 
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.Location
