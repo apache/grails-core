@@ -28,7 +28,8 @@ import org.hibernate.FetchMode
 import spock.lang.Specification
 
 /**
- * Covers {@link HibernateMappingBuilder} branches not exercised by legacy mapping tests.
+ * Tests for {@link HibernateMappingBuilder} covering table mapping, caching, identity, inheritance,
+ * column/property configuration, and join table mappings.
  */
 class HibernateMappingBuilderSpec extends Specification {
 
@@ -40,9 +41,7 @@ class HibernateMappingBuilderSpec extends Specification {
         builder().evaluate(cl)
     }
 
-    // -------------------------------------------------------------------------
-    // table / catalog / schema / comment
-    // -------------------------------------------------------------------------
+
 
     def "table with name only"() {
         when:
@@ -70,9 +69,6 @@ class HibernateMappingBuilderSpec extends Specification {
         m.comment == 'wahoo'
     }
 
-    // -------------------------------------------------------------------------
-    // version / autoTimestamp
-    // -------------------------------------------------------------------------
 
     def "version column can be changed"() {
         when:
@@ -98,9 +94,6 @@ class HibernateMappingBuilderSpec extends Specification {
         !m.autoTimestamp
     }
 
-    // -------------------------------------------------------------------------
-    // discriminator
-    // -------------------------------------------------------------------------
 
     def "discriminator value only"() {
         when:
@@ -143,9 +136,6 @@ class HibernateMappingBuilderSpec extends Specification {
         !m.discriminator.insertable
     }
 
-    // -------------------------------------------------------------------------
-    // inheritance
-    // -------------------------------------------------------------------------
 
     def "tablePerHierarchy false disables it"() {
         when:
@@ -172,9 +162,6 @@ class HibernateMappingBuilderSpec extends Specification {
         !m.tablePerHierarchy
     }
 
-    // -------------------------------------------------------------------------
-    // cache settings
-    // -------------------------------------------------------------------------
 
     def "default cache strategy"() {
         when:
@@ -212,9 +199,6 @@ class HibernateMappingBuilderSpec extends Specification {
         m.cache.include.toString() == 'all'
     }
 
-    // -------------------------------------------------------------------------
-    // identity / id
-    // -------------------------------------------------------------------------
 
     def "identity column mapping"() {
         when:
@@ -264,9 +248,6 @@ class HibernateMappingBuilderSpec extends Specification {
         evaluate { id natural: [properties: ['one', 'two'], mutable: true] }.identity.natural.mutable
     }
 
-    // -------------------------------------------------------------------------
-    // other root settings
-    // -------------------------------------------------------------------------
 
     def "autoImport defaults to true and can be disabled"() {
         expect:
@@ -492,9 +473,6 @@ class HibernateMappingBuilderSpec extends Specification {
         !m.getPropertyConfig('lastName').updatable
     }
 
-    // -------------------------------------------------------------------------
-    // autowire / tenantId
-    // -------------------------------------------------------------------------
 
     def "autowire stores the value on the mapping"() {
         expect:
@@ -507,9 +485,6 @@ class HibernateMappingBuilderSpec extends Specification {
         evaluate { tenantId 'tenantId' }.getPropertyConfig('tenantId') != null
     }
 
-    // -------------------------------------------------------------------------
-    // cache(String, Map)
-    // -------------------------------------------------------------------------
 
     def "cache(String, Map) sets usage and include"() {
         when:
@@ -539,9 +514,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.cache.include.toString() == 'all'  // default preserved; INVALID_INCLUDE rejected
     }
 
-    // -------------------------------------------------------------------------
     // hibernateCustomUserType
-    // -------------------------------------------------------------------------
 
     def "hibernateCustomUserType registers a user type when args are valid"() {
         when:
@@ -567,9 +540,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.userTypes.isEmpty()
     }
 
-    // -------------------------------------------------------------------------
     // includes() null-safety
-    // -------------------------------------------------------------------------
 
     def "includes() with null closure does not throw"() {
         when:
@@ -579,9 +550,7 @@ class HibernateMappingBuilderSpec extends Specification {
         noExceptionThrown()
     }
 
-    // -------------------------------------------------------------------------
     // sort / order null guards
-    // -------------------------------------------------------------------------
 
     def "sort(null) is a no-op"() {
         when:
@@ -607,9 +576,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.batchSize == null
     }
 
-    // -------------------------------------------------------------------------
     // evaluate with context argument
-    // -------------------------------------------------------------------------
 
     def "evaluate passes context to the closure"() {
         given:
@@ -623,9 +590,6 @@ class HibernateMappingBuilderSpec extends Specification {
         captured == 'myContext'
     }
 
-    // -------------------------------------------------------------------------
-    // property(Map, String) — the 2-arg typed method
-    // -------------------------------------------------------------------------
 
     def "property(Map, String) registers the property config"() {
         when:
@@ -637,9 +601,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.getPropertyConfig('myProp').column == 'my_col'
     }
 
-    // -------------------------------------------------------------------------
     // handlePropertyInternal — uncovered branches
-    // -------------------------------------------------------------------------
 
     def "property with accessType stores it"() {
         when:
@@ -801,9 +763,7 @@ class HibernateMappingBuilderSpec extends Specification {
         m.getPropertyConfig('myProp').columns[0].comment == 'a test column'
     }
 
-    // -------------------------------------------------------------------------
     // methodMissing — filtering branches
-    // -------------------------------------------------------------------------
 
     def "methodMissing skips properties in methodMissingExcludes via importFrom"() {
         given: "a class whose constraints closure maps 'foos' and 'bars'"
