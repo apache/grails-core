@@ -33,7 +33,7 @@ class PropertyFieldSpec extends Specification {
     @Shared @AutoCleanup HibernateDatastore hibernateDatastore = new HibernateDatastore(getClass().getPackage())
 
     @Rollback
-    @Issue('https://github.com/grails/grails-data-mapping/issues/934')
+    @Issue('https://github.com/apache/grails-data-mapping/issues/934')
     void "test domain class with property named 'property'"() {
         expect:
         Book book = new Book(title: 'book', property: new Property(name: 'p1'))

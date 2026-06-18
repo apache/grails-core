@@ -22,14 +22,8 @@ import grails.gorm.MultiTenant
 import grails.gorm.annotation.Entity
 import grails.gorm.multitenancy.Tenants
 import grails.gorm.tests.HibernateGormDatastoreSpec
-import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
-import org.grails.orm.hibernate.cfg.Settings
-import org.hibernate.FlushMode
-import spock.lang.Issue
-
-import javax.sql.DataSource
 
 class HibernateDatastoreMultiTenancySpec extends HibernateGormDatastoreSpec {
 

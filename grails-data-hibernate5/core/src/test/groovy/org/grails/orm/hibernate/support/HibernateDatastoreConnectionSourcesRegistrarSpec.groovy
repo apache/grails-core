@@ -21,7 +21,6 @@ package org.grails.orm.hibernate.support
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.datastore.gorm.bootstrap.support.InstanceFactoryBean
 import org.grails.datastore.mapping.config.Settings
-import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.hibernate.SessionFactory
 import org.springframework.beans.factory.support.DefaultListableBeanFactory
 import org.springframework.transaction.PlatformTransactionManager

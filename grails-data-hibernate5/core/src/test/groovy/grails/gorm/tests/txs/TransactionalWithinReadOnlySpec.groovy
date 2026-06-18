@@ -33,7 +33,8 @@ import spock.lang.Specification
  */
 class TransactionalWithinReadOnlySpec extends Specification {
 
-    @Shared @AutoCleanup HibernateDatastore datastore = new HibernateDatastore(Product, Attribute)
+    @AutoCleanup
+    @Shared HibernateDatastore datastore = new HibernateDatastore(Product, Attribute)
 
 
     void "test transaction status"() {

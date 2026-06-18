@@ -36,7 +36,7 @@ class TwoBidirectionalOneToManySpec extends Specification {
 
     @Rollback
     void "test an entity with 2 bidirectional one-to-many mappings"() {
-        when:"A new entity is created is created"
+        when:"A new entity is created"
         Room r = new Room(name:"Test")
                         .addToPointx(new PointX())
                         .addToPointy(new PointY())
@@ -53,7 +53,7 @@ class TwoBidirectionalOneToManySpec extends Specification {
 
     @Rollback
     void "test an entity with 1 one directional one-to-many mappings"() {
-        when:"A new entity is created is created"
+        when:"A new entity is created"
         Room r = new Room(name:"Test")
                 .addToPointz(new PointZ())
 

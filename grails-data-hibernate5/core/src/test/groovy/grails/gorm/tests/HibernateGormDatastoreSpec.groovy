@@ -42,12 +42,10 @@ import org.hibernate.service.spi.ServiceRegistryImplementor
 import org.hibernate.boot.spi.MetadataContributor
 
 /**
- * The original GormDataStoreSpec destroyed the setup
- * between tests instead of at the end of all tests
- * It also was default configured for H2 which
- * made it break with some Java types.
- * Finally, it loaded all the test Entities,
- * now it can be setup individually.
+ * Base spec for Hibernate 5 integration tests. Sets up a per-spec H2 in-memory datastore
+ * and registers domain classes via {@link #manager}. Individual specs call
+ * {@code manager.registerDomainClasses(...)} in their own {@code setupSpec()} rather than
+ * loading the entire package, keeping each spec isolated and fast.
  */
 class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
