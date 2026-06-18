@@ -142,6 +142,15 @@ After all jar files are verified to be signed by a valid Grails key, we need to 
 
 Further details on the building can be found in the [INSTALL](INSTALL) document.  Otherwise, run the `verify-reproducible.sh` shell script to compare the published jar files to a locally built version of them. 
 
+#### Dual-JDK requirement for the Grails-Micronaut island
+
+Grails 8 release artifacts come from TWO different JDKs and therefore TWO different reproducibility pins:
+
+- **Primary JDK (`$JAVA_VERSION` in `release.yml`, also in `.sdkmanrc` and the primary `FROM` in `etc/bin/Dockerfile`)**: builds every published artifact EXCEPT the Grails-Micronaut "island" (`grails-micronaut`, `grails-micronaut-bom`).
+- **Secondary JDK (`$JAVA_VERSION_MICRONAUT` in `release.yml`, installed alongside the primary in `etc/bin/Dockerfile` and exposed as `$JDK_25_HOME`)**: builds the two Micronaut island artifacts. The Micronaut 5 platform GA targets JVM 25 bytecode, so these two JARs cannot be reproduced on the primary JDK.
+
+The verify script understands both. Inside the verification container, `JDK_25_HOME` is already set so `verify-reproducible.sh` "just works". Outside the container, manual verifiers MUST install Liberica JDK matching `$JAVA_VERSION_MICRONAUT` from `release.yml` (for example via `sdk install java <version>-librca`) and export `JDK_25_HOME=/path/to/jdk25` before running the script - otherwise the script fails fast with a clear error.
+
 If there are any jar file differences, confirm they are relevant by following the following steps: 
 1. Extract the differing jar file using the `etc/bin/extract-build-artifact.sh <jarfilepath from diff.txt>`
 2. In IntelliJ, under `etc/bin/results` there will now be a `firstArtifact` & `secondArtifact` folder. Select them both, right click, and select `Compared Directories`  
@@ -401,6 +410,12 @@ Setup the key for validity:
 The Grails image is officially built on linux in a GitHub action using an Ubuntu container. To run a linux container
 locally, you can use the following command (substitute `<git-tag-of-release>` with the tag name):
 
+The verification container ships with BOTH JDKs needed for full reproducible verification: the primary Liberica JDK
+(`$JAVA_VERSION`, default on `PATH`/`JAVA_HOME`) and the secondary Liberica JDK 25 for the Grails-Micronaut "island"
+(installed at `$JDK_25_HOME`). `verify-reproducible.sh` uses both automatically - no manual JDK switching required
+inside the container. Both pins live in `etc/bin/Dockerfile` and must stay synced with
+`$JAVA_VERSION` / `$JAVA_VERSION_MICRONAUT` in `.github/workflows/release.yml`.
+
 **macOS/Linux**
 ```bash
     docker build -t grails:testing -f etc/bin/Dockerfile . && docker run -it --rm -v $(pwd):/home/groovy/project -p 8080:8080 grails:testing bash
@@ -493,6 +508,14 @@ The Grails Development Team created several shell scripts that test reproducibil
 To test reproducibility locally, running etc/bin/test-reproducible-builds.sh will execute the necessary gradle commands
 to build the three gradle projects Grails uses. The artifacts are then saved off, and built again. Finally, the hashes
 are generated to ensure the artifacts are the same.
+
+Note that Grails 8 release artifacts come from TWO pinned JDKs: the primary one (used for everything except the
+Grails-Micronaut island) and a secondary Liberica JDK 25 (used only for `grails-micronaut` and `grails-micronaut-bom`,
+because Micronaut 5 platform GA targets JVM 25 bytecode). Both pins live in `.github/workflows/release.yml`
+(`JAVA_VERSION` and `JAVA_VERSION_MICRONAUT` respectively) and are installed side-by-side in `etc/bin/Dockerfile`. The
+verify scripts switch `JAVA_HOME` to `$JDK_25_HOME` for the island and back to the default for everything else. Anyone
+bumping either pin must also bump the matching pin in the Dockerfile so the verification container can reproduce the
+new artifacts.
 
 Some common gotchas with Java build reproducibility problems:
 

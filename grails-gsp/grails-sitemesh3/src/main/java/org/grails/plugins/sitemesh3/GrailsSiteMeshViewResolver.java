@@ -51,6 +51,9 @@ public class GrailsSiteMeshViewResolver extends SiteMeshViewResolver {
 
     @Override
     protected SiteMeshView createSiteMeshView(View innerView) {
+        // Forward-based JSP inner views are switched to include dispatch by
+        // SiteMeshViewResolver.prepareForBufferedRender (keyed on
+        // DispatchMode) before this hook runs.
         return new GrailsSiteMeshView(innerView, contentProcessor, decoratorSelector, servletContext,
                 getInnerViewResolver());
     }

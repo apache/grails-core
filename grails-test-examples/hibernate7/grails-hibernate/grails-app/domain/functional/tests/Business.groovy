@@ -27,4 +27,7 @@ class Business {
             people: Person
     ]
 
+    static constraints = {
+        name nullable: false
+    }
 }

@@ -229,7 +229,7 @@ public class Sitemesh3CapturedPage implements Content {
         if (!titleCaptured) {
             return head;
         }
-        int titleStart = indexOfIgnoreCase(head, "<title", 0);
+        int titleStart = indexOfTitleOpenTag(head);
         if (titleStart < 0) {
             return head;
         }
@@ -247,6 +247,30 @@ public class Sitemesh3CapturedPage implements Content {
         sb.append(head, 0, titleStart);
         sb.append(head, closeEnd, len);
         return sb;
+    }
+
+    // Finds the start of a real <title> open tag. A bare "<title" prefix
+    // match is not enough: it would also match elements such as
+    // <titlebar> or <title-x> and mis-slice the head, so the character
+    // following the prefix must terminate the tag name ('>' or
+    // whitespace before attributes).
+    private static int indexOfTitleOpenTag(CharSequence head) {
+        int len = head.length();
+        int from = 0;
+        while (true) {
+            int i = indexOfIgnoreCase(head, "<title", from);
+            if (i < 0) {
+                return -1;
+            }
+            int boundary = i + 6;
+            if (boundary < len) {
+                char c = head.charAt(boundary);
+                if (c == '>' || Character.isWhitespace(c)) {
+                    return i;
+                }
+            }
+            from = i + 1;
+        }
     }
 
     private static int indexOfIgnoreCase(CharSequence seq, String needle, int fromIndex) {

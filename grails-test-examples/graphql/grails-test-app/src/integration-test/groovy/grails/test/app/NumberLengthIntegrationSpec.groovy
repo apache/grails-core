@@ -42,7 +42,7 @@ class NumberLengthIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """)
-        Map data = resp.body()
+        Map data = resp.body
 
         then:
         data.data.numberLengthCreate.id
@@ -62,7 +62,7 @@ class NumberLengthIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """)
-        Map data = resp.body()
+        Map data = resp.body
 
         then:
         data.data == null
@@ -83,7 +83,7 @@ class NumberLengthIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """)
-        Map data = resp.body()
+        Map data = resp.body
 
         then:
         data.data == null
@@ -104,7 +104,7 @@ class NumberLengthIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """)
-        Map data = resp.body()
+        Map data = resp.body
 
         then:
         data.data == null
@@ -125,7 +125,7 @@ class NumberLengthIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """)
-        Map data = resp.body()
+        Map data = resp.body
 
         then:
         data.data == null
