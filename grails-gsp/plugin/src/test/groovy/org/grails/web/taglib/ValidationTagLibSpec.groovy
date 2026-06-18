@@ -658,6 +658,13 @@ class ValidationTagLibBook {
     URL publisherURL
     Date releaseDate
     BigDecimal usPrice
+
+    static constraints = {
+        title nullable: false
+        publisherURL nullable: false
+        releaseDate nullable: false
+        usPrice nullable: false
+    }
 }
 
 @Entity

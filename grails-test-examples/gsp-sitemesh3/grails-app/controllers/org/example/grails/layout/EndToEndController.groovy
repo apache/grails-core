@@ -59,4 +59,33 @@ class EndToEndController {
     def multilineTitle() {
         render view: 'multilineTitle', layout: 'simple'
     }
+
+    def templateContent() {
+        render view: 'templateContent'
+    }
+
+    def templateDocument() {
+        render view: 'templateDocument'
+    }
+
+    def actionContent() {
+        render view: 'actionContent'
+    }
+
+    def urlContent() {
+        render view: 'urlContent', model: [port: request.localPort]
+    }
+
+    def parseContent() {
+        render view: 'parseContent'
+    }
+
+    def modelContent() {
+        render view: 'modelContent'
+    }
+
+    def contentFragment() {
+        render text: "<html><head><title>Included title</title></head><body>included body foo=${params.foo ?: 'none'}</body></html>",
+                contentType: 'text/html'
+    }
 }

@@ -61,3 +61,9 @@ grails:
             htmlcodec: xml
             codecs:
                 scriptlet: html
+
+---
+grails:
+    gorm:
+        default:
+            nullable: false

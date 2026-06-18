@@ -80,6 +80,14 @@ public class CaptureAwareContentProcessor implements ContentProcessor {
         }
 
         if (captured != null && captured.isUsed()) {
+            // The capture taglib also writes the full <head>/<body> markup to
+            // the response buffer, so `data` is the complete original page.
+            // Attach it as the page's rendered data so that, when no decorator
+            // is selected, SiteMeshView writes the original page back instead
+            // of the (empty) reconstructed-from-properties data chunk. Head/body
+            // child properties are still materialized for any decorator that IS
+            // selected, so meta-layout pages are unaffected.
+            captured.setRenderedContent(data);
             return captured;
         }
         return fallback.build(data, context);
