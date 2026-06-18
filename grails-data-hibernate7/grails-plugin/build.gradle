@@ -76,10 +76,7 @@ dependencies {
 
     testRuntimeOnly 'com.h2database:h2'
     testRuntimeOnly 'org.apache.tomcat:tomcat-jdbc'
-    testRuntimeOnly 'org.hibernate.orm:hibernate-jcache', {
-        // exclude javax variant of hibernate-core 5.6
-
-    }
+    testRuntimeOnly 'org.hibernate.orm:hibernate-jcache'
     testRuntimeOnly "org.jboss.spec.javax.transaction:jboss-transaction-api_1.3_spec:$jbossTransactionApiVersion", {
         // required for hibernate-ehcache to work with javax variant of hibernate-core excluded
     }

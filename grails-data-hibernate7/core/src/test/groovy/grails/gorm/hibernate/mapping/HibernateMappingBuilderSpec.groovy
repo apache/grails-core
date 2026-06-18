@@ -28,7 +28,7 @@ import org.hibernate.FetchMode
 import spock.lang.Specification
 
 /**
- * Covers branches of {@link HibernateMappingBuilder} not exercised by
+ * Covers {@link HibernateMappingBuilder} branches not exercised by legacy mapping tests.
  */
 class HibernateMappingBuilderSpec extends Specification {
 
@@ -221,11 +221,7 @@ class HibernateMappingBuilderSpec extends Specification {
         Mapping m = evaluate { id column: 'foo_id', type: Integer }
 
         then:
-        m.identity.type == Long // Default remains Long? No, wait.
-        // In HibernateMappingBuilderTests:
-        // assertEquals Long, mapping.identity.type
-        // assertEquals 'foo_id', mapping.getPropertyConfig("id").column
-        // assertEquals Integer, mapping.getPropertyConfig("id").type
+        m.identity.type == Long
         m.getPropertyConfig("id").column == 'foo_id'
         m.getPropertyConfig("id").type == Integer
         m.identity.generator == 'native'
