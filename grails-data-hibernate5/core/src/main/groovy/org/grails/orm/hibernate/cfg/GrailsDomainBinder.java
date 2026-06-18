@@ -2393,7 +2393,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                     final ColumnConfig columnConfig = new ColumnConfig();
                     columnConfig.setName(namingStrategy.propertyToColumnName(property.getName()) +
                             UNDERSCORE + FOREIGN_KEY_SUFFIX);
-                    var keys = new ArrayList<>();
+                    var keys = new ArrayList<ColumnConfig>();
                     keys.add(columnConfig);
                     jt.setKeys(keys);
                     pc.setJoinTable(jt);
