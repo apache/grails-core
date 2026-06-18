@@ -91,6 +91,11 @@ try {
         else {
             gradle."bootRun"(*arguments)
         }
+        // A deliberate stop is a successful build, so bootRun returns here instead of throwing.
+        if(org.grails.cli.gradle.RunningApplicationProcess.isStopRequested(buildDir)) {
+            console.updateStatus("Application stopped")
+            return true
+        }
     }
     else {
         def future
@@ -137,8 +142,8 @@ catch(org.gradle.tooling.BuildCancelledException e) {
     return true
 }
 catch(Throwable e) {
-    // A deliberate stop-app terminates the bootRun process, which surfaces here as a build
-    // failure; report it as a clean shutdown rather than a startup failure.
+    // Fallback for a force-killed app (did not exit on SIGTERM in time): a requested stop is a clean
+    // shutdown, not a startup failure. A normal stop succeeds and is handled above.
     if(org.grails.cli.gradle.RunningApplicationProcess.isStopRequested(buildDir)) {
         console.updateStatus("Application stopped")
         return true

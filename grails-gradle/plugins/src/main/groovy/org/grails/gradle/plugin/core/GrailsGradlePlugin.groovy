@@ -612,6 +612,10 @@ class GrailsGradlePlugin extends GroovyPlugin {
                 // force the build directory provider during configuration. The forked application
                 // reads this location so stop-app can locate and terminate it.
                 task.jvmArgumentProviders.add(new RunAppPidFileProvider(CLI_PID_FILE_PROPERTY, pidFile))
+
+                // Report a deliberate stop as a successful build (see BootRunExitCodeVerifier).
+                task.ignoreExitValue = true
+                task.doLast(new BootRunExitCodeVerifier())
             }
         }
     }
