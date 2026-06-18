@@ -48,7 +48,7 @@ class HibernateDatastoreSpringInitializerSpec extends Specification{
                 'dataSources.books.url':"jdbc:h2:mem:books;LOCK_TIMEOUT=10000",
                 'dataSources.moreBooks.url':"jdbc:h2:mem:moreBooks;LOCK_TIMEOUT=10000"
         ]
-        HibernateDatastoreSpringInitializer datastoreInitializer = new HibernateDatastoreSpringInitializer(config, Person, Book, Author)
+        def datastoreInitializer = new HibernateDatastoreSpringInitializer(config, Person, Book, Author)
 
         when:"the application is configured"
         applicationContext = (ConfigurableApplicationContext) datastoreInitializer.configure()
@@ -66,7 +66,7 @@ class HibernateDatastoreSpringInitializerSpec extends Specification{
         applicationContext.getBean("sessionFactory_moreBooks", SessionFactory).metamodel.entity(Author.name)
 
         and:"Each domain has the correct data source(s)"
-        HibernateDatastore hibernateDatastore = applicationContext.getBean(HibernateDatastore)
+        def hibernateDatastore = applicationContext.getBean(HibernateDatastore)
         Person.withNewSession { Person.count() == 0 }
         hibernateDatastore.withNewSession { Session s ->
             assert s.doReturningWork { it.getMetaData().getURL() } == "jdbc:h2:mem:people"
@@ -92,7 +92,6 @@ class HibernateDatastoreSpringInitializerSpec extends Specification{
             assert s.doReturningWork { it.getMetaData().getURL() } == "jdbc:h2:mem:moreBooks"
             return true
         }
-
     }
 }
 @Entity
