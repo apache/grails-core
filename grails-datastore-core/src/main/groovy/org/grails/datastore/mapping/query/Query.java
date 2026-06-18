@@ -623,6 +623,7 @@ public abstract class Query implements Cloneable, Serializable {
      * exist, since appending a count projection would produce incorrect results.
      *
      * @return The row count
+     * @since 8.0
      */
     public Number countResults() {
         if (!projections.getProjectionList().isEmpty()) {
