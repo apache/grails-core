@@ -40,7 +40,8 @@ class SaveWithInvalidEntitySpec extends Specification {
      * This currently fails with a NPE. See explanation https://github.com/grails/grails-core/issues/10604#issuecomment-298943022
      */
     @Rollback
-    @Issue('https://github.com/grails/grails-core/issues/10604')
+    @Issue(['https://github.com/grails/grails-core/issues/10604',
+            'https://github.com/apache/grails-core/issues/14616'])
     void "test save with an invalid entity"() {
         given:
         def b = new B(field2: "test")
