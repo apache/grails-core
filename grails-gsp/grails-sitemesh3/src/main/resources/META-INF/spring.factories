@@ -1,2 +1,0 @@
-org.springframework.boot.env.EnvironmentPostProcessor=\
-org.grails.plugins.sitemesh3.Sitemesh3EnvironmentPostProcessor

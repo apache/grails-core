@@ -41,7 +41,7 @@ class RestrictedIntegrationSpec extends Specification implements GraphQLSpec {
             }
         """)
 
-        def obj = resp.body().data.restrictedCreate
+        def obj = resp.body.data.restrictedCreate
 
         then:
         obj.id == 1
@@ -58,7 +58,7 @@ class RestrictedIntegrationSpec extends Specification implements GraphQLSpec {
             }
         """)
 
-        def obj = resp.body().data.restrictedDelete
+        def obj = resp.body.data.restrictedDelete
 
         then: "the registered interceptor prevented the action"
         obj == null
@@ -77,7 +77,7 @@ class RestrictedIntegrationSpec extends Specification implements GraphQLSpec {
             }
         """)
 
-        def obj = resp.body().data.restrictedUpdate
+        def obj = resp.body.data.restrictedUpdate
 
         then: "the registered interceptor prevented the action"
         obj == null
@@ -94,7 +94,7 @@ class RestrictedIntegrationSpec extends Specification implements GraphQLSpec {
             }
         """)
 
-        def obj = resp.body().data.restricted
+        def obj = resp.body.data.restricted
 
         then: "the registered interceptor prevented the action"
         obj.id == 1
@@ -109,7 +109,7 @@ class RestrictedIntegrationSpec extends Specification implements GraphQLSpec {
             }
         """)
 
-        def obj = resp.body().data.restrictedCount
+        def obj = resp.body.data.restrictedCount
 
         then: "the registered interceptor prevented the action"
         obj == 1
@@ -126,7 +126,7 @@ class RestrictedIntegrationSpec extends Specification implements GraphQLSpec {
             }
         """)
 
-        def obj = resp.body().data.restrictedList
+        def obj = resp.body.data.restrictedList
 
         then: "the registered interceptor prevented the action"
         obj.size() == 1

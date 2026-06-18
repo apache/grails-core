@@ -51,7 +51,7 @@ class ArtistIntegrationSpec extends Specification implements GraphQLSpec {
               }
             }
         """)
-        def json = resp.body()
+        def json = resp.body
         println json.toString()
         def artists = json.data.artistList
         def artist = artists[0]

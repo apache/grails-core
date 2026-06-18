@@ -68,6 +68,10 @@ jobs:
           cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
           develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
       - name: "📖 Generate Documentation"
+        # The Grails-Micronaut "island" requires JDK 25 (Micronaut 5 bytecode); this docs
+        # build runs on the JDK 21 reproducibility pin, where settings.gradle auto-prunes
+        # the island from the project graph so Gradle does not resolve its JVM 25 variants.
+        # The docs themselves have no code dependency on Micronaut.
         run: ./gradlew grails-doc:build -PgithubBranch=${TARGET_BRANCH}
       - name: "🚀 Publish to GitHub Pages"
         uses: apache/grails-github-actions/deploy-github-pages@asf

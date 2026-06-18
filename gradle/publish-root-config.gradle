@@ -64,6 +64,7 @@ def publishedProjects = [
         'grails-geb',
         'grails-gsp',
         'grails-gsp-core',
+        'grails-gsp-spring-boot',
         'grails-i18n',
         'grails-interceptors',
         'grails-layout',

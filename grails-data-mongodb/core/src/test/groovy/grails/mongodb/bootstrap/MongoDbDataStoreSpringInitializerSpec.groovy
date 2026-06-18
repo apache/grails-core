@@ -226,7 +226,7 @@ class Person implements MongoEntity<Person> {
     Birthday birthday
 
     static constraints = {
-        name blank: false
+        name blank: false, nullable: false
         birthday nullable: true
     }
 }

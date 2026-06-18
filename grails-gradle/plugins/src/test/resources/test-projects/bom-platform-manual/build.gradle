@@ -1,0 +1,42 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+// This project already declares a Grails BOM by hand (the Micronaut variant, as an
+// enforcedPlatform). The Grails Gradle plugin must therefore NOT auto-inject grails-bom on top
+// of it - exactly one Grails BOM may be applied.
+dependencies {
+    implementation enforcedPlatform("org.apache.grails:grails-micronaut-bom:$grailsVersion")
+}
+
+tasks.register('inspectBomSetup') {
+    doLast {
+        def implDeps = configurations.implementation.allDependencies
+
+        def hasGrailsBom = implDeps.any { dep ->
+            dep.group == 'org.apache.grails' && dep.name == 'grails-bom'
+        }
+        println "HAS_GRAILS_BOM=${hasGrailsBom}"
+
+        def hasMicronautBom = implDeps.any { dep ->
+            dep.group == 'org.apache.grails' && dep.name == 'grails-micronaut-bom'
+        }
+        println "HAS_MICRONAUT_BOM=${hasMicronautBom}"
+
+        // A sibling declarable configuration that does NOT declare a BOM by hand must still
+        // receive the single effective BOM (the Micronaut variant) via per-configuration injection.
+        def testImplDeps = configurations.testImplementation.allDependencies
+        def siblingHasMicronautBom = testImplDeps.any { dep ->
+            dep.group == 'org.apache.grails' && dep.name == 'grails-micronaut-bom'
+        }
+        println "SIBLING_HAS_MICRONAUT_BOM=${siblingHasMicronautBom}"
+
+        def siblingHasGrailsBom = testImplDeps.any { dep ->
+            dep.group == 'org.apache.grails' && dep.name == 'grails-bom'
+        }
+        println "SIBLING_HAS_GRAILS_BOM=${siblingHasGrailsBom}"
+
+        def hasBomPropertyOverrides = project.plugins.findPlugin('org.apache.grails.gradle.bom-property-overrides') != null
+        println "HAS_BOM_PROPERTY_OVERRIDES=${hasBomPropertyOverrides}"
+    }
+}
