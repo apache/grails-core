@@ -1,18 +1,20 @@
 /*
- *  Licensed to the Apache Software Foundation (ASF) under one or more
- *  contributor license agreements.  See the NOTICE file distributed with
- *  this work for additional information regarding copyright ownership.
- *  The ASF licenses this file to You under the Apache License, Version 2.0
- *  (the "License"); you may not use this file except in compliance with
- *  the License.  You may obtain a copy of the License at
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *    https://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
  */
 package org.grails.orm.hibernate.proxy;
 
@@ -26,8 +28,6 @@ import org.hibernate.Hibernate;
 import org.hibernate.collection.spi.PersistentCollection;
 import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.proxy.HibernateProxyHelper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.grails.datastore.gorm.proxy.ProxyInstanceMetaClass;
 import org.grails.datastore.mapping.core.Session;
@@ -47,8 +47,6 @@ import org.grails.orm.hibernate.GrailsHibernateTemplate;
  */
 public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
 
-    private static final Logger LOG = LoggerFactory.getLogger(HibernateProxyHandler.class);
-
     /**
      * Check if the proxy or persistent collection is initialized.
      * {@inheritDoc}
@@ -56,50 +54,22 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
     @Override
     public boolean isInitialized(Object o) {
         if (o == null) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("isInitialized(Object) - object is null, returning false");
-            }
             return false;
         }
-
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("isInitialized(Object) - checking object of type: {}", o.getClass().getName());
-        }
-
         if (o instanceof EntityProxy) {
-            boolean initialized = ((EntityProxy) o).isInitialized();
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("isInitialized(Object) - object is EntityProxy, isInitialized: {}", initialized);
-            }
-            return initialized;
+            return ((EntityProxy) o).isInitialized();
         }
         if (o instanceof HibernateProxy) {
-            boolean initialized = !((HibernateProxy) o).getHibernateLazyInitializer().isUninitialized();
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("isInitialized(Object) - object is HibernateProxy, isInitialized: {}", initialized);
-            }
-            return initialized;
+            return !((HibernateProxy) o).getHibernateLazyInitializer().isUninitialized();
         }
         if (o instanceof PersistentCollection) {
-            boolean initialized = ((PersistentCollection) o).wasInitialized();
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("isInitialized(Object) - object is PersistentCollection, wasInitialized: {}", initialized);
-            }
-            return initialized;
+            return ((PersistentCollection) o).wasInitialized();
         }
         ProxyInstanceMetaClass proxyMc = getProxyInstanceMetaClass(o);
         if (proxyMc != null) {
-            boolean initialized = proxyMc.isProxyInitiated();
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("isInitialized(Object) - object is Groovy Proxy, isProxyInitiated: {}", initialized);
-            }
-            return initialized;
+            return proxyMc.isProxyInitiated();
         }
-        boolean initialized = Hibernate.isInitialized(o);
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("isInitialized(Object) - Hibernate.isInitialized returned: {}", initialized);
-        }
-        return initialized;
+        return Hibernate.isInitialized(o);
     }
 
     /**
@@ -108,21 +78,11 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
      */
     @Override
     public boolean isInitialized(Object obj, String associationName) {
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("isInitialized(Object, String) - checking association '{}' on object of type: {}", associationName, obj != null ? obj.getClass().getName() : "null");
-        }
         try {
             Object proxy = ClassPropertyFetcher.getInstancePropertyValue(obj, associationName);
-            boolean initialized = isInitialized(proxy);
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("isInitialized(Object, String) - association '{}' isInitialized: {}", associationName, initialized);
-            }
-            return initialized;
+            return isInitialized(proxy);
         }
         catch (RuntimeException e) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("isInitialized(Object, String) - RuntimeException occurred while checking association '{}', returning false", associationName);
-            }
             return false;
         }
     }
@@ -163,7 +123,7 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
             return proxyMc.getKey();
         }
         if (o instanceof HibernateProxy) {
-            return (Serializable) ((HibernateProxy) o).getHibernateLazyInitializer().getIdentifier();
+            return ((HibernateProxy) o).getHibernateLazyInitializer().getIdentifier();
         }
         else {
             return null;
@@ -184,7 +144,7 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
      * @see #unwrap(Object)
      * @deprecated use unwrap
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     public Object unwrapIfProxy(Object instance) {
         return unwrap(instance);
     }
@@ -221,29 +181,14 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
     }
 
     private ProxyInstanceMetaClass getProxyInstanceMetaClass(Object o) {
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("getProxyInstanceMetaClass() - checking if object is GroovyObject: {}", o != null ? o.getClass().getName() : "null");
-        }
         if (o instanceof GroovyObject) {
             MetaClass mc = ((GroovyObject) o).getMetaClass();
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("getProxyInstanceMetaClass() - metaClass type: {}", mc.getClass().getName());
-            }
             if (mc instanceof HandleMetaClass) {
                 mc = ((HandleMetaClass) mc).getAdaptee();
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("getProxyInstanceMetaClass() - handleMetaClass adaptee type: {}", mc.getClass().getName());
-                }
             }
             if (mc instanceof ProxyInstanceMetaClass) {
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("getProxyInstanceMetaClass() - found ProxyInstanceMetaClass");
-                }
                 return (ProxyInstanceMetaClass) mc;
             }
-        }
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("getProxyInstanceMetaClass() - no ProxyInstanceMetaClass found");
         }
         return null;
     }
@@ -268,7 +213,7 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
     /**
      * @deprecated use unwrap
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     public Object unwrapProxy(Object proxy) {
         return unwrap(proxy);
     }

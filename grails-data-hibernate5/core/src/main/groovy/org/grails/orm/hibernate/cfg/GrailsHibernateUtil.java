@@ -178,7 +178,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
     /**
      * @deprecated No replacement. Do not use.
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     public static void setBinder(GrailsDomainBinder binder) {
     }
 
@@ -190,7 +190,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * @param argMap The arguments map
      *
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     @SuppressWarnings("rawtypes")
     public static void populateArgumentsForCriteria(Class<?> targetClass, Criteria c, Map argMap, ConversionService conversionService) {
         populateArgumentsForCriteria(null, targetClass, c, argMap, conversionService);
@@ -371,7 +371,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * @param target The GroovyObject
      * @param persistentClass The persistent class
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     public static void ensureCorrectGroovyMetaClass(Object target, Class<?> persistentClass) {
         if (target instanceof GroovyObject) {
             GroovyObject go = ((GroovyObject) target);

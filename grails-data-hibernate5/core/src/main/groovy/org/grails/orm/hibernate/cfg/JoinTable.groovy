@@ -40,6 +40,11 @@ class JoinTable extends Table {
      */
     List<ColumnConfig> keys = []
 
+    /**
+     * The child id column
+     */
+    ColumnConfig column
+
     void setKeys(List<ColumnConfig> keys) {
         this.keys = keys
     }
@@ -53,11 +58,6 @@ class JoinTable extends Table {
         this.keys = (List<ColumnConfig>) names.collect { it instanceof ColumnConfig ? it : new ColumnConfig(name: it.toString()) }
         return this
     }
-
-    /**
-     * The child id column
-     */
-    ColumnConfig column
 
     /**
      * Configures the column

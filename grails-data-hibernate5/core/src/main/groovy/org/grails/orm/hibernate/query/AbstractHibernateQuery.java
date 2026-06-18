@@ -569,6 +569,9 @@ public abstract class AbstractHibernateQuery extends Query {
         return hibernateProjectionList;
     }
 
+    /**
+     * @since 8.0
+     */
     @Override
     public Number countResults() {
         if (hibernateProjectionList != null && !hibernateProjectionList.isEmpty()) {
