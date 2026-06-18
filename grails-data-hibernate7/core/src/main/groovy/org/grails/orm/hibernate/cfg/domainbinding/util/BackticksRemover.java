@@ -21,7 +21,13 @@ package org.grails.orm.hibernate.cfg.domainbinding.util;
 import java.util.Optional;
 import java.util.function.Function;
 
-/** Removes matching leading and trailing backticks from mapping names. */
+/**
+ * Removes matching leading and trailing backticks from mapping names.
+ * Used to strip the Groovy backtick-quoting convention from property and column names
+ * before passing them to the Hibernate mapping layer.
+ *
+ * @since 8.0
+ */
 public class BackticksRemover implements Function<String, String> {
 
     public static final String BACKTICK = "`";
