@@ -60,9 +60,9 @@ dependencies {
         exclude group:'javax.transaction', module:'jta'
     }
     api project(':grails-spring')
-    api project(':grails-core')
 
     compileOnly project(':grails-bootstrap')
+    compileOnly project(':grails-core')
 
     compileOnly 'org.spockframework:spock-core', {
         exclude group: 'junit', module: 'junit-dep'
@@ -77,9 +77,6 @@ dependencies {
     testRuntimeOnly 'com.h2database:h2'
     testRuntimeOnly 'org.apache.tomcat:tomcat-jdbc'
     testRuntimeOnly 'org.hibernate.orm:hibernate-jcache'
-    testRuntimeOnly "org.jboss.spec.javax.transaction:jboss-transaction-api_1.3_spec:$jbossTransactionApiVersion", {
-        // required for hibernate-ehcache to work with javax variant of hibernate-core excluded
-    }
     testRuntimeOnly 'org.springframework:spring-aop'
     testRuntimeOnly 'org.springframework:spring-expression'
     testRuntimeOnly 'org.yaml:snakeyaml'
