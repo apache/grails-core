@@ -34,7 +34,7 @@ class DataServiceDatasourceInheritanceSpec extends Specification {
 
     void cleanup() {
         Product.secondary.withTransaction {
-            Product.secondary.executeUpdate('delete from Product', [:])
+            Product.secondary.executeUpdate('delete from Product')
         }
     }
 

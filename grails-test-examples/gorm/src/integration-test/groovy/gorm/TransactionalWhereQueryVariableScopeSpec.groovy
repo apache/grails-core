@@ -45,8 +45,8 @@ class TransactionalWhereQueryVariableScopeSpec extends Specification {
     WhereQueryVariableScopeService whereQueryVariableScopeService
 
     def setup() {
-        Book.executeUpdate('delete from Book', [:])
-        Author.executeUpdate('delete from Author', [:])
+        Book.executeUpdate('delete from Book')
+        Author.executeUpdate('delete from Author')
 
         def king = new Author(name: 'Stephen King', email: 'stephen@king.com').save(flush: true)
         def clancy = new Author(name: 'Tom Clancy', email: 'tom@clancy.com').save(flush: true)

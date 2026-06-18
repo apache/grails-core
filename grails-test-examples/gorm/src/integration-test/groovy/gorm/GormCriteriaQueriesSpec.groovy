@@ -37,8 +37,8 @@ class GormCriteriaQueriesSpec extends Specification {
 
     def setup() {
         // Clean up and create fresh test data
-        Book.executeUpdate('delete from Book', [:])
-        Author.executeUpdate('delete from Author', [:])
+        Book.executeUpdate('delete from Book')
+        Author.executeUpdate('delete from Author')
 
         def kingAuthor = new Author(name: 'Stephen King', email: 'stephen@king.com').save(flush: true)
         def clancyAuthor = new Author(name: 'Tom Clancy', email: 'tom@clancy.com').save(flush: true)
@@ -489,7 +489,7 @@ class GormCriteriaQueriesSpec extends Specification {
     // ============================================
 
     void "test basic HQL query"() {
-        when: "executing a plain String HQL query with no parameters"
+        when: "executing HQL query"
         def results = Book.executeQuery("from Book where inStock = true")
 
         then: "results returned"
@@ -545,7 +545,7 @@ class GormCriteriaQueriesSpec extends Specification {
     void "test HQL aggregate functions"() {
         when: "executing HQL aggregates"
         def result = Book.executeQuery(
-            'select count(b), avg(b.price), max(b.pageCount) from Book b', [:]
+            'select count(b), avg(b.price), max(b.pageCount) from Book b'
         )[0]
 
         then: "aggregates calculated"
@@ -557,7 +557,7 @@ class GormCriteriaQueriesSpec extends Specification {
     void "test HQL group by"() {
         when: "executing HQL group by"
         def results = Book.executeQuery(
-            'select a.name, count(b) from Book b join b.author a group by a.name order by count(b) desc', [:]
+            'select a.name, count(b) from Book b join b.author a group by a.name order by count(b) desc'
         )
 
         then: "grouped results"
@@ -569,7 +569,7 @@ class GormCriteriaQueriesSpec extends Specification {
     void "test executeUpdate for bulk operations"() {
         when: "executing bulk update"
         int updated = Book.executeUpdate(
-            'update Book b set b.price = b.price * 1.1 where b.inStock = true', [:]
+            'update Book b set b.price = b.price * 1.1 where b.inStock = true'
         )
 
         then: "bulk update applied"

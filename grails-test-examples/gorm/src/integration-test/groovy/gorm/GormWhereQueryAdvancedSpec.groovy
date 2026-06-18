@@ -39,8 +39,8 @@ class GormWhereQueryAdvancedSpec extends Specification {
 
     def setup() {
         // Clean up existing data
-        Book.executeUpdate('delete from Book', [:])
-        Author.executeUpdate('delete from Author', [:])
+        Book.executeUpdate('delete from Book')
+        Author.executeUpdate('delete from Author')
 
         // Create test authors
         def king = new Author(name: 'Stephen King', email: 'stephen@king.com').save(flush: true)
