@@ -99,8 +99,8 @@ class SoftKeySpec extends Specification {
     def "two SoftKeys with different hashes are not equal"() {
         given:
         // ensure different hash codes (different objects)
-        def sk1 = new SoftKey<>(new Integer(1))
-        def sk2 = new SoftKey<>(new Integer(99999))
+        def sk1 = new SoftKey<>(Integer.valueOf(1))
+        def sk2 = new SoftKey<>(Integer.valueOf(99999))
 
         expect:
         sk1 != sk2
