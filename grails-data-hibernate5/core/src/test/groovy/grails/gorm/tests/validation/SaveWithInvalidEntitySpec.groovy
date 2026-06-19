@@ -62,4 +62,8 @@ class A {
 class B {
     String field1
     String field2
+
+    static constraints = {
+        field1 nullable: false
+    }
 }
