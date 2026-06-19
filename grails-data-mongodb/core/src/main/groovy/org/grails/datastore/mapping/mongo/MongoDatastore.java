@@ -1019,15 +1019,44 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
     /**
      * Find an existing index whose key pattern matches the given keys, or {@code null} if none.
      * Directions/types are compared numerically (1 vs 1.0) so driver-returned values match.
+     *
+     * <p>Text indexes are special-cased: a declared text index has key {@code {field: 'text'}}, but
+     * MongoDB reports an existing one with a synthetic {@code {_fts: 'text', _ftsx: 1}} key, so the
+     * two never match by pattern. Since MongoDB allows at most one text index per collection, an
+     * existing text index is unambiguously the one a newly-declared text index conflicts with —
+     * match it regardless of its key shape or name so {@code recreateOnConflict} can absorb it.</p>
      */
     private static Document findIndexByKeyPattern(com.mongodb.client.MongoCollection<Document> collection, Document keys) {
+        boolean desiredIsText = isTextIndex(keys);
         for (Document idx : collection.listIndexes()) {
             Object key = idx.get("key");
-            if (key instanceof Document && sameKeyPattern((Document) key, keys)) {
+            if (!(key instanceof Document)) {
+                continue;
+            }
+            if (desiredIsText && isTextIndex((Document) key)) {
+                return idx;
+            }
+            if (sameKeyPattern((Document) key, keys)) {
                 return idx;
             }
         }
         return null;
+    }
+
+    /**
+     * True for a text index in either representation: a declaration ({@code {field: 'text'}}) or the
+     * synthetic key MongoDB reports for an existing one ({@code {_fts: 'text', _ftsx: 1}}).
+     */
+    private static boolean isTextIndex(Document key) {
+        if (key.containsKey("_fts")) {
+            return true;
+        }
+        for (Object v : key.values()) {
+            if ("text".equals(v)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean sameKeyPattern(Document existingKey, Document desiredKey) {
