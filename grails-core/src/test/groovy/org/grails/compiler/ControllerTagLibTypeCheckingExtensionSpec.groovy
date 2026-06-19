@@ -132,4 +132,26 @@ class ControllerTagLibTypeCheckingExtensionSpec extends Specification {
         then: 'compilation succeeds — the tag call is made dynamic'
         c
     }
+
+    void 'tag extension resolves a tag call dispatched through a namespace property'() {
+        given:
+        def gcl = new GroovyClassLoader(getClass().classLoader)
+
+        when: 'a controller invokes a tag via a namespace dispatcher with only the tag extension active'
+        // GROOVY-12041: on Groovy 5 the namespace dispatcher ('g') resolves to Object via getProperty
+        // and unresolvedVariable/unresolvedProperty no longer fire, so methodNotFound must recognise it.
+        def c = gcl.parseClass('''
+            import groovy.transform.CompileStatic
+
+            @CompileStatic(extensions = ['org.grails.compiler.ControllerTagLibTypeCheckingExtension'])
+            class BookController {
+                def index() {
+                    g.link(controller: 'home')
+                }
+            }
+        ''')
+
+        then: 'compilation succeeds — the namespaced dispatch call is made dynamic'
+        c
+    }
 }
