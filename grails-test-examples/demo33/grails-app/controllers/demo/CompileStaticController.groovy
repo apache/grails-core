@@ -16,17 +16,25 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.gorm.tests
+package demo
 
-import org.apache.grails.data.testing.tck.tests.FirstAndLastMethodSpec
-import org.apache.grails.data.testing.tck.tests.StaticCompiledCriteriaSpec
-import org.junit.platform.suite.api.SelectClasses
-import org.junit.platform.suite.api.Suite
+import grails.compiler.GrailsCompileStatic
 
 /**
- * Created by graemerocher on 06/07/2016.
+ * Demonstrates that a controller annotated with {@code @GrailsCompileStatic} can
+ * invoke tag library methods — both in the default namespace (direct call) and via
+ * a namespace dispatcher property — without compile errors.
  */
-@Suite
-@SelectClasses([FirstAndLastMethodSpec, StaticCompiledCriteriaSpec])
-class Hibernate5Suite {
+@GrailsCompileStatic
+class CompileStaticController {
+
+    def invokeDefaultNamespaceTag() {
+        // link() is a core tag in the default 'g' namespace; invoked directly on this
+        response.writer << link(controller: 'demo', action: 'clearDatabase')
+    }
+
+    def invokeNamespacedTag() {
+        // one.sayHello() accesses the 'one' namespace dispatcher, then invokes the tag
+        response.writer << one.sayHello()
+    }
 }

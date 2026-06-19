@@ -16,17 +16,30 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package grails.gorm.tests
+package demo
 
-import org.apache.grails.data.testing.tck.tests.FirstAndLastMethodSpec
-import org.apache.grails.data.testing.tck.tests.StaticCompiledCriteriaSpec
-import org.junit.platform.suite.api.SelectClasses
-import org.junit.platform.suite.api.Suite
+import grails.testing.web.controllers.ControllerUnitTest
+import spock.lang.Specification
 
-/**
- * Created by graemerocher on 06/07/2016.
- */
-@Suite
-@SelectClasses([FirstAndLastMethodSpec, StaticCompiledCriteriaSpec])
-class Hibernate5Suite {
+class CompileStaticControllerSpec extends Specification implements ControllerUnitTest<CompileStaticController> {
+
+    void setup() {
+        mockTagLibs FirstTagLib, SecondTagLib
+    }
+
+    void 'controller with @GrailsCompileStatic can call a default-namespace tag directly'() {
+        when:
+        controller.invokeDefaultNamespaceTag()
+
+        then:
+        response.text == '<a href="/demo/clearDatabase"></a>'
+    }
+
+    void 'controller with @GrailsCompileStatic can call a tag via namespace dispatcher property'() {
+        when:
+        controller.invokeNamespacedTag()
+
+        then:
+        response.text == 'BEFORE Hello From SecondTagLib AFTER'
+    }
 }

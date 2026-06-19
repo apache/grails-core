@@ -27,11 +27,17 @@ import groovy.transform.CompileStatic
  *
  */
 @AnnotationCollector
-@CompileStatic(extensions=['org.grails.compiler.ValidateableTypeCheckingExtension',
-                           'org.grails.compiler.NamedQueryTypeCheckingExtension',
-                           'org.grails.compiler.HttpServletRequestTypeCheckingExtension',
-                           'org.grails.compiler.WhereQueryTypeCheckingExtension',
-                           'org.grails.compiler.DynamicFinderTypeCheckingExtension',
-                           'org.grails.compiler.DomainMappingTypeCheckingExtension',
-                           'org.grails.compiler.RelationshipManagementMethodTypeCheckingExtension'])
+@CompileStatic(extensions = [
+        'org.grails.compiler.CriteriaTypeCheckingExtension',
+        'org.grails.compiler.DomainMappingTypeCheckingExtension',
+        'org.grails.compiler.DynamicFinderTypeCheckingExtension',
+        'org.grails.compiler.HttpServletRequestTypeCheckingExtension',
+        'org.grails.compiler.NamedQueryTypeCheckingExtension',
+        'org.grails.compiler.RelationshipManagementMethodTypeCheckingExtension',
+        'org.grails.compiler.ValidateableTypeCheckingExtension',
+        'org.grails.compiler.WhereQueryTypeCheckingExtension',
+        // Catch-all: must run last so it can defer to any extension above that has
+        // already resolved an unrecognised call (see ControllerTagLibTypeCheckingExtension).
+        'org.grails.compiler.ControllerTagLibTypeCheckingExtension',
+])
 @interface GrailsCompileStatic {}
