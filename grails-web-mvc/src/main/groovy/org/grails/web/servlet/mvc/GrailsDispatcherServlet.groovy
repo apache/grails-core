@@ -18,13 +18,18 @@
  */
 package org.grails.web.servlet.mvc
 
+import java.util.function.Supplier
+
 import groovy.transform.CompileStatic
 
+import io.micrometer.observation.Observation
+import io.micrometer.observation.ObservationRegistry
 import jakarta.servlet.ServletContext
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 
 import org.springframework.context.ApplicationContext
+import org.springframework.web.servlet.ModelAndView
 import org.springframework.web.context.ServletContextAware
 import org.springframework.web.context.WebApplicationContext
 import org.springframework.web.context.request.RequestAttributes
@@ -34,6 +39,10 @@ import org.springframework.web.servlet.DispatcherServlet
 
 import grails.util.Holders
 import org.grails.web.context.ServletEnvironmentGrailsApplicationDiscoveryStrategy
+import org.grails.web.observation.DefaultRenderObservationConvention
+import org.grails.web.observation.GrailsObservationDocumentation
+import org.grails.web.observation.RenderObservationContext
+import org.grails.web.observation.RenderObservationConvention
 import org.grails.web.util.WebUtils
 
 /**
@@ -44,6 +53,10 @@ import org.grails.web.util.WebUtils
  */
 @CompileStatic
 class GrailsDispatcherServlet extends DispatcherServlet implements ServletContextAware {
+
+    private ObservationRegistry observationRegistry
+
+    private static final DefaultRenderObservationConvention DEFAULT_RENDER_CONVENTION = new DefaultRenderObservationConvention()
 
     GrailsDispatcherServlet() {
     }
@@ -87,6 +100,45 @@ class GrailsDispatcherServlet extends DispatcherServlet implements ServletContex
             }
         }
         return request
+    }
+
+    /**
+     * Wraps the view-render phase in a {@code grails.render} span — parent of the GSP render spans, so
+     * "render excluding GSP" is {@code grails.render} minus its GSP children.
+     */
+    @Override
+    protected void render(ModelAndView mv, HttpServletRequest request, HttpServletResponse response) throws Exception {
+        ObservationRegistry registry = resolveObservationRegistry()
+        if (registry == null || registry.isNoop()) {
+            super.render(mv, request, response)
+            return
+        }
+        Observation observation = GrailsObservationDocumentation.RENDER.observation(
+                (RenderObservationConvention) null, DEFAULT_RENDER_CONVENTION,
+                { -> new RenderObservationContext((mv != null && mv.viewName) ? mv.viewName : null) } as Supplier<RenderObservationContext>,
+                registry).start()
+        Observation.Scope scope = observation.openScope()
+        try {
+            super.render(mv, request, response)
+        }
+        catch (Throwable t) {
+            observation.error(t)
+            throw t
+        }
+        finally {
+            scope.close()
+            observation.stop()
+        }
+    }
+
+    private ObservationRegistry resolveObservationRegistry() {
+        ObservationRegistry registry = this.observationRegistry
+        if (registry == null) {
+            WebApplicationContext wac = getWebApplicationContext()
+            registry = (wac != null) ? wac.getBeanProvider(ObservationRegistry).getIfAvailable({ -> ObservationRegistry.NOOP }) : ObservationRegistry.NOOP
+            this.observationRegistry = registry
+        }
+        return registry
     }
 
     @Override

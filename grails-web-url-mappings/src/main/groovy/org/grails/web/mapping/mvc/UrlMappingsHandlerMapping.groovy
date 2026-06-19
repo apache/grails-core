@@ -25,8 +25,10 @@ import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.http.server.observation.ServerRequestObservationContext
 import org.springframework.util.Assert
 import org.springframework.web.context.request.WebRequestInterceptor
+import org.springframework.web.filter.ServerHttpObservationFilter
 import org.springframework.web.servlet.HandlerExecutionChain
 import org.springframework.web.servlet.HandlerInterceptor
 import org.springframework.web.servlet.ModelAndView
@@ -112,6 +114,7 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
             }
         }
 
+        chain.addInterceptor(new ObservationRouteHandler())
         chain.addInterceptor(new ErrorHandlingHandler())
         return chain
     }
@@ -188,6 +191,51 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
             version = mimeType.version
         }
         return version
+    }
+
+    /**
+     * Sets the HTTP server observation's route from the matched controller/action, so the
+     * {@code http.server.requests} {@code uri} tag is a low-cardinality route (e.g. {@code /book/show})
+     * instead of {@code UNKNOWN}. Runs at {@code preHandle}: at URL-mapping match the observation
+     * context is not yet on the request.
+     */
+    @CompileStatic
+    static class ObservationRouteHandler implements HandlerInterceptor {
+
+        @Override
+        boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+            try {
+                String controllerName = null
+                String actionName = null
+                GrailsWebRequest webRequest = GrailsWebRequest.lookup(request)
+                if (webRequest != null) {
+                    controllerName = webRequest.controllerName
+                    actionName = webRequest.actionName
+                }
+                if ((controllerName == null || controllerName.isEmpty()) && handler instanceof UrlMappingInfo) {
+                    UrlMappingInfo info = (UrlMappingInfo) handler
+                    controllerName = info.controllerName
+                    if (actionName == null || actionName.isEmpty()) {
+                        actionName = info.actionName
+                    }
+                }
+                if (controllerName != null && !controllerName.isEmpty()) {
+                    if ((actionName == null || actionName.isEmpty()) && handler instanceof GrailsControllerUrlMappingInfo) {
+                        actionName = ((GrailsControllerUrlMappingInfo) handler).controllerClass?.defaultAction
+                    }
+                    if (actionName == null || actionName.isEmpty()) {
+                        actionName = 'index'
+                    }
+                    ServerRequestObservationContext context = ServerHttpObservationFilter.findObservationContext(request).orElse(null)
+                    if (context != null) {
+                        context.setPathPattern('/' + controllerName + '/' + actionName)
+                    }
+                }
+            }
+            catch (Throwable ignored) {
+            }
+            return true
+        }
     }
 
     static class ErrorHandlingHandler implements HandlerInterceptor {
