@@ -168,10 +168,10 @@ class FirstAndLastMethodSpec extends GrailsDataTckSpec {
     )
     void "Test first and last method with composite key"() {
         given:
-        assert new PersonWithCompositeKey(firstName: 'Steve', lastName: 'Harris', age: 56).save(failOnError: true)
-        assert new PersonWithCompositeKey(firstName: 'Dave', lastName: 'Murray', age: 54).save(failOnError: true)
-        assert new PersonWithCompositeKey(firstName: 'Adrian', lastName: 'Smith', age: 55).save(failOnError: true)
-        assert new PersonWithCompositeKey(firstName: 'Bruce', lastName: 'Dickinson', age: 53).save(failOnError: true, flush: true)
+        assert new PersonWithCompositeKey(firstName: 'Steve', lastName: 'Harris', age: 56).save()
+        assert new PersonWithCompositeKey(firstName: 'Dave', lastName: 'Murray', age: 54).save()
+        assert new PersonWithCompositeKey(firstName: 'Adrian', lastName: 'Smith', age: 55).save()
+        assert new PersonWithCompositeKey(firstName: 'Bruce', lastName: 'Dickinson', age: 53).save(flush: true)
         assert PersonWithCompositeKey.count() == 4
 
         when:

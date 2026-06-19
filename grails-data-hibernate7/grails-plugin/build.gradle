@@ -38,7 +38,6 @@ ext {
 }
 
 dependencies {
-    // TODO: Clarify and clean up dependencies
     implementation platform(project(':grails-hibernate7-bom'))
 
     api 'org.springframework.boot:spring-boot'
