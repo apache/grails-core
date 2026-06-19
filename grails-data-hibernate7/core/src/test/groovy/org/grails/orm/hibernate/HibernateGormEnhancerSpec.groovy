@@ -20,7 +20,6 @@ package org.grails.orm.hibernate
 
 import grails.gorm.annotation.Entity
 import grails.gorm.tests.HibernateGormDatastoreSpec
-import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 
 class HibernateGormEnhancerSpec extends HibernateGormDatastoreSpec {

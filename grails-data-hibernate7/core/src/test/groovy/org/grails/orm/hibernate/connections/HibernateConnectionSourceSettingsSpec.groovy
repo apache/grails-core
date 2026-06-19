@@ -37,7 +37,7 @@ class HibernateConnectionSourceSettingsSpec extends Specification {
                 'hibernate.flush.mode': 'commit',
                 'hibernate.cache.queries': 'true',
                 'hibernate.hbm2ddl.auto': 'create',
-                'hibernate.cache':['region.factory_class':'org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory'],
+                'hibernate.cache':['region.factory_class':'org.hibernate.cache.jcache.internal.JCacheRegionFactory'],
                 'hibernate.configLocations':'file:hibernate.cfg.xml',
                 'hibernate.jpa.compliance.cascade': 'true',
         ]
@@ -59,7 +59,7 @@ class HibernateConnectionSourceSettingsSpec extends Specification {
         expectedHibernateProperties.put('hibernate.configLocations','file:hibernate.cfg.xml')
         expectedHibernateProperties.put('hibernate.use_query_cache','true')
         expectedHibernateProperties.put("hibernate.connection.handling_mode", "DELAYED_ACQUISITION_AND_HOLD")
-        expectedHibernateProperties.put('hibernate.cache.region.factory_class','org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory')
+        expectedHibernateProperties.put('hibernate.cache.region.factory_class','org.hibernate.cache.jcache.internal.JCacheRegionFactory')
         expectedHibernateProperties.put('hibernate.jpa.compliance.cascade', 'true')
 
         then:"The results are correct"
@@ -84,7 +84,7 @@ class HibernateConnectionSourceSettingsSpec extends Specification {
         hibernateProperties['hibernate.configLocations'] == 'file:hibernate.cfg.xml'
         hibernateProperties['hibernate.use_query_cache'] == 'true'
         hibernateProperties["hibernate.connection.handling_mode"] == "DELAYED_ACQUISITION_AND_HOLD"
-        hibernateProperties['hibernate.cache.region.factory_class'] == 'org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory'
+        hibernateProperties['hibernate.cache.region.factory_class'] == 'org.hibernate.cache.jcache.internal.JCacheRegionFactory'
         hibernateProperties['hibernate.jpa.compliance.cascade'] == 'true'
     }
 
