@@ -54,7 +54,7 @@ dependencies {
 
     api 'org.springframework:spring-webmvc'
     api 'org.springframework:spring-context-support'
-    api 'io.micrometer:micrometer-observation'
+    api project(':grails-observation')
     implementation 'com.github.ben-manes.caffeine:caffeine'
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'

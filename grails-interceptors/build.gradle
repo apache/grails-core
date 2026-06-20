@@ -39,6 +39,7 @@ dependencies {
 
     api project(':grails-controllers')
     api project(':grails-url-mappings')
+    api project(':grails-observation')
     api 'org.apache.groovy:groovy'
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'

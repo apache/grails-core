@@ -16,17 +16,16 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.observation;
+package org.grails.plugins.web.interceptors.observation;
 
 import io.micrometer.observation.ObservationConvention;
 
 /**
- * {@link ObservationConvention} for the {@link GrailsObservationDocumentation#CONTROLLER} observation.
- * The default implementation is {@link DefaultControllerObservationConvention}; supply a custom one to
- * override the span name or tags.
+ * {@link ObservationConvention} for the {@link InterceptorObservationDocumentation#INTERCEPTOR}
+ * observation. The default implementation is {@link DefaultInterceptorObservationConvention}.
  *
  * @author Apache Grails
  * @since 8.0.0
  */
-public interface ControllerObservationConvention extends ObservationConvention<ControllerObservationContext> {
+public interface InterceptorObservationConvention extends ObservationConvention<InterceptorObservationContext> {
 }

@@ -18,9 +18,14 @@
  */
 package org.grails.plugins.web.interceptors
 
+import java.util.function.BooleanSupplier
+import java.util.function.Supplier
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
+import io.micrometer.observation.Observation
+import io.micrometer.observation.ObservationRegistry
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 
@@ -36,6 +41,10 @@ import grails.artefact.Interceptor
 import grails.interceptors.Matcher
 import grails.util.GrailsNameUtils
 import org.grails.datastore.mapping.services.ServiceRegistry
+import org.grails.plugins.web.interceptors.observation.DefaultInterceptorObservationConvention
+import org.grails.plugins.web.interceptors.observation.InterceptorObservationContext
+import org.grails.plugins.web.interceptors.observation.InterceptorObservationConvention
+import org.grails.plugins.web.interceptors.observation.InterceptorObservationDocumentation
 import org.grails.web.util.GrailsApplicationAttributes
 import org.grails.web.util.WebUtils
 
@@ -60,6 +69,11 @@ class GrailsInterceptorHandlerInterceptorAdapter implements HandlerInterceptor {
     ServiceRegistry[] serviceRegistry // inject the service registry to ensure data services are wired up
 
     @Autowired(required = false)
+    ObservationRegistry observationRegistry = ObservationRegistry.NOOP
+
+    private static final DefaultInterceptorObservationConvention DEFAULT_INTERCEPTOR_CONVENTION = new DefaultInterceptorObservationConvention()
+
+    @Autowired(required = false)
     @CompileDynamic
     void setInterceptors(Interceptor[] interceptors) {
         this.interceptors = interceptors.sort(new OrderComparator()) as List<Interceptor>
@@ -80,7 +94,7 @@ class GrailsInterceptorHandlerInterceptorAdapter implements HandlerInterceptor {
             for (i in interceptors) {
                 if (i.doesMatch(request)) {
                     matchInterceptors.add(i)
-                    if (!i.before()) {
+                    if (!observe(i, 'before', { -> i.before() } as BooleanSupplier)) {
                         return false
                     }
                 }
@@ -100,7 +114,7 @@ class GrailsInterceptorHandlerInterceptorAdapter implements HandlerInterceptor {
             List<Interceptor> reversedInterceptors = ((List<Interceptor>) matchedInterceptorsObject).reverse()
             request.setAttribute(ATTRIBUTE_MATCHED_INTERCEPTORS, reversedInterceptors)
             for (i in reversedInterceptors) {
-                if (!i.after()) {
+                if (!observe(i, 'after', { -> i.after() } as BooleanSupplier)) {
                     if (request.getAttribute(INTERCEPTOR_RENDERED_VIEW)) {
                         ModelAndView interceptorsModelAndView = i.modelAndView
                         modelAndView.viewName = interceptorsModelAndView.viewName
@@ -127,6 +141,34 @@ class GrailsInterceptorHandlerInterceptorAdapter implements HandlerInterceptor {
             for (i in ((List<Interceptor>) matchedInterceptorsObject)) {
                 i.afterView()
             }
+        }
+    }
+
+    /**
+     * Records a {@code grails.interceptor} span around a single interceptor callback, preserving its
+     * boolean result and control flow. No-op (runs the callback directly) when observation is disabled.
+     */
+    private boolean observe(Interceptor interceptor, String phase, BooleanSupplier action) {
+        ObservationRegistry registry = this.observationRegistry
+        if (registry == null || registry.isNoop()) {
+            return action.getAsBoolean()
+        }
+        String name = GrailsNameUtils.getLogicalPropertyName(interceptor.getClass().name, 'Interceptor')
+        Observation observation = InterceptorObservationDocumentation.INTERCEPTOR.observation(
+                (InterceptorObservationConvention) null, DEFAULT_INTERCEPTOR_CONVENTION,
+                { -> new InterceptorObservationContext(name, phase) } as Supplier<InterceptorObservationContext>,
+                registry).start()
+        Observation.Scope scope = observation.openScope()
+        try {
+            return action.getAsBoolean()
+        }
+        catch (Throwable t) {
+            observation.error(t)
+            throw t
+        }
+        finally {
+            scope.close()
+            observation.stop()
         }
     }
 }

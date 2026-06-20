@@ -23,6 +23,8 @@ import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationConvention;
 import io.micrometer.observation.docs.ObservationDocumentation;
 
+import org.grails.observation.GrailsObservationKeyNames;
+
 /**
  * {@link ObservationDocumentation} for the Grails request-handling lifecycle observations that sit
  * between the Spring HTTP server observation and the leaf GSP/data-store observations.
@@ -43,7 +45,11 @@ public enum GrailsObservationDocumentation implements ObservationDocumentation {
 
         @Override
         public KeyName[] getLowCardinalityKeyNames() {
-            return ControllerLowCardinalityKeyNames.values();
+            return new KeyName[] {
+                ControllerLowCardinalityKeyNames.CONTROLLER,
+                ControllerLowCardinalityKeyNames.ACTION,
+                GrailsObservationKeyNames.ERROR,
+            };
         }
     },
 
@@ -58,7 +64,10 @@ public enum GrailsObservationDocumentation implements ObservationDocumentation {
 
         @Override
         public KeyName[] getLowCardinalityKeyNames() {
-            return RenderLowCardinalityKeyNames.values();
+            return new KeyName[] {
+                RenderLowCardinalityKeyNames.VIEW,
+                GrailsObservationKeyNames.ERROR,
+            };
         }
     };
 
@@ -78,14 +87,6 @@ public enum GrailsObservationDocumentation implements ObservationDocumentation {
             public String asString() {
                 return "grails.action";
             }
-        },
-
-        /** Simple name of the thrown exception, or {@code none}. */
-        ERROR {
-            @Override
-            public String asString() {
-                return "error";
-            }
         }
     }
 
@@ -96,14 +97,6 @@ public enum GrailsObservationDocumentation implements ObservationDocumentation {
             @Override
             public String asString() {
                 return "grails.view";
-            }
-        },
-
-        /** Simple name of the thrown exception, or {@code none}. */
-        ERROR {
-            @Override
-            public String asString() {
-                return "error";
             }
         }
     }

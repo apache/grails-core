@@ -27,7 +27,12 @@ import org.codehaus.groovy.runtime.InvokerHelper
 import org.codehaus.groovy.runtime.MetaClassHelper
 import org.codehaus.groovy.runtime.metaclass.ThreadManagedMetaBeanProperty
 
+import java.util.function.Supplier
+
+import io.micrometer.observation.Observation
+import io.micrometer.observation.ObservationRegistry
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.ApplicationContext
 import org.springframework.context.MessageSource
 import org.springframework.validation.BeanPropertyBindingResult
 import org.springframework.validation.BindingResult
@@ -68,6 +73,11 @@ import org.grails.web.databinding.SpringConversionServiceAdapter
 import org.grails.web.databinding.converters.ByteArrayMultipartFileValueConverter
 import org.grails.web.servlet.mvc.GrailsWebRequest
 
+import grails.web.databinding.observation.DataBindingObservationContext
+import grails.web.databinding.observation.DataBindingObservationConvention
+import grails.web.databinding.observation.DataBindingObservationDocumentation
+import grails.web.databinding.observation.DefaultDataBindingObservationConvention
+
 import static grails.web.databinding.DataBindingUtils.getBindingIncludeList
 
 @CompileStatic
@@ -78,6 +88,10 @@ class GrailsWebDataBinder extends SimpleDataBinder {
     boolean trimStrings = true
     boolean convertEmptyStringsToNull = true
     protected List<DataBindingListener> listeners = []
+
+    private volatile ObservationRegistry observationRegistry
+
+    private static final DefaultDataBindingObservationConvention DEFAULT_DATABINDING_CONVENTION = new DefaultDataBindingObservationConvention()
 
     GrailsWebDataBinder(GrailsApplication grailsApplication) {
         this.grailsApplication = grailsApplication
@@ -103,6 +117,45 @@ class GrailsWebDataBinder extends SimpleDataBinder {
 
     @Override
     protected void doBind(object, DataBindingSource source, String filter, List whiteList, List blackList, DataBindingListener listener, errors) {
+        ObservationRegistry registry = resolveObservationRegistry()
+        if (registry == null || registry.isNoop()) {
+            doBindInternal(object, source, filter, whiteList, blackList, listener, errors)
+            return
+        }
+        Observation observation = DataBindingObservationDocumentation.DATABINDING.observation(
+                (DataBindingObservationConvention) null, DEFAULT_DATABINDING_CONVENTION,
+                { -> new DataBindingObservationContext(object != null ? object.getClass().simpleName : null) } as Supplier<DataBindingObservationContext>,
+                registry).start()
+        Observation.Scope scope = observation.openScope()
+        try {
+            doBindInternal(object, source, filter, whiteList, blackList, listener, errors)
+        }
+        catch (Throwable t) {
+            observation.error(t)
+            throw t
+        }
+        finally {
+            scope.close()
+            observation.stop()
+        }
+    }
+
+    private ObservationRegistry resolveObservationRegistry() {
+        ObservationRegistry registry = this.observationRegistry
+        if (registry == null) {
+            ApplicationContext ctx = grailsApplication?.mainContext
+            if (ctx == null) {
+                // context not ready (e.g. binding during bootstrap) — return NOOP without caching
+                // so a later call re-resolves the real registry
+                return ObservationRegistry.NOOP
+            }
+            registry = ctx.getBeanProvider(ObservationRegistry).getIfAvailable({ -> ObservationRegistry.NOOP })
+            this.observationRegistry = registry
+        }
+        return registry
+    }
+
+    protected void doBindInternal(object, DataBindingSource source, String filter, List whiteList, List blackList, DataBindingListener listener, errors) {
         BeanPropertyBindingResult bindingResult = (BeanPropertyBindingResult) errors
         def errorHandlingListener = new GrailsWebDataBindingListener(messageSource)
 

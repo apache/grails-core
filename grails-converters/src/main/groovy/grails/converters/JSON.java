@@ -35,6 +35,8 @@ import groovy.util.BuilderSupport;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -51,6 +53,10 @@ import org.grails.web.converters.configuration.DefaultConverterConfiguration;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ClosureObjectMarshaller;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
+import org.grails.web.converters.observation.ConverterObservationContext;
+import org.grails.web.converters.observation.ConverterObservationConvention;
+import org.grails.web.converters.observation.ConverterObservationDocumentation;
+import org.grails.web.converters.observation.DefaultConverterObservationConvention;
 import org.grails.web.json.JSONArray;
 import org.grails.web.json.JSONElement;
 import org.grails.web.json.JSONException;
@@ -70,6 +76,7 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
 
     private final static Log log = LogFactory.getLog(JSON.class);
     private static final String CACHED_JSON = "org.codehaus.groovy.grails.CACHED_JSON_REQUEST_CONTENT";
+    private static final DefaultConverterObservationConvention DEFAULT_CONVERT_CONVENTION = new DefaultConverterObservationConvention();
 
     protected Object target;
     protected final ConverterConfiguration<JSON> config;
@@ -148,6 +155,29 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
      * @throws ConverterException
      */
     public void render(HttpServletResponse response) throws ConverterException {
+        ObservationRegistry registry = ConvertersConfigurationHolder.getObservationRegistry();
+        if (registry == null || registry.isNoop()) {
+            renderInternal(response);
+            return;
+        }
+        Observation observation = ConverterObservationDocumentation.CONVERT.observation(
+                (ConverterObservationConvention) null, DEFAULT_CONVERT_CONVENTION,
+                () -> new ConverterObservationContext("json"), registry).start();
+        Observation.Scope scope = observation.openScope();
+        try {
+            renderInternal(response);
+        }
+        catch (Throwable t) {
+            observation.error(t);
+            throw t;
+        }
+        finally {
+            scope.close();
+            observation.stop();
+        }
+    }
+
+    private void renderInternal(HttpServletResponse response) throws ConverterException {
         response.setContentType(GrailsWebUtil.getContentType(contentType, encoding));
         try {
             render(response.getWriter());

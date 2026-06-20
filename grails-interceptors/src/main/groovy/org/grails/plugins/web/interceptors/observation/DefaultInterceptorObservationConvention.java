@@ -16,7 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.observation;
+package org.grails.plugins.web.interceptors.observation;
 
 import io.micrometer.common.KeyValues;
 import io.micrometer.common.docs.KeyName;
@@ -24,21 +24,21 @@ import io.micrometer.common.docs.KeyName;
 import org.grails.observation.GrailsObservationConvention;
 import org.grails.observation.GrailsObservationKeyNames;
 
-import static org.grails.web.observation.GrailsObservationDocumentation.RenderLowCardinalityKeyNames;
+import static org.grails.plugins.web.interceptors.observation.InterceptorObservationDocumentation.InterceptorLowCardinalityKeyNames;
 
 /**
- * Default {@link RenderObservationConvention}.
+ * Default {@link InterceptorObservationConvention}.
  *
  * @author Apache Grails
  * @since 8.0.0
  */
-public class DefaultRenderObservationConvention extends GrailsObservationConvention<RenderObservationContext>
-        implements RenderObservationConvention {
+public class DefaultInterceptorObservationConvention extends GrailsObservationConvention<InterceptorObservationContext>
+        implements InterceptorObservationConvention {
 
-    private static final String NAME = "grails.render";
+    private static final String NAME = "grails.interceptor";
 
-    public DefaultRenderObservationConvention() {
-        super(RenderObservationContext.class);
+    public DefaultInterceptorObservationConvention() {
+        super(InterceptorObservationContext.class);
     }
 
     @Override
@@ -47,14 +47,15 @@ public class DefaultRenderObservationConvention extends GrailsObservationConvent
     }
 
     @Override
-    public String getContextualName(RenderObservationContext context) {
-        return NAME + " " + orElse(context.getView(), NONE);
+    public String getContextualName(InterceptorObservationContext context) {
+        return NAME + " " + orElse(context.getInterceptor(), UNKNOWN);
     }
 
     @Override
-    public KeyValues getLowCardinalityKeyValues(RenderObservationContext context) {
+    public KeyValues getLowCardinalityKeyValues(InterceptorObservationContext context) {
         return KeyValues.of(
-                RenderLowCardinalityKeyNames.VIEW.withValue(orElse(context.getView(), NONE)),
+                InterceptorLowCardinalityKeyNames.INTERCEPTOR.withValue(orElse(context.getInterceptor(), UNKNOWN)),
+                InterceptorLowCardinalityKeyNames.PHASE.withValue(orElse(context.getPhase(), UNKNOWN)),
                 error(context));
     }
 

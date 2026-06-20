@@ -16,17 +16,25 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.observation;
+package org.grails.web.converters.observation;
 
-import io.micrometer.observation.ObservationConvention;
+import io.micrometer.observation.Observation;
 
 /**
- * {@link ObservationConvention} for the {@link GrailsObservationDocumentation#CONTROLLER} observation.
- * The default implementation is {@link DefaultControllerObservationConvention}; supply a custom one to
- * override the span name or tags.
+ * Observation context for the {@link ConverterObservationDocumentation#CONVERT} observation.
  *
  * @author Apache Grails
  * @since 8.0.0
  */
-public interface ControllerObservationConvention extends ObservationConvention<ControllerObservationContext> {
+public class ConverterObservationContext extends Observation.Context {
+
+    private final String format;
+
+    public ConverterObservationContext(String format) {
+        this.format = format;
+    }
+
+    public String getFormat() {
+        return this.format;
+    }
 }

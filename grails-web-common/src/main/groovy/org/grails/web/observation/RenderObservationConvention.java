@@ -18,19 +18,15 @@
  */
 package org.grails.web.observation;
 
-import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationConvention;
 
 /**
  * {@link ObservationConvention} for the {@link GrailsObservationDocumentation#RENDER} observation.
+ * The default implementation is {@link DefaultRenderObservationConvention}; supply a custom one to
+ * override the span name or tags.
  *
  * @author Apache Grails
  * @since 8.0.0
  */
 public interface RenderObservationConvention extends ObservationConvention<RenderObservationContext> {
-
-    @Override
-    default boolean supportsContext(Observation.Context context) {
-        return context instanceof RenderObservationContext;
-    }
 }

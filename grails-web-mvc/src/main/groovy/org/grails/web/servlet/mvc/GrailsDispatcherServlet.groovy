@@ -54,7 +54,7 @@ import org.grails.web.util.WebUtils
 @CompileStatic
 class GrailsDispatcherServlet extends DispatcherServlet implements ServletContextAware {
 
-    private ObservationRegistry observationRegistry
+    private volatile ObservationRegistry observationRegistry
 
     private static final DefaultRenderObservationConvention DEFAULT_RENDER_CONVENTION = new DefaultRenderObservationConvention()
 
@@ -135,7 +135,11 @@ class GrailsDispatcherServlet extends DispatcherServlet implements ServletContex
         ObservationRegistry registry = this.observationRegistry
         if (registry == null) {
             WebApplicationContext wac = getWebApplicationContext()
-            registry = (wac != null) ? wac.getBeanProvider(ObservationRegistry).getIfAvailable({ -> ObservationRegistry.NOOP }) : ObservationRegistry.NOOP
+            if (wac == null) {
+                // context not ready — return NOOP without caching so a later call re-resolves
+                return ObservationRegistry.NOOP
+            }
+            registry = wac.getBeanProvider(ObservationRegistry).getIfAvailable({ -> ObservationRegistry.NOOP })
             this.observationRegistry = registry
         }
         return registry

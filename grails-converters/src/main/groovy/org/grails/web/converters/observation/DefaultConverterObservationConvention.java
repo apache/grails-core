@@ -16,7 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.observation;
+package org.grails.web.converters.observation;
 
 import io.micrometer.common.KeyValues;
 import io.micrometer.common.docs.KeyName;
@@ -24,21 +24,21 @@ import io.micrometer.common.docs.KeyName;
 import org.grails.observation.GrailsObservationConvention;
 import org.grails.observation.GrailsObservationKeyNames;
 
-import static org.grails.web.observation.GrailsObservationDocumentation.RenderLowCardinalityKeyNames;
+import static org.grails.web.converters.observation.ConverterObservationDocumentation.ConverterLowCardinalityKeyNames;
 
 /**
- * Default {@link RenderObservationConvention}.
+ * Default {@link ConverterObservationConvention}.
  *
  * @author Apache Grails
  * @since 8.0.0
  */
-public class DefaultRenderObservationConvention extends GrailsObservationConvention<RenderObservationContext>
-        implements RenderObservationConvention {
+public class DefaultConverterObservationConvention extends GrailsObservationConvention<ConverterObservationContext>
+        implements ConverterObservationConvention {
 
-    private static final String NAME = "grails.render";
+    private static final String NAME = "grails.convert";
 
-    public DefaultRenderObservationConvention() {
-        super(RenderObservationContext.class);
+    public DefaultConverterObservationConvention() {
+        super(ConverterObservationContext.class);
     }
 
     @Override
@@ -47,14 +47,14 @@ public class DefaultRenderObservationConvention extends GrailsObservationConvent
     }
 
     @Override
-    public String getContextualName(RenderObservationContext context) {
-        return NAME + " " + orElse(context.getView(), NONE);
+    public String getContextualName(ConverterObservationContext context) {
+        return NAME + " " + orElse(context.getFormat(), UNKNOWN);
     }
 
     @Override
-    public KeyValues getLowCardinalityKeyValues(RenderObservationContext context) {
+    public KeyValues getLowCardinalityKeyValues(ConverterObservationContext context) {
         return KeyValues.of(
-                RenderLowCardinalityKeyNames.VIEW.withValue(orElse(context.getView(), NONE)),
+                ConverterLowCardinalityKeyNames.FORMAT.withValue(orElse(context.getFormat(), UNKNOWN)),
                 error(context));
     }
 

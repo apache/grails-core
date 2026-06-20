@@ -16,7 +16,7 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.observation;
+package grails.web.databinding.observation;
 
 import io.micrometer.common.KeyValues;
 import io.micrometer.common.docs.KeyName;
@@ -24,21 +24,21 @@ import io.micrometer.common.docs.KeyName;
 import org.grails.observation.GrailsObservationConvention;
 import org.grails.observation.GrailsObservationKeyNames;
 
-import static org.grails.web.observation.GrailsObservationDocumentation.RenderLowCardinalityKeyNames;
+import static grails.web.databinding.observation.DataBindingObservationDocumentation.DataBindingLowCardinalityKeyNames;
 
 /**
- * Default {@link RenderObservationConvention}.
+ * Default {@link DataBindingObservationConvention}.
  *
  * @author Apache Grails
  * @since 8.0.0
  */
-public class DefaultRenderObservationConvention extends GrailsObservationConvention<RenderObservationContext>
-        implements RenderObservationConvention {
+public class DefaultDataBindingObservationConvention extends GrailsObservationConvention<DataBindingObservationContext>
+        implements DataBindingObservationConvention {
 
-    private static final String NAME = "grails.render";
+    private static final String NAME = "grails.databinding";
 
-    public DefaultRenderObservationConvention() {
-        super(RenderObservationContext.class);
+    public DefaultDataBindingObservationConvention() {
+        super(DataBindingObservationContext.class);
     }
 
     @Override
@@ -47,14 +47,14 @@ public class DefaultRenderObservationConvention extends GrailsObservationConvent
     }
 
     @Override
-    public String getContextualName(RenderObservationContext context) {
-        return NAME + " " + orElse(context.getView(), NONE);
+    public String getContextualName(DataBindingObservationContext context) {
+        return NAME + " " + orElse(context.getTarget(), UNKNOWN);
     }
 
     @Override
-    public KeyValues getLowCardinalityKeyValues(RenderObservationContext context) {
+    public KeyValues getLowCardinalityKeyValues(DataBindingObservationContext context) {
         return KeyValues.of(
-                RenderLowCardinalityKeyNames.VIEW.withValue(orElse(context.getView(), NONE)),
+                DataBindingLowCardinalityKeyNames.TARGET.withValue(orElse(context.getTarget(), UNKNOWN)),
                 error(context));
     }
 

@@ -21,7 +21,7 @@ package org.grails.web.observation;
 import io.micrometer.observation.Observation;
 
 /**
- * {@link Observation.Context} for the {@link GrailsObservationDocumentation#RENDER} observation.
+ * Observation context for the {@link GrailsObservationDocumentation#RENDER} observation.
  *
  * @author Apache Grails
  * @since 8.0.0

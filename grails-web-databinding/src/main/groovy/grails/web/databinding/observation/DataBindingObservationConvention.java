@@ -16,17 +16,16 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.web.observation;
+package grails.web.databinding.observation;
 
 import io.micrometer.observation.ObservationConvention;
 
 /**
- * {@link ObservationConvention} for the {@link GrailsObservationDocumentation#CONTROLLER} observation.
- * The default implementation is {@link DefaultControllerObservationConvention}; supply a custom one to
- * override the span name or tags.
+ * {@link ObservationConvention} for the {@link DataBindingObservationDocumentation#DATABINDING}
+ * observation. The default implementation is {@link DefaultDataBindingObservationConvention}.
  *
  * @author Apache Grails
  * @since 8.0.0
  */
-public interface ControllerObservationConvention extends ObservationConvention<ControllerObservationContext> {
+public interface DataBindingObservationConvention extends ObservationConvention<DataBindingObservationContext> {
 }

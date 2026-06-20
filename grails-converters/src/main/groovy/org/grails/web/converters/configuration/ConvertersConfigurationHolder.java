@@ -24,6 +24,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import io.micrometer.observation.ObservationRegistry;
+
 import org.grails.core.lifecycle.ShutdownOperations;
 import org.grails.web.converters.Converter;
 import org.grails.web.converters.exceptions.ConverterException;
@@ -39,6 +41,8 @@ import org.grails.web.converters.marshaller.ObjectMarshaller;
 public class ConvertersConfigurationHolder {
 
     public static final String CONVERTERS_DEFAULT_ENCODING = "UTF-8";
+
+    private static volatile ObservationRegistry observationRegistry = ObservationRegistry.NOOP;
 
     static {
         ShutdownOperations.addOperation(new Runnable() {
@@ -75,6 +79,19 @@ public class ConvertersConfigurationHolder {
         configurationHolder.defaultConfiguration.clear();
         configurationHolder.namedConfigurations.clear();
         configurationHolder.threadLocalConfiguration = createThreadLocalConfiguration();
+        observationRegistry = ObservationRegistry.NOOP;
+    }
+
+    /**
+     * The {@link ObservationRegistry} used to instrument converter rendering ({@code render obj as
+     * JSON}/{@code as XML}). Defaults to {@link ObservationRegistry#NOOP}; set once at startup.
+     */
+    public static ObservationRegistry getObservationRegistry() {
+        return observationRegistry;
+    }
+
+    public static void setObservationRegistry(ObservationRegistry registry) {
+        observationRegistry = (registry != null) ? registry : ObservationRegistry.NOOP;
     }
 
     public static <C extends Converter> void setDefaultConfiguration(Class<C> c, ConverterConfiguration<C> cfg) {
