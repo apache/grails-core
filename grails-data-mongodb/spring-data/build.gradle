@@ -65,6 +65,12 @@ dependencies {
 
     testImplementation 'org.spockframework:spock-core'
     testImplementation project(':grails-testing-support-mongodb')
+    testImplementation 'org.springframework.boot:spring-boot-test', {
+        // test: ApplicationContextRunner for verifying the auto-configuration
+    }
+    testImplementation 'org.assertj:assertj-core', {
+        // test: required by Spring Boot's AssertableApplicationContext
+    }
     testRuntimeOnly 'org.slf4j:slf4j-nop'
 }
 
