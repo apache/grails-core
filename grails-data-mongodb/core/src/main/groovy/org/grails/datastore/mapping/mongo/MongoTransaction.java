@@ -76,9 +76,18 @@ public class MongoTransaction implements Transaction<ClientSession> {
             committed = true;
         } finally {
             if (!committed) {
-                // The commit failed and the server transaction is aborted/unknown. Discard the GORM
-                // session's pending operations and first-level cache so a reused session cannot return
-                // entities that were never committed.
+                // The commit (or the flush before it) failed. Explicitly abort the server transaction
+                // rather than relying on close() to do so implicitly, then discard the GORM session's
+                // pending operations and first-level cache so a reused session cannot return entities
+                // that were never committed.
+                if (clientSession.hasActiveTransaction()) {
+                    try {
+                        clientSession.abortTransaction();
+                    }
+                    catch (RuntimeException e) {
+                        LOG.debug("Error aborting transaction after failed commit: {}", e.getMessage(), e);
+                    }
+                }
                 try {
                     session.clear();
                 }

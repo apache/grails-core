@@ -47,13 +47,14 @@ class MongoTransactionSpec extends AutoStartedMongoSpec {
                 'grails.mongodb.url'          : dbContainer.getReplicaSetUrl('myDb'),
                 'grails.mongodb.transactional': true
         ]
-        datastore = new MongoDatastore(config, TxPerson, TxPet)
+        datastore = new MongoDatastore(config, TxPerson, TxPet, TxCounter)
     }
 
     void setup() {
         TxPerson.withNewSession {
             TxPerson.DB.drop()
             TxPet.DB.drop()
+            TxCounter.DB.drop()
         }
     }
 
@@ -150,6 +151,34 @@ class MongoTransactionSpec extends AutoStartedMongoSpec {
         and: "only the inner transaction's write survived - suspend/resume kept the two sessions separate"
         TxPerson.withNewSession { TxPerson.findAll()*.name } == ["inner"]
     }
+
+    void "test native Long identifier generation works for entities committed in a transaction"() {
+        when: "two entities with a native Long id are saved in one transaction"
+        TxCounter.withTransaction {
+            new TxCounter(name: "a").save()
+            new TxCounter(name: "b").save()
+        }
+
+        then: "both are persisted with generated, monotonically increasing Long ids"
+        List<TxCounter> saved = TxCounter.withNewSession { TxCounter.list().sort { it.id } }
+        saved*.name == ["a", "b"]
+        saved.every { it.id instanceof Long }
+        saved[1].id > saved[0].id
+    }
+
+    void "test a rolled back transaction discards a native Long id entity (id generation is non-transactional)"() {
+        when: "a native Long id entity is flushed in a transaction that then fails"
+        TxCounter.withTransaction {
+            new TxCounter(name: "doomed").save(flush: true)
+            throw new RuntimeException("boom")
+        }
+
+        then:
+        thrown(RuntimeException)
+
+        and: "the document was rolled back even though the id counter is not enrolled in the transaction"
+        TxCounter.withNewSession { TxCounter.count() } == 0
+    }
 }
 
 @Entity
@@ -159,5 +188,11 @@ class TxPerson {
 
 @Entity
 class TxPet {
+    String name
+}
+
+@Entity
+class TxCounter {
+    Long id
     String name
 }
