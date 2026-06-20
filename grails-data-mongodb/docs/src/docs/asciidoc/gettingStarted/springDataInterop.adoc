@@ -60,7 +60,9 @@ void transfer(MongoTemplate mongoTemplate) {
 }
 ----
 
-The unified manager is the primary `transactionManager`, so an unqualified `@Transactional` uses it. To run with GORM-only semantics, qualify the manager: `@Transactional("mongoTransactionManager")`.
+The unified manager is registered as the primary `transactionManager` (it has to be, to be chosen over GORM's plain `mongoTransactionManager` for an unqualified `@Transactional`). It backs off automatically if the application already defines a bean named `transactionManager`. To run a block with GORM-only semantics, qualify the manager: `@Transactional("mongoTransactionManager")`.
+
+WARNING: Because it is primary, in an application that mixes this with another persistence stack (for example Hibernate/JPA), an unqualified `@Transactional` resolves to this MongoDB manager. If you run multiple persistence stacks, define your own primary `transactionManager` (or qualify every `@Transactional` explicitly) so each method targets the intended manager.
 
 NOTE: Like GORM's own transaction manager, the unified manager supports a single flat transaction (`PROPAGATION_REQUIRED`). Spring-native suspension propagations such as `REQUIRES_NEW` and `NESTED` are not supported — a nested transactional call joins the surrounding transaction rather than starting an independent one.
 
