@@ -43,7 +43,7 @@ public class Sitemesh3AutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(SiteMeshViewResolverBeanPostProcessor.class)
-    public GrailsSiteMeshViewResolverBeanPostProcessor siteMeshViewResolverBeanPostProcessor() {
+    public static GrailsSiteMeshViewResolverBeanPostProcessor siteMeshViewResolverBeanPostProcessor() {
         return new GrailsSiteMeshViewResolverBeanPostProcessor();
     }
 }
