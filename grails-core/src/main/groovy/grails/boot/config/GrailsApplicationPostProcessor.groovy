@@ -232,6 +232,13 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
             }
         }
 
+        // Before flushing the late (doWithSpring) beans over the registry, nudge the narrow case
+        // where one overrides a name-guarded @ConditionalOnMissingBean auto-config bean that would
+        // have deferred had it been registered in doWithSpringBeforeAutoConfiguration instead.
+        if (application.config.getProperty('grails.plugins.warnOnDeferrableOverride', Boolean, true)) {
+            DeferrableOverrideWarner.warnOnDeferrableOverrides(springConfig, registry)
+        }
+
         springConfig.registerBeansWithRegistry(registry)
     }
 
