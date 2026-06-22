@@ -35,8 +35,7 @@ class SaveWithInvalidEntitySpec extends Specification {
     @Shared @AutoCleanup HibernateDatastore hibernateDatastore = new HibernateDatastore(A, B)
 
     @Rollback
-    @Issue(['https://github.com/apache/grails-core/issues/10604',
-            'https://github.com/apache/grails-core/issues/14616'])
+    @Issue('https://github.com/apache/grails-core/issues/14616')
     void "test save with an invalid entity"() {
         given:
         def b = new B(field2: "test")

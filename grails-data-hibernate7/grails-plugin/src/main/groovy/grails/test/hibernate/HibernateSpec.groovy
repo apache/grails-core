@@ -75,7 +75,7 @@ abstract class HibernateSpec extends Specification {
     @Shared @AutoCleanup HibernateDatastore hibernateDatastore
     @Shared PlatformTransactionManager transactionManager
     @Shared HibernateProxyHandler proxyHandler = new HibernateProxyHandler()
-    @Shared @AutoCleanup('close') ApplicationContext applicationContext
+    @Shared @AutoCleanup ApplicationContext applicationContext
 
     static class TestGrailsBytecodeProvider extends GrailsBytecodeProvider {
 
@@ -101,7 +101,6 @@ abstract class HibernateSpec extends Specification {
         HibernateDatastoreSpringInitializer initializer
 
         if (applicationContext == null) {
-            System.out.println('HibernateSpec: applicationContext is null, creating new one.')
             List<PropertySourceLoader> propertySourceLoaders = SpringFactoriesLoader.loadFactories(PropertySourceLoader, getClass().getClassLoader())
             ResourceLoader resourceLoader = new DefaultResourceLoader()
             MutablePropertySources propertySources = new MutablePropertySources()
@@ -140,13 +139,10 @@ abstract class HibernateSpec extends Specification {
 
             applicationContext = initializer.configure()
         } else {
-            System.out.println("HibernateSpec: applicationContext already exists (${applicationContext.class.name}), registering beans.")
             // Context already exists (e.g. from ControllerUnitTest), register our beans into it
             try {
                 config = applicationContext.getBean('grailsConfig', Config)
             } catch (e) {
-                // Fallback: create a new config if grailsConfig bean is missing
-                System.out.println('HibernateSpec: grailsConfig bean not found, creating fallback.')
                 List<PropertySourceLoader> propertySourceLoaders = SpringFactoriesLoader.loadFactories(PropertySourceLoader, getClass().getClassLoader())
                 ResourceLoader resourceLoader = new DefaultResourceLoader()
                 MutablePropertySources propertySources = new MutablePropertySources()
@@ -182,11 +178,9 @@ abstract class HibernateSpec extends Specification {
             try {
                 hibernateDatastore = applicationContext.getBean('hibernateDatastore', HibernateDatastore)
             } catch (e2) {
-                System.err.println('Available beans: ' + applicationContext.getBeanDefinitionNames().join(', '))
                 throw e2
             }
         }
-        System.out.println("HibernateDatastore initialized with multi-tenancy mode: ${hibernateDatastore.multiTenancyMode}")
         try {
             transactionManager = hibernateDatastore.getTransactionManager()
         } catch (e) {

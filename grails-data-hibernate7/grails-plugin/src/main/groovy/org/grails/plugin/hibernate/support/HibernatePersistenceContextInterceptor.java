@@ -104,11 +104,11 @@ public class HibernatePersistenceContextInterceptor
     }
 
     public void disconnect() {
-        throw new UnsupportedOperationException("disconnect is not supported by Hibernate 6");
+        throw new UnsupportedOperationException("disconnect is not supported by Hibernate 7");
     }
 
     public void reconnect() {
-        throw new UnsupportedOperationException("reconnect is not supported by Hibernate 6");
+        throw new UnsupportedOperationException("reconnect is not supported by Hibernate 7");
     }
 
     public void flush() {

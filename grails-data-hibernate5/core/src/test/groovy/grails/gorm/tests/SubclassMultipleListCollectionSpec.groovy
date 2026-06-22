@@ -27,7 +27,7 @@ import spock.lang.*
 /**
  * Created by graemerocher on 01/03/2017.
  */
-@Ignore
+@Ignore // https://github.com/apache/grails-core/issues/14624 — MappingException: Repeated column (iteration_id) for Product; not fixed in this PR
 class SubclassMultipleListCollectionSpec extends Specification {
 
     @AutoCleanup @Shared HibernateDatastore hibernateDatastore
@@ -42,8 +42,7 @@ class SubclassMultipleListCollectionSpec extends Specification {
     }
 
     @Rollback
-    @Issue(['https://github.com/apache/grails-data-mapping/issues/882',
-            'https://github.com/apache/grails-core/issues/14624'])
+    @Issue('https://github.com/apache/grails-core/issues/14624')
     void "test inheritance with multiple list collections"() {
         when:
         Iteration iter = new Iteration()
