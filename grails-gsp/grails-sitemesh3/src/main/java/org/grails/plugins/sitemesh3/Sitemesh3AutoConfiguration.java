@@ -35,7 +35,6 @@ import grails.config.Config;
 import grails.core.GrailsApplication;
 import grails.util.Environment;
 import grails.util.Metadata;
-
 import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator;
 
 /**
@@ -85,9 +84,9 @@ public class Sitemesh3AutoConfiguration {
         Config config = grailsApplication.getConfig();
         Environment env = Environment.getCurrent();
         boolean developmentMode = Metadata.getCurrent().isDevelopmentEnvironmentAvailable();
-        boolean reloadEnabled = env.isReloadEnabled()
-                || config.getProperty("grails.gsp.enable.reload", Boolean.class, false)
-                || (developmentMode && env == Environment.DEVELOPMENT);
+        boolean reloadEnabled = env.isReloadEnabled() ||
+                config.getProperty("grails.gsp.enable.reload", Boolean.class, false) ||
+                (developmentMode && env == Environment.DEVELOPMENT);
 
         // The SiteMesh 3 specific key wins; fall back to the SiteMesh 2 plugin's
         // grails.views.layout.default so existing apps keep their configured
