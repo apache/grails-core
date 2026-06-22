@@ -719,7 +719,7 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         setupTestData()
 
         when:"A static native SQL query with no user input"
-        List<Club> results = Club.findAllWithNativeSql("select * from club c order by c.name")
+        List<Club> results = Club.findAllWithSql("select * from club c order by c.name")
 
         then:"The results are correct"
         results.size() == 3
@@ -728,36 +728,13 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         club.name == 'Arsenal'
     }
 
-    void "test deprecated findAllWithSql delegates to findAllWithNativeSql"() {
-        given:
-        setupTestData()
-
-        when:"The deprecated name still works as a delegate"
-        List<Club> results = Club.findAllWithSql("select * from club c order by c.name")
-
-        then:"The results are correct"
-        results.size() == 3
-    }
-
-    void "test deprecated findWithSql delegates to findWithNativeSql"() {
-        given:
-        setupTestData()
-
-        when:"The deprecated name still works as a delegate"
-        Club result = Club.findWithSql("select * from club c where c.name = 'Arsenal'")
-
-        then:
-        result != null
-        result.name == 'Arsenal'
-    }
-
     void "test sql query with gstring parameters"() {
         given:
         setupTestData()
 
         when:"Some test data is saved"
         String p = "%l%"
-        List<Club> results = Club.findAllWithNativeSql("select * from club c where c.name like $p order by c.name")
+        List<Club> results = Club.findAllWithSql("select * from club c where c.name like $p order by c.name")
 
         then:"The results are correct"
         results.size() == 2
