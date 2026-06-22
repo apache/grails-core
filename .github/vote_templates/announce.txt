@@ -2,6 +2,10 @@ The Apache Grails community is pleased to announce the release of ${PROJECT_NAME
 
 ${PROJECT_DESC}
 
+<IF MILESTONE>
+This is a pre-release of a new version for ${PROJECT_NAME}. We greatly appreciate any feedback you can give us when using this version.
+</IF MILESTONE>
+
 The release notes are available here:
 https://github.com/${REPO_SLUG}/releases/tag/${TAG}
 
