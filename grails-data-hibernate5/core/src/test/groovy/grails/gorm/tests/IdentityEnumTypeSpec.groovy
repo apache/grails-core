@@ -20,8 +20,6 @@ package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
 import grails.gorm.transactions.Rollback
-import jakarta.persistence.Enumerated
-import jakarta.persistence.EnumType
 import org.grails.orm.hibernate.cfg.IdentityEnumType
 import org.hibernate.HibernateException
 import org.hibernate.MappingException
@@ -222,7 +220,6 @@ class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
 
 @Entity
 class EnumEntityDomain {
-    @Enumerated(EnumType.STRING)
     Status status
 
     static mapping = {
@@ -240,7 +237,6 @@ class EnumEntityDomain {
 class FooWithEnum {
     long id
     String name
-    @Enumerated(EnumType.STRING)
     XEnum mySuperValue
 
     static mapping = {
