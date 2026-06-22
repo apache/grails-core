@@ -36,6 +36,23 @@ interface GrailsApplicationLifeCycle {
     Closure doWithSpring()
 
     /**
+     * Sub classes should override to register Spring beans <em>before</em> Spring Boot
+     * auto-configuration runs. Beans registered here are placed in the bean registry ahead of
+     * auto-configuration, so Boot beans guarded by {@code @ConditionalOnMissingBean} back off in
+     * favour of the plugin's bean — instead of the plugin having to override or remove the Boot
+     * bean afterwards (the legacy behaviour of {@link #doWithSpring()}).
+     *
+     * <p>This is the modern, Boot-aligned registration phase. Use it for beans that need to win
+     * over a Spring Boot auto-configuration default. Beans that iterate Grails artefacts
+     * (controllers, services, taglibs) must stay in {@link #doWithSpring()}, which runs after
+     * artefact discovery.
+     *
+     * @return A closure that defines beans to be registered before auto-configuration
+     * @since 8.0
+     */
+    default Closure doWithSpringBeforeAutoConfiguration() { null }
+
+    /**
      * Invoked once the {@link org.springframework.context.ApplicationContext} has been refreshed in a phase where plugins can add dynamic methods. Subclasses should override
      */
     void doWithDynamicMethods()

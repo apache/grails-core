@@ -177,6 +177,23 @@ public abstract class AbstractGrailsPluginManager implements GrailsPluginManager
     }
 
     /**
+     * Drains each plugin's {@code doWithSpringBeforeAutoConfiguration} closure. Invoked from the
+     * pre-auto-configuration phase so the resulting beans are registered ahead of Spring Boot's
+     * auto-configuration, letting Boot's {@code @ConditionalOnMissingBean} guards defer to them.
+     */
+    @Override
+    public void doRuntimeConfigurationBeforeAutoConfiguration(RuntimeSpringConfiguration springConfig) {
+        checkInitialised();
+        for (PluginInfo pluginInfo : pluginDiscovery.getPluginsInTopologicalOrder()) {
+            GrailsPlugin grailsPlugin = plugins.get(pluginInfo.getName());
+            // Only plugins that opt in (override the default no-op) register anything here.
+            if (grailsPlugin.supportsCurrentScopeAndEnvironment()) {
+                grailsPlugin.doWithRuntimeConfigurationBeforeAutoConfiguration(springConfig);
+            }
+        }
+    }
+
+    /**
      * Base implementation that will perform runtime configuration for the specified plugin name.
      */
     public void doRuntimeConfiguration(String pluginName, RuntimeSpringConfiguration springConfig) {

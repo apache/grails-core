@@ -194,6 +194,17 @@ public interface GrailsPlugin extends ApplicationContextAware, Comparable, Grail
     void doWithRuntimeConfiguration(RuntimeSpringConfiguration springConfig);
 
     /**
+     * Executes the plugin code defined in the {@code doWithSpringBeforeAutoConfiguration} closure
+     * (registered before Spring Boot auto-configuration). Default no-op for legacy plugins.
+     *
+     * @param springConfig The RuntimeSpringConfiguration instance
+     * @since 8.0
+     */
+    default void doWithRuntimeConfigurationBeforeAutoConfiguration(RuntimeSpringConfiguration springConfig) {
+        // no-op by default
+    }
+
+    /**
      * Makes the plugin excluded for a particular Environment
      * @param env The Environment
      */

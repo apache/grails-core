@@ -108,6 +108,18 @@ public interface GrailsPluginManager extends ApplicationContextAware {
     void doRuntimeConfiguration(RuntimeSpringConfiguration springConfig);
 
     /**
+     * Executes the pre-auto-configuration phase of the loaded plugins
+     * ({@code doWithSpringBeforeAutoConfiguration}), so the resulting beans are registered ahead of
+     * Spring Boot auto-configuration. Default no-op.
+     *
+     * @param springConfig The {@link RuntimeSpringConfiguration} instance
+     * @since 8.0
+     */
+    default void doRuntimeConfigurationBeforeAutoConfiguration(RuntimeSpringConfiguration springConfig) {
+        // no-op by default
+    }
+
+    /**
      * Performs post-initialization configuration for each plugin,
      * passing the built application context (e.g., {@code doWithApplicationContext}).
      *

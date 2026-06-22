@@ -110,6 +110,17 @@ abstract class Plugin implements GrailsApplicationLifeCycle, GrailsApplicationAw
     Closure doWithSpring() { null }
 
     /**
+     * Sub classes should override to register beans <em>before</em> Spring Boot auto-configuration
+     * runs, so Boot beans guarded by {@code @ConditionalOnMissingBean} defer to the plugin's bean.
+     * See {@link grails.core.GrailsApplicationLifeCycle#doWithSpringBeforeAutoConfiguration()}.
+     *
+     * @return A closure that defines beans to be registered before auto-configuration
+     * @since 8.0
+     */
+    @Override
+    Closure doWithSpringBeforeAutoConfiguration() { null }
+
+    /**
      * Invoked in a phase where plugins can add dynamic methods. Subclasses should override
      */
     @Override
