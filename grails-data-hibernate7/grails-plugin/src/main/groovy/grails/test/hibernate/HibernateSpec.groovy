@@ -58,7 +58,6 @@ import org.hibernate.boot.registry.BootstrapServiceRegistry
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder
 import org.hibernate.dialect.H2Dialect
 import org.grails.orm.hibernate.proxy.GrailsBytecodeProvider
-import org.hibernate.proxy.pojo.bytebuddy.ByteBuddyProxyHelper
 import org.hibernate.internal.SessionFactoryImpl
 import org.hibernate.service.spi.ServiceRegistryImplementor
 import org.springframework.context.ApplicationContext
@@ -76,23 +75,6 @@ abstract class HibernateSpec extends Specification {
     @Shared PlatformTransactionManager transactionManager
     @Shared HibernateProxyHandler proxyHandler = new HibernateProxyHandler()
     @Shared @AutoCleanup ApplicationContext applicationContext
-
-    static class TestGrailsBytecodeProvider extends GrailsBytecodeProvider {
-
-        @Override
-        @CompileStatic(TypeCheckingMode.SKIP)
-        protected ByteBuddyProxyHelper createProxyHelper() {
-            try {
-                def byteBuddyStateClass = Class.forName('org.hibernate.bytecode.internal.bytebuddy.ByteBuddyState')
-                def byteBuddyStateConstructor = byteBuddyStateClass.getDeclaredConstructor()
-                byteBuddyStateConstructor.setAccessible(true)
-                def byteBuddyState = byteBuddyStateConstructor.newInstance()
-                return new ByteBuddyProxyHelper(byteBuddyState as org.hibernate.bytecode.internal.bytebuddy.ByteBuddyState)
-            } catch (e) {
-                throw new RuntimeException('Failed to instantiate ByteBuddyState using reflection', e)
-            }
-        }
-    }
 
     @CompileStatic(TypeCheckingMode.SKIP)
     void setupSpec() {
@@ -134,7 +116,7 @@ abstract class HibernateSpec extends Specification {
                     username = 'sa'
                     password = ''
                 }
-                hibernateBytecodeProvider(TestGrailsBytecodeProvider)
+                hibernateBytecodeProvider(GrailsBytecodeProvider)
             }
 
             applicationContext = initializer.configure()
