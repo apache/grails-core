@@ -1,1 +1,2 @@
 org.grails.plugins.web.controllers.ControllersAutoConfiguration
+org.grails.plugins.web.controllers.GrailsViewResolverAutoConfiguration
