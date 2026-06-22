@@ -65,6 +65,8 @@ import org.springframework.context.ApplicationContext
 /**
  * Specification for Hibernate tests
  *
+ * TODO: rename to AHibernateSpec to follow the abstract class naming convention
+ *
  * @author Graeme Rocher
  * @since 6.0
  */
