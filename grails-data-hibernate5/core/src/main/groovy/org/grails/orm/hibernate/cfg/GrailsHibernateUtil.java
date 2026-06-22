@@ -18,6 +18,7 @@
  */
 package org.grails.orm.hibernate.cfg;
 
+import java.util.List;
 import java.util.Map;
 
 import groovy.lang.GroovyObject;
@@ -50,6 +51,7 @@ import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.reflect.ClassUtils;
 import org.grails.orm.hibernate.AbstractHibernateDatastore;
+import org.grails.orm.hibernate.datasource.MultipleDataSourceSupport;
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
 import org.grails.orm.hibernate.support.HibernateRuntimeUtils;
 
@@ -418,6 +420,30 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      */
     public static Object unwrapIfProxy(Object instance) {
         return proxyHandler.unwrap(instance);
+    }
+
+    /**
+     * @deprecated Use {@link MultipleDataSourceSupport#getDefaultDataSource(PersistentEntity)} instead.
+     */
+    @Deprecated(forRemoval = true)
+    public static String getDefaultDataSource(PersistentEntity domainClass) {
+        return MultipleDataSourceSupport.getDefaultDataSource(domainClass);
+    }
+
+    /**
+     * @deprecated Use {@link MultipleDataSourceSupport#getDatasourceNames(PersistentEntity)} instead.
+     */
+    @Deprecated(forRemoval = true)
+    public static List<String> getDatasourceNames(PersistentEntity domainClass) {
+        return MultipleDataSourceSupport.getDatasourceNames(domainClass);
+    }
+
+    /**
+     * @deprecated Use {@link MultipleDataSourceSupport#usesDatasource(PersistentEntity, String)} instead.
+     */
+    @Deprecated(forRemoval = true)
+    public static boolean usesDatasource(PersistentEntity domainClass, String dataSourceName) {
+        return MultipleDataSourceSupport.usesDatasource(domainClass, dataSourceName);
     }
 
     public static boolean isMappedWithHibernate(PersistentEntity domainClass) {
