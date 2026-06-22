@@ -48,7 +48,6 @@ class CompositeIdWithJoinTableSpec extends HibernateGormDatastoreSpec {
 class CompositeIdParent implements Serializable, Comparable<CompositeIdParent> {
     String name
     String last
-    SortedSet<CompositeIdChild> children
     static hasMany = [children: CompositeIdChild]
     static mapping = define {
         id composite('name', 'last')
@@ -73,7 +72,7 @@ class CompositeIdParent implements Serializable, Comparable<CompositeIdParent> {
 }
 
 @Entity
-class CompositeIdChild implements Comparable<CompositeIdChild> {
+class CompositeIdChild {
     String foo
     static belongsTo = [parent: CompositeIdParent]
 
@@ -81,10 +80,5 @@ class CompositeIdChild implements Comparable<CompositeIdChild> {
 
     }
     static constraints = {
-    }
-
-    @Override
-    int compareTo(CompositeIdChild other) {
-        foo <=> other.foo
     }
 }
