@@ -36,10 +36,9 @@ import org.springframework.core.type.AnnotationMetadata;
  * any unmatched view name to a servlet forward, producing
  * {@code Circular view path [index]: would dispatch back to the current handler URL} errors.
  *
- * <p>{@code grails-gsp} already removes this bean for GSP applications via its own registrar,
- * but a JSON-only application never loads {@code grails-gsp}. This core auto-configuration
- * removes the {@code defaultViewResolver} for every Grails servlet web application so Grails'
- * own view resolution (GSP, JSON/Markup views) is used instead. Ordered after
+ * This is the single place the {@code defaultViewResolver} is removed for every Grails servlet
+ * web application (GSP, JSON/Markup or plain), so Grails' own view resolution is used instead.
+ * grails-gsp only loads for GSP applications, so the removal cannot live there. Ordered after
  * {@link WebMvcAutoConfiguration} so the bean exists by the time the registrar runs.
  *
  * <p>Disable with {@code grails.web.removeDefaultViewResolverBean=false}.
