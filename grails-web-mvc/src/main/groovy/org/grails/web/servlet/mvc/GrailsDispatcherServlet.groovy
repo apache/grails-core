@@ -18,8 +18,6 @@
  */
 package org.grails.web.servlet.mvc
 
-import java.util.function.Supplier
-
 import groovy.transform.CompileStatic
 
 import io.micrometer.observation.Observation
@@ -39,10 +37,6 @@ import org.springframework.web.servlet.DispatcherServlet
 
 import grails.util.Holders
 import org.grails.web.context.ServletEnvironmentGrailsApplicationDiscoveryStrategy
-import org.grails.web.observation.DefaultRenderObservationConvention
-import org.grails.web.observation.GrailsObservationDocumentation
-import org.grails.web.observation.RenderObservationContext
-import org.grails.web.observation.RenderObservationConvention
 import org.grails.web.util.WebUtils
 
 /**
@@ -55,8 +49,6 @@ import org.grails.web.util.WebUtils
 class GrailsDispatcherServlet extends DispatcherServlet implements ServletContextAware {
 
     private volatile ObservationRegistry observationRegistry
-
-    private static final DefaultRenderObservationConvention DEFAULT_RENDER_CONVENTION = new DefaultRenderObservationConvention()
 
     GrailsDispatcherServlet() {
     }
@@ -113,10 +105,9 @@ class GrailsDispatcherServlet extends DispatcherServlet implements ServletContex
             super.render(mv, request, response)
             return
         }
-        Observation observation = GrailsObservationDocumentation.RENDER.observation(
-                (RenderObservationConvention) null, DEFAULT_RENDER_CONVENTION,
-                { -> new RenderObservationContext((mv != null && mv.viewName) ? mv.viewName : null) } as Supplier<RenderObservationContext>,
-                registry).start()
+        Observation observation = Observation.createNotStarted('grails.render', registry)
+                .lowCardinalityKeyValue('grails.view', (mv != null && mv.viewName) ? mv.viewName : 'none')
+                .start()
         Observation.Scope scope = observation.openScope()
         try {
             super.render(mv, request, response)

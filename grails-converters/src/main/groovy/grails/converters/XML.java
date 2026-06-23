@@ -33,6 +33,7 @@ import groovy.util.BuilderSupport;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import io.micrometer.observation.Observation;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -55,9 +56,6 @@ import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ClosureObjectMarshaller;
 import org.grails.web.converters.marshaller.NameAwareMarshaller;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
-import org.grails.web.converters.observation.ConverterObservationContext;
-import org.grails.web.converters.observation.ConverterObservationDocumentation;
-import org.grails.web.converters.observation.DefaultConverterObservationConvention;
 import org.grails.web.xml.PrettyPrintXMLStreamWriter;
 import org.grails.web.xml.StreamingMarkupWriter;
 import org.grails.web.xml.XMLStreamWriter;
@@ -75,7 +73,6 @@ public class XML extends AbstractConverter<XMLStreamWriter> implements IncludeEx
     public static final Log log = LogFactory.getLog(XML.class);
 
     private static final String CACHED_XML = "org.codehaus.groovy.grails.CACHED_XML_REQUEST_CONTENT";
-    private static final DefaultConverterObservationConvention DEFAULT_CONVERT_CONVENTION = new DefaultConverterObservationConvention();
 
     private Object target;
     private StreamingMarkupWriter stream;
@@ -272,9 +269,9 @@ public class XML extends AbstractConverter<XMLStreamWriter> implements IncludeEx
             renderInternal(response);
             return;
         }
-        var observation = ConverterObservationDocumentation.CONVERT.observation(
-                null, DEFAULT_CONVERT_CONVENTION,
-                () -> new ConverterObservationContext("xml"), observationRegistry).start();
+        var observation = Observation.createNotStarted("grails.convert", observationRegistry)
+                .lowCardinalityKeyValue("grails.convert.format", "xml")
+                .start();
         var observationScope = observation.openScope();
         try {
             renderInternal(response);

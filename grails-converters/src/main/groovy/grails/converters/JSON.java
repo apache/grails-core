@@ -35,6 +35,7 @@ import groovy.util.BuilderSupport;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import io.micrometer.observation.Observation;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -51,9 +52,6 @@ import org.grails.web.converters.configuration.DefaultConverterConfiguration;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ClosureObjectMarshaller;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
-import org.grails.web.converters.observation.ConverterObservationContext;
-import org.grails.web.converters.observation.ConverterObservationDocumentation;
-import org.grails.web.converters.observation.DefaultConverterObservationConvention;
 import org.grails.web.json.JSONArray;
 import org.grails.web.json.JSONElement;
 import org.grails.web.json.JSONException;
@@ -73,7 +71,6 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
 
     private final static Log log = LogFactory.getLog(JSON.class);
     private static final String CACHED_JSON = "org.codehaus.groovy.grails.CACHED_JSON_REQUEST_CONTENT";
-    private static final DefaultConverterObservationConvention DEFAULT_CONVERT_CONVENTION = new DefaultConverterObservationConvention();
 
     protected Object target;
     protected final ConverterConfiguration<JSON> config;
@@ -157,9 +154,9 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
             renderInternal(response);
             return;
         }
-        var observation = ConverterObservationDocumentation.CONVERT.observation(
-                null, DEFAULT_CONVERT_CONVENTION,
-                () -> new ConverterObservationContext("json"), observationRegistry).start();
+        var observation = Observation.createNotStarted("grails.convert", observationRegistry)
+                .lowCardinalityKeyValue("grails.convert.format", "json")
+                .start();
         var observationScope = observation.openScope();
         try {
             renderInternal(response);

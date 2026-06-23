@@ -19,7 +19,6 @@
 package org.grails.plugins.web.interceptors
 
 import java.util.function.BooleanSupplier
-import java.util.function.Supplier
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
@@ -41,10 +40,6 @@ import grails.artefact.Interceptor
 import grails.interceptors.Matcher
 import grails.util.GrailsNameUtils
 import org.grails.datastore.mapping.services.ServiceRegistry
-import org.grails.plugins.web.interceptors.observation.DefaultInterceptorObservationConvention
-import org.grails.plugins.web.interceptors.observation.InterceptorObservationContext
-import org.grails.plugins.web.interceptors.observation.InterceptorObservationConvention
-import org.grails.plugins.web.interceptors.observation.InterceptorObservationDocumentation
 import org.grails.web.util.GrailsApplicationAttributes
 import org.grails.web.util.WebUtils
 
@@ -70,8 +65,6 @@ class GrailsInterceptorHandlerInterceptorAdapter implements HandlerInterceptor {
 
     @Autowired(required = false)
     ObservationRegistry observationRegistry = ObservationRegistry.NOOP
-
-    private static final DefaultInterceptorObservationConvention DEFAULT_INTERCEPTOR_CONVENTION = new DefaultInterceptorObservationConvention()
 
     @Autowired(required = false)
     @CompileDynamic
@@ -154,10 +147,10 @@ class GrailsInterceptorHandlerInterceptorAdapter implements HandlerInterceptor {
             return action.getAsBoolean()
         }
         String name = GrailsNameUtils.getLogicalPropertyName(interceptor.getClass().name, 'Interceptor')
-        Observation observation = InterceptorObservationDocumentation.INTERCEPTOR.observation(
-                (InterceptorObservationConvention) null, DEFAULT_INTERCEPTOR_CONVENTION,
-                { -> new InterceptorObservationContext(name, phase) } as Supplier<InterceptorObservationContext>,
-                registry).start()
+        Observation observation = Observation.createNotStarted('grails.interceptor', registry)
+                .lowCardinalityKeyValue('grails.interceptor', name ?: 'unknown')
+                .lowCardinalityKeyValue('grails.interceptor.phase', phase ?: 'unknown')
+                .start()
         Observation.Scope scope = observation.openScope()
         try {
             return action.getAsBoolean()

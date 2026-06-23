@@ -27,8 +27,6 @@ import org.codehaus.groovy.runtime.InvokerHelper
 import org.codehaus.groovy.runtime.MetaClassHelper
 import org.codehaus.groovy.runtime.metaclass.ThreadManagedMetaBeanProperty
 
-import java.util.function.Supplier
-
 import io.micrometer.observation.Observation
 import io.micrometer.observation.ObservationRegistry
 import org.springframework.beans.factory.annotation.Autowired
@@ -73,11 +71,6 @@ import org.grails.web.databinding.SpringConversionServiceAdapter
 import org.grails.web.databinding.converters.ByteArrayMultipartFileValueConverter
 import org.grails.web.servlet.mvc.GrailsWebRequest
 
-import grails.web.databinding.observation.DataBindingObservationContext
-import grails.web.databinding.observation.DataBindingObservationConvention
-import grails.web.databinding.observation.DataBindingObservationDocumentation
-import grails.web.databinding.observation.DefaultDataBindingObservationConvention
-
 import static grails.web.databinding.DataBindingUtils.getBindingIncludeList
 
 @CompileStatic
@@ -90,8 +83,6 @@ class GrailsWebDataBinder extends SimpleDataBinder {
     protected List<DataBindingListener> listeners = []
 
     private volatile ObservationRegistry observationRegistry
-
-    private static final DefaultDataBindingObservationConvention DEFAULT_DATABINDING_CONVENTION = new DefaultDataBindingObservationConvention()
 
     GrailsWebDataBinder(GrailsApplication grailsApplication) {
         this.grailsApplication = grailsApplication
@@ -122,10 +113,9 @@ class GrailsWebDataBinder extends SimpleDataBinder {
             doBindInternal(object, source, filter, whiteList, blackList, listener, errors)
             return
         }
-        Observation observation = DataBindingObservationDocumentation.DATABINDING.observation(
-                (DataBindingObservationConvention) null, DEFAULT_DATABINDING_CONVENTION,
-                { -> new DataBindingObservationContext(object != null ? object.getClass().simpleName : null) } as Supplier<DataBindingObservationContext>,
-                registry).start()
+        Observation observation = Observation.createNotStarted('grails.databinding', registry)
+                .lowCardinalityKeyValue('grails.databinding.target', object != null ? object.getClass().simpleName : 'unknown')
+                .start()
         Observation.Scope scope = observation.openScope()
         try {
             doBindInternal(object, source, filter, whiteList, blackList, listener, errors)

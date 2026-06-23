@@ -70,7 +70,6 @@ def publishedProjects = [
         'grails-layout',
         'grails-logging',
         'grails-mimetypes',
-        'grails-observation',
         'grails-rest-transforms',
         'grails-scaffolding',
         'grails-services',

@@ -38,7 +38,7 @@ dependencies {
     implementation platform(project(':grails-bom'))
 
     api project(":grails-databinding-core")
-    api project(':grails-observation')
+    implementation 'io.micrometer:micrometer-observation'
     api project(":grails-web-common"), {
         exclude module: 'grails-encoder'
     }

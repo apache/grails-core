@@ -19,7 +19,6 @@
 package org.grails.web.mapping.mvc
 
 import java.util.concurrent.ConcurrentHashMap
-import java.util.function.Supplier
 
 import groovy.transform.CompileStatic
 
@@ -40,10 +39,6 @@ import grails.web.mapping.LinkGenerator
 import grails.web.mapping.ResponseRedirector
 import grails.web.mapping.UrlMappingInfo
 import grails.web.mvc.FlashScope
-import org.grails.web.observation.ControllerObservationContext
-import org.grails.web.observation.ControllerObservationConvention
-import org.grails.web.observation.DefaultControllerObservationConvention
-import org.grails.web.observation.GrailsObservationDocumentation
 import org.grails.web.servlet.mvc.ActionResultTransformer
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.GrailsApplicationAttributes
@@ -64,8 +59,6 @@ class UrlMappingsInfoHandlerAdapter implements HandlerAdapter, ApplicationContex
     protected Map<String, Object> controllerCache = new ConcurrentHashMap<>()
     protected ResponseRedirector redirector
     protected ObservationRegistry observationRegistry = ObservationRegistry.NOOP
-
-    private static final DefaultControllerObservationConvention DEFAULT_CONTROLLER_CONVENTION = new DefaultControllerObservationConvention()
 
     void setApplicationContext(ApplicationContext applicationContext) {
         this.actionResultTransformers = applicationContext.getBeansOfType(ActionResultTransformer).values()
@@ -126,10 +119,10 @@ class UrlMappingsInfoHandlerAdapter implements HandlerAdapter, ApplicationContex
                 }
                 else {
                     // scope open across invoke so the action's DB/cache spans nest under this span
-                    Observation observation = GrailsObservationDocumentation.CONTROLLER.observation(
-                            (ControllerObservationConvention) null, DEFAULT_CONTROLLER_CONVENTION,
-                            { -> new ControllerObservationContext(controllerClass.logicalPropertyName, action?.toString()) } as Supplier<ControllerObservationContext>,
-                            obsRegistry).start()
+                    Observation observation = Observation.createNotStarted('grails.controller', obsRegistry)
+                            .lowCardinalityKeyValue('grails.controller', controllerClass.logicalPropertyName ?: 'unknown')
+                            .lowCardinalityKeyValue('grails.action', action ? action.toString() : 'unknown')
+                            .start()
                     Observation.Scope scope = observation.openScope()
                     try {
                         result = controllerClass.invoke(controller, action)
