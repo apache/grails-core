@@ -18,7 +18,6 @@
  */
 package grails.gorm.tests
 
-
 import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.HibernateEntity
 import grails.gorm.transactions.Rollback
@@ -361,7 +360,7 @@ class WqBiBook implements HibernateEntity<WqBiBook> {
     String title
 
     static hasMany = [authors: WqBiAuthor]
-    static belongsTo = [WqBiAuthor]
+    static belongsTo = WqBiAuthor
 }
 
 @Entity
