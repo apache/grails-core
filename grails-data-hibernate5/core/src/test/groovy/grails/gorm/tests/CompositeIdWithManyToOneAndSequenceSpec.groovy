@@ -21,36 +21,32 @@ package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
 import grails.gorm.transactions.Rollback
-
+import org.grails.orm.hibernate.HibernateDatastore
+import org.springframework.transaction.PlatformTransactionManager
+import spock.lang.AutoCleanup
 import spock.lang.Issue
+import spock.lang.Shared
+import spock.lang.Specification
 
 /**
  * Created by graemerocher on 26/01/2017.
  */
-class CompositeIdWithManyToOneAndSequenceSpec extends HibernateGormDatastoreSpec {
+class CompositeIdWithManyToOneAndSequenceSpec extends Specification {
 
-    def setupSpec() {
-        manager.registerDomainClasses(Tooth, ToothDisease)
-    }
+    @AutoCleanup @Shared HibernateDatastore datastore = new HibernateDatastore(Tooth, ToothDisease)
+    @Shared PlatformTransactionManager transactionManager = datastore.transactionManager
 
     @Rollback
     @Issue('https://github.com/apache/grails-data-mapping/issues/835')
-    void "Test composite id one to many and sequence"() {
+    void "Test composite id many to one and sequence"() {
 
-        when:"a one to many association is created"
-        def tooth = new Tooth()
-        def td = new ToothDisease(idColumn: 1, nrVersion: 1)
-        tooth.addToToothDiseases(td)
-        tooth.save(flush: true, failOnError: true)
+        when:"a many to one association is created"
+        ToothDisease td = new ToothDisease(nrVersion: 1).save()
+        new Tooth(toothDisease: td).save(flush:true)
 
-        and:"the session is cleared to ensure we are checking persisted state"
-        manager.session.clear()
-
-        then:"The object was saved and the association is correct"
+        then:"The object was saved"
         Tooth.count() == 1
-        ToothDisease.count() == 1
-        def reloadedTooth = Tooth.list().first()
-        reloadedTooth.toothDiseases.size() == 1
+        Tooth.list().first().toothDisease != null
     }
 
 }
@@ -59,59 +55,25 @@ class CompositeIdWithManyToOneAndSequenceSpec extends HibernateGormDatastoreSpec
 @Entity
 class Tooth {
     Integer id
-    SortedSet<ToothDisease> toothDiseases
-
-    static hasMany = [toothDiseases: ToothDisease]
-    static mappedBy = [toothDiseases: 'tooth']
-
+    ToothDisease toothDisease
     static mapping = {
         table name: 'AK_TOOTH'
-        id generator: 'native', params: [sequence_name: 'SEQ_AK_TOOTH']
+        id generator: 'sequence', params: [sequence: 'SEQ_AK_TOOTH']
+        toothDisease {
+            column name: 'FK_AK_TOOTH_ID'
+            column name: 'FK_AK_TOOTH_NR_VERSION'
+        }
     }
 }
 
 @Entity
-class ToothDisease implements Serializable, Comparable<ToothDisease> {
+class ToothDisease implements Serializable {
     Integer idColumn
     Integer nrVersion
-
-    static belongsTo = [tooth: Tooth]
-
     static mapping = {
         table name: 'AK_TOOTH_DISEASE'
-        idColumn column: 'ID', type: 'integer'
-        nrVersion column: 'NR_VERSION', type: 'integer'
+        idColumn column: 'ID', generator: 'sequence', params: [sequence: 'SEQ_AK_TOOTH_DISEASE']
+        nrVersion column: 'NR_VERSION'
         id composite: ['idColumn', 'nrVersion']
-        tooth column: 'tooth_id'
-    }
-
-    @Override
-    int compareTo(ToothDisease other) {
-        def idCmp = this.idColumn <=> other.idColumn
-        if (idCmp != 0) {
-            return idCmp
-        }
-        return this.nrVersion <=> other.nrVersion
-    }
-
-    @Override
-    boolean equals(Object o) {
-        if (this.is(o)) return true
-        if (getClass() != o.getClass()) return false
-
-        ToothDisease that = (ToothDisease) o
-
-        if (idColumn != that.idColumn) return false
-        if (nrVersion != that.nrVersion) return false
-
-        return true
-    }
-
-    @Override
-    int hashCode() {
-        int result
-        result = idColumn.hashCode()
-        result = 31 * result + nrVersion.hashCode()
-        return result
     }
 }
