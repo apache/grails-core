@@ -79,7 +79,8 @@ public class GroovyPageView extends AbstractGrailsView {
             doRenderTemplate(model, webRequest, request, response);
             return;
         }
-        String resource = (getUrl() != null && !getUrl().isEmpty()) ? getUrl() : "unknown";
+        String url = getUrl();
+        String resource = (url != null && !url.isEmpty()) ? url : "unknown";
         Observation observation = Observation.createNotStarted("gsp.view", this.observationRegistry)
                 .contextualName("gsp.view " + resource)
                 .highCardinalityKeyValue("gsp.name", resource);

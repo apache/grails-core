@@ -77,7 +77,7 @@ class EmbeddedGrailsLayoutViewObservationSpec extends Specification {
     }
 
     private EmbeddedGrailsLayoutView viewFor(ObservationRegistry registry) {
-        EmbeddedGrailsLayoutView view = new EmbeddedGrailsLayoutView(null, null)
+        def view = new EmbeddedGrailsLayoutView(null, null)
         view.observationRegistry = registry
         view
     }
@@ -85,7 +85,7 @@ class EmbeddedGrailsLayoutViewObservationSpec extends Specification {
     void "a gsp.layout observation is recorded with the layout page name on a successful decoration"() {
         given:
         EmbeddedGrailsLayoutView view = viewFor(recordingRegistry())
-        StubDecorator decorator = new StubDecorator(Mock(View))
+        def decorator = new StubDecorator(Mock(View))
 
         when:
         view.renderWithLayout(decorator, Mock(Content), [:], null, null, Mock(GrailsWebRequest))
@@ -105,7 +105,7 @@ class EmbeddedGrailsLayoutViewObservationSpec extends Specification {
     void "no observation is recorded when the registry is NOOP (zero overhead)"() {
         given:
         EmbeddedGrailsLayoutView view = viewFor(ObservationRegistry.NOOP)
-        StubDecorator decorator = new StubDecorator(Mock(View))
+        def decorator = new StubDecorator(Mock(View))
 
         when:
         view.renderWithLayout(decorator, Mock(Content), [:], null, null, Mock(GrailsWebRequest))
@@ -118,7 +118,7 @@ class EmbeddedGrailsLayoutViewObservationSpec extends Specification {
     void "the observation records the exception when decoration fails"() {
         given:
         EmbeddedGrailsLayoutView view = viewFor(recordingRegistry())
-        StubDecorator decorator = new StubDecorator(Mock(View))
+        def decorator = new StubDecorator(Mock(View))
         decorator.toThrow = new IllegalStateException('boom')
 
         when:

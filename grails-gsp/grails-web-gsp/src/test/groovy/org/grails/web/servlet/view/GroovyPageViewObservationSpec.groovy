@@ -53,7 +53,7 @@ class GroovyPageViewObservationSpec extends Specification {
 
     /** A view whose actual render body is supplied by a closure, bypassing the GSP pipeline. */
     private GroovyPageView viewFor(ObservationRegistry registry, String url = '/book/show', Closure body = {}) {
-        GroovyPageView view = new GroovyPageView() {
+        def view = new GroovyPageView() {
             @Override
             protected void doRenderTemplate(Map<String, Object> model, GrailsWebRequest webRequest,
                     HttpServletRequest request, HttpServletResponse response) {

@@ -32,7 +32,7 @@ import spock.lang.Specification
  * Tests the {@code gsp.compile} observation on {@link GroovyPagesTemplateEngine}. The real GSP
  * compilation is overridden so the test stays a unit.
  *
- * <p>Note: GSP cache hit/miss is no longer instrumented here. The engine's runtime-compile cache is
+ * <p>Note: GSP cache hit/miss is intentionally not instrumented here. The engine's runtime-compile cache is
  * a development-only signal (a precompiled production deployment bypasses it), so the operational
  * {@code gsp.cache} hit/miss counters live on the request-path caches in {@code GroovyPagesTemplateRenderer}
  * and {@code GroovyPageViewResolver} instead.</p>
@@ -49,7 +49,7 @@ class GroovyPagesTemplateEngineObservationSpec extends Specification {
             @Override void onStop(Observation.Context context) { recorded << context }
         })
 
-        GroovyPagesTemplateEngine engine = new GroovyPagesTemplateEngine() {
+        def engine = new GroovyPagesTemplateEngine() {
             @Override
             protected GroovyPageMetaInfo buildPageMetaInfo(InputStream inputStream, Resource res, String pageName) {
                 return new GroovyPageMetaInfo()
@@ -57,7 +57,7 @@ class GroovyPagesTemplateEngineObservationSpec extends Specification {
         }
         engine.setReloadEnabled(false)
 
-        GenericApplicationContext ctx = new GenericApplicationContext()
+        def ctx = new GenericApplicationContext()
         ctx.getBeanFactory().registerSingleton('observationRegistry', observationRegistry)
         ctx.refresh()
         engine.setApplicationContext(ctx)

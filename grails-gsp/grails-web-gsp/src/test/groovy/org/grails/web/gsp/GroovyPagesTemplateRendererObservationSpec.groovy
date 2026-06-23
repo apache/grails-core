@@ -51,7 +51,7 @@ class GroovyPagesTemplateRendererObservationSpec extends Specification {
 
     /** A renderer whose actual render body is supplied by a closure, bypassing the GSP pipeline. */
     private GroovyPagesTemplateRenderer rendererFor(ObservationRegistry registry, Closure body = {}) {
-        GroovyPagesTemplateRenderer renderer = new GroovyPagesTemplateRenderer() {
+        def renderer = new GroovyPagesTemplateRenderer() {
             @Override
             protected void doRender(String templateName, GrailsWebRequest webRequest,
                     org.grails.taglib.TemplateVariableBinding pageScope, Map<String, Object> attrs,
