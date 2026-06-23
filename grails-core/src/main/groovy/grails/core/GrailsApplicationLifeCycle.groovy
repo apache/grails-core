@@ -57,6 +57,14 @@ interface GrailsApplicationLifeCycle {
      * iterating {@code grailsApplication} artefacts is not (they are not discovered yet — use
      * {@link #doWithSpring()} for those).
      *
+     * <p><strong>Plugins only.</strong> This phase is drained for plugins. An <em>application</em>
+     * class does not need it: it is a {@code @Configuration}, and Spring Boot processes user
+     * configuration before auto-configuration, so a plain {@code @Bean} in the application class
+     * already registers ahead of auto-config and Boot's {@code @ConditionalOnMissingBean} beans
+     * defer to it. (Draining the application class here is also unsafe — its
+     * {@code grailsApplication} is not yet available this early.) So override this on a
+     * {@link grails.plugins.Plugin}; in an application class, declare a {@code @Bean} instead.
+     *
      * @return A closure that defines beans to be registered before auto-configuration
      * @since 8.0
      */

@@ -23,6 +23,7 @@ import grails.core.GrailsApplication;
 import grails.plugins.DefaultGrailsPluginManager;
 import grails.plugins.GrailsPluginManager;
 import org.apache.grails.core.plugins.PluginDiscovery;
+import org.grails.config.NavigableMap;
 import org.grails.config.PropertySourcesConfig;
 import org.grails.spring.DefaultRuntimeSpringConfiguration;
 import org.grails.spring.RuntimeSpringConfiguration;
@@ -34,6 +35,10 @@ import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.PriorityOrdered;
+import org.springframework.core.convert.support.ConfigurableConversionService;
+import org.springframework.core.env.AbstractEnvironment;
+import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.core.io.Resource;
 
 /**
  * Registers plugin beans contributed via
@@ -72,7 +77,7 @@ public class GrailsBeforeAutoConfigurationPostProcessor implements BeanDefinitio
         PluginDiscovery pluginDiscovery = applicationContext.getBean(PluginDiscovery.BEAN_NAME, PluginDiscovery.class);
 
         DefaultGrailsApplication grailsApplication = new DefaultGrailsApplication();
-        grailsApplication.setConfig(new PropertySourcesConfig(applicationContext.getEnvironment().getPropertySources()));
+        grailsApplication.setConfig(buildConfig());
         grailsApplication.setApplicationContext(applicationContext);
 
         DefaultGrailsPluginManager pluginManager = new DefaultGrailsPluginManager(grailsApplication, pluginDiscovery);
@@ -86,6 +91,30 @@ public class GrailsBeforeAutoConfigurationPostProcessor implements BeanDefinitio
         if (LOG.isDebugEnabled()) {
             LOG.debug("Registered plugin beans from the before-auto-configuration phase");
         }
+    }
+
+    /**
+     * Builds the {@link PropertySourcesConfig} that backs {@code grailsApplication.config} in this
+     * phase, registering the same conversion-service converters that
+     * {@code GrailsApplicationPostProcessor.loadApplicationConfig} registers for the main lifecycle.
+     * This gives before-auto-configuration closures parity when reading config — null-safe
+     * navigation of missing paths and {@code String -> Resource} coercion — not just scalar
+     * {@code getProperty(...)} access.
+     */
+    private PropertySourcesConfig buildConfig() {
+        ConfigurableEnvironment environment = applicationContext.getEnvironment();
+        ConfigurableConversionService conversionService = null;
+        if (environment instanceof AbstractEnvironment) {
+            conversionService = ((AbstractEnvironment) environment).getConversionService();
+            conversionService.addConverter(String.class, Resource.class, applicationContext::getResource);
+            conversionService.addConverter(NavigableMap.NullSafeNavigator.class, String.class, source -> null);
+            conversionService.addConverter(NavigableMap.NullSafeNavigator.class, Object.class, source -> null);
+        }
+        PropertySourcesConfig config = new PropertySourcesConfig(environment.getPropertySources());
+        if (conversionService != null) {
+            config.setConversionService(conversionService);
+        }
+        return config;
     }
 
     @Override
