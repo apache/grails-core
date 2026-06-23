@@ -31,8 +31,8 @@ import org.hibernate.proxy.pojo.bytebuddy.ByteBuddyProxyHelper;
 /**
  * A {@link BytecodeProvider} implementation for Hibernate 7 that provides Groovy-aware proxies.
  *
- * @author Graeme Rocher
- * @since 7.0
+ * @author Walter Duque de Estrada
+ * @since 8.0
  */
 public class GrailsBytecodeProvider implements BytecodeProvider, java.io.Serializable {
 
