@@ -201,7 +201,6 @@ public interface GrailsPlugin extends ApplicationContextAware, Comparable, Grail
      * @since 8.0
      */
     default void doWithRuntimeConfigurationBeforeAutoConfiguration(RuntimeSpringConfiguration springConfig) {
-        // no-op by default
     }
 
     /**

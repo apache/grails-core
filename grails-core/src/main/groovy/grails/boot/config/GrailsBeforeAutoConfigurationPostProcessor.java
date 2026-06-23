@@ -27,8 +27,6 @@ import org.grails.config.NavigableMap;
 import org.grails.config.PropertySourcesConfig;
 import org.grails.spring.DefaultRuntimeSpringConfiguration;
 import org.grails.spring.RuntimeSpringConfiguration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
@@ -70,8 +68,6 @@ import org.springframework.core.io.Resource;
  */
 public class GrailsBeforeAutoConfigurationPostProcessor implements BeanDefinitionRegistryPostProcessor {
 
-    private static final Logger LOG = LoggerFactory.getLogger(GrailsBeforeAutoConfigurationPostProcessor.class);
-
     private final ConfigurableApplicationContext applicationContext;
 
     public GrailsBeforeAutoConfigurationPostProcessor(ConfigurableApplicationContext applicationContext) {
@@ -104,10 +100,6 @@ public class GrailsBeforeAutoConfigurationPostProcessor implements BeanDefinitio
         RuntimeSpringConfiguration springConfig = new DefaultRuntimeSpringConfiguration();
         pluginManager.doRuntimeConfigurationBeforeAutoConfiguration(springConfig);
         springConfig.registerBeansWithRegistry(registry);
-
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("Registered plugin beans from the before-auto-configuration phase");
-        }
     }
 
     /**

@@ -116,7 +116,6 @@ public interface GrailsPluginManager extends ApplicationContextAware {
      * @since 8.0
      */
     default void doRuntimeConfigurationBeforeAutoConfiguration(RuntimeSpringConfiguration springConfig) {
-        // no-op by default
     }
 
     /**
