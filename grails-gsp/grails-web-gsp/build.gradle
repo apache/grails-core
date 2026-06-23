@@ -45,7 +45,7 @@ dependencies {
     api project(':grails-gsp-core')
     api project(':grails-web-common')
     api project(':grails-web-taglib')
-    api 'io.micrometer:micrometer-core' // MeterRegistry appears in setMeterRegistry(...) ABI; used for gsp.cache hit/miss (GroovyPageCacheMetrics)
+    api 'io.micrometer:micrometer-observation'
 
 //    api 'org.apache.grails:grails-core', { // GrailsDomainClass, CacheEntry, Environment, GrailsStringUtils, GrailsApplication, GrailsControllerClass, GrailsApplicationAware, ControllerArtefactHandler, GrailsPluginManager, GrailsFactoriesLoader
 //        // API dependencies in grails-core

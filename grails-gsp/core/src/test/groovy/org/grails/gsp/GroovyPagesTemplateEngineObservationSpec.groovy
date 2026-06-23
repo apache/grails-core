@@ -31,11 +31,6 @@ import spock.lang.Specification
 /**
  * Tests the {@code gsp.compile} observation on {@link GroovyPagesTemplateEngine}. The real GSP
  * compilation is overridden so the test stays a unit.
- *
- * <p>Note: GSP cache hit/miss is intentionally not instrumented here. The engine's runtime-compile cache is
- * a development-only signal (a precompiled production deployment bypasses it), so the operational
- * {@code gsp.cache} hit/miss counters live on the request-path caches in {@code GroovyPagesTemplateRenderer}
- * and {@code GroovyPageViewResolver} instead.</p>
  */
 class GroovyPagesTemplateEngineObservationSpec extends Specification {
 
