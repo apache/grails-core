@@ -18,7 +18,6 @@
  */
 package grails.gorm.tests.validation
 
-
 import grails.gorm.annotation.Entity
 import grails.gorm.transactions.Rollback
 import org.grails.orm.hibernate.HibernateDatastore
