@@ -29,8 +29,7 @@ import org.grails.observation.GrailsObservationKeyNames;
  * {@link ObservationDocumentation} for the execution of a Grails interceptor's {@code before()} /
  * {@code after()} callback around a request.
  *
- * @author Apache Grails
- * @since 8.0.0
+ * @since 8.0
  */
 public enum InterceptorObservationDocumentation implements ObservationDocumentation {
 

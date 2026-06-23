@@ -24,8 +24,7 @@ import io.micrometer.observation.ObservationConvention;
  * {@link ObservationConvention} for the {@link InterceptorObservationDocumentation#INTERCEPTOR}
  * observation. The default implementation is {@link DefaultInterceptorObservationConvention}.
  *
- * @author Apache Grails
- * @since 8.0.0
+ * @since 8.0
  */
 public interface InterceptorObservationConvention extends ObservationConvention<InterceptorObservationContext> {
 }

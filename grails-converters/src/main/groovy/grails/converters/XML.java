@@ -33,8 +33,6 @@ import groovy.util.BuilderSupport;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import io.micrometer.observation.Observation;
-import io.micrometer.observation.ObservationRegistry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -58,7 +56,6 @@ import org.grails.web.converters.marshaller.ClosureObjectMarshaller;
 import org.grails.web.converters.marshaller.NameAwareMarshaller;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
 import org.grails.web.converters.observation.ConverterObservationContext;
-import org.grails.web.converters.observation.ConverterObservationConvention;
 import org.grails.web.converters.observation.ConverterObservationDocumentation;
 import org.grails.web.converters.observation.DefaultConverterObservationConvention;
 import org.grails.web.xml.PrettyPrintXMLStreamWriter;
@@ -270,15 +267,15 @@ public class XML extends AbstractConverter<XMLStreamWriter> implements IncludeEx
     }
 
     public void render(HttpServletResponse response) throws ConverterException {
-        ObservationRegistry registry = ConvertersConfigurationHolder.getObservationRegistry();
-        if (registry == null || registry.isNoop()) {
+        var observationRegistry = ConvertersConfigurationHolder.getObservationRegistry();
+        if (observationRegistry == null || observationRegistry.isNoop()) {
             renderInternal(response);
             return;
         }
-        Observation observation = ConverterObservationDocumentation.CONVERT.observation(
-                (ConverterObservationConvention) null, DEFAULT_CONVERT_CONVENTION,
-                () -> new ConverterObservationContext("xml"), registry).start();
-        Observation.Scope scope = observation.openScope();
+        var observation = ConverterObservationDocumentation.CONVERT.observation(
+                null, DEFAULT_CONVERT_CONVENTION,
+                () -> new ConverterObservationContext("xml"), observationRegistry).start();
+        var observationScope = observation.openScope();
         try {
             renderInternal(response);
         }
@@ -287,7 +284,7 @@ public class XML extends AbstractConverter<XMLStreamWriter> implements IncludeEx
             throw t;
         }
         finally {
-            scope.close();
+            observationScope.close();
             observation.stop();
         }
     }

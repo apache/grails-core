@@ -29,8 +29,7 @@ import static org.grails.web.converters.observation.ConverterObservationDocument
 /**
  * Default {@link ConverterObservationConvention}.
  *
- * @author Apache Grails
- * @since 8.0.0
+ * @since 8.0
  */
 public class DefaultConverterObservationConvention extends GrailsObservationConvention<ConverterObservationContext>
         implements ConverterObservationConvention {

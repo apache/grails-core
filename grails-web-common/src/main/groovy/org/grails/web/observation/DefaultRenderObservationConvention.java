@@ -29,8 +29,7 @@ import static org.grails.web.observation.GrailsObservationDocumentation.RenderLo
 /**
  * Default {@link RenderObservationConvention}.
  *
- * @author Apache Grails
- * @since 8.0.0
+ * @since 8.0
  */
 public class DefaultRenderObservationConvention extends GrailsObservationConvention<RenderObservationContext>
         implements RenderObservationConvention {

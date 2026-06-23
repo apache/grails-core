@@ -29,8 +29,7 @@ import static org.grails.plugins.web.interceptors.observation.InterceptorObserva
 /**
  * Default {@link InterceptorObservationConvention}.
  *
- * @author Apache Grails
- * @since 8.0.0
+ * @since 8.0
  */
 public class DefaultInterceptorObservationConvention extends GrailsObservationConvention<InterceptorObservationContext>
         implements InterceptorObservationConvention {

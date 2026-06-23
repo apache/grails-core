@@ -29,8 +29,7 @@ import static grails.web.databinding.observation.DataBindingObservationDocumenta
 /**
  * Default {@link DataBindingObservationConvention}.
  *
- * @author Apache Grails
- * @since 8.0.0
+ * @since 8.0
  */
 public class DefaultDataBindingObservationConvention extends GrailsObservationConvention<DataBindingObservationContext>
         implements DataBindingObservationConvention {

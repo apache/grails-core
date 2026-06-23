@@ -29,8 +29,7 @@ import static org.grails.web.observation.GrailsObservationDocumentation.Controll
 /**
  * Default {@link ControllerObservationConvention}.
  *
- * @author Apache Grails
- * @since 8.0.0
+ * @since 8.0
  */
 public class DefaultControllerObservationConvention extends GrailsObservationConvention<ControllerObservationContext>
         implements ControllerObservationConvention {

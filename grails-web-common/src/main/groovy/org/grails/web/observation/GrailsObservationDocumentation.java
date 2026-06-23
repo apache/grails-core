@@ -29,8 +29,7 @@ import org.grails.observation.GrailsObservationKeyNames;
  * {@link ObservationDocumentation} for the Grails request-handling lifecycle observations that sit
  * between the Spring HTTP server observation and the leaf GSP/data-store observations.
  *
- * @author Apache Grails
- * @since 8.0.0
+ * @since 8.0
  */
 public enum GrailsObservationDocumentation implements ObservationDocumentation {
 

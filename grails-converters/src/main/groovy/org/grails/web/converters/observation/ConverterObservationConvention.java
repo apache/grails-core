@@ -24,8 +24,7 @@ import io.micrometer.observation.ObservationConvention;
  * {@link ObservationConvention} for the {@link ConverterObservationDocumentation#CONVERT} observation.
  * The default implementation is {@link DefaultConverterObservationConvention}.
  *
- * @author Apache Grails
- * @since 8.0.0
+ * @since 8.0
  */
 public interface ConverterObservationConvention extends ObservationConvention<ConverterObservationContext> {
 }

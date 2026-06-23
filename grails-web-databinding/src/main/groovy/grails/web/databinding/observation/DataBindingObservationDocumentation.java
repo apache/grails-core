@@ -28,8 +28,7 @@ import org.grails.observation.GrailsObservationKeyNames;
 /**
  * {@link ObservationDocumentation} for binding a request's data onto a command or domain object.
  *
- * @author Apache Grails
- * @since 8.0.0
+ * @since 8.0
  */
 public enum DataBindingObservationDocumentation implements ObservationDocumentation {
 

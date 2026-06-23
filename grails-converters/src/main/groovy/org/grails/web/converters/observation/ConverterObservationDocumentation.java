@@ -29,8 +29,7 @@ import org.grails.observation.GrailsObservationKeyNames;
  * {@link ObservationDocumentation} for serializing a value to the HTTP response via a Grails
  * converter ({@code render obj as JSON} / {@code as XML}).
  *
- * @author Apache Grails
- * @since 8.0.0
+ * @since 8.0
  */
 public enum ConverterObservationDocumentation implements ObservationDocumentation {
 

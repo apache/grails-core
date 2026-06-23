@@ -28,8 +28,7 @@ import io.micrometer.observation.ObservationConvention;
  * conventions only declare their own name, contextual name and observation-specific tags.
  *
  * @param <C> the {@link Observation.Context} type this convention handles
- * @author Apache Grails
- * @since 8.0.0
+ * @since 8.0
  */
 public abstract class GrailsObservationConvention<C extends Observation.Context>
         implements ObservationConvention<C> {

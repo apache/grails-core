@@ -23,8 +23,7 @@ import io.micrometer.observation.Observation;
 /**
  * Observation context for the {@link GrailsObservationDocumentation#RENDER} observation.
  *
- * @author Apache Grails
- * @since 8.0.0
+ * @since 8.0
  */
 public class RenderObservationContext extends Observation.Context {
 

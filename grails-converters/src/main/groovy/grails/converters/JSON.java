@@ -35,8 +35,6 @@ import groovy.util.BuilderSupport;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import io.micrometer.observation.Observation;
-import io.micrometer.observation.ObservationRegistry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -54,7 +52,6 @@ import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ClosureObjectMarshaller;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
 import org.grails.web.converters.observation.ConverterObservationContext;
-import org.grails.web.converters.observation.ConverterObservationConvention;
 import org.grails.web.converters.observation.ConverterObservationDocumentation;
 import org.grails.web.converters.observation.DefaultConverterObservationConvention;
 import org.grails.web.json.JSONArray;
@@ -155,15 +152,15 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
      * @throws ConverterException
      */
     public void render(HttpServletResponse response) throws ConverterException {
-        ObservationRegistry registry = ConvertersConfigurationHolder.getObservationRegistry();
-        if (registry == null || registry.isNoop()) {
+        var observationRegistry = ConvertersConfigurationHolder.getObservationRegistry();
+        if (observationRegistry == null || observationRegistry.isNoop()) {
             renderInternal(response);
             return;
         }
-        Observation observation = ConverterObservationDocumentation.CONVERT.observation(
-                (ConverterObservationConvention) null, DEFAULT_CONVERT_CONVENTION,
-                () -> new ConverterObservationContext("json"), registry).start();
-        Observation.Scope scope = observation.openScope();
+        var observation = ConverterObservationDocumentation.CONVERT.observation(
+                null, DEFAULT_CONVERT_CONVENTION,
+                () -> new ConverterObservationContext("json"), observationRegistry).start();
+        var observationScope = observation.openScope();
         try {
             renderInternal(response);
         }
@@ -172,7 +169,7 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
             throw t;
         }
         finally {
-            scope.close();
+            observationScope.close();
             observation.stop();
         }
     }

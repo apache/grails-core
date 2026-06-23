@@ -25,8 +25,7 @@ import io.micrometer.observation.ObservationConvention;
  * The default implementation is {@link DefaultRenderObservationConvention}; supply a custom one to
  * override the span name or tags.
  *
- * @author Apache Grails
- * @since 8.0.0
+ * @since 8.0
  */
 public interface RenderObservationConvention extends ObservationConvention<RenderObservationContext> {
 }

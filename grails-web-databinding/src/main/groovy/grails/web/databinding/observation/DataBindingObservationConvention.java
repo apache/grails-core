@@ -24,8 +24,7 @@ import io.micrometer.observation.ObservationConvention;
  * {@link ObservationConvention} for the {@link DataBindingObservationDocumentation#DATABINDING}
  * observation. The default implementation is {@link DefaultDataBindingObservationConvention}.
  *
- * @author Apache Grails
- * @since 8.0.0
+ * @since 8.0
  */
 public interface DataBindingObservationConvention extends ObservationConvention<DataBindingObservationContext> {
 }

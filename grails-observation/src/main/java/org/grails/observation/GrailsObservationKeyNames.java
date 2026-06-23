@@ -22,8 +22,7 @@ import io.micrometer.common.docs.KeyName;
  * {@link KeyName}s shared by every Grails request-lifecycle observation, so the common tags are
  * defined once rather than redeclared per observation.
  *
- * @author Apache Grails
- * @since 8.0.0
+ * @since 8.0
  */
 public enum GrailsObservationKeyNames implements KeyName {
 
