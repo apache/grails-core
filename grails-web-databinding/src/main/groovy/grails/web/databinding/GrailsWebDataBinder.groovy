@@ -113,8 +113,10 @@ class GrailsWebDataBinder extends SimpleDataBinder {
             doBindInternal(object, source, filter, whiteList, blackList, listener, errors)
             return
         }
+        String target = object != null ? object.getClass().simpleName : 'unknown'
         Observation observation = Observation.createNotStarted('grails.databinding', registry)
-                .lowCardinalityKeyValue('grails.databinding.target', object != null ? object.getClass().simpleName : 'unknown')
+                .contextualName('grails.databinding ' + target)
+                .lowCardinalityKeyValue('grails.databinding.target', target)
                 .start()
         Observation.Scope scope = observation.openScope()
         try {

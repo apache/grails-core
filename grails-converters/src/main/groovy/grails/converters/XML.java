@@ -270,6 +270,7 @@ public class XML extends AbstractConverter<XMLStreamWriter> implements IncludeEx
             return;
         }
         var observation = Observation.createNotStarted("grails.convert", observationRegistry)
+                .contextualName("grails.convert xml")
                 .lowCardinalityKeyValue("grails.convert.format", "xml")
                 .start();
         var observationScope = observation.openScope();

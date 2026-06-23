@@ -119,8 +119,10 @@ class UrlMappingsInfoHandlerAdapter implements HandlerAdapter, ApplicationContex
                 }
                 else {
                     // scope open across invoke so the action's DB/cache spans nest under this span
+                    String controllerName = controllerClass.logicalPropertyName ?: 'unknown'
                     Observation observation = Observation.createNotStarted('grails.controller', obsRegistry)
-                            .lowCardinalityKeyValue('grails.controller', controllerClass.logicalPropertyName ?: 'unknown')
+                            .contextualName('grails.controller ' + controllerName)
+                            .lowCardinalityKeyValue('grails.controller', controllerName)
                             .lowCardinalityKeyValue('grails.action', action ? action.toString() : 'unknown')
                             .start()
                     Observation.Scope scope = observation.openScope()

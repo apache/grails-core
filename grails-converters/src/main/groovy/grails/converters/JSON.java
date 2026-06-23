@@ -155,6 +155,7 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
             return;
         }
         var observation = Observation.createNotStarted("grails.convert", observationRegistry)
+                .contextualName("grails.convert json")
                 .lowCardinalityKeyValue("grails.convert.format", "json")
                 .start();
         var observationScope = observation.openScope();

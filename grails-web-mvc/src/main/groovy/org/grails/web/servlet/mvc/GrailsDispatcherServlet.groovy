@@ -105,8 +105,10 @@ class GrailsDispatcherServlet extends DispatcherServlet implements ServletContex
             super.render(mv, request, response)
             return
         }
+        String view = (mv != null && mv.viewName) ? mv.viewName : 'none'
         Observation observation = Observation.createNotStarted('grails.render', registry)
-                .lowCardinalityKeyValue('grails.view', (mv != null && mv.viewName) ? mv.viewName : 'none')
+                .contextualName('grails.render ' + view)
+                .lowCardinalityKeyValue('grails.view', view)
                 .start()
         Observation.Scope scope = observation.openScope()
         try {

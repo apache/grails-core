@@ -146,9 +146,10 @@ class GrailsInterceptorHandlerInterceptorAdapter implements HandlerInterceptor {
         if (registry == null || registry.isNoop()) {
             return action.getAsBoolean()
         }
-        String name = GrailsNameUtils.getLogicalPropertyName(interceptor.getClass().name, 'Interceptor')
+        String name = GrailsNameUtils.getLogicalPropertyName(interceptor.getClass().name, 'Interceptor') ?: 'unknown'
         Observation observation = Observation.createNotStarted('grails.interceptor', registry)
-                .lowCardinalityKeyValue('grails.interceptor', name ?: 'unknown')
+                .contextualName('grails.interceptor ' + name)
+                .lowCardinalityKeyValue('grails.interceptor', name)
                 .lowCardinalityKeyValue('grails.interceptor.phase', phase ?: 'unknown')
                 .start()
         Observation.Scope scope = observation.openScope()
