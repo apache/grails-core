@@ -37,7 +37,6 @@ import io.micrometer.core.instrument.MeterRegistry;
  * <em>ratio</em> sits at ~100%; the actionable signal is the <strong>miss rate</strong>, which
  * spikes on cold start / deploy and on any unexpected cache flush.</p>
  *
- * @author Grails
  * @since 8.0
  */
 public final class GroovyPageCacheMetrics {
