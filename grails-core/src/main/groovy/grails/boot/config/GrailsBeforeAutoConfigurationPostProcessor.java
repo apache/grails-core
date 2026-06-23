@@ -18,15 +18,6 @@
  */
 package grails.boot.config;
 
-import grails.core.DefaultGrailsApplication;
-import grails.core.GrailsApplication;
-import grails.plugins.DefaultGrailsPluginManager;
-import grails.plugins.GrailsPluginManager;
-import org.apache.grails.core.plugins.PluginDiscovery;
-import org.grails.config.NavigableMap;
-import org.grails.config.PropertySourcesConfig;
-import org.grails.spring.DefaultRuntimeSpringConfiguration;
-import org.grails.spring.RuntimeSpringConfiguration;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
@@ -36,6 +27,14 @@ import org.springframework.core.convert.support.ConfigurableConversionService;
 import org.springframework.core.env.AbstractEnvironment;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.io.Resource;
+
+import grails.core.DefaultGrailsApplication;
+import grails.plugins.DefaultGrailsPluginManager;
+import org.apache.grails.core.plugins.PluginDiscovery;
+import org.grails.config.NavigableMap;
+import org.grails.config.PropertySourcesConfig;
+import org.grails.spring.DefaultRuntimeSpringConfiguration;
+import org.grails.spring.RuntimeSpringConfiguration;
 
 /**
  * Registers plugin beans contributed via
@@ -49,14 +48,14 @@ import org.springframework.core.io.Resource;
  * plugin's bean — no removal or override needed afterwards.
  *
  * <p>This deliberately does the minimum needed to drain the modern phase: it builds a lightweight
- * {@link GrailsApplication} backed by the already-populated {@code Environment} config and loads the plugin
+ * {@link grails.core.GrailsApplication} backed by the already-populated {@code Environment} config and loads the plugin
  * classes (cheap). The full plugin lifecycle (artefact discovery, dynamic methods, legacy {@code doWithSpring})
  * runs later in {@code GrailsApplicationPostProcessor} against a separate plugin manager and GrailsApplication,
  * so each plugin is instantiated twice. That is safe for the bean-definition-only contract of the phase, with
  * one caveat: anything implementing {@link org.springframework.context.ApplicationListener} would, when given
  * the real context, be registered as a listener in both passes. So this phase gives the real context to
  * <strong>neither</strong> its throwaway plugin instances (the manager context is left unset) <strong>nor</strong>
- * its throwaway {@link GrailsApplication} (no {@code setApplicationContext}); bean definitions are flushed
+ * its throwaway {@link grails.core.GrailsApplication} (no {@code setApplicationContext}); bean definitions are flushed
  * straight into the registry.
  *
  * <p>Ordering is guaranteed by being added via {@code addBeanFactoryPostProcessor} (manually-registered

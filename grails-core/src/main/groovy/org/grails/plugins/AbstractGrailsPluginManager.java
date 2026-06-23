@@ -56,13 +56,13 @@ import grails.plugins.GrailsPlugin;
 import grails.plugins.GrailsPluginManager;
 import grails.plugins.Plugin;
 import grails.plugins.exceptions.PluginException;
-import org.grails.core.exceptions.GrailsConfigurationException;
 import grails.util.Environment;
 import grails.util.GrailsNameUtils;
 import org.apache.grails.core.plugins.PluginDiscovery;
 import org.apache.grails.core.plugins.PluginInfo;
 import org.apache.grails.core.plugins.PluginUtils;
 import org.grails.config.NavigableMap;
+import org.grails.core.exceptions.GrailsConfigurationException;
 import org.grails.io.support.GrailsResourceUtils;
 import org.grails.plugins.support.WatchPattern;
 import org.grails.spring.RuntimeSpringConfiguration;
@@ -195,8 +195,8 @@ public abstract class AbstractGrailsPluginManager implements GrailsPluginManager
                 try {
                     grailsPlugin.doWithRuntimeConfigurationBeforeAutoConfiguration(springConfig);
                 } catch (Throwable t) {
-                    throw new GrailsConfigurationException("Error configuring before-auto-configuration beans for plugin "
-                            + grailsPlugin.getName() + ": " + t.getMessage(), t);
+                    throw new GrailsConfigurationException("Error configuring before-auto-configuration beans for plugin " +
+                            grailsPlugin.getName() + ": " + t.getMessage(), t);
                 }
             }
         }

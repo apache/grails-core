@@ -23,6 +23,7 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
@@ -65,12 +66,12 @@ final class DeferrableOverrideWarner {
                 continue; // a fresh bean, not an override
             }
             if (overridesDeferrableConditional(registry.getBeanDefinition(name), name)) {
-                LOG.warn("Bean '{}' registered in doWithSpring overrides a Spring Boot auto-configuration "
-                        + "bean of the same name that is @ConditionalOnMissingBean(name=\"{}\") and would have "
-                        + "deferred. Register it in doWithSpringBeforeAutoConfiguration() instead: the "
-                        + "auto-configuration bean then backs off cleanly, with no override and no wasted bean "
-                        + "creation. (doWithSpring stays correct for decoration, aggregation, artefact-driven "
-                        + "beans, and intentional overrides of unconditional beans.)", name, name);
+                LOG.warn("Bean '{}' registered in doWithSpring overrides a Spring Boot auto-configuration " +
+                        "bean of the same name that is @ConditionalOnMissingBean(name=\"{}\") and would have " +
+                        "deferred. Register it in doWithSpringBeforeAutoConfiguration() instead: the " +
+                        "auto-configuration bean then backs off cleanly, with no override and no wasted bean " +
+                        "creation. (doWithSpring stays correct for decoration, aggregation, artefact-driven " +
+                        "beans, and intentional overrides of unconditional beans.)", name, name);
             }
         }
     }
