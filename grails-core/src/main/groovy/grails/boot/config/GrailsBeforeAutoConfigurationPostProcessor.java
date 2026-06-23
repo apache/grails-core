@@ -34,7 +34,6 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
 import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.core.PriorityOrdered;
 import org.springframework.core.convert.support.ConfigurableConversionService;
 import org.springframework.core.env.AbstractEnvironment;
 import org.springframework.core.env.ConfigurableEnvironment;
@@ -54,11 +53,22 @@ import org.springframework.core.io.Resource;
  * <p>This deliberately does the minimum needed to drain the modern phase: it builds a lightweight
  * {@link GrailsApplication} backed by the already-populated {@code Environment} config and loads the plugin
  * classes (cheap). The full plugin lifecycle (artefact discovery, dynamic methods, legacy {@code doWithSpring})
- * still runs later in {@code GrailsApplicationPostProcessor}; {@code loadPlugins()} is idempotent.
+ * runs later in {@code GrailsApplicationPostProcessor} against a separate plugin manager, so each plugin is
+ * instantiated twice. That is safe for the bean-definition-only contract of the phase, with one caveat: a
+ * plugin that also implements {@link org.springframework.context.ApplicationListener} would, when given the
+ * real context, be registered as a listener in both passes — so this phase does <strong>not</strong> propagate
+ * the application context to its throwaway plugin instances (the manager context is left unset; bean
+ * definitions are flushed straight into the registry).
+ *
+ * <p>Ordering is guaranteed by being added via {@code addBeanFactoryPostProcessor} (manually-registered
+ * {@code BeanDefinitionRegistryPostProcessor}s run before registry-discovered ones such as
+ * {@code ConfigurationClassPostProcessor}). It is NOT an ordered/priority bean — Spring does not sort
+ * manually-added post-processors by {@code getOrder()} — so this class deliberately does not implement
+ * {@code PriorityOrdered}.
  *
  * @since 8.0
  */
-public class GrailsBeforeAutoConfigurationPostProcessor implements BeanDefinitionRegistryPostProcessor, PriorityOrdered {
+public class GrailsBeforeAutoConfigurationPostProcessor implements BeanDefinitionRegistryPostProcessor {
 
     private static final Logger LOG = LoggerFactory.getLogger(GrailsBeforeAutoConfigurationPostProcessor.class);
 
@@ -70,18 +80,25 @@ public class GrailsBeforeAutoConfigurationPostProcessor implements BeanDefinitio
 
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
-        if (!applicationContext.containsBean(PluginDiscovery.BEAN_NAME)) {
-            // No plugin discovery promoted to the context (e.g. unit-test slice) — nothing to do.
+        // Check the LOCAL singleton only — a parent context's discovery must not cause us to re-run
+        // the early drain into a child context (containsBean/getBean would delegate to the parent).
+        Object discovery = applicationContext.getBeanFactory().getSingleton(PluginDiscovery.BEAN_NAME);
+        if (!(discovery instanceof PluginDiscovery)) {
+            // No plugin discovery promoted to this context (e.g. unit-test slice) — nothing to do.
             return;
         }
-        PluginDiscovery pluginDiscovery = applicationContext.getBean(PluginDiscovery.BEAN_NAME, PluginDiscovery.class);
+        PluginDiscovery pluginDiscovery = (PluginDiscovery) discovery;
 
         DefaultGrailsApplication grailsApplication = new DefaultGrailsApplication();
         grailsApplication.setConfig(buildConfig());
         grailsApplication.setApplicationContext(applicationContext);
+        grailsApplication.setMainContext(applicationContext);
 
+        // The manager's application context is deliberately NOT set: loadPlugins() must not propagate
+        // the real context to these throwaway plugin instances, or a plugin implementing
+        // ApplicationListener would be registered a second time (see class javadoc). The drain needs
+        // only the GrailsApplication (bound above); profiles are read from its main context.
         DefaultGrailsPluginManager pluginManager = new DefaultGrailsPluginManager(grailsApplication, pluginDiscovery);
-        pluginManager.setApplicationContext(applicationContext);
         pluginManager.loadPlugins();
 
         RuntimeSpringConfiguration springConfig = new DefaultRuntimeSpringConfiguration();
@@ -120,10 +137,5 @@ public class GrailsBeforeAutoConfigurationPostProcessor implements BeanDefinitio
     @Override
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
         // no-op
-    }
-
-    @Override
-    public int getOrder() {
-        return PriorityOrdered.HIGHEST_PRECEDENCE;
     }
 }

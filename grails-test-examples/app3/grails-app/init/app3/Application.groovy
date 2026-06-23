@@ -21,9 +21,18 @@ package app3
 
 import grails.boot.GrailsApp
 import grails.boot.config.GrailsAutoConfiguration
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
+import org.springframework.context.annotation.Bean
 
 class Application extends GrailsAutoConfiguration {
     static void main(String[] args) {
         GrailsApp.run(Application, args)
     }
+
+    // Default for the probe the loadafter plugin registers in its before-auto-configuration phase.
+    // Because the plugin registered it ahead of auto-config, this @ConditionalOnMissingBean default
+    // must defer to it — BeforeAutoConfigPhaseSpec asserts the plugin's value wins.
+    @Bean
+    @ConditionalOnMissingBean(name = 'beforeAutoConfigProbe')
+    String beforeAutoConfigProbe() { 'from-conditional-default' }
 }

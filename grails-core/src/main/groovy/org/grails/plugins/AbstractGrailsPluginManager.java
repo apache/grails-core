@@ -185,8 +185,11 @@ public abstract class AbstractGrailsPluginManager implements GrailsPluginManager
     @Override
     public void doRuntimeConfigurationBeforeAutoConfiguration(RuntimeSpringConfiguration springConfig) {
         checkInitialised();
-        String[] activeProfiles = applicationContext != null
-                ? applicationContext.getEnvironment().getActiveProfiles()
+        // The before-auto-config phase leaves the manager context unset (to avoid re-registering
+        // ApplicationListener plugins); read active profiles from the GrailsApplication's main context.
+        ApplicationContext context = application != null ? application.getMainContext() : null;
+        String[] activeProfiles = context != null
+                ? context.getEnvironment().getActiveProfiles()
                 : new String[0];
         for (PluginInfo pluginInfo : pluginDiscovery.getPluginsInTopologicalOrder()) {
             GrailsPlugin grailsPlugin = plugins.get(pluginInfo.getName());

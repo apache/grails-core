@@ -148,7 +148,7 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
         if (this.plugin instanceof ApplicationContextAware) {
             ((ApplicationContextAware) plugin).setApplicationContext(applicationContext);
         }
-        if (this.plugin instanceof ApplicationListener) {
+        if (applicationContext != null && this.plugin instanceof ApplicationListener) {
             ((ConfigurableApplicationContext) applicationContext).addApplicationListener((ApplicationListener) plugin);
         }
     }

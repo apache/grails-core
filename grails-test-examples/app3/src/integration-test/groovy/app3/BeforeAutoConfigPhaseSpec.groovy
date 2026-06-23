@@ -25,10 +25,10 @@ import spock.lang.Specification
 
 /**
  * End-to-end test of the before-auto-configuration phase through real plugin discovery and a real
- * GrailsApp boot. The {@code loadfirst} plugin registers {@code beforeAutoConfigProbe} in
- * {@code doWithSpringBeforeAutoConfiguration} (ahead of auto-config); the application defines a
- * {@code @ConditionalOnMissingBean(name='beforeAutoConfigProbe')} default. The plugin's bean must
- * win and the default must defer.
+ * GrailsApp boot. The {@code loadafter} plugin (an app3 dependency) registers
+ * {@code beforeAutoConfigProbe} in {@code doWithSpringBeforeAutoConfiguration} (ahead of auto-config);
+ * {@code Application} defines a {@code @ConditionalOnMissingBean(name='beforeAutoConfigProbe')}
+ * default. The plugin's bean must win and the default must defer.
  */
 @Integration
 class BeforeAutoConfigPhaseSpec extends Specification {
@@ -36,9 +36,8 @@ class BeforeAutoConfigPhaseSpec extends Specification {
     @Autowired
     ApplicationContext applicationContext
 
-    void "a real plugin's doWithSpringBeforeAutoConfiguration bean is registered in a real boot"() {
-        expect: 'loadfirst contributed the bean through real plugin discovery + the early drain'
-        applicationContext.containsBean('beforeAutoConfigProbe')
+    void "a plugin's before-auto-config bean wins; the app @ConditionalOnMissingBean default defers"() {
+        expect: 'the plugin registered the probe ahead of auto-config, so the conditional default deferred to it'
         applicationContext.getBean('beforeAutoConfigProbe') == 'from-plugin-before-autoconfig'
     }
 }
