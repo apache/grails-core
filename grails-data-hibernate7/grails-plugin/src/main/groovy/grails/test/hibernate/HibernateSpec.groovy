@@ -201,7 +201,6 @@ abstract class HibernateSpec extends Specification {
         ] as Map<String, Object>
     }
 
-    @CompileStatic(TypeCheckingMode.SKIP)
     protected InFlightMetadataCollectorImpl getCollector() {
         def bootstrapServiceRegistry = getServiceRegistry()
                 .getParentServiceRegistry()
