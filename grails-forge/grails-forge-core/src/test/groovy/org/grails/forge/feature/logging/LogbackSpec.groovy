@@ -42,12 +42,12 @@ class LogbackSpec extends ApplicationContextSpec implements CommandOutputFixture
     }
 
     @Unroll
-    void "test logback-spring.xml config file is present for #applicationType application"() {
+    void "test no logback-spring.xml config file is generated for #applicationType application"() {
         when:
         def output = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS))
 
         then:
-        output.containsKey("grails-app/conf/logback-spring.xml")
+        !output.containsKey("grails-app/conf/logback-spring.xml")
 
         where:
         applicationType << ApplicationType.values().toList()
