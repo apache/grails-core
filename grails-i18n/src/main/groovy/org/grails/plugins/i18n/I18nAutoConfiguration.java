@@ -21,6 +21,7 @@ package org.grails.plugins.i18n;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.autoconfigure.context.MessageSourceAutoConfiguration;
 import org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration;
@@ -56,11 +57,13 @@ public class I18nAutoConfiguration {
     private int fileCacheSeconds;
 
     @Bean(DispatcherServlet.LOCALE_RESOLVER_BEAN_NAME)
+    @ConditionalOnMissingBean(name = DispatcherServlet.LOCALE_RESOLVER_BEAN_NAME)
     public LocaleResolver localeResolver() {
         return new SessionLocaleResolver();
     }
 
     @Bean
+    @ConditionalOnMissingBean(name = "localeChangeInterceptor")
     public LocaleChangeInterceptor localeChangeInterceptor() {
         ParamsAwareLocaleChangeInterceptor localeChangeInterceptor = new ParamsAwareLocaleChangeInterceptor();
         localeChangeInterceptor.setParamName("lang");
@@ -68,6 +71,7 @@ public class I18nAutoConfiguration {
     }
 
     @Bean(AbstractApplicationContext.MESSAGE_SOURCE_BEAN_NAME)
+    @ConditionalOnMissingBean(name = AbstractApplicationContext.MESSAGE_SOURCE_BEAN_NAME)
     public MessageSource messageSource(GrailsApplication grailsApplication, GrailsPluginManager pluginManager) {
         PluginAwareResourceBundleMessageSource messageSource = new PluginAwareResourceBundleMessageSource(grailsApplication, pluginManager);
         messageSource.setDefaultEncoding(encoding);
