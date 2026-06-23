@@ -21,11 +21,11 @@ package org.grails.orm.hibernate.cfg.domainbinding.hibernate;
 import java.util.Map;
 import java.util.Optional;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.hibernate.FetchMode;
 import org.hibernate.MappingException;
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.IndexedCollection;
+import org.jspecify.annotations.NonNull;
 
 import org.springframework.util.StringUtils;
 

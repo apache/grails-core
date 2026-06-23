@@ -66,10 +66,10 @@ dependencies {
         exclude group:'org.slf4j', module:'slf4j-api'
     }
     api 'jakarta.validation:jakarta.validation-api'
-    api 'org.checkerframework:checker-qual'
 
     api 'io.smallrye:jandex'
 
+    compileOnly 'org.jspecify:jspecify'
     compileOnly 'org.hibernate.orm:hibernate-core'
     compileOnly 'org.hibernate.orm:hibernate-jcache', {
         exclude group:'commons-collections', module:'commons-collections'

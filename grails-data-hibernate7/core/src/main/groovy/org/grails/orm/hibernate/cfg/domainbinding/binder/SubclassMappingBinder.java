@@ -20,9 +20,9 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import java.util.Optional;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Subclass;
+import org.jspecify.annotations.NonNull;
 
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.Mapping;

@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.hibernate.mapping.DependantValue;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Property;
@@ -31,6 +30,7 @@ import org.hibernate.mapping.SimpleValue;
 import org.hibernate.mapping.Table;
 import org.hibernate.mapping.ToOne;
 import org.hibernate.usertype.UserCollectionType;
+import org.jspecify.annotations.Nullable;
 
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;

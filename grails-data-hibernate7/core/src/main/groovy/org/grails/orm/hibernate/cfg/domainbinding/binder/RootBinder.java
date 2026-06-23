@@ -22,10 +22,10 @@ import java.util.stream.Stream;
 
 import jakarta.annotation.Nonnull;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.mapping.RootClass;
 import org.hibernate.mapping.Subclass;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
