@@ -47,6 +47,16 @@ interface GrailsApplicationLifeCycle {
      * (controllers, services, taglibs) must stay in {@link #doWithSpring()}, which runs after
      * artefact discovery.
      *
+     * <p><strong>Contract:</strong> the returned closure must <em>only define bean definitions</em>
+     * and must be free of side effects. This phase runs before the main Grails lifecycle, in an
+     * isolated lightweight pass that instantiates plugins purely to collect their bean definitions;
+     * those plugin instances are then discarded and the real lifecycle re-instantiates them. A
+     * closure with side effects (mutating shared/static state, doing I/O, registering listeners)
+     * would therefore run twice. Read configuration and reference other beans freely — just do not
+     * <em>do</em> anything beyond declaring beans. Reading {@code grailsApplication.config} is safe;
+     * iterating {@code grailsApplication} artefacts is not (they are not discovered yet — use
+     * {@link #doWithSpring()} for those).
+     *
      * @return A closure that defines beans to be registered before auto-configuration
      * @since 8.0
      */
