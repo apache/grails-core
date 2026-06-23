@@ -40,6 +40,8 @@ import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.control.CompilerConfiguration;
 import org.codehaus.groovy.runtime.IOGroovyMethods;
 
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -76,6 +78,10 @@ import org.grails.gsp.io.GroovyPageLocator;
 import org.grails.gsp.io.GroovyPageResourceScriptSource;
 import org.grails.gsp.io.GroovyPageScriptSource;
 import org.grails.gsp.jsp.TagLibraryResolver;
+import org.grails.gsp.observation.DefaultGroovyPageObservationConvention;
+import org.grails.gsp.observation.GroovyPageObservationContext;
+import org.grails.gsp.observation.GroovyPageObservationConvention;
+import org.grails.gsp.observation.GroovyPageObservationDocumentation;
 import org.grails.taglib.TagLibraryLookup;
 
 /**
@@ -107,6 +113,9 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
     private ConcurrentMap<String, CacheEntry<GroovyPageMetaInfo>> pageCache = new ConcurrentHashMap<>();
     private ClassLoader classLoader;
     private AtomicInteger scriptNameCount = new AtomicInteger(0);
+
+    private static final GroovyPageObservationConvention COMPILE_OBSERVATION_CONVENTION = new DefaultGroovyPageObservationConvention("gsp.compile");
+    private ObservationRegistry observationRegistry = ObservationRegistry.NOOP;
 
     private GroovyPageLocator groovyPageLocator = new DefaultGroovyPageLocator();
 
@@ -481,6 +490,18 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
     }
 
     protected GroovyPageMetaInfo buildPageMetaInfo(Resource resource, String pageName) throws IOException {
+        if (this.observationRegistry.isNoop()) {
+            return doBuildPageMetaInfo(resource, pageName);
+        }
+        // Compilation only happens on a template cache miss, so the count of this observation is
+        // effectively the GSP compile (cache-miss) rate; its timer is the compile latency.
+        Observation observation = GroovyPageObservationDocumentation.GSP_COMPILE.observation(
+                null, COMPILE_OBSERVATION_CONVENTION,
+                () -> new GroovyPageObservationContext(pageName), this.observationRegistry);
+        return observation.observeChecked(() -> doBuildPageMetaInfo(resource, pageName));
+    }
+
+    private GroovyPageMetaInfo doBuildPageMetaInfo(Resource resource, String pageName) throws IOException {
         InputStream inputStream = resource.getInputStream();
         try {
             return buildPageMetaInfo(inputStream, resource, pageName);
@@ -754,6 +775,8 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
             Config config = grailsApplication.getConfig();
             this.gspEncoding = config.getProperty(GroovyPageParser.CONFIG_PROPERTY_GSP_ENCODING, System.getProperty("file.encoding", GroovyPageParser.DEFAULT_ENCODING));
         }
+        this.observationRegistry = applicationContext.getBeanProvider(ObservationRegistry.class)
+                .getIfAvailable(() -> ObservationRegistry.NOOP);
     }
 
     /**

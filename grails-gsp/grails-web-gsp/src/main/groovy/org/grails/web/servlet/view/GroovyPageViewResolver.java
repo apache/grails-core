@@ -27,11 +27,14 @@ import groovy.lang.GroovyObject;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.observation.ObservationRegistry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.ApplicationContext;
 import org.springframework.core.Ordered;
 import org.springframework.scripting.ScriptSource;
 import org.springframework.util.Assert;
@@ -44,6 +47,8 @@ import grails.util.GrailsStringUtils;
 import grails.util.GrailsUtil;
 import org.grails.gsp.GroovyPagesTemplateEngine;
 import org.grails.gsp.io.GroovyPageScriptSource;
+import org.grails.gsp.observation.GroovyPageCacheMetrics;
+import org.grails.gsp.observation.GroovyPageObservationConvention;
 import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
 
@@ -66,6 +71,9 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
     private boolean allowGrailsViewCaching = !GrailsUtil.isDevelopmentEnv();
     private long cacheTimeout = -1;
     private boolean resolveJspView = false;
+    private volatile ObservationRegistry observationRegistry;
+    private GroovyPageObservationConvention observationConvention;
+    private GroovyPageCacheMetrics cacheMetrics = GroovyPageCacheMetrics.NOOP;
 
     /**
      * Constructor.
@@ -94,6 +102,8 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
         }
 
         if (!allowGrailsViewCaching) {
+            // view caching disabled (development) → the View is rebuilt every time
+            cacheMetrics.record(false);
             return createGrailsView(viewName);
         }
 
@@ -119,6 +129,8 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
 
         View view = null;
         if (entry == null) {
+            // no cache entry yet → this lookup builds the View (a miss)
+            cacheMetrics.record(false);
             try {
                 return CacheEntry.getValue(viewCache, viewCacheKey, cacheTimeout, updater);
             }
@@ -129,6 +141,8 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
             }
         }
 
+        // existing entry served from cache (never expires by default) → a hit
+        cacheMetrics.record(true);
         try {
             view = entry.getValue(cacheTimeout, updater, true, null);
         } catch (WrappedInitializationException e) {
@@ -221,6 +235,8 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
         gspSpringView.setApplicationContext(getApplicationContext());
         gspSpringView.setTemplateEngine(templateEngine);
         gspSpringView.setScriptSource(scriptSource);
+        gspSpringView.setObservationRegistry(resolveObservationRegistry());
+        gspSpringView.setObservationConvention(this.observationConvention);
         try {
             gspSpringView.afterPropertiesSet();
             if (LOG.isDebugEnabled()) {
@@ -230,6 +246,51 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
             throw new RuntimeException("Error initializing GroovyPageView", e);
         }
         return gspSpringView;
+    }
+
+    /**
+     * Resolves the {@link ObservationRegistry} to apply to GSP views: an explicitly configured one
+     * if set, otherwise the registry bean from the application context, falling back to
+     * {@link ObservationRegistry#NOOP} when none is available.
+     */
+    private ObservationRegistry resolveObservationRegistry() {
+        ObservationRegistry registry = this.observationRegistry;
+        if (registry == null) {
+            ApplicationContext ctx = getApplicationContext();
+            registry = (ctx != null) ?
+                    ctx.getBeanProvider(ObservationRegistry.class).getIfAvailable(() -> ObservationRegistry.NOOP) :
+                    ObservationRegistry.NOOP;
+            // Benign race: two threads may both resolve and write the volatile field before it is set.
+            // Resolution is idempotent (same context bean, or NOOP), so the duplicate is harmless and
+            // avoiding it isn't worth synchronizing this hot path.
+            this.observationRegistry = registry;
+        }
+        return registry;
+    }
+
+    /**
+     * Sets the {@link ObservationRegistry} used to instrument GSP view rendering. When left unset it
+     * is resolved from the application context (falling back to {@link ObservationRegistry#NOOP}).
+     */
+    public void setObservationRegistry(ObservationRegistry observationRegistry) {
+        this.observationRegistry = observationRegistry;
+    }
+
+    /**
+     * Sets a custom {@link GroovyPageObservationConvention} applied to GSP view observations.
+     */
+    public void setObservationConvention(GroovyPageObservationConvention observationConvention) {
+        this.observationConvention = observationConvention;
+    }
+
+    /**
+     * Sets the {@link MeterRegistry} used to record view-resolver cache hits/misses as the
+     * {@code gsp.cache} counter ({@code cache=view}). This is one of the caches actually consulted on
+     * the request path in a deployed app. When unset, cache metrics are disabled.
+     */
+    @Autowired(required = false)
+    public void setMeterRegistry(MeterRegistry meterRegistry) {
+        this.cacheMetrics = GroovyPageCacheMetrics.forCache(meterRegistry, "view");
     }
 
     protected View createFallbackView(String viewName) throws Exception {

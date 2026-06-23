@@ -44,6 +44,8 @@ dependencies {
     api project(':grails-core')
     api project(':grails-taglib')
     api 'org.apache.groovy:groovy-templates'
+    // GSP rendering/compilation Micrometer instrumentation (gsp.view/template/layout/compile + cache counters)
+    implementation 'io.micrometer:micrometer-core'
 
 //    api project(':grails-bootstrap'), { // ConfigMap
 //        // API dependencies in grails-bootstrap

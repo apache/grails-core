@@ -33,7 +33,12 @@ import java.util.concurrent.ConcurrentMap;
 import groovy.text.Template;
 import org.codehaus.groovy.runtime.InvokerHelper;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
+
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.util.Assert;
 import org.springframework.util.ReflectionUtils;
@@ -54,6 +59,11 @@ import org.grails.gsp.GroovyPageBinding;
 import org.grails.gsp.GroovyPageMetaInfo;
 import org.grails.gsp.GroovyPagesTemplateEngine;
 import org.grails.gsp.io.GroovyPageScriptSource;
+import org.grails.gsp.observation.DefaultGroovyPageObservationConvention;
+import org.grails.gsp.observation.GroovyPageCacheMetrics;
+import org.grails.gsp.observation.GroovyPageObservationContext;
+import org.grails.gsp.observation.GroovyPageObservationConvention;
+import org.grails.gsp.observation.GroovyPageObservationDocumentation;
 import org.grails.io.support.GrailsResourceUtils;
 import org.grails.taglib.GrailsTagException;
 import org.grails.taglib.TemplateVariableBinding;
@@ -84,6 +94,10 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
     private Method generateViewMethod;
     private boolean reloadEnabled;
     private boolean cacheEnabled = !Environment.isDevelopmentMode();
+    private static final GroovyPageObservationConvention DEFAULT_OBSERVATION_CONVENTION = new DefaultGroovyPageObservationConvention("gsp.template");
+    private ObservationRegistry observationRegistry = ObservationRegistry.NOOP;
+    private GroovyPageObservationConvention observationConvention;
+    private GroovyPageCacheMetrics cacheMetrics = GroovyPageCacheMetrics.NOOP;
 
     public void afterPropertiesSet() throws Exception {
         if (scaffoldingTemplateGenerator != null) {
@@ -103,6 +117,32 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
         this.reloadEnabled = reloadEnabled;
     }
 
+    /**
+     * Sets the {@link ObservationRegistry} used to instrument GSP template rendering. Defaults to
+     * {@link ObservationRegistry#NOOP}, in which case template rendering is not observed.
+     */
+    @Autowired(required = false)
+    public void setObservationRegistry(ObservationRegistry observationRegistry) {
+        this.observationRegistry = (observationRegistry != null) ? observationRegistry : ObservationRegistry.NOOP;
+    }
+
+    /**
+     * Sets a custom {@link GroovyPageObservationConvention}. When {@code null} the default convention is used.
+     */
+    public void setObservationConvention(GroovyPageObservationConvention observationConvention) {
+        this.observationConvention = observationConvention;
+    }
+
+    /**
+     * Sets the {@link MeterRegistry} used to record {@code <g:render>} template cache hits/misses as the
+     * {@code gsp.cache} counter ({@code cache=template}). This is one of the caches actually consulted on
+     * the request path in a deployed app. When unset, cache metrics are disabled.
+     */
+    @Autowired(required = false)
+    public void setMeterRegistry(MeterRegistry meterRegistry) {
+        this.cacheMetrics = GroovyPageCacheMetrics.forCache(meterRegistry, "template");
+    }
+
     public void clearCache() {
         templateCache.clear();
     }
@@ -115,6 +155,18 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
             throw new GrailsTagException("Tag [render] is missing required attribute [template]");
         }
 
+        if (this.observationRegistry.isNoop()) {
+            doRender(templateName, webRequest, pageScope, attrs, body, out);
+            return;
+        }
+        Observation observation = GroovyPageObservationDocumentation.GSP_TEMPLATE.observation(
+                this.observationConvention, DEFAULT_OBSERVATION_CONVENTION,
+                () -> new GroovyPageObservationContext(templateName), this.observationRegistry);
+        observation.observeChecked(() -> doRender(templateName, webRequest, pageScope, attrs, body, out));
+    }
+
+    protected void doRender(String templateName, GrailsWebRequest webRequest, TemplateVariableBinding pageScope,
+            Map<String, Object> attrs, Object body, Writer out) throws IOException {
         String uri = webRequest.getAttributes().getTemplateUri(templateName, webRequest.getRequest());
         String contextPath = getStringValue(attrs, "contextPath");
         String pluginName = getStringValue(attrs, "plugin");
@@ -158,7 +210,10 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
             }
         }
 
-        return CacheEntry.getValue(templateCache, cacheKey, reloadEnabled ? GroovyPageMetaInfo.LASTMODIFIED_CHECK_INTERVAL : -1, null,
+        // Carries a one-shot "built" flag through CacheEntry (which ignores the request object by
+        // default); updateValue sets it when it actually builds, so a lookup that did not build is a hit.
+        final boolean[] built = { false };
+        Template template = CacheEntry.getValue(templateCache, cacheKey, reloadEnabled ? GroovyPageMetaInfo.LASTMODIFIED_CHECK_INTERVAL : -1, null,
                 new Callable<CacheEntry<Template>>() {
                     public CacheEntry<Template> call() {
                         return new CacheEntry<>() {
@@ -185,6 +240,10 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
                             @Override
                             protected Template updateValue(Template oldValue, Callable<Template> updater, Object cacheRequestObject)
                                     throws Exception {
+                                // updateValue is invoked by CacheEntry only on a cold/expired entry — a miss.
+                                if (cacheRequestObject instanceof boolean[]) {
+                                    ((boolean[]) cacheRequestObject)[0] = true;
+                                }
                                 Template t = null;
                                 if (scriptSource != null) {
                                     t = groovyPagesTemplateEngine.createTemplate(scriptSource);
@@ -201,7 +260,9 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
                             }
                         };
                     }
-                }, true, null);
+                }, true, built);
+        cacheMetrics.record(!built[0]);
+        return template;
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})

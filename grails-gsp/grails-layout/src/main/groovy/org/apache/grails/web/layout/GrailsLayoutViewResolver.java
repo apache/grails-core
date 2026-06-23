@@ -30,6 +30,7 @@ import com.opensymphony.module.sitemesh.Factory;
 import com.opensymphony.module.sitemesh.factory.DefaultFactory;
 import com.opensymphony.sitemesh.ContentProcessor;
 import com.opensymphony.sitemesh.compatability.PageParser2ContentProcessor;
+import io.micrometer.observation.ObservationRegistry;
 
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.context.ApplicationListener;
@@ -47,9 +48,18 @@ public class GrailsLayoutViewResolver extends EmbeddedGrailsLayoutViewResolver i
     protected GrailsApplication grailsApplication;
     private boolean grailsLayoutConfigLoaded = false;
     private int order = Ordered.LOWEST_PRECEDENCE - 50;
+    private ObservationRegistry observationRegistry = ObservationRegistry.NOOP;
+    private org.grails.gsp.observation.GroovyPageObservationConvention observationConvention;
 
     public GrailsLayoutViewResolver() {
         super();
+    }
+
+    /**
+     * Sets a custom convention applied to {@code gsp.layout} observations on the views this resolver builds.
+     */
+    public void setObservationConvention(org.grails.gsp.observation.GroovyPageObservationConvention observationConvention) {
+        this.observationConvention = observationConvention;
     }
 
     public GrailsLayoutViewResolver(ViewResolver innerViewResolver, GroovyPageLayoutFinder groovyPageLayoutFinder) {
@@ -58,7 +68,10 @@ public class GrailsLayoutViewResolver extends EmbeddedGrailsLayoutViewResolver i
 
     @Override
     protected View createLayoutView(View innerView) {
-        return new GrailsLayoutView(groovyPageLayoutFinder, innerView, contentProcessor);
+        GrailsLayoutView layoutView = new GrailsLayoutView(groovyPageLayoutFinder, innerView, contentProcessor);
+        layoutView.setObservationRegistry(this.observationRegistry);
+        layoutView.setObservationConvention(this.observationConvention);
+        return layoutView;
     }
 
     public void init() {
@@ -140,6 +153,8 @@ public class GrailsLayoutViewResolver extends EmbeddedGrailsLayoutViewResolver i
 
     @Override
     public void onApplicationEvent(ContextRefreshedEvent event) {
+        this.observationRegistry = event.getApplicationContext()
+                .getBeanProvider(ObservationRegistry.class).getIfAvailable(() -> ObservationRegistry.NOOP);
         init();
     }
 }
