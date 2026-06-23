@@ -123,6 +123,7 @@ public class ControllersAutoConfiguration {
     }
 
     @Bean
+    @ConditionalOnMissingBean(name = "grailsWebRequestFilter")
     public FilterRegistrationBean<GrailsWebRequestFilter> grailsWebRequestFilter(GrailsWebRequestFilter grailsWebRequest) {
         FilterRegistrationBean<GrailsWebRequestFilter> registrationBean = new FilterRegistrationBean<>();
         registrationBean.setFilter(grailsWebRequest);
@@ -163,6 +164,7 @@ public class ControllersAutoConfiguration {
     }
 
     @Bean
+    @ConditionalOnMissingBean(GrailsWebMvcConfigurer.class)
     public GrailsWebMvcConfigurer webMvcConfig() {
         return new GrailsWebMvcConfigurer(resourcesCachePeriod, resourcesEnabled, resourcesPattern);
     }
