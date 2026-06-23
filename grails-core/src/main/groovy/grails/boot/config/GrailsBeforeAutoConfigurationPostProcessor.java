@@ -51,12 +51,13 @@ import org.springframework.core.io.Resource;
  * <p>This deliberately does the minimum needed to drain the modern phase: it builds a lightweight
  * {@link GrailsApplication} backed by the already-populated {@code Environment} config and loads the plugin
  * classes (cheap). The full plugin lifecycle (artefact discovery, dynamic methods, legacy {@code doWithSpring})
- * runs later in {@code GrailsApplicationPostProcessor} against a separate plugin manager, so each plugin is
- * instantiated twice. That is safe for the bean-definition-only contract of the phase, with one caveat: a
- * plugin that also implements {@link org.springframework.context.ApplicationListener} would, when given the
- * real context, be registered as a listener in both passes — so this phase does <strong>not</strong> propagate
- * the application context to its throwaway plugin instances (the manager context is left unset; bean
- * definitions are flushed straight into the registry).
+ * runs later in {@code GrailsApplicationPostProcessor} against a separate plugin manager and GrailsApplication,
+ * so each plugin is instantiated twice. That is safe for the bean-definition-only contract of the phase, with
+ * one caveat: anything implementing {@link org.springframework.context.ApplicationListener} would, when given
+ * the real context, be registered as a listener in both passes. So this phase gives the real context to
+ * <strong>neither</strong> its throwaway plugin instances (the manager context is left unset) <strong>nor</strong>
+ * its throwaway {@link GrailsApplication} (no {@code setApplicationContext}); bean definitions are flushed
+ * straight into the registry.
  *
  * <p>Ordering is guaranteed by being added via {@code addBeanFactoryPostProcessor} (manually-registered
  * {@code BeanDefinitionRegistryPostProcessor}s run before registry-discovered ones such as
@@ -85,15 +86,16 @@ public class GrailsBeforeAutoConfigurationPostProcessor implements BeanDefinitio
         }
         PluginDiscovery pluginDiscovery = (PluginDiscovery) discovery;
 
+        // A lightweight GrailsApplication, given ONLY its config so before-auto-config closures can read
+        // grailsApplication.config. It is deliberately given NO application context: setApplicationContext
+        // would register this throwaway app as an ApplicationListener on the real context, and likewise the
+        // manager context is left unset so loadPlugins() does not register throwaway plugin instances as
+        // listeners. Bean definitions are flushed straight into the registry below.
+        // (setConfig also publishes Holders.config; the real lifecycle resets it, and both wrap the same
+        // environment property sources, so the values are equivalent.)
         DefaultGrailsApplication grailsApplication = new DefaultGrailsApplication();
         grailsApplication.setConfig(buildConfig());
-        grailsApplication.setApplicationContext(applicationContext);
-        grailsApplication.setMainContext(applicationContext);
 
-        // The manager's application context is deliberately NOT set: loadPlugins() must not propagate
-        // the real context to these throwaway plugin instances, or a plugin implementing
-        // ApplicationListener would be registered a second time (see class javadoc). The drain needs
-        // only the GrailsApplication (bound above); profiles are read from its main context.
         DefaultGrailsPluginManager pluginManager = new DefaultGrailsPluginManager(grailsApplication, pluginDiscovery);
         pluginManager.loadPlugins();
 
