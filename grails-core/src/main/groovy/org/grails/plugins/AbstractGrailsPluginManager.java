@@ -56,6 +56,7 @@ import grails.plugins.GrailsPlugin;
 import grails.plugins.GrailsPluginManager;
 import grails.plugins.Plugin;
 import grails.plugins.exceptions.PluginException;
+import org.grails.core.exceptions.GrailsConfigurationException;
 import grails.util.Environment;
 import grails.util.GrailsNameUtils;
 import org.apache.grails.core.plugins.PluginDiscovery;
@@ -184,11 +185,20 @@ public abstract class AbstractGrailsPluginManager implements GrailsPluginManager
     @Override
     public void doRuntimeConfigurationBeforeAutoConfiguration(RuntimeSpringConfiguration springConfig) {
         checkInitialised();
+        String[] activeProfiles = applicationContext != null
+                ? applicationContext.getEnvironment().getActiveProfiles()
+                : new String[0];
         for (PluginInfo pluginInfo : pluginDiscovery.getPluginsInTopologicalOrder()) {
             GrailsPlugin grailsPlugin = plugins.get(pluginInfo.getName());
-            // Only plugins that opt in (override the default no-op) register anything here.
-            if (grailsPlugin.supportsCurrentScopeAndEnvironment()) {
-                grailsPlugin.doWithRuntimeConfigurationBeforeAutoConfiguration(springConfig);
+            // Only plugins enabled for the current scope/environment, and that opt in by overriding
+            // the default no-op, register anything in this phase.
+            if (grailsPlugin.supportsCurrentScopeAndEnvironment() && grailsPlugin.isEnabled(activeProfiles)) {
+                try {
+                    grailsPlugin.doWithRuntimeConfigurationBeforeAutoConfiguration(springConfig);
+                } catch (Throwable t) {
+                    throw new GrailsConfigurationException("Error configuring before-auto-configuration beans for plugin "
+                            + grailsPlugin.getName() + ": " + t.getMessage(), t);
+                }
             }
         }
     }
