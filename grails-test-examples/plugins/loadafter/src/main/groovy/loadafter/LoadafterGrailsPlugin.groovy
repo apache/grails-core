@@ -33,4 +33,13 @@ Brief summary/description of the plugin.
 
     def loadAfter = ['springSecurityCore']
 
+    // Exercises the before-auto-configuration phase end-to-end (see app3 BeforeAutoConfigPhaseSpec):
+    // registered ahead of auto-config through real plugin discovery + the early drain.
+    @Override
+    Closure doWithSpringBeforeAutoConfiguration() {
+        { ->
+            beforeAutoConfigProbe(String, 'from-plugin-before-autoconfig')
+        }
+    }
+
 }
