@@ -77,9 +77,9 @@ class GroovyPagesTemplateEngineObservationSpec extends Specification {
         recorded[0].name == 'gsp.compile'
         recorded[0].contextualName == 'gsp.compile /book/show'
 
-        and: "gsp.name is high-cardinality (span only); error is the low-cardinality metric tag"
+        and: "gsp.name is high-cardinality (span only); no error on a successful compile"
         recorded[0].highCardinalityKeyValues.find { it.key == 'gsp.name' }?.value == '/book/show'
         recorded[0].lowCardinalityKeyValues.find { it.key == 'gsp.name' } == null
-        recorded[0].lowCardinalityKeyValues.find { it.key == 'error' }?.value == 'none'
+        recorded[0].error == null
     }
 }

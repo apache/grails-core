@@ -77,10 +77,10 @@ class GroovyPageViewObservationSpec extends Specification {
         recorded[0].name == 'gsp.view'
         recorded[0].contextualName == 'gsp.view /book/show'
 
-        and: "gsp.name is high-cardinality (span only); error is the low-cardinality metric tag"
+        and: "gsp.name is high-cardinality (span only); no error on a successful render"
         recorded[0].highCardinalityKeyValues.find { it.key == 'gsp.name' }?.value == '/book/show'
         recorded[0].lowCardinalityKeyValues.find { it.key == 'gsp.name' } == null
-        recorded[0].lowCardinalityKeyValues.find { it.key == 'error' }?.value == 'none'
+        recorded[0].error == null
     }
 
     void "no observation is recorded when the registry is NOOP (zero overhead)"() {
@@ -94,7 +94,7 @@ class GroovyPageViewObservationSpec extends Specification {
         recorded.isEmpty()
     }
 
-    void "the error key carries the exception name when rendering fails"() {
+    void "the observation records the exception when rendering fails"() {
         given:
         GroovyPageView view = viewFor(recordingRegistry(), '/book/show', { throw new GroovyPagesException('boom') })
 
@@ -105,6 +105,6 @@ class GroovyPageViewObservationSpec extends Specification {
         thrown(GroovyPagesException)
         recorded.size() == 1
         recorded[0].name == 'gsp.view'
-        recorded[0].lowCardinalityKeyValues.find { it.key == 'error' }?.value == 'GroovyPagesException'
+        recorded[0].error instanceof GroovyPagesException
     }
 }

@@ -36,10 +36,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.web.servlet.View;
 
-import org.grails.gsp.observation.DefaultGroovyPageObservationConvention;
-import org.grails.gsp.observation.GroovyPageObservationContext;
-import org.grails.gsp.observation.GroovyPageObservationConvention;
-import org.grails.gsp.observation.GroovyPageObservationDocumentation;
 import org.grails.web.servlet.WrappedResponseHolder;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
 import org.grails.web.servlet.mvc.OutputAwareHttpServletResponse;
@@ -54,9 +50,7 @@ public class EmbeddedGrailsLayoutView extends AbstractGrailsView {
 
     public static final String GSP_GRAILS_LAYOUT_PAGE = EmbeddedGrailsLayoutView.class.getName() + ".GSP_GRAILS_LAYOUT_PAGE";
 
-    private static final GroovyPageObservationConvention DEFAULT_OBSERVATION_CONVENTION = new DefaultGroovyPageObservationConvention("gsp.layout");
     private ObservationRegistry observationRegistry = ObservationRegistry.NOOP;
-    private GroovyPageObservationConvention observationConvention;
 
     public EmbeddedGrailsLayoutView(GroovyPageLayoutFinder groovyPageLayoutFinder, View innerView) {
         this.groovyPageLayoutFinder = groovyPageLayoutFinder;
@@ -119,9 +113,10 @@ public class EmbeddedGrailsLayoutView extends AbstractGrailsView {
             decorator.render(content, model, request, response, webRequest.getServletContext());
             return;
         }
-        Observation observation = GroovyPageObservationDocumentation.GSP_LAYOUT.observation(
-                this.observationConvention, DEFAULT_OBSERVATION_CONVENTION,
-                () -> new GroovyPageObservationContext(decorator.getPage()), this.observationRegistry);
+        String resource = (decorator.getPage() != null && !decorator.getPage().isEmpty()) ? decorator.getPage() : "unknown";
+        Observation observation = Observation.createNotStarted("gsp.layout", this.observationRegistry)
+                .contextualName("gsp.layout " + resource)
+                .highCardinalityKeyValue("gsp.name", resource);
         observation.observeChecked(() -> decorator.render(content, model, request, response, webRequest.getServletContext()));
     }
 
@@ -131,14 +126,6 @@ public class EmbeddedGrailsLayoutView extends AbstractGrailsView {
      */
     public void setObservationRegistry(ObservationRegistry observationRegistry) {
         this.observationRegistry = (observationRegistry != null) ? observationRegistry : ObservationRegistry.NOOP;
-    }
-
-    /**
-     * Sets a custom {@link GroovyPageObservationConvention} for layout-decoration observations. When
-     * {@code null} the default convention is used.
-     */
-    public void setObservationConvention(GroovyPageObservationConvention observationConvention) {
-        this.observationConvention = observationConvention;
     }
 
     protected void beforeDecorating(Content content, Map<String, Object> model, GrailsWebRequest webRequest,

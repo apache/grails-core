@@ -59,11 +59,7 @@ import org.grails.gsp.GroovyPageBinding;
 import org.grails.gsp.GroovyPageMetaInfo;
 import org.grails.gsp.GroovyPagesTemplateEngine;
 import org.grails.gsp.io.GroovyPageScriptSource;
-import org.grails.gsp.observation.DefaultGroovyPageObservationConvention;
 import org.grails.gsp.observation.GroovyPageCacheMetrics;
-import org.grails.gsp.observation.GroovyPageObservationContext;
-import org.grails.gsp.observation.GroovyPageObservationConvention;
-import org.grails.gsp.observation.GroovyPageObservationDocumentation;
 import org.grails.io.support.GrailsResourceUtils;
 import org.grails.taglib.GrailsTagException;
 import org.grails.taglib.TemplateVariableBinding;
@@ -94,9 +90,7 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
     private Method generateViewMethod;
     private boolean reloadEnabled;
     private boolean cacheEnabled = !Environment.isDevelopmentMode();
-    private static final GroovyPageObservationConvention DEFAULT_OBSERVATION_CONVENTION = new DefaultGroovyPageObservationConvention("gsp.template");
     private ObservationRegistry observationRegistry = ObservationRegistry.NOOP;
-    private GroovyPageObservationConvention observationConvention;
     private GroovyPageCacheMetrics cacheMetrics = GroovyPageCacheMetrics.NOOP;
 
     public void afterPropertiesSet() throws Exception {
@@ -127,13 +121,6 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
     }
 
     /**
-     * Sets a custom {@link GroovyPageObservationConvention}. When {@code null} the default convention is used.
-     */
-    public void setObservationConvention(GroovyPageObservationConvention observationConvention) {
-        this.observationConvention = observationConvention;
-    }
-
-    /**
      * Sets the {@link MeterRegistry} used to record {@code <g:render>} template cache hits/misses as the
      * {@code gsp.cache} counter ({@code cache=template}). This is one of the caches actually consulted on
      * the request path in a deployed app. When unset, cache metrics are disabled.
@@ -159,9 +146,10 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
             doRender(templateName, webRequest, pageScope, attrs, body, out);
             return;
         }
-        Observation observation = GroovyPageObservationDocumentation.GSP_TEMPLATE.observation(
-                this.observationConvention, DEFAULT_OBSERVATION_CONVENTION,
-                () -> new GroovyPageObservationContext(templateName), this.observationRegistry);
+        String resource = (templateName != null && !templateName.isEmpty()) ? templateName : "unknown";
+        Observation observation = Observation.createNotStarted("gsp.template", this.observationRegistry)
+                .contextualName("gsp.template " + resource)
+                .highCardinalityKeyValue("gsp.name", resource);
         observation.observeChecked(() -> doRender(templateName, webRequest, pageScope, attrs, body, out));
     }
 

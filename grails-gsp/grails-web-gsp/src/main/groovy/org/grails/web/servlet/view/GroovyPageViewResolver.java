@@ -48,7 +48,6 @@ import grails.util.GrailsUtil;
 import org.grails.gsp.GroovyPagesTemplateEngine;
 import org.grails.gsp.io.GroovyPageScriptSource;
 import org.grails.gsp.observation.GroovyPageCacheMetrics;
-import org.grails.gsp.observation.GroovyPageObservationConvention;
 import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
 
@@ -72,7 +71,6 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
     private long cacheTimeout = -1;
     private boolean resolveJspView = false;
     private volatile ObservationRegistry observationRegistry;
-    private GroovyPageObservationConvention observationConvention;
     private GroovyPageCacheMetrics cacheMetrics = GroovyPageCacheMetrics.NOOP;
 
     /**
@@ -236,7 +234,6 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
         gspSpringView.setTemplateEngine(templateEngine);
         gspSpringView.setScriptSource(scriptSource);
         gspSpringView.setObservationRegistry(resolveObservationRegistry());
-        gspSpringView.setObservationConvention(this.observationConvention);
         try {
             gspSpringView.afterPropertiesSet();
             if (LOG.isDebugEnabled()) {
@@ -274,13 +271,6 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
      */
     public void setObservationRegistry(ObservationRegistry observationRegistry) {
         this.observationRegistry = observationRegistry;
-    }
-
-    /**
-     * Sets a custom {@link GroovyPageObservationConvention} applied to GSP view observations.
-     */
-    public void setObservationConvention(GroovyPageObservationConvention observationConvention) {
-        this.observationConvention = observationConvention;
     }
 
     /**

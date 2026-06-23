@@ -96,10 +96,10 @@ class EmbeddedGrailsLayoutViewObservationSpec extends Specification {
         recorded[0].name == 'gsp.layout'
         recorded[0].contextualName == 'gsp.layout /layouts/main'
 
-        and: "gsp.name is high-cardinality (span only); error is the low-cardinality metric tag"
+        and: "gsp.name is high-cardinality (span only); no error on a successful decoration"
         recorded[0].highCardinalityKeyValues.find { it.key == 'gsp.name' }?.value == '/layouts/main'
         recorded[0].lowCardinalityKeyValues.find { it.key == 'gsp.name' } == null
-        recorded[0].lowCardinalityKeyValues.find { it.key == 'error' }?.value == 'none'
+        recorded[0].error == null
     }
 
     void "no observation is recorded when the registry is NOOP (zero overhead)"() {
@@ -115,7 +115,7 @@ class EmbeddedGrailsLayoutViewObservationSpec extends Specification {
         recorded.isEmpty()
     }
 
-    void "the error key carries the exception name when decoration fails"() {
+    void "the observation records the exception when decoration fails"() {
         given:
         EmbeddedGrailsLayoutView view = viewFor(recordingRegistry())
         StubDecorator decorator = new StubDecorator(Mock(View))
@@ -128,6 +128,6 @@ class EmbeddedGrailsLayoutViewObservationSpec extends Specification {
         thrown(IllegalStateException)
         recorded.size() == 1
         recorded[0].name == 'gsp.layout'
-        recorded[0].lowCardinalityKeyValues.find { it.key == 'error' }?.value == 'IllegalStateException'
+        recorded[0].error instanceof IllegalStateException
     }
 }

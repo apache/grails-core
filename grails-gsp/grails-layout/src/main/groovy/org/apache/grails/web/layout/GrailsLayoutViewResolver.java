@@ -49,17 +49,9 @@ public class GrailsLayoutViewResolver extends EmbeddedGrailsLayoutViewResolver i
     private boolean grailsLayoutConfigLoaded = false;
     private int order = Ordered.LOWEST_PRECEDENCE - 50;
     private ObservationRegistry observationRegistry = ObservationRegistry.NOOP;
-    private org.grails.gsp.observation.GroovyPageObservationConvention observationConvention;
 
     public GrailsLayoutViewResolver() {
         super();
-    }
-
-    /**
-     * Sets a custom convention applied to {@code gsp.layout} observations on the views this resolver builds.
-     */
-    public void setObservationConvention(org.grails.gsp.observation.GroovyPageObservationConvention observationConvention) {
-        this.observationConvention = observationConvention;
     }
 
     public GrailsLayoutViewResolver(ViewResolver innerViewResolver, GroovyPageLayoutFinder groovyPageLayoutFinder) {
@@ -70,7 +62,6 @@ public class GrailsLayoutViewResolver extends EmbeddedGrailsLayoutViewResolver i
     protected View createLayoutView(View innerView) {
         GrailsLayoutView layoutView = new GrailsLayoutView(groovyPageLayoutFinder, innerView, contentProcessor);
         layoutView.setObservationRegistry(this.observationRegistry);
-        layoutView.setObservationConvention(this.observationConvention);
         return layoutView;
     }
 

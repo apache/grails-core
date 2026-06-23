@@ -41,10 +41,6 @@ import org.grails.gsp.GroovyPageTemplate;
 import org.grails.gsp.GroovyPageWritable;
 import org.grails.gsp.GroovyPagesException;
 import org.grails.gsp.GroovyPagesTemplateEngine;
-import org.grails.gsp.observation.DefaultGroovyPageObservationConvention;
-import org.grails.gsp.observation.GroovyPageObservationContext;
-import org.grails.gsp.observation.GroovyPageObservationConvention;
-import org.grails.gsp.observation.GroovyPageObservationDocumentation;
 import org.grails.web.pages.GSPResponseWriter;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
 
@@ -74,9 +70,7 @@ public class GroovyPageView extends AbstractGrailsView {
     public static final String EXCEPTION_MODEL_KEY = "exception";
     private static boolean developmentMode = Environment.isDevelopmentMode();
 
-    private static final GroovyPageObservationConvention DEFAULT_OBSERVATION_CONVENTION = new DefaultGroovyPageObservationConvention("gsp.view");
     private ObservationRegistry observationRegistry = ObservationRegistry.NOOP;
-    private GroovyPageObservationConvention observationConvention;
 
     @Override
     protected void renderTemplate(Map<String, Object> model, GrailsWebRequest webRequest, HttpServletRequest request,
@@ -85,9 +79,10 @@ public class GroovyPageView extends AbstractGrailsView {
             doRenderTemplate(model, webRequest, request, response);
             return;
         }
-        Observation observation = GroovyPageObservationDocumentation.GSP_VIEW.observation(
-                this.observationConvention, DEFAULT_OBSERVATION_CONVENTION,
-                () -> new GroovyPageObservationContext(getUrl()), this.observationRegistry);
+        String resource = (getUrl() != null && !getUrl().isEmpty()) ? getUrl() : "unknown";
+        Observation observation = Observation.createNotStarted("gsp.view", this.observationRegistry)
+                .contextualName("gsp.view " + resource)
+                .highCardinalityKeyValue("gsp.name", resource);
         observation.observe(() -> doRenderTemplate(model, webRequest, request, response));
     }
 
@@ -185,15 +180,6 @@ public class GroovyPageView extends AbstractGrailsView {
      */
     public void setObservationRegistry(ObservationRegistry observationRegistry) {
         this.observationRegistry = (observationRegistry != null) ? observationRegistry : ObservationRegistry.NOOP;
-    }
-
-    /**
-     * Sets a custom {@link GroovyPageObservationConvention}. When {@code null} the
-     * {@link DefaultGroovyPageObservationConvention} is used.
-     * @param observationConvention the convention, or {@code null} for the default
-     */
-    public void setObservationConvention(GroovyPageObservationConvention observationConvention) {
-        this.observationConvention = observationConvention;
     }
 
     public boolean isExpired() {

@@ -78,10 +78,6 @@ import org.grails.gsp.io.GroovyPageLocator;
 import org.grails.gsp.io.GroovyPageResourceScriptSource;
 import org.grails.gsp.io.GroovyPageScriptSource;
 import org.grails.gsp.jsp.TagLibraryResolver;
-import org.grails.gsp.observation.DefaultGroovyPageObservationConvention;
-import org.grails.gsp.observation.GroovyPageObservationContext;
-import org.grails.gsp.observation.GroovyPageObservationConvention;
-import org.grails.gsp.observation.GroovyPageObservationDocumentation;
 import org.grails.taglib.TagLibraryLookup;
 
 /**
@@ -114,7 +110,6 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
     private ClassLoader classLoader;
     private AtomicInteger scriptNameCount = new AtomicInteger(0);
 
-    private static final GroovyPageObservationConvention COMPILE_OBSERVATION_CONVENTION = new DefaultGroovyPageObservationConvention("gsp.compile");
     private ObservationRegistry observationRegistry = ObservationRegistry.NOOP;
 
     private GroovyPageLocator groovyPageLocator = new DefaultGroovyPageLocator();
@@ -495,9 +490,10 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
         }
         // Compilation only happens on a template cache miss, so the count of this observation is
         // effectively the GSP compile (cache-miss) rate; its timer is the compile latency.
-        Observation observation = GroovyPageObservationDocumentation.GSP_COMPILE.observation(
-                null, COMPILE_OBSERVATION_CONVENTION,
-                () -> new GroovyPageObservationContext(pageName), this.observationRegistry);
+        String resourceName = (pageName != null && !pageName.isEmpty()) ? pageName : "unknown";
+        Observation observation = Observation.createNotStarted("gsp.compile", this.observationRegistry)
+                .contextualName("gsp.compile " + resourceName)
+                .highCardinalityKeyValue("gsp.name", resourceName);
         return observation.observeChecked(() -> doBuildPageMetaInfo(resource, pageName));
     }
 
