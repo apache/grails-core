@@ -122,40 +122,40 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
                 metadataCollector.getMetadataBuildingOptions(),
                 metadataCollector,
                 null);
-        CollectionHolder collectionHolder = new CollectionHolder(metadataBuildingContext);
-        BackticksRemover backticksRemover = new BackticksRemover();
-        PersistentEntityNamingStrategy namingStrategy = getNamingStrategy();
-        JdbcEnvironment jdbcEnvironment = getJdbcEnvironment();
-        DefaultColumnNameFetcher defaultColumnNameFetcher =
+        var collectionHolder = new CollectionHolder(metadataBuildingContext);
+        var backticksRemover = new BackticksRemover();
+        var namingStrategy = getNamingStrategy();
+        var jdbcEnvironment = getJdbcEnvironment();
+        var defaultColumnNameFetcher =
                 new DefaultColumnNameFetcher(namingStrategy, backticksRemover);
-        ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher =
+        var columnNameForPropertyAndPathFetcher =
                 new ColumnNameForPropertyAndPathFetcher(namingStrategy, defaultColumnNameFetcher, backticksRemover);
-        SimpleValueBinder simpleValueBinder =
+        var simpleValueBinder =
                 new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment);
-        EnumTypeBinder enumTypeBinder =
+        var enumTypeBinder =
                 new EnumTypeBinder(metadataBuildingContext, columnNameForPropertyAndPathFetcher, namingStrategy);
-        PropertyFromValueCreator propertyFromValueCreator = new PropertyFromValueCreator();
-        ClassBinder classBinder = new ClassBinder(metadataCollector);
-        SimpleValueColumnFetcher simpleValueColumnFetcher = new SimpleValueColumnFetcher();
-        CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder =
+        var propertyFromValueCreator = new PropertyFromValueCreator();
+        var classBinder = new ClassBinder(metadataCollector);
+        var simpleValueColumnFetcher = new SimpleValueColumnFetcher();
+        var compositeIdentifierToManyToOneBinder =
                 new CompositeIdentifierToManyToOneBinder(
                         new org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator(),
                         namingStrategy,
                         defaultColumnNameFetcher,
                         backticksRemover,
                         simpleValueBinder);
-        OneToOneBinder oneToOneBinder = new OneToOneBinder(metadataBuildingContext, simpleValueBinder);
-        ManyToOneBinder manyToOneBinder = new ManyToOneBinder(
+        var oneToOneBinder = new OneToOneBinder(metadataBuildingContext, simpleValueBinder);
+        var manyToOneBinder = new ManyToOneBinder(
                 metadataBuildingContext,
                 namingStrategy,
                 simpleValueBinder,
                 new ManyToOneValuesBinder(),
                 compositeIdentifierToManyToOneBinder);
-        ForeignKeyOneToOneBinder foreignKeyOneToOneBinder =
+        var foreignKeyOneToOneBinder =
                 new ForeignKeyOneToOneBinder(manyToOneBinder, simpleValueColumnFetcher);
 
-        TableForManyCalculator tableForManyCalculator = new TableForManyCalculator(namingStrategy, metadataCollector);
-        CollectionBinder collectionBinder = new CollectionBinder(
+        var tableForManyCalculator = new TableForManyCalculator(namingStrategy, metadataCollector);
+        var collectionBinder = new CollectionBinder(
                 metadataBuildingContext,
                 namingStrategy,
                 simpleValueBinder,
@@ -166,11 +166,11 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
                 collectionHolder,
                 metadataCollector,
                 tableForManyCalculator);
-        ComponentUpdater componentUpdater = new ComponentUpdater(propertyFromValueCreator);
-        ComponentBinder componentBinder =
+        var componentUpdater = new ComponentUpdater(propertyFromValueCreator);
+        var componentBinder =
                 new ComponentBinder(metadataBuildingContext, getMappingCacheHolder(), componentUpdater);
 
-        GrailsPropertyBinder grailsPropertyBinder = new GrailsPropertyBinder(
+        var grailsPropertyBinder = new GrailsPropertyBinder(
                 enumTypeBinder,
                 componentBinder,
                 collectionBinder,
@@ -180,42 +180,42 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
                 foreignKeyOneToOneBinder);
         componentBinder.setGrailsPropertyBinder(grailsPropertyBinder);
         collectionBinder.setComponentBinder(componentBinder);
-        CompositeIdBinder compositeIdBinder =
+        var compositeIdBinder =
                 new CompositeIdBinder(metadataBuildingContext, componentUpdater, grailsPropertyBinder);
-        PropertyBinder propertyBinder = new PropertyBinder();
-        SimpleIdBinder simpleIdBinder = new SimpleIdBinder(
+        var propertyBinder = new PropertyBinder();
+        var simpleIdBinder = new SimpleIdBinder(
                 metadataBuildingContext,
                 new BasicValueCreator(metadataBuildingContext, jdbcEnvironment, namingStrategy),
                 simpleValueBinder,
                 propertyBinder);
-        IdentityBinder identityBinder = new IdentityBinder(simpleIdBinder, compositeIdBinder);
-        VersionBinder versionBinder =
+        var identityBinder = new IdentityBinder(simpleIdBinder, compositeIdBinder);
+        var versionBinder =
                 new VersionBinder(metadataBuildingContext, simpleValueBinder, propertyBinder, BasicValue::new);
-        NaturalIdentifierBinder naturalIdentifierBinder = new NaturalIdentifierBinder();
-        ClassPropertiesBinder classPropertiesBinder =
+        var naturalIdentifierBinder = new NaturalIdentifierBinder();
+        var classPropertiesBinder =
                 new ClassPropertiesBinder(grailsPropertyBinder, propertyFromValueCreator, naturalIdentifierBinder);
-        MultiTenantFilterBinder multiTenantFilterBinder = new MultiTenantFilterBinder(
+        var multiTenantFilterBinder = new MultiTenantFilterBinder(
                 new GrailsPropertyResolver(),
                 new MultiTenantFilterDefinitionBinder(),
                 metadataCollector,
                 defaultColumnNameFetcher);
-        JoinedSubClassBinder joinedSubClassBinder = new JoinedSubClassBinder(
+        var joinedSubClassBinder = new JoinedSubClassBinder(
                 metadataBuildingContext,
                 namingStrategy,
                 new SimpleValueColumnBinder(),
                 columnNameForPropertyAndPathFetcher,
                 classBinder,
                 metadataCollector);
-        UnionSubclassBinder unionSubclassBinder =
+        var unionSubclassBinder =
                 new UnionSubclassBinder(metadataBuildingContext, namingStrategy, classBinder, metadataCollector);
-        SingleTableSubclassBinder singleTableSubclassBinder =
+        var singleTableSubclassBinder =
                 new SingleTableSubclassBinder(classBinder, metadataBuildingContext);
 
-        SubclassMappingBinder subclassMappingBinder = new SubclassMappingBinder(
+        var subclassMappingBinder = new SubclassMappingBinder(
                 joinedSubClassBinder, unionSubclassBinder, singleTableSubclassBinder, classPropertiesBinder);
-        SubClassBinder subClassBinder =
+        var subClassBinder =
                 new SubClassBinder(subclassMappingBinder, multiTenantFilterBinder, dataSourceName);
-        RootPersistentClassCommonValuesBinder rootPersistentClassCommonValuesBinder =
+        var rootPersistentClassCommonValuesBinder =
                 new RootPersistentClassCommonValuesBinder(
                         metadataBuildingContext,
                         getNamingStrategy(),
@@ -224,12 +224,12 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
                         classBinder,
                         classPropertiesBinder,
                         metadataCollector);
-        DiscriminatorPropertyBinder discriminatorPropertyBinder = new DiscriminatorPropertyBinder(
+        var discriminatorPropertyBinder = new DiscriminatorPropertyBinder(
                 metadataBuildingContext,
                 mappingCacheHolder,
                 new ConfiguredDiscriminatorBinder(new SimpleValueColumnBinder(), new ColumnConfigToColumnBinder()),
                 new DefaultDiscriminatorBinder(new SimpleValueColumnBinder()));
-        RootBinder rootBinder = new RootBinder(
+        var rootBinder = new RootBinder(
                 dataSourceName,
                 multiTenantFilterBinder,
                 subClassBinder,
