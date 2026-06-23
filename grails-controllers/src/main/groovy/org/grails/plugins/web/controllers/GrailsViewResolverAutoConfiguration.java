@@ -18,6 +18,8 @@
  */
 package org.grails.plugins.web.controllers;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -41,14 +43,21 @@ import org.springframework.core.type.AnnotationMetadata;
  * grails-gsp only loads for GSP applications, so the removal cannot live there. Ordered after
  * {@link WebMvcAutoConfiguration} so the bean exists by the time the registrar runs.
  *
- * <p>Disable with {@code grails.web.removeDefaultViewResolverBean=false}.
+ * <p>Disable with {@code grails.web.removeDefaultViewResolverBean=false}. The earlier
+ * {@code spring.gsp.removeDefaultViewResolverBean} (when removal lived in grails-gsp) is still
+ * honoured for backward compatibility, but is deprecated.
  */
 @AutoConfiguration(after = WebMvcAutoConfiguration.class)
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 @Import(GrailsViewResolverAutoConfiguration.RemoveDefaultViewResolverRegistrar.class)
 public class GrailsViewResolverAutoConfiguration {
 
+    static final String REMOVE_PROPERTY = "grails.web.removeDefaultViewResolverBean";
+    static final String LEGACY_REMOVE_PROPERTY = "spring.gsp.removeDefaultViewResolverBean";
+
     static class RemoveDefaultViewResolverRegistrar implements ImportBeanDefinitionRegistrar, EnvironmentAware {
+
+        private static final Logger LOG = LoggerFactory.getLogger(RemoveDefaultViewResolverRegistrar.class);
 
         private boolean removeDefaultViewResolverBean = true;
 
@@ -61,8 +70,13 @@ public class GrailsViewResolverAutoConfiguration {
 
         @Override
         public void setEnvironment(Environment environment) {
+            // Honour the legacy grails-gsp property name for backward compatibility (deprecated).
+            Boolean legacy = environment.getProperty(LEGACY_REMOVE_PROPERTY, Boolean.class);
+            if (legacy != null) {
+                LOG.warn("'{}' is deprecated; use '{}' instead.", LEGACY_REMOVE_PROPERTY, REMOVE_PROPERTY);
+            }
             this.removeDefaultViewResolverBean = environment.getProperty(
-                    "grails.web.removeDefaultViewResolverBean", Boolean.class, true);
+                    REMOVE_PROPERTY, Boolean.class, legacy != null ? legacy : true);
         }
     }
 }
