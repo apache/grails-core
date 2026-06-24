@@ -43,11 +43,13 @@ reactor:
       backlog: 1024
 grails:
     mime:
-        # Demonstrates grails.mime.mergeDefaults end-to-end: only a single custom type is declared here,
-        # yet json/xml/html content negotiation still works because the framework defaults are merged in
-        # (an undeclared extension keeps its built-in default; a declared one would override it).
+        # Demonstrates grails.mime.mergeDefaults end-to-end: only 'all' and a custom 'vnd' type are
+        # declared here, yet json/xml/html content negotiation still works because the framework
+        # defaults are merged in (an undeclared extension keeps its built-in default; a declared one
+        # overrides it). 'all' stays declared first so it remains the default negotiated format.
         mergeDefaults: true
         types:
+            all: '*/*'
             vnd: application/vnd.app1.v1+json
     hibernate:
         cache:
