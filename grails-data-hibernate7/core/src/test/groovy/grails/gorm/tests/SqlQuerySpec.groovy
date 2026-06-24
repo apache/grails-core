@@ -41,7 +41,7 @@ class SqlQuerySpec extends Specification {
 
         when:"Some test data is saved"
         String name = "Arsenal"
-        Club c = Club.withSql("select * from club c where c.name = $name")
+        Club c = Club.findWithSql("select * from club c where c.name = $name")
 
         then:"The results are correct"
         c != null
@@ -55,7 +55,7 @@ class SqlQuerySpec extends Specification {
         setupTestData()
 
         when:"Some test data is saved"
-        List<Club> results = Club.withAllSql("select * from club c order by c.name")
+        List<Club> results = Club.findAllWithSql("select * from club c order by c.name")
 
         then:"The results are correct"
         results.size() == 3
@@ -69,7 +69,7 @@ class SqlQuerySpec extends Specification {
 
         when:"Some test data is saved"
         String p = "%l%"
-        List<Club> results = Club.withAllSql("select * from club c where c.name like $p order by c.name")
+        List<Club> results = Club.findAllWithSql("select * from club c where c.name like $p order by c.name")
 
         then:"The results are correct"
         results.size() == 2

@@ -41,62 +41,6 @@ import org.grails.orm.hibernate.HibernateGormStaticApi
 trait HibernateEntity<D> extends GormEntity<D> {
 
     /**
-     * Finds an entity for the given native SQL query. Pass a GString to have interpolated
-     * values safely bound as named parameters rather than interpolated into the query string.
-     * Use this method (not {@code find}) when you need raw SQL rather than HQL.
-     *
-     * @param sql The native SQL query
-     * @return The entity
-     * @since 8.0
-     */
-    @Generated
-    static D withSql(CharSequence sql) {
-        currentHibernateStaticApi().findWithNativeSql(sql, Collections.emptyMap())
-    }
-
-    /**
-     * Finds an entity for the given native SQL query. Pass a GString to have interpolated
-     * values safely bound as named parameters rather than interpolated into the query string.
-     *
-     * @param sql  The native SQL query
-     * @param args Pagination/query settings (max, offset, cache, etc.)
-     * @return The entity
-     * @since 8.0
-     */
-    @Generated
-    static D withSql(CharSequence sql, Map args) {
-        currentHibernateStaticApi().findWithNativeSql(sql, args)
-    }
-
-    /**
-     * Finds all objects for the given native SQL query. Pass a GString to have interpolated
-     * values safely bound as named parameters rather than interpolated into the query string.
-     * Use this method (not {@code findAll}) when you need raw SQL rather than HQL.
-     *
-     * @param sql The native SQL query
-     * @return The matching objects
-     * @since 8.0
-     */
-    @Generated
-    static List<D> withAllSql(CharSequence sql) {
-        currentHibernateStaticApi().findAllWithNativeSql(sql, Collections.emptyMap())
-    }
-
-    /**
-     * Finds all objects for the given native SQL query. Pass a GString to have interpolated
-     * values safely bound as named parameters rather than interpolated into the query string.
-     *
-     * @param sql  The native SQL query
-     * @param args Pagination/query settings (max, offset, cache, etc.)
-     * @return The matching objects
-     * @since 8.0
-     */
-    @Generated
-    static List<D> withAllSql(CharSequence sql, Map args) {
-        currentHibernateStaticApi().findAllWithNativeSql(sql, args)
-    }
-
-    /**
      * Finds all objects for the given native SQL query. Pass a GString to have interpolated
      * values safely bound as named parameters rather than interpolated into the query string.
      * Use this method (not {@code findAll}) when you need raw SQL rather than HQL.

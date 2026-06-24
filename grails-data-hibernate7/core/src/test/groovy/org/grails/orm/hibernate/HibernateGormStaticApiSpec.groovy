@@ -719,24 +719,13 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         setupTestData()
 
         when:"A static native SQL query with no user input"
-        List<Club> results = Club.withAllSql("select * from club c order by c.name")
+        List<Club> results = Club.findAllWithNativeSql("select * from club c order by c.name")
 
         then:"The results are correct"
         results.size() == 3
         results[0] instanceof Club
         Club club = results[0] as Club
         club.name == 'Arsenal'
-    }
-
-    void "test withSql returns a single result"() {
-        given:
-        setupTestData()
-
-        when:"A native SQL query for a single entity"
-        Club result = Club.withSql("select * from club c where c.name = 'Arsenal'")
-
-        then:
-        result?.name == 'Arsenal'
     }
 
     void "test deprecated findAllWithSql delegates to findAllWithNativeSql"() {
@@ -767,7 +756,7 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
 
         when:"Some test data is saved"
         String p = "%l%"
-        List<Club> results = Club.withAllSql("select * from club c where c.name like $p order by c.name")
+        List<Club> results = Club.findAllWithNativeSql("select * from club c where c.name like $p order by c.name")
 
         then:"The results are correct"
         results.size() == 2
