@@ -94,6 +94,40 @@ class GrailsExtension {
     List<String> starImports = []
 
     /**
+     * Convenience shortcut that opts every controller, service and tag library into
+     * {@code @GrailsCompileStatic} - equivalent to enabling {@link #compileStaticControllers},
+     * {@link #compileStaticServices} and {@link #compileStaticTagLibs} together. Disabled by default.
+     * The individual flags are still honoured, so this can be combined with them; a per-class
+     * {@code @CompileDynamic} (or {@code @CompileStatic}/{@code @GrailsCompileStatic}) annotation always
+     * wins over this default.
+     */
+    boolean compileStaticArtefacts = false
+
+    /**
+     * Whether every controller under {@code grails-app/controllers} should be compiled with
+     * {@code @GrailsCompileStatic} automatically. Disabled by default. Individual controllers can opt out
+     * by carrying their own {@code @CompileDynamic} (or {@code @CompileStatic}/{@code @GrailsCompileStatic})
+     * annotation, which is always honoured over this default.
+     */
+    boolean compileStaticControllers = false
+
+    /**
+     * Whether every service under {@code grails-app/services} should be compiled with
+     * {@code @GrailsCompileStatic} automatically. Disabled by default. Individual services can opt out
+     * by carrying their own {@code @CompileDynamic} (or {@code @CompileStatic}/{@code @GrailsCompileStatic})
+     * annotation, which is always honoured over this default.
+     */
+    boolean compileStaticServices = false
+
+    /**
+     * Whether every tag library under {@code grails-app/taglib} should be compiled with
+     * {@code @GrailsCompileStatic} automatically. Disabled by default. Individual tag libraries can opt out
+     * by carrying their own {@code @CompileDynamic} (or {@code @CompileStatic}/{@code @GrailsCompileStatic})
+     * annotation, which is always honoured over this default.
+     */
+    boolean compileStaticTagLibs = false
+
+    /**
      * @deprecated The Spring Dependency Management plugin has been replaced with Gradle's native
      * {@code platform()} support plus lightweight property-based version overrides
      * supplied by the {@code org.apache.grails.gradle.bom-property-overrides} plugin.

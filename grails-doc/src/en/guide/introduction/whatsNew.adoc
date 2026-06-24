@@ -62,6 +62,22 @@ class BookController {
 
 The new `ControllerTagLibTypeCheckingExtension` (bundled with `@GrailsCompileStatic`) recognises controller classes by convention and marks tag dispatch points as permissible dynamic calls, while leaving the rest of the controller fully type-checked.
 
+==== Opt All Controllers, Services and Tag Libraries into GrailsCompileStatic
+
+Static compilation can now be enabled for every controller, service and tag library in an application from the `grails` build configuration block, without annotating each class:
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    compileStaticControllers = true
+    compileStaticServices = true
+    compileStaticTagLibs = true
+}
+----
+
+All three options are disabled by default and independent, or `compileStaticArtefacts = true` can be used as a shortcut to enable all of them. Any class that declares its own `@CompileDynamic` (or `@GrailsCompileStatic`/`@CompileStatic`/`@GrailsTypeChecked`/`@TypeChecked`) annotation keeps that setting, so the opt-in never overrides an explicit per-class choice. Tag libraries should define tags as methods to be statically compiled. See the xref:staticTypeCheckingAndCompilation/grailsCompileStatic[GrailsCompileStatic] section for details.
+
 ==== Test HTTP Client Form Requests
 
 Integration tests that implement `HttpClientSupport` can now use `httpPostForm(...)` to send `application/x-www-form-urlencoded`

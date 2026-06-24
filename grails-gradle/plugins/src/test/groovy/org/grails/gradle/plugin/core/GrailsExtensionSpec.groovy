@@ -125,4 +125,46 @@ class GrailsExtensionSpec extends Specification {
         extension.bom.getOrNull() == 'grails-hibernate5-bom'
         extension.springDependencyManagement
     }
+
+    def "compileStaticArtefacts, compileStaticControllers, compileStaticServices and compileStaticTagLibs default to false"() {
+        given:
+        Project project = ProjectBuilder.builder().build()
+
+        when:
+        GrailsExtension extension = new GrailsExtension(project)
+
+        then:
+        !extension.compileStaticArtefacts
+        !extension.compileStaticControllers
+        !extension.compileStaticServices
+        !extension.compileStaticTagLibs
+    }
+
+    def "compileStaticArtefacts can be enabled as a shortcut for all artefact types"() {
+        given:
+        Project project = ProjectBuilder.builder().build()
+        GrailsExtension extension = new GrailsExtension(project)
+
+        when:
+        extension.compileStaticArtefacts = true
+
+        then:
+        extension.compileStaticArtefacts
+    }
+
+    def "compileStaticControllers, compileStaticServices and compileStaticTagLibs can be enabled"() {
+        given:
+        Project project = ProjectBuilder.builder().build()
+        GrailsExtension extension = new GrailsExtension(project)
+
+        when:
+        extension.compileStaticControllers = true
+        extension.compileStaticServices = true
+        extension.compileStaticTagLibs = true
+
+        then:
+        extension.compileStaticControllers
+        extension.compileStaticServices
+        extension.compileStaticTagLibs
+    }
 }

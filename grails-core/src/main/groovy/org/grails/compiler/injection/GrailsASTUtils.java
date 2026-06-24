@@ -126,6 +126,26 @@ public class GrailsASTUtils {
     public static final ClassNode INTEGER_CLASS_NODE = new ClassNode(Integer.class).getPlainNodeReference();
     private static final ClassNode COMPILESTATIC_CLASS_NODE = ClassHelper.make(CompileStatic.class);
     private static final ClassNode TYPECHECKINGMODE_CLASS_NODE = ClassHelper.make(TypeCheckingMode.class);
+
+    /**
+     * The Grails-specific type checking extensions applied by {@code @GrailsCompileStatic}.
+     *
+     * <p>This list MUST be kept in sync with the {@code extensions} declared on
+     * {@code grails.compiler.GrailsCompileStatic}; it is used by
+     * {@link #addGrailsCompileStaticAnnotation(ClassNode)} to reproduce {@code @GrailsCompileStatic}
+     * when the annotation is applied to a class node after the {@code @AnnotationCollector}
+     * expansion phase has already run.</p>
+     */
+    public static final List<String> GRAILS_COMPILE_STATIC_EXTENSIONS = Collections.unmodifiableList(Arrays.asList(
+            "org.grails.compiler.CriteriaTypeCheckingExtension",
+            "org.grails.compiler.DomainMappingTypeCheckingExtension",
+            "org.grails.compiler.DynamicFinderTypeCheckingExtension",
+            "org.grails.compiler.HttpServletRequestTypeCheckingExtension",
+            "org.grails.compiler.NamedQueryTypeCheckingExtension",
+            "org.grails.compiler.RelationshipManagementMethodTypeCheckingExtension",
+            "org.grails.compiler.ValidateableTypeCheckingExtension",
+            "org.grails.compiler.WhereQueryTypeCheckingExtension",
+            "org.grails.compiler.ControllerTagLibTypeCheckingExtension"));
     public static final Parameter[] ZERO_PARAMETERS = new Parameter[0];
     public static final ArgumentListExpression ZERO_ARGUMENTS = new ArgumentListExpression();
 
@@ -1248,6 +1268,63 @@ public class GrailsASTUtils {
         }
         return annotatedNode;
     }
+
+    /**
+     * Applies {@code @GrailsCompileStatic} to the given class node by adding the equivalent
+     * {@code @CompileStatic} annotation (carrying the {@link #GRAILS_COMPILE_STATIC_EXTENSIONS Grails
+     * type checking extensions}) and registering the static compilation transform directly.
+     *
+     * <p>Registering the transform via {@link ClassNode#addTransform} is required because this is
+     * intended to be called from a global transform/injector that runs after the phase in which local
+     * transform annotations are normally collected; without it the added annotation would be ignored.</p>
+     *
+     * <p>This is a no-op if the class already carries a static compilation, type checking or
+     * {@code @CompileDynamic} annotation, so an explicit choice on the class always wins.</p>
+     *
+     * @param classNode the class to compile statically
+     * @return true if the annotation was applied, false if it was skipped
+     */
+    public static boolean addGrailsCompileStaticAnnotation(ClassNode classNode) {
+        if (classNode == null || hasStaticCompilationAnnotation(classNode)) {
+            return false;
+        }
+        AnnotationNode an = new AnnotationNode(COMPILESTATIC_CLASS_NODE);
+        ListExpression extensions = new ListExpression();
+        for (String extension : GRAILS_COMPILE_STATIC_EXTENSIONS) {
+            extensions.addExpression(new ConstantExpression(extension));
+        }
+        an.addMember("extensions", extensions);
+        classNode.addAnnotation(an);
+        classNode.addTransform(StaticCompileTransformation.class, an);
+        return true;
+    }
+
+    /**
+     * Determines whether the given class already carries an annotation that expresses an explicit
+     * static compilation, type checking or dynamic compilation choice - namely {@code @CompileStatic},
+     * {@code @CompileDynamic}, {@code @TypeChecked}, {@code @GrailsCompileStatic} or
+     * {@code @GrailsTypeChecked}. The {@code @AnnotationCollector} based variants ({@code @CompileDynamic},
+     * {@code @GrailsCompileStatic}, {@code @GrailsTypeChecked}) are expanded to {@code @CompileStatic} or
+     * {@code @TypeChecked} before this is consulted, but they are matched explicitly as well to be safe.
+     *
+     * @param classNode the class to inspect
+     * @return true if such an annotation is present
+     */
+    public static boolean hasStaticCompilationAnnotation(ClassNode classNode) {
+        if (classNode == null) {
+            return false;
+        }
+        for (AnnotationNode annotation : classNode.getAnnotations()) {
+            String name = annotation.getClassNode().getNameWithoutPackage();
+            if (STATIC_COMPILATION_ANNOTATION_NAMES.contains(name)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static final List<String> STATIC_COMPILATION_ANNOTATION_NAMES = Arrays.asList(
+            "CompileStatic", "CompileDynamic", "TypeChecked", "GrailsCompileStatic", "GrailsTypeChecked");
 
     /**
      * Set the method target of a MethodCallExpression to the first matching method with same number of arguments.
