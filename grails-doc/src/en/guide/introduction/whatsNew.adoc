@@ -68,3 +68,26 @@ Integration tests that implement `HttpClientSupport` can now use `httpPostForm(.
 request bodies. The helper URL-encodes form fields using UTF-8, and repeated values in a `Collection` or array are encoded as
 repeated keys in insertion order.
 
+==== GORM for MongoDB: TTL, Text, and Reconciled Indexes
+
+GORM for MongoDB can now declare a https://www.mongodb.com/docs/manual/core/index-ttl/[TTL index] directly in the mapping DSL.
+Adding `expireAfterSeconds` to the `indexAttributes` of a single date-valued property creates a TTL index, and MongoDB
+automatically removes each document once it reaches the configured age:
+
+[source,groovy]
+----
+class LoginEvent {
+    Date dateCreated
+    static mapping = {
+        dateCreated index: true, indexAttributes: [expireAfterSeconds: 3600]
+    }
+}
+----
+
+A single property can likewise declare a `$text` index — or another special type such as `2dsphere` — through
+`indexAttributes: [type: 'text']`.
+
+When the options of an already-created index change between restarts, GORM now reconciles the difference instead of only
+logging a conflict. A changed TTL is applied in place with MongoDB's `collMod` command — no drop, no rebuild — while any
+other option change is applied by declaring `indexAttributes: [recreateOnConflict: true]`.
+
