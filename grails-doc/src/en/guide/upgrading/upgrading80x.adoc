@@ -1008,3 +1008,49 @@ grails.gorm.default.constraints = {
     '*'(nullable: false)
 }
 ----
+
+==== 27. @EnableWebMvc No Longer Added to Grails Applications
+
+In earlier versions, Grails added Spring's `@EnableWebMvc` annotation to the generated `Application` class at compile time.
+`@EnableWebMvc` is a Spring Framework configuration annotation that is not intended to be combined with Spring Boot: it imports `DelegatingWebMvcConfiguration`, which eagerly registers a fixed set of MVC beans and switches off Spring Boot's `WebMvcAutoConfiguration`.
+In a Boot application this produced bean-definition override warnings at startup (for example for `localeResolver` and `internalAutoProxyCreator`) and prevented Boot's conditional, more configurable auto-configuration from taking effect.
+
+Grails 8 removes the auto-injected `@EnableWebMvc`.
+Spring Boot's `WebMvcAutoConfiguration` is now active for Grails servlet web applications, which is the intended Boot behavior and resolves those override warnings.
+
+**No action is required for most applications.**
+Grails adapts internally so the change is transparent.
+The notes below explain the two behavioral differences this introduces and the configuration toggles available if you need to control them.
+
+===== 27.1 Boot's default view resolver is removed automatically
+
+With `WebMvcAutoConfiguration` active, Boot contributes a catch-all `defaultViewResolver` (an `InternalResourceViewResolver`).
+For a Grails application that does not use JSP/`InternalResource` views (for example a REST/JSON-views application) this resolver maps any unmatched view name to a servlet forward, which can surface as:
+
+[source]
+----
+Circular view path [index]: would dispatch back to the current handler URL
+----
+
+To prevent this, Grails removes Boot's `defaultViewResolver` for every Grails servlet web application so that Grails' own view resolution is used instead.
+If you need to keep Boot's `defaultViewResolver` (for example, an application that genuinely relies on JSP/`InternalResource` views), opt out:
+
+[source,yaml]
+.application.yml
+----
+grails:
+    web:
+        removeDefaultViewResolverBean: false
+----
+
+NOTE: In GSP applications the GSP view resolver continues to be installed as the primary `viewResolver`, controlled as before by `spring.gsp.replaceViewResolverBean`.
+The previous `spring.gsp.removeDefaultViewResolverBean` property has been removed; `defaultViewResolver` removal is now handled centrally for all Grails servlet web applications by the `grails.web.removeDefaultViewResolverBean` property above.
+
+===== 27.2 GrailsWebRequest binding
+
+With `WebMvcAutoConfiguration` active, Boot would otherwise register its own `RequestContextFilter` that rebinds a plain `ServletRequestAttributes`, replacing the `GrailsWebRequest` bound earlier in the filter chain.
+Downstream code that expects a `GrailsWebRequest` would then fail with a `ClassCastException`.
+
+Grails 8 registers its request-binding filter as a `RequestContextFilter` bean so that Boot's filter backs off and the `GrailsWebRequest` remains bound for the whole request.
+This is handled internally and requires no configuration changes.
+Applications that defined their own `GrailsWebRequestFilter` bean continue to override the Grails-provided one.
