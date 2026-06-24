@@ -63,6 +63,10 @@ dependencies {
 
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
     testImplementation 'org.springframework:spring-test'
+    // WebApplicationContextRunner verifies Boot's WebMvcAutoConfiguration backs off its RequestContextFilter
+    testImplementation 'org.springframework.boot:spring-boot-test'
+    // spring-boot-test's AssertableApplicationContext implements AssertJ's AssertProvider, loaded at runtime
+    testRuntimeOnly 'org.assertj:assertj-core'
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'

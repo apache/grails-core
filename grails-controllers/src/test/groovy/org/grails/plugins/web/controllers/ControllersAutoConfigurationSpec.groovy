@@ -19,7 +19,14 @@
 
 package org.grails.plugins.web.controllers
 
+import java.util.function.Supplier
+
+import grails.core.GrailsApplication
+
+import org.springframework.boot.autoconfigure.AutoConfigurations
+import org.springframework.boot.test.context.runner.WebApplicationContextRunner
 import org.springframework.boot.web.servlet.FilterRegistrationBean
+import org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration
 import org.springframework.context.ApplicationContext
 import org.springframework.web.filter.RequestContextFilter
 
@@ -55,5 +62,31 @@ class ControllersAutoConfigurationSpec extends Specification {
         then: 'the same filter instance is registered ahead of the Spring Security chain'
         registrationBean.filter.is(filter)
         registrationBean.order == GrailsFilters.GRAILS_WEB_REQUEST_FILTER.order
+    }
+
+    void 'Boot WebMvcAutoConfiguration registers its own requestContextFilter when the Grails controllers auto-config is absent'() {
+        expect: 'the contrast case proves the backoff assertion below is meaningful'
+        new WebApplicationContextRunner()
+                .withConfiguration(AutoConfigurations.of(WebMvcAutoConfiguration))
+                .run { context ->
+                    assert context.containsBean('requestContextFilter')
+                }
+    }
+
+    void 'Grails controllers auto-config makes Boot WebMvcAutoConfiguration back off its requestContextFilter'() {
+        given: 'a GrailsApplication, required by the controllers auto-config'
+        GrailsApplication grailsApplication = Mock(GrailsApplication) {
+            getClassLoader() >> getClass().classLoader
+        }
+        Supplier<GrailsApplication> grailsApplicationSupplier = () -> grailsApplication
+
+        expect: 'Boot does not contribute its OrderedRequestContextFilter, leaving GrailsWebRequest bound'
+        new WebApplicationContextRunner()
+                .withBean(GrailsApplication, grailsApplicationSupplier)
+                .withConfiguration(AutoConfigurations.of(ControllersAutoConfiguration, WebMvcAutoConfiguration))
+                .run { context ->
+                    assert !context.containsBean('requestContextFilter')
+                    assert context.getBeanNamesForType(GrailsWebRequestFilter).length == 1
+                }
     }
 }
