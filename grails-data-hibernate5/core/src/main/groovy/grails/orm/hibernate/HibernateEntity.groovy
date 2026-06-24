@@ -36,82 +36,46 @@ import org.grails.orm.hibernate.AbstractHibernateGormStaticApi
 trait HibernateEntity<D> extends GormEntity<D> {
 
     /**
-     * Finds an entity for the given native SQL query. Pass a GString to have interpolated
-     * values safely bound as named parameters rather than interpolated into the query string.
+     * Finds all objects for the given string-based query
      *
-     * @param sql The native SQL query
-     * @return The entity, or {@code null} if none matched
-     * @since 8.0
-     */
-    @Generated
-    static D withSql(CharSequence sql) {
-        currentHibernateStaticApi().findWithSql(sql, Collections.emptyMap())
-    }
-
-    /**
-     * Finds an entity for the given native SQL query. Pass a GString to have interpolated
-     * values safely bound as named parameters rather than interpolated into the query string.
+     * @param sql The query
      *
-     * @param sql  The native SQL query
-     * @param args Pagination/query settings (max, offset, cache, etc.)
-     * @return The entity, or {@code null} if none matched
-     * @since 8.0
+     * @return The object
      */
-    @Generated
-    static D withSql(CharSequence sql, Map args) {
-        currentHibernateStaticApi().findWithSql(sql, args)
-    }
-
-    /**
-     * Finds all objects for the given native SQL query. Pass a GString to have interpolated
-     * values safely bound as named parameters rather than interpolated into the query string.
-     *
-     * @param sql The native SQL query
-     * @return The matching objects
-     * @since 8.0
-     */
-    @Generated
-    static List<D> withAllSql(CharSequence sql) {
-        currentHibernateStaticApi().findAllWithSql(sql, Collections.emptyMap())
-    }
-
-    /**
-     * Finds all objects for the given native SQL query. Pass a GString to have interpolated
-     * values safely bound as named parameters rather than interpolated into the query string.
-     *
-     * @param sql  The native SQL query
-     * @param args Pagination/query settings (max, offset, cache, etc.)
-     * @return The matching objects
-     * @since 8.0
-     */
-    @Generated
-    static List<D> withAllSql(CharSequence sql, Map args) {
-        currentHibernateStaticApi().findAllWithSql(sql, args)
-    }
-
-    /** @deprecated Use {@link #withAllSql(CharSequence)} */
-    @Deprecated
     @Generated
     static List<D> findAllWithSql(CharSequence sql) {
         currentHibernateStaticApi().findAllWithSql(sql, Collections.emptyMap())
     }
 
-    /** @deprecated Use {@link #withSql(CharSequence)} */
-    @Deprecated
+    /**
+     * Finds an entity for the given SQL query
+     *
+     * @param sql The sql query
+     * @return The entity
+     */
     @Generated
     static D findWithSql(CharSequence sql) {
         currentHibernateStaticApi().findWithSql(sql, Collections.emptyMap())
     }
 
-    /** @deprecated Use {@link #withAllSql(CharSequence, Map)} */
-    @Deprecated
+    /**
+     * Finds all objects for the given string-based query
+     *
+     * @param sql The query
+     *
+     * @return The object
+     */
     @Generated
     static List<D> findAllWithSql(CharSequence sql, Map args) {
         currentHibernateStaticApi().findAllWithSql(sql, args)
     }
 
-    /** @deprecated Use {@link #withSql(CharSequence, Map)} */
-    @Deprecated
+    /**
+     * Finds an entity for the given SQL query
+     *
+     * @param sql The sql query
+     * @return The entity
+     */
     @Generated
     static D findWithSql(CharSequence sql, Map args) {
         currentHibernateStaticApi().findWithSql(sql, args)

@@ -739,6 +739,28 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         result?.name == 'Arsenal'
     }
 
+    void "test deprecated findAllWithSql delegates to findAllWithNativeSql"() {
+        given:
+        setupTestData()
+
+        when:"The deprecated name still works"
+        List<Club> results = Club.findAllWithSql("select * from club c order by c.name")
+
+        then:
+        results.size() == 3
+    }
+
+    void "test deprecated findWithSql delegates to findWithNativeSql"() {
+        given:
+        setupTestData()
+
+        when:"The deprecated name still works"
+        Club result = Club.findWithSql("select * from club c where c.name = 'Arsenal'")
+
+        then:
+        result?.name == 'Arsenal'
+    }
+
     void "test sql query with gstring parameters"() {
         given:
         setupTestData()
