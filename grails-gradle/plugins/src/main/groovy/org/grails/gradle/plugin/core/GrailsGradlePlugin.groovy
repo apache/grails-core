@@ -819,6 +819,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
             project.tasks.withType(BootRun).configureEach { BootRun it ->
                 it.dependsOn(findMainClassTask)
                 it.mainClass.convention(GrailsGradlePlugin.getMainClassProvider(project))
+                it.systemProperty('spring.output.ansi.console-available', 'true')
             }
 
             project.tasks.withType(ResolveMainClassName).configureEach {

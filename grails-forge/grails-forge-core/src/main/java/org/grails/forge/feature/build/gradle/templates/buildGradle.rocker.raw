@@ -96,13 +96,6 @@ repositories {
 
 compileJava.options.release = @features.getTargetJdk()
 
-// Render colored console output when running the app in development.
-// Spring Boot's AnsiOutput enables colors on Linux/macOS and modern Windows
-// terminals, and stays off on legacy Windows consoles to avoid escape-code noise.
-tasks.matching { it.name == 'bootRun' }.configureEach {
-    systemProperty 'spring.output.ansi.console-available', 'true'
-}
-
 @if (features.contains("jrebel")) {
 tasks.named('bootRun') {
     dependsOn(generateRebel)

@@ -68,14 +68,14 @@ class LogbackSpec extends ApplicationContextSpec implements CommandOutputFixture
     }
 
     @Unroll
-    void "test bootRun enables Spring Boot console colors without Jansi for #applicationType application"() {
+    void "test build.gradle does not inline bootRun console color config for #applicationType application"() {
         when:
         def output = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS))
 
-        then: "bootRun signals an available console so Spring Boot AnsiOutput renders %clr colors in development per-OS, replacing Jansi (issue #15663)"
+        then: "The Grails Gradle plugin configures bootRun console colors instead of generated end-user build.gradle files (issue #15663)"
         def build = output.get("build.gradle")
-        build.contains("tasks.matching { it.name == 'bootRun' }.configureEach {")
-        build.contains("systemProperty 'spring.output.ansi.console-available', 'true'")
+        !build.contains("tasks.matching { it.name == 'bootRun' }.configureEach {")
+        !build.contains("spring.output.ansi.console-available")
 
         where:
         applicationType << ApplicationType.values().toList()

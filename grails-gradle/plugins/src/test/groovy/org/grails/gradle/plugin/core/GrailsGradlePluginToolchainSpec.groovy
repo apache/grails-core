@@ -122,6 +122,17 @@ class GrailsGradlePluginToolchainSpec extends GradleSpecification {
         result.output.contains('MAX_HEAP=768m')
     }
 
+    def "BootRun tasks enable Spring Boot console colors"() {
+        given:
+        setupTestResourceProject('bootrun-console-ansi')
+
+        when:
+        def result = executeTask('inspectBootRunSysProps')
+
+        then:
+        result.output.contains('CONSOLE_AVAILABLE=true')
+    }
+
     def "custom heap sizes are not overridden by fork settings"() {
         given:
         setupTestResourceProject('fork-settings-custom')
