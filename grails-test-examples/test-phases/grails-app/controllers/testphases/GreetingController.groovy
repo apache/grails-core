@@ -26,7 +26,7 @@ class GreetingController {
     GreetingService greetingService
 
     def index() {
-        respond([message: greetingService.greet('World')])
+        render greetingService.greet('World')
     }
 
 }
