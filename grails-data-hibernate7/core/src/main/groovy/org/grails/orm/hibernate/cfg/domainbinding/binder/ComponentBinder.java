@@ -18,12 +18,11 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
-import org.jspecify.annotations.NonNull;
-
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.Component;
 import org.hibernate.mapping.PersistentClass;
+import org.jspecify.annotations.NonNull;
 
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.MappingCacheHolder;

@@ -20,8 +20,6 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import java.util.Optional;
 
-import org.jspecify.annotations.NonNull;
-
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.mapping.BasicValue;
@@ -30,6 +28,7 @@ import org.hibernate.mapping.DependantValue;
 import org.hibernate.mapping.Formula;
 import org.hibernate.mapping.SimpleValue;
 import org.hibernate.mapping.Table;
+import org.jspecify.annotations.NonNull;
 
 import org.grails.datastore.mapping.model.types.TenantId;
 import org.grails.orm.hibernate.cfg.ColumnConfig;

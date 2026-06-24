@@ -18,10 +18,9 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
-import org.jspecify.annotations.NonNull;
-
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.mapping.PersistentClass;
+import org.jspecify.annotations.NonNull;
 
 import org.grails.orm.hibernate.cfg.Mapping;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;

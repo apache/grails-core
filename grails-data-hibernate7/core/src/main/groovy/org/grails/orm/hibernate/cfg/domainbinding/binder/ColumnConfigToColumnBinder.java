@@ -1,4 +1,4 @@
-    /*
+/*
  *  Licensed to the Apache Software Foundation (ASF) under one
  *  or more contributor license agreements.  See the NOTICE file
  *  distributed with this work for additional information
@@ -20,9 +20,8 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import java.util.Optional;
 
-import org.jspecify.annotations.NonNull;
-
 import org.hibernate.mapping.Column;
+import org.jspecify.annotations.NonNull;
 
 import org.grails.orm.hibernate.cfg.ColumnConfig;
 import org.grails.orm.hibernate.cfg.PropertyConfig;

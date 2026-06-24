@@ -20,9 +20,8 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import java.util.Optional;
 
-import org.jspecify.annotations.NonNull;
-
 import org.hibernate.mapping.Collection;
+import org.jspecify.annotations.NonNull;
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 
