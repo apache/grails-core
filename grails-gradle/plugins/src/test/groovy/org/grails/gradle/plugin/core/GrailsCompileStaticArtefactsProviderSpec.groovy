@@ -24,106 +24,106 @@ import org.gradle.testfixtures.ProjectBuilder
 import spock.lang.Specification
 
 /**
- * Unit tests for {@link GrailsCompileStaticArtefactsProvider}, verifying that the
- * {@code grails { compileStaticControllers / compileStaticServices }} opt-ins are translated into the
+ * Unit tests for {@link GrailsCompileStaticArtefactsProvider}, verifying that the nested
+ * {@code grails { compileStatic { controllers / services / tagLibs } }} opt-ins are translated into the
  * expected {@code -D} system properties for the Groovy compiler worker JVM.
  *
  * @since 8.0
  */
 class GrailsCompileStaticArtefactsProviderSpec extends Specification {
 
-    private static GrailsExtension extension() {
+    private static GrailsCompileStaticOptions options() {
         Project project = ProjectBuilder.builder().build()
-        new GrailsExtension(project)
+        new GrailsExtension(project).compileStatic
     }
 
-    void 'no arguments are emitted when both opt-ins are disabled (the default)'() {
+    void 'no arguments are emitted when the opt-ins are disabled (the default)'() {
         expect:
-        new GrailsCompileStaticArtefactsProvider(extension()).asArguments().toList() == []
+        new GrailsCompileStaticArtefactsProvider(options()).asArguments().toList() == []
     }
 
     void 'the controllers opt-in is published as a system property'() {
         given:
-        GrailsExtension extension = extension()
-        extension.compileStaticControllers = true
+        GrailsCompileStaticOptions compileStatic = options()
+        compileStatic.controllers.set(true)
 
         expect:
-        new GrailsCompileStaticArtefactsProvider(extension).asArguments().toList() ==
+        new GrailsCompileStaticArtefactsProvider(compileStatic).asArguments().toList() ==
                 ["-D${BuildSettings.COMPILE_STATIC_CONTROLLERS}=true".toString()]
     }
 
     void 'the services opt-in is published as a system property'() {
         given:
-        GrailsExtension extension = extension()
-        extension.compileStaticServices = true
+        GrailsCompileStaticOptions compileStatic = options()
+        compileStatic.services.set(true)
 
         expect:
-        new GrailsCompileStaticArtefactsProvider(extension).asArguments().toList() ==
+        new GrailsCompileStaticArtefactsProvider(compileStatic).asArguments().toList() ==
                 ["-D${BuildSettings.COMPILE_STATIC_SERVICES}=true".toString()]
     }
 
     void 'the taglibs opt-in is published as a system property'() {
         given:
-        GrailsExtension extension = extension()
-        extension.compileStaticTagLibs = true
+        GrailsCompileStaticOptions compileStatic = options()
+        compileStatic.tagLibs.set(true)
 
         expect:
-        new GrailsCompileStaticArtefactsProvider(extension).asArguments().toList() ==
+        new GrailsCompileStaticArtefactsProvider(compileStatic).asArguments().toList() ==
                 ["-D${BuildSettings.COMPILE_STATIC_TAGLIBS}=true".toString()]
     }
 
     void 'all opt-ins are published when enabled'() {
         given:
-        GrailsExtension extension = extension()
-        extension.compileStaticControllers = true
-        extension.compileStaticServices = true
-        extension.compileStaticTagLibs = true
+        GrailsCompileStaticOptions compileStatic = options()
+        compileStatic.controllers.set(true)
+        compileStatic.services.set(true)
+        compileStatic.tagLibs.set(true)
 
         expect:
-        new GrailsCompileStaticArtefactsProvider(extension).asArguments().toList() == [
+        new GrailsCompileStaticArtefactsProvider(compileStatic).asArguments().toList() == [
                 "-D${BuildSettings.COMPILE_STATIC_CONTROLLERS}=true".toString(),
                 "-D${BuildSettings.COMPILE_STATIC_SERVICES}=true".toString(),
                 "-D${BuildSettings.COMPILE_STATIC_TAGLIBS}=true".toString()
         ]
     }
 
-    void 'the compileStaticArtefacts shortcut publishes all three opt-ins'() {
+    void 'the all shortcut publishes all three opt-ins'() {
         given:
-        GrailsExtension extension = extension()
-        extension.compileStaticArtefacts = true
+        GrailsCompileStaticOptions compileStatic = options()
+        compileStatic.all.set(true)
 
         expect:
-        new GrailsCompileStaticArtefactsProvider(extension).asArguments().toList() == [
+        new GrailsCompileStaticArtefactsProvider(compileStatic).asArguments().toList() == [
                 "-D${BuildSettings.COMPILE_STATIC_CONTROLLERS}=true".toString(),
                 "-D${BuildSettings.COMPILE_STATIC_SERVICES}=true".toString(),
                 "-D${BuildSettings.COMPILE_STATIC_TAGLIBS}=true".toString()
         ]
     }
 
-    void 'the compileStaticArtefacts shortcut combines with an individual opt-in without duplicates'() {
+    void 'the all shortcut combines with an individual opt-in without duplicates'() {
         given:
-        GrailsExtension extension = extension()
-        extension.compileStaticArtefacts = true
-        extension.compileStaticControllers = true
+        GrailsCompileStaticOptions compileStatic = options()
+        compileStatic.all.set(true)
+        compileStatic.controllers.set(true)
 
         expect:
-        new GrailsCompileStaticArtefactsProvider(extension).asArguments().toList() == [
+        new GrailsCompileStaticArtefactsProvider(compileStatic).asArguments().toList() == [
                 "-D${BuildSettings.COMPILE_STATIC_CONTROLLERS}=true".toString(),
                 "-D${BuildSettings.COMPILE_STATIC_SERVICES}=true".toString(),
                 "-D${BuildSettings.COMPILE_STATIC_TAGLIBS}=true".toString()
         ]
     }
 
-    void 'the provider reads the extension lazily so it reflects values set after construction'() {
+    void 'the provider reads the options lazily so it reflects values set after construction'() {
         given:
-        GrailsExtension extension = extension()
-        GrailsCompileStaticArtefactsProvider provider = new GrailsCompileStaticArtefactsProvider(extension)
+        GrailsCompileStaticOptions compileStatic = options()
+        GrailsCompileStaticArtefactsProvider provider = new GrailsCompileStaticArtefactsProvider(compileStatic)
 
         expect: 'nothing yet'
         provider.asArguments().toList() == []
 
         when: 'the opt-in is enabled after the provider was created'
-        extension.compileStaticControllers = true
+        compileStatic.controllers.set(true)
 
         then: 'the provider now publishes it'
         provider.asArguments().toList() == ["-D${BuildSettings.COMPILE_STATIC_CONTROLLERS}=true".toString()]

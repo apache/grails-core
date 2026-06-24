@@ -64,19 +64,21 @@ The new `ControllerTagLibTypeCheckingExtension` (bundled with `@GrailsCompileSta
 
 ==== Opt All Controllers, Services and Tag Libraries into GrailsCompileStatic
 
-Static compilation can now be enabled for every controller, service and tag library in an application from the `grails` build configuration block, without annotating each class:
+Static compilation can now be enabled for every controller, service and tag library in an application from the nested `compileStatic` block of the `grails` build configuration, without annotating each class:
 
 [source,groovy]
 .build.gradle
 ----
 grails {
-    compileStaticControllers = true
-    compileStaticServices = true
-    compileStaticTagLibs = true
+    compileStatic {
+        controllers = true
+        services = true
+        tagLibs = true
+    }
 }
 ----
 
-All three options are disabled by default and independent, or `compileStaticArtefacts = true` can be used as a shortcut to enable all of them. Any class that declares its own `@CompileDynamic` (or `@GrailsCompileStatic`/`@CompileStatic`/`@GrailsTypeChecked`/`@TypeChecked`) annotation keeps that setting, so the opt-in never overrides an explicit per-class choice. Tag libraries should define tags as methods to be statically compiled. See the xref:staticTypeCheckingAndCompilation/grailsCompileStatic[GrailsCompileStatic] section for details.
+All three options are disabled by default and independent, or `compileStatic { all = true }` can be used as a shortcut to enable all of them. Any class that declares its own `@CompileDynamic` (or `@GrailsCompileStatic`/`@CompileStatic`/`@GrailsTypeChecked`/`@TypeChecked`) annotation keeps that setting, so the opt-in never overrides an explicit per-class choice. Tag libraries should define tags as methods to be statically compiled. See the xref:staticTypeCheckingAndCompilation/grailsCompileStatic[GrailsCompileStatic] section for details.
 
 ==== Test HTTP Client Form Requests
 

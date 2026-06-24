@@ -26,55 +26,56 @@ import org.gradle.process.CommandLineArgumentProvider
 import grails.util.BuildSettings
 
 /**
- * Publishes the {@code grails { compileStaticControllers }} / {@code grails { compileStaticServices }} /
- * {@code grails { compileStaticTagLibs }} opt-ins (see {@link BuildSettings#COMPILE_STATIC_CONTROLLERS},
- * {@link BuildSettings#COMPILE_STATIC_SERVICES} and {@link BuildSettings#COMPILE_STATIC_TAGLIBS}) to the
- * Groovy compiler's worker JVM as system properties so the {@code CompileStaticArtefactInjector} AST
- * transform can stamp {@code @GrailsCompileStatic} onto the matching artefacts. The
- * {@code grails { compileStaticArtefacts }} shortcut is folded into all three.
+ * Publishes the nested {@code grails { compileStatic { controllers / services / tagLibs } }} opt-ins
+ * (see {@link BuildSettings#COMPILE_STATIC_CONTROLLERS}, {@link BuildSettings#COMPILE_STATIC_SERVICES}
+ * and {@link BuildSettings#COMPILE_STATIC_TAGLIBS}) to the Groovy compiler's worker JVM as system
+ * properties so the {@code CompileStaticArtefactInjector} AST transform can stamp
+ * {@code @GrailsCompileStatic} onto the matching artefacts. The {@code compileStatic { all }} shortcut
+ * is folded into all three.
  *
- * <p>The flags are exposed as {@link Input} so toggling them invalidates the compile task and
- * triggers recompilation.</p>
+ * <p>The lazy {@link GrailsCompileStaticOptions} properties are read in {@link #asArguments} (at compile
+ * time, not configuration time). The effective values are also exposed as {@link Input} getters so
+ * toggling any flag invalidates the compile task and triggers recompilation.</p>
  *
  * @since 8.0
  */
 @CompileStatic
 class GrailsCompileStaticArtefactsProvider implements CommandLineArgumentProvider {
 
-    private final GrailsExtension grails
+    private final GrailsCompileStaticOptions compileStatic
 
-    GrailsCompileStaticArtefactsProvider(GrailsExtension grails) {
-        this.grails = grails
+    GrailsCompileStaticArtefactsProvider(GrailsCompileStaticOptions compileStatic) {
+        this.compileStatic = compileStatic
     }
 
-    // The effective values fold in the compileStaticArtefacts shortcut so that toggling it both emits the
+    // The effective values fold in the compileStatic.all shortcut so that toggling it both emits the
     // flags and invalidates the compile task (it is the @Input getters that Gradle snapshots).
 
     @Input
     boolean isCompileStaticControllers() {
-        grails.compileStaticArtefacts || grails.compileStaticControllers
+        compileStatic.all.getOrElse(false) || compileStatic.controllers.getOrElse(false)
     }
 
     @Input
     boolean isCompileStaticServices() {
-        grails.compileStaticArtefacts || grails.compileStaticServices
+        compileStatic.all.getOrElse(false) || compileStatic.services.getOrElse(false)
     }
 
     @Input
     boolean isCompileStaticTagLibs() {
-        grails.compileStaticArtefacts || grails.compileStaticTagLibs
+        compileStatic.all.getOrElse(false) || compileStatic.tagLibs.getOrElse(false)
     }
 
     @Override
     Iterable<String> asArguments() {
         List<String> args = []
-        if (compileStaticControllers) {
+        if (isCompileStaticControllers()) {
             args.add("-D${BuildSettings.COMPILE_STATIC_CONTROLLERS}=true".toString())
         }
-        if (compileStaticServices) {
+        if (isCompileStaticServices()) {
             args.add("-D${BuildSettings.COMPILE_STATIC_SERVICES}=true".toString())
         }
-        if (compileStaticTagLibs) {
+        if (isCompileStaticTagLibs()) {
             args.add("-D${BuildSettings.COMPILE_STATIC_TAGLIBS}=true".toString())
         }
         args

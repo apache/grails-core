@@ -50,6 +50,7 @@ class GrailsExtension {
         this.pluginDefiner = new PluginDefiner(project)
         this.indy = project.objects.property(Boolean).convention(false)
         this.preserveParameterNames = project.objects.property(Boolean).convention(true)
+        this.compileStatic = project.objects.newInstance(GrailsCompileStaticOptions)
         this.bom = project.objects.property(String)
         // Use set() rather than convention() so that clearing the value (bom = null,
         // or the deprecated springDependencyManagement = false) results in no BOM being
@@ -94,38 +95,36 @@ class GrailsExtension {
     List<String> starImports = []
 
     /**
-     * Convenience shortcut that opts every controller, service and tag library into
-     * {@code @GrailsCompileStatic} - equivalent to enabling {@link #compileStaticControllers},
-     * {@link #compileStaticServices} and {@link #compileStaticTagLibs} together. Disabled by default.
-     * The individual flags are still honoured, so this can be combined with them; a per-class
+     * Lazy opt-ins for compiling controllers, services and tag libraries with {@code @GrailsCompileStatic}
+     * automatically, configured through the nested {@code compileStatic} block. Each flag is a lazy
+     * {@link Property} (read at compile time, not configuration time) and defaults to {@code false}:
+     *
+     * <pre>
+     * grails {
+     *     compileStatic {
+     *         controllers = true
+     *         services = true
+     *         tagLibs = true
+     *     }
+     * }
+     * </pre>
+     *
+     * Use {@code compileStatic { all = true }} as a shortcut to enable all three at once. A per-class
      * {@code @CompileDynamic} (or {@code @CompileStatic}/{@code @GrailsCompileStatic}) annotation always
-     * wins over this default.
+     * wins over these defaults.
      */
-    boolean compileStaticArtefacts = false
+    final GrailsCompileStaticOptions compileStatic
 
     /**
-     * Whether every controller under {@code grails-app/controllers} should be compiled with
-     * {@code @GrailsCompileStatic} automatically. Disabled by default. Individual controllers can opt out
-     * by carrying their own {@code @CompileDynamic} (or {@code @CompileStatic}/{@code @GrailsCompileStatic})
-     * annotation, which is always honoured over this default.
+     * Configures the nested {@link #compileStatic} opt-ins.
+     *
+     * @param configureClosure a closure applied to the {@link GrailsCompileStaticOptions}
      */
-    boolean compileStaticControllers = false
-
-    /**
-     * Whether every service under {@code grails-app/services} should be compiled with
-     * {@code @GrailsCompileStatic} automatically. Disabled by default. Individual services can opt out
-     * by carrying their own {@code @CompileDynamic} (or {@code @CompileStatic}/{@code @GrailsCompileStatic})
-     * annotation, which is always honoured over this default.
-     */
-    boolean compileStaticServices = false
-
-    /**
-     * Whether every tag library under {@code grails-app/taglib} should be compiled with
-     * {@code @GrailsCompileStatic} automatically. Disabled by default. Individual tag libraries can opt out
-     * by carrying their own {@code @CompileDynamic} (or {@code @CompileStatic}/{@code @GrailsCompileStatic})
-     * annotation, which is always honoured over this default.
-     */
-    boolean compileStaticTagLibs = false
+    void compileStatic(@DelegatesTo(value = GrailsCompileStaticOptions, strategy = Closure.DELEGATE_FIRST) Closure<?> configureClosure) {
+        configureClosure.delegate = this.compileStatic
+        configureClosure.resolveStrategy = Closure.DELEGATE_FIRST
+        configureClosure.call()
+    }
 
     /**
      * @deprecated The Spring Dependency Management plugin has been replaced with Gradle's native

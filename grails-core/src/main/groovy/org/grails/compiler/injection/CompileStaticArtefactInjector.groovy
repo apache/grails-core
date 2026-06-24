@@ -37,9 +37,9 @@ import org.grails.core.artefact.ServiceArtefactHandler
  * Opts controllers, services and tag libraries into {@code @GrailsCompileStatic} automatically when the
  * corresponding build opt-in is enabled.
  *
- * <p>The opt-ins are surfaced as system properties by the Grails Gradle plugin (see
- * {@code grails { compileStaticControllers = true }}, {@code grails { compileStaticServices = true }} and
- * {@code grails { compileStaticTagLibs = true }}). When enabled, every matching artefact is compiled
+ * <p>The opt-ins are surfaced as system properties by the Grails Gradle plugin (see the nested
+ * {@code grails { compileStatic { controllers = true; services = true; tagLibs = true } }} block).
+ * When enabled, every matching artefact is compiled
  * statically unless it already declares its own {@code @CompileStatic}, {@code @CompileDynamic},
  * {@code @TypeChecked}, {@code @GrailsCompileStatic} or {@code @GrailsTypeChecked} annotation - an
  * explicit choice on the class always wins.</p>

@@ -126,7 +126,7 @@ class GrailsExtensionSpec extends Specification {
         extension.springDependencyManagement
     }
 
-    def "compileStaticArtefacts, compileStaticControllers, compileStaticServices and compileStaticTagLibs default to false"() {
+    def "compileStatic all, controllers, services and tagLibs default to false"() {
         given:
         Project project = ProjectBuilder.builder().build()
 
@@ -134,37 +134,55 @@ class GrailsExtensionSpec extends Specification {
         GrailsExtension extension = new GrailsExtension(project)
 
         then:
-        !extension.compileStaticArtefacts
-        !extension.compileStaticControllers
-        !extension.compileStaticServices
-        !extension.compileStaticTagLibs
+        !extension.compileStatic.all.get()
+        !extension.compileStatic.controllers.get()
+        !extension.compileStatic.services.get()
+        !extension.compileStatic.tagLibs.get()
     }
 
-    def "compileStaticArtefacts can be enabled as a shortcut for all artefact types"() {
+    def "the compileStatic all flag can be enabled as a shortcut for all artefact types"() {
         given:
         Project project = ProjectBuilder.builder().build()
         GrailsExtension extension = new GrailsExtension(project)
 
         when:
-        extension.compileStaticArtefacts = true
+        extension.compileStatic {
+            all = true
+        }
 
         then:
-        extension.compileStaticArtefacts
+        extension.compileStatic.all.get()
     }
 
-    def "compileStaticControllers, compileStaticServices and compileStaticTagLibs can be enabled"() {
+    def "the nested compileStatic block enables controllers, services and tagLibs"() {
         given:
         Project project = ProjectBuilder.builder().build()
         GrailsExtension extension = new GrailsExtension(project)
 
         when:
-        extension.compileStaticControllers = true
-        extension.compileStaticServices = true
-        extension.compileStaticTagLibs = true
+        extension.compileStatic {
+            controllers = true
+            services = true
+            tagLibs = true
+        }
 
         then:
-        extension.compileStaticControllers
-        extension.compileStaticServices
-        extension.compileStaticTagLibs
+        extension.compileStatic.controllers.get()
+        extension.compileStatic.services.get()
+        extension.compileStatic.tagLibs.get()
+    }
+
+    def "the compileStatic flags can also be set directly on the lazy properties"() {
+        given:
+        Project project = ProjectBuilder.builder().build()
+        GrailsExtension extension = new GrailsExtension(project)
+
+        when:
+        extension.compileStatic.controllers.set(true)
+
+        then:
+        extension.compileStatic.controllers.get()
+        !extension.compileStatic.services.get()
+        !extension.compileStatic.tagLibs.get()
     }
 }
