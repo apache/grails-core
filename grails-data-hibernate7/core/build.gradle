@@ -70,6 +70,10 @@ dependencies {
     api 'io.smallrye:jandex'
 
     compileOnly 'org.jspecify:jspecify'
+    // checker-qual is required on the compile classpath (not runtime) so JDK 25's javac can
+    // resolve checker-framework annotations (e.g. @UnknownKeyFor) carried in the bytecode of
+    // dependencies such as Hibernate/byte-buddy. JDK 21 tolerates them missing; JDK 25 does not.
+    compileOnly 'org.checkerframework:checker-qual'
     compileOnly 'org.hibernate.orm:hibernate-core'
     compileOnly 'org.hibernate.orm:hibernate-jcache', {
         exclude group:'commons-collections', module:'commons-collections'
