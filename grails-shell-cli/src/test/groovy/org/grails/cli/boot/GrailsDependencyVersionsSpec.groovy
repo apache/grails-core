@@ -476,7 +476,7 @@ class GrailsDependencyVersionsSpec extends Specification {
         versions.versionProperties['groovy.version'] != springBootGroovyVersion
     }
 
-    def "addDependencyManagement gracefully handles unresolvable imported Grails BOMs"() {
+    def "addDependencyManagement fails when an imported BOM cannot be resolved"() {
         given: "A BOM that imports a Grails BOM which cannot be resolved"
         String missingBomVersion = '1.0.0'
         String coreVersion = '2.0.0'
@@ -505,17 +505,18 @@ class GrailsDependencyVersionsSpec extends Specification {
         GrapeEngine grape = Mock(GrapeEngine)
 
         when: "GrailsDependencyVersions is constructed"
-        def versions = new GrailsDependencyVersions(grape, [group: 'org.apache.grails', module: 'grails-bom', version: coreVersion, type: 'pom'])
+        new GrailsDependencyVersions(grape, [group: 'org.apache.grails', module: 'grails-bom', version: coreVersion, type: 'pom'])
 
         then: "The parent BOM is resolved"
         1 * grape.resolve(null, { it.module == 'grails-bom' }) >> [parentBomUri]
 
-        and: "The missing Grails BOM resolution throws but is caught"
+        and: "The missing Grails BOM resolution throws"
         1 * grape.resolve(null, { it.module == 'grails-missing-bom' }) >> { throw new RuntimeException("Not found") }
 
-        and: "Direct dependencies from the parent BOM are still available"
-        versions.find('org.apache.grails', 'grails-core') != null
-        versions.find('org.apache.grails', 'grails-core').version == coreVersion
+        and: "The failure is surfaced instead of silently dropping managed versions"
+        def e = thrown(IllegalStateException)
+        e.message == 'Failed to resolve imported BOM org.apache.grails:grails-missing-bom:1.0.0'
+        e.cause.message == 'Not found'
     }
 
     def "addDependencyManagement without grapeEngine skips imported BOMs without error"() {

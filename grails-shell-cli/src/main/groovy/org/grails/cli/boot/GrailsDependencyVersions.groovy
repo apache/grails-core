@@ -151,11 +151,8 @@ class GrailsDependencyVersions implements DependencyManagement {
                 addDependencyManagement(importedPom)
             }
         } catch (Exception e) {
-            // If the imported BOM cannot be resolved, skip it. The blast radius of this is now
-            // wider than when only Grails BOMs were followed: Spring Boot's managed versions exist
-            // *only* behind this recursed third-party import, so a swallowed failure here silently
-            // drops every Spring Boot-managed version at once. Logging is not idiomatic in this
-            // module, so the failure is intentionally left silent.
+            String coordinates = "${groupId}:${artifactId}:${version}".toString()
+            throw new IllegalStateException("Failed to resolve imported BOM ${coordinates}".toString(), e)
         }
     }
 
