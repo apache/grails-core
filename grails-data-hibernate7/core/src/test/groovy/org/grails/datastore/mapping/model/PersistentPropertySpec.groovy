@@ -21,6 +21,7 @@ package org.grails.datastore.mapping.model
 
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.persistence.Entity
+
 class PersistentPropertySpec extends HibernateGormDatastoreSpec {
 
     void "test isUnidirectionalOneToMany"() {

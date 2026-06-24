@@ -27,7 +27,8 @@ import spock.lang.*
 /**
  * Created by graemerocher on 01/03/2017.
  */
-@Ignore // https://github.com/apache/grails-core/issues/14624 — MappingException: Repeated column (iteration_id) for Product; not fixed in this PR
+@Ignore
+@Issue('https://github.com/apache/grails-core/issues/14624')
 class SubclassMultipleListCollectionSpec extends Specification {
 
     @AutoCleanup @Shared HibernateDatastore hibernateDatastore
