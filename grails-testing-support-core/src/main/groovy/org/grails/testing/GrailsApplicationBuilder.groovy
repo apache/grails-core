@@ -73,6 +73,10 @@ class GrailsApplicationBuilder {
 
     static final Set DEFAULT_INCLUDED_PLUGINS = ['core', 'eventBus'] as Set
 
+    private static final String ALLOW_BEAN_DEFINITION_OVERRIDING = 'spring.main.allow-bean-definition-overriding'
+
+    private static final String ALLOW_CIRCULAR_REFERENCES = 'spring.main.allow-circular-references'
+
     Closure doWithSpring
     Closure doWithConfig
     Set<String> includePlugins
@@ -166,11 +170,15 @@ class GrailsApplicationBuilder {
             ((AnnotationConfigRegistry) context).register(ClassUtils.forName(it, classLoader))
         }
 
-        def beanFactory = (context.beanFactory as DefaultListableBeanFactory).tap {
-            allowBeanDefinitionOverriding = true
-            allowCircularReferences = true
-        }
+        def beanFactory = context.beanFactory as DefaultListableBeanFactory
         prepareContext(context, beanFactory)
+        // Bean definition overriding and circular references default to true (the historical Grails
+        // behavior) but can be turned off via the standard spring.main.* properties. These are read
+        // after prepareContext so that application.yml (loaded by ConfigDataApplicationContextInitializer)
+        // and other property sources are available, and before refresh so the values take effect.
+        def environment = context.environment
+        beanFactory.allowBeanDefinitionOverriding = environment.getProperty(ALLOW_BEAN_DEFINITION_OVERRIDING, Boolean, Boolean.TRUE)
+        beanFactory.allowCircularReferences = environment.getProperty(ALLOW_CIRCULAR_REFERENCES, Boolean, Boolean.TRUE)
         context.refresh()
         context.registerShutdownHook()
         return context

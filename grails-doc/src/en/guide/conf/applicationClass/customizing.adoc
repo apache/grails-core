@@ -55,6 +55,23 @@ class Application extends GrailsAutoConfiguration {
 }
 ----
 
+[id=bean-overriding-and-circular-references]
+=== Bean Definition Overriding and Circular References
+
+By default Grails starts the application context with bean definition overriding and circular references enabled, because many plugins rely on contributing or replacing beans during startup. These two behaviors map onto the standard Spring Boot `spring.main` properties and both default to `true` in Grails.
+
+If you want stricter startup semantics — for example to catch an accidental bean name clash or an unintended circular dependency — you can disable either behavior in `application.yml`:
+
+[source,yaml]
+----
+spring:
+  main:
+    allow-bean-definition-overriding: false
+    allow-circular-references: false
+----
+
+NOTE: These default to `true` in Grails to preserve compatibility, which differs from a plain Spring Boot application where both default to `false`. Disabling them can cause startup failures if a plugin (or your own configuration) registers a bean that is already defined or depends on a circular reference, so change these values with care.
+
 [id=customizing-the-banner]
 === Customizing the Banner
 
