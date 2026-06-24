@@ -41,31 +41,46 @@ import org.grails.orm.hibernate.HibernateGormStaticApi
 trait HibernateEntity<D> extends GormEntity<D> {
 
     /**
-     * Finds all objects for the given native SQL query. Pass a GString to have interpolated
+     * Finds an entity for the given native SQL query. Pass a GString to have interpolated
      * values safely bound as named parameters rather than interpolated into the query string.
-     * Use this method (not {@code findAll}) when you need raw SQL rather than HQL.
      *
      * @param sql The native SQL query
-     * @return The matching objects
+     * @return The entity, or {@code null} if none matched
+     * @since 8.0
      */
     @Generated
-    static List<D> findAllWithNativeSql(CharSequence sql) {
+    static D withSql(CharSequence sql) {
         HibernateGormStaticApi<D> api = (HibernateGormStaticApi<D>) GormEnhancer.findStaticApi(this)
-        return (List<D>) api.findAllWithNativeSql(sql, Collections.emptyMap())
+        return (D) api.findWithNativeSql(sql, Collections.emptyMap())
     }
 
     /**
      * Finds an entity for the given native SQL query. Pass a GString to have interpolated
      * values safely bound as named parameters rather than interpolated into the query string.
-     * Use this method (not {@code find}) when you need raw SQL rather than HQL.
      *
-     * @param sql The native SQL query
-     * @return The entity
+     * @param sql  The native SQL query
+     * @param args Pagination/query settings (max, offset, cache, etc.)
+     * @return The entity, or {@code null} if none matched
+     * @since 8.0
      */
     @Generated
-    static D findWithNativeSql(CharSequence sql) {
+    static D withSql(CharSequence sql, Map args) {
         HibernateGormStaticApi<D> api = (HibernateGormStaticApi<D>) GormEnhancer.findStaticApi(this)
-        return (D) api.findWithNativeSql(sql, Collections.emptyMap())
+        return (D) api.findWithNativeSql(sql, args)
+    }
+
+    /**
+     * Finds all objects for the given native SQL query. Pass a GString to have interpolated
+     * values safely bound as named parameters rather than interpolated into the query string.
+     *
+     * @param sql The native SQL query
+     * @return The matching objects
+     * @since 8.0
+     */
+    @Generated
+    static List<D> withAllSql(CharSequence sql) {
+        HibernateGormStaticApi<D> api = (HibernateGormStaticApi<D>) GormEnhancer.findStaticApi(this)
+        return (List<D>) api.findAllWithNativeSql(sql, Collections.emptyMap())
     }
 
     /**
@@ -75,57 +90,12 @@ trait HibernateEntity<D> extends GormEntity<D> {
      * @param sql  The native SQL query
      * @param args Pagination/query settings (max, offset, cache, etc.)
      * @return The matching objects
+     * @since 8.0
      */
     @Generated
-    static List<D> findAllWithNativeSql(CharSequence sql, Map args) {
+    static List<D> withAllSql(CharSequence sql, Map args) {
         HibernateGormStaticApi<D> api = (HibernateGormStaticApi<D>) GormEnhancer.findStaticApi(this)
         return (List<D>) api.findAllWithNativeSql(sql, args)
-    }
-
-    /**
-     * Finds an entity for the given native SQL query. Pass a GString to have interpolated
-     * values safely bound as named parameters rather than interpolated into the query string.
-     *
-     * @param sql  The native SQL query
-     * @param args Pagination/query settings (max, offset, cache, etc.)
-     * @return The entity
-     */
-    @Generated
-    static D findWithNativeSql(CharSequence sql, Map args) {
-        HibernateGormStaticApi<D> api = (HibernateGormStaticApi<D>) GormEnhancer.findStaticApi(this)
-        return (D) api.findWithNativeSql(sql, args)
-    }
-
-    /** @deprecated Use {@link #findAllWithNativeSql(CharSequence)} — native SQL is distinct from HQL. */
-    @Deprecated
-    @Generated
-    static List<D> findAllWithSql(CharSequence sql) {
-        HibernateGormStaticApi<D> api = (HibernateGormStaticApi<D>) GormEnhancer.findStaticApi(this)
-        return (List<D>) api.findAllWithNativeSql(sql, Collections.emptyMap())
-    }
-
-    /** @deprecated Use {@link #findWithNativeSql(CharSequence)} — native SQL is distinct from HQL. */
-    @Deprecated
-    @Generated
-    static D findWithSql(CharSequence sql) {
-        HibernateGormStaticApi<D> api = (HibernateGormStaticApi<D>) GormEnhancer.findStaticApi(this)
-        return (D) api.findWithNativeSql(sql, Collections.emptyMap())
-    }
-
-    /** @deprecated Use {@link #findAllWithNativeSql(CharSequence, Map)} — native SQL is distinct from HQL. */
-    @Deprecated
-    @Generated
-    static List<D> findAllWithSql(CharSequence sql, Map args) {
-        HibernateGormStaticApi<D> api = (HibernateGormStaticApi<D>) GormEnhancer.findStaticApi(this)
-        return (List<D>) api.findAllWithNativeSql(sql, args)
-    }
-
-    /** @deprecated Use {@link #findWithNativeSql(CharSequence, Map)} — native SQL is distinct from HQL. */
-    @Deprecated
-    @Generated
-    static D findWithSql(CharSequence sql, Map args) {
-        HibernateGormStaticApi<D> api = (HibernateGormStaticApi<D>) GormEnhancer.findStaticApi(this)
-        return (D) api.findWithNativeSql(sql, args)
     }
 
     /**
