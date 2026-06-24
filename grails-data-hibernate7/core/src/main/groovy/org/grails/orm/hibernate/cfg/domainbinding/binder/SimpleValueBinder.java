@@ -20,7 +20,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import java.util.Optional;
 
-import jakarta.annotation.Nonnull;
+import org.jspecify.annotations.NonNull;
 
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
@@ -58,7 +58,6 @@ public class SimpleValueBinder {
         this.basicValueCreator = basicValueCreator;
     }
 
-    /** Convenience constructor for namingStrategy. */
     public SimpleValueBinder(
             MetadataBuildingContext metadataBuildingContext,
             PersistentEntityNamingStrategy namingStrategy,
@@ -66,12 +65,12 @@ public class SimpleValueBinder {
         this(
                 metadataBuildingContext,
                 new ColumnConfigToColumnBinder(),
-                new ColumnBinder(namingStrategy),
+                new ColumnBinder(namingStrategy, jdbcEnvironment.getDialect()),
                 new BasicValueCreator(metadataBuildingContext, jdbcEnvironment, namingStrategy));
     }
 
     public BasicValue bindBasicValue(
-            @Nonnull HibernatePersistentProperty property,
+            @NonNull HibernatePersistentProperty property,
             HibernatePersistentProperty parentProperty,
             String path) {
         BasicValue basicValue = basicValueCreator.bindBasicValue(property);

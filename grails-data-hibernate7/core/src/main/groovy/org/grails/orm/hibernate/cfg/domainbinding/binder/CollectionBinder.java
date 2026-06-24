@@ -52,7 +52,11 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher;
 import org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator;
 
 
-/** Handles the binding of collections to the Hibernate runtime meta model. */
+/**
+ * Handles the binding of collections to the Hibernate runtime meta model.
+ *
+ * @since 8.0
+ */
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class CollectionBinder {
 
@@ -68,7 +72,6 @@ public class CollectionBinder {
         this.collectionSecondPassBinder.setComponentBinder(componentBinder);
     }
 
-    /** Creates a new {@link CollectionBinder} instance. */
     public CollectionBinder(
             MetadataBuildingContext metadataBuildingContext,
             PersistentEntityNamingStrategy namingStrategy,
@@ -88,7 +91,7 @@ public class CollectionBinder {
         CollectionForPropertyConfigBinder collectionForPropertyConfigBinder = new CollectionForPropertyConfigBinder();
         UnidirectionalOneToManyInverseValuesBinder unidirectionalOneToManyInverseValuesBinder =
                 new UnidirectionalOneToManyInverseValuesBinder(metadataBuildingContext);
-        SimpleValueColumnBinder simpleValueColumnBinder = new SimpleValueColumnBinder();
+        var simpleValueColumnBinder = new SimpleValueColumnBinder();
         CollectionWithJoinTableBinder collectionWithJoinTableBinder = new CollectionWithJoinTableBinder(
                 namingStrategy,
                 unidirectionalOneToManyInverseValuesBinder,

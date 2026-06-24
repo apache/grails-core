@@ -111,10 +111,10 @@ import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
  * equivalent JPA Criteria predicate. {@link grails.gorm.DetachedCriteria} can also be passed in
  * place of a closure to support multi-tenant and reusable query fragments.
  *
- * To adjust the methods to be handled you have to extend this class, extend CriteriaMethodInvoker
+ * To customise which methods are handled, either extend {@link CriteriaMethodInvoker} and inject it
+ * via {@link #setCriteriaMethodInvoker(CriteriaMethodInvoker)}, or subclass this class directly.
  *
  * @author Graeme Rocher
- * @author walterduquedeestrada
  * @see HibernateQuery
  * @see grails.gorm.DetachedCriteria
  */

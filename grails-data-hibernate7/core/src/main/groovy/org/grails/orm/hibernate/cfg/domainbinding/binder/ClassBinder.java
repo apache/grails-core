@@ -18,7 +18,7 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
-import jakarta.annotation.Nonnull;
+import org.jspecify.annotations.NonNull;
 
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.mapping.PersistentClass;
@@ -28,23 +28,27 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
 
 import static org.grails.orm.hibernate.cfg.GrailsHibernateUtil.unqualify;
 
-/** The class binder class. */
+/**
+ * Binds a Grails domain class to the Hibernate persistent class model.
+ *
+ * @since 8.0
+ */
 public class ClassBinder {
 
     private final InFlightMetadataCollector collector;
 
-    public ClassBinder(@Nonnull InFlightMetadataCollector collector) {
+    public ClassBinder(@NonNull InFlightMetadataCollector collector) {
         this.collector = collector;
     }
 
     /**
-     * Binds the specified persistant class to the runtime model based on the properties defined in
+     * Binds the specified persistent class to the runtime model based on the properties defined in
      * the domain class
      *
      * @param persistentEntity The Grails domain class
-     * @param persistentClass The persistant class
+     * @param persistentClass The persistent class
      */
-    public void bindClass(@Nonnull GrailsHibernatePersistentEntity persistentEntity, PersistentClass persistentClass) {
+    public void bindClass(@NonNull GrailsHibernatePersistentEntity persistentEntity, PersistentClass persistentClass) {
         persistentClass.setLazy(true);
         var entityName = persistentEntity.getName();
         persistentClass.setEntityName(entityName);

@@ -20,17 +20,21 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import java.util.Optional;
 
-import jakarta.annotation.Nonnull;
+import org.jspecify.annotations.NonNull;
 
 import org.hibernate.mapping.Collection;
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 
-/** The collection for property config binder class. */
+/**
+ * Binds collection-level lazy and extra-lazy settings from the property config.
+ *
+ * @since 8.0
+ */
 public class CollectionForPropertyConfigBinder {
 
     /** Bind collection for property config. */
-    public void bindCollectionForPropertyConfig(@Nonnull HibernateToManyProperty property) {
+    public void bindCollectionForPropertyConfig(@NonNull HibernateToManyProperty property) {
         Collection collection = property.getCollection();
         collection.setLazy(property.isLazy());
         Optional.ofNullable(property.getLazy()).ifPresent(collection::setExtraLazy);
