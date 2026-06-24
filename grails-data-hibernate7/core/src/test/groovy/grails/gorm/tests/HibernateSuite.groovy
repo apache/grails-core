@@ -19,6 +19,7 @@
 package grails.gorm.tests
 
 import org.apache.grails.data.testing.tck.tests.FirstAndLastMethodSpec
+import org.apache.grails.data.testing.tck.tests.StaticCompiledCriteriaSpec
 import org.junit.platform.suite.api.SelectClasses
 import org.junit.platform.suite.api.Suite
 
@@ -26,6 +27,6 @@ import org.junit.platform.suite.api.Suite
  * Created by graemerocher on 06/07/2016.
  */
 @Suite
-@SelectClasses([FirstAndLastMethodSpec])
+@SelectClasses([FirstAndLastMethodSpec, StaticCompiledCriteriaSpec])
 class HibernateSuite {
 }
