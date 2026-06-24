@@ -82,6 +82,66 @@ class Person {
 As per the MongoDB docs 1 is for ascending and -1 is for descending.
 
 
+==== TTL Indexes
+
+
+MongoDB can automatically remove documents from a collection once they reach a certain age using a https://www.mongodb.com/docs/manual/core/index-ttl/[TTL index]. Declare one by adding `expireAfterSeconds` to the `indexAttributes` of a single date-valued property:
+
+[source,groovy]
+----
+class LoginEvent {
+    Date dateCreated
+    static mapping = {
+        dateCreated index:true, indexAttributes: [expireAfterSeconds: 3600]
+    }
+}
+----
+
+With the mapping above MongoDB expires each `LoginEvent` roughly one hour (3600 seconds) after the value stored in its `dateCreated` property. The indexed property must hold a `Date` (or an array of dates), and TTL is supported on single-field indexes only — MongoDB ignores `expireAfterSeconds` if it is applied to a `compoundIndex`.
+
+If you later change the declared `expireAfterSeconds`, GORM reconciles the existing index in place on startup (using MongoDB's https://www.mongodb.com/docs/manual/reference/command/collMod/[collMod] command) so that the new expiry takes effect without dropping or rebuilding the index.
+
+
+==== Text Indexes
+
+
+In addition to declaring a text index with the `index` method (see <<textSearch>>), you can declare one on a single property through `indexAttributes` using `type: 'text'`:
+
+[source,groovy]
+----
+class Product {
+    String title
+    static mapping = {
+        title index:true, indexAttributes: [type: 'text']
+    }
+}
+----
+
+The `type` attribute sets the index type for that field, so it can equally be used to declare other special index types such as `'2d'` or `'2dsphere'`. Note that MongoDB allows at most one text index per collection. See <<textSearch>> for how to query a text index once it has been created.
+
+
+==== Reconciling Index Option Changes
+
+
+An index is created from its declared options the first time the collection is initialised. If you later change the options of an already-created index — for example marking it `unique` — MongoDB cannot alter most options in place and reports an `IndexOptionsConflict`. By default GORM logs this conflict and leaves the existing index untouched.
+
+To have GORM drop the existing index and recreate it with the newly declared options, add `recreateOnConflict: true` to the `indexAttributes`:
+
+[source,groovy]
+----
+class Person {
+    String name
+    static mapping = {
+        name index:true, indexAttributes: [unique:true, recreateOnConflict:true]
+    }
+}
+----
+
+WARNING: Dropping and recreating an index rebuilds it from scratch, during which queries that rely on the index are not served by it. Enable `recreateOnConflict` deliberately, and prefer applying it during a maintenance window for large collections.
+
+A change to a TTL index's `expireAfterSeconds` is handled automatically and does not require `recreateOnConflict`, because GORM updates the expiry in place rather than rebuilding the index.
+
+
 ==== Indexing using the 'index' method
 
 
