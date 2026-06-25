@@ -22,17 +22,11 @@ package org.grails.gsp
 import grails.core.gsp.GrailsTagLibClass
 import org.grails.core.gsp.DefaultGrailsTagLibClass
 import org.grails.taglib.TagLibraryLookup
-import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 
 
 class GspCompileStaticSpec extends Specification {
 
-    // Helper to detect Groovy 5+
-    static boolean isGroovy5OrLater() {
-        GroovySystem.version.startsWith('5') || 
-            GroovySystem.version.split('\\.')[0].toInteger() >= 5
-    }
     GroovyPagesTemplateEngine gpte
 
     def setup() {
@@ -153,9 +147,6 @@ out.print(messageClosure('World'))
         t.metaInfo.compilationException.message.contains('Cannot find matching method java.util.Date#getTimeTypo()')
     }
 
-    // GROOVY-12041: Groovy 5 treats receivers inherited through getProperty(String) as dynamic by design.
-    // Keep this pending until Grails adds its own stricter undeclared-variable check for GSP expressions.
-    @PendingFeatureIf({ instance.isGroovy5OrLater() })
     def "should fail compilation when using invalid property"() {
         given:
         def template = '''<%@ model="Date date"%>${somename}'''
@@ -165,8 +156,6 @@ out.print(messageClosure('World'))
         t.metaInfo.compilationException.message.contains('The variable [somename] is undeclared.')
     }
 
-    // GROOVY-12041: see above - same undeclared-variable check that the Groovy 5 STC extension path no longer reports.
-    @PendingFeatureIf({ instance.isGroovy5OrLater() })
     def "should fail compilation when calling method on invalid property"() {
         given:
         def template = '''<%@ model="Date date"%>${somename.somemethod([a: 1])}'''

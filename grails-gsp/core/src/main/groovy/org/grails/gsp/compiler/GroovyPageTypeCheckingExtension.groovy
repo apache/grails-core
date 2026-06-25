@@ -22,6 +22,8 @@ package org.grails.gsp.compiler
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.CodeVisitorSupport
+import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.ListExpression
 import org.codehaus.groovy.ast.expr.PropertyExpression
@@ -45,6 +47,7 @@ class GroovyPageTypeCheckingExtension extends GroovyTypeCheckingExtensionSupport
             newScope {
                 allowedTagLibs = [] as Set
                 dynamicProperties = [] as Set
+                undeclaredDynamicVariables = [] as Set
             }
             AnnotationNode configAnnotation = classNode.getAnnotations(configAnnotationClassNode)?.find { it }
             if (configAnnotation) {
@@ -86,6 +89,42 @@ class GroovyPageTypeCheckingExtension extends GroovyTypeCheckingExtensionSupport
             if (isAllowedDynamicTaglibNamespace(objectExpression)) {
                 return makeDynamic(call)
             }
+            if (objectExpression instanceof VariableExpression && isUndeclaredDynamicVariable(objectExpression)) {
+                reportUndeclaredDynamicVariable(objectExpression)
+                return makeDynamic(call)
+            }
+        }
+
+        afterVisitMethod { MethodNode methodNode ->
+            reportUndeclaredDynamicVariables(methodNode)
+        }
+    }
+
+    private void reportUndeclaredDynamicVariables(MethodNode methodNode) {
+        methodNode.code?.visit(new CodeVisitorSupport() {
+            @Override
+            void visitVariableExpression(VariableExpression expression) {
+                if (isUndeclaredDynamicVariable(expression)) {
+                    reportUndeclaredDynamicVariable(expression)
+                }
+                super.visitVariableExpression(expression)
+            }
+        })
+    }
+
+    private boolean isUndeclaredDynamicVariable(VariableExpression expression) {
+        if (expression.thisExpression || expression.superExpression) {
+            return false
+        }
+        if (currentScope.allowedTagLibs.contains(expression.name)) {
+            return false
+        }
+        expression.getNodeMetaData(StaticTypesMarker.DYNAMIC_RESOLUTION) != null
+    }
+
+    private void reportUndeclaredDynamicVariable(VariableExpression expression) {
+        if (currentScope.undeclaredDynamicVariables.add(expression.name)) {
+            typeCheckingVisitor.addStaticTypeError("The variable [${expression.name}] is undeclared.", expression)
         }
     }
 
