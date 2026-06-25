@@ -124,7 +124,7 @@ public class EmbeddedGrailsLayoutView extends AbstractGrailsView {
      * Sets the {@link ObservationRegistry} used to instrument GSP layout (SiteMesh) decoration. Defaults
      * to {@link ObservationRegistry#NOOP}, in which case layout decoration is not observed.
      */
-    public void setObservationRegistry(ObservationRegistry observationRegistry) {
+    void setObservationRegistry(ObservationRegistry observationRegistry) {
         this.observationRegistry = (observationRegistry != null) ? observationRegistry : ObservationRegistry.NOOP;
     }
 

@@ -35,7 +35,6 @@ import groovy.util.BuilderSupport;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import io.micrometer.observation.Observation;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -149,27 +148,7 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
      * @throws ConverterException
      */
     public void render(HttpServletResponse response) throws ConverterException {
-        var observationRegistry = ConvertersConfigurationHolder.getObservationRegistry();
-        if (observationRegistry == null || observationRegistry.isNoop()) {
-            renderInternal(response);
-            return;
-        }
-        var observation = Observation.createNotStarted("grails.convert", observationRegistry)
-                .contextualName("grails.convert json")
-                .lowCardinalityKeyValue("grails.convert.format", "json")
-                .start();
-        var observationScope = observation.openScope();
-        try {
-            renderInternal(response);
-        }
-        catch (Throwable t) {
-            observation.error(t);
-            throw t;
-        }
-        finally {
-            observationScope.close();
-            observation.stop();
-        }
+        ConvertersConfigurationHolder.withConverterObservation("json", () -> renderInternal(response));
     }
 
     private void renderInternal(HttpServletResponse response) throws ConverterException {

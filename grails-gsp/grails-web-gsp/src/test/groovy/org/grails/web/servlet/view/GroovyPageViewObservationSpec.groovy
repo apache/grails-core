@@ -18,7 +18,6 @@
  */
 package org.grails.web.servlet.view
 
-import io.micrometer.common.KeyValues
 import io.micrometer.observation.Observation
 import io.micrometer.observation.ObservationHandler
 import io.micrometer.observation.ObservationRegistry
@@ -43,31 +42,31 @@ class GroovyPageViewObservationSpec extends Specification {
     private List<Observation.Context> recorded = []
 
     private ObservationRegistry recordingRegistry() {
-        ObservationRegistry registry = ObservationRegistry.create()
-        registry.observationConfig().observationHandler(new ObservationHandler<Observation.Context>() {
-            @Override boolean supportsContext(Observation.Context context) { true }
-            @Override void onStop(Observation.Context context) { recorded << context }
-        })
-        registry
+        ObservationRegistry.create().tap {
+            observationConfig().observationHandler(new ObservationHandler<Observation.Context>() {
+                @Override boolean supportsContext(Observation.Context context) { true }
+                @Override void onStop(Observation.Context context) { recorded << context }
+            })
+        }
     }
 
     /** A view whose actual render body is supplied by a closure, bypassing the GSP pipeline. */
     private GroovyPageView viewFor(ObservationRegistry registry, String url = '/book/show', Closure body = {}) {
-        def view = new GroovyPageView() {
+        new GroovyPageView() {
             @Override
             protected void doRenderTemplate(Map<String, Object> model, GrailsWebRequest webRequest,
                     HttpServletRequest request, HttpServletResponse response) {
                 body.call()
             }
+        }.tap {
+            it.url = url
+            observationRegistry = registry
         }
-        view.url = url
-        view.observationRegistry = registry
-        view
     }
 
     void "a gsp.view observation is recorded with the view URI on a successful render"() {
         given:
-        GroovyPageView view = viewFor(recordingRegistry())
+        def view = viewFor(recordingRegistry())
 
         when:
         view.renderTemplate([:], null, null, null)
@@ -85,7 +84,7 @@ class GroovyPageViewObservationSpec extends Specification {
 
     void "no observation is recorded when the registry is NOOP (zero overhead)"() {
         given:
-        GroovyPageView view = viewFor(ObservationRegistry.NOOP)
+        def view = viewFor(ObservationRegistry.NOOP)
 
         when:
         view.renderTemplate([:], null, null, null)
@@ -96,7 +95,7 @@ class GroovyPageViewObservationSpec extends Specification {
 
     void "the observation records the exception when rendering fails"() {
         given:
-        GroovyPageView view = viewFor(recordingRegistry(), '/book/show', { throw new GroovyPagesException('boom') })
+        def view = viewFor(recordingRegistry(), '/book/show', { throw new GroovyPagesException('boom') })
 
         when:
         view.renderTemplate([:], null, null, null)

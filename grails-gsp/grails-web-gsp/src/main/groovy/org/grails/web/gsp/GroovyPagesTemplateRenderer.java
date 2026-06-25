@@ -133,8 +133,8 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
             doRender(templateName, webRequest, pageScope, attrs, body, out);
             return;
         }
-        String resource = (templateName != null && !templateName.isEmpty()) ? templateName : "unknown";
-        Observation observation = Observation.createNotStarted("gsp.template", this.observationRegistry)
+        var resource = (templateName != null && !templateName.isEmpty()) ? templateName : "unknown";
+        var observation = Observation.createNotStarted("gsp.template", this.observationRegistry)
                 .contextualName("gsp.template " + resource)
                 .highCardinalityKeyValue("gsp.name", resource);
         observation.observeChecked(() -> doRender(templateName, webRequest, pageScope, attrs, body, out));

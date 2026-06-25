@@ -60,7 +60,7 @@ public class GrailsLayoutViewResolver extends EmbeddedGrailsLayoutViewResolver i
 
     @Override
     protected View createLayoutView(View innerView) {
-        GrailsLayoutView layoutView = new GrailsLayoutView(groovyPageLayoutFinder, innerView, contentProcessor);
+        var layoutView = new GrailsLayoutView(groovyPageLayoutFinder, innerView, contentProcessor);
         layoutView.setObservationRegistry(this.observationRegistry);
         return layoutView;
     }

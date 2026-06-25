@@ -100,17 +100,17 @@ class GrailsDispatcherServlet extends DispatcherServlet implements ServletContex
      */
     @Override
     protected void render(ModelAndView mv, HttpServletRequest request, HttpServletResponse response) throws Exception {
-        ObservationRegistry registry = resolveObservationRegistry()
-        if (registry == null || registry.isNoop()) {
+        def observationRegistry = resolveObservationRegistry()
+        if (observationRegistry == null || observationRegistry.isNoop()) {
             super.render(mv, request, response)
             return
         }
-        String view = (mv != null && mv.viewName) ? mv.viewName : 'none'
-        Observation observation = Observation.createNotStarted('grails.render', registry)
+        def view = (mv != null && mv.viewName) ? mv.viewName : 'none'
+        def observation = Observation.createNotStarted('grails.render', observationRegistry)
                 .contextualName('grails.render ' + view)
                 .lowCardinalityKeyValue('grails.view', view)
                 .start()
-        Observation.Scope scope = observation.openScope()
+        def observationScope = observation.openScope()
         try {
             super.render(mv, request, response)
         }
@@ -119,15 +119,15 @@ class GrailsDispatcherServlet extends DispatcherServlet implements ServletContex
             throw t
         }
         finally {
-            scope.close()
+            observationScope.close()
             observation.stop()
         }
     }
 
     private ObservationRegistry resolveObservationRegistry() {
-        ObservationRegistry registry = this.observationRegistry
+        def registry = this.observationRegistry
         if (registry == null) {
-            WebApplicationContext wac = getWebApplicationContext()
+            def wac = getWebApplicationContext()
             if (wac == null) {
                 // context not ready — return NOOP without caching so a later call re-resolves
                 return ObservationRegistry.NOOP
@@ -135,7 +135,7 @@ class GrailsDispatcherServlet extends DispatcherServlet implements ServletContex
             registry = wac.getBeanProvider(ObservationRegistry).getIfAvailable({ -> ObservationRegistry.NOOP })
             this.observationRegistry = registry
         }
-        return registry
+        registry
     }
 
     @Override

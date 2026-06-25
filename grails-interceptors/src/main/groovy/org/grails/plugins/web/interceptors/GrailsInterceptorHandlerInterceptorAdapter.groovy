@@ -142,17 +142,17 @@ class GrailsInterceptorHandlerInterceptorAdapter implements HandlerInterceptor {
      * boolean result and control flow. No-op (runs the callback directly) when observation is disabled.
      */
     private boolean observe(Interceptor interceptor, String phase, BooleanSupplier action) {
-        ObservationRegistry registry = this.observationRegistry
+        var registry = this.observationRegistry
         if (registry == null || registry.isNoop()) {
             return action.getAsBoolean()
         }
-        String name = GrailsNameUtils.getLogicalPropertyName(interceptor.getClass().name, 'Interceptor') ?: 'unknown'
-        Observation observation = Observation.createNotStarted('grails.interceptor', registry)
+        var name = GrailsNameUtils.getLogicalPropertyName(interceptor.getClass().name, 'Interceptor') ?: 'unknown'
+        var observation = Observation.createNotStarted('grails.interceptor', registry)
                 .contextualName('grails.interceptor ' + name)
                 .lowCardinalityKeyValue('grails.interceptor', name)
                 .lowCardinalityKeyValue('grails.interceptor.phase', phase ?: 'unknown')
                 .start()
-        Observation.Scope scope = observation.openScope()
+        var scope = observation.openScope()
         try {
             return action.getAsBoolean()
         }

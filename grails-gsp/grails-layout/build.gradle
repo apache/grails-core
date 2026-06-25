@@ -60,7 +60,7 @@ dependencies {
         // impl: MockHttpServletRequest
     }
     testImplementation project(':grails-testing-support-web')
-    testRuntimeOnly 'net.bytebuddy:byte-buddy' // lets Spock mock concrete types (e.g. GrailsWebRequest) in tests
+    testRuntimeOnly 'net.bytebuddy:byte-buddy' // Required by Spock's mocking support
     testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during test task
 }
 

@@ -20,7 +20,6 @@ package org.apache.grails.web.layout
 
 import com.opensymphony.sitemesh.Content
 
-import io.micrometer.common.KeyValues
 import io.micrometer.observation.Observation
 import io.micrometer.observation.ObservationHandler
 import io.micrometer.observation.ObservationRegistry
@@ -68,23 +67,23 @@ class EmbeddedGrailsLayoutViewObservationSpec extends Specification {
     }
 
     private ObservationRegistry recordingRegistry() {
-        ObservationRegistry registry = ObservationRegistry.create()
-        registry.observationConfig().observationHandler(new ObservationHandler<Observation.Context>() {
-            @Override boolean supportsContext(Observation.Context context) { true }
-            @Override void onStop(Observation.Context context) { recorded << context }
-        })
-        registry
+        ObservationRegistry.create().tap {
+            observationConfig().observationHandler(new ObservationHandler<Observation.Context>() {
+                @Override boolean supportsContext(Observation.Context context) { true }
+                @Override void onStop(Observation.Context context) { recorded << context }
+            })
+        }
     }
 
-    private EmbeddedGrailsLayoutView viewFor(ObservationRegistry registry) {
-        def view = new EmbeddedGrailsLayoutView(null, null)
-        view.observationRegistry = registry
-        view
+    private static EmbeddedGrailsLayoutView viewFor(ObservationRegistry registry) {
+        new EmbeddedGrailsLayoutView(null, null).tap {
+            observationRegistry = registry
+        }
     }
 
     void "a gsp.layout observation is recorded with the layout page name on a successful decoration"() {
         given:
-        EmbeddedGrailsLayoutView view = viewFor(recordingRegistry())
+        def view = viewFor(recordingRegistry())
         def decorator = new StubDecorator(Mock(View))
 
         when:
@@ -104,7 +103,7 @@ class EmbeddedGrailsLayoutViewObservationSpec extends Specification {
 
     void "no observation is recorded when the registry is NOOP (zero overhead)"() {
         given:
-        EmbeddedGrailsLayoutView view = viewFor(ObservationRegistry.NOOP)
+        def view = viewFor(ObservationRegistry.NOOP)
         def decorator = new StubDecorator(Mock(View))
 
         when:
@@ -117,9 +116,10 @@ class EmbeddedGrailsLayoutViewObservationSpec extends Specification {
 
     void "the observation records the exception when decoration fails"() {
         given:
-        EmbeddedGrailsLayoutView view = viewFor(recordingRegistry())
-        def decorator = new StubDecorator(Mock(View))
-        decorator.toThrow = new IllegalStateException('boom')
+        def view = viewFor(recordingRegistry())
+        def decorator = new StubDecorator(Mock(View)).tap {
+            toThrow = new IllegalStateException('boom')
+        }
 
         when:
         view.renderWithLayout(decorator, Mock(Content), [:], null, null, Mock(GrailsWebRequest))

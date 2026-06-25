@@ -179,7 +179,7 @@ public class GroovyPageView extends AbstractGrailsView {
      * {@link ObservationRegistry#NOOP}, in which case rendering is not observed.
      * @param observationRegistry the registry, or {@code null} for no-op
      */
-    public void setObservationRegistry(ObservationRegistry observationRegistry) {
+    void setObservationRegistry(ObservationRegistry observationRegistry) {
         this.observationRegistry = (observationRegistry != null) ? observationRegistry : ObservationRegistry.NOOP;
     }
 
