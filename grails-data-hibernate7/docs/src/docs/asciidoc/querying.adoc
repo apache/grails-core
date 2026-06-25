@@ -16,59 +16,45 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 ////
+[[querying]]
+== Querying
 
-GORM supports a number of powerful ways to query from dynamic finders, to criteria to Hibernate's object oriented query language HQL. Depending on the complexity of the query you have the following options in order of flexibility and power:
+GORM provides multiple querying mechanisms, ranging from simple dynamic finders to full SQL queries.
 
-* Dynamic Finders
-* Where Queries
-* Criteria Queries
-* Hibernate Query Language (HQL)
+* xref:querying-finders[Dynamic Finders] — auto-generated methods based on properties
+* xref:querying-whereQueries[Where Queries] — type-safe Groovy criteria DSL
+* xref:querying-criteria[Criteria Queries] — advanced query builder with Hibernate 7 DSL
+* xref:querying-detachedCriteria[Detached Criteria] — reusable query fragments and subqueries
+* xref:querying-hql[HQL Queries] — Hibernate Query Language
+* xref:querying-nativeSql[Native SQL Queries] — raw database SQL via Hibernate
 
-In addition, Groovy's ability to manipulate collections with https://groovy.codehaus.org/GPath[GPath] and methods like sort, findAll and so on combined with GORM results in a powerful combination.
+=== Dynamic Finders
 
-However, let's start with the basics.
-
-
-==== Listing instances
-
-
-Use the link:../api/org/grails/datastore/gorm/GormEntity.html#list()[list()] method to obtain all instances of a given class:
+The simplest form of querying uses auto-generated finder methods based on property names:
 
 [source,groovy]
 ----
-def books = Book.list()
+Book.findByTitle('Groovy in Action')
+Book.findAllByAuthorAndGenre('Dierk König', 'Tech')
+Book.countByGenre('Fiction')
+Book.findByTitleLike('%Groovy%')
+Book.findAllByPagesGreaterThan(300)
+Book.findAllByTitleIlike('%groovy%')    // case-insensitive
 ----
 
-The link:../api/org/grails/datastore/gorm/GormEntity.html#list(java.util.Map)[list()] method supports arguments to perform pagination:
+Finder methods support pagination:
 
 [source,groovy]
 ----
-def books = Book.list(offset:10, max:20)
+Book.findAllByGenre('Fiction', [max: 10, offset: 0, sort: 'title', order: 'asc'])
 ----
 
-as well as sorting:
+=== `get`, `list`, `count`
 
 [source,groovy]
 ----
-def books = Book.list(sort:"title", order:"asc")
-----
-
-Here, the `sort` argument is the name of the domain class property that you wish to sort on, and the `order` argument is either `asc` for *asc*ending or `desc` for *desc*ending.
-
-
-==== Retrieval by Database  Identifier
-
-
-The second basic form of retrieval is by database identifier using the link:../api/org/grails/datastore/gorm/GormEntity.html#get(java.io.Serializable)[get(id)] method:
-
-[source,groovy]
-----
-def book = Book.get(23)
-----
-
-You can also obtain a list of instances for a set of identifiers using link:../api/org/grails/datastore/gorm/GormEntity.html#getAll(java.io.Serializable)[getAll()]:
-
-[source,groovy]
-----
-def books = Book.getAll(23, 93, 81)
+Book.get(1)                                 // by id
+Book.list()                                 // all
+Book.list(max: 10, offset: 20)             // paginated
+Book.count()                                // total count
 ----

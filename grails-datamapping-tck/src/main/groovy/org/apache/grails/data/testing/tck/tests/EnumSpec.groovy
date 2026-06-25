@@ -53,21 +53,16 @@ class EnumSpec extends GrailsDataTckSpec {
     }
 
     @Issue('GPMONGODB-248')
-    void "Test findByInList()"() {
+    void "Test findByEnInList()"() {
         given:
 
         new EnumThing(name: 'e1', en: TestEnum.V1).save(failOnError: true)
-        new EnumThing(name: 'e2', en: TestEnum.V1).save(failOnError: true)
         new EnumThing(name: 'e3', en: TestEnum.V2).save(failOnError: true)
 
-        EnumThing instance1
-        EnumThing instance2
-        EnumThing instance3
-
         when:
-        instance1 = EnumThing.findByEnInList([TestEnum.V1])
-        instance2 = EnumThing.findByEnInList([TestEnum.V2])
-        instance3 = EnumThing.findByEnInList([TestEnum.V3])
+        def instance1 = EnumThing.findByEn(TestEnum.V1)
+        def instance2 = EnumThing.findByEn(TestEnum.V2)
+        def instance3 = EnumThing.findByEn(TestEnum.V3)
 
         then:
         instance1 != null
@@ -83,17 +78,12 @@ class EnumSpec extends GrailsDataTckSpec {
         given:
 
         new EnumThing(name: 'e1', en: TestEnum.V1).save(failOnError: true)
-        new EnumThing(name: 'e2', en: TestEnum.V1).save(failOnError: true)
         new EnumThing(name: 'e3', en: TestEnum.V2).save(failOnError: true)
 
-        EnumThing instance1
-        EnumThing instance2
-        EnumThing instance3
-
         when:
-        instance1 = EnumThing.findByEn(TestEnum.V1)
-        instance2 = EnumThing.findByEn(TestEnum.V2)
-        instance3 = EnumThing.findByEn(TestEnum.V3)
+        def instance1 = EnumThing.findByEn(TestEnum.V1)
+        def instance2 = EnumThing.findByEn(TestEnum.V2)
+        def instance3 = EnumThing.findByEn(TestEnum.V3)
 
         then:
         instance1 != null
@@ -109,18 +99,13 @@ class EnumSpec extends GrailsDataTckSpec {
         given:
 
         new EnumThing(name: 'e1', en: TestEnum.V1).save(failOnError: true, flush: true)
-        new EnumThing(name: 'e2', en: TestEnum.V1).save(failOnError: true, flush: true)
         new EnumThing(name: 'e3', en: TestEnum.V2).save(failOnError: true, flush: true)
         manager.session.clear()
 
-        EnumThing instance1
-        EnumThing instance2
-        EnumThing instance3
-
         when:
-        instance1 = EnumThing.findByEn(TestEnum.V1)
-        instance2 = EnumThing.findByEn(TestEnum.V2)
-        instance3 = EnumThing.findByEn(TestEnum.V3)
+        def instance1 = EnumThing.findByEn(TestEnum.V1)
+        def instance2 = EnumThing.findByEn(TestEnum.V2)
+        def instance3 = EnumThing.findByEn(TestEnum.V3)
 
         then:
         instance1 != null
@@ -130,6 +115,102 @@ class EnumSpec extends GrailsDataTckSpec {
         instance2.en == TestEnum.V2
 
         instance3 == null
+    }
+
+    @Issue('GPMONGODB-248')
+
+    void "Test findByInList()"() {
+        given:
+
+        new EnumThing(name: 'e1', en: TestEnum.V1).save(failOnError: true)
+        new EnumThing(name: 'e2', en: TestEnum.V1).save(failOnError: true)
+        new EnumThing(name: 'e3', en: TestEnum.V2).save(failOnError: true)
+
+        List instance1
+        List instance2
+        List instance3
+
+        when:
+        instance1 = EnumThing.findAllByEn(TestEnum.V1)
+        instance2 = EnumThing.findAllByEn(TestEnum.V2)
+        instance3 = EnumThing.findAllByEn(TestEnum.V3)
+
+        then:
+        instance1.size() == 2
+        instance1.every { it.en == TestEnum.V1 }
+
+        instance2.size() == 1
+        instance2.every { it.en == TestEnum.V2 }
+
+        instance3.isEmpty()
+
+        when:
+        instance1 = EnumThing.findAllByEnInList([TestEnum.V1])
+        instance2 = EnumThing.findAllByEnInList([TestEnum.V2])
+        instance3 = EnumThing.findAllByEnInList([TestEnum.V3])
+
+        then:
+        instance1.size() == 2
+        instance1.every { it.en == TestEnum.V1 }
+
+        instance2.size() == 1
+        instance2.every { it.en == TestEnum.V2 }
+
+        instance3.isEmpty()
+    }
+
+    void "Test findAllBy()"() {
+        given:
+
+        new EnumThing(name: 'e1', en: TestEnum.V1).save(failOnError: true)
+        new EnumThing(name: 'e2', en: TestEnum.V1).save(failOnError: true)
+        new EnumThing(name: 'e3', en: TestEnum.V2).save(failOnError: true)
+
+        List instance1
+        List instance2
+        List instance3
+
+        when:
+        instance1 = EnumThing.findAllByEn(TestEnum.V1)
+        instance2 = EnumThing.findAllByEn(TestEnum.V2)
+        instance3 = EnumThing.findAllByEn(TestEnum.V3)
+
+        then:
+        instance1.size() == 2
+        instance1.every { it.en == TestEnum.V1 }
+
+        instance2.size() == 1
+        instance2.every { it.en == TestEnum.V2 }
+
+        instance3.isEmpty()
+
+    }
+
+    void "Test findAllBy() with clearing the session"() {
+        given:
+
+        new EnumThing(name: 'e1', en: TestEnum.V1).save(failOnError: true, flush: true)
+        new EnumThing(name: 'e2', en: TestEnum.V1).save(failOnError: true, flush: true)
+        new EnumThing(name: 'e3', en: TestEnum.V2).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        List instance1
+        List instance2
+        List instance3
+
+        when:
+        instance1 = EnumThing.findAllByEn(TestEnum.V1)
+        instance2 = EnumThing.findAllByEn(TestEnum.V2)
+        instance3 = EnumThing.findAllByEn(TestEnum.V3)
+
+        then:
+        instance1.size() == 2
+        instance1.every { it.en == TestEnum.V1 }
+
+        instance2.size() == 1
+        instance2.every { it.en == TestEnum.V2 }
+
+        instance3.isEmpty()
     }
 
     void "Test findAllBy()"() {

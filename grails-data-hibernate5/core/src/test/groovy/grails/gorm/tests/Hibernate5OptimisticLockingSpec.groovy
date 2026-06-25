@@ -18,10 +18,10 @@
  */
 package grails.gorm.tests
 
-import org.apache.grails.data.testing.tck.domains.OptLockNotVersioned
-import org.apache.grails.data.testing.tck.domains.OptLockVersioned
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.OptLockNotVersioned
+import org.apache.grails.data.testing.tck.domains.OptLockVersioned
 import org.grails.orm.hibernate.support.hibernate5.HibernateOptimisticLockingFailureException
 
 /**
@@ -29,13 +29,39 @@ import org.grails.orm.hibernate.support.hibernate5.HibernateOptimisticLockingFai
  */
 class Hibernate5OptimisticLockingSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
-
     void setupSpec() {
         manager.registerDomainClasses(OptLockVersioned, OptLockNotVersioned)
     }
 
-    void "Test optimistic locking"() {
+    void "Test versioning"() {
+        given:
+        def o = new OptLockVersioned(name: 'locked')
 
+        when:
+        o.save flush: true
+
+        then:
+        o.version == 0
+
+        when:
+        manager.session.clear()
+        o = OptLockVersioned.get(o.id)
+        o.name = 'Fred'
+        o.save flush: true
+
+        then:
+        o.version == 1
+
+        when:
+        manager.session.clear()
+        o = OptLockVersioned.get(o.id)
+
+        then:
+        o.name == 'Fred'
+        o.version == 1
+    }
+
+    void "Test optimistic locking"() {
         given:
         def o = new OptLockVersioned(name: 'locked').save(flush: true)
         manager.session.clear()

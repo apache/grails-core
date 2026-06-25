@@ -42,22 +42,21 @@ dependencies {
     // TODO: Clarify and clean up dependencies
     implementation platform(project(':grails-hibernate7-bom'))
 
-    api project(":grails-data-hibernate7-core")
-    api "org.apache.groovy:groovy"
-    api "org.springframework.boot:spring-boot-autoconfigure"
-
     compileOnly project(':grails-shell-cli'), {
         exclude group:'org.apache.groovy', module:'groovy'
     }
-    compileOnly "org.springframework.boot:spring-boot-jdbc"
-    compileOnly "org.springframework.boot:spring-boot-hibernate"
+    api "org.apache.groovy:groovy"
+    api "org.springframework.boot:spring-boot-autoconfigure"
+    api "org.springframework.boot:spring-boot-jdbc"
+    api "org.springframework.boot:spring-boot-hibernate"
+    api project(":grails-data-hibernate7-spring-orm")
+    api project(":grails-data-hibernate7-core")
 
     testImplementation project(':grails-shell-cli'), {
         exclude group:'org.apache.groovy', module:'groovy'
     }
     testImplementation "org.spockframework:spock-core"
-    testImplementation "org.springframework.boot:spring-boot-jdbc"
-    testImplementation "org.springframework.boot:spring-boot-hibernate"
+    testImplementation "org.springframework.boot:spring-boot-starter-test"
 
     testRuntimeOnly "org.apache.tomcat:tomcat-jdbc"
     testRuntimeOnly "com.h2database:h2"

@@ -18,23 +18,16 @@
  */
 package org.grails.orm.hibernate
 
-import javax.sql.DataSource
-
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-
+import javax.sql.DataSource
 import org.hibernate.FlushMode
-import org.hibernate.Session
 import org.hibernate.SessionFactory
-import org.hibernate.engine.jdbc.spi.JdbcCoordinator
-import org.hibernate.engine.spi.SessionImplementor
 
 import org.grails.orm.hibernate.support.hibernate7.HibernateTransactionManager
 import org.grails.orm.hibernate.support.hibernate7.SessionHolder
 import org.springframework.transaction.TransactionDefinition
-import org.springframework.transaction.support.DefaultTransactionStatus
 import org.springframework.transaction.support.TransactionSynchronizationManager
-import org.springframework.util.Assert
 
 /**
  * Extends the standard class to always set the flush mode to manual when in a read-only transaction.
@@ -46,63 +39,32 @@ import org.springframework.util.Assert
 class GrailsHibernateTransactionManager extends HibernateTransactionManager {
 
     final FlushMode defaultFlushMode
-    boolean isJdbcBatchVersionedData
-
-    GrailsHibernateTransactionManager(FlushMode defaultFlushMode = FlushMode.AUTO) {
-        this.defaultFlushMode = defaultFlushMode
-    }
-
-    GrailsHibernateTransactionManager(SessionFactory sessionFactory, FlushMode defaultFlushMode = FlushMode.AUTO) {
-        super(sessionFactory)
-        this.defaultFlushMode = defaultFlushMode
-        this.isJdbcBatchVersionedData = sessionFactory.getSessionFactoryOptions().isJdbcBatchVersionedData()
-    }
 
     GrailsHibernateTransactionManager(SessionFactory sessionFactory, DataSource dataSource, FlushMode defaultFlushMode = FlushMode.AUTO) {
         super(sessionFactory)
-        setDataSource(dataSource)
+        if (dataSource != null) {
+            setDataSource(dataSource)
+        }
         this.defaultFlushMode = defaultFlushMode
-        this.isJdbcBatchVersionedData = sessionFactory.getSessionFactoryOptions().isJdbcBatchVersionedData()
     }
 
     @Override
     protected void doBegin(Object transaction, TransactionDefinition definition) {
-        super.doBegin(transaction, definition)
+        super.doBegin transaction, definition
 
         if (definition.isReadOnly()) {
             // transaction is HibernateTransactionManager.HibernateTransactionObject private class instance
             // always set to manual; the base class doesn't because the OSIV has already registered a session
 
             SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.getResource(sessionFactory)
-            holder.session.setHibernateFlushMode(FlushMode.MANUAL)
-        }
-        else if (defaultFlushMode != FlushMode.AUTO) {
+            if (holder != null) {
+                holder.session.setHibernateFlushMode(FlushMode.MANUAL)
+            }
+        } else if (defaultFlushMode != FlushMode.AUTO) {
             SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.getResource(sessionFactory)
-            holder.session.setHibernateFlushMode(defaultFlushMode)
-        }
-    }
-
-    @Override
-    protected void doRollback(DefaultTransactionStatus status) {
-        super.doRollback(status)
-        if (isJdbcBatchVersionedData) {
-            try {
-                SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.getResource(sessionFactory)
-                if (holder != null) {
-                    Session session = holder.getSession()
-                    JdbcCoordinator jdbcCoordinator = ((SessionImplementor) session).getJdbcCoordinator()
-                    jdbcCoordinator.abortBatch()
-                }
-            } catch (Throwable e) {
-                log.warn("Error aborting batch during Transaction rollback: ${e.message}", e)
+            if (holder != null) {
+                holder.session.setHibernateFlushMode(defaultFlushMode)
             }
         }
-    }
-
-    @Override
-    void setSessionFactory(SessionFactory sessionFactory) {
-        Assert.notNull(sessionFactory, 'SessionFactory cannot be null')
-        super.setSessionFactory(sessionFactory)
-        this.isJdbcBatchVersionedData = sessionFactory.getSessionFactoryOptions().isJdbcBatchVersionedData()
     }
 }

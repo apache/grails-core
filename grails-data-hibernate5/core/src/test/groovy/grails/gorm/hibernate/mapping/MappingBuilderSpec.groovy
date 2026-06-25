@@ -259,7 +259,7 @@ class MappingBuilderSpec extends Specification {
         config != null
         config.joinTable != null
         config.joinTable.name == 'foo'
-        config.joinTable.key.name == 'foo_id'
+        config.joinTable.keys[0].name == 'foo_id'
         config.joinTable.column.name == 'bar_id'
 
     }
@@ -280,7 +280,7 @@ class MappingBuilderSpec extends Specification {
         config != null
         config.joinTable != null
         config.joinTable.name == 'foo'
-        config.joinTable.key.name == 'foo_id'
+        config.joinTable.keys[0].name == 'foo_id'
         config.joinTable.column.name == 'bar_id'
 
     }

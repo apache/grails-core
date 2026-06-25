@@ -32,7 +32,6 @@ import org.springframework.ui.ModelMap;
 import org.springframework.web.context.request.WebRequest;
 
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
-import org.grails.orm.hibernate.AbstractHibernateDatastore;
 import org.grails.orm.hibernate.HibernateDatastore;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
 import org.grails.orm.hibernate.support.hibernate7.SessionFactoryUtils;
@@ -56,11 +55,8 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
 
     private final List<AdditionalSessionFactoryConfig> additionalSessionFactories = new ArrayList<>();
 
-    /**
-     * Holds configuration for an additional (non-default) SessionFactory
-     * that needs OSIV session management.
-     */
     private static class AdditionalSessionFactoryConfig {
+
         final String connectionName;
         final SessionFactory sessionFactory;
         final FlushMode flushMode;
@@ -104,7 +100,8 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
 
     @Override
     public void postHandle(WebRequest request, ModelMap model) throws DataAccessException {
-        SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(getSessionFactory());
+        SessionHolder sessionHolder =
+                (SessionHolder) TransactionSynchronizationManager.getResource(getSessionFactory());
         Session session = sessionHolder != null ? sessionHolder.getSession() : null;
         try {
             super.postHandle(request, model);
@@ -116,8 +113,7 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
                 }
                 session.flush();
             }
-        }
-        finally {
+        } finally {
             if (session != null) {
                 session.setHibernateFlushMode(FlushMode.MANUAL);
             }
@@ -139,20 +135,17 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
                             }
                             additionalSession.flush();
                         }
-                    }
-                    catch (RuntimeException ex) {
+                    } catch (RuntimeException ex) {
                         if (firstFlushException == null) {
                             firstFlushException = ex;
-                        }
-                        else {
+                        } else {
                             if (logger.isDebugEnabled()) {
                                 logger.debug("Additional flush exception for datasource '" + config.connectionName + "'", ex);
                             }
                             firstFlushException.addSuppressed(ex);
                         }
                     }
-                }
-                finally {
+                } finally {
                     additionalSession.setHibernateFlushMode(FlushMode.MANUAL);
                 }
             }
@@ -177,24 +170,21 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
                     }
                     try {
                         SessionFactoryUtils.closeSession(session);
-                    }
-                    catch (RuntimeException closeEx) {
+                    } catch (RuntimeException closeEx) {
                         logger.error("Unexpected exception on closing additional Hibernate Session for datasource '" + config.connectionName + "'", closeEx);
                     }
                 }
             }
-        }
-        finally {
+        } finally {
             super.afterCompletion(request, ex);
         }
     }
 
-    public void setHibernateDatastore(AbstractHibernateDatastore hibernateDatastore) {
+    public void setHibernateDatastore(HibernateDatastore hibernateDatastore) {
         String defaultFlushModeName = hibernateDatastore.getDefaultFlushModeName();
         if (hibernateDatastore.isOsivReadOnly()) {
             this.hibernateFlushMode = FlushMode.MANUAL;
-        }
-        else {
+        } else {
             this.hibernateFlushMode = FlushMode.valueOf(defaultFlushModeName);
         }
         setSessionFactory(hibernateDatastore.getSessionFactory());
@@ -204,12 +194,11 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
             for (ConnectionSource<SessionFactory, HibernateConnectionSourceSettings> connectionSource : hibernateDs.getConnectionSources().getAllConnectionSources()) {
                 String connectionName = connectionSource.getName();
                 if (!ConnectionSource.DEFAULT.equals(connectionName)) {
-                    AbstractHibernateDatastore childDatastore = hibernateDs.getDatastoreForConnection(connectionName);
+                    HibernateDatastore childDatastore = hibernateDs.getDatastoreForConnection(connectionName);
                     FlushMode childFlushMode;
                     if (childDatastore.isOsivReadOnly()) {
                         childFlushMode = FlushMode.MANUAL;
-                    }
-                    else {
+                    } else {
                         childFlushMode = FlushMode.valueOf(childDatastore.getDefaultFlushModeName());
                     }
                     additionalSessionFactories.add(

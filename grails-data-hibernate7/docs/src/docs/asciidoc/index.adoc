@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-= GORM for Hibernate
+= GORM for Hibernate 7
 :revnumber: {version}
 :imagesdir: ./images
 :source-highlighter: coderay
@@ -170,7 +170,7 @@ include::querying/finders.adoc[]
 include::querying/whereQueries.adoc[]
 
 [[criteria]]
-=== Criteria
+=== Criteria Queries
 
 include::querying/criteria.adoc[]
 
@@ -183,6 +183,11 @@ include::querying/detachedCriteria.adoc[]
 === Hibernate Query Language (HQL)
 
 include::querying/hql.adoc[]
+
+[[nativeSql]]
+=== Native SQL
+
+include::querying/nativeSql.adoc[]
 
 [[advancedGORMFeatures]]
 == Advanced GORM Features

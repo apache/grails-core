@@ -37,21 +37,29 @@ ext {
     pomDescription = 'The Database Migration plugin helps you manage database changes, via Liquibase, while developing Grails applications for Hibernate 7'
 }
 
+configurations {
+    enversRuntime.extendsFrom(testImplementation)
+}
+
 dependencies {
     // TODO: Clarify and clean up dependencies
     implementation platform(project(':grails-hibernate7-bom'))
 
-    implementation("org.liquibase:liquibase-core") {
-        exclude group: 'javax.xml.bind', module: 'jaxb-api'
-    }
-    implementation("org.liquibase.ext:liquibase-hibernate5") {
-        exclude group: 'org.hibernate', module: 'hibernate-core'
-        exclude group: 'org.hibernate', module: 'hibernate-entitymanager'
-        exclude group: 'org.hibernate', module: 'hibernate-envers'
-        exclude group: 'com.h2database', module: 'h2'
-        exclude group: 'org.liquibase', module: 'liquibase-commercial'
-        exclude group: 'org.liquibase', module: 'liquibase-core'
-    }
+    implementation("org.liquibase:liquibase-core")
+    implementation("org.hibernate.models:hibernate-models")
+    implementation project(':grails-data-hibernate7-dbmigration-core')
+    testImplementation testFixtures(project(':grails-data-hibernate7-dbmigration-core'))
+    implementation project(':grails-data-hibernate7')
+    implementation project(':grails-data-hibernate7-spring-orm')
+    compileOnly("org.hibernate.orm:hibernate-envers")
+    testCompileOnly("org.hibernate.orm:hibernate-envers")
+
+    compileOnly "org.projectlombok:lombok"
+    annotationProcessor platform(project(':grails-hibernate7-bom'))
+    annotationProcessor 'org.projectlombok:lombok'
+    testCompileOnly "org.projectlombok:lombok"
+    testAnnotationProcessor platform(project(':grails-hibernate7-bom'))
+    testAnnotationProcessor "org.projectlombok:lombok"
 
     implementation(project(':grails-shell-cli')) {
         exclude group: 'org.slf4j', module: 'slf4j-simple'
@@ -69,12 +77,29 @@ dependencies {
     compileOnly 'org.apache.groovy:groovy-sql'
     compileOnly 'org.apache.groovy:groovy-xml'
 
+    compileOnly 'org.springframework:spring-test'
+    compileOnly 'org.springframework:spring-jdbc'
+    compileOnly 'org.springframework:spring-beans'
+    compileOnly 'org.springframework:spring-context'
+    compileOnly 'org.springframework:spring-orm'
+
     testImplementation 'org.springframework.boot:spring-boot-starter-tomcat'
+    testImplementation project(':grails-data-hibernate7-core')
     testImplementation project(':grails-data-hibernate7')
     testImplementation project(':grails-core')
     testImplementation project(':grails-testing-support-datamapping')
     testImplementation project(':grails-testing-support-web')
+
+    testImplementation 'org.testcontainers:testcontainers'
+    testImplementation 'org.testcontainers:testcontainers-postgresql'
+    testImplementation 'org.testcontainers:testcontainers-spock'
     testImplementation 'com.h2database:h2'
+    testImplementation 'org.hsqldb:hsqldb'
+    testImplementation 'org.postgresql:postgresql'
+    testImplementation('org.liquibase:liquibase-test-harness') {
+        exclude group: 'org.liquibase', module: 'liquibase-commercial'
+    }
+    enversRuntime("org.hibernate.orm:hibernate-envers")
 
     // Liquibase uses JUL for logging -> redirect it to SLF4J to reliably capture its output
     testRuntimeOnly 'org.slf4j:jul-to-slf4j'
@@ -82,6 +107,7 @@ dependencies {
 
 tasks.named('test', Test) {
     systemProperty("java.util.logging.config.file", "src/test/resources/logging.properties")
+    classpath += configurations.enversRuntime
 }
 
 tasks.named('jar', Jar) {

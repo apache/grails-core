@@ -16,97 +16,74 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 ////
+[[gormAssociation-oneToMany]]
+== One-to-Many Associations
 
-A one-to-many relationship is when one class, example `Author`, has many instances of another class, example `Book`. With GORM you define such a relationship with the `hasMany` setting:
+A one-to-many association is declared using `hasMany`. It represents a collection of associated domain objects.
+
+=== Bidirectional One-to-Many
+
+When both sides declare the relationship, GORM manages the foreign key on the many side's table:
 
 [source,groovy]
 ----
 class Author {
-    static hasMany = [books: Book]
-
     String name
+    static hasMany = [books: Book]  // <1>
 }
-----
 
-[source,groovy]
-----
 class Book {
     String title
-}
-----
-
-In this case we have a unidirectional one-to-many. GORM will, by default, map this kind of relationship with a join table.
-
-NOTE: The <<ormdsl,ORM DSL>> allows mapping unidirectional relationships using a foreign key association instead
-
-GORM will automatically inject a property of type `java.util.Set` into the domain class based on the `hasMany` setting. This can be used to iterate over the collection:
-
-[source,groovy]
-----
-def a = Author.get(1)
-
-for (book in a.books) {
-    println book.title
-}
-----
-
-NOTE: The default fetch strategy used by GORM is "lazy", which means that the collection will be lazily initialized on first access. This can lead to the N+1 if you are not careful.
-
-If you need "eager" fetching you can use the <<ormdsl,ORM DSL>> or specify eager fetching as part of a <<querying,query>>
-
-The default cascading behaviour is to cascade saves and updates, but not deletes unless a `belongsTo` is also specified:
-
-[source,groovy]
-----
-class Author {
-    static hasMany = [books: Book]
-
-    String name
-}
-----
-
-[source,groovy]
-----
-class Book {
+    Author author                   // <2>
     static belongsTo = [author: Author]
+}
+----
+<1> `Author` owns a collection of `Book` objects.
+<2> `Book` declares the back-reference. `belongsTo` also enables cascade delete.
+
+With `belongsTo`, deleting an `Author` will cascade-delete all of its `books`.
+
+=== Unidirectional One-to-Many
+
+Without `belongsTo` on the other side, GORM uses a join table to maintain the relationship:
+
+[source,groovy]
+----
+class Author {
+    String name
+    static hasMany = [books: Book]
+}
+
+class Book {
     String title
+    // no belongsTo or author property
 }
 ----
 
-If you have two properties of the same type on the many side of a one-to-many you have to use `mappedBy` to specify which the collection is mapped:
+The join table name defaults to `author_books` and can be customised — see xref:ormdsl-tableAndColumnNames[Table and Column Names].
+
+=== Sorting
+
+You can define a default sort order for the collection:
 
 [source,groovy]
 ----
-class Airport {
-    static hasMany = [flights: Flight]
-    static mappedBy = [flights: "departureAirport"]
+class Author {
+    static hasMany = [books: Book]
+    static mapping = {
+        books sort: 'title', order: 'asc'
+    }
 }
 ----
+
+=== Adding and Removing Items
 
 [source,groovy]
 ----
-class Flight {
-    Airport departureAirport
-    Airport destinationAirport
-}
-----
+def author = Author.get(1)
+author.addToBooks(new Book(title: 'Groovy in Action'))
+author.save()
 
-This is also true if you have multiple collections that map to different properties on the many side:
-
-[source,groovy]
+author.removeFromBooks(author.books.first())
+author.save()
 ----
-class Airport {
-    static hasMany = [outboundFlights: Flight, inboundFlights: Flight]
-    static mappedBy = [outboundFlights: "departureAirport",
-                       inboundFlights: "destinationAirport"]
-}
-----
-
-[source,groovy]
-----
-class Flight {
-    Airport departureAirport
-    Airport destinationAirport
-}
-----
-

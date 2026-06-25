@@ -18,6 +18,8 @@
  */
 package org.grails.orm.hibernate.exceptions;
 
+import java.io.Serial;
+
 import org.grails.datastore.mapping.core.DatastoreException;
 
 /**
@@ -27,6 +29,7 @@ import org.grails.datastore.mapping.core.DatastoreException;
  */
 public abstract class GrailsHibernateException extends DatastoreException {
 
+    @Serial
     private static final long serialVersionUID = -6019220941440364736L;
 
     public GrailsHibernateException(String message) {

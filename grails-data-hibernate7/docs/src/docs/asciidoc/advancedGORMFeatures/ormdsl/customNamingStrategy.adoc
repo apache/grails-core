@@ -16,66 +16,55 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 ////
+[[ormdsl-customNamingStrategy]]
+== Custom Naming Strategy
 
-By default GORM uses Hibernate's `ImprovedNamingStrategy` to convert domain class Class and field names to SQL table and column names by converting from camel-cased Strings to ones that use underscores as word separators. You can customize these on a per-class basis in the `mapping` closure but if there's a consistent pattern you can specify a different `NamingStrategy` class to use.
+By default GORM uses Hibernate's snake_case physical naming strategy (`PhysicalNamingStrategySnakeCaseImpl`), which converts camelCase class and property names to `snake_case` table and column names (e.g., `BookAuthor` → `book_author`, `firstName` → `first_name`).
 
-Configure the class name to be used in `grails-app/conf/application.groovy` in the `hibernate` section, e.g.
+=== Configuring a Custom Strategy
 
-[source,java]
+You can replace this with any Hibernate `PhysicalNamingStrategy` implementation via application configuration:
+
+[source,yaml]
 ----
-dataSource {
-    pooled = true
-    dbCreate = "create-drop"
-    ...
-}
-
-hibernate {
-    cache.use_second_level_cache = true
-    ...
-    naming_strategy = com.myco.myproj.CustomNamingStrategy
-}
+hibernate:
+    physicalNamingStrategy: com.example.MyCustomNamingStrategy
 ----
 
-You can also specify the name of the class and it will be loaded for you:
+Or set it per datasource:
 
-[source,java]
+[source,yaml]
 ----
-hibernate {
-    ...
-    naming_strategy = 'com.myco.myproj.CustomNamingStrategy'
-}
-----
-
-A third option is to provide an instance if there is some configuration required beyond calling the default constructor:
-
-[source,java]
-----
-hibernate {
-    ...
-    def strategy = new com.myco.myproj.CustomNamingStrategy()
-    // configure as needed
-    naming_strategy = strategy
-}
+dataSources:
+    reporting:
+        hibernate:
+            physicalNamingStrategy: com.example.LegacyNamingStrategy
 ----
 
-You can use an existing class or write your own, for example one that prefixes table names and column names:
+=== Implementing a Custom Strategy
 
-[source,java]
+Implement Hibernate's `org.hibernate.boot.model.naming.PhysicalNamingStrategy` interface:
+
+[source,groovy]
 ----
-package com.myco.myproj
+import org.hibernate.boot.model.naming.Identifier
+import org.hibernate.boot.model.naming.PhysicalNamingStrategy
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 
-import org.hibernate.cfg.ImprovedNamingStrategy
-import org.hibernate.util.StringHelper
+class UpperCaseNamingStrategy implements PhysicalNamingStrategy {
 
-class CustomNamingStrategy extends ImprovedNamingStrategy {
-
-    String classToTableName(String className) {
-        "table_" + StringHelper.unqualify(className)
+    @Override
+    Identifier toPhysicalTableName(Identifier name, JdbcEnvironment jdbcEnvironment) {
+        return Identifier.toIdentifier(name.text.toUpperCase())
     }
 
-    String propertyToColumnName(String propertyName) {
-        "col_" + StringHelper.unqualify(propertyName)
+    @Override
+    Identifier toPhysicalColumnName(Identifier name, JdbcEnvironment jdbcEnvironment) {
+        return Identifier.toIdentifier(name.text.toUpperCase())
     }
+
+    // ... other required method overrides ...
 }
 ----
 
+TIP: Individual column or table names set explicitly in the `mapping` block always take precedence over what the naming strategy would produce.

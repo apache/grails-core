@@ -31,7 +31,14 @@ public interface ConnectionSource<T, S extends ConnectionSourceSettings> extends
     /**
      * The name of the default connection source
      */
-    String DEFAULT = "DEFAULT";
+    String DEFAULT = "default";
+
+    /**
+     * The name of the default connection source used in previous versions of GORM
+     * @deprecated Use {@link #DEFAULT} instead
+     */
+    @Deprecated
+    String OLD_DEFAULT = "DEFAULT";
 
     /**
      * Constance for a mapping to all connection sources

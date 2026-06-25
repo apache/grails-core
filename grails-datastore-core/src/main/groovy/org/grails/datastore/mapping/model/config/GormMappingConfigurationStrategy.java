@@ -484,7 +484,7 @@ public class GormMappingConfigurationStrategy implements MappingConfigurationStr
             association = propertyFactory.createOneToMany(entity, context, property);
         }
         else if (Collection.class.isAssignableFrom(relatedClassPropertyType) ||
-                 Map.class.isAssignableFrom(relatedClassPropertyType)) {
+                Map.class.isAssignableFrom(relatedClassPropertyType)) {
             // many-to-many
             association = propertyFactory.createManyToMany(entity, context, property);
             ((ManyToMany) association).setInversePropertyName(relatedClassPropertyName);
@@ -526,7 +526,7 @@ public class GormMappingConfigurationStrategy implements MappingConfigurationStr
     }
 
     private String findManyRelatedClassPropertyName(String propertyName,
-            ClassPropertyFetcher cpf, Map classRelationships, Class<?> classType) {
+                                                    ClassPropertyFetcher cpf, Map classRelationships, Class<?> classType) {
         Map mappedBy = getMapStaticProperty(cpf, MAPPED_BY);
         // retrieve the relationship property
         for (Object o : classRelationships.keySet()) {
@@ -549,10 +549,10 @@ public class GormMappingConfigurationStrategy implements MappingConfigurationStr
      * @return <code>true</code> if the relationship is a many-to-many
      */
     private boolean isRelationshipToMany(PersistentEntity entity,
-            Class<?> relatedClassType, Map relatedClassRelationships) {
+                                         Class<?> relatedClassType, Map relatedClassRelationships) {
         return relatedClassRelationships != null &&
-               !relatedClassRelationships.isEmpty() &&
-               !relatedClassType.equals(entity.getJavaClass());
+                !relatedClassRelationships.isEmpty() &&
+                !relatedClassType.equals(entity.getJavaClass());
     }
 
     /**
@@ -787,7 +787,7 @@ public class GormMappingConfigurationStrategy implements MappingConfigurationStr
     }
 
     private boolean isNotMappedToDifferentProperty(PropertyDescriptor property,
-            String relatedClassPropertyName, Map mappedBy) {
+                                                   String relatedClassPropertyName, Map mappedBy) {
 
         String mappedByForRelation = (String) mappedBy.get(relatedClassPropertyName);
         if (mappedByForRelation == null) return true;
@@ -922,7 +922,7 @@ public class GormMappingConfigurationStrategy implements MappingConfigurationStr
             }
             if (!entity.isExternal() && isAbstract(entity)) {
                 throw new IllegalMappingException("Mapped identifier [" + names[0] + "] for class [" +
-                      javaClass.getName() + "] is not a valid property");
+                        javaClass.getName() + "] is not a valid property");
             }
             return null;
         }

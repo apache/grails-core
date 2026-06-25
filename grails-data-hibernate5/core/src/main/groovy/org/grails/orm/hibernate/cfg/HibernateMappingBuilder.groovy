@@ -588,7 +588,12 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
                     if (joinArgs.catalog) join.catalog = joinArgs.remove('catalog')
                     if (joinArgs.name) join.name = joinArgs.remove('name')
                     if (joinArgs.key) {
-                        join.key = new ColumnConfig(name: joinArgs.remove('key'))
+                        def keyVal = joinArgs.remove('key')
+                        if (keyVal instanceof Collection || keyVal.getClass().isArray()) {
+                            join.keys(keyVal as List)
+                        } else {
+                            join.key(keyVal.toString())
+                        }
                     }
                     if (joinArgs.column) {
                         ColumnConfig cc = new ColumnConfig(name: joinArgs.column)

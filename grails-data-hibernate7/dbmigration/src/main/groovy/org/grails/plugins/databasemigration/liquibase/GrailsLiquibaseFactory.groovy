@@ -19,9 +19,11 @@
 
 package org.grails.plugins.databasemigration.liquibase
 
+import groovy.transform.CompileStatic
 import org.springframework.beans.factory.config.AbstractFactoryBean
 import org.springframework.context.ApplicationContext
 
+@CompileStatic
 class GrailsLiquibaseFactory extends AbstractFactoryBean<GrailsLiquibase> {
 
     private final ApplicationContext applicationContext

@@ -50,7 +50,11 @@ class GroovyChangeLogParser extends AbstractChangeLogParser {
         def inputStream = null
         def changeLogText = null
         try {
-            inputStream = resourceAccessor.openStreams(null, physicalChangeLogLocation).first()
+            def inputStreamList = resourceAccessor.openStreams(null, physicalChangeLogLocation)
+            if (inputStreamList == null || inputStreamList.isEmpty()) {
+                throw new ChangeLogParseException("Could not find physicalChangeLogLocation: ${physicalChangeLogLocation}")
+            }
+            inputStream = inputStreamList.first()
             changeLogText = inputStream?.text
         } finally {
             IOUtils.closeQuietly(inputStream)
@@ -89,7 +93,7 @@ class GroovyChangeLogParser extends AbstractChangeLogParser {
     }
 
     @CompileDynamic
-    protected void setChangeLogProperties(Map changeLogProperties, ChangeLogParameters changeLogParameters) {
+    protected static void setChangeLogProperties(Map changeLogProperties, ChangeLogParameters changeLogParameters) {
         changeLogProperties.each { name, value ->
             String contexts = null
             String labels = null

@@ -36,7 +36,6 @@
 /grails.iws
 /idea-target
 /lib
-/local.properties
 /out
 /src
 /test/grails-app
@@ -66,3 +65,8 @@ tmp/
 !etc/bin
 etc/bin/results
 .vscode/
+/scratch/
+/local.properties
+node_modules/
+local-tasks.gradle
+local-init.gradle
