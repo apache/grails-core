@@ -150,10 +150,10 @@ class HibernateSimpleIdentity extends Property implements HibernatePropertyIdent
     }
 
     Properties getProperties() {
-        new Properties().tap {
-            getParams()?.each { k, v ->
-                setProperty(k.toString(), v.toString())
-            }
+        Properties properties = new Properties()
+        getParams()?.each { k, v ->
+            properties.setProperty(k.toString(), v.toString())
         }
+        return properties
     }
 }

@@ -257,7 +257,7 @@ ext {
         combinedDependencies += customBomDependencies
     } else if (project.name == 'grails-hibernate5-micronaut-bom') {
         customBomVersions = [
-                'groovy.version'             : '5.0.6',
+                'groovy.version'             : bomDependencyVersions['groovy.version'],
                 'liquibase-hibernate.version': '4.27.0',
                 'liquibase.version'          : '4.27.0',
                 'hibernate.version'          : '5.6.15.Final',
@@ -317,7 +317,7 @@ ext {
     } else if (project.name == 'grails-hibernate7-micronaut-bom') {
         customBomVersions = [
                 'cache-ri-impl.version'         : '1.1.1',
-                'groovy.version'                : '5.0.6',
+                'groovy.version'                : bomDependencyVersions['groovy.version'],
                 'hibernate-models.version'      : '1.1.1',
                 'hibernate-tools.version'       : '7.3.8.Final',
                 'hibernate.version'             : '7.4.1.Final',
