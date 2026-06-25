@@ -37,7 +37,7 @@ import grails.persistence.support.PersistenceContextInterceptor;
 import grails.validation.DeferredBindingActions;
 import org.grails.core.lifecycle.ShutdownOperations;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
-import org.grails.orm.hibernate.AbstractHibernateDatastore;
+import org.grails.orm.hibernate.HibernateDatastore;
 import org.grails.orm.hibernate.support.HibernateRuntimeUtils;
 import org.grails.orm.hibernate.support.hibernate7.SessionFactoryUtils;
 import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
@@ -46,10 +46,11 @@ import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
  * @author Graeme Rocher
  * @since 0.4
  */
-public class HibernatePersistenceContextInterceptor implements PersistenceContextInterceptor, SessionFactoryAwarePersistenceContextInterceptor {
+public class HibernatePersistenceContextInterceptor
+        implements PersistenceContextInterceptor, SessionFactoryAwarePersistenceContextInterceptor {
 
     private static final Logger LOG = LoggerFactory.getLogger(HibernatePersistenceContextInterceptor.class);
-    private AbstractHibernateDatastore hibernateDatastore;
+    private HibernateDatastore hibernateDatastore;
 
     private static ThreadLocal<Map<String, Boolean>> participate = ThreadLocal.withInitial(HashMap::new);
 
@@ -97,47 +98,48 @@ public class HibernatePersistenceContextInterceptor implements PersistenceContex
         try {
             disconnected.clear();
             SessionFactoryUtils.closeSession(holder.getSession());
-        }
-        catch (RuntimeException ex) {
+        } catch (RuntimeException ex) {
             LOG.error("Unexpected exception on closing Hibernate Session", ex);
         }
     }
 
     public void disconnect() {
-        if (getSessionFactory() == null) return;
-        try {
-            disconnected.add(
-                    getSession(false).disconnect()
-            );
-
-        }
-        catch (Exception e) {
-            // no session ignore
-        }
+        throw new UnsupportedOperationException("disconnect is not supported by Hibernate 7");
     }
 
     public void reconnect() {
-        if (getSessionFactory() == null) return;
-        Session session = getSession();
-        if (!session.isConnected() && !disconnected.isEmpty()) {
-            try {
-                Connection connection = disconnected.peekLast();
-                getSession().reconnect(connection);
-            } catch (IllegalStateException e) {
-                // cannot reconnect on different exception. ignore
-                LOG.debug(e.getMessage(), e);
-            }
-        }
+        throw new UnsupportedOperationException("reconnect is not supported by Hibernate 7");
     }
 
     public void flush() {
         if (getSessionFactory() == null) return;
         if (!getParticipate()) {
+            Session session = getSession();
             if (!transactionRequired) {
-                getSession().flush();
-            }
-            else if (TransactionSynchronizationManager.isSynchronizationActive()) {
-                getSession().flush();
+                session.flush();
+            } else if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                session.flush();
+            } else {
+                // No active Spring transaction synchronization. This happens when the interceptor
+                // opened the session itself - for example around a non-transactional BootStrap.
+                // Flush and commit the owned session's pending changes in a short transaction so
+                // they are persisted rather than discarded when the session is closed in destroy().
+                org.hibernate.Transaction transaction = session.getTransaction();
+                boolean ownTransaction = transaction == null || !transaction.isActive();
+                if (ownTransaction) {
+                    transaction = session.beginTransaction();
+                }
+                try {
+                    session.flush();
+                    if (ownTransaction) {
+                        transaction.commit();
+                    }
+                } catch (RuntimeException ex) {
+                    if (ownTransaction && transaction.isActive()) {
+                        transaction.rollback();
+                    }
+                    throw ex;
+                }
             }
         }
     }
@@ -161,8 +163,7 @@ public class HibernatePersistenceContextInterceptor implements PersistenceContex
         if (getSessionFactory() == null) return false;
         try {
             return getSession(false).isOpen();
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             return false;
         }
     }
@@ -181,8 +182,7 @@ public class HibernatePersistenceContextInterceptor implements PersistenceContex
         if (TransactionSynchronizationManager.hasResource(sf)) {
             // Do not modify the Session: just set the participate flag.
             setParticipate(true);
-        }
-        else {
+        } else {
             setParticipate(false);
             LOG.debug("Opening single Hibernate session in HibernatePersistenceContextInterceptor");
             Session session = getSession();
@@ -211,7 +211,8 @@ public class HibernatePersistenceContextInterceptor implements PersistenceContex
             return hibernateDatastore.openSession();
         }
 
-        throw new IllegalStateException("No Hibernate Session bound to thread, and configuration does not allow creation of non-transactional one here");
+        throw new IllegalStateException(
+                "No Hibernate Session bound to thread, and configuration does not allow creation of non-transactional one here");
     }
 
     /**
@@ -221,7 +222,7 @@ public class HibernatePersistenceContextInterceptor implements PersistenceContex
         return hibernateDatastore.getSessionFactory();
     }
 
-    public void setHibernateDatastore(AbstractHibernateDatastore hibernateDatastore) {
+    public void setHibernateDatastore(HibernateDatastore hibernateDatastore) {
         this.hibernateDatastore = hibernateDatastore;
     }
 

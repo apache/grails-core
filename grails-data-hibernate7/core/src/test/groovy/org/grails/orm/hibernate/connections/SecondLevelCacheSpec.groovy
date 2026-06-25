@@ -38,7 +38,7 @@ class SecondLevelCacheSpec extends Specification {
                 'dataSource.logSql': 'true',
                 'hibernate.flush.mode': 'COMMIT',
                 'hibernate.cache.queries': 'true',
-                'hibernate.cache': ['use_second_level_cache': true, 'region.factory_class': 'org.hibernate.cache.ehcache.EhCacheRegionFactory'],
+                'hibernate.cache': ['use_second_level_cache': true, 'region.factory_class': 'org.hibernate.cache.jcache.internal.JCacheRegionFactory'],
                 'hibernate.hbm2ddl.auto': 'create',
         ]
 

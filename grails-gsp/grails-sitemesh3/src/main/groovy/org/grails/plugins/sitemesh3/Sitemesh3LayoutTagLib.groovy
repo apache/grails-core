@@ -125,7 +125,7 @@ class Sitemesh3LayoutTagLib implements TagLibrary {
      * re-parsing HTML. Invoked automatically by the GSP compile-time
      * preprocessor; not intended for direct use in templates.
      */
-    Closure captureHead = { Map attrs, body ->
+    def captureHead(Map attrs, Closure body) {
         Object content = captureTagContent(out, 'head', attrs, body)
         if (content != null) {
             Sitemesh3CapturedPage page = findCapturedPage(request)
@@ -144,7 +144,7 @@ class Sitemesh3LayoutTagLib implements TagLibrary {
      * @attr onload optional — body onload handler, stored as {@code body.onload}
      * @attr class optional — body CSS class, stored as {@code body.class}
      */
-    Closure captureBody = { Map attrs, body ->
+    def captureBody(Map attrs, Closure body) {
         Object content = captureTagContent(out, 'body', attrs, body)
         if (content != null) {
             Sitemesh3CapturedPage page = findCapturedPage(request)
@@ -165,7 +165,7 @@ class Sitemesh3LayoutTagLib implements TagLibrary {
      * Invoked automatically by the GSP compile-time preprocessor; not
      * intended for direct use in templates.
      */
-    Closure captureTitle = { Map attrs, body ->
+    def captureTitle(Map attrs, Closure body) {
         Sitemesh3CapturedPage page = findCapturedPage(request)
         Object content = captureTagContent(out, 'title', attrs, body)
         if (page != null && content != null) {
@@ -180,7 +180,7 @@ class Sitemesh3LayoutTagLib implements TagLibrary {
      * {@code <g:layoutTitle>} can render it verbatim. Invoked automatically
      * by the GSP compile-time preprocessor; not intended for direct use.
      */
-    Closure wrapTitleTag = { Map attrs, body ->
+    def wrapTitleTag(Map attrs, Closure body) {
         if (body != null) {
             Sitemesh3CapturedPage page = findCapturedPage(request)
             if (page != null) {
@@ -203,7 +203,7 @@ class Sitemesh3LayoutTagLib implements TagLibrary {
      * @attr content optional — the {@code content} attribute value to store
      * @attr http-equiv optional — the {@code http-equiv} attribute of the meta tag
      */
-    Closure captureMeta = { Map attrs, body ->
+    def captureMeta(Map attrs, Closure body) {
         captureTagContent(out, 'meta', attrs, body, true)
         Sitemesh3CapturedPage page = findCapturedPage(request)
         Object val = attrs?.content
@@ -234,7 +234,7 @@ class Sitemesh3LayoutTagLib implements TagLibrary {
      *
      * @attr tag REQUIRED the name of the content block (e.g. {@code navbar})
      */
-    Closure captureContent = { Map attrs, body ->
+    def captureContent(Map attrs, Closure body) {
         if (body != null) {
             Sitemesh3CapturedPage page = findCapturedPage(request)
             if (page != null && attrs.tag) {
@@ -251,7 +251,7 @@ class Sitemesh3LayoutTagLib implements TagLibrary {
      * @attr name REQUIRED the parameter name
      * @attr value REQUIRED the parameter value
      */
-    Closure parameter = { Map attrs, body ->
+    def parameter(Map attrs, Closure body) {
         Sitemesh3CapturedPage page = findCapturedPage(request)
         String name = attrs.name?.toString()
         String val = attrs.value?.toString()

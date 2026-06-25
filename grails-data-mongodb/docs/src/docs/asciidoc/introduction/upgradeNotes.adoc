@@ -49,3 +49,22 @@ abstract class BookService {
 
 Please note that with autowire by-type as the default, when multiple beans for same type are found the application with throw Exception. Use the Spring `@Qualifier annotation for https://docs.spring.io/spring-framework/docs/5.3.10/reference/html/core.html#beans-autowired-annotation-qualifiers[Fine-tuning Annotation Based Autowiring with Qualifiers].
 
+==== MongoClient Lifecycle for an Externally-Supplied Client
+
+When you construct a `MongoDatastore` with a `MongoClient` that you created yourself, GORM no longer closes that client when the datastore shuts down. The client is owned by whoever created it, so closing it is now your responsibility.
+
+This only affects you if you previously relied on `MongoDatastore.close()` to also close a client you passed in:
+
+[source,groovy]
+----
+MongoClient mongoClient = MongoClients.create("mongodb://localhost/mydb")
+MongoDatastore datastore = new MongoDatastore(mongoClient, Person)
+
+// ...
+
+datastore.close()    // no longer closes mongoClient
+mongoClient.close()  // close the client you created
+----
+
+No change is required when GORM creates the client itself — for example `new MongoDatastore(Person)`, or configuration-driven setups where GORM builds the client from `grails.mongodb.*` settings — because GORM continues to own and close those clients. A `MongoClient` registered as a Spring bean likewise continues to be closed by the `ApplicationContext`.
+

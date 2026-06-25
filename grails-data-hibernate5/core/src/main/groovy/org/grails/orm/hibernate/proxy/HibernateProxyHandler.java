@@ -20,16 +20,23 @@ package org.grails.orm.hibernate.proxy;
 
 import java.io.Serializable;
 
+import groovy.lang.GroovyObject;
+import groovy.lang.MetaClass;
+import org.codehaus.groovy.runtime.HandleMetaClass;
+
 import org.hibernate.Hibernate;
 import org.hibernate.collection.spi.PersistentCollection;
 import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.proxy.HibernateProxyHelper;
 
+import org.grails.datastore.gorm.proxy.ProxyInstanceMetaClass;
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.engine.AssociationQueryExecutor;
+import org.grails.datastore.mapping.proxy.EntityProxy;
 import org.grails.datastore.mapping.proxy.ProxyFactory;
 import org.grails.datastore.mapping.proxy.ProxyHandler;
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
+import org.grails.orm.hibernate.GrailsHibernateTemplate;
 
 /**
  * Implementation of the ProxyHandler interface for Hibernate using org.hibernate.Hibernate
@@ -46,6 +53,22 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
      */
     @Override
     public boolean isInitialized(Object o) {
+        if (o == null) {
+            return false;
+        }
+        if (o instanceof EntityProxy) {
+            return ((EntityProxy) o).isInitialized();
+        }
+        if (o instanceof HibernateProxy) {
+            return !((HibernateProxy) o).getHibernateLazyInitializer().isUninitialized();
+        }
+        if (o instanceof PersistentCollection) {
+            return ((PersistentCollection) o).wasInitialized();
+        }
+        ProxyInstanceMetaClass proxyMc = getProxyInstanceMetaClass(o);
+        if (proxyMc != null) {
+            return proxyMc.isProxyInitiated();
+        }
         return Hibernate.isInitialized(o);
     }
 
@@ -72,6 +95,13 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
      */
     @Override
     public Object unwrap(Object object) {
+        if (object instanceof EntityProxy) {
+            return ((EntityProxy) object).getTarget();
+        }
+        ProxyInstanceMetaClass proxyMc = getProxyInstanceMetaClass(object);
+        if (proxyMc != null) {
+            return proxyMc.getProxyTarget();
+        }
         if (object instanceof PersistentCollection) {
             initialize(object);
             return object;
@@ -85,13 +115,17 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
      */
     @Override
     public Serializable getIdentifier(Object o) {
+        if (o instanceof EntityProxy) {
+            return ((EntityProxy) o).getProxyKey();
+        }
+        ProxyInstanceMetaClass proxyMc = getProxyInstanceMetaClass(o);
+        if (proxyMc != null) {
+            return proxyMc.getKey();
+        }
         if (o instanceof HibernateProxy) {
             return ((HibernateProxy) o).getHibernateLazyInitializer().getIdentifier();
         }
         else {
-            //TODO seems we can get the id here if its has normal getId
-            // PersistentEntity persistentEntity = GormEnhancer.findStaticApi(o.getClass()).getGormPersistentEntity();
-            // return persistentEntity.getMappingContext().getEntityReflector(persistentEntity).getIdentifier(o);
             return null;
         }
     }
@@ -110,7 +144,7 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
      * @see #unwrap(Object)
      * @deprecated use unwrap
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     public Object unwrapIfProxy(Object instance) {
         return unwrap(instance);
     }
@@ -120,7 +154,10 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
      */
     @Override
     public boolean isProxy(Object o) {
-        return (o instanceof HibernateProxy) || (o instanceof PersistentCollection);
+        if (getProxyInstanceMetaClass(o) != null) {
+            return true;
+        }
+        return (o instanceof EntityProxy) || (o instanceof HibernateProxy) || (o instanceof PersistentCollection);
     }
 
     /**
@@ -129,12 +166,43 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
      */
     @Override
     public void initialize(Object o) {
-        Hibernate.initialize(o);
+        if (o instanceof EntityProxy) {
+            ((EntityProxy) o).initialize();
+        }
+        else {
+            ProxyInstanceMetaClass proxyMc = getProxyInstanceMetaClass(o);
+            if (proxyMc != null) {
+                proxyMc.getProxyTarget();
+            }
+            else {
+                Hibernate.initialize(o);
+            }
+        }
+    }
+
+    private ProxyInstanceMetaClass getProxyInstanceMetaClass(Object o) {
+        if (o instanceof GroovyObject) {
+            MetaClass mc = ((GroovyObject) o).getMetaClass();
+            if (mc instanceof HandleMetaClass) {
+                mc = ((HandleMetaClass) mc).getAdaptee();
+            }
+            if (mc instanceof ProxyInstanceMetaClass) {
+                return (ProxyInstanceMetaClass) mc;
+            }
+        }
+        return null;
     }
 
     @Override
     public <T> T createProxy(Session session, Class<T> type, Serializable key) {
-        throw new UnsupportedOperationException("createProxy not supported in HibernateProxyHandler");
+        org.hibernate.Session hibSession = null;
+        if (session.getNativeInterface() instanceof GrailsHibernateTemplate grailsHibernateTemplate) {
+            hibSession = grailsHibernateTemplate.getSession();
+        }
+        if (hibSession == null) {
+            throw new IllegalStateException("Could not obtain native Hibernate Session from Session#getNativeInterface()");
+        }
+        return hibSession.getReference(type, key);
     }
 
     @Override
@@ -145,7 +213,7 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
     /**
      * @deprecated use unwrap
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     public Object unwrapProxy(Object proxy) {
         return unwrap(proxy);
     }

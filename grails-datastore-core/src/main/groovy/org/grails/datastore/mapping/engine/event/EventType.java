@@ -31,5 +31,7 @@ public enum EventType {
     PostLoad,
     PostUpdate,
     SaveOrUpdate,
-    Validation
+    Validation,
+    Merge,
+    Persist
 }

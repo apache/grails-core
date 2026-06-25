@@ -25,8 +25,6 @@ plugins {
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
-    id 'org.apache.grails.gradle.grails-code-style'
-    id 'org.apache.grails.gradle.grails-jacoco'
 }
 
 version = projectVersion
@@ -47,8 +45,14 @@ dependencies {
     api 'org.springframework:spring-beans'
     api 'org.springframework:spring-context'
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
-    api "org.hibernate:hibernate-core-jakarta", {
+    api 'org.hibernate.orm:hibernate-core', {
         exclude group: 'commons-logging', module: 'commons-logging'
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
+}
+
+// Javadoc references Spring Framework internals not on our classpath - suppress errors for vendored code
+tasks.withType(Javadoc).configureEach {
+    options.addStringOption('Xdoclint:none', '-quiet')
+    failOnError = false
 }

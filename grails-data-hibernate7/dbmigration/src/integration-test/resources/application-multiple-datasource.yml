@@ -30,7 +30,8 @@ dataSource:
     username: sa
     password:
     dbCreate: none
-    url: jdbc:h2:file:./multipleFirstDb
+    url: jdbc:h2:file:./multipleMainDb
+hibernate:
     logSql: true
     formatSql: true
 dataSources:

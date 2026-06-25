@@ -39,7 +39,6 @@ ext {
 }
 
 dependencies {
-    // TODO: Clarify and clean up dependencies
     implementation platform(project(':grails-hibernate7-bom'))
 
     api 'org.slf4j:slf4j-api'
@@ -48,8 +47,10 @@ dependencies {
     api project(':grails-datamapping-core')
     api project(':grails-data-hibernate7-spring-orm')
     api 'org.springframework:spring-orm'
+    compileOnly 'org.springframework:spring-webmvc'
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
-    api 'org.hibernate:hibernate-core-jakarta', {
+    implementation "net.bytebuddy:byte-buddy"
+    api 'org.hibernate.orm:hibernate-core', {
         exclude group:'commons-logging', module:'commons-logging'
         exclude group:'com.h2database', module:'h2'
         exclude group:'commons-collections', module:'commons-collections'
@@ -58,36 +59,81 @@ dependencies {
         exclude group:'org.slf4j', module:'slf4j-log4j12'
         exclude group:'xml-apis', module:'xml-apis'
     }
+    api "org.hibernate.models:hibernate-models"
     api 'org.hibernate.validator:hibernate-validator', {
         exclude group:'commons-logging', module:'commons-logging'
         exclude group:'commons-collections', module:'commons-collections'
         exclude group:'org.slf4j', module:'slf4j-api'
     }
+    api 'jakarta.validation:jakarta.validation-api'
+
+    api 'io.smallrye:jandex'
+
+    compileOnly 'org.jspecify:jspecify'
+    // checker-qual is required on the compile classpath (not runtime) so JDK 25's javac can
+    // resolve checker-framework annotations (e.g. @UnknownKeyFor) carried in the bytecode of
+    // dependencies such as Hibernate/byte-buddy. JDK 21 tolerates them missing; JDK 25 does not.
+    compileOnly 'org.checkerframework:checker-qual'
+    compileOnly 'org.hibernate.orm:hibernate-core'
+    compileOnly 'org.hibernate.orm:hibernate-jcache', {
+        exclude group:'commons-collections', module:'commons-collections'
+        exclude group:'commons-logging', module:'commons-logging'
+        exclude group:'com.h2database', module:'h2'
+        exclude group:'net.sf.ehcache', module:'ehcache'
+        exclude group:'net.sf.ehcache', module:'ehcache-core'
+
+        exclude group:'org.slf4j', module:'jcl-over-slf4j'
+        exclude group:'org.slf4j', module:'slf4j-api'
+        exclude group:'org.slf4j', module:'slf4j-log4j12'
+        exclude group:'xml-apis', module:'xml-apis'
+    }
+
+    testImplementation 'org.testcontainers:testcontainers'
+    testImplementation 'org.postgresql:postgresql'
+    testImplementation 'org.testcontainers:testcontainers-postgresql'
+    testImplementation 'com.mysql:mysql-connector-j'
+    testImplementation 'org.testcontainers:testcontainers-mysql'
+    testImplementation 'org.mariadb.jdbc:mariadb-java-client'
+    testImplementation 'org.testcontainers:testcontainers-mariadb'
+    testImplementation 'com.oracle.database.jdbc:ojdbc11'
+    testImplementation 'org.testcontainers:testcontainers-oracle-free'
+    testImplementation 'org.testcontainers:testcontainers-spock'
+    testImplementation 'org.jsr107.ri:cache-ri-impl'
+
+    testImplementation 'org.objenesis:objenesis'
+
 
     testImplementation 'com.h2database:h2'
-    testImplementation 'org.junit.platform:junit-platform-suite', {
-        // api: SelectClasses, Suite
-    }
+    testImplementation 'org.junit.platform:junit-platform-suite'
+
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.apache.groovy:groovy-sql'
     testImplementation 'org.apache.groovy:groovy-json'
-    testImplementation 'org.apache.tomcat:tomcat-jdbc'
+    testImplementation 'org.hibernate.orm:hibernate-jcache'
     testImplementation 'org.spockframework:spock-core'
+    testImplementation "org.hibernate.orm:hibernate-core"
+
+    // groovy proxy fixes bytebuddy to be a bit smarter when it comes to groovy metaClass
     testImplementation 'org.yakworks:hibernate-groovy-proxy', {
-        // groovy proxy fixes bytebuddy to be a bit smarter when it comes to groovy metaClass
         exclude group: 'org.codehaus.groovy', module: 'groovy'
+        exclude group: 'org.hibernate', module: 'hibernate-core'
+        exclude group: 'org.hibernate.orm', module: 'hibernate-core'
     }
 
-    testRuntimeOnly 'org.hibernate:hibernate-ehcache', {
-        // exclude javax variant of hibernate-core 5.6
-        exclude group: 'org.hibernate', module: 'hibernate-core'
-    }
-    testRuntimeOnly "org.jboss.spec.javax.transaction:jboss-transaction-api_1.3_spec:$jbossTransactionApiVersion", {
-        // required for hibernate-ehcache to work with javax variant of hibernate-core excluded
-    }
+    testImplementation 'org.apache.tomcat:tomcat-jdbc'
+    testImplementation 'org.spockframework:spock-core'
+
     testRuntimeOnly 'org.slf4j:slf4j-simple'
     testRuntimeOnly 'org.slf4j:jcl-over-slf4j'
     testRuntimeOnly 'org.springframework:spring-aop'
+    testRuntimeOnly 'org.mockito:mockito-inline'
+
+}
+
+sourceSets {
+    test {
+        groovy.srcDirs = ['src/test/groovy']
+    }
 }
 
 apply {

@@ -18,7 +18,6 @@
  */
 package org.grails.orm.hibernate;
 
-import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -26,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.hibernate.boot.Metadata;
+import org.hibernate.boot.spi.BootstrapContext;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.event.service.spi.EventListenerGroup;
 import org.hibernate.event.service.spi.EventListenerRegistry;
@@ -35,16 +35,7 @@ import org.hibernate.service.spi.SessionFactoryServiceRegistry;
 
 public class EventListenerIntegrator implements Integrator {
 
-    protected HibernateEventListeners hibernateEventListeners;
-    protected Map<String, Object> eventListeners;
-
-    public EventListenerIntegrator(HibernateEventListeners hibernateEventListeners, Map<String, Object> eventListeners) {
-        this.hibernateEventListeners = hibernateEventListeners;
-        this.eventListeners = eventListeners;
-    }
-
-    @SuppressWarnings("unchecked")
-    protected static final List<EventType<? extends Serializable>> TYPES = Arrays.asList(
+    protected static final List<EventType<?>> TYPES = Arrays.asList(
             EventType.AUTO_FLUSH,
             EventType.MERGE,
             EventType.PERSIST,
@@ -59,9 +50,6 @@ public class EventListenerIntegrator implements Integrator {
             EventType.LOCK,
             EventType.REFRESH,
             EventType.REPLICATE,
-            EventType.SAVE_UPDATE,
-            EventType.SAVE,
-            EventType.UPDATE,
             EventType.PRE_LOAD,
             EventType.PRE_UPDATE,
             EventType.PRE_DELETE,
@@ -79,12 +67,26 @@ public class EventListenerIntegrator implements Integrator {
             EventType.POST_COLLECTION_RECREATE,
             EventType.POST_COLLECTION_REMOVE,
             EventType.POST_COLLECTION_UPDATE);
+    protected HibernateEventListeners hibernateEventListeners;
+    protected Map<String, Object> eventListeners;
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    public EventListenerIntegrator(
+            HibernateEventListeners hibernateEventListeners, Map<String, Object> eventListeners) {
+        this.hibernateEventListeners = hibernateEventListeners;
+        this.eventListeners = eventListeners;
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes", "PMD.DataflowAnomalyAnalysis"})
     @Override
-    public void integrate(Metadata metadata, SessionFactoryImplementor sessionFactory, SessionFactoryServiceRegistry serviceRegistry) {
+    public void integrate(
+            Metadata metadata,
+            BootstrapContext bootstrapContext,
+            SessionFactoryImplementor sfi) {
 
-        EventListenerRegistry listenerRegistry = serviceRegistry.getService(EventListenerRegistry.class);
+        EventListenerRegistry listenerRegistry = sfi.getServiceRegistry().getService(EventListenerRegistry.class);
+        if (listenerRegistry == null) {
+            throw new IllegalStateException("EventListenerRegistry not available from ServiceRegistry");
+        }
 
         if (eventListeners != null) {
             for (Map.Entry<String, Object> entry : eventListeners.entrySet()) {
@@ -92,8 +94,7 @@ public class EventListenerIntegrator implements Integrator {
                 Object listenerObject = entry.getValue();
                 if (listenerObject instanceof Collection) {
                     appendListeners(listenerRegistry, type, (Collection) listenerObject);
-                }
-                else if (listenerObject != null) {
+                } else if (listenerObject != null) {
                     appendListeners(listenerRegistry, type, Collections.singleton(listenerObject));
                 }
             }
@@ -105,22 +106,22 @@ public class EventListenerIntegrator implements Integrator {
                 appendListeners(listenerRegistry, type, listenerMap);
             }
         }
-
     }
 
-    protected <T> void appendListeners(EventListenerRegistry listenerRegistry,
-                                       EventType<T> eventType, Collection<T> listeners) {
+    @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
+    protected <T> void appendListeners(
+            EventListenerRegistry listenerRegistry, EventType<T> eventType, Collection<T> listeners) {
 
         EventListenerGroup<T> group = listenerRegistry.getEventListenerGroup(eventType);
         for (T listener : listeners) {
             if (listener != null) {
                 if (shouldOverrideListeners(eventType, listener)) {
-                    // since ClosureEventTriggeringInterceptor extends DefaultSaveOrUpdateEventListener we want to override instead of append the listener here
+                    // since ClosureEventTriggeringInterceptor extends DefaultSaveOrUpdateEventListener we
+                    // want to override instead of append the listener here
                     // to avoid there being 2 implementations which would impact performance too
-                    group.clear();
+                    group.clearListeners();
                     group.appendListener(listener);
-                }
-                else {
+                } else {
                     group.appendListener(listener);
                 }
             }
@@ -128,27 +129,33 @@ public class EventListenerIntegrator implements Integrator {
     }
 
     private <T> boolean shouldOverrideListeners(EventType<T> eventType, Object listener) {
-        return (listener instanceof org.hibernate.event.internal.DefaultSaveOrUpdateEventListener) &&
-                eventType.equals(EventType.SAVE_UPDATE);
+        var isMergeListener = listener instanceof org.hibernate.event.internal.DefaultMergeEventListener;
+        var isMergeEvent = eventType.equals(EventType.MERGE);
+        var isPersistEventListener = listener instanceof org.hibernate.event.internal.DefaultPersistEventListener;
+        var isPersistEvent = eventType.equals(EventType.PERSIST);
+        return isMergeListener && isMergeEvent || isPersistEventListener && isPersistEvent;
     }
 
     @SuppressWarnings("unchecked")
-    protected <T> void appendListeners(final EventListenerRegistry listenerRegistry,
-                                       final EventType<T> eventType, final Map<String, Object> listeners) {
+    protected <T> void appendListeners(
+            final EventListenerRegistry listenerRegistry,
+            final EventType<T> eventType,
+            final Map<String, Object> listeners) {
 
         Object listener = listeners.get(eventType.eventName());
         if (listener != null) {
             if (shouldOverrideListeners(eventType, listener)) {
-                // since ClosureEventTriggeringInterceptor extends DefaultSaveOrUpdateEventListener we want to override instead of append the listener here
+                // since ClosureEventTriggeringInterceptor extends DefaultSaveOrUpdateEventListener we want
+                // to override instead of append the listener here
                 // to avoid there being 2 implementations which would impact performance too
                 listenerRegistry.setListeners(eventType, (T) listener);
-            }
-            else {
+            } else {
                 listenerRegistry.appendListeners(eventType, (T) listener);
             }
         }
     }
 
+    @Override
     public void disintegrate(SessionFactoryImplementor sessionFactory, SessionFactoryServiceRegistry serviceRegistry) {
         // nothing to do
     }

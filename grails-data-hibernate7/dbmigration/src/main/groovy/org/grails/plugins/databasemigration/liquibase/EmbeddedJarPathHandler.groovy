@@ -45,7 +45,7 @@ class EmbeddedJarPathHandler extends ZipPathHandler {
         PRIORITY_NOT_APPLICABLE
     }
 
-    private String parseJarPath(String root) {
+    private static String parseJarPath(String root) {
         root.substring(9, root.lastIndexOf('!'))
     }
 

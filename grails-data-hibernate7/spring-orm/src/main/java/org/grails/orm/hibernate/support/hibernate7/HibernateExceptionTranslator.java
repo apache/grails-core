@@ -91,7 +91,7 @@ public class HibernateExceptionTranslator implements PersistenceExceptionTransla
     protected DataAccessException convertHibernateAccessException(HibernateException ex) {
         if (this.jdbcExceptionTranslator != null && ex instanceof JDBCException jdbcEx) {
             DataAccessException dae = this.jdbcExceptionTranslator.translate(
-                "Hibernate operation: " + jdbcEx.getMessage(), jdbcEx.getSQL(), jdbcEx.getSQLException());
+                    "Hibernate operation: " + jdbcEx.getMessage(), jdbcEx.getSQL(), jdbcEx.getSQLException());
             if (dae != null) {
                 return dae;
             }

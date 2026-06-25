@@ -58,7 +58,7 @@ class Tooth {
     ToothDisease toothDisease
     static mapping = {
         table name: 'AK_TOOTH'
-        id generator: 'sequence', params: [sequence: 'SEQ_AK_TOOTH']
+        id generator: 'sequence', params: [sequence_name: 'SEQ_AK_TOOTH']
         toothDisease {
             column name: 'FK_AK_TOOTH_ID'
             column name: 'FK_AK_TOOTH_NR_VERSION'
@@ -72,7 +72,7 @@ class ToothDisease implements Serializable {
     Integer nrVersion
     static mapping = {
         table name: 'AK_TOOTH_DISEASE'
-        idColumn column: 'ID', generator: 'sequence', params: [sequence: 'SEQ_AK_TOOTH_DISEASE']
+        idColumn column: 'ID', generator: 'sequence', params: [sequence_name: 'SEQ_AK_TOOTH_DISEASE']
         nrVersion column: 'NR_VERSION'
         id composite: ['idColumn', 'nrVersion']
     }

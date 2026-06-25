@@ -147,7 +147,7 @@ class JpaQueryBuilderSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
         then: "The query is valid"
         queryInfo.query != null
-        queryInfo.query == 'DELETE org.apache.grails.data.testing.tck.domains.Person person WHERE (person.firstName=:p1)'
+        queryInfo.query == 'DELETE FROM org.apache.grails.data.testing.tck.domains.Person person WHERE (person.firstName=:p1)'
         queryInfo.parameters == ["Bob"]
     }
 
@@ -212,7 +212,7 @@ class JpaQueryBuilderSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
         then: "The query is valid"
         queryInfo.query != null
-        queryInfo.query == 'DELETE org.apache.grails.data.testing.tck.domains.Person person'
+        queryInfo.query == 'DELETE FROM org.apache.grails.data.testing.tck.domains.Person person'
         queryInfo.parameters == []
     }
 

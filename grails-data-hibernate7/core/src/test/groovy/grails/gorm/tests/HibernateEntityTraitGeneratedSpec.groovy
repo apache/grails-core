@@ -22,7 +22,6 @@ import grails.gorm.tests.entities.Club
 import grails.gorm.transactions.Rollback
 import groovy.transform.Generated
 import org.grails.orm.hibernate.HibernateDatastore
-
 import spock.lang.AutoCleanup
 import spock.lang.Shared
 import spock.lang.Specification

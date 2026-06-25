@@ -66,8 +66,6 @@ Then register the class with the Hibernate `sessionFactory` by adding relevant e
 
 [source,xml]
 ----
-<!DOCTYPE hibernate-configuration SYSTEM
-  "https://hibernate.sourceforge.net/hibernate-configuration-3.0.dtd">
 <hibernate-configuration>
     <session-factory>
         <mapping package="com.books" />

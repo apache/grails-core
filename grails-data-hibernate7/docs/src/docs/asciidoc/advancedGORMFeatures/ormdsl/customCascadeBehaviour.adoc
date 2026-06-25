@@ -16,43 +16,53 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 ////
+[[ormdsl-customCascadeBehaviour]]
+== Custom Cascade Behaviour
 
-As described in the section on <<cascades,cascading updates>>, the primary mechanism to control the way updates and deletes cascade from one association to another is the static <<ref-domain-classes-belongsTo,belongsTo>> property.
+Hibernate cascades control which persistence operations (save, update, delete, etc.) are automatically propagated from a parent entity to its associated children.
 
-However, the ORM DSL gives you complete access to Hibernate's https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html#associations[transitive persistence] capabilities using the `cascade` attribute.
+=== Default Cascade Behaviour
 
-Valid settings for the cascade attribute include:
+By default GORM applies `save-update` cascading on associations — when you save or update an entity, changes to its associated objects are also persisted. Deletions are **not** cascaded by default.
 
-* `merge` - merges the state of a detached association
-* `save-update` - cascades only saves and updates to an association
-* `delete` - cascades only deletes to an association
-* `lock` - useful if a pessimistic lock should be cascaded to its associations
-* `refresh` - cascades refreshes to an association
-* `evict` - cascades evictions (equivalent to `discard()` in GORM) to associations if set
-* `all` - cascade _all_ operations to associations
-* `all-delete-orphan` - Applies only to one-to-many associations and indicates that when a child is removed from an association then it should be automatically deleted. Children are also deleted when the parent is.
+=== Configuring Cascade
 
+Use the `cascade` option in the `mapping` block to override the default:
 
-To specify the cascade attribute simply define one or more (comma-separated) of the aforementioned settings as its value:
-
-[source,java]
+[source,groovy]
 ----
-class Person {
-
-    String firstName
-
-    static hasMany = [addresses: Address]
-
+class Author {
+    String name
+    static hasMany = [books: Book]
     static mapping = {
-        addresses cascade: "all-delete-orphan"
+        books cascade: 'all'        // <1>
     }
 }
 ----
+<1> `all` cascades all operations including delete to `books`.
 
-[source,java]
+[format="csv", options="header"]
+|===
+value,description
+`all`,Propagates all operations (save/update/delete/merge/refresh)
+`save-update`,Propagates save and update — default
+`delete`,Propagates delete only
+`all-delete-orphan`,Like `all` but also deletes child rows not present in the collection
+`none`,No cascade
+|===
+
+=== Cascade Delete Example
+
+[source,groovy]
 ----
-class Address {
-    String street
-    String postCode
+class Author {
+    String name
+    static hasMany = [books: Book]
+    static mapping = {
+        books cascade: 'all-delete-orphan'  // <1>
+    }
 }
 ----
+<1> When you remove a `Book` from `author.books` and call `author.save()`, the removed `Book` row is also deleted from the database.
+
+TIP: Use `all-delete-orphan` when the child entity has no meaning outside the parent (composition). Use `save-update` (default) when the child may belong to multiple parents (aggregation).

@@ -28,6 +28,7 @@ import groovy.transform.CompileStatic
  */
 @AnnotationCollector
 @CompileStatic(extensions = [
+        'org.grails.compiler.CriteriaTypeCheckingExtension',
         'org.grails.compiler.DomainMappingTypeCheckingExtension',
         'org.grails.compiler.DynamicFinderTypeCheckingExtension',
         'org.grails.compiler.HttpServletRequestTypeCheckingExtension',
