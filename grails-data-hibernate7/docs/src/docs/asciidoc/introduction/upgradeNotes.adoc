@@ -17,34 +17,60 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-==== Dependency Upgrades
+[[upgrade-notes]]
+== Upgrade Notes
 
-GORM 7.1 supports Apache Groovy 3 and Java 14 Hibernate 5.5.x and Spring 5.3.x.
+=== Grails 8 / Hibernate 7
 
-Each of these underlying components may have changes that require altering your application. These changes are beyond the scope of this documentation.
+==== Query API — Injection Safety
 
-==== Default Autowire By Type inside GORM Data Services
+The Grails 8 / Hibernate 7 query API keeps the Hibernate 5 calling conventions while making the idiomatic Groovy query form injection-safe by default. There is no breaking change here: the methods that accepted a plain `String` on Hibernate 5 still do.
 
-A Grails Service (or a bean) inside GORM DataService will default to autowire by-type, For example:
+===== Single-argument HQL overloads
 
-_./grails-app/services/example/BookService.groovy_
-```
-package example
+The single-argument overloads continue to accept a plain `String`, exactly as on Hibernate 5:
 
-import grails.gorm.services.Service
+* `find(CharSequence)`
+* `findAll(CharSequence)`
+* `executeQuery(CharSequence)`
+* `executeUpdate(CharSequence)`
 
-@Service(Book)
-abstract class BookService {
+When a Groovy `GString` is passed instead, GORM extracts every `${value}` interpolation and binds it as a named parameter rather than interpolating it into the query text, so the idiomatic interpolated form is injection-safe by binding:
 
-    TestService testRepo
+[source,groovy]
+----
+// Plain String — executed as written (no params map required)
+Book.findAll("from Book where active = true")
 
-    abstract Book save(String title, String author)
+// GString — ${params.title} is bound as :p0, never interpolated (injection-safe)
+Book.findAll("from Book where title = ${params.title}")
 
-    void doSomething() {
-        assert testRepo != null
-    }
-}
-```
+// Named parameters with a plain String
+Book.findAll("from Book where title = :title", [title: params.title])
 
-Please note that with autowire by-type as the default, when multiple beans for same type are found the application with throw Exception. Use the Spring `@Qualifier annotation for https://docs.spring.io/spring-framework/docs/5.3.10/reference/html/core.html#beans-autowired-annotation-qualifiers[Fine-tuning Annotation Based Autowiring with Qualifiers].
+// Positional parameters
+Book.executeQuery("from Book where title like ?1", [params.title + '%'])
+----
 
+As in any ORM, manually concatenating untrusted input into a plain `String` (for example `"... where title = '" + userInput + "'"`) remains an injection risk and should be avoided in favour of the GString or parameterized forms above.
+
+===== `findWithSql` / `findAllWithSql` renamed
+
+`findWithSql` and `findAllWithSql` are deprecated. Use `findWithNativeSql` and `findAllWithNativeSql` instead. The old names remain as delegating aliases for backwards compatibility.
+
+[source,groovy]
+----
+// Before (deprecated)
+Book.findAllWithSql("select * from book where ...")
+
+// After
+Book.findAllWithNativeSql("select * from book where ...")
+----
+
+==== Schema-per-Tenant — Schema Names Are Now Quoted
+
+`DefaultSchemaHandler` now quotes schema names using the JDBC identifier quote character (`connection.metaData.identifierQuoteString`) before executing `SET SCHEMA` and `CREATE SCHEMA` DDL statements. This prevents SQL injection via tenant identifiers.
+
+Embedded quote characters are stripped from the schema name before quoting. If the JDBC driver does not support identifier quoting (returns `" "` or empty), the name is used unquoted as before — no behaviour change for such drivers.
+
+No application changes are required unless your tenant resolver intentionally produces schema names containing the database's identifier quote character (typically `"` or `` ` ``), in which case those characters will be stripped.

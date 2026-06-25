@@ -91,13 +91,15 @@ class DataServiceMultiTenantMultiDataSourceSpec extends Specification {
     void "schema is created on analytics datasource"() {
         expect: 'The analytics datasource connects to the analyticsDB H2 database'
         Metric.analytics.withNewSession { Session s ->
-            assert s.connection().metaData.getURL() == 'jdbc:h2:mem:analyticsDB'
+            String url = s.doReturningWork { it.metaData.getURL() }
+            assert url == 'jdbc:h2:mem:analyticsDB'
             return true
         }
 
         and: 'The default datasource connects to a different database'
         datastore.withNewSession { Session s ->
-            assert s.connection().metaData.getURL() == 'jdbc:h2:mem:grailsDB'
+            String url = s.doReturningWork { it.metaData.getURL() }
+            assert url == 'jdbc:h2:mem:grailsDB'
             return true
         }
     }
@@ -268,7 +270,7 @@ abstract class MetricService implements MetricDataService {
      * executeUpdate routes to the analytics datasource.
      */
     void deleteAll() {
-        Metric.executeUpdate('delete from Metric where 1=1')
+        Metric.executeUpdate('delete from Metric where 1=1', [:])
     }
 
     /**

@@ -19,8 +19,20 @@
 
 package org.grails.datastore.mapping.model;
 
+import java.util.Optional;
+import java.util.SortedSet;
+
 import org.grails.datastore.mapping.config.Property;
+import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.Basic;
+import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.model.types.ManyToMany;
+import org.grails.datastore.mapping.model.types.ManyToOne;
+import org.grails.datastore.mapping.model.types.OneToMany;
+import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.reflect.EntityReflector;
+
+import static java.util.Optional.ofNullable;
 
 /**
  * @author Graeme Rocher
@@ -47,12 +59,18 @@ public interface PersistentProperty<T extends Property> {
     Class<?> getType();
 
     /**
-    * Specifies the mapping between this property and an external form
-    * such as a column, key/value pair etc.
-    *
-    * @return The PropertyMapping instance
-    */
+     * Specifies the mapping between this property and an external form
+     * such as a column, key/value pair, etc.
+     *
+     * @return The PropertyMapping instance
+     */
     PropertyMapping<T> getMapping();
+
+    default T getMappedForm() {
+        return Optional.of(getMapping())
+                .map(PropertyMapping::getMappedForm)
+                .orElse(null);
+    }
 
     /**
      * Obtains the owner of this persistent property
@@ -82,4 +100,63 @@ public interface PersistentProperty<T extends Property> {
      * @return The writer for this property
      */
     EntityReflector.PropertyWriter getWriter();
+
+    default boolean isUnidirectionalOneToMany() {
+        return ((this instanceof OneToMany) && !((Association<?>) this).isBidirectional());
+    }
+
+    default boolean isLazyAble() {
+        return this instanceof ToOne && !(this instanceof Embedded) ||
+                !(this instanceof Association) && !this.equals(this.getOwner().getIdentity());
+    }
+
+    default boolean isBidirectionalManyToOne() {
+        if (this instanceof ManyToOne manyToOne) {
+            return manyToOne.isBidirectional();
+        }
+        return false;
+    }
+
+    default boolean supportsJoinColumnMapping() {
+        return this instanceof ManyToMany || isUnidirectionalOneToMany() || this instanceof Basic;
+    }
+
+    /**
+     * Establish whether a collection property is sorted
+     *
+     * @return true if sorted
+     */
+    default boolean isSorted() {
+        return SortedSet.class.isAssignableFrom(this.getType());
+    }
+
+    /**
+     * @return Whether this property is part of a composite identifier
+     */
+    default boolean isCompositeIdProperty() {
+        PersistentProperty[] compositeId = getOwner().getCompositeIdentity();
+        if (compositeId != null) {
+            for (PersistentProperty p : compositeId) {
+                if (p.getName().equals(getName())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @return Whether this property is the identity
+     */
+    default boolean isIdentityProperty() {
+        return getOwner().isIdentityName(getName());
+    }
+
+    default String getOwnerClassName() {
+        return ofNullable(getOwner())
+                .map(PersistentEntity::getJavaClass)
+                .map(Class::getName)
+                .orElseThrow(() -> new IllegalMappingException("Property [" + getName() + "] has no owner entity defined"));
+    }
+
 }

@@ -22,7 +22,7 @@ import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
-@Issue('https://github.com/grails/grails-data-hibernate5/issues/151')
+@Issue('https://github.com/grails/gorm-hibernate5/issues/151')
 class TablePerConcreteClassImportedSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
     void setupSpec() {
         manager.registerDomainClasses(Vehicle, Spaceship)
@@ -30,7 +30,8 @@ class TablePerConcreteClassImportedSpec extends GrailsDataTckSpec<GrailsDataHibe
 
     void "test that subclasses are added to the imports on the metamodel"() {
         expect:
-        manager.sessionFactory.getMetamodel().getImportedClassName('Vehicle')
-        manager.sessionFactory.getMetamodel().getImportedClassName('Spaceship')
+        manager.sessionFactory.getMetamodel().entities
+                .collect { it.javaType }
+                .containsAll([Vehicle, Spaceship])
     }
 }

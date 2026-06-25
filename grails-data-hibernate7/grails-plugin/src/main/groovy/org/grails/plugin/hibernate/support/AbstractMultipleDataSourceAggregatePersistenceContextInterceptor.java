@@ -26,7 +26,7 @@ import org.hibernate.SessionFactory;
 import grails.persistence.support.PersistenceContextInterceptor;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.core.connections.ConnectionSources;
-import org.grails.orm.hibernate.AbstractHibernateDatastore;
+import org.grails.orm.hibernate.HibernateDatastore;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
 
 /**
@@ -35,17 +35,22 @@ import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
  * @author Graeme Rocher
  * @since 2.0.7
  */
-public abstract class AbstractMultipleDataSourceAggregatePersistenceContextInterceptor implements PersistenceContextInterceptor {
+public abstract class AbstractMultipleDataSourceAggregatePersistenceContextInterceptor
+        implements PersistenceContextInterceptor {
 
     protected final List<PersistenceContextInterceptor> interceptors = new ArrayList<>();
-    protected final AbstractHibernateDatastore hibernateDatastore;
+    protected final HibernateDatastore hibernateDatastore;
 
-    public AbstractMultipleDataSourceAggregatePersistenceContextInterceptor(AbstractHibernateDatastore hibernateDatastore) {
+    public AbstractMultipleDataSourceAggregatePersistenceContextInterceptor(HibernateDatastore hibernateDatastore) {
         this.hibernateDatastore = hibernateDatastore;
-        ConnectionSources<SessionFactory, HibernateConnectionSourceSettings> connectionSources = hibernateDatastore.getConnectionSources();
-        Iterable<ConnectionSource<SessionFactory, HibernateConnectionSourceSettings>> allConnectionSources = connectionSources.getAllConnectionSources();
-        for (ConnectionSource<SessionFactory, HibernateConnectionSourceSettings> connectionSource : allConnectionSources) {
-            SessionFactoryAwarePersistenceContextInterceptor interceptor = createPersistenceContextInterceptor(connectionSource.getName());
+        ConnectionSources<SessionFactory, HibernateConnectionSourceSettings> connectionSources =
+                hibernateDatastore.getConnectionSources();
+        Iterable<ConnectionSource<SessionFactory, HibernateConnectionSourceSettings>> allConnectionSources =
+                connectionSources.getAllConnectionSources();
+        for (ConnectionSource<SessionFactory, HibernateConnectionSourceSettings> connectionSource :
+                allConnectionSources) {
+            SessionFactoryAwarePersistenceContextInterceptor interceptor =
+                    createPersistenceContextInterceptor(connectionSource.getName());
             this.interceptors.add(interceptor);
         }
     }
@@ -114,6 +119,6 @@ public abstract class AbstractMultipleDataSourceAggregatePersistenceContextInter
         }
     }
 
-    protected abstract SessionFactoryAwarePersistenceContextInterceptor createPersistenceContextInterceptor(String dataSourceName);
-
+    protected abstract SessionFactoryAwarePersistenceContextInterceptor createPersistenceContextInterceptor(
+            String dataSourceName);
 }

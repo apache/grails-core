@@ -16,77 +16,99 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 ////
+[[quickStartGuide-basicCRUD]]
+== Basic CRUD
 
-Try performing some basic CRUD (Create/Read/Update/Delete) operations.
+Every GORM domain class automatically gets Create, Read, Update, and Delete (CRUD) operations.
 
-
-==== Create
-
-
-To create a domain class use Map constructor to set its properties and call the `save()` method:
+=== Create
 
 [source,groovy]
 ----
-def p = new Person(name: "Fred", age: 40, lastVisit: new Date())
-p.save()
+// Constructor with named parameters
+def book = new Book(title: 'Groovy in Action', author: 'Dierk König')
+book.save()
+
+// Or using the create() factory method
+def book = Book.create(title: 'Grails in Action', author: 'Glen Smith')
 ----
 
-The link:../api/org/grails/datastore/gorm/GormEntity.html#save()[save()] method will persist your class to the database using the underlying Hibernate ORM layer.
-
-The `save()` method is defined by the link:../api/org/grails/datastore/gorm/GormEntity.html[GormEntity] trait.
-
-==== Read
-
-GORM transparently adds an implicit `id` property to your domain class which you can use for retrieval:
+=== Read
 
 [source,groovy]
 ----
-def p = Person.get(1)
-assert 1 == p.id
+// By primary key
+def book = Book.get(1)
+
+// Returns null if not found
+def book = Book.get(999)    // null
+
+// Get multiple by IDs
+def books = Book.getAll(1, 2, 3)
+
+// The returned list preserves the supplied id order
+def books = Book.getAll(3, 1, 2)
+
+// Load a proxy (no immediate SELECT)
+def book = Book.load(1)
+
+// List all
+def books = Book.list()
+
+// With pagination
+def books = Book.list(max: 10, offset: 0, sort: 'title', order: 'asc')
+
+// Dynamic finders
+def book  = Book.findByTitle('Groovy in Action')
+def books = Book.findAllByAuthor('Dierk König')
+def count = Book.countByAuthor('Dierk König')
+
+// Property-map queries; null values match null properties
+def unreleased = Book.findWhere(releaseDate: null)
+def matching = Book.findAllWhere(author: 'Dierk König', releaseDate: null)
 ----
 
-This uses the static link:../api/org/grails/datastore/gorm/GormEntity.html#get(java.io.Serializable)[get(id)] method that expects a database identifier to read the `Person` object back from the database.
-
-You can also load an object in a read-only state by using the `read(id)` method:
+=== Update
 
 [source,groovy]
 ----
-def p = Person.read(1)
+def book = Book.get(1)
+book.title = 'Updated Title'
+book.save()
 ----
 
-In this case the underlying Hibernate engine will not do any dirty checking and the object will not be persisted. Note that if you explicitly call the `save()` method then the object is placed back into a read-write state.
-
-In addition, you can also load a proxy for an instance by using the `load(id)` method:
-
-[source,java]
-----
-def p = Person.load(1)
-----
-
-This incurs no database access until a method other than getId() is called. Hibernate then initializes the proxied instance, or
-throws an exception if no record is found for the specified id.
-
-
-==== Update
-
-
-To update an instance, change some properties and then call `save()` again:
+=== Delete
 
 [source,groovy]
 ----
-def p = Person.get(1)
-p.name = "Bob"
-p.save()
+def book = Book.get(1)
+book.delete()
 ----
 
+=== Validation
 
-==== Delete
-
-
-To delete an instance use the link:../api/org/grails/datastore/gorm/GormEntity.html#delete()[delete()] method:
+`save()` runs constraints before persisting and returns `null` if validation fails:
 
 [source,groovy]
 ----
-def p = Person.get(1)
-p.delete()
+def book = new Book(title: '')          // blank title violates constraint
+if (!book.save()) {
+    println book.errors.allErrors       // print validation errors
+}
+
+// Throw on failure instead
+book.save(failOnError: true)            // throws ValidationException
+----
+
+=== Transactions
+
+GORM operations run inside Hibernate sessions. Use `withTransaction` for explicit transaction control:
+
+[source,groovy]
+----
+Book.withTransaction {
+    def book = new Book(title: 'Tx Book', author: 'Author')
+    book.save()
+    // any exception here rolls back the transaction
+}
 ----

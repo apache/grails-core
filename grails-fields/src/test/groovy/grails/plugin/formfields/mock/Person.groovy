@@ -58,7 +58,7 @@ class Person {
 
 	static constraints = {
         salutation nullable: true
-		name blank: false
+		name blank: false, nullable: false
 		dateOfBirth nullable: true
 		address nullable: true
 		excludedProperty nullable: true
@@ -68,6 +68,9 @@ class Person {
 		anotherPicture nullable: true
 		password password: true
 		biography nullable: true, widget: 'textarea'
+		// declared last so it keeps sorting after the explicitly-ordered properties (preserving
+		// field-enumeration order); explicit now that properties are nullable by default
+		gender nullable: false
 	}
 
 	static scaffold = [exclude: ['excludedProperty']]

@@ -301,7 +301,11 @@ public abstract class AbstractPersistentEntity<T extends Entity> implements Pers
     }
 
     public boolean isIdentityName(String propertyName) {
-        return getIdentity().getName().equals(propertyName);
+        PersistentProperty identity = getIdentity();
+        if (identity != null) {
+            return identity.getName().equals(propertyName);
+        }
+        return GormProperties.IDENTITY.equals(propertyName);
     }
 
     public PersistentEntity getParentEntity() {
@@ -342,7 +346,7 @@ public abstract class AbstractPersistentEntity<T extends Entity> implements Pers
     }
 
     public ClassMapping<T> getMapping() {
-        return new AbstractClassMapping<Entity>(this, context) {
+        return (ClassMapping<T>) new AbstractClassMapping<Entity>(this, context) {
             @Override
             public Entity getMappedForm() {
                 return new Entity();
@@ -375,7 +379,7 @@ public abstract class AbstractPersistentEntity<T extends Entity> implements Pers
         return (this.versionCompatibleType || !propertiesInitialized) && versioned;
     }
 
-    public Class getJavaClass() {
+    public Class<?> getJavaClass() {
         return javaClass;
     }
 

@@ -106,7 +106,7 @@ public class LocalSessionFactoryBuilder extends Configuration {
 
     private static final String PACKAGE_INFO_SUFFIX = ".package-info";
 
-    private static final TypeFilter[] DEFAULT_ENTITY_TYPE_FILTERS = new TypeFilter[]{
+    private static final TypeFilter[] DEFAULT_ENTITY_TYPE_FILTERS = new TypeFilter[] {
         new AnnotationTypeFilter(Entity.class, false),
         new AnnotationTypeFilter(Embeddable.class, false),
         new AnnotationTypeFilter(MappedSuperclass.class, false)};
@@ -116,7 +116,7 @@ public class LocalSessionFactoryBuilder extends Configuration {
     private static final String IGNORE_CLASSFORMAT_PROPERTY_NAME = "spring.classformat.ignore";
 
     private static final boolean shouldIgnoreClassFormatException =
-        SpringProperties.getFlag(IGNORE_CLASSFORMAT_PROPERTY_NAME);
+            SpringProperties.getFlag(IGNORE_CLASSFORMAT_PROPERTY_NAME);
 
     private final ResourcePatternResolver resourcePatternResolver;
 
@@ -149,7 +149,7 @@ public class LocalSessionFactoryBuilder extends Configuration {
      */
     public LocalSessionFactoryBuilder(@Nullable DataSource dataSource, ResourceLoader resourceLoader) {
         this(dataSource, resourceLoader, new MetadataSources(
-            new BootstrapServiceRegistryBuilder().applyClassLoader(resourceLoader.getClassLoader()).build()));
+                new BootstrapServiceRegistryBuilder().applyClassLoader(resourceLoader.getClassLoader()).build()));
     }
 
     /**
@@ -161,7 +161,7 @@ public class LocalSessionFactoryBuilder extends Configuration {
      * @since 4.3
      */
     public LocalSessionFactoryBuilder(
-        @Nullable DataSource dataSource, ResourceLoader resourceLoader, MetadataSources metadataSources) {
+            @Nullable DataSource dataSource, ResourceLoader resourceLoader, MetadataSources metadataSources) {
 
         super(metadataSources);
 
@@ -170,7 +170,7 @@ public class LocalSessionFactoryBuilder extends Configuration {
             getProperties().put(AvailableSettings.DATASOURCE, dataSource);
         }
         getProperties().put(AvailableSettings.CONNECTION_HANDLING,
-            PhysicalConnectionHandlingMode.DELAYED_ACQUISITION_AND_HOLD);
+                PhysicalConnectionHandlingMode.DELAYED_ACQUISITION_AND_HOLD);
 
         getProperties().put(AvailableSettings.CLASSLOADERS, Collections.singleton(resourceLoader.getClassLoader()));
         this.resourcePatternResolver = ResourcePatternUtils.getResourcePatternResolver(resourceLoader);
@@ -194,27 +194,30 @@ public class LocalSessionFactoryBuilder extends Configuration {
             boolean webspherePresent = ClassUtils.isPresent("com.ibm.wsspi.uow.UOWManager", getClass().getClassLoader());
             if (webspherePresent) {
                 getProperties().put(AvailableSettings.JTA_PLATFORM,
-                    "org.hibernate.engine.transaction.jta.platform.internal.WebSphereExtendedJtaPlatform");
-            } else {
+                        "org.hibernate.engine.transaction.jta.platform.internal.WebSphereExtendedJtaPlatform");
+            }
+            else {
                 if (springJtaTm.getTransactionManager() == null) {
                     throw new IllegalArgumentException(
-                        "Can only apply JtaTransactionManager which has a TransactionManager reference set");
+                            "Can only apply JtaTransactionManager which has a TransactionManager reference set");
                 }
                 getProperties().put(AvailableSettings.JTA_PLATFORM,
-                    new ConfigurableJtaPlatform(springJtaTm.getTransactionManager(), springJtaTm.getUserTransaction(),
-                        springJtaTm.getTransactionSynchronizationRegistry()));
+                        new ConfigurableJtaPlatform(springJtaTm.getTransactionManager(), springJtaTm.getUserTransaction(),
+                                springJtaTm.getTransactionSynchronizationRegistry()));
             }
-        } else if (jtaTransactionManager instanceof TransactionManager jtaTm) {
+        }
+        else if (jtaTransactionManager instanceof TransactionManager jtaTm) {
             getProperties().put(AvailableSettings.JTA_PLATFORM,
-                new ConfigurableJtaPlatform(jtaTm, null, null));
-        } else {
+                    new ConfigurableJtaPlatform(jtaTm, null, null));
+        }
+        else {
             throw new IllegalArgumentException(
-                "Unknown transaction manager type: " + jtaTransactionManager.getClass().getName());
+                    "Unknown transaction manager type: " + jtaTransactionManager.getClass().getName());
         }
 
         getProperties().put(AvailableSettings.TRANSACTION_COORDINATOR_STRATEGY, "jta");
         getProperties().put(AvailableSettings.CONNECTION_HANDLING,
-            PhysicalConnectionHandlingMode.DELAYED_ACQUISITION_AND_RELEASE_AFTER_STATEMENT);
+                PhysicalConnectionHandlingMode.DELAYED_ACQUISITION_AND_RELEASE_AFTER_STATEMENT);
 
         return this;
     }
@@ -261,9 +264,10 @@ public class LocalSessionFactoryBuilder extends Configuration {
      * @see AvailableSettings#MULTI_TENANT_IDENTIFIER_RESOLVER
      */
     @Override
-    public void setCurrentTenantIdentifierResolver(CurrentTenantIdentifierResolver currentTenantIdentifierResolver) {
+    public Configuration setCurrentTenantIdentifierResolver(CurrentTenantIdentifierResolver<?> currentTenantIdentifierResolver) {
         getProperties().put(AvailableSettings.MULTI_TENANT_IDENTIFIER_RESOLVER, currentTenantIdentifierResolver);
         super.setCurrentTenantIdentifierResolver(currentTenantIdentifierResolver);
+        return this;
     }
 
     /**
@@ -316,7 +320,7 @@ public class LocalSessionFactoryBuilder extends Configuration {
         try {
             for (String pkg : packagesToScan) {
                 String pattern = ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX +
-                    ClassUtils.convertClassNameToResourcePath(pkg) + RESOURCE_PATTERN;
+                        ClassUtils.convertClassNameToResourcePath(pkg) + RESOURCE_PATTERN;
                 Resource[] resources = this.resourcePatternResolver.getResources(pattern);
                 MetadataReaderFactory readerFactory = new CachingMetadataReaderFactory(this.resourcePatternResolver);
                 for (Resource resource : resources) {
@@ -325,23 +329,29 @@ public class LocalSessionFactoryBuilder extends Configuration {
                         String className = reader.getClassMetadata().getClassName();
                         if (matchesEntityTypeFilter(reader, readerFactory)) {
                             entityClassNames.add(className);
-                        } else if (CONVERTER_TYPE_FILTER.match(reader, readerFactory)) {
+                        }
+                        else if (CONVERTER_TYPE_FILTER.match(reader, readerFactory)) {
                             converterClassNames.add(className);
-                        } else if (className.endsWith(PACKAGE_INFO_SUFFIX)) {
+                        }
+                        else if (className.endsWith(PACKAGE_INFO_SUFFIX)) {
                             packageNames.add(className.substring(0, className.length() - PACKAGE_INFO_SUFFIX.length()));
                         }
-                    } catch (FileNotFoundException ex) {
+                    }
+                    catch (FileNotFoundException ex) {
                         // Ignore non-readable resource
-                    } catch (ClassFormatException ex) {
+                    }
+                    catch (ClassFormatException ex) {
                         if (!shouldIgnoreClassFormatException) {
                             throw new MappingException("Incompatible class format in " + resource, ex);
                         }
-                    } catch (Throwable ex) {
+                    }
+                    catch (Throwable ex) {
                         throw new MappingException("Failed to read candidate component class: " + resource, ex);
                     }
                 }
             }
-        } catch (IOException ex) {
+        }
+        catch (IOException ex) {
             throw new MappingException("Failed to scan classpath for unlisted classes", ex);
         }
         try {
@@ -355,7 +365,8 @@ public class LocalSessionFactoryBuilder extends Configuration {
             for (String packageName : packageNames) {
                 addPackage(packageName);
             }
-        } catch (ClassNotFoundException ex) {
+        }
+        catch (ClassNotFoundException ex) {
             throw new MappingException("Failed to load annotated classes from classpath", ex);
         }
         return this;
@@ -391,8 +402,8 @@ public class LocalSessionFactoryBuilder extends Configuration {
     public SessionFactory buildSessionFactory(AsyncTaskExecutor bootstrapExecutor) {
         Assert.notNull(bootstrapExecutor, "AsyncTaskExecutor must not be null");
         return (SessionFactory) Proxy.newProxyInstance(this.resourcePatternResolver.getClassLoader(),
-            new Class<?>[]{SessionFactoryImplementor.class, InfrastructureProxy.class},
-            new BootstrapSessionFactoryInvocationHandler(bootstrapExecutor));
+                new Class<?>[] {SessionFactoryImplementor.class, InfrastructureProxy.class},
+                new BootstrapSessionFactoryInvocationHandler(bootstrapExecutor));
     }
 
     /**
@@ -406,7 +417,7 @@ public class LocalSessionFactoryBuilder extends Configuration {
 
         public BootstrapSessionFactoryInvocationHandler(AsyncTaskExecutor bootstrapExecutor) {
             this.sessionFactoryFuture = bootstrapExecutor.submit(
-                (Callable<SessionFactory>) LocalSessionFactoryBuilder.this::buildSessionFactory);
+                    (Callable<SessionFactory>) LocalSessionFactoryBuilder.this::buildSessionFactory);
         }
 
         @Override
@@ -424,7 +435,8 @@ public class LocalSessionFactoryBuilder extends Configuration {
                         // Regular delegation to the target SessionFactory,
                         // enforcing its full initialization...
                         yield method.invoke(getSessionFactory(), args);
-                    } catch (InvocationTargetException ex) {
+                    }
+                    catch (InvocationTargetException ex) {
                         throw ex.getTargetException();
                     }
                 }
@@ -434,17 +446,19 @@ public class LocalSessionFactoryBuilder extends Configuration {
         private SessionFactory getSessionFactory() {
             try {
                 return this.sessionFactoryFuture.get();
-            } catch (InterruptedException ex) {
+            }
+            catch (InterruptedException ex) {
                 Thread.currentThread().interrupt();
                 throw new IllegalStateException("Interrupted during initialization of Hibernate SessionFactory", ex);
-            } catch (ExecutionException ex) {
+            }
+            catch (ExecutionException ex) {
                 Throwable cause = ex.getCause();
                 if (cause instanceof HibernateException hibernateException) {
                     // Rethrow a provider configuration exception (possibly with a nested cause) directly
                     throw hibernateException;
                 }
                 throw new IllegalStateException("Failed to asynchronously initialize Hibernate SessionFactory: " +
-                    ex.getMessage(), cause);
+                        ex.getMessage(), cause);
             }
         }
     }

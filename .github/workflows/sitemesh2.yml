@@ -1,0 +1,127 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# SiteMesh 3 is the default GSP layout engine. This separate lane exercises the
+# legacy SiteMesh 2 (grails-layout) path so that regressions affecting apps that
+# still rely on it are caught. Setting SITEMESH2_TESTING_ENABLED=true flips the
+# starter, the uber unit suite and the functional test examples back onto
+# :grails-layout instead of :grails-sitemesh3.
+name: "SiteMesh 2 Compatibility"
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 1' # Weekly, Mondays 06:00 UTC
+  push:
+    branches:
+      - '[0-9]+.[0-9]+.x'
+      - '8.0.x-hibernate7.*'
+    paths:
+      - 'grails-gsp/**'
+      - 'grails-test-suite-uber/**'
+      - 'grails-test-examples/**'
+      - 'grails-dependencies/**'
+      - '.github/workflows/sitemesh2.yml'
+  pull_request:
+    paths:
+      - 'grails-gsp/**'
+      - 'grails-test-suite-uber/**'
+      - 'grails-test-examples/**'
+      - 'grails-dependencies/**'
+      - '.github/workflows/sitemesh2.yml'
+# Queue jobs - cancel in-progress PR runs when new commits pushed, but allow branch builds to complete
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  coreTests:
+    name: "SiteMesh 2 Core Tests (Java ${{ matrix.java }})"
+    if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        java: [ 21 ]
+    runs-on: ubuntu-24.04
+    env:
+      SITEMESH2_TESTING_ENABLED: 'true'
+    steps:
+      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: liberica
+          java-version: ${{ matrix.java }}
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        with:
+          cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
+      - name: "🔍 Setup TestLens"
+        uses: testlens-app/setup-testlens@d96a555133c275a00949d2cc77b70fe9a4242ebf # v1.9.2
+      - name: "🔨 Run Core Tests against SiteMesh 2"
+        # --rerun-tasks forces the tests to execute against the grails-layout
+        # classpath instead of reusing outputs cached from a SiteMesh 3 build.
+        run: >
+          ./gradlew build
+          --continue
+          --rerun-tasks
+          --stacktrace
+          -PonlyCoreTests
+          -PskipCodeStyle
+  functionalTests:
+    name: "SiteMesh 2 Functional Tests (Java ${{ matrix.java }}, indy=${{ matrix.indy }})"
+    if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        java: [ 21 ]
+        indy: [ false ]
+    runs-on: ubuntu-24.04
+    env:
+      SITEMESH2_TESTING_ENABLED: 'true'
+    steps:
+      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: liberica
+          java-version: ${{ matrix.java }}
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        with:
+          cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
+      - name: "🔍 Setup TestLens"
+        uses: testlens-app/setup-testlens@d96a555133c275a00949d2cc77b70fe9a4242ebf # v1.9.2
+      - name: "🏃 Run Functional Tests against SiteMesh 2"
+        # --rerun-tasks forces the tests to execute against the grails-layout
+        # classpath instead of reusing outputs cached from a SiteMesh 3 build.
+        run: >
+          ./gradlew bootJar check
+          --continue
+          --rerun-tasks
+          --stacktrace
+          -PgebAtCheckWaiting
+          -PgrailsIndy=${{ matrix.indy }}
+          -PonlyFunctionalTests
+          -PskipCodeStyle
+          -PskipHibernate5Tests
+          -PskipHibernate7Tests
+          -PskipMongodbTests

@@ -282,7 +282,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param mappingContext The mapping context
      */
     public MongoDatastore(MongoClient mongoClient, PropertyResolver configuration, MongoMappingContext mappingContext, ConfigurableApplicationEventPublisher eventPublisher) {
-        this(createDefaultConnectionSources(mongoClient, configuration, mappingContext), mappingContext, eventPublisher);
+        // The client is supplied by the caller, so GORM must not close it (closeable = false).
+        this(createDefaultConnectionSources(mongoClient, configuration, mappingContext, false), mappingContext, eventPublisher);
     }
 
     /**
@@ -346,7 +347,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param mappingContext The mapping context
      */
     public MongoDatastore(MongoClientSettings.Builder clientOptions, PropertyResolver configuration, MongoMappingContext mappingContext, ConfigurableApplicationEventPublisher eventPublisher) {
-        this(createMongoClient(configuration, clientOptions, mappingContext), configuration, mappingContext, eventPublisher);
+        // GORM builds the client from the supplied options, so it owns it and must close it (closeable = true).
+        this(createDefaultConnectionSources(createMongoClient(configuration, clientOptions, mappingContext), configuration, mappingContext, true), mappingContext, eventPublisher);
     }
 
     /**
@@ -357,7 +359,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param mappingContext The mapping context
      */
     public MongoDatastore(MongoClientSettings.Builder clientOptions, PropertyResolver configuration, MongoMappingContext mappingContext) {
-        this(createMongoClient(configuration, clientOptions, mappingContext), configuration, mappingContext, new DefaultApplicationEventPublisher());
+        // GORM builds the client from the supplied options, so it owns it and must close it (closeable = true).
+        this(createDefaultConnectionSources(createMongoClient(configuration, clientOptions, mappingContext), configuration, mappingContext, true), mappingContext, new DefaultApplicationEventPublisher());
     }
 
     /**
@@ -956,17 +959,21 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
     }
 
     /**
-     * Creates the connection sources for an existing {@link MongoClient}
+     * Creates the connection sources for a {@link MongoClient}.
      *
      * @param mongoClient The {@link MongoClient}
      * @param configuration The configuration
      * @param mappingContext The {@link MongoMappingContext}
+     * @param closeable whether GORM owns the client and should close it on shutdown. Pass
+     *                  {@code false} for an externally-supplied client (its lifecycle is owned by the
+     *                  caller, e.g. a Spring-managed bean) and {@code true} for a client GORM created
+     *                  itself, so it is not leaked.
      * @return The {@link ConnectionSources}
      */
-    protected static ConnectionSources<MongoClient, MongoConnectionSourceSettings> createDefaultConnectionSources(MongoClient mongoClient, PropertyResolver configuration, MongoMappingContext mappingContext) {
+    protected static ConnectionSources<MongoClient, MongoConnectionSourceSettings> createDefaultConnectionSources(MongoClient mongoClient, PropertyResolver configuration, MongoMappingContext mappingContext, boolean closeable) {
         MongoConnectionSourceSettings settings = new MongoConnectionSourceSettings();
         settings.setDatabaseName(mappingContext.getDefaultDatabaseName());
-        ConnectionSource<MongoClient, MongoConnectionSourceSettings> defaultConnectionSource = new DefaultConnectionSource<>(ConnectionSource.DEFAULT, mongoClient, settings);
+        ConnectionSource<MongoClient, MongoConnectionSourceSettings> defaultConnectionSource = new DefaultConnectionSource<>(ConnectionSource.DEFAULT, mongoClient, settings, closeable);
         return new InMemoryConnectionSources<>(defaultConnectionSource, new MongoConnectionSourceFactory(), configuration);
     }
 

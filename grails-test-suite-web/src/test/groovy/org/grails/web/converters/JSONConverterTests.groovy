@@ -228,6 +228,11 @@ class Book {
    Long version
    String title
    String author
+
+   static constraints = {
+       title nullable: false
+       author nullable: false
+   }
 }
 
 class CustomCharSequence implements CharSequence {

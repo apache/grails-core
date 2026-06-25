@@ -22,7 +22,7 @@ To use GORM for Hibernate in Spring Boot, add the necessary dependency to your B
 [source,groovy,subs="attributes"]
 .build.gradle
 ----
-implementation 'org.grails:gorm-hibernate5-spring-boot:{version}'
+implementation 'org.grails:gorm-hibernate7-spring-boot:{version}'
 ----
 
 Then ensure you have configured a https://docs.spring.io/spring-boot/reference/data/sql.html#data.sql.datasource[datasource and Hibernate as per the Spring Boot guide]. For example in the case of MySQL:

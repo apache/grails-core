@@ -18,22 +18,12 @@
  */
 package org.grails.plugins.sitemesh3
 
-import jakarta.servlet.DispatcherType
-import jakarta.servlet.Filter
-import jakarta.servlet.FilterChain
-import jakarta.servlet.ServletRequest
-import jakarta.servlet.ServletResponse
-
-import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.core.env.ConfigurableEnvironment
 import org.springframework.core.env.MapPropertySource
 import org.springframework.core.env.PropertySource
 
-import grails.config.Config
 import grails.core.DefaultGrailsApplication
 import grails.plugins.Plugin
-import grails.util.Environment
-import grails.util.Metadata
 import org.grails.config.PropertySourcesConfig
 import org.grails.plugins.web.taglib.RenderSitemeshTagLib
 import org.grails.web.util.WebUtils
@@ -80,52 +70,18 @@ class Sitemesh3GrailsPlugin extends Plugin {
         { ->
             ConfigurableEnvironment configurableEnvironment = grailsApplication.mainContext.environment as ConfigurableEnvironment
             def propertySources = configurableEnvironment.getPropertySources()
-            String defaultLayout = grailsApplication.getConfig().getProperty('grails.sitemesh.default.layout')
+            // The SiteMesh 3 specific key wins; fall back to the SiteMesh 2
+            // plugin's grails.views.layout.default so existing apps keep
+            // their configured default layout when switching.
+            String defaultLayout = grailsApplication.getConfig().getProperty('grails.sitemesh.default.layout') ?:
+                    grailsApplication.getConfig().getProperty('grails.views.layout.default')
             propertySources.addFirst(getDefaultPropertySource(configurableEnvironment, defaultLayout))
             (grailsApplication as DefaultGrailsApplication).config = new PropertySourcesConfig(propertySources)
 
-            Config config = grailsApplication.getConfig()
-            boolean developmentMode = Metadata.getCurrent().isDevelopmentEnvironmentAvailable()
-            Environment env = Environment.current
-            boolean enableReload = env.isReloadEnabled() ||
-                    config.getProperty('grails.gsp.enable.reload', Boolean, false) ||
-                    (developmentMode && env == Environment.DEVELOPMENT)
-            String resolvedDefaultLayout = defaultLayout
-
-            // Bean names match the @ConditionalOnMissingBean(name = "contentProcessor"/"decoratorSelector")
-            // guards on upstream's SiteMeshViewResolverAutoConfiguration, so
-            // our implementations replace upstream's defaults.
-            contentProcessor(CaptureAwareContentProcessor)
-
-            decoratorSelector(Sitemesh3LayoutFinder, ref('groovyPageLocator')) {
-                gspReloadEnabled = enableReload
-                defaultDecoratorName = resolvedDefaultLayout ?: null
-                layoutCacheExpirationMillis = config.getProperty('grails.sitemesh.layout.cache.interval', Long, 5000L)
-            }
-
-            // Replace the filter registration from
-            // org.sitemesh.autoconfigure.SiteMeshAutoConfiguration with a no-op
-            // filter bean under the same name. SiteMeshAutoConfiguration is
-            // @ConditionalOnMissingBean(name = "sitemesh") so registering this
-            // bean disables the upstream filter-based integration entirely.
-            // Decoration is done by the Spring MVC view resolver chain.
-            sitemesh(FilterRegistrationBean) { bean ->
-                bean.autowire = false
-                filter = new NoopSitemeshFilter()
-                enabled = false
-                dispatcherTypes = EnumSet.of(DispatcherType.REQUEST)
-            }
-        }
-    }
-
-    // This class is never invoked (the FilterRegistrationBean has enabled = false).
-    // It exists solely so we can register a bean named "sitemesh" and satisfy
-    // SiteMeshAutoConfiguration's @ConditionalOnMissingBean(name = "sitemesh")
-    // guard — preventing the upstream filter-based integration from activating.
-    static class NoopSitemeshFilter implements Filter {
-        @Override
-        void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) {
-            chain.doFilter(request, response)
+            // Unwraps the SiteMesh view for "render template:" partials so
+            // they are never decorated with a layout (the SiteMesh 2 plugin
+            // does the same with its GrailsLayoutRenderViewMutator).
+            grailsRenderViewMutator(Sitemesh3RenderViewMutator)
         }
     }
 }

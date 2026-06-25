@@ -54,9 +54,6 @@ dependencies {
     implementation 'org.apache.grails:grails-data-mongodb-gson-templates'
 
     implementation 'org.hibernate:hibernate-core-jakarta'
-    implementation "io.micronaut.rxjava2:micronaut-rxjava2-http-client:$micronautRxjava2Version"
-    // JSON mapper for the micronaut HTTP client used by the GraphQLSpec trait.
-    implementation "io.micronaut.serde:micronaut-serde-jackson:$micronautSerdeJacksonVersion"
 
     console 'org.apache.grails:grails-console'
     profile 'org.apache.grails.profiles:rest-api'
@@ -66,6 +63,8 @@ dependencies {
 
     testImplementation 'org.apache.grails:grails-testing-support-datamapping'
     testImplementation 'org.apache.grails:grails-testing-support-web'
+
+    integrationTestRuntimeOnly 'tools.jackson.core:jackson-databind'
 }
 
 apply {

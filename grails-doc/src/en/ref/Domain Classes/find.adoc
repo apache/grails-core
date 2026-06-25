@@ -78,5 +78,5 @@ Parameters:
 * `query` - An HQL query
 * `positionalParams` - A `List` of parameters for a positional parametrized HQL query
 * `namedParams` - A `Map` of named parameters a HQL query
-* `queryParams` - A `Map` of query parameters. Currently, only `cache` is supported
+* `queryParams` - A `Map` of query parameters such as `cache`, `readOnly`, `fetchSize`, `timeout`, `flushMode`, and `lock`
 * `example` - An instance of the domain class for query by example

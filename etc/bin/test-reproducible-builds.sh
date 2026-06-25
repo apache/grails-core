@@ -28,28 +28,40 @@ cd "${SCRIPT_DIR}/../.."
 rm -rf "${SCRIPT_DIR}/results" || true
 mkdir -p "${SCRIPT_DIR}/results"
 
+if [[ -z "${JDK_25_HOME:-}" ]]; then
+  echo "❌ JDK_25_HOME is not set; the Grails-Micronaut island requires a separate Liberica JDK 25 install."
+  echo "   Install Liberica JDK matching JAVA_VERSION_MICRONAUT in .github/workflows/release.yml,"
+  echo "   then export JDK_25_HOME=/path/to/jdk before running this script."
+  exit 1
+fi
+
+build_all() {
+  # JDK 21 (default) pass across the three composites, Micronaut island skipped.
+  killall -e java || true
+  cd grails-gradle
+  ./gradlew build --rerun-tasks -PskipTests --no-build-cache --no-daemon
+  cd ..
+  ./gradlew build --rerun-tasks -PskipTests --no-build-cache --no-daemon -PskipMicronautProjects
+  cd grails-forge
+  ./gradlew build --rerun-tasks -PskipTests --no-build-cache --no-daemon -PskipMicronautProjects
+  cd ..
+
+  # JDK 25 pass: the Grails-Micronaut island only.
+  killall -e java || true
+  JAVA_HOME="${JDK_25_HOME}" PATH="${JDK_25_HOME}/bin:${PATH}" \
+    ./gradlew :grails-micronaut:build :grails-micronaut-bom:build \
+    --rerun-tasks -PskipTests --no-build-cache --no-daemon
+  killall -e java || true
+}
+
 git clean -xdf --exclude='etc/bin' --exclude='.idea' --exclude='.gradle'
-killall -e java || true
-cd grails-gradle
-./gradlew build --rerun-tasks -PskipTests --no-build-cache
-cd ..
-./gradlew build --rerun-tasks -PskipTests --no-build-cache
-cd grails-forge
-./gradlew build --rerun-tasks -PskipTests --no-build-cache
-cd ..
+build_all
 "${SCRIPT_DIR}/generate-build-artifact-hashes.groovy" > "${SCRIPT_DIR}/results/first.txt"
 mkdir -p "${SCRIPT_DIR}/results/first"
 find . -path ./etc -prune -o -type f -path '*/build/libs/*.jar' -print0 | xargs -0 cp --parents -t "${SCRIPT_DIR}/results/first/"
 
 git clean -xdf --exclude='etc/bin' --exclude='.idea' --exclude='.gradle'
-killall -e java || true
-cd grails-gradle
-./gradlew build --rerun-tasks -PskipTests --no-build-cache
-cd ..
-./gradlew build --rerun-tasks -PskipTests --no-build-cache
-cd grails-forge
-./gradlew build --rerun-tasks -PskipTests --no-build-cache
-cd ..
+build_all
 "${SCRIPT_DIR}/generate-build-artifact-hashes.groovy" > "${SCRIPT_DIR}/results/second.txt"
 mkdir -p "${SCRIPT_DIR}/results/second"
 find . -path ./etc -prune -o -type f -path '*/build/libs/*.jar' -print0 | xargs -0 cp --parents -t "${SCRIPT_DIR}/results/second/"

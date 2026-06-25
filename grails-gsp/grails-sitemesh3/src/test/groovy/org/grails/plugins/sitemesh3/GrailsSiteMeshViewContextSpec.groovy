@@ -88,4 +88,44 @@ class GrailsSiteMeshViewContextSpec extends Specification {
         then:
         1 * view.render(_, request, response)
     }
+
+    void "dispatch renders the layout view with an empty model by default"() {
+        given:
+        View view = Mock(View)
+        viewResolver.resolveViewName('/layouts/custom', Locale.ENGLISH) >> view
+
+        when:
+        newContext().dispatch(request, response, '/layouts/custom')
+
+        then:
+        1 * view.render([:], request, response)
+    }
+
+    void "dispatch renders the layout view with the configured view model"() {
+        given:
+        View view = Mock(View)
+        viewResolver.resolveViewName('/layouts/custom', Locale.ENGLISH) >> view
+        GrailsSiteMeshViewContext context = newContext()
+        context.setViewModel([greeting: 'hello'])
+
+        when:
+        context.dispatch(request, response, '/layouts/custom')
+
+        then:
+        1 * view.render([greeting: 'hello'], request, response)
+    }
+
+    void "a null view model falls back to an empty model"() {
+        given:
+        View view = Mock(View)
+        viewResolver.resolveViewName('/layouts/custom', Locale.ENGLISH) >> view
+        GrailsSiteMeshViewContext context = newContext()
+        context.setViewModel(null)
+
+        when:
+        context.dispatch(request, response, '/layouts/custom')
+
+        then:
+        1 * view.render([:], request, response)
+    }
 }

@@ -55,6 +55,12 @@ abstract class DatabaseMigrationCommandSpec extends Specification {
 
     protected static extractOutput(Object output){
         String out = output.toString()
-        out.getAt(out.indexOf("databaseChangeLog")..-1)?.replaceAll(/\s/,"")
+        int start = out.indexOf("databaseChangeLog")
+        if (start == -1) return ""
+        int end = out.lastIndexOf("}")
+        if (end > start) {
+            return out.substring(start, end + 1).replaceAll(/\s/,"")
+        }
+        out.substring(start).replaceAll(/\s/,"")
     }
 }

@@ -152,6 +152,11 @@ interface Settings {
     String GORM_DEFAULT_CONSTRAINTS = 'grails.gorm.default.constraints'
 
     /**
+     * Whether an unconstrained persistent property is nullable by default
+     */
+    String GORM_DEFAULT_NULLABLE = 'grails.gorm.default.nullable'
+
+    /**
      * Whether to autowire instances
      */
     String GORM_AUTOWIRE_INSTANCES = 'grails.gorm.autowire'

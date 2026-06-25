@@ -56,8 +56,7 @@ class ConfigurableJtaPlatform implements JtaPlatform {
      * @param tsr the JTA 1.1 TransactionSynchronizationRegistry (optional)
      */
     public ConfigurableJtaPlatform(TransactionManager tm, @Nullable UserTransaction ut,
-                                   @Nullable TransactionSynchronizationRegistry tsr) {
-
+            @Nullable TransactionSynchronizationRegistry tsr) {
         Assert.notNull(tm, "TransactionManager reference must not be null");
         this.transactionManager = tm;
         this.userTransaction = (ut != null ? ut : new UserTransactionAdapter(tm));
@@ -83,7 +82,8 @@ class ConfigurableJtaPlatform implements JtaPlatform {
     public boolean canRegisterSynchronization() {
         try {
             return (this.transactionManager.getStatus() == Status.STATUS_ACTIVE);
-        } catch (SystemException ex) {
+        }
+        catch (SystemException ex) {
             throw new TransactionException("Could not determine JTA transaction status", ex);
         }
     }
@@ -92,10 +92,12 @@ class ConfigurableJtaPlatform implements JtaPlatform {
     public void registerSynchronization(Synchronization synchronization) {
         if (this.transactionSynchronizationRegistry != null) {
             this.transactionSynchronizationRegistry.registerInterposedSynchronization(synchronization);
-        } else {
+        }
+        else {
             try {
                 this.transactionManager.getTransaction().registerSynchronization(synchronization);
-            } catch (Exception ex) {
+            }
+            catch (Exception ex) {
                 throw new TransactionException("Could not access JTA Transaction to register synchronization", ex);
             }
         }

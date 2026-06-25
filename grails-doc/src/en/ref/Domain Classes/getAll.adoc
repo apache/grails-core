@@ -48,6 +48,8 @@ def bookList = Book.getAll()
 === Description
 
 
+The returned list preserves the order of the ids supplied by the caller. If an id is `null` or does not exist, the corresponding position in the returned list is `null`.
+
 Parameters:
 
 * `varargs`* - A variable argument list of ids

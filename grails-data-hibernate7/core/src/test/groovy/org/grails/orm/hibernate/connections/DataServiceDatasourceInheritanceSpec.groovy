@@ -66,7 +66,7 @@ class DataServiceDatasourceInheritanceSpec extends Specification {
 
     void setup() {
         Inventory.warehouse.withNewTransaction {
-            Inventory.warehouse.executeUpdate('delete from Inventory')
+            Inventory.warehouse.executeUpdate('delete from Inventory', [:])
         }
     }
 

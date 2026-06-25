@@ -36,7 +36,7 @@ public class HibernateJdbcException extends UncategorizedDataAccessException {
 
     public HibernateJdbcException(JDBCException ex) {
         super("JDBC exception on Hibernate data access: SQLException for SQL [" + ex.getSQL() + "]; SQL state [" +
-            ex.getSQLState() + "]; error code [" + ex.getErrorCode() + "]; " + ex.getMessage(), ex);
+                ex.getSQLState() + "]; error code [" + ex.getErrorCode() + "]; " + ex.getMessage(), ex);
     }
 
     /**

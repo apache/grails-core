@@ -78,8 +78,6 @@ class JsonViewTemplateResolverSpec extends Specification {
         request.getHeader(HttpHeaders.ACCEPT_VERSION) >> "1.1"
         request.getLocale() >> Locale.ENGLISH
         webRequest.getCurrentRequest() >> request
-        webRequest.getRequest() >> request
-        webRequest.getResponse() >> response
         def templateResolver = Mock(TemplateResolver)
         viewResolver.templateResolver = templateResolver
 

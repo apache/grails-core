@@ -30,6 +30,7 @@ import spock.lang.Specification
 /**
  * Created by graemerocher on 17/02/2017.
  */
+//TODO Not able to distinguish correctly a field projection without an alias
 class ExecuteQueryWithinValidatorSpec extends Specification {
 
     @AutoCleanup @Shared HibernateDatastore hibernateDatastore = new HibernateDatastore(Named, NameType)
@@ -41,7 +42,7 @@ class ExecuteQueryWithinValidatorSpec extends Specification {
         when:"a validator executed an HQL query"
         NameType nt = new NameType(nameType: "test").save(flush:true)
         Named.withSession { Session session ->
-            session.save(new Named(nameType: nt))
+            session.persist(new Named(nameType: nt))
         }
 
 
@@ -57,9 +58,9 @@ class Named {
 
     static constraints = {
         nameType (validator: { val, obj, errors ->
-            if (val !=null) {
+            if (val !=null && val.nameType != null) {
                 def parms = [nameType: val.nameType.trim().toLowerCase() ]
-                def rows = NameType.executeQuery("""select nameType from NameType where lower(nameType) = :nameType""", parms)
+                def rows = NameType.executeQuery("""select nameType from NameType where lower(nameType) = :nameType""", parms,[:])
 
                 def found =false
                 if (rows !=null && rows.size() ==1)
