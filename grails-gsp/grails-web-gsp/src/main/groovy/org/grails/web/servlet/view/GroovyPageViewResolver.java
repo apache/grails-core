@@ -256,14 +256,6 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
         return registry;
     }
 
-    /**
-     * Sets the {@link ObservationRegistry} used to instrument GSP view rendering. When left unset it
-     * is resolved from the application context (falling back to {@link ObservationRegistry#NOOP}).
-     */
-    public void setObservationRegistry(ObservationRegistry observationRegistry) {
-        this.observationRegistry = observationRegistry;
-    }
-
     protected View createFallbackView(String viewName) throws Exception {
         if (resolveJspView) {
             if (LOG.isDebugEnabled()) {
