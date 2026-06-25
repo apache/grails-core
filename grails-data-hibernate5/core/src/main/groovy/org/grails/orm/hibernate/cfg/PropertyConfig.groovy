@@ -232,7 +232,11 @@ class PropertyConfig extends Property {
         DataBinder dataBinder = new DataBinder(joinTable)
         dataBinder.bind(new MutablePropertyValues(joinTableDef))
         if (joinTableDef.key) {
-            joinTable.key(joinTableDef.key.toString())
+            if (joinTableDef.key instanceof Collection || joinTableDef.key.getClass().isArray()) {
+                joinTable.keys(joinTableDef.key as List)
+            } else {
+                joinTable.key(joinTableDef.key.toString())
+            }
         }
         if (joinTableDef.column) {
             joinTable.column(joinTableDef.column.toString())
@@ -444,8 +448,7 @@ class PropertyConfig extends Property {
     }
 
     String toString() {
-        // TODO(Grails 8): updateable -> updatable
-        "property[type:$type, lazy:$lazy, columns:$columns, insertable:${insertable}, updateable:${updatable}]"
+        "property[type:$type, lazy:$lazy, columns:$columns, insertable:${insertable}, updatable:${updatable}]"
     }
 
     protected void checkHasSingleColumn() {
@@ -472,5 +475,12 @@ class PropertyConfig extends Property {
             newColumns.add(c.clone())
         }
         return pc
+    }
+
+    /**
+     * @since 8.0
+     */
+    boolean hasJoinKeyMapping() {
+        joinTable?.keys
     }
 }

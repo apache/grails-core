@@ -139,7 +139,7 @@ In this case if the `Author` instance is not null we use it in a query to obtain
 ==== Pagination and Sorting
 
 
-The same pagination and sorting parameters available on the link:../api/org/grails/datastore/gorm/GormEntity.html#list()[list()] method can also be used with dynamic finders by supplying a map as the final parameter:
+The same pagination and sorting parameters available on the `list()` method can also be used with dynamic finders by supplying a map as the final parameter:
 
 [source,groovy]
 ----

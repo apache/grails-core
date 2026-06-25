@@ -18,6 +18,8 @@
  */
 package org.grails.orm.hibernate;
 
+import java.io.Serial;
+
 import jakarta.transaction.Status;
 import jakarta.transaction.Transaction;
 import jakarta.transaction.TransactionManager;
@@ -25,7 +27,6 @@ import jakarta.transaction.TransactionManager;
 import org.hibernate.FlushMode;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
-import org.hibernate.SessionFactory;
 import org.hibernate.context.spi.CurrentSessionContext;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.engine.transaction.jta.platform.spi.JtaPlatform;
@@ -51,6 +52,7 @@ import org.grails.orm.hibernate.support.hibernate7.SpringSessionSynchronization;
  */
 public class GrailsSessionContext implements CurrentSessionContext {
 
+    @Serial
     private static final long serialVersionUID = 1;
 
     private static final Logger LOG = LoggerFactory.getLogger(GrailsSessionContext.class);
@@ -63,6 +65,7 @@ public class GrailsSessionContext implements CurrentSessionContext {
 
     /**
      * Constructor.
+     *
      * @param sessionFactory the SessionFactory to provide current Sessions for
      */
     public GrailsSessionContext(SessionFactoryImplementor sessionFactory) {
@@ -70,30 +73,47 @@ public class GrailsSessionContext implements CurrentSessionContext {
     }
 
     public void initJta() {
-        JtaPlatform jtaPlatform = sessionFactory.getServiceRegistry().getService(JtaPlatform.class);
-        TransactionManager transactionManager = jtaPlatform.retrieveTransactionManager();
-        jtaSessionContext = transactionManager == null ? null : new SpringJtaSessionContext(sessionFactory);
+        TransactionManager tm = resolveJtaTransactionManager();
+        jtaSessionContext = tm == null ? null : buildJtaSessionContext();
     }
 
     /**
-     * Retrieve the Spring-managed Session for the current thread, if any.
+     * Resolves the JTA {@link TransactionManager} from the session factory's service registry.
+     * Protected to allow overriding in tests without a real JTA platform.
      */
+    protected TransactionManager resolveJtaTransactionManager() {
+        JtaPlatform jtaPlatform = sessionFactory.getServiceRegistry().getService(JtaPlatform.class);
+        return jtaPlatform != null ? jtaPlatform.retrieveTransactionManager() : null;
+    }
+
+    /**
+     * Creates the JTA-backed {@link CurrentSessionContext}.
+     * Protected to allow overriding in tests without a real JTA platform.
+     */
+    protected CurrentSessionContext buildJtaSessionContext() {
+        return new SpringJtaSessionContext(sessionFactory);
+    }
+
+    /** Retrieve the Spring-managed Session for the current thread, if any. */
+    @Override
     public Session currentSession() throws HibernateException {
         Object value = TransactionSynchronizationManager.getResource(sessionFactory);
         if (value instanceof Session) {
             return (Session) value;
         }
 
-        if (value instanceof SessionHolder) {
-            SessionHolder sessionHolder = (SessionHolder) value;
+        if (value instanceof SessionHolder sessionHolder) {
             Session session = sessionHolder.getSession();
-            if (TransactionSynchronizationManager.isSynchronizationActive() && !sessionHolder.isSynchronizedWithTransaction()) {
-                TransactionSynchronizationManager.registerSynchronization(createSpringSessionSynchronization(sessionHolder));
+            if (TransactionSynchronizationManager.isSynchronizationActive() &&
+                    !sessionHolder.isSynchronizedWithTransaction()) {
+                TransactionSynchronizationManager.registerSynchronization(
+                        createSpringSessionSynchronization(sessionHolder));
                 sessionHolder.setSynchronizedWithTransaction(true);
                 // Switch to FlushMode.AUTO, as we have to assume a thread-bound Session
                 // with FlushMode.MANUAL, which needs to allow flushing within the transaction.
                 FlushMode flushMode = session.getHibernateFlushMode();
-                if (flushMode.equals(FlushMode.MANUAL) && !TransactionSynchronizationManager.isCurrentTransactionReadOnly()) {
+                if (flushMode.equals(FlushMode.MANUAL) &&
+                        !TransactionSynchronizationManager.isCurrentTransactionReadOnly()) {
                     session.setHibernateFlushMode(FlushMode.AUTO);
                     sessionHolder.setPreviousFlushMode(flushMode);
                 }
@@ -133,32 +153,18 @@ public class GrailsSessionContext implements CurrentSessionContext {
             if (holderToUse == null) {
                 holderToUse = new SessionHolder(session);
             }
-            else {
-                // it's up to the caller to manage concurrent sessions
-                // holderToUse.addSession(session);
-            }
             if (TransactionSynchronizationManager.isCurrentTransactionReadOnly()) {
                 session.setHibernateFlushMode(FlushMode.MANUAL);
             }
             TransactionSynchronizationManager.registerSynchronization(createSpringSessionSynchronization(holderToUse));
             holderToUse.setSynchronizedWithTransaction(true);
-            if (holderToUse != sessionHolder) {
+            if (sessionHolder == null) {
                 TransactionSynchronizationManager.bindResource(sessionFactory, holderToUse);
             }
-        }
-        else {
+        } else {
             // No Spring transaction management active -> try JTA transaction synchronization.
             registerJtaSynchronization(session, sessionHolder);
         }
-
-        /*
-        // Check whether we are allowed to return the Session.
-        if (!allowCreate && !isSessionTransactional(session, sessionFactory)) {
-           closeSession(session);
-           throw new IllegalStateException("No Hibernate Session bound to thread, " +
-              "and configuration does not allow creation of non-transactional one here");
-        }
-        */
         return session;
     }
 
@@ -167,7 +173,7 @@ public class GrailsSessionContext implements CurrentSessionContext {
         // JTA synchronization is only possible with a jakarta.transaction.TransactionManager.
         // We'll check the Hibernate SessionFactory: If a TransactionManagerLookup is specified
         // in Hibernate configuration, it will contain a TransactionManager reference.
-        TransactionManager jtaTm = getJtaTransactionManager(session);
+        TransactionManager jtaTm = lookupJtaTransactionManager(this.sessionFactory);
         if (jtaTm == null) {
             return;
         }
@@ -190,42 +196,27 @@ public class GrailsSessionContext implements CurrentSessionContext {
             if (holderToUse == null) {
                 holderToUse = new SessionHolder(session);
             }
-            else {
-                // it's up to the caller to manage concurrent sessions
-                // holderToUse.addSession(session);
-            }
-            jtaTx.registerSynchronization(new SpringJtaSynchronizationAdapter(createSpringSessionSynchronization(holderToUse), jtaTm));
+            jtaTx.registerSynchronization(
+                    new SpringJtaSynchronizationAdapter(createSpringSessionSynchronization(holderToUse)));
             holderToUse.setSynchronizedWithTransaction(true);
-            if (holderToUse != sessionHolder) {
+            if (sessionHolder == null) {
                 TransactionSynchronizationManager.bindResource(sessionFactory, holderToUse);
             }
-        }
-        catch (Throwable ex) {
-            throw new DataAccessResourceFailureException("Could not register synchronization with JTA TransactionManager", ex);
+        } catch (Exception ex) {
+            throw new DataAccessResourceFailureException(
+                    "Could not register synchronization with JTA TransactionManager", ex);
         }
     }
 
-    protected TransactionManager getJtaTransactionManager(Session session) {
-        SessionFactoryImplementor sessionFactoryImpl = null;
-        if (sessionFactory instanceof SessionFactoryImplementor) {
-            sessionFactoryImpl = ((SessionFactoryImplementor) sessionFactory);
-        }
-        else if (session != null) {
-            SessionFactory internalFactory = session.getSessionFactory();
-            if (internalFactory instanceof SessionFactoryImplementor) {
-                sessionFactoryImpl = (SessionFactoryImplementor) internalFactory;
-            }
-        }
-
-        if (sessionFactoryImpl == null) {
+    /**
+     * Looks up the JTA {@link TransactionManager} from the given session factory's service registry.
+     * Protected to allow overriding in tests without a real JTA platform binding.
+     */
+    protected TransactionManager lookupJtaTransactionManager(SessionFactoryImplementor sf) {
+        ServiceBinding<JtaPlatform> sb = sf.getServiceRegistry().locateServiceBinding(JtaPlatform.class);
+        if (sb == null || sb.getService() == null) {
             return null;
         }
-
-        ServiceBinding<JtaPlatform> sb = sessionFactory.getServiceRegistry().locateServiceBinding(JtaPlatform.class);
-        if (sb == null) {
-            return null;
-        }
-
         return sb.getService().retrieveTransactionManager();
     }
 
@@ -236,5 +227,4 @@ public class GrailsSessionContext implements CurrentSessionContext {
     protected TransactionSynchronization createSpringSessionSynchronization(SessionHolder sessionHolder) {
         return new SpringSessionSynchronization(sessionHolder, sessionFactory);
     }
-
 }

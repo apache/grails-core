@@ -38,15 +38,17 @@ ext {
 }
 
 dependencies {
-    // TODO: Clarify and clean up dependencies
     implementation platform(project(':grails-hibernate7-bom'))
 
-    api "org.springframework.boot:spring-boot"
-    api "org.springframework:spring-orm"
-    api 'org.hibernate:hibernate-core-jakarta'
-    api project(":grails-datastore-web")
-    api project(":grails-datamapping-support")
-    api project(":grails-data-hibernate7-core"), {
+    api 'org.springframework.boot:spring-boot'
+    api 'org.springframework:spring-orm'
+    api 'org.hibernate.orm:hibernate-core'
+    implementation 'org.hibernate.tool:hibernate-tools-orm'
+    implementation 'org.hibernate.tool:hibernate-tools-utils'
+    api project(':grails-datastore-web')
+    api project(':grails-datamapping-support')
+    api project(':grails-data-hibernate7-spring-orm')
+    api project(':grails-data-hibernate7-core'), {
         exclude group:'org.springframework', module:'spring-context'
         exclude group:'org.springframework', module:'spring-core'
         exclude group:'org.springframework', module:'spring-beans'
@@ -56,6 +58,7 @@ dependencies {
         exclude group:'org.apache.grails', module:'grails-core'
         exclude group:'javax.transaction', module:'jta'
     }
+    api project(':grails-spring')
 
     compileOnly project(':grails-bootstrap')
     compileOnly project(':grails-core')
@@ -72,13 +75,7 @@ dependencies {
 
     testRuntimeOnly 'com.h2database:h2'
     testRuntimeOnly 'org.apache.tomcat:tomcat-jdbc'
-    testRuntimeOnly 'org.hibernate:hibernate-ehcache', {
-        // exclude javax variant of hibernate-core 5.6
-        exclude group: 'org.hibernate', module: 'hibernate-core'
-    }
-    testRuntimeOnly "org.jboss.spec.javax.transaction:jboss-transaction-api_1.3_spec:$jbossTransactionApiVersion", {
-        // required for hibernate-ehcache to work with javax variant of hibernate-core excluded
-    }
+    testRuntimeOnly 'org.hibernate.orm:hibernate-jcache'
     testRuntimeOnly 'org.springframework:spring-aop'
     testRuntimeOnly 'org.springframework:spring-expression'
     testRuntimeOnly 'org.yaml:snakeyaml'

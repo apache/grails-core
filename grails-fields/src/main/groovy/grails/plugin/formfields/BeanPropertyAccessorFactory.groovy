@@ -93,7 +93,7 @@ class BeanPropertyAccessorFactory implements GrailsApplicationAware {
         String propertyName = pathElements.remove(0)
         PersistentEntity beanClass = resolveDomainClass(beanWrapper.wrappedClass)
         Class propertyType = resolvePropertyType(beanWrapper, beanClass, propertyName)
-        Object value = beanWrapper.getPropertyValue(propertyName)
+        Object value = unwrapIfProxy(beanWrapper.getPropertyValue(propertyName))
         if (pathElements.empty) {
             params.value = value
             params.propertyType = propertyType

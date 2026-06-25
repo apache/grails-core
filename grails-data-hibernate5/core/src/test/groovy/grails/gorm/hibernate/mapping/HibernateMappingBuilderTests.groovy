@@ -380,7 +380,7 @@ class HibernateMappingBuilderTests {
         property = mapping.getPropertyConfig('things')
         assert property?.joinTable
         assertEquals "foo", property.joinTable.name
-        assertEquals "foo_id", property.joinTable.key.name
+        assertEquals "foo_id", property.joinTable.keys[0].name
         assertEquals "bar_id", property.joinTable.column.name
     }
 
@@ -408,7 +408,7 @@ class HibernateMappingBuilderTests {
         property = mapping.getPropertyConfig('things')
         assert property?.joinTable
         assertEquals "foo", property.joinTable.name
-        assertEquals "foo_id", property.joinTable.key.name
+        assertEquals "foo_id", property.joinTable.keys[0].name
         assertEquals "bar_id", property.joinTable.column.name
     }
 

@@ -237,17 +237,17 @@ generateBomDocumentation.configure { Task it ->
         it.logger.lifecycle "BOM Hibernate 5 Dependency Page generated to: ${bomHibernate5DocumentFile.asFile.absolutePath}"
 
         // Generate Hibernate 7 BOM page
-        bomHibernate5DocumentFile.asFile.withWriter { writer ->
+        bomHibernate7DocumentFile.asFile.withWriter { writer ->
             writer.writeLine '== Grails Hibernate 7 BOM Dependencies'
             writer.writeLine ''
             writer.writeLine 'This document provides information about the dependencies defined in `org.apache.grails:grails-hibernate7-bom`. This BOM inherits from the default `grails-bom` and explicitly enforces Hibernate 7 compatible dependency versions for consumers using `enforcedPlatform`.'
             writer.writeLine ''
-            writer.writeLine "See also: link:Grails%20BOM.html[Default BOM] | link:Grails%20BOM%20Hibernate5.html[Grails Hibernate 5 BOM]'${micronautBomCrossRefSuffix}"
+            writer.writeLine "See also: link:Grails%20BOM.html[Default BOM] | link:Grails%20BOM%20Hibernate5.html[Grails Hibernate 5 BOM]${micronautBomCrossRefSuffix}"
             writer.writeLine ''
-            writer.write(grailsBomHibernate5ConstraintFile.get().asFile.text)
+            writer.write(grailsBomHibernate7ConstraintFile.get().asFile.text)
             writer.writeLine ''
         }
-        it.logger.lifecycle "BOM Hibernate 7 Dependency Page generated to: ${bomHibernate5DocumentFile.asFile.absolutePath}"
+        it.logger.lifecycle "BOM Hibernate 7 Dependency Page generated to: ${bomHibernate7DocumentFile.asFile.absolutePath}"
 
         if (grailsMicronautBom != null) {
             // Generate Micronaut BOM page

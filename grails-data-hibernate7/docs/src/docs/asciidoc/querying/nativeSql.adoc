@@ -1,0 +1,97 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[querying-native-sql]]
+== Native SQL Queries
+
+GORM provides `findWithNativeSql` and `findAllWithNativeSql` for executing raw SQL when HQL or the Criteria API cannot express the query you need (e.g. database-specific functions, complex joins, or legacy SQL).
+
+WARNING: Native SQL bypasses Hibernate's type system and object mapping. Prefer HQL, the Criteria API, or dynamic finders wherever possible. Use native SQL only when there is no higher-level alternative.
+
+=== Methods
+
+[cols="1,2"]
+|===
+| Method | Description
+
+| `findWithNativeSql(CharSequence sql)`
+| Returns the first result mapped to the domain class
+
+| `findWithNativeSql(CharSequence sql, Map args)`
+| Returns the first result; `args` controls pagination (`max`, `offset`, `cache`)
+
+| `findAllWithNativeSql(CharSequence sql)`
+| Returns all results mapped to the domain class
+
+| `findAllWithNativeSql(CharSequence sql, Map args)`
+| Returns all results; `args` controls pagination
+|===
+
+=== Safe Usage — GString Value Parameters
+
+When a query contains user-supplied **values** (not identifiers), use Groovy GString interpolation. GORM extracts each `${expression}` and binds it as a named JDBC parameter, preventing injection.
+
+[source,groovy]
+----
+String nameFilter = params.name  // user input
+
+// ✅ SAFE — ${nameFilter} is bound as :p0, never inlined into the SQL string
+List results = Club.findAllWithNativeSql(
+    "select * from club c where c.name like ${nameFilter} order by c.name")
+----
+
+=== Static SQL (No User Input)
+
+A plain `String` constant with no user data is safe and accepted directly.
+
+[source,groovy]
+----
+// ✅ SAFE — no user input, static SQL
+List results = Club.findAllWithNativeSql(
+    "select * from club c order by c.name")
+----
+
+=== What Cannot Be Parameterized
+
+SQL identifiers — table names, column names, schema names — **cannot** be bound as JDBC parameters. Do not interpolate them from user input under any circumstances.
+
+[source,groovy]
+----
+// ❌ UNSAFE — table name from user input, cannot be made safe via GString
+String table = params.table
+Club.findAllWithNativeSql("select * from ${table}")  // DO NOT DO THIS
+
+// ❌ UNSAFE — string concatenation, no protection at all
+Club.findAllWithNativeSql("select * from club where name = '" + userInput + "'")
+----
+
+If you need dynamic identifiers (e.g. schema-per-tenant), use the JDBC identifier quoting API (`connection.metaData.identifierQuoteString`) to quote and sanitize the name before use — the same mechanism used internally by `DefaultSchemaHandler`.
+
+=== Deprecated Names
+
+`findWithSql` and `findAllWithSql` are deprecated aliases for `findWithNativeSql` and `findAllWithNativeSql`. They remain functional for backwards compatibility but will be removed in a future release.
+
+[source,groovy]
+----
+// Deprecated — replace with findAllWithNativeSql
+Club.findAllWithSql("select * from club")
+
+// Preferred
+Club.findAllWithNativeSql("select * from club")
+----

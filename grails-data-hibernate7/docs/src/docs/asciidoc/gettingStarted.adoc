@@ -22,8 +22,8 @@ To use GORM {pluginVersion} for Hibernate in Grails 7 you can specify the follow
 [source,groovy,subs="attributes"]
 ----
 dependencies {
-    implementation "org.grails.plugins:hibernate5:{pluginVersion}"
-    runtimeOnly 'org.hibernate:hibernate-ehcache:5.6.15.Final', {
+    implementation "org.grails.plugins:hibernate7:{pluginVersion}"
+    runtimeOnly 'org.hibernate:hibernate-ehcache:7.0.Final', {
     // exclude javax variant of hibernate-core
     exclude group: 'org.hibernate', module: 'hibernate-core'
     }

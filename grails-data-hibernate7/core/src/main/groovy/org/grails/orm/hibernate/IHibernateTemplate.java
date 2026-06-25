@@ -23,7 +23,6 @@ import java.util.Collection;
 
 import groovy.lang.Closure;
 
-import org.hibernate.Criteria;
 import org.hibernate.LockMode;
 import org.hibernate.SessionFactory;
 import org.hibernate.query.Query;
@@ -36,7 +35,13 @@ import org.hibernate.query.Query;
  */
 public interface IHibernateTemplate {
 
-    Serializable save(Object o);
+    void persist(Object o);
+
+    /**
+     * Merge the state of the given entity into the current persistence context. Returns the managed
+     * instance that the state was merged to.
+     */
+    Object merge(Object o);
 
     void refresh(Object o);
 
@@ -50,15 +55,13 @@ public interface IHibernateTemplate {
 
     boolean contains(Object o);
 
-    void setFlushMode(int mode);
-
     int getFlushMode();
+
+    void setFlushMode(int mode);
 
     void deleteAll(Collection<?> list);
 
-    void applySettings(Query query);
-
-    void applySettings(Criteria criteria);
+    void applySettings(Query<?> query);
 
     <T> T get(Class<T> type, Serializable key);
 
@@ -66,7 +69,7 @@ public interface IHibernateTemplate {
 
     <T> T load(Class<T> type, Serializable key);
 
-    void delete(Object o);
+    void remove(Object o);
 
     SessionFactory getSessionFactory();
 

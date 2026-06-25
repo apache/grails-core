@@ -19,23 +19,20 @@
 package grails.gorm.tests.validation
 
 import grails.gorm.annotation.Entity
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
-import org.grails.orm.hibernate.HibernateDatastore
-import org.hibernate.SessionFactory
-import spock.lang.AutoCleanup
 import spock.lang.Issue
-import spock.lang.Shared
-import spock.lang.Specification
 
 /**
  * @author Graeme Rocher
  * @since 1.0
  */
-@Issue('https://github.com/apache/grails-data-mapping/issues/1004')
-class UniqueWithHasOneSpec extends Specification {
+@Issue('https://github.com/grails/grails-data-mapping/issues/1004')
+class UniqueWithHasOneSpec extends HibernateGormDatastoreSpec {
 
-    @AutoCleanup @Shared HibernateDatastore hibernateDatastore = new HibernateDatastore(getClass().getPackage())
-    @Shared SessionFactory sessionFactory = hibernateDatastore.sessionFactory
+    def setupSpec() {
+        manager.registerDomainClasses(Foo, Bar)
+    }
 
     @Rollback
     void "test unique constraint with hasOne"() {
@@ -55,26 +52,27 @@ class UniqueWithHasOneSpec extends Specification {
 @Entity
 class Foo {
 
+    String name
+    Bar bar
+
     static hasOne = [bar: Bar]
 
-    String name
 
     static constraints = {
-        bar nullable: true
-        name unique: "bar"
+        bar nullable: true, unique: true
     }
 
+    static mapping = {
+        bar column: 'bar_id'
+    }
 }
 
 @Entity
 class Bar {
 
-    static belongsTo = [foo: Foo]
-
     String name
+    static belongsTo = [ foo: Foo]
 
     static constraints = {
-        foo nullable: true
     }
-
 }

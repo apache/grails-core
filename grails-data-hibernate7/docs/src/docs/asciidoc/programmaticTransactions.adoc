@@ -16,64 +16,76 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 ////
+[[programmaticTransactions]]
+== Programmatic Transactions
 
-GORM's transaction management is built on Spring and uses Spring's Transaction abstraction for dealing with programmatic transactions.
+GORM integrates with Spring's transaction management. All persistence operations should run within a transaction.
 
-However, GORM classes have been enhanced to make this simpler with the link:../api/org/grails/datastore/gorm/GormEntity.html#withTransaction(groovy.lang.Closure)[withTransaction(Closure)]  method. This method has a single parameter, a Closure, which has a single parameter which is a Spring https://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/transaction/TransactionStatus.html[TransactionStatus] instance.
+=== `withTransaction`
 
-==== Using the withTransaction Method
+Use `withTransaction` on any domain class to run a block within a transaction:
 
-Here's an example of using `withTransaction` in a controller methods:
-
-[source,java]
+[source,groovy]
 ----
-def transferFunds() {
-    Account.withTransaction { status ->
-        def source = Account.get(params.from)
-        def dest = Account.get(params.to)
-
-        def amount = params.amount.toInteger()
-        if (source.active) {
-            if (dest.active) {
-                source.balance -= amount
-                dest.amount += amount
-            }
-            else {
-                status.setRollbackOnly()
-            }
-        }
-    }
+Book.withTransaction {
+    new Book(title: 'Grails in Action', author: 'Glen Smith').save()
+    new Book(title: 'Groovy in Action', author: 'Dierk König').save()
+    // both are committed together; any exception rolls back both
 }
 ----
 
-In this example we rollback the transaction if the destination account is not active. 
-
-Also, if an `Exception` (both checked or runtime exception) or `Error` is thrown during the process the transaction will automatically be rolled back..
-
-WARNING: GORM versions prior to 6.0.0 did not roll back transactions for a checked `Exception`.
-
-You can also use "save points" to rollback a transaction to a particular point in time if you don't want to rollback the entire transaction. This can be achieved through the use of Spring's https://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/transaction/SavepointManager.html[SavePointManager] interface.
-
-The `withTransaction` method deals with the begin/commit/rollback logic for you within the scope of the block.
-
-==== Using TransactionService
-
-Since GORM 6.1, if you need more flexibility then instead you can instead take advantage of the link:../api/grails/gorm/transactions/TransactionService.html[TransactionService], which can be obtained by looking it up from from the `HibernateDatastore`:
+The closure receives a `TransactionStatus` parameter if needed:
 
 [source,groovy]
 ----
-import grails.gorm.transactions.*
-
-TransactionService transactionService = datastore.getService(TransactionService)
+Book.withTransaction { TransactionStatus status ->
+    def book = new Book(title: 'Test')
+    book.save()
+    if (someCondition) {
+        status.setRollbackOnly()    // <1>
+    }
+}
 ----
+<1> Marks the transaction for rollback without throwing an exception.
 
-Or via dependency injection:
+=== `withNewTransaction`
+
+Start a new, independent transaction (suspending the current one if any):
 
 [source,groovy]
 ----
-import grails.gorm.transactions.*
-
-@Autowired TransactionService transactionService
+Book.withNewTransaction {
+    // runs in a brand-new transaction regardless of any outer transaction
+}
 ----
 
-Once you have an instance then there are various including `withTransaction`, `withRollback`, `withNewTransaction` etc. which helps with the construction of programmatic transactions.
+=== `withSession`
+
+Access the underlying Hibernate `Session` directly:
+
+[source,groovy]
+----
+Book.withSession { session ->
+    session.flush()
+    session.clear()     // <1>
+}
+----
+<1> Evicts all entities from the first-level cache.
+
+=== Service-Layer Transactions
+
+In a Grails application, services are transactional by default. Annotate individual methods or the entire service class with Spring's `@Transactional` for fine-grained control:
+
+[source,groovy]
+----
+import org.springframework.transaction.annotation.Transactional
+
+@Transactional
+class BookService {
+    def transferOwnership(Long bookId, Long newAuthorId) {
+        def book = Book.get(bookId)
+        book.author = Author.get(newAuthorId)
+        book.save(failOnError: true)
+    }
+}
+----

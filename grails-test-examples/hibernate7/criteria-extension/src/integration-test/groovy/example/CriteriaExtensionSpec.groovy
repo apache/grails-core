@@ -33,7 +33,7 @@ import spock.lang.Specification
  *       {@code new DetachedCriteria(Product).build { eqIf ... }}.</li>
  *   <li>{@link org.grails.orm.hibernate.query.HibernateCriteriaBuilderExtensions}: adds {@code numberLike}
  *       to {@code AbstractHibernateCriteriaBuilder}. Exercised via
- *       {@code Product.createCriteria().list { numberLike ... }}.</li>
+ *       {@code new DetachedCriteria(Product).build { numberLike ... }}.</li>
  * </ul>
  */
 @Integration
@@ -181,9 +181,9 @@ class CriteriaExtensionSpec extends Specification {
         createProducts()
 
         when: 'prices: 9.99, 49.99, 4.99 — 4.99 and 49.99 start with 4 when cast to varchar'
-        List<Product> results = Product.createCriteria().list {
+        List<Product> results = new DetachedCriteria(Product).build {
             numberLike 'price', '4%'
-        } as List<Product>
+        }.list()
 
         then:
         results.size() == 2
@@ -195,9 +195,9 @@ class CriteriaExtensionSpec extends Specification {
         createProducts()
 
         when:
-        List<Product> results = Product.createCriteria().list {
+        List<Product> results = new DetachedCriteria(Product).build {
             numberLike 'price', '9.99'
-        } as List<Product>
+        }.list()
 
         then:
         results.size() == 1
@@ -209,9 +209,9 @@ class CriteriaExtensionSpec extends Specification {
         createProducts()
 
         when: 'all three prices (9.99, 49.99, 4.99) contain the digit 9'
-        List<Product> results = Product.createCriteria().list {
+        List<Product> results = new DetachedCriteria(Product).build {
             numberLike 'price', '%9%'
-        } as List<Product>
+        }.list()
 
         then:
         results.size() == 3
@@ -223,10 +223,10 @@ class CriteriaExtensionSpec extends Specification {
         new Product(name: 'Sprocket', price: 9.50).save(flush: true)
 
         when: 'price starts with 9 and name is Widget'
-        List<Product> results = Product.createCriteria().list {
+        List<Product> results = new DetachedCriteria(Product).build {
             numberLike 'price', '9%'
             eqIf 'name', 'Widget'
-        } as List<Product>
+        }.list()
 
         then:
         results.size() == 1
