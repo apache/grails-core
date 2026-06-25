@@ -19,7 +19,6 @@
 package org.grails.compiler
 
 import org.codehaus.groovy.ast.ASTNode
-import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.expr.ArgumentListExpression
 import org.codehaus.groovy.ast.expr.Expression
@@ -123,13 +122,9 @@ class ControllerTagLibTypeCheckingExtension extends GroovyTypeCheckingExtensionS
             if (call instanceof MethodCallExpression) {
                 Expression objectExpression = ((MethodCallExpression) call).objectExpression
                 if (objectExpression in currentScope.dynamicNamespaceProperties) return makeDynamic(call)
-                // GROOVY-12041: on Groovy 5 the unresolvedVariable / unresolvedProperty callbacks above no
-                // longer fire when the controller inherits getProperty(String), so the namespace dispatcher
-                // receiver (e.g. the 'cst' in cst.greet(...)) was never recorded. Recognise it here instead:
-                // an unresolved dispatcher resolves to Object via getProperty, so silence calls whose receiver
-                // is an Object-typed bare-variable or this-property expression. Calls on declared fields and
-                // locals keep their concrete receiver type and so remain fully type-checked.
-                if (isDynamicNamespaceReceiver(receiver, objectExpression)) return makeDynamic(call)
+                // GROOVY-12041: on Groovy 5, getProperty(String) receivers are pre-resolved as dynamic
+                // and unresolvedVariable / unresolvedProperty no longer record namespace dispatchers.
+                if (isDynamicNamespaceReceiver(objectExpression)) return makeDynamic(call)
             }
             null
         }
@@ -137,14 +132,10 @@ class ControllerTagLibTypeCheckingExtension extends GroovyTypeCheckingExtensionS
         null
     }
 
-    private boolean isDynamicNamespaceReceiver(ClassNode receiver, Expression objectExpression) {
-        if (!ClassHelper.OBJECT_TYPE.equals(receiver)) return false
-        if (objectExpression instanceof VariableExpression) {
-            return !((VariableExpression) objectExpression).isThisExpression()
-        }
-        if (objectExpression instanceof PropertyExpression) {
-            return isThisReceiver(objectExpression)
-        }
+    private boolean isDynamicNamespaceReceiver(Expression objectExpression) {
+        if (objectExpression.getNodeMetaData(StaticTypesMarker.DYNAMIC_RESOLUTION) == null) return false
+        if (objectExpression instanceof VariableExpression) return !((VariableExpression) objectExpression).isThisExpression()
+        if (objectExpression instanceof PropertyExpression) return isThisReceiver(objectExpression)
         false
     }
 

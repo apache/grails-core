@@ -27,6 +27,7 @@ import org.codehaus.groovy.ast.expr.ListExpression
 import org.codehaus.groovy.ast.expr.PropertyExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.transform.stc.GroovyTypeCheckingExtensionSupport
+import org.codehaus.groovy.transform.stc.StaticTypesMarker
 
 /**
  * CompileStatic type checking extension for GSPs
@@ -79,17 +80,28 @@ class GroovyPageTypeCheckingExtension extends GroovyTypeCheckingExtensionSupport
             if (currentScope.dynamicProperties.contains(objectExpression)) {
                 return makeDynamic(call)
             }
-            // GROOVY-12041: fall back to matching the receiver by name against allowed taglib namespaces.
-            String namespaceName = null
-            if (objectExpression instanceof VariableExpression) {
-                namespaceName = ((VariableExpression) objectExpression).name
-            } else if (objectExpression instanceof PropertyExpression && isThisTheReceiver(objectExpression)) {
-                namespaceName = ((PropertyExpression) objectExpression).propertyAsString
-            }
-            if (namespaceName != null && currentScope.allowedTagLibs.contains(namespaceName)) {
+            // GROOVY-12041: Groovy 5 resolves receivers inherited through getProperty(String) as dynamic
+            // before unresolvedVariable/unresolvedProperty can record them. Use the marker Groovy places on
+            // those expressions, but still require the receiver name to be an allowed taglib namespace.
+            if (isAllowedDynamicTaglibNamespace(objectExpression)) {
                 return makeDynamic(call)
             }
         }
+    }
+
+    private boolean isAllowedDynamicTaglibNamespace(Expression objectExpression) {
+        if (objectExpression.getNodeMetaData(StaticTypesMarker.DYNAMIC_RESOLUTION) == null) {
+            return false
+        }
+
+        String namespaceName = null
+        if (objectExpression instanceof VariableExpression) {
+            namespaceName = ((VariableExpression) objectExpression).name
+        } else if (objectExpression instanceof PropertyExpression && isThisTheReceiver(objectExpression)) {
+            namespaceName = ((PropertyExpression) objectExpression).propertyAsString
+        }
+
+        namespaceName != null && currentScope.allowedTagLibs.contains(namespaceName)
     }
 
     def isThisTheReceiver(expr) {

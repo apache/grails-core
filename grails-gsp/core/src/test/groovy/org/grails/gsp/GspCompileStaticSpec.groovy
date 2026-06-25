@@ -153,8 +153,8 @@ out.print(messageClosure('World'))
         t.metaInfo.compilationException.message.contains('Cannot find matching method java.util.Date#getTimeTypo()')
     }
 
-    // GROOVY-12041 (open): undeclared GSP variables are not reported through this type-checking extension path on
-    // Groovy 5. Tracked as pending so the test starts failing - prompting removal of this guard - once GROOVY-12041 lands.
+    // GROOVY-12041: Groovy 5 treats receivers inherited through getProperty(String) as dynamic by design.
+    // Keep this pending until Grails adds its own stricter undeclared-variable check for GSP expressions.
     @PendingFeatureIf({ instance.isGroovy5OrLater() })
     def "should fail compilation when using invalid property"() {
         given:
@@ -165,7 +165,7 @@ out.print(messageClosure('World'))
         t.metaInfo.compilationException.message.contains('The variable [somename] is undeclared.')
     }
 
-    // GROOVY-12041 (open): see above - same undeclared-variable check that the Groovy 5 STC extension path no longer reports.
+    // GROOVY-12041: see above - same undeclared-variable check that the Groovy 5 STC extension path no longer reports.
     @PendingFeatureIf({ instance.isGroovy5OrLater() })
     def "should fail compilation when calling method on invalid property"() {
         given:
@@ -264,4 +264,3 @@ class SampleTagLib {
         "Hello ${attrs.code}"
     }
 }
-
