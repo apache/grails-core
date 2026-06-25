@@ -62,6 +62,7 @@ import org.apache.grails.core.plugins.PluginDiscovery;
 import org.apache.grails.core.plugins.PluginInfo;
 import org.apache.grails.core.plugins.PluginUtils;
 import org.grails.config.NavigableMap;
+import org.grails.core.exceptions.GrailsConfigurationException;
 import org.grails.io.support.GrailsResourceUtils;
 import org.grails.plugins.support.WatchPattern;
 import org.grails.spring.RuntimeSpringConfiguration;
@@ -172,6 +173,31 @@ public abstract class AbstractGrailsPluginManager implements GrailsPluginManager
             GrailsPlugin grailsPlugin = plugins.get(pluginInfo.getName());
             if (grailsPlugin.supportsCurrentScopeAndEnvironment() && grailsPlugin.isEnabled(context.getEnvironment().getActiveProfiles())) {
                 grailsPlugin.doWithRuntimeConfiguration(springConfig);
+            }
+        }
+    }
+
+    /**
+     * Drains each plugin's {@code doWithSpringBeforeAutoConfiguration} closure. Invoked from the
+     * pre-auto-configuration phase so the resulting beans are registered ahead of Spring Boot's
+     * auto-configuration, letting Boot's {@code @ConditionalOnMissingBean} guards defer to them.
+     */
+    @Override
+    public void doRuntimeConfigurationBeforeAutoConfiguration(RuntimeSpringConfiguration springConfig) {
+        checkInitialised();
+        for (PluginInfo pluginInfo : pluginDiscovery.getPluginsInTopologicalOrder()) {
+            GrailsPlugin grailsPlugin = plugins.get(pluginInfo.getName());
+            // Skip plugins disabled for the current scope/environment; only plugins that opt in (override
+            // the default no-op) register anything here. Plugin *profile* filtering deliberately does not
+            // apply this early — plugin profiles are not evaluated yet, and the runtime profile is not
+            // activated until after ConfigurationClassPostProcessor has run.
+            if (grailsPlugin.supportsCurrentScopeAndEnvironment()) {
+                try {
+                    grailsPlugin.doWithRuntimeConfigurationBeforeAutoConfiguration(springConfig);
+                } catch (Throwable t) {
+                    throw new GrailsConfigurationException("Error configuring before-auto-configuration beans for plugin " +
+                            grailsPlugin.getName() + ": " + t.getMessage(), t);
+                }
             }
         }
     }

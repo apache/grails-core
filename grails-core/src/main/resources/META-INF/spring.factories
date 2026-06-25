@@ -23,3 +23,4 @@ org.springframework.boot.env.PropertySourceLoader=\
 org.springframework.boot.EnvironmentPostProcessor=grails.boot.config.GrailsEnvironmentPostProcessor
 org.springframework.boot.SpringApplicationRunListener=grails.config.external.ExternalConfigRunListener
 org.springframework.boot.bootstrap.BootstrapRegistryInitializer=org.apache.grails.core.GrailsBootstrapRegistryInitializer
+org.springframework.context.ApplicationContextInitializer=grails.boot.config.GrailsBeforeAutoConfigurationInitializer

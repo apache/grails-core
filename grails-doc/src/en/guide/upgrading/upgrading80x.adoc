@@ -1226,3 +1226,28 @@ grails.gorm.default.constraints = {
     '*'(nullable: false)
 }
 ----
+
+==== 27. Spring Boot Web MVC Auto-Configuration Is Now Active
+
+Earlier Grails versions auto-injected `@EnableWebMvc` into every application class, which switched Spring Boot's `WebMvcAutoConfiguration` **off** and made Grails responsible for the entire Web MVC setup.
+Grails 8 no longer injects `@EnableWebMvc`, so Spring Boot's `WebMvcAutoConfiguration` is **active**, and Grails registers its own beans *ahead of* it so Boot's `@ConditionalOnMissingBean`-guarded beans defer to Grails.
+
+For the vast majority of applications this is transparent and requires **no action**.
+Grails continues to own the beans it always has — its `dispatcherServlet` (`GrailsDispatcherServlet`), `localeResolver`, `messageSource`, `localeChangeInterceptor`, character-encoding and request-binding filters, URL-mappings handler — and Boot backs off in favour of them.
+What changes is that Boot's auto-configuration now contributes the standard pieces it would in any Spring Boot MVC application (content negotiation, message converters, the welcome-page and static-resource handlers, async support, `mvcConversionService`/`mvcValidator`, etc.) rather than those being suppressed.
+
+**View resolution.** With `WebMvcAutoConfiguration` active, Boot contributes a catch-all `defaultViewResolver` (an `InternalResourceViewResolver`). For an application that does not use JSP/`InternalResource` views — a REST/JSON-views app, for example — that resolver forwards any unmatched view name to a servlet, producing `Circular view path [...]: would dispatch back to the current handler URL` errors. Grails therefore removes Boot's `defaultViewResolver` for every Grails servlet web application so its own view resolution is used.
+
+If you have a genuine reason to keep Boot's `defaultViewResolver`, opt out:
+
+[source,yaml]
+.application.yml
+----
+grails:
+    web:
+        removeDefaultViewResolverBean: false
+----
+
+NOTE: The earlier `spring.gsp.removeDefaultViewResolverBean` property (from when this removal lived in the GSP module) is still honoured for backward compatibility but is **deprecated** — use `grails.web.removeDefaultViewResolverBean`. Setting the old name logs a deprecation warning at startup.
+
+**Action required:** none for typical applications. If your application or a plugin explicitly registered MVC infrastructure to compensate for `@EnableWebMvc` being present (for example, manually re-adding a bean Boot's auto-configuration now provides), you can remove that workaround. If you defined a bean that collides by name with one Boot now contributes, prefer registering it so Boot defers (a plain `@Bean` in your application class, or `doWithSpringBeforeAutoConfiguration` in a plugin) rather than overriding it after the fact.

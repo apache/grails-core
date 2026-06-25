@@ -143,7 +143,6 @@ class ApplicationClassInjector implements GrailsArtefactClassInjector {
                 addAnnotation('org.springframework.boot.SpringBootConfiguration', classNode)?.with {
                     GrailsASTUtils.addExpressionToAnnotationMember(it, 'proxyBeanMethods', constX(false))
                 }
-                addAnnotation('org.springframework.web.servlet.config.annotation.EnableWebMvc', classNode, 'jakarta.servlet.ServletContext')
                 addAnnotation('org.springframework.boot.autoconfigure.EnableAutoConfiguration', classNode)?.with { annotation ->
                     EXCLUDED_AUTO_CONFIGURE_CLASSES.each {
                         GrailsASTUtils.addExpressionToAnnotationMember(

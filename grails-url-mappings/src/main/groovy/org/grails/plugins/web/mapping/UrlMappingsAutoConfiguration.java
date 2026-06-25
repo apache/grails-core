@@ -76,12 +76,14 @@ public class UrlMappingsAutoConfiguration {
     }
 
     @Bean
+    @ConditionalOnMissingBean(GrailsCorsFilter.class)
     @ConditionalOnProperty(name = Settings.SETTING_CORS_FILTER, havingValue = "true", matchIfMissing = true)
     public GrailsCorsFilter grailsCorsFilter(GrailsCorsConfiguration grailsCorsConfiguration) {
         return new GrailsCorsFilter(grailsCorsConfiguration);
     }
 
     @Bean
+    @ConditionalOnMissingBean(UrlMappingsErrorPageCustomizer.class)
     public UrlMappingsErrorPageCustomizer urlMappingsErrorPageCustomizer(ObjectProvider<UrlMappings> urlMappingsProvider) {
         UrlMappingsErrorPageCustomizer errorPageCustomizer = new UrlMappingsErrorPageCustomizer();
         errorPageCustomizer.setUrlMappings(urlMappingsProvider.getIfAvailable());
@@ -89,6 +91,7 @@ public class UrlMappingsAutoConfiguration {
     }
 
     @Bean
+    @ConditionalOnMissingBean(UrlMappingsInfoHandlerAdapter.class)
     public UrlMappingsInfoHandlerAdapter urlMappingsInfoHandlerAdapter() {
         return new UrlMappingsInfoHandlerAdapter();
     }

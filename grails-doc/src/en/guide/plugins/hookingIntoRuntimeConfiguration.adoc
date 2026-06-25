@@ -51,6 +51,39 @@ class I18nGrailsPlugin extends Plugin {
 This plugin configures the Grails `messageSource` bean and a couple of other beans to manage Locale resolution and switching. It using the link:spring.html#theBeanBuilderDSLExplained[Spring Bean Builder] syntax to do so.
 
 
+==== Registering Beans Before Auto-Configuration
+
+
+`doWithSpring` runs _after_ Spring Boot auto-configuration. That is the right phase for most beans, but it means a plugin bean that shares a name with a Spring Boot auto-configuration bean _overrides_ it — the auto-configuration bean is built and then replaced.
+
+When a plugin wants its bean to be the one Spring Boot's `@ConditionalOnMissingBean` defers to, override `doWithSpringBeforeAutoConfiguration` instead. Beans returned here are registered _ahead of_ auto-configuration, so the matching auto-configuration bean simply backs off — no override, and no wasted bean creation:
+
+[source,groovy]
+----
+import org.springframework.web.servlet.i18n.SessionLocaleResolver
+import grails.plugins.*
+
+class MyPlugin extends Plugin {
+
+    @Override
+    Closure doWithSpringBeforeAutoConfiguration() {{->
+        // Boot's @ConditionalOnMissingBean(name="localeResolver") now defers to this bean
+        localeResolver(SessionLocaleResolver)
+    }}
+}
+----
+
+Use this phase only for beans that need to win over a Spring Boot default. Keep everything else in `doWithSpring`, which remains the correct place for:
+
+* beans that _decorate_ or wrap a bean auto-configuration already created (they need it to exist first);
+* beans that iterate Grails artefacts (controllers, services, taglibs) — those are not discovered this early;
+* intentionally overriding an _unconditional_ Boot bean (the only way to replace it).
+
+IMPORTANT: The closure returned by `doWithSpringBeforeAutoConfiguration` must only _define bean definitions_ and be free of side effects. This phase runs in an isolated, lightweight pass that instantiates plugins purely to collect their bean definitions; a closure with side effects (mutating shared state, I/O, registering listeners) would run twice. Reading `grailsApplication.config` is safe; iterating artefacts is not. This phase applies to plugins; an application class is itself a `@Configuration`, so a plain `@Bean` there already registers before auto-configuration.
+
+If a plugin bean defined in `doWithSpring` overrides an auto-configuration bean that is `@ConditionalOnMissingBean` on that name — a bean that _would_ have deferred — Grails logs a one-line warning pointing you to `doWithSpringBeforeAutoConfiguration`. Set `grails.plugins.warnOnDeferrableOverride=false` to silence it.
+
+
 ==== Customizing the Servlet Environment
 
 

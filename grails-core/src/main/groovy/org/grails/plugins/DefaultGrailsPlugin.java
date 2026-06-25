@@ -148,7 +148,7 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
         if (this.plugin instanceof ApplicationContextAware) {
             ((ApplicationContextAware) plugin).setApplicationContext(applicationContext);
         }
-        if (this.plugin instanceof ApplicationListener) {
+        if (applicationContext != null && this.plugin instanceof ApplicationListener) {
             ((ConfigurableApplicationContext) applicationContext).addApplicationListener((ApplicationListener) plugin);
         }
     }
@@ -413,6 +413,29 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
             bb.invokeMethod("beans", new Object[]{c});
         }
 
+    }
+
+    @Override
+    public void doWithRuntimeConfigurationBeforeAutoConfiguration(RuntimeSpringConfiguration springConfig) {
+        // Only Plugin subclasses expose the modern before-auto-configuration phase.
+        if (!(plugin instanceof Plugin)) {
+            return;
+        }
+        Closure c = ((Plugin) plugin).doWithSpringBeforeAutoConfiguration();
+        if (c == null) {
+            return;
+        }
+        Binding b = new Binding();
+        b.setVariable("application", grailsApplication);
+        b.setVariable(GrailsApplication.APPLICATION_ID, grailsApplication);
+        b.setVariable("manager", getManager());
+        b.setVariable("plugin", this);
+        b.setVariable("parentCtx", getParentCtx());
+        b.setVariable("resolver", getResolver());
+        BeanBuilder bb = new BeanBuilder(getParentCtx(), springConfig, grailsApplication.getClassLoader());
+        bb.setBinding(b);
+        c.setDelegate(bb);
+        bb.invokeMethod("beans", new Object[]{c});
     }
 
     @Override
