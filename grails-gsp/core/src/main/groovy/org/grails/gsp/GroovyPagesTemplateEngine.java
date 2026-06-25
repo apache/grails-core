@@ -490,8 +490,8 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
         }
         // Compilation only happens on a template cache miss, so the count of this observation is
         // effectively the GSP compile (cache-miss) rate; its timer is the compile latency.
-        String resourceName = (pageName != null && !pageName.isEmpty()) ? pageName : "unknown";
-        Observation observation = Observation.createNotStarted("gsp.compile", this.observationRegistry)
+        var resourceName = (pageName != null && !pageName.isEmpty()) ? pageName : "unknown";
+        var observation = Observation.createNotStarted("gsp.compile", this.observationRegistry)
                 .contextualName("gsp.compile " + resourceName)
                 .highCardinalityKeyValue("gsp.name", resourceName);
         return observation.observeChecked(() -> doBuildPageMetaInfo(resource, pageName));

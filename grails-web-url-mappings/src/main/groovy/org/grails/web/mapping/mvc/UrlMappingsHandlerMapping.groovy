@@ -25,7 +25,6 @@ import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.http.server.observation.ServerRequestObservationContext
 import org.springframework.util.Assert
 import org.springframework.web.context.request.WebRequestInterceptor
 import org.springframework.web.filter.ServerHttpObservationFilter
@@ -207,13 +206,13 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
             try {
                 String controllerName = null
                 String actionName = null
-                GrailsWebRequest webRequest = GrailsWebRequest.lookup(request)
+                def webRequest = GrailsWebRequest.lookup(request)
                 if (webRequest != null) {
                     controllerName = webRequest.controllerName
                     actionName = webRequest.actionName
                 }
                 if ((controllerName == null || controllerName.isEmpty()) && handler instanceof UrlMappingInfo) {
-                    UrlMappingInfo info = (UrlMappingInfo) handler
+                    def info = (UrlMappingInfo) handler
                     controllerName = info.controllerName
                     if (actionName == null || actionName.isEmpty()) {
                         actionName = info.actionName
@@ -226,7 +225,7 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
                     if (actionName == null || actionName.isEmpty()) {
                         actionName = 'index'
                     }
-                    ServerRequestObservationContext context = ServerHttpObservationFilter.findObservationContext(request).orElse(null)
+                    def context = ServerHttpObservationFilter.findObservationContext(request).orElse(null)
                     if (context != null) {
                         context.setPathPattern('/' + controllerName + '/' + actionName)
                     }

@@ -30,7 +30,6 @@ import org.codehaus.groovy.runtime.metaclass.ThreadManagedMetaBeanProperty
 import io.micrometer.observation.Observation
 import io.micrometer.observation.ObservationRegistry
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.context.ApplicationContext
 import org.springframework.context.MessageSource
 import org.springframework.validation.BeanPropertyBindingResult
 import org.springframework.validation.BindingResult
@@ -108,17 +107,17 @@ class GrailsWebDataBinder extends SimpleDataBinder {
 
     @Override
     protected void doBind(object, DataBindingSource source, String filter, List whiteList, List blackList, DataBindingListener listener, errors) {
-        ObservationRegistry registry = resolveObservationRegistry()
-        if (registry == null || registry.isNoop()) {
+        def observationRegistry = resolveObservationRegistry()
+        if (observationRegistry == null || observationRegistry.noop) {
             doBindInternal(object, source, filter, whiteList, blackList, listener, errors)
             return
         }
-        String target = object != null ? object.getClass().simpleName : 'unknown'
-        Observation observation = Observation.createNotStarted('grails.databinding', registry)
+        def target = object != null ? object.getClass().simpleName : 'unknown'
+        def observation = Observation.createNotStarted('grails.databinding', observationRegistry)
                 .contextualName('grails.databinding ' + target)
                 .lowCardinalityKeyValue('grails.databinding.target', target)
                 .start()
-        Observation.Scope scope = observation.openScope()
+        def observationScope = observation.openScope()
         try {
             doBindInternal(object, source, filter, whiteList, blackList, listener, errors)
         }
@@ -127,15 +126,15 @@ class GrailsWebDataBinder extends SimpleDataBinder {
             throw t
         }
         finally {
-            scope.close()
+            observationScope.close()
             observation.stop()
         }
     }
 
     private ObservationRegistry resolveObservationRegistry() {
-        ObservationRegistry registry = this.observationRegistry
+        def registry = this.observationRegistry
         if (registry == null) {
-            ApplicationContext ctx = grailsApplication?.mainContext
+            def ctx = grailsApplication?.mainContext
             if (ctx == null) {
                 // context not ready (e.g. binding during bootstrap) — return NOOP without caching
                 // so a later call re-resolves the real registry

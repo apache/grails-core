@@ -112,20 +112,20 @@ class UrlMappingsInfoHandlerAdapter implements HandlerAdapter, ApplicationContex
                 }
                 webRequest.controllerNamespace = controllerClass.namespace
                 request.setAttribute(GrailsApplicationAttributes.CONTROLLER, controller)
-                def result
-                ObservationRegistry obsRegistry = this.observationRegistry
+                Object result = null
+                def obsRegistry = this.observationRegistry
                 if (obsRegistry == null || obsRegistry.isNoop()) {
                     result = controllerClass.invoke(controller, action)
                 }
                 else {
                     // scope open across invoke so the action's DB/cache spans nest under this span
-                    String controllerName = controllerClass.logicalPropertyName ?: 'unknown'
-                    Observation observation = Observation.createNotStarted('grails.controller', obsRegistry)
+                    def controllerName = controllerClass.logicalPropertyName ?: 'unknown'
+                    def observation = Observation.createNotStarted('grails.controller', obsRegistry)
                             .contextualName('grails.controller ' + controllerName)
                             .lowCardinalityKeyValue('grails.controller', controllerName)
                             .lowCardinalityKeyValue('grails.action', action ? action.toString() : 'unknown')
                             .start()
-                    Observation.Scope scope = observation.openScope()
+                    def observationScope = observation.openScope()
                     try {
                         result = controllerClass.invoke(controller, action)
                     }
@@ -134,7 +134,7 @@ class UrlMappingsInfoHandlerAdapter implements HandlerAdapter, ApplicationContex
                         throw t
                     }
                     finally {
-                        scope.close()
+                        observationScope.close()
                         observation.stop()
                     }
                 }

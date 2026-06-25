@@ -33,7 +33,6 @@ import org.apache.commons.logging.LogFactory;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.ApplicationContext;
 import org.springframework.core.Ordered;
 import org.springframework.scripting.ScriptSource;
 import org.springframework.util.Assert;
@@ -242,9 +241,9 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
      * {@link ObservationRegistry#NOOP} when none is available.
      */
     private ObservationRegistry resolveObservationRegistry() {
-        ObservationRegistry registry = this.observationRegistry;
+        var registry = this.observationRegistry;
         if (registry == null) {
-            ApplicationContext ctx = getApplicationContext();
+            var ctx = getApplicationContext();
             registry = (ctx != null) ?
                     ctx.getBeanProvider(ObservationRegistry.class).getIfAvailable(() -> ObservationRegistry.NOOP) :
                     ObservationRegistry.NOOP;
