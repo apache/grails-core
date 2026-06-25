@@ -16,5 +16,39 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 ////
+[[advancedGORMFeatures]]
+== Advanced GORM Features
 
-The following sections cover more advanced usages of GORM including caching, custom mapping and events.
+This section covers advanced GORM and Hibernate mapping capabilities available through the `static mapping {}` DSL and other configuration mechanisms.
+
+The ORM DSL `mapping` block is available on every domain class and allows you to customise every aspect of the Hibernate mapping:
+
+[source,groovy]
+----
+class Book {
+    String title
+    Date dateCreated
+
+    static mapping = {
+        table     'books'
+        title     column: 'book_title', index: true
+        batchSize 20
+        cache     usage: 'read-write'
+    }
+}
+----
+
+The following topics are covered in this section:
+
+* xref:ormdsl-tableAndColumnNames[Table and Column Names]
+* xref:ormdsl-identity[Identity]
+* xref:ormdsl-compositePrimaryKeys[Composite Primary Keys]
+* xref:ormdsl-optimisticLockingAndVersioning[Optimistic Locking and Versioning]
+* xref:ormdsl-inheritanceStrategies[Inheritance Strategies]
+* xref:ormdsl-fetchingDSL[Fetching Strategies]
+* xref:ormdsl-caching[Caching]
+* xref:ormdsl-customCascadeBehaviour[Custom Cascade Behaviour]
+* xref:ormdsl-customNamingStrategy[Custom Naming Strategy]
+* xref:ormdsl-customHibernateTypes[Custom Hibernate Types]
+* xref:ormdsl-derivedProperties[Derived Properties]
+* xref:ormdsl-databaseIndices[Database Indices]

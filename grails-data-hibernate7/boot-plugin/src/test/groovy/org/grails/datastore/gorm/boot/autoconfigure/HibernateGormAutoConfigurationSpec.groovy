@@ -19,73 +19,52 @@
 package org.grails.datastore.gorm.boot.autoconfigure
 
 import grails.gorm.annotation.Entity
-import org.springframework.beans.factory.support.DefaultListableBeanFactory
+import org.grails.orm.hibernate.HibernateDatastore
+import org.springframework.boot.autoconfigure.AutoConfigurations
 import org.springframework.boot.autoconfigure.AutoConfigurationPackages
-import org.springframework.boot.autoconfigure.context.PropertyPlaceholderAutoConfiguration
-import org.springframework.context.annotation.AnnotationConfigApplicationContext
+import org.springframework.boot.test.context.runner.ApplicationContextRunner
 import org.springframework.context.annotation.Configuration
-import org.springframework.context.annotation.Import
-import org.springframework.core.env.MapPropertySource
-import org.springframework.jdbc.datasource.DriverManagerDataSource
-import spock.lang.Ignore
+import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder
+import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType
 import spock.lang.Specification
 
-/**
- * Created by graemerocher on 06/02/14.
- */
-class HibernateGormAutoConfigurationSpec extends Specification{
+import javax.sql.DataSource
 
-    protected AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+class HibernateGormAutoConfigurationSpec extends Specification {
 
-    void cleanup() {
-        context.close()
-    }
-
-    void setup() {
-
-        AutoConfigurationPackages.register(context, "org.grails.datastore.gorm.boot.autoconfigure")
-        this.context.getEnvironment().getPropertySources().addFirst(new MapPropertySource("foo", ['hibernate.hbm2ddl.auto':'create']))
-        def beanFactory = this.context.defaultListableBeanFactory
-        beanFactory.registerSingleton("dataSource", new DriverManagerDataSource("jdbc:h2:mem:grailsDb1;LOCK_TIMEOUT=10000;DB_CLOSE_DELAY=-1", 'sa', ''))
-        this.context.register( TestConfiguration.class,
-                PropertyPlaceholderAutoConfiguration.class);
-    }
-
-    void 'Test that GORM is correctly configured'() {
-        when:"The context is refreshed"
-            context.refresh()
-
-            def result = Person.withTransaction {
-                Person.count()
+    private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
+            .withConfiguration(AutoConfigurations.of(TestConfiguration, HibernateGormAutoConfiguration))
+            .withInitializer { context ->
+                AutoConfigurationPackages.register(context, "org.grails.datastore.gorm.boot.autoconfigure")
             }
+            .withPropertyValues("spring.datasource.url=jdbc:h2:mem:testdb")
 
-        then:"GORM queries work"
-            result == 0
+    def "should configure hibernate datastore"() {
+        given:
+        def dataSource = new EmbeddedDatabaseBuilder()
+                .setType(EmbeddedDatabaseType.H2)
+                .build()
 
-        when:"The addTo* methods are called"
-            def p = new Person()
-            p.addToChildren(firstName:"Bob")
+        when:
+        contextRunner
+                .withBean(DataSource, { dataSource })
+                .run { context ->
+                    assert context.containsBean('hibernateDatastore')
+                    assert context.containsBean('sessionFactory')
+                    assert context.containsBean('hibernateTransactionManager')
+                    assert context.getBean(HibernateDatastore) != null
+                }
+        
+        then:
+        noExceptionThrown()
 
-        then:"They work too"
-            p.children.size() == 1
+        cleanup:
+        dataSource.shutdown()
     }
 
     @Configuration
-    @Import(HibernateGormAutoConfiguration)
     static class TestConfiguration {
     }
-
-}
-
-
-@Entity
-class Person {
-    String firstName
-    String lastName
-    Integer age = 18
-
-    Set children = []
-    static hasMany = [children: Person]
 }
 
 

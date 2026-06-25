@@ -66,16 +66,14 @@ public class HibernateMappingContext extends AbstractMappingContext {
      * @param contextObject The context object (for example a Spring ApplicationContext)
      * @param persistentClasses The persistent classes
      */
-    public HibernateMappingContext(HibernateConnectionSourceSettings settings, Object contextObject, Class... persistentClasses) {
+    public HibernateMappingContext(HibernateConnectionSourceSettings settings, Object contextObject, Class<?>... persistentClasses) {
         this.mappingFactory = new HibernateMappingFactory();
 
         // The mapping factory needs to be configured before initialize can be safely called
         initialize(settings);
 
-        if (settings != null) {
-            this.mappingFactory.setDefaultMapping(settings.getDefault().getMapping());
-            this.mappingFactory.setDefaultConstraints(settings.getDefault().getConstraints());
-        }
+        this.mappingFactory.setDefaultMapping(settings.getDefault().getMapping());
+        this.mappingFactory.setDefaultConstraints(settings.getDefault().getConstraints());
         this.mappingFactory.setContextObject(contextObject);
         this.syntaxStrategy = new JpaMappingConfigurationStrategy(mappingFactory) {
             @Override

@@ -393,10 +393,18 @@ class GormEnhancer implements Closeable {
             def className = cls.name
             for (q in qualifiers) {
                 NAMED_QUERIES.remove(className)
-                STATIC_APIS.get(q)?.remove(className)
-                INSTANCE_APIS.get(q)?.remove(className)
-                VALIDATION_APIS.get(q)?.remove(className)
-                DATASTORES.get(q)?.remove(datastore)
+                if (STATIC_APIS.containsKey(q)) {
+                    STATIC_APIS.get(q).remove(className)
+                }
+                if (INSTANCE_APIS.containsKey(q)) {
+                    INSTANCE_APIS.get(q).remove(className)
+                }
+                if (VALIDATION_APIS.containsKey(q)) {
+                    VALIDATION_APIS.get(q).remove(className)
+                }
+                if (DATASTORES.containsKey(q)) {
+                    DATASTORES.get(q).remove(className)
+                }
             }
             registry.removeMetaClass(cls)
         }

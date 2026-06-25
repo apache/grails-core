@@ -19,6 +19,9 @@
 
 package org.grails.plugins.databasemigration
 
+import groovy.transform.CompileStatic
+
+@CompileStatic
 class PluginConstants {
 
     static final String DATA_SOURCE_NAME_KEY = 'dataSourceName'

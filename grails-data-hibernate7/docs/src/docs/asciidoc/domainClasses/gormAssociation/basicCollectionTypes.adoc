@@ -16,42 +16,91 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 ////
+[[gormAssociation-basicCollectionTypes]]
+== Basic Collection Types
 
-As well as associations between different domain classes, GORM also supports mapping of basic collection types.
-For example, the following class creates a `nicknames` association that is a `Set` of `String` instances:
+In addition to collections of domain objects, GORM supports collections of basic types — strings, numbers, enums, and other persistable values. These are stored in a separate join table.
 
-[source,java]
+=== String Collections
+
+[source,groovy]
 ----
-class Person {
-    static hasMany = [nicknames: String]
+class Author {
+    String name
+    static hasMany = [nicknames: String]    // <1>
+}
+----
+<1> A join table `author_nicknames` is created with a `nicknames` column holding the string values.
+
+=== Numeric Collections
+
+[source,groovy]
+----
+class Survey {
+    String question
+    static hasMany = [scores: Integer]
 }
 ----
 
-GORM will map an association like the above using a join table. You can alter various aspects of how the join table is mapped using the `joinTable` argument:
+=== Enum Collections
 
-[source,java]
+Collections of `enum` types are supported:
+
+[source,groovy]
 ----
-class Person {
+enum Status { ACTIVE, INACTIVE, SUSPENDED }
 
-    static hasMany = [nicknames: String]
+class Account {
+    String name
+    static hasMany = [allowedStatuses: Status]  // <1>
+}
+----
+<1> A join table `account_allowed_statuses` is created. Enum values are stored using their ordinal position by default.
 
+To store enum values as their string names instead of ordinals, configure the `enumType` on the column:
+
+[source,groovy]
+----
+class Account {
+    static hasMany = [allowedStatuses: Status]
     static mapping = {
-       nicknames joinTable: [name: 'bunch_o_nicknames',
-                           key: 'person_id',
-                           column: 'nickname',
-                           type: "text"]
+        allowedStatuses {
+            column enumType: 'string'   // <1>
+        }
     }
 }
 ----
+<1> Stores `'ACTIVE'`, `'INACTIVE'`, etc. instead of `0`, `1`, `2`.
 
-The example above will map to a table that looks like the following:
+=== Customising the Join Table
 
-*bunch_o_nicknames Table*
-[source,java]
+You can override the join table name and the value column name:
+
+[source,groovy]
 ----
----------------------------------------------
-| person_id         |     nickname          |
----------------------------------------------
-|   1               |      Fred             |
----------------------------------------------
+class Author {
+    static hasMany = [nicknames: String]
+    static mapping = {
+        nicknames joinTable: [
+            name:   'author_alias',     // <1>
+            column: 'alias_value'       // <2>
+        ]
+    }
+}
+----
+<1> The join table name.
+<2> The column that holds the basic value.
+
+=== Accessing and Modifying
+
+Basic collections behave like any other GORM `hasMany` — use `addTo*` and `removeFrom*`:
+
+[source,groovy]
+----
+def author = Author.get(1)
+author.addToNicknames('Graeme')
+author.save()
+
+author.removeFromNicknames('Graeme')
+author.save()
 ----

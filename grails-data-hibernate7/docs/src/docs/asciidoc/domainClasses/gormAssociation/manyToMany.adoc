@@ -16,47 +16,71 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 ////
+[[gormAssociation-manyToMany]]
+== Many-to-Many Associations
 
-GORM supports many-to-many relationships by defining a `hasMany` on both sides of the relationship and having a `belongsTo` on the owned side of the relationship:
+A many-to-many association is created when both domain classes declare `hasMany` pointing at each other, and one side also declares `belongsTo`.
+
+=== Declaring the Relationship
 
 [source,groovy]
 ----
 class Book {
-    static belongsTo = Author
-    static hasMany = [authors:Author]
     String title
+    static hasMany  = [authors: Author]
+    static belongsTo = Author               // <1>
+}
+
+class Author {
+    String name
+    static hasMany = [books: Book]
 }
 ----
+<1> `belongsTo` without a property name makes `Book` the owned side. The owning side (`Author`) controls cascade save/delete.
+
+GORM creates a join table `author_books` with foreign-key columns for both sides.
+
+=== Saving a Many-to-Many
+
+Always save from the owning side (the side that does **not** have `belongsTo`):
+
+[source,groovy]
+----
+def author = new Author(name: 'Graeme Rocher')
+def book   = new Book(title:  'Grails in Action')
+
+author.addToBooks(book)
+author.save()           // <1>
+----
+<1> `book` is cascade-saved because `Author` is the owning side.
+
+=== Join Table Customisation
+
+Override the join table name and columns in the `mapping` block:
 
 [source,groovy]
 ----
 class Author {
-    static hasMany = [books:Book]
-    String name
+    static hasMany = [books: Book]
+    static mapping = {
+        books joinTable: [
+            name:   'author_to_book',
+            key:    'auth_id',
+            column: 'book_id'
+        ]
+    }
 }
 ----
 
-GORM maps a many-to-many using a join table at the database level. The owning side of the relationship, in this case `Author`, takes responsibility for persisting the relationship and is the only side that can cascade saves across.
+=== Bidirectional Access
 
-For example this will work and cascade saves:
-
-[source,groovy]
-----
-new Author(name:"Stephen King")
-        .addToBooks(new Book(title:"The Stand"))
-        .addToBooks(new Book(title:"The Shining"))
-        .save()
-----
-
-However this will only save the `Book` and not the authors!
+Both sides of the relationship can be navigated:
 
 [source,groovy]
 ----
-new Book(name:"Groovy in Action")
-        .addToAuthors(new Author(name:"Dierk Koenig"))
-        .addToAuthors(new Author(name:"Guillaume Laforge"))
-        .save()
+Author author = Author.get(1)
+author.books.each { println it.title }
+
+Book book = Book.get(1)
+book.authors.each { println it.name }
 ----
-
-This is the expected behaviour as, just like Hibernate, only one side of a many-to-many can take responsibility for managing the relationship.
-

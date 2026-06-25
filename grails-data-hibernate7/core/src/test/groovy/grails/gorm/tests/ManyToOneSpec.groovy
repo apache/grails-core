@@ -36,16 +36,21 @@ class ManyToOneSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
 
     void "Test many-to-one association"() {
         when: "A many-to-one association is saved"
-        Foo foo1 = new Foo(fooDesc: "Foo One").save()
-        Foo foo2 = new Foo(fooDesc: "Foo Two").save()
-        Foo foo3 = new Foo(fooDesc: "Foo Three").save()
+        Foo foo1 = new Foo(fooDesc: "Foo One").save(flush:true)
+        Foo foo2 = new Foo(fooDesc: "Foo Two").save(flush:true)
+        Foo foo3 = new Foo(fooDesc: "Foo Three").save(flush:true)
 
-        foo3.bar = new Bar(barDesc: "Bar Three", foo: foo3)
-        foo3.save(flush: true)
-        foo1.bar = new Bar(barDesc: "Bar One", foo: foo1)
-        foo1.save(flush: true)
-        foo2.bar = new Bar(barDesc: "Bar Two", foo: foo2)
-        foo2.save(flush: true)
+        manager.session.clear() // Clear session to ensure fresh entities
+
+        // Retrieve fresh Foo instances if needed, or work with detached instances
+        Foo loadedFoo1 = Foo.get(foo1.id)
+        Foo loadedFoo2 = Foo.get(foo2.id)
+        Foo loadedFoo3 = Foo.get(foo3.id)
+
+        // Create and save Bar instances
+        new Bar(barDesc: "Bar One", foo: loadedFoo1).save(flush:true)
+        new Bar(barDesc: "Bar Two", foo: loadedFoo2).save(flush:true)
+        new Bar(barDesc: "Bar Three", foo: loadedFoo3).save(flush:true)
 
         manager.session.clear()
         println "RETRIEVING FOOS!"
@@ -96,6 +101,8 @@ class Foo {
     String fooDesc
 
     Bar bar
+
+    static hasOne = [bar: Bar]
 
     static mapping = {
         id generator: 'identity'

@@ -37,7 +37,7 @@ class SchemaNameSpec extends Specification {
     @Shared PlatformTransactionManager transactionManager = datastore.getTransactionManager()
 
     @Rollback
-    @Issue('https://github.com/apache/grails-core/issues/10083')
+    @Issue('https://github.com/grails/grails-core/issues/10083')
     void 'test schema name alteration with h2'() {
         when:"An object with a custom schema is saved"
         new CustomSchema(name: "Test").save(flush:true)

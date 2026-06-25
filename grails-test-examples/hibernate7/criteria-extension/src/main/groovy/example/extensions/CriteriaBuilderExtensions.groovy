@@ -23,7 +23,10 @@ import groovy.transform.CompileStatic
 import org.grails.datastore.mapping.query.api.Criteria
 
 /**
- * Groovy extension module methods added to CriteriaBuilder.
+ * Groovy extension module methods added to {@link Criteria}.
+ *
+ * Targeting the common {@code Criteria} interface means these methods are available
+ * inside both {@code DetachedCriteria.build{}} and {@code withCriteria{}} closures.
  *
  * Registered via META-INF/groovy/org.codehaus.groovy.runtime.ExtensionModule.
  */
@@ -35,7 +38,7 @@ class CriteriaBuilderExtensions {
      * For String values, the value is trimmed (when trim is true) and treated as absent when
      * empty or blank. Non-String values are passed through unchanged; null is treated as absent.
      *
-     * @param self      the Hibernate Criteria instance
+     * @param self      the criteria instance
      * @param attribute the property name to restrict
      * @param value     the candidate value; null or blank strings are ignored
      * @param trim      whether to trim String values before the null check (default true)

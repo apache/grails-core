@@ -16,6 +16,21 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+/*
+ * Copyright 2003-2007 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.grails.orm.hibernate.cfg
 
 import groovy.transform.CompileStatic
@@ -23,14 +38,18 @@ import groovy.transform.PackageScope
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
 
+import jakarta.persistence.AccessType
 import jakarta.persistence.FetchType
-
 import org.hibernate.FetchMode
-
 import org.springframework.beans.MutablePropertyValues
 import org.springframework.validation.DataBinder
-
 import org.grails.datastore.mapping.config.Property
+
+import static jakarta.persistence.FetchType.EAGER
+import static jakarta.persistence.FetchType.LAZY
+import static org.hibernate.FetchMode.DEFAULT
+import static org.hibernate.FetchMode.JOIN
+import static org.hibernate.FetchMode.SELECT
 
 /**
  * Custom mapping for a single domain property. Note that a property
@@ -45,6 +64,7 @@ class PropertyConfig extends Property {
 
     PropertyConfig() {
         setFetchStrategy(null)
+        setAccessType(AccessType.PROPERTY)
     }
 
     @PackageScope
@@ -86,30 +106,31 @@ class PropertyConfig extends Property {
     boolean ignoreNotFound = false
 
     /**
-    * Whether or not this is column is insertable by hibernate
+     * Whether or not this is column is insertable by hibernate
      */
     boolean insertable = true
 
     /**
-    * Whether or not this column is updatable by hibernate
+     * Whether or not this column is updatable by hibernate
      */
     boolean updatable = true
 
     /**
      * Whether or not this column is updatable by hibernate
      *
-     * @deprecated Use updatable instead
+     * @deprecated Use {@link #getUpdatable()} instead
      */
-    @Deprecated // Cheap to keep around for backwards compatibility
+    @Deprecated(since = '7.0', forRemoval = true)
     boolean getUpdateable() {
         return updatable
     }
 
     /**
      * Whether or not this column is updatable by hibernate
-     * @deprecated Use updatable instead
+     *
+     * @deprecated Use {@code updatable} instead
      */
-    @Deprecated // Cheap to keep around for backwards compatibility
+    @Deprecated(since = '7.0', forRemoval = true)
     void setUpdateable(boolean updateable) {
         this.updatable = updateable
     }
@@ -128,8 +149,7 @@ class PropertyConfig extends Property {
         if (columns.size() == 1 && firstColumnIsColumnCopy) {
             firstColumnIsColumnCopy = false
             ColumnConfig.configureExisting(columns[0], columnDef)
-        }
-        else {
+        } else {
             columns.add(ColumnConfig.configureNew(columnDef))
         }
         return this
@@ -144,8 +164,7 @@ class PropertyConfig extends Property {
         if (columns.size() == 1 && firstColumnIsColumnCopy) {
             firstColumnIsColumnCopy = false
             ColumnConfig.configureExisting(columns[0], columnDef)
-        }
-        else {
+        } else {
             columns.add(ColumnConfig.configureNew(columnDef))
         }
         return this
@@ -160,8 +179,7 @@ class PropertyConfig extends Property {
         if (columns.size() == 1 && firstColumnIsColumnCopy) {
             firstColumnIsColumnCopy = false
             columns[0].name = columnDef
-        }
-        else {
+        } else {
             columns.add(ColumnConfig.configureNew(name: columnDef))
         }
         return this
@@ -203,6 +221,17 @@ class PropertyConfig extends Property {
     JoinTable joinTable = new JoinTable()
 
     /**
+     * Allows Java code and tests to set the join table.
+     */
+    void setJoinTable(JoinTable jt) {
+        this.joinTable = jt
+    }
+
+    ColumnConfig getJoinTableColumnConfig() {
+        return this.joinTable?.column
+    }
+
+    /**
      * The join table configuration
      */
     PropertyConfig joinTable(@DelegatesTo(JoinTable) Closure joinTableDef) {
@@ -232,7 +261,11 @@ class PropertyConfig extends Property {
         DataBinder dataBinder = new DataBinder(joinTable)
         dataBinder.bind(new MutablePropertyValues(joinTableDef))
         if (joinTableDef.key) {
-            joinTable.key(joinTableDef.key.toString())
+            if (joinTableDef.key instanceof Collection || joinTableDef.key.getClass().isArray()) {
+                joinTable.keys(joinTableDef.key as List)
+            } else {
+                joinTable.key(joinTableDef.key.toString())
+            }
         }
         if (joinTableDef.column) {
             joinTable.column(joinTableDef.column.toString())
@@ -244,12 +277,7 @@ class PropertyConfig extends Property {
      * @param fetch The Hibernate {@link FetchMode}
      */
     void setFetch(FetchMode fetch) {
-        if (FetchMode.JOIN.equals(fetch)) {
-            super.setFetchStrategy(FetchType.EAGER)
-        }
-        else {
-            super.setFetchStrategy(FetchType.LAZY)
-        }
+        super.setFetchStrategy(JOIN == fetch ? EAGER : LAZY)
     }
 
     /**
@@ -258,15 +286,15 @@ class PropertyConfig extends Property {
     FetchMode getFetchMode() {
         FetchType strategy = super.getFetchStrategy()
         if (strategy == null) {
-            return FetchMode.DEFAULT
+            return DEFAULT
         }
         switch (strategy) {
-            case FetchType.EAGER:
-                return FetchMode.JOIN
-            case FetchType.LAZY:
-                return FetchMode.SELECT
+            case EAGER:
+                return JOIN
+            case LAZY:
+                return SELECT
             default:
-                return FetchMode.DEFAULT
+                return DEFAULT
         }
     }
     /**
@@ -317,8 +345,7 @@ class PropertyConfig extends Property {
         ColumnConfig cc
         if (property.columns) {
             cc = property.columns[0]
-        }
-        else {
+        } else {
             cc = new ColumnConfig()
             property.columns.add(cc)
         }
@@ -390,8 +417,7 @@ class PropertyConfig extends Property {
     boolean isUnique() {
         if (columns.size() > 1) {
             return super.isUnique()
-        }
-        else {
+        } else {
             if (columns.isEmpty()) return super.isUnique()
             return columns[0].unique
         }
@@ -432,20 +458,25 @@ class PropertyConfig extends Property {
         return columns[0].scale
     }
 
+    /**
+     * @return The type name
+     */
+    String getTypeName() {
+        return type?.with { it instanceof Class ? it.name : it.toString() }
+    }
+
     @Override
     void setScale(int scale) {
         checkHasSingleColumn()
-        if (!columns.isEmpty())  {
+        if (!columns.isEmpty()) {
             columns[0].scale = scale
-        }
-        else {
+        } else {
             super.setScale(scale)
         }
     }
 
     String toString() {
-        // TODO(Grails 8): updateable -> updatable
-        "property[type:$type, lazy:$lazy, columns:$columns, insertable:${insertable}, updateable:${updatable}]"
+        "property[type:$type, lazy:$lazy, columns:$columns, insertable:${insertable}, updatable:${updatable}]"
     }
 
     protected void checkHasSingleColumn() {
@@ -473,4 +504,9 @@ class PropertyConfig extends Property {
         }
         return pc
     }
+
+    boolean hasJoinKeyMapping() {
+        joinTable?.keys
+    }
+
 }

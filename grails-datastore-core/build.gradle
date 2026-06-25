@@ -90,6 +90,8 @@ dependencies {
         // There are some tests that use JUnit 5
     }
     testImplementation 'org.spockframework:spock-core'
+    testImplementation 'net.bytebuddy:byte-buddy'
+    testImplementation 'org.objenesis:objenesis'
 
     testRuntimeOnly 'org.apache.groovy:groovy-test-junit5'
     testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during tests

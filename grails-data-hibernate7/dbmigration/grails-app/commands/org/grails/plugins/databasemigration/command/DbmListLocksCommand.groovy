@@ -52,7 +52,7 @@ class DbmListLocksCommand implements ApplicationCommand, ApplicationContextDatab
             outputFile.parentFile.mkdirs()
         }
         outputFile.withOutputStream { OutputStream out ->
-            closure.call(new PrintStream(out))
+            closure.call(new PrintStream(out, false, 'UTF-8'))
         }
     }
 }

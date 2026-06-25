@@ -16,22 +16,58 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 ////
+[[ormdsl-databaseIndices]]
+== Database Indices
 
-To get the best performance out of your queries it is often necessary to tailor the table index definitions. How you tailor them is domain specific and a matter of monitoring usage patterns of your queries. With GORM's DSL you can specify which columns are used in which indexes:
+GORM lets you define database indices on domain class columns directly in the `mapping` block, so they are created automatically when `hbm2ddl` generates the schema.
 
-[source,java]
+=== Single-Column Index
+
+Set `index: true` on a column to create an auto-named index, or provide a string name to name it explicitly:
+
+[source,groovy]
 ----
-class Person {
-    String firstName
-    String address
+class Book {
+    String title
+    String isbn
     static mapping = {
-        table 'people'
-        version false
-        id column: 'person_id'
-        firstName column: 'First_Name', index: 'Name_Idx'
-        address column: 'Address', index: 'Name_Idx,Address_Index'
+        title  index: true          // <1>
+        isbn   index: 'isbn_idx'    // <2>
+    }
+}
+----
+<1> Creates an unnamed (auto-named) index on `title`.
+<2> Creates a named index `isbn_idx` on `isbn`.
+
+=== Composite Index
+
+To create a composite index across multiple columns, use the same index name on each column:
+
+[source,groovy]
+----
+class OrderItem {
+    Long orderId
+    Long productId
+    static mapping = {
+        orderId   index: 'order_product_idx'    // <1>
+        productId index: 'order_product_idx'    // <1>
+    }
+}
+----
+<1> Both columns share the same index name, so Hibernate creates a single composite index.
+
+=== Unique Index
+
+You can combine `index` with `unique` to create a unique index:
+
+[source,groovy]
+----
+class Book {
+    String isbn
+    static mapping = {
+        isbn unique: true, index: 'isbn_unique_idx'
     }
 }
 ----
 
-Note that you cannot have any spaces in the value of the `index` attribute; in this example `index:'Name_Idx, Address_Index'` will cause an error.
+NOTE: Indices are only created automatically when `hibernate.hbm2ddl.auto` is set to `create`, `create-drop`, or `update`. For production schemas, prefer explicit DDL migration scripts.

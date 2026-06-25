@@ -19,14 +19,14 @@ under the License.
 
 Criteria is an advanced way to query that uses a Groovy builder to construct potentially complex queries. It is a much better approach than building up query strings using a `StringBuilder`.
 
-Criteria can be used either with the link:../api/org/grails/datastore/gorm/GormEntity.html#createCriteria()[createCriteria()] or link:../api/org/grails/datastore/gorm/GormEntity.html#withCriteria(groovy.lang.Closure)[withCriteria(closure)] methods.
+Criteria can be used either with the `createCriteria()` or `withCriteria(closure)` methods.
 
-The builder uses Hibernate's Criteria API. The nodes on this builder map the static methods found in the https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/criterion/Restrictions.html[Restrictions] class of the Hibernate Criteria API. For example:
+The builder uses Hibernate 7's Criteria API (based on JPA Criteria). The nodes on this builder map to GORM query constraints which are then translated into JPA Criteria predicates.
 
 [source,groovy]
 ----
 def c = Account.createCriteria()
-def results = c {
+def results = c.list {
     between("balance", 500, 1000)
     eq("branch", "London")
     or {
@@ -48,6 +48,23 @@ The results will be sorted in descending order by `holderLastName`.
 
 If no records are found with the above criteria, an empty List is returned.
 
+[[HibernateCriteriaDSL]]
+==== Hibernate Criteria DSL
+
+In Hibernate 7, the criteria builder has been completely rewritten to leverage the JPA Criteria API. The `HibernateCriteriaBuilder` implements the GORM criteria DSL and provides seamless integration with Hibernate 7 features.
+
+The DSL supports all standard GORM criteria methods such as `eq`, `ne`, `gt`, `lt`, `ge`, `le`, `between`, `like`, `ilike`, `in`, `isNull`, `isNotNull`, `isEmpty`, `isNotEmpty`, and more.
+
+[source,groovy]
+----
+def results = Person.withCriteria {
+    ilike('firstName', 'b%')
+    or {
+        ge('age', 18)
+        isNull('parent')
+    }
+}
+----
 
 ==== Conjunctions and Disjunctions
 
@@ -135,7 +152,7 @@ Here we find all accounts that have either performed transactions in the last 10
 ==== Querying with Projections
 
 
-Projections may be used to customise the results. Define a "projections" node within the criteria builder tree to use projections. There are equivalent methods within the projections node to the methods found in the Hibernate https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/criterion/Projections.html[Projections] class:
+Projections may be used to customise the results. Define a "projections" node within the criteria builder tree to use projections.
 
 [source,java]
 ----
@@ -150,158 +167,10 @@ def numberOfBranches = c.get {
 
 When multiple fields are specified in the projection, a List of values will be returned. A single value will be returned otherwise.
 
-
-==== Transforming Projection Results
-
-
-If the raw value or simple object array returned by the criteria method doesn't suit your needs, the result can be transformed with a https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/transform/ResultTransformer.html[ResultTransformer]. Let's say we want to transform the criteria results into a Map so that we can easily reference values by key:
-
-[source,java]
-----
-def c = Account.createCriteria()
-
-def accountsOverview = c.get {
-    resultTransformer(CriteriaSpecification.ALIAS_TO_ENTITY_MAP)
-    projections {
-        sum('balance', 'allBalances')
-        countDistinct('holderLastName', 'lastNames')
-    }
-}
-
-// accountsOverview.allBalances
-// accountsOverview.lastNames
-----
-
-Note that we've added an alias to each projection as an additional parameter to be used as the key. For this to work, all projections must have aliases defined, otherwise the corresponding map entry will not be built.
-
-We can also transform the result into an object of our choosing via the https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/transform/Transformers.html#aliasToBean-java.lang.Class-[Transformers.aliasToBean()] method. In this case, we'll transform it into an `AccountsOverview`:
-
-[source,java]
-----
-class AccountsOverview {
-    Number allBalances
-    Number lastNames
-}
-----
-
-[source,java]
-----
-def c = Account.createCriteria()
-
-def accountsOverview = c.get {
-    resultTransformer(Transformers.aliasToBean(AccountsOverview))
-    projections {
-        sum('balance', 'allBalances')
-        countDistinct('holderLastName', 'lastNames')
-    }
-}
-
-// accountsOverview instanceof AccountsOverview
-----
-
-Each alias must have a corresponding property or explicit setter on the bean otherwise an exception will be thrown.
+Common projections include `count`, `countDistinct`, `groupProperty`, `avg`, `min`, `max`, `sum`, `id`, and `property`.
 
 
-==== SQL Projections
-
-
-The criteria DSL provides access to Hibernate's SQL projection API.
-
-[source,java]
-----
-// Box is a domain class...
-class Box {
-    int width
-    int height
-}
-----
-
-[source,java]
-----
-// Use SQL projections to retrieve the perimeter and area of all of the Box instances...
-def c = Box.createCriteria()
-
-def results = c.list {
-    projections {
-      sqlProjection '(2 * (width + height)) as perimeter, (width * height) as area', ['perimeter', 'area'], [INTEGER, INTEGER]
-    }
-}
-----
-
-The first argument to the `sqlProjection` method is the SQL which defines the projections.  The second argument is a list of
-Strings which represent column aliases corresponding to the projected values expressed in the SQL.  The third argument
-is a list of `org.hibernate.type.Type` instances which correspond to the projected values expressed in the SQL.  The API
-supports all `org.hibernate.type.Type` objects but constants like INTEGER, LONG, FLOAT etc. are provided by the DSL which
-correspond to all of the types defined in `org.hibernate.type.StandardBasicTypes`.
-
-Consider that the following table represents the data in the
-`BOX` table.
-[format="csv", options="header"]
-|===
-
-width,height
-2,7
-2,8
-2,9
-4,9
-|===
-
-The query above would return results like this:
-
-[source,groovy]
-----
-[[18, 14], [20, 16], [22, 18], [26, 36]]
-----
-
-Each of the inner lists contains the 2 projected values for each `Box`, perimeter and area.
-
-NOTE: Note that if there are other references in scope wherever your criteria query is expressed that have names that conflict
-with any of the type constants described above, the code in your criteria will refer to those references, not the type
-constants provided by the DSL.  In the unlikely event of that happening you can disambiguate the conflict by referring
-to the fully qualified Hibernate type.  For example `StandardBasicTypes.INTEGER` instead of `INTEGER`.
-
-If only 1 value is being projected, the alias and the type do not need to be included in a list.
-
-[source,java]
-----
-def results = c.list {
-    projections {
-      sqlProjection 'sum(width * height) as totalArea', 'totalArea', INTEGER
-    }
-}
-----
-
-That query would return a single result with the value of 84 as the total area of all of the `Box` instances.
-
-The DSL supports grouped projections with the `sqlGroupProjection` method.
-
-[source,java]
-----
-def results = c.list {
-    projections {
-        sqlGroupProjection 'width, sum(height) as combinedHeightsForThisWidth', 'width', ['width', 'combinedHeightsForThisWidth'], [INTEGER, INTEGER]
-    }
-}
-----
-
-The first argument to the `sqlGroupProjection` method is the SQL which defines the projections.  The second argument represents the
-group by clause that should be part of the query.  That string may be single column name or a comma separated list of column
-names.  The third argument is a list of
-Strings which represent column aliases corresponding to the projected values expressed in the SQL.  The fourth argument
-is a list of `org.hibernate.type.Type` instances which correspond to the projected values expressed in the SQL.
-
-The query above is projecting the combined heights of boxes grouped by width and would return results that look like this:
-
-[source,groovy]
-----
-[[2, 24], [4, 9]]
-----
-
-Each of the inner lists contains 2 values.  The first value is a box width and the second value is the sum of the heights
-of all of the boxes which have that width.
-
-
-==== Using SQL Restrictions
+==== SQL Restrictions
 
 
 You can access Hibernate's SQL Restrictions capabilities.
@@ -317,7 +186,6 @@ def peopleWithShortFirstNames = c.list {
 
 SQL Restrictions may be parameterized to deal with SQL injection vulnerabilities related to dynamic restrictions.
 
-
 [source,java]
 ----
 def c = Person.createCriteria()
@@ -327,18 +195,45 @@ def peopleWithShortFirstNames = c.list {
 }
 ----
 
+NOTE: Note that the parameter there is SQL. The `first_name` attribute referenced in the example refers to the persistence model, not the object model like in HQL queries.
 
-NOTE: Note that the parameter there is SQL. The `first_name` attribute referenced in the example refers to the persistence model, not the object model like in HQL queries. The `Person` property named `firstName` is mapped to the `first_name` column in the database and you must refer to that in the `sqlRestriction` string.
+==== Setting Properties in the Criteria Instance
 
-Also note that the SQL used here is not necessarily portable across databases.
+
+The builder allows setting properties that control how the query is executed.
+
+[source,groovy]
+----
+import org.hibernate.FetchMode
+...
+def results = c.list {
+    maxResults(10)
+    firstResult(50)
+    cache(true)
+    readOnly(true)
+    lock(true)
+    fetchMode("aRelationship", FetchMode.JOIN)
+}
+----
+
+If a node within the builder tree doesn't match a particular criterion it will attempt to set a property on the Criteria object itself. This allows full access to all the properties in the criteria.
+
+==== Advanced Hibernate 7 Features
+
+The Hibernate 7 criteria builder supports several advanced features:
+
+* **Pessimistic Locking:** Use `lock(true)` to obtain a pessimistic write lock.
+* **Query Caching:** Use `cache(true)` to enable query caching for the results.
+* **Read-Only Mode:** Use `readOnly(true)` to disable dirty checking for loaded entities.
+* **Fetch Mode:** Use `fetchMode("association", FetchMode.JOIN)` to specify Eager/Lazy fetching strategies.
 
 
 ==== Using Scrollable Results
 
 
-You can use Hibernate's https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/ScrollableResults.html[ScrollableResults] feature by calling the scroll method:
+You can use Hibernate's https://docs.hibernate.org/orm/7.0/javadocs/org/hibernate/ScrollableResults.html[ScrollableResults] feature by calling the scroll method:
 
-[source,java]
+[source,groovy]
 ----
 def results = crit.scroll {
     maxResults(10)
@@ -352,7 +247,7 @@ def future = results.scroll(10)
 def accountNumber = results.getLong('number')
 ----
 
-To quote the documentation of Hibernate ScrollableResults:
+To quote the Hibernate documentation on ScrollableResults:
 
 ____
 A result iterator that allows moving around within the results by arbitrary increments. The Query / ScrollableResults pattern is very similar to the JDBC PreparedStatement / ResultSet pattern and the semantics of methods of this interface are similar to the similarly named methods on ResultSet.
@@ -361,29 +256,12 @@ ____
 Contrary to JDBC, columns of results are numbered from zero.
 
 
-==== Setting properties in the Criteria instance
-
-
-If a node within the builder tree doesn't match a particular criterion it will attempt to set a property on the Criteria object itself. This allows full access to all the properties in this class. This example calls `setMaxResults` and `setFirstResult` on the https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/Criteria.html[Criteria] instance:
-
-[source,java]
-----
-import org.hibernate.FetchMode as FM
-...
-def results = c.list {
-    maxResults(10)
-    firstResult(50)
-    fetchMode("aRelationship", FM.JOIN)
-}
-----
-
-
 ==== Querying with Eager Fetching
 
 
-In the section on <<fetching,Eager and Lazy Fetching>> we discussed how to declaratively specify fetching to avoid the N+1 SELECT problem. However, this can also be achieved using a criteria query:
+In the section on eager and lazy fetching we discussed how to declaratively specify fetching to avoid the N+1 SELECT problem. However, this can also be achieved using a criteria query:
 
-[source,java]
+[source,groovy]
 ----
 def criteria = Task.createCriteria()
 def tasks = criteria.list{
@@ -394,7 +272,8 @@ def tasks = criteria.list{
 }
 ----
 
-Notice the usage of the `join` method: it tells the criteria API to use a `JOIN` to fetch the named associations with the `Task` instances. It's probably best not to use this for one-to-many associations though, because you will most likely end up with duplicate results. Instead, use the 'select' fetch mode:
+Notice the usage of the `join` method: it tells the criteria API to use a `JOIN` to fetch the named associations with the `Task` instances. It's probably best not to use this for one-to-many associations though, because you will most likely end up with duplicate results. Instead, use the `select` fetch mode:
+
 [source,groovy]
 ----
 import org.hibernate.FetchMode as FM
@@ -404,11 +283,13 @@ def results = Airport.withCriteria {
     fetchMode "flights", FM.SELECT
 }
 ----
-Although this approach triggers a second query to get the `flights` association, you will get reliable results  - even with the `maxResults` option.
+
+Although this approach triggers a second query to get the `flights` association, you will get reliable results — even with the `maxResults` option.
 
 NOTE: `fetchMode` and `join` are general settings of the query and can only be specified at the top-level, i.e. you cannot use them inside projections or association constraints.
 
 An important point to bear in mind is that if you include associations in the query constraints, those associations will automatically be eagerly loaded. For example, in this query:
+
 [source,groovy]
 ----
 def results = Airport.withCriteria {
@@ -418,6 +299,7 @@ def results = Airport.withCriteria {
     }
 }
 ----
+
 the `flights` collection would be loaded eagerly via a join even though the fetch mode has not been explicitly set.
 
 
@@ -426,26 +308,25 @@ the `flights` collection would be loaded eagerly via a join even though the fetc
 
 If you invoke the builder with no method name such as:
 
-[source,java]
+[source,groovy]
 ----
 c { ... }
 ----
 
-The build defaults to listing all the results and hence the above is equivalent to:
+The builder defaults to listing all the results and hence the above is equivalent to:
 
-[source,java]
+[source,groovy]
 ----
 c.list { ... }
 ----
 
 [format="csv", options="header"]
 |===
-
 Method,Description
 *list*,This is the default method. It returns all matching rows.
 *get*,Returns a unique result set i.e. just one row. The criteria has to be formed in a way that it only queries one row. This method is not to be confused with a limit to just the first row.
 *scroll*,Returns a scrollable result set.
-*listDistinct*,If subqueries or associations are used one may end up with the same row multiple times in the result set. This allows listing only distinct entities and is equivalent to `DISTINCT_ROOT_ENTITY` of the https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/criterion/CriteriaSpecification.html[CriteriaSpecification] class.
+*listDistinct*,If subqueries or associations are used one may end up with the same row multiple times in the result set. This allows listing only distinct entities and is equivalent to `DISTINCT_ROOT_ENTITY` of the CriteriaSpecification class.
 *count*,Returns the number of matching rows.
 |===
 
@@ -455,7 +336,7 @@ Method,Description
 
 You can combine multiple criteria closures in the following way:
 
-[source,java]
+[source,groovy]
 ----
 def emeaCriteria = {
     eq "region", "EMEA"

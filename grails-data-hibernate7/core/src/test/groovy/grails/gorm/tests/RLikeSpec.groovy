@@ -24,18 +24,18 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
     void setupSpec() {
-        manager.registerDomainClasses(RlikeFoo)
+        manager.registerDomainClasses(RLikeLegacyFoo)
     }
 
     void "test rlike works with H2"() {
         given:
-        new RlikeFoo(name: "ABC").save(flush: true)
-        new RlikeFoo(name: "ABCDEF").save(flush: true)
-        new RlikeFoo(name: "ABCDEFGHI").save(flush: true)
+        new RLikeLegacyFoo(name: "ABC").save(flush: true)
+        new RLikeLegacyFoo(name: "ABCDEF").save(flush: true)
+        new RLikeLegacyFoo(name: "ABCDEFGHI").save(flush: true)
 
         when:
         manager.session.clear()
-        List<RlikeFoo> allFoos = RlikeFoo.findAllByNameRlike("ABCD.*")
+        List<RLikeLegacyFoo> allFoos = RLikeLegacyFoo.findAllByNameRlike("ABCD.*")
 
         then:
         allFoos.size() == 2
@@ -43,6 +43,6 @@ class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
 }
 
 @Entity
-class RlikeFoo {
+class RLikeLegacyFoo {
     String name
 }
