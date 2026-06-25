@@ -19,6 +19,7 @@
 
 package org.grails.gorm.graphql.entity.dsl.helpers
 
+import groovy.transform.Anchored
 import groovy.transform.CompileStatic
 
 /**
@@ -31,6 +32,7 @@ import groovy.transform.CompileStatic
 @CompileStatic
 trait ExecutesClosures {
 
+    @Anchored
     static void withDelegate(@DelegatesTo(strategy = Closure.DELEGATE_ONLY)Closure closure, Object delegate) {
         if (closure != null) {
             closure.resolveStrategy = Closure.DELEGATE_ONLY
@@ -44,4 +46,3 @@ trait ExecutesClosures {
         }
     }
 }
-

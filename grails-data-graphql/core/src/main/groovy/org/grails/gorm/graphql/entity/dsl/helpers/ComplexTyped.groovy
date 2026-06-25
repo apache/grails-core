@@ -131,16 +131,7 @@ trait ComplexTyped<T> extends ExecutesClosures {
 
     private void handleField(@DelegatesTo(strategy = Closure.DELEGATE_ONLY)Closure closure, Field field) {
         field.nullable(defaultNull)
-        // Inlined ExecutesClosures.withDelegate: Groovy 5 STC can't resolve a parent trait's static method.
-        if (closure != null) {
-            closure.resolveStrategy = Closure.DELEGATE_ONLY
-            closure.delegate = field
-            try {
-                closure.call()
-            } finally {
-                closure.delegate = null
-            }
-        }
+        ExecutesClosures.withDelegate(closure, field)
         handleField(field)
     }
 
