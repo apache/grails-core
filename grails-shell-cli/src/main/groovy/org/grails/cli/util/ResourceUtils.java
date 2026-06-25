@@ -163,7 +163,7 @@ public abstract class ResourceUtils {
                 URL url = URI.create(location).toURL();
                 return new UrlResource(url);
             }
-            catch (MalformedURLException ex) {
+            catch (MalformedURLException | IllegalArgumentException ex) {
                 // No URL -> resolve as resource path.
                 return getResourceByPath(location);
             }
