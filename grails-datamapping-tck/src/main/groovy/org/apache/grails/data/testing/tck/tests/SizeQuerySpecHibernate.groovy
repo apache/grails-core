@@ -32,7 +32,7 @@ import spock.lang.Unroll
 class SizeQuerySpecHibernate extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Owner_Default_Bi_P, Child_BT_Default_P])
+        manager.registerDomainClasses(Owner_Default_Bi_P, Child_BT_Default_P)
     }
 
     private void setupTestData() {

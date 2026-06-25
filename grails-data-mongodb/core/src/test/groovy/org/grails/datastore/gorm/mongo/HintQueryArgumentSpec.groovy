@@ -18,18 +18,18 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import com.mongodb.MongoException
 import com.mongodb.MongoQueryException
 import grails.gorm.CriteriaBuilder
 import grails.gorm.DetachedCriteria
-import grails.gorm.specs.Person
+import grails.gorm.tests.Person
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
-class HintQueryArgumentSpec extends MongoDatastoreSpec {
+class HintQueryArgumentSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Person])
+        manager.registerDomainClasses(Person)
     }
 
     void "Test that hints work on criteria queries"() {

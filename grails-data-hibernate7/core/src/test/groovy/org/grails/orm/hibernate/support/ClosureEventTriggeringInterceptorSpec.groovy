@@ -20,7 +20,7 @@ package org.grails.orm.hibernate.support
 
 import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.HibernateEntity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
 import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher
 import org.grails.datastore.mapping.core.Datastore
@@ -55,10 +55,10 @@ class ClosureEventTriggeringInterceptorSpec extends HibernateGormDatastoreSpec {
 
     @Override
     void setupSpec() {
-        manager.addAllDomainClasses([
+        manager.registerDomainClasses(
             InterceptorBook,
             TimestampedBook,
-        ])
+        )
     }
 
     // -------------------------------------------------------------------------

@@ -27,8 +27,9 @@ import org.apache.grails.data.testing.tck.domains.TestEntity
  */
 class OrderBySpec extends GrailsDataTckSpec {
 
+    @Override
     void setupSpec() {
-        manager.addAllDomainClasses([TestEntity, ChildEntity])
+        manager.registerDomainClasses(TestEntity, ChildEntity)
     }
 
     void 'Test order with criteria'() {
@@ -41,7 +42,7 @@ class OrderBySpec extends GrailsDataTckSpec {
 
         when:
         def results = TestEntity.createCriteria().list {
-            order 'age'
+            order('age')
         }
         then:
         40 == results[0].age
@@ -50,7 +51,7 @@ class OrderBySpec extends GrailsDataTckSpec {
 
         when:
         results = TestEntity.createCriteria().list {
-            order 'age', 'desc'
+            order('age', 'desc')
         }
 
         then:

@@ -23,20 +23,19 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 
-import org.gradle.api.NamedDomainObjectContainer
-import org.gradle.api.Plugin
-import org.gradle.api.Project
-import org.gradle.api.plugins.quality.Pmd
-import org.gradle.api.plugins.quality.PmdExtension
-import org.gradle.api.plugins.quality.PmdPlugin
-import org.gradle.api.provider.Provider
-
 import com.github.spotbugs.snom.Confidence
 import com.github.spotbugs.snom.Effort
 import com.github.spotbugs.snom.SpotBugsExtension
 import com.github.spotbugs.snom.SpotBugsPlugin
-import com.github.spotbugs.snom.SpotBugsReport
 import com.github.spotbugs.snom.SpotBugsTask
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.logging.Logger
+import org.gradle.api.logging.Logging
+import org.gradle.api.plugins.quality.Pmd
+import org.gradle.api.plugins.quality.PmdExtension
+import org.gradle.api.plugins.quality.PmdPlugin
 
 /**
  * Convention plugin for Grails byte code analysis (PMD and SpotBugs).
@@ -45,14 +44,16 @@ import com.github.spotbugs.snom.SpotBugsTask
 @CompileStatic
 class GrailsCodeAnalysisPlugin implements Plugin<Project> {
 
-    static String PMD_DIR_PROPERTY = 'grails.codeanalysis.dir.pmd'
-    static String PMD_ENABLED_PROPERTY = 'grails.codeanalysis.enabled.pmd'
+    private static final Logger LOGGER = Logging.getLogger(GrailsViolationAggregationPlugin)
+
+    static String PMD_DIR_PROPERTY = 'grails.code-analysis.dir.pmd'
+    static String PMD_ENABLED_PROPERTY = 'grails.code-analysis.enabled.pmd'
     static String PMD_CONFIG_FILE_NAME = 'pmd.xml'
 
-    static String SPOTBUGS_ENABLED_PROPERTY = 'grails.codeanalysis.enabled.spotbugs'
+    static String SPOTBUGS_ENABLED_PROPERTY = 'grails.code-analysis.enabled.spotbugs'
 
-    static String IGNORE_FAILURES_PROPERTY = 'grails.codeanalysis.ignoreFailures'
-    static String TEST_ANALYSIS_PROPERTY = 'grails.codeanalysis.enabled.tests'
+    static String IGNORE_FAILURES_PROPERTY = 'grails.code-analysis.ignoreFailures'
+    static String TEST_ANALYSIS_PROPERTY = 'grails.code-analysis.enabled.tests'
 
     static String BASE_RESOURCE_PATH = '/META-INF/org.apache.grails.buildsrc.grails-code-analysis'
 
@@ -64,21 +65,22 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
 
         // withType returns a live empty collection when the tool is not enabled,
         // so these dependsOn calls are safe regardless of whether PMD/SpotBugs are active
-        project.tasks.register('codeAnalysis') { task ->
-            task.group = 'verification'
-            task.description = 'Runs code analysis checks (PMD, SpotBugs)'
-            task.dependsOn(project.tasks.withType(Pmd))
-            task.dependsOn(project.tasks.withType(SpotBugsTask))
+        project.tasks.register('codeAnalysis') {
+            it.group = 'verification'
+            it.description = 'Runs code analysis checks (PMD, SpotBugs)'
+            it.dependsOn(project.tasks.withType(Pmd))
+            it.dependsOn(project.tasks.withType(SpotBugsTask))
         }
     }
 
     private static void initExtension(Project project) {
         def gca = project.extensions.create('grailsCodeAnalysis', GrailsCodeAnalysisExtension)
+        def buildDirectory = project.layout.buildDirectory
 
         gca.pmdDirectory.set(project.provider {
             def directory = project.hasProperty(PMD_DIR_PROPERTY) ?
                     project.rootProject.layout.projectDirectory.dir(project.property(PMD_DIR_PROPERTY) as String) :
-                    project.rootProject.layout.buildDirectory.get().dir('codeanalysis').dir('pmd')
+                    project.rootProject.layout.buildDirectory.get().dir('code-analysis').dir('pmd')
 
             def toCreate = directory.asFile.toPath()
             Files.createDirectories(toCreate)
@@ -86,35 +88,35 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
             createOrLoad(
                     toCreate.resolve(PMD_CONFIG_FILE_NAME),
                     "${BASE_RESOURCE_PATH}/pmd/${PMD_CONFIG_FILE_NAME}",
-                    project
+                    buildDirectory
             )
 
             directory
         })
     }
 
-    private static void createOrLoad(Path expectedPath, String defaultResource, Project project) {
-        boolean defaultPath = expectedPath.startsWith(project.rootProject.buildDir.toPath())
+    private static void createOrLoad(Path expectedPath, String defaultResource, DirectoryProperty buildDirectory) {
+        def defaultPath = expectedPath.startsWith(buildDirectory.get().asFile.toPath())
         if (!Files.exists(expectedPath) || expectedPath.size() == 0 || defaultPath) {
             def defaultValue = GrailsCodeAnalysisPlugin.getResourceAsStream(defaultResource)
             if (!defaultValue) {
                 throw new IllegalStateException("Could not locate default configuration file: ${defaultResource}")
             }
-            project.logger.info('Replacing code analysis configuration')
+            LOGGER.info('Replacing code analysis configuration')
             expectedPath.text = defaultValue.text
         }
     }
 
     static void configurePmd(Project project) {
-        Provider<Boolean> pmdEnabled = GradleUtils.booleanProvider(project, PMD_ENABLED_PROPERTY)
+        def pmdEnabled = GradleUtils.booleanProvider(project, PMD_ENABLED_PROPERTY)
         if (!pmdEnabled.get()) {
             return
         }
 
         project.pluginManager.apply(PmdPlugin)
 
-        Provider<Boolean> ignoreFailures = GradleUtils.booleanProvider(project, IGNORE_FAILURES_PROPERTY)
-        Provider<Boolean> testStylingEnabled = GradleUtils.booleanProvider(project, TEST_ANALYSIS_PROPERTY)
+        def ignoreFailures = GradleUtils.booleanProvider(project, IGNORE_FAILURES_PROPERTY)
+        def testStylingEnabled = GradleUtils.booleanProvider(project, TEST_ANALYSIS_PROPERTY)
 
         project.extensions.configure(PmdExtension) {
             it.ruleSetFiles = project.files(project.extensions.getByType(GrailsCodeAnalysisExtension).pmdDirectory.file(PMD_CONFIG_FILE_NAME))
@@ -124,35 +126,35 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
             it.toolVersion = project.findProperty('pmdVersion')
         }
 
-        project.tasks.withType(Pmd).configureEach { Pmd task ->
-            task.group = 'verification'
-            task.onlyIf { !project.hasProperty('skipCodeStyle') }
-            task.ignoreFailures = ignoreFailures.get()
+        project.tasks.withType(Pmd).configureEach {
+            it.group = 'verification'
+            it.onlyIf { !project.hasProperty('skipCodeStyle') }
+            it.ignoreFailures = ignoreFailures.get()
 
-            if (task.name.contains('Test') || task.name.contains('test')) {
-                task.enabled = testStylingEnabled.get()
+            if (it.name.contains('Test') || it.name.contains('test')) {
+                it.enabled = testStylingEnabled.get()
             }
 
-            task.reports.xml.required.set(true)
-            task.reports.xml.outputLocation.set(
+            it.reports.xml.required.set(true)
+            it.reports.xml.outputLocation.set(
                     project.extensions.getByType(GrailsCodeAnalysisExtension)
                             .reportsDirectory.get()
                             .dir('pmd')
-                            .file("${project.name}-${task.name}.xml")
+                            .file("${project.name}-${it.name}.xml")
             )
         }
     }
 
     static void configureSpotbugs(Project project) {
-        Provider<Boolean> spotbugsEnabled = GradleUtils.booleanProvider(project, SPOTBUGS_ENABLED_PROPERTY)
+        def spotbugsEnabled = GradleUtils.booleanProvider(project, SPOTBUGS_ENABLED_PROPERTY)
         if (!spotbugsEnabled.get()) {
             return
         }
 
         project.pluginManager.apply(SpotBugsPlugin)
 
-        Provider<Boolean> ignoreFailures = GradleUtils.booleanProvider(project, IGNORE_FAILURES_PROPERTY)
-        Provider<Boolean> testStylingEnabled = GradleUtils.booleanProvider(project, TEST_ANALYSIS_PROPERTY)
+        def ignoreFailures = GradleUtils.booleanProvider(project, IGNORE_FAILURES_PROPERTY)
+        def testStylingEnabled = GradleUtils.booleanProvider(project, TEST_ANALYSIS_PROPERTY)
 
         project.extensions.configure(SpotBugsExtension) {
             it.effort.set(Effort.valueOf('MAX'))
@@ -160,23 +162,23 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
             it.ignoreFailures.set(ignoreFailures)
         }
 
-        project.tasks.withType(SpotBugsTask).configureEach { SpotBugsTask task ->
-            task.group = 'verification'
-            NamedDomainObjectContainer<SpotBugsReport> spotBugsReports = task.reports
-            SpotBugsReport htmlReport = spotBugsReports.maybeCreate('html')
+        project.tasks.withType(SpotBugsTask).configureEach {
+            it.group = 'verification'
+            def spotBugsReports = it.reports
+            def htmlReport = spotBugsReports.maybeCreate('html')
             htmlReport.required.set(true)
-            SpotBugsReport xmlReport = spotBugsReports.maybeCreate('xml')
+            def xmlReport = spotBugsReports.maybeCreate('xml')
             xmlReport.required.set(true)
             xmlReport.outputLocation.set(
                 project.extensions.getByType(GrailsCodeAnalysisExtension)
                         .reportsDirectory.get()
                         .dir('spotbugs')
-                        .file("${project.name}-${task.name}.xml")
+                        .file("${project.name}-${it.name}.xml")
             )
-            task.onlyIf { !project.hasProperty('skipCodeStyle') }
+            it.onlyIf { !project.hasProperty('skipCodeStyle') }
 
-            if (task.name.contains('Test') || task.name.contains('test')) {
-                task.enabled = testStylingEnabled.get()
+            if (it.name.contains('Test') || it.name.contains('test')) {
+                it.enabled = testStylingEnabled.get()
             }
         }
     }

@@ -26,7 +26,6 @@ plugins {
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.gradle.grails-code-style'
-    id 'org.apache.grails.gradle.grails-code-analysis'
     id 'org.apache.grails.gradle.grails-jacoco'
 }
 
@@ -58,7 +57,9 @@ dependencies {
     api 'org.apache.ant:ant'
     api 'org.fusesource.jansi:jansi'
     api 'org.jline:jline'
-    api "org.gradle:gradle-tooling-api:$gradleToolingApiVersion"
+    api("org.gradle:gradle-tooling-api:$gradleToolingApiVersion") {
+        exclude group: 'org.slf4j', module: 'slf4j-api'
+    }
     
     compileOnly 'org.springframework.boot:spring-boot'
     compileOnly 'org.springframework.boot:spring-boot-loader-tools'
@@ -107,10 +108,9 @@ dependencies {
 
     // Testing
     testImplementation 'org.slf4j:slf4j-simple'
-    testImplementation('org.spockframework:spock-core') { transitive = false }
-    // Required by Spock's Mocking
-    testRuntimeOnly 'net.bytebuddy:byte-buddy'
-    testImplementation 'org.objenesis:objenesis'
+    testImplementation 'org.spockframework:spock-core'
+
+    testRuntimeOnly 'net.bytebuddy:byte-buddy' // Required by Spock's mocking support
 
     // any project that should be included in the end distribution should be included here
     // historically these were the included projects so we have trimmed them back down to pre7.0

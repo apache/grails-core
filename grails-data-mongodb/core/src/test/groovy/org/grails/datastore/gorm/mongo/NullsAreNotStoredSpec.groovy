@@ -18,10 +18,9 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import grails.mongodb.MongoEntity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.Document
 import org.bson.types.ObjectId
 import grails.persistence.Entity
@@ -29,10 +28,10 @@ import grails.persistence.Entity
 /**
  *
  */
-class NullsAreNotStoredSpec extends MongoDatastoreSpec {
+class NullsAreNotStoredSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([NANSPerson])
+        manager.registerDomainClasses(NANSPerson)
     }
 
     void "Test that null values are not stored on domain creation"() {

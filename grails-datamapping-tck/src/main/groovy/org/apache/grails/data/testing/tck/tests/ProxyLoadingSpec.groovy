@@ -18,17 +18,18 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.ChildEntity
 import org.apache.grails.data.testing.tck.domains.TestEntity
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Abstract base test for loading proxies. Subclasses should do the necessary setup to configure GORM
  */
 class ProxyLoadingSpec extends GrailsDataTckSpec {
 
+    @Override
     void setupSpec() {
-        manager.addAllDomainClasses([TestEntity, ChildEntity])
+        manager.registerDomainClasses(TestEntity, ChildEntity)
     }
 
     void 'Test load proxied instance directly'() {

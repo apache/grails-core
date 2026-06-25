@@ -18,13 +18,14 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import org.apache.grails.data.testing.tck.domains.TestEntity
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.TestEntity
 
 class FindWhereSpec extends GrailsDataTckSpec {
 
+    @Override
     void setupSpec() {
-        manager.addAllDomainClasses([TestEntity])
+        manager.registerDomainClasses(TestEntity)
     }
 
     def 'Test findWhere returns a matching Instance'() {
@@ -79,5 +80,46 @@ class FindWhereSpec extends GrailsDataTckSpec {
         'David' == entity[0].name
         27 == entity[0].age
         entityId == entity[0].id
+    }
+
+    def 'Test findWhere matches null property values'() {
+        given:
+        new TestEntity(name: 'hasAge', age: 41).save(flush: true)
+        new TestEntity(name: 'noAge', age: null).save(flush: true)
+
+        when: 'a null value is supplied for a nullable property'
+        def entity = TestEntity.findWhere(age: null)
+
+        then: 'the row whose property is null is matched (is null, not = null)'
+        entity != null
+        'noAge' == entity.name
+        null == entity.age
+    }
+
+    def 'Test findAllWhere matches null property values'() {
+        given:
+        new TestEntity(name: 'hasAge', age: 41).save(flush: true)
+        new TestEntity(name: 'noAge1', age: null).save(flush: true)
+        new TestEntity(name: 'noAge2', age: null).save(flush: true)
+
+        when: 'a null value is supplied for a nullable property'
+        def results = TestEntity.findAllWhere(age: null)
+
+        then: 'every row whose property is null is matched'
+        2 == results.size()
+        results.every { null == it.age }
+    }
+
+    def 'Test findWhere returns a single instance when multiple rows match'() {
+        given:
+        new TestEntity(name: 'duplicate', age: 1).save(flush: true)
+        new TestEntity(name: 'duplicate', age: 2).save(flush: true)
+
+        when: 'more than one row matches the property map'
+        def entity = TestEntity.findWhere(name: 'duplicate')
+
+        then: 'a single instance is returned rather than failing on multiple results'
+        entity != null
+        'duplicate' == entity.name
     }
 }

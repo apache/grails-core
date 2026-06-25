@@ -18,16 +18,17 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import org.apache.grails.data.testing.tck.domains.Book
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.Book
 
 /**
  * @author graemerocher
  */
 class NegationSpec extends GrailsDataTckSpec {
 
+    @Override
     void setupSpec() {
-        manager.addAllDomainClasses([Book])
+        manager.registerDomainClasses(Book)
     }
 
     void 'Test negation in dynamic finder'() {
@@ -78,17 +79,14 @@ class NegationSpec extends GrailsDataTckSpec {
         when:
         def results = Book.withCriteria {
             not {
-                or {
-                    eq 'title', 'The Stand'
-                    eq 'author', 'Stephen King'
-                }
-
+                eq('title', 'The Stand')
+                eq('author', 'James Patterson')
             }
         }
 
         then:
         results.size() == 2
         results.find { it.author == 'Stieg Larsson' } != null
-        results.find { it.author == 'James Patterson' } != null
+        results.find { it.author == 'Stephen King' && it.title == 'The Shining' } != null
     }
 }

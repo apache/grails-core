@@ -21,6 +21,8 @@ package org.grails.taglib
 
 import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
+import org.apache.commons.logging.Log
+import org.apache.commons.logging.LogFactory
 import org.codehaus.groovy.reflection.CachedMethod
 import org.codehaus.groovy.runtime.metaclass.MethodSelectionException
 
@@ -31,6 +33,8 @@ import grails.util.GrailsClassUtils
 import org.grails.taglib.encoder.OutputContextLookupHelper
 
 class TagLibraryMetaUtils {
+
+    private static final Log LOG = LogFactory.getLog(TagLibraryMetaUtils)
 
     // used for testing (GroovyPageUnitTestMixin.mockTagLib) and "nonEnhancedTagLibClasses" in GroovyPagesGrailsPlugin
     private final static Object[] EMPTY_OBJECT_ARRAY = new Object[0]
@@ -44,8 +48,42 @@ class TagLibraryMetaUtils {
 
     @CompileStatic
     static void enhanceTagLibMetaClass(MetaClass mc, TagLibraryLookup gspTagLibraryLookup, String namespace) {
+        registerTagMethodContextMetaProperties(mc)
         registerTagMetaMethods(mc, gspTagLibraryLookup, namespace)
         registerNamespaceMetaProperties(mc, gspTagLibraryLookup)
+    }
+
+    @CompileStatic
+    static void registerTagMethodContextMetaProperties(MetaClass metaClass) {
+        GroovyObject mc = (GroovyObject) metaClass
+        if (!metaClass.hasProperty('attrs') && !doesMethodExist(metaClass, 'getAttrs', [] as Class[])) {
+            mc.setProperty('getAttrs') { ->
+                TagMethodContext.currentAttrs()
+            }
+        }
+        if (!metaClass.hasProperty('body') && !doesMethodExist(metaClass, 'getBody', [] as Class[])) {
+            mc.setProperty('getBody') { ->
+                TagMethodContext.currentBody()
+            }
+        }
+        if (!doesMethodExist(metaClass, 'body', [] as Class[])) {
+            mc.setProperty('body') { ->
+                Closure currentBody = (Closure) TagMethodContext.currentBody()
+                currentBody.call()
+            }
+        }
+        if (!doesMethodExist(metaClass, 'body', [Map] as Class[])) {
+            mc.setProperty('body') { Map arguments ->
+                Closure currentBody = (Closure) TagMethodContext.currentBody()
+                currentBody.call(arguments)
+            }
+        }
+        if (!doesMethodExist(metaClass, 'body', [Object] as Class[])) {
+            mc.setProperty('body') { Object argument ->
+                Closure currentBody = (Closure) TagMethodContext.currentBody()
+                currentBody.call(argument)
+            }
+        }
     }
 
     @CompileStatic
@@ -57,7 +95,7 @@ class TagLibraryMetaUtils {
 
     @CompileStatic
     static void registerNamespaceMetaProperty(MetaClass metaClass, TagLibraryLookup gspTagLibraryLookup, String namespace) {
-        if (!metaClass.hasProperty(namespace) && !doesMethodExist(metaClass, GrailsClassUtils.getGetterName(namespace), [] as Class[])) {
+        if (!doesMethodExist(metaClass, GrailsClassUtils.getGetterName(namespace), [] as Class[], false, true)) {
             registerPropertyMissingForTag(metaClass, namespace, gspTagLibraryLookup.lookupNamespaceDispatcher(namespace))
         }
     }
@@ -66,33 +104,54 @@ class TagLibraryMetaUtils {
     static registerMethodMissingForTags(MetaClass metaClass, TagLibraryLookup gspTagLibraryLookup, String namespace, String name, boolean addAll = true, boolean overrideMethods = true) {
         GroovyObject mc = (GroovyObject) metaClass
 
-        if (overrideMethods || !doesMethodExist(metaClass, name, [Map, Closure] as Class[])) {
+        if (shouldRegisterTagDispatcher(metaClass, namespace, name, [Map, Closure] as Class[], overrideMethods)) {
             mc.setProperty(name) { Map attrs, Closure body ->
-                TagOutput.captureTagOutput(gspTagLibraryLookup, namespace, name, attrs, body, OutputContextLookupHelper.lookupOutputContext())
+                captureTagOutputForMethodCall(gspTagLibraryLookup, namespace, name, attrs, body)
             }
         }
-        if (overrideMethods || !doesMethodExist(metaClass, name, [Map, CharSequence] as Class[])) {
+        if (shouldRegisterTagDispatcher(metaClass, namespace, name, [Map, CharSequence] as Class[], overrideMethods)) {
             mc.setProperty(name) { Map attrs, CharSequence body ->
-                TagOutput.captureTagOutput(gspTagLibraryLookup, namespace, name, attrs, new TagOutput.ConstantClosure(body), OutputContextLookupHelper.lookupOutputContext())
+                captureTagOutputForMethodCall(gspTagLibraryLookup, namespace, name, attrs, new TagOutput.ConstantClosure(body))
             }
         }
-        if (overrideMethods || !doesMethodExist(metaClass, name, [Map] as Class[])) {
+        if (shouldRegisterTagDispatcher(metaClass, namespace, name, [Map] as Class[], overrideMethods)) {
             mc.setProperty(name) { Map attrs ->
-                TagOutput.captureTagOutput(gspTagLibraryLookup, namespace, name, attrs, null, OutputContextLookupHelper.lookupOutputContext())
+                captureTagOutputForMethodCall(gspTagLibraryLookup, namespace, name, attrs, null)
             }
         }
         if (addAll) {
-            if (overrideMethods || !doesMethodExist(metaClass, name, [Closure] as Class[])) {
+            if (shouldRegisterTagDispatcher(metaClass, namespace, name, [Closure] as Class[], overrideMethods)) {
                 mc.setProperty(name) { Closure body ->
-                    TagOutput.captureTagOutput(gspTagLibraryLookup, namespace, name, [:], body, OutputContextLookupHelper.lookupOutputContext())
+                    captureTagOutputForMethodCall(gspTagLibraryLookup, namespace, name, [:], body)
                 }
             }
-            if (overrideMethods || !doesMethodExist(metaClass, name, [] as Class[])) {
+            if (shouldRegisterTagDispatcher(metaClass, namespace, name, [] as Class[], overrideMethods)) {
                 mc.setProperty(name) { ->
-                    TagOutput.captureTagOutput(gspTagLibraryLookup, namespace, name, [:], null, OutputContextLookupHelper.lookupOutputContext())
+                    captureTagOutputForMethodCall(gspTagLibraryLookup, namespace, name, [:], null)
                 }
             }
         }
+    }
+
+    @CompileStatic
+    private static boolean shouldRegisterTagDispatcher(MetaClass metaClass, String namespace, String name, Class[] parameterTypes, boolean overrideMethods) {
+        boolean methodExists = doesMethodExist(metaClass, name, parameterTypes)
+        if (!methodExists) {
+            return true
+        }
+        if (overrideMethods) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Registering tag dispatcher ${namespace}:${name} over existing method ${metaClass.theClass.name}.${name}(${parameterTypes*.simpleName.join(', ')})")
+            }
+            return true
+        }
+        return false
+    }
+
+    @CompileStatic
+    private static Object captureTagOutputForMethodCall(TagLibraryLookup gspTagLibraryLookup, String namespace, String name, Map attrs, Object body) {
+        Object output = TagOutput.captureTagOutput(gspTagLibraryLookup, namespace, name, attrs, body, OutputContextLookupHelper.lookupOutputContext())
+        return output
     }
 
     static registerMethodMissingForTags(MetaClass mc, ApplicationContext ctx,
@@ -109,13 +168,13 @@ class TagLibraryMetaUtils {
     }
 
     @CompileStatic
-    static void registerTagMetaMethods(MetaClass emc, TagLibraryLookup lookup, String namespace) {
+    static void registerTagMetaMethods(MetaClass emc, TagLibraryLookup lookup, String namespace, boolean overrideMethods = true) {
         for (String tagName : lookup.getAvailableTags(namespace)) {
             boolean addAll = !(namespace == TagOutput.DEFAULT_NAMESPACE && tagName == 'hasErrors')
-            registerMethodMissingForTags(emc, lookup, namespace, tagName, addAll, false)
+            registerMethodMissingForTags(emc, lookup, namespace, tagName, addAll, overrideMethods)
         }
         if (namespace != TagOutput.DEFAULT_NAMESPACE) {
-            registerTagMetaMethods(emc, lookup, TagOutput.DEFAULT_NAMESPACE)
+            registerTagMetaMethods(emc, lookup, TagOutput.DEFAULT_NAMESPACE, false)
         }
     }
 
@@ -149,6 +208,34 @@ class TagLibraryMetaUtils {
         Object[] args = makeObjectArray(argsParam)
         final GroovyObject tagBean = gspTagLibraryLookup.lookupTagLibrary(namespace, name)
         if (tagBean != null) {
+            Object tagLibProp = TagMethodInvoker.getClosureTagProperty(tagBean, name)
+            if (tagLibProp instanceof Closure || TagMethodInvoker.hasInvokableTagMethod(tagBean, name)) {
+                Map attrs = [:]
+                Object body = null
+                switch (args.length) {
+                    case 0:
+                        break
+                    case 1:
+                        if (args[0] instanceof Map) {
+                            attrs = (Map) args[0]
+                        } else if (args[0] instanceof Closure || args[0] instanceof CharSequence) {
+                            body = args[0]
+                        } else {
+                            attrs = [(name): args[0]]
+                        }
+                        break
+                    case 2:
+                        if (args[0] instanceof Map) {
+                            attrs = (Map) args[0]
+                            body = args[1]
+                        }
+                        break
+                }
+                if (addMethodsToMetaClass) {
+                    registerMethodMissingForTags(mc, gspTagLibraryLookup, namespace, name)
+                }
+                return captureTagOutputForMethodCall(gspTagLibraryLookup, namespace, name, attrs, body)
+            }
             MetaClass tagBeanMc = tagBean.getMetaClass()
             final MetaMethod method = tagBeanMc.respondsTo(tagBean, name, args).find { it }
             if (method != null) {

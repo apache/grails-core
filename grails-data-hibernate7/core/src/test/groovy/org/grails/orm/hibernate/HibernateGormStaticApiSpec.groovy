@@ -20,15 +20,16 @@
 package org.grails.orm.hibernate
 
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.entities.Club
+import grails.gorm.tests.entities.Club
 import org.grails.datastore.gorm.GormRegistry
+import org.hibernate.jpa.AvailableHints
 
 class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([HibernateGormStaticApiEntity, Club, HibernateGormStaticApiMultiTenantEntity])
+        manager.registerDomainClasses(HibernateGormStaticApiEntity, HibernateGormStaticApiMappedPropertyEntity, Club, HibernateGormStaticApiMultiTenantEntity)
     }
 
     void "Test that HibernateGormStaticApi uses the shared template from the datastore"() {
@@ -185,6 +186,78 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         instances.size() == 2
     }
 
+    void "Test findWhere matches null values"() {
+        given:
+        new HibernateGormStaticApiEntity(name: "null-test", nullableName: null).save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: "other", nullableName: "present").save(flush: true, failOnError: true)
+
+        when:
+        def instance = HibernateGormStaticApiEntity.findWhere(nullableName: null)
+
+        then:
+        instance.name == 'null-test'
+    }
+
+    void "Test findAllWhere matches null values"() {
+        given:
+        new HibernateGormStaticApiEntity(name: "null-test-1", nullableName: null).save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: "null-test-2", nullableName: null).save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: "other", nullableName: "present").save(flush: true, failOnError: true)
+
+        when:
+        def instances = HibernateGormStaticApiEntity.findAllWhere(nullableName: null)
+
+        then:
+        instances.size() == 2
+        instances*.name.containsAll(['null-test-1', 'null-test-2'])
+    }
+
+    void "Test findWhere rejects unsafe property names"() {
+        when:
+        HibernateGormStaticApiEntity.findWhere(['name) or 1=1 or (name': 'test'])
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains('not a valid property')
+    }
+
+    void "Test findAllWhere rejects unsafe null-valued property names"() {
+        when:
+        HibernateGormStaticApiEntity.findAllWhere(['nullableName) is null or 1=1 or (nullableName': null])
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains('not a valid property')
+    }
+
+    void "Test findWhere rejects mapped column names"() {
+        when:
+        HibernateGormStaticApiMappedPropertyEntity.findWhere(name_col: 'test')
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains('not a valid property')
+    }
+
+    void "Test findWhere applies JPA hints from args"() {
+        given:
+        def entity = new HibernateGormStaticApiEntity(name: "hint-test").save(flush: true, failOnError: true)
+        def entityId = entity.id
+        session.clear()
+
+        when:
+        def instance = HibernateGormStaticApiEntity.findWhere([name: 'hint-test'], [(AvailableHints.HINT_READ_ONLY): true])
+        instance.name = "modified"
+        session.flush()
+
+        and: "the instance is reloaded from the database"
+        session.clear()
+        def reloadedInstance = HibernateGormStaticApiEntity.get(entityId)
+
+        then:
+        reloadedInstance.name == "hint-test"
+    }
+
     void "Test findAll with HQL using named params"() {
         given:
         new HibernateGormStaticApiEntity(name: "test1").save(failOnError: true)
@@ -229,27 +302,39 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         new HibernateGormStaticApiEntity(name: "test1").save(failOnError: true)
         new HibernateGormStaticApiEntity(name: "test2").save(flush: true, failOnError: true)
 
-        when:
+        when: "a plain String HQL query is executed (no params map required, as on Hibernate 5)"
         String hql = "select name from HibernateGormStaticApiEntity"
-        List results = HibernateGormStaticApiEntity.executeQuery(hql)
+        def names = HibernateGormStaticApiEntity.executeQuery(hql)
 
-        then:
-        results.size() == 2
-        results.contains("test1")
-        results.contains("test2")
+        then: "the query runs and returns the projected values"
+        names.size() == 2
+        names.containsAll(['test1', 'test2'])
     }
 
     void "Test executeUpdate with plain String"() {
         given:
         new HibernateGormStaticApiEntity(name: "test").save(flush: true, failOnError: true)
 
-        when:
-        String hql = "update HibernateGormStaticApiEntity set name = 'updated' where name = 'test'"
-        int result = HibernateGormStaticApiEntity.executeUpdate(hql)
+        when: "a plain String HQL update is executed"
+        String hql = "update HibernateGormStaticApiEntity set name = 'updated'"
+        int updated = HibernateGormStaticApiEntity.executeUpdate(hql)
 
-        then:
-        result == 1
-        HibernateGormStaticApiEntity.countByName("updated") == 1
+        then: "the update runs and reports the affected row count"
+        updated == 1
+        HibernateGormStaticApiEntity.findByName('updated') != null
+    }
+
+    void "Test executeQuery with a GString binds interpolated values as parameters (injection-safe)"() {
+        given:
+        new HibernateGormStaticApiEntity(name: "test1").save(failOnError: true)
+        new HibernateGormStaticApiEntity(name: "test2").save(flush: true, failOnError: true)
+
+        when: "a GString carrying a SQL-injection-style value is interpolated into the query"
+        String malicious = "missing' or '1'='1"
+        def results = HibernateGormStaticApiEntity.executeQuery("from HibernateGormStaticApiEntity where name = ${malicious}")
+
+        then: "the value is bound as a parameter rather than interpolated, so the injection matches no rows"
+        results.isEmpty()
     }
 
 
@@ -522,6 +607,22 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         instances[2].id == e2.id
     }
 
+    void "Test getAll preserves input order for convertible ids"() {
+        given:
+        def e1 = new HibernateGormStaticApiEntity(name: "first").save(failOnError: true)
+        def e2 = new HibernateGormStaticApiEntity(name: "second").save(failOnError: true)
+        def e3 = new HibernateGormStaticApiEntity(name: "third").save(flush: true, failOnError: true)
+
+        when: "ids are supplied as strings in reverse order"
+        def instances = HibernateGormStaticApiEntity.getAll([e3.id.toString(), e1.id.toString(), e2.id.toString()])
+
+        then: "results are ordered by the converted requested ids"
+        instances.size() == 3
+        instances[0].id == e3.id
+        instances[1].id == e1.id
+        instances[2].id == e2.id
+    }
+
     void "Test getAll returns null in position for non-existent ids"() {
         given:
         def e1 = new HibernateGormStaticApiEntity(name: "exists").save(flush: true, failOnError: true)
@@ -618,7 +719,7 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         setupTestData()
 
         when:"A static native SQL query with no user input"
-        List<Club> results = Club.findAllWithNativeSql("select * from club c order by c.name")
+        List<Club> results = Club.findAllWithSql("select * from club c order by c.name")
 
         then:"The results are correct"
         results.size() == 3
@@ -627,36 +728,13 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         club.name == 'Arsenal'
     }
 
-    void "test deprecated findAllWithSql delegates to findAllWithNativeSql"() {
-        given:
-        setupTestData()
-
-        when:"The deprecated name still works as a delegate"
-        List<Club> results = Club.findAllWithSql("select * from club c order by c.name")
-
-        then:"The results are correct"
-        results.size() == 3
-    }
-
-    void "test deprecated findWithSql delegates to findWithNativeSql"() {
-        given:
-        setupTestData()
-
-        when:"The deprecated name still works as a delegate"
-        Club result = Club.findWithSql("select * from club c where c.name = 'Arsenal'")
-
-        then:
-        result != null
-        result.name == 'Arsenal'
-    }
-
     void "test sql query with gstring parameters"() {
         given:
         setupTestData()
 
         when:"Some test data is saved"
         String p = "%l%"
-        List<Club> results = Club.findAllWithNativeSql("select * from club c where c.name like $p order by c.name")
+        List<Club> results = Club.findAllWithSql("select * from club c where c.name like $p order by c.name")
 
         then:"The results are correct"
         results.size() == 2
@@ -880,6 +958,20 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
 @Entity
 class HibernateGormStaticApiEntity {
     String name
+    String nullableName
+
+    static constraints = {
+        nullableName nullable: true
+    }
+}
+
+@Entity
+class HibernateGormStaticApiMappedPropertyEntity {
+    String name
+
+    static mapping = {
+        name column: 'name_col'
+    }
 }
 
 @Entity

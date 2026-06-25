@@ -20,7 +20,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
 import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
 import org.grails.orm.hibernate.cfg.Mapping
@@ -35,7 +35,7 @@ import org.hibernate.mapping.Property
 class IncrementGeneratorSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([EntityWithIncrement])
+        manager.registerDomainClasses(EntityWithIncrement)
     }
 
     @Rollback

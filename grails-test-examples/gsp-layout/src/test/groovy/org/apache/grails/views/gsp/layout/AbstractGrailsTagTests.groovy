@@ -75,6 +75,7 @@ import org.grails.gsp.GroovyPagesTemplateEngine
 import org.grails.gsp.compiler.GrailsLayoutPreprocessor
 import org.grails.plugins.DefaultGrailsPlugin
 import org.grails.plugins.MockGrailsPluginManager
+import org.grails.plugins.codecs.DefaultCodecLookup
 import org.grails.taglib.GroovyPageAttributes
 import org.grails.taglib.TagOutput
 import org.grails.taglib.encoder.OutputContextLookupHelper
@@ -322,6 +323,9 @@ abstract class AbstractGrailsTagTests {
         }
         mockManager.registerProvidedArtefacts(grailsApplication)
         def springConfig = new WebRuntimeSpringConfiguration(ctx)
+        // Legacy harness: boots from the plugin pipeline, not Spring Boot auto-config,
+        // so CodecsConfiguration (the normal codecLookup source) is never processed here.
+        springConfig.addSingletonBean('codecLookup', DefaultCodecLookup)
 
         webRequest = GrailsWebMockUtil.bindMockWebRequest(ctx)
         onInit()

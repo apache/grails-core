@@ -19,7 +19,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.hibernate.MappingException
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PropertyMapping
@@ -31,7 +31,7 @@ import java.lang.annotation.RetentionPolicy
 class HibernateBasicPropertySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([HBPPerson])
+        manager.registerDomainClasses(HBPPerson)
     }
 
     def "test getCollection throws exception if not initialized"() {

@@ -29,7 +29,7 @@ import org.grails.datastore.mapping.proxy.ProxyHandler
 class BuiltinUniqueConstraintWorksWithTargetProxiesConstraintsSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([ContactDetails, Patient])
+        manager.registerDomainClasses(ContactDetails, Patient)
     }
 
     @PendingFeatureIf({ !Boolean.getBoolean('hibernate5.gorm.suite') && !Boolean.getBoolean('hibernate7.gorm.suite') && !Boolean.getBoolean('mongodb.gorm.suite') })

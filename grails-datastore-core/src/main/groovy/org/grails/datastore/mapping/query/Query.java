@@ -623,6 +623,7 @@ public abstract class Query implements Cloneable, Serializable {
      * exist, since appending a count projection would produce incorrect results.
      *
      * @return The row count
+     * @since 8.0
      */
     public Number countResults() {
         if (!projections.getProjectionList().isEmpty()) {
@@ -630,12 +631,10 @@ public abstract class Query implements Cloneable, Serializable {
             // a simple count() projection returns incorrect results because it
             // appends to the existing projections rather than replacing them.
             // Fall back to counting the grouped result rows.
-            // TODO: This needs resolved properly in Grails 8 with Hibernate 7's
-            // JpaSelectCriteria.from(Subquery) support for derived tables.
+            // Hibernate 7 resolves this via HibernateQuery.countResults() using derived-table subqueries.
             logger.warn("DetachedCriteria.count() with user-defined projections cannot use a SQL count query " +
-                "due to a Hibernate 5 limitation. All grouped result rows will be loaded into memory to " +
-                "determine the count. This may impact performance on large result sets. " +
-                "This will be resolved in Grails 8 (Hibernate 7) which supports derived table subqueries.");
+                "due to a datastore limitation. All grouped result rows will be loaded into memory to " +
+                "determine the count. This may impact performance on large result sets.");
             return list().size();
         }
         projections().count();

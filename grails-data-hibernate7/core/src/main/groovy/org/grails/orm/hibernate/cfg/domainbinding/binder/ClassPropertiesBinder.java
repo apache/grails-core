@@ -18,12 +18,11 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
-import jakarta.annotation.Nonnull;
-
 import org.hibernate.MappingException;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Table;
 import org.hibernate.mapping.Value;
+import org.jspecify.annotations.NonNull;
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
@@ -32,8 +31,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.PropertyFromValueCreator;
 /**
  * Binds the properties of a Grails domain class to the Hibernate meta-model.
  *
- * @author Graeme Rocher
- * @since 7.0
+ * @since 8.0
  */
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class ClassPropertiesBinder {
@@ -42,7 +40,6 @@ public class ClassPropertiesBinder {
     private final PropertyFromValueCreator propertyFromValueCreator;
     private final NaturalIdentifierBinder naturalIdentifierBinder;
 
-    /** Creates a new {@link ClassPropertiesBinder} instance. */
     public ClassPropertiesBinder(
             GrailsPropertyBinder grailsPropertyBinder,
             PropertyFromValueCreator propertyFromValueCreator,
@@ -52,7 +49,6 @@ public class ClassPropertiesBinder {
         this.naturalIdentifierBinder = naturalIdentifierBinder;
     }
 
-    /** Creates a new {@link ClassPropertiesBinder} instance. */
     public ClassPropertiesBinder(
             GrailsPropertyBinder grailsPropertyBinder, PropertyFromValueCreator propertyFromValueCreator) {
         this(grailsPropertyBinder, propertyFromValueCreator, new NaturalIdentifierBinder());
@@ -70,7 +66,7 @@ public class ClassPropertiesBinder {
         naturalIdentifierBinder.bindNaturalIdentifier(hibernatePersistentEntity, persistentClass);
     }
 
-    @Nonnull
+    @NonNull
     private Table getTable(PersistentClass persistentClass) {
         if (persistentClass.getTable() == null) {
             throw new MappingException("Persistent class [" + persistentClass.getEntityName() +

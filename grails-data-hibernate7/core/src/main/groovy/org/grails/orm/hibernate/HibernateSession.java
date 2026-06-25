@@ -171,7 +171,10 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
 
     @Override
     public void attach(Object o) {
-        hibernateTemplate.lock(o, LockMode.NONE);
+        ((GrailsHibernateTemplate) hibernateTemplate).execute(session -> {
+            HibernateAttachSupport.attach(o, session);
+            return null;
+        });
     }
 
     @Override

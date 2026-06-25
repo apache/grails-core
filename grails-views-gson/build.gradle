@@ -25,7 +25,6 @@ plugins {
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.gradle.grails-code-style'
-    id 'org.apache.grails.gradle.grails-code-analysis'
     id 'org.apache.grails.gradle.grails-jacoco'
 }
 
@@ -58,6 +57,7 @@ dependencies {
     testImplementation 'tools.jackson.core:jackson-databind'
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
 
+    testRuntimeOnly 'org.objenesis:objenesis' // Required by Spock for mocking classes without default constructor
     testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during test task
 }
 

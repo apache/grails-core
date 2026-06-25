@@ -155,7 +155,7 @@ class Sitemesh3LayoutFinderSpec extends Specification {
         paths == ['/layouts/application'] as String[]
     }
 
-    void 'returns empty when nothing matches and no default'() {
+    void 'returns empty when nothing matches, no default and no application layout'() {
         given:
         bindController(new ConventionController(), 'sample', '/sample/edit')
         Content content = emptyContent()
@@ -166,7 +166,68 @@ class Sitemesh3LayoutFinderSpec extends Specification {
         then:
         1 * locator.findViewByPath('/layouts/sample/edit') >> null
         1 * locator.findViewByPath('/layouts/sample') >> null
+        1 * locator.findViewByPath('/layouts/application') >> null
         paths.length == 0
+    }
+
+    void 'falls back to the implicit application layout when no default is configured'() {
+        given:
+        bindController(new ConventionController(), 'sample', '/sample/edit')
+        Content content = emptyContent()
+
+        when:
+        String[] paths = finder.selectDecoratorPaths(content, context)
+
+        then:
+        1 * locator.findViewByPath('/layouts/sample/edit') >> null
+        1 * locator.findViewByPath('/layouts/sample') >> null
+        1 * locator.findViewByPath('/layouts/application') >> Mock(GroovyPageScriptSource)
+        paths == ['/layouts/application'] as String[]
+    }
+
+    void 'a configured default that is missing does not fall back to the application layout'() {
+        given: 'SiteMesh 2 parity: the explicit default replaces the implicit fallback'
+        finder.defaultDecoratorName = 'custom'
+        bindController(new ConventionController(), 'sample', '/sample/edit')
+        Content content = emptyContent()
+
+        when:
+        String[] paths = finder.selectDecoratorPaths(content, context)
+
+        then:
+        1 * locator.findViewByPath('/layouts/sample/edit') >> null
+        1 * locator.findViewByPath('/layouts/sample') >> null
+        1 * locator.findViewByPath('/layouts/custom') >> null
+        0 * locator.findViewByPath('/layouts/application')
+        paths.length == 0
+    }
+
+    void 'NONE layout suppresses decoration'() {
+        given:
+        request.setAttribute(WebUtils.LAYOUT_ATTRIBUTE, WebUtils.NONE_LAYOUT)
+        Content content = contentWithMetaLayout('ignored')
+
+        when:
+        String[] paths = finder.selectDecoratorPaths(content, context)
+
+        then:
+        0 * locator.findViewByPath(_)
+        paths.length == 0
+    }
+
+    void 'meta layout still applies when the response carries an error status'() {
+        given: 'an error-dispatched render (e.g. a custom 404 page) bound to the request'
+        GrailsWebRequest webRequest = new GrailsWebRequest(request, response, servletContext)
+        RequestContextHolder.setRequestAttributes(webRequest)
+        response.setStatus(404)
+        Content content = contentWithMetaLayout('main')
+
+        when:
+        String[] paths = finder.selectDecoratorPaths(content, context)
+
+        then:
+        1 * locator.findViewByPath('/layouts/main') >> Mock(GroovyPageScriptSource)
+        paths == ['/layouts/main'] as String[]
     }
 
     private Content contentWithMetaLayout(String layout) {

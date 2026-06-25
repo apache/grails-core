@@ -21,7 +21,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.generator
 
 import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.HibernateEntity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
@@ -58,7 +58,7 @@ class GrailsSequenceGeneratorEnumSpec extends HibernateGormDatastoreSpec {
             'hibernate.dialect'           : 'org.hibernate.dialect.PostgreSQLDialect',
             'hibernate.hbm2ddl.auto'      : 'create',
         ]
-        manager.addAllDomainClasses([GrailsSequenceGeneratorEnumSpecEntity])
+        manager.registerDomainClasses(GrailsSequenceGeneratorEnumSpecEntity)
     }
 
     /**

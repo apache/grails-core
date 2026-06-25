@@ -19,6 +19,7 @@
 package org.apache.grails.buildsrc
 
 import org.gradle.testkit.runner.GradleRunner
+import org.gradle.testkit.runner.TaskOutcome
 import spock.lang.Specification
 import spock.lang.TempDir
 import java.nio.file.Path
@@ -70,7 +71,7 @@ class Test{
                 .build()
 
         then: "task finished successfully"
-        result.task(':codenarcFix').outcome == org.gradle.testkit.runner.TaskOutcome.SUCCESS
+        result.task(':codenarcFix').outcome == TaskOutcome.SUCCESS
 
         and: "violations are fixed"
         def fixedContent = groovyFile.text
@@ -101,7 +102,7 @@ class Test {
                 .build()
 
         then: "task finished successfully"
-        result.task(':codenarcFix').outcome == org.gradle.testkit.runner.TaskOutcome.SUCCESS
+        result.task(':codenarcFix').outcome == TaskOutcome.SUCCESS
 
         and: "strings with single quotes are NOT changed to single quotes (which would break them)"
         def content = groovyFile.text
@@ -127,9 +128,97 @@ class Test {
                 .build()
 
         then: "task finished successfully"
-        result.task(':codenarcFix').outcome == org.gradle.testkit.runner.TaskOutcome.SUCCESS
+        result.task(':codenarcFix').outcome == TaskOutcome.SUCCESS
 
         and: "escaped quotes are NOT broken"
         groovyFile.text.contains('"\\"\\$it\\""')
+    }
+
+    def "test codenarcFix task does not corrupt method references (::)"() {
+        given: "a file with :: method references"
+        groovyFile.text = """package org.test
+
+import java.util.Arrays
+
+class Test {
+    def result = Arrays.stream(items).map(String::trim).toList()
+    def other = items.collect(String::valueOf)
+    def cors = parseConfigList(config, 'allowedOrigins', corsConfig::setAllowedOrigins)
+}
+"""
+        when: "running codenarcFix"
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('codenarcFix', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+
+        then: "task finished successfully"
+        result.task(':codenarcFix').outcome == TaskOutcome.SUCCESS
+
+        and: "method references are NOT broken"
+        def content = groovyFile.text
+        content.contains('String::trim')
+        content.contains('String::valueOf')
+        content.contains('corsConfig::setAllowedOrigins')
+        !content.contains('String: :trim')
+        !content.contains('String: :valueOf')
+        !content.contains('corsConfig: :setAllowedOrigins')
+    }
+
+    def "test codenarcFix task does not corrupt adjacent GString and plain string"() {
+        given: "a file with a GString method name followed by a plain string argument"
+        groovyFile.text = '''package org.test
+
+class Test {
+    def invoke(invoker, name) {
+        invoker."${name}"("plain arg")
+        invoker."${name}"("-Pargs=${someVar}")
+    }
+}
+'''
+        when: "running codenarcFix"
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('codenarcFix', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+
+        then: "task finished successfully"
+        result.task(':codenarcFix').outcome == TaskOutcome.SUCCESS
+
+        and: "adjacent GString boundaries are NOT fused"
+        def content = groovyFile.text
+        content.contains('invoker."${name}"(\'plain arg\')')
+        content.contains('invoker."${name}"("-Pargs=${someVar}")')
+        !content.contains('invoker."${name}\'(\'plain arg")')
+        !content.contains('invoker."${name}\'(\'plain arg\')')
+    }
+
+    def "test codenarcFix task does not corrupt double quotes inside single-quoted strings"() {
+        given: "a file with single-quoted strings containing double quotes"
+        groovyFile.text = """package org.test
+
+class Test {
+    def d1 = description('Accepts format "hh:mm:ss"')
+    def d2 = writeLine('[cols="2,5,2", options="header"]')
+    def d3 = 'value with "double quotes" inside'
+}
+"""
+        when: "running codenarcFix"
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('codenarcFix', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+
+        then: "task finished successfully"
+        result.task(':codenarcFix').outcome == TaskOutcome.SUCCESS
+
+        and: "double quotes inside single-quoted strings are NOT changed"
+        def content = groovyFile.text
+        content.contains('\'Accepts format "hh:mm:ss"\'')
+        content.contains('\'[cols="2,5,2", options="header"]\'')
+        content.contains('\'value with "double quotes" inside\'')
     }
 }

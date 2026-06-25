@@ -18,6 +18,7 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
+import org.hibernate.dialect.Dialect;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.Table;
 import org.slf4j.Logger;
@@ -34,6 +35,11 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndP
 import org.grails.orm.hibernate.cfg.domainbinding.util.CreateKeyForProps;
 import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher;
 
+/**
+ * Binds a {@link org.hibernate.mapping.Column} to the Hibernate meta-model from Grails property and column config.
+ *
+ * @since 8.0
+ */
 @SuppressWarnings({"PMD.NullAssignment", "PMD.DataflowAnomalyAnalysis"})
 public class ColumnBinder {
 
@@ -59,13 +65,12 @@ public class ColumnBinder {
         this.indexBinder = indexBinder;
     }
 
-    /** Convenience constructor for backward compatibility. */
-    public ColumnBinder(PersistentEntityNamingStrategy namingStrategy) {
+    public ColumnBinder(PersistentEntityNamingStrategy namingStrategy, Dialect dialect) {
         this(
                 new ColumnNameForPropertyAndPathFetcher(
                         namingStrategy, new DefaultColumnNameFetcher(namingStrategy), new BackticksRemover()),
                 new StringColumnConstraintsBinder(),
-                new NumericColumnConstraintsBinder(),
+                new NumericColumnConstraintsBinder(dialect),
                 new CreateKeyForProps(new ColumnNameForPropertyAndPathFetcher(
                         namingStrategy, new DefaultColumnNameFetcher(namingStrategy), new BackticksRemover())),
                 new IndexBinder());
@@ -126,7 +131,7 @@ public class ColumnBinder {
             Mapping mapping = owner.getHibernateMappedForm();
             if (mapping != null && mapping.getTablePerHierarchy()) {
                 if (LOG.isDebugEnabled()) {
-                    LOG.debug("[GrailsDomainBinder] Sub class property [{}] for column name [{}] set to nullable", property.getName(), column.getName());
+                    LOG.debug("Sub class property [{}] for column name [{}] set to nullable", property.getName(), column.getName());
                 }
                 column.setNullable(true);
             } else {
@@ -139,7 +144,7 @@ public class ColumnBinder {
         column.setUnique(mappedFormFinal.isUnique() && !mappedFormFinal.isUniqueWithinGroup());
 
         if (LOG.isDebugEnabled()) {
-            LOG.debug("[GrailsDomainBinder] bound property [{}] to column name [{}] in table [{}]", property.getName(), column.getName(), table.getName());
+            LOG.debug("Bound property [{}] to column name [{}] in table [{}]", property.getName(), column.getName(), table.getName());
         }
     }
 }

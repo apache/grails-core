@@ -26,7 +26,6 @@ import grails.test.hibernate.HibernateSpec
  */
 class HibernateSpecSpec extends HibernateSpec {
 
-
     void setup() {
         if (!Book.countByTitle("The Stand")) {
             new Book(title: "The Stand").save(flush:true)
@@ -74,7 +73,7 @@ class Person {
     Integer age
     String phone
     static constraints = {
-        age min: 18, max: 65
+        age min: 18, max: 65, nullable: false
         name blank: false
         phone nullable: true
     }

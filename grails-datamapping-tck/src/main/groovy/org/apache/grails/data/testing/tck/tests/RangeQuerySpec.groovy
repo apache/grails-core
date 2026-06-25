@@ -18,20 +18,22 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
+import groovy.time.TimeCategory
+
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.ChildEntity
 import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.testing.tck.domains.Publication
 import org.apache.grails.data.testing.tck.domains.TestEntity
-import groovy.time.TimeCategory
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Abstract base test for querying ranges. Subclasses should do the necessary setup to configure GORM
  */
 class RangeQuerySpec extends GrailsDataTckSpec {
 
+    @Override
     void setupSpec() {
-        manager.addAllDomainClasses([Publication, TestEntity, Person, ChildEntity])
+        manager.registerDomainClasses(ChildEntity, Person, Publication, TestEntity)
     }
 
     void 'Test between query with dates'() {

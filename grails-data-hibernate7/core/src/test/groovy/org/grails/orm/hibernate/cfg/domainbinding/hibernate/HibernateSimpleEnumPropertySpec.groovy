@@ -19,14 +19,14 @@
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import java.beans.PropertyDescriptor
 import java.lang.annotation.RetentionPolicy
 
 class HibernateSimpleEnumPropertySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([HSEPEntity])
+        manager.registerDomainClasses(HSEPEntity)
     }
 
     def "HibernateSimpleEnumProperty instantiation and behavior"() {

@@ -477,6 +477,9 @@ class PropertyConfig extends Property {
         return pc
     }
 
+    /**
+     * @since 8.0
+     */
     boolean hasJoinKeyMapping() {
         joinTable?.keys
     }

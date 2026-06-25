@@ -27,7 +27,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class GormDirtyCheckingSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Student, BooleanTest])
+        manager.registerDomainClasses(Student, BooleanTest)
     }
 
     void "test a new instance is dirty by default"() {

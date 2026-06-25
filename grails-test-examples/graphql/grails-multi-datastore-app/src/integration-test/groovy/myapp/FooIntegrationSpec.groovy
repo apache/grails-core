@@ -39,7 +39,7 @@ class FooIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """)
-        Map obj = resp.body().data.fooCreate
+        Map obj = resp.body.data.fooCreate
 
         then: 'foo is created in the Hibernate datastore with a sequential numeric id'
         obj.id == 1

@@ -26,7 +26,6 @@ plugins {
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.gradle.grails-code-style'
-    id 'org.apache.grails.gradle.grails-code-analysis'
     id 'org.apache.grails.gradle.grails-jacoco'
 }
 
@@ -40,7 +39,6 @@ ext {
 }
 
 dependencies {
-    // TODO: Clarify and clean up dependencies
     implementation platform(project(':grails-hibernate7-bom'))
 
     api 'org.slf4j:slf4j-api'
@@ -68,10 +66,14 @@ dependencies {
         exclude group:'org.slf4j', module:'slf4j-api'
     }
     api 'jakarta.validation:jakarta.validation-api'
-    api 'org.checkerframework:checker-qual'
 
     api 'io.smallrye:jandex'
 
+    compileOnly 'org.jspecify:jspecify'
+    // checker-qual is required on the compile classpath (not runtime) so JDK 25's javac can
+    // resolve checker-framework annotations (e.g. @UnknownKeyFor) carried in the bytecode of
+    // dependencies such as Hibernate/byte-buddy. JDK 21 tolerates them missing; JDK 25 does not.
+    compileOnly 'org.checkerframework:checker-qual'
     compileOnly 'org.hibernate.orm:hibernate-core'
     compileOnly 'org.hibernate.orm:hibernate-jcache', {
         exclude group:'commons-collections', module:'commons-collections'
@@ -102,9 +104,7 @@ dependencies {
 
 
     testImplementation 'com.h2database:h2'
-    testImplementation 'org.junit.platform:junit-platform-suite', {
-        // api: SelectClasses, Suite
-    }
+    testImplementation 'org.junit.platform:junit-platform-suite'
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.apache.groovy:groovy-sql'

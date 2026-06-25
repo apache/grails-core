@@ -28,7 +28,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class EntityReflectorSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Library, LibraryBook])
+        manager.registerDomainClasses(Library, LibraryBook)
     }
 
     void "test getAssociationId with a null association"() {

@@ -21,7 +21,7 @@ package org.grails.orm.hibernate
 import grails.gorm.MultiTenant
 import grails.gorm.annotation.Entity
 import grails.gorm.multitenancy.Tenants
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
@@ -41,7 +41,7 @@ class HibernateDatastoreMultiTenancySpec extends HibernateGormDatastoreSpec {
                 'grails.gorm.multiTenancy.mode': MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR,
                 'grails.gorm.multiTenancy.tenantResolver': new SystemPropertyTenantResolver()
         ]
-        manager.addAllDomainClasses([MultiTenantBook])
+        manager.registerDomainClasses(MultiTenantBook)
     }
 
     void "test discriminator multi-tenancy filter"() {

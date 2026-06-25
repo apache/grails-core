@@ -23,10 +23,9 @@ plugins {
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.gradle.grails-plugin'
     id 'org.apache.grails.buildsrc.compile'
-    // TODO: id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.gradle.grails-code-style'
-    id 'org.apache.grails.gradle.grails-code-analysis'
     id 'org.apache.grails.gradle.grails-jacoco'
 }
 
@@ -59,8 +58,9 @@ dependencies {
     testImplementation 'org.spockframework:spock-core'
     testImplementation 'org.springframework:spring-test'
     testImplementation project(':grails-testing-support-web')
-    testImplementation 'org.objenesis:objenesis'
-    testRuntimeOnly 'net.bytebuddy:byte-buddy'
+
+    testRuntimeOnly 'net.bytebuddy:byte-buddy' // Required by Spock's mocking support
+    testRuntimeOnly 'org.objenesis:objenesis' // Required by Spock for mocking classes without default constructor
     testRuntimeOnly 'org.slf4j:slf4j-nop'
 }
 

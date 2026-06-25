@@ -19,7 +19,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CollectionForPropertyConfigBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneBinder
@@ -38,10 +38,10 @@ class BidirectionalMapElementBinderSpec extends HibernateGormDatastoreSpec {
     BidirectionalMapElementBinder binder
 
     void setupSpec() {
-        manager.addAllDomainClasses([
+        manager.registerDomainClasses(
             BBMEOwner,
             BBMEItem,
-        ])
+        )
     }
 
     void setup() {

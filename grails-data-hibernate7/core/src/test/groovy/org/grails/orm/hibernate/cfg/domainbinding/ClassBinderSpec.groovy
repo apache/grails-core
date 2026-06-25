@@ -19,7 +19,7 @@
 
 package org.grails.orm.hibernate.cfg.domainbinding
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.hibernate.mapping.RootClass
 
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ClassBinder

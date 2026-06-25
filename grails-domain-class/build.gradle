@@ -27,7 +27,6 @@ plugins {
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.gradle.grails-code-style'
-    id 'org.apache.grails.gradle.grails-code-analysis'
     id 'org.apache.grails.gradle.grails-jacoco'
 }
 
@@ -80,10 +79,7 @@ dependencies {
 
     // Testing
     testImplementation 'org.slf4j:slf4j-simple'
-    testImplementation('org.spockframework:spock-core') { transitive = false }
-    // Required by Spock's Mocking
-    testRuntimeOnly 'net.bytebuddy:byte-buddy'
-    testImplementation 'org.objenesis:objenesis'
+    testImplementation 'org.spockframework:spock-core'
 }
 
 apply {

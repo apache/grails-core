@@ -19,7 +19,7 @@
 
 package org.grails.orm.hibernate.event.listener
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.datastore.gorm.timestamp.DefaultTimestampProvider
 import org.grails.datastore.mapping.engine.event.MergeEvent as GormMergeEvent
 import org.grails.datastore.mapping.engine.event.PersistEvent as GormPersistEvent
@@ -395,6 +395,8 @@ class HibernateEventListenerSpec extends HibernateGormDatastoreSpec {
         def mockSessionFactory = Mock(org.hibernate.engine.spi.SessionFactoryImplementor)
         def mockPersister = Mock(org.hibernate.persister.entity.EntityPersister)
         mockPersister.getFactory() >> mockSessionFactory
+        mockEventSource.asEventSource() >> mockEventSource
+        mockEventSource.getFactory() >> mockSessionFactory
         mockEventSource.getSessionFactory() >> mockSessionFactory
 
         when: "Calling onPersistEvent"

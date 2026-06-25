@@ -27,7 +27,7 @@ import grails.gorm.hibernate.mapping.MappingBuilder
 import org.grails.orm.hibernate.connections.MultiTenantAuthorService
 import grails.gorm.multitenancy.Tenant
 import grails.gorm.multitenancy.Tenants
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.mapping.multitenancy.AllTenantsResolver
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
@@ -56,7 +56,7 @@ import org.hibernate.dialect.H2Dialect
 class PartitionedMultiTenancySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([MultiTenantAuthor, MultiTenantBook, MultiTenantPublisher])
+        manager.registerDomainClasses(MultiTenantAuthor, MultiTenantBook, MultiTenantPublisher)
         manager.grailsConfig = [
                 'dataSource.url'                              : "jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
                 'dataSource.dbCreate'                         : 'update',

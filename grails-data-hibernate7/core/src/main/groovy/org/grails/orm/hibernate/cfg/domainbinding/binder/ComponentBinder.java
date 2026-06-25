@@ -18,12 +18,11 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
-import jakarta.annotation.Nonnull;
-
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.Component;
 import org.hibernate.mapping.PersistentClass;
+import org.jspecify.annotations.NonNull;
 
 import org.grails.orm.hibernate.cfg.GrailsHibernateUtil;
 import org.grails.orm.hibernate.cfg.MappingCacheHolder;
@@ -36,6 +35,11 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentP
 // via setGrailsPropertyBinder() to break a circular dependency (ComponentBinder ↔ GrailsPropertyBinder ↔
 // CollectionBinder ↔ ComponentBinder). This mutual dependency should be resolved by introducing a shared
 // binding context or factory object that all binders receive at construction time.
+/**
+ * Binds embedded components and embedded collection elements to the Hibernate meta-model.
+ *
+ * @since 8.0
+ */
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class ComponentBinder {
 
@@ -57,7 +61,7 @@ public class ComponentBinder {
         this.grailsPropertyBinder = grailsPropertyBinder;
     }
 
-    public Component bindComponent(@Nonnull HibernateEmbeddedProperty embeddedProperty, String path) {
+    public Component bindComponent(@NonNull HibernateEmbeddedProperty embeddedProperty, String path) {
         var owner = embeddedProperty.getPersistentClass();
         Component component = new Component(metadataBuildingContext, owner);
         Class<?> type = embeddedProperty.getType();
@@ -91,7 +95,7 @@ public class ComponentBinder {
      * Used for {@code hasMany} associations whose element type is a non-entity value object
      * (a GORM embedded type) rather than a scalar or persistent entity.
      */
-    public Component bindEmbeddedCollectionComponent(@Nonnull HibernateEmbeddedCollectionProperty property) {
+    public Component bindEmbeddedCollectionComponent(@NonNull HibernateEmbeddedCollectionProperty property) {
         Collection collection = property.getCollection();
         Component component = new Component(metadataBuildingContext, collection);
 

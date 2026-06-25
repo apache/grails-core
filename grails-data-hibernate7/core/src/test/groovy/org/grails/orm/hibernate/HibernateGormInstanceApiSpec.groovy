@@ -18,7 +18,7 @@
  */
 package org.grails.orm.hibernate
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.HibernateEntity
 import grails.gorm.transactions.Rollback
@@ -30,7 +30,7 @@ import org.grails.orm.hibernate.query.SelectHqlQuery
 class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([PersonInstanceApi, BookInstanceApi, ConstrainedPerson, ConstrainedBook, HGIAuthor, HGIBook])
+        manager.registerDomainClasses(PersonInstanceApi, BookInstanceApi, ConstrainedPerson, ConstrainedBook, HGIAuthor, HGIBook)
     }
 
     void "Test that HibernateGormInstanceApi uses the shared template from the datastore"() {
@@ -183,6 +183,53 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
         
         then:
         found.name == 'Fred'
+    }
+
+    @Rollback
+    def "attach() does not overwrite a newer version of the row (optimistic lock preserved)"() {
+        given: "a versioned person is saved"
+        def person = new PersonInstanceApi(name: 'Original', age: 30)
+        person.save(flush: true)
+        def id = person.id
+
+        and: "the row is updated to a newer version while a stale detached copy is held"
+        manager.session.clear()
+        def fresh = PersonInstanceApi.get(id)
+        fresh.name = 'Updated by someone else'
+        fresh.save(flush: true)
+        manager.session.clear()
+
+        when: "the stale detached instance is attached and the session is flushed"
+        person.attach()
+        manager.session.flush()
+        manager.session.clear()
+
+        then: "attach() did not push the stale state over the newer row"
+        def reloaded = PersonInstanceApi.get(id)
+        reloaded.name == 'Updated by someone else'
+        reloaded.version == 1
+    }
+
+    @Rollback
+    def "attach() on a deleted detached instance does not resurrect the row"() {
+        given: "a saved person whose row is then deleted"
+        def person = new PersonInstanceApi(name: 'Ghost', age: 50)
+        person.save(flush: true)
+        def id = person.id
+        person.delete(flush: true)
+        manager.session.clear()
+
+        expect: "the row is gone"
+        PersonInstanceApi.get(id) == null
+
+        when: "the detached instance is attached and the session is flushed"
+        person.attach()
+        manager.session.flush()
+        manager.session.clear()
+
+        then: "no row was resurrected in the database"
+        PersonInstanceApi.get(id) == null
+        PersonInstanceApi.count() == 0
     }
 
     @Rollback

@@ -23,10 +23,8 @@ import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
 import groovy.sql.Sql
 import org.apache.grails.data.testing.tck.base.GrailsDataTckManager
-import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
-import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
 import org.grails.orm.hibernate.GrailsHibernateTransactionManager
 import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration
@@ -61,12 +59,6 @@ class GrailsDataHibernate5TckManager extends GrailsDataTckManager {
     void setup(Class<? extends Specification> spec) {
         cleanRegistry()
         super.setup(spec)
-        if (multiDataSourceDatastore != null) {
-            multiDataSourceDatastore.registerAllEntitiesWithEnhancer()
-        }
-        if (multiTenantMultiDataSourceDatastore != null) {
-            multiTenantMultiDataSourceDatastore.registerAllEntitiesWithEnhancer()
-        }
     }
 
     @Override
@@ -75,16 +67,16 @@ class GrailsDataHibernate5TckManager extends GrailsDataTckManager {
         if (grailsConfig) {
             config.putAll(grailsConfig)
         }
+        if (!config.containsKey('dataSource.dbCreate') && !config.dataSource.containsKey('dbCreate')) {
+            config.dataSource.dbCreate = "create-drop"
+        }
         boolean isTransactional = true
 
         System.setProperty('hibernate5.gorm.suite', "true")
-        grailsApplication = new DefaultGrailsApplication(domainClasses as Class[], new GroovyClassLoader(GrailsDataHibernate5TckManager.getClassLoader()))
-        if (config) {
-            grailsApplication.config.putAll(config)
-        }
+        grailsApplication = new DefaultGrailsApplication(domainClasses, new GroovyClassLoader(GrailsDataHibernate5TckManager.getClassLoader()))
+        grailsApplication.config.putAll(config)
 
-        config.dataSource.dbCreate = "create-drop"
-        hibernateDatastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config), domainClasses as Class[])
+        hibernateDatastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config), domainClasses)
         transactionManager = hibernateDatastore.getTransactionManager()
         sessionFactory = hibernateDatastore.sessionFactory
         if (transactionStatus == null && isTransactional) {
@@ -146,7 +138,7 @@ class GrailsDataHibernate5TckManager extends GrailsDataTckManager {
                 'hibernate.flush.mode'     : 'COMMIT',
                 'hibernate.cache.queries'  : 'true',
                 'hibernate.hbm2ddl.auto'   : 'create-drop',
-                'dataSources.secondary.url': "jdbc:h2:mem:tckSecondaryDB;LOCK_TIMEOUT=10000",
+                'dataSources.secondary'    : [url: "jdbc:h2:mem:tckSecondaryDB;LOCK_TIMEOUT=10000"],
         ]
         multiDataSourceDatastore = new HibernateDatastore(
                 DatastoreUtils.createPropertyResolver(config), domainClasses
@@ -165,12 +157,9 @@ class GrailsDataHibernate5TckManager extends GrailsDataTckManager {
 
     @Override
     def getServiceForConnection(Class serviceType, String connectionName) {
-        def service = multiDataSourceDatastore.getDatastoreForConnection(connectionName).getService(serviceType)
-        if (service.respondsTo('setTargetDatastore')) {
-            MultipleConnectionSourceCapableDatastore[] arr = [multiDataSourceDatastore]
-            service.setTargetDatastore(arr)
-        }
-        return service
+        multiDataSourceDatastore
+                .getDatastoreForConnection(connectionName)
+                .getService(serviceType)
     }
 
     @Override
@@ -190,7 +179,7 @@ class GrailsDataHibernate5TckManager extends GrailsDataTckManager {
                 'hibernate.flush.mode'                      : 'COMMIT',
                 'hibernate.cache.queries'                   : 'true',
                 'hibernate.hbm2ddl.auto'                    : 'create-drop',
-                'dataSources.secondary.url': "jdbc:h2:mem:tckMtSecondaryDB;LOCK_TIMEOUT=10000",
+                'dataSources.secondary'                     : [url: "jdbc:h2:mem:tckMtSecondaryDB;LOCK_TIMEOUT=10000"],
         ]
         multiTenantMultiDataSourceDatastore = new HibernateDatastore(
                 DatastoreUtils.createPropertyResolver(config), domainClasses
@@ -209,12 +198,9 @@ class GrailsDataHibernate5TckManager extends GrailsDataTckManager {
 
     @Override
     def getServiceForMultiTenantConnection(Class serviceType, String connectionName) {
-        def service = multiTenantMultiDataSourceDatastore.getDatastoreForConnection(connectionName).getService(serviceType)
-        if (service.respondsTo('setTargetDatastore')) {
-            MultipleConnectionSourceCapableDatastore[] arr = [multiTenantMultiDataSourceDatastore]
-            service.setTargetDatastore(arr)
-        }
-        return service
+        multiTenantMultiDataSourceDatastore
+                .getDatastoreForConnection(connectionName)
+                .getService(serviceType)
     }
 
     private void shutdownInMemDb() {

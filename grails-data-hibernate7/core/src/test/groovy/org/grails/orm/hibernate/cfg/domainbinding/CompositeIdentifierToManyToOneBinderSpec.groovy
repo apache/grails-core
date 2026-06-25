@@ -27,6 +27,9 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.PropertyConfig
+import org.hibernate.mapping.Column
+import org.hibernate.mapping.KeyValue
+import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.SimpleValue
 import spock.lang.Specification
 
@@ -55,6 +58,8 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
         def association = Mock(HibernatePersistentProperty)
         def value = Mock(SimpleValue)
         def refDomainClass = Mock(GrailsHibernatePersistentEntity)
+        def persistentClass = new RootClass(metadataBuildingContext)
+        def identifier = Mock(KeyValue)
         def path = "/test"
 
         // Use a real CompositeIdentity object to avoid final method mocking issues
@@ -89,6 +94,16 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
 
         // Make backticks remover pass through the values for simplicity
         backticksRemover.apply(_) >> { String s -> s }
+        refDomainClass.getPersistentClass() >> persistentClass
+        refDomainClass.getName() >> "RefDomain"
+        persistentClass.setIdentifier(identifier)
+        identifier.getColumns() >> [new Column("part_a_col"), new Column("part_b_col")]
+        value.getColumns() >> [new Column("ref_table_nested_entity_col_part_a_col"), new Column("ref_table_nested_entity_col_part_b_col")]
+
+        // sortOrIndexForeignKeyColumns and getReferencedIdentifierColumns are now on the entity mock
+        refDomainClass.sortOrIndexForeignKeyColumns(value) >> {}
+        refDomainClass.getReferencedIdentifierColumns(propertyNames) >> [new Column("part_a_col"), new Column("part_b_col")]
+        value.createForeignKeyOfEntity("RefDomain", _ as List<Column>) >> null
 
         when:
         binder.bindCompositeIdentifierToManyToOne(association as HibernatePersistentProperty, value, compositeId, refDomainClass, path)
@@ -122,6 +137,8 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
         def compositeId = new HibernateCompositeIdentity()
         compositeId.setPropertyNames(["prop1", "prop2"] as String[])
         def refDomainClass = Mock(GrailsHibernatePersistentEntity)
+        def persistentClass = new RootClass(metadataBuildingContext)
+        def identifier = Mock(KeyValue)
         def path = "/test"
 
         // 3. Set up the "match" condition
@@ -133,6 +150,15 @@ class CompositeIdentifierToManyToOneBinderSpec extends Specification {
 
         // The calculated length is the same as the number of columns already in the config
         calculator.calculateForeignKeyColumnCount(refDomainClass, _ as String[]) >> 2
+        refDomainClass.getPersistentClass() >> persistentClass
+        refDomainClass.getName() >> "RefDomain"
+        persistentClass.setIdentifier(identifier)
+        identifier.getColumns() >> [new Column("prop1"), new Column("prop2")]
+        value.getColumns() >> [new Column("prop1"), new Column("prop2")]
+
+        refDomainClass.sortOrIndexForeignKeyColumns(value) >> {}
+        refDomainClass.getReferencedIdentifierColumns(_ as String[]) >> [new Column("prop1"), new Column("prop2")]
+        value.createForeignKeyOfEntity("RefDomain", _ as List<Column>) >> null
 
         when:
         binder.bindCompositeIdentifierToManyToOne(association as HibernatePersistentProperty, value, compositeId, refDomainClass, path)

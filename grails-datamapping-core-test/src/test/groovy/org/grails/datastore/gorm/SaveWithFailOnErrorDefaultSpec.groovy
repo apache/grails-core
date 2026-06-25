@@ -31,7 +31,7 @@ import org.grails.datastore.gorm.validation.constraints.eval.DefaultConstraintEv
 class SaveWithFailOnErrorDefaultSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([TestProduct])
+        manager.registerDomainClasses(TestProduct)
     }
 
     def setup() {

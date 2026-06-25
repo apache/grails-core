@@ -4,31 +4,32 @@
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * 'License'); you may not use this file except in compliance
+ * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
  *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
 package org.apache.grails.data.testing.tck.tests
 
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.ChildEntity
 import org.apache.grails.data.testing.tck.domains.TestEntity
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * @author graemerocher
  */
 class GormEnhancerSpec extends GrailsDataTckSpec {
 
+    @Override
     void setupSpec() {
-        manager.addAllDomainClasses([TestEntity, ChildEntity])
+        manager.registerDomainClasses(TestEntity, ChildEntity)
     }
 
     void 'Test basic CRUD operations'() {
@@ -118,6 +119,35 @@ class GormEnhancerSpec extends GrailsDataTckSpec {
 
         then:
         2 == results.size()
+    }
+
+    void 'Test getAll preserves the supplied id order'() {
+        given:
+        def bob = new TestEntity(name: 'Bob', age: 40, child: new ChildEntity(name: 'Bob Child')).save()
+        def fred = new TestEntity(name: 'Fred', age: 41, child: new ChildEntity(name: 'Fred Child')).save()
+        def barney = new TestEntity(name: 'Barney', age: 42, child: new ChildEntity(name: 'Barney Child')).save()
+        manager.session.flush()
+
+        when: 'ids are requested out of insertion order'
+        def results = TestEntity.getAll([barney.id, bob.id, fred.id])
+
+        then: 'results are returned in the requested order'
+        ['Barney', 'Bob', 'Fred'] == results*.name
+    }
+
+    void 'Test getAll returns a null slot for a missing id'() {
+        given:
+        def bob = new TestEntity(name: 'Bob', age: 40, child: new ChildEntity(name: 'Bob Child')).save()
+        manager.session.flush()
+        def missingId = bob.id + 1000
+
+        when:
+        def results = TestEntity.getAll([bob.id, missingId])
+
+        then: 'the present row keeps its position and the missing id yields a null slot'
+        2 == results.size()
+        'Bob' == results[0]?.name
+        null == results[1]
     }
 
     void 'Test ident() method'() {

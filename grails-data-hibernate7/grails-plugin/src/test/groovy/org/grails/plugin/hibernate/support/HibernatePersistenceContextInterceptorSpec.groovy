@@ -127,6 +127,28 @@ class HibernatePersistenceContextInterceptorSpec extends Specification {
         }
         nativeSession.close()
     }
+
+    def "test flush persists changes in a non-transactional interceptor-owned session"() {
+        given: "A persistence context interceptor and no active transaction synchronization"
+        def interceptor = new HibernatePersistenceContextInterceptor()
+        interceptor.setHibernateDatastore(datastore)
+        SessionFactory sf = datastore.sessionFactory
+
+        expect: "the situation matches a non-transactional BootStrap: no bound session, no synchronization"
+        !TransactionSynchronizationManager.hasResource(sf)
+        !TransactionSynchronizationManager.isSynchronizationActive()
+
+        when: "an entity is saved in the interceptor-owned session then flushed and the session destroyed"
+        interceptor.init()
+        new HpciBook(title: 'bootstrap-persisted').save(failOnError: true)
+        interceptor.flush()
+        interceptor.destroy()
+
+        then: "the change is committed and visible from a fresh session"
+        HpciBook.withNewSession {
+            HpciBook.findByTitle('bootstrap-persisted') != null
+        }
+    }
 }
 
 @Entity

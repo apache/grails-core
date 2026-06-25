@@ -19,7 +19,7 @@
 
 package org.grails.orm.hibernate.cfg
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.domainbinding.util.UniqueNameGenerator
 import org.hibernate.mapping.Column
 import org.hibernate.mapping.Property

@@ -18,13 +18,14 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import org.apache.grails.data.testing.tck.domains.Plant
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.Plant
 
 class FindByExampleSpec extends GrailsDataTckSpec {
 
+    @Override
     void setupSpec() {
-        manager.addAllDomainClasses([Plant])
+        manager.registerDomainClasses(Plant)
     }
 
     def 'Test findAll by example'() {

@@ -104,3 +104,31 @@ class SomeClass {
 Code that is marked with `GrailsCompileStatic` will all be statically compiled except for Grails specific interactions that cannot be statically compiled but that `GrailsCompileStatic` can identify as permissible for dynamic dispatch.  These include things like invoking dynamic finders and DSL code in configuration blocks like constraints and mapping closures in domain classes.
 
 Care must be taken when deciding to statically compile code.  There are benefits associated with static compilation but in order to take advantage of those benefits you are giving up the power and flexibility of dynamic dispatch.  For example if code is statically compiled it cannot take advantage of runtime metaprogramming enhancements which may be provided by plugins.
+
+===== Tag Library Calls in Controllers
+
+Controllers annotated with `@GrailsCompileStatic` can invoke tag library methods without compile errors.
+Tag dispatch is handled at runtime through `TagLibraryInvoker`, and `@GrailsCompileStatic` includes a built-in type-checking extension that recognises these call sites and allows them to compile.
+
+Both calling patterns work:
+
+[source,groovy]
+----
+import grails.compiler.GrailsCompileStatic
+
+@GrailsCompileStatic
+class BookController {
+
+    def index() {
+        // Direct call — tag in the default namespace invoked on `this`
+        response.writer << link(controller: 'book', action: 'list')
+
+        // Namespaced call — namespace dispatcher property, then tag method
+        response.writer << g.message(code: 'book.list.title')
+    }
+}
+----
+
+Only controller classes (those whose name ends with `Controller`) receive this treatment.
+All other code in the controller remains fully type-checked.
+If you need to opt a single method out of static compilation, use `@GrailsCompileStatic(TypeCheckingMode.SKIP)` on that method.

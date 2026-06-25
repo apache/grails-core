@@ -185,7 +185,7 @@ public class SelectHqlQuery extends Query implements HqlQueryMethods, Serializab
             return max;
         }
         Object m = queryContext.querySettings().get(HibernateQueryArgument.MAX.value());
-        return m instanceof Number n ? n.intValue() : -1;
+        return m == null ? -1 : HqlQueryMethods.toInteger(m);
     }
 
     @Override
@@ -194,6 +194,6 @@ public class SelectHqlQuery extends Query implements HqlQueryMethods, Serializab
             return offset;
         }
         Object o = queryContext.querySettings().get(HibernateQueryArgument.OFFSET.value());
-        return o instanceof Number n ? n.intValue() : 0;
+        return o == null ? 0 : HqlQueryMethods.toInteger(o);
     }
 }

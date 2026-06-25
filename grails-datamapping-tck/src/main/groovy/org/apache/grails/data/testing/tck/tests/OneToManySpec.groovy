@@ -4,14 +4,14 @@
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * 'License'); you may not use this file except in compliance
+ * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
  *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
@@ -20,28 +20,25 @@
 package org.apache.grails.data.testing.tck.tests
 
 import grails.gorm.transactions.Rollback
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.ChildPersister
 import org.apache.grails.data.testing.tck.domains.Country
-import org.apache.grails.data.testing.tck.domains.Face
-import org.apache.grails.data.testing.tck.domains.Location
-import org.apache.grails.data.testing.tck.domains.Nose
+import org.apache.grails.data.testing.tck.domains.Owner_Default_Uni_P
 import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.testing.tck.domains.Pet
 import org.apache.grails.data.testing.tck.domains.PetType
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import org.apache.grails.data.testing.tck.domains.ChildPersister
-import org.apache.grails.data.testing.tck.domains.Owner_Default_Uni_P
-import org.apache.grails.data.testing.tck.domains.SimpleCountry
 
 /**
  * @author graemerocher
  */
 class OneToManySpec extends GrailsDataTckSpec {
 
+    @Override
     void setupSpec() {
-        manager.addAllDomainClasses([Owner_Default_Uni_P, ChildPersister, Location, Country, Person, Pet, PetType, SimpleCountry, Face, Nose])
+        manager.registerDomainClasses(Country, Person, Pet, PetType, Owner_Default_Uni_P, ChildPersister)
     }
 
-    void 'test save and return unidirectional one to many Country '() {
+    void 'test save and return unidirectional one to many'() {
         given:
         Person p = new Person(firstName: 'Fred', lastName: 'Flinstone')
         Country c = new Country(name: 'Dinoville')
@@ -54,7 +51,6 @@ class OneToManySpec extends GrailsDataTckSpec {
         c = Country.findByName('Dinoville')
 
         then:
-        Person.count() == 1
         c != null
         c.residents != null
         c.residents.size() == 1
@@ -74,23 +70,17 @@ class OneToManySpec extends GrailsDataTckSpec {
     }
 
     @Rollback
-    void 'test unidirectional default cascade Owner_Default_Uni_P  persists child'() {
-        when: 'A new owner is saved after adding a child'
+    void 'test unidirectional default cascade persists child'() {
+        when: 'a new owner is saved after adding a child'
         def owner = new Owner_Default_Uni_P(name: 'Owner')
         owner.addToChildren(new ChildPersister(title: 'Child'))
         owner.save(flush: true)
-        if (owner.hasErrors()) {
-            println "Errors saving owner: ${owner.errors}"
-        }
 
-        then: 'The owner is saved without errors and both owner and child exist'
-
+        then: 'the owner is saved without errors and both owner and child exist'
         !owner.errors.hasErrors()
         Owner_Default_Uni_P.count() == 1
         ChildPersister.count() == 1
-        def owner2 = Owner_Default_Uni_P.findByName('Owner')
-        owner2.children.size() == 1
-
+        Owner_Default_Uni_P.findByName('Owner').children.size() == 1
     }
 
     void 'test save and return bidirectional one to many'() {

@@ -64,6 +64,7 @@ def publishedProjects = [
         'grails-geb',
         'grails-gsp',
         'grails-gsp-core',
+        'grails-gsp-spring-boot',
         'grails-i18n',
         'grails-interceptors',
         'grails-layout',
@@ -73,7 +74,7 @@ def publishedProjects = [
         'grails-scaffolding',
         'grails-services',
         'grails-shell-cli',
-        // TODO: 'grails-sitemesh3', // Sitemesh3 has not been updated to support boot 4
+        'grails-sitemesh3',
         'grails-spring',
         'grails-taglib',
         'grails-test-core',

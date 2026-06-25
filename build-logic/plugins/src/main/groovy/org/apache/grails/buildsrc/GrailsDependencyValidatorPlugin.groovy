@@ -55,7 +55,19 @@ class GrailsDependencyValidatorPlugin implements Plugin<Project> {
      */
     static final String ALLOWED_OVERRIDES_EXT = 'allowedBomOverrides'
 
-    private static final Set<String> BOM_PROJECT_NAMES = ['grails-bom', 'grails-gradle-bom', 'grails-base-bom', 'grails-hibernate5-bom', 'grails-hibernate7-bom', 'grails-micronaut-bom'].toSet()
+    private static final Set<String> BOM_PROJECT_NAMES = ['grails-bom', 'grails-gradle-bom', 'grails-base-bom', 'grails-hibernate5-bom', 'grails-hibernate7-bom', 'grails-micronaut-bom', 'grails-hibernate5-micronaut-bom', 'grails-hibernate7-micronaut-bom'].toSet()
+
+    /**
+     * Configuration names that pull in a Grails BOM purely as build tooling rather than as part
+     * of the project's published dependency graph, and are therefore ignored when detecting the
+     * project's single Grails BOM. The shared {@code gradle/docs-dependencies.gradle} script adds
+     * {@code platform(grails-bom)} to the {@code documentation} configuration only to resolve the
+     * groovydoc tooling versions; a project that selects a non-default BOM variant (e.g.
+     * {@code grails-micronaut-bom} or {@code grails-hibernate7-bom}) for its real configurations
+     * still receives {@code grails-bom} here, which must not be misreported as a second,
+     * conflicting BOM.
+     */
+    private static final Set<String> BOM_DETECTION_EXCLUDED_CONFIGURATIONS = ['documentation'].toSet()
 
     @Override
     void apply(Project project) {
@@ -159,19 +171,50 @@ class GrailsDependencyValidatorPlugin implements Plugin<Project> {
 
     /**
      * Scans the project's configurations to find which BOM project is in use.
+     *
+     * <p>Exactly one Grails BOM is expected on a project: the BOMs are split by
+     * integration (default / hibernate5 / micronaut), so a project selects a single
+     * variant. This method returns the path of the one declared Grails BOM, {@code null}
+     * when none is declared, and fails the build when more than one distinct Grails BOM
+     * is found (which indicates a misconfiguration - e.g. layering grails-bom and
+     * grails-micronaut-bom on the same project).</p>
+     *
+     * <p>Build-tooling configurations that pull in a BOM purely to resolve their own tool
+     * versions (see {@link #BOM_DETECTION_EXCLUDED_CONFIGURATIONS}) are skipped, so the shared
+     * {@code documentation} configuration's {@code grails-bom} does not conflict with a variant
+     * BOM a project selects for its real dependencies.</p>
      */
     static String detectBomPath(Project project) {
+        Set<String> bomPaths = new LinkedHashSet<>()
+
         for (Configuration config : project.configurations) {
+            if (BOM_DETECTION_EXCLUDED_CONFIGURATIONS.contains(config.name)) {
+                continue
+            }
             for (Dependency dep : config.dependencies) {
-                if (BOM_PROJECT_NAMES.contains(dep.name)) {
-                    Project bomProject = project.rootProject.findProject(":${dep.name}" as String)
-                    if (bomProject != null) {
-                        return bomProject.path
-                    }
+                if (!BOM_PROJECT_NAMES.contains(dep.name)) {
+                    continue
                 }
+                def bomProject = project.rootProject.findProject(":${dep.name}" as String)
+                if (bomProject == null) {
+                    continue
+                }
+                bomPaths.add(bomProject.path)
             }
         }
-        null
+
+        if (bomPaths.isEmpty()) {
+            return null
+        }
+        if (bomPaths.size() > 1) {
+            throw new GradleException(
+                    "Project '${project.name}' declares more than one Grails BOM (${bomPaths.join(', ')}). " +
+                            'Exactly one Grails BOM may be applied; the BOMs are split by integration ' +
+                            '(default / hibernate5 / micronaut), so a project must select a single variant.'
+            )
+        }
+
+        bomPaths.first()
     }
 
     /**

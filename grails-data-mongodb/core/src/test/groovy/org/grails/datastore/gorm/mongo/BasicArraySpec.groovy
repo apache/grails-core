@@ -19,19 +19,18 @@
 
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.Document
 import org.bson.types.ObjectId
 
 /**
  * @author Graeme Rocher
  */
-class BasicArraySpec extends MongoDatastoreSpec {
+class BasicArraySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([Data])
+        manager.registerDomainClasses(Data)
     }
 
     void "Test that arrays are saved correctly"() {

@@ -108,4 +108,65 @@ class EndToEndSpec extends ContainerGebSpec {
 <body><h1>Hello</h1><div id="base"><div id="dialog">body text</div></div>
 </body></html>"""
     }
+
+    // The template/url/action/model/parse attribute forms mirror SiteMesh 2's
+    // <g:applyLayout> (RenderGrailsLayoutTagLib); the SiteMesh 2 twin app has
+    // no coverage for them, so these cases encode the SiteMesh 2 semantics.
+    def 'apply layout to a template'() {
+        when:
+        go('endToEnd/templateContent')
+
+        then:
+        pageSource.contains('<h1>Hello</h1>')
+        pageSource.contains('template content with from the model')
+    }
+
+    def 'apply layout to a template that is a full document'() {
+        when:
+        go('endToEnd/templateDocument')
+
+        then:
+        title == 'Decorated Document title'
+        pageSource.contains('<h1>Hello</h1>')
+        pageSource.contains('document body')
+    }
+
+    def 'apply layout to the output of another controller action'() {
+        when:
+        go('endToEnd/actionContent')
+
+        then:
+        title == 'Decorated Included title'
+        pageSource.contains('<h1>Hello</h1>')
+        pageSource.contains('included body foo=bar')
+    }
+
+    def 'apply layout to content fetched from a url'() {
+        when:
+        go('endToEnd/urlContent')
+
+        then:
+        title == 'Decorated Included title'
+        pageSource.contains('<h1>Hello</h1>')
+        pageSource.contains('included body foo=none')
+    }
+
+    def 'parse attribute forces a SiteMesh parse of the tag body'() {
+        when:
+        go('endToEnd/parseContent')
+
+        then:
+        title == 'Decorated Parsed title'
+        pageSource.contains('<h1>Hello</h1>')
+        pageSource.contains('parsed body')
+    }
+
+    def 'model is available to the layout being applied'() {
+        when:
+        go('endToEnd/modelContent')
+
+        then:
+        pageSource.contains('<span id="model">hi from the model</span>')
+        pageSource.contains('plain body')
+    }
 }

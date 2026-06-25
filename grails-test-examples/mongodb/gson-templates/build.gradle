@@ -36,11 +36,10 @@ dependencies {
     implementation 'org.apache.grails:grails-views-gson'
     implementation 'org.apache.grails:grails-views-markup'
     implementation 'org.apache.grails:grails-gsp'
-    if(System.getenv('SITEMESH3_TESTING_ENABLED') == 'true') {
-        implementation 'org.apache.grails:grails-sitemesh3'
-    }
-    else {
+    if (System.getenv('SITEMESH2_TESTING_ENABLED') == 'true') {
         implementation 'org.apache.grails:grails-layout'
+    } else {
+        implementation 'org.apache.grails:grails-sitemesh3'
     }
     implementation 'org.apache.grails:grails-databinding'
     implementation 'org.apache.grails:grails-rest-transforms'

@@ -85,7 +85,8 @@ public class JoinedSubClassBinder {
                 getJoinedSubClassTableName(sub, joinedSubclass),
                 null,
                 false,
-                metadataBuildingContext);
+                metadataBuildingContext,
+                false);
 
         joinedSubclass.setTable(mytable);
         if (LOG.isInfoEnabled()) {

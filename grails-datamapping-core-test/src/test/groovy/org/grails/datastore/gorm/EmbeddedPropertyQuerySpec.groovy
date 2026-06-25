@@ -18,15 +18,13 @@
  */
 package org.grails.datastore.gorm
 
-
 import grails.persistence.Entity
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class EmbeddedPropertyQuerySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
-
     void setupSpec() {
-        manager.addAllDomainClasses([Book2, Author2])
+        manager.registerDomainClasses(Book2, Author2)
     }
 
     void "Test eq query of embedded properties"() {
@@ -117,14 +115,12 @@ class EmbeddedPropertyQuerySpec extends GrailsDataTckSpec<GrailsDataCoreTckManag
 
 @Entity
 class Author2 {
-
     String name
     static hasMany = [books: Book2]
 }
 
 @Entity
 class Book2 {
-
     String name
     Period publishPeriod
 
@@ -132,7 +128,6 @@ class Book2 {
 }
 
 class Period {
-
     Date startDate
     Date endDate
 }

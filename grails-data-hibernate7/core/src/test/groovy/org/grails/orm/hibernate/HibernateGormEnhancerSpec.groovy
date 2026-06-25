@@ -19,14 +19,14 @@
 package org.grails.orm.hibernate
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 
 class HibernateGormEnhancerSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([HGESimple])
+        manager.registerDomainClasses(HGESimple)
     }
 
     def "test findStaticApi"() {

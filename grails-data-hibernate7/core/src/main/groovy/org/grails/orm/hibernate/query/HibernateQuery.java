@@ -21,9 +21,11 @@ package org.grails.orm.hibernate.query;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import groovy.lang.Closure;
 
@@ -73,6 +75,7 @@ public class HibernateQuery extends Query {
     protected static final String ALIAS = "_alias";
     private final Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<>();
     private final List<HibernateAlias> aliases = new java.util.ArrayList<>();
+    private final Set<String> fetchJoinPaths = new LinkedHashSet<>();
     protected String alias;
     protected int aliasCount;
     protected Deque<GrailsHibernatePersistentEntity> entityStack = new LinkedList<>();
@@ -418,14 +421,26 @@ public class HibernateQuery extends Query {
 
     @Override
     public Query join(String property) {
+        fetchJoinPaths.add(property);
         detachedCriteria.join(property);
         return this;
     }
 
     @Override
     public Query join(String property, JoinType joinType) {
+        fetchJoinPaths.add(property);
         detachedCriteria.join(property, joinType);
         return this;
+    }
+
+    /**
+     * The association paths requested as eager join fetches via {@link #join(String)} - for
+     * example by a dynamic finder invoked with {@code [fetch: [assoc: 'join']]}. These are
+     * materialized as JPA {@code root.fetch(...)} joins so the associations are eagerly
+     * initialized, matching the Hibernate 5 behaviour.
+     */
+    public Set<String> getFetchJoinPaths() {
+        return Collections.unmodifiableSet(fetchJoinPaths);
     }
 
     @Override

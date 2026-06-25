@@ -91,7 +91,8 @@ public class RootPersistentClassCommonValuesBinder {
                 hibernatePersistentEntity.getTableName(namingStrategy),
                 null,
                 hibernatePersistentEntity.isTableAbstract(),
-                metadataBuildingContext);
+                metadataBuildingContext,
+                false);
         root.setTable(table);
         if (LOG.isDebugEnabled()) {
             LOG.debug("[GrailsDomainBinder] Mapping Grails domain class: {} -> {}", hibernatePersistentEntity.getName(), root.getTable().getName());

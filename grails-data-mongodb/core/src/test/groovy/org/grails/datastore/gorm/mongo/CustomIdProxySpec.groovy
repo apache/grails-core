@@ -18,19 +18,18 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.mapping.proxy.EntityProxy
 import spock.lang.Issue
 
 /**
  * Created by graemerocher on 14/10/16.
  */
-class CustomIdProxySpec extends MongoDatastoreSpec {
+class CustomIdProxySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([CustomIdCompany, CustomIdTeam])
+        manager.registerDomainClasses(CustomIdCompany, CustomIdTeam)
     }
 
     @Issue('https://github.com/apache/grails-data-mapping/issues/813')

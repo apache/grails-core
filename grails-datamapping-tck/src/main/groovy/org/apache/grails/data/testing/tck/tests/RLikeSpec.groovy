@@ -20,13 +20,11 @@ package org.apache.grails.data.testing.tck.tests
 
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import spock.lang.IgnoreIf
 
-@IgnoreIf({ System.getProperty('hibernate7.gorm.suite') == 'true' })
 class RLikeSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([RlikeFoo])
+        manager.registerDomainClasses(RlikeFoo)
     }
 
     void 'test rlike works'() {

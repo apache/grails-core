@@ -18,17 +18,18 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.ChildEntity
 import org.apache.grails.data.testing.tck.domains.TestEntity
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Abstract base test for query associations. Subclasses should do the necessary setup to configure GORM
  */
 class QueryByAssociationSpec extends GrailsDataTckSpec {
 
+    @Override
     void setupSpec() {
-        manager.addAllDomainClasses([TestEntity, ChildEntity])
+        manager.registerDomainClasses(TestEntity, ChildEntity)
     }
 
     void 'Test query entity by single-ended association'() {

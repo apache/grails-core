@@ -85,7 +85,7 @@ export GRADLE_OPTS="-Xms2G -Xmx5G"
 | Groovy | 4.0.x |
 | Spring Boot | 4.0.x |
 | Spring Framework | 7.0.x |
-| Spock | 2.3-groovy-4.0 |
+| Spock | 2.4-groovy-4.0 |
 | Gradle | 8.14.x |
 | Jakarta EE | 10 |
 
@@ -269,6 +269,11 @@ See `CONTRIBUTING.md` for full details.
 ### Reporting Vulnerabilities
 
 Please see the page of the [ASF Security Team](https://www.apache.org/security/) for further information and contact information.
+
+Security model: [SECURITY.md](./SECURITY.md) → [THREAT_MODEL.md](./THREAT_MODEL.md). Agents that
+scan this repository should consult `SECURITY.md` and the linked `THREAT_MODEL.md` for the project's
+threat model — in-scope / out-of-scope declarations, the security properties claimed and disclaimed,
+and known non-findings — before reporting issues.
 
 ## Resources
 

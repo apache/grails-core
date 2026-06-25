@@ -97,7 +97,7 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
 
     @Override
     Session createSession() {
-        def allClasses = getDomainClasses() as Class[]
+        def allClasses = domainClasses
         def ctx = new GenericApplicationContext()
         ctx.refresh()
 
@@ -133,7 +133,7 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
                 return null
             }
         })
-        mappingContext.addPersistentEntities(allClasses as Class[])
+        mappingContext.addPersistentEntities(allClasses)
         mongoClient = mongoDatastore.getMongoClient()
 
         grailsApplication = new DefaultGrailsApplication(allClasses, getClass().getClassLoader())

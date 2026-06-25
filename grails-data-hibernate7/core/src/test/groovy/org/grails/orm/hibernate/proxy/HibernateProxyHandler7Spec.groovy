@@ -20,7 +20,7 @@
 package org.grails.orm.hibernate.proxy
 
 import org.hibernate.proxy.HibernateProxy
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.apache.grails.data.testing.tck.domains.Location
 import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.testing.tck.domains.Pet
@@ -39,7 +39,7 @@ class HibernateProxyHandler7Spec extends HibernateGormDatastoreSpec {
     @Shared HibernateProxyHandler proxyHandler = new HibernateProxyHandler()
 
     void setupSpec() {
-        manager.addAllDomainClasses([Location, Person, Pet])
+        manager.registerDomainClasses(Location, Person, Pet)
     }
 
     void "test isInitialized for native Hibernate proxy"() {

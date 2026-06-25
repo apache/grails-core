@@ -85,7 +85,7 @@ abstract class AbstractPromiseFactory implements PromiseFactory {
      */
     <T> Promise<List<T>> createPromise(List<Closure<T>> closures, List<PromiseDecorator> decorators) {
         if (closures == null) {
-            return new PromiseList<T>()
+            return new BoundPromise<List<T>>(Collections.<T> emptyList())
         }
         List<Closure<T>> decoratedClosures = new ArrayList<Closure<T>>(closures.size())
         for (Closure<T> closure : closures) {

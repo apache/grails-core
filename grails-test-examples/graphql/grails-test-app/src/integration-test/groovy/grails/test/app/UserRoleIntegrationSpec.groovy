@@ -58,7 +58,7 @@ class UserRoleIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """)
-        Map obj = resp.body().data.userCreate
+        Map obj = resp.body.data.userCreate
         userId = obj.id
 
         resp = graphQL.graphql("""
@@ -70,7 +70,7 @@ class UserRoleIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """)
-        obj = resp.body().data.roleCreate
+        obj = resp.body.data.roleCreate
         roleId = obj.id
     }
 
@@ -97,7 +97,7 @@ class UserRoleIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """)
-        Map obj = resp.body().data.userRoleCreate
+        Map obj = resp.body.data.userRoleCreate
 
         then:
         obj.user.profile.email == 'admin@email.com'
@@ -132,7 +132,7 @@ class UserRoleIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """.toString())
-        Map obj = resp.body().data.userRole
+        Map obj = resp.body.data.userRole
 
         then:
         obj.user.id == userId
@@ -156,7 +156,7 @@ class UserRoleIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """.toString())
-        obj = resp.body().data.userRole
+        obj = resp.body.data.userRole
 
         then: 'The user and role will be fetched with the same query'
         obj.user.profile.email == 'admin@email.com'
@@ -184,7 +184,7 @@ class UserRoleIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """.toString())
-        Map result = resp.body()
+        Map result = resp.body
 
         then:
         result.errors.size() == 1
@@ -207,7 +207,7 @@ class UserRoleIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """.toString())
-        List obj = resp.body().data.userRoleList
+        List obj = resp.body.data.userRoleList
 
         then:
         obj.size() == 1
@@ -226,7 +226,7 @@ class UserRoleIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """.toString())
-        List obj = resp.body().data.usersByRole
+        List obj = resp.body.data.usersByRole
 
         then:
         obj.size() == 1
@@ -244,7 +244,7 @@ class UserRoleIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """)
-        Long newRoleId = resp.body().data.roleCreate.id
+        Long newRoleId = resp.body.data.roleCreate.id
         graphQL.graphql("""
             mutation {
                 userRoleCreate(userRole: {
@@ -275,7 +275,7 @@ class UserRoleIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """.toString())
-        List list = resp.body().data.userRoleList
+        List list = resp.body.data.userRoleList
 
         then:
         list.size() == 2
@@ -288,7 +288,7 @@ class UserRoleIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """.toString())
-        Map obj = resp.body().data.revokeAllRoles
+        Map obj = resp.body.data.revokeAllRoles
 
         then:
         obj.success
@@ -306,7 +306,7 @@ class UserRoleIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """.toString())
-        list = resp.body().data.userRoleList
+        list = resp.body.data.userRoleList
 
         then: 'Check if the delete worked'
         list.empty
@@ -342,7 +342,7 @@ class UserRoleIntegrationSpec extends Specification implements GraphQLSpec {
                 }
             }
         """.toString())
-        Map obj = resp.body().data.userRoleDelete
+        Map obj = resp.body.data.userRoleDelete
 
         then:
         obj.success

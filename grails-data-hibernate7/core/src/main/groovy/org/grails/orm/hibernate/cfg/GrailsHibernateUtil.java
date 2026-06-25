@@ -56,57 +56,52 @@ import org.grails.orm.hibernate.support.HibernateRuntimeUtils;
  */
 public class GrailsHibernateUtil extends HibernateRuntimeUtils {
 
-    private static final String VERSION_8_0 = "8.0";
     /** @deprecated Use {@link org.grails.orm.hibernate.query.HibernateQueryArgument#FETCH_SIZE} */
-    @Deprecated(since = VERSION_8_0, forRemoval = true)
+    @Deprecated(since = "8.0", forRemoval = true)
     public static final String ARGUMENT_FETCH_SIZE = HibernateQueryArgument.FETCH_SIZE.value();
     /** @deprecated Use {@link org.grails.orm.hibernate.query.HibernateQueryArgument#TIMEOUT} */
-    @Deprecated(since = VERSION_8_0, forRemoval = true)
+    @Deprecated(since = "8.0", forRemoval = true)
     public static final String ARGUMENT_TIMEOUT = HibernateQueryArgument.TIMEOUT.value();
     /** @deprecated Use {@link org.grails.orm.hibernate.query.HibernateQueryArgument#READ_ONLY} */
-    @Deprecated(since = VERSION_8_0, forRemoval = true)
+    @Deprecated(since = "8.0", forRemoval = true)
     public static final String ARGUMENT_READ_ONLY = HibernateQueryArgument.READ_ONLY.value();
     /** @deprecated Use {@link org.grails.orm.hibernate.query.HibernateQueryArgument#FLUSH_MODE} */
-    @Deprecated(since = VERSION_8_0, forRemoval = true)
+    @Deprecated(since = "8.0", forRemoval = true)
     public static final String ARGUMENT_FLUSH_MODE = HibernateQueryArgument.FLUSH_MODE.value();
     /** @deprecated Use {@link org.grails.orm.hibernate.query.HibernateQueryArgument#MAX} */
-    @Deprecated(since = VERSION_8_0, forRemoval = true)
+    @Deprecated(since = "8.0", forRemoval = true)
     public static final String ARGUMENT_MAX = HibernateQueryArgument.MAX.value();
     /** @deprecated Use {@link org.grails.orm.hibernate.query.HibernateQueryArgument#OFFSET} */
-    @Deprecated(since = VERSION_8_0, forRemoval = true)
+    @Deprecated(since = "8.0", forRemoval = true)
     public static final String ARGUMENT_OFFSET = HibernateQueryArgument.OFFSET.value();
     /** @deprecated Use {@link org.grails.orm.hibernate.query.HibernateQueryArgument#ORDER} */
-    @Deprecated(since = VERSION_8_0, forRemoval = true)
+    @Deprecated(since = "8.0", forRemoval = true)
     public static final String ARGUMENT_ORDER = HibernateQueryArgument.ORDER.value();
     /** @deprecated Use {@link org.grails.orm.hibernate.query.HibernateQueryArgument#SORT} */
-    @Deprecated(since = VERSION_8_0, forRemoval = true)
+    @Deprecated(since = "8.0", forRemoval = true)
     public static final String ARGUMENT_SORT = HibernateQueryArgument.SORT.value();
     /** @deprecated Use {@link org.grails.orm.hibernate.query.HibernateQueryArgument#ORDER_DESC} */
-    @Deprecated(since = VERSION_8_0, forRemoval = true)
+    @Deprecated(since = "8.0", forRemoval = true)
     public static final String ORDER_DESC = HibernateQueryArgument.ORDER_DESC.value();
     /** @deprecated Use {@link org.grails.orm.hibernate.query.HibernateQueryArgument#ORDER_ASC} */
-    @Deprecated(since = VERSION_8_0, forRemoval = true)
+    @Deprecated(since = "8.0", forRemoval = true)
     public static final String ORDER_ASC = HibernateQueryArgument.ORDER_ASC.value();
     /** @deprecated Use {@link org.grails.orm.hibernate.query.HibernateQueryArgument#FETCH} */
-    @Deprecated(since = VERSION_8_0, forRemoval = true)
+    @Deprecated(since = "8.0", forRemoval = true)
     public static final String ARGUMENT_FETCH = HibernateQueryArgument.FETCH.value();
     /** @deprecated Use {@link org.grails.orm.hibernate.query.HibernateQueryArgument#IGNORE_CASE} */
-    @Deprecated(since = VERSION_8_0, forRemoval = true)
+    @Deprecated(since = "8.0", forRemoval = true)
     public static final String ARGUMENT_IGNORE_CASE = HibernateQueryArgument.IGNORE_CASE.value();
     /** @deprecated Use {@link org.grails.orm.hibernate.query.HibernateQueryArgument#CACHE} */
-    @Deprecated(since = VERSION_8_0, forRemoval = true)
+    @Deprecated(since = "8.0", forRemoval = true)
     public static final String ARGUMENT_CACHE = HibernateQueryArgument.CACHE.value();
     /** @deprecated Use {@link org.grails.orm.hibernate.query.HibernateQueryArgument#LOCK} */
-    @Deprecated(since = VERSION_8_0, forRemoval = true)
+    @Deprecated(since = "8.0", forRemoval = true)
     public static final String ARGUMENT_LOCK = HibernateQueryArgument.LOCK.value();
 
     protected static final Logger LOG = LoggerFactory.getLogger(GrailsHibernateUtil.class);
 
-    private static HibernateProxyHandler proxyHandler = new HibernateProxyHandler();
-
-    public static void setProxyHandler(HibernateProxyHandler handler) {
-        proxyHandler = handler;
-    }
+    private static final HibernateProxyHandler DEFAULT_PROXY_HANDLER = new HibernateProxyHandler();
 
     /**
      * Sets the target object to read-only using the given SessionFactory instance. This avoids
@@ -216,7 +211,11 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * @return the unproxied instance
      */
     public static Object unwrapProxy(HibernateProxy proxy) {
-        return proxyHandler.unwrap(proxy);
+        return unwrapProxy(proxy, DEFAULT_PROXY_HANDLER);
+    }
+
+    public static Object unwrapProxy(HibernateProxy proxy, HibernateProxyHandler handler) {
+        return handler.unwrap(proxy);
     }
 
     /**
@@ -227,7 +226,11 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * @return A proxy
      */
     public static HibernateProxy getAssociationProxy(Object obj, String associationName) {
-        return proxyHandler.getAssociationProxy(obj, associationName);
+        return getAssociationProxy(obj, associationName, DEFAULT_PROXY_HANDLER);
+    }
+
+    public static HibernateProxy getAssociationProxy(Object obj, String associationName, HibernateProxyHandler handler) {
+        return handler.getAssociationProxy(obj, associationName);
     }
 
     /**
@@ -238,7 +241,11 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * @return true if is initialized
      */
     public static boolean isInitialized(Object obj, String associationName) {
-        return proxyHandler.isInitialized(obj, associationName);
+        return isInitialized(obj, associationName, DEFAULT_PROXY_HANDLER);
+    }
+
+    public static boolean isInitialized(Object obj, String associationName, HibernateProxyHandler handler) {
+        return handler.isInitialized(obj, associationName);
     }
 
     /**
@@ -247,7 +254,11 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * as-is.
      */
     public static Object unwrapIfProxy(Object instance) {
-        return proxyHandler.unwrap(instance);
+        return unwrapIfProxy(instance, DEFAULT_PROXY_HANDLER);
+    }
+
+    public static Object unwrapIfProxy(Object instance, HibernateProxyHandler handler) {
+        return handler.unwrap(instance);
     }
 
     public static boolean isMappedWithHibernate(PersistentEntity domainClass) {

@@ -18,20 +18,19 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import grails.mongodb.MongoEntity
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.types.ObjectId
 
 /**
  * Created by graemerocher on 14/04/14.
  */
-class TestSearchSpec extends MongoDatastoreSpec {
+class TestSearchSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([Product])
+        manager.registerDomainClasses(Product)
     }
 
     void "Test simple text search"() {

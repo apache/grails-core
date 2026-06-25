@@ -19,7 +19,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.hibernate.MappingException
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PropertyMapping
@@ -29,7 +29,7 @@ import java.beans.PropertyDescriptor
 class HibernateOneToManyPropertySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([HOTMPBook, HOTMPAuthor])
+        manager.registerDomainClasses(HOTMPBook, HOTMPAuthor)
     }
 
     void "test getReferencedEntityName returns the correct entity name"() {

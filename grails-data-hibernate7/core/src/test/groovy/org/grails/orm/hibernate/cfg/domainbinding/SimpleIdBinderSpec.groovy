@@ -19,13 +19,14 @@
 
 package org.grails.orm.hibernate.cfg.domainbinding
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleIdentityProperty
 import org.hibernate.boot.spi.MetadataBuildingContext
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import org.hibernate.mapping.BasicValue
+import org.hibernate.mapping.Column
 import org.hibernate.mapping.PrimaryKey
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.Table
@@ -82,6 +83,7 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         }
         def rootClass = new RootClass(metadataBuildingContext)
         currentTable = new Table("TEST_TABLE")
+        currentTable.setName("TEST_TABLE")
         rootClass.setTable(currentTable)
         def domainClass = Mock(HibernatePersistentEntity) {
             getMappedForm() >> mapping
@@ -95,13 +97,22 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         simpleIdBinder.bindSimpleId(domainClass)
 
         then:
-        1 * simpleValueBinder.bindSimpleValue(testProperty, null, _, "")
+        1 * simpleValueBinder.bindSimpleValue(testProperty, null, _, "") >> { HibernatePersistentProperty property, HibernatePersistentProperty parentProperty, BasicValue value, String path ->
+            bindIdColumn(value)
+        }
         1 * propertyBinder.bindProperty(testProperty, _)
 
         rootClass.identifier instanceof BasicValue
         rootClass.declaredIdentifierProperty != null
         rootClass.identifierProperty != null
+        rootClass.table.primaryKey == null
+
+        when: "the root class creates the table primary key"
+        rootClass.createPrimaryKey()
+
+        then:
         rootClass.table.primaryKey instanceof PrimaryKey
+        rootClass.table.primaryKey.columnSpan == 1
     }
 
     def "bindSimpleId with sequence generator"() {
@@ -114,6 +125,7 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         }
         def rootClass = new RootClass(metadataBuildingContext)
         currentTable = new Table("TEST_TABLE")
+        currentTable.setName("TEST_TABLE")
         rootClass.setTable(currentTable)
         def domainClass = Mock(HibernatePersistentEntity) {
             getMappedForm() >> mapping
@@ -127,13 +139,22 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         simpleIdBinder.bindSimpleId(domainClass)
 
         then:
-        1 * simpleValueBinder.bindSimpleValue(testProperty, null, _, "")
+        1 * simpleValueBinder.bindSimpleValue(testProperty, null, _, "") >> { HibernatePersistentProperty property, HibernatePersistentProperty parentProperty, BasicValue value, String path ->
+            bindIdColumn(value)
+        }
         1 * propertyBinder.bindProperty(testProperty, _)
 
         rootClass.identifier instanceof BasicValue
         rootClass.declaredIdentifierProperty != null
         rootClass.identifierProperty != null
+        rootClass.table.primaryKey == null
+
+        when: "the root class creates the table primary key"
+        rootClass.createPrimaryKey()
+
+        then:
         rootClass.table.primaryKey instanceof PrimaryKey
+        rootClass.table.primaryKey.columnSpan == 1
     }
 
     def "bindSimpleId with synthetic identifier property"() {
@@ -144,6 +165,7 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         def reflector = Mock(EntityReflector)
         def rootClass = new RootClass(metadataBuildingContext)
         currentTable = new Table("TEST_TABLE")
+        currentTable.setName("TEST_TABLE")
         rootClass.setTable(currentTable)
         def domainClass = Mock(HibernatePersistentEntity) {
             getMappedForm() >> mapping
@@ -160,13 +182,22 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
         simpleIdBinder.bindSimpleId(domainClass)
 
         then:
-        1 * simpleValueBinder.bindSimpleValue(_, null, _, "")
+        1 * simpleValueBinder.bindSimpleValue(_, null, _, "") >> { HibernatePersistentProperty property, HibernatePersistentProperty parentProperty, BasicValue value, String path ->
+            bindIdColumn(value)
+        }
         1 * propertyBinder.bindProperty(_, _)
 
         rootClass.identifier instanceof BasicValue
         rootClass.declaredIdentifierProperty != null
         rootClass.identifierProperty != null
+        rootClass.table.primaryKey == null
+
+        when: "the root class creates the table primary key"
+        rootClass.createPrimaryKey()
+
+        then:
         rootClass.table.primaryKey instanceof PrimaryKey
+        rootClass.table.primaryKey.columnSpan == 1
     }
 
     def "bindSimpleId throws MappingException when identity property is not a HibernateSimpleIdentityProperty"() {
@@ -187,5 +218,13 @@ class SimpleIdBinderSpec extends HibernateGormDatastoreSpec {
     def "getMetadataBuildingContext returns the context passed to constructor"() {
         expect:
         simpleIdBinder.getMetadataBuildingContext() == metadataBuildingContext
+    }
+
+    private static BasicValue bindIdColumn(BasicValue value) {
+        def column = new Column("id")
+        column.setValue(value)
+        value.table.addColumn(column)
+        value.addColumn(column)
+        value
     }
 }

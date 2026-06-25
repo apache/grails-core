@@ -131,7 +131,6 @@ tasks.named('rat') {
             'build-logic/.idea/**', // grails-gradle idea directories
             'build/**', // build directories
             'buildSrc/build/**', // build directories
-            'node_modules/**', // exclude node_modules
             '**/*.log', // exclude log files
             'local-tasks.gradle', // exclude local helper scripts
             '**/ISSUES.md', // exclude local issue tracking files (no license header)

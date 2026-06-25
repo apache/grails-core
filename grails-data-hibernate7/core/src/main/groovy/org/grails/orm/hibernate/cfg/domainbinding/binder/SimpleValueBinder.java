@@ -20,8 +20,6 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import java.util.Optional;
 
-import jakarta.annotation.Nonnull;
-
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 import org.hibernate.mapping.BasicValue;
@@ -30,6 +28,7 @@ import org.hibernate.mapping.DependantValue;
 import org.hibernate.mapping.Formula;
 import org.hibernate.mapping.SimpleValue;
 import org.hibernate.mapping.Table;
+import org.jspecify.annotations.NonNull;
 
 import org.grails.datastore.mapping.model.types.TenantId;
 import org.grails.orm.hibernate.cfg.ColumnConfig;
@@ -58,7 +57,6 @@ public class SimpleValueBinder {
         this.basicValueCreator = basicValueCreator;
     }
 
-    /** Convenience constructor for namingStrategy. */
     public SimpleValueBinder(
             MetadataBuildingContext metadataBuildingContext,
             PersistentEntityNamingStrategy namingStrategy,
@@ -66,12 +64,12 @@ public class SimpleValueBinder {
         this(
                 metadataBuildingContext,
                 new ColumnConfigToColumnBinder(),
-                new ColumnBinder(namingStrategy),
+                new ColumnBinder(namingStrategy, jdbcEnvironment.getDialect()),
                 new BasicValueCreator(metadataBuildingContext, jdbcEnvironment, namingStrategy));
     }
 
     public BasicValue bindBasicValue(
-            @Nonnull HibernatePersistentProperty property,
+            @NonNull HibernatePersistentProperty property,
             HibernatePersistentProperty parentProperty,
             String path) {
         BasicValue basicValue = basicValueCreator.bindBasicValue(property);

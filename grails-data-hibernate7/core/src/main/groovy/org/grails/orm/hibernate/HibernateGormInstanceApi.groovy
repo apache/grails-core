@@ -24,6 +24,8 @@ import org.codehaus.groovy.runtime.InvokerHelper
 
 import jakarta.persistence.LockModeType
 
+import org.hibernate.LockMode
+
 import org.hibernate.Hibernate
 import org.hibernate.Session
 import org.hibernate.collection.spi.PersistentCollection
@@ -423,10 +425,22 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     }
 
     @Override
-    D attach(D target) {
-        (D) getHibernateTemplate().execute { Session session ->
-            session.merge(target)
+    boolean isAttached(D instance) {
+        hibernateTemplate.contains instance
+    }
+
+    @Override
+    D lock(D instance) {
+        hibernateTemplate.lock(instance, LockMode.PESSIMISTIC_WRITE)
+        instance
+    }
+
+    @Override
+    D attach(D instance) {
+        hibernateTemplate.execute { Session session ->
+            HibernateAttachSupport.attach(instance, session)
         }
+        return instance
     }
 
     @Override
@@ -436,21 +450,6 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
                 session.detach target
             }
         }
-    }
-
-    @Override
-    boolean isAttached(D target) {
-        getHibernateTemplate().execute { Session session ->
-            sessionContains(session, target)
-        }
-    }
-
-    @Override
-    D lock(D target) {
-        getHibernateTemplate().execute { Session session ->
-            session.lock target, LockModeType.PESSIMISTIC_WRITE
-        }
-        return target
     }
 
     @Override

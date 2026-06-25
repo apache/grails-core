@@ -17,12 +17,14 @@ package org.grails.orm.hibernate.query;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import jakarta.persistence.criteria.AbstractQuery;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Root;
 
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
@@ -103,13 +105,47 @@ public class JpaCriteriaQueryCreator<T> {
         var context = JpaQueryContext.forSubquery(parentContext, aliases, root);
         registerDetachedJoins(context);
         discoverAliases(detachedCriteria.getCriteria(), context);
-        
+
+        applyEagerFetchJoins(root, projectionList);
+
         new JpaProjectionAdapter(criteriaBuilder, context).adapt(projections, (AbstractQuery<?>) cq);
         assignGroupBy(cq, context);
 
         assignOrderBy(cq, context);
         assignCriteria(cq, root, context, entity);
         return cq;
+    }
+
+    /**
+     * Eagerly fetch-join the associations requested via {@code fetch:[assoc:'join']} (which a
+     * dynamic finder turns into {@link HibernateQuery#join(String)} calls). Hibernate 5 initializes
+     * these collections; without an explicit JPA {@code root.fetch(...)} they would only be plain
+     * joins (or, when not referenced in a predicate, not materialized at all), leaving the
+     * association uninitialized. Only applied to full-entity selects - a fetch join on a projection
+     * query (for example {@code count}) is invalid.
+     */
+    private void applyEagerFetchJoins(Root<?> root, List<Query.Projection> projectionList) {
+        if (hibernateQuery == null) {
+            return;
+        }
+        boolean entitySelect = projectionList.stream().noneMatch(p -> !(p instanceof Query.DistinctProjection));
+        if (!entitySelect) {
+            return;
+        }
+        Map<String, ?> joinTypes = detachedCriteria.getJoinTypes();
+        for (String fetchPath : hibernateQuery.getFetchJoinPaths()) {
+            if (fetchPath == null || fetchPath.indexOf('.') >= 0) {
+                continue;
+            }
+            Object configured = (joinTypes != null) ? joinTypes.get(fetchPath) : null;
+            JoinType joinType = (configured instanceof JoinType jt) ? jt : JoinType.LEFT;
+            try {
+                root.fetch(fetchPath, joinType);
+            }
+            catch (IllegalArgumentException ignored) {
+                // Not a fetchable association on this root; the plain join handling remains in place.
+            }
+        }
     }
 
     @SuppressWarnings("unchecked")

@@ -20,7 +20,7 @@
 package org.grails.orm.hibernate.query
 
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.persistence.Entity
 import org.hibernate.FlushMode
 import spock.lang.Unroll
@@ -30,7 +30,7 @@ import org.grails.datastore.mapping.query.Query
 class SelectHqlQuerySpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([SelectHqlQuerySpecBook, SelectHqlQuerySpecAuthor])
+        manager.registerDomainClasses(SelectHqlQuerySpecBook, SelectHqlQuerySpecAuthor)
     }
 
     def setup() {
@@ -139,6 +139,17 @@ class SelectHqlQuerySpec extends HibernateGormDatastoreSpec {
         def results = buildHqlQuery("from SelectHqlQuerySpecBook order by title", [:], null, [offset: 2]).list()
         then:
         results.size() == 1
+    }
+
+    void "createHqlQuery exposes converted max and offset args"() {
+        when:
+        def query = buildHqlQuery("from SelectHqlQuerySpecBook order by title", [:], null, [max: '2', offset: '1'])
+        def results = query.list()
+
+        then:
+        query.max == 2
+        query.offset == 1
+        results.size() == 2
     }
 
     void "createHqlQuery with empty query string defaults to full entity query"() {

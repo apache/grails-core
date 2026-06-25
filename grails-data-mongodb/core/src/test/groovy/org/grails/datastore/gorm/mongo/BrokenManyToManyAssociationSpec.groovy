@@ -18,20 +18,19 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import grails.mongodb.MongoEntity
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.Document
 
 /**
  * @author Noam Y. Tenne
  */
-class BrokenManyToManyAssociationSpec extends MongoDatastoreSpec {
+class BrokenManyToManyAssociationSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([ReferencingEntity, ReferencedEntity])
+        manager.registerDomainClasses(ReferencingEntity, ReferencedEntity)
     }
 
     def 'Perform a cascading delete on a broken many-to-many relationship'() {

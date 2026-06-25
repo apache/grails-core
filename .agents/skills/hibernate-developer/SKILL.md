@@ -12,9 +12,9 @@ Licensed to the Apache Software Foundation (ASF) under one or more contributor l
 ## What I Do
 
 - Provide repository-specific guidance for the `grails-data-hibernate7` project.
-- Help with Hibernate 7 migration work in domain binding, mapping metadata, identifiers, generators, collections, and second-pass binding.
 - Guide changes around `GrailsDomainBinder`, `GrailsPropertyBinder`, `IdentityBinder`, `VersionBinder`, collection binders, and related utilities.
-- Keep changes aligned with the testing constraints and migration status documented in `grails-data-hibernate7/AGENTS.md`.
+- Keep changes aligned with the testing constraints used by the Hibernate 7 modules in this repository.
+- Help with migration work inside this framework module (e.g., porting domain-binding behaviour from H5 to H7, updating binder internals, fixing H7 regressions). Does not cover user-facing application migration guides; those belong in `grails-doc`.
 
 ## When to Use Me
 
@@ -88,9 +88,9 @@ Keep these module-specific expectations in mind:
 When touching `grails-data-hibernate7`, test through real Hibernate wiring rather than assuming mocks are enough.
 
 - Use `HibernateGormDatastoreSpec` for Hibernate 7 integration and domain-binding specifications.
-- Prefer `manager.addAllDomainClasses([...])` in `setupSpec()` to register entities for specs.
+- Prefer `manager.registerDomainClasses(...)` in `setupSpec()` to register entities for specs.
 - Define test entities as top-level classes in the same Groovy spec file.
-- Ensure test domain class names are globally unique within the package to avoid collisions during parallel execution.
+- Ensure test domain class names are globally unique within the package. The test suite uses `maxParallelForks > 1`, so multiple specs can run concurrently in the same JVM fork. `HibernateDatastore` caches mapping metadata by entity class name, so two specs registering a domain class with the same simple name in the same package can overwrite each other's mappings and cause flaky failures.
 - Prefer real entities over heavy mocking for binder logic.
 
 ## Change Workflow
@@ -110,10 +110,9 @@ When touching `grails-data-hibernate7`, test through real Hibernate wiring rathe
 
 ## Known Status and Constraints
 
-- The Hibernate 7 binder migration is largely in migrated state across the main binders, collection types, second-pass binders, generators, and utilities.
-- Unidirectional many-to-many support in `CollectionSecondPassBinder` is implemented.
-- `GrailsIncrementGenerator` reflection hacks remain a known temporary compromise until a later Hibernate upgrade removes the need.
+- The Hibernate 7 binder migration is complete: all main binders, collection types, second-pass binders, generators, and utilities have been migrated.
+- `GrailsIncrementGenerator` retains reflection-based workarounds for accessing Hibernate 7 internals; avoid broad refactors in that class unless explicitly targeting that area.
 
 ## Source of Truth
 
-This skill is derived from `grails-data-hibernate7/AGENTS.md`. When the module guidance changes, update this skill so agents can load the same rules directly from `.agents/skills/hibernate-developer/SKILL.md`.
+This skill is the repository guidance for Hibernate 7 module work. When module conventions change, update this skill directly so agents load the current rules from `.agents/skills/hibernate-developer/SKILL.md`.

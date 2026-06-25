@@ -54,10 +54,11 @@ public class TagOutput {
             throw new GrailsTagException("Tag [" + tagName + "] does not exist. No corresponding tag library found.");
         }
 
+        boolean gspTagSyntaxCall = attrs instanceof GroovyPageAttributes && ((GroovyPageAttributes) attrs).isGspTagSyntaxCall();
         if (!(attrs instanceof GroovyPageAttributes)) {
             attrs = new GroovyPageAttributes(attrs, false);
         }
-        ((GroovyPageAttributes) attrs).setGspTagSyntaxCall(false);
+        ((GroovyPageAttributes) attrs).setGspTagSyntaxCall(gspTagSyntaxCall);
         Closure actualBody = createOutputCapturingClosure(tagLib, body, outputContext);
 
         final GroovyPageTagWriter tagOutput = new GroovyPageTagWriter();
@@ -74,7 +75,7 @@ public class TagOutput {
             builder.topWriter(tagOutput);
             outputStack.push(builder.build());
 
-            Object tagLibProp = tagLib.getProperty(tagName); // retrieve tag lib and create wrapper writer
+            Object tagLibProp = TagMethodInvoker.getClosureTagProperty(tagLib, tagName); // retrieve tag closure field
             if (tagLibProp instanceof Closure) {
                 Closure tag = (Closure) ((Closure) tagLibProp).clone();
                 Object bodyResult;
@@ -120,6 +121,26 @@ public class TagOutput {
                     return taglibEncoder.encode(tagOutput.getBuffer());
                 } else {
                     return tagOutput.getBuffer();
+                }
+            }
+            if (TagMethodInvoker.hasInvokableTagMethod(tagLib, tagName)) {
+                try {
+                    TagMethodContext.push(attrs, actualBody);
+                    Object bodyResult = TagMethodInvoker.invokeTagMethod(tagLib, tagName, attrs, actualBody);
+                    Encoder taglibEncoder = outputStack.getTaglibEncoder();
+                    boolean returnsObject = gspTagLibraryLookup.doesTagReturnObject(namespace, tagName);
+                    if (returnsObject && bodyResult != null && !(bodyResult instanceof Writer)) {
+                        if (taglibEncoder != null) {
+                            bodyResult = taglibEncoder.encode(bodyResult);
+                        }
+                        return bodyResult;
+                    }
+                    if (taglibEncoder != null) {
+                        return taglibEncoder.encode(tagOutput.getBuffer());
+                    }
+                    return tagOutput.getBuffer();
+                } finally {
+                    TagMethodContext.pop();
                 }
             }
 

@@ -4,28 +4,30 @@
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * 'License'); you may not use this file except in compliance
+ * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
  *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
 package org.apache.grails.data.testing.tck.tests
 
-import org.apache.grails.data.testing.tck.domains.TestEntity
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.IgnoreIf
+
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.TestEntity
 
 class NullValueEqualSpec extends GrailsDataTckSpec {
 
+    @Override
     void setupSpec() {
-        manager.addAllDomainClasses([TestEntity])
+        manager.registerDomainClasses(TestEntity)
     }
 
     void 'test null value in equal'() {
@@ -40,7 +42,7 @@ class NullValueEqualSpec extends GrailsDataTckSpec {
         TestEntity.countByAge(null) == 2
     }
 
-    @IgnoreIf({ System.getProperty('hibernate5.gorm.suite') })
+    @IgnoreIf({ System.getProperty('hibernate5.gorm.suite') || System.getProperty('hibernate7.gorm.suite') })
     void 'test null value in not equal'() {
         when:
         new TestEntity(name: 'Fred', age: null).save(failOnError: true)

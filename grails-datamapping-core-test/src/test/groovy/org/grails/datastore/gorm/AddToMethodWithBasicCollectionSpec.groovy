@@ -27,7 +27,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class AddToMethodWithBasicCollectionSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([BasicBook])
+        manager.registerDomainClasses(BasicBook)
     }
 
     @Issue('GRAILS-8779')

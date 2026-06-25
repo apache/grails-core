@@ -52,7 +52,6 @@ class HibernateDatastoreSpringInitializerSpec extends Specification{
 
         when:"the application is configured"
         applicationContext = (ConfigurableApplicationContext) datastoreInitializer.configure()
-        println applicationContext.getBeanDefinitionNames()
 
         then:"Each session factory has the correct number of persistent entities"
         applicationContext.getBeansOfType(PlatformTransactionManager).size() == 3
@@ -67,10 +66,9 @@ class HibernateDatastoreSpringInitializerSpec extends Specification{
         applicationContext.getBean("sessionFactory_moreBooks", SessionFactory).metamodel.entity(Author.name)
 
         and:"Each domain has the correct data source(s)"
-        HibernateDatastore hibernateDatastore = applicationContext.getBean(HibernateDatastore)
-        println "Author.moreBooks class is: " + Author.moreBooks.getClass().getName()
-        Person.withTransaction { Person.count() == 0 }
-        hibernateDatastore.withNewSession('DEFAULT') { Session s ->
+        def hibernateDatastore = applicationContext.getBean(HibernateDatastore)
+        Person.withNewSession { Person.count() == 0 }
+        hibernateDatastore.withNewSession { Session s ->
             assert s.doReturningWork { it.getMetaData().getURL() } == "jdbc:h2:mem:people"
             return true
         }
@@ -82,7 +80,7 @@ class HibernateDatastoreSpringInitializerSpec extends Specification{
             assert s.doReturningWork { it.getMetaData().getURL() } == "jdbc:h2:mem:moreBooks"
             return true
         }
-        hibernateDatastore.withNewSession('DEFAULT') { Session s ->
+        hibernateDatastore.withNewSession { Session s ->
             assert s.doReturningWork { it.getMetaData().getURL() } == "jdbc:h2:mem:people"
             return true
         }
@@ -90,11 +88,10 @@ class HibernateDatastoreSpringInitializerSpec extends Specification{
             assert s.doReturningWork { it.getMetaData().getURL() } == "jdbc:h2:mem:books"
             return true
         }
-        hibernateDatastore.withNewSession("moreBooks") { Session s ->
+        Author.moreBooks.withNewSession { Session s ->
             assert s.doReturningWork { it.getMetaData().getURL() } == "jdbc:h2:mem:moreBooks"
             return true
         }
-
     }
 }
 @Entity

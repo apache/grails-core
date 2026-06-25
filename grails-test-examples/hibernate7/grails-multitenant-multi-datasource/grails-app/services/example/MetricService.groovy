@@ -61,6 +61,6 @@ abstract class MetricService {
      * Delete all metrics for the current tenant from the secondary datasource.
      */
     void deleteAll() {
-        secondaryApi.executeUpdate('delete from Metric', [:])
+        secondaryApi.executeUpdate('delete from Metric')
     }
 }

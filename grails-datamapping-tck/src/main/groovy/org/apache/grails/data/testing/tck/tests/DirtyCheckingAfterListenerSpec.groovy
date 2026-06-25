@@ -4,37 +4,39 @@
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * 'License'); you may not use this file except in compliance
+ * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
  *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
 package org.apache.grails.data.testing.tck.tests
 
-import org.apache.grails.data.testing.tck.domains.TestAuthor
+import spock.util.concurrent.PollingConditions
+
+import org.springframework.context.ApplicationEvent
+import org.springframework.context.ApplicationEventPublisher
+import org.springframework.context.ConfigurableApplicationContext
+
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.TestPlayer
 import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEventListener
 import org.grails.datastore.mapping.engine.event.PreInsertEvent
 import org.grails.datastore.mapping.engine.event.PreUpdateEvent
-import org.springframework.context.ApplicationEvent
-import org.springframework.context.ApplicationEventPublisher
-import org.springframework.context.ConfigurableApplicationContext
-import spock.util.concurrent.PollingConditions
 
 class DirtyCheckingAfterListenerSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([TestAuthor])
+        manager.registerDomainClasses(TestPlayer)
     }
 
     TestSaveOrUpdateEventListener listener
@@ -54,18 +56,19 @@ class DirtyCheckingAfterListenerSpec extends GrailsDataTckSpec {
     void 'test state change from listener update the object'() {
 
         when:
-        TestAuthor john = new TestAuthor(name: 'John').save(flush: true)
+        TestPlayer john = new TestPlayer(name: 'John').save(flush: true)
 
         then:
-        new PollingConditions().eventually { listener.isExecuted && TestAuthor.count() }
+        new PollingConditions().eventually { listener.isExecuted && TestPlayer.count() }
 
         when:
         manager.session.flush()
         manager.session.clear()
-        john = TestAuthor.get(john.id)
+        john = TestPlayer.get(john.id)
 
         then:
-        john.name == 'Foo'
+        john.attributes
+        john.attributes.size() == 3
 
     }
 }
@@ -80,8 +83,11 @@ class TestSaveOrUpdateEventListener extends AbstractPersistenceEventListener {
 
     @Override
     protected void onPersistenceEvent(AbstractPersistenceEvent event) {
-        TestAuthor player = (TestAuthor) event.entityObject
-        player.name = 'Foo'
+        TestPlayer player = (TestPlayer) event.entityObject
+        player.attributes = ['test0', 'test1', 'test2']
+        if (event.getEntityAccess() != null) {
+            event.getEntityAccess().setProperty('attributes', player.attributes)
+        }
         isExecuted = true
     }
 

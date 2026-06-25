@@ -115,7 +115,17 @@ class ValidationTagLibSpec extends Specification implements TagLibUnitTest<Valid
 
 
 
-    void testFieldValueHTMLEscape() {
+    void "formatValue is exposed as a tag and HTML-encodes its value"() {
+        expect:
+        applyTemplate('''<g:formatValue value="${'<b>hi</b>'}" />''') == "&lt;b&gt;hi&lt;/b&gt;"
+    }
+
+    void "formatValue function-style call returns encoded String"() {
+        expect:
+        applyTemplate('''${formatValue(value: "<b>hi</b>")}''') == "&lt;b&gt;hi&lt;/b&gt;"
+    }
+
+void testFieldValueHTMLEscape() {
         given:
             def b = new ValidationTagLibBook(title:"<script>alert('escape me')</script>")
             def template = '''<g:fieldValue bean="${book}" field="title" />'''
@@ -648,6 +658,13 @@ class ValidationTagLibBook {
     URL publisherURL
     Date releaseDate
     BigDecimal usPrice
+
+    static constraints = {
+        title nullable: false
+        publisherURL nullable: false
+        releaseDate nullable: false
+        usPrice nullable: false
+    }
 }
 
 @Entity

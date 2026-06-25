@@ -18,18 +18,20 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
+import groovy.transform.InheritConstructors
+
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.ChildEntity
 import org.apache.grails.data.testing.tck.domains.TestEntity
-import groovy.transform.InheritConstructors
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 /**
  * Transaction tests.
  */
 class WithTransactionSpec extends GrailsDataTckSpec {
 
+    @Override
     void setupSpec() {
-        manager.addAllDomainClasses([TestEntity, ChildEntity])
+        manager.registerDomainClasses(TestEntity, ChildEntity)
     }
 
     void 'Test save() with transaction'() {

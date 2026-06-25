@@ -18,14 +18,14 @@
  */
 package org.grails.orm.hibernate.query
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.persistence.Entity
 import org.grails.datastore.mapping.query.Query
 
 class HibernateHqlQueryCreatorSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([HqlCreatorSpecBook])
+        manager.registerDomainClasses(HqlCreatorSpecBook)
     }
 
     void "createHqlQuery returns SelectHqlQuery for SELECT"() {

@@ -24,6 +24,7 @@ import spock.lang.Unroll
 import grails.gorm.DetachedCriteria
 import grails.gorm.transactions.Rollback
 import grails.testing.mixin.integration.Integration
+
 /**
  * Tests for GORM Criteria Queries - both createCriteria() and DetachedCriteria.
  *
@@ -31,13 +32,13 @@ import grails.testing.mixin.integration.Integration
  * complex queries without writing HQL strings.
  */
 @Rollback
-@Integration(applicationClass = Application)
+@Integration
 class GormCriteriaQueriesSpec extends Specification {
 
     def setup() {
         // Clean up and create fresh test data
-        Book.executeUpdate('delete from Book', [:])
-        Author.executeUpdate('delete from Author', [:])
+        Book.executeUpdate('delete from Book')
+        Author.executeUpdate('delete from Author')
 
         def kingAuthor = new Author(name: 'Stephen King', email: 'stephen@king.com').save(flush: true)
         def clancyAuthor = new Author(name: 'Tom Clancy', email: 'tom@clancy.com').save(flush: true)
@@ -488,8 +489,8 @@ class GormCriteriaQueriesSpec extends Specification {
     // ============================================
 
     void "test basic HQL query"() {
-        when: "executing HQL query with no parameters (use Map overload for plain strings)"
-        def results = Book.executeQuery("from Book where inStock = true", [:])
+        when: "executing HQL query"
+        def results = Book.executeQuery("from Book where inStock = true")
 
         then: "results returned"
         results.size() == 6
@@ -544,7 +545,7 @@ class GormCriteriaQueriesSpec extends Specification {
     void "test HQL aggregate functions"() {
         when: "executing HQL aggregates"
         def result = Book.executeQuery(
-            'select count(b), avg(b.price), max(b.pageCount) from Book b', [:]
+            'select count(b), avg(b.price), max(b.pageCount) from Book b'
         )[0]
 
         then: "aggregates calculated"
@@ -556,7 +557,7 @@ class GormCriteriaQueriesSpec extends Specification {
     void "test HQL group by"() {
         when: "executing HQL group by"
         def results = Book.executeQuery(
-            'select a.name, count(b) from Book b join b.author a group by a.name order by count(b) desc', [:]
+            'select a.name, count(b) from Book b join b.author a group by a.name order by count(b) desc'
         )
 
         then: "grouped results"
@@ -568,7 +569,7 @@ class GormCriteriaQueriesSpec extends Specification {
     void "test executeUpdate for bulk operations"() {
         when: "executing bulk update"
         int updated = Book.executeUpdate(
-            'update Book b set b.price = b.price * 1.1 where b.inStock = true', [:]
+            'update Book b set b.price = b.price * 1.1 where b.inStock = true'
         )
 
         then: "bulk update applied"

@@ -29,7 +29,7 @@ import spock.lang.PendingFeature
 class ListOrderByHungarianNotationSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([ClassWithHungarianNotation])
+        manager.registerDomainClasses(ClassWithHungarianNotation)
     }
 
     @PendingFeature(reason = 'SimpleMapDatastore does not fully support hungarian notation dynamic finder order by')

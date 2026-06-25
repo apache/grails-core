@@ -18,7 +18,7 @@
  */
 package org.grails.orm.hibernate.query
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.persistence.Entity
 import org.hibernate.query.MutationQuery
 import org.hibernate.query.QueryArgumentException
@@ -30,7 +30,7 @@ import java.lang.reflect.Method
 class MutationQueryDelegateSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([MutationQueryDelegateTestBook])
+        manager.registerDomainClasses(MutationQueryDelegateTestBook)
     }
 
     void setup() {

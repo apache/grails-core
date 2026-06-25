@@ -19,7 +19,7 @@
 
 package org.grails.orm.hibernate.cfg.domainbinding
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.hibernate.HibernateEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import spock.lang.Subject
@@ -31,7 +31,7 @@ class ConfigureDerivedPropertiesConsumerSpec extends HibernateGormDatastoreSpec 
     HibernatePersistentProperty titleProperty
 
     def setupSpec() {
-        manager.addAllDomainClasses([CDPCBook])
+        manager.registerDomainClasses(CDPCBook)
     }
 
     def setup() {

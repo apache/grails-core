@@ -19,7 +19,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import java.beans.PropertyDescriptor
 import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller
 import java.lang.annotation.RetentionPolicy
@@ -27,7 +27,7 @@ import java.lang.annotation.RetentionPolicy
 class HibernateCustomEnumPropertySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([HCEPEntity])
+        manager.registerDomainClasses(HCEPEntity)
     }
 
     def "HibernateCustomEnumProperty instantiation and behavior"() {

@@ -104,20 +104,42 @@ public class HibernatePersistenceContextInterceptor
     }
 
     public void disconnect() {
-        throw new UnsupportedOperationException("disconnect is not supported by Hibernate 6");
+        throw new UnsupportedOperationException("disconnect is not supported by Hibernate 7");
     }
 
     public void reconnect() {
-        throw new UnsupportedOperationException("reconnect is not supported by Hibernate 6");
+        throw new UnsupportedOperationException("reconnect is not supported by Hibernate 7");
     }
 
     public void flush() {
         if (getSessionFactory() == null) return;
         if (!getParticipate()) {
+            Session session = getSession();
             if (!transactionRequired) {
-                getSession().flush();
+                session.flush();
             } else if (TransactionSynchronizationManager.isSynchronizationActive()) {
-                getSession().flush();
+                session.flush();
+            } else {
+                // No active Spring transaction synchronization. This happens when the interceptor
+                // opened the session itself - for example around a non-transactional BootStrap.
+                // Flush and commit the owned session's pending changes in a short transaction so
+                // they are persisted rather than discarded when the session is closed in destroy().
+                org.hibernate.Transaction transaction = session.getTransaction();
+                boolean ownTransaction = transaction == null || !transaction.isActive();
+                if (ownTransaction) {
+                    transaction = session.beginTransaction();
+                }
+                try {
+                    session.flush();
+                    if (ownTransaction) {
+                        transaction.commit();
+                    }
+                } catch (RuntimeException ex) {
+                    if (ownTransaction && transaction.isActive()) {
+                        transaction.rollback();
+                    }
+                    throw ex;
+                }
             }
         }
     }

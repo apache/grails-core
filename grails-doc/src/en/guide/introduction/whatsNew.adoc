@@ -27,6 +27,44 @@ This release focuses on enhancing the developer experience, improving performanc
 For detailed information on how to upgrade to Grails 8, including major dependency changes, please see the xref:upgrading#upgrading80x[Upgrading from Grails 7 to Grails 8] section.
 Notable new features are included below.
 
-==== No New Features at this time
+==== GSP Tag Library Improvements
 
-No new features at this time
+Grails 8 continues the move toward method-based TagLib handlers while preserving compatibility with existing closure-based tags.
+Method-defined tags now bind named attributes more predictably, exclude inherited framework and `Object` methods from tag dispatch, and preserve real namespace property getters.
+
+The Grails Gradle extension now defaults `preserveParameterNames` to `true`, so application Groovy compilation preserves method parameter names for features such as typed method TagLib arguments.
+
+Tag library unit tests also clean up and rebuild TagLib metadata automatically between features.
+Tests that use `TagLibUnitTest` no longer need to manage `purgeTagLibMetaClass`, and specs that mock additional tag libraries continue to work across feature methods.
+
+==== @GrailsCompileStatic on Controllers That Use Tag Libraries
+
+Controllers annotated with `@GrailsCompileStatic` can now invoke tag library methods without compile-time errors.
+
+Both calling patterns are supported out of the box:
+
+[source,groovy]
+----
+import grails.compiler.GrailsCompileStatic
+
+@GrailsCompileStatic
+class BookController {
+
+    def index() {
+        // Direct call in the default namespace
+        response.writer << link(controller: 'book', action: 'list')
+
+        // Namespaced call via a dispatcher property
+        response.writer << my.customTag(attr: 'value')
+    }
+}
+----
+
+The new `ControllerTagLibTypeCheckingExtension` (bundled with `@GrailsCompileStatic`) recognises controller classes by convention and marks tag dispatch points as permissible dynamic calls, while leaving the rest of the controller fully type-checked.
+
+==== Test HTTP Client Form Requests
+
+Integration tests that implement `HttpClientSupport` can now use `httpPostForm(...)` to send `application/x-www-form-urlencoded`
+request bodies. The helper URL-encodes form fields using UTF-8, and repeated values in a `Collection` or array are encoded as
+repeated keys in insertion order.
+

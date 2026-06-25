@@ -42,7 +42,7 @@ import grails.testing.mixin.integration.Integration
 class GormEventsSpec extends Specification {
 
     def setup() {
-        AuditedEntity.executeUpdate('delete from AuditedEntity', [:])
+        AuditedEntity.executeUpdate('delete from AuditedEntity')
     }
 
     // ============================================

@@ -27,7 +27,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class ReadOnlyCriteriaResultsSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([FamilyMember])
+        manager.registerDomainClasses(FamilyMember)
     }
 
     @Issue('GRAILS-11670')

@@ -51,7 +51,7 @@ class ColumnConfigToColumnBinderSpec extends Specification {
         column.unique
     }
 
-    def "should not bind properties when values are -1"() {
+    def "should not set precision or scale when values are -1"() {
         given:
         def columnConfig = new ColumnConfig()
         columnConfig.length = -1
@@ -63,46 +63,19 @@ class ColumnConfigToColumnBinderSpec extends Specification {
 
         then:
         column.length == null
-        column.precision == 15 // Default for non-Oracle
+        column.precision == null
         column.scale == null
         column.sqlType == null
         !column.unique
     }
 
-    def "should use default precision 15 for H2 when no precision set"() {
-        given:
-        def h2Binder = new ColumnConfigToColumnBinder(new org.hibernate.dialect.H2Dialect())
-        def columnConfig = new ColumnConfig(precision: -1)
-
+    def "should not set precision or scale when columnConfig is null"() {
         when:
-        h2Binder.bindColumnConfigToColumn(column, columnConfig, null)
+        binder.bindColumnConfigToColumn(column, null, null)
 
         then:
-        column.precision == 15
-    }
-
-    def "should use Oracle-specific default precision 126 when no precision set"() {
-        given:
-        def oracleBinder = new ColumnConfigToColumnBinder(new org.hibernate.dialect.OracleDialect())
-        def columnConfig = new ColumnConfig(precision: -1)
-
-        when:
-        oracleBinder.bindColumnConfigToColumn(column, columnConfig, null)
-
-        then:
-        column.precision == 126
-    }
-
-    def "should use default precision 15 for other dialects when no precision set"() {
-        given:
-        def pgBinder = new ColumnConfigToColumnBinder(new org.hibernate.dialect.PostgreSQLDialect())
-        def columnConfig = new ColumnConfig(precision: -1)
-
-        when:
-        pgBinder.bindColumnConfigToColumn(column, columnConfig, null)
-
-        then:
-        column.precision == 15
+        column.precision == null
+        column.scale == null
     }
 
     def "column config honors uniqueness property"() {
@@ -119,7 +92,7 @@ class ColumnConfigToColumnBinderSpec extends Specification {
 
         then:
         column.length == null
-        column.precision == 15 // Default for non-Oracle
+        column.precision == null
         column.scale == null
         column.sqlType == null
         !column.unique
@@ -134,7 +107,7 @@ class ColumnConfigToColumnBinderSpec extends Specification {
         binder.bindColumnConfigToColumn(column, columnConfig, mappedForm)
 
         then:
-        !column.unique // Should be false because it's handled via unique groups in Hibernate
+        !column.unique
     }
 
     def "column config honors uniqueness property when set to a list (composite groups)"() {
@@ -186,7 +159,7 @@ class ColumnConfigToColumnBinderSpec extends Specification {
 
         then:
         column.length == null
-        column.precision == 15 // Default for non-Oracle
+        column.precision == null
         column.scale == null
         column.sqlType == null
         !column.unique

@@ -19,14 +19,14 @@
 package org.grails.orm.hibernate
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.query.PropertyReference
 import spock.lang.Unroll
 
 class HibernateDetachedCriteriaSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([HDCProduct])
+        manager.registerDomainClasses(HDCProduct)
     }
 
     @Unroll

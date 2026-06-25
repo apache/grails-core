@@ -19,21 +19,21 @@
 
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
-
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.Plant
+import grails.gorm.tests.Plant
 import grails.mongodb.MongoEntity
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
 
 /**
  * Created by graemerocher on 20/03/14.
  */
 @ApplyDetachedCriteriaTransform
-class BatchUpdateDeleteSpec extends MongoDatastoreSpec {
+class BatchUpdateDeleteSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.addAllDomainClasses([BatchUser, BatchAddress, Plant])
+        manager.registerDomainClasses(BatchUser, BatchAddress, Plant)
     }
 
     void "Test that batch delete works"() {

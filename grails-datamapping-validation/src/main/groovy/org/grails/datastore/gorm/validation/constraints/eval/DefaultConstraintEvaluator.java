@@ -72,6 +72,7 @@ public class DefaultConstraintEvaluator implements ConstraintsEvaluator {
     protected final MappingContext mappingContext;
     protected final Map<String, Object> defaultConstraints;
     protected final boolean cacheAutoTimestampAnnotations;
+    protected final boolean defaultNullable;
 
     public DefaultConstraintEvaluator() {
         this(new DefaultConstraintRegistry(new StaticMessageSource()), new KeyValueMappingContext("default"), Collections.<String, Object>emptyMap(), true);
@@ -98,10 +99,15 @@ public class DefaultConstraintEvaluator implements ConstraintsEvaluator {
     }
 
     public DefaultConstraintEvaluator(ConstraintRegistry constraintRegistry, MappingContext mappingContext, Map<String, Object> defaultConstraints, boolean cacheAutoTimestampAnnotations) {
+        this(constraintRegistry, mappingContext, defaultConstraints, cacheAutoTimestampAnnotations, true);
+    }
+
+    public DefaultConstraintEvaluator(ConstraintRegistry constraintRegistry, MappingContext mappingContext, Map<String, Object> defaultConstraints, boolean cacheAutoTimestampAnnotations, boolean defaultNullable) {
         this.constraintRegistry = constraintRegistry;
         this.mappingContext = mappingContext;
         this.defaultConstraints = defaultConstraints;
         this.cacheAutoTimestampAnnotations = cacheAutoTimestampAnnotations;
+        this.defaultNullable = defaultNullable;
     }
 
     @Override
@@ -270,7 +276,14 @@ public class DefaultConstraintEvaluator implements ConstraintsEvaluator {
     }
 
     protected void applyDefaultNullableConstraint(PersistentProperty p, ConstrainedProperty cp) {
-        applyDefaultNullableConstraint(cp, false);
+        // Grails 8: persistent properties are nullable by default, aligning Grails with the rest of
+        // the JVM persistence/validation ecosystem (JPA/Hibernate, Spring Data, Micronaut Data and
+        // Jakarta Bean Validation are all "nullable unless you say otherwise"). To restore the
+        // legacy required-by-default behavior, either set the boolean flag:
+        //     grails.gorm.default.nullable = false
+        // or apply a wildcard default constraint:
+        //     grails.gorm.default.constraints = { '*'(nullable: false) }
+        applyDefaultNullableConstraint(cp, defaultNullable);
     }
 
     protected void applyDefaultNullableConstraint(ConstrainedProperty cp, boolean defaultNullable) {

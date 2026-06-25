@@ -20,7 +20,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding.binder
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.hibernate.mapping.RootClass
 import org.hibernate.mapping.Table
 import org.hibernate.mapping.SingleTableSubclass

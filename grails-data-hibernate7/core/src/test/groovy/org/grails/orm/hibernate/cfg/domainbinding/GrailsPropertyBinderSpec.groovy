@@ -20,7 +20,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.*
 import org.grails.orm.hibernate.cfg.domainbinding.binder.*
 
@@ -113,7 +113,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
     }
 
     void setupSpec() {
-        manager.addAllDomainClasses([
+        manager.registerDomainClasses(
             PropertyBinderSpecSimpleBook,
             PropertyBinderSpecEnumBook,
             PropertyBinderSpecAuthor,
@@ -127,7 +127,7 @@ class GrailsPropertyBinderSpec extends HibernateGormDatastoreSpec {
             PropertyBinderSpecFKOwner,
             PropertyBinderSpecFKChild,
             PropertyBinderSpecTenantEntity
-        ])
+        )
     }
 
     void "Test bind simple property"() {

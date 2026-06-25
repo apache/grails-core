@@ -19,7 +19,7 @@
 package org.grails.orm.hibernate.cfg.domainbinding.hibernate
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.hibernate.FetchMode
 import org.hibernate.type.ForeignKeyDirection
 import org.grails.datastore.mapping.model.PersistentEntity
@@ -28,7 +28,7 @@ import org.grails.orm.hibernate.cfg.PropertyConfig
 class HibernateToOnePropertySpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.addAllDomainClasses([HTOPAuthor, HTOPBook, HTOPProfile, HTOPAddress])
+        manager.registerDomainClasses(HTOPAuthor, HTOPBook, HTOPProfile, HTOPAddress)
     }
 
     // ─── HibernateManyToOneProperty Tests ────────────────────────────────────

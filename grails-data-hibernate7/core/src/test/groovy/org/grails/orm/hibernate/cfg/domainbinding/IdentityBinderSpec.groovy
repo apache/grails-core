@@ -23,7 +23,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentE
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateCompositeIdentityProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateSimpleIdentityProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateIdentityProperty
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import spock.lang.Subject
 
 import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdBinder

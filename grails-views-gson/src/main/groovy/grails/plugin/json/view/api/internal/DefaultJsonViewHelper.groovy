@@ -95,7 +95,13 @@ class DefaultJsonViewHelper extends DefaultGrailsViewHelper {
     }
 
     protected PersistentEntity findEntity(Object object) {
-        def clazz = object.getClass()
+        // A Hibernate proxy reports its generated subclass (e.g. Player$HibernateProxy$xxx) from
+        // getClass(), which is not a registered persistent entity. Resolve the real entity class
+        // by unwrapping the proxy first, otherwise the proxy renders as a plain POGO (losing its
+        // id) instead of as a domain entity.
+        def proxyHandler = ((JsonView) view)?.proxyHandler
+        Object target = (proxyHandler != null && proxyHandler.isProxy(object)) ? proxyHandler.unwrapIfProxy(object) : object
+        def clazz = (target != null ? target : object).getClass()
         try {
             return GormEnhancer.findEntity(clazz)
         } catch (Exception ignored) {

@@ -20,12 +20,10 @@ package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
 import java.util.stream.Stream;
 
-import jakarta.annotation.Nonnull;
-
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.mapping.RootClass;
 import org.hibernate.mapping.Subclass;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,7 +68,7 @@ public class RootBinder {
      *
      * @param entity The Grails domain class
      */
-    public void bindRoot(@Nonnull HibernatePersistentEntity entity) {
+    public void bindRoot(@NonNull HibernatePersistentEntity entity) {
         if (mappings.getEntityBinding(entity.getName()) != null) {
             if (LOG.isWarnEnabled()) {
                 LOG.warn("[RootBinder] Class [{}] is already mapped, skipping.. ", entity.getName());

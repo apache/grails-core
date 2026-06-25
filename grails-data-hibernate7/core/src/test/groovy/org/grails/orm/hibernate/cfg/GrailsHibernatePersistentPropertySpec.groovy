@@ -20,7 +20,7 @@
 package org.grails.orm.hibernate.cfg
 
 import grails.gorm.annotation.Entity
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyWrapper
@@ -234,6 +234,34 @@ class GrailsHibernatePersistentPropertySpec extends HibernateGormDatastoreSpec {
         then:
         thrown(org.hibernate.MappingException)
     }
+
+    void "test buildPropertyIdentity on real property with params"() {
+        given:
+        PersistentEntity entity = createPersistentEntity(TestEntityWithParams)
+        HibernatePersistentProperty property = (HibernatePersistentProperty) entity.getPropertyByName("myProperty")
+
+        when:
+        def optionalIdentity = property.buildPropertyIdentity()
+
+        then:
+        optionalIdentity.isPresent()
+        def identity = optionalIdentity.get()
+        identity.name == "myProperty"
+        identity.type == String.class
+        identity.params == [param1: "value1"]
+    }
+
+    void "test buildPropertyIdentity on real property without params"() {
+        given:
+        PersistentEntity entity = createPersistentEntity(TestEntityWithTypeName)
+        HibernatePersistentProperty property = (HibernatePersistentProperty) entity.getPropertyByName("name")
+
+        when:
+        def optionalIdentity = property.buildPropertyIdentity()
+
+        then:
+        !optionalIdentity.isPresent()
+    }
 }
 
 
@@ -385,4 +413,13 @@ class BMTOWLMAuthor {
     List<BMTOWLMBook> books
 
     static hasMany = [books: BMTOWLMBook]
+}
+
+@Entity
+class TestEntityWithParams {
+    Long id
+    String myProperty
+    static mapping = {
+        myProperty type: 'string', params: [param1: 'value1']
+    }
 }

@@ -4,14 +4,14 @@
  *  distributed with this work for additional information
  *  regarding copyright ownership.  The ASF licenses this file
  *  to you under the Apache License, Version 2.0 (the
- *  'License'); you may not use this file except in compliance
+ *  "License"); you may not use this file except in compliance
  *  with the License.  You may obtain a copy of the License at
  *
  *    https://www.apache.org/licenses/LICENSE-2.0
  *
  *  Unless required by applicable law or agreed to in writing,
  *  software distributed under the License is distributed on an
- *  'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  *  KIND, either express or implied.  See the License for the
  *  specific language governing permissions and limitations
  *  under the License.
@@ -58,7 +58,6 @@ import org.hibernate.boot.registry.BootstrapServiceRegistry
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder
 import org.hibernate.dialect.H2Dialect
 import org.grails.orm.hibernate.proxy.GrailsBytecodeProvider
-import org.hibernate.proxy.pojo.bytebuddy.ByteBuddyProxyHelper
 import org.hibernate.internal.SessionFactoryImpl
 import org.hibernate.service.spi.ServiceRegistryImplementor
 import org.springframework.context.ApplicationContext
@@ -75,24 +74,7 @@ abstract class HibernateSpec extends Specification {
     @Shared @AutoCleanup HibernateDatastore hibernateDatastore
     @Shared PlatformTransactionManager transactionManager
     @Shared HibernateProxyHandler proxyHandler = new HibernateProxyHandler()
-    @Shared @AutoCleanup('close') ApplicationContext applicationContext
-
-    static class TestGrailsBytecodeProvider extends GrailsBytecodeProvider {
-
-        @Override
-        @CompileStatic(TypeCheckingMode.SKIP)
-        protected ByteBuddyProxyHelper createProxyHelper() {
-            try {
-                def byteBuddyStateClass = Class.forName('org.hibernate.bytecode.internal.bytebuddy.ByteBuddyState')
-                def byteBuddyStateConstructor = byteBuddyStateClass.getDeclaredConstructor()
-                byteBuddyStateConstructor.setAccessible(true)
-                def byteBuddyState = byteBuddyStateConstructor.newInstance()
-                return new ByteBuddyProxyHelper(byteBuddyState as org.hibernate.bytecode.internal.bytebuddy.ByteBuddyState)
-            } catch (e) {
-                throw new RuntimeException('Failed to instantiate ByteBuddyState using reflection', e)
-            }
-        }
-    }
+    @Shared @AutoCleanup ApplicationContext applicationContext
 
     @CompileStatic(TypeCheckingMode.SKIP)
     void setupSpec() {
@@ -101,7 +83,6 @@ abstract class HibernateSpec extends Specification {
         HibernateDatastoreSpringInitializer initializer
 
         if (applicationContext == null) {
-            System.out.println('HibernateSpec: applicationContext is null, creating new one.')
             List<PropertySourceLoader> propertySourceLoaders = SpringFactoriesLoader.loadFactories(PropertySourceLoader, getClass().getClassLoader())
             ResourceLoader resourceLoader = new DefaultResourceLoader()
             MutablePropertySources propertySources = new MutablePropertySources()
@@ -135,18 +116,15 @@ abstract class HibernateSpec extends Specification {
                     username = 'sa'
                     password = ''
                 }
-                hibernateBytecodeProvider(TestGrailsBytecodeProvider)
+                hibernateBytecodeProvider(GrailsBytecodeProvider)
             }
 
             applicationContext = initializer.configure()
         } else {
-            System.out.println("HibernateSpec: applicationContext already exists (${applicationContext.class.name}), registering beans.")
             // Context already exists (e.g. from ControllerUnitTest), register our beans into it
             try {
                 config = applicationContext.getBean('grailsConfig', Config)
             } catch (e) {
-                // Fallback: create a new config if grailsConfig bean is missing
-                System.out.println('HibernateSpec: grailsConfig bean not found, creating fallback.')
                 List<PropertySourceLoader> propertySourceLoaders = SpringFactoriesLoader.loadFactories(PropertySourceLoader, getClass().getClassLoader())
                 ResourceLoader resourceLoader = new DefaultResourceLoader()
                 MutablePropertySources propertySources = new MutablePropertySources()
@@ -182,11 +160,9 @@ abstract class HibernateSpec extends Specification {
             try {
                 hibernateDatastore = applicationContext.getBean('hibernateDatastore', HibernateDatastore)
             } catch (e2) {
-                System.err.println('Available beans: ' + applicationContext.getBeanDefinitionNames().join(', '))
                 throw e2
             }
         }
-        System.out.println("HibernateDatastore initialized with multi-tenancy mode: ${hibernateDatastore.multiTenancyMode}")
         try {
             transactionManager = hibernateDatastore.getTransactionManager()
         } catch (e) {
@@ -223,7 +199,6 @@ abstract class HibernateSpec extends Specification {
         ] as Map<String, Object>
     }
 
-    @CompileStatic(TypeCheckingMode.SKIP)
     protected InFlightMetadataCollectorImpl getCollector() {
         def bootstrapServiceRegistry = getServiceRegistry()
                 .getParentServiceRegistry()

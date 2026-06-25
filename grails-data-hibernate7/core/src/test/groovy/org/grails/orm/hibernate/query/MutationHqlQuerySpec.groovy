@@ -18,7 +18,7 @@
  */
 package org.grails.orm.hibernate.query
 
-import grails.gorm.specs.HibernateGormDatastoreSpec
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.persistence.Entity
 import org.hibernate.FlushMode
 import org.grails.datastore.mapping.query.Query
@@ -26,7 +26,7 @@ import org.grails.datastore.mapping.query.Query
 class MutationHqlQuerySpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.addAllDomainClasses([MutationHqlQuerySpecBook])
+        manager.registerDomainClasses(MutationHqlQuerySpecBook)
     }
 
     def setup() {
