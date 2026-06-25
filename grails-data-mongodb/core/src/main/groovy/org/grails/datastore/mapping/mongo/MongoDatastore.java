@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -950,7 +951,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
                 reconcileIndexConflict(entity, collection, keys, indexOptions,
                         expireAfterSeconds, recreateOnConflict, descriptor, e);
             } else {
-                LOG.error("Failed to create index for entity [" + entity.getName() + "] " + descriptor + ": " + e.getMessage(), e);
+                LOG.error("Failed to create index for entity [{}] {}: {}",
+                    entity.getName(), descriptor, e.getMessage(), e);
             }
         }
     }
@@ -969,12 +971,13 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
         try {
             existing = findIndexByKeyPattern(collection, keys);
         } catch (RuntimeException listError) {
-            LOG.error("Failed to create index for entity [" + entity.getName() + "] " + descriptor +
-                    " and could not inspect existing indexes: " + listError.getMessage(), original);
+            LOG.error("Failed to create index for entity [{}] {} and could not inspect existing indexes: {}",
+                entity.getName(), descriptor, listError.getMessage(), original);
             return;
         }
         if (existing == null) {
-            LOG.error("Failed to create index for entity [" + entity.getName() + "] " + descriptor + ": " + original.getMessage(), original);
+            LOG.error("Failed to create index for entity [{}] {}: {}",
+                entity.getName(), descriptor, original.getMessage(), original);
             return;
         }
 
@@ -990,13 +993,14 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
                         .runCommand(new Document("collMod", getCollectionName(entity))
                                 .append("index", new Document("name", existingName)
                                         .append(INDEX_EXPIRE_AFTER_SECONDS, expireAfterSeconds)));
-                LOG.info("Updated TTL of index [" + existingName + "] on entity [" + entity.getName() + "] to " + expireAfterSeconds + "s");
+                LOG.info("Updated TTL of index [{}] on entity [{}] to {}s",
+                    existingName, entity.getName(), expireAfterSeconds);
                 return;
             } catch (MongoCommandException collModError) {
                 // collMod can't make every change (e.g. add a TTL to a non-TTL index on older
                 // servers) — fall through to recreate (if authorised) rather than fail outright.
-                LOG.warn("collMod TTL update failed for index [" + existingName + "] on entity [" + entity.getName() + "]: " +
-                        collModError.getMessage() + (recreateOnConflict ? " — recreating" : ""));
+                LOG.warn("collMod TTL update failed for index [{}] on entity [{}]: {}{}",
+                    existingName, entity.getName(), collModError.getMessage(), recreateOnConflict ? " — recreating" : "");
             }
         }
 
@@ -1004,16 +1008,18 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
             try {
                 collection.dropIndex(existingName);
                 collection.createIndex(keys, desired);
-                LOG.info("Recreated index [" + existingName + "] on entity [" + entity.getName() + "] " + descriptor);
+                LOG.info("Recreated index [{}] on entity [{}] {}", existingName, entity.getName(), descriptor);
             } catch (MongoCommandException recreateError) {
-                LOG.error("Failed to recreate index [" + existingName + "] on entity [" + entity.getName() + "] " + descriptor + ": " + recreateError.getMessage(), recreateError);
+                LOG.error("Failed to recreate index [{}] on entity [{}] {}: {}",
+                    existingName, entity.getName(), descriptor, recreateError.getMessage(), recreateError);
             }
             return;
         }
 
-        LOG.error("Index conflict for entity [" + entity.getName() + "] " + descriptor + ": an index [" + existingName +
-                "] already exists on the same keys with different options. Declare indexAttributes:[recreateOnConflict:true]" +
-                " to drop and recreate it. Original error: " + original.getMessage());
+        LOG.error(
+            "Index conflict for entity [{}] {}: an index [{}] already exists on the same keys with different options. " +
+                "Declare indexAttributes:[recreateOnConflict:true] to drop and recreate it. Original error: {}",
+            entity.getName(), descriptor, existingName, original.getMessage());
     }
 
     /**
@@ -1073,7 +1079,7 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
                 if (((Number) a).doubleValue() != ((Number) b).doubleValue()) {
                     return false;
                 }
-            } else if (a == null ? b != null : !a.equals(b)) {
+            } else if (!Objects.equals(a, b)) {
                 return false;
             }
         }
