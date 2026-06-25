@@ -34,38 +34,36 @@ import spock.lang.Specification
  */
 class GroovyPagesTemplateEngineObservationSpec extends Specification {
 
+    ByteArrayResource pageContent = new ByteArrayResource('<html><body>hi</body></html>'.bytes)
+
     private List<Observation.Context> recorded = []
 
     /** Engine whose actual compilation returns a stub, wired with a recording observation registry. */
     private GroovyPagesTemplateEngine engine() {
-        ObservationRegistry observationRegistry = ObservationRegistry.create()
-        observationRegistry.observationConfig().observationHandler(new ObservationHandler<Observation.Context>() {
-            @Override boolean supportsContext(Observation.Context context) { true }
-            @Override void onStop(Observation.Context context) { recorded << context }
-        })
-
-        def engine = new GroovyPagesTemplateEngine() {
+        def observationRegistry = ObservationRegistry.create().tap {
+            observationConfig().observationHandler(new ObservationHandler<Observation.Context>() {
+                @Override boolean supportsContext(Observation.Context context) { true }
+                @Override void onStop(Observation.Context context) { recorded << context }
+            })
+        }
+        def ctx = new GenericApplicationContext().tap {
+            beanFactory.registerSingleton('observationRegistry', observationRegistry)
+            refresh()
+        }
+        new GroovyPagesTemplateEngine() {
             @Override
             protected GroovyPageMetaInfo buildPageMetaInfo(InputStream inputStream, Resource res, String pageName) {
                 return new GroovyPageMetaInfo()
             }
+        }.tap {
+            reloadEnabled = false
+            applicationContext = ctx
         }
-        engine.setReloadEnabled(false)
-
-        def ctx = new GenericApplicationContext()
-        ctx.getBeanFactory().registerSingleton('observationRegistry', observationRegistry)
-        ctx.refresh()
-        engine.setApplicationContext(ctx)
-        return engine
-    }
-
-    private Resource gsp() {
-        new ByteArrayResource('<html><body>hi</body></html>'.bytes)
     }
 
     void "compiling a page records a gsp.compile observation tagged with the page name"() {
         when:
-        engine().buildPageMetaInfo(gsp(), '/book/show')
+        engine().buildPageMetaInfo(pageContent, '/book/show')
 
         then:
         recorded.size() == 1

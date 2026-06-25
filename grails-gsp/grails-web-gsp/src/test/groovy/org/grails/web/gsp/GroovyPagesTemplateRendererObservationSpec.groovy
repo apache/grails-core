@@ -18,13 +18,13 @@
  */
 package org.grails.web.gsp
 
-import io.micrometer.common.KeyValues
 import io.micrometer.observation.Observation
 import io.micrometer.observation.ObservationHandler
 import io.micrometer.observation.ObservationRegistry
 
 import org.grails.gsp.GroovyPagesException
 import org.grails.gsp.GroovyPagesTemplateEngine
+import org.grails.taglib.TemplateVariableBinding
 import org.grails.web.servlet.mvc.GrailsWebRequest
 
 import spock.lang.Specification
@@ -41,32 +41,32 @@ class GroovyPagesTemplateRendererObservationSpec extends Specification {
     private List<Observation.Context> recorded = []
 
     private ObservationRegistry recordingRegistry() {
-        ObservationRegistry registry = ObservationRegistry.create()
-        registry.observationConfig().observationHandler(new ObservationHandler<Observation.Context>() {
-            @Override boolean supportsContext(Observation.Context context) { true }
-            @Override void onStop(Observation.Context context) { recorded << context }
-        })
-        registry
+        ObservationRegistry.create().tap {
+            observationConfig().observationHandler(new ObservationHandler<Observation.Context>() {
+                @Override boolean supportsContext(Observation.Context context) { true }
+                @Override void onStop(Observation.Context context) { recorded << context }
+            })
+        }
     }
 
     /** A renderer whose actual render body is supplied by a closure, bypassing the GSP pipeline. */
     private GroovyPagesTemplateRenderer rendererFor(ObservationRegistry registry, Closure body = {}) {
-        def renderer = new GroovyPagesTemplateRenderer() {
+        new GroovyPagesTemplateRenderer() {
             @Override
             protected void doRender(String templateName, GrailsWebRequest webRequest,
-                    org.grails.taglib.TemplateVariableBinding pageScope, Map<String, Object> attrs,
-                    Object body2, Writer out) {
+                                    TemplateVariableBinding pageScope, Map<String, Object> attrs,
+                                    Object body2, Writer out) {
                 body.call()
             }
+        }.tap {
+            groovyPagesTemplateEngine = Mock(GroovyPagesTemplateEngine)
+            observationRegistry = registry
         }
-        renderer.groovyPagesTemplateEngine = Mock(GroovyPagesTemplateEngine)
-        renderer.observationRegistry = registry
-        renderer
     }
 
     void "a gsp.template observation is recorded with the template name on a successful render"() {
         given:
-        GroovyPagesTemplateRenderer renderer = rendererFor(recordingRegistry())
+        def renderer = rendererFor(recordingRegistry())
 
         when:
         renderer.render(null, null, [template: '/shared/_card'], null, new StringWriter())
@@ -84,7 +84,7 @@ class GroovyPagesTemplateRendererObservationSpec extends Specification {
 
     void "no observation is recorded when the registry is NOOP (zero overhead)"() {
         given:
-        GroovyPagesTemplateRenderer renderer = rendererFor(ObservationRegistry.NOOP)
+        def renderer = rendererFor(ObservationRegistry.NOOP)
 
         when:
         renderer.render(null, null, [template: '/shared/_card'], null, new StringWriter())
@@ -95,7 +95,9 @@ class GroovyPagesTemplateRendererObservationSpec extends Specification {
 
     void "the observation records the exception when rendering fails"() {
         given:
-        GroovyPagesTemplateRenderer renderer = rendererFor(recordingRegistry(), { throw new GroovyPagesException('boom') })
+        def renderer = rendererFor(recordingRegistry()) {
+            throw new GroovyPagesException('boom')
+        }
 
         when:
         renderer.render(null, null, [template: '/shared/_card'], null, new StringWriter())
