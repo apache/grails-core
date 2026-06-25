@@ -1,0 +1,60 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+package example
+
+import example.query.NumberLikeCriterion
+import spock.lang.Specification
+import spock.lang.Unroll
+
+class NumberLikeCriterionSpec extends Specification {
+
+    @Unroll
+    void "criterion stores property name and value '#value'"() {
+        when:
+        def criterion = new NumberLikeCriterion('price', value)
+
+        then:
+        criterion.property == 'price'
+        criterion.value == expectedValue
+
+        where:
+        value     || expectedValue
+        '4%'      || '4%'
+        '9.99'    || '9.99'
+        '%9%'     || '%9%'
+        '100'     || '100'
+    }
+
+    void "commas are stripped from value"() {
+        expect:
+        new NumberLikeCriterion('price', '1,000.50').value == '1000.50'
+        new NumberLikeCriterion('price', '1,000').value == '1000'
+    }
+
+    void "toString returns a readable representation"() {
+        expect:
+        new NumberLikeCriterion('price', '100').toString() == 'price like 100'
+    }
+
+    void "toString reflects comma-stripped value"() {
+        expect:
+        new NumberLikeCriterion('price', '1,000').toString() == 'price like 1000'
+    }
+}

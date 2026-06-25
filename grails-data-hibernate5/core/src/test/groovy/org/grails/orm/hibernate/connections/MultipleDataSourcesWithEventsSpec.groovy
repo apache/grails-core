@@ -47,7 +47,7 @@ class MultipleDataSourcesWithEventsSpec extends Specification {
         ]
 
         when:"A entity is saved with the default connection"
-        HibernateDatastore datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config),EventsBook, SecondaryBook )
+        HibernateDatastore datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config), EventsBook, SecondaryBook)
         EventsBook book = new EventsBook(name:"test")
         EventsBook.withTransaction {
             book.save(flush:true)

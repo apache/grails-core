@@ -105,7 +105,11 @@ class DefaultServiceRegistry implements ServiceRegistry, Initializable {
     }
 
     protected Iterable<Service> loadServices() {
-        ServiceLoader.load(Service)
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader()
+        if (classLoader == null) {
+            classLoader = datastore.getClass().classLoader
+        }
+        ServiceLoader.load(Service, classLoader)
     }
 
     @Override

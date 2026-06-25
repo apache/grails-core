@@ -1,0 +1,81 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+plugins {
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.buildsrc.compile'
+}
+
+group = 'org.example.grails'
+version = '0.0.1'
+
+apply plugin: 'org.apache.grails.gradle.grails-web'
+apply plugin: 'cloud.wondrify.asset-pipeline'
+
+// These two Gradle plugins are not needed for running the functional tests.
+// They are applied as a smoke test to check that compiling gson-views and gsp
+// for production does not fail during build task.
+apply plugin: 'org.apache.grails.gradle.grails-gson'
+apply plugin: 'org.apache.grails.gradle.grails-gsp'
+
+dependencies {
+    implementation platform(project(':grails-hibernate7-bom'))
+
+    implementation 'org.apache.grails:grails-core'
+    implementation 'org.apache.grails:grails-rest-transforms'
+    implementation 'org.apache.grails:grails-databinding'
+    implementation 'org.apache.grails:grails-services'
+    implementation 'org.apache.grails:grails-url-mappings'
+    implementation 'org.apache.grails:grails-interceptors'
+    implementation 'org.apache.grails:grails-web-boot'
+    implementation 'org.apache.grails:grails-gsp'
+    if (System.getenv('SITEMESH2_TESTING_ENABLED') == 'true') {
+        implementation 'org.apache.grails:grails-layout'
+    } else {
+        implementation 'org.apache.grails:grails-sitemesh3'
+    }
+    implementation 'org.apache.grails:grails-data-hibernate7'
+    implementation 'org.apache.grails:grails-views-gson'
+
+    testAndDevelopmentOnly platform(project(':grails-hibernate7-bom'))
+    testAndDevelopmentOnly 'org.webjars.npm:bootstrap'
+    testAndDevelopmentOnly 'org.webjars.npm:jquery'
+
+    runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
+    runtimeOnly 'com.h2database:h2'
+    runtimeOnly 'com.zaxxer:HikariCP'
+    runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'
+    runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
+    runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
+
+    testImplementation 'org.apache.grails:grails-testing-support-web'
+    testImplementation 'org.apache.grails:grails-testing-support-datamapping'
+
+    integrationTestImplementation 'org.apache.grails:grails-testing-support-http-client'
+}
+
+tasks.named('compileTestGroovy').configure {
+    dependsOn 'compileGsonViews'
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-webjar-asset-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
+}

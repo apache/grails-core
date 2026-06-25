@@ -24,6 +24,7 @@ import com.mongodb.client.MongoClient
 import com.mongodb.client.MongoClients
 
 import org.springframework.beans.BeansException
+import org.springframework.beans.factory.DisposableBean
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
 import org.springframework.boot.autoconfigure.AutoConfigurationPackages
@@ -54,7 +55,7 @@ import org.grails.datastore.mapping.services.Service
 @Configuration
 @ConditionalOnMissingBean(MongoDatastore)
 @AutoConfigureAfter(MongoAutoConfiguration)
-class MongoDbGormAutoConfiguration implements ApplicationContextAware {
+class MongoDbGormAutoConfiguration implements ApplicationContextAware, DisposableBean {
 
     @Autowired(required = false)
     private MongoProperties mongoProperties
@@ -66,6 +67,14 @@ class MongoDbGormAutoConfiguration implements ApplicationContextAware {
     MongoClientSettings mongoOptions
 
     ConfigurableApplicationContext applicationContext
+
+    /**
+     * Whether the {@link #mongo} client was created by this auto-configuration rather than supplied
+     * as an existing bean. Only an internally created client is closed on shutdown; a client provided
+     * as a bean is owned by the application context (or the user), and GORM no longer closes a client
+     * it did not create.
+     */
+    private boolean mongoClientCreatedInternally = false
 
     @Bean
     MongoDatastore mongoDatastore() {
@@ -91,6 +100,7 @@ class MongoDbGormAutoConfiguration implements ApplicationContextAware {
         }
         else if (mongoProperties != null) {
             this.mongo = MongoClients.create(mongoOptions)
+            this.mongoClientCreatedInternally = true
             datastore = new MongoDatastore(mongo, environment, eventPublisher, packages as Package[])
         }
         else {
@@ -125,6 +135,19 @@ class MongoDbGormAutoConfiguration implements ApplicationContextAware {
             throw new IllegalArgumentException('MongoDbGormAutoConfiguration requires an instance of ConfigurableApplicationContext')
         }
         this.applicationContext = (ConfigurableApplicationContext) applicationContext
+    }
+
+    /**
+     * Closes the {@link MongoClient} only when it was created by this auto-configuration. A client
+     * supplied as an existing bean is owned by the application context (or the user) and must not be
+     * closed here. The {@code mongoDatastore} bean is created after this configuration, so it is
+     * destroyed first, leaving its sessions closed before the client itself is closed.
+     */
+    @Override
+    void destroy() throws Exception {
+        if (mongoClientCreatedInternally && mongo != null) {
+            mongo.close()
+        }
     }
 
 }

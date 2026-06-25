@@ -16,38 +16,69 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 ////
+[[domainClasses]]
+== Domain Classes
 
-When building applications you have to consider the problem domain you are trying to solve. For example if you were building an https://www.amazon.com/[Amazon]-style bookstore you would be thinking about books, authors, customers and publishers to name a few.
+Domain classes are the heart of a GORM application. They represent the data model and are mapped to database tables automatically by convention.
 
-These are modeled in GORM as Groovy classes, so a `Book` class may have a title, a release date, an ISBN number and so on. The next few sections show how to model the domain in GORM.
-
-
-Consider the following domain class:
-
-[source,groovy]
-.grails-app/domain/org/bookstore/Book.groovy
-----
-package org.bookstore
-
-class Book {
-}
-----
-
-This class will map automatically to a table in the database called `book` (the same name as the class).
-
-NOTE: This behaviour is customizable through the <<ormdsl,ORM Domain Specific Language>>
-
-Now that you have a domain class you can define its properties as Java types. For example:
+=== Anatomy of a Domain Class
 
 [source,groovy]
 ----
-package org.bookstore
-
 class Book {
     String title
-    Date releaseDate
-    String ISBN
+    String author
+    Integer pages
+    Date dateCreated         // <1>
+    Date lastUpdated         // <1>
+
+    static constraints = {   // <2>
+        title  blank: false, maxSize: 255
+        author blank: false
+        pages  min: 1, nullable: true
+    }
+
+    static mapping = {       // <3>
+        table 'books'
+        title index: true
+    }
 }
 ----
+<1> `dateCreated` and `lastUpdated` are automatically timestamped by GORM.
+<2> The `constraints` block defines validation rules and column constraints.
+<3> The `mapping` block customises the Hibernate ORM mapping.
 
-Each property is mapped to a column in the database, where the convention for column names is all lower case separated by underscores. For example `releaseDate` maps onto a column `release_date`. The SQL types are auto-detected from the Java types, but can be customized with <<constraints,Constraints>> or the <<ormdsl,ORM DSL>>.
+=== Automatic Properties
+
+Every domain class automatically gets:
+
+[cols="1,2"]
+|===
+|Property | Description
+
+|`id`
+|Auto-generated primary key (`Long` by default)
+
+|`version`
+|Optimistic locking version column (`Long`)
+|===
+
+And auto-timestamped properties if declared:
+
+[cols="1,2"]
+|===
+|Property | Description
+
+|`dateCreated`
+|Set to the current timestamp on first save
+
+|`lastUpdated`
+|Updated to the current timestamp on every save
+|===
+
+Refer to the following sections for details on domain class features:
+
+* xref:domainClasses-setsListsAndMaps[Sets, Lists and Maps]
+* xref:domainClasses-gormAssociation[GORM Associations]
+* xref:domainClasses-gormComposition[GORM Composition]
+* xref:domainClasses-inheritanceInGORM[Inheritance in GORM]

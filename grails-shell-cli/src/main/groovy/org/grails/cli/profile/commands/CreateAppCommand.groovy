@@ -519,7 +519,7 @@ class CreateAppCommand extends ArgumentCompletingCommand implements ProfileRepos
             configuredRepositories.add(repository)
 
             GrailsGradleRepository sitemeshSnapshots = new GrailsGradleRepository(url: 'https://central.sonatype.com/repository/maven-snapshots', snapshotsOnly: true)
-            sitemeshSnapshots.includeOnly('org[.]sitemesh.*', '.*', '.*-SNAPSHOT')
+            sitemeshSnapshots.includeOnly('org[.]sitemesh.*', '.*', '.*')
             configuredRepositories.add(sitemeshSnapshots)
         }
         configuredRepositories.unique()

@@ -74,11 +74,11 @@ class Person {
    static constraints = {
       lastUpdatedBy nullable: true
    }
-   
+
    static mapping = {
       autowire true
    }
-   
+
    def beforeUpdate() {
       lastUpdatedBy = securityService.currentAuthenticatedUsername()
    }
@@ -290,40 +290,40 @@ The values of the Map are instances of classes that implement one or more Hibern
 |===
 
 *Name*,*Interface*
-auto-flush,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/AutoFlushEventListener.html[AutoFlushEventListener]
-merge,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/MergeEventListener.html[MergeEventListener]
-create,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PersistEventListener.html[PersistEventListener]
-create-onflush,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PersistEventListener.html[PersistEventListener]
-delete,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/DeleteEventListener.html[DeleteEventListener]
-dirty-check,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/DirtyCheckEventListener.html[DirtyCheckEventListener]
-evict,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/EvictEventListener.html[EvictEventListener]
-flush,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/FlushEventListener.html[FlushEventListener]
-flush-entity,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/FlushEntityEventListener.html[FlushEntityEventListener]
-load,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/LoadEventListener.html[LoadEventListener]
-load-collection,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/InitializeCollectionEventListener.html[InitializeCollectionEventListener]
-lock,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/LockEventListener.html[LockEventListener]
-refresh,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/RefreshEventListener.html[RefreshEventListener]
-replicate,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/ReplicateEventListener.html[ReplicateEventListener]
-save-update,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/SaveOrUpdateEventListener.html[SaveOrUpdateEventListener]
-save,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/SaveOrUpdateEventListener.html[SaveOrUpdateEventListener]
-update,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/SaveOrUpdateEventListener.html[SaveOrUpdateEventListener]
-pre-load,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PreLoadEventListener.html[PreLoadEventListener]
-pre-update,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PreUpdateEventListener.html[PreUpdateEventListener]
-pre-delete,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PreDeleteEventListener.html[PreDeleteEventListener]
-pre-insert,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PreInsertEventListener.html[PreInsertEventListener]
-pre-collection-recreate,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PreCollectionRecreateEventListener.html[PreCollectionRecreateEventListener]
-pre-collection-remove,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PreCollectionRemoveEventListener.html[PreCollectionRemoveEventListener]
-pre-collection-update,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PreCollectionUpdateEventListener.html[PreCollectionUpdateEventListener]
-post-load,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PostLoadEventListener.html[PostLoadEventListener]
-post-update,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PostUpdateEventListener.html[PostUpdateEventListener]
-post-delete,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PostDeleteEventListener.html[PostDeleteEventListener]
-post-insert,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PostInsertEventListener.html[PostInsertEventListener]
-post-commit-update,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PostUpdateEventListener.html[PostUpdateEventListener]
-post-commit-delete,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PostDeleteEventListener.html[PostDeleteEventListener]
-post-commit-insert,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PostInsertEventListener.html[PostInsertEventListener]
-post-collection-recreate,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PostCollectionRecreateEventListener.html[PostCollectionRecreateEventListener]
-post-collection-remove,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PostCollectionRemoveEventListener.html[PostCollectionRemoveEventListener]
-post-collection-update,https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/event/spi/PostCollectionUpdateEventListener.html[PostCollectionUpdateEventListener]
+auto-flush,https://docs.jboss.org/hibernate/orm/7.0/javadocs/org/hibernate/event/spi/AutoFlushEventListener.html[AutoFlushEventListener]
+merge,https://docs.jboss.org/hibernate/orm/7.0/javadocs/org/hibernate/event/spi/MergeEventListener.html[MergeEventListener]
+create,https://docs.jboss.org/hibernate/orm/7.0/javadocs/org/hibernate/event/spi/PersistEventListener.html[PersistEventListener]
+create-onflush,https://docs.jboss.org/hibernate/orm/7.0/javadocs/org/hibernate/event/spi/PersistEventListener.html[PersistEventListener]
+delete,https://docs.jboss.org/hibernate/orm/7.0/javadocs/org/hibernate/event/spi/DeleteEventListener.html[DeleteEventListener]
+dirty-check,https://docs.jboss.org/hibernate/orm/7.0/javadocs/org/hibernate/event/spi/DirtyCheckEventListener.html[DirtyCheckEventListener]
+evict,https://docs.jboss.org/hibernate/orm/7.0/javadocs/org/hibernate/event/spi/EvictEventListener.html[EvictEventListener]
+flush,https://docs.jboss.org/hibernate/orm/7.0/javadocs/org/hibernate/event/spi/FlushEventListener.html[FlushEventListener]
+flush-entity,https://docs.jboss.org/hibernate/orm/7.0/javadocs/org/hibernate/event/spi/FlushEntityEventListener.html[FlushEntityEventListener]
+load,https://docs.jboss.org/hibernate/orm/7.0/javadocs/org/hibernate/event/spi/LoadEventListener.html[LoadEventListener]
+load-collection,https://docs.jboss.org/hibernate/orm/7.0/javadocs/org/hibernate/event/spi/InitializeCollectionEventListener.html[InitializeCollectionEventListener]
+lock,https://docs.jboss.org/hibernate/orm/7.0/javadocs/org/hibernate/event/spi/LockEventListener.html[LockEventListener]
+refresh,https://docs.jboss.org/hibernate/orm/7.0/javadocs/org/hibernate/event/spi/RefreshEventListener.html[RefreshEventListener]
+replicate,https://docs.jboss.org/hibernate/orm/7.0/javadocs/org/hibernate/event/spi/ReplicateEventListener.html[ReplicateEventListener]
+save-update,https://docs.jboss.org/hibernate/orm/7.0/javadocs/org/hibernate/event/spi/SaveOrUpdateEventListener.html[SaveOrUpdateEventListener]
+save,https://docs.jboss.org/hibernate/orm/7.0/javadocs/org/hibernate/event/spi/SaveOrUpdateEventListener.html[SaveOrUpdateEventListener]
+update,https://docs.jboss.org/hibernate/orm/7.0/javadocs/org/hibernate/event/spi/SaveOrUpdateEventListener.html[SaveOrUpdateEventListener]
+pre-load,https://docs.jboss.org/hibernate/orm/7.0/javadocs/org/hibernate/event/spi/PreLoadEventListener.html[PreLoadEventListener]
+pre-update,https://docs.jboss.org/hibernate/orm/7.0/javadocs/org/hibernate/event/spi/PreUpdateEventListener.html[PreUpdateEventListener]
+pre-delete,https://docs.jboss.org/hibernate/orm/7.0/javadocs/org/hibernate/event/spi/PreDeleteEventListener.html[PreDeleteEventListener]
+pre-insert,https://docs.jboss.org/hibernate/orm/7.0/javadocs/org/hibernate/event/spi/PreInsertEventListener.html[PreInsertEventListener]
+pre-collection-recreate,https://docs.jboss.org/hibernate/orm/7.0/javadocs/org/hibernate/event/spi/PreCollectionRecreateEventListener.html[PreCollectionRecreateEventListener]
+pre-collection-remove,https://docs.jboss.org/hibernate/orm/7.0/javadocs/org/hibernate/event/spi/PreCollectionRemoveEventListener.html[PreCollectionRemoveEventListener]
+pre-collection-update,https://docs.jboss.org/hibernate/orm/7.0/javadocs/org/hibernate/event/spi/PreCollectionUpdateEventListener.html[PreCollectionUpdateEventListener]
+post-load,https://docs.jboss.org/hibernate/orm/7.0/javadocs/org/hibernate/event/spi/PostLoadEventListener.html[PostLoadEventListener]
+post-update,https://docs.jboss.org/hibernate/orm/7.0/javadocs/org/hibernate/event/spi/PostUpdateEventListener.html[PostUpdateEventListener]
+post-delete,https://docs.jboss.org/hibernate/orm/7.0/javadocs/org/hibernate/event/spi/PostDeleteEventListener.html[PostDeleteEventListener]
+post-insert,https://docs.jboss.org/hibernate/orm/7.0/javadocs/org/hibernate/event/spi/PostInsertEventListener.html[PostInsertEventListener]
+post-commit-update,https://docs.jboss.org/hibernate/orm/7.0/javadocs/org/hibernate/event/spi/PostUpdateEventListener.html[PostUpdateEventListener]
+post-commit-delete,https://docs.jboss.org/hibernate/orm/7.0/javadocs/org/hibernate/event/spi/PostDeleteEventListener.html[PostDeleteEventListener]
+post-commit-insert,https://docs.jboss.org/hibernate/orm/7.0/javadocs/org/hibernate/event/spi/PostInsertEventListener.html[PostInsertEventListener]
+post-collection-recreate,https://docs.jboss.org/hibernate/orm/7.0/javadocs/org/hibernate/event/spi/PostCollectionRecreateEventListener.html[PostCollectionRecreateEventListener]
+post-collection-remove,https://docs.jboss.org/hibernate/orm/7.0/javadocs/org/hibernate/event/spi/PostCollectionRemoveEventListener.html[PostCollectionRemoveEventListener]
+post-collection-update,https://docs.jboss.org/hibernate/orm/7.0/javadocs/org/hibernate/event/spi/PostCollectionUpdateEventListener.html[PostCollectionUpdateEventListener]
 |===
 
 For example, you could register a class `AuditEventListener` which implements `PostInsertEventListener`, `PostUpdateEventListener`, and `PostDeleteEventListener` using the following in an application:

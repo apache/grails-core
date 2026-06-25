@@ -16,73 +16,52 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 ////
+[[ormdsl-compositePrimaryKeys]]
+== Composite Primary Keys
 
-GORM supports the concept of composite identifiers (identifiers composed from 2 or more properties). It is not an approach we recommend, but is available to you if you need it:
+GORM allows you to map domain classes to tables that use a composite primary key (a key composed of two or more columns). This is commonly needed when mapping to legacy database schemas.
+
+=== Defining a Composite Identity
+
+Use `id composite: [...]` in the `mapping` block, listing the property names that together form the primary key:
 
 [source,groovy]
 ----
-import org.apache.commons.lang.builder.HashCodeBuilder
-
-class Person implements Serializable {
-
-    String firstName
-    String lastName
-
-    boolean equals(other) {
-        if (!(other instanceof Person)) {
-            return false
-        }
-
-        other.firstName == firstName && other.lastName == lastName
-    }
-
-    int hashCode() {
-        def builder = new HashCodeBuilder()
-        builder.append firstName
-        builder.append lastName
-        builder.toHashCode()
-    }
+class OrderItem {
+    Long orderId
+    Long productId
+    Integer quantity
 
     static mapping = {
-        id composite: ['firstName', 'lastName']
+        id composite: ['orderId', 'productId']  // <1>
     }
 }
 ----
+<1> The composite key is made up of `orderId` and `productId`.
 
-The above will create a composite id of the `firstName` and `lastName` properties of the Person class. To retrieve an instance by id you use a prototype of the object itself:
+NOTE: Domain classes with composite keys do **not** have the auto-generated `id` and `version` properties. You are responsible for setting the key properties before calling `save()`.
 
-[source,java]
-----
-def p = Person.get(new Person(firstName: "Fred", lastName: "Flintstone"))
-println p.firstName
-----
-
-Domain classes mapped with composite primary keys must implement the `Serializable` interface and override the `equals` and `hashCode` methods, using the properties in the composite key for the calculations. The example above uses a `HashCodeBuilder` for convenience but it's fine to implement it yourself.
-
-Another important consideration when using composite primary keys is associations. If for example you have a many-to-one association where the foreign keys are stored in the associated table then 2 columns will be present in the associated table.
-
-For example consider the following domain class:
+=== Using Composite Keys
 
 [source,groovy]
 ----
-class Address {
-    Person person
-}
+def item = new OrderItem(orderId: 1L, productId: 42L, quantity: 3)
+item.save()
+
+// Load by composite key — pass a map
+def found = OrderItem.get(orderId: 1L, productId: 42L)
 ----
 
-In this case the `address` table will have an additional two columns called `person_first_name` and `person_last_name`. If you wish the change the mapping of these columns then you can do so using the following technique:
+=== Associations with Composite Keys
+
+When another domain class references a domain class with a composite key, GORM creates multiple foreign-key columns automatically:
 
 [source,groovy]
 ----
-class Address {
-    Person person
-    static mapping = {
-        columns {
-		    person {
-                column name: "FirstName"
-                column name: "LastName"
-			}
-        }
-    }
+class OrderLine {
+    Integer lineNumber
+    OrderItem item     // foreign key will use both orderId and productId columns
 }
 ----
+
+TIP: Composite primary keys add complexity to all queries and associations. Prefer surrogate (auto-generated) single-column keys wherever possible and use composite unique constraints instead of composite keys for business-key uniqueness requirements.

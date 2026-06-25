@@ -23,13 +23,14 @@ import grails.gorm.DetachedCriteria
 import grails.gorm.transactions.ReadOnly
 
 /**
- * Demonstrates the two Groovy extension modules via GORM criteria builders.
+ * Demonstrates the two Groovy extension modules via {@link grails.gorm.DetachedCriteria}.
  *
  * <ul>
  *   <li>{@code CriteriaBuilderExtensions.eqIf}: conditional equality added to
- *       {@link grails.gorm.CriteriaBuilder}. Called inside {@code DetachedCriteria.build}.</li>
+ *       {@link org.grails.datastore.mapping.query.api.Criteria}. Called inside
+ *       {@code DetachedCriteria.build}.</li>
  *   <li>{@code HibernateCriteriaBuilderExtensions.numberLike}: number-to-string LIKE added to
- *       {@link org.grails.orm.hibernate.query.AbstractHibernateCriteriaBuilder}.
+ *       {@link org.grails.datastore.gorm.query.criteria.AbstractDetachedCriteria}.
  *       Called inside a detached criteria builder closure.</li>
  * </ul>
  */
@@ -50,15 +51,15 @@ class ProductSearchService {
     }
 
     /**
-     * Uses an explicit Hibernate criteria builder with {@code numberLike} to match products
+     * Uses an explicit detached criteria with {@code numberLike} to match products
      * by a price string pattern (e.g. {@code '4%'} matches 4.99 and 49.99).
      *
      * On H2 falls back to {@code cast(col as varchar) like ?}; on Oracle/PostgreSQL uses
      * {@code trim(to_char(trunc(...))) like ?}.
      */
     List<Product> findByPriceLike(String pricePattern) {
-        Product.createCriteria().list {
+        new DetachedCriteria(Product).build {
             numberLike 'price', pricePattern
-        } as List<Product>
+        }.list() as List<Product>
     }
 }

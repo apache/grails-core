@@ -163,7 +163,7 @@ class FirstAndLastMethodSpec extends GrailsDataTckSpec {
     }
 
     @PendingFeatureIf(
-            value = { System.getProperty('hibernate5.gorm.suite') || System.getProperty('hibernate7.gorm.suite') },
+            value = { System.getProperty('hibernate5.gorm.suite') },
             reason = 'Was previously @Ignore'
     )
     void "Test first and last method with composite key"() {
@@ -171,7 +171,7 @@ class FirstAndLastMethodSpec extends GrailsDataTckSpec {
         assert new PersonWithCompositeKey(firstName: 'Steve', lastName: 'Harris', age: 56).save()
         assert new PersonWithCompositeKey(firstName: 'Dave', lastName: 'Murray', age: 54).save()
         assert new PersonWithCompositeKey(firstName: 'Adrian', lastName: 'Smith', age: 55).save()
-        assert new PersonWithCompositeKey(firstName: 'Bruce', lastName: 'Dickinson', age: 53).save()
+        assert new PersonWithCompositeKey(firstName: 'Bruce', lastName: 'Dickinson', age: 53).save(flush: true)
         assert PersonWithCompositeKey.count() == 4
 
         when:
