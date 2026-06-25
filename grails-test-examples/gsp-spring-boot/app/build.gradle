@@ -46,6 +46,10 @@ dependencyManagement {
     imports {
         mavenBom("org.apache.grails:grails-bom:${projectVersion}")
     }
+    dependencies {
+        dependency "org.sitemesh:spring-boot-starter-sitemesh:${bomDependencyVersions['starter-sitemesh.version']}"
+        dependency "org.sitemesh:spring-webmvc-sitemesh:${bomDependencyVersions['spring-webmvc-sitemesh.version']}"
+    }
 }
 
 jar {
