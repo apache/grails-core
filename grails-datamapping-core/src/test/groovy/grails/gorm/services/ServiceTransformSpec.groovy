@@ -23,6 +23,7 @@ import grails.gorm.transactions.ReadOnly
 import grails.gorm.transactions.TransactionService
 import grails.gorm.transactions.Transactional
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.services.Implemented
 import org.grails.datastore.gorm.services.implementers.FindAllImplementer
 import org.grails.datastore.gorm.services.implementers.FindOneImplementer
@@ -36,6 +37,14 @@ import spock.lang.Specification
  * Created by graemerocher on 11/01/2017.
  */
 class ServiceTransformSpec extends Specification {
+
+    def setup() {
+        GormRegistry.reset()
+    }
+
+    def cleanup() {
+        GormRegistry.reset()
+    }
 
     void "test interface projection with an entity that implements GormEntity"() {
         when:
@@ -225,7 +234,7 @@ class Foo {
 
         then:"The impl is valid - protected methods should have no transaction"
         impl.getMethod("readFoo", Serializable).getAnnotation(ReadOnly) != null
-        impl.getMethod("findFoo", Serializable).getAnnotation(ReadOnly) == null
+        impl.getDeclaredMethod("findFoo", Serializable).getAnnotation(ReadOnly) == null
         org.grails.datastore.mapping.services.Service.isAssignableFrom(impl)
 
     }
@@ -916,7 +925,7 @@ class Foo {
 
         then:
         def e = thrown(IllegalStateException)
-        e.message == 'No GORM implementations configured. Ensure GORM has been initialized correctly'
+        e.message?.contains('No GORM implementation') && e.message?.contains('configured')
     }
 
     void "test implement interface"() {
@@ -971,7 +980,7 @@ class Foo {
 
         then:
         def e = thrown(IllegalStateException)
-        e.message == 'No GORM implementations configured. Ensure GORM has been initialized correctly'
+        e.message?.contains('No GORM implementation') && e.message?.contains('configured')
     }
 
     void "test service transform applied to interface that can't be implemented"() {

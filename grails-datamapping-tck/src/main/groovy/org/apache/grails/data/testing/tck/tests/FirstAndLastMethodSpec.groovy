@@ -4,14 +4,14 @@
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
+ * 'License'); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
  *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
@@ -31,7 +31,7 @@ class FirstAndLastMethodSpec extends GrailsDataTckSpec {
         manager.registerDomainClasses(SimpleWidget, PersonWithCompositeKey, SimpleWidgetWithNonStandardId)
     }
 
-    void "Test first and last method with empty datastore"() {
+    void 'Test first and last method with empty datastore'() {
         given:
         assert SimpleWidget.count() == 0
 
@@ -48,7 +48,7 @@ class FirstAndLastMethodSpec extends GrailsDataTckSpec {
         result == null
     }
 
-    void "Test first and last method with multiple entities in the datastore"() {
+    void 'Test first and last method with multiple entities in the datastore'() {
         given:
         assert new SimpleWidget(name: 'one', spanishName: 'uno').save()
         assert new SimpleWidget(name: 'two', spanishName: 'dos').save()
@@ -68,7 +68,7 @@ class FirstAndLastMethodSpec extends GrailsDataTckSpec {
         result?.name == 'three'
     }
 
-    void "Test first and last method with one entity"() {
+    void 'Test first and last method with one entity'() {
         given:
         assert new SimpleWidget(name: 'one', spanishName: 'uno').save()
         assert SimpleWidget.count() == 1
@@ -86,7 +86,7 @@ class FirstAndLastMethodSpec extends GrailsDataTckSpec {
         result?.name == 'one'
     }
 
-    void "Test first and last method with sort parameter"() {
+    void 'Test first and last method with sort parameter'() {
         given:
         assert new SimpleWidget(name: 'one', spanishName: 'uno').save()
         assert new SimpleWidget(name: 'two', spanishName: 'dos').save()
@@ -142,7 +142,7 @@ class FirstAndLastMethodSpec extends GrailsDataTckSpec {
         result?.spanishName == 'uno'
     }
 
-    void "Test first and last method with non standard identifier"() {
+    void 'Test first and last method with non standard identifier'() {
         given:
         ['one', 'two', 'three'].each { name ->
             assert new SimpleWidgetWithNonStandardId(name: name).save()
@@ -163,10 +163,10 @@ class FirstAndLastMethodSpec extends GrailsDataTckSpec {
     }
 
     @PendingFeatureIf(
-            value = { System.getProperty('hibernate5.gorm.suite') },
+            value = { System.getProperty('hibernate5.gorm.suite') || System.getProperty('hibernate7.gorm.suite') },
             reason = 'Was previously @Ignore'
     )
-    void "Test first and last method with composite key"() {
+    void 'Test first and last method with composite key'() {
         given:
         assert new PersonWithCompositeKey(firstName: 'Steve', lastName: 'Harris', age: 56).save()
         assert new PersonWithCompositeKey(firstName: 'Dave', lastName: 'Murray', age: 54).save()

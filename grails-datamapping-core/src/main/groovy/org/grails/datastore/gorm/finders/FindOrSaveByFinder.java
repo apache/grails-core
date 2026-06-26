@@ -18,14 +18,7 @@
  */
 package org.grails.datastore.gorm.finders;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import groovy.lang.GroovySystem;
-import groovy.lang.MetaClass;
-import groovy.lang.MissingMethodException;
-
+import org.grails.datastore.gorm.DatastoreResolver;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.model.MappingContext;
 
@@ -33,37 +26,24 @@ public class FindOrSaveByFinder extends FindOrCreateByFinder {
 
     public static final String METHOD_PATTERN = "(findOrSaveBy)([A-Z]\\w*)";
 
-    public FindOrSaveByFinder(final Datastore datastore) {
+    public FindOrSaveByFinder(final String methodPattern, final Datastore datastore) {
+        super(methodPattern, datastore);
+    }
+
+    public FindOrSaveByFinder(final String methodPattern, DatastoreResolver datastoreResolver, MappingContext mappingContext) {
+        super(methodPattern, datastoreResolver, mappingContext);
+    }
+
+    public FindOrSaveByFinder(Datastore datastore) {
         super(METHOD_PATTERN, datastore);
     }
 
-    public FindOrSaveByFinder(final MappingContext mappingContext) {
-        super(METHOD_PATTERN, mappingContext);
+    public FindOrSaveByFinder(DatastoreResolver datastoreResolver, MappingContext mappingContext) {
+        super(METHOD_PATTERN, datastoreResolver, mappingContext);
     }
 
-    @Override
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    protected Object doInvokeInternal(final DynamicFinderInvocation invocation) {
-        if (OPERATOR_OR.equals(invocation.getOperator())) {
-            throw new MissingMethodException(invocation.getMethodName(), invocation.getJavaClass(), invocation.getArguments());
-        }
-
-        Object result = super.doInvokeInternal(invocation);
-        if (result == null) {
-            Map m = new HashMap();
-            List<MethodExpression> expressions = invocation.getExpressions();
-            for (MethodExpression me : expressions) {
-                if (!(me instanceof MethodExpression.Equal)) {
-                    throw new MissingMethodException(invocation.getMethodName(), invocation.getJavaClass(), invocation.getArguments());
-                }
-                String propertyName = me.propertyName;
-                Object[] arguments = me.getArguments();
-                m.put(propertyName, arguments[0]);
-            }
-            MetaClass metaClass = GroovySystem.getMetaClassRegistry().getMetaClass(invocation.getJavaClass());
-            result = metaClass.invokeConstructor(new Object[]{m});
-        }
-        return result;
+    public FindOrSaveByFinder(MappingContext mappingContext) {
+        super(METHOD_PATTERN, mappingContext);
     }
 
     @Override

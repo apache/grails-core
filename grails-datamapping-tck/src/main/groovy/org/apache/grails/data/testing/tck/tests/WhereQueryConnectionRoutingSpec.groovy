@@ -4,14 +4,14 @@
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
+ * 'License'); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
  *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
@@ -42,7 +42,7 @@ class WhereQueryConnectionRoutingSpec extends GrailsDataTckSpec {
         manager.cleanupMultiDataSource()
     }
 
-    void "@Where query routes to secondary datasource"() {
+    void '@Where query routes to secondary datasource'() {
         given:
         saveToConnection('secondary', 'Cheap', 10.0)
         saveToConnection('secondary', 'Expensive', 500.0)
@@ -55,7 +55,7 @@ class WhereQueryConnectionRoutingSpec extends GrailsDataTckSpec {
         results[0].name == 'Expensive'
     }
 
-    void "@Where query does not return data from default datasource"() {
+    void '@Where query does not return data from default datasource'() {
         given: 'an item saved to secondary'
         saveToConnection('secondary', 'OnSecondary', 50.0)
 
@@ -69,7 +69,7 @@ class WhereQueryConnectionRoutingSpec extends GrailsDataTckSpec {
         results.size() == 0
     }
 
-    void "count routes to secondary datasource"() {
+    void 'count routes to secondary datasource'() {
         given:
         saveToConnection('secondary', 'A', 1.0)
         saveToConnection('secondary', 'B', 2.0)
@@ -81,7 +81,7 @@ class WhereQueryConnectionRoutingSpec extends GrailsDataTckSpec {
         itemService.count() == 2
     }
 
-    void "list routes to secondary datasource"() {
+    void 'list routes to secondary datasource'() {
         given:
         saveToConnection('secondary', 'X', 10.0)
         saveToConnection('secondary', 'Y', 20.0)
@@ -96,7 +96,7 @@ class WhereQueryConnectionRoutingSpec extends GrailsDataTckSpec {
         all.size() == 2
     }
 
-    void "findByName routes to secondary datasource"() {
+    void 'findByName routes to secondary datasource'() {
         given:
         saveToConnection('secondary', 'Unique', 77.0)
 

@@ -218,7 +218,7 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
         return true;
     }
 
-    protected Set<String> getLastUpdatedPropertyNames(String entityName) {
+    public Set<String> getLastUpdatedPropertyNames(String entityName) {
         Optional<Set<String>> properties = entitiesWithLastUpdated.get(entityName);
         return properties == null ? null : properties.orElse(null);
     }

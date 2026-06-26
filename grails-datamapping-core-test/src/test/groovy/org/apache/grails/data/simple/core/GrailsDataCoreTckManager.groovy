@@ -102,6 +102,7 @@ class GrailsDataCoreTckManager extends GrailsDataTckManager {
                 }
         ] as Validator)
 
+        new org.grails.datastore.gorm.GormEnhancer(simple, simple.transactionManager, simple.connectionSources.defaultConnectionSource.settings)
 
         simple.connect()
     }

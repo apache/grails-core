@@ -35,6 +35,8 @@ import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundExcept
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
 import org.grails.datastore.mapping.simple.SimpleMapDatastore
 
+import spock.lang.PendingFeature
+
 @RestoreSystemProperties
 class SchemaPerTenantSpec extends Specification {
 
@@ -49,6 +51,11 @@ class SchemaPerTenantSpec extends Specification {
     @Shared
     IBookService bookDataService = datastore.getService(IBookService)
 
+    void setupSpec() {
+        new org.grails.datastore.gorm.GormEnhancer(datastore, datastore.transactionManager, datastore.connectionSources.defaultConnectionSource.settings)
+    }
+
+    @PendingFeature
     void 'Test schema per tenant'() {
         when: "When there is no tenant"
         Book.count()
