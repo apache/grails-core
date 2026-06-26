@@ -56,8 +56,6 @@ As in any ORM, manually concatenating untrusted input into a plain `String` (for
 
 ===== SQL query helpers
 
-Hibernate 7 keeps the Hibernate 5 method names for raw SQL query helpers:
-
 [source,groovy]
 ----
 Book.findWithSql("select * from book where id = ${params.id}")
