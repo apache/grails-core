@@ -26,12 +26,12 @@ import grails.gorm.transactions.Transactional
 /**
  * Created by graemerocher on 06/04/2017.
  */
-@CurrentTenant
 @Transactional
+@CurrentTenant
 class AnotherBookService {
 
     Book saveBook(String title = 'The Stand') {
-        new Book(title: title).save()
+        new Book(title: title).save(flush: true)
     }
 
     @ReadOnly

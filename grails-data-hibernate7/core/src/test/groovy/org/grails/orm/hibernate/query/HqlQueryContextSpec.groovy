@@ -55,7 +55,7 @@ class HqlQueryContextSpec extends Specification {
         def ctx = HqlQueryContext.prepare(bookEntity, "", [:], null, [:], [:], false, false)
 
         then:
-        ctx.hql() == "from ${HqlQueryContextSpecBook.name}"
+        ctx.hql() == "from ${HqlQueryContextSpecBook.name} e"
     }
 
     void "prepare expands GString into named parameters"() {

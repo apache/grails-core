@@ -26,56 +26,34 @@ class GormEnhancerCleanupSpec extends HibernateGormDatastoreSpec {
         manager.registerDomainClasses(CleanupEntity)
     }
 
-    void "Test that GormEnhancer.close() removes datastore from DATASTORES registry"() {
+    void "Test that GormEnhancer.close() removes datastore from registry"() {
         given:
-        def enhancerClass = GormEnhancer.class
-        def datastoresField = enhancerClass.getDeclaredField("DATASTORES")
-        datastoresField.setAccessible(true)
-        Map<String, Map<String, Datastore>> datastoresRegistry = (Map) datastoresField.get(null)
+        GormRegistry registry = GormRegistry.instance
 
         expect: "The datastore is registered for the entity"
-        datastoresRegistry.get("default")?.get(CleanupEntity.name) == datastore
+        registry.getDatastore(CleanupEntity.name, "default") == datastore
 
         when: "The datastore is closed"
         datastore.close()
 
         then: "The datastore reference is removed from the registry"
-        datastoresRegistry.get("default")?.get(CleanupEntity.name) == null
+        registry.getDatastore(CleanupEntity.name, "default") == null
     }
 
-    void "Test that GormEnhancer.close() does not mutate maps via withDefault"() {
+    void "Test that GormEnhancer.close() does not mutate registry with extra maps"() {
         given:
-        def enhancerClass = GormEnhancer.class
-        def staticApisField = enhancerClass.getDeclaredField("STATIC_APIS")
-        staticApisField.setAccessible(true)
-        Map staticApisRegistry = (Map) staticApisField.get(null)
-
+        GormRegistry registry = GormRegistry.instance
         String unknownQualifier = "unknown_tenant_" + System.currentTimeMillis()
         
         expect: "The unknown qualifier is not in the map"
-        !staticApisRegistry.containsKey(unknownQualifier)
+        !registry.datastoresByQualifier.containsKey(unknownQualifier)
 
-        when: "Closing a datastore with an unknown qualifier (simulated)"
-        // This is tricky because we need a datastore that 'claims' to have this qualifier
-        // We'll just manually call close() with a mock/stub if possible, 
-        // but GormEnhancer uses 'this.datastore' internally.
-        
-        // Let's just verify the logic we added: containKey check
-        def enhancer = datastore.gormEnhancer
-        // We need to inject the unknown qualifier into the enhancer's datastore or similar
-        // Actually, the bug was in the loop: for (q in qualifiers) { ... STATIC_APIS.get(q) ... }
-        // If we can trigger a close for a qualifier that isn't in the registry, it shouldn't be added.
-        
-        // We'll use a hacky approach to test the withDefault prevention
-        staticApisRegistry.containsKey(unknownQualifier) == false
-        
-        // Manually simulate what close() does now with the fix
-        if (staticApisRegistry.containsKey(unknownQualifier)) {
-             staticApisRegistry.get(unknownQualifier).remove("SomeClass")
-        }
+        when: "Accessing an unknown qualifier"
+        def ds = registry.getDatastore(CleanupEntity.name, unknownQualifier)
 
-        then: "The qualifier was NOT added to the map"
-        !staticApisRegistry.containsKey(unknownQualifier)
+        then: "The datastore is not found but NO map was created for that qualifier"
+        ds == null
+        !registry.datastoresByQualifier.containsKey(unknownQualifier)
     }
 }
 

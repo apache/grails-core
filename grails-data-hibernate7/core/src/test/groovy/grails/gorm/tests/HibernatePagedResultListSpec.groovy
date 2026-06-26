@@ -20,7 +20,7 @@ package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.HibernateEntity
-import org.grails.orm.hibernate.query.HibernatePagedResultList
+import org.grails.orm.hibernate.query.PagedResultList
 import spock.lang.Issue
 
 class HibernatePagedResultListSpec extends HibernateGormDatastoreSpec {
@@ -29,7 +29,7 @@ class HibernatePagedResultListSpec extends HibernateGormDatastoreSpec {
         manager.registerDomainClasses(HPBook)
     }
 
-    void "test HibernatePagedResultList totalCount with HQL query"() {
+    void "test PagedResultList totalCount with HQL query"() {
         given:
         (1..10).each { i -> new HPBook(title: "Book $i").save() }
         session.flush()
@@ -39,7 +39,7 @@ class HibernatePagedResultListSpec extends HibernateGormDatastoreSpec {
         def results = HPBook.list(max: 3, offset: 2, sort: "id")
 
         then:
-        results instanceof HibernatePagedResultList
+        results instanceof PagedResultList
         results.size() == 3
         results.totalCount == 10
         results.max == 3
@@ -49,7 +49,7 @@ class HibernatePagedResultListSpec extends HibernateGormDatastoreSpec {
         results[2].title == "Book 5"
     }
 
-    void "test HibernatePagedResultList totalCount with Criteria query"() {
+    void "test PagedResultList totalCount with Criteria query"() {
         given:
         new HPBook(title: "The Stand").save()
         new HPBook(title: "The Shining").save()
@@ -64,7 +64,7 @@ class HibernatePagedResultListSpec extends HibernateGormDatastoreSpec {
         }
 
         then:
-        results instanceof HibernatePagedResultList
+        results instanceof PagedResultList
         results.size() == 2
         results.totalCount == 2
         results.max == 2
@@ -73,7 +73,7 @@ class HibernatePagedResultListSpec extends HibernateGormDatastoreSpec {
         results[1].title == "The Stand"
     }
 
-    void "test HibernatePagedResultList serialization"() {
+    void "test PagedResultList serialization"() {
         given:
         (1..5).each { i -> new HPBook(title: "Book $i").save() }
         session.flush()
@@ -92,7 +92,7 @@ class HibernatePagedResultListSpec extends HibernateGormDatastoreSpec {
         // Deserialize
         def bais = new ByteArrayInputStream(baos.toByteArray())
         def ois = new ObjectInputStream(bais)
-        def deserializedResults = (HibernatePagedResultList) ois.readObject()
+        def deserializedResults = (PagedResultList) ois.readObject()
         ois.close()
 
         then:
@@ -113,7 +113,7 @@ class HibernatePagedResultListSpec extends HibernateGormDatastoreSpec {
         mockQuery.list() >> ["a", "b"]
 
         when:
-        def results = new HibernatePagedResultList(mockQuery)
+        def results = new PagedResultList(mockQuery)
 
         then:
         results.size() == 2

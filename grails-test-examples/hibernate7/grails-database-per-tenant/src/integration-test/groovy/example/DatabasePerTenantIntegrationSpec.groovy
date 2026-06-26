@@ -57,9 +57,9 @@ class DatabasePerTenantIntegrationSpec extends Specification {
         given:
         webRequest.session.setAttribute(SessionTenantResolver.ATTRIBUTE, "moreBooks")
 
+
         when:
         Book book = bookService.saveBook("Book-Test-${System.currentTimeMillis()}")
-        println book
         log.info("${book}")
 
         then:
@@ -72,9 +72,9 @@ class DatabasePerTenantIntegrationSpec extends Specification {
         given:
         webRequest.session.setAttribute(SessionTenantResolver.ATTRIBUTE, "moreBooks")
 
+
         when:
         Book book = anotherBookService.saveBook("Book-Test-${System.currentTimeMillis()}")
-        println book
         log.info("${book}")
 
         then:

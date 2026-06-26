@@ -38,9 +38,9 @@ import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
-import org.grails.orm.hibernate.query.HibernatePagedResultList;
 import org.grails.orm.hibernate.query.HibernateQuery;
 import org.grails.orm.hibernate.query.HibernateQueryArgument;
+import org.grails.orm.hibernate.query.PagedResultList;
 
 /**
  * If you want to extend functionality of the HibernateCriteriaBuilder
@@ -133,7 +133,7 @@ public class CriteriaMethodInvoker {
                     }
                     hibernateQuery.order(order);
                 }
-                result = new HibernatePagedResultList(hibernateQuery);
+                result = new PagedResultList(hibernateQuery);
             } else if (builder.isScroll()) {
                 result = hibernateQuery.scroll();
             } else {

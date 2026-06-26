@@ -23,6 +23,7 @@ import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.HibernateEntity
 import grails.gorm.transactions.Rollback
 
+import org.grails.datastore.gorm.GormRegistry
 import org.hibernate.FlushMode
 import org.grails.orm.hibernate.query.SelectHqlQuery
 
@@ -34,8 +35,7 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
 
     void "Test that HibernateGormInstanceApi uses the shared template from the datastore"() {
         given:
-        def enhancer = manager.hibernateDatastore.gormEnhancer
-        def api = enhancer.getInstanceApi(PersonInstanceApi)
+        def api = GormRegistry.instance.findInstanceApi(PersonInstanceApi)
 
         expect:
         api.hibernateTemplate.is(manager.hibernateDatastore.getHibernateTemplate())
@@ -43,8 +43,7 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
 
     void "Test that HibernateGormInstanceApi uses the shared InstanceApiHelper from the datastore"() {
         given:
-        def enhancer = manager.hibernateDatastore.gormEnhancer
-        def api = enhancer.getInstanceApi(PersonInstanceApi)
+        def api = GormRegistry.instance.findInstanceApi(PersonInstanceApi)
 
         expect:
         api.instanceApiHelper.is(manager.hibernateDatastore.getInstanceApiHelper())

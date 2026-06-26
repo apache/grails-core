@@ -30,14 +30,14 @@ import spock.lang.Issue
 class HibernateDirtyCheckingSpec extends HibernateGormDatastoreSpec {
 
     def setupSpec() {
-        manager.registerDomainClasses(Person)
+        manager.registerDomainClasses(DirtyCheckPerson)
     }
 
     @Rollback
     @Issue('https://github.com/grails/grails-core/issues/10613')
     void "Test that presence of beforeInsert doesn't impact dirty properties"() {
         given: 'a new person'
-        def person = new Person(name: 'John', occupation: 'Grails developer').save(flush: true)
+        def person = new DirtyCheckPerson(name: 'John', occupation: 'Grails developer').save(flush: true)
 
         when: 'the name is changed'
         person.name = 'Dave'
@@ -72,7 +72,7 @@ class HibernateDirtyCheckingSpec extends HibernateGormDatastoreSpec {
     @Rollback
     void "test dirty checking on embedded"() {
         given: 'a new person'
-        Person person = new Person(name: 'John', occupation: 'Grails developer', address: new Address(street: "Old Town", zip: "1234")).save(flush: true)
+        DirtyCheckPerson person = new DirtyCheckPerson(name: 'John', occupation: 'Grails developer', address: new Address(street: "Old Town", zip: "1234")).save(flush: true)
 
         when: 'the name is changed'
         person.address.street = "New Town"
@@ -90,7 +90,7 @@ class HibernateDirtyCheckingSpec extends HibernateGormDatastoreSpec {
 
         when:
         manager.hibernateDatastore.sessionFactory.currentSession.clear()
-        person = Person.first()
+        person = DirtyCheckPerson.first()
 
         then:
         person.address.street == "New Town"
@@ -99,9 +99,9 @@ class HibernateDirtyCheckingSpec extends HibernateGormDatastoreSpec {
     @Rollback
     void "test dirty checking on boolean true -> false"() {
         given: 'a new person'
-        new Person(name: 'John', occupation: 'Grails developer', employed: true).save(flush: true)
+        new DirtyCheckPerson(name: 'John', occupation: 'Grails developer', employed: true).save(flush: true)
         manager.hibernateDatastore.sessionFactory.currentSession.clear()
-        Person person = Person.first()
+        DirtyCheckPerson person = DirtyCheckPerson.first()
 
         when:
         person.employed = false
@@ -114,7 +114,7 @@ class HibernateDirtyCheckingSpec extends HibernateGormDatastoreSpec {
         when:
         person.save(flush: true)
         manager.hibernateDatastore.sessionFactory.currentSession.clear()
-        person = Person.first()
+        person = DirtyCheckPerson.first()
 
         then:
         person.employed == false
@@ -123,9 +123,9 @@ class HibernateDirtyCheckingSpec extends HibernateGormDatastoreSpec {
     @Rollback
     void "test dirty checking on boolean false -> true"() {
         given: 'a new person'
-        new Person(name: 'John', occupation: 'Grails developer', employed: false).save(flush: true)
+        new DirtyCheckPerson(name: 'John', occupation: 'Grails developer', employed: false).save(flush: true)
         manager.hibernateDatastore.sessionFactory.currentSession.clear()
-        Person person = Person.first()
+        DirtyCheckPerson person = DirtyCheckPerson.first()
 
         when:
         person.employed = true
@@ -138,7 +138,7 @@ class HibernateDirtyCheckingSpec extends HibernateGormDatastoreSpec {
         when:
         person.save(flush: true)
         manager.hibernateDatastore.sessionFactory.currentSession.clear()
-        person = Person.first()
+        person = DirtyCheckPerson.first()
 
         then:
         person.employed == true
@@ -148,7 +148,7 @@ class HibernateDirtyCheckingSpec extends HibernateGormDatastoreSpec {
 
 
 @Entity
-class Person {
+class DirtyCheckPerson {
 
     String name
     String occupation

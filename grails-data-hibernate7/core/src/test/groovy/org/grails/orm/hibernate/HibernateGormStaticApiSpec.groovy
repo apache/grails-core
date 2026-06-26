@@ -23,6 +23,7 @@ package org.grails.orm.hibernate
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.annotation.Entity
 import grails.gorm.tests.entities.Club
+import org.grails.datastore.gorm.GormRegistry
 import org.hibernate.jpa.AvailableHints
 
 class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
@@ -33,8 +34,7 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
 
     void "Test that HibernateGormStaticApi uses the shared template from the datastore"() {
         given:
-        def enhancer = manager.hibernateDatastore.gormEnhancer
-        def api = enhancer.getStaticApi(HibernateGormStaticApiEntity)
+        def api = GormRegistry.instance.findStaticApi(HibernateGormStaticApiEntity)
 
         expect:
         api.hibernateTemplate.is(manager.hibernateDatastore.getHibernateTemplate())
@@ -905,10 +905,10 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
     }
 
     // -------------------------------------------------------------------------
-    // list with max — returns HibernatePagedResultList
+    // list with max — returns PagedResultList
     // -------------------------------------------------------------------------
 
-    void "list with max parameter returns a HibernatePagedResultList"() {
+    void "list with max parameter returns a PagedResultList"() {
         given:
         setupTestData()
 
@@ -916,7 +916,7 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         def result = Club.list(max: 2)
 
         then:
-        result instanceof org.grails.orm.hibernate.query.HibernatePagedResultList
+        result instanceof org.grails.orm.hibernate.query.PagedResultList
         result.size() <= 2
     }
 

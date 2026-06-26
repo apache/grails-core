@@ -47,6 +47,8 @@ import org.hibernate.SessionFactory;
 import org.hibernate.boot.Metadata;
 import org.hibernate.cfg.Environment;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
+import org.hibernate.event.service.spi.EventListenerRegistry;
+import org.hibernate.event.spi.EventType;
 import org.hibernate.integrator.spi.Integrator;
 import org.hibernate.integrator.spi.IntegratorService;
 import org.hibernate.service.ServiceRegistry;
@@ -120,6 +122,7 @@ import org.grails.orm.hibernate.event.listener.HibernateEventListener;
 import org.grails.orm.hibernate.multitenancy.MultiTenantEventListener;
 import org.grails.orm.hibernate.query.HibernateQueryArgument;
 import org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor;
+import org.grails.orm.hibernate.support.GormAutoTimestampFlushEntityEventListener;
 
 /**
  * Datastore implementation that uses a Hibernate SessionFactory underneath.
@@ -246,10 +249,11 @@ public class HibernateDatastore extends AbstractDatastore
         } else {
             this.bytecodeProvider = new org.grails.orm.hibernate.proxy.GrailsBytecodeProvider();
         }
-        
-        this.dataSourceName = ConnectionSource.DEFAULT;
+
+        this.dataSourceName = defaultConnectionSource.getName();
         this.sessionFactory = sessionFactory != null ? sessionFactory : defaultConnectionSource.getSource();
-        
+        setSessionResolver(new HibernateSessionResolver(this, this.sessionFactory));
+
         HibernateConnectionSourceSettings settings = defaultConnectionSource.getSettings();
         HibernateConnectionSourceSettings.HibernateSettings hibernateSettings = settings.getHibernate();
         this.osivReadOnly = hibernateSettings.getOsiv().isReadonly();
@@ -259,11 +263,11 @@ public class HibernateDatastore extends AbstractDatastore
         Boolean markDirty = settings.getMarkDirty();
         this.markDirty = markDirty != null && markDirty;
         this.defaultFlushMode = FlushMode.valueOf(hibernateSettings.getFlush().getMode().name());
-        
+
         MultiTenancySettings multiTenancySettings = settings.getMultiTenancy();
         final TenantResolver multiTenantResolver = multiTenancySettings.getTenantResolver();
         this.multiTenantMode = multiTenancySettings.getMode();
-        
+
         Class<? extends SchemaHandler> schemaHandlerClass = settings.getDataSource().getSchemaHandler();
         this.schemaHandler = BeanUtils.instantiateClass(schemaHandlerClass);
         this.tenantResolver = multiTenantResolver;
@@ -275,7 +279,9 @@ public class HibernateDatastore extends AbstractDatastore
 
         this.transactionManager = new GrailsHibernateTransactionManager(
                 defaultConnectionSource.getSource(), defaultConnectionSource.getDataSource(), defaultFlushMode);
+        this.transactionManager.setDatastore(this);
         this.eventPublisher = eventPublisher;
+        setApplicationEventPublisher(eventPublisher);
         this.eventTriggeringInterceptor = new HibernateEventListener(this);
         this.autoTimestampEventListener = new AutoTimestampEventListener(this);
 
@@ -283,6 +289,7 @@ public class HibernateDatastore extends AbstractDatastore
         interceptor.setDatastore(this);
         interceptor.setEventPublisher(eventPublisher);
         registerEventListeners(this.eventPublisher);
+        registerAutoTimestampFlushEntityEventListener();
         configureValidatorRegistry(mappingContext);
         this.mappingContext.addMappingContextListener(new MappingContext.Listener() {
             @Override
@@ -306,7 +313,22 @@ public class HibernateDatastore extends AbstractDatastore
                 if (ConnectionSource.DEFAULT.equals(connectionSource.getName())) {
                     childDatastore = this;
                 } else {
+                    HibernateConnectionSourceSettings hcss = connectionSource.getSettings();
+                    String schema = hcss.getHibernate().get("default_schema");
+                    if (schema != null) {
+                        try (Connection connection = defaultConnectionSource.getDataSource().getConnection()) {
+                            try {
+                                schemaHandler.useSchema(connection, schema);
+                            } catch (Exception e) {
+                                schemaHandler.createSchema(connection, schema);
+                            }
+                            schemaHandler.useDefaultSchema(connection);
+                        } catch (SQLException e) {
+                            LOG.warn("Could not create schema [" + schema + "]: " + e.getMessage());
+                        }
+                    }
                     childDatastore = createChildDatastore(mappingContext, eventPublisher, parent, singletonConnectionSources);
+                    org.grails.datastore.gorm.GormRegistry.getInstance().registerDatastoreByQualifier(connectionSource.getName(), childDatastore);
                 }
                 datastoresByConnectionSource.put(connectionSource.getName(), childDatastore);
             }
@@ -316,6 +338,7 @@ public class HibernateDatastore extends AbstractDatastore
                         singletonConnectionSources = new SingletonConnectionSources<>(
                                 connectionSource, connectionSources.getBaseConfiguration());
                 HibernateDatastore childDatastore = createChildDatastore(mappingContext, eventPublisher, parent, singletonConnectionSources);
+                org.grails.datastore.gorm.GormRegistry.getInstance().registerDatastoreByQualifier(connectionSource.getName(), childDatastore);
                 datastoresByConnectionSource.put(connectionSource.getName(), childDatastore);
                 registerAllEntitiesWithEnhancer();
             });
@@ -336,6 +359,9 @@ public class HibernateDatastore extends AbstractDatastore
         }
 
         this.gormEnhancer = initialize();
+        if (this.gormEnhancer != null) {
+            registerAllEntitiesWithEnhancer();
+        }
     }
 
     private HibernateDatastore createChildDatastore(
@@ -532,6 +558,25 @@ public class HibernateDatastore extends AbstractDatastore
         }
     }
 
+    /**
+     * Registers {@link GormAutoTimestampFlushEntityEventListener} as a prepended
+     * {@code FLUSH_ENTITY} listener so it runs before Hibernate's
+     * {@code DefaultFlushEntityEventListener} and can update {@code lastUpdated} on the
+     * entity before the dirty-property set is computed. This ensures {@code lastUpdated}
+     * is included in dynamic-update SQL even when {@code dynamicUpdate = true}.
+     */
+    protected void registerAutoTimestampFlushEntityEventListener() {
+        if (this.sessionFactory instanceof SessionFactoryImplementor sfi) {
+            EventListenerRegistry elr =
+                    sfi.getServiceRegistry().getService(EventListenerRegistry.class);
+            if (elr != null) {
+                elr.getEventListenerGroup(EventType.FLUSH_ENTITY)
+                        .prependListener(new GormAutoTimestampFlushEntityEventListener(
+                                autoTimestampEventListener, mappingContext));
+            }
+        }
+    }
+
     protected void configureValidatorRegistry(HibernateMappingContext mappingContext) {
         StaticMessageSource messageSource = new StaticMessageSource();
         ValidatorRegistry defaultValidatorRegistry = createValidatorRegistry(messageSource);
@@ -561,18 +606,28 @@ public class HibernateDatastore extends AbstractDatastore
                     datastoresByConnectionSource
             );
         } else {
-            return new HibernateGormEnhancer(this, transactionManager, defaultConnectionSource.getSettings());
+            return new HibernateGormEnhancer(this, transactionManager, defaultConnectionSource.getSettings(), datastoresByConnectionSource);
         }
     }
 
     @Override
     public boolean hasCurrentSession() {
-        return TransactionSynchronizationManager.getResource(sessionFactory) != null;
+        SessionFactory sf = getSessionFactory();
+        return super.hasCurrentSession() || (sf != null && TransactionSynchronizationManager.getResource(sf) != null);
+    }
+
+    public boolean hasCurrentTransaction() {
+        SessionFactory sf = getSessionFactory();
+        Object resource = sf != null ? TransactionSynchronizationManager.getResource(sf) : null;
+        if (resource instanceof org.grails.orm.hibernate.support.hibernate7.SessionHolder) {
+            return ((org.grails.orm.hibernate.support.hibernate7.SessionHolder) resource).getTransaction() != null;
+        }
+        return false;
     }
 
     @Override
     protected Session createSession(PropertyResolver connectionDetails) {
-        return new HibernateSession(this, sessionFactory);
+        return new HibernateSession(this, getSessionFactory());
     }
 
     @Override
@@ -634,17 +689,62 @@ public class HibernateDatastore extends AbstractDatastore
         return session;
     }
 
+    /**
+     * Returns the current GORM session for this datastore, using a priority-based lookup.
+     *
+     * <p>Priority order:
+     * <ol>
+     *   <li>Custom session resolver (e.g. {@code StaticSingletonPersistenceContextInterceptor})</li>
+     *   <li>GORM session holder in TSM (key = this datastore)</li>
+     *   <li>Spring TX {@link SessionFactory} holder in TSM (key = SessionFactory) — used when
+     *       {@code withTransaction{}} is active and the TX manager has bound the session</li>
+     * </ol>
+     *
+     * <p>Without priority 3, {@code DatastoreUtils.execute()} would call {@link #connect()} and
+     * open a brand-new standalone session even inside a {@code withTransaction{}} block,
+     * causing {@code TransactionRequiredException} on flush for SCHEMA multi-tenancy child
+     * datastores (each of which has its own {@link SessionFactory}).</p>
+     */
     @Override
     public Session getCurrentSession() throws ConnectionNotFoundException {
-        return new HibernateSession(this, sessionFactory);
+        // Priority 1: custom session resolver
+        Session resolved = getSessionResolver().resolve();
+        if (resolved != null) {
+            return resolved;
+        }
+        // Priority 2: GORM session holder (key = this datastore)
+        org.grails.datastore.mapping.transactions.SessionHolder gormHolder =
+                (org.grails.datastore.mapping.transactions.SessionHolder)
+                        TransactionSynchronizationManager.getResource(this);
+        if (gormHolder != null) {
+            Session s = gormHolder.getValidatedSession();
+            if (s != null) {
+                return s;
+            }
+        }
+        // Priority 3: Spring TX SessionFactory holder (key = SessionFactory).
+        // When withTransaction{} is active, the TX manager binds the Hibernate session here.
+        SessionFactory sf = getSessionFactory();
+        if (sf != null) {
+            Object resource = TransactionSynchronizationManager.getResource(sf);
+            if (resource instanceof org.grails.orm.hibernate.support.hibernate7.SessionHolder sfHolder) {
+                org.hibernate.Session nativeSession = sfHolder.getSession();
+                if (nativeSession != null && nativeSession.isOpen()) {
+                    return new HibernateSession(this, sf, nativeSession);
+                }
+            }
+        }
+        throw new ConnectionNotFoundException(
+                "No Datastore Session bound to thread, and configuration does not allow creation of non-transactional one here");
     }
 
     @Override
     public void destroy() {
         if (!this.destroyed) {
+            org.grails.datastore.gorm.GormRegistry.getInstance().removeDatastore(this);
             try {
                 for (HibernateDatastore childDatastore : datastoresByConnectionSource.values()) {
-                    if (childDatastore != this && childDatastore.getMappingContext() != getMappingContext()) {
+                    if (childDatastore != this) {
                         childDatastore.destroy();
                     }
                 }
@@ -760,6 +860,7 @@ public class HibernateDatastore extends AbstractDatastore
             ConnectionSource<SessionFactory, HibernateConnectionSourceSettings> connectionSource =
                     factory.create(schemaName, dataSourceConnectionSource, tenantSettings);
             HibernateDatastore childDatastore = getChildDatastore(connectionSource);
+            org.grails.datastore.gorm.GormRegistry.getInstance().registerDatastoreByQualifier(schemaName, childDatastore);
             datastoresByConnectionSource.put(connectionSource.getName(), childDatastore);
         } finally {
             TransactionSynchronizationManager.unbindResourceIfPossible(dataSource);
@@ -815,16 +916,21 @@ public class HibernateDatastore extends AbstractDatastore
                 messageSource);
     }
 
+    /**
+     * @return The primary datastore
+     */
+    public HibernateDatastore getPrimaryDatastore() {
+        return this;
+    }
+
     @Override
     public MultiTenancySettings.MultiTenancyMode getMultiTenancyMode() {
-        return this.multiTenantMode == MultiTenancySettings.MultiTenancyMode.SCHEMA ?
-                MultiTenancySettings.MultiTenancyMode.DATABASE :
-                this.multiTenantMode;
+        return this.multiTenantMode;
     }
 
     @Override
     public Datastore getDatastoreForTenantId(Serializable tenantId) {
-        if (getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DATABASE) {
+        if (getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DATABASE || getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
             return getDatastoreForConnection(tenantId.toString());
         } else {
             return this;
@@ -877,7 +983,7 @@ public class HibernateDatastore extends AbstractDatastore
         return failOnError;
     }
 
-    public boolean isOsivReadOnly() {
+    public boolean isOsivReadOnly(SessionFactory sessionFactory) {
         return osivReadOnly;
     }
 
@@ -941,33 +1047,67 @@ public class HibernateDatastore extends AbstractDatastore
 
     @Override
     public <T> T withSession(final Closure<T> callable) {
-        Closure<T> multiTenantCallable = prepareMultiTenantClosure(callable);
-        return getHibernateTemplate().execute(multiTenantCallable);
+        if (multiTenantMode == MultiTenancySettings.MultiTenancyMode.SCHEMA && !(this instanceof ChildHibernateDatastore)) {
+            Serializable tenantId = Tenants.currentId(this);
+            if (tenantId != null && !ConnectionSource.DEFAULT.equals(tenantId.toString())) {
+                return getDatastoreForTenantId(tenantId).withSession(callable);
+            }
+        }
+        final HibernateDatastore self = this;
+        return DatastoreUtils.execute(this, session -> {
+            org.hibernate.Session nativeSession = ((HibernateSession) session).getNativeSession();
+            SessionFactory sessionFactory = getSessionFactory();
+            boolean alreadyBound = TransactionSynchronizationManager.hasResource(sessionFactory);
+            if (!alreadyBound) {
+                org.grails.orm.hibernate.support.hibernate7.SessionHolder sessionHolder = new org.grails.orm.hibernate.support.hibernate7.SessionHolder(nativeSession);
+                TransactionSynchronizationManager.bindResource(sessionFactory, sessionHolder);
+            }
+            try {
+                Closure<T> multiTenantCallable = prepareMultiTenantClosure(callable);
+                return multiTenantCallable.call(nativeSession);
+            } finally {
+                if (!alreadyBound) {
+                    TransactionSynchronizationManager.unbindResource(sessionFactory);
+                }
+            }
+        });
     }
 
     public <T> T withSession(String connectionName, final Closure<T> callable) {
-        HibernateDatastore datastore = getDatastoreForConnection(connectionName);
-        Closure<T> multiTenantCallable = datastore.prepareMultiTenantClosure(callable);
-        return datastore.getHibernateTemplate().execute(multiTenantCallable);
+        return getDatastoreForConnection(connectionName).withSession(callable);
     }
 
     public <T> T withNewSession(String connectionName, final Closure<T> callable) {
-        HibernateDatastore datastore = getDatastoreForConnection(connectionName);
-        Closure<T> multiTenantCallable = datastore.prepareMultiTenantClosure(callable);
-        return datastore.getHibernateTemplate().executeWithNewSession(multiTenantCallable);
+        return getDatastoreForConnection(connectionName).withNewSession(callable);
     }
 
     public <T> T withNewSession(final Closure<T> callable) {
-        Closure<T> multiTenantCallable = prepareMultiTenantClosure(callable);
-        return getHibernateTemplate().executeWithNewSession(multiTenantCallable);
+        // Delegate to GrailsHibernateTemplate.executeWithNewSession which correctly saves and
+        // restores both the Hibernate SessionHolder and the JDBC ConnectionHolder so that a
+        // nested transaction inside the closure starts clean (no pre-bound connection conflict).
+        final HibernateDatastore self = this;
+        final Closure<T> multiTenantCallable = prepareMultiTenantClosure(callable);
+        return getHibernateTemplate().executeWithNewSession(new Closure<T>(this) {
+            @Override
+            public T call(Object... args) {
+                org.hibernate.Session nativeSession = (org.hibernate.Session) args[0];
+                HibernateSession gormSession = new HibernateSession(self, self.getSessionFactory(), nativeSession);
+                DatastoreUtils.bindNewSession(gormSession);
+                try {
+                    return multiTenantCallable.call(nativeSession);
+                } finally {
+                    DatastoreUtils.unbindSession(gormSession);
+                    // Native session is closed by executeWithNewSession's finally block,
+                    // but we still want to clean up any GORM-specific state if needed.
+                }
+            }
+        });
     }
 
     @Override
     public <T1> T1 withNewSession(Serializable tenantId, Closure<T1> callable) {
-        if (getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DATABASE) {
-            HibernateDatastore datastore = getDatastoreForConnection(tenantId.toString());
-            SessionFactory sf = datastore.getSessionFactory();
-            return datastore.getHibernateTemplate().executeWithExistingOrCreateNewSession(sf, callable);
+        if (getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DATABASE || getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
+            return ((HibernateDatastore) getDatastoreForTenantId(tenantId)).withNewSession(callable);
         } else {
             return withNewSession(callable);
         }

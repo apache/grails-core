@@ -451,8 +451,15 @@ public class HibernateTransactionManager extends AbstractPlatformTransactionMana
     @Override
     protected boolean isExistingTransaction(Object transaction) {
         HibernateTransactionObject txObject = (HibernateTransactionObject) transaction;
-        return (txObject.hasSpringManagedTransaction() ||
+        boolean existing = (txObject.hasSpringManagedTransaction() ||
                 (this.hibernateManagedSession && txObject.hasHibernateManagedTransaction()));
+        if (logger.isDebugEnabled()) {
+            logger.debug("isExistingTransaction: " + existing + 
+                         ", hasSpringManagedTransaction: " + txObject.hasSpringManagedTransaction() +
+                         ", sessionHolder: " + (txObject.hasSessionHolder() ? txObject.getSessionHolder() : "null") +
+                         ", transaction: " + (txObject.hasSessionHolder() && txObject.getSessionHolder().getTransaction() != null ? txObject.getSessionHolder().getTransaction() : "null"));
+        }
+        return existing;
     }
 
     @Override
@@ -789,7 +796,7 @@ public class HibernateTransactionManager extends AbstractPlatformTransactionMana
      * Hibernate transaction object, representing a SessionHolder.
      * Used as transaction object by HibernateTransactionManager.
      */
-    private class HibernateTransactionObject extends JdbcTransactionObjectSupport {
+    public static class HibernateTransactionObject extends JdbcTransactionObjectSupport {
 
         @Nullable
         private SessionHolder sessionHolder;
@@ -883,11 +890,11 @@ public class HibernateTransactionManager extends AbstractPlatformTransactionMana
                 getSessionHolder().getSession().flush();
             }
             catch (HibernateException ex) {
-                throw convertHibernateAccessException(ex);
+                throw SessionFactoryUtils.convertHibernateAccessException(ex);
             }
             catch (PersistenceException ex) {
                 if (ex.getCause() instanceof HibernateException hibernateEx) {
-                    throw convertHibernateAccessException(hibernateEx);
+                    throw SessionFactoryUtils.convertHibernateAccessException(hibernateEx);
                 }
                 throw ex;
             }

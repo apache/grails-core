@@ -168,6 +168,7 @@ class HibernateDatastoreIntegrationSpec extends HibernateGormDatastoreSpec {
     void "hasCurrentSession is false outside a transaction"() {
         setup: "ensure no session is bound from a prior test"
         TransactionSynchronizationManager.unbindResourceIfPossible(sessionFactory)
+        TransactionSynchronizationManager.unbindResourceIfPossible(datastore)
 
         expect:
         !datastore.hasCurrentSession()
