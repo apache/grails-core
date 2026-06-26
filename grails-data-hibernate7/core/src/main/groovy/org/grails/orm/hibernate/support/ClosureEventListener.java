@@ -74,7 +74,6 @@ import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.reflect.ClassUtils;
 import org.grails.datastore.mapping.reflect.EntityReflector;
-import org.grails.datastore.mapping.validation.ValidationException;
 import org.grails.orm.hibernate.HibernateGormValidationApi;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 
@@ -98,6 +97,16 @@ public class ClosureEventListener
     @Serial
     private static final long serialVersionUID = 1;
 
+    /**
+     * Thread-local flag set by {@code save(deepValidate: false)} to suppress validation
+     * inside Hibernate cascade events for all transitively reachable entities within the
+     * same {@code session.persist()} call.  In Hibernate 7, a vetoed insert throws
+     * {@link org.hibernate.action.internal.EntityActionVetoException} rather than silently
+     * cancelling the action as Hibernate 5 did, so cascade-reachable entities must not be
+     * validated when the root save explicitly opts out of deep validation.
+     */
+    public static final ThreadLocal<Boolean> SKIP_DEEP_VALIDATION = new ThreadLocal<>();
+
     private final transient EventTriggerCaller beforeInsertCaller;
     private final transient EventTriggerCaller preLoadEventCaller;
     private final transient EventTriggerCaller postLoadEventListener;
@@ -112,8 +121,12 @@ public class ClosureEventListener
     private final boolean failOnErrorEnabled;
     private final Map validateParams;
 
+    private final transient org.grails.orm.hibernate.HibernateDatastore hibernateDatastore;
+
     public ClosureEventListener(
+            org.grails.orm.hibernate.HibernateDatastore hibernateDatastore,
             GrailsHibernatePersistentEntity persistentEntity, boolean failOnError, List failOnErrorPackages) {
+        this.hibernateDatastore = hibernateDatastore;
         this.persistentEntity = persistentEntity;
         Class domainClazz = persistentEntity.getJavaClass();
         this.domainMetaClass = GroovySystem.getMetaClassRegistry().getMetaClass(domainClazz);
@@ -240,14 +253,22 @@ public class ClosureEventListener
 
     protected boolean doValidate(Object entity) {
         GormValidateable validateable = (GormValidateable) entity;
-        if (!validateable.shouldSkipValidation() && !validateable.validate(validateParams)) {
-            if (failOnErrorEnabled) {
-                throw ValidationException.newInstance(
-                        "Validation error whilst flushing entity [" +
-                                entity.getClass().getName() + "]",
-                        validateable.getErrors());
+        if (!validateable.shouldSkipValidation() && !Boolean.TRUE.equals(SKIP_DEEP_VALIDATION.get())) {
+            String qualifier = org.grails.datastore.mapping.core.connections.ConnectionSource.DEFAULT;
+            if (hibernateDatastore != null) {
+                qualifier = hibernateDatastore.getConnectionSources().getDefaultConnectionSource().getName();
             }
-            return true;
+            org.grails.datastore.gorm.GormValidationApi validationApi = org.grails.datastore.gorm.GormRegistry.getInstance().findValidationApi(entity.getClass(), qualifier);
+            
+            if (validationApi != null && !validationApi.validate(entity, validateParams)) {
+                if (failOnErrorEnabled) {
+                    throw org.grails.datastore.mapping.validation.ValidationException.newInstance(
+                            "Validation error whilst flushing entity [" +
+                                    entity.getClass().getName() + "]",
+                            validateable.getErrors());
+                }
+                return true;
+            }
         }
         return false;
     }

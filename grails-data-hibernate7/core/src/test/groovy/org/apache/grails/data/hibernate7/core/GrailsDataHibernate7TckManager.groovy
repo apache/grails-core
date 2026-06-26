@@ -25,6 +25,7 @@ import groovy.sql.Sql
 import org.apache.grails.data.testing.tck.base.GrailsDataTckManager
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
+import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
 import org.grails.orm.hibernate.GrailsHibernateTransactionManager
@@ -41,6 +42,7 @@ import org.springframework.transaction.TransactionStatus
 import org.springframework.transaction.support.DefaultTransactionDefinition
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import spock.lang.Specification
+import org.grails.datastore.gorm.GormRegistry
 
 class GrailsDataHibernate7TckManager extends GrailsDataTckManager {
     GrailsApplication grailsApplication
@@ -60,6 +62,14 @@ class GrailsDataHibernate7TckManager extends GrailsDataTckManager {
     void setup(Class<? extends Specification> spec) {
         cleanRegistry()
         super.setup(spec)
+        // cleanRegistry() removes MetaClass handlers installed by setupMultiDataSource().
+        // Re-register multi-datasource entities so their propertyMissing handlers are restored.
+        if (multiDataSourceDatastore != null) {
+            multiDataSourceDatastore.registerAllEntitiesWithEnhancer()
+        }
+        if (multiTenantMultiDataSourceDatastore != null) {
+            multiTenantMultiDataSourceDatastore.registerAllEntitiesWithEnhancer()
+        }
     }
 
     @Override
@@ -155,16 +165,33 @@ class GrailsDataHibernate7TckManager extends GrailsDataTckManager {
         if (multiDataSourceDatastore != null) {
             multiDataSourceDatastore.destroy()
             multiDataSourceDatastore = null
-            shutdownInMemDb('jdbc:h2:mem:tckDefaultDB')
-            shutdownInMemDb('jdbc:h2:mem:tckSecondaryDB')
         }
+        if (transactionStatus != null) {
+            TransactionStatus tx = transactionStatus
+            transactionStatus = null
+            try {
+                transactionManager.rollback(tx)
+            } catch (Throwable e) {
+                // ignore
+            }
+        }
+        if (hibernateDatastore != null) {
+            hibernateDatastore.destroy()
+            hibernateDatastore = null
+        }
+        cleanRegistry()
+        shutdownInMemDb('jdbc:h2:mem:tckDefaultDB')
+        shutdownInMemDb('jdbc:h2:mem:tckSecondaryDB')
     }
 
     @Override
     def getServiceForConnection(Class serviceType, String connectionName) {
-        multiDataSourceDatastore
-                .getDatastoreForConnection(connectionName)
-                .getService(serviceType)
+        def service = multiDataSourceDatastore.getDatastoreForConnection(connectionName).getService(serviceType)
+        if (service.respondsTo('setTargetDatastore')) {
+            MultipleConnectionSourceCapableDatastore[] arr = [multiDataSourceDatastore]
+            service.setTargetDatastore(arr)
+        }
+        return service
     }
 
     @Override
@@ -207,9 +234,12 @@ class GrailsDataHibernate7TckManager extends GrailsDataTckManager {
 
     @Override
     def getServiceForMultiTenantConnection(Class serviceType, String connectionName) {
-        multiTenantMultiDataSourceDatastore
-                .getDatastoreForConnection(connectionName)
-                .getService(serviceType)
+        def service = multiTenantMultiDataSourceDatastore.getDatastoreForConnection(connectionName).getService(serviceType)
+        if (service.respondsTo('setTargetDatastore')) {
+            MultipleConnectionSourceCapableDatastore[] arr = [multiTenantMultiDataSourceDatastore]
+            service.setTargetDatastore(arr)
+        }
+        return service
     }
 
     private void shutdownInMemDb() {

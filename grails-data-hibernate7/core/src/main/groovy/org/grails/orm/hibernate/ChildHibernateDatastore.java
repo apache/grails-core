@@ -18,19 +18,32 @@
  */
 package org.grails.orm.hibernate;
 
+import java.util.Collections;
+import java.util.Map;
+
 import org.hibernate.SessionFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher;
+import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.core.connections.ConnectionSources;
 import org.grails.orm.hibernate.cfg.HibernateMappingContext;
 import org.grails.orm.hibernate.cfg.Settings;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
+import org.grails.orm.hibernate.support.hibernate7.SessionHolder;
 
 /**
  * A datastore for a specific connection in a multiple data source setup.
  */
 public class ChildHibernateDatastore extends HibernateDatastore {
+
+    private static final Logger log = LoggerFactory.getLogger(ChildHibernateDatastore.class);
+
+    private static final ThreadLocal<HibernateDatastore> PARENT_HOLDER = new ThreadLocal<>();
 
     private final HibernateDatastore parent;
 
@@ -39,37 +52,117 @@ public class ChildHibernateDatastore extends HibernateDatastore {
             ConnectionSources<SessionFactory, HibernateConnectionSourceSettings> connectionSources,
             HibernateMappingContext mappingContext,
             ConfigurableApplicationEventPublisher eventPublisher) {
-        super(connectionSources, mappingContext, eventPublisher,
-            connectionSources.getDefaultConnectionSource().getSource());
+        super(bindParent(parent, connectionSources), mappingContext, eventPublisher,
+                connectionSources.getDefaultConnectionSource().getSource());
         this.parent = parent;
+        PARENT_HOLDER.remove();
+    }
+
+    private static ConnectionSources<SessionFactory, HibernateConnectionSourceSettings> bindParent(HibernateDatastore parent, ConnectionSources<SessionFactory, HibernateConnectionSourceSettings> connectionSources) {
+        PARENT_HOLDER.set(parent);
+        return connectionSources;
+    }
+
+    @Override
+    public HibernateDatastore getPrimaryDatastore() {
+        return parent != null ? parent : PARENT_HOLDER.get();
     }
 
     @Override
     protected HibernateGormEnhancer initialize() {
-        return null;
+        HibernateDatastore p = getPrimaryDatastore();
+        Map<String, HibernateDatastore> datastoresMap = p != null ? p.datastoresByConnectionSource : Collections.emptyMap();
+        return new HibernateGormEnhancer(this, getTransactionManager(), connectionSources.getDefaultConnectionSource().getSettings(), datastoresMap);
     }
 
     @Override
     public void destroy() {
         if (!this.destroyed) {
-            // Only mark as destroyed, don't close shared resources
-            this.destroyed = true;
+            super.destroy();
         }
     }
 
     @Override
     public HibernateDatastore getDatastoreForConnection(String connectionName) {
-        if (Settings.SETTING_DATASOURCE.equals(connectionName) ||
-                ConnectionSource.DEFAULT.equals(connectionName)) {
-            return parent;
-        } else {
-            HibernateDatastore hibernateDatastore = parent.datastoresByConnectionSource.get(connectionName);
-            if (hibernateDatastore == null) {
-                throw new org.grails.datastore.mapping.core.exceptions.ConfigurationException(
-                        "DataSource not found for name [" + connectionName +
-                                "] in configuration. Please check your multiple data sources configuration and try again.");
-            }
-            return hibernateDatastore;
+        String myName = getConnectionSources().getDefaultConnectionSource().getName();
+        if (connectionName.equals(myName)) {
+            return this;
         }
+
+        HibernateDatastore p = getPrimaryDatastore();
+        if (Settings.SETTING_DATASOURCE.equals(connectionName) || ConnectionSource.DEFAULT.equals(connectionName)) {
+            return p;
+        }
+
+        if (p != null) {
+            HibernateDatastore hibernateDatastore = p.datastoresByConnectionSource.get(connectionName);
+            if (hibernateDatastore != null) {
+                return hibernateDatastore;
+            }
+            // During initialization this child may not yet be registered in the parent's runtime map,
+            // while sibling datastores being initialized in parallel may also be absent. Return null
+            // only when (a) this child is not yet registered (so we are in the initialization phase)
+            // AND (b) the requested connection name is a sibling that is configured in the parent's
+            // connection sources (i.e., it will exist once initialization completes). Truly unknown
+            // names always throw ConfigurationException regardless of initialization state.
+            if (!p.datastoresByConnectionSource.containsKey(myName) &&
+                    p.connectionSources.getConnectionSource(connectionName) != null) {
+                return null;
+            }
+        }
+
+        throw new org.grails.datastore.mapping.core.exceptions.ConfigurationException(
+                "DataSource not found for name [" + connectionName +
+                        "] in configuration. Please check your multiple data sources configuration and try again.");
+    }
+
+    private org.springframework.transaction.PlatformTransactionManager springTransactionManager;
+
+    @Override
+    public org.springframework.context.ConfigurableApplicationContext getApplicationContext() {
+        org.springframework.context.ConfigurableApplicationContext ctx = super.getApplicationContext();
+        if (ctx == null && parent != null) {
+            ctx = parent.getApplicationContext();
+        }
+        return ctx;
+    }
+
+    @Override
+    public org.springframework.transaction.PlatformTransactionManager getTransactionManager() {
+        if (springTransactionManager == null && getApplicationContext() != null) {
+            String name = getConnectionSources().getDefaultConnectionSource().getName();
+            String beanName = "transactionManager_" + name;
+            if (log.isDebugEnabled()) {
+                log.debug("ChildHibernateDatastore.getTransactionManager(): name=" + name + " beanName=" + beanName);
+            }
+            if (getApplicationContext() instanceof org.springframework.context.ConfigurableApplicationContext configurableApplicationContext) {
+                org.springframework.beans.factory.config.ConfigurableListableBeanFactory beanFactory = configurableApplicationContext.getBeanFactory();
+                boolean contains = beanFactory.containsBean(beanName);
+                boolean inCreation = beanFactory.isCurrentlyInCreation(beanName);
+                if (log.isDebugEnabled()) {
+                    log.debug("ChildHibernateDatastore.getTransactionManager(): contains=" + contains + " inCreation=" + inCreation);
+                }
+                if (contains && !inCreation) {
+                    springTransactionManager = beanFactory.getBean(beanName, org.springframework.transaction.PlatformTransactionManager.class);
+                    if (log.isDebugEnabled()) {
+                        log.debug("ChildHibernateDatastore.getTransactionManager(): springTransactionManager resolved: " + springTransactionManager);
+                    }
+                }
+            }
+        }
+        return springTransactionManager != null ? springTransactionManager : super.getTransactionManager();
+    }
+
+    @Override
+    public Session connect() {
+        SessionFactory sf = getSessionFactory();
+        Object resource = TransactionSynchronizationManager.getResource(sf);
+        if (resource instanceof SessionHolder sfHolder) {
+            org.hibernate.Session nativeSession = sfHolder.getSession();
+            if (nativeSession != null && nativeSession.isOpen()) {
+                return new HibernateSession(this, sf, nativeSession);
+            }
+        }
+        return new HibernateSession(this, sf, sf.openSession());
     }
 }

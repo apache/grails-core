@@ -24,6 +24,8 @@ import grails.gorm.hibernate.HibernateEntity
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import jakarta.persistence.FlushModeType
 import org.grails.orm.hibernate.query.HibernateQuery
+import org.hibernate.HibernateException
+import org.springframework.transaction.support.TransactionSynchronizationManager
 
 class HibernateSessionSpec extends HibernateGormDatastoreSpec {
 
@@ -481,6 +483,47 @@ class HibernateSessionSpec extends HibernateGormDatastoreSpec {
 
         then:
         noExceptionThrown()
+    }
+
+    // -------------------------------------------------------------------------
+    // getNativeSession() — fallback contract
+    // -------------------------------------------------------------------------
+
+    // Exposes the root cause of the SCHEMA multi-tenancy "No Session found" bug:
+    // HibernateSession constructed without a native session falls back to
+    // sessionFactory.getCurrentSession(), which throws when no session is
+    // bound to the thread (e.g. bare Tenants.withId() 0-arg closure path).
+    void "getNativeSession() throws HibernateException when constructed without a native session and no thread-bound session exists"() {
+        given: "any pre-existing thread-bound Hibernate session is saved and cleared"
+        def sf = datastore.sessionFactory
+        def prior = TransactionSynchronizationManager.getResource(sf)
+        if (prior) TransactionSynchronizationManager.unbindResource(sf)
+
+        and: "a HibernateSession created without a pre-opened native session"
+        def wrapper = new HibernateSession(datastore, sf)
+
+        when: "getNativeSession() falls back to getCurrentSession() with nothing bound"
+        wrapper.getNativeSession()
+
+        then: "an exception is thrown because there is no session on the thread"
+        thrown(HibernateException)
+
+        cleanup:
+        if (prior) TransactionSynchronizationManager.bindResource(sf, prior)
+    }
+
+    // Documents the correct contract: when a native session is explicitly provided,
+    // getNativeSession() returns it directly without any thread-lookup.
+    void "getNativeSession() returns the explicitly provided native session without thread lookup"() {
+        given: "a real Hibernate session captured from withNewSession"
+        org.hibernate.Session captured = null
+        datastore.withNewSession { org.hibernate.Session s -> captured = s }
+
+        and: "a HibernateSession wrapper constructed with that native session"
+        def wrapper = new HibernateSession(datastore, datastore.sessionFactory, captured)
+
+        expect: "getNativeSession() returns the exact same session instance"
+        wrapper.getNativeSession().is(captured)
     }
 }
 

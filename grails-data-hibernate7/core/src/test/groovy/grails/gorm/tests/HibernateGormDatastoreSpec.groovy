@@ -25,6 +25,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.orm.hibernate.HibernateSession
 import org.grails.orm.hibernate.HibernateDatastore
+import org.grails.orm.hibernate.GrailsHibernateTransactionManager
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.cfg.HibernateMappingContext
@@ -153,6 +154,10 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate7T
 
     protected HibernateDatastore getDatastore() {
         manager.hibernateDatastore
+    }
+
+    protected GrailsHibernateTransactionManager getTransactionManager() {
+        (GrailsHibernateTransactionManager) manager.transactionManager
     }
 
     protected org.hibernate.query.criteria.HibernateCriteriaBuilder getCriteriaBuilder() {

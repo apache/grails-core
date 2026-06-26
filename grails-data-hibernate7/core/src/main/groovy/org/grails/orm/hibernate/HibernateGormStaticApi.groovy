@@ -16,257 +16,215 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-/*
- * Copyright 2013 the original author or authors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package org.grails.orm.hibernate
 
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
 
 import org.grails.datastore.mapping.query.Query as GormQuery
 
-import org.hibernate.Session
-import org.hibernate.SessionFactory
-import org.hibernate.jpa.AvailableHints
+import org.hibernate.FlushMode
 
 import org.springframework.core.convert.ConversionService
 import org.springframework.transaction.PlatformTransactionManager
 
 import grails.orm.HibernateCriteriaBuilder
-import grails.gorm.DetachedCriteria
+import org.grails.datastore.gorm.DatastoreResolver
 import org.grails.datastore.gorm.GormStaticApi
+import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.finders.FinderMethod
+import org.grails.datastore.gorm.proxy.GroovyProxyFactory
+import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.core.Session
+import org.grails.datastore.mapping.core.SessionCallback
 import org.grails.datastore.mapping.core.connections.ConnectionSource
-import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
-import org.grails.datastore.mapping.proxy.ProxyHandler
+import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
-import org.grails.datastore.mapping.query.api.BuildableCriteria as GrailsCriteria
+import org.grails.datastore.mapping.model.config.GormProperties
+import org.grails.datastore.mapping.model.types.Basic
+import org.grails.datastore.mapping.model.types.Simple
+import org.grails.datastore.mapping.query.Restrictions
+import org.grails.datastore.mapping.query.api.BuildableCriteria
 import org.grails.datastore.mapping.query.event.PostQueryEvent
 import org.grails.datastore.mapping.query.event.PreQueryEvent
+import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
 import org.grails.orm.hibernate.query.HibernateHqlQueryCreator
-import org.grails.orm.hibernate.query.HibernatePagedResultList
-import org.grails.orm.hibernate.query.MutationHqlQuery
 import org.grails.orm.hibernate.query.HibernateQuery
 import org.grails.orm.hibernate.query.HibernateQueryArgument
 import org.grails.orm.hibernate.query.HqlListQueryBuilder
 import org.grails.orm.hibernate.query.HqlQueryContext
+import org.grails.orm.hibernate.query.MutationHqlQuery
+import org.grails.orm.hibernate.query.PagedResultList
 import org.grails.orm.hibernate.support.HibernateRuntimeUtils
 
 /**
- * The implementation of the GORM static method contract for Hibernate
+ * Hibernate GORM static API.
  *
  * @author Graeme Rocher
  * @since 1.0
  */
-@Slf4j
 @CompileStatic
-//TODO Duplication!!
 class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     protected GrailsHibernateTemplate hibernateTemplate
-    protected ConversionService conversionService
-    protected final HibernateSession hibernateSession
-    protected ProxyHandler proxyHandler
-    protected SessionFactory sessionFactory
-    protected Class identityType
-    protected ClassLoader classLoader
-    protected String qualifier
-    private HibernateGormInstanceApi<D> instanceApi
+    protected final ClassLoader classLoader
 
-    HibernateGormStaticApi(Class<D> persistentClass, HibernateDatastore datastore, List<FinderMethod> finders,
-                           ClassLoader classLoader, PlatformTransactionManager transactionManager, String qualifier = null) {
-        super(persistentClass, datastore, finders, transactionManager)
+    private static final Set<String> PAGINATION_ARGS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+            DynamicFinder.ARGUMENT_MAX,
+            DynamicFinder.ARGUMENT_OFFSET,
+            DynamicFinder.ARGUMENT_SORT,
+            DynamicFinder.ARGUMENT_ORDER,
+            DynamicFinder.ARGUMENT_FETCH,
+            DynamicFinder.ARGUMENT_IGNORE_CASE,
+            DynamicFinder.ARGUMENT_FETCH_SIZE,
+            DynamicFinder.ARGUMENT_TIMEOUT,
+            DynamicFinder.ARGUMENT_READ_ONLY,
+            DynamicFinder.ARGUMENT_FLUSH_MODE,
+            'cache'
+    )))
+
+    HibernateGormStaticApi(Class<D> persistentClass, HibernateDatastore datastore, List<FinderMethod> finders, DatastoreResolver datastoreResolver, String qualifier, ClassLoader classLoader) {
+        super(persistentClass, datastore.mappingContext, finders, datastoreResolver, qualifier)
         this.hibernateTemplate = (GrailsHibernateTemplate) datastore.getHibernateTemplate()
-        this.conversionService = datastore.mappingContext.conversionService
-        this.proxyHandler = datastore.mappingContext.proxyHandler
-        this.hibernateSession = new HibernateSession(
-                (HibernateDatastore) datastore,
-                hibernateTemplate.getSessionFactory()
-        )
         this.classLoader = classLoader
-        this.sessionFactory = datastore.getSessionFactory()
-        this.identityType = persistentEntity.identity?.type
-        this.instanceApi = new HibernateGormInstanceApi<>(persistentClass, datastore, classLoader)
-        this.qualifier = qualifier
     }
 
-    GrailsHibernateTemplate getHibernateTemplate() {
-        return hibernateTemplate as GrailsHibernateTemplate
+    HibernateGormStaticApi(Class<D> persistentClass, HibernateDatastore datastore, List<FinderMethod> finders, ClassLoader classLoader, DatastoreResolver datastoreResolver, String qualifier) {
+        this(persistentClass, datastore, finders, datastoreResolver, qualifier, classLoader)
+    }
+
+    HibernateGormStaticApi(Class<D> persistentClass, HibernateDatastore datastore, List<FinderMethod> finders, ClassLoader classLoader, PlatformTransactionManager transactionManager) {
+        this(persistentClass, datastore, finders, new DatastoreResolver() {
+            @Override Datastore resolve() { datastore }
+        }, ConnectionSource.DEFAULT, classLoader)
+    }
+
+    HibernateGormStaticApi(Class<D> persistentClass, MappingContext mappingContext, List<FinderMethod> finders, DatastoreResolver datastoreResolver, String qualifier, ClassLoader classLoader) {
+        super(persistentClass, mappingContext, finders, datastoreResolver, qualifier)
+        this.classLoader = classLoader
+    }
+
+    protected HibernateDatastore getHibernateDatastore() {
+        (HibernateDatastore) getDatastore()
     }
 
     String getQualifier() {
-        if (qualifier != null) return qualifier
-        def dsNames = persistentEntity.mapping.mappedForm.datasources
-        if (dsNames) {
-            String first = dsNames[0]
-            if (first != ConnectionSource.DEFAULT && first != 'ALL') {
-                return first
-            }
-        }
-        null
+        return this.@qualifier
     }
 
-    GormStaticApi<D> getApi(String qualifier) {
-        (GormStaticApi<D>) HibernateGormEnhancer.findStaticApi(persistentClass, qualifier)
+    protected IHibernateTemplate getHibernateTemplate() {
+        IHibernateTemplate template = (IHibernateTemplate) getHibernateDatastore().getHibernateTemplate()
+        String connectionName = getHibernateDatastore().connectionSources.defaultConnectionSource.name
+        if (qualifier != null && !connectionName.equals(qualifier) && !ConnectionSource.DEFAULT.equals(qualifier) && getHibernateDatastore().getMultiTenancyMode() == org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
+            return new TenantBoundHibernateTemplate(template, (Serializable)qualifier, getHibernateDatastore())
+        }
+        return template
     }
 
     @Override
-    DetachedCriteria<D> where(Closure callable) {
-        new HibernateDetachedCriteria<D>(persistentClass).build(callable)
-    }
-
-    @Override
-    DetachedCriteria<D> whereLazy(Closure callable) {
-        new HibernateDetachedCriteria<D>(persistentClass).buildLazy(callable)
-    }
-
-    @Override
-    DetachedCriteria<D> whereAny(Closure callable) {
-        (DetachedCriteria<D>) new HibernateDetachedCriteria<D>(persistentClass).or(callable)
-    }
-
-    @Override
-    D merge(D d) {
-        instanceApi.merge(d)
-    }
-
-    @Override
-    <T> T withNewSession(Closure<T> callable) {
-        if (persistentEntity.isMultiTenant()) {
-            return ((HibernateDatastore) datastore).withNewSession(callable)
-        }
-        String q = getQualifier()
-        if (q != null && q != ConnectionSource.DEFAULT) {
-            return ((HibernateDatastore) datastore).withNewSession(q, callable)
-        }
-        ((HibernateDatastore) datastore).withNewSession(callable)
-    }
-
-    @Override
-    <T> T withSession(Closure<T> callable) {
-        if (persistentEntity.isMultiTenant()) {
-            return ((HibernateDatastore) datastore).withSession(callable)
-        }
-        String q = getQualifier()
-        if (q != null && q != ConnectionSource.DEFAULT) {
-            return ((HibernateDatastore) datastore).withSession(q, callable)
-        }
-        ((HibernateDatastore) datastore).withSession(callable)
-    }
-
-    D get(Serializable id) {
-        if (id == null) {
-            return null
-        }
-
-        id = convertIdentifier(id)
-
-        if (id == null) {
-            return null
-        }
-
-        if (persistentEntity.isMultiTenant()) {
-            // for multi-tenant entities we process get(..) via a query
-            (D) hibernateTemplate.execute { Session session ->
-                new HibernateQuery(hibernateSession, (GrailsHibernatePersistentEntity) persistentEntity).idEq(id).singleResult()
-            }
-        } else {
-            // for non multi-tenant entities we process get(..) via the second level cache
-            (D) hibernateTemplate.execute { Session session -> session.find(persistentEntity.javaClass, id) }
-        }
-    }
-
-    D read(Serializable id) {
-        if (id == null) {
-            return null
-        }
-        id = convertIdentifier(id)
-
-        if (id == null) {
-            return null
-        }
-
-        String hql = "from ${persistentEntity.name} where ${persistentEntity.identity.name} = :id"
-        Map<String, Object> args = [(AvailableHints.HINT_READ_ONLY): (Object) true]
-        proxyHandler.unwrap(doSingleInternal(hql, [id: id], [], args, false)) as D
-    }
-
-    @Override
-    D load(Serializable id) {
-        id = convertIdentifier(id)
-        if (id != null) {
-            return (D) hibernateTemplate.load((Class) persistentClass, id)
-        } else {
-            return null
-        }
-    }
-
-    @Override
-    D proxy(Serializable id) {
-        id = convertIdentifier(id)
-        if (id != null) {
-            // Use the configured MappingContext proxyFactory (e.g. GroovyProxyFactory) so proxies are created correctly
-            def proxyFactory = datastore.getMappingContext().getProxyFactory()
-            return (D) proxyFactory.createProxy(datastore.currentSession, (Class) persistentClass, id)
-        } else {
-            return null
-        }
-    }
-
-    @Override
-    List<D> getAll() {
-        doListInternal("from ${persistentEntity.name}".toString(), [:], [], [:], false)
-    }
-
-    @Override
-    Integer count() {
-        String entity = persistentEntity.name
-        doSingleInternal("select count(*) from $entity" as String, [:], [], [:], false) as Integer
+    BuildableCriteria createCriteria() {
+        HibernateDatastore ds = getHibernateDatastore()
+        new HibernateCriteriaBuilder(persistentClass, ds.sessionFactory, ds)
     }
 
     @Override
     boolean exists(Serializable id) {
-        def converted = convertIdentifier(id)
-        if (converted == null) return false
-        String entity = persistentEntity.name
-        String idName = persistentEntity.identity.name
-        (doSingleInternal("select count(*) from $entity where $idName = :id" as String, [id: converted], [], [:], false) as Long) > 0
+        if (id == null) return false
+        id = convertIdentifier(id)
+        if (id == null) return false
+        PersistentEntity pe = getGormPersistentEntity()
+
+        return (Boolean) getHibernateTemplate().execute { org.hibernate.Session session ->
+            StringBuilder hql = new StringBuilder('select count(e) from ').append(pe.name).append(' e where ')
+            Map<String, Object> params = [:]
+
+            PersistentProperty identity = pe.getIdentity()
+            if (identity != null) {
+                hql.append('e.').append(identity.name).append(' = :id')
+                params.id = id
+            } else {
+                PersistentProperty[] compositeId = pe.getCompositeIdentity()
+                if (compositeId != null && compositeId.length > 0) {
+                    List<String> conditions = []
+                    for (prop in compositeId) {
+                        conditions << ("e.${prop.name} = :${prop.name}".toString())
+                        params[prop.name] = id[prop.name]
+                    }
+                    hql.append(conditions.join(' and '))
+                } else {
+                    return false
+                }
+            }
+
+            org.hibernate.query.Query<Long> q = session.createQuery(hql.toString(), Long)
+            params.each { k, v -> q.setParameter(k, v) }
+            return q.uniqueResult() > 0L
+        }
     }
 
     @Override
-    D first(Map m) {
-        def list = list(m)
-        list.isEmpty() ? null : list.first()
+    HibernateGormStaticApi<D> forQualifier(String qualifier) {
+        Datastore ds = getDatastore()
+        if (ds == null) return this
+
+        org.grails.datastore.gorm.DatastoreResolver resolver = new org.grails.datastore.gorm.DatastoreResolver() {
+            @Override Datastore resolve() { org.grails.datastore.gorm.GormRegistry.instance.apiResolver.findDatastore(persistentClass, qualifier) }
+        }
+        // Create new finders with the qualifier-specific resolver so dynamic finders (e.g. findByName)
+        // execute against the correct (non-DEFAULT) datasource session factory.
+        List<org.grails.datastore.gorm.finders.FinderMethod> qualifiedFinders =
+                registry.createDynamicFinders(resolver, ds.mappingContext)
+        HibernateGormStaticApi<D> newApi = new HibernateGormStaticApi<D>(persistentClass, ds.mappingContext, qualifiedFinders, resolver, qualifier, classLoader)
+        return newApi
     }
 
     @Override
-    D last(Map m) {
-        def list = list(m)
-        list.isEmpty() ? null : list.last()
+    def <T> T withSession(Closure<T> callable) {
+        getHibernateDatastore().withSession { session ->
+            callable.call(session)
+        }
     }
 
     @Override
-    D find(CharSequence query, Map namedParams, Map args) {
-        doSingleInternal(query, namedParams, [], args, false)
+    def <T> T withNewSession(Closure<T> callable) {
+        getHibernateDatastore().withNewSession { session ->
+            callable.call(session)
+        }
     }
 
     @Override
-    D find(CharSequence query, Collection positionalParams, Map args) {
-        doSingleInternal(query, [:], positionalParams, args, false)
+    def <T1> T1 withDatastoreSession(Closure<T1> callable) {
+        getHibernateDatastore().withSession { session ->
+            callable.call(new HibernateSession(getHibernateDatastore(), getHibernateDatastore().getSessionFactory(), (org.hibernate.Session)session))
+        }
+    }
+
+    @Override
+    def <T> T withNewSession(Serializable tenantId, Closure<T> callable) {
+        HibernateDatastore primaryDatastore = getHibernateDatastore().getPrimaryDatastore()
+        return (T) grails.gorm.multitenancy.Tenants.withId((org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore)primaryDatastore, tenantId) { id, session ->
+            callable.call(session)
+        }
+    }
+
+    @Override
+    List<D> list(Map params) {
+        PersistentEntity entity = getGormPersistentEntity()
+        HqlQueryContext ctx = HqlQueryContext.prepare(entity, null, null, null, params, new HashMap<>(), false, false)
+        GormQuery q = HibernateHqlQueryCreator.createHqlQuery(getHibernateDatastore(), getHibernateDatastore().getSessionFactory(), entity, ctx)
+        if (HqlListQueryBuilder.isPaged(params)) {
+            return (List<D>) new PagedResultList(q)
+        }
+        return (List<D>) q.list()
+    }
+
+    @Override
+    List executeQuery(CharSequence query, Map params, Map args) {
+        PersistentEntity entity = getGormPersistentEntity()
+        HqlQueryContext ctx = HqlQueryContext.prepare(entity, query, params, null, args, new HashMap<>(), false, false)
+        return (List) HibernateHqlQueryCreator.createHqlQuery(getHibernateDatastore(), getHibernateDatastore().getSessionFactory(), entity, ctx).list()
     }
 
     @Override
@@ -303,28 +261,104 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     }
 
     @Override
+    List executeQuery(CharSequence query, Map params) {
+        return executeQuery(query, params, params)
+    }
+
+    @Override
+    List executeQuery(CharSequence query, Collection params) {
+        return executeQuery(query, params, Collections.emptyMap())
+    }
+
+    @Override
+    List executeQuery(CharSequence query, Collection params, Map args) {
+        PersistentEntity entity = getGormPersistentEntity()
+        HqlQueryContext ctx = HqlQueryContext.prepare(entity, query, null, params, args, new HashMap<>(), false, false)
+        return (List) HibernateHqlQueryCreator.createHqlQuery(getHibernateDatastore(), getHibernateDatastore().getSessionFactory(), entity, ctx).list()
+    }
+
+    @Override
+    List executeQuery(CharSequence query, Object... params) {
+        return executeQuery(query, Arrays.asList(params))
+    }
+
+    @Override
+    grails.gorm.api.GormAllOperations<D> eachTenant(Closure callable) {
+        grails.gorm.multitenancy.Tenants.eachTenant((Class<? extends Datastore>)getDatastore().getClass()) { Serializable tenantId ->
+            withTenant(tenantId).withSession {
+                callable.call(tenantId)
+            }
+        }
+        return this
+    }
+
+    @Override
+    grails.gorm.api.GormAllOperations<D> withTenant(Serializable tenantId) {
+        HibernateDatastore hibernateDatastore = (HibernateDatastore) ((org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore)getDatastore()).getDatastoreForTenantId(tenantId)
+        final org.grails.datastore.gorm.DatastoreResolver resolver = new org.grails.datastore.gorm.DatastoreResolver() {
+            @Override Datastore resolve() { hibernateDatastore }
+        }
+        return (grails.gorm.api.GormAllOperations<D>) new HibernateGormStaticApi<D>(persistentClass, hibernateDatastore, finders, resolver, tenantId.toString(), classLoader)
+    }
+
+    @Override
+    def <T1> T1 withTenant(Serializable tenantId, Closure<T1> callable) {
+        HibernateDatastore primaryDatastore = getHibernateDatastore().getPrimaryDatastore()
+        return (T1) grails.gorm.multitenancy.Tenants.withId((org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore)primaryDatastore, tenantId) { id, session ->
+            if (callable.maximumNumberOfParameters == 2) {
+                callable.call(tenantId, session)
+            } else {
+                callable.call(session)
+            }
+        }
+    }
+
+    @Override
+    D find(CharSequence query, Map params, Map args) {
+        PersistentEntity entity = getGormPersistentEntity()
+        HqlQueryContext ctx = HqlQueryContext.prepare(entity, query, params, null, args, new HashMap<>(), false, false)
+        ctx.querySettings().put(DynamicFinder.ARGUMENT_MAX, 1)
+        List results = HibernateHqlQueryCreator.createHqlQuery(getHibernateDatastore(), getHibernateDatastore().getSessionFactory(), entity, ctx).list()
+        return results ? (D) results[0] : null
+    }
+
+    @Override
     D find(CharSequence query) {
         doSingleInternal(query, [:], [], [:], false)
     }
 
     @Override
     D find(CharSequence query, Map params) {
-        doSingleInternal(query, params, [], params, false)
+        return find(query, params, Collections.emptyMap())
+    }
+
+    @Override
+    D find(CharSequence query, Collection params) {
+        return find(query, params, Collections.emptyMap())
+    }
+
+    @Override
+    D find(CharSequence query, Collection params, Map args) {
+        PersistentEntity entity = getGormPersistentEntity()
+        HqlQueryContext ctx = HqlQueryContext.prepare(entity, query, null, params, args, new HashMap<>(), false, false)
+        ctx.querySettings().put(DynamicFinder.ARGUMENT_MAX, 1)
+        List results = HibernateHqlQueryCreator.createHqlQuery(getHibernateDatastore(), getHibernateDatastore().getSessionFactory(), entity, ctx).list()
+        return results ? (D) results[0] : null
     }
 
     @Override
     List<D> findAll(CharSequence query, Map params) {
-        doListInternal(query, params, [], params, false)
+        return findAll(query, params, Collections.emptyMap())
     }
 
     @Override
-    List executeQuery(CharSequence query, Map args) {
-        doListInternal(query, args, [], args, false)
+    List<D> findAll(CharSequence query, Collection params) {
+        return findAll(query, params, Collections.emptyMap())
     }
 
     @Override
-    Integer executeUpdate(CharSequence query, Map args) {
-        doInternalExecuteUpdate(query, args, [], args)
+    List<D> findAll(CharSequence query, Object[] params) {
+        return findAll(query, Arrays.asList(params))
     }
 
     @Override
@@ -334,6 +368,58 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     }
 
     @Override
+    @CompileDynamic
+    D read(Serializable id) {
+        if (id == null) return null
+        id = convertIdentifier(id)
+        if (id == null) return null
+        def template = getHibernateTemplate()
+        return (D) template.execute { org.hibernate.Session session ->
+            D entity = (D) session.get(persistentClass, id)
+            if (entity != null) {
+                session.setReadOnly(entity, true)
+            }
+            entity
+        }
+    }
+
+    @Override
+    @CompileDynamic
+    D proxy(Serializable id) {
+        if (id == null) return null
+        id = convertIdentifier(id)
+        if (id == null) return null
+        def proxyFactory = getHibernateDatastore().mappingContext.getProxyFactory()
+        if (proxyFactory instanceof GroovyProxyFactory) {
+            return execute({ org.grails.datastore.mapping.core.Session session ->
+                session.proxy(persistentClass, id)
+            } as SessionCallback<D>)
+        }
+        return (D) getHibernateTemplate().load(persistentClass, id)
+    }
+
+    @Override
+    D load(Serializable id) {
+        if (id == null) return null
+        id = convertIdentifier(id)
+        if (id == null) return null
+        return (D) getHibernateTemplate().load(persistentClass, id)
+    }
+
+    @Override
+    @CompileDynamic
+    D last(Map params) {
+        Map p = new LinkedHashMap(params ?: [:])
+        if (!p.containsKey(DynamicFinder.ARGUMENT_ORDER)) {
+            p.put(DynamicFinder.ARGUMENT_ORDER, 'desc')
+        }
+        p.put(DynamicFinder.ARGUMENT_MAX, 1)
+        List<D> results = list(p)
+        results ? results.get(0) : null
+    }
+
+    @Override
+    @CompileDynamic
     List<D> findAllWhere(Map queryMap, Map args) {
         if (!queryMap) return null
         executeListHqlQuery(prepareWhereHqlQuery(queryMap, buildQuerySettings(args)))
@@ -352,17 +438,19 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     }
 
     private String buildWhereHql(Map<String, Object> queryMap) {
+        PersistentEntity pe = gormPersistentEntity
         String whereClause = queryMap.collect { String key, Object value ->
             String propertyName = validateWherePropertyName(key)
             value == null ? "$propertyName is null" : "$propertyName = :$propertyName"
         }.join(' and ')
-        return "from ${persistentEntity.name} where $whereClause"
+        return "from ${pe.name} where $whereClause"
     }
 
     private String validateWherePropertyName(String propertyName) {
-        PersistentProperty property = persistentEntity.getPropertyByName(propertyName)
+        PersistentEntity pe = gormPersistentEntity
+        PersistentProperty property = pe.getPropertyByName(propertyName)
         if (property == null || property.name != propertyName) {
-            throw new IllegalArgumentException("Property [$propertyName] is not a valid property of ${persistentEntity.name}")
+            throw new IllegalArgumentException("Property [$propertyName] is not a valid property of ${pe.name}")
         }
         return propertyName
     }
@@ -383,14 +471,34 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         return queryArgs
     }
 
-    @Override
-    List executeQuery(CharSequence query, Map namedParams, Map args) {
-        doListInternal(query, namedParams, [], args, false)
+    @CompileDynamic
+    protected Serializable convertIdentifier(Serializable id) {
+        try {
+            PersistentEntity pe = getGormPersistentEntity()
+            PersistentProperty identity = pe.getIdentity()
+            Class identityType = identity != null ? identity.type : id.getClass()
+            if (!identityType.isInstance(id)) {
+                ConversionService conversionService = pe.mappingContext.conversionService
+                if (conversionService.canConvert(id.class, identityType)) {
+                    return (Serializable) conversionService.convert(id, identityType)
+                }
+                return null
+            }
+            return id
+        }
+        catch (Throwable e) {
+            return null
+        }
     }
 
     @Override
-    List executeQuery(CharSequence query, Collection positionalParams, Map args) {
-        return doListInternal(query, [:], positionalParams, args, false)
+    Integer executeUpdate(CharSequence query, Map params) {
+        return executeUpdate(query, params, Collections.emptyMap())
+    }
+
+    @Override
+    Integer executeUpdate(CharSequence query, Collection params) {
+        return executeUpdate(query, params, Collections.emptyMap())
     }
 
     @Override
@@ -400,9 +508,11 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     private List<D> getAllInternal(List ids) {
         if (!ids) return []
+        PersistentEntity persistentEntity = gormPersistentEntity
         String idName = persistentEntity.identity.name
         String entity = persistentEntity.name
         Class<?> idType = persistentEntity.identity.type
+        ConversionService conversionService = persistentEntity.mappingContext.conversionService
         List convertedIds = ids.collect { HibernateRuntimeUtils.convertValueToType(it, idType, conversionService) }
         List<D> results = doListInternal("from $entity where $idName in (:ids)" as String, [ids: convertedIds], [], [:], false)
         Map<Object, D> byId = results.collectEntries { [(it[idName]): it] }
@@ -415,10 +525,10 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     }
 
     protected List<D> doListInternal(CharSequence hql,
-                                   Map namedParams,
-                                   Collection positionalParams,
-                                   Map args
-                                    , boolean isNative) {
+                                     Map namedParams,
+                                     Collection positionalParams,
+                                     Map args,
+                                     boolean isNative) {
         GormQuery hqlQuery = prepareHqlQuery(hql, isNative, false, namedParams, positionalParams, args)
         executeListHqlQuery(hqlQuery)
     }
@@ -434,8 +544,8 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     private D doSingleInternal(CharSequence hql,
                                Map namedParams,
                                Collection positionalParams,
-                               Map args, Map hints = [:], boolean isNative
-    ) {
+                               Map args,
+                               boolean isNative) {
         GormQuery hqlQuery = prepareHqlQuery(hql, isNative, false, namedParams, positionalParams, args)
         executeSingleHqlQuery(hqlQuery)
     }
@@ -469,94 +579,163 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         return (Integer) execute
     }
 
-    @SuppressWarnings('GroovyAssignabilityCheck')
-    protected GormQuery prepareHqlQuery(CharSequence hql
-                                        , boolean isNative
-                                        , boolean isUpdate
-                                        , Map<String, Object> namedParams
-                                        , Collection<Object> positionalParams
-                                        , Map<String, Object> querySettings
-                                        , Map<String, Object> hints = [:]) {
-        if (hints.isEmpty() && querySettings != null) {
-            hints = querySettings.findAll { AvailableHints.getDefinedHints().contains(it.key) }
-        }
-        Map<String, Object> coercedParams = namedParams?.collectEntries { k, v -> [k.toString(), v] } ?: [:]
-        def ctx = HqlQueryContext.prepare(persistentEntity, hql, coercedParams, positionalParams, querySettings, hints, isNative, isUpdate)
-        return HibernateHqlQueryCreator.createHqlQuery(
-                (HibernateDatastore) datastore,
-                sessionFactory,
-                persistentEntity,
-                ctx
-        )
+    @Override
+    @CompileDynamic
+    List<D> findAll(D example, Map args) {
+        execute({ Session session ->
+            def query = session.createQuery(persistentClass)
+            populateQueryByExample(session, query, example)
+            if (query.allCriteria.isEmpty()) {
+                return null
+            }
+            Integer max = ClassUtils.getIntegerFromMap(DynamicFinder.ARGUMENT_MAX, args)
+            Integer offset = ClassUtils.getIntegerFromMap(DynamicFinder.ARGUMENT_OFFSET, args)
+            if (max != null) {
+                query.max(max.intValue())
+            }
+            if (offset != null) {
+                query.offset(offset.intValue())
+            }
+            query.list()
+        } as SessionCallback<List<D>>)
     }
 
-    protected Serializable convertIdentifier(Serializable id) {
-        def identity = persistentEntity.identity
-        if (identity != null) {
-            ConversionService conversionService = persistentEntity.mappingContext.conversionService
-            if (id != null) {
-                Class identityType = identity.type
-                Class idInstanceType = id.getClass()
-                if (identityType.isAssignableFrom(idInstanceType)) {
-                    return id
-                } else if (conversionService.canConvert(idInstanceType, identityType)) {
-                    try {
-                        return (Serializable) conversionService.convert(id, identityType)
+    @Override
+    @CompileDynamic
+    D find(D example, Map args) {
+        execute({ Session session ->
+            def query = session.createQuery(persistentClass)
+            populateQueryByExample(session, query, example)
+            if (query.allCriteria.isEmpty()) {
+                return null
+            }
+            query.singleResult()
+        } as SessionCallback<D>)
+    }
+
+    protected void populateQueryByExample(Session session, GormQuery query, D example) {
+        PersistentEntity pe = getGormPersistentEntity()
+        MappingContext mappingContext = pe.mappingContext
+        def ea = mappingContext.createEntityAccess(pe, example)
+        def id = ea.getIdentifier()
+        if (id != null) {
+            query.add(Restrictions.eq(pe.identity.name, id))
+        }
+        else {
+            for (prop in pe.persistentProperties) {
+                if (prop.name == GormProperties.VERSION) {
+                    continue
+                }
+                if (prop instanceof Simple || prop instanceof Basic) {
+                    def val = ea.getProperty(prop.name)
+                    if (val != null) {
+                        query.add(Restrictions.eq(prop.name, val))
                     }
-                    catch (Throwable ignored) {
-                        return null
-                    }
-                } else {
-                    return null
                 }
             }
         }
-        return id
     }
 
-    @Override
-    List<D> list(Map params = Collections.emptyMap()) {
-        firePreQueryEvent()
-        HqlListQueryBuilder builder = new HqlListQueryBuilder((GrailsHibernatePersistentEntity) persistentEntity, params)
-        String hql = builder.buildListHql()
-        HqlQueryContext ctx = HqlQueryContext.prepare(persistentEntity, hql, Collections.emptyMap(), Collections.emptyList(), params, new HashMap<String, Object>(), false, false)
-        GormQuery hqlQuery = HibernateHqlQueryCreator.createHqlQuery(
-                (HibernateDatastore) datastore,
-                sessionFactory,
+    protected void populateQueryArguments(org.hibernate.query.Query q, Map args) {
+        if (args == null || args.isEmpty()) return
+
+        Map argsToUse = new HashMap(args)
+        Integer max = intValue(argsToUse, DynamicFinder.ARGUMENT_MAX)
+        if (max != null) {
+            q.setMaxResults(max)
+        }
+        Integer offset = intValue(argsToUse, DynamicFinder.ARGUMENT_OFFSET)
+        if (offset != null) {
+            q.setFirstResult(offset)
+        }
+
+        if (argsToUse.containsKey(DynamicFinder.ARGUMENT_CACHE)) {
+            q.setCacheable(org.grails.datastore.mapping.reflect.ClassUtils.getBooleanFromMap(DynamicFinder.ARGUMENT_CACHE, argsToUse))
+        }
+        if (argsToUse.containsKey(DynamicFinder.ARGUMENT_FETCH_SIZE)) {
+            Object fetchSize = argsToUse.remove(DynamicFinder.ARGUMENT_FETCH_SIZE)
+            if (fetchSize instanceof Number) {
+                q.setFetchSize(((Number) fetchSize).intValue())
+            }
+        }
+        if (argsToUse.containsKey(DynamicFinder.ARGUMENT_TIMEOUT)) {
+            Object timeout = argsToUse.remove(DynamicFinder.ARGUMENT_TIMEOUT)
+            if (timeout instanceof Number) {
+                q.setTimeout(((Number) timeout).intValue())
+            }
+        }
+        if (argsToUse.containsKey(DynamicFinder.ARGUMENT_READ_ONLY)) {
+            q.setReadOnly((Boolean) argsToUse.remove(DynamicFinder.ARGUMENT_READ_ONLY))
+        }
+        if (argsToUse.containsKey(DynamicFinder.ARGUMENT_FLUSH_MODE)) {
+            Object flushMode = argsToUse.remove(DynamicFinder.ARGUMENT_FLUSH_MODE)
+            if (flushMode instanceof FlushMode) {
+                q.setHibernateFlushMode((FlushMode) flushMode)
+            } else if (flushMode instanceof String) {
+                q.setHibernateFlushMode(FlushMode.valueOf(flushMode.toString().toUpperCase()))
+            }
+        }
+    }
+
+    protected Integer intValue(Map args, String name) {
+        Object val = args.get(name)
+        if (val instanceof Number) {
+            return ((Number) val).intValue()
+        } else if (val != null) {
+            try {
+                return Integer.valueOf(val.toString())
+            } catch (NumberFormatException e) {
+                return null
+            }
+        }
+        return null
+    }
+
+    protected String buildOrdinalParameterQueryFromGString(GString query, List params) {
+        StringBuilder sqlString = new StringBuilder()
+        int i = 0
+        Object[] values = query.values
+        String[] strings = query.getStrings()
+        for (String str in strings) {
+            sqlString.append(str)
+            if (i < values.length) {
+                sqlString.append('?')
+                params.add(values[i++])
+            }
+        }
+        return sqlString.toString()
+    }
+
+    @SuppressWarnings('GroovyAssignabilityCheck')
+    protected GormQuery prepareHqlQuery(CharSequence hql,
+                                        boolean isNative,
+                                        boolean isUpdate,
+                                        Map namedParams,
+                                        Collection positionalParams,
+                                        Map args) {
+        PersistentEntity persistentEntity = gormPersistentEntity
+        Map<String, Object> coercedParams = namedParams?.collectEntries { k, v -> [k.toString(), v] } ?: [:]
+        Map<String, Object> coercedArgs = args?.collectEntries { k, v -> [k.toString(), v] } ?: [:]
+        def ctx = HqlQueryContext.prepare(persistentEntity, hql, coercedParams, positionalParams, coercedArgs, new HashMap<>(), isNative, isUpdate)
+        return HibernateHqlQueryCreator.createHqlQuery(
+                getHibernateDatastore(),
+                getHibernateDatastore().getSessionFactory(),
                 persistentEntity,
                 ctx
         )
-        if (params.containsKey('max')) {
-            return new HibernatePagedResultList(getHibernateTemplate(), persistentEntity, hqlQuery)
-        }
-        List<D> result = (List<D>) hqlQuery.list()
-        firePostQueryEvent(result)
-        result
-    }
-
-    @Override
-    def propertyMissing(String name) {
-        if (datastore instanceof ConnectionSourcesProvider) {
-            return HibernateGormEnhancer.findStaticApi(persistentClass, name)
-        } else {
-            throw new MissingPropertyException(name, persistentClass)
-        }
-    }
-
-    @Override
-    GrailsCriteria createCriteria() {
-        return new HibernateCriteriaBuilder(persistentClass, sessionFactory, (HibernateDatastore) datastore)
     }
 
     protected void firePostQueryEvent(Object result) {
-        def hibernateQuery = new HibernateQuery(new HibernateSession((HibernateDatastore) datastore, sessionFactory), (GrailsHibernatePersistentEntity) persistentEntity)
+        def hibernateSession = new HibernateSession(getHibernateDatastore(), getHibernateDatastore().getSessionFactory())
+        def hibernateQuery = new HibernateQuery(hibernateSession, (GrailsHibernatePersistentEntity) gormPersistentEntity)
         def list = result instanceof List ? (List) result : Collections.singletonList(result)
-        datastore.applicationEventPublisher.publishEvent(new PostQueryEvent(datastore, hibernateQuery, list))
+        getHibernateDatastore().applicationEventPublisher.publishEvent(new PostQueryEvent(getHibernateDatastore(), hibernateQuery, list))
     }
 
     protected void firePreQueryEvent() {
-        def hibernateSession = new HibernateSession((HibernateDatastore) datastore, sessionFactory)
-        def hibernateQuery = new HibernateQuery(hibernateSession, (GrailsHibernatePersistentEntity) persistentEntity)
-        datastore.applicationEventPublisher.publishEvent(new PreQueryEvent(datastore, hibernateQuery))
+        def hibernateSession = new HibernateSession(getHibernateDatastore(), getHibernateDatastore().getSessionFactory())
+        def hibernateQuery = new HibernateQuery(hibernateSession, (GrailsHibernatePersistentEntity) gormPersistentEntity)
+        getHibernateDatastore().applicationEventPublisher.publishEvent(new PreQueryEvent(getHibernateDatastore(), hibernateQuery))
     }
+
 }

@@ -42,20 +42,18 @@ public class SchemaTenantGormEnhancer extends HibernateGormEnhancer {
     private final HibernateConnectionSource defaultConnectionSource;
     private final TenantResolver tenantResolver;
     private final SchemaHandler schemaHandler;
-    private final Map<String, HibernateDatastore> datastoresByConnectionSource;
 
     public SchemaTenantGormEnhancer(
-            Datastore datastore,
+            HibernateDatastore datastore,
             PlatformTransactionManager transactionManager,
             HibernateConnectionSource defaultConnectionSource,
             TenantResolver tenantResolver,
             SchemaHandler schemaHandler,
             Map<String, HibernateDatastore> datastoresByConnectionSource) {
-        super(datastore, transactionManager, defaultConnectionSource.getSettings());
+        super(datastore, transactionManager, defaultConnectionSource.getSettings(), datastoresByConnectionSource);
         this.defaultConnectionSource = defaultConnectionSource;
         this.tenantResolver = tenantResolver;
         this.schemaHandler = schemaHandler;
-        this.datastoresByConnectionSource = datastoresByConnectionSource;
         // super() calls registerEntity → allQualifiers before our fields are set.
         // Re-register now that all fields are initialized so schema qualifiers are wired correctly.
         for (PersistentEntity entity : datastore.getMappingContext().getPersistentEntities()) {

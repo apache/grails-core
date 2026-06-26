@@ -43,8 +43,8 @@ class WhereQueryMultiDataSourceSpec extends Specification {
             'hibernate.flush.mode': 'COMMIT',
             'hibernate.cache.queries': 'true',
             'hibernate.hbm2ddl.auto': 'create-drop',
-            'dataSources.secondary':[url:"jdbc:h2:mem:secondaryDB;LOCK_TIMEOUT=10000"],
-    ]
+            'dataSources.secondary.url':"jdbc:h2:mem:secondaryDB;LOCK_TIMEOUT=10000"]
+    
 
     @Shared @AutoCleanup HibernateDatastore datastore = new HibernateDatastore(
             DatastoreUtils.createPropertyResolver(config), Item
