@@ -27,6 +27,18 @@ This release focuses on enhancing the developer experience, improving performanc
 For detailed information on how to upgrade to Grails {grailsMajorVersion}, including major dependency changes, please see the xref:upgrading#upgrading80x[Upgrading from Grails 7 to Grails {grailsMajorVersion}] section.
 Notable new features are included below.
 
+==== Platform Baseline
+
+Grails {grailsMajorVersion} raises the standard build and runtime baseline to Java 21 and uses Gradle {gradleVersion}.
+The standard Grails BOM remains on Groovy {groovyVersion} and Spock {spockVersion}, while Micronaut-enabled Grails applications use Micronaut-specific BOM variants that align with Micronaut 5 and require JDK 25 or later.
+
+==== Spring Boot 4.1 and Spring Framework 7
+
+Grails {grailsMajorVersion} is built on Spring Boot {springBootVersion} and Spring Framework {springVersion}.
+This brings the Spring Boot 4 modular artifact layout, Spring Framework 7 API removals, Jackson 3, Tomcat 11 and Jakarta Servlet 6.1, plus Spring Boot 4.1 dependency management for Spring Security 7.1, Spring Data 2026.0 and Micrometer 1.17.
+
+The Grails 8 upgrade guide calls out the major application-impacting changes and links to the Spring Boot 4.0 migration guide, Spring Boot 4.1 release notes and Spring Framework 7.0 release notes.
+
 ==== GSP Tag Library Improvements
 
 Grails {grailsMajorVersion} continues the move toward method-based TagLib handlers while preserving compatibility with existing closure-based tags.
@@ -90,4 +102,3 @@ A single property can likewise declare a `$text` index — or another special ty
 When the options of an already-created index change between restarts, GORM now reconciles the difference instead of only
 logging a conflict. A changed TTL is applied in place with MongoDB's `collMod` command — no drop, no rebuild — while any
 other option change is applied by declaring `indexAttributes: [recreateOnConflict: true]`.
-
