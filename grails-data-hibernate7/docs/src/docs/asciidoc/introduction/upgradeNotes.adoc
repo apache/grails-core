@@ -54,17 +54,14 @@ Book.executeQuery("from Book where title like ?1", [params.title + '%'])
 
 As in any ORM, manually concatenating untrusted input into a plain `String` (for example `"... where title = '" + userInput + "'"`) remains an injection risk and should be avoided in favour of the GString or parameterized forms above.
 
-===== `findWithSql` / `findAllWithSql` renamed
+===== SQL query helpers
 
-`findWithSql` and `findAllWithSql` are deprecated. Use `findWithNativeSql` and `findAllWithNativeSql` instead. The old names remain as delegating aliases for backwards compatibility.
+Hibernate 7 keeps the Hibernate 5 method names for raw SQL query helpers:
 
 [source,groovy]
 ----
-// Before (deprecated)
+Book.findWithSql("select * from book where id = ${params.id}")
 Book.findAllWithSql("select * from book where ...")
-
-// After
-Book.findAllWithNativeSql("select * from book where ...")
 ----
 
 ==== Schema-per-Tenant — Schema Names Are Now Quoted

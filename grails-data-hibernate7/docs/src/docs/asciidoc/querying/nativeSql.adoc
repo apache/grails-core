@@ -18,11 +18,11 @@ under the License.
 ////
 
 [[querying-native-sql]]
-== Native SQL Queries
+== SQL Queries
 
-GORM provides `findWithNativeSql` and `findAllWithNativeSql` for executing raw SQL when HQL or the Criteria API cannot express the query you need (e.g. database-specific functions, complex joins, or legacy SQL).
+GORM provides `findWithSql` and `findAllWithSql` for executing raw SQL when HQL or the Criteria API cannot express the query you need (e.g. database-specific functions, complex joins, or legacy SQL).
 
-WARNING: Native SQL bypasses Hibernate's type system and object mapping. Prefer HQL, the Criteria API, or dynamic finders wherever possible. Use native SQL only when there is no higher-level alternative.
+WARNING: Raw SQL bypasses Hibernate's type system and object mapping. Prefer HQL, the Criteria API, or dynamic finders wherever possible. Use SQL only when there is no higher-level alternative.
 
 === Methods
 
@@ -30,20 +30,20 @@ WARNING: Native SQL bypasses Hibernate's type system and object mapping. Prefer 
 |===
 | Method | Description
 
-| `findWithNativeSql(CharSequence sql)`
+| `findWithSql(CharSequence sql)`
 | Returns the first result mapped to the domain class
 
-| `findWithNativeSql(CharSequence sql, Map args)`
+| `findWithSql(CharSequence sql, Map args)`
 | Returns the first result; `args` controls pagination (`max`, `offset`, `cache`)
 
-| `findAllWithNativeSql(CharSequence sql)`
+| `findAllWithSql(CharSequence sql)`
 | Returns all results mapped to the domain class
 
-| `findAllWithNativeSql(CharSequence sql, Map args)`
+| `findAllWithSql(CharSequence sql, Map args)`
 | Returns all results; `args` controls pagination
 |===
 
-=== Safe Usage — GString Value Parameters
+=== Safe Usage - GString Value Parameters
 
 When a query contains user-supplied **values** (not identifiers), use Groovy GString interpolation. GORM extracts each `${expression}` and binds it as a named JDBC parameter, preventing injection.
 
@@ -51,8 +51,8 @@ When a query contains user-supplied **values** (not identifiers), use Groovy GSt
 ----
 String nameFilter = params.name  // user input
 
-// ✅ SAFE — ${nameFilter} is bound as :p0, never inlined into the SQL string
-List results = Club.findAllWithNativeSql(
+// SAFE - ${nameFilter} is bound as :p0, never inlined into the SQL string
+List results = Club.findAllWithSql(
     "select * from club c where c.name like ${nameFilter} order by c.name")
 ----
 
@@ -62,36 +62,23 @@ A plain `String` constant with no user data is safe and accepted directly.
 
 [source,groovy]
 ----
-// ✅ SAFE — no user input, static SQL
-List results = Club.findAllWithNativeSql(
+// SAFE - no user input, static SQL
+List results = Club.findAllWithSql(
     "select * from club c order by c.name")
 ----
 
 === What Cannot Be Parameterized
 
-SQL identifiers — table names, column names, schema names — **cannot** be bound as JDBC parameters. Do not interpolate them from user input under any circumstances.
+SQL identifiers - table names, column names, schema names - **cannot** be bound as JDBC parameters. Do not interpolate them from user input under any circumstances.
 
 [source,groovy]
 ----
-// ❌ UNSAFE — table name from user input, cannot be made safe via GString
+// UNSAFE - table name from user input, cannot be made safe via GString
 String table = params.table
-Club.findAllWithNativeSql("select * from ${table}")  // DO NOT DO THIS
+Club.findAllWithSql("select * from ${table}")  // DO NOT DO THIS
 
-// ❌ UNSAFE — string concatenation, no protection at all
-Club.findAllWithNativeSql("select * from club where name = '" + userInput + "'")
+// UNSAFE - string concatenation, no protection at all
+Club.findAllWithSql("select * from club where name = '" + userInput + "'")
 ----
 
-If you need dynamic identifiers (e.g. schema-per-tenant), use the JDBC identifier quoting API (`connection.metaData.identifierQuoteString`) to quote and sanitize the name before use — the same mechanism used internally by `DefaultSchemaHandler`.
-
-=== Deprecated Names
-
-`findWithSql` and `findAllWithSql` are deprecated aliases for `findWithNativeSql` and `findAllWithNativeSql`. They remain functional for backwards compatibility but will be removed in a future release.
-
-[source,groovy]
-----
-// Deprecated — replace with findAllWithNativeSql
-Club.findAllWithSql("select * from club")
-
-// Preferred
-Club.findAllWithNativeSql("select * from club")
-----
+If you need dynamic identifiers (e.g. schema-per-tenant), use the JDBC identifier quoting API (`connection.metaData.identifierQuoteString`) to quote and sanitize the name before use - the same mechanism used internally by `DefaultSchemaHandler`.
