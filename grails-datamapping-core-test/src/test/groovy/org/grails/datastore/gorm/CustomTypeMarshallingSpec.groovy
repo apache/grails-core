@@ -75,7 +75,6 @@ class CustomTypeMarshallingSpec extends GrailsDataTckSpec<GrailsDataCoreTckManag
     }
 
     @Issue("https://github.com/apache/grails-core/issues/4546")
-    @PendingFeature(reason = 'Was previously @Ignore')
     void "can re-save an existing instance without modifications"() {
         given:
         def p = Person.findByName("Fred")

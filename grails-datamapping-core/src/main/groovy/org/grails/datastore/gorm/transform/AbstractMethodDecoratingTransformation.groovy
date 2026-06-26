@@ -81,7 +81,7 @@ import static org.grails.datastore.mapping.reflect.AstUtils.processVariableScope
 @CompileStatic
 abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTransformation {
 
-    private static final Set<String> METHOD_NAME_EXCLUDES = new HashSet<String>(Arrays.asList('afterPropertiesSet', 'destroy'))
+    private static final Set<String> METHOD_NAME_EXCLUDES = new HashSet<String>(Arrays.asList('afterPropertiesSet', 'destroy', 'getTargetDatastore', 'setTargetDatastore', 'getTransactionManager', 'setTransactionManager'))
     private static final Set<String> ANNOTATION_NAME_EXCLUDES = new HashSet<String>(Arrays.asList(PostConstruct.getName(), PreDestroy.getName(), 'grails.web.controllers.ControllerMethod'))
     /**
      * Key used to store within the original method node metadata, all previous decorated methods
@@ -124,6 +124,7 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
             if (!md.isSynthetic() && Modifier.isPublic(modifiers) && !Modifier.isAbstract(modifiers) &&
                     !Modifier.isStatic(modifiers) && !hasJunitAnnotation(md)) {
                 if (hasExcludedAnnotation(md)) continue
+                if (hasLocalAnnotation(md, annotationNode)) continue
 
                 def startsWithSpock = methodName.startsWith('$spock')
                 if (methodName.contains('$') && !startsWithSpock) continue
@@ -392,6 +393,10 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
             }
         }
         return excludedAnnotation
+    }
+
+    protected boolean hasLocalAnnotation(MethodNode amd, AnnotationNode classAnnotation) {
+        return hasAnnotation(amd, classAnnotation.classNode)
     }
 
 }
