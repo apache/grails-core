@@ -18,11 +18,10 @@
  */
 package org.grails.orm.hibernate.connections
 
-import org.grails.datastore.mapping.core.DatastoreUtils
-import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.gorm.jdbc.connections.DataSourceConnectionSourceFactory
 import org.grails.datastore.gorm.jdbc.schema.DefaultSchemaHandler
-import org.hibernate.dialect.Oracle8iDialect
+import org.grails.datastore.mapping.core.DatastoreUtils
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 import spock.lang.Specification
 
 /**
@@ -36,7 +35,6 @@ class DataSourceConnectionSourceFactorySpec extends Specification {
         Map config = [
                 'dataSource.url':"jdbc:h2:mem:dsConnDsFactorySpecDb;LOCK_TIMEOUT=10000",
                 'dataSource.dbCreate': 'update',
-                'dataSource.dialect': Oracle8iDialect.name,
                 'dataSource.properties.dbProperties': [useSSL: false]
         ]
         def connectionSource = factory.create(ConnectionSource.DEFAULT, DatastoreUtils.createPropertyResolver(config))

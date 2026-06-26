@@ -23,7 +23,9 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 import groovy.lang.Closure;
 
@@ -125,6 +127,25 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
     public static final String SETTING_STATELESS = MongoSettings.SETTING_STATELESS;
     public static final String SETTING_ENGINE = MongoSettings.SETTING_ENGINE;
     public static final String INDEX_ATTRIBUTES = "indexAttributes";
+
+    /**
+     * TTL index attribute. MongoDB's {@link IndexOptions#expireAfter(Long, TimeUnit)} is the only
+     * way to set a TTL, but it is a two-argument setter that {@link MongoConstants#mapToObject}
+     * cannot reach (that helper only invokes single-argument setters). So {@code expireAfterSeconds}
+     * is pulled out of the index attributes and applied explicitly. TTL indexes are single-field
+     * only — MongoDB silently ignores the option on a compound index.
+     */
+    public static final String INDEX_EXPIRE_AFTER_SECONDS = "expireAfterSeconds";
+
+    /**
+     * Opt-in index attribute: when an index already exists on the same keys with conflicting
+     * options that cannot be reconciled in place (i.e. anything other than a TTL change), drop the
+     * existing index and recreate it with the declared options instead of just logging the conflict.
+     */
+    public static final String INDEX_RECREATE_ON_CONFLICT = "recreateOnConflict";
+
+    /** MongoDB server error code for {@code IndexOptionsConflict}. */
+    private static final int INDEX_OPTIONS_CONFLICT_CODE = 85;
     public static final String CODEC_ENGINE = MongoConstants.CODEC_ENGINE;
 
     protected final MongoClient mongo;
@@ -282,7 +303,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param mappingContext The mapping context
      */
     public MongoDatastore(MongoClient mongoClient, PropertyResolver configuration, MongoMappingContext mappingContext, ConfigurableApplicationEventPublisher eventPublisher) {
-        this(createDefaultConnectionSources(mongoClient, configuration, mappingContext), mappingContext, eventPublisher);
+        // The client is supplied by the caller, so GORM must not close it (closeable = false).
+        this(createDefaultConnectionSources(mongoClient, configuration, mappingContext, false), mappingContext, eventPublisher);
     }
 
     /**
@@ -346,7 +368,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param mappingContext The mapping context
      */
     public MongoDatastore(MongoClientSettings.Builder clientOptions, PropertyResolver configuration, MongoMappingContext mappingContext, ConfigurableApplicationEventPublisher eventPublisher) {
-        this(createMongoClient(configuration, clientOptions, mappingContext), configuration, mappingContext, eventPublisher);
+        // GORM builds the client from the supplied options, so it owns it and must close it (closeable = true).
+        this(createDefaultConnectionSources(createMongoClient(configuration, clientOptions, mappingContext), configuration, mappingContext, true), mappingContext, eventPublisher);
     }
 
     /**
@@ -357,7 +380,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * @param mappingContext The mapping context
      */
     public MongoDatastore(MongoClientSettings.Builder clientOptions, PropertyResolver configuration, MongoMappingContext mappingContext) {
-        this(createMongoClient(configuration, clientOptions, mappingContext), configuration, mappingContext, new DefaultApplicationEventPublisher());
+        // GORM builds the client from the supplied options, so it owns it and must close it (closeable = true).
+        this(createDefaultConnectionSources(createMongoClient(configuration, clientOptions, mappingContext), configuration, mappingContext, true), mappingContext, new DefaultApplicationEventPublisher());
     }
 
     /**
@@ -845,13 +869,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
             if (mappedForm != null) {
                 List<MongoCollection.Index> indices = mappedForm.getIndices();
                 for (MongoCollection.Index index : indices) {
-                    final Map<String, Object> options = index.getOptions();
-                    final IndexOptions indexOptions = MongoConstants.mapToObject(IndexOptions.class, options);
-                    try {
-                        collection.createIndex(new Document(index.getDefinition()), indexOptions);
-                    } catch (MongoCommandException e) {
-                        LOG.error("Failed to create index for entity [" + entity.getName() + "] with definition [" + index.getDefinition() + "]: " + e.getMessage(), e);
-                    }
+                    createOrUpdateIndex(entity, collection, new Document(index.getDefinition()),
+                            index.getOptions(), "with definition [" + index.getDefinition() + "]");
                 }
 
                 for (Map compoundIndex : mappedForm.getCompoundIndices()) {
@@ -864,16 +883,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
                         }
                     }
                     Document indexDef = new Document(compoundIndex);
-                    try {
-                        if (indexAttributes != null) {
-                            final IndexOptions indexOptions = MongoConstants.mapToObject(IndexOptions.class, indexAttributes);
-                            collection.createIndex(indexDef, indexOptions);
-                        } else {
-                            collection.createIndex(indexDef);
-                        }
-                    } catch (MongoCommandException e) {
-                        LOG.error("Failed to create compound index for entity [" + entity.getName() + "] with definition [" + indexDef + "]: " + e.getMessage(), e);
-                    }
+                    createOrUpdateIndex(entity, collection, indexDef, indexAttributes,
+                            "compound index with definition [" + indexDef + "]");
                 }
             }
         }
@@ -897,20 +908,185 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
                         options.putAll(attributes);
                     }
                 }
-                // continue using deprecated method to support older versions of MongoDB
-                try {
-                    if (options.isEmpty()) {
-                        collection.createIndex(dbObject);
-                    } else {
-                        final IndexOptions indexOptions = MongoConstants.mapToObject(IndexOptions.class, options);
-                        collection.createIndex(dbObject, indexOptions);
-                    }
-                } catch (MongoCommandException e) {
-                    LOG.error("Failed to create index for entity [" + entity.getName() + "] on property [" + property.getName() + "]: " + e.getMessage(), e);
-                }
+                createOrUpdateIndex(entity, collection, dbObject, options,
+                        "on property [" + property.getName() + "]");
             }
         }
 
+    }
+
+    /**
+     * Create an index, reconciling option conflicts with any pre-existing index on the same keys.
+     *
+     * <p>Two things this does beyond a raw {@code createIndex}:</p>
+     * <ol>
+     *   <li>Applies {@code expireAfterSeconds} (TTL) — the one option {@link MongoConstants#mapToObject}
+     *       cannot set, because the driver only exposes the two-argument {@link IndexOptions#expireAfter}.</li>
+     *   <li>On {@code IndexOptionsConflict} (an index already exists on these keys with different
+     *       options), reconciles instead of only logging: a TTL change is applied in place with
+     *       {@code collMod} (no drop, no rebuild, no gap); any other conflict is dropped and
+     *       recreated only when {@code recreateOnConflict:true} was declared, else logged with guidance.</li>
+     * </ol>
+     */
+    private void createOrUpdateIndex(PersistentEntity entity,
+                                     com.mongodb.client.MongoCollection<Document> collection,
+                                     Document keys, Map<String, Object> rawOptions, String descriptor) {
+        Map<String, Object> options = rawOptions != null ? new HashMap<>(rawOptions) : new HashMap<>();
+
+        // Control flag — not a Mongo index option.
+        boolean recreateOnConflict = Boolean.TRUE.equals(options.remove(INDEX_RECREATE_ON_CONFLICT));
+
+        Long expireAfterSeconds = null;
+        Object ttl = options.remove(INDEX_EXPIRE_AFTER_SECONDS);
+        if (ttl instanceof Number) {
+            expireAfterSeconds = ((Number) ttl).longValue();
+        }
+
+        final IndexOptions indexOptions = MongoConstants.mapToObject(IndexOptions.class, options);
+        if (expireAfterSeconds != null) {
+            indexOptions.expireAfter(expireAfterSeconds, TimeUnit.SECONDS);
+        }
+
+        try {
+            collection.createIndex(keys, indexOptions);
+        } catch (MongoCommandException e) {
+            if (e.getErrorCode() == INDEX_OPTIONS_CONFLICT_CODE) {
+                reconcileIndexConflict(entity, collection, keys, indexOptions,
+                        expireAfterSeconds, recreateOnConflict, descriptor, e);
+            } else {
+                LOG.error("Failed to create index for entity [{}] {}: {}",
+                    entity.getName(), descriptor, e.getMessage(), e);
+            }
+        }
+    }
+
+    /**
+     * Reconcile an {@code IndexOptionsConflict}: an index already exists on the same keys with
+     * different options. A TTL difference is the common, safe case (e.g. a configurable retention
+     * changed between restarts) and is updated in place via {@code collMod}; anything else needs an
+     * explicit {@code recreateOnConflict:true} to authorise the drop-and-recreate.
+     */
+    private void reconcileIndexConflict(PersistentEntity entity,
+                                        com.mongodb.client.MongoCollection<Document> collection,
+                                        Document keys, IndexOptions desired, Long expireAfterSeconds,
+                                        boolean recreateOnConflict, String descriptor, MongoCommandException original) {
+        Document existing;
+        try {
+            existing = findIndexByKeyPattern(collection, keys);
+        } catch (RuntimeException listError) {
+            LOG.error("Failed to create index for entity [{}] {} and could not inspect existing indexes: {}",
+                entity.getName(), descriptor, listError.getMessage(), original);
+            return;
+        }
+        if (existing == null) {
+            LOG.error("Failed to create index for entity [{}] {}: {}",
+                entity.getName(), descriptor, original.getMessage(), original);
+            return;
+        }
+
+        String existingName = existing.getString("name");
+        Object existingTtl = existing.get(INDEX_EXPIRE_AFTER_SECONDS);
+        Long existingTtlSeconds = existingTtl instanceof Number ? ((Number) existingTtl).longValue() : null;
+
+        // TTL change on an existing index — update in place, no rebuild, no gap.
+        boolean ttlChange = expireAfterSeconds != null && !expireAfterSeconds.equals(existingTtlSeconds);
+        if (ttlChange) {
+            try {
+                getMongoClient().getDatabase(getDatabaseName(entity))
+                        .runCommand(new Document("collMod", getCollectionName(entity))
+                                .append("index", new Document("name", existingName)
+                                        .append(INDEX_EXPIRE_AFTER_SECONDS, expireAfterSeconds)));
+                LOG.info("Updated TTL of index [{}] on entity [{}] to {}s",
+                    existingName, entity.getName(), expireAfterSeconds);
+                return;
+            } catch (MongoCommandException collModError) {
+                // collMod can't make every change (e.g. add a TTL to a non-TTL index on older
+                // servers) — fall through to recreate (if authorised) rather than fail outright.
+                LOG.warn("collMod TTL update failed for index [{}] on entity [{}]: {}{}",
+                    existingName, entity.getName(), collModError.getMessage(), recreateOnConflict ? " — recreating" : "");
+            }
+        }
+
+        if (recreateOnConflict) {
+            try {
+                collection.dropIndex(existingName);
+                collection.createIndex(keys, desired);
+                LOG.info("Recreated index [{}] on entity [{}] {}", existingName, entity.getName(), descriptor);
+            } catch (MongoCommandException recreateError) {
+                LOG.error("Failed to recreate index [{}] on entity [{}] {}: {}",
+                    existingName, entity.getName(), descriptor, recreateError.getMessage(), recreateError);
+            }
+            return;
+        }
+
+        LOG.error(
+            "Index conflict for entity [{}] {}: an index [{}] already exists on the same keys with different options. " +
+                "Declare indexAttributes:[recreateOnConflict:true] to drop and recreate it. Original error: {}",
+            entity.getName(), descriptor, existingName, original.getMessage());
+    }
+
+    /**
+     * Find an existing index whose key pattern matches the given keys, or {@code null} if none.
+     * Directions/types are compared numerically (1 vs 1.0) so driver-returned values match.
+     *
+     * <p>Text indexes are special-cased: a declared text index has key {@code {field: 'text'}}, but
+     * MongoDB reports an existing one with a synthetic {@code {_fts: 'text', _ftsx: 1}} key, so the
+     * two never match by pattern. Since MongoDB allows at most one text index per collection, an
+     * existing text index is unambiguously the one a newly-declared text index conflicts with —
+     * match it regardless of its key shape or name so {@code recreateOnConflict} can absorb it.</p>
+     */
+    private static Document findIndexByKeyPattern(com.mongodb.client.MongoCollection<Document> collection, Document keys) {
+        boolean desiredIsText = isTextIndex(keys);
+        for (Document idx : collection.listIndexes()) {
+            Object key = idx.get("key");
+            if (!(key instanceof Document)) {
+                continue;
+            }
+            if (desiredIsText && isTextIndex((Document) key)) {
+                return idx;
+            }
+            if (sameKeyPattern((Document) key, keys)) {
+                return idx;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * True for a text index in either representation: a declaration ({@code {field: 'text'}}) or the
+     * synthetic key MongoDB reports for an existing one ({@code {_fts: 'text', _ftsx: 1}}).
+     */
+    private static boolean isTextIndex(Document key) {
+        if (key.containsKey("_fts")) {
+            return true;
+        }
+        for (Object v : key.values()) {
+            if ("text".equals(v)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean sameKeyPattern(Document existingKey, Document desiredKey) {
+        if (existingKey.size() != desiredKey.size()) {
+            return false;
+        }
+        for (Map.Entry<String, Object> entry : desiredKey.entrySet()) {
+            if (!existingKey.containsKey(entry.getKey())) {
+                return false;
+            }
+            Object a = existingKey.get(entry.getKey());
+            Object b = entry.getValue();
+            if (a instanceof Number && b instanceof Number) {
+                if (((Number) a).doubleValue() != ((Number) b).doubleValue()) {
+                    return false;
+                }
+            } else if (!Objects.equals(a, b)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     String getMongoFieldNameForProperty(PersistentProperty<MongoAttribute> property) {
@@ -956,17 +1132,21 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
     }
 
     /**
-     * Creates the connection sources for an existing {@link MongoClient}
+     * Creates the connection sources for a {@link MongoClient}.
      *
      * @param mongoClient The {@link MongoClient}
      * @param configuration The configuration
      * @param mappingContext The {@link MongoMappingContext}
+     * @param closeable whether GORM owns the client and should close it on shutdown. Pass
+     *                  {@code false} for an externally-supplied client (its lifecycle is owned by the
+     *                  caller, e.g. a Spring-managed bean) and {@code true} for a client GORM created
+     *                  itself, so it is not leaked.
      * @return The {@link ConnectionSources}
      */
-    protected static ConnectionSources<MongoClient, MongoConnectionSourceSettings> createDefaultConnectionSources(MongoClient mongoClient, PropertyResolver configuration, MongoMappingContext mappingContext) {
+    protected static ConnectionSources<MongoClient, MongoConnectionSourceSettings> createDefaultConnectionSources(MongoClient mongoClient, PropertyResolver configuration, MongoMappingContext mappingContext, boolean closeable) {
         MongoConnectionSourceSettings settings = new MongoConnectionSourceSettings();
         settings.setDatabaseName(mappingContext.getDefaultDatabaseName());
-        ConnectionSource<MongoClient, MongoConnectionSourceSettings> defaultConnectionSource = new DefaultConnectionSource<>(ConnectionSource.DEFAULT, mongoClient, settings);
+        ConnectionSource<MongoClient, MongoConnectionSourceSettings> defaultConnectionSource = new DefaultConnectionSource<>(ConnectionSource.DEFAULT, mongoClient, settings, closeable);
         return new InMemoryConnectionSources<>(defaultConnectionSource, new MongoConnectionSourceFactory(), configuration);
     }
 

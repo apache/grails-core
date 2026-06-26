@@ -33,7 +33,11 @@ import java.util.concurrent.ConcurrentMap;
 import groovy.text.Template;
 import org.codehaus.groovy.runtime.InvokerHelper;
 
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
+
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.util.Assert;
 import org.springframework.util.ReflectionUtils;
@@ -84,6 +88,7 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
     private Method generateViewMethod;
     private boolean reloadEnabled;
     private boolean cacheEnabled = !Environment.isDevelopmentMode();
+    private ObservationRegistry observationRegistry = ObservationRegistry.NOOP;
 
     public void afterPropertiesSet() throws Exception {
         if (scaffoldingTemplateGenerator != null) {
@@ -103,6 +108,15 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
         this.reloadEnabled = reloadEnabled;
     }
 
+    /**
+     * Sets the {@link ObservationRegistry} used to instrument GSP template rendering. Defaults to
+     * {@link ObservationRegistry#NOOP}, in which case template rendering is not observed.
+     */
+    @Autowired(required = false)
+    public void setObservationRegistry(ObservationRegistry observationRegistry) {
+        this.observationRegistry = (observationRegistry != null) ? observationRegistry : ObservationRegistry.NOOP;
+    }
+
     public void clearCache() {
         templateCache.clear();
     }
@@ -115,6 +129,19 @@ public class GroovyPagesTemplateRenderer implements InitializingBean {
             throw new GrailsTagException("Tag [render] is missing required attribute [template]");
         }
 
+        if (this.observationRegistry.isNoop()) {
+            doRender(templateName, webRequest, pageScope, attrs, body, out);
+            return;
+        }
+        var resource = (templateName != null && !templateName.isEmpty()) ? templateName : "unknown";
+        var observation = Observation.createNotStarted("gsp.template", this.observationRegistry)
+                .contextualName("gsp.template " + resource)
+                .highCardinalityKeyValue("gsp.name", resource);
+        observation.observeChecked(() -> doRender(templateName, webRequest, pageScope, attrs, body, out));
+    }
+
+    protected void doRender(String templateName, GrailsWebRequest webRequest, TemplateVariableBinding pageScope,
+            Map<String, Object> attrs, Object body, Writer out) throws IOException {
         String uri = webRequest.getAttributes().getTemplateUri(templateName, webRequest.getRequest());
         String contextPath = getStringValue(attrs, "contextPath");
         String pluginName = getStringValue(attrs, "plugin");

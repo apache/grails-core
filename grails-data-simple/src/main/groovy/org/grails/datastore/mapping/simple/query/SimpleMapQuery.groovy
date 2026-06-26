@@ -93,6 +93,11 @@ class SimpleMapQuery extends Query {
             def entityList = entityMap.values()
 
             projectionList.each { Query.Projection p ->
+                if (p instanceof Query.DistinctProjection) {
+                    if (projectionCount == 1) {
+                        results = new ArrayList(entityList).unique()
+                    }
+                }
 
                 if (p instanceof Query.IdProjection) {
                     if (projectionCount == 1) {
@@ -167,14 +172,14 @@ class SimpleMapQuery extends Query {
 
     private List applyMaxAndOffset(List sortedResults) {
         final def total = sortedResults.size()
-        if (offset >= total) return Collections.emptyList()
+        def from = offset != null ? offset : 0
+        if (from >= total) return Collections.emptyList()
 
         // 0..3
         // 0..-1
         // 1..1
-        def max = this.max // 20
-        def from = offset // 10
-        def to = max == -1 ? -1 : (offset + max) - 1      // 15
+        def max = this.max != null ? this.max : -1
+        def to = max == -1 ? -1 : (from + max) - 1      // 15
         if (to >= total) to = -1
 
         return sortedResults[from..to]

@@ -24,6 +24,7 @@ import java.lang.reflect.Method;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -33,7 +34,11 @@ import java.util.Properties;
 import org.hibernate.HibernateException;
 import org.hibernate.MappingException;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
-import org.hibernate.type.AbstractStandardBasicType;
+import org.hibernate.type.descriptor.WrapperOptions;
+import org.hibernate.type.descriptor.java.JavaType;
+import org.hibernate.type.descriptor.jdbc.IntegerJdbcType;
+import org.hibernate.type.descriptor.jdbc.JdbcType;
+import org.hibernate.type.descriptor.jdbc.VarcharJdbcType;
 import org.hibernate.type.spi.TypeConfiguration;
 import org.hibernate.usertype.ParameterizedType;
 import org.hibernate.usertype.UserType;
@@ -41,139 +46,165 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Hibernate Usertype that enum values by their ID.
- *
- * @author Siegfried Puchbauer
- * @author Graeme Rocher
- *
- * @since 1.1
+ * Hibernate 7 UserType to map Enums to their "id" value.
  */
-public class IdentityEnumType implements UserType, ParameterizedType, Serializable {
-
-    private static final long serialVersionUID = -6625622185856547501L;
+public class IdentityEnumType implements UserType<Object>, ParameterizedType, Serializable {
 
     private static final Logger LOG = LoggerFactory.getLogger(IdentityEnumType.class);
+    private static final TypeConfiguration typeConfiguration = new TypeConfiguration();
 
-    private static TypeConfiguration typeConfiguration = new TypeConfiguration();
     public static final String ENUM_ID_ACCESSOR = "getId";
-
     public static final String PARAM_ENUM_CLASS = "enumClass";
 
     private static final Map<Class<? extends Enum<?>>, BidiEnumMap> ENUM_MAPPINGS = new HashMap<>();
+
     protected Class<? extends Enum<?>> enumClass;
     protected BidiEnumMap bidiMap;
-    protected AbstractStandardBasicType<?> type;
-    protected int[] sqlTypes;
+    protected JavaType<Object> javaType;
+    protected JdbcType jdbcType;
+    protected int sqlType;
 
-    public static BidiEnumMap getBidiEnumMap(Class<? extends Enum<?>> cls) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+    public static BidiEnumMap getBidiEnumMap(Class<? extends Enum<?>> cls) {
         BidiEnumMap m = ENUM_MAPPINGS.get(cls);
         if (m == null) {
             synchronized (ENUM_MAPPINGS) {
-                if (!ENUM_MAPPINGS.containsKey(cls)) {
-                    m = new BidiEnumMap(cls);
-                    ENUM_MAPPINGS.put(cls, m);
-                }
-                else {
-                    m = ENUM_MAPPINGS.get(cls);
+                m = ENUM_MAPPINGS.get(cls);
+                if (m == null) {
+                    try {
+                        m = new BidiEnumMap(cls);
+                        ENUM_MAPPINGS.put(cls, m);
+                    } catch (Exception e) {
+                        throw new HibernateException("Error building BidiEnumMap for " + cls.getName(), e);
+                    }
                 }
             }
         }
         return m;
     }
 
-    @SuppressWarnings("unchecked")
-    public void setParameterValues(Properties properties) {
-        try {
-            enumClass = (Class<? extends Enum<?>>) Thread.currentThread().getContextClassLoader().loadClass(
-                    (String) properties.get(PARAM_ENUM_CLASS));
-            if (LOG.isDebugEnabled()) {
-                LOG.debug(String.format("Building ID-mapping for Enum Class %s", enumClass.getName()));
+    @Override
+    public void setParameterValues(Properties parameters) {
+        String enumClassName = parameters.getProperty(PARAM_ENUM_CLASS);
+        if (enumClassName != null) {
+            try {
+                enumClass = (Class<? extends Enum<?>>) Thread.currentThread().getContextClassLoader().loadClass(enumClassName);
+            } catch (ClassNotFoundException e) {
+                throw new MappingException("Enum class not found: " + enumClassName, e);
             }
-            bidiMap = getBidiEnumMap(enumClass);
-            type = (AbstractStandardBasicType<?>) typeConfiguration.getBasicTypeRegistry().getRegisteredType(bidiMap.keyType.getName());
-            if (LOG.isDebugEnabled()) {
-                LOG.debug(String.format("Mapped Basic Type is %s", type));
+        }
+
+        if (enumClass == null) {
+            // Fallback for some Grails versions
+            Object enumClassAttr = parameters.get(PARAM_ENUM_CLASS);
+            if (enumClassAttr instanceof Class) {
+                enumClass = (Class<? extends Enum<?>>) enumClassAttr;
             }
-            sqlTypes = type.sqlTypes(null);
         }
-        catch (Exception e) {
-            throw new MappingException("Error mapping Enum Class using IdentifierEnumType", e);
+
+        if (enumClass == null) {
+            throw new MappingException("IdentityEnumType: enumClass parameter is required");
         }
-    }
 
-    public int[] sqlTypes() {
-        return sqlTypes;
-    }
-
-    public Class<?> returnedClass() {
-        return enumClass;
-    }
-
-    public boolean equals(Object o1, Object o2) throws HibernateException {
-        return o1 == o2;
-    }
-
-    public int hashCode(Object o) throws HibernateException {
-        return o.hashCode();
+        bidiMap = getBidiEnumMap(enumClass);
+        javaType = (JavaType<Object>) typeConfiguration.getJavaTypeRegistry().getDescriptor(bidiMap.keyType);
+        
+        // Safely determine JdbcType without triggering dialect resolution if possible
+        if (bidiMap.keyType == String.class) {
+            jdbcType = VarcharJdbcType.INSTANCE;
+            sqlType = Types.VARCHAR;
+        } else if (bidiMap.keyType == Integer.class || bidiMap.keyType == int.class) {
+            jdbcType = IntegerJdbcType.INSTANCE;
+            sqlType = Types.INTEGER;
+        } else if (bidiMap.keyType == Long.class || bidiMap.keyType == long.class) {
+            jdbcType = org.hibernate.type.descriptor.jdbc.BigIntJdbcType.INSTANCE;
+            sqlType = Types.BIGINT;
+        } else {
+            jdbcType = VarcharJdbcType.INSTANCE;
+            sqlType = Types.VARCHAR;
+        }
     }
 
     @Override
-    public Object nullSafeGet(ResultSet rs, String[] names, SharedSessionContractImplementor session, Object owner) throws HibernateException, SQLException {
-        Object id = type.nullSafeGet(rs, names[0], session);
-        if ((!rs.wasNull()) && id != null) {
-            return bidiMap.getEnumValue(id);
-        }
-        return null;
+    public int getSqlType() {
+        return sqlType;
     }
 
     @Override
-    public void nullSafeSet(PreparedStatement st, Object value, int index, SharedSessionContractImplementor session) throws HibernateException, SQLException {
+    public Class<Object> returnedClass() {
+        return (Class) enumClass;
+    }
+
+    @Override
+    public boolean equals(Object x, Object y) throws HibernateException {
+        return x == y || (x != null && y != null && x.equals(y));
+    }
+
+    @Override
+    public int hashCode(Object x) throws HibernateException {
+        return x == null ? 0 : x.hashCode();
+    }
+
+    @Override
+    public Object nullSafeGet(ResultSet rs, int position, SharedSessionContractImplementor session, Object owner) throws SQLException {
+        return nullSafeGet(rs, position, (WrapperOptions) session);
+    }
+
+    @Override
+    public Object nullSafeGet(ResultSet rs, int position, WrapperOptions options) throws SQLException {
+        Object id = jdbcType.getExtractor(javaType).extract(rs, position, options);
+        return id == null ? null : bidiMap.getEnumValue(id);
+    }
+
+    @Override
+    public void nullSafeSet(PreparedStatement st, Object value, int index, SharedSessionContractImplementor session) throws SQLException {
+        nullSafeSet(st, value, index, (WrapperOptions) session);
+    }
+
+    @Override
+    public void nullSafeSet(PreparedStatement st, Object value, int index, WrapperOptions options) throws SQLException {
         if (value == null) {
-            st.setNull(index, sqlTypes[0]);
-        }
-        else {
-            type.nullSafeSet(st, bidiMap.getKey(value), index, session);
+            st.setNull(index, sqlType);
+        } else {
+            Object id = (value instanceof Enum) ? bidiMap.getKey(value) : value;
+            jdbcType.getBinder(javaType).bind(st, id, index, options);
         }
     }
 
-    public Object deepCopy(Object o) throws HibernateException {
-        return o;
+    @Override
+    public Object deepCopy(Object value) throws HibernateException {
+        return value;
     }
 
+    @Override
     public boolean isMutable() {
         return false;
     }
 
-    public Serializable disassemble(Object o) throws HibernateException {
-        return (Serializable) o;
+    @Override
+    public Serializable disassemble(Object value) throws HibernateException {
+        return (Serializable) value;
     }
 
+    @Override
     public Object assemble(Serializable cached, Object owner) throws HibernateException {
         return cached;
     }
 
-    public Object replace(Object orig, Object target, Object owner) throws HibernateException {
-        return orig;
+    @Override
+    public Object replace(Object original, Object target, Object owner) throws HibernateException {
+        return original;
     }
 
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    private static class BidiEnumMap implements Serializable {
-
-        private static final long serialVersionUID = 3325751131102095834L;
+    public static class BidiEnumMap implements Serializable {
         private final Map enumToKey;
-        private final Map keytoEnum;
-        private Class keyType;
+        private final Map keyToEnum;
+        private final Class keyType;
 
-        private BidiEnumMap(Class<? extends Enum> enumClass) throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Building Bidirectional Enum Map...");
-            }
-
+        private BidiEnumMap(Class<? extends Enum<?>> enumClass) throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
             EnumMap enumToKey = new EnumMap(enumClass);
-            HashMap keytoEnum = new HashMap();
+            HashMap keyToEnum = new HashMap();
 
             Method idAccessor = enumClass.getMethod(ENUM_ID_ACCESSOR);
-
             keyType = idAccessor.getReturnType();
 
             Method valuesAccessor = enumClass.getMethod("values");
@@ -182,18 +213,18 @@ public class IdentityEnumType implements UserType, ParameterizedType, Serializab
             for (Object value : values) {
                 Object id = idAccessor.invoke(value);
                 enumToKey.put((Enum) value, id);
-                if (keytoEnum.containsKey(id)) {
-                    LOG.warn(String.format("Duplicate Enum ID '%s' detected for Enum %s!", id, enumClass.getName()));
+                if (keyToEnum.containsKey(id)) {
+                    LOG.warn("Duplicate Enum ID '{}' detected for Enum {}!", id, enumClass.getName());
                 }
-                keytoEnum.put(id, value);
+                keyToEnum.put(id, value);
             }
 
             this.enumToKey = Collections.unmodifiableMap(enumToKey);
-            this.keytoEnum = Collections.unmodifiableMap(keytoEnum);
+            this.keyToEnum = Collections.unmodifiableMap(keyToEnum);
         }
 
         public Object getEnumValue(Object id) {
-            return keytoEnum.get(id);
+            return keyToEnum.get(id);
         }
 
         public Object getKey(Object enumValue) {

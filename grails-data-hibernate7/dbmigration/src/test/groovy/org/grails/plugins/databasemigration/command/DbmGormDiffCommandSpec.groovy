@@ -53,7 +53,7 @@ databaseChangeLog = \\{
             column\\(name: "title", type: "VARCHAR\\(255\\)"\\) \\{
                 constraints\\(nullable: "false"\\)
             \\}
-            
+
             column\\(name: "author_id", type: "BIGINT"\\) \\{
                 constraints\\(nullable: "false"\\)
             \\}
@@ -92,7 +92,7 @@ databaseChangeLog = \\{
             column\\(name: "title", type: "VARCHAR\\(255\\)"\\) \\{
                 constraints\\(nullable: "false"\\)
             \\}
-            
+
             column\\(name: "author_id", type: "BIGINT"\\) \\{
                 constraints\\(nullable: "false"\\)
             \\}

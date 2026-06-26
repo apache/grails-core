@@ -309,4 +309,28 @@ class ContentNegotiationSpec extends Specification implements HttpClientSupport 
         then: "response is JSON"
         response.assertStatus(200).contentType.contains('application/json')
     }
+
+    // ========== Merged Custom MIME Type (grails.mime.mergeDefaults) ==========
+
+    def "custom MIME type declared with mergeDefaults is honored"() {
+        when: "requesting the custom format declared in application.yml"
+        def response = http('/contentNegotiation/mergedFormats', 'Accept': 'application/vnd.app1.v1+json')
+
+        then: "the custom 'vnd' format is negotiated"
+        response.assertStatus(200).contentType.contains('application/vnd.app1.v1+json')
+
+        and: "the custom body is returned"
+        response.assertJsonContains([format: 'vnd', merged: true])
+    }
+
+    def "framework default MIME types remain available alongside a merged custom type"() {
+        when: "requesting a default (json) format that is NOT declared in application.yml"
+        def response = http('/contentNegotiation/mergedFormats', 'Accept': 'application/json')
+
+        then: "json still negotiates because grails.mime.mergeDefaults merges the framework defaults in"
+        response.assertStatus(200).contentType.contains('application/json')
+
+        and: "the json body is returned"
+        response.assertJsonContains([message: 'Hello World', merged: true])
+    }
 }

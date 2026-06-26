@@ -40,4 +40,3 @@ dataSources:
 You can configure individual settings for each data source. If a setting is not specified by default the setting is inherited from the default data source, so in the example above there is no need to specify the `driverClassName` for each data source if the same driver is used for all.
 
 TIP: For more information on configuration see the <<configuration,Configuration section>>.
-

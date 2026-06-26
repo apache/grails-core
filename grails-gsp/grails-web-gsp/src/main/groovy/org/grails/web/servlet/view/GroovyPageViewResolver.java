@@ -27,6 +27,7 @@ import groovy.lang.GroovyObject;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import io.micrometer.observation.ObservationRegistry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -66,6 +67,7 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
     private boolean allowGrailsViewCaching = !GrailsUtil.isDevelopmentEnv();
     private long cacheTimeout = -1;
     private boolean resolveJspView = false;
+    private volatile ObservationRegistry observationRegistry;
 
     /**
      * Constructor.
@@ -221,6 +223,7 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
         gspSpringView.setApplicationContext(getApplicationContext());
         gspSpringView.setTemplateEngine(templateEngine);
         gspSpringView.setScriptSource(scriptSource);
+        gspSpringView.setObservationRegistry(resolveObservationRegistry());
         try {
             gspSpringView.afterPropertiesSet();
             if (LOG.isDebugEnabled()) {
@@ -230,6 +233,26 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
             throw new RuntimeException("Error initializing GroovyPageView", e);
         }
         return gspSpringView;
+    }
+
+    /**
+     * Resolves the {@link ObservationRegistry} to apply to GSP views: an explicitly configured one
+     * if set, otherwise the registry bean from the application context, falling back to
+     * {@link ObservationRegistry#NOOP} when none is available.
+     */
+    private ObservationRegistry resolveObservationRegistry() {
+        var registry = this.observationRegistry;
+        if (registry == null) {
+            var ctx = getApplicationContext();
+            registry = (ctx != null) ?
+                    ctx.getBeanProvider(ObservationRegistry.class).getIfAvailable(() -> ObservationRegistry.NOOP) :
+                    ObservationRegistry.NOOP;
+            // Benign race: two threads may both resolve and write the volatile field before it is set.
+            // Resolution is idempotent (same context bean, or NOOP), so the duplicate is harmless and
+            // avoiding it isn't worth synchronizing this hot path.
+            this.observationRegistry = registry;
+        }
+        return registry;
     }
 
     protected View createFallbackView(String viewName) throws Exception {

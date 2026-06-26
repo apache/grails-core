@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import io.micrometer.observation.ObservationRegistry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -77,6 +78,10 @@ public class ConvertersConfigurationInitializer implements ApplicationContextAwa
     public void initialize() {
         if (LOG.isDebugEnabled()) {
             LOG.debug("Initializing Converters Default Configurations...");
+        }
+        if (applicationContext != null) {
+            ConvertersConfigurationHolder.setObservationRegistry(
+                    applicationContext.getBeanProvider(ObservationRegistry.class).getIfAvailable(() -> ObservationRegistry.NOOP));
         }
         initJSONConfiguration();
         initXMLConfiguration();

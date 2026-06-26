@@ -385,6 +385,16 @@ public abstract class AbstractHibernateCriterionAdapter {
             }
         });
 
+        criterionAdaptors.put(Query.SizeNotEquals.class, new CriterionAdaptor<Query.SizeNotEquals>() {
+            @Override
+            public Criterion toHibernateCriterion(AbstractHibernateQuery hibernateQuery, Query.SizeNotEquals criterion, String alias) {
+                String propertyName = getPropertyName(criterion, alias);
+                Object value = criterion.getValue();
+                int size = value instanceof Number ? ((Number) value).intValue() : Integer.parseInt(value.toString());
+                return Restrictions.sizeNe(propertyName, size);
+            }
+        });
+
         criterionAdaptors.put(Query.SizeGreaterThan.class, new CriterionAdaptor<Query.SizeGreaterThan>() {
             @Override
             public Criterion toHibernateCriterion(AbstractHibernateQuery hibernateQuery, Query.SizeGreaterThan criterion, String alias) {

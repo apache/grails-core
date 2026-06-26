@@ -54,10 +54,7 @@ dependencies {
     runtimeOnly 'org.apache.grails:grails-services'
     runtimeOnly 'org.apache.grails:grails-url-mappings'
     runtimeOnly 'org.apache.grails:grails-fields'
-    runtimeOnly 'org.hibernate:hibernate-ehcache', {
-        // exclude javax variant of hibernate-core 5.6
-        exclude group: 'org.hibernate', module: 'hibernate-core'
-    }
+    runtimeOnly 'org.hibernate.orm:hibernate-jcache'
     runtimeOnly "org.jboss.spec.javax.transaction:jboss-transaction-api_1.3_spec:$jbossTransactionApiVersion", {
         // required for hibernate-ehcache to work with javax variant of hibernate-core excluded
     }

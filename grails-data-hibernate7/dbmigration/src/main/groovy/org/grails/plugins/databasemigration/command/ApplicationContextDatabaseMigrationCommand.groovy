@@ -95,7 +95,7 @@ trait ApplicationContextDatabaseMigrationCommand implements DatabaseMigrationCom
         HibernateDatastore hibernateDatastore = applicationContext.getBean('hibernateDatastore', HibernateDatastore)
         hibernateDatastore = hibernateDatastore.getDatastoreForConnection(dataSource)
 
-        Database database = new GormDatabase(dialect, serviceRegistry, hibernateDatastore)
+        Database database = new GormDatabase(dialect, hibernateDatastore)
         configureDatabase(database)
 
         return database

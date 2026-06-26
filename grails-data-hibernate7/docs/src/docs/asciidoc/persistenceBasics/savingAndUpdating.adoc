@@ -16,47 +16,79 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 ////
+[[persistenceBasics-savingAndUpdating]]
+== Saving and Updating
 
-An example of using the link:../api/org/grails/datastore/gorm/GormEntity.html#save()[save()] method can be seen below:
+=== Saving
 
-[source,groovy]
-----
-def p = Person.get(1)
-p.save()
-----
-
-This save will be not be pushed to the database immediately - it will be pushed when the next flush occurs. But there are occasions when you want to control when those statements are executed or, in Hibernate terminology, when the session is "flushed". To do so you can use the flush argument to the save method:
+Call `save()` on a domain instance to persist it. GORM delegates to Hibernate's `Session.saveOrUpdate()`:
 
 [source,groovy]
 ----
-def p = Person.get(1)
-p.save(flush: true)
+def book = new Book(title: 'Groovy in Action', author: 'Dierk König')
+book.save()
 ----
 
-Note that in this case _all_ pending SQL statements including previous saves, deletes, etc. will be synchronized with the database. This also lets you catch any exceptions, which is typically useful in highly concurrent scenarios involving <<locking,optimistic locking>>:
-
-[source,groovy]
-----
-def p = Person.get(1)
-try {
-    p.save(flush: true)
-}
-catch (org.springframework.dao.DataIntegrityViolationException e) {
-    // deal with exception
-}
-----
-
-Another thing to bear in mind is that GORM validates a domain instance every time you save it. If that validation fails the domain instance will _not_ be persisted to the database. By default, `save()` will simply return `null` in this case, but if you would prefer it to throw an exception you can use the `failOnError` argument:
+If validation fails, `save()` returns `null` and the errors are available on the instance:
 
 [source,groovy]
 ----
-def p = Person.get(1)
-try {
-    p.save(failOnError: true)
-}
-catch (ValidationException e) {
-    // deal with exception
+def book = new Book(title: '')   // violates blank constraint
+if (!book.save()) {
+    book.errors.allErrors.each { println it }
 }
 ----
 
-You can even change the default behaviour with a setting in `application.groovy`, as described in the <<configuration,section on configuration>>. Just remember that when you are saving domain instances that have been bound with data provided by the user, the likelihood of validation exceptions is quite high and you won't want those exceptions propagating to the end user.
+=== Fail on Error
+
+Use `failOnError: true` to throw a `ValidationException` instead of returning `null`:
+
+[source,groovy]
+----
+book.save(failOnError: true)    // throws ValidationException on constraint violation
+----
+
+=== Flush
+
+By default Hibernate delays SQL writes until the session is flushed. Force an immediate flush:
+
+[source,groovy]
+----
+book.save(flush: true)      // <1>
+----
+<1> Issues the `INSERT` or `UPDATE` immediately.
+
+=== Updating
+
+Modify properties on a loaded instance and call `save()`:
+
+[source,groovy]
+----
+def book = Book.get(1)
+book.title = 'Updated Title'
+book.save()
+----
+
+=== Dynamic Update
+
+To generate `UPDATE` statements that only include changed columns (useful for wide tables), enable `dynamicUpdate`:
+
+[source,groovy]
+----
+class Book {
+    static mapping = {
+        dynamicUpdate true
+    }
+}
+----
+
+=== Dynamic Insert
+
+Similarly, `dynamicInsert` generates `INSERT` statements that omit null properties:
+
+[source,groovy]
+----
+static mapping = {
+    dynamicInsert true
+}
+----

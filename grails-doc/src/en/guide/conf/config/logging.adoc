@@ -41,7 +41,7 @@ The Grails Environments `development`, `test` and `production` can be used with 
 
 TIP: When generating a project with https://start.grails.org[Grails Forge], select the *Logback Configuration* feature to start with a ready-made `grails-app/conf/logback-spring.xml`.
 
-// To be re-included when a Grails 7 release of the plugin gets released
+// To be re-included when a Grails {grailsMajorVersion} release of the plugin gets released
 // See: virtualdogbert/logback-groovy-config#15
 //
 // NOTE: Since Grails 5.1.2 support for groovy configuration (`grails-app/conf/logback.groovy`) has been removed (by logback 1.2.9). It is possible to add back groovy configuration by adding the https://github.com/virtualdogbert/logback-groovy-config[logback-groovy-config] library to your project.

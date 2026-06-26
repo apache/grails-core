@@ -16,16 +16,56 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 ////
+[[introduction]]
+== Introduction
 
-GORM is a data access framework with multiple backend implementations that allows you to rapidly write data access code with little effort for your favourite database.
+GORM for Hibernate 7 (grails-data-hibernate7) is the Hibernate 7 persistence layer for GORM, the GRAILS Object Relational Mapping framework. It provides a high-level, convention-over-configuration API for mapping Groovy domain classes to a relational database via Hibernate ORM 7 and Jakarta EE 10.
 
-There are currently several implementations of GORM. This documentation covers the original implementation of GORM which is based on the Hibernate ORM. Below you can find links to the other implementations:
+=== Features
 
-* https://grails.apache.org/docs/latest/grails-data/mongodb/manual/[GORM for MongoDB]
-* https://gorm.grails.org/latest/neo4j/manual[GORM for Neo4j]
-* https://gorm.grails.org/latest/cassandra/manual[GORM for Cassandra]
-* https://gorm.grails.org/latest/rx/manual[RxGORM for MongoDB]
-* https://gorm.grails.org/latest/rx/rest-client/manual[RxGORM for REST]
+* Convention-based ORM mapping — minimal configuration for common patterns
+* Full Hibernate 7 support with Jakarta EE 10 (`jakarta.*` packages)
+* Spring Boot 3.5 integration
+* Dynamic finders, named queries, `where` query DSL, HQL, and native SQL
+* Optimistic locking, second-level caching, and batch fetching
+* Comprehensive association mapping: one-to-one, one-to-many, many-to-many, basic collections
+* Multiple inheritance strategies: table-per-hierarchy, table-per-subclass, table-per-concrete-class
+* Multi-tenancy support
+* Groovy `static mapping {}` DSL for full control over table/column names, types, and strategies
 
-As mentioned, GORM for Hibernate is the original implementation of GORM and has evolved dramatically over the years from a few meta-programming functions into a complete data access framework with multiple implementations for different datastores relational and NoSQL.
+=== Requirements
 
+[format="csv", options="header"]
+|===
+Component,Version
+JDK,17+
+Groovy,4.0.x
+Spring Boot,3.5.x
+Hibernate ORM,7.x
+Jakarta EE,10
+|===
+
+=== Quick Start
+
+Add the dependency to your Grails application and define a domain class:
+
+[source,groovy]
+----
+class Book {
+    String title
+    String author
+    Date dateCreated
+    Date lastUpdated
+
+    static constraints = {
+        title blank: false
+        author blank: false
+    }
+}
+----
+
+GORM automatically:
+
+* Creates a `book` table with `id`, `version`, `title`, `author`, `date_created`, and `last_updated` columns
+* Adds dynamic finders like `Book.findByTitle('...')`, `Book.findAllByAuthor('...')`
+* Injects `save()`, `delete()`, `get()`, `list()`, and other persistence methods

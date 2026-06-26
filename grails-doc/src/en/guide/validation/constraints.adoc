@@ -51,7 +51,7 @@ class User {
 
 In this example we've declared that the `login` property must be between 5 and 15 characters long, it cannot be blank and must be unique. We've also applied other constraints to the `password`, `email` and `age` properties.
 
-NOTE: As of Grails 8, domain class properties are *nullable by default*: an unconstrained property is optional unless you declare `nullable: false` (prior to Grails 8 the default was the opposite — an implicit `nullable: false` was applied to every property). To restore the legacy required-by-default behaviour application-wide, set `grails.gorm.default.nullable = false`.
+NOTE: As of Grails {grailsMajorVersion}, domain class properties are *nullable by default*: an unconstrained property is optional unless you declare `nullable: false` (prior to Grails {grailsMajorVersion} the default was the opposite — an implicit `nullable: false` was applied to every property). To restore the legacy required-by-default behaviour application-wide, set `grails.gorm.default.nullable = false`.
 
 A complete reference for the available constraints can be found in the Quick Reference section under the Constraints heading.
 

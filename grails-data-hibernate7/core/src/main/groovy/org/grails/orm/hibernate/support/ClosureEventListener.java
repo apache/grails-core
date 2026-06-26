@@ -18,23 +18,29 @@
  */
 package org.grails.orm.hibernate.support;
 
-import java.lang.reflect.Field;
+import java.io.Serial;
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 
-import groovy.lang.Closure;
 import groovy.lang.GroovySystem;
 import groovy.lang.MetaClass;
 
 import org.hibernate.FlushMode;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
-import org.hibernate.action.internal.EntityUpdateAction;
-import org.hibernate.engine.spi.ActionQueue;
-import org.hibernate.engine.spi.ExecutableList;
+import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.event.spi.AbstractEvent;
 import org.hibernate.event.spi.AbstractPreDatabaseOperationEvent;
+import org.hibernate.event.spi.EventSource;
+import org.hibernate.event.spi.MergeContext;
+import org.hibernate.event.spi.MergeEvent;
+import org.hibernate.event.spi.MergeEventListener;
+import org.hibernate.event.spi.PersistContext;
+import org.hibernate.event.spi.PersistEvent;
+import org.hibernate.event.spi.PersistEventListener;
 import org.hibernate.event.spi.PostDeleteEvent;
 import org.hibernate.event.spi.PostDeleteEventListener;
 import org.hibernate.event.spi.PostInsertEvent;
@@ -46,88 +52,77 @@ import org.hibernate.event.spi.PostUpdateEventListener;
 import org.hibernate.event.spi.PreDeleteEvent;
 import org.hibernate.event.spi.PreDeleteEventListener;
 import org.hibernate.event.spi.PreInsertEvent;
+import org.hibernate.event.spi.PreInsertEventListener;
 import org.hibernate.event.spi.PreLoadEvent;
 import org.hibernate.event.spi.PreLoadEventListener;
 import org.hibernate.event.spi.PreUpdateEvent;
 import org.hibernate.event.spi.PreUpdateEventListener;
-import org.hibernate.event.spi.SaveOrUpdateEvent;
-import org.hibernate.event.spi.SaveOrUpdateEventListener;
+import org.hibernate.jpa.event.spi.CallbackRegistry;
+import org.hibernate.jpa.event.spi.CallbackRegistryConsumer;
+import org.hibernate.metamodel.mapping.AttributeMapping;
+import org.hibernate.metamodel.mapping.EntityMappingType;
 import org.hibernate.persister.entity.EntityPersister;
-import org.hibernate.tuple.entity.EntityMetamodel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.springframework.util.ReflectionUtils;
-import org.springframework.validation.Errors;
 
 import org.grails.datastore.gorm.GormValidateable;
 import org.grails.datastore.gorm.support.BeforeValidateHelper.BeforeValidateEventTriggerCaller;
 import org.grails.datastore.gorm.support.EventTriggerCaller;
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent;
 import org.grails.datastore.mapping.engine.event.ValidationEvent;
-import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.reflect.ClassUtils;
 import org.grails.datastore.mapping.reflect.EntityReflector;
 import org.grails.datastore.mapping.validation.ValidationException;
-import org.grails.orm.hibernate.AbstractHibernateGormValidationApi;
+import org.grails.orm.hibernate.HibernateGormValidationApi;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 
-/**
- * <p>Invokes closure events on domain entities such as beforeInsert, beforeUpdate and beforeDelete.
- *
- * <p>Also deals with auto time stamping of domain classes that have properties named 'lastUpdated' and/or 'dateCreated'.
- *
- * @author Lari Hotari
- * @author Graeme Rocher
- * @since 1.3.5
- */
-@SuppressWarnings({"rawtypes", "unchecked", "serial"})
-public class ClosureEventListener implements SaveOrUpdateEventListener,
-        PreLoadEventListener,
-        PostLoadEventListener,
-        PostInsertEventListener,
-        PostUpdateEventListener,
-        PostDeleteEventListener,
-        PreDeleteEventListener,
-        PreUpdateEventListener {
+@SuppressWarnings({"rawtypes", "unchecked", "PMD.CloseResource"})
+public class ClosureEventListener
+        implements PreLoadEventListener,
+                PostLoadEventListener,
+                PreInsertEventListener, // Added to fix "does not exist in superclass" error
+                PostInsertEventListener,
+                PostUpdateEventListener,
+                PostDeleteEventListener,
+                PreDeleteEventListener,
+                PreUpdateEventListener,
+                MergeEventListener,
+                PersistEventListener,
+                CallbackRegistryConsumer,
+                Serializable {
 
-    private static final long serialVersionUID = 1;
     protected static final Logger LOG = LoggerFactory.getLogger(ClosureEventListener.class);
 
-    private final EventTriggerCaller saveOrUpdateCaller;
-    private final EventTriggerCaller beforeInsertCaller;
-    private final EventTriggerCaller preLoadEventCaller;
-    private final EventTriggerCaller postLoadEventListener;
-    private final EventTriggerCaller postInsertEventListener;
-    private final EventTriggerCaller postUpdateEventListener;
-    private final EventTriggerCaller postDeleteEventListener;
-    private final EventTriggerCaller preDeleteEventListener;
-    private final EventTriggerCaller preUpdateEventListener;
-    private final BeforeValidateEventTriggerCaller beforeValidateEventListener;
-    private final PersistentEntity persistentEntity;
-    private final MetaClass domainMetaClass;
-    private final boolean isMultiTenant;
+    @Serial
+    private static final long serialVersionUID = 1;
+
+    private final transient EventTriggerCaller beforeInsertCaller;
+    private final transient EventTriggerCaller preLoadEventCaller;
+    private final transient EventTriggerCaller postLoadEventListener;
+    private final transient EventTriggerCaller postInsertEventListener;
+    private final transient EventTriggerCaller postUpdateEventListener;
+    private final transient EventTriggerCaller postDeleteEventListener;
+    private final transient EventTriggerCaller preDeleteEventListener;
+    private final transient EventTriggerCaller preUpdateEventListener;
+    private final transient BeforeValidateEventTriggerCaller beforeValidateEventListener;
+    private final transient GrailsHibernatePersistentEntity persistentEntity;
+    private final transient MetaClass domainMetaClass;
     private final boolean failOnErrorEnabled;
     private final Map validateParams;
 
-    private Field actionQueueUpdatesField;
-    private Field entityUpdateActionStateField;
-
-    public ClosureEventListener(PersistentEntity persistentEntity, boolean failOnError, List failOnErrorPackages) {
+    public ClosureEventListener(
+            GrailsHibernatePersistentEntity persistentEntity, boolean failOnError, List failOnErrorPackages) {
         this.persistentEntity = persistentEntity;
         Class domainClazz = persistentEntity.getJavaClass();
         this.domainMetaClass = GroovySystem.getMetaClassRegistry().getMetaClass(domainClazz);
-        this.isMultiTenant = ClassUtils.isMultiTenant(domainClazz);
-        saveOrUpdateCaller = buildCaller(AbstractPersistenceEvent.ONLOAD_SAVE, domainClazz);
+
         beforeInsertCaller = buildCaller(AbstractPersistenceEvent.BEFORE_INSERT_EVENT, domainClazz);
-        EventTriggerCaller preLoadEventCaller = buildCaller(AbstractPersistenceEvent.ONLOAD_EVENT, domainClazz);
-        if (preLoadEventCaller == null) {
-            this.preLoadEventCaller = buildCaller(AbstractPersistenceEvent.BEFORE_LOAD_EVENT, domainClazz);
-        }
-        else {
-            this.preLoadEventCaller = preLoadEventCaller;
-        }
+        EventTriggerCaller preLoadCaller = buildCaller(AbstractPersistenceEvent.ONLOAD_EVENT, domainClazz);
+        this.preLoadEventCaller = (preLoadCaller != null) ?
+                preLoadCaller :
+                buildCaller(AbstractPersistenceEvent.BEFORE_LOAD_EVENT, domainClazz);
 
         postLoadEventListener = buildCaller(AbstractPersistenceEvent.AFTER_LOAD_EVENT, domainClazz);
         postInsertEventListener = buildCaller(AbstractPersistenceEvent.AFTER_INSERT_EVENT, domainClazz);
@@ -137,161 +132,105 @@ public class ClosureEventListener implements SaveOrUpdateEventListener,
         preUpdateEventListener = buildCaller(AbstractPersistenceEvent.BEFORE_UPDATE_EVENT, domainClazz);
 
         beforeValidateEventListener = new BeforeValidateEventTriggerCaller(domainClazz, domainMetaClass);
-
-        if (failOnErrorPackages.size() > 0) {
-            failOnErrorEnabled = ClassUtils.isClassBelowPackage(domainClazz, failOnErrorPackages);
-        } else {
-            failOnErrorEnabled = failOnError;
-        }
+        failOnErrorEnabled = !failOnErrorPackages.isEmpty() ?
+                ClassUtils.isClassBelowPackage(domainClazz, failOnErrorPackages) :
+                failOnError;
 
         validateParams = new HashMap();
-        validateParams.put(AbstractHibernateGormValidationApi.ARGUMENT_DEEP_VALIDATE, Boolean.FALSE);
+        validateParams.put(HibernateGormValidationApi.ARGUMENT_DEEP_VALIDATE, Boolean.FALSE);
+    }
 
-        try {
-            actionQueueUpdatesField = ReflectionUtils.findField(ActionQueue.class, "updates");
-            actionQueueUpdatesField.setAccessible(true);
-            entityUpdateActionStateField = ReflectionUtils.findField(EntityUpdateAction.class, "state");
-            entityUpdateActionStateField.setAccessible(true);
-        } catch (Exception e) {
-            // ignore
+    @Override
+    public void onPreLoad(PreLoadEvent event) {
+        if (preLoadEventCaller != null) {
+            doPreLoadWithManualSession(event, () -> preLoadEventCaller.call(event.getEntity()));
         }
     }
 
-    public void onSaveOrUpdate(SaveOrUpdateEvent event) throws HibernateException {
-        // no-op, merely a hook for plugins to override
+    @Override
+    public void onPostLoad(PostLoadEvent event) {
+        if (postLoadEventListener != null) {
+            doPostLoadWithManualSession(event, () -> postLoadEventListener.call(event.getEntity()));
+        }
     }
 
-    public void onPreLoad(final PreLoadEvent event) {
-        if (preLoadEventCaller == null) {
-            return;
-        }
-
-        doWithManualSession(event, new Closure(this) {
-            @Override
-            public Object call() {
-                preLoadEventCaller.call(event.getEntity());
-                return null;
+    @Override
+    public boolean onPreInsert(PreInsertEvent event) {
+        return doBooleanWithManualSession(event, () -> {
+            Object entity = event.getEntity();
+            if (beforeInsertCaller != null) {
+                if (beforeInsertCaller.call(entity)) return true;
+                synchronizePersisterState(event, event.getState());
             }
+            return doValidate(entity);
         });
     }
 
-    public void onPostLoad(final PostLoadEvent event) {
-        if (postLoadEventListener == null) {
-            return;
-        }
+    // --- Specific manual session versions for PreLoad and PostLoad ---
 
-        doWithManualSession(event, new Closure(this) {
-            @Override
-            public Object call() {
-                postLoadEventListener.call(event.getEntity());
-                return null;
-            }
-        });
+    private void doPreLoadWithManualSession(PreLoadEvent event, Runnable action) {
+        flushOrRun(event.getSession(), action);
     }
 
+    private void flushOrRun(EventSource event, Runnable action) {
+        if ((SharedSessionContractImplementor) event instanceof Session session) {
+            FlushMode current = session.getHibernateFlushMode();
+            try {
+                session.setHibernateFlushMode(FlushMode.MANUAL);
+                action.run();
+            } finally {
+                session.setHibernateFlushMode(current);
+            }
+        } else {
+            action.run();
+        }
+    }
+
+    private void doPostLoadWithManualSession(PostLoadEvent event, Runnable action) {
+        flushOrRun(event.getSession(), action);
+    }
+
+    // --- Standard Overrides ---
+
+    @Override
     public void onPostInsert(PostInsertEvent event) {
-        final Object entity = event.getEntity();
-        if (postInsertEventListener == null) {
-            return;
+        if (postInsertEventListener != null) {
+            doVoidWithManualSession(event, () -> postInsertEventListener.call(event.getEntity()));
         }
-
-        doWithManualSession(event, new Closure(this) {
-            @Override
-            public Object call() {
-                postInsertEventListener.call(entity);
-                return null;
-            }
-        });
     }
 
     @Override
-    public boolean requiresPostCommitHanding(EntityPersister persister) {
-        return false;
-    }
-
-    @Override
-    public boolean requiresPostCommitHandling(EntityPersister persister) {
-        return false;
-    }
-
     public void onPostUpdate(PostUpdateEvent event) {
-        final Object entity = event.getEntity();
-        if (postUpdateEventListener == null) {
-            return;
+        if (postUpdateEventListener != null) {
+            doVoidWithManualSession(event, () -> postUpdateEventListener.call(event.getEntity()));
         }
-
-        doWithManualSession(event, new Closure(this) {
-            @Override
-            public Object call() {
-                postUpdateEventListener.call(entity);
-                return null;
-            }
-        });
     }
 
+    @Override
     public void onPostDelete(PostDeleteEvent event) {
-        final Object entity = event.getEntity();
-        if (postDeleteEventListener == null) {
-            return;
+        if (postDeleteEventListener != null) {
+            doVoidWithManualSession(event, () -> postDeleteEventListener.call(event.getEntity()));
         }
-
-        doWithManualSession(event, new Closure(this) {
-            @Override
-            public Object call() {
-                postDeleteEventListener.call(entity);
-                return null;
-            }
-        });
     }
 
-    public boolean onPreDelete(final PreDeleteEvent event) {
-        if (preDeleteEventListener == null) {
-            return false;
-        }
-
-        return doWithManualSession(event, new Closure<>(this) {
-            @Override
-            public Boolean call() {
-                return preDeleteEventListener.call(event.getEntity());
-            }
-        });
+    @Override
+    public boolean onPreDelete(PreDeleteEvent event) {
+        if (preDeleteEventListener == null) return false;
+        return doBooleanWithManualSession(event, () -> preDeleteEventListener.call(event.getEntity()));
     }
 
-    public boolean onPreUpdate(final PreUpdateEvent event) {
-        return doWithManualSession(event, new Closure<>(this) {
-            @Override
-            public Boolean call() {
-                Object entity = event.getEntity();
-                boolean evict = false;
-                if (preUpdateEventListener != null) {
-                    evict = preUpdateEventListener.call(entity);
-                    if (!evict) {
-                        synchronizePersisterState(event, event.getState());
-                    }
-                }
-                return evict || doValidate(entity);
-            }
-        });
-    }
-
-    public boolean onPreInsert(final PreInsertEvent event) {
-        return doWithManualSession(event, new Closure<>(this) {
-            @Override
-            public Boolean call() {
-                Object entity = event.getEntity();
-                boolean synchronizeState = false;
-                if (beforeInsertCaller != null) {
-                    if (beforeInsertCaller.call(entity)) {
-                        return true;
-                    }
-                    synchronizeState = true;
-                }
-                if (synchronizeState) {
+    @Override
+    public boolean onPreUpdate(PreUpdateEvent event) {
+        return doBooleanWithManualSession(event, () -> {
+            Object entity = event.getEntity();
+            boolean evict = false;
+            if (preUpdateEventListener != null) {
+                evict = preUpdateEventListener.call(entity);
+                if (!evict) {
                     synchronizePersisterState(event, event.getState());
                 }
-                return doValidate(entity);
             }
-
+            return evict || doValidate(entity);
         });
     }
 
@@ -300,91 +239,90 @@ public class ClosureEventListener implements SaveOrUpdateEventListener,
     }
 
     protected boolean doValidate(Object entity) {
-        boolean evict = false;
         GormValidateable validateable = (GormValidateable) entity;
-        if (!validateable.shouldSkipValidation() &&
-                !validateable.validate(validateParams)) {
-            evict = true;
+        if (!validateable.shouldSkipValidation() && !validateable.validate(validateParams)) {
             if (failOnErrorEnabled) {
-                Errors errors = validateable.getErrors();
-                throw ValidationException.newInstance("Validation error whilst flushing entity [" + entity.getClass().getName() +
-                        "]", errors);
+                throw ValidationException.newInstance(
+                        "Validation error whilst flushing entity [" +
+                                entity.getClass().getName() + "]",
+                        validateable.getErrors());
             }
+            return true;
         }
-        return evict;
+        return false;
     }
 
     private EventTriggerCaller buildCaller(String eventName, Class<?> domainClazz) {
         return EventTriggerCaller.buildCaller(eventName, domainClazz, domainMetaClass, null);
     }
 
-    private void synchronizePersisterState(AbstractPreDatabaseOperationEvent event, Object[] state) {
+    private void synchronizePersisterState(AbstractPreDatabaseOperationEvent event, Object... state) {
         EntityPersister persister = event.getPersister();
-        synchronizePersisterState(event, state, persister, persister.getPropertyNames());
-    }
-
-    private void synchronizePersisterState(AbstractPreDatabaseOperationEvent event, Object[] state, EntityPersister persister, String[] propertyNames) {
         Object entity = event.getEntity();
         EntityReflector reflector = persistentEntity.getReflector();
-        HashMap<Integer, Object> changedState = new HashMap<>();
-        EntityMetamodel entityMetamodel = persister.getEntityMetamodel();
-        for (int i = 0; i < propertyNames.length; i++) {
-            String p = propertyNames[i];
-            Integer index = entityMetamodel.getPropertyIndexOrNull(p);
-            if (index == null) continue;
+        EntityMappingType entityMappingType = persister.getEntityMappingType();
+        String[] propertyNames = persister.getPropertyNames();
 
-            PersistentProperty property = persistentEntity.getPropertyByName(p);
-            if (property == null) {
-                continue;
-            }
-            String propertyName = property.getName();
+        for (String p : propertyNames) {
+            AttributeMapping attributeMapping = entityMappingType.findAttributeMapping(p);
+            if (attributeMapping == null) continue;
 
-            if (GormProperties.VERSION.equals(propertyName)) {
-                continue;
-            }
+            int index = attributeMapping.getStateArrayPosition();
+            PersistentProperty property = persistentEntity.getHibernatePropertyByName(p);
 
-            Object value = reflector.getProperty(entity, propertyName);
-            if (state[index] != value) {
-                changedState.put(i, value);
+            if (property != null && !GormProperties.VERSION.equals(property.getName())) {
+                state[index] = reflector.getProperty(entity, property.getName());
             }
-            state[index] = value;
         }
-
-        synchronizeEntityUpdateActionState(event, entity, changedState);
     }
 
-    private void synchronizeEntityUpdateActionState(AbstractPreDatabaseOperationEvent event, Object entity,
-                                                    HashMap<Integer, Object> changedState) {
-        if (actionQueueUpdatesField != null && event instanceof PreInsertEvent && changedState.size() > 0) {
+    private void doVoidWithManualSession(AbstractEvent event, Runnable action) {
+        SharedSessionContractImplementor sessionImpl = event.getSession();
+        if (sessionImpl instanceof Session session) {
+            FlushMode current = session.getHibernateFlushMode();
             try {
-                ExecutableList<EntityUpdateAction> updates = (ExecutableList<EntityUpdateAction>) actionQueueUpdatesField.get(event.getSession().getActionQueue());
-                if (updates != null) {
-                    for (EntityUpdateAction updateAction : updates) {
-                        if (updateAction.getInstance() == entity) {
-                            Object[] updateState = (Object[]) entityUpdateActionStateField.get(updateAction);
-                            if (updateState != null) {
-                                for (Map.Entry<Integer, Object> entry : changedState.entrySet()) {
-                                    updateState[entry.getKey()] = entry.getValue();
-                                }
-                            }
-                        }
-                    }
-                }
+                session.setHibernateFlushMode(FlushMode.MANUAL);
+                action.run();
+            } finally {
+                session.setHibernateFlushMode(current);
             }
-            catch (Exception e) {
-                LOG.warn("Error synchronizing object state with Hibernate: " + e.getMessage(), e);
-            }
+        } else {
+            action.run();
         }
     }
 
-    private <T> T doWithManualSession(AbstractEvent event, Closure<T> callable) {
-        Session session = event.getSession();
-        FlushMode current = session.getHibernateFlushMode();
+    private boolean doBooleanWithManualSession(AbstractEvent event, Callable<Boolean> callable) {
+        SharedSessionContractImplementor sessionImpl = event.getSession();
+        if (sessionImpl instanceof Session session) {
+            FlushMode current = session.getHibernateFlushMode();
+            try {
+                session.setHibernateFlushMode(FlushMode.MANUAL);
+                return callable.call();
+            } catch (Exception e) {
+                throw new HibernateException(e);
+            } finally {
+                session.setHibernateFlushMode(current);
+            }
+        }
         try {
-            session.setHibernateFlushMode(FlushMode.MANUAL);
             return callable.call();
-        } finally {
-            session.setHibernateFlushMode(current);
+        } catch (Exception e) {
+            throw new HibernateException(e);
         }
     }
+
+    @Override
+    public void onMerge(MergeEvent event) {}
+
+    @Override
+    public void onMerge(MergeEvent event, MergeContext copiedAlready) {}
+
+    @Override
+    public void onPersist(PersistEvent event) {}
+
+    @Override
+    public void onPersist(PersistEvent event, PersistContext createdAlready) {}
+
+    @Override
+    public void injectCallbackRegistry(CallbackRegistry callbackRegistry) {}
 }

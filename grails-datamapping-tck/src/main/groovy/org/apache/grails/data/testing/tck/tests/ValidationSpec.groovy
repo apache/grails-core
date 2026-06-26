@@ -45,7 +45,6 @@ class ValidationSpec extends GrailsDataTckSpec {
      }
 
     // Hibernate did not originally have this test and it fails for it
-    @PendingFeatureIf({ System.getProperty('hibernate5.gorm.suite') || System.getProperty('hibernate7.gorm.suite') })
     void 'Test validating an object that has had values rejected with an ObjectError'() {
         given:
         def t = new TestEntity(name: 'someName')

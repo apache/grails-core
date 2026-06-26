@@ -21,149 +21,161 @@ package org.grails.orm.hibernate.proxy;
 import java.io.Serializable;
 
 import org.hibernate.Hibernate;
+import org.hibernate.collection.spi.LazyInitializable;
 import org.hibernate.collection.spi.PersistentCollection;
 import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.proxy.HibernateProxyHelper;
 
+import org.grails.datastore.gorm.proxy.ProxyInstanceMetaClass;
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.engine.AssociationQueryExecutor;
+import org.grails.datastore.mapping.proxy.EntityProxy;
 import org.grails.datastore.mapping.proxy.ProxyFactory;
 import org.grails.datastore.mapping.proxy.ProxyHandler;
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
+import org.grails.orm.hibernate.GrailsHibernateTemplate;
 
 /**
- * Implementation of the ProxyHandler interface for Hibernate using org.hibernate.Hibernate
- * and HibernateProxyHelper where possible.
+ * Implementation of the ProxyHandler interface for Hibernate 7.
  *
  * @author Graeme Rocher
- * @since 1.2.2
+ * @since 7.0
  */
+@SuppressWarnings("PMD.CloseResource")
 public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
 
-    /**
-     * Check if the proxy or persistent collection is initialized.
-     * {@inheritDoc}
-     */
     @Override
     public boolean isInitialized(Object o) {
+        if (o == null) return false;
+
+        if (o instanceof HibernateProxy hp) {
+            return !hp.getHibernateLazyInitializer().isUninitialized();
+        }
+        if (o instanceof EntityProxy<?> ep) {
+            return ep.isInitialized();
+        }
+        if (o instanceof LazyInitializable li) {
+            return li.wasInitialized();
+        }
+
+        Boolean groovyProxyInitialized = GroovyProxyInterceptorLogic.isInitialized(o);
+        if (groovyProxyInitialized != null) {
+            return groovyProxyInitialized;
+        }
+
         return Hibernate.isInitialized(o);
     }
 
-    /**
-     * Check if an association proxy or persistent collection is initialized.
-     * {@inheritDoc}
-     */
     @Override
     public boolean isInitialized(Object obj, String associationName) {
         try {
             Object proxy = ClassPropertyFetcher.getInstancePropertyValue(obj, associationName);
             return isInitialized(proxy);
-        }
-        catch (RuntimeException e) {
+        } catch (RuntimeException e) {
             return false;
         }
     }
 
-    /**
-     * Unproxies a HibernateProxy. If the proxy is uninitialized, it automatically triggers an initialization.
-     * In case the supplied object is null or not a proxy, the object will be returned as-is.
-     * {@inheritDoc}
-     * @see Hibernate#unproxy
-     */
     @Override
     public Object unwrap(Object object) {
+        if (object instanceof EntityProxy<?> ep) {
+            return ep.getTarget();
+        }
+
+        Object unwrapped = GroovyProxyInterceptorLogic.unwrap(object);
+        if (unwrapped != null) {
+            return unwrapped;
+        }
+
         if (object instanceof PersistentCollection) {
             initialize(object);
             return object;
         }
+
         return Hibernate.unproxy(object);
     }
 
-    /**
-     * {@inheritDoc}
-     * @see org.hibernate.proxy.AbstractLazyInitializer#getIdentifier
-     */
     @Override
     public Serializable getIdentifier(Object o) {
-        if (o instanceof HibernateProxy) {
-            return ((HibernateProxy) o).getHibernateLazyInitializer().getIdentifier();
+        if (o instanceof EntityProxy<?> ep) {
+            return ep.getProxyKey();
         }
-        else {
-            //TODO seems we can get the id here if its has normal getId
-            // PersistentEntity persistentEntity = GormEnhancer.findStaticApi(o.getClass()).getGormPersistentEntity();
-            // return persistentEntity.getMappingContext().getEntityReflector(persistentEntity).getIdentifier(o);
-            return null;
+
+        Serializable identifier = GroovyProxyInterceptorLogic.getIdentifier(o);
+        if (identifier != null) {
+            return identifier;
         }
+
+        if (o instanceof HibernateProxy hp) {
+            return (Serializable) hp.getHibernateLazyInitializer().getIdentifier();
+        }
+
+        return null;
     }
 
-    /**
-     * {@inheritDoc}
-     * @see HibernateProxyHelper#getClassWithoutInitializingProxy
-     */
     @Override
     public Class<?> getProxiedClass(Object o) {
         return HibernateProxyHelper.getClassWithoutInitializingProxy(o);
     }
 
-    /**
-     * calls unwrap which calls unproxy
-     * @see #unwrap(Object)
-     * @deprecated use unwrap
-     */
+    @Override
+    public boolean isProxy(Object o) {
+        return GroovyProxyInterceptorLogic.getProxyInstanceMetaClass(o) != null ||
+                o instanceof EntityProxy ||
+                o instanceof HibernateProxy ||
+                o instanceof PersistentCollection;
+    }
+
+    @Override
+    public void initialize(Object o) {
+        if (o instanceof EntityProxy<?> ep) {
+            ep.initialize();
+            return;
+        }
+
+        ProxyInstanceMetaClass proxyMc = GroovyProxyInterceptorLogic.getProxyInstanceMetaClass(o);
+        if (proxyMc != null) {
+            proxyMc.getProxyTarget();
+        } else {
+            Hibernate.initialize(o);
+        }
+    }
+
+    @Override
+    public <T> T createProxy(Session session, Class<T> type, Serializable key) {
+        if (session.getNativeInterface() instanceof GrailsHibernateTemplate ght) {
+            org.hibernate.SessionFactory sessionFactory = ght.getSessionFactory();
+            if (sessionFactory != null) {
+                return org.hibernate.Hibernate.createDetachedProxy(sessionFactory, type, key);
+            }
+        }
+        throw new IllegalStateException(
+                "Could not obtain native Hibernate SessionFactory from Session#getNativeInterface()");
+    }
+
+    @Override
+    public <T, K extends Serializable> T createProxy(
+            Session session, AssociationQueryExecutor<K, T> executor, K associationKey) {
+        throw new UnsupportedOperationException(
+                "createProxy via AssociationQueryExecutor not supported in HibernateProxyHandler");
+    }
+
+    public HibernateProxy getAssociationProxy(Object obj, String associationName) {
+        try {
+            Object proxy = ClassPropertyFetcher.getInstancePropertyValue(obj, associationName);
+            return (proxy instanceof HibernateProxy hp) ? hp : null;
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
     @Deprecated
     public Object unwrapIfProxy(Object instance) {
         return unwrap(instance);
     }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public boolean isProxy(Object o) {
-        return (o instanceof HibernateProxy) || (o instanceof PersistentCollection);
-    }
-
-    /**
-     * Force initialization of a proxy or persistent collection.
-     * {@inheritDoc}
-     */
-    @Override
-    public void initialize(Object o) {
-        Hibernate.initialize(o);
-    }
-
-    @Override
-    public <T> T createProxy(Session session, Class<T> type, Serializable key) {
-        throw new UnsupportedOperationException("createProxy not supported in HibernateProxyHandler");
-    }
-
-    @Override
-    public <T, K extends Serializable> T createProxy(Session session, AssociationQueryExecutor<K, T> executor, K associationKey) {
-        throw new UnsupportedOperationException("createProxy not supported in HibernateProxyHandler");
-    }
-
-    /**
-     * @deprecated use unwrap
-     */
     @Deprecated
     public Object unwrapProxy(Object proxy) {
         return unwrap(proxy);
-    }
-
-    /**
-     * returns the proxy for an association. returns null if its not a proxy.
-     * Note: Only used in a test. Deprecate?
-     */
-    public HibernateProxy getAssociationProxy(Object obj, String associationName) {
-        try {
-            Object proxy = ClassPropertyFetcher.getInstancePropertyValue(obj, associationName);
-            if (proxy instanceof HibernateProxy) {
-                return (HibernateProxy) proxy;
-            }
-            return null;
-        }
-        catch (RuntimeException e) {
-            return null;
-        }
     }
 }

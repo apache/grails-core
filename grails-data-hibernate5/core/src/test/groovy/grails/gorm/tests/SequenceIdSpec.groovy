@@ -45,9 +45,12 @@ class SequenceIdSpec extends Specification {
         then:"The entity was saved"
         BookWithSequence.first()
 
-        ((SessionImplementor)datastore.sessionFactory.currentSession).connection().prepareStatement("call NEXT VALUE FOR book_seq;")
-                .executeQuery()
-                .next()
+        SessionImplementor sessionImplementor = (SessionImplementor) datastore.sessionFactory.currentSession
+        sessionImplementor.doWork {connection ->
+            connection.prepareStatement("call NEXT VALUE FOR book_seq;")
+            .executeQuery().next()
+        }
+
     }
 }
 @Entity

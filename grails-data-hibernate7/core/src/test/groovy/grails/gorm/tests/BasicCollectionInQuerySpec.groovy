@@ -82,7 +82,7 @@ class BasicCollectionInQuerySpec extends Specification {
         when:
         def results = BcStudent.createCriteria().list {
             createAlias("schools", "s")
-            'in'("s.elements", ["SchoolB"])
+            'in'("s", ["SchoolB"])
             projections {
                 property 'email'
             }

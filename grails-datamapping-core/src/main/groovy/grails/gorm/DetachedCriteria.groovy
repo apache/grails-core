@@ -136,9 +136,9 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
      * @return A list of matching instances
      */
     List<T> list(Map args = Collections.emptyMap(), @DelegatesTo(DetachedCriteria) Closure additionalCriteria = null) {
-        (List) withPopulatedQuery(args, additionalCriteria) { Query query ->
+        (List)withPopulatedQuery(args, additionalCriteria) { Query query ->
             if (args?.max) {
-                return new PagedResultList(query)
+                return new PagedResultList<T>(query)
             }
             return query.list()
         }
@@ -514,24 +514,8 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
      * @return The count
      */
     Number count(Map args = Collections.emptyMap(), @DelegatesTo(DetachedCriteria) Closure additionalCriteria = null) {
-        if (!projections.isEmpty()) {
-            // When user-defined projections exist (e.g. groupProperty + count),
-            // a simple count() projection returns incorrect results because it
-            // appends to the existing projections rather than replacing them.
-            // Fall back to counting the grouped result rows.
-            // This will be resolved properly in Grails 8 with Hibernate 7's
-            // JpaSelectCriteria.from(Subquery) support for derived tables.
-            log.warn('DetachedCriteria.count() with user-defined projections cannot use a SQL count query ' +
-                    'due to a Hibernate 5 limitation. All grouped result rows will be loaded into memory to ' +
-                    'determine the count. This may impact performance on large result sets. ' +
-                    'This will be resolved in Grails 8 (Hibernate 7) which supports derived table subqueries.')
-            return ((List) withPopulatedQuery(args, additionalCriteria) { Query query ->
-                query.list()
-            }).size()
-        }
         (Number) withPopulatedQuery(args, additionalCriteria) { Query query ->
-            query.projections().count()
-            query.singleResult()
+            query.countResults()
         }
     }
 
@@ -731,7 +715,7 @@ class DetachedCriteria<T> extends AbstractDetachedCriteria<T> implements GormOpe
     }
 
     @Override
-    protected DetachedCriteria<T> clone() {
+    DetachedCriteria<T> clone() {
         return (DetachedCriteria) super.clone()
     }
 

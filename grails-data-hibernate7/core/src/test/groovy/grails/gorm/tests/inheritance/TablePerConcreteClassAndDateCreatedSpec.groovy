@@ -26,7 +26,7 @@ import spock.lang.Issue
 /**
  * Created by graemerocher on 29/05/2017.
  */
-@Issue('https://github.com/apache/grails-data-mapping/issues/937')
+@Issue('https://github.com/grails/grails-data-mapping/issues/937')
 class TablePerConcreteClassAndDateCreatedSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
     void setupSpec() {
         manager.registerDomainClasses(Vehicle, Spaceship)
@@ -65,7 +65,7 @@ abstract class Vehicle {
     static mapping = {
         tablePerConcreteClass true
         dynamicUpdate true
-        id generator: 'increment'
+        id generator: 'table'
     }
 }
 

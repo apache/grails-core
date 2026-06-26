@@ -44,10 +44,4 @@ class CodecsGrailsPlugin extends Plugin {
             URLCodec,
             RawCodec
     ]
-
-    Closure doWithSpring() {
-        { ->
-            codecLookup(DefaultCodecLookup)
-        }
-    }
 }

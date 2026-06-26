@@ -170,6 +170,12 @@ interface Settings {
      */
     String MIME_TYPES = 'grails.mime.types'
     /**
+     * Whether a configured {@code grails.mime.types} map is merged over the built-in defaults
+     * (adding any extension it does not declare) rather than replacing them. Defaults to {@code false},
+     * preserving the historical behaviour where a declared map fully replaces the defaults.
+     */
+    String MIME_TYPES_MERGE_DEFAULTS = 'grails.mime.mergeDefaults'
+    /**
      * Whether to use the accept header for content negotiation
      */
     String MIME_USE_ACCEPT_HEADER = 'grails.mime.use.accept.header'

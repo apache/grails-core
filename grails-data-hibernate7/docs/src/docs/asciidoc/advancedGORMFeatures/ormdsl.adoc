@@ -16,32 +16,22 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 ////
+[[advancedGORMFeatures-ormdsl]]
+== ORM DSL
 
-GORM domain classes can be mapped onto many legacy schemas with an Object Relational Mapping DSL (domain specific language). The following sections takes you through what is possible with the ORM DSL.
+The ORM DSL is a `static mapping` closure on every domain class that gives you fine-grained control over how GORM maps your domain model to the database schema.
 
-NOTE: None of this is necessary if you are happy to stick to the conventions defined by GORM for table names, column names and so on. You only needs this functionality if you need to tailor the way GORM maps onto legacy schemas or configures caching
+See the subsections below for details on each feature:
 
-Custom mappings are defined using a static `mapping` block defined within your domain class:
-
-[source,java]
-----
-class Person {
-    ...
-    static mapping = {
-        version false
-        autoTimestamp false
-    }
-}
-----
-
-You can also configure global mappings in `application.groovy` (or an external config file) using this setting:
-
-[source,java]
-----
-grails.gorm.default.mapping = {
-    version false
-    autoTimestamp false
-}
-----
-
-It has the same syntax as the standard `mapping` block but it applies to all your domain classes! You can then override these defaults within the `mapping` block of a domain class.
+* xref:ormdsl-tableAndColumnNames[Table and Column Names]
+* xref:ormdsl-identity[Identity]
+* xref:ormdsl-compositePrimaryKeys[Composite Primary Keys]
+* xref:ormdsl-optimisticLockingAndVersioning[Optimistic Locking and Versioning]
+* xref:ormdsl-inheritanceStrategies[Inheritance Strategies]
+* xref:ormdsl-fetchingDSL[Fetching Strategies]
+* xref:ormdsl-caching[Caching]
+* xref:ormdsl-customCascadeBehaviour[Custom Cascade Behaviour]
+* xref:ormdsl-customNamingStrategy[Custom Naming Strategy]
+* xref:ormdsl-customHibernateTypes[Custom Hibernate Types]
+* xref:ormdsl-derivedProperties[Derived Properties]
+* xref:ormdsl-databaseIndices[Database Indices]

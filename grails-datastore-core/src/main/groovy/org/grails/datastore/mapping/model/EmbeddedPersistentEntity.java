@@ -18,6 +18,7 @@
  */
 package org.grails.datastore.mapping.model;
 
+import org.grails.datastore.mapping.config.Entity;
 import org.grails.datastore.mapping.reflect.FieldEntityAccess;
 
 /**
@@ -27,7 +28,7 @@ import org.grails.datastore.mapping.reflect.FieldEntityAccess;
  * @since 1.0
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
-public class EmbeddedPersistentEntity extends AbstractPersistentEntity {
+public class EmbeddedPersistentEntity<T extends Entity> extends AbstractPersistentEntity<T> {
     public EmbeddedPersistentEntity(Class type, MappingContext ctx) {
         super(type, ctx);
     }
