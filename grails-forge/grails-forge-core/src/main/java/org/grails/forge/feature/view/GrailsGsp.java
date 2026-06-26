@@ -31,7 +31,6 @@ import org.grails.forge.feature.web.GrailsWeb;
 import org.grails.forge.options.Options;
 import org.grails.forge.template.URLTemplate;
 
-import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
 
@@ -88,20 +87,6 @@ public class GrailsGsp implements DefaultFeature {
     @Override
     public void apply(GeneratorContext generatorContext) {
         final Map<String, Object> config = generatorContext.getConfiguration();
-        config.put("grails.mime.types.all", "*/*");
-        config.put("grails.mime.types.atom", "application/atom+xml");
-        config.put("grails.mime.types.css", "text/css");
-        config.put("grails.mime.types.csv", "text/csv");
-        config.put("grails.mime.types.form", "application/x-www-form-urlencoded");
-        config.put("grails.mime.types.html", Arrays.asList("text/html", "application/xhtml+xml"));
-        config.put("grails.mime.types.js", "text/javascript");
-        config.put("grails.mime.types.json", Arrays.asList("application/json", "text/json"));
-        config.put("grails.mime.types.multipartForm", "multipart/form-data");
-        config.put("grails.mime.types.pdf", "application/pdf");
-        config.put("grails.mime.types.rss", "application/rss+xml");
-        config.put("grails.mime.types.text", "text/plain");
-        config.put("grails.mime.types.hal", Arrays.asList("application/hal+json", "application/hal+xml"));
-        config.put("grails.mime.types.xml", Arrays.asList("text/xml", "application/xml"));
         config.put("grails.views.gsp.encoding", "UTF-8");
         config.put("grails.views.gsp.htmlcodec", "xml");
         config.put("grails.views.gsp.codecs.scriptlet", "html");

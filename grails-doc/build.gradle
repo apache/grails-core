@@ -616,6 +616,7 @@ publishGuideTask.configure { PublishGuideTask publish ->
 
     publish.properties = project.provider {
         def projectVersionForURL = projectVersion.endsWith('-SNAPSHOT') ? 'SNAPSHOT' : projectVersion
+        def grailsMajorVersion = projectVersion.tokenize('.')[0]
         def springVersion = getVersion('spring-core')
         def springBootVersion = getVersion('spring-boot')
         def spockVersion = getVersion("spock-core")
@@ -657,6 +658,7 @@ publishGuideTask.configure { PublishGuideTask publish ->
                 'springVersion'            : springVersion,
                 'gradleVersion'            : gradle.gradleVersion,
                 'GrailsVersion'            : projectVersion,
+                'grailsMajorVersion'       : grailsMajorVersion,
                 'grailsVersionForURL'      : projectVersionForURL,
                 'version'                  : projectVersion,
                 'gormVersion'              : projectVersion,
