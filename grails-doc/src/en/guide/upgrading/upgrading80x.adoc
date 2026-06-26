@@ -1313,7 +1313,21 @@ logging:
         name: logs/myapp.log              # setting this activates Spring Boot's file appender
 ----
 
-Add a configuration file only when properties are not enough — for example custom appenders, structured output, or environment-specific logging. When you do, create `grails-app/conf/logback-spring.xml` (the `-spring` variant, not plain `logback.xml`), because it is processed by Spring Boot and unlocks `<springProfile>` and `<springProperty>`:
+Per-environment logging also needs no XML. Grails environments map to Spring profiles, so an `environments` block in `application.yml` applies levels to a single environment — for example, verbose logging for your own packages in development only:
+
+[source,yaml]
+.application.yml
+----
+environments:
+    development:
+        logging:
+            level:
+                com.example.myapp: DEBUG
+----
+
+A profile-specific `grails-app/conf/application-development.yml` containing the same `logging.level` entries works as well.
+
+Reach for a `logback-spring.xml` file only when properties are not enough — for example custom appenders, structured/JSON output, or per-environment appender routing. Use the `-spring` variant (not plain `logback.xml`), because it is processed by Spring Boot and unlocks `<springProfile>` and `<springProperty>`:
 
 [source,xml]
 .grails-app/conf/logback-spring.xml
@@ -1327,7 +1341,5 @@ Add a configuration file only when properties are not enough — for example cus
     </springProfile>
 </configuration>
 ----
-
-The Grails environments `development`, `test` and `production` map to the corresponding Spring profiles, so `<springProfile>` blocks provide environment-specific logging.
 
 TIP: When generating a project with https://start.grails.org[Grails Forge], select the *Logback Configuration* feature to have a starter `grails-app/conf/logback-spring.xml` generated for you.
