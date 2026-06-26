@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-To use GORM {pluginVersion} for Hibernate in Grails 7 you can specify the following configuration in `build.gradle`:
+To use GORM {pluginVersion} for Hibernate in Grails {grailsMajorVersion} you can specify the following configuration in `build.gradle`:
 
 [source,groovy,subs="attributes"]
 ----
