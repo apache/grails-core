@@ -36,6 +36,7 @@ import org.springframework.core.convert.ConversionService;
 import org.springframework.util.StringUtils;
 
 import grails.gorm.DetachedCriteria;
+import org.grails.datastore.gorm.DatastoreResolver;
 import org.grails.datastore.gorm.finders.MethodExpression.Between;
 import org.grails.datastore.gorm.finders.MethodExpression.Equal;
 import org.grails.datastore.gorm.finders.MethodExpression.GreaterThan;
@@ -53,11 +54,13 @@ import org.grails.datastore.gorm.finders.MethodExpression.Like;
 import org.grails.datastore.gorm.finders.MethodExpression.NotEqual;
 import org.grails.datastore.gorm.finders.MethodExpression.NotInList;
 import org.grails.datastore.gorm.finders.MethodExpression.Rlike;
+import org.grails.datastore.gorm.query.criteria.AbstractCriteriaBuilder;
 import org.grails.datastore.gorm.query.criteria.AbstractDetachedCriteria;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.BuildableCriteria;
@@ -132,6 +135,15 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
         resetMethodExpressionPattern();
     }
 
+    protected DynamicFinder(final Pattern pattern, final String[] operators, final DatastoreResolver datastoreResolver, MappingContext mappingContext) {
+        super(datastoreResolver);
+        this.mappingContext = mappingContext;
+        this.pattern = pattern;
+        this.operators = operators;
+        this.operatorPatterns = new Pattern[operators.length];
+        populateOperators(operators);
+    }
+
     protected DynamicFinder(final Pattern pattern, final String[] operators, final Datastore datastore) {
         super(datastore);
         this.mappingContext = datastore.getMappingContext();
@@ -142,7 +154,7 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
     }
 
     protected DynamicFinder(final Pattern pattern, final String[] operators, final MappingContext mappingContext) {
-        super(null);
+        super((Datastore) null);
         this.mappingContext = mappingContext;
         this.pattern = pattern;
         this.operators = operators;
@@ -433,6 +445,31 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
         }
 
         Object sortObject = argMap.get(ARGUMENT_SORT);
+        if (sortObject == null && orderParam != null) {
+            PersistentEntity entity = null;
+            if (query instanceof AbstractCriteriaBuilder) {
+                entity = ((AbstractCriteriaBuilder) query).getPersistentEntity();
+            }
+            else if (query instanceof AbstractDetachedCriteria) {
+                entity = ((AbstractDetachedCriteria) query).getPersistentEntity();
+            }
+
+            if (entity != null) {
+                PersistentProperty identity = entity.getIdentity();
+                if (identity != null) {
+                    sortObject = identity.getName();
+                } else {
+                    PersistentProperty[] composite = entity.getCompositeIdentity();
+                    if (composite != null && composite.length > 0) {
+                        Map<String, String> sortMap = new LinkedHashMap<>();
+                        for (PersistentProperty p : composite) {
+                            sortMap.put(p.getName(), orderParam);
+                        }
+                        sortObject = sortMap;
+                    }
+                }
+            }
+        }
         boolean ignoreCase = !argMap.containsKey(ARGUMENT_IGNORE_CASE) || ClassUtils.getBooleanFromMap(ARGUMENT_IGNORE_CASE, argMap);
 
         if (sortObject != null) {
@@ -521,6 +558,24 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
             query.offset(offset);
         }
         Object sortObject = argMap.get(ARGUMENT_SORT);
+        if (sortObject == null && orderParam != null) {
+            PersistentEntity entity = query.getEntity();
+            if (entity != null) {
+                PersistentProperty identity = entity.getIdentity();
+                if (identity != null) {
+                    sortObject = identity.getName();
+                } else {
+                    PersistentProperty[] composite = entity.getCompositeIdentity();
+                    if (composite != null && composite.length > 0) {
+                        Map<String, String> sortMap = new LinkedHashMap<>();
+                        for (PersistentProperty p : composite) {
+                            sortMap.put(p.getName(), orderParam);
+                        }
+                        sortObject = sortMap;
+                    }
+                }
+            }
+        }
         boolean ignoreCase = !argMap.containsKey(ARGUMENT_IGNORE_CASE) || ClassUtils.getBooleanFromMap(ARGUMENT_IGNORE_CASE, argMap);
 
         if (sortObject != null) {

@@ -4,14 +4,14 @@
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
+ * 'License'); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
  *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
@@ -25,6 +25,18 @@ import org.apache.grails.data.testing.tck.domains.DataServiceRoutingProduct
 import org.apache.grails.data.testing.tck.domains.DataServiceRoutingProductDataService
 import org.apache.grails.data.testing.tck.domains.DataServiceRoutingProductService
 
+/**
+ * Verifies that {@code @Service}-based Data Service operations route to the correct secondary
+ * datasource via the {@code GormRegistry} selector chain.
+ *
+ * <p>Replaces the service-layer portion of the removed {@code CrossLayerMultiDataSourceSpec}.
+ * That spec obtained a service bean via {@code manager.getServiceForConnection()} — internal
+ * wiring that changed when {@code GormEnhancer}'s static maps were replaced by a single
+ * {@code GormRegistry}. Services are now resolved through the registry's connection-routing
+ * selector ({@code PreferredDatastoreSelector} → {@code QualifiedDatastoreSelector} →
+ * {@code DefaultDatastoreSelector}). The domain-API routing side is covered by
+ * {@link DomainMultiDataSourceSpec}.</p>
+ */
 @Requires({ instance.manager?.supportsMultipleDataSources() })
 class DataServiceConnectionRoutingSpec extends GrailsDataTckSpec {
 
@@ -45,7 +57,8 @@ class DataServiceConnectionRoutingSpec extends GrailsDataTckSpec {
 
     // ---- Abstract class service tests ----
 
-    void "save routes to secondary datasource"() {
+    void 'save routes to secondary datasource'() {
+
         when: 'a product is saved through the abstract Data Service'
         def saved = productService.save(new DataServiceRoutingProduct(name: 'Widget', amount: 42))
 
@@ -59,7 +72,7 @@ class DataServiceConnectionRoutingSpec extends GrailsDataTckSpec {
         countOnConnection('secondary') == 1
     }
 
-    void "get by ID routes to secondary datasource"() {
+    void 'get by ID routes to secondary datasource'() {
         given: 'a product saved on secondary'
         def saved = productService.save(new DataServiceRoutingProduct(name: 'Gadget', amount: 99))
 
@@ -73,7 +86,7 @@ class DataServiceConnectionRoutingSpec extends GrailsDataTckSpec {
         found.amount == 99
     }
 
-    void "count routes to secondary datasource"() {
+    void 'count routes to secondary datasource'() {
         given: 'two products saved on secondary'
         productService.save(new DataServiceRoutingProduct(name: 'Alpha', amount: 10))
         productService.save(new DataServiceRoutingProduct(name: 'Beta', amount: 20))
@@ -85,7 +98,7 @@ class DataServiceConnectionRoutingSpec extends GrailsDataTckSpec {
         productService.count() == 2
     }
 
-    void "delete by ID routes to secondary datasource - FindAndDeleteImplementer"() {
+    void 'delete by ID routes to secondary datasource - FindAndDeleteImplementer'() {
         given: 'a product saved on secondary'
         def saved = productService.save(new DataServiceRoutingProduct(name: 'Ephemeral', amount: 1))
 
@@ -99,7 +112,7 @@ class DataServiceConnectionRoutingSpec extends GrailsDataTckSpec {
         productService.count() == 0
     }
 
-    void "delete by ID routes to secondary datasource - DeleteImplementer"() {
+    void 'delete by ID routes to secondary datasource - DeleteImplementer'() {
         given: 'a product saved on secondary'
         def saved = productService.save(new DataServiceRoutingProduct(name: 'AlsoEphemeral', amount: 2))
 
@@ -111,7 +124,7 @@ class DataServiceConnectionRoutingSpec extends GrailsDataTckSpec {
         productService.count() == 0
     }
 
-    void "findByName routes to secondary datasource"() {
+    void 'findByName routes to secondary datasource'() {
         given: 'products saved on secondary'
         productService.save(new DataServiceRoutingProduct(name: 'Unique', amount: 77))
         productService.save(new DataServiceRoutingProduct(name: 'Other', amount: 88))
@@ -125,7 +138,7 @@ class DataServiceConnectionRoutingSpec extends GrailsDataTckSpec {
         found.amount == 77
     }
 
-    void "findAllByName routes to secondary datasource"() {
+    void 'findAllByName routes to secondary datasource'() {
         given: 'products with duplicate names on secondary'
         productService.save(new DataServiceRoutingProduct(name: 'Duplicate', amount: 10))
         productService.save(new DataServiceRoutingProduct(name: 'Duplicate', amount: 20))
@@ -139,7 +152,7 @@ class DataServiceConnectionRoutingSpec extends GrailsDataTckSpec {
         found.every { it.name == 'Duplicate' }
     }
 
-    void "constructor-style save routes to secondary datasource"() {
+    void 'constructor-style save routes to secondary datasource'() {
         when: 'a product is saved using property arguments'
         def saved = productService.saveProduct('Constructed', 55)
 
@@ -153,7 +166,7 @@ class DataServiceConnectionRoutingSpec extends GrailsDataTckSpec {
         productService.get(saved.id) != null
     }
 
-    void "save, get, and find round-trip through Data Service"() {
+    void 'save, get, and find round-trip through Data Service'() {
         when: 'a product is saved, retrieved by ID, and found by name'
         def saved = productService.save(new DataServiceRoutingProduct(name: 'RoundTrip', amount: 33))
         def byId = productService.get(saved.id)
@@ -168,7 +181,7 @@ class DataServiceConnectionRoutingSpec extends GrailsDataTckSpec {
 
     // ---- Interface service tests ----
 
-    void "interface service: save routes to secondary datasource"() {
+    void 'interface service: save routes to secondary datasource'() {
         when: 'a product is saved through the interface Data Service'
         def saved = productDataService.save(new DataServiceRoutingProduct(name: 'InterfaceWidget', amount: 42))
 
@@ -182,7 +195,7 @@ class DataServiceConnectionRoutingSpec extends GrailsDataTckSpec {
         countOnConnection('secondary') == 1
     }
 
-    void "interface service: get by ID routes to secondary datasource"() {
+    void 'interface service: get by ID routes to secondary datasource'() {
         given: 'a product saved on secondary via abstract service'
         def saved = productService.save(new DataServiceRoutingProduct(name: 'InterfaceGet', amount: 99))
 
@@ -195,7 +208,7 @@ class DataServiceConnectionRoutingSpec extends GrailsDataTckSpec {
         found.name == 'InterfaceGet'
     }
 
-    void "interface service: delete routes to secondary datasource"() {
+    void 'interface service: delete routes to secondary datasource'() {
         given: 'a product saved on secondary'
         def saved = productService.save(new DataServiceRoutingProduct(name: 'InterfaceDelete', amount: 1))
 
@@ -208,7 +221,7 @@ class DataServiceConnectionRoutingSpec extends GrailsDataTckSpec {
         productDataService.get(saved.id) == null
     }
 
-    void "interface service: void delete routes to secondary datasource"() {
+    void 'interface service: void delete routes to secondary datasource'() {
         given: 'a product saved on secondary'
         def saved = productService.save(new DataServiceRoutingProduct(name: 'InterfaceVoidDel', amount: 2))
 
@@ -219,7 +232,7 @@ class DataServiceConnectionRoutingSpec extends GrailsDataTckSpec {
         productDataService.get(saved.id) == null
     }
 
-    void "interface and abstract services share the same datasource"() {
+    void 'interface and abstract services share the same datasource'() {
         given: 'a product saved through the abstract service'
         def saved = productService.save(new DataServiceRoutingProduct(name: 'CrossService', amount: 77))
 
@@ -231,7 +244,7 @@ class DataServiceConnectionRoutingSpec extends GrailsDataTckSpec {
         productService.count() == productDataService.count()
     }
 
-    void "secondary data is not visible on default datasource"() {
+    void 'secondary data is not visible on default datasource'() {
         given: 'a product saved on secondary'
         productService.save(new DataServiceRoutingProduct(name: 'SecondaryOnly', amount: 42))
 
@@ -239,7 +252,7 @@ class DataServiceConnectionRoutingSpec extends GrailsDataTckSpec {
         countOnConnection(null) == 0
     }
 
-    void "default data is not visible on secondary datasource"() {
+    void 'default data is not visible on secondary datasource'() {
         given: 'a product saved on default'
         saveToConnection(null, 'DefaultOnly', 42)
 

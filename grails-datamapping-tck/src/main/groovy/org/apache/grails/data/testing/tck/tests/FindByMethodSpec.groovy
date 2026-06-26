@@ -4,14 +4,14 @@
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
+ * 'License'); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
  *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * 'AS IS' BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
@@ -230,7 +230,7 @@ class FindByMethodSpec extends GrailsDataTckSpec {
         0 == books?.size()
     }
 
-    void "Test findOrCreateBy For A Record That Does Not Exist In The Database"() {
+    void 'Test findOrCreateBy For A Record That Does Not Exist In The Database'() {
         when:
         def book = TckBook.findOrCreateByAuthor('Someone')
 
@@ -240,7 +240,7 @@ class FindByMethodSpec extends GrailsDataTckSpec {
         null == book.id
     }
 
-    void "Test findOrCreateBy With An AND Clause"() {
+    void 'Test findOrCreateBy With An AND Clause'() {
         when:
         def book = TckBook.findOrCreateByAuthorAndTitle('Someone', 'Something')
 
@@ -250,7 +250,7 @@ class FindByMethodSpec extends GrailsDataTckSpec {
         null == book.id
     }
 
-    void "Test findOrCreateBy Throws Exception If An OR Clause Is Used"() {
+    void 'Test findOrCreateBy Throws Exception If An OR Clause Is Used'() {
         when:
         TckBook.findOrCreateByAuthorOrTitle('Someone', 'Something')
 
@@ -258,7 +258,7 @@ class FindByMethodSpec extends GrailsDataTckSpec {
         thrown(MissingMethodException)
     }
 
-    void "Test findOrSaveBy For A Record That Does Not Exist In The Database"() {
+    void 'Test findOrSaveBy For A Record That Does Not Exist In The Database'() {
         when:
         def book = TckBook.findOrSaveByAuthorAndTitle('Some New Author', 'Some New Title')
 
@@ -268,7 +268,7 @@ class FindByMethodSpec extends GrailsDataTckSpec {
         book.id != null
     }
 
-    void "Test findOrSaveBy For A Record That Does Exist In The Database"() {
+    void 'Test findOrSaveBy For A Record That Does Exist In The Database'() {
 
         given:
         def originalId = new TckBook(author: 'Some Author', title: 'Some Title').save().id
@@ -283,7 +283,7 @@ class FindByMethodSpec extends GrailsDataTckSpec {
     }
 
     @Unroll
-    void "Test findOrCreateBy/findOrSaveBy patterns [#index] #methodName should throw #exception.simpleName"() {
+    void 'Test findOrCreateBy/findOrSaveBy patterns [#index] #methodName should throw #exception.simpleName'() {
         when:
         action.call()
 

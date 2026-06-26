@@ -56,6 +56,9 @@ class MappingContextTraversableResolver implements TraversableResolver {
 
     @Override
     boolean isCascadable(Object traversableObject, Path.Node traversableProperty, Class<?> rootBeanType, Path pathToTraversableObject, ElementType elementType) {
+        if (GormValidatorAdapter.CASCADE_VALIDATION.get() == Boolean.FALSE) {
+            return false
+        }
         Class type = proxyHandler.getProxiedClass(traversableObject)
         PersistentEntity entity = mappingContext.getPersistentEntity(type.name)
         if (entity != null) {

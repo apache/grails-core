@@ -28,6 +28,7 @@ import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.interceptor.NoRollbackRuleAttribute;
 import org.springframework.transaction.interceptor.RollbackRuleAttribute;
 import org.springframework.transaction.interceptor.RuleBasedTransactionAttribute;
+import org.springframework.transaction.interceptor.TransactionAttribute;
 
 /**
  * Extended version of {@link RuleBasedTransactionAttribute} that ensures all exception types are rolled back and allows inheritance of setRollbackOnly
@@ -51,38 +52,48 @@ public class CustomizableRollbackTransactionAttribute extends RuleBasedTransacti
         super(propagationBehavior, rollbackRules);
     }
 
-    public CustomizableRollbackTransactionAttribute(org.springframework.transaction.interceptor.TransactionAttribute other) {
+    public CustomizableRollbackTransactionAttribute(TransactionAttribute other) {
         super();
-        setPropagationBehavior(other.getPropagationBehavior());
-        setIsolationLevel(other.getIsolationLevel());
-        setTimeout(other.getTimeout());
-        setReadOnly(other.isReadOnly());
-        setName(other.getName());
+        copyFrom(other);
     }
 
     public CustomizableRollbackTransactionAttribute(TransactionDefinition other) {
         super();
+        copyFrom(other);
+    }
+
+    public CustomizableRollbackTransactionAttribute(CustomizableRollbackTransactionAttribute other) {
+        super();
+        copyFrom(other);
+    }
+
+    public CustomizableRollbackTransactionAttribute(RuleBasedTransactionAttribute other) {
+        super();
+        copyFrom(other);
+    }
+
+    protected void copyFrom(TransactionDefinition other) {
         setPropagationBehavior(other.getPropagationBehavior());
         setIsolationLevel(other.getIsolationLevel());
         setTimeout(other.getTimeout());
         setReadOnly(other.isReadOnly());
         setName(other.getName());
-    }
-
-    public CustomizableRollbackTransactionAttribute(CustomizableRollbackTransactionAttribute other) {
-        this((RuleBasedTransactionAttribute) other);
-    }
-
-    public CustomizableRollbackTransactionAttribute(RuleBasedTransactionAttribute other) {
+        if (other instanceof TransactionAttribute) {
+            setQualifier(((TransactionAttribute) other).getQualifier());
+        }
+        if (other instanceof RuleBasedTransactionAttribute) {
+            setRollbackRules(((RuleBasedTransactionAttribute) other).getRollbackRules());
+        }
         if (other instanceof CustomizableRollbackTransactionAttribute) {
             this.inheritRollbackOnly = ((CustomizableRollbackTransactionAttribute) other).inheritRollbackOnly;
+            this.connection = ((CustomizableRollbackTransactionAttribute) other).connection;
         }
     }
 
     @Override
     public boolean rollbackOn(Throwable ex) {
         if (log.isTraceEnabled()) {
-            log.trace("Applying rules to determine whether transaction should rollback on $ex");
+            log.trace("Applying rules to determine whether transaction should rollback on " + ex);
         }
 
         RollbackRuleAttribute winner = null;
@@ -100,12 +111,14 @@ public class CustomizableRollbackTransactionAttribute extends RuleBasedTransacti
         }
 
         if (log.isTraceEnabled()) {
-            log.trace("Winning rollback rule is: $winner");
+            log.trace("Winning rollback rule is: " + winner);
         }
 
         // User superclass behavior (rollback on unchecked) if no rule matches.
         if (winner == null) {
-            log.trace("No relevant rollback rule found: applying default rules");
+            if (log.isTraceEnabled()) {
+                log.trace("No relevant rollback rule found: applying default rules");
+            }
 
             // always rollback regardless if it is a checked or unchecked exception since Groovy doesn't differentiate those
             return true;

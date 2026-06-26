@@ -21,6 +21,7 @@ package org.grails.datastore.gorm.finders;
 import groovy.lang.Closure;
 
 import grails.gorm.CriteriaBuilder;
+import org.grails.datastore.gorm.DatastoreResolver;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.DatastoreUtils;
 import org.grails.datastore.mapping.core.SessionCallback;
@@ -35,27 +36,41 @@ import org.grails.datastore.mapping.query.Query;
 @SuppressWarnings("rawtypes")
 public abstract class AbstractFinder implements FinderMethod {
 
-    protected final Datastore datastore;
+    protected DatastoreResolver datastoreResolver;
+    protected Datastore datastore;
 
     public AbstractFinder(final Datastore datastore) {
         this.datastore = datastore;
     }
 
+    public AbstractFinder(final DatastoreResolver datastoreResolver) {
+        this.datastoreResolver = datastoreResolver;
+    }
+
+    protected Datastore getDatastore() {
+        if (datastoreResolver != null) {
+            return datastoreResolver.resolve();
+        }
+        return datastore;
+    }
+
     protected <T> T execute(final SessionCallback<T> callback) {
-        if (datastore != null) {
-            return DatastoreUtils.execute(datastore, callback);
+        Datastore ds = getDatastore();
+        if (ds != null) {
+            return DatastoreUtils.execute(ds, callback);
         }
         else {
-            throw new IllegalStateException("Cannot execute session query in stateless mode");
+            throw new IllegalStateException("Cannot execute session query with null datastore");
         }
     }
 
     protected void execute(final VoidSessionCallback callback) {
-        if (datastore != null) {
-            DatastoreUtils.execute(datastore, callback);
+        Datastore ds = getDatastore();
+        if (ds != null) {
+            DatastoreUtils.execute(ds, callback);
         }
         else {
-            throw new IllegalStateException("Cannot execute session query in stateless mode");
+            throw new IllegalStateException("Cannot execute session query with null datastore");
         }
 
     }

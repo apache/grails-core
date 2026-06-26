@@ -173,4 +173,25 @@ public class CriteriaBuilder<T> extends AbstractCriteriaBuilder implements Build
     public Object scroll(@DelegatesTo(Criteria.class) Closure c) {
         return invokeMethod(SCROLL_CALL, new Object[]{c});
     }
+
+    /**
+     * Executes the criteria builder
+     *
+     * @param c The closure
+     * @return The result
+     */
+    public Object call(@DelegatesTo(Criteria.class) Closure c) {
+        ensureQueryIsInitialized();
+        uniqueResult = false;
+        invokeClosureNode(c);
+        
+        Object result;
+        if (!uniqueResult) {
+            result = invokeList();
+        }
+        else {
+            result = query.singleResult();
+        }
+        return result;
+    }
 }

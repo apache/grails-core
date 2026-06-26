@@ -22,6 +22,8 @@ import groovy.transform.CompileStatic
 import groovy.transform.stc.ClosureParams
 import groovy.transform.stc.SimpleType
 
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.TransactionException
@@ -42,6 +44,8 @@ import org.grails.datastore.mapping.transactions.CustomizableRollbackTransaction
  */
 @CompileStatic
 class GrailsTransactionTemplate {
+
+    private static final Logger log = LoggerFactory.getLogger(GrailsTransactionTemplate)
 
     CustomizableRollbackTransactionAttribute transactionAttribute
 
@@ -69,12 +73,28 @@ class GrailsTransactionTemplate {
             Object result = transactionTemplate.execute(new TransactionCallback() {
                 Object doInTransaction(TransactionStatus status) {
                     try {
-                        return action.call(status)
+                        if (log.isDebugEnabled()) {
+                            log.debug('executeAndRollback doInTransaction - starting on transaction manager: ' + transactionTemplate.getTransactionManager())
+                        }
+                        Object val = action.call(status)
+                        if (log.isDebugEnabled()) {
+                            log.debug('executeAndRollback doInTransaction - finished action')
+                            log.debug('executeAndRollback action finished. status=' + status)
+                        }
+                        return val
                     }
                     catch (Throwable e) {
+                        if (log.isDebugEnabled()) {
+                            log.debug('executeAndRollback doInTransaction - caught exception: ' + e)
+                            log.debug('executeAndRollback action caught: ' + e)
+                        }
                         return new ThrowableHolder(e)
                     } finally {
                         status.setRollbackOnly()
+                        if (log.isDebugEnabled()) {
+                            log.debug('executeAndRollback doInTransaction - setRollbackOnly called. isRollbackOnly=' + status.isRollbackOnly())
+                            log.debug('executeAndRollback setRollbackOnly called. status.isRollbackOnly=' + status.isRollbackOnly())
+                        }
                     }
                 }
             })
