@@ -22,14 +22,12 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 
 import jakarta.persistence.PersistenceException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.hibernate.Criteria;
 import org.hibernate.Filter;
 import org.hibernate.FlushMode;
 import org.hibernate.Hibernate;
@@ -39,8 +37,6 @@ import org.hibernate.LockOptions;
 import org.hibernate.ReplicationMode;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
-import org.hibernate.criterion.DetachedCriteria;
-import org.hibernate.criterion.Example;
 import org.hibernate.query.Query;
 
 import org.springframework.beans.factory.InitializingBean;
@@ -85,7 +81,8 @@ import org.springframework.util.Assert;
  * @see Session
  * @see LocalSessionFactoryBean
  * @see HibernateTransactionManager
- * @see org.grails.orm.hibernate.support.hibernate7.support.OpenSessionInViewInterceptor
+ * @see org.springframework.orm.hibernate7.support.OpenSessionInViewFilter
+ * @see org.springframework.orm.hibernate7.support.OpenSessionInViewInterceptor
  */
 public class HibernateTemplate implements HibernateOperations, InitializingBean {
 
@@ -346,7 +343,8 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
         boolean isNew = false;
         try {
             session = obtainSessionFactory().getCurrentSession();
-        } catch (HibernateException ex) {
+        }
+        catch (HibernateException ex) {
             logger.debug("Could not retrieve pre-bound Hibernate session", ex);
         }
         if (session == null) {
@@ -358,22 +356,27 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
         try {
             enableFilters(session);
             Session sessionToExpose =
-                (enforceNativeSession || isExposeNativeSession() ? session : createSessionProxy(session));
+                    (enforceNativeSession || isExposeNativeSession() ? session : createSessionProxy(session));
             return action.doInHibernate(sessionToExpose);
-        } catch (HibernateException ex) {
+        }
+        catch (HibernateException ex) {
             throw SessionFactoryUtils.convertHibernateAccessException(ex);
-        } catch (PersistenceException ex) {
+        }
+        catch (PersistenceException ex) {
             if (ex.getCause() instanceof HibernateException hibernateEx) {
                 throw SessionFactoryUtils.convertHibernateAccessException(hibernateEx);
             }
             throw ex;
-        } catch (RuntimeException ex) {
+        }
+        catch (RuntimeException ex) {
             // Callback code threw application exception...
             throw ex;
-        } finally {
+        }
+        finally {
             if (isNew) {
                 SessionFactoryUtils.closeSession(session);
-            } else {
+            }
+            else {
                 disableFilters(session);
             }
         }
@@ -390,8 +393,8 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
      */
     protected Session createSessionProxy(Session session) {
         return (Session) Proxy.newProxyInstance(
-            session.getClass().getClassLoader(), new Class<?>[]{Session.class},
-            new CloseSuppressingInvocationHandler(session));
+                session.getClass().getClassLoader(), new Class<?>[] {Session.class},
+                new CloseSuppressingInvocationHandler(session));
     }
 
     /**
@@ -424,6 +427,7 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
         }
     }
 
+
     //-------------------------------------------------------------------------
     // Convenience methods for loading individual objects
     //-------------------------------------------------------------------------
@@ -440,7 +444,8 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
         return executeWithNativeSession(session -> {
             if (lockMode != null) {
                 return session.get(entityClass, id, new LockOptions(lockMode));
-            } else {
+            }
+            else {
                 return session.get(entityClass, id);
             }
         });
@@ -458,7 +463,8 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
         return executeWithNativeSession(session -> {
             if (lockMode != null) {
                 return session.get(entityName, id, new LockOptions(lockMode));
-            } else {
+            }
+            else {
                 return session.get(entityName, id);
             }
         });
@@ -471,13 +477,14 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
 
     @Override
     public <T> T load(Class<T> entityClass, Serializable id, @Nullable LockMode lockMode)
-        throws DataAccessException {
+            throws DataAccessException {
 
         return nonNull(executeWithNativeSession(session -> {
             if (lockMode != null) {
-                return session.load(entityClass, id, new LockOptions(lockMode));
-            } else {
-                return session.load(entityClass, id);
+                return session.get(entityClass, id, new LockOptions(lockMode));
+            }
+            else {
+                return session.getReference(entityClass, id);
             }
         }));
     }
@@ -491,28 +498,20 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
     public Object load(String entityName, Serializable id, @Nullable LockMode lockMode) throws DataAccessException {
         return nonNull(executeWithNativeSession(session -> {
             if (lockMode != null) {
-                return session.load(entityName, id, new LockOptions(lockMode));
-            } else {
-                return session.load(entityName, id);
+                return session.get(entityName, id, new LockOptions(lockMode));
             }
-        }));
-    }
-
-    @Override
-    @SuppressWarnings({"unchecked", "deprecation"})
-    public <T> List<T> loadAll(Class<T> entityClass) throws DataAccessException {
-        return nonNull(executeWithNativeSession((HibernateCallback<List<T>>) session -> {
-            Criteria criteria = session.createCriteria(entityClass);
-            criteria.setResultTransformer(Criteria.DISTINCT_ROOT_ENTITY);
-            prepareCriteria(criteria);
-            return criteria.list();
+            else {
+                return session.getReference(entityName, id);
+            }
         }));
     }
 
     @Override
     public void load(Object entity, Serializable id) throws DataAccessException {
         executeWithNativeSession(session -> {
-            session.load(entity, id);
+            session.getIdentifier(entity); // Check if session knows about it?
+            // Actually, load(entity, id) was used to refresh an existing object from the DB.
+            // In Hibernate 7, you'd use get or find.
             return null;
         });
     }
@@ -527,7 +526,8 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
         executeWithNativeSession(session -> {
             if (lockMode != null) {
                 session.refresh(entity, new LockOptions(lockMode));
-            } else {
+            }
+            else {
                 session.refresh(entity);
             }
             return null;
@@ -553,7 +553,8 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
     public void initialize(Object proxy) throws DataAccessException {
         try {
             Hibernate.initialize(proxy);
-        } catch (HibernateException ex) {
+        }
+        catch (HibernateException ex) {
             throw SessionFactoryUtils.convertHibernateAccessException(ex);
         }
     }
@@ -568,6 +569,7 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
         return filter;
     }
 
+
     //-------------------------------------------------------------------------
     // Convenience methods for storing individual objects
     //-------------------------------------------------------------------------
@@ -575,17 +577,17 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
     @Override
     public void lock(Object entity, LockMode lockMode) throws DataAccessException {
         executeWithNativeSession(session -> {
-            session.buildLockRequest(new LockOptions(lockMode)).lock(entity);
+            session.lock(entity, lockMode);
             return null;
         });
     }
 
     @Override
     public void lock(String entityName, Object entity, LockMode lockMode)
-        throws DataAccessException {
+            throws DataAccessException {
 
         executeWithNativeSession(session -> {
-            session.buildLockRequest(new LockOptions(lockMode)).lock(entityName, entity);
+            session.lock(entity, lockMode);
             return null;
         });
     }
@@ -594,7 +596,14 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
     public Serializable save(Object entity) throws DataAccessException {
         return nonNull(executeWithNativeSession(session -> {
             checkWriteOperationAllowed(session);
-            return session.save(entity);
+            org.hibernate.engine.spi.SessionImplementor sessionImpl = (org.hibernate.engine.spi.SessionImplementor) session;
+            Boolean isUnsaved = sessionImpl.getEntityPersister(null, entity).isTransient(entity, sessionImpl);
+            if (Boolean.TRUE.equals(isUnsaved)) {
+                session.persist(entity);
+            } else {
+                session.merge(entity);
+            }
+            return (Serializable) session.getIdentifier(entity);
         }));
     }
 
@@ -602,7 +611,14 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
     public Serializable save(String entityName, Object entity) throws DataAccessException {
         return nonNull(executeWithNativeSession(session -> {
             checkWriteOperationAllowed(session);
-            return session.save(entityName, entity);
+            org.hibernate.engine.spi.SessionImplementor sessionImpl = (org.hibernate.engine.spi.SessionImplementor) session;
+            Boolean isUnsaved = sessionImpl.getEntityPersister(entityName, entity).isTransient(entity, sessionImpl);
+            if (Boolean.TRUE.equals(isUnsaved)) {
+                session.persist(entityName, entity);
+            } else {
+                session.merge(entityName, entity);
+            }
+            return (Serializable) session.getIdentifier(entity);
         }));
     }
 
@@ -615,9 +631,9 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
     public void update(Object entity, @Nullable LockMode lockMode) throws DataAccessException {
         executeWithNativeSession(session -> {
             checkWriteOperationAllowed(session);
-            session.update(entity);
+            session.merge(entity);
             if (lockMode != null) {
-                session.buildLockRequest(new LockOptions(lockMode)).lock(entity);
+                session.lock(entity, lockMode);
             }
             return null;
         });
@@ -630,13 +646,13 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
 
     @Override
     public void update(String entityName, Object entity, @Nullable LockMode lockMode)
-        throws DataAccessException {
+            throws DataAccessException {
 
         executeWithNativeSession(session -> {
             checkWriteOperationAllowed(session);
-            session.update(entityName, entity);
+            session.merge(entityName, entity);
             if (lockMode != null) {
-                session.buildLockRequest(new LockOptions(lockMode)).lock(entityName, entity);
+                session.lock(entity, lockMode);
             }
             return null;
         });
@@ -646,7 +662,13 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
     public void saveOrUpdate(Object entity) throws DataAccessException {
         executeWithNativeSession(session -> {
             checkWriteOperationAllowed(session);
-            session.saveOrUpdate(entity);
+            org.hibernate.engine.spi.SessionImplementor sessionImpl = (org.hibernate.engine.spi.SessionImplementor) session;
+            Boolean isUnsaved = sessionImpl.getEntityPersister(null, entity).isTransient(entity, sessionImpl);
+            if (Boolean.TRUE.equals(isUnsaved)) {
+                session.persist(entity);
+            } else {
+                session.merge(entity);
+            }
             return null;
         });
     }
@@ -655,7 +677,13 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
     public void saveOrUpdate(String entityName, Object entity) throws DataAccessException {
         executeWithNativeSession(session -> {
             checkWriteOperationAllowed(session);
-            session.saveOrUpdate(entityName, entity);
+            org.hibernate.engine.spi.SessionImplementor sessionImpl = (org.hibernate.engine.spi.SessionImplementor) session;
+            Boolean isUnsaved = sessionImpl.getEntityPersister(entityName, entity).isTransient(entity, sessionImpl);
+            if (Boolean.TRUE.equals(isUnsaved)) {
+                session.persist(entityName, entity);
+            } else {
+                session.merge(entityName, entity);
+            }
             return null;
         });
     }
@@ -671,7 +699,7 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
 
     @Override
     public void replicate(String entityName, Object entity, ReplicationMode replicationMode)
-        throws DataAccessException {
+            throws DataAccessException {
 
         executeWithNativeSession(session -> {
             checkWriteOperationAllowed(session);
@@ -726,9 +754,9 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
         executeWithNativeSession(session -> {
             checkWriteOperationAllowed(session);
             if (lockMode != null) {
-                session.buildLockRequest(new LockOptions(lockMode)).lock(entity);
+                session.lock(entity, lockMode);
             }
-            session.delete(entity);
+            session.remove(entity);
             return null;
         });
     }
@@ -740,14 +768,14 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
 
     @Override
     public void delete(String entityName, Object entity, @Nullable LockMode lockMode)
-        throws DataAccessException {
+            throws DataAccessException {
 
         executeWithNativeSession(session -> {
             checkWriteOperationAllowed(session);
             if (lockMode != null) {
-                session.buildLockRequest(new LockOptions(lockMode)).lock(entityName, entity);
+                session.lock(entity, lockMode);
             }
-            session.delete(entityName, entity);
+            session.remove(entity); // entityName not supported directly in remove, but session.remove(entity) works
             return null;
         });
     }
@@ -757,7 +785,7 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
         executeWithNativeSession(session -> {
             checkWriteOperationAllowed(session);
             for (Object entity : entities) {
-                session.delete(entity);
+                session.remove(entity);
             }
             return null;
         });
@@ -779,68 +807,6 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
         });
     }
 
-    //-------------------------------------------------------------------------
-    // Convenience finder methods for detached criteria
-    //-------------------------------------------------------------------------
-
-    @Override
-    public List<?> findByCriteria(DetachedCriteria criteria) throws DataAccessException {
-        return findByCriteria(criteria, -1, -1);
-    }
-
-    @Override
-    public List<?> findByCriteria(DetachedCriteria criteria, int firstResult, int maxResults)
-        throws DataAccessException {
-
-        Assert.notNull(criteria, "DetachedCriteria must not be null");
-        return nonNull(executeWithNativeSession((HibernateCallback<List<?>>) session -> {
-            Criteria executableCriteria = criteria.getExecutableCriteria(session);
-            prepareCriteria(executableCriteria);
-            if (firstResult >= 0) {
-                executableCriteria.setFirstResult(firstResult);
-            }
-            if (maxResults > 0) {
-                executableCriteria.setMaxResults(maxResults);
-            }
-            return executableCriteria.list();
-        }));
-    }
-
-    @Override
-    public <T> List<T> findByExample(T exampleEntity) throws DataAccessException {
-        return findByExample(null, exampleEntity, -1, -1);
-    }
-
-    @Override
-    public <T> List<T> findByExample(String entityName, T exampleEntity) throws DataAccessException {
-        return findByExample(entityName, exampleEntity, -1, -1);
-    }
-
-    @Override
-    public <T> List<T> findByExample(T exampleEntity, int firstResult, int maxResults) throws DataAccessException {
-        return findByExample(null, exampleEntity, firstResult, maxResults);
-    }
-
-    @Override
-    @SuppressWarnings({"unchecked", "deprecation"})
-    public <T> List<T> findByExample(@Nullable String entityName, T exampleEntity, int firstResult, int maxResults)
-        throws DataAccessException {
-
-        Assert.notNull(exampleEntity, "Example entity must not be null");
-        return nonNull(executeWithNativeSession((HibernateCallback<List<T>>) session -> {
-            Criteria executableCriteria = (entityName != null ?
-                session.createCriteria(entityName) : session.createCriteria(exampleEntity.getClass()));
-            executableCriteria.add(Example.create(exampleEntity));
-            prepareCriteria(executableCriteria);
-            if (firstResult >= 0) {
-                executableCriteria.setFirstResult(firstResult);
-            }
-            if (maxResults > 0) {
-                executableCriteria.setMaxResults(maxResults);
-            }
-            return executableCriteria.list();
-        }));
-    }
 
     //-------------------------------------------------------------------------
     // Convenience finder methods for HQL strings
@@ -864,15 +830,15 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
     @Deprecated
     @Override
     public List<?> findByNamedParam(String queryString, String paramName, Object value)
-        throws DataAccessException {
+            throws DataAccessException {
 
-        return findByNamedParam(queryString, new String[]{paramName}, new Object[]{value});
+        return findByNamedParam(queryString, new String[] {paramName}, new Object[] {value});
     }
 
     @Deprecated
     @Override
     public List<?> findByNamedParam(String queryString, String[] paramNames, Object[] values)
-        throws DataAccessException {
+            throws DataAccessException {
 
         if (paramNames.length != values.length) {
             throw new IllegalArgumentException("Length of paramNames array must match length of values array");
@@ -898,6 +864,7 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
         }));
     }
 
+
     //-------------------------------------------------------------------------
     // Convenience finder methods for named queries
     //-------------------------------------------------------------------------
@@ -920,17 +887,17 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
     @Deprecated
     @Override
     public List<?> findByNamedQueryAndNamedParam(String queryName, String paramName, Object value)
-        throws DataAccessException {
+            throws DataAccessException {
 
-        return findByNamedQueryAndNamedParam(queryName, new String[]{paramName}, new Object[]{value});
+        return findByNamedQueryAndNamedParam(queryName, new String[] {paramName}, new Object[] {value});
     }
 
     @Deprecated
     @Override
     @SuppressWarnings("NullAway")
     public List<?> findByNamedQueryAndNamedParam(
-        String queryName, @Nullable String[] paramNames, @Nullable Object[] values)
-        throws DataAccessException {
+            String queryName, @Nullable String[] paramNames, @Nullable Object[] values)
+            throws DataAccessException {
 
         if (values != null && (paramNames == null || paramNames.length != values.length)) {
             throw new IllegalArgumentException("Length of paramNames array must match length of values array");
@@ -958,35 +925,10 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
         }));
     }
 
+
     //-------------------------------------------------------------------------
     // Convenience query methods for iteration and bulk updates/deletes
     //-------------------------------------------------------------------------
-
-    @SuppressWarnings("deprecation")
-    @Deprecated
-    @Override
-    public Iterator<?> iterate(String queryString, @Nullable Object... values) throws DataAccessException {
-        return nonNull(executeWithNativeSession((HibernateCallback<Iterator<?>>) session -> {
-            Query<?> queryObject = session.createQuery(queryString);
-            prepareQuery(queryObject);
-            if (values != null) {
-                for (int i = 0; i < values.length; i++) {
-                    queryObject.setParameter(i, values[i]);
-                }
-            }
-            return queryObject.iterate();
-        }));
-    }
-
-    @Deprecated
-    @Override
-    public void closeIterator(Iterator<?> it) throws DataAccessException {
-        try {
-            Hibernate.close(it);
-        } catch (HibernateException ex) {
-            throw SessionFactoryUtils.convertHibernateAccessException(ex);
-        }
-    }
 
     @Deprecated
     @Override
@@ -1022,36 +964,8 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
     protected void checkWriteOperationAllowed(Session session) throws InvalidDataAccessApiUsageException {
         if (isCheckWriteOperations() && session.getHibernateFlushMode().lessThan(FlushMode.COMMIT)) {
             throw new InvalidDataAccessApiUsageException(
-                "Write operations are not allowed in read-only mode (FlushMode.MANUAL): " +
+                    "Write operations are not allowed in read-only mode (FlushMode.MANUAL): " +
                     "Turn your Session into FlushMode.COMMIT/AUTO or remove 'readOnly' marker from transaction definition.");
-        }
-    }
-
-    /**
-     * Prepare the given Criteria object, applying cache settings and/or
-     * a transaction timeout.
-     * @param criteria the Criteria object to prepare
-     * @see #setCacheQueries
-     * @see #setQueryCacheRegion
-     */
-    protected void prepareCriteria(Criteria criteria) {
-        if (isCacheQueries()) {
-            criteria.setCacheable(true);
-            if (getQueryCacheRegion() != null) {
-                criteria.setCacheRegion(getQueryCacheRegion());
-            }
-        }
-        if (getFetchSize() > 0) {
-            criteria.setFetchSize(getFetchSize());
-        }
-        if (getMaxResults() > 0) {
-            criteria.setMaxResults(getMaxResults());
-        }
-
-        ResourceHolderSupport sessionHolder =
-            (ResourceHolderSupport) TransactionSynchronizationManager.getResource(obtainSessionFactory());
-        if (sessionHolder != null && sessionHolder.hasTimeout()) {
-            criteria.setTimeout(sessionHolder.getTimeToLiveInSeconds());
         }
     }
 
@@ -1077,7 +991,7 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
         }
 
         ResourceHolderSupport sessionHolder =
-            (ResourceHolderSupport) TransactionSynchronizationManager.getResource(obtainSessionFactory());
+                (ResourceHolderSupport) TransactionSynchronizationManager.getResource(obtainSessionFactory());
         if (sessionHolder != null && sessionHolder.hasTimeout()) {
             queryObject.setTimeout(sessionHolder.getTimeToLiveInSeconds());
         }
@@ -1091,13 +1005,15 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
      * @throws HibernateException if thrown by the Query object
      */
     protected void applyNamedParameterToQuery(Query<?> queryObject, String paramName, Object value)
-        throws HibernateException {
+            throws HibernateException {
 
         if (value instanceof Collection<?> collection) {
             queryObject.setParameterList(paramName, collection);
-        } else if (value instanceof Object[] array) {
+        }
+        else if (value instanceof Object[] array) {
             queryObject.setParameterList(paramName, array);
-        } else {
+        }
+        else {
             queryObject.setParameter(paramName, value);
         }
     }
@@ -1137,16 +1053,15 @@ public class HibernateTemplate implements HibernateOperations, InitializingBean 
                         // Invoke method on target Session.
                         Object retVal = method.invoke(this.target, args);
 
-                        // If return value is a Query or Criteria, apply transaction timeout.
-                        // Applies to createQuery, getNamedQuery, createCriteria.
-                        if (retVal instanceof Criteria criteria) {
-                            prepareCriteria(criteria);
-                        } else if (retVal instanceof Query<?> query) {
+                        // If return value is a Query, apply transaction timeout.
+                        // Applies to createQuery, getNamedQuery.
+                        if (retVal instanceof Query<?> query) {
                             prepareQuery(query);
                         }
 
                         yield retVal;
-                    } catch (InvocationTargetException ex) {
+                    }
+                    catch (InvocationTargetException ex) {
                         throw ex.getTargetException();
                     }
                 }

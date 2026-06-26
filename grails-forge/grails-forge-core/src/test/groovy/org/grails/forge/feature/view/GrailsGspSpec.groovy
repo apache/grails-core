@@ -63,25 +63,12 @@ class GrailsGspSpec extends ApplicationContextSpec implements CommandOutputFixtu
         ctx.getConfiguration().containsKey("grails.views.gsp.codecs.scriptlet")
     }
 
-    void "test mime configuration"() {
+    void "test mime types are not written to config as they are now framework defaults"() {
         when:
         final GeneratorContext ctx = buildGeneratorContext(["gsp"])
 
-        then:
-        ctx.getConfiguration().get("grails.mime.types.all") == "*/*"
-        ctx.getConfiguration().get("grails.mime.types.atom") == "application/atom+xml"
-        ctx.getConfiguration().get("grails.mime.types.css") == "text/css"
-        ctx.getConfiguration().get("grails.mime.types.csv") == "text/csv"
-        ctx.getConfiguration().get("grails.mime.types.form") == "application/x-www-form-urlencoded"
-        ctx.getConfiguration().get("grails.mime.types.html") == Arrays.asList("text/html", "application/xhtml+xml")
-        ctx.getConfiguration().get("grails.mime.types.js") == "text/javascript"
-        ctx.getConfiguration().get("grails.mime.types.json") == Arrays.asList("application/json", "text/json")
-        ctx.getConfiguration().get("grails.mime.types.multipartForm") == "multipart/form-data"
-        ctx.getConfiguration().get("grails.mime.types.pdf") == "application/pdf"
-        ctx.getConfiguration().get("grails.mime.types.rss") == "application/rss+xml"
-        ctx.getConfiguration().get("grails.mime.types.text") == "text/plain"
-        ctx.getConfiguration().get("grails.mime.types.hal") == Arrays.asList("application/hal+json", "application/hal+xml")
-        ctx.getConfiguration().get("grails.mime.types.xml") == Arrays.asList("text/xml", "application/xml")
+        then: "the generated application relies on the framework provided MimeType defaults"
+        ctx.getConfiguration().keySet().every { !it.toString().startsWith("grails.mime.types") }
     }
 
     void "test default views are present"() {

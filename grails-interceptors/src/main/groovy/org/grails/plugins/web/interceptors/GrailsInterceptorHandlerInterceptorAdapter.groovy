@@ -18,9 +18,13 @@
  */
 package org.grails.plugins.web.interceptors
 
+import java.util.function.BooleanSupplier
+
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
+import io.micrometer.observation.Observation
+import io.micrometer.observation.ObservationRegistry
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 
@@ -60,6 +64,9 @@ class GrailsInterceptorHandlerInterceptorAdapter implements HandlerInterceptor {
     ServiceRegistry[] serviceRegistry // inject the service registry to ensure data services are wired up
 
     @Autowired(required = false)
+    ObservationRegistry observationRegistry = ObservationRegistry.NOOP
+
+    @Autowired(required = false)
     @CompileDynamic
     void setInterceptors(Interceptor[] interceptors) {
         this.interceptors = interceptors.sort(new OrderComparator()) as List<Interceptor>
@@ -80,7 +87,7 @@ class GrailsInterceptorHandlerInterceptorAdapter implements HandlerInterceptor {
             for (i in interceptors) {
                 if (i.doesMatch(request)) {
                     matchInterceptors.add(i)
-                    if (!i.before()) {
+                    if (!observe(i, 'before', { -> i.before() } as BooleanSupplier)) {
                         return false
                     }
                 }
@@ -100,7 +107,7 @@ class GrailsInterceptorHandlerInterceptorAdapter implements HandlerInterceptor {
             List<Interceptor> reversedInterceptors = ((List<Interceptor>) matchedInterceptorsObject).reverse()
             request.setAttribute(ATTRIBUTE_MATCHED_INTERCEPTORS, reversedInterceptors)
             for (i in reversedInterceptors) {
-                if (!i.after()) {
+                if (!observe(i, 'after', { -> i.after() } as BooleanSupplier)) {
                     if (request.getAttribute(INTERCEPTOR_RENDERED_VIEW)) {
                         ModelAndView interceptorsModelAndView = i.modelAndView
                         modelAndView.viewName = interceptorsModelAndView.viewName
@@ -127,6 +134,35 @@ class GrailsInterceptorHandlerInterceptorAdapter implements HandlerInterceptor {
             for (i in ((List<Interceptor>) matchedInterceptorsObject)) {
                 i.afterView()
             }
+        }
+    }
+
+    /**
+     * Records a {@code grails.interceptor} span around a single interceptor callback, preserving its
+     * boolean result and control flow. No-op (runs the callback directly) when observation is disabled.
+     */
+    private boolean observe(Interceptor interceptor, String phase, BooleanSupplier action) {
+        var registry = this.observationRegistry
+        if (registry == null || registry.isNoop()) {
+            return action.getAsBoolean()
+        }
+        var name = GrailsNameUtils.getLogicalPropertyName(interceptor.getClass().name, 'Interceptor') ?: 'unknown'
+        var observation = Observation.createNotStarted('grails.interceptor', registry)
+                .contextualName('grails.interceptor ' + name)
+                .lowCardinalityKeyValue('grails.interceptor', name)
+                .lowCardinalityKeyValue('grails.interceptor.phase', phase ?: 'unknown')
+                .start()
+        var scope = observation.openScope()
+        try {
+            return action.getAsBoolean()
+        }
+        catch (Throwable t) {
+            observation.error(t)
+            throw t
+        }
+        finally {
+            scope.close()
+            observation.stop()
         }
     }
 }

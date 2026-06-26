@@ -23,6 +23,9 @@ import org.grails.datastore.mapping.config.Settings
 
 class HibernateSpecOverrideSpec extends HibernateSpec {
     @Override
+    List<Class> getDomainClasses() { [] }
+
+    @Override
     Map getConfiguration() {
         [(Settings.SETTING_FAIL_ON_ERROR): true]
     }

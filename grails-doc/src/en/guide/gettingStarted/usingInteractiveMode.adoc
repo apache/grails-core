@@ -23,7 +23,7 @@ Since 3.0, Grails has an interactive mode which makes command execution faster s
 
 image::interactive-output.png[]
 
-NOTE: As of **Grails 7**, both the Grails Shell CLI and the Forge CLI are available. Interactive mode is part of the Grails Shell CLI and is accessed by typing `grails` without additional arguments. Grails Forge CLI is accessed as `grails -t forge`.
+NOTE: In **Grails {grailsMajorVersion}**, both the Grails Shell CLI and the Forge CLI are available. Interactive mode is part of the Grails Shell CLI and is accessed by typing `grails` without additional arguments. Grails Forge CLI is accessed as `grails -t forge`.
 
 For more information on the capabilities of interactive mode refer to the section on link:commandLine.html#interactiveMode[Interactive Mode] in the user guide.
 

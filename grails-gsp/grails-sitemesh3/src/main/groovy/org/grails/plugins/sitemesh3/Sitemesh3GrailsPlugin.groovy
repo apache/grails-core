@@ -22,11 +22,8 @@ import org.springframework.core.env.ConfigurableEnvironment
 import org.springframework.core.env.MapPropertySource
 import org.springframework.core.env.PropertySource
 
-import grails.config.Config
 import grails.core.DefaultGrailsApplication
 import grails.plugins.Plugin
-import grails.util.Environment
-import grails.util.Metadata
 import org.grails.config.PropertySourcesConfig
 import org.grails.plugins.web.taglib.RenderSitemeshTagLib
 import org.grails.web.util.WebUtils
@@ -80,25 +77,6 @@ class Sitemesh3GrailsPlugin extends Plugin {
                     grailsApplication.getConfig().getProperty('grails.views.layout.default')
             propertySources.addFirst(getDefaultPropertySource(configurableEnvironment, defaultLayout))
             (grailsApplication as DefaultGrailsApplication).config = new PropertySourcesConfig(propertySources)
-
-            Config config = grailsApplication.getConfig()
-            boolean developmentMode = Metadata.getCurrent().isDevelopmentEnvironmentAvailable()
-            Environment env = Environment.current
-            boolean enableReload = env.isReloadEnabled() ||
-                    config.getProperty('grails.gsp.enable.reload', Boolean, false) ||
-                    (developmentMode && env == Environment.DEVELOPMENT)
-            String resolvedDefaultLayout = defaultLayout
-
-            // Bean names match the @ConditionalOnMissingBean(name = "contentProcessor"/"decoratorSelector")
-            // guards on upstream's SiteMeshViewResolverAutoConfiguration, so
-            // our implementations replace upstream's defaults.
-            contentProcessor(CaptureAwareContentProcessor)
-
-            decoratorSelector(Sitemesh3LayoutFinder, ref('groovyPageLocator')) {
-                gspReloadEnabled = enableReload
-                defaultDecoratorName = resolvedDefaultLayout ?: null
-                layoutCacheExpirationMillis = config.getProperty('grails.sitemesh.layout.cache.interval', Long, 5000L)
-            }
 
             // Unwraps the SiteMesh view for "render template:" partials so
             // they are never decorated with a layout (the SiteMesh 2 plugin

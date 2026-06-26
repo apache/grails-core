@@ -70,7 +70,7 @@ export GRADLE_OPTS="-Xms2G -Xmx5G"
 
 | Skill | Path | Use For |
 |-------|------|---------|
-| **grails-developer** | `.agents/skills/grails-developer/SKILL.md` | Grails 7 apps, GORM, controllers, views |
+| **grails-developer** | `.agents/skills/grails-developer/SKILL.md` | Current Grails apps, GORM, controllers, views |
 | **groovy-developer** | `.agents/skills/groovy-developer/SKILL.md` | Groovy 4 syntax, closures, DSLs, Spock |
 | **java-developer** | `.agents/skills/java-developer/SKILL.md` | Java 17 features, Groovy interop |
 | **hibernate-developer** | `.agents/skills/hibernate-developer/SKILL.md` | Hibernate 7 mapping, binders, generators |
@@ -277,7 +277,7 @@ and known non-findings — before reporting issues.
 
 ## Resources
 
-- **Grails 7 Guide**: https://grails.apache.org/docs/latest/guide/single.html
+- **Grails Guide**: https://grails.apache.org/docs/latest/guide/single.html
 - **Groovy 4 Docs**: https://docs.groovy-lang.org/docs/groovy-4.0.30/html/documentation/
 - **Spock 2.3 Docs**: https://spockframework.org/spock/docs/2.3/all_in_one.html
 - **GORM Docs**: https://grails.apache.org/docs/latest/grails-data/

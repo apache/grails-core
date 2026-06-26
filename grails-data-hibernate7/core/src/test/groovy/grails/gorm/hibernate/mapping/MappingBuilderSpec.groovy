@@ -19,14 +19,13 @@
 package grails.gorm.hibernate.mapping
 
 import org.grails.datastore.mapping.model.config.GormProperties
-import org.grails.orm.hibernate.cfg.CompositeIdentity
+import org.grails.orm.hibernate.cfg.HibernateCompositeIdentity
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.PropertyConfig
 import spock.lang.Specification
 
-import jakarta.persistence.FetchType
-
 import static grails.gorm.hibernate.mapping.MappingBuilder.define
+
 /**
  * Created by graemerocher on 01/02/2017.
  */
@@ -83,7 +82,7 @@ class MappingBuilderSpec extends Specification {
         }.build()
 
         expect:
-        mapping.identity instanceof CompositeIdentity
+        mapping.identity instanceof HibernateCompositeIdentity
         mapping.identity.propertyNames == ['foo', 'bar']
         mapping.identity.compositeClass == MappingBuilderSpec
     }
@@ -100,8 +99,8 @@ class MappingBuilderSpec extends Specification {
 
         expect:
         mapping.cache.enabled
-        mapping.cache.usage == 'read'
-        mapping.cache.include == 'some'
+        mapping.cache.usage.toString() == 'read'
+        mapping.cache.include.toString() == 'some'
     }
 
     void "test sort mapping"() {
@@ -259,7 +258,7 @@ class MappingBuilderSpec extends Specification {
         config != null
         config.joinTable != null
         config.joinTable.name == 'foo'
-        config.joinTable.key.name == 'foo_id'
+        config.joinTable.keys[0].name == 'foo_id'
         config.joinTable.column.name == 'bar_id'
 
     }
@@ -280,7 +279,7 @@ class MappingBuilderSpec extends Specification {
         config != null
         config.joinTable != null
         config.joinTable.name == 'foo'
-        config.joinTable.key.name == 'foo_id'
+        config.joinTable.keys[0].name == 'foo_id'
         config.joinTable.column.name == 'bar_id'
 
     }

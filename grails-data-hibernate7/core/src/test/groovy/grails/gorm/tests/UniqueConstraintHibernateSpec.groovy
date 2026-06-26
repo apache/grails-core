@@ -91,7 +91,6 @@ class UniqueConstraintHibernateSpec extends Specification {
 
     }
 
-    @spock.lang.Ignore
     def "Test unique constraint with a hasOne association"() {
         when:"Two domain classes with the same license are saved"
         Driver one

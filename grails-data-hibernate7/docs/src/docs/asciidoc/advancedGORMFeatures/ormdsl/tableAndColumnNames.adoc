@@ -16,204 +16,126 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 ////
+[[ormdsl-tableAndColumnNames]]
+== Table and Column Names
 
+By default GORM derives table and column names from your domain class and property names using an underscore-based naming strategy. You can override these defaults with the ORM DSL `mapping` block.
 
-===== Table names
+=== Changing the Table Name
 
-
-The database table name which the class maps to can be customized using the `table` method:
-
-[source,java]
+[source,groovy]
 ----
-class Person {
-    ...
+class Book {
+    String title
     static mapping = {
-        table 'people'
+        table 'books'           // <1>
+    }
+}
+----
+<1> Maps the `Book` domain class to a table named `books`.
+
+You can also specify a catalog and/or schema:
+
+[source,groovy]
+----
+class Book {
+    String title
+    static mapping = {
+        table name: 'books', catalog: 'inventory', schema: 'dbo'
     }
 }
 ----
 
-In this case the class would be mapped to a table called `people` instead of the default name of `person`.
+=== Changing Column Names
 
+Use the property name followed by `column` to override the column name for any property:
 
-===== Column names
-
-
-It is also possible to customize the mapping for individual columns onto the database. For example to change the name you can do:
-
-[source,java]
+[source,groovy]
 ----
-class Person {
-
-    String firstName
-
+class Book {
+    String title
     static mapping = {
-        table 'people'
-        firstName column: 'First_Name'
+        title column: 'book_title'
     }
 }
 ----
 
-Here `firstName` is a dynamic method within the `mapping` Closure that has a single Map parameter. Since its name corresponds to a domain class persistent field, the parameter values (in this case just `"column"`) are used to configure the mapping for that property.
+For multi-column user types, call `column` multiple times:
 
-
-===== Column type
-
-
-GORM supports configuration of Hibernate types with the DSL using the type attribute. This includes specifying user types that implement the Hibernate https://docs.jboss.org/hibernate/orm/5.6/javadocs/org/hibernate/usertype/UserType.html[org.hibernate.usertype.UserType] interface, which allows complete customization of how a type is persisted. As an example if you had a `PostCodeType` you could use it as follows:
-
-[source,java]
+[source,groovy]
 ----
-class Address {
-
-    String number
-    String postCode
-
+class Payment {
+    Money amount
     static mapping = {
-        postCode type: PostCodeType
+        amount {
+            column name: 'amount_value'
+            column name: 'amount_currency'
+        }
     }
 }
 ----
 
-Alternatively if you just wanted to map it to one of Hibernate's basic types other than the default chosen by GORM you could use:
+=== Column Properties
 
-[source,java]
+The `column` block supports the following attributes:
+
+[format="csv", options="header"]
+|===
+attribute,description,default
+`name`,The column name,derived from property name
+`sqlType`,The SQL type override,derived from Hibernate type
+`unique`,Whether the column has a unique constraint,`false`
+`index`,Index name (or `true` for an auto-named index),none
+`defaultValue`,The DDL default value for the column,none
+`comment`,A DDL comment for the column,none
+`read`,A SQL expression to use when reading the value,none
+`write`,A SQL expression to use when writing the value,none
+|===
+
+=== Join Table Configuration for Collections
+
+When a domain class has a `hasMany` relationship without a `belongsTo` on the other side (unidirectional), or for `hasMany` of basic/enum types, GORM uses a join table. You can customise the join table name and its columns:
+
+[source,groovy]
 ----
-class Address {
-
-    String number
-    String postCode
-
+class Author {
+    static hasMany = [books: Book]
     static mapping = {
-        postCode type: 'text'
+        books joinTable: 'author_books'     // <1>
     }
 }
 ----
+<1> Override the join table name only.
 
-This would make the `postCode` column map to the default large-text type for the database you're using (for example TEXT or CLOB).
-
-See the Hibernate documentation regarding https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html#basic-explicit[Basic Types] for further information.
-
-
-===== Many-to-One/One-to-One Mappings
-
-
-In the case of associations it is also possible to configure the foreign keys used to map associations. In the case of a many-to-one or one-to-one association this is exactly the same as any regular column. For example consider the following:
-
-[source,java]
+[source,groovy]
 ----
-class Person {
-
-    String firstName
-    Address address
-
+class Author {
+    static hasMany = [books: Book]
     static mapping = {
-        table 'people'
-        firstName column: 'First_Name'
-        address column: 'Person_Address_Id'
+        books joinTable: [
+            name: 'author_books',       // <1>
+            key: 'author_fk',           // <2>
+            column: 'book_fk'           // <3>
+        ]
     }
 }
 ----
+<1> The join table name.
+<2> The foreign-key column that points back to `Author`.
+<3> The foreign-key column that points to `Book` (or holds the element value for basic types).
 
-By default the `address` association would map to a foreign key column called `address_id`. By using the above mapping we have changed the name of the foreign key column to `Person_Adress_Id`.
+You can also use the closure form:
 
-===== One-to-Many Mapping
-
-With a bidirectional one-to-many you can change the foreign key column used by changing the column name on the many side of the association as per the example in the previous section on one-to-one associations. However, with unidirectional associations the foreign key needs to be specified on the association itself. For example given a unidirectional one-to-many relationship between `Person` and `Address` the following code will change the foreign key in the `address` table:
-
-[source,java]
+[source,groovy]
 ----
-class Person {
-
-    String firstName
-
-    static hasMany = [addresses: Address]
-
+class Author {
+    static hasMany = [books: Book]
     static mapping = {
-        table 'people'
-        firstName column: 'First_Name'
-        addresses column: 'Person_Address_Id'
+        books joinTable {
+            name 'author_books'
+            key  'author_fk'
+            column 'book_fk'
+        }
     }
-}
-----
-
-If you don't want the column to be in the `address` table, but instead some intermediate join table you can use the `joinTable` parameter:
-
-[source,java]
-----
-class Person {
-
-    String firstName
-
-    static hasMany = [addresses: Address]
-
-    static mapping = {
-        table 'people'
-        firstName column: 'First_Name'
-        addresses joinTable: [name: 'Person_Addresses',
-                              key: 'Person_Id',
-                              column: 'Address_Id']
-    }
-}
-----
-
-
-===== Many-to-Many Mapping
-
-
-GORM, by default maps a many-to-many association using a join table. For example consider this many-to-many association:
-
-[source,java]
-----
-class Group {
-    ...
-    static hasMany = [people: Person]
-}
-----
-
-[source,java]
-----
-class Person {
-    ...
-    static belongsTo = Group
-    static hasMany = [groups: Group]
-}
-----
-
-In this case GORM will create a join table called `group_person` containing foreign keys called `person_id` and `group_id` referencing the `person` and `group` tables. To change the column names you can specify a column within the mappings for each class.
-
-[source,java]
-----
-class Group {
-   ...
-   static mapping = {
-       people column: 'Group_Person_Id'
-   }
-}
-class Person {
-   ...
-   static mapping = {
-       groups column: 'Group_Group_Id'
-   }
-}
-----
-
-You can also specify the name of the join table to use:
-
-[source,java]
-----
-class Group {
-   ...
-   static mapping = {
-       people column: 'Group_Person_Id',
-              joinTable: 'PERSON_GROUP_ASSOCIATIONS'
-   }
-}
-class Person {
-   ...
-   static mapping = {
-       groups column: 'Group_Group_Id',
-              joinTable: 'PERSON_GROUP_ASSOCIATIONS'
-   }
 }
 ----

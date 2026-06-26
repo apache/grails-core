@@ -21,6 +21,7 @@ package grails.gorm.tests
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.hibernate.engine.spi.SessionImplementor
 
 import java.sql.ResultSet
 
@@ -33,9 +34,12 @@ class EnumMappingSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> 
     }
 
     void "Test enum mapping"() {
-        when: "An enum property is persisted"
-        new Recipe(title: "Chicken Tikka Masala").save(flush: true)
-        ResultSet resultSet = manager.sessionFactory.currentSession.connection().prepareStatement("select * from recipe").executeQuery()
+        when:"An enum property is persisted"
+        new Recipe(title: "Chicken Tikka Masala").save(flush:true)
+        SessionImplementor sessionImplementor = (SessionImplementor) manager.sessionFactory.currentSession
+        ResultSet resultSet = sessionImplementor.doReturningWork {
+            return it.prepareStatement("select * from recipe").executeQuery()
+        }
         resultSet.next()
 
         then: "The enum is mapped as a varchar"

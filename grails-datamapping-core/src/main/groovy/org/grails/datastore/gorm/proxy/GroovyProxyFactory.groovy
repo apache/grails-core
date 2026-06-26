@@ -20,6 +20,7 @@ package org.grails.datastore.gorm.proxy
 
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.runtime.HandleMetaClass
+import org.codehaus.groovy.runtime.InvokerHelper
 
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.engine.AssociationQueryExecutor
@@ -47,10 +48,9 @@ class GroovyProxyFactory implements ProxyFactory {
     }
 
     @Override
-    @Override
     Class<?> getProxiedClass(Object o) {
         if (isProxy(o)) {
-            return o.getClass().getSuperclass()
+            return o.getClass()
         }
         return o.getClass()
     }
@@ -58,14 +58,6 @@ class GroovyProxyFactory implements ProxyFactory {
     @Override
     void initialize(Object o) {
         unwrap(o)
-    }
-
-    protected ProxyInstanceMetaClass getProxyInstanceMetaClass(object) {
-        if (object == null) {
-            return null
-        }
-        MetaClass mc = unwrapHandleMetaClass(object instanceof GroovyObject ? ((GroovyObject) object).getMetaClass() : object.metaClass)
-        mc instanceof ProxyInstanceMetaClass ? (ProxyInstanceMetaClass) mc : null
     }
 
     @Override
@@ -80,7 +72,10 @@ class GroovyProxyFactory implements ProxyFactory {
 
     @groovy.transform.CompileDynamic
     protected Serializable getIdDynamic(obj) {
-        return obj.getId()
+        if (obj.respondsTo('getId')) {
+            return (Serializable)obj.invokeMethod('getId', null)
+        }
+        return null
     }
 
     /**
@@ -96,44 +91,64 @@ class GroovyProxyFactory implements ProxyFactory {
     <T> T createProxy(Session session, Class<T> type, Serializable key) {
         EntityPersister persister = (EntityPersister) session.getPersister(type)
         T proxy = type.newInstance()
-        persister.setObjectIdentifier(proxy, key)
-
-        MetaClass metaClass = new ProxyInstanceMetaClass(resolveTargetMetaClass(proxy, type), session, key)
-        if (proxy instanceof GroovyObject) {
-            // direct assignment of MetaClass to GroovyObject
-            ((GroovyObject) proxy).setMetaClass(metaClass)
+        if (persister != null) {
+            persister.setObjectIdentifier(proxy, key)
         } else {
-            // call DefaultGroovyMethods.setMetaClass
-            proxy.metaClass = metaClass
+            // Fallback: try to set identifier using MappingContext's EntityReflector if available
+            try {
+                def mappingContext = session.getMappingContext()
+                if (mappingContext != null) {
+                    def pe = mappingContext.getPersistentEntity(type.name)
+                    if (pe != null) {
+                        mappingContext.getEntityReflector(pe).setIdentifier(proxy, key)
+                    } else {
+                        // Last resort: set 'id' property directly
+                        try {
+                            proxy.metaClass.setProperty(proxy, 'id', key)
+                        } catch (Throwable ignore) {
+                            // ignore - proxy may not be a Groovy object
+                        }
+                    }
+                }
+            } catch (Throwable ignore) {
+                // ignore
+            }
         }
+
+        MetaClass delegateMetaClass = InvokerHelper.getMetaClass(proxy.getClass())
+        ProxyInstanceMetaClass proxyMc = new ProxyInstanceMetaClass(delegateMetaClass, session, key)
+        setMetaClassDynamic(proxy, proxyMc)
         return proxy
     }
 
+    @groovy.transform.CompileDynamic
+    protected void setMetaClassDynamic(Object proxy, MetaClass proxyMc) {
+        proxy.setMetaClass(proxyMc)
+    }
+
     @Override
-    def <T, K extends Serializable> T createProxy(Session session, AssociationQueryExecutor<K, T> executor, K associationKey) {
-        throw new UnsupportedOperationException('Association proxies are not currently supported by the Groovy project factory')
-    }
-
-    protected <T> MetaClass resolveTargetMetaClass(T proxy, Class<T> type) {
-        unwrapHandleMetaClass(proxy.getMetaClass())
-    }
-
-    private MetaClass unwrapHandleMetaClass(MetaClass metaClass) {
-        (metaClass instanceof HandleMetaClass) ? ((HandleMetaClass) metaClass).getAdaptee() : metaClass
+    <T, K extends Serializable> T createProxy(Session session, AssociationQueryExecutor<K, T> executor, K associationKey) {
+        throw new UnsupportedOperationException('Association proxies are not supported by GroovyProxyFactory')
     }
 
     @Override
     boolean isInitialized(Object object) {
         ProxyInstanceMetaClass proxyMc = getProxyInstanceMetaClass(object)
-        if (proxyMc != null) {
-            return proxyMc.isProxyInitiated()
+        return proxyMc == null || proxyMc.isProxyInitiated()
+    }
+
+    protected ProxyInstanceMetaClass getProxyInstanceMetaClass(object) {
+        if (object == null) {
+            return null
         }
-        return true
+        MetaClass mc = object instanceof GroovyObject ? ((GroovyObject) object).getMetaClass() : object.metaClass
+        mc = unwrapHandleMetaClass(mc)
+        mc instanceof ProxyInstanceMetaClass ? (ProxyInstanceMetaClass) mc : null
     }
 
     @Override
     boolean isInitialized(Object object, String associationName) {
-        final Object value = ClassPropertyFetcher.getInstancePropertyValue(object, associationName)
+        Object value = ClassPropertyFetcher.getInstancePropertyValue(object, associationName)
         return value == null || isInitialized(value)
     }
 
@@ -144,5 +159,12 @@ class GroovyProxyFactory implements ProxyFactory {
             return proxyMc.getProxyTarget()
         }
         return object
+    }
+
+    protected MetaClass unwrapHandleMetaClass(MetaClass mc) {
+        if (mc instanceof HandleMetaClass) {
+            return ((HandleMetaClass) mc).getAdaptee()
+        }
+        return mc
     }
 }

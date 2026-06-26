@@ -84,6 +84,7 @@ Method reference:
 |Method|Description
 |*list*|The default method; returns all matching rows.
 |*get*|Returns a unique result, i.e. just one row. The criteria has to be formed that way, that it only queries one row. This method is not to be confused with a limit to just the first row.
+|*singleResult*|Alias for *get*.
 |*scroll*|Returns a scrollable result set
 |*listDistinct*|If subqueries or associations are used, one may end up with the same row multiple times in the result set. In Hibernate one would do a "CriteriaSpecification.DISTINCT_ROOT_ENTITY". In Grails one can do it by just using this method.
 |===
@@ -151,7 +152,10 @@ With dynamic finders, you have access to options such as `max`, `sort`, etc. The
 |*order*(String, String)|Specifies both the sort column (the first argument) and the sort order (either 'asc' or 'desc').|`order "age", "desc"`
 |*firstResult*(int)|Specifies the offset for the results. A value of 0 will return all records up to the maximum specified.|`firstResult 20`
 |*maxResults*(int)|Specifies the maximum number of records to return.|`maxResults 10`
-|*cache*(boolean)|Indicates if the query should be cached (if the query cache is enabled).|`cache 'true'`
+|*cache*(boolean)|Indicates if the query should be cached (if the query cache is enabled).|`cache true`
+|*readOnly*(boolean)|Indicates if the entities returned by the query should be read-only (no dirty checking).|`readOnly true`
+|*lock*(boolean)|Indicates if a pessimistic write lock should be obtained.|`lock true`
+|*fetchMode*(String, FetchMode)|Specifies the fetching strategy for an association.|`fetchMode "transactions", FetchMode.JOIN`
 |===
 
 Criteria also support the notion of projections. A projection is used to change the nature of the results. For example the following query uses a projection to count the number of distinct `branch` names that exist for each `Account`:

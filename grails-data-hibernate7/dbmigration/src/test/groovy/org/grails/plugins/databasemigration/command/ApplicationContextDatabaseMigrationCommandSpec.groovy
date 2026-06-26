@@ -65,6 +65,7 @@ abstract class ApplicationContextDatabaseMigrationCommandSpec extends DatabaseMi
             'dataSource.password'                              : '',
             'dataSource.driverClassName'                       : Driver.name,
             'environments.other.dataSource.url'                : 'jdbc:h2:mem:otherDb',
+            'hibernate.envers.autoRegisterListeners'           : false
         ]))
         config = new PropertySourcesConfig(mutablePropertySources)
 
@@ -118,6 +119,10 @@ abstract class ApplicationContextDatabaseMigrationCommandSpec extends DatabaseMi
 class Book {
     String title
     Author author
+    static belongsTo = [author: Author]
+    static constraints = {
+        author nullable: false
+    }
 }
 
 @Entity

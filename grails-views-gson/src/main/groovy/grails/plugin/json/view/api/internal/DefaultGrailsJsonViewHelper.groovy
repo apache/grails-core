@@ -115,18 +115,15 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
 
     private JsonOutput.JsonWritable preProcessedOutput(Object object, Map<Object, JsonOutput.JsonWritable> processedObjects) {
         JsonView jsonView = (JsonView) view
-        boolean rootRender = processedObjects.isEmpty()
         object = jsonView.proxyHandler?.unwrapIfProxy(object) ?: object
         if (object == null) {
             return NULL_OUTPUT
         }
-
-        if (!rootRender && processedObjects.containsKey(object)) {
-            def existingOutput = processedObjects.get(object)
-            if (!NULL_OUTPUT.equals(existingOutput)) {
-                return existingOutput
-            }
-        }
+        // Each occurrence of an entity in the object graph must be rendered fresh in its own
+        // context so it gets its own id (a previously cached JsonWritable is bound to the first
+        // occurrence's delegate/path/deep state and would drop the id or render an empty object
+        // for siblings or proxy-loaded instances). True cyclic associations are broken earlier
+        // by the circular-association handling in process(), so this never recurses infinitely.
         return null
     }
 

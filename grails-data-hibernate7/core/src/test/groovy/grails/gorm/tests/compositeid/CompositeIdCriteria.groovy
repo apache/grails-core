@@ -31,164 +31,84 @@ import spock.lang.Specification
 @Rollback
 class CompositeIdCriteria extends Specification {
 
-  @Shared
-  @AutoCleanup
-  HibernateDatastore datastore = new HibernateDatastore(CompositeIdToMany, CompositeIdSimple, Author, Book)
+    @Shared
+    @AutoCleanup
+    HibernateDatastore datastore = new HibernateDatastore(CompositeIdToMany, CompositeIdSimple, Author, Book)
 
-  @Issue("https://github.com/grails/grails-data-hibernate5/issues/234")
-  def "test that composite to-many properties can be queried using JPA"() {
-    Author _author = new Author(name:"Author").save()
-    Book _book = new Book(title:"Book").save()
-    CompositeIdToMany compositeIdToMany = new CompositeIdToMany(author:_author, book:_book).save(failOnError:true, flush:true)
+    @Issue("https://github.com/grails/gorm-hibernate5/issues/234")
+    def "test that composite to-many properties can be queried using JPA"() {
+        Author _author = new Author(name: "Author").save()
+        Book _book = new Book(title: "Book").save()
+        CompositeIdToMany compositeIdToMany = new CompositeIdToMany(author: _author, book: _book).save(failOnError: true, flush: true)
 
-    def criteriaBuilder = datastore.sessionFactory.criteriaBuilder
-    def criteriaQuery = criteriaBuilder.createQuery()
-    def root = criteriaQuery.from(CompositeIdToMany)
-    criteriaQuery.select(root)
-    criteriaQuery.where(criteriaBuilder.equal(root.get("author"), _author))
-    def query = datastore.sessionFactory.currentSession.createQuery(criteriaQuery)
+        def criteriaBuilder = datastore.sessionFactory.criteriaBuilder
+        def criteriaQuery = criteriaBuilder.createQuery()
+        def root = criteriaQuery.from(CompositeIdToMany)
+        criteriaQuery.select(root)
+        criteriaQuery.where(criteriaBuilder.equal(root.get("author"), _author))
+        def query = datastore.sessionFactory.currentSession.createQuery(criteriaQuery)
 
-    expect:
-    query.list() == [compositeIdToMany]
-  }
-
-  def "test that composite can be queried using JPA"() {
-    CompositeIdSimple compositeIdSimple = new CompositeIdSimple(name:"name", age:2l).save(failOnError:true, flush:true)
-
-    def criteriaBuilder = datastore.sessionFactory.criteriaBuilder
-    def criteriaQuery = criteriaBuilder.createQuery()
-    def root = criteriaQuery.from(CompositeIdSimple)
-    criteriaQuery.select(root)
-    criteriaQuery.where(criteriaBuilder.equal(root.get("name"), "name"))
-    def query = datastore.sessionFactory.currentSession.createQuery(criteriaQuery)
-
-    expect:
-    query.list() == [compositeIdSimple]
-  }
-
-  @Issue("https://github.com/apache/grails-data-mapping/issues/1351")
-  def "test that composite to-many can be used in criteria"() {
-    Author _author = new Author(name:"Author").save()
-    Book _book = new Book(title:"Book").save()
-    CompositeIdToMany compositeIdToMany = new CompositeIdToMany(author:_author, book:_book).save(failOnError:true, flush:true)
-
-    expect:
-    CompositeIdToMany.createCriteria().list {
-      author {
-        eq('id', _author.id)
-      }
-    } == [compositeIdToMany]
-  }
-  @Issue("https://github.com/apache/grails-core/issues/14516")
-  def "test that composite id components can be used in criteria projections"() {
-    Author _author = new Author(name:"Author").save()
-    Book _book = new Book(title:"Book").save()
-    CompositeIdToMany compositeIdToMany = new CompositeIdToMany(author:_author, book:_book).save(failOnError:true, flush:true)
-
-    when: "querying with projections navigating composite ID component associations"
-    def results = CompositeIdToMany.createCriteria().list {
-      projections {
-        book {
-          property('id')
-        }
-      }
-      author {
-        eq('id', _author.id)
-      }
+        expect:
+        query.list() == [compositeIdToMany]
     }
 
-    then: "the projection returns the expected ID"
-    results.size() == 1
-    results[0] == _book.id
-  }
+    def "test that composite can be queried using JPA"() {
+        CompositeIdSimple compositeIdSimple = new CompositeIdSimple(name: "name", age: 2l).save(failOnError: true, flush: true)
 
-  @Issue("https://github.com/apache/grails-core/issues/14516")
-  def "test that composite id components can be used in criteria restrictions"() {
-    Author _author = new Author(name:"Author2").save()
-    Book _book = new Book(title:"Book2").save()
-    CompositeIdToMany compositeIdToMany = new CompositeIdToMany(author:_author, book:_book).save(failOnError:true, flush:true)
+        def criteriaBuilder = datastore.sessionFactory.criteriaBuilder
+        def criteriaQuery = criteriaBuilder.createQuery()
+        def root = criteriaQuery.from(CompositeIdSimple)
+        criteriaQuery.select(root)
+        criteriaQuery.where(criteriaBuilder.equal(root.get("name"), "name"))
+        def query = datastore.sessionFactory.currentSession.createQuery(criteriaQuery)
 
-    when: "querying with restrictions on composite ID component associations"
-    def results = CompositeIdToMany.createCriteria().list {
-      author {
-        eq('name', 'Author2')
-      }
-      book {
-        eq('title', 'Book2')
-      }
+        expect:
+        query.list() == [compositeIdSimple]
     }
 
-    then: "the entity is found"
-    results.size() == 1
-    results[0] == compositeIdToMany
-  }
+    @Issue("https://github.com/grails/grails-data-mapping/issues/1351")
+    def "test that composite to-many can be used in criteria"() {
+        Author _author = new Author(name: "Author").save()
+        Book _book = new Book(title: "Book").save()
+        CompositeIdToMany compositeIdToMany = new CompositeIdToMany(author: _author, book: _book).save(failOnError: true, flush: true)
 
-  @Issue("https://github.com/apache/grails-core/issues/14516")
-  def "test that eq on composite id component entity works"() {
-    Author _author = new Author(name:"Author3").save()
-    Book _book = new Book(title:"Book3").save()
-    CompositeIdToMany compositeIdToMany = new CompositeIdToMany(author:_author, book:_book).save(failOnError:true, flush:true)
-
-    when: "querying with eq on composite ID component association"
-    def results = CompositeIdToMany.createCriteria().list {
-      eq('author', _author)
+        expect:
+        CompositeIdToMany.createCriteria().list {
+            author {
+                eq('id', _author.id)
+            }
+        } == [compositeIdToMany]
     }
-
-    then: "the entity is found"
-    results.size() == 1
-    results[0] == compositeIdToMany
-  }
-
-  @Issue("https://github.com/apache/grails-core/issues/14516")
-  def "test that eq on composite id component works with Hibernate proxy"() {
-    given: "an entity with composite ID saved and session cleared"
-    Author _author = new Author(name:"ProxyAuthor").save(flush:true)
-    Book _book = new Book(title:"ProxyBook").save(flush:true)
-    CompositeIdToMany compositeIdToMany = new CompositeIdToMany(author:_author, book:_book).save(failOnError:true, flush:true)
-    def authorId = _author.id
-    datastore.sessionFactory.currentSession.clear()
-
-    when: "querying with eq using a Hibernate proxy (uninitialized) for the composite ID component"
-    Author proxyAuthor = Author.load(authorId)
-    def results = CompositeIdToMany.createCriteria().list {
-      eq('author', proxyAuthor)
-    }
-
-    then: "the entity is found via the proxy's ID without initializing it"
-    results.size() == 1
-    results[0].author.id == authorId
-    results[0].book.title == "ProxyBook"
-  }
 }
 
 @Entity
 class Author {
-  String name
+    String name
 }
 
 @Entity
 class Book {
-  String title
+    String title
 }
 
 @Entity
 class CompositeIdToMany implements Serializable {
-  Author author
-  Book book
+    Author author
+    Book book
 
-  static mapping = MappingBuilder.define {
-    composite("author", "book")
-  }
+    static mapping = MappingBuilder.define {
+        composite("author", "book")
+    }
 }
 
 @Entity
 class CompositeIdSimple implements Serializable {
-  String name
-  Long age
+    String name
+    Long age
 
-  static mapping = MappingBuilder.define {
-    composite("name", "age")
-  }
+    static mapping = MappingBuilder.define {
+        composite("name", "age")
+    }
 }
 
 

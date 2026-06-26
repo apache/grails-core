@@ -21,21 +21,22 @@ import org.asciidoctor.gradle.jvm.AsciidoctorTask
 
 plugins {
     id 'groovy'
-    id 'org.asciidoctor.jvm.convert'
     id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.asciidoctor.jvm.convert'
 }
 
 version = projectVersion
 
 ext {
     isReleaseVersion = !projectVersion.endsWith('-SNAPSHOT')
+    grailsMajorVersion = projectVersion.tokenize('.')[0]
     coreProjects = ['grails-datastore-core', 'grails-datamapping-core']
 }
 
 apply plugin: 'org.apache.grails.buildsrc.groovydoc'
 
 dependencies {
-    documentation platform(project(':grails-bom'))
+    documentation platform(project(':grails-hibernate7-bom'))
     documentation 'com.github.javaparser:javaparser-core'
     documentation "info.picocli:picocli:$picocliVersion"
     documentation 'org.apache.groovy:groovy-dateutil'
@@ -47,12 +48,12 @@ dependencies {
     documentation project(':grails-bootstrap')
     documentation project(':grails-core')
     documentation project(':grails-spring')
-    documentation 'org.hibernate:hibernate-core-jakarta'
+    documentation "org.hibernate.orm:hibernate-core"
     coreProjects.each {
         documentation "org.apache.grails.data:$it"
     }
     rootProject.subprojects
-            .findAll { it.findProperty('gormApiDocs') }
+            .findAll { it.findProperty('gormApiDocs') && !it.path.contains('hibernate5') }
             .each { documentation project(":$it.name") }
 }
 
@@ -73,24 +74,26 @@ tasks.named('asciidoctor', AsciidoctorTask) { AsciidoctorTask it ->
     }
 
     it.attributes = [
-            'experimental': 'true',
-            'compat-mode': 'true',
-            'toc': 'left',
-            'icons': 'font',
-            'reproducible': '',
-            'version': projectVersion,
-            'pluginVersion': projectVersion,
-            'groupId': project.group,
-            'artifactId': project.name,
+            'experimental'              : 'true',
+            'compat-mode'               : 'true',
+            'toc'                       : 'left',
+            'icons'                     : 'font',
+            'reproducible'              : '',
+            'grailsMajorVersion'        : grailsMajorVersion,
+            'version'                   : projectVersion,
+            'pluginVersion'             : projectVersion,
+            'groupId'                   : project.group,
+            'artifactId'                : project.name,
             'migrationPluginExamplesDir': project.layout.projectDirectory.dir('src/docs/asciidoc/databaseMigration').asFile.relativePath(rootProject.findProject(':grails-data-hibernate7-dbmigration').layout.projectDirectory.asFile),
-            'migrationPluginGroupId': rootProject.findProject(':grails-data-hibernate7-dbmigration').group,
-            'migrationPluginArtifactId': rootProject.findProject(':grails-data-hibernate7-dbmigration').name,
+            'migrationPluginGroupId'    : rootProject.findProject(':grails-data-hibernate7-dbmigration').group,
+            'migrationPluginArtifactId' : rootProject.findProject(':grails-data-hibernate7-dbmigration').name,
+
     ]
 }
 
 tasks.withType(Groovydoc).configureEach {
     it.dependsOn(rootProject.subprojects
-            .findAll { it.findProperty('gormApiDocs') }
+            .findAll { it.findProperty('gormApiDocs') && !it.path.contains('hibernate5') }
             .collect { ":${it.name}:groovydoc" })
 
     it.docTitle = "GORM for Hibernate 7 - $project.version"
@@ -100,7 +103,7 @@ tasks.withType(Groovydoc).configureEach {
     }.sum()
 
     rootProject.subprojects
-            .findAll { it.findProperty('gormApiDocs') }
+            .findAll { it.findProperty('gormApiDocs') && !it.path.contains('hibernate5') }
             .each { sourceFiles += it.files('src/main/groovy') }
 
     it.source = sourceFiles

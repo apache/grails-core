@@ -76,8 +76,8 @@ import org.springframework.lang.Nullable;
  * @see org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean
  */
 public class LocalSessionFactoryBean extends HibernateExceptionTranslator
-    implements FactoryBean<SessionFactory>, ResourceLoaderAware, BeanFactoryAware,
-    InitializingBean, SmartInitializingSingleton, DisposableBean {
+        implements FactoryBean<SessionFactory>, ResourceLoaderAware, BeanFactoryAware,
+        InitializingBean, SmartInitializingSingleton, DisposableBean {
 
     @Nullable
     private DataSource dataSource;
@@ -177,7 +177,7 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
      * @see Configuration#configure(java.net.URL)
      */
     public void setConfigLocation(Resource configLocation) {
-        this.configLocations = new Resource[]{configLocation};
+        this.configLocations = new Resource[] {configLocation};
     }
 
     /**
@@ -414,7 +414,7 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
      * existing one), potentially populated with a custom Hibernate bootstrap
      * {@link org.hibernate.service.ServiceRegistry} as well.
      * @since 4.3
-     * @see MetadataSources#MetadataSources(org.hibernate.service.ServiceRegistry)
+     * @see MetadataSources#MetadataSources(ServiceRegistry)
      * @see BootstrapServiceRegistryBuilder#build()
      */
     public void setMetadataSources(MetadataSources metadataSources) {
@@ -491,7 +491,7 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
         }
 
         LocalSessionFactoryBuilder sfb = new LocalSessionFactoryBuilder(
-            this.dataSource, getResourceLoader(), getMetadataSources());
+                this.dataSource, getResourceLoader(), getMetadataSources());
 
         if (this.configLocations != null) {
             for (Resource resource : this.configLocations) {
@@ -535,7 +535,7 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
                 File file = resource.getFile();
                 if (!file.isDirectory()) {
                     throw new IllegalArgumentException(
-                        "Mapping directory location [" + resource + "] does not denote a directory");
+                            "Mapping directory location [" + resource + "] does not denote a directory");
                 }
                 sfb.addDirectory(file);
             }
@@ -619,7 +619,7 @@ public class LocalSessionFactoryBean extends HibernateExceptionTranslator
      */
     protected SessionFactory buildSessionFactory(LocalSessionFactoryBuilder sfb) {
         return (this.bootstrapExecutor != null ? sfb.buildSessionFactory(this.bootstrapExecutor) :
-            sfb.buildSessionFactory());
+                sfb.buildSessionFactory());
     }
 
     /**

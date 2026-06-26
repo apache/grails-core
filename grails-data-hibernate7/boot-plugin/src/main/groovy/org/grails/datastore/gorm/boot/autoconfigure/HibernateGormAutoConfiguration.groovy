@@ -33,8 +33,8 @@ import org.springframework.boot.autoconfigure.AutoConfigureBefore
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
-import org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration
 import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration
+import org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
 import org.springframework.context.ConfigurableApplicationContext
@@ -73,8 +73,12 @@ class HibernateGormAutoConfiguration implements ApplicationContextAware,BeanFact
     HibernateDatastore hibernateDatastore() {
         List<String> packageNames = AutoConfigurationPackages.get(this.beanFactory)
         List<Package> packages = []
+        ClassLoader classLoader = getClass().getClassLoader()
         for (name in packageNames) {
             Package pkg = Package.getPackage(name)
+            if (pkg == null) {
+                pkg = classLoader.getDefinedPackage(name)
+            }
             if (pkg != null) {
                 packages.add(pkg)
             }
@@ -129,7 +133,7 @@ class HibernateGormAutoConfiguration implements ApplicationContextAware,BeanFact
     @Override
     void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         if (!(applicationContext instanceof ConfigurableApplicationContext)) {
-            throw new IllegalArgumentException('Neo4jAutoConfiguration requires an instance of ConfigurableApplicationContext')
+            throw new IllegalArgumentException('HibernateGormAutoConfiguration requires an instance of ConfigurableApplicationContext')
         }
         this.applicationContext = (ConfigurableApplicationContext) applicationContext
     }

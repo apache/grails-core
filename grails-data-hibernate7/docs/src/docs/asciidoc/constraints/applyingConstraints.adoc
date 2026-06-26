@@ -104,7 +104,7 @@ In this example, the `obj` argument to the custom validator is the domain _insta
 
 === Cascade constraints validation
 
-If GORM entity references some other entities, then during its constraints evaluation (validation) the constraints of the referenced entity could be 
+If GORM entity references some other entities, then during its constraints evaluation (validation) the constraints of the referenced entity could be
 evaluated also, if needed. There is a special parameter `cascadeValidate` in the entity mappings section, which manage the way of this _cascaded_ validation happens.
 
 [source,groovy]
@@ -129,7 +129,7 @@ class Publisher {
 The following table presents all options, which can be used:
 [cols="1,2"]
 |===
-|Option |Description 
+|Option |Description
 
 |none
 |Will not do any cascade validation at all for the association.
@@ -141,7 +141,7 @@ The following table presents all options, which can be used:
 |Only cascade validation if the referenced object is dirty via the `DirtyCheckable` trait. If the object doesn't implement DirtyCheckable, this will fall back to `default`.
 
 |owned
-|Only cascade validation if the entity <<gormAssociation, owns>> the referenced object. 
+|Only cascade validation if the entity <<gormAssociation, owns>> the referenced object.
 |===
 
 It is possible to set the global option for the `cascadeValidate`:

@@ -41,16 +41,16 @@ class ConnectionSourcesInitializer {
      * @param configuration The configuration
      * @return The {@link ConnectionSources}
      */
-    static <T,S extends ConnectionSourceSettings> ConnectionSources create(ConnectionSourceFactory<T, S> connectionSourceFactory, PropertyResolver configuration) {
+    static <T,S extends ConnectionSourceSettings> ConnectionSources<T, S> create(ConnectionSourceFactory<T, S> connectionSourceFactory, PropertyResolver configuration) {
         ConnectionSource defaultConnectionSource = connectionSourceFactory.create(ConnectionSource.DEFAULT, configuration)
         Class<ConnectionSources> connectionSourcesClass = defaultConnectionSource.getSettings().getConnectionSourcesClass()
 
         if (connectionSourcesClass == null) {
-            return new InMemoryConnectionSources(defaultConnectionSource, connectionSourceFactory, configuration)
+            return (ConnectionSources<T, S>) new InMemoryConnectionSources(defaultConnectionSource, connectionSourceFactory, configuration)
         }
         else {
             try {
-                return connectionSourcesClass.newInstance(defaultConnectionSource, connectionSourceFactory, configuration)
+                return (ConnectionSources<T, S>) connectionSourcesClass.newInstance(defaultConnectionSource, connectionSourceFactory, configuration)
             } catch (Throwable e) {
                 throw new ConfigurationException("Cannot instantiate custom ConnectionSources implementation: $e.message", e)
             }

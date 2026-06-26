@@ -108,7 +108,7 @@ class RenderSitemeshTagLib implements TagLibrary {
     // inside applyLayout inside a Sitemesh3LayoutView render) would tear
     // down the outer request scope before the outer render finished —
     // causing "request is not active anymore" errors.
-    Closure applyLayout = { Map attrs, body ->
+    def applyLayout(Map attrs, Closure body) {
         String savedAttribute = request.getAttribute(WebUtils.LAYOUT_ATTRIBUTE)
         // Save the request-scoped captured page (the one being decorated by the
         // outer SiteMesh render) and push a fresh one for the duration of the
@@ -280,7 +280,7 @@ class RenderSitemeshTagLib implements TagLibrary {
      * @attr default the default value to use if the property is null
      * @attr writeEntireProperty if true, writes the property in the form 'foo = "bar"', otherwise renders 'bar'
      */
-    Closure pageProperty = { attrs ->
+    def pageProperty(Map attrs) {
         if (!attrs.name) {
             throwTagError('Tag [pageProperty] is missing required attribute [name]')
         }
@@ -313,7 +313,7 @@ class RenderSitemeshTagLib implements TagLibrary {
      * @attr name REQUIRED the property name
      * @attr equals optional value to test against
      */
-    Closure ifPageProperty = { Map attrs, body ->
+    def ifPageProperty(Map attrs, Closure body) {
         if (!attrs.name) {
             return
         }
@@ -345,7 +345,7 @@ class RenderSitemeshTagLib implements TagLibrary {
     // require a second HTML parse of the layout output to expand. The
     // property is pulled directly from the Content being merged (set on the
     // request under WebAppContext.CONTENT_KEY by WebAppContext.decorate).
-    Closure layoutTitle = { attrs ->
+    def layoutTitle(Map attrs) {
         ContentProperty titleProp = getContentProperty('title')
         String defaultValue = attrs.default?.toString() ?: ''
         if (titleProp?.hasValue()) {
@@ -355,7 +355,7 @@ class RenderSitemeshTagLib implements TagLibrary {
         }
     }
 
-    Closure layoutHead = { attrs, body ->
+    def layoutHead(Map attrs, Closure body) {
         ContentProperty headProp = getContentProperty('head')
         if (headProp?.hasValue()) {
             headProp.writeValueTo(out)
@@ -364,7 +364,7 @@ class RenderSitemeshTagLib implements TagLibrary {
         }
     }
 
-    Closure layoutBody = { attrs, body ->
+    def layoutBody(Map attrs, Closure body) {
         ContentProperty bodyProp = getContentProperty('body')
         if (bodyProp?.hasValue()) {
             bodyProp.writeValueTo(out)
@@ -373,7 +373,7 @@ class RenderSitemeshTagLib implements TagLibrary {
         }
     }
 
-    Closure content = { attrs, body ->
+    def content(Map attrs, Closure body) {
         Encoder htmlEncoder = codecLookup?.lookupEncoder('HTML')
         out << '<content tag="'
         out << (htmlEncoder != null ? htmlEncoder.encode(attrs.tag) : attrs.tag)

@@ -29,8 +29,9 @@ import spock.lang.Issue
 import spock.lang.Shared
 import spock.lang.Specification
 
-@Issue('https://github.com/grails/grails-data-hibernate5/issues/78')
+@Issue('https://github.com/grails/gorm-hibernate5/issues/78')
 @Rollback
+//TODO Multi valued paths are only allowed for the member of operator
 class HasManyWithInQuerySpec extends Specification {
 
     @Shared @AutoCleanup HibernateDatastore datastore = new HibernateDatastore(getClass().getPackage())
@@ -38,8 +39,6 @@ class HasManyWithInQuerySpec extends Specification {
     @Shared PublicationService publicationService = datastore.getService(PublicationService)
     @Shared BookService bookService = datastore.getService(BookService)
 
-
-    @Ignore
     void "test 'in' criteria"() {
         setupData()
 
@@ -95,7 +94,7 @@ class Publication {
 
 @Entity
 class Book {
-
+    static belongsTo = [publication: Publication]
     String title
 }
 

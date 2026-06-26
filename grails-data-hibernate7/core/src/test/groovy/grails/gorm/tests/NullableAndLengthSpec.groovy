@@ -37,7 +37,7 @@ class NullableAndLengthSpec extends Specification {
     @Shared PlatformTransactionManager transactionManager = datastore.getTransactionManager()
 
     @Rollback
-    @Issue('https://github.com/apache/grails-core/issues/10107')
+    @Issue('https://github.com/grails/grails-core/issues/10107')
     void "Test nullable and length mapping"() {
         when:"An object is persisted that violates the length mapping"
         new Node(label: "AAAAAAAAAAAA").save(flush:true)

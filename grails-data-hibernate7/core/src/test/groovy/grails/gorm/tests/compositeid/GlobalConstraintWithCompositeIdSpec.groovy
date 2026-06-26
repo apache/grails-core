@@ -19,55 +19,55 @@
 package grails.gorm.tests.compositeid
 
 import grails.gorm.annotation.Entity
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
-import org.grails.datastore.mapping.core.DatastoreUtils
+import jakarta.annotation.Nonnull
+import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.orm.hibernate.cfg.PropertyConfig
-import org.hibernate.dialect.H2Dialect
-import org.springframework.transaction.PlatformTransactionManager
-import spock.lang.AutoCleanup
 import spock.lang.Issue
-import spock.lang.Shared
-import spock.lang.Specification
 
 /**
  * Created by graemerocher on 17/02/2017.
  */
-class GlobalConstraintWithCompositeIdSpec extends Specification {
+//TODO 2025-04-17 CompositeId not working
+class GlobalConstraintWithCompositeIdSpec extends HibernateGormDatastoreSpec {
 
-    @Shared Map config = [
-            'dataSource.url':"jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
-            'dataSource.dbCreate': 'update',
-            'dataSource.dialect': H2Dialect.name,
-            'dataSource.formatSql': 'true',
-            'hibernate.flush.mode': 'COMMIT',
-            'grails.gorm.default.constraints':{
-                '*'(nullable: true)
-            }
-    ]
-
-    @Shared @AutoCleanup HibernateDatastore hibernateDatastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config),ParentB, ChildB, DomainB)
-    @Shared PlatformTransactionManager transactionManager = hibernateDatastore.transactionManager
+    def setupSpec() {
+        manager.registerDomainClasses(ParentB, ChildB, DomainB)
+        manager.grailsConfig = [
+                'dataSource.url'               : "jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
+                'dataSource.dbCreate'            : 'create-drop',
+                'dataSource.formatSql'           : 'true',
+                'dataSource.logSql'              : 'true',
+                'hibernate.flush.mode'           : 'COMMIT',
+                'hibernate.cache.queries'        : 'true',
+                'hibernate.hbm2ddl.auto'         : 'create',
+                'hibernate.type.descriptor.sql'  : 'true',
+                'grails.gorm.default.constraints': {
+                    '*'(nullable: true)
+                }
+        ]
+    }
 
     @Rollback
-    @Issue('https://github.com/apache/grails-core/issues/10457')
+    @Issue('https://github.com/grails/grails-core/issues/10457')
     void "test global constraints with composite id"() {
         when:
-        ParentB parent = new ParentB(code:"AAA", desc: "BBB")
-                                    .addToChilds(name:"Child A")
-                                    .save(flush:true)
+        ParentB parent = new ParentB(code: "AAA", desc: "BBB")
+                .addToChildren(name: "Child A")
+                .save(flush: true)
 
         then:
         ParentB.count == 1
         ChildB.count == 1
     }
 
-    @Rollback
-    @Issue('https://github.com/apache/grails-data-mapping/issues/877')
+//    @Ignore("DDL not working for composite id")
+    @Issue('https://github.com/grails/grails-data-mapping/issues/877')
     void "test global constraints with unique constraint"() {
         given:
-        PersistentEntity entity = hibernateDatastore.mappingContext.getPersistentEntity(DomainB.name)
+        PersistentEntity entity = manager.hibernateDatastore.mappingContext.getPersistentEntity(DomainB.name)
         PropertyConfig nameProp = entity.getPropertyByName('name').mapping.mappedForm
         PropertyConfig someOtherConfig = entity.getPropertyByName('someOther').mapping.mappedForm
         expect:
@@ -86,8 +86,9 @@ class ParentB implements Serializable {
 
     String code
     String desc
+    SortedSet<ChildB> children
 
-    static hasMany = [childs: ChildB]
+    static hasMany = [children: ChildB]
 
     static constraints = {
     }
@@ -101,7 +102,7 @@ class ParentB implements Serializable {
 }
 
 @Entity
-class ChildB implements Serializable {
+class ChildB implements Serializable, Comparable<ChildB> {
     String name
 
     static belongsTo = [parent: ParentB]
@@ -118,6 +119,11 @@ class ChildB implements Serializable {
                 column name: 'DSC'
             }
         }
+    }
+
+    @Override
+    int compareTo(@Nonnull ChildB o) {
+        this.name <=> o.name
     }
 }
 

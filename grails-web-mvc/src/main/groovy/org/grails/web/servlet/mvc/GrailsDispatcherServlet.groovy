@@ -20,11 +20,14 @@ package org.grails.web.servlet.mvc
 
 import groovy.transform.CompileStatic
 
+import io.micrometer.observation.Observation
+import io.micrometer.observation.ObservationRegistry
 import jakarta.servlet.ServletContext
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 
 import org.springframework.context.ApplicationContext
+import org.springframework.web.servlet.ModelAndView
 import org.springframework.web.context.ServletContextAware
 import org.springframework.web.context.WebApplicationContext
 import org.springframework.web.context.request.RequestAttributes
@@ -44,6 +47,8 @@ import org.grails.web.util.WebUtils
  */
 @CompileStatic
 class GrailsDispatcherServlet extends DispatcherServlet implements ServletContextAware {
+
+    private volatile ObservationRegistry observationRegistry
 
     GrailsDispatcherServlet() {
     }
@@ -87,6 +92,50 @@ class GrailsDispatcherServlet extends DispatcherServlet implements ServletContex
             }
         }
         return request
+    }
+
+    /**
+     * Wraps the view-render phase in a {@code grails.render} span — parent of the GSP render spans, so
+     * "render excluding GSP" is {@code grails.render} minus its GSP children.
+     */
+    @Override
+    protected void render(ModelAndView mv, HttpServletRequest request, HttpServletResponse response) throws Exception {
+        def observationRegistry = resolveObservationRegistry()
+        if (observationRegistry == null || observationRegistry.isNoop()) {
+            super.render(mv, request, response)
+            return
+        }
+        def view = (mv != null && mv.viewName) ? mv.viewName : 'none'
+        def observation = Observation.createNotStarted('grails.render', observationRegistry)
+                .contextualName('grails.render ' + view)
+                .lowCardinalityKeyValue('grails.view', view)
+                .start()
+        def observationScope = observation.openScope()
+        try {
+            super.render(mv, request, response)
+        }
+        catch (Throwable t) {
+            observation.error(t)
+            throw t
+        }
+        finally {
+            observationScope.close()
+            observation.stop()
+        }
+    }
+
+    private ObservationRegistry resolveObservationRegistry() {
+        def registry = this.observationRegistry
+        if (registry == null) {
+            def wac = getWebApplicationContext()
+            if (wac == null) {
+                // context not ready — return NOOP without caching so a later call re-resolves
+                return ObservationRegistry.NOOP
+            }
+            registry = wac.getBeanProvider(ObservationRegistry).getIfAvailable({ -> ObservationRegistry.NOOP })
+            this.observationRegistry = registry
+        }
+        registry
     }
 
     @Override

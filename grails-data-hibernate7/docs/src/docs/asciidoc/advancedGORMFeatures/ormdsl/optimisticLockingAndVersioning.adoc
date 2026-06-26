@@ -16,43 +16,68 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 ////
+[[ormdsl-optimisticLockingAndVersioning]]
+== Optimistic Locking and Versioning
 
-As discussed in the section on <<locking,Optimistic and Pessimistic Locking>>, by default GORM uses optimistic locking and automatically injects a `version` property into every class which is in turn mapped to a `version` column at the database level.
+GORM enables optimistic locking by default via a `version` column added to every domain class table.
 
-If you're mapping to a legacy schema that doesn't have version columns (or there's some other reason why you don't want/need this feature) you can disable this with the `version` method:
+=== How Optimistic Locking Works
 
-[source,java]
+When you call `save()`, Hibernate checks that the `version` in the database matches the version loaded by the current session. If another transaction modified the row in between, the versions will differ and Hibernate throws `StaleObjectStateException`:
+
+[source,groovy]
 ----
-class Person {
-    ...
-    static mapping = {
-        table 'people'
-        version false
-    }
+def book = Book.get(1)
+// ... another thread or transaction updates the same book row ...
+book.title = "New Title"
+book.save()  // throws StaleObjectStateException if version was incremented elsewhere
+----
+
+Handle this with a try/catch in your service or controller:
+
+[source,groovy]
+----
+try {
+    book.save(failOnError: true)
+} catch (org.hibernate.StaleObjectStateException e) {
+    // handle conflict: reload and retry, or inform the user
 }
 ----
 
-NOTE: If you disable optimistic locking you are essentially on your own with regards to concurrent updates and are open to the risk of users losing data (due to data overriding) unless you use <<locking,pessimistic locking>>
+=== Disabling Optimistic Locking
 
-
-===== Version columns types
-
-
-By default GORM maps the `version` property as a `Long` that gets incremented by one each time an instance is updated. But Hibernate also supports using a `Timestamp`, for example:
-
-[source,java]
+[source,groovy]
 ----
-import java.sql.Timestamp
-
-class Person {
-
-    ...
-    Timestamp version
-
+class Book {
+    String title
     static mapping = {
-        table 'people'
+        version false   // <1>
     }
 }
 ----
+<1> No `version` column is created; concurrent modifications are not detected.
 
-There's a slight risk that two updates occurring at nearly the same time on a fast server can end up with the same timestamp value but this risk is very low. One benefit of using a `Timestamp` instead of a `Long` is that you combine the optimistic locking and last-updated semantics into a single column.
+WARNING: Disabling versioning removes all optimistic locking protection. Concurrent updates to the same row will silently overwrite each other.
+
+=== Customising the Version Column
+
+[source,groovy]
+----
+static mapping = {
+    version column: 'revision'
+}
+----
+
+=== Locking Pessimistically
+
+For cases where you need a database-level lock, use GORM's `lock()` method:
+
+[source,groovy]
+----
+Book.withTransaction {
+    def book = Book.lock(1)   // <1>
+    book.title = "Locked Update"
+    book.save()
+}
+----
+<1> Issues a `SELECT ... FOR UPDATE`, preventing other transactions from reading or modifying the row until the transaction commits.

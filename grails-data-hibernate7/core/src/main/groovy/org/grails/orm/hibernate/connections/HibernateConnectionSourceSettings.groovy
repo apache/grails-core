@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.orm.hibernate.connections
 
 import groovy.transform.AutoClone
@@ -25,10 +24,9 @@ import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
 
 import org.hibernate.CustomEntityDirtinessStrategy
-import org.hibernate.cfg.AvailableSettings
+import org.hibernate.boot.model.naming.PhysicalNamingStrategy
+import org.hibernate.boot.model.naming.PhysicalNamingStrategySnakeCaseImpl
 import org.hibernate.cfg.Configuration
-import org.hibernate.cfg.ImprovedNamingStrategy
-import org.hibernate.cfg.NamingStrategy
 
 import org.springframework.core.io.Resource
 
@@ -36,7 +34,7 @@ import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.orm.hibernate.HibernateEventListeners
 import org.grails.orm.hibernate.dirty.GrailsEntityDirtinessStrategy
-import org.grails.orm.hibernate.support.AbstractClosureEventTriggeringInterceptor
+import org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor
 
 /**
  * Settings for Hibernate
@@ -109,7 +107,7 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
         /**
          * The naming strategy
          */
-        Class<? extends NamingStrategy> naming_strategy = ImprovedNamingStrategy
+        Class<? extends PhysicalNamingStrategy> naming_strategy = PhysicalNamingStrategySnakeCaseImpl
 
         /**
          *
@@ -117,14 +115,14 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
         Class<? extends CustomEntityDirtinessStrategy> entity_dirtiness_strategy = GrailsEntityDirtinessStrategy
 
         /**
-         * A subclass of AbstractClosureEventTriggeringInterceptor
+         * A subclass of ClosureEventTriggeringInterceptor
          */
-        Class<? extends AbstractClosureEventTriggeringInterceptor> closureEventTriggeringInterceptorClass
+        Class<? extends ClosureEventTriggeringInterceptor> closureEventTriggeringInterceptorClass
 
         /**
          * The event triggering interceptor
          */
-        AbstractClosureEventTriggeringInterceptor eventTriggeringInterceptor
+        ClosureEventTriggeringInterceptor eventTriggeringInterceptor
         /**
          * The default hibernate event listeners
          */
@@ -201,16 +199,23 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
         String[] packagesToScan
 
         /**
+         * JPA Settings
+         */
+        JpaSettings jpa = new JpaSettings()
+
+        /**
          * Any additional properties that should be passed through as is.
          */
         Properties additionalProperties = new Properties()
 
         @CompileStatic
-        Map<String, Object> toHibernateEventListeners(AbstractClosureEventTriggeringInterceptor eventTriggeringInterceptor) {
+        static Map<String, Object> toHibernateEventListeners(ClosureEventTriggeringInterceptor eventTriggeringInterceptor) {
             if (eventTriggeringInterceptor != null) {
                 return [
-                    'save': eventTriggeringInterceptor,
-                    'save-update': eventTriggeringInterceptor,
+//                    'save': eventTriggeringInterceptor,
+//                    'save-update': eventTriggeringInterceptor,
+//                        "merge": eventTriggeringInterceptor,
+//                        "persist": eventTriggeringInterceptor,
                     'pre-load': eventTriggeringInterceptor,
                     'post-load': eventTriggeringInterceptor,
                     'pre-insert': eventTriggeringInterceptor,
@@ -219,7 +224,7 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
                     'post-update': eventTriggeringInterceptor,
                     'pre-delete': eventTriggeringInterceptor,
                     'post-delete': eventTriggeringInterceptor
-                ] as Map<String,Object>
+                ] as Map<String, Object>
             }
             return Collections.emptyMap()
         }
@@ -233,33 +238,19 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
         Properties toProperties() {
             Properties props = new Properties()
             if (naming_strategy != null) {
-                props.put('hibernate.naming_strategy', naming_strategy.name)
+                props.put('hibernate.naming_strategy'.toString(), naming_strategy.name)
             }
             if (configClass != null) {
-                props.put('hibernate.config_class', configClass.name)
+                props.put('hibernate.config_class'.toString(), configClass.name)
             }
             props.put('hibernate.use_query_cache', String.valueOf(cache.queries))
+            props.put('hibernate.jpa.compliance.cascade', String.valueOf(jpa.compliance.cascade))
 
             if (entity_dirtiness_strategy != null && !hibernateDirtyChecking) {
                 props.put('hibernate.entity_dirtiness_strategy', entity_dirtiness_strategy.name)
             }
 
-            // Hibernate 5.1/5.2: manually enforce connection release mode ON_CLOSE (the former default)
-            try {
-                // Try Hibernate 5.2
-                AvailableSettings.getField('CONNECTION_HANDLING')
-                props.put('hibernate.connection.handling_mode', 'DELAYED_ACQUISITION_AND_HOLD')
-            }
-            catch (NoSuchFieldException ex) {
-                // Try Hibernate 5.1
-                try {
-                    AvailableSettings.getField('ACQUIRE_CONNECTIONS')
-                    props.put('hibernate.connection.release_mode', 'ON_CLOSE')
-                }
-                catch (NoSuchFieldException ex2) {
-                    // on Hibernate 5.0.x or lower - no need to change the default there
-                }
-            }
+            props.put('hibernate.connection.handling_mode', 'DELAYED_ACQUISITION_AND_HOLD')
 
             String prefix = 'hibernate'
             props.putAll(additionalProperties)
@@ -273,8 +264,7 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
                 def value = current.get(key)
                 if (value instanceof Map) {
                     populateProperties(props, (Map) value, "${prefix}.$key")
-                }
-                else {
+                } else {
                     props.put("$prefix.$key".toString(), value)
                 }
             }
@@ -303,6 +293,7 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
              * @see org.hibernate.FlushMode
              */
             static enum FlushMode {
+
                 MANUAL(0),
                 COMMIT(5),
                 AUTO(10),
@@ -337,5 +328,17 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
             boolean enabled = true
         }
 
+        @Builder(builderStrategy = SimpleStrategy, prefix = '')
+        @AutoClone
+        static class JpaSettings {
+
+            JpaComplianceSettings compliance = new JpaComplianceSettings()
+        }
+
+        @Builder(builderStrategy = SimpleStrategy, prefix = '')
+        static class JpaComplianceSettings {
+
+            boolean cascade = true
+        }
     }
 }
