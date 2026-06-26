@@ -38,7 +38,9 @@ This module includes code from the [Liquibase Hibernate extension](https://githu
 
 ## Branches
 
-**9.0.x** Version of the plugin compatible with the current Grails release and Liquibase 4.27
+**8.0.x** Version of the plugin compatible with Grails 8 and Liquibase 4.27
+
+The temporary 9.0.x snapshots were never released. Since Grails Data was merged into grails-core, Grails Data and GORM modules use the same version as Grails itself.
 
 **5.0.x** Version of the plugin compatible with Grails 6 and Liquibase 4.19
 
@@ -68,7 +70,8 @@ One popular approach is to have a root changelog named changelog.groovy (or chan
 * 3.x: Grails 3 with Hibernate 5
 * 4.0.x Grails 5
 * 5.0.x Grails 6
-* 9.0.x Current Grails release
+* 7.0.x Grails 7 with Hibernate 5
+* 8.0.x Grails 8 with Hibernate 7
 
 ## Documentation
 
