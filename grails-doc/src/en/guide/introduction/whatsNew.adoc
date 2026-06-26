@@ -17,19 +17,19 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-This section covers all the new features introduced in Grails 8
+This section covers all the new features introduced in Grails {grailsMajorVersion}
 
 === Overview
 
-Grails 8 is a major release that includes new features, improvements, and dependency upgrades.
+Grails {grailsMajorVersion} is a major release that includes new features, improvements, and dependency upgrades.
 This release focuses on enhancing the developer experience, improving performance, and ensuring compatibility with the latest technologies.
 
-For detailed information on how to upgrade to Grails 8, including major dependency changes, please see the xref:upgrading#upgrading80x[Upgrading from Grails 7 to Grails 8] section.
+For detailed information on how to upgrade to Grails {grailsMajorVersion}, including major dependency changes, please see the xref:upgrading#upgrading80x[Upgrading from Grails 7 to Grails {grailsMajorVersion}] section.
 Notable new features are included below.
 
 ==== GSP Tag Library Improvements
 
-Grails 8 continues the move toward method-based TagLib handlers while preserving compatibility with existing closure-based tags.
+Grails {grailsMajorVersion} continues the move toward method-based TagLib handlers while preserving compatibility with existing closure-based tags.
 Method-defined tags now bind named attributes more predictably, exclude inherited framework and `Object` methods from tag dispatch, and preserve real namespace property getters.
 
 The Grails Gradle extension now defaults `preserveParameterNames` to `true`, so application Groovy compilation preserves method parameter names for features such as typed method TagLib arguments.
@@ -67,4 +67,27 @@ The new `ControllerTagLibTypeCheckingExtension` (bundled with `@GrailsCompileSta
 Integration tests that implement `HttpClientSupport` can now use `httpPostForm(...)` to send `application/x-www-form-urlencoded`
 request bodies. The helper URL-encodes form fields using UTF-8, and repeated values in a `Collection` or array are encoded as
 repeated keys in insertion order.
+
+==== GORM for MongoDB: TTL, Text, and Reconciled Indexes
+
+GORM for MongoDB can now declare a https://www.mongodb.com/docs/manual/core/index-ttl/[TTL index] directly in the mapping DSL.
+Adding `expireAfterSeconds` to the `indexAttributes` of a single date-valued property creates a TTL index, and MongoDB
+automatically removes each document once it reaches the configured age:
+
+[source,groovy]
+----
+class LoginEvent {
+    Date dateCreated
+    static mapping = {
+        dateCreated index: true, indexAttributes: [expireAfterSeconds: 3600]
+    }
+}
+----
+
+A single property can likewise declare a `$text` index — or another special type such as `2dsphere` — through
+`indexAttributes: [type: 'text']`.
+
+When the options of an already-created index change between restarts, GORM now reconciles the difference instead of only
+logging a conflict. A changed TTL is applied in place with MongoDB's `collMod` command — no drop, no rebuild — while any
+other option change is applied by declaring `indexAttributes: [recreateOnConflict: true]`.
 

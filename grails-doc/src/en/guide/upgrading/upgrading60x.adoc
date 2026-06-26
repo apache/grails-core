@@ -201,6 +201,17 @@ Grails 6 is updated to use Micronaut for Spring 4.5.1. For more information, che
 
 Micronaut for Spring 4.5.1 provides seamless integration between Micronaut and Spring, allowing you to leverage the strengths of both frameworks in your Grails project.
 
+===== 12.27 stop-app no longer uses JMX or the Actuator shutdown endpoint
+
+The interactive CLI `stop-app` command no longer stops a running application through JMX or the Spring Boot Actuator `/actuator/shutdown` endpoint. Both mechanisms were unreliable on current JDKs and default configurations.
+
+Instead, `run-app` records the application's process id in a PID file (`build/run-app.pid`) and `stop-app` reads that file to stop the process directly. As a result:
+
+* The `--host` and `--port` options of `stop-app` have been removed. `stop-app` now stops the application started by `run-app` for the current project. If you previously scripted `grails stop-app --host=... --port=...`, drop those options.
+* `stop-app` only stops an application that was started with `run-app` for the same project. It can be invoked from interactive mode or from a separate terminal.
+* On Linux and macOS the application is shut down gracefully (the equivalent of `SIGTERM`), so JVM shutdown hooks and Spring's orderly shutdown run. On Windows the application is terminated on a best-effort basis and a graceful shutdown is not guaranteed.
+* Every `bootRun` invocation (including a direct `./gradlew bootRun`) now writes `build/run-app.pid` while the application is running; the file is removed once the application stops. Customizing the Gradle build directory (`layout.buildDirectory`) is not supported by `stop-app`, which always looks for the PID file under the conventional `build` directory.
+
 ==== 13. Upgrading the Spring Security Plugin
 
 If your application uses the Grails Spring Security plugin, please consult the https://apache.github.io/grails-spring-security/snapshot/guide/index.html#upgrading-from-previous-versions[Upgrading from Previous Versions] section of the Spring Security plugin documentation for specific upgrade instructions related to Grails 7.

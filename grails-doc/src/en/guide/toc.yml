@@ -16,7 +16,7 @@
 introduction:
   title: Introduction
   whatsNew:
-    title: What's new in Grails 7?
+    title: What's new in Grails {grailsMajorVersion}?
     dependencyUpgrades: Updated Dependencies
 gettingStarted:
   title: Getting Started

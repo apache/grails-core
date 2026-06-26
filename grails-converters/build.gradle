@@ -36,6 +36,7 @@ group = 'org.apache.grails'
 dependencies {
     implementation platform(project(':grails-bom'))
 
+    implementation 'io.micrometer:micrometer-observation'
     api project(':grails-web-common')
     api 'org.apache.groovy:groovy'
 
