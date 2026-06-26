@@ -29,12 +29,14 @@ import org.yaml.snakeyaml.constructor.SafeConstructor
 class YamlTocStrategy {
 
     private final parser = new Yaml(new SafeConstructor(new LoaderOptions()))
+    private final Map substitutionProperties
     private resourceChecker
     private String ext = '.gdoc'
 
-    YamlTocStrategy(resourceChecker, String ext = '.gdoc') {
+    YamlTocStrategy(resourceChecker, String ext = '.gdoc', Map properties = [:]) {
         this.resourceChecker = resourceChecker
         this.ext = ext
+        this.substitutionProperties = properties ?: [:]
     }
 
     UserGuideNode generateToc(yaml) {
@@ -67,7 +69,7 @@ class YamlTocStrategy {
 
     private processSection(Map sections, UserGuideNode node) {
         if (sections.title) {
-            node.title = sections.title
+            node.title = replaceProperties(sections.title)
             sections = sections.clone()
             sections.remove('title')
         }
@@ -80,7 +82,14 @@ class YamlTocStrategy {
     }
 
     private processSection(String title, UserGuideNode node) {
-        node.title = title
+        node.title = replaceProperties(title)
+    }
+
+    private String replaceProperties(String title) {
+        title.replaceAll(/\{[^}]+\}/) { String propertyExpression ->
+            String propertyName = propertyExpression[1..-2]
+            substitutionProperties.containsKey(propertyName) ? substitutionProperties[propertyName].toString() : propertyExpression
+        }
     }
 
     private determineFilePath(basename, parent) {

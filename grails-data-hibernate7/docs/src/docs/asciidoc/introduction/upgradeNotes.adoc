@@ -20,11 +20,11 @@ under the License.
 [[upgrade-notes]]
 == Upgrade Notes
 
-=== Grails 8 / Hibernate 7
+=== Grails {grailsMajorVersion} / Hibernate 7
 
 ==== Query API — Injection Safety
 
-The Grails 8 / Hibernate 7 query API keeps the Hibernate 5 calling conventions while making the idiomatic Groovy query form injection-safe by default. There is no breaking change here: the methods that accepted a plain `String` on Hibernate 5 still do.
+The Grails {grailsMajorVersion} / Hibernate 7 query API keeps the Hibernate 5 calling conventions while making the idiomatic Groovy query form injection-safe by default. There is no breaking change here: the methods that accepted a plain `String` on Hibernate 5 still do.
 
 ===== Single-argument HQL overloads
 

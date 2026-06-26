@@ -38,7 +38,7 @@ This module includes code from the [Liquibase Hibernate extension](https://githu
 
 ## Branches
 
-**9.0.x** Version of the plugin compatible with Grails 7 and Liquibase 4.27
+**9.0.x** Version of the plugin compatible with the current Grails release and Liquibase 4.27
 
 **5.0.x** Version of the plugin compatible with Grails 6 and Liquibase 4.19
 
@@ -62,12 +62,13 @@ Database migrations are represented in text form, either using a Groovy DSL or n
 One popular approach is to have a root changelog named changelog.groovy (or changelog.xml) and to include a changelog per feature/branch that includes multiple smaller changelogs. Once the feature is finished and merged into the main development tree/trunk the changelog files can either stay as they are or be merged into one large file. Use whatever approach makes sense for your applications, but keep in mind that there are many options available for changelog management.
 
 ## Versions
+
 * 1.x: Grails 2
 * 2.x: Grails 3 with Hibernate 4
 * 3.x: Grails 3 with Hibernate 5
 * 4.0.x Grails 5
 * 5.0.x Grails 6
-* 9.0.x Grails 7
+* 9.0.x Current Grails release
 
 ## Documentation
 
