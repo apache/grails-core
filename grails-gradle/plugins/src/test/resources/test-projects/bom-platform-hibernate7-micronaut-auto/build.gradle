@@ -6,9 +6,18 @@ grails {
     bom = 'grails-hibernate7-micronaut-bom'
 }
 
+dependencies {
+    implementation 'org.apache.grails:grails-micronaut'
+}
+
 tasks.register('inspectBomSetup') {
     doLast {
         def implDeps = configurations.implementation.allDependencies
+
+        def hasMicronautLibrary = implDeps.any { dep ->
+            dep.group == 'org.apache.grails' && dep.name == 'grails-micronaut'
+        }
+        println "HAS_MICRONAUT_LIBRARY=${hasMicronautLibrary}"
 
         def hasGrailsBom = implDeps.any { dep ->
             dep.group == 'org.apache.grails' && dep.name == 'grails-bom'

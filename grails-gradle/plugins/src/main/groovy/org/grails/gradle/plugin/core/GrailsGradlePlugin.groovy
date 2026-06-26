@@ -644,10 +644,10 @@ ${importStatements}
 
             project.logger.lifecycle('Micronaut Support Detected for {}', project.name)
 
-            // Validate that grails-micronaut-bom is applied as enforcedPlatform. The BOM is now the
-            // single source of truth for the Micronaut platform version: applying it as
-            // enforcedPlatform pins io.micronaut.platform:micronaut-platform with a strict
-            // constraint that no transitive can override.
+            // Validate that a Micronaut-compatible Grails BOM is applied as enforcedPlatform. The
+            // selected BOM is the single source of truth for the Micronaut platform version:
+            // applying it as enforcedPlatform pins io.micronaut.platform:micronaut-platform with a
+            // strict constraint that no transitive can override.
             validateMicronautBom(project)
 
         }

@@ -32,7 +32,7 @@ Here's an example build file:
 .build.gradle
 ----
 dependencies {
-    // enforcedPlatform is required: it forces grails-bom-managed versions over the
+    // enforcedPlatform is required: it forces the selected Grails Micronaut BOM versions over the
     // versions declared by the Micronaut platform (for example Groovy 5 and javaparser-core),
     // preventing binary incompatibilities at runtime.
     implementation enforcedPlatform("org.apache.grails:grails-micronaut-bom:$grailsVersion")
@@ -41,7 +41,7 @@ dependencies {
 }
 ----
 
-The `grails-micronaut-bom` layers Micronaut-specific dependency overrides on top of `grails-bom` and pins the `io.micronaut.platform:micronaut-platform` version it was built against. Applying it as `enforcedPlatform` makes all of its constraints strictly versioned so that no transitive dependency (including Micronaut's own platform) can override them — there is no need to set a `micronautPlatformVersion` Gradle property. See link:{versionsRef}Grails%20BOM%20Micronaut.html[Grails Micronaut BOM Dependencies] for the full list of managed versions.
+The `grails-micronaut-bom` layers Micronaut-specific dependency overrides on top of `grails-bom` and pins the `io.micronaut.platform:micronaut-platform` version it was built against. Applying it as `enforcedPlatform` makes all of its constraints strictly versioned so that no transitive dependency, including Micronaut's own platform, can override them. There is no need to set a `micronautPlatformVersion` Gradle property. See link:{versionsRef}Grails%20BOM%20Micronaut.html[Grails Micronaut BOM Dependencies] for the full list of managed versions.
 
 ==== Hibernate-Specific Micronaut BOMs
 
@@ -84,7 +84,7 @@ grails {
 }
 ----
 
-WARNING: Disabling auto-setup is rarely appropriate. Without auto-setup, the Grails Gradle plugin will not validate that a Micronaut-compatible BOM is applied as `enforcedPlatform`. Without `enforcedPlatform`, Gradle's default conflict resolution allows the Micronaut platform to silently override grails-bom-managed versions of libraries such as Groovy and `javaparser-core`, leading to binary incompatibilities at runtime.
+WARNING: Disabling auto-setup is rarely appropriate. Without auto-setup, the Grails Gradle plugin will not validate that a Micronaut-compatible BOM is applied as `enforcedPlatform`. Without `enforcedPlatform`, Gradle's default conflict resolution allows the Micronaut platform to silently override the selected Grails Micronaut BOM versions of libraries such as Groovy and `javaparser-core`, leading to binary incompatibilities at runtime.
 
 ==== Generated Applications
 

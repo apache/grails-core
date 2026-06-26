@@ -74,6 +74,7 @@ class BomPlatformFunctionalSpec extends GradleSpecification {
         def result = executeTask('inspectBomSetup')
 
         then:
+        result.output.contains('HAS_MICRONAUT_LIBRARY=true')
         result.output.contains('HAS_H7_MICRONAUT_BOM=true')
         result.output.contains('H7_MICRONAUT_BOM_ENFORCED=true')
         result.output.contains('HAS_GRAILS_BOM=false')
@@ -89,6 +90,7 @@ class BomPlatformFunctionalSpec extends GradleSpecification {
 
         then:
         result.output.contains('HAS_GRAILS_BOM=false')
+        result.output.contains('HAS_MICRONAUT_LIBRARY=true')
         result.output.contains('HAS_H7_MICRONAUT_BOM=true')
         result.output.contains('H7_MICRONAUT_BOM_ENFORCED=true')
         result.output.contains('SIBLING_HAS_H7_MICRONAUT_BOM=true')
