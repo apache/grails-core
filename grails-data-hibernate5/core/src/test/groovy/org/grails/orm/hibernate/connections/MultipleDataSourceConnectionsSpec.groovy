@@ -180,6 +180,17 @@ class MultipleDataSourceConnectionsSpec extends Specification {
         then:
         testService != null
     }
+
+    void "late registered entity is enhanced without child datastore listener failure"() {
+        when: "an entity is added after child datastores have been initialized"
+        datastore.mappingContext.addPersistentEntity(LateRegisteredBook)
+
+        then: "the parent enhancer registers public GORM APIs for the mapped datasource"
+        LateRegisteredBook.withNewSession { Session s ->
+            assert s.connection().metaData.getURL() == "jdbc:h2:mem:books"
+            true
+        }
+    }
 }
 
 @Entity
@@ -215,4 +226,15 @@ class Author {
 @Service
 @Transactional(connection = "books")
 class TestService {
+}
+
+@Entity
+class LateRegisteredBook {
+    Long id
+    Long version
+    String name
+
+    static mapping = {
+        datasource 'books'
+    }
 }

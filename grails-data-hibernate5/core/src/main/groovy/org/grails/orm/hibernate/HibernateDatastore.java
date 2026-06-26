@@ -142,7 +142,9 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
         this.mappingContext.addMappingContextListener(new MappingContext.Listener() {
             @Override
             public void persistentEntityAdded(PersistentEntity entity) {
-                gormEnhancer.registerEntity(entity);
+                if (gormEnhancer != null) {
+                    gormEnhancer.registerEntity(entity);
+                }
             }
         });
         initializeConverters(this.mappingContext);
