@@ -20,9 +20,9 @@ under the License.
 [[querying-native-sql]]
 == SQL Queries
 
-GORM provides `findWithSql` and `findAllWithSql` for executing raw SQL when HQL or the Criteria API cannot express the query you need (e.g. database-specific functions, complex joins, or legacy SQL).
+GORM provides `findWithSql` and `findAllWithSql` for executing raw SQL when HQL or the DetachedCriteria API cannot express the query you need (e.g. database-specific functions, complex joins, or legacy SQL).
 
-WARNING: Raw SQL bypasses Hibernate's type system and object mapping. Prefer HQL, the Criteria API, or dynamic finders wherever possible. Use SQL only when there is no higher-level alternative.
+WARNING: Raw SQL bypasses Hibernate's type system and object mapping. Prefer HQL, the DetachedCriteria API, or dynamic finders wherever possible. Use SQL only when there is no higher-level alternative.
 
 === Methods
 
