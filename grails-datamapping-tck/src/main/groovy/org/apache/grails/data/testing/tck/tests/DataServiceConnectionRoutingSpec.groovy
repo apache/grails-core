@@ -25,6 +25,18 @@ import org.apache.grails.data.testing.tck.domains.DataServiceRoutingProduct
 import org.apache.grails.data.testing.tck.domains.DataServiceRoutingProductDataService
 import org.apache.grails.data.testing.tck.domains.DataServiceRoutingProductService
 
+/**
+ * Verifies that {@code @Service}-based Data Service operations route to the correct secondary
+ * datasource via the {@code GormRegistry} selector chain.
+ *
+ * <p>Replaces the service-layer portion of the removed {@code CrossLayerMultiDataSourceSpec}.
+ * That spec obtained a service bean via {@code manager.getServiceForConnection()} — internal
+ * wiring that changed when {@code GormEnhancer}'s static maps were replaced by a single
+ * {@code GormRegistry}. Services are now resolved through the registry's connection-routing
+ * selector ({@code PreferredDatastoreSelector} → {@code QualifiedDatastoreSelector} →
+ * {@code DefaultDatastoreSelector}). The domain-API routing side is covered by
+ * {@link DomainMultiDataSourceSpec}.</p>
+ */
 @Requires({ instance.manager?.supportsMultipleDataSources() })
 class DataServiceConnectionRoutingSpec extends GrailsDataTckSpec {
 

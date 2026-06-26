@@ -23,7 +23,7 @@ import groovy.transform.Generated
 import org.codehaus.groovy.runtime.InvokerHelper
 
 import org.grails.datastore.gorm.GormEntity
-import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.ToOne
@@ -141,7 +141,7 @@ trait HibernateEntity<D> extends GormEntity<D> {
 
     @Generated
     private static HibernateGormStaticApi currentHibernateStaticApi() {
-        (HibernateGormStaticApi) GormEnhancer.findStaticApi(this)
+        (HibernateGormStaticApi) GormRegistry.findStaticApi(this)
     }
 
     /**

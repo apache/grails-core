@@ -26,6 +26,17 @@ import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantR
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.DataServiceRoutingMetric
 
+/**
+ * Verifies that domain-API operations on a secondary datasource are correctly scoped to the
+ * active tenant.
+ *
+ * <p>Replaces the domain-layer portion of the removed {@code CrossLayerMultiTenantMultiDataSourceSpec}.
+ * That spec tested cross-layer visibility under a tenant context (domain save visible via service
+ * and vice versa) using {@code manager.getServiceForMultiTenantConnection()} — internal wiring
+ * that changed with the {@code GormRegistry} rewrite. The service-routing side is now covered by
+ * {@link DataServiceMultiTenantConnectionRoutingSpec}; tenant isolation across connections is
+ * verified in the 'tenant1 data not visible to tenant2' feature below.</p>
+ */
 @RestoreSystemProperties
 @Requires({ instance.manager?.supportsMultiTenantMultiDataSource() })
 class DomainMultiTenantMultiDataSourceSpec extends GrailsDataTckSpec {

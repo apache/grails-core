@@ -44,7 +44,6 @@ import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.model.types.Basic
 import org.grails.datastore.mapping.model.types.Simple
-import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.query.Restrictions
 import org.grails.datastore.mapping.query.api.BuildableCriteria
 import org.grails.datastore.mapping.query.event.PostQueryEvent
@@ -214,7 +213,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     List<D> list(Map params) {
         PersistentEntity entity = getGormPersistentEntity()
         HqlQueryContext ctx = HqlQueryContext.prepare(entity, null, null, null, params, new HashMap<>(), false, false)
-        Query q = HibernateHqlQueryCreator.createHqlQuery(getHibernateDatastore(), getHibernateDatastore().getSessionFactory(), entity, ctx)
+        GormQuery q = HibernateHqlQueryCreator.createHqlQuery(getHibernateDatastore(), getHibernateDatastore().getSessionFactory(), entity, ctx)
         if (HqlListQueryBuilder.isPaged(params)) {
             return (List<D>) new PagedResultList(q)
         }
@@ -439,17 +438,19 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     }
 
     private String buildWhereHql(Map<String, Object> queryMap) {
+        PersistentEntity pe = gormPersistentEntity
         String whereClause = queryMap.collect { String key, Object value ->
             String propertyName = validateWherePropertyName(key)
             value == null ? "$propertyName is null" : "$propertyName = :$propertyName"
         }.join(' and ')
-        return "from ${persistentEntity.name} where $whereClause"
+        return "from ${pe.name} where $whereClause"
     }
 
     private String validateWherePropertyName(String propertyName) {
-        PersistentProperty property = persistentEntity.getPropertyByName(propertyName)
+        PersistentEntity pe = gormPersistentEntity
+        PersistentProperty property = pe.getPropertyByName(propertyName)
         if (property == null || property.name != propertyName) {
-            throw new IllegalArgumentException("Property [$propertyName] is not a valid property of ${persistentEntity.name}")
+            throw new IllegalArgumentException("Property [$propertyName] is not a valid property of ${pe.name}")
         }
         return propertyName
     }
@@ -507,6 +508,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     private List<D> getAllInternal(List ids) {
         if (!ids) return []
+        PersistentEntity persistentEntity = gormPersistentEntity
         String idName = persistentEntity.identity.name
         String entity = persistentEntity.name
         Class<?> idType = persistentEntity.identity.type
@@ -611,7 +613,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         } as SessionCallback<D>)
     }
 
-    protected void populateQueryByExample(Session session, Query query, D example) {
+    protected void populateQueryByExample(Session session, GormQuery query, D example) {
         PersistentEntity pe = getGormPersistentEntity()
         MappingContext mappingContext = pe.mappingContext
         def ea = mappingContext.createEntityAccess(pe, example)
@@ -711,6 +713,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
                                         Map namedParams,
                                         Collection positionalParams,
                                         Map args) {
+        PersistentEntity persistentEntity = gormPersistentEntity
         Map<String, Object> coercedParams = namedParams?.collectEntries { k, v -> [k.toString(), v] } ?: [:]
         Map<String, Object> coercedArgs = args?.collectEntries { k, v -> [k.toString(), v] } ?: [:]
         def ctx = HqlQueryContext.prepare(persistentEntity, hql, coercedParams, positionalParams, coercedArgs, new HashMap<>(), isNative, isUpdate)
@@ -724,14 +727,14 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     protected void firePostQueryEvent(Object result) {
         def hibernateSession = new HibernateSession(getHibernateDatastore(), getHibernateDatastore().getSessionFactory())
-        def hibernateQuery = new HibernateQuery(hibernateSession, (GrailsHibernatePersistentEntity) persistentEntity)
+        def hibernateQuery = new HibernateQuery(hibernateSession, (GrailsHibernatePersistentEntity) gormPersistentEntity)
         def list = result instanceof List ? (List) result : Collections.singletonList(result)
         getHibernateDatastore().applicationEventPublisher.publishEvent(new PostQueryEvent(getHibernateDatastore(), hibernateQuery, list))
     }
 
     protected void firePreQueryEvent() {
         def hibernateSession = new HibernateSession(getHibernateDatastore(), getHibernateDatastore().getSessionFactory())
-        def hibernateQuery = new HibernateQuery(hibernateSession, (GrailsHibernatePersistentEntity) persistentEntity)
+        def hibernateQuery = new HibernateQuery(hibernateSession, (GrailsHibernatePersistentEntity) gormPersistentEntity)
         getHibernateDatastore().applicationEventPublisher.publishEvent(new PreQueryEvent(getHibernateDatastore(), hibernateQuery))
     }
 

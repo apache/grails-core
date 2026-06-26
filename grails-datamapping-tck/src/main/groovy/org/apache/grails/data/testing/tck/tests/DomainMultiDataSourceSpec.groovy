@@ -23,6 +23,18 @@ import spock.lang.Requires
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.DataServiceRoutingProduct
 
+/**
+ * Verifies that domain-API CRUD operations route to the correct secondary datasource.
+ *
+ * <p>Replaces the domain-layer portion of the removed {@code CrossLayerMultiDataSourceSpec}.
+ * That spec tested cross-layer visibility (domain save visible via service and vice versa) using
+ * {@code manager.getServiceForConnection()} — a wiring mechanism that no longer exists after the
+ * {@code GormRegistry} rewrite. The service-routing side of that contract is now covered by
+ * {@link DataServiceConnectionRoutingSpec}; data isolation between connections is verified in
+ * the 'secondary data not visible on default' and 'default data not visible on secondary' features
+ * below. Cross-layer visibility follows implicitly from both layers routing to the same
+ * child datastore.</p>
+ */
 @Requires({ instance.manager?.supportsMultipleDataSources() })
 class DomainMultiDataSourceSpec extends GrailsDataTckSpec {
 
