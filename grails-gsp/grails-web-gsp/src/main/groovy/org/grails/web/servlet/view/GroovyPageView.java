@@ -26,6 +26,8 @@ import groovy.text.Template;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -68,8 +70,24 @@ public class GroovyPageView extends AbstractGrailsView {
     public static final String EXCEPTION_MODEL_KEY = "exception";
     private static boolean developmentMode = Environment.isDevelopmentMode();
 
+    private ObservationRegistry observationRegistry = ObservationRegistry.NOOP;
+
     @Override
     protected void renderTemplate(Map<String, Object> model, GrailsWebRequest webRequest, HttpServletRequest request,
+            HttpServletResponse response) {
+        if (this.observationRegistry.isNoop()) {
+            doRenderTemplate(model, webRequest, request, response);
+            return;
+        }
+        String url = getUrl();
+        String resource = (url != null && !url.isEmpty()) ? url : "unknown";
+        Observation observation = Observation.createNotStarted("gsp.view", this.observationRegistry)
+                .contextualName("gsp.view " + resource)
+                .highCardinalityKeyValue("gsp.name", resource);
+        observation.observe(() -> doRenderTemplate(model, webRequest, request, response));
+    }
+
+    protected void doRenderTemplate(Map<String, Object> model, GrailsWebRequest webRequest, HttpServletRequest request,
             HttpServletResponse response) {
         request.setAttribute(GroovyPagesUriService.RENDERING_VIEW_ATTRIBUTE, Boolean.TRUE);
         GSPResponseWriter out = null;
@@ -154,6 +172,15 @@ public class GroovyPageView extends AbstractGrailsView {
 
     public void setTemplateEngine(GroovyPagesTemplateEngine templateEngine) {
         this.templateEngine = templateEngine;
+    }
+
+    /**
+     * Sets the {@link ObservationRegistry} used to instrument GSP view rendering. Defaults to
+     * {@link ObservationRegistry#NOOP}, in which case rendering is not observed.
+     * @param observationRegistry the registry, or {@code null} for no-op
+     */
+    void setObservationRegistry(ObservationRegistry observationRegistry) {
+        this.observationRegistry = (observationRegistry != null) ? observationRegistry : ObservationRegistry.NOOP;
     }
 
     public boolean isExpired() {

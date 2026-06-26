@@ -51,7 +51,7 @@ public class DynamicFinderInvocation {
         this.operator = operator;
     }
 
-    public Class getJavaClass() {
+    public Class<?> getJavaClass() {
         return javaClass;
     }
 

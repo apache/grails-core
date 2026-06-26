@@ -55,12 +55,21 @@ import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.model.types.EmbeddedCollection;
 import org.grails.datastore.mapping.model.types.Identity;
 import org.grails.datastore.mapping.model.types.ManyToMany;
-import org.grails.datastore.mapping.model.types.ManyToOne;
 import org.grails.datastore.mapping.model.types.OneToMany;
-import org.grails.datastore.mapping.model.types.OneToOne;
 import org.grails.datastore.mapping.model.types.Simple;
 import org.grails.datastore.mapping.model.types.TenantId;
 import org.grails.datastore.mapping.model.types.ToOne;
+import org.grails.datastore.mapping.model.types.mapping.BasicWithMapping;
+import org.grails.datastore.mapping.model.types.mapping.CustomWithMapping;
+import org.grails.datastore.mapping.model.types.mapping.EmbeddedCollectionWithMapping;
+import org.grails.datastore.mapping.model.types.mapping.EmbeddedWithMapping;
+import org.grails.datastore.mapping.model.types.mapping.IdentityWithMapping;
+import org.grails.datastore.mapping.model.types.mapping.ManyToManyWithMapping;
+import org.grails.datastore.mapping.model.types.mapping.ManyToOneWithMapping;
+import org.grails.datastore.mapping.model.types.mapping.OneToManyWithMapping;
+import org.grails.datastore.mapping.model.types.mapping.OneToOneWithMapping;
+import org.grails.datastore.mapping.model.types.mapping.SimpleWithMapping;
+import org.grails.datastore.mapping.model.types.mapping.TenantIdWithMapping;
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
 
 /**
@@ -144,12 +153,7 @@ public abstract class MappingFactory<R extends Entity, T extends Property> {
     private Map<Class, Collection<CustomTypeMarshaller>> typeConverterMap = new ConcurrentHashMap<>();
 
     public void registerCustomType(CustomTypeMarshaller marshallerCustom) {
-        Collection<CustomTypeMarshaller> marshallers = typeConverterMap.get(marshallerCustom.getTargetType());
-        if (marshallers == null) {
-            marshallers = new ConcurrentLinkedQueue<>();
-            typeConverterMap.put(marshallerCustom.getTargetType(), marshallers);
-        }
-        marshallers.add(marshallerCustom);
+        typeConverterMap.computeIfAbsent(marshallerCustom.getTargetType(), k -> new ConcurrentLinkedQueue<>()).add(marshallerCustom);
     }
 
     public boolean isSimpleType(Class propType) {
@@ -196,13 +200,9 @@ public abstract class MappingFactory<R extends Entity, T extends Property> {
      * @return An Identity instance
      */
     public Identity<T> createIdentity(PersistentEntity owner, MappingContext context, PropertyDescriptor pd) {
-        return new Identity<>(owner, context, pd) {
-            PropertyMapping<T> propertyMapping = createPropertyMapping(this, owner);
-
-            public PropertyMapping<T> getMapping() {
-                return propertyMapping;
-            }
-        };
+        IdentityWithMapping<T> identity = new IdentityWithMapping<>(owner, context, pd);
+        identity.setMapping(createPropertyMapping(identity, owner));
+        return identity;
     }
 
     /**
@@ -214,13 +214,9 @@ public abstract class MappingFactory<R extends Entity, T extends Property> {
      * @return An Identity instance
      */
     public TenantId<T> createTenantId(PersistentEntity owner, MappingContext context, PropertyDescriptor pd) {
-        return new TenantId<>(owner, context, pd) {
-            PropertyMapping<T> propertyMapping = createDerivedPropertyMapping(this, owner);
-
-            public PropertyMapping<T> getMapping() {
-                return propertyMapping;
-            }
-        };
+        TenantIdWithMapping<T> tenantId = new TenantIdWithMapping<>(owner, context, pd);
+        tenantId.setMapping(createDerivedPropertyMapping(tenantId, owner));
+        return tenantId;
     }
 
     /**
@@ -251,13 +247,9 @@ public abstract class MappingFactory<R extends Entity, T extends Property> {
         if (customTypeMarshaller == null && !allowArbitraryCustomTypes()) {
             throw new IllegalStateException("Cannot create a custom type without a type converter for type " + propertyType);
         }
-        return new Custom<>(owner, context, pd, customTypeMarshaller) {
-            PropertyMapping<T> propertyMapping = createPropertyMapping(this, owner);
-
-            public PropertyMapping<T> getMapping() {
-                return propertyMapping;
-            }
-        };
+        CustomWithMapping<T> custom = new CustomWithMapping<>(owner, context, pd, customTypeMarshaller);
+        custom.setMapping(createPropertyMapping(custom, owner));
+        return custom;
     }
 
     protected boolean allowArbitraryCustomTypes() {
@@ -295,43 +287,19 @@ public abstract class MappingFactory<R extends Entity, T extends Property> {
      * @return A Simple property type
      */
     public Simple<T> createSimple(PersistentEntity owner, MappingContext context, PropertyDescriptor pd) {
-        return new Simple<>(owner, context, pd) {
-            PropertyMapping<T> propertyMapping = createPropertyMapping(this, owner);
-
-            public PropertyMapping<T> getMapping() {
-                return propertyMapping;
-            }
-        };
+        SimpleWithMapping<T> simple = new SimpleWithMapping<>(owner, context, pd);
+        simple.setMapping(createPropertyMapping(simple, owner));
+        return simple;
     }
 
     protected PropertyMapping<T> createPropertyMapping(final PersistentProperty<T> property, final PersistentEntity owner) {
-        return new PropertyMapping<>() {
-            private T mappedForm = createMappedForm(property);
-
-            public ClassMapping getClassMapping() {
-                return owner.getMapping();
-            }
-
-            public T getMappedForm() {
-                return mappedForm;
-            }
-        };
+        return new DefaultPropertyMapping<>(owner.getMapping(), createMappedForm(property));
     }
 
-    private PropertyMapping<T> createDerivedPropertyMapping(final PersistentProperty<T> property, final PersistentEntity owner) {
+    protected PropertyMapping<T> createDerivedPropertyMapping(final PersistentProperty<T> property, final PersistentEntity owner) {
         final T mappedFormObject = createMappedForm(property);
         mappedFormObject.setDerived(true);
-        return new PropertyMapping<>() {
-            private T mappedForm = mappedFormObject;
-
-            public ClassMapping getClassMapping() {
-                return owner.getMapping();
-            }
-
-            public T getMappedForm() {
-                return mappedForm;
-            }
-        };
+        return new DefaultPropertyMapping<>(owner.getMapping(), mappedFormObject);
     }
 
     /**
@@ -343,18 +311,9 @@ public abstract class MappingFactory<R extends Entity, T extends Property> {
      * @return The ToOne instance
      */
     public ToOne createOneToOne(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
-        return new OneToOne<T>(entity, context, property) {
-            PropertyMapping<T> propertyMapping = createPropertyMapping(this, owner);
-
-            public PropertyMapping getMapping() {
-                return propertyMapping;
-            }
-
-            @Override
-            public String toString() {
-                return associationtoString("one-to-one: ", this);
-            }
-        };
+        OneToOneWithMapping<T> oneToOne = new OneToOneWithMapping<>(entity, context, property);
+        oneToOne.setMapping(createPropertyMapping(oneToOne, entity));
+        return oneToOne;
     }
 
     /**
@@ -366,19 +325,9 @@ public abstract class MappingFactory<R extends Entity, T extends Property> {
      * @return The ToOne instance
      */
     public ToOne createManyToOne(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
-        return new ManyToOne<T>(entity, context, property) {
-            PropertyMapping<T> propertyMapping = createPropertyMapping(this, owner);
-            public PropertyMapping getMapping() {
-                return propertyMapping;
-            }
-
-            @Override
-            public String toString() {
-                return associationtoString("many-to-one: ", this);
-            }
-
-        };
-
+        ManyToOneWithMapping<T> manyToOne = new ManyToOneWithMapping<>(entity, context, property);
+        manyToOne.setMapping(createPropertyMapping(manyToOne, entity));
+        return manyToOne;
     }
 
     /**
@@ -390,18 +339,9 @@ public abstract class MappingFactory<R extends Entity, T extends Property> {
      * @return The {@link OneToMany} instance
      */
     public OneToMany createOneToMany(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
-        return new OneToMany<T>(entity, context, property) {
-            PropertyMapping<T> propertyMapping = createPropertyMapping(this, owner);
-            public PropertyMapping getMapping() {
-                return propertyMapping;
-            }
-
-            @Override
-            public String toString() {
-                return associationtoString("one-to-many: ", this);
-            }
-        };
-
+        OneToManyWithMapping<T> oneToMany = new OneToManyWithMapping<>(entity, context, property);
+        oneToMany.setMapping(createPropertyMapping(oneToMany, entity));
+        return oneToMany;
     }
 
     /**
@@ -413,18 +353,9 @@ public abstract class MappingFactory<R extends Entity, T extends Property> {
      * @return The {@link ManyToMany} instance
      */
     public ManyToMany createManyToMany(PersistentEntity entity, MappingContext context, PropertyDescriptor property) {
-        return new ManyToMany<T>(entity, context, property) {
-            PropertyMapping<T> propertyMapping = createPropertyMapping(this, owner);
-
-            public PropertyMapping getMapping() {
-                return propertyMapping;
-            }
-
-            @Override
-            public String toString() {
-                return associationtoString("many-to-many: ", this);
-            }
-        };
+        ManyToManyWithMapping<T> manyToMany = new ManyToManyWithMapping<>(entity, context, property);
+        manyToMany.setMapping(createPropertyMapping(manyToMany, entity));
+        return manyToMany;
     }
 
     /**
@@ -436,19 +367,10 @@ public abstract class MappingFactory<R extends Entity, T extends Property> {
      * @return The {@link Embedded} instance
      */
     public Embedded createEmbedded(PersistentEntity entity,
-            MappingContext context, PropertyDescriptor property) {
-        return new Embedded<T>(entity, context, property) {
-            PropertyMapping<T> propertyMapping = createPropertyMapping(this, owner);
-
-            public PropertyMapping getMapping() {
-                return propertyMapping;
-            }
-
-            @Override
-            public String toString() {
-                return associationtoString("embedded: ", this);
-            }
-        };
+                                   MappingContext context, PropertyDescriptor property) {
+        EmbeddedWithMapping<T> embedded = new EmbeddedWithMapping<>(entity, context, property);
+        embedded.setMapping(createPropertyMapping(embedded, entity));
+        return embedded;
     }
 
     /**
@@ -460,19 +382,10 @@ public abstract class MappingFactory<R extends Entity, T extends Property> {
      * @return The {@link Embedded} instance
      */
     public EmbeddedCollection createEmbeddedCollection(PersistentEntity entity,
-            MappingContext context, PropertyDescriptor property) {
-        return new EmbeddedCollection<T>(entity, context, property) {
-            PropertyMapping<T> propertyMapping = createPropertyMapping(this, owner);
-
-            public PropertyMapping getMapping() {
-                return propertyMapping;
-            }
-
-            @Override
-            public String toString() {
-                return associationtoString("embedded: ", this);
-            }
-        };
+                                                       MappingContext context, PropertyDescriptor property) {
+        EmbeddedCollectionWithMapping<T> embedded = new EmbeddedCollectionWithMapping<>(entity, context, property);
+        embedded.setMapping(createPropertyMapping(embedded, entity));
+        return embedded;
     }
 
     /**
@@ -484,14 +397,9 @@ public abstract class MappingFactory<R extends Entity, T extends Property> {
      * @return The Basic collection type
      */
     public Basic createBasicCollection(PersistentEntity entity,
-            MappingContext context, PropertyDescriptor property, Class collectionType) {
-        Basic basic = new Basic(entity, context, property) {
-            PropertyMapping<T> propertyMapping = createPropertyMapping(this, owner);
-
-            public PropertyMapping getMapping() {
-                return propertyMapping;
-            }
-        };
+                                       MappingContext context, PropertyDescriptor property, Class collectionType) {
+        BasicWithMapping<T> basic = new BasicWithMapping<>(entity, context, property);
+        basic.setMapping(createPropertyMapping(basic, entity));
 
         CustomTypeMarshaller customTypeMarshaller = findCustomType(context, property.getPropertyType());
 
@@ -533,80 +441,16 @@ public abstract class MappingFactory<R extends Entity, T extends Property> {
     }
 
     public IdentityMapping createDefaultIdentityMapping(final ClassMapping classMapping) {
-        return new IdentityMapping() {
-
-            public String[] getIdentifierName() {
-                PersistentProperty identity = classMapping.getEntity().getIdentity();
-                String propertyName = identity != null ? identity.getMapping().getMappedForm().getName() : null;
-                if (propertyName != null) {
-                    return new String[] { propertyName };
-                }
-                else {
-                    return new String[] { IDENTITY_PROPERTY };
-                }
-            }
-
-            @Override
-            public ValueGenerator getGenerator() {
-                return ValueGenerator.AUTO;
-            }
-
-            @Override
-            public Class<?> getStoredAs() {
-                // Read from the underlying property so backend-specific hooks (e.g. Mongo's
-                // global default applied in createIdentity) are observable, even for domains
-                // without an explicit `static mapping` block.
-                Property mappedForm = getMappedForm();
-                return mappedForm != null ? mappedForm.getStoredAs() : null;
-            }
-
-            public ClassMapping getClassMapping() {
-                return classMapping;
-            }
-
-            public Property getMappedForm() {
-                // Null-safe for composite-key entities, which have null getIdentity().
-                PersistentProperty identity = classMapping.getEntity().getIdentity();
-                return identity != null ? identity.getMapping().getMappedForm() : null;
-            }
-        };
+        return new DefaultIdentityMapping(classMapping);
     }
 
     protected IdentityMapping createDefaultIdentityMapping(final ClassMapping classMapping, final T property) {
-        final String targetName = property != null ? property.getName() : null;
-        final String generator = property != null ? property.getGenerator() : null;
-        return new IdentityMapping() {
+        String targetName = property != null ? property.getName() : null;
+        String[] identifierNames = targetName != null ? new String[]{targetName} : new String[]{IDENTITY_PROPERTY};
+        String generatorName = property != null ? property.getGenerator() : null;
+        ValueGenerator generator = generatorName != null ? ValueGenerator.valueOf(generatorName.toUpperCase(java.util.Locale.ENGLISH)) : ValueGenerator.AUTO;
+        return new DefaultIdentityMapping<>(classMapping, property, identifierNames, generator);
 
-            public String[] getIdentifierName() {
-                if (targetName != null) {
-                    return new String[] { targetName };
-                }
-                else {
-                    return new String[] { IDENTITY_PROPERTY };
-                }
-            }
-
-            @Override
-            public ValueGenerator getGenerator() {
-                return generator != null ? ValueGenerator.valueOf(generator) : ValueGenerator.AUTO;
-            }
-
-            @Override
-            public Class<?> getStoredAs() {
-                // Read dynamically from the underlying property so downstream hooks (e.g. Mongo's
-                // global default applied in createIdentity) remain observable even when they run
-                // after this IdentityMapping has been constructed.
-                return property != null ? property.getStoredAs() : null;
-            }
-
-            public ClassMapping getClassMapping() {
-                return classMapping;
-            }
-
-            public Property getMappedForm() {
-                return property;
-            }
-        };
     }
 
     public static String associationtoString(String desc, Association a) {

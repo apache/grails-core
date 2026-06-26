@@ -21,7 +21,7 @@ Logging is handled by the https://logback.qos.ch[Logback logging framework] and 
 
 The Grails Environments `development`, `test` and `production` can be used with <springProfile name="development"> to configure environment specific logging.  This was one of the features lost when logback removed groovy configuration.  
 
-// To be re-included when a Grails 7 release of the plugin gets released
+// To be re-included when a Grails {grailsMajorVersion} release of the plugin gets released
 // See: virtualdogbert/logback-groovy-config#15
 //
 // NOTE: Since Grails 5.1.2 support for groovy configuration (`grails-app/conf/logback.groovy`) has been removed (by logback 1.2.9). It is possible to add back groovy configuration by adding the https://github.com/virtualdogbert/logback-groovy-config[logback-groovy-config] library to your project.

@@ -35,9 +35,9 @@ public class InstanceApiHelper {
         this.hibernateTemplate = hibernateTemplate;
     }
 
-    public void delete(final Object obj, final boolean flush) {
+    public void remove(final Object obj, final boolean flush) {
         hibernateTemplate.execute((HibernateCallback<Void>) session -> {
-            session.delete(obj);
+            session.remove(obj);
             if (flush) {
                 session.flush();
             }

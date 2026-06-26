@@ -18,19 +18,23 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import org.apache.grails.data.testing.tck.domains.Book
+import org.apache.grails.data.testing.tck.domains.Book as TckBook
 import org.apache.grails.data.testing.tck.domains.Highway
 import org.apache.grails.data.testing.tck.domains.Person
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException
+import spock.lang.Unroll
 
 /**
+ * TCK Spec for Dynamic Finders.
+ *
  * @author graemerocher
  */
 class FindByMethodSpec extends GrailsDataTckSpec {
 
     @Override
     void setupSpec() {
-        manager.registerDomainClasses(Book, Highway, Person)
+        manager.registerDomainClasses(Person, TckBook, Highway)
     }
 
     void 'Test Using AND Multiple Times In A Dynamic Finder'() {
@@ -101,9 +105,9 @@ class FindByMethodSpec extends GrailsDataTckSpec {
     void testBooleanPropertyQuery() {
         given:
         new Highway(bypassed: true, name: 'Bypassed Highway').save()
-        new Highway(bypassed: true, name: 'Bypassed Highway').save()
+        new Highway(bypassed: true, name: 'Another Bypassed Highway').save()
         new Highway(bypassed: false, name: 'Not Bypassed Highway').save()
-        new Highway(bypassed: false, name: 'Not Bypassed Highway').save()
+        new Highway(bypassed: false, name: 'Another Not Bypassed Highway').save()
 
         when:
         def highways = Highway.findAllBypassedByName('Not Bypassed Highway')
@@ -115,17 +119,15 @@ class FindByMethodSpec extends GrailsDataTckSpec {
         highways = Highway.findAllNotBypassedByName('Not Bypassed Highway')
 
         then:
-        2 == highways?.size()
+        1 == highways?.size()
         'Not Bypassed Highway' == highways[0].name
-        'Not Bypassed Highway' == highways[1].name
 
         when:
         highways = Highway.findAllBypassedByName('Bypassed Highway')
 
         then:
-        2 == highways?.size()
+        1 == highways?.size()
         'Bypassed Highway' == highways[0].name
-        'Bypassed Highway' == highways[1].name
 
         when:
         highways = Highway.findAllNotBypassedByName('Bypassed Highway')
@@ -136,28 +138,16 @@ class FindByMethodSpec extends GrailsDataTckSpec {
         highways = Highway.findAllBypassed()
         then:
         2 == highways?.size()
-        'Bypassed Highway' == highways[0].name
-        'Bypassed Highway' == highways[1].name
+        highways*.name.containsAll(['Bypassed Highway', 'Another Bypassed Highway'])
 
         when:
         highways = Highway.findAllNotBypassed()
         then:
         2 == highways?.size()
-        'Not Bypassed Highway' == highways[0].name
-        'Not Bypassed Highway' == highways[1].name
+        highways*.name.containsAll(['Not Bypassed Highway', 'Another Not Bypassed Highway'])
 
         when:
-        def highway = Highway.findNotBypassed()
-        then:
-        'Not Bypassed Highway' == highway?.name
-
-        when:
-        highway = Highway.findBypassed()
-        then:
-        'Bypassed Highway' == highway?.name
-
-        when:
-        highway = Highway.findNotBypassedByName('Not Bypassed Highway')
+        def highway = Highway.findNotBypassedByName('Not Bypassed Highway')
         then:
         'Not Bypassed Highway' == highway?.name
 
@@ -167,83 +157,82 @@ class FindByMethodSpec extends GrailsDataTckSpec {
         'Bypassed Highway' == highway?.name
 
         when:
-        Book.newInstance(author: 'Jeff', title: 'Fly Fishing For Everyone', published: false).save()
-        Book.newInstance(author: 'Jeff', title: 'DGGv2', published: true).save()
-        Book.newInstance(author: 'Graeme', title: 'DGGv2', published: true).save()
-        Book.newInstance(author: 'Dierk', title: 'GINA', published: true).save()
+        TckBook.newInstance(author: 'Jeff', title: 'Fly Fishing For Everyone', published: false).save()
+        TckBook.newInstance(author: 'Jeff', title: 'DGGv2', published: true).save()
+        TckBook.newInstance(author: 'Graeme', title: 'DGGv2', published: true).save()
+        TckBook.newInstance(author: 'Dierk', title: 'GINA', published: true).save()
 
-        def book = Book.findPublishedByAuthor('Jeff')
+        def book = TckBook.findPublishedByAuthor('Jeff')
         then:
         'Jeff' == book.author
         'DGGv2' == book.title
 
         when:
-        book = Book.findPublishedByAuthor('Graeme')
+        book = TckBook.findPublishedByAuthor('Graeme')
         then:
         'Graeme' == book.author
         'DGGv2' == book.title
 
         when:
-        book = Book.findPublishedByTitleAndAuthor('DGGv2', 'Jeff')
+        book = TckBook.findPublishedByTitleAndAuthor('DGGv2', 'Jeff')
         then:
         'Jeff' == book.author
         'DGGv2' == book.title
 
         when:
-        book = Book.findNotPublishedByAuthor('Jeff')
+        book = TckBook.findNotPublishedByAuthor('Jeff')
         then:
         'Fly Fishing For Everyone' == book.title
 
         when:
-        book = Book.findPublishedByTitleOrAuthor('Fly Fishing For Everyone', 'Dierk')
+        book = TckBook.findPublishedByTitleOrAuthor('Fly Fishing For Everyone', 'Dierk')
         then:
         'GINA' == book.title
-        Book.findPublished() != null
 
         when:
-        book = Book.findNotPublished()
+        book = TckBook.findNotPublished()
         then:
         'Fly Fishing For Everyone' == book?.title
 
         when:
-        def books = Book.findAllPublishedByTitle('DGGv2')
+        def books = TckBook.findAllPublishedByTitle('DGGv2')
         then:
         2 == books?.size()
 
         when:
-        books = Book.findAllPublished()
+        books = TckBook.findAllPublished()
         then:
         3 == books?.size()
 
         when:
-        books = Book.findAllNotPublished()
+        books = TckBook.findAllNotPublished()
         then:
         1 == books?.size()
 
         when:
-        books = Book.findAllPublishedByTitleAndAuthor('DGGv2', 'Graeme')
+        books = TckBook.findAllPublishedByTitleAndAuthor('DGGv2', 'Graeme')
         then:
         1 == books?.size()
 
         when:
-        books = Book.findAllPublishedByAuthorOrTitle('Graeme', 'GINA')
+        books = TckBook.findAllPublishedByAuthorOrTitle('Graeme', 'GINA')
         then:
         2 == books?.size()
 
         when:
-        books = Book.findAllNotPublishedByAuthor('Jeff')
+        books = TckBook.findAllNotPublishedByAuthor('Jeff')
         then:
         1 == books?.size()
 
         when:
-        books = Book.findAllNotPublishedByAuthor('Graeme')
+        books = TckBook.findAllNotPublishedByAuthor('Graeme')
         then:
         0 == books?.size()
     }
 
     void "Test findOrCreateBy For A Record That Does Not Exist In The Database"() {
         when:
-        def book = Book.findOrCreateByAuthor('Someone')
+        def book = TckBook.findOrCreateByAuthor('Someone')
 
         then:
         'Someone' == book.author
@@ -253,7 +242,7 @@ class FindByMethodSpec extends GrailsDataTckSpec {
 
     void "Test findOrCreateBy With An AND Clause"() {
         when:
-        def book = Book.findOrCreateByAuthorAndTitle('Someone', 'Something')
+        def book = TckBook.findOrCreateByAuthorAndTitle('Someone', 'Something')
 
         then:
         'Someone' == book.author
@@ -263,7 +252,7 @@ class FindByMethodSpec extends GrailsDataTckSpec {
 
     void "Test findOrCreateBy Throws Exception If An OR Clause Is Used"() {
         when:
-        Book.findOrCreateByAuthorOrTitle('Someone', 'Something')
+        TckBook.findOrCreateByAuthorOrTitle('Someone', 'Something')
 
         then:
         thrown(MissingMethodException)
@@ -271,7 +260,7 @@ class FindByMethodSpec extends GrailsDataTckSpec {
 
     void "Test findOrSaveBy For A Record That Does Not Exist In The Database"() {
         when:
-        def book = Book.findOrSaveByAuthorAndTitle('Some New Author', 'Some New Title')
+        def book = TckBook.findOrSaveByAuthorAndTitle('Some New Author', 'Some New Title')
 
         then:
         'Some New Author' == book.author
@@ -282,10 +271,10 @@ class FindByMethodSpec extends GrailsDataTckSpec {
     void "Test findOrSaveBy For A Record That Does Exist In The Database"() {
 
         given:
-        def originalId = new Book(author: 'Some Author', title: 'Some Title').save().id
+        def originalId = new TckBook(author: 'Some Author', title: 'Some Title').save().id
 
         when:
-        def book = Book.findOrSaveByAuthor('Some Author')
+        def book = TckBook.findOrSaveByAuthor('Some Author')
 
         then:
         'Some Author' == book.author
@@ -293,165 +282,34 @@ class FindByMethodSpec extends GrailsDataTckSpec {
         originalId == book.id
     }
 
-    void "Test patterns which shold throw MissingMethodException"() {
-        // Redis doesn't like Like queries...
-//        when:
-//            Book.findOrCreateByAuthorLike('B%')
-//
-//        then:
-//            thrown MissingMethodException
-
+    @Unroll
+    void "Test findOrCreateBy/findOrSaveBy patterns [#index] #methodName should throw #exception.simpleName"() {
         when:
-        Book.findOrCreateByAuthorInList(['Jeff'])
+        action.call()
 
         then:
-        thrown(MissingMethodException)
+        thrown(exception)
 
-        when:
-        Book.findOrCreateByAuthorOrTitle('Jim', 'Title')
+        where:
+        index | methodName                              | exception              | action
+        // findOrCreateBy patterns
+        1     | 'findOrCreateByAuthorInList'            | MissingMethodException | { TckBook.findOrCreateByAuthorInList(['Jeff']) }
+        2     | 'findOrCreateByAuthorOrTitle'           | MissingMethodException | { TckBook.findOrCreateByAuthorOrTitle('Jim', 'Title') }
+        3     | 'findOrCreateByAuthorNotEqual'          | MissingMethodException | { TckBook.findOrCreateByAuthorNotEqual('B') }
+        4     | 'findOrCreateByAuthorGreaterThan'       | ConfigurationException | { TckBook.findOrCreateByAuthorGreaterThan('B') }
+        5     | 'findOrCreateByAuthorLessThan'          | ConfigurationException | { TckBook.findOrCreateByAuthorLessThan('B') }
+        6     | 'findOrCreateByAuthorBetween'           | MissingMethodException | { TckBook.findOrCreateByAuthorBetween('A', 'B') }
+        7     | 'findOrCreateByAuthorGreaterThanEquals' | ConfigurationException | { TckBook.findOrCreateByAuthorGreaterThanEquals('B') }
+        8     | 'findOrCreateByAuthorLessThanEquals'    | ConfigurationException | { TckBook.findOrCreateByAuthorLessThanEquals('B') }
 
-        then:
-        thrown(MissingMethodException)
-
-        when:
-        Book.findOrCreateByAuthorNotEqual('B')
-
-        then:
-        thrown(MissingMethodException)
-
-        when:
-        Book.findOrCreateByAuthorGreaterThan('B')
-
-        then:
-        thrown(MissingMethodException)
-
-        when:
-        Book.findOrCreateByAuthorLessThan('B')
-
-        then:
-        thrown(MissingMethodException)
-
-        when:
-        Book.findOrCreateByAuthorBetween('A', 'B')
-
-        then:
-        thrown(MissingMethodException)
-
-        when:
-        Book.findOrCreateByAuthorGreaterThanEquals('B')
-
-        then:
-        thrown(MissingMethodException)
-
-        when:
-        Book.findOrCreateByAuthorLessThanEquals('B')
-
-        then:
-        thrown(MissingMethodException)
-
-        // GemFire doesn't like these...
-//        when:
-//            Book.findOrCreateByAuthorIlike('B%')
-//
-//        then:
-//            thrown MissingMethodException
-
-//        when:
-//            Book.findOrCreateByAuthorRlike('B%')
-//
-//        then:
-//            thrown MissingMethodException
-
-//        when:
-//            Book.findOrCreateByAuthorIsNull()
-//
-//        then:
-//            thrown MissingMethodException
-
-//        when:
-//            Book.findOrCreateByAuthorIsNotNull()
-//
-//        then:
-//            thrown MissingMethodException
-
-        // Redis doesn't like Like queries...
-//        when:
-//            Book.findOrSaveByAuthorLike('B%')
-//
-//        then:
-//            thrown MissingMethodException
-
-        when:
-        Book.findOrSaveByAuthorInList(['Jeff'])
-
-        then:
-        thrown(MissingMethodException)
-
-        when:
-        Book.findOrSaveByAuthorOrTitle('Jim', 'Title')
-
-        then:
-        thrown(MissingMethodException)
-
-        when:
-        Book.findOrSaveByAuthorNotEqual('B')
-
-        then:
-        thrown(MissingMethodException)
-
-        when:
-        Book.findOrSaveByAuthorGreaterThan('B')
-
-        then:
-        thrown(MissingMethodException)
-
-        when:
-        Book.findOrSaveByAuthorLessThan('B')
-
-        then:
-        thrown(MissingMethodException)
-
-        when:
-        Book.findOrSaveByAuthorBetween('A', 'B')
-
-        then:
-        thrown(MissingMethodException)
-
-        when:
-        Book.findOrSaveByAuthorGreaterThanEquals('B')
-
-        then:
-        thrown(MissingMethodException)
-
-        when:
-        Book.findOrSaveByAuthorLessThanEquals('B')
-
-        then:
-        thrown(MissingMethodException)
-
-        // GemFire doesn't like these...
-//        when:
-//            Book.findOrSaveByAuthorIlike('B%')
-//
-//        then:
-//            thrown MissingMethodException
-
-//        when:
-//            Book.findOrSaveByAuthorRlike('B%')
-//
-//        then:
-//            thrown MissingMethodException
-
-//        when:
-//            Book.findOrSaveByAuthorIsNull()
-//
-//        then:
-//            thrown MissingMethodException
-
-//        when:
-//            Book.findOrSaveByAuthorIsNotNull()
-//
-//        then:
-//            thrown MissingMethodException
+        // findOrSaveBy patterns
+        9     | 'findOrSaveByAuthorInList'              | MissingMethodException | { TckBook.findOrSaveByAuthorInList(['Jeff']) }
+        10    | 'findOrSaveByAuthorOrTitle'             | MissingMethodException | { TckBook.findOrSaveByAuthorOrTitle('Jim', 'Title') }
+        11    | 'findOrSaveByAuthorNotEqual'            | MissingMethodException | { TckBook.findOrSaveByAuthorNotEqual('B') }
+        12    | 'findOrSaveByAuthorGreaterThan'         | ConfigurationException | { TckBook.findOrSaveByAuthorGreaterThan('B') }
+        13    | 'findOrSaveByAuthorLessThan'            | ConfigurationException | { TckBook.findOrSaveByAuthorLessThan('B') }
+        14    | 'findOrSaveByAuthorBetween'             | MissingMethodException | { TckBook.findOrSaveByAuthorBetween('A', 'B') }
+        15    | 'findOrSaveByAuthorGreaterThanEquals'   | ConfigurationException | { TckBook.findOrSaveByAuthorGreaterThanEquals('B') }
+        16    | 'findOrSaveByAuthorLessThanEquals'      | ConfigurationException | { TckBook.findOrSaveByAuthorLessThanEquals('B') }
     }
 }

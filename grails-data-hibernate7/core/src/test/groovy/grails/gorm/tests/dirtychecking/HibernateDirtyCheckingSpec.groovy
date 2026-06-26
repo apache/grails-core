@@ -20,25 +20,24 @@ package grails.gorm.tests.dirtychecking
 
 import grails.gorm.annotation.Entity
 import grails.gorm.dirty.checking.DirtyCheck
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
-import org.grails.orm.hibernate.HibernateDatastore
-import spock.lang.AutoCleanup
 import spock.lang.Issue
-import spock.lang.Shared
-import spock.lang.Specification
 
 /**
  * Created by graemerocher on 03/05/2017.
  */
-class HibernateDirtyCheckingSpec extends Specification {
+class HibernateDirtyCheckingSpec extends HibernateGormDatastoreSpec {
 
-    @Shared @AutoCleanup HibernateDatastore hibernateDatastore = new HibernateDatastore(Person)
+    def setupSpec() {
+        manager.registerDomainClasses(Person)
+    }
 
     @Rollback
-    @Issue('https://github.com/apache/grails-core/issues/10613')
-    void    "Test that presence of beforeInsert doesn't impact dirty properties"() {
+    @Issue('https://github.com/grails/grails-core/issues/10613')
+    void "Test that presence of beforeInsert doesn't impact dirty properties"() {
         given: 'a new person'
-        def person = new Person(name: 'John', occupation: 'Grails developer').save(flush:true)
+        def person = new Person(name: 'John', occupation: 'Grails developer').save(flush: true)
 
         when: 'the name is changed'
         person.name = 'Dave'
@@ -51,7 +50,7 @@ class HibernateDirtyCheckingSpec extends Specification {
         !person.isDirty('occupation')
 
         when:
-        person.save(flush:true)
+        person.save(flush: true)
 
         then:
         person.getPersistentValue('name') == "Dave"
@@ -73,7 +72,7 @@ class HibernateDirtyCheckingSpec extends Specification {
     @Rollback
     void "test dirty checking on embedded"() {
         given: 'a new person'
-        Person person = new Person(name: 'John', occupation: 'Grails developer', address: new Address(street: "Old Town", zip: "1234")).save(flush:true)
+        Person person = new Person(name: 'John', occupation: 'Grails developer', address: new Address(street: "Old Town", zip: "1234")).save(flush: true)
 
         when: 'the name is changed'
         person.address.street = "New Town"
@@ -83,14 +82,14 @@ class HibernateDirtyCheckingSpec extends Specification {
         person.address.hasChanged("street")
 
         when:
-        person.save(flush:true)
+        person.save(flush: true)
 
         then:
         !person.address.hasChanged()
         person.address.listDirtyPropertyNames().isEmpty()
 
         when:
-        hibernateDatastore.sessionFactory.currentSession.clear()
+        manager.hibernateDatastore.sessionFactory.currentSession.clear()
         person = Person.first()
 
         then:
@@ -101,7 +100,7 @@ class HibernateDirtyCheckingSpec extends Specification {
     void "test dirty checking on boolean true -> false"() {
         given: 'a new person'
         new Person(name: 'John', occupation: 'Grails developer', employed: true).save(flush: true)
-        hibernateDatastore.sessionFactory.currentSession.clear()
+        manager.hibernateDatastore.sessionFactory.currentSession.clear()
         Person person = Person.first()
 
         when:
@@ -113,8 +112,8 @@ class HibernateDirtyCheckingSpec extends Specification {
         person.isDirty('employed')
 
         when:
-        person.save(flush:true)
-        hibernateDatastore.sessionFactory.currentSession.clear()
+        person.save(flush: true)
+        manager.hibernateDatastore.sessionFactory.currentSession.clear()
         person = Person.first()
 
         then:
@@ -125,7 +124,7 @@ class HibernateDirtyCheckingSpec extends Specification {
     void "test dirty checking on boolean false -> true"() {
         given: 'a new person'
         new Person(name: 'John', occupation: 'Grails developer', employed: false).save(flush: true)
-        hibernateDatastore.sessionFactory.currentSession.clear()
+        manager.hibernateDatastore.sessionFactory.currentSession.clear()
         Person person = Person.first()
 
         when:
@@ -137,8 +136,8 @@ class HibernateDirtyCheckingSpec extends Specification {
         person.isDirty('employed')
 
         when:
-        person.save(flush:true)
-        hibernateDatastore.sessionFactory.currentSession.clear()
+        person.save(flush: true)
+        manager.hibernateDatastore.sessionFactory.currentSession.clear()
         person = Person.first()
 
         then:
@@ -159,7 +158,7 @@ class Person {
     static embedded = ['address']
 
     static constraints = {
-        address nullable:true
+        address nullable: true
     }
 
     def beforeInsert() {
@@ -168,7 +167,13 @@ class Person {
 }
 
 @DirtyCheck
+
 class Address {
+
     String street
+
     String zip
+
 }
+
+

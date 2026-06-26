@@ -121,6 +121,35 @@ class GormEnhancerSpec extends GrailsDataTckSpec {
         2 == results.size()
     }
 
+    void 'Test getAll preserves the supplied id order'() {
+        given:
+        def bob = new TestEntity(name: 'Bob', age: 40, child: new ChildEntity(name: 'Bob Child')).save()
+        def fred = new TestEntity(name: 'Fred', age: 41, child: new ChildEntity(name: 'Fred Child')).save()
+        def barney = new TestEntity(name: 'Barney', age: 42, child: new ChildEntity(name: 'Barney Child')).save()
+        manager.session.flush()
+
+        when: 'ids are requested out of insertion order'
+        def results = TestEntity.getAll([barney.id, bob.id, fred.id])
+
+        then: 'results are returned in the requested order'
+        ['Barney', 'Bob', 'Fred'] == results*.name
+    }
+
+    void 'Test getAll returns a null slot for a missing id'() {
+        given:
+        def bob = new TestEntity(name: 'Bob', age: 40, child: new ChildEntity(name: 'Bob Child')).save()
+        manager.session.flush()
+        def missingId = bob.id + 1000
+
+        when:
+        def results = TestEntity.getAll([bob.id, missingId])
+
+        then: 'the present row keeps its position and the missing id yields a null slot'
+        2 == results.size()
+        'Bob' == results[0]?.name
+        null == results[1]
+    }
+
     void 'Test ident() method'() {
         given:
         def t

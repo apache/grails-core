@@ -236,7 +236,7 @@ public interface MappingContext {
      */
     void addMappingContextListener(Listener listener);
 
-    PersistentEntity createEmbeddedEntity(Class type);
+    PersistentEntity createEmbeddedEntity(Class<?> type);
 
     /**
      * Obtains a {@link EntityReflector} instance for the given entity

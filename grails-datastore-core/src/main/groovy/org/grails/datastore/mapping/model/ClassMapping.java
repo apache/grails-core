@@ -47,5 +47,5 @@ public interface ClassMapping<T extends Entity> {
      *
      * @return The Identity
      */
-    IdentityMapping getIdentifier();
+    IdentityMapping<?> getIdentifier();
 }

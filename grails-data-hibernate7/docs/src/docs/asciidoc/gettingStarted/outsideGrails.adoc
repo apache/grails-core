@@ -22,7 +22,7 @@ If you wish to use GORM for Hibernate outside a Grails application you should de
 [source,groovy,subs="attributes"]
 ----
 implementation platform("org.apache.grails:grails-bom:{version}")
-implementation "org.apache.grails.data:grails-data-hibernate5-core"
+implementation "org.apache.grails.data:grails-data-hibernate7-core"
 runtimeOnly "com.h2database"
 runtimeOnly "org.apache.tomcat:tomcat-jdbc"
 runtimeOnly "org.slf4j:slf4j-nop"

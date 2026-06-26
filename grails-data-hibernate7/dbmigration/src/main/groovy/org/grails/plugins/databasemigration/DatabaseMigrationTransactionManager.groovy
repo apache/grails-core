@@ -140,6 +140,6 @@ class DatabaseMigrationTransactionManager {
             return
         }
 
-        new GrailsTransactionTemplate(transactionManager, definition).execute(callable)
+        new GrailsTransactionTemplate(transactionManager as PlatformTransactionManager, definition).execute(callable)
     }
 }

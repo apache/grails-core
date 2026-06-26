@@ -16,17 +16,21 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 ////
+[[persistenceBasics]]
+== Persistence Basics
+
+This section covers the core persistence operations available on every GORM domain class: saving, updating, deleting, querying for changes, and transaction management.
 
 A key thing to remember about GORM is that under the surface GORM is using https://www.hibernate.org/[Hibernate] for persistence. If you are coming from a background of using https://api.rubyonrails.org/classes/ActiveRecord/Base.html[ActiveRecord] or https://www.mybatis.org/[iBatis/MyBatis], Hibernate's "session" model may feel a little strange.
 
-If you are using Grails, then Grails automatically binds a Hibernate session to the currently executing request. This lets you use the `save()` and `delete` methods as well as other GORM methods transparently.
+If you are using Grails, then Grails automatically binds a Hibernate session to the currently executing request. This lets you use the `save()` and `delete()` methods as well as other GORM methods transparently.
 
-If you are not using Grails then you have to make sure that a session is bound to the current request. One way to to achieve that is with the link:../api/org/grails/datastore/gorm/GormEntity.html#withNewSession(groovy.lang.Closure)[withNewSession(Closure)] method:
+If you are not using Grails then you have to make sure that a session is bound to the current request. One way to achieve that is with the link:../api/org/grails/datastore/gorm/GormEntity.html#withNewSession(groovy.lang.Closure)[withNewSession(Closure)] method:
 
 [source,groovy]
 ----
 Book.withNewSession {
-	// your logic here
+    // your logic here
 }
 ----
 
@@ -35,9 +39,11 @@ Another option is to bind a transaction using the link:../api/org/grails/datasto
 [source,groovy]
 ----
 Book.withTransaction {
-	// your logic here
+    // your logic here
 }
 ----
+
+NOTE: *Hibernate 7 — direct Session API changes.* If you call the Hibernate `Session` directly inside a `withSession` block (rather than using GORM's own methods), note that `session.save()`, `session.update()`, `session.delete()`, `session.load()`, and `session.get()` were removed in Hibernate 7. Use the JPA equivalents: `session.persist()`, `session.merge()`, `session.remove()`, `session.getReference()`, and `session.find()` respectively. GORM's dynamic methods (`save()`, `delete()`, `get()`, etc. on the domain class) are *not* affected — they go through GORM's own API and work unchanged.
 
 
 ==== Transactional Write-Behind
@@ -45,7 +51,7 @@ Book.withTransaction {
 
 A useful feature of Hibernate over direct JDBC calls and even other frameworks is that when you call link:../api/org/grails/datastore/gorm/GormEntity.html#save()[save()] or link:../api/org/grails/datastore/gorm/GormEntity.html#delete()[delete()] it does not necessarily perform any SQL operations *at that point*. Hibernate batches up SQL statements and executes them as late as possible, often at the end of the request when flushing and closing the session.
 
-If you are using Grails this typically done for you automatically, which manages your Hibernate session. If you are using GORM outside of Grails then you may need to manually flush the session at the end of your operation.
+If you are using Grails this is typically done for you automatically, which manages your Hibernate session. If you are using GORM outside of Grails then you may need to manually flush the session at the end of your operation.
 
 Hibernate caches database updates where possible, only actually pushing the changes when it knows that a flush is required, or when a flush is triggered programmatically. One common case where Hibernate will flush cached updates is when performing queries since the cached information might be included in the query results. But as long as you're doing non-conflicting saves, updates, and deletes, they'll be batched until the session is flushed. This can be a significant performance boost for applications that do a lot of database writes.
 

@@ -36,7 +36,7 @@ class SaveWithExistingValidationErrorSpec extends Specification {
     @Shared PlatformTransactionManager transactionManager = datastore.getTransactionManager()
 
     @Rollback
-    @Issue('https://github.com/apache/grails-core/issues/9820')
+    @Issue('https://github.com/grails/grails-core/issues/9820')
     void "test saving an object with another invalid object"() {
         when:"An object with a validation error is assigned"
         def testB = new ObjectB()

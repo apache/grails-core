@@ -88,4 +88,3 @@ interface AuthorService {
 <3> Return the interface from the service.
 
 NOTE: If a property exists on the interface but not on the domain class you will receive a compilation error.
-

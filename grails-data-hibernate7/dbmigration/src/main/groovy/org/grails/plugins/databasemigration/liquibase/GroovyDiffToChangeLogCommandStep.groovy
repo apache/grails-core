@@ -48,11 +48,11 @@ class GroovyDiffToChangeLogCommandStep extends DiffChangelogCommandStep {
 
         InternalSnapshotCommandStep.logUnsupportedDatabase(referenceDatabase, this.getClass())
 
-        DiffCommandStep diffCommandStep = new DiffCommandStep()
+        DiffCommandStep diffCommandStep = createDiffCommandStep()
 
         DiffResult diffResult = diffCommandStep.createDiffResult(resultsBuilder)
 
-        PrintStream outputStream = new PrintStream(resultsBuilder.getOutputStream())
+        PrintStream outputStream = new PrintStream(resultsBuilder.getOutputStream(), false, 'UTF-8')
 
         ObjectQuotingStrategy originalStrategy = referenceDatabase.getObjectQuotingStrategy()
 
@@ -77,6 +77,10 @@ class GroovyDiffToChangeLogCommandStep extends DiffChangelogCommandStep {
     @Override
     String[][] defineCommandNames() {
         return new String[][] { COMMAND_NAME }
+    }
+
+    protected DiffCommandStep createDiffCommandStep() {
+        return new DiffCommandStep()
     }
 
 }

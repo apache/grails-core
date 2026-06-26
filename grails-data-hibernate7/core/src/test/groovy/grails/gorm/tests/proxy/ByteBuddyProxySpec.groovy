@@ -132,9 +132,10 @@ class ByteBuddyProxySpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManage
         then:"The asserts on the intance should not init proxy"
         !proxyHandler.isInitialized(team)
 
-        //isDirty will init the proxy. should make changes for this.
+        // Hibernate 7 does not initialize the proxy on a clean isDirty() check
+        // (Hibernate 5 initializes it here)
         !team.isDirty()
-        proxyHandler.isInitialized(team)
+        !proxyHandler.isInitialized(team)
         //it should not have initialized the association
         !proxyHandler.isInitialized(team.club)
 

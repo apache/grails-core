@@ -17,73 +17,157 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-There are various changes you have to make to your build depending on the version of Grails when using GORM {version}.
+[[gettingStarted-hibernateVersions]]
+== Hibernate Versions
 
-==== Grails 7.0.0 and above with Hibernate 5.6.x
+GORM for Hibernate 7 (`grails-data-hibernate7`) requires Hibernate ORM 7.x and Jakarta EE 10 (`jakarta.*` packages).
 
-Grails 7.0.x is based on Spring Boot 3.4.x which enforces Hibernate 5.6.x as the default version.
+=== Grails {grailsMajorVersion} with Hibernate 7
 
-[source,groovy]
-.build.gradle
-----
-dependencies {
-    implementation "org.grails.plugins:hibernate5:{pluginVersion}"
-    runtimeOnly 'org.hibernate:hibernate-ehcache:5.6.15.Final', {
-    // exclude javax variant of hibernate-core
-    exclude group: 'org.hibernate', module: 'hibernate-core'
-    }
-    runtimeOnly 'org.jboss.spec.javax.transaction:jboss-transaction-api_1.3_spec:2.0.0.Final', {
-      // required for hibernate-ehcache to work with javax variant of hibernate-core excluded
-    }
-}
-----
-
-
-==== Grails 3.2.x and above with Hibernate 4
-
-Grails 3.2.x is based on Spring Boot 1.4.x which enforces Hibernate 5.0.x as the default version. If you want to continue to use Hibernate 4 you must explicitly declare the Hibernate 4 dependences in `build.gradle`.
+Grails {grailsMajorVersion} ships with Hibernate 5 as the default, but provides first-class support for Hibernate 7 via a dedicated BOM and plugin artifact.
 
 [source,groovy]
 .build.gradle
 ----
 dependencies {
-    compile "org.grails.plugins:hibernate4"
-    compile "org.hibernate:hibernate-core:4.3.10.Final"
-    compile "org.hibernate:hibernate-ehcache:4.3.10.Final"
+    implementation enforcedPlatform("org.apache.grails:grails-hibernate7-bom:{version}")
+    implementation "org.apache.grails:grails-hibernate7"
 }
 ----
 
-==== Grails 3.1.x and below with Hibernate 5
-
-Grails 3.1.x and below are based on Spring Boot 1.3.x which enforces Hibernate 4 as the default version of Hibernate, hence you have to use explicit versions to depend on Hibernate 5:
+Or using the Micronaut integration:
 
 [source,groovy]
 .build.gradle
 ----
 dependencies {
-    compile "org.grails.plugins:hibernate5"
-    compile "org.hibernate:hibernate-core:5.1.0.Final"
-    compile "org.hibernate:hibernate-ehcache:5.1.0.Final"
+    implementation enforcedPlatform("org.apache.grails:grails-hibernate7-micronaut-bom:{version}")
+    implementation "org.apache.grails:grails-hibernate7"
+    implementation "org.apache.grails:grails-micronaut"
 }
 ----
 
-==== Grails 3.0.x Spring Version Conflicts
+=== Hibernate 7.4 support line
 
-Grails 3.0.x enforces Spring 4.1.x as the Spring version, so if you want to use Hibernate 5 you must force an upgrade to Spring 4.2.x in `build.gradle`:
+Grails Hibernate 7 targets Hibernate ORM 7.4, the current stable Hibernate 7 line. Hibernate ORM 7.3 and 7.2 are limited-support lines, so new Hibernate 7 applications should validate against the Hibernate 7.4 behavior described below.
 
-[source,groovy]
-.build.gradle
-----
-// the below is unnecessary in Grails 3.1 and above, but required in Grails 3.0.x
-configurations.all {
-    resolutionStrategy {
-        eachDependency { DependencyResolveDetails details ->
-            if(details.requested.group == 'org.springframework') {
-                details.useVersion('4.2.3.RELEASE')
-            }
-        }
-    }
-}
-----
+=== Migration checklist from Hibernate 5
 
-The `resolutionStrategy` is needed to enforce an upgrade to Spring 4.2.x which is required by Hibernate 5 support. This block is not needed if you are using Grails 3.1 or above.
+If you are migrating an application from Hibernate 5 or the Grails Hibernate 5 plugin, review these remaining application-level changes. GORM compatibility issues fixed by this release, such as `findWhere` null handling and `getAll` ordering with converted ids, are documented in the relevant GORM API reference pages and do not require separate migration steps when using the fixed GORM APIs.
+
+[cols="1,2,2", options="header"]
+|===
+| Area
+| Hibernate 7.4 change
+| Application migration action
+
+| Hibernate artifacts
+| Hibernate 7 applications must resolve the Hibernate 7 Grails plugin, BOM, and Hibernate ORM artifacts together.
+| Use `grails-hibernate7-bom` and `grails-hibernate7` consistently. Do not mix Hibernate 5 and Hibernate 7 GORM or Hibernate artifacts in one runtime.
+
+| Jakarta Persistence
+| Hibernate 7 requires Jakarta Persistence 3.2 and Jakarta EE packages.
+| Replace any remaining `javax.persistence.*` or other `javax.*` imports with the matching `jakarta.*` APIs.
+
+| Direct Hibernate `Session` API
+| `Session.save()`, `update()`, `delete()`, and `load()` were removed. `Session.get()` remains available but is deprecated in favor of `find()`.
+| GORM domain methods such as `save()`, `delete()`, `get()`, and `load()` are unaffected. Direct `Session` code inside `withSession` blocks should use `persist()`, `merge()`, `remove()`, and `getReference()` for removed methods, and prefer `find()` over deprecated direct `Session.get()` usage.
+
+| Hibernate annotations
+| Several Hibernate 5 annotations or enum constants were removed or renamed.
+| Replace direct uses of `CascadeType.SAVE_UPDATE`, `@org.hibernate.annotations.Where`, `@Proxy`, and `@LazyCollection`. The GORM ORM DSL `cascade: 'save-update'` string continues to work.
+
+| HQL string safety (no migration required)
+| Single-argument GORM HQL overloads accept a plain `String` exactly as on Hibernate 5. When a Groovy `GString` is passed, its interpolated values are bound as named parameters rather than interpolated into the query text, so the idiomatic form is injection-safe by binding.
+| No change is required. For dynamic values, prefer the `GString` form (auto-bound) or an explicit named/positional params map or list. See <<querying-hql,HQL Queries>>.
+
+| H5-specific cache setup
+| Hibernate 5 cache integrations and region-factory classes are not valid Hibernate 7 cache configuration.
+| Remove H5 cache dependencies and region-factory settings before booting on Hibernate 7. Reintroduce caching with a Hibernate 7 compatible provider such as JCache and test locked queries without relying on query cache entries.
+
+| Direct single-result queries
+| Hibernate 7.3 and later strictly throw when `getSingleResult()` or `getSingleResultOrNull()` sees more than one result.
+| GORM single-result helpers fixed by this release preserve GORM first-row behavior. Direct Hibernate or JPA queries should add `setMaxResults(1)`, query for a list and choose the first row intentionally, or use a result-list transformer when duplicate collapse is required.
+
+| Read-only entity collections
+| Collections owned by entities loaded in read-only mode are now read-only too.
+| Do not mutate associations on read-only entities. Reload the entity in a writable session before changing its collections.
+
+| Timeout exceptions
+| Query or lock timeouts may now throw `PersistenceException` when the database marks the transaction for rollback.
+| Catch `PersistenceException` around direct Hibernate or JPA timeout-sensitive code and inspect the cause when you need to distinguish query timeout, lock timeout, and transaction rollback behavior.
+
+| Native SQL temporal values
+| Native SQL queries return `java.time` types instead of `java.sql` temporal types by default.
+| Update result handling to use `java.time` types, or set `hibernate.query.native.prefer_jdbc_datetime_types=true` during migration if legacy JDBC temporal values are required.
+
+| Direct aggregate HQL
+| Hibernate 7 validates projection result types strictly.
+| Use scalar-compatible return types for aggregate projections. For example, `avg` generally returns `Double`, `count` returns `Long`, and `max` or `min` follow the selected expression type.
+
+| Numeric expression typing
+| Hibernate 7 SQM typing is stricter about comparing unlike numeric expression types.
+| GORM where-query numeric comparison fixes are included in this release. In direct HQL, align domain numeric types or cast explicitly when comparing expressions of different numeric types.
+
+| Managed collection identity
+| Hibernate 7 detects duplicate managed collection wrappers more aggressively.
+| Prefer mutating managed collection instances with GORM `addTo*` and `removeFrom*` helpers instead of replacing collection objects. Be careful when merging detached graphs into an existing session.
+
+| Bidirectional associations
+| Hibernate 7 is less tolerant of inconsistent managed association state at flush time.
+| Keep both sides of bidirectional associations synchronized. Prefer GORM association helpers where possible.
+
+| Query locks and query cache
+| Locked queries are not query-cacheable.
+| Do not expect `lock: true` queries to use the query cache. Treat pessimistically locked queries as database reads that require fresh row state.
+
+| Programmatic datastore setup
+| Hibernate 7 test and programmatic datastore setups expose wrong package scanning more readily.
+| When constructing a datastore manually, scan the package that contains the domain and service classes, not only the caller or spec package.
+
+| Multiple datasources and OSIV
+| Hibernate 7 multiple-datasource and Open Session in View behavior should be validated explicitly for each application.
+| Run targeted migration tests for datasource switching, transaction routing, and GSP rendering under OSIV before migrating production applications with multiple datasources.
+
+| Views and scaffolding
+| Generated views and scaffolding can expose Hibernate 7 differences in association rendering and unique-constraint behavior.
+| Regression-test generated and custom association rendering, fields rendering, and unique constraints before enabling Hibernate 7 in applications that rely on scaffolding.
+
+| Version-column DDL
+| Hibernate 7.3 declares `@Version` columns `not null` by default.
+| Validate generated DDL against existing schemas before using `dbCreate=update`, especially for tables with legacy nullable version columns.
+
+| General DDL changes
+| Hibernate 7 changes generated DDL for several mappings, including `char`/`Character`, Oracle floating-point types, `@ElementCollection` sets, `@CreationTimestamp`, `@UpdateTimestamp`, and Oracle 23c LOB columns.
+| Prefer explicit database migrations for production schemas. Compare generated DDL in a staging database before using schema update tooling.
+
+| Schema actions and `import.sql`
+| Hibernate 7.3 and later run schema actions even when no entities are mapped.
+| Remove accidental `import.sql` files from the runtime classpath, or ensure schema-generation settings are intentional for persistence units with no mapped entities.
+
+| MySQL fetch depth
+| Hibernate 7.4 removes the MySQL dialect-specific default `hibernate.max_fetch_depth=2`.
+| Set `hibernate.max_fetch_depth` explicitly if the application relied on that implicit MySQL default.
+
+| Fetch joins with limits
+| Hibernate 7.4 applies pagination or limits with collection fetch joins in SQL instead of doing the limit in memory.
+| Review queries that combine `max`/`offset` or limits with collection fetch joins. Set the query hint `org.hibernate.limitInMemory` only when the previous in-memory behavior is required.
+
+| Oracle HQL date expressions
+| On Oracle, HQL `current date` and `local date` now translate to `trunc(current_date)`.
+| Review Oracle queries that depended on a time component from those date expressions.
+
+| Eager `@Any` mappings
+| Hibernate 7.4 join-fetches eager `@Any` associations when loading an entity by id.
+| Review direct Hibernate `@Any` mappings for SQL shape and row-width changes.
+
+| Spanner PostgreSQL dialect
+| `SpannerPostgreSQLDialect` moved from `hibernate-community-dialects` to `hibernate-core` and package `org.hibernate.dialect`.
+| Update explicit dialect configuration to `org.hibernate.dialect.SpannerPostgreSQLDialect`, or rely on automatic dialect resolution.
+
+| Envers audited associations
+| Hibernate 7.3 respects `RelationTargetAuditMode.NOT_AUDITED` for audited associations.
+| If you use Envers, verify historic reads that previously expected the associated target entity to come from its audit table despite `NOT_AUDITED`.
+|===
+
+See the https://docs.hibernate.org/orm/7.4/migration-guide/[Hibernate ORM 7.4 Migration Guide], https://docs.hibernate.org/orm/7.3/migration-guide/[Hibernate ORM 7.3 Migration Guide], https://docs.hibernate.org/orm/7.0/migration-guide/[Hibernate ORM 7.0 Migration Guide], and https://docs.hibernate.org/orm/6.0/migration-guide/[Hibernate ORM 6.0 Migration Guide] for the full list of Hibernate changes.
