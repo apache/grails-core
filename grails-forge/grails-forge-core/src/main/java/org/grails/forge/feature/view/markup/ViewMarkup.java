@@ -29,9 +29,6 @@ import org.grails.forge.feature.view.markup.templates.*;
 import org.grails.forge.feature.web.GrailsWeb;
 import org.grails.forge.template.RockerTemplate;
 
-import java.util.Arrays;
-import java.util.Map;
-
 @Singleton
 public class ViewMarkup extends GrailsViews implements Feature {
 
@@ -58,18 +55,6 @@ public class ViewMarkup extends GrailsViews implements Feature {
 
     @Override
     public void apply(GeneratorContext generatorContext) {
-        final Map<String, Object> config = generatorContext.getConfiguration();
-        config.put("grails.mime.types.xml", Arrays.asList("text/xml", "application/xml"));
-        config.put("grails.mime.types.atom", "application/atom+xml");
-        config.put("grails.mime.types.json", Arrays.asList("application/json", "text/json"));
-        config.put("grails.mime.types.hal", Arrays.asList("application/hal+json", "application/hal+xml"));
-        config.put("grails.mime.types.css", "text/css");
-        config.put("grails.mime.types.csv", "text/csv");
-        config.put("grails.mime.types.js", "text/javascript");
-        config.put("grails.mime.types.rss", "application/rss+xml");
-        config.put("grails.mime.types.text", "text/plain");
-        config.put("grails.mime.types.all", "*/*");
-
         generatorContext.addBuildPlugin(GradlePlugin.builder()
                 .id("org.apache.grails.gradle.grails-markup")
                 .useApplyPlugin(true)
