@@ -139,26 +139,83 @@ public class ClosureEventTriggeringInterceptor extends AbstractClosureEventTrigg
     }
 
     private void synchronizeHibernateState(PreInsertEvent hibernateEvent, ModificationTrackingEntityAccess entityAccess) {
-        Map<String, Object> modifiedProperties = entityAccess.getModifiedProperties();
+        Object[] state = hibernateEvent.getState();
+        EntityPersister persister = hibernateEvent.getPersister();
+        Map<String, Object> modifiedProperties = findModifiedProperties(hibernateEvent.getEntity(), persister, state);
+        modifiedProperties.putAll(entityAccess.getModifiedProperties());
+        
         if (!modifiedProperties.isEmpty()) {
-            Object[] state = hibernateEvent.getState();
-            EntityPersister persister = hibernateEvent.getPersister();
             synchronizeHibernateState(persister, state, modifiedProperties);
         }
     }
 
     private void synchronizeHibernateState(PreUpdateEvent hibernateEvent, ModificationTrackingEntityAccess entityAccess, boolean autoTimestamp) {
-        Map<String, Object> modifiedProperties = entityAccess.getModifiedProperties();
+        Object[] state = hibernateEvent.getState();
+        EntityPersister persister = hibernateEvent.getPersister();
+        Map<String, Object> modifiedProperties = findModifiedProperties(hibernateEvent.getEntity(), persister, state);
+        modifiedProperties.putAll(entityAccess.getModifiedProperties());
 
         if (autoTimestamp) {
             updateModifiedPropertiesWithAutoTimestamp(modifiedProperties, hibernateEvent);
         }
 
         if (!modifiedProperties.isEmpty()) {
-            Object[] state = hibernateEvent.getState();
-            EntityPersister persister = hibernateEvent.getPersister();
             synchronizeHibernateState(persister, state, modifiedProperties);
+            
+            // Synchronize with ActionQueue for Hibernate 5 EntityUpdateAction
+            try {
+                java.lang.reflect.Field actionQueueUpdatesField = org.springframework.util.ReflectionUtils.findField(org.hibernate.engine.spi.ActionQueue.class, "updates");
+                if (actionQueueUpdatesField != null) {
+                    actionQueueUpdatesField.setAccessible(true);
+                    org.hibernate.engine.spi.ExecutableList<org.hibernate.action.internal.EntityUpdateAction> updates = (org.hibernate.engine.spi.ExecutableList<org.hibernate.action.internal.EntityUpdateAction>) actionQueueUpdatesField.get(hibernateEvent.getSession().getActionQueue());
+                    if (updates != null) {
+                        java.lang.reflect.Field entityUpdateActionStateField = org.springframework.util.ReflectionUtils.findField(org.hibernate.action.internal.EntityUpdateAction.class, "state");
+                        if (entityUpdateActionStateField != null) {
+                            entityUpdateActionStateField.setAccessible(true);
+                            for (org.hibernate.action.internal.EntityUpdateAction updateAction : updates) {
+                                if (updateAction.getInstance() == hibernateEvent.getEntity()) {
+                                    Object[] updateState = (Object[]) entityUpdateActionStateField.get(updateAction);
+                                    if (updateState != null) {
+                                        org.hibernate.tuple.entity.EntityMetamodel entityMetamodel = persister.getEntityMetamodel();
+                                        for (Map.Entry<String, Object> entry : modifiedProperties.entrySet()) {
+                                            Integer index = entityMetamodel.getPropertyIndexOrNull(entry.getKey());
+                                            if (index != null) {
+                                                updateState[index] = entry.getValue();
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // Ignore
+            }
         }
+    }
+
+    private Map<String, Object> findModifiedProperties(Object entity, EntityPersister persister, Object[] state) {
+        Map<String, Object> modifiedProperties = new java.util.HashMap<>();
+        PersistentEntity persistentEntity = mappingContext.getPersistentEntity(Hibernate.getClass(entity).getName());
+        if (persistentEntity != null) {
+            org.grails.datastore.mapping.reflect.EntityReflector reflector = persistentEntity.getReflector();
+            org.hibernate.tuple.entity.EntityMetamodel entityMetamodel = persister.getEntityMetamodel();
+            for (String propertyName : persister.getPropertyNames()) {
+                if ("version".equals(propertyName)) continue;
+                Integer index = entityMetamodel.getPropertyIndexOrNull(propertyName);
+                if (index != null) {
+                    org.grails.datastore.mapping.model.PersistentProperty property = persistentEntity.getPropertyByName(propertyName);
+                    if (property != null) {
+                        Object value = reflector.getProperty(entity, propertyName);
+                        if (state[index] != value) {
+                            modifiedProperties.put(propertyName, value);
+                        }
+                    }
+                }
+            }
+        }
+        return modifiedProperties;
     }
 
     private void updateModifiedPropertiesWithAutoTimestamp(Map<String, Object> modifiedProperties, PreUpdateEvent hibernateEvent) {
@@ -213,6 +270,41 @@ public class ClosureEventTriggeringInterceptor extends AbstractClosureEventTrigg
         if (!cancelled && entityAccess != null) {
             boolean autoTimestamp = persistentEntity.getMapping().getMappedForm().isAutoTimestamp();
             synchronizeHibernateState(hibernateEvent, entityAccess, autoTimestamp);
+            
+            // Synchronize with ActionQueue for Hibernate 5 EntityUpdateAction
+            Map<String, Object> modifiedProperties = entityAccess.getModifiedProperties();
+            if (!modifiedProperties.isEmpty()) {
+                try {
+                    java.lang.reflect.Field actionQueueUpdatesField = org.springframework.util.ReflectionUtils.findField(org.hibernate.engine.spi.ActionQueue.class, "updates");
+                    if (actionQueueUpdatesField != null) {
+                        actionQueueUpdatesField.setAccessible(true);
+                        org.hibernate.engine.spi.ExecutableList<org.hibernate.action.internal.EntityUpdateAction> updates = (org.hibernate.engine.spi.ExecutableList<org.hibernate.action.internal.EntityUpdateAction>) actionQueueUpdatesField.get(hibernateEvent.getSession().getActionQueue());
+                        if (updates != null) {
+                            java.lang.reflect.Field entityUpdateActionStateField = org.springframework.util.ReflectionUtils.findField(org.hibernate.action.internal.EntityUpdateAction.class, "state");
+                            if (entityUpdateActionStateField != null) {
+                                entityUpdateActionStateField.setAccessible(true);
+                                for (org.hibernate.action.internal.EntityUpdateAction updateAction : updates) {
+                                    if (updateAction.getInstance() == entity) {
+                                        Object[] updateState = (Object[]) entityUpdateActionStateField.get(updateAction);
+                                        if (updateState != null) {
+                                            EntityPersister persister = hibernateEvent.getPersister();
+                                            org.hibernate.tuple.entity.EntityMetamodel entityMetamodel = persister.getEntityMetamodel();
+                                            for (Map.Entry<String, Object> entry : modifiedProperties.entrySet()) {
+                                                Integer index = entityMetamodel.getPropertyIndexOrNull(entry.getKey());
+                                                if (index != null) {
+                                                    updateState[index] = entry.getValue();
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    // Ignore
+                }
+            }
         }
         return cancelled;
 

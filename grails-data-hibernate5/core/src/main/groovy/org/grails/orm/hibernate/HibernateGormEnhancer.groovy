@@ -23,9 +23,7 @@ import groovy.transform.CompileStatic
 import org.springframework.transaction.PlatformTransactionManager
 
 import org.grails.datastore.gorm.GormEnhancer
-import org.grails.datastore.gorm.GormInstanceApi
-import org.grails.datastore.gorm.GormStaticApi
-import org.grails.datastore.gorm.GormValidationApi
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 
@@ -39,42 +37,22 @@ import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 @CompileStatic
 class HibernateGormEnhancer extends GormEnhancer {
 
-    @Deprecated
+    private static final HibernateGormApiFactory API_FACTORY = new HibernateGormApiFactory()
+    private final PlatformTransactionManager transactionManager
+
     HibernateGormEnhancer(HibernateDatastore datastore, PlatformTransactionManager transactionManager) {
-        super(datastore, transactionManager)
+        super(datastore, transactionManager, new ConnectionSourceSettings(), prepareRegistry())
+        this.transactionManager = transactionManager
     }
 
     HibernateGormEnhancer(Datastore datastore, PlatformTransactionManager transactionManager, ConnectionSourceSettings settings) {
-        super(datastore, transactionManager, settings)
+        super(datastore, transactionManager, settings, prepareRegistry())
+        this.transactionManager = transactionManager
     }
 
-    @Override
-    protected <D> GormStaticApi<D> getStaticApi(Class<D> cls, String qualifier) {
-        HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
-        HibernateDatastore datastoreForConnection = hibernateDatastore.getDatastoreForConnection(qualifier)
-        new HibernateGormStaticApi<D>(
-                cls,
-                datastoreForConnection,
-                createDynamicFinders(datastoreForConnection),
-                Thread.currentThread().contextClassLoader,
-                datastoreForConnection.getTransactionManager()
-        )
-    }
-
-    @Override
-    protected <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, String qualifier) {
-        HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
-        new HibernateGormInstanceApi<D>(cls, hibernateDatastore.getDatastoreForConnection(qualifier), Thread.currentThread().contextClassLoader)
-    }
-
-    @Override
-    protected <D> GormValidationApi<D> getValidationApi(Class<D> cls, String qualifier) {
-        HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
-        new HibernateGormValidationApi<D>(cls, hibernateDatastore.getDatastoreForConnection(qualifier), Thread.currentThread().contextClassLoader)
-    }
-
-    @Override
-    protected void registerConstraints(Datastore datastore) {
-        // no-op
+    private static GormRegistry prepareRegistry() {
+        GormRegistry registry = GormRegistry.instance
+        registry.registerApiFactory(HibernateDatastore, API_FACTORY)
+        return registry
     }
 }

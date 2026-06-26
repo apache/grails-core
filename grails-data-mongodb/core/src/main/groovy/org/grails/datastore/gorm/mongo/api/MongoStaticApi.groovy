@@ -39,13 +39,19 @@ import org.bson.conversions.Bson
 
 import org.springframework.transaction.PlatformTransactionManager
 
+import org.grails.datastore.mapping.model.PersistentEntity
 import grails.gorm.multitenancy.Tenants
 import grails.mongodb.api.MongoAllOperations
+import org.grails.datastore.gorm.AbstractGormApi
 import org.grails.datastore.gorm.GormStaticApi
+import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.gorm.mongo.MongoCriteriaBuilder
+import org.grails.datastore.gorm.mongo.transactions.MongoTransactionTemplateFactory
+import org.grails.datastore.gorm.transactions.TransactionTemplateFactory
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.Session
+import org.grails.datastore.mapping.core.SessionCallback
 import org.grails.datastore.mapping.engine.EntityPersister
 import org.grails.datastore.mapping.engine.internal.MappingUtils
 import org.grails.datastore.mapping.mongo.AbstractMongoSession
@@ -53,6 +59,8 @@ import org.grails.datastore.mapping.mongo.MongoCodecSession
 import org.grails.datastore.mapping.mongo.MongoDatastore
 import org.grails.datastore.mapping.mongo.query.MongoQuery
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
+import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 
 /**
  * MongoDB static API implementation
@@ -64,7 +72,44 @@ import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D> {
 
     MongoStaticApi(Class<D> persistentClass, Datastore datastore, List<FinderMethod> finders, PlatformTransactionManager transactionManager) {
-        super(persistentClass, datastore, finders, transactionManager)
+        super(persistentClass, datastore.mappingContext, finders, new AbstractGormApi.ConstantDatastoreResolver(datastore), ConnectionSource.DEFAULT)
+    }
+
+    MongoStaticApi(Class<D> persistentClass, org.grails.datastore.mapping.model.MappingContext mappingContext, List<FinderMethod> finders, org.grails.datastore.gorm.DatastoreResolver datastoreResolver, String qualifier) {
+        super(persistentClass, mappingContext, finders, datastoreResolver, qualifier)
+    }
+
+    @Override
+    protected GormStaticApi<D> createStaticApi(Class<D> persistentClass, org.grails.datastore.mapping.model.MappingContext mappingContext, List<FinderMethod> finders, org.grails.datastore.gorm.DatastoreResolver resolver, String qualifier) {
+        new MongoStaticApi<D>(persistentClass, mappingContext, finders, resolver, qualifier)
+    }
+
+    @Override
+    protected TransactionTemplateFactory getTransactionTemplateFactory() {
+        Datastore datastore = getDatastore()
+        if (datastore instanceof MongoDatastore) {
+            return new MongoTransactionTemplateFactory((MongoDatastore) datastore)
+        }
+        return super.getTransactionTemplateFactory()
+    }
+
+    @Override
+    List<D> findAll(D example, Map args) {
+        execute({ Session session ->
+            org.grails.datastore.mapping.query.Query query = session.createQuery(persistentClass)
+            populateQueryByExample(session, query, example)
+            if (args) {
+                Object maxVal = args.get(DynamicFinder.ARGUMENT_MAX)
+                Object offsetVal = args.get(DynamicFinder.ARGUMENT_OFFSET)
+                if (maxVal != null) {
+                    query.max(((Number) maxVal).intValue())
+                }
+                if (offsetVal != null) {
+                    query.offset(((Number) offsetVal).intValue())
+                }
+            }
+            (List<D>) query.list()
+        } as SessionCallback<List<D>>)
     }
 
     FindIterable<D> find(Bson filter) {
@@ -287,9 +332,17 @@ class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D
     }
 
     protected Bson wrapFilterWithMultiTenancy(Bson filter) {
-        if (multiTenancyMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR && persistentEntity.isMultiTenant()) {
+        MultiTenantCapableDatastore mongoDatastore = (MultiTenantCapableDatastore) datastore
+        PersistentEntity persistentEntity = getGormPersistentEntity()
+        if (mongoDatastore.multiTenancyMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR && persistentEntity.isMultiTenant()) {
+            Serializable tenantId
+            if (qualifier != null && !ConnectionSource.DEFAULT.equals(qualifier)) {
+                tenantId = qualifier
+            } else {
+                tenantId = Tenants.currentId((Class<Datastore>) datastore.getClass())
+            }
             filter = Filters.and(
-                    Filters.eq(MappingUtils.getTargetKey(persistentEntity.tenantId), Tenants.currentId((Class<Datastore>) datastore.getClass())),
+                    Filters.eq(MappingUtils.getTargetKey(persistentEntity.tenantId), tenantId),
                     filter
             )
         }
@@ -298,9 +351,17 @@ class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D
 
     private List<Bson> preparePipeline(List pipeline) {
         List<Bson> newPipeline = new ArrayList<Bson>()
-        if (multiTenancyMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR && persistentEntity.isMultiTenant()) {
+        MultiTenantCapableDatastore mongoDatastore = (MultiTenantCapableDatastore) datastore
+        PersistentEntity persistentEntity = getGormPersistentEntity()
+        if (mongoDatastore.multiTenancyMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR && persistentEntity.isMultiTenant()) {
+            Serializable tenantId
+            if (qualifier != null && !ConnectionSource.DEFAULT.equals(qualifier)) {
+                tenantId = qualifier
+            } else {
+                tenantId = Tenants.currentId((Class<Datastore>) datastore.getClass())
+            }
             newPipeline.add(
-                    Aggregates.match(Filters.eq(MappingUtils.getTargetKey(persistentEntity.tenantId), Tenants.currentId((Class<Datastore>) datastore.getClass())))
+                    Aggregates.match(Filters.eq(MappingUtils.getTargetKey(persistentEntity.tenantId), tenantId))
             )
         }
         for (o in pipeline) {

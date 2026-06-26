@@ -32,7 +32,7 @@ class IsNullSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     @Issue('GPMONGODB-164')
     void "Test isNull works in a criteria query"() {
         given: "Some test data"
-        new Elephant(name: "Dumbo").save(validate: false)
+        new Elephant(name: "Dumbo").save(flush: true, validate: false)
         new Elephant(name: "Big Daddy", trunk: new Trunk(length: 10).save()).save(flush: true, validate: false)
         manager.session.clear()
 
@@ -58,7 +58,7 @@ class IsNullSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     @Issue('GPMONGODB-164')
     void "Test isNull works in a dynamic finder"() {
         given: "Some test data"
-        new Elephant(name: "Dumbo").save(validate: false)
+        new Elephant(name: "Dumbo").save(flush: true, validate: false)
         new Elephant(name: "Big Daddy", trunk: new Trunk(length: 10).save()).save(flush: true, validate: false)
         manager.session.clear()
 

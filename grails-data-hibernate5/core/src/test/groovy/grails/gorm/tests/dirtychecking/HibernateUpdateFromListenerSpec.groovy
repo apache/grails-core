@@ -39,7 +39,7 @@ class HibernateUpdateFromListenerSpec extends Specification {
 
     @Shared
     @AutoCleanup
-    HibernateDatastore datastore = new HibernateDatastore(Person)
+    HibernateDatastore datastore = new HibernateDatastore(DirtyCheckPerson)
     @Shared PlatformTransactionManager transactionManager = datastore.transactionManager
 
     PersonSaveOrUpdatePersistentEventListener listener
@@ -57,15 +57,15 @@ class HibernateUpdateFromListenerSpec extends Specification {
     @Rollback
     void "test the changes made from the listener are saved"() {
         when:
-        Person danny = new Person(name: "Danny", occupation: "manager").save()
+        DirtyCheckPerson danny = new DirtyCheckPerson(name: "Danny", occupation: "manager").save()
 
         then:
-        new PollingConditions().eventually {listener.isExecuted && Person.count()}
+        new PollingConditions().eventually {listener.isExecuted && DirtyCheckPerson.count()}
 
         when:
         datastore.currentSession.flush()
         datastore.currentSession.clear()
-        danny = Person.get(danny.id)
+        danny = DirtyCheckPerson.get(danny.id)
 
         then:
         danny.occupation
@@ -82,8 +82,8 @@ class HibernateUpdateFromListenerSpec extends Specification {
 
         @Override
         protected void onPersistenceEvent(AbstractPersistenceEvent event) {
-            if (event.entityObject instanceof Person) {
-                Person person = (Person) event.entityObject
+            if (event.entityObject instanceof DirtyCheckPerson) {
+                DirtyCheckPerson person = (DirtyCheckPerson) event.entityObject
                 person.occupation = person.occupation + " listener"
                 if (event.entityAccess != null) {
                     event.entityAccess.setProperty("occupation", person.occupation)

@@ -47,7 +47,7 @@ import org.grails.datastore.bson.codecs.decoders.EmbeddedDecoder
 import org.grails.datastore.bson.codecs.encoders.EmbeddedCollectionEncoder
 import org.grails.datastore.bson.codecs.encoders.EmbeddedEncoder
 import org.grails.datastore.bson.codecs.encoders.IdentityEncoder
-import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.schemaless.DynamicAttributes
 import org.grails.datastore.mapping.collection.PersistentList
 import org.grails.datastore.mapping.collection.PersistentSet
@@ -59,12 +59,12 @@ import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckableCollection
 import org.grails.datastore.mapping.engine.EntityAccess
-import org.grails.datastore.mapping.engine.EntityPersister
 import org.grails.datastore.mapping.engine.internal.MappingUtils
 import org.grails.datastore.mapping.model.EmbeddedPersistentEntity
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Association
+import org.grails.datastore.mapping.model.types.Basic
 import org.grails.datastore.mapping.model.types.Embedded
 import org.grails.datastore.mapping.model.types.EmbeddedCollection
 import org.grails.datastore.mapping.model.types.Identity
@@ -161,7 +161,7 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
             callback(AbstractDatastore.retrieveSession(MongoDatastore))
         }
         else {
-            GormEnhancer.findStaticApi(entity.javaClass).withSession(callback)
+            GormRegistry.instance.findStaticApi(entity.javaClass).withSession(callback)
         }
     }
 
@@ -175,10 +175,10 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
             return cachedInstance
         }
         if (entity instanceof EmbeddedPersistentEntity) {
-            callback(AbstractDatastore.retrieveSession(MongoDatastore))
+            return callback(AbstractDatastore.retrieveSession(MongoDatastore))
         }
         else {
-            GormEnhancer.findStaticApi(entity.javaClass).withSession(callback)
+            return GormRegistry.instance.findStaticApi(entity.javaClass).withSession(callback)
         }
     }
 
@@ -234,6 +234,19 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
 
             def dirtyProperties = new ArrayList<String>(dirty.listDirtyPropertyNames())
             boolean isNew = dirtyProperties.isEmpty() && dirty.hasChanged()
+            if (!isNew && dirtyProperties.isEmpty()) {
+                // Preserve historical Mongo behavior for basic collection properties:
+                // a save on an entity with wrapped basic collections is treated as an update.
+                for (PersistentProperty prop : entity.persistentProperties) {
+                    if (prop instanceof Basic) {
+                        Object basicValue = access.getProperty(prop.name)
+                        if (basicValue instanceof DirtyCheckableCollection && ((DirtyCheckableCollection)basicValue).hasChanged()) {
+                            isNew = true
+                            break
+                        }
+                    }
+                }
+            }
             def isVersioned = entity.isVersioned()
             if (isNew) {
                 // if it is new it can only be an embedded entity that has now been updated
@@ -242,14 +255,10 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
                 if (!entity.isRoot()) {
                     sets.put(MongoConstants.MONGO_CLASS_FIELD, new BsonString(entity.discriminator))
                 }
-
-                if (isVersioned) {
-                    EntityPersister.incrementEntityVersion(access)
-                }
-
             }
 
             for (propertyName in dirtyProperties) {
+                if (isVersioned && propertyName == entity.version.name) continue
                 def prop = entity.getPropertyByName(propertyName)
                 if (prop != null) {
 
@@ -291,7 +300,7 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
             }
             else {
 
-                GormEnhancer.findStaticApi(entity.javaClass).withSession { Session mongoSession ->
+                GormRegistry.instance.findStaticApi(entity.javaClass).withSession { Session mongoSession ->
                     if (mongoSession != null) {
                         Document schemaless = (Document) mongoSession.getAttribute(value, SCHEMALESS_ATTRIBUTES)
                         if (schemaless != null) {
@@ -703,16 +712,39 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
                 }
             }
 
+            Class associatedType = associatedEntity.javaClass
+            if (associationId != null && associatedEntity.isRoot()) {
+                try {
+                    Document raw = mongoSession.getCollection(associatedEntity)
+                            .withDocumentClass(Document)
+                            .find(new Document(MongoConstants.MONGO_ID_FIELD, associationId), Document)
+                            .limit(1)
+                            .first()
+                    if (raw != null) {
+                        Object discriminator = raw.get(MongoConstants.MONGO_CLASS_FIELD)
+                        if (discriminator != null) {
+                            PersistentEntity childEntity = associatedEntity.mappingContext
+                                    .getChildEntityByDiscriminator(associatedEntity.rootEntity, discriminator.toString())
+                            if (childEntity != null) {
+                                associatedType = childEntity.javaClass
+                            }
+                        }
+                    }
+                } catch (Exception ignored) {
+                    // fall back to the declared association type
+                }
+            }
+
             if (isLazy) {
                 entityAccess.setPropertyNoConversion(
                         property.name,
-                        mongoSession.proxy(associatedEntity.javaClass, associationId)
+                        mongoSession.proxy(associatedType, associationId)
                 )
             }
             else {
                 entityAccess.setPropertyNoConversion(
                         property.name,
-                        mongoSession.retrieve(associatedEntity.javaClass, associationId)
+                        mongoSession.retrieve(associatedType, associationId)
                 )
             }
 

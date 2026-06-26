@@ -53,14 +53,11 @@ import grails.gorm.multitenancy.Tenants;
 import grails.util.GrailsMessageSourceUtils;
 import org.grails.datastore.bson.codecs.CodecExtensions;
 import org.grails.datastore.gorm.GormEnhancer;
-import org.grails.datastore.gorm.GormInstanceApi;
-import org.grails.datastore.gorm.GormValidationApi;
 import org.grails.datastore.gorm.events.AutoTimestampEventListener;
 import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher;
 import org.grails.datastore.gorm.events.DefaultApplicationEventPublisher;
 import org.grails.datastore.gorm.events.DomainEventListener;
 import org.grails.datastore.gorm.mongo.MongoGormEnhancer;
-import org.grails.datastore.gorm.mongo.api.MongoStaticApi;
 import org.grails.datastore.gorm.multitenancy.MultiTenantEventListener;
 import org.grails.datastore.gorm.utils.ClasspathEntityScanner;
 import org.grails.datastore.gorm.validation.constraints.MappingContextAwareConstraintFactory;
@@ -78,7 +75,6 @@ import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.core.connections.ConnectionSources;
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesInitializer;
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesListener;
-import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport;
 import org.grails.datastore.mapping.core.connections.DefaultConnectionSource;
 import org.grails.datastore.mapping.core.connections.InMemoryConnectionSources;
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore;
@@ -231,9 +227,10 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
             });
         }
 
+        final TenantResolver baseResolver;
         if (multiTenancyMode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
-            final TenantResolver baseResolver = multiTenancySettings.getTenantResolver();
-            this.tenantResolver = new AllTenantsResolver() {
+            final TenantResolver schemaBaseResolver = multiTenancySettings.getTenantResolver();
+            baseResolver = new AllTenantsResolver() {
                 @Override
                 public Iterable<Serializable> resolveTenantIds() {
                     List<Serializable> ids = new ArrayList<>();
@@ -246,11 +243,48 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
 
                 @Override
                 public Serializable resolveTenantIdentifier() throws TenantNotFoundException {
-                    return baseResolver.resolveTenantIdentifier();
+                    return schemaBaseResolver.resolveTenantIdentifier();
                 }
             };
         } else {
-            this.tenantResolver = multiTenancySettings.getTenantResolver();
+            baseResolver = multiTenancySettings.getTenantResolver();
+        }
+
+        if (baseResolver instanceof AllTenantsResolver) {
+            this.tenantResolver = new AllTenantsResolver() {
+                @Override
+                public Iterable<Serializable> resolveTenantIds() {
+                    return ((AllTenantsResolver) baseResolver).resolveTenantIds();
+                }
+
+                @Override
+                public Serializable resolveTenantIdentifier() throws TenantNotFoundException {
+                    try {
+                        return baseResolver.resolveTenantIdentifier();
+                    } catch (TenantNotFoundException e) {
+                        if (isAllowedWithoutTenant()) {
+                            return ConnectionSource.DEFAULT;
+                        }
+                        throw e;
+                    }
+                }
+            };
+        } else if (baseResolver != null) {
+            this.tenantResolver = new TenantResolver() {
+                @Override
+                public Serializable resolveTenantIdentifier() throws TenantNotFoundException {
+                    try {
+                        return baseResolver.resolveTenantIdentifier();
+                    } catch (TenantNotFoundException e) {
+                        if (isAllowedWithoutTenant()) {
+                            return ConnectionSource.DEFAULT;
+                        }
+                        throw e;
+                    }
+                }
+            };
+        } else {
+            this.tenantResolver = null;
         }
 
         this.autoTimestampEventListener = new AutoTimestampEventListener(this);
@@ -788,52 +822,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
 
         buildIndex();
 
-        return new MongoGormEnhancer(this, transactionManager, settings) {
-            @Override
-            protected <D> MongoStaticApi<D> getStaticApi(Class<D> cls, String qualifier) {
-                MongoDatastore mongoDatastore = getDatastoreForQualifier(cls, qualifier);
-                return new MongoStaticApi<>(cls, mongoDatastore, createDynamicFinders(mongoDatastore), transactionManager);
-            }
-
-            @Override
-            protected <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, String qualifier) {
-                MongoDatastore mongoDatastore = getDatastoreForQualifier(cls, qualifier);
-
-                GormInstanceApi<D> instanceApi = new GormInstanceApi<>(cls, mongoDatastore);
-                instanceApi.setFailOnError(getFailOnError());
-                instanceApi.setMarkDirty(getMarkDirty());
-                return instanceApi;
-            }
-
-            @Override
-            protected <D> GormValidationApi<D> getValidationApi(Class<D> cls, String qualifier) {
-                MongoDatastore mongoDatastore = getDatastoreForQualifier(cls, qualifier);
-                return new GormValidationApi<>(cls, mongoDatastore);
-            }
-
-            private <D> MongoDatastore getDatastoreForQualifier(Class<D> cls, String qualifier) {
-                String defaultConnectionSourceName = ConnectionSourcesSupport.getDefaultConnectionSourceName(getMappingContext().getPersistentEntity(cls.getName()));
-                if (defaultConnectionSourceName.equals(ConnectionSource.ALL)) {
-                    defaultConnectionSourceName = ConnectionSource.DEFAULT;
-                }
-
-                boolean isDefaultQualifier = qualifier.equals(ConnectionSource.DEFAULT);
-                if (isDefaultQualifier && defaultConnectionSourceName.equals(ConnectionSource.DEFAULT)) {
-                    return MongoDatastore.this;
-                }
-                else {
-                    if (isDefaultQualifier) {
-                        qualifier = defaultConnectionSourceName;
-                    }
-                    ConnectionSource<MongoClient, MongoConnectionSourceSettings> connectionSource = connectionSources.getConnectionSource(qualifier);
-                    if (connectionSource == null) {
-                        throw new ConfigurationException("Invalid connection [" + defaultConnectionSourceName + "] configured for class [" + cls + "]");
-                    }
-
-                    return datastoresByConnectionSource.get(qualifier);
-                }
-            }
-        };
+        org.grails.datastore.gorm.GormRegistry.getInstance().registerApiFactory(MongoDatastore.class, new org.grails.datastore.gorm.mongo.MongoGormApiFactory());
+        return new MongoGormEnhancer(this, transactionManager, settings);
 
     }
 
@@ -1108,6 +1098,7 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
     @Override
     @PreDestroy
     public void close() {
+        org.grails.datastore.gorm.GormRegistry.getInstance().removeDatastore(this);
         try {
             super.destroy();
         } catch (Exception e) {
@@ -1217,7 +1208,7 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
     @Override
     public MongoDatastore getDatastoreForTenantId(Serializable tenantId) {
         if (getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DATABASE) {
-            return this.datastoresByConnectionSource.get(tenantId.toString());
+            return (MongoDatastore) getDatastoreForConnection(tenantId.toString());
         }
         return this;
     }
@@ -1269,5 +1260,15 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
 
     public AutoTimestampEventListener getAutoTimestampEventListener() {
         return this.autoTimestampEventListener;
+    }
+
+    private static boolean isAllowedWithoutTenant() {
+        for (StackTraceElement element : Thread.currentThread().getStackTrace()) {
+            String methodName = element.getMethodName();
+            if ("eachTenant".equals(methodName) || "withTenant".equals(methodName)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

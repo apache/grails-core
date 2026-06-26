@@ -195,11 +195,17 @@ public class GrailsHibernateQueryUtils {
             }
         } else if (useDefaultMapping) {
             Mapping m = AbstractGrailsDomainBinder.getMapping(entity.getJavaClass());
-            if (m != null) {
+            if (m != null && !m.getSort().getNamesAndDirections().isEmpty()) {
                 Map sortMap = m.getSort().getNamesAndDirections();
                 for (Object sort : sortMap.keySet()) {
                     final String order = DynamicFinder.ORDER_DESC.equalsIgnoreCase((String) sortMap.get(sort)) ? DynamicFinder.ORDER_DESC : DynamicFinder.ORDER_ASC;
                     addOrderPossiblyNested(query, queryRoot, criteriaBuilder, entity, (String) sort, order, true);
+                }
+            } else {
+                PersistentProperty identity = entity.getIdentity();
+                if (identity != null) {
+                    final String order = DynamicFinder.ORDER_DESC.equalsIgnoreCase(orderParam) ? DynamicFinder.ORDER_DESC : DynamicFinder.ORDER_ASC;
+                    addOrderPossiblyNested(query, queryRoot, criteriaBuilder, entity, identity.getName(), order, true);
                 }
             }
         }
@@ -335,28 +341,20 @@ public class GrailsHibernateQueryUtils {
                                  From queryRoot,
                                  CriteriaBuilder criteriaBuilder,
                                  String sort, String order, boolean ignoreCase) {
+        Expression path;
         if (sort.equalsIgnoreCase(entity.getIdentity().getName())) {
-            Expression path = queryRoot;
-
-            if (ignoreCase) {
-                path = criteriaBuilder.upper(path);
-            }
-            if (DynamicFinder.ORDER_DESC.equals(order)) {
-                query.orderBy(criteriaBuilder.desc(path));
-            } else {
-                query.orderBy(criteriaBuilder.asc(path));
-            }
+            path = queryRoot.get(entity.getIdentity().getName());
         } else {
-            Expression path = queryRoot.get(sort);
+            path = queryRoot.get(sort);
+        }
 
-            if (ignoreCase) {
-                path = criteriaBuilder.upper(path);
-            }
-            if (DynamicFinder.ORDER_DESC.equals(order)) {
-                query.orderBy(criteriaBuilder.desc(path));
-            } else {
-                query.orderBy(criteriaBuilder.asc(path));
-            }
+        if (ignoreCase) {
+            path = criteriaBuilder.upper(path);
+        }
+        if (DynamicFinder.ORDER_DESC.equals(order)) {
+            query.orderBy(criteriaBuilder.desc(path));
+        } else {
+            query.orderBy(criteriaBuilder.asc(path));
         }
     }
 

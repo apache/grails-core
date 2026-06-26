@@ -49,7 +49,7 @@ import org.bson.Document
 import org.bson.conversions.Bson
 import org.bson.types.ObjectId
 
-import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.mapping.mongo.AbstractMongoSession
 import org.grails.datastore.mapping.mongo.MongoConstants
 import org.grails.datastore.mapping.mongo.engine.AbstractMongoObectEntityPersister
@@ -74,7 +74,7 @@ class MongoExtensions {
             return (T) document
         }
         else {
-            def datastore = GormEnhancer.findDatastore(cls)
+            def datastore = GormRegistry.instance.apiResolver.findDatastore(cls)
             AbstractMongoSession session = (AbstractMongoSession) datastore.currentSession
             if (session != null) {
                 return session.decode(cls, document)
@@ -93,7 +93,7 @@ class MongoExtensions {
             return (T) iterable
         }
         else {
-            def datastore = GormEnhancer.findDatastore(cls)
+            def datastore = GormRegistry.instance.apiResolver.findDatastore(cls)
             AbstractMongoSession session = (AbstractMongoSession) datastore.currentSession
 
             if (session != null) {
@@ -106,7 +106,7 @@ class MongoExtensions {
     }
 
     static <T> List<T> toList(FindIterable iterable, Class<T> cls) {
-        def datastore = GormEnhancer.findDatastore(cls)
+        def datastore = GormRegistry.instance.apiResolver.findDatastore(cls)
         AbstractMongoSession session = (AbstractMongoSession) datastore.currentSession
 
         MongoEntityPersister p = (MongoEntityPersister) session.getPersister(cls)
@@ -620,4 +620,3 @@ class MongoExtensions {
     }
 
 }
-

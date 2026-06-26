@@ -41,22 +41,26 @@ import static com.mongodb.client.model.Filters.*
 @RestoreSystemProperties
 class MultiTenancySpec extends AutoStartedMongoSpec {
 
-    @AutoCleanup MongoDatastore datastore
+    @Shared @AutoCleanup MongoDatastore datastore
 
     @Override
     boolean shouldInitializeDatastore() {
         false
     }
 
-    void setup() {
-        // Ensure tenant property is cleared before each test for test isolation
-        System.clearProperty(SystemPropertyTenantResolver.PROPERTY_NAME)
+    void setupSpec() {
+        org.grails.datastore.gorm.GormRegistry.reset()
         Map config = [
                 "grails.gorm.multiTenancy.mode"               :"DISCRIMINATOR",
                 "grails.gorm.multiTenancy.tenantResolverClass": MyResolver,
                 (MongoSettings.SETTING_URL)                   : "mongodb://${mongoHost}:${mongoPort}/defaultDb" as String,
         ]
         this.datastore = new MongoDatastore(config, getDomainClasses() as Class[])
+    }
+
+    void setup() {
+        // Ensure tenant property is cleared before each test for test isolation
+        System.clearProperty(SystemPropertyTenantResolver.PROPERTY_NAME)
     }
 
 

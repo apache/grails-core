@@ -33,15 +33,15 @@ import org.hibernate.Session
 import org.hibernate.SessionFactory
 import org.hibernate.query.Query
 
-import org.springframework.core.convert.ConversionService
-import org.grails.orm.hibernate.support.hibernate5.SessionHolder
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import grails.orm.HibernateCriteriaBuilder
-import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.finders.FinderMethod
+import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.query.api.BuildableCriteria as GrailsCriteria
 import org.grails.datastore.mapping.query.event.PostQueryEvent
 import org.grails.datastore.mapping.query.event.PreQueryEvent
@@ -50,6 +50,7 @@ import org.grails.orm.hibernate.query.GrailsHibernateQueryUtils
 import org.grails.orm.hibernate.query.HibernateHqlQuery
 import org.grails.orm.hibernate.query.HibernateQuery
 import org.grails.orm.hibernate.query.PagedResultList
+import org.grails.orm.hibernate.support.hibernate5.SessionHolder
 
 /**
  * The implementation of the GORM static method contract for Hibernate
@@ -60,8 +61,6 @@ import org.grails.orm.hibernate.query.PagedResultList
 @CompileStatic
 class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
 
-    protected SessionFactory sessionFactory
-    protected ConversionService conversionService
     protected Class identityType
     protected ClassLoader classLoader
     private HibernateGormInstanceApi<D> instanceApi
@@ -69,29 +68,57 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
 
     HibernateGormStaticApi(Class<D> persistentClass, HibernateDatastore datastore, List<FinderMethod> finders,
                 ClassLoader classLoader, PlatformTransactionManager transactionManager) {
-        super(persistentClass, datastore, finders, transactionManager)
+        super(persistentClass, datastore, finders)
         this.classLoader = classLoader
-        sessionFactory = datastore.getSessionFactory()
-        conversionService = datastore.mappingContext.conversionService
-
-        identityType = persistentEntity.identity?.type
+        identityType = getGormPersistentEntity().identity?.type
         this.defaultFlushMode = datastore.getDefaultFlushMode()
         instanceApi = new HibernateGormInstanceApi<>(persistentClass, datastore, classLoader)
     }
 
+    HibernateGormStaticApi(Class<D> persistentClass, org.grails.datastore.mapping.model.MappingContext mappingContext, List<FinderMethod> finders, org.grails.datastore.gorm.DatastoreResolver datastoreResolver, String qualifier, ClassLoader classLoader) {
+        super(persistentClass, mappingContext, finders, datastoreResolver, qualifier)
+        this.classLoader = classLoader
+    }
+
     @Override
-    GrailsHibernateTemplate getHibernateTemplate() {
-        return (GrailsHibernateTemplate) super.getHibernateTemplate()
+    GormStaticApi<D> forQualifier(String qualifier) {
+        Datastore ds = getDatastore()
+        if (ds == null) return this
+
+        org.grails.datastore.gorm.DatastoreResolver resolver = new org.grails.datastore.gorm.DatastoreResolver() {
+            @Override Datastore resolve() { org.grails.datastore.gorm.GormRegistry.instance.apiResolver.findDatastore(persistentClass, qualifier) }
+        }
+        List<FinderMethod> qualifiedFinders = registry.createDynamicFinders(resolver, ds.mappingContext)
+        return new HibernateGormStaticApi<D>(persistentClass, ds.mappingContext, qualifiedFinders, resolver, qualifier, classLoader)
+    }
+
+    protected SessionFactory getSessionFactory() {
+        getHibernateDatastore().getSessionFactory()
+    }
+
+    protected Class getIdentityType() {
+        if (identityType == null) {
+            return getGormPersistentEntity().identity?.type
+        }
+        return identityType
+    }
+
+    @Override
+    IHibernateTemplate getHibernateTemplate() {
+        return super.getHibernateTemplate()
     }
 
     @Override
     List<D> list(Map params = Collections.emptyMap()) {
-        hibernateTemplate.execute { Session session ->
-            CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder()
-            CriteriaQuery criteriaQuery = criteriaBuilder.createQuery(persistentEntity.javaClass)
-            Root queryRoot = criteriaQuery.from(persistentEntity.javaClass)
+        getHibernateTemplate().execute { Object session ->
+            PersistentEntity entity = getGormPersistentEntity()
+            CriteriaBuilder criteriaBuilder = ((Session)session).getCriteriaBuilder()
+            CriteriaQuery criteriaQuery = criteriaBuilder.createQuery(entity.javaClass)
+            Root queryRoot = criteriaQuery.from(entity.javaClass)
+
+            params = params ? new HashMap(params) : Collections.emptyMap()
             GrailsHibernateQueryUtils.populateArgumentsForCriteria(
-                    persistentEntity,
+                    entity,
                     criteriaQuery,
                     queryRoot,
                     criteriaBuilder,
@@ -99,28 +126,29 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
                     datastore.mappingContext.conversionService,
                     true
             )
-            Query query = session.createQuery(criteriaQuery)
+            Query query = ((Session)session).createQuery(criteriaQuery)
 
             GrailsHibernateQueryUtils.populateArgumentsForCriteria(
-                    persistentEntity,
+                    entity,
                     query,
                     params,
                     datastore.mappingContext.conversionService,
                     true
             )
 
+            HibernateSession hibernateSession = new HibernateSession((HibernateDatastore) datastore, getSessionFactory())
             HibernateHqlQuery hibernateQuery = new HibernateHqlQuery(
-                    new HibernateSession((HibernateDatastore) datastore, sessionFactory),
-                    persistentEntity,
+                    hibernateSession,
+                    entity,
                     query
             )
-            hibernateTemplate.applySettings(query)
 
-            params = params ? new HashMap(params) : Collections.emptyMap()
+            getHibernateTemplate().applySettings(query)
+
             if (params.containsKey(DynamicFinder.ARGUMENT_MAX)) {
                 return new PagedResultList(
-                        hibernateTemplate,
-                        persistentEntity,
+                        getHibernateTemplate(),
+                        entity,
                         hibernateQuery,
                         criteriaQuery,
                         queryRoot,
@@ -134,21 +162,16 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
     }
 
     @Override
-    def propertyMissing(String name) {
-        return GormEnhancer.findStaticApi(persistentClass, name)
-    }
-
-    @Override
     GrailsCriteria createCriteria() {
-        def builder = new HibernateCriteriaBuilder(persistentClass, sessionFactory)
+        def builder = new HibernateCriteriaBuilder(persistentClass, getSessionFactory())
         builder.datastore = (AbstractHibernateDatastore) datastore
-        builder.conversionService = conversionService
+        builder.conversionService = getConversionService()
         return builder
     }
 
     @Override
     D lock(Serializable id) {
-        (D) hibernateTemplate.lock((Class)persistentClass, convertIdentifier(id), LockMode.PESSIMISTIC_WRITE)
+        (D) getHibernateTemplate().lock((Class)persistentClass, convertIdentifier(id), LockMode.PESSIMISTIC_WRITE)
     }
 
     @Override
@@ -159,10 +182,10 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
             query = buildNamedParameterQueryFromGString((GString) query, params)
         }
 
-        def template = hibernateTemplate
-        SessionFactory sessionFactory = this.sessionFactory
-        return (Integer) template.execute { Session session ->
-            Query q = (Query) session.createQuery(query.toString())
+        def template = getHibernateTemplate()
+        SessionFactory sessionFactory = getSessionFactory()
+        return (Integer) template.execute { Object session ->
+            Query q = (Query) ((Session)session).createQuery(query.toString())
             template.applySettings(q)
             def sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(sessionFactory)
             if (sessionHolder && sessionHolder.hasTimeout()) {
@@ -185,11 +208,11 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
             throw new GrailsQueryException("Unsafe query [$query]. GORM cannot automatically escape a GString value when combined with ordinal parameters, so this query is potentially vulnerable to HQL injection attacks. Please embed the parameters within the GString so they can be safely escaped.")
         }
 
-        def template = hibernateTemplate
-        SessionFactory sessionFactory = this.sessionFactory
+        def template = getHibernateTemplate()
+        SessionFactory sessionFactory = getSessionFactory()
 
-        return (Integer) template.execute { Session session ->
-            Query q = (Query) session.createQuery(query.toString())
+        return (Integer) template.execute { Object session ->
+            Query q = (Query) ((Session)session).createQuery(query.toString())
             template.applySettings(q)
             def sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(sessionFactory)
             if (sessionHolder && sessionHolder.hasTimeout()) {
@@ -215,8 +238,9 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
         HibernateDatastore hibernateDatastore = (HibernateDatastore) datastore
 
         def eventPublisher = hibernateDatastore.applicationEventPublisher
+        PersistentEntity entity = getGormPersistentEntity()
 
-        def hqlQuery = new HibernateHqlQuery(new HibernateSession(hibernateDatastore, sessionFactory), persistentEntity, query)
+        def hqlQuery = new HibernateHqlQuery(new HibernateSession(hibernateDatastore, getSessionFactory()), entity, query)
         eventPublisher.publishEvent(new PreQueryEvent(hibernateDatastore, hqlQuery))
 
         def result = callable.call()
@@ -226,24 +250,27 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
     }
 
     @Override
-    protected void firePostQueryEvent(Session session, Criteria criteria, Object result) {
+    protected void firePostQueryEvent(org.grails.datastore.mapping.core.Session session, Criteria criteria, Object result) {
+        PersistentEntity entity = getGormPersistentEntity()
         if (result instanceof List) {
-            datastore.applicationEventPublisher.publishEvent(new PostQueryEvent(datastore, new HibernateQuery(criteria, persistentEntity), (List) result))
+            datastore.applicationEventPublisher.publishEvent(new PostQueryEvent(datastore, new HibernateQuery(criteria, entity), (List) result))
         }
         else {
-            datastore.applicationEventPublisher.publishEvent(new PostQueryEvent(datastore, new HibernateQuery(criteria, persistentEntity), Collections.singletonList(result)))
+            datastore.applicationEventPublisher.publishEvent(new PostQueryEvent(datastore, new HibernateQuery(criteria, entity), Collections.singletonList(result)))
         }
     }
 
     @Override
-    protected void firePreQueryEvent(Session session, Criteria criteria) {
-        datastore.applicationEventPublisher.publishEvent(new PreQueryEvent(datastore, new HibernateQuery(criteria, persistentEntity)))
+    protected void firePreQueryEvent(org.grails.datastore.mapping.core.Session session, Criteria criteria) {
+        PersistentEntity entity = getGormPersistentEntity()
+        datastore.applicationEventPublisher.publishEvent(new PreQueryEvent(datastore, new HibernateQuery(criteria, entity)))
     }
 
     @Override
-    protected HibernateHqlQuery createHqlQuery(Session session, Query q) {
-        HibernateSession hibernateSession = new HibernateSession((HibernateDatastore) datastore, sessionFactory)
-        FlushMode hibernateMode = session.getHibernateFlushMode()
+    protected HibernateHqlQuery createHqlQuery(org.grails.datastore.mapping.core.Session session, Query q) {
+        HibernateSession hibernateSession = (HibernateSession) session ?: getHibernateSession()
+        Session nativeSession = hibernateSession.getHibernateTemplate().getSessionFactory().getCurrentSession()
+        FlushMode hibernateMode = nativeSession.getHibernateFlushMode()
         switch (hibernateMode) {
             case FlushMode.AUTO:
                 hibernateSession.setFlushMode(FlushModeType.AUTO)
@@ -255,7 +282,7 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
                 hibernateSession.setFlushMode(FlushModeType.COMMIT)
 
         }
-        HibernateHqlQuery query = new HibernateHqlQuery(hibernateSession, persistentEntity, q)
+        HibernateHqlQuery query = new HibernateHqlQuery(hibernateSession, getGormPersistentEntity(), q)
         return query
     }
 
