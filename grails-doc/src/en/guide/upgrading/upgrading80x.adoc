@@ -136,15 +136,52 @@ spring:
 ==== 5. Hibernate ORM Package Relocations
 
 Spring Framework 7 removed the `org.springframework.orm.hibernate5` package entirely.
-Grails 8 vendors these classes from Spring Framework 6.2.x into a new module (`grails-data-hibernate5-spring-orm`) under the package `org.grails.orm.hibernate.support.hibernate5`.
+Grails 8 vendors these classes from Spring Framework 6.2.x into `grails-data-hibernate5-spring-orm` and `grails-data-hibernate7-spring-orm` so that both Hibernate 5 and Hibernate 7 users have a drop-in replacement.
 
 This change is transparent for most applications since Grails manages the Hibernate integration internally.
-However, if your application directly imports any of the following classes, you must update your import statements:
+However, if your application directly imports any of the following classes, you must update your import statements based on which Hibernate version you are using.
+
+===== 5.1 Hibernate 5 (Default)
+
+If your application uses the default Grails Hibernate 5 integration (`org.apache.grails:grails-hibernate5` / `grails-data-hibernate5-spring-orm`), replace the `org.springframework.orm.hibernate5` package prefix with `org.grails.orm.hibernate.support.hibernate5`:
 
 [cols="1,1", options="header"]
 |===
 | Before (Spring Framework 6 / Grails 7)
-| After (Grails 8)
+| After (Grails 8 — Hibernate 5)
+
+| `org.springframework.orm.hibernate5.HibernateTemplate`
+| `org.grails.orm.hibernate.support.hibernate5.HibernateTemplate`
+
+| `org.springframework.orm.hibernate5.HibernateTransactionManager`
+| `org.grails.orm.hibernate.support.hibernate5.HibernateTransactionManager`
+
+| `org.springframework.orm.hibernate5.LocalSessionFactoryBean`
+| `org.grails.orm.hibernate.support.hibernate5.LocalSessionFactoryBean`
+
+| `org.springframework.orm.hibernate5.SessionFactoryUtils`
+| `org.grails.orm.hibernate.support.hibernate5.SessionFactoryUtils`
+
+| `org.springframework.orm.hibernate5.SessionHolder`
+| `org.grails.orm.hibernate.support.hibernate5.SessionHolder`
+
+| `org.springframework.orm.hibernate5.HibernateCallback`
+| `org.grails.orm.hibernate.support.hibernate5.HibernateCallback`
+
+| `org.springframework.orm.hibernate5.support.OpenSessionInViewInterceptor`
+| `org.grails.orm.hibernate.support.hibernate5.support.OpenSessionInViewInterceptor`
+|===
+
+All other classes from `org.springframework.orm.hibernate5` follow the same pattern — replace the `org.springframework.orm.hibernate5` prefix with `org.grails.orm.hibernate.support.hibernate5`.
+
+===== 5.2 Hibernate 7
+
+If your application has opted in to Hibernate 7 (`org.apache.grails:grails-hibernate7` / `grails-data-hibernate7-spring-orm`), the equivalent vendored classes live under `org.grails.orm.hibernate.support.hibernate7`:
+
+[cols="1,1", options="header"]
+|===
+| Before (Spring Framework 6 / Grails 7)
+| After (Grails 8 — Hibernate 7)
 
 | `org.springframework.orm.hibernate5.HibernateTemplate`
 | `org.grails.orm.hibernate.support.hibernate7.HibernateTemplate`
@@ -168,7 +205,9 @@ However, if your application directly imports any of the following classes, you 
 | `org.grails.orm.hibernate.support.hibernate7.support.OpenSessionInViewInterceptor`
 |===
 
-All other classes from `org.springframework.orm.hibernate5` follow the same pattern - replace the `org.springframework.orm.hibernate5` prefix with `org.grails.orm.hibernate.support.hibernate5`.
+All other classes follow the same pattern — replace the `org.springframework.orm.hibernate5` prefix with `org.grails.orm.hibernate.support.hibernate7`.
+
+NOTE: See <<_hibernate_5_to_hibernate_7_migration>> below if you are also upgrading from Hibernate 5 to Hibernate 7 as part of this Grails 8 migration.
 
 ==== 6. HttpStatus.MOVED_TEMPORARILY Removed
 
@@ -965,7 +1004,186 @@ Previously, rendering an enum value would produce a JSON string with the type an
 Rendering an enum value as JSON will now instead throw a `ConverterException`.
 See https://github.com/apache/grails-core/pull/15212[PR 15212] for more details on this change.
 
-==== 26. GORM Properties Are Nullable by Default
+[[_hibernate_5_to_hibernate_7_migration]]
+==== 26. Hibernate 5 to Hibernate 7 Migration
+
+Grails 8 supports both Hibernate 5 (the default) and Hibernate 7.
+If you are upgrading from Grails 7 and also want to migrate from Hibernate 5 to Hibernate 7, apply the `grails-hibernate7-bom` and the Hibernate 7 plugin in addition to the standard Grails 8 upgrade steps.
+
+[source,groovy]
+.build.gradle — switch to Hibernate 7
+----
+dependencies {
+    implementation enforcedPlatform("org.apache.grails:grails-hibernate7-bom:$grailsVersion")
+    implementation 'org.apache.grails:grails-hibernate7'
+}
+----
+
+The following sections cover every breaking change introduced between Hibernate ORM 5.6.x (used by Grails 7) and Hibernate ORM 7.0.x, and what you need to do in your Grails application.
+
+===== 26.1 Hibernate Session API Removals
+
+Hibernate 7 removed long-deprecated Hibernate-specific session methods in favour of the standard JPA equivalents.
+GORM's dynamic methods (`save()`, `delete()`, `get()`, `load()`, `merge()`, etc.) are **not** affected — these go through GORM's own persistence API and have been updated internally.
+
+You are only affected if your code calls the Hibernate `Session` or `StatelessSession` directly (e.g. inside a `withSession` or `withStatelessSession` block).
+
+[cols="1,1", options="header"]
+|===
+| Removed (Hibernate 5/6)
+| Replacement (Hibernate 7 / JPA)
+
+| `session.save(entity)`
+| `session.persist(entity)`
+
+| `session.update(entity)`
+| `session.merge(entity)`
+
+| `session.saveOrUpdate(entity)`
+| `session.persist(entity)` (new) or `session.merge(entity)` (detached)
+
+| `session.delete(entity)`
+| `session.remove(entity)`
+
+| `session.load(Class, id)`
+| `session.getReference(Class, id)`
+
+| `session.get(Class, id)`
+| `session.find(Class, id)`
+|===
+
+===== 26.2 Removed Hibernate Annotations
+
+The following Hibernate-specific annotations were removed in Hibernate 7.
+Where a replacement exists, migrate before upgrading.
+
+[cols="1,2", options="header"]
+|===
+| Removed annotation
+| Action required
+
+| `@org.hibernate.annotations.Where`
+| Replace with `@org.hibernate.annotations.SQLRestriction`
+
+| `@org.hibernate.annotations.WhereJoinTable`
+| Replace with `@org.hibernate.annotations.SQLJoinTableRestriction`
+
+| `@org.hibernate.annotations.Proxy`
+| Remove — proxy configuration is no longer supported
+
+| `@org.hibernate.annotations.LazyCollection`
+| Remove and use `@ManyToMany(fetch = FetchType.LAZY)` or `EAGER` directly
+
+| `@org.hibernate.annotations.Persister`
+| Remove — custom persisters are no longer supported
+
+| `@org.hibernate.annotations.SelectBeforeUpdate`
+| Remove — behaviour is now configurable via `@DynamicUpdate`
+
+| `@org.hibernate.annotations.Loader`
+| Remove — custom SQL loaders are no longer supported; use `@SQLSelect` on the entity itself
+|===
+
+NOTE: Grails domain classes that use the `mapping { }` DSL are not affected by annotation removals.
+These annotations only apply if you are using Hibernate annotations directly on Java or Groovy classes.
+
+===== 26.3 CascadeType.SAVE_UPDATE Removed
+
+`CascadeType.SAVE_UPDATE` (a Hibernate-specific cascade type) was removed in Hibernate 7.
+Persisting a transient entity that has detached associations now throws `EntityExistsException` instead of silently merging.
+
+If your domain mapping or annotated classes used `cascade = CascadeType.SAVE_UPDATE`, replace it with `cascade = CascadeType.ALL` or `cascade = [CascadeType.PERSIST, CascadeType.MERGE]` as appropriate.
+
+Also note that automatic `cascade = CascadeType.PERSIST` on `@Id` and `@MapsId` associations was removed.
+If you relied on this implicit behaviour, add an explicit `cascade = CascadeType.PERSIST` to the `@ManyToOne` or `@OneToOne` carrying `@MapsId`.
+
+===== 26.4 Detached Entity Operations
+
+Calling `refresh()` or `lock()` on a detached entity now throws `IllegalArgumentException` (JPA specification compliance).
+In Hibernate 5 and 6 this was silently permitted.
+
+If your code calls `entity.refresh()` or `entity.lock()` after the Hibernate session has been closed or the entity has been evicted, you must either re-attach the entity first (via `session.merge()`) or reload it before refreshing.
+
+===== 26.5 Native Query Temporal Type Changes
+
+Native SQL queries (via `executeQuery`, `withCriteria`, or a raw `Session.createNativeQuery`) now return `java.time` types (`LocalDate`, `LocalTime`, `LocalDateTime`) instead of the legacy `java.sql` types (`java.sql.Date`, `java.sql.Time`, `java.sql.Timestamp`).
+
+If your code casts results from native queries to `java.sql` date/time types, update those casts to use the `java.time` equivalents, or set the following property to restore legacy behaviour during a phased migration:
+
+[source,yaml]
+.application.yml
+----
+hibernate:
+    query:
+        native:
+            prefer_jdbc_datetime_types: true
+----
+
+===== 26.6 StatelessSession Now Uses Second-Level Cache by Default
+
+`StatelessSession` in Hibernate 7 participates in the second-level cache by default (it did not in Hibernate 5/6).
+If you use `withStatelessSession` for bulk operations where cache bypass was intentional, disable caching explicitly:
+
+[source,groovy]
+----
+YourDomain.withStatelessSession { StatelessSession session ->
+    session.setCacheMode(CacheMode.IGNORE)
+    // ... bulk operations
+}
+----
+
+===== 26.7 DDL Schema Changes
+
+If you use `dbCreate = 'create-drop'` or `dbCreate = 'update'` in development, or generate a schema with the `schema-export` command, be aware of the following DDL differences in Hibernate 7.
+
+[cols="1,1,2", options="header"]
+|===
+| Database
+| Column type
+| Change
+
+| All
+| `char` / `Character` fields
+| Now maps to `varchar(1)` instead of `char(1)` to avoid trailing-space issues in MySQL
+
+| Oracle
+| `float` / `double` fields
+| Now maps to `binary_float` / `binary_double` (IEEE 754). Set `hibernate.dialect.oracle.use_binary_floats=false` to restore the old mapping.
+
+| Oracle
+| `Timestamp` columns
+| Precision changed to 9 digits (nanoseconds). Existing columns with lower precision will need migration.
+
+| SQL Server
+| `Timestamp` columns
+| Precision changed to 7 digits (100 nanoseconds). Existing columns will need migration.
+
+| MySQL / MariaDB
+| Array-mapped columns
+| Now stored as JSON instead of `VARBINARY`. Set `hibernate.type.preferred_array_jdbc_type=VARBINARY` to restore old behaviour.
+|===
+
+WARNING: If you have an existing production database, validate the schema diff before enabling `dbCreate = 'update'` or running Liquibase migrations after the Hibernate 7 upgrade.
+
+===== 26.8 Hibernate 6 Intermediate Changes
+
+Hibernate 7 builds on Hibernate 6, which itself introduced breaking changes relative to Hibernate 5.
+The changes in Hibernate 6 that are most likely to affect a Grails application are listed here for completeness.
+
+*HQL / criteria result type*: An HQL query with a `JOIN` but no explicit `SELECT` clause now returns the root entity type (`List<Person>`) instead of `List<Object[]>`.
+If you depended on the old tuple-style result, add an explicit `SELECT` clause to your query.
+
+*Ordinal HQL parameters*: Ordinal parameters changed from 0-based to 1-based indexing (`:?1`, `:?2`, ...).
+The GORM dynamic finders and criteria API are not affected; only raw HQL strings with ordinal parameters need updating.
+
+*Legacy Hibernate Criteria API removed*: The legacy `Criteria` / `DetachedCriteria` API from Hibernate 5 was removed in Hibernate 6.
+GORM's `createCriteria()` and `withCriteria()` DSL are implemented on top of the JPA Criteria API and are **not** affected.
+
+*Boolean type mappings*: If your schema used string-based boolean type names (e.g. `type: 'yes_no'`), migrate to the corresponding converter class (`YesNoConverter`).
+
+*`javax.persistence` → `jakarta.persistence`*: This migration was already required for Grails 7; Grails 8 continues to require `jakarta.*`.
+
+==== 27. GORM Properties Are Nullable by Default
 
 Grails 8 changes the validation default so that an *unconstrained persistent (domain) property is nullable by default* rather than required.
 This aligns Grails with the rest of the JVM persistence/validation ecosystem (JPA/Hibernate, Spring Data, Micronaut Data and Jakarta Bean Validation), all of which treat an unconstrained property as valid when `null`.
@@ -1007,4 +1225,66 @@ The existing `grails.gorm.default.constraints` wildcard form also works:
 grails.gorm.default.constraints = {
     '*'(nullable: false)
 }
+----
+
+==== 27. MIME Types Are Now Framework Defaults
+
+Grails 8 ships the full set of supported MIME types as built-in framework defaults.
+Previously every newly generated application declared a `grails.mime.types` block in `grails-app/conf/application.yml`; the Grails Forge and the application profiles no longer generate that block, because the framework now supplies the same defaults out of the box.
+
+The built-in defaults cover `all`, `atom`, `css`, `csv`, `form`, `html`, `js`, `json`, `multipartForm`, `pdf`, `rss`, `text`, `hal` and `xml` — the same set new applications historically declared.
+
+**No action is required.**
+A declared `grails.mime.types` still *replaces* the defaults, exactly as in Grails 7 — your existing block remains authoritative and you get precisely the types you declared (including a deliberately narrowed set). New applications simply no longer need the block, because the framework supplies these defaults when none is configured.
+
+**Optional: merge instead of replace.**
+If you would rather add to the defaults than re-declare them, set `grails.mime.mergeDefaults` to `true`. Your declared entries are then merged over the built-in defaults — an entry replaces the default for its extension, and any extension you do not declare keeps its default — so you can register a single custom type without restating the full list:
+
+[source,yaml]
+.application.yml
+----
+grails:
+    mime:
+        mergeDefaults: true
+        types:
+            custom: application/vnd.example+json
+----
+
+==== 28. Accept Header Honored for All Clients
+
+Grails 8 honors the HTTP `Accept` header for content negotiation for **every** client by default, including browsers.
+
+In Grails 7 and earlier, the `Accept` header was ignored for the major browser rendering engines: `grails.mime.disable.accept.header.userAgents` defaulted to `['Gecko', 'WebKit', 'Presto', 'Trident']`.
+That was a workaround for very old browsers (Firefox 2 and 3) whose `Accept` header ranked XML above HTML.
+Modern browsers send a well-formed header that already prioritizes HTML (`text/html` at `q=1.0`, `application/xml` at `q=0.9`), so the workaround is no longer needed.
+
+The practical effect of the old default was that a browser-issued `fetch()` or `XMLHttpRequest` call requesting `application/json` would receive HTML instead of JSON, because those calls do not send an `X-Requested-With: XMLHttpRequest` header (only libraries such as jQuery add it automatically).
+In Grails 8 such a request correctly receives JSON.
+
+**What changed:** `grails.mime.disable.accept.header.userAgents` now defaults to unset, so no user agents are filtered.
+
+**Most applications need no action.**
+Browser page loads still resolve to HTML because modern browsers rank `text/html` highest, and `withFormat { html { } json { } }` continues to serve HTML to browsers and JSON to clients that ask for it.
+
+**`respond` endpoints without an HTML view now error for browser requests.**
+Because browsers now negotiate `text/html`, an action that uses `respond(...)` but has no corresponding HTML view (GSP) can no longer return JSON to a browser by accident — it negotiates `html` and attempts to render the missing view, which results in an error.
+Previously the browser's `Accept` header was ignored, so such an endpoint happened to return JSON.
+If you have browser-facing `respond` endpoints, add an HTML view for the action (or `render` an appropriate response directly).
+API clients that send a specific `Accept` such as `application/json` are unaffected.
+
+To restore the Grails 7 behavior of ignoring the `Accept` header for browsers, set the property explicitly:
+
+[source,yaml]
+.application.yml
+----
+grails:
+    mime:
+        disable:
+            accept:
+                header:
+                    userAgents:
+                        - Gecko
+                        - WebKit
+                        - Presto
+                        - Trident
 ----

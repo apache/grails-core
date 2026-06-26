@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import groovy.lang.Closure;
 import groovy.lang.MissingMethodException;
@@ -54,6 +55,7 @@ import org.grails.datastore.gorm.finders.MethodExpression.NotInList;
 import org.grails.datastore.gorm.finders.MethodExpression.Rlike;
 import org.grails.datastore.gorm.query.criteria.AbstractDetachedCriteria;
 import org.grails.datastore.mapping.core.Datastore;
+import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Basic;
@@ -100,7 +102,7 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
     private static final Object[] EMPTY_OBJECT_ARRAY = {};
 
     private static final String NOT = "Not";
-    private static final Map<String, Constructor> methodExpressions = new LinkedHashMap<>();
+    private static final Map<String, Constructor> methodExpressions = new LinkedHashMap<String, Constructor>();
     protected final MappingContext mappingContext;
 
     static {
@@ -116,8 +118,7 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
                 Equal.class, NotEqual.class, NotInList.class, InList.class, InRange.class, Between.class, Like.class, Ilike.class, Rlike.class,
                 GreaterThanEquals.class, LessThanEquals.class, GreaterThan.class,
                 LessThan.class, IsNull.class, IsNotNull.class, IsEmpty.class,
-                IsEmpty.class, IsNotEmpty.class
-            };
+                IsEmpty.class, IsNotEmpty.class };
             Class[] constructorParamTypes = { Class.class, String.class };
             for (Class c : classes) {
                 methodExpressions.put(c.getSimpleName(), c.getConstructor(constructorParamTypes));
@@ -454,7 +455,6 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
                     }
                     query.order(order);
                 }
-
             }
         }
 
@@ -532,7 +532,6 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
             else if (sortObject instanceof Map) {
                 Map sortMap = (Map) sortObject;
                 applySortForMap(query, sortMap, ignoreCase);
-
             }
         }
 
@@ -766,15 +765,48 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
      * @return the initialized expression
      */
     private MethodExpression getInitializedExpression(MethodExpression expression, Object[] arguments) {
-        /*
-        if (expression instanceof Equal && arguments.length == 1 && arguments[0] == null) { // logic moved directly to Equal.createCriterion
-            expression = new IsNull(expression.propertyName);
-        } else {
-        */
+        // if (expression instanceof Equal && arguments.length == 1 && arguments[0] == null) { // logic moved directly to Equal.createCriterion
+        //     expression = new IsNull(expression.propertyName);
+        // } else {
         expression.setArguments(arguments);
-        /*
-        }
-        */
+        // }
         return expression;
+    }
+
+    public boolean firstExpressionIsRequiredBoolean() {
+        return false;
+    }
+
+    protected Query.Junction getJunction(DynamicFinderInvocation invocation) {
+        var criteria = invocation.getExpressions().stream().map(MethodExpression::createCriterion).collect(Collectors.toList());
+        Query.Junction junction;
+        if (FindAllByFinder.OPERATOR_OR.equals(invocation.getOperator())) {
+            if (firstExpressionIsRequiredBoolean()) {
+                junction = new Query.Conjunction();
+                junction.add(criteria.remove(0));
+                var disjunction = new Query.Disjunction();
+                criteria.forEach(disjunction::add);
+                junction.add(disjunction);
+            }
+            else {
+                junction = new Query.Disjunction();
+                criteria.forEach(junction::add);
+            }
+        }
+        else {
+            junction = new Query.Conjunction();
+            criteria.forEach(junction::add);
+        }
+        return junction;
+    }
+
+    public Query buildQuery(DynamicFinderInvocation invocation, Session session) {
+        final Class<?> clazz = invocation.getJavaClass();
+        var query = session.createQuery(clazz);
+        applyAdditionalCriteria(query, invocation.getCriteria());
+        applyDetachedCriteria(query, invocation.getDetachedCriteria());
+        configureQueryWithArguments(clazz, query, invocation.getArguments());
+        query.add(getJunction(invocation));
+        return query;
     }
 }

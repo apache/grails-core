@@ -21,6 +21,7 @@ package org.grails.datastore.mapping.model.types;
 
 import java.beans.PropertyDescriptor;
 
+import org.grails.datastore.mapping.config.Property;
 import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller;
 import org.grails.datastore.mapping.model.AbstractPersistentProperty;
 import org.grails.datastore.mapping.model.MappingContext;
@@ -32,7 +33,7 @@ import org.grails.datastore.mapping.model.PersistentEntity;
  * @author Graeme Rocher
  * @since 1.0
  */
-public abstract class Custom<T> extends AbstractPersistentProperty {
+public abstract class Custom<T extends Property> extends AbstractPersistentProperty<T> {
     private CustomTypeMarshaller<?, ?, ?> customTypeMarshaller;
 
     public Custom(PersistentEntity owner, MappingContext context, PropertyDescriptor descriptor,

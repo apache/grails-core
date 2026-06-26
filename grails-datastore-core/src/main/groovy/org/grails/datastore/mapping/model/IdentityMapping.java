@@ -18,12 +18,13 @@
  */
 package org.grails.datastore.mapping.model;
 
+import org.grails.datastore.mapping.config.Property;
+
 /**
  * @author Graeme Rocher
  * @since 1.0
  */
-@SuppressWarnings("rawtypes")
-public interface IdentityMapping extends PropertyMapping {
+public interface IdentityMapping<T extends Property> extends PropertyMapping<T> {
 
     /**
      * The identifier property name(s). Usually there is just one identifier

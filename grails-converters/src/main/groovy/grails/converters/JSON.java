@@ -148,6 +148,10 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
      * @throws ConverterException
      */
     public void render(HttpServletResponse response) throws ConverterException {
+        ConvertersConfigurationHolder.withConverterObservation("json", () -> renderInternal(response));
+    }
+
+    private void renderInternal(HttpServletResponse response) throws ConverterException {
         response.setContentType(GrailsWebUtil.getContentType(contentType, encoding));
         try {
             render(response.getWriter());

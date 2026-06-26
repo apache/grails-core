@@ -19,12 +19,11 @@
 
 package org.apache.grails.data.testing.tck.domains
 
-import groovy.transform.EqualsAndHashCode
-
-import grails.gorm.DetachedCriteria
 import grails.gorm.async.AsyncEntity
+import grails.gorm.DetachedCriteria
 import grails.gorm.dirty.checking.DirtyCheck
 import grails.persistence.Entity
+import groovy.transform.EqualsAndHashCode
 import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
 
 @DirtyCheck
@@ -38,12 +37,10 @@ class Person implements Serializable, Comparable<Person>, AsyncEntity<Person> {
         lastName == 'Simpson'
     }
 
-    Long id
     Long version
     String firstName
     String lastName
     Integer age = 0
-    Set<Pet> pets = [] as Set
     static hasMany = [pets: Pet]
     Face face
     boolean myBooleanProperty
@@ -68,13 +65,13 @@ class Person implements Serializable, Comparable<Person>, AsyncEntity<Person> {
     }
 
     static mapping = {
-        firstName(index: true)
-        lastName(index: true)
-        age(index: true)
+        firstName index: true
+        lastName index: true
+        age index: true
     }
 
     static constraints = {
-        face(nullable: true)
+        face nullable: true
     }
 
     @Override

@@ -18,8 +18,8 @@
  */
 package org.grails.orm.hibernate.connections
 
-import grails.gorm.services.Service
 import grails.gorm.annotation.Entity
+import grails.gorm.services.Service
 import grails.gorm.transactions.Transactional
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.orm.hibernate.HibernateDatastore
@@ -61,24 +61,29 @@ class MultipleDataSourceConnectionsSpec extends Specification {
         then:"The default data source is bound"
         result ==1
         Book.withNewSession { Session s ->
-            assert s.connection().metaData.getURL() == "jdbc:h2:mem:books"
+            def url = s.doReturningWork { return it.metaData.getURL()  }
+            assert url  == "jdbc:h2:mem:books"
             return true
         }
         Book.moreBooks.withNewSession { Session s ->
-            assert s.connection().metaData.getURL() == "jdbc:h2:mem:moreBooks"
+            def url = s.doReturningWork { return it.metaData.getURL()  }
+            assert url   == "jdbc:h2:mem:moreBooks"
             return true
         }
         Author.withNewSession { Author.count() == 1 }
         Author.withNewSession { Session s ->
-            assert s.connection().metaData.getURL() == "jdbc:h2:mem:grailsDB"
+            def url = s.doReturningWork { return it.metaData.getURL()  }
+            assert url  == "jdbc:h2:mem:grailsDB"
             return true
         }
         Author.books.withNewSession { Session s ->
-            assert s.connection().metaData.getURL() == "jdbc:h2:mem:books"
+            def url = s.doReturningWork { return it.metaData.getURL()  }
+            assert url  == "jdbc:h2:mem:books"
             return true
         }
         Author.moreBooks.withNewSession { Session s ->
-            assert s.connection().metaData.getURL() == "jdbc:h2:mem:moreBooks"
+            def url = s.doReturningWork { return it.metaData.getURL()  }
+            assert url == "jdbc:h2:mem:moreBooks"
             return true
         }
 
@@ -107,7 +112,8 @@ class MultipleDataSourceConnectionsSpec extends Specification {
         Author.withTransaction { Author.count() } == 1
         Book.withTransaction { Book.count() } == 1
         Author.yetAnother.withNewSession { Session s ->
-            assert s.connection().metaData.getURL() == "jdbc:h2:mem:yetAnotherDB"
+            def url = s.doReturningWork { return it.metaData.getURL()  }
+            assert url  == "jdbc:h2:mem:yetAnotherDB"
             return true
         }
     }
@@ -123,7 +129,8 @@ class MultipleDataSourceConnectionsSpec extends Specification {
 
         then: "withNewSession uses books datasource"
         Book.withNewSession { Session s ->
-            assert s.connection().metaData.getURL() == "jdbc:h2:mem:books"
+            def url = s.doReturningWork { return it.metaData.getURL() }
+            assert url == "jdbc:h2:mem:books"
             return true
         }
 
@@ -167,7 +174,7 @@ class MultipleDataSourceConnectionsSpec extends Specification {
     void "ALL mapped entity uses default datasource for withNewSession"() {
         when: "requesting a new session for ALL mapped entity"
         def url = Author.withNewSession { Session s ->
-            s.connection().metaData.getURL()
+            s.doReturningWork { return it.metaData.getURL() }
         }
 
         then: "default datasource is used"
@@ -175,10 +182,13 @@ class MultipleDataSourceConnectionsSpec extends Specification {
     }
 
     void "test @Transactional with connection property to non-default database"() {
+
         when:
         TestService testService = datastore.getDatastoreForConnection("books").getService(TestService)
+        testService.doSomething()
+
         then:
-        testService != null
+        noExceptionThrown()
     }
 }
 
@@ -215,4 +225,9 @@ class Author {
 @Service
 @Transactional(connection = "books")
 class TestService {
+
+    def doSomething() {}
 }
+
+
+

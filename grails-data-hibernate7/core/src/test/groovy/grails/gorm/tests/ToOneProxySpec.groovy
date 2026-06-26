@@ -35,16 +35,16 @@ class ToOneProxySpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
     void "test that a proxy is not initialized on get"() {
         given:
         Team t = new Team(name: "First Team", club: new Club(name: "Manchester United").save())
-        t.save(flush:true)
+        t.save(flush: true)
         manager.session.clear()
 
 
-        when:"An object is retrieved and the session is flushed"
+        when: "An object is retrieved and the session is flushed"
         t = Team.get(t.id)
         manager.session.flush()
 
         def proxyHandler = new HibernateProxyHandler()
-        then:"The association was not initialized"
+        then: "The association was not initialized"
         proxyHandler.getAssociationProxy(t, "club") != null
         !proxyHandler.isInitialized(t, "club")
 

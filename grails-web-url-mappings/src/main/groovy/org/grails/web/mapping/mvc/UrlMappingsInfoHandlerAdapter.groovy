@@ -22,6 +22,8 @@ import java.util.concurrent.ConcurrentHashMap
 
 import groovy.transform.CompileStatic
 
+import io.micrometer.observation.Observation
+import io.micrometer.observation.ObservationRegistry
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 
@@ -56,11 +58,14 @@ class UrlMappingsInfoHandlerAdapter implements HandlerAdapter, ApplicationContex
     protected Collection<ActionResultTransformer> actionResultTransformers = Collections.emptyList()
     protected Map<String, Object> controllerCache = new ConcurrentHashMap<>()
     protected ResponseRedirector redirector
+    protected ObservationRegistry observationRegistry = ObservationRegistry.NOOP
 
     void setApplicationContext(ApplicationContext applicationContext) {
         this.actionResultTransformers = applicationContext.getBeansOfType(ActionResultTransformer).values()
         this.applicationContext = applicationContext
         this.redirector = new ResponseRedirector(applicationContext.getBean(LinkGenerator))
+        this.observationRegistry = applicationContext.getBeanProvider(ObservationRegistry)
+                .getIfAvailable({ -> ObservationRegistry.NOOP })
     }
 
     @Override
@@ -107,7 +112,32 @@ class UrlMappingsInfoHandlerAdapter implements HandlerAdapter, ApplicationContex
                 }
                 webRequest.controllerNamespace = controllerClass.namespace
                 request.setAttribute(GrailsApplicationAttributes.CONTROLLER, controller)
-                def result = controllerClass.invoke(controller, action)
+                Object result = null
+                def obsRegistry = this.observationRegistry
+                if (obsRegistry == null || obsRegistry.isNoop()) {
+                    result = controllerClass.invoke(controller, action)
+                }
+                else {
+                    // scope open across invoke so the action's DB/cache spans nest under this span
+                    def controllerName = controllerClass.logicalPropertyName ?: 'unknown'
+                    def observation = Observation.createNotStarted('grails.controller', obsRegistry)
+                            .contextualName('grails.controller ' + controllerName)
+                            .lowCardinalityKeyValue('grails.controller', controllerName)
+                            .lowCardinalityKeyValue('grails.action', action ? action.toString() : 'unknown')
+                            .start()
+                    def observationScope = observation.openScope()
+                    try {
+                        result = controllerClass.invoke(controller, action)
+                    }
+                    catch (Throwable t) {
+                        observation.error(t)
+                        throw t
+                    }
+                    finally {
+                        observationScope.close()
+                        observation.stop()
+                    }
+                }
 
                 if (actionResultTransformers) {
                     for (transformer in actionResultTransformers) {

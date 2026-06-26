@@ -20,47 +20,201 @@ package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
 import grails.gorm.transactions.Rollback
-import org.grails.orm.hibernate.HibernateDatastore
-import org.springframework.transaction.PlatformTransactionManager
-import spock.lang.AutoCleanup
-import spock.lang.Shared
-import spock.lang.Specification
+import org.grails.orm.hibernate.cfg.IdentityEnumType
+import org.hibernate.HibernateException
+import org.hibernate.MappingException
+import org.hibernate.engine.spi.SharedSessionContractImplementor
 
 import javax.sql.DataSource
 import java.sql.ResultSet
 
 /**
- * Created by graemerocher on 16/11/16.
+ * Tests for IdentityEnumType in Hibernate 5.
  */
-class IdentityEnumTypeSpec extends Specification {
+class IdentityEnumTypeSpec extends HibernateGormDatastoreSpec {
 
-    @Shared @AutoCleanup HibernateDatastore hibernateDatastore = new HibernateDatastore(EnumEntityDomain, FooWithEnum)
-    @Shared PlatformTransactionManager transactionManager = hibernateDatastore.getTransactionManager()
+    def setupSpec() {
+        manager.registerDomainClasses(EnumEntityDomain, FooWithEnum)
+    }
 
     @Rollback
     void "test identity enum type"() {
         when:
-        new EnumEntityDomain(status: EnumEntityDomain.Status.FOO).save(flush:true)
-        DataSource ds = hibernateDatastore.connectionSources.defaultConnectionSource.dataSource
+        new EnumEntityDomain(status: EnumEntityDomain.Status.FOO).save(flush: true)
+        DataSource ds = manager.hibernateDatastore.connectionSources.defaultConnectionSource.dataSource
         ResultSet resultSet = ds.getConnection().prepareStatement('select status from enum_entity_domain').executeQuery()
 
         then:
         resultSet.next()
-        resultSet.getString(1) == 'F'
+        resultSet.getString(1) == 'F' // FOO id is 'F'
         EnumEntityDomain.first().status == EnumEntityDomain.Status.FOO
     }
 
     @Rollback
     void "test identity enum type 2"() {
         when:
-        new FooWithEnum(name: "blah", mySuperValue: XEnum.X__TWO).save(flush:true)
-        DataSource ds = hibernateDatastore.connectionSources.defaultConnectionSource.dataSource
+        new FooWithEnum(name: "blah", mySuperValue: XEnum.X__TWO).save(flush: true)
+        DataSource ds = manager.hibernateDatastore.connectionSources.defaultConnectionSource.dataSource
         ResultSet resultSet = ds.getConnection().prepareStatement('select my_super_value from foo_with_enum').executeQuery()
 
         then:
         resultSet.next()
-        resultSet.getInt(1) == 100
+        resultSet.getInt(1) == 100 // X__TWO id is 100
         FooWithEnum.first().mySuperValue == XEnum.X__TWO
+    }
+
+    def "setParameterValues initializes enumClass"() {
+        given:
+        def type = new IdentityEnumType()
+        def props = new Properties()
+        props.setProperty(IdentityEnumType.PARAM_ENUM_CLASS, IdentityStatusEnum.name)
+
+        when:
+        type.setParameterValues(props)
+
+        then:
+        type.returnedClass() == IdentityStatusEnum
+        type.sqlTypes()[0] != 0
+    }
+
+    def "setParameterValues throws MappingException for enum without getId method"() {
+        given:
+        def type = new IdentityEnumType()
+        def props = new Properties()
+        props.setProperty(IdentityEnumType.PARAM_ENUM_CLASS, PlainEnum.name)
+
+        when:
+        type.setParameterValues(props)
+
+        then:
+        thrown(HibernateException) // Throw by BidiEnumMap constructor
+    }
+
+    def "equals uses identity comparison"() {
+        given:
+        def type = new IdentityEnumType()
+
+        expect:
+        type.equals(IdentityStatusEnum.ACTIVE, IdentityStatusEnum.ACTIVE)
+        !type.equals(IdentityStatusEnum.ACTIVE, IdentityStatusEnum.INACTIVE)
+        !type.equals(null, IdentityStatusEnum.ACTIVE)
+    }
+
+    def "hashCode delegates to the object"() {
+        given:
+        def type = new IdentityEnumType()
+        def val = IdentityStatusEnum.ACTIVE
+
+        expect:
+        type.hashCode(val) == val.hashCode()
+    }
+
+    def "deepCopy returns the same object reference"() {
+        given:
+        def type = new IdentityEnumType()
+        def val = IdentityStatusEnum.ACTIVE
+
+        expect:
+        type.deepCopy(val).is(val)
+    }
+
+    def "isMutable returns false"() {
+        expect:
+        !new IdentityEnumType().isMutable()
+    }
+
+    def "disassemble returns the value as Serializable"() {
+        given:
+        def type = new IdentityEnumType()
+        def val = IdentityStatusEnum.ACTIVE
+
+        expect:
+        type.disassemble(val).is(val)
+    }
+
+    def "assemble returns the cached value unchanged"() {
+        given:
+        def type = new IdentityEnumType()
+        def val = IdentityStatusEnum.ACTIVE
+
+        expect:
+        type.assemble(val, null).is(val)
+    }
+
+    def "replace returns the original value"() {
+        given:
+        def type = new IdentityEnumType()
+
+        expect:
+        type.replace(IdentityStatusEnum.ACTIVE, IdentityStatusEnum.INACTIVE, null).is(IdentityStatusEnum.ACTIVE)
+    }
+
+    def "nullSafeGet returns null for null value"() {
+        given:
+        def type = new IdentityEnumType()
+        def props = new Properties()
+        props.setProperty(IdentityEnumType.PARAM_ENUM_CLASS, IdentityStatusEnum.name)
+        type.setParameterValues(props)
+        def rs = Mock(java.sql.ResultSet)
+        def session = manager.sessionFactory.currentSession as SharedSessionContractImplementor
+
+        when:
+        def res = type.nullSafeGet(rs, ['status'] as String[], session, null)
+
+        then:
+        1 * rs.getString('status') >> null
+        1 * rs.wasNull() >> true
+        res == null
+    }
+
+    def "nullSafeGet converts id to enum"() {
+        given:
+        def type = new IdentityEnumType()
+        def props = new Properties()
+        props.setProperty(IdentityEnumType.PARAM_ENUM_CLASS, IdentityStatusEnum.name)
+        type.setParameterValues(props)
+        def rs = Mock(java.sql.ResultSet)
+        def session = manager.sessionFactory.currentSession as SharedSessionContractImplementor
+
+        when:
+        def res = type.nullSafeGet(rs, ['status'] as String[], session, null)
+
+        then:
+        1 * rs.getString('status') >> "A"
+        2 * rs.wasNull() >> false
+        res == IdentityStatusEnum.ACTIVE
+    }
+
+    def "nullSafeSet handles null value"() {
+        given:
+        def type = new IdentityEnumType()
+        def props = new Properties()
+        props.setProperty(IdentityEnumType.PARAM_ENUM_CLASS, IdentityStatusEnum.name)
+        type.setParameterValues(props)
+        def st = Mock(java.sql.PreparedStatement)
+        def session = manager.sessionFactory.currentSession as SharedSessionContractImplementor
+
+        when:
+        type.nullSafeSet(st, null, 1, session)
+
+        then:
+        1 * st.setNull(1, _)
+    }
+
+    def "nullSafeSet converts enum to id"() {
+        given:
+        def type = new IdentityEnumType()
+        def props = new Properties()
+        props.setProperty(IdentityEnumType.PARAM_ENUM_CLASS, IdentityStatusEnum.name)
+        type.setParameterValues(props)
+        def st = Mock(java.sql.PreparedStatement)
+        def session = manager.sessionFactory.currentSession as SharedSessionContractImplementor
+
+        when:
+        type.nullSafeSet(st, IdentityStatusEnum.INACTIVE, 1, session)
+
+        then:
+        1 * st.setString(1, "I")
     }
 }
 
@@ -74,7 +228,7 @@ class EnumEntityDomain {
 
     enum Status {
         FOO("F"), BAR("B")
-        String id
+        final String id
         Status(String id) { this.id = id }
     }
 }
@@ -87,14 +241,14 @@ class FooWithEnum {
 
     static mapping = {
         version false
-        mySuperValue enumType:"identity"
+        mySuperValue enumType: "identity"
     }
 }
 
 enum XEnum {
-    X__ONE (000, "x.one"),
-    X__TWO (100, "x.two"),
-    X__THREE (200, "x.three")
+    X__ONE(000, "x.one"),
+    X__TWO(100, "x.two"),
+    X__THREE(200, "x.three")
 
     final int id
     final String name
@@ -107,4 +261,23 @@ enum XEnum {
     String toString() {
         name
     }
+}
+
+/** Enum with a String id — used for direct IdentityEnumType unit tests. */
+enum IdentityStatusEnum {
+    ACTIVE("A"), INACTIVE("I")
+    final String id
+    IdentityStatusEnum(String id) { this.id = id }
+}
+
+/** Plain enum with no getId — should cause MappingException in setParameterValues. */
+enum PlainEnum {
+    ONE, TWO
+}
+
+/** Enum with duplicate ids — triggers the warn path in BidiEnumMap. */
+enum DuplicateIdEnum {
+    X("same"), Y("same")
+    final String id
+    DuplicateIdEnum(String id) { this.id = id }
 }

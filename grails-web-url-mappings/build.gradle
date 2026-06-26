@@ -38,6 +38,7 @@ dependencies {
     implementation platform(project(':grails-bom'))
 
     api project(':grails-web-common')
+    implementation 'io.micrometer:micrometer-observation'
     compileOnly 'org.apache.grails.views:grails-gsp-core', {
         exclude module: 'grails-encoder'
         exclude module: 'grails-core'

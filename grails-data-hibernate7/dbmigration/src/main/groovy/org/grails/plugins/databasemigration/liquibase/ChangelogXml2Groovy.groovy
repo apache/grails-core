@@ -41,8 +41,11 @@ class ChangelogXml2Groovy {
         def groovy = new StringBuilder('databaseChangeLog = {')
         groovy.append(NEWLINE)
 
-        new XmlParser(false, false).parseText(xml).each { Node node ->
-            convertNode(node, groovy, 1)
+        Node root = new XmlParser(false, false).parseText(xml)
+        root.children().each { Object child ->
+            if (child instanceof Node) {
+                convertNode(child, groovy, 1)
+            }
         }
         groovy.append('}')
         groovy.append(NEWLINE)
@@ -54,7 +57,7 @@ class ChangelogXml2Groovy {
         groovy.append(NEWLINE)
         appendWithIndent(indentLevel, groovy, (String) node.name())
 
-        String mixedText
+        String mixedText = null
         def children = []
         for (child in node.children()) {
             if (child instanceof String) {
@@ -90,10 +93,10 @@ class ChangelogXml2Groovy {
             delimiter = ', '
         }
 
-        node.attributes().each { name, value ->
+        node.attributes().each { Object name, Object value ->
             local.append(delimiter)
-            local.append(name)
-            local.append(': "').append(((String) value).replaceAll(/(\$|\\|\\n)/, /\\$1/)).append('"')
+            local.append(name.toString())
+            local.append(': "').append(value.toString().replaceAll(/(\$|\\|\\n)/, /\\$1/)).append('"')
             delimiter = ', '
         }
 

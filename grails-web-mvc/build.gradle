@@ -39,6 +39,7 @@ dependencies {
 
     api project(':grails-web-common')
     api project(':grails-web-url-mappings')
+    implementation 'io.micrometer:micrometer-observation'
     api 'org.apache.groovy:groovy'
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'

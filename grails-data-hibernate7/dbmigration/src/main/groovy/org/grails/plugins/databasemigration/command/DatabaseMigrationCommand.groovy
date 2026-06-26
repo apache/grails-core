@@ -18,6 +18,7 @@
  */
 package org.grails.plugins.databasemigration.command
 
+import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.text.DateFormat
 import java.text.ParseException
@@ -149,19 +150,22 @@ trait DatabaseMigrationCommand {
             return (Map<String, String>) (config.getProperty(dataSourceName, Map) ?: [:])
         }
 
-        def dataSources = config.getProperty('dataSources', Map) ?: [:]
-        if (!dataSources) {
+        Map dataSourcesMap = (Map) config.getProperty('dataSources', Map)
+        if (dataSourcesMap == null) {
+            dataSourcesMap = [:]
+        }
+        if (dataSourcesMap.isEmpty()) {
             def defaultDataSource = config.getProperty('dataSource', Map)
             if (defaultDataSource) {
-                dataSources['dataSource'] = defaultDataSource
+                dataSourcesMap['dataSource'] = defaultDataSource
             }
         }
-        return (Map<String, String>) dataSources.get(dataSourceName)
+        return (Map<String, String>) dataSourcesMap.get(dataSourceName)
     }
 
     void withFileOrSystemOutWriter(String filename, @ClosureParams(value = SimpleType, options = 'java.io.Writer') Closure closure) {
         if (!filename) {
-            closure.call(new PrintWriter(System.out))
+            closure.call(new PrintWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8)))
             return
         }
 

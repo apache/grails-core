@@ -61,7 +61,7 @@ class UniqueInheritanceSpec extends Specification {
         !i.hasErrors() // item.product.name is not unique
     }
 
-    @Issue('https://github.com/grails/grails-data-hibernate5/issues/32')
+    @Issue('https://github.com/grails/gorm-hibernate5/issues/32')
     void "test save multiple book instances with unique constraint applied"() {
         when:
         def book1=new Book(title: "one")

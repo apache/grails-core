@@ -72,7 +72,7 @@ public interface GradleRepository extends Ordered {
                 null,
                 List.of(
                     new VersionRegexRepoFilter(
-                        "org[.]sitemesh.*", ".*", ".*-SNAPSHOT"
+                        "org[.]sitemesh.*", ".*", ".*"
                     )
                 ),
                 List.of(VersionType.SNAPSHOT)

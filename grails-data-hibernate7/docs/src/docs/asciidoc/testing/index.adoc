@@ -28,4 +28,3 @@ include::spock.adoc[]
 === Unit Testing with JUnit
 
 include::junit.adoc[]
-

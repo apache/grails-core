@@ -34,10 +34,11 @@ class UuidInsertSpec extends Specification {
 
 
     @Rollback
-    @Issue('https://github.com/apache/grails-data-mapping/issues/902')
     void "Test UUID insert"() {
         when:"A UUID is used"
-        Person p = new Person(name: "test").save(flush:true)
+        Person p = new Person(name: "test")
+        p.trackChanges()
+        p.save(flush:true)
 
         then:"An update should not be triggered"
         p.id

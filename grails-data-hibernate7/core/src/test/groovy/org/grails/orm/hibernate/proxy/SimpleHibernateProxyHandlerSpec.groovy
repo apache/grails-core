@@ -21,6 +21,8 @@ package org.grails.orm.hibernate.proxy
 import org.hibernate.collection.spi.PersistentCollection
 import org.hibernate.proxy.HibernateProxy
 import org.hibernate.proxy.LazyInitializer
+import org.grails.datastore.mapping.engine.AssociationQueryExecutor
+import org.grails.datastore.mapping.core.Session
 import spock.lang.Specification
 
 class SimpleHibernateProxyHandlerSpec extends Specification {
@@ -61,5 +63,145 @@ class SimpleHibernateProxyHandlerSpec extends Specification {
         then:
         ph.isInitialized(initialized)
         !ph.isInitialized(notInitialized)
+    }
+
+    void "test isInitialized returns false for null"() {
+        given:
+        def ph = new HibernateProxyHandler()
+
+        expect:
+        !ph.isInitialized(null)
+    }
+
+    void "test isInitialized returns true for plain object"() {
+        given:
+        def ph = new HibernateProxyHandler()
+
+        expect:
+        ph.isInitialized("a plain string")
+    }
+
+    void "test isInitialized(obj, associationName) returns false for unknown property"() {
+        given:
+        def ph = new HibernateProxyHandler()
+        def obj = new Object()
+
+        expect:
+        !ph.isInitialized(obj, "nonExistentAssociation")
+    }
+
+    void "test isProxy returns false for plain object"() {
+        given:
+        def ph = new HibernateProxyHandler()
+
+        expect:
+        !ph.isProxy("a plain string")
+    }
+
+    void "test isProxy returns true for HibernateProxy"() {
+        given:
+        def ph = new HibernateProxyHandler()
+        def proxy = Mock(HibernateProxy)
+
+        expect:
+        ph.isProxy(proxy)
+    }
+
+    void "test isProxy returns true for PersistentCollection"() {
+        given:
+        def ph = new HibernateProxyHandler()
+        def coll = Mock(PersistentCollection)
+
+        expect:
+        ph.isProxy(coll)
+    }
+
+    void "test getProxiedClass returns the class of a plain object"() {
+        given:
+        def ph = new HibernateProxyHandler()
+        def obj = "hello"
+
+        expect:
+        ph.getProxiedClass(obj) == String
+    }
+
+    void "test unwrap returns same object for plain (non-proxy) object"() {
+        given:
+        def ph = new HibernateProxyHandler()
+        def obj = "plain object"
+
+        expect:
+        ph.unwrap(obj) == obj
+    }
+
+    void "test getIdentifier returns null for plain object"() {
+        given:
+        def ph = new HibernateProxyHandler()
+
+        expect:
+        ph.getIdentifier("plain") == null
+    }
+
+    void "test getIdentifier returns identifier for HibernateProxy"() {
+        given:
+        def ph = new HibernateProxyHandler()
+        def proxy = Mock(HibernateProxy)
+        def li = Mock(LazyInitializer)
+        proxy.getHibernateLazyInitializer() >> li
+        li.getIdentifier() >> 42L
+
+        expect:
+        ph.getIdentifier(proxy) == 42L
+    }
+
+    void "test initialize does not throw for plain object"() {
+        given:
+        def ph = new HibernateProxyHandler()
+
+        when:
+        ph.initialize("plain")
+
+        then:
+        noExceptionThrown()
+    }
+
+    void "test unwrapIfProxy delegates to unwrap"() {
+        given:
+        def ph = new HibernateProxyHandler()
+        def obj = "plain"
+
+        expect:
+        ph.unwrapIfProxy(obj) == obj
+    }
+
+    void "test unwrapProxy delegates to unwrap"() {
+        given:
+        def ph = new HibernateProxyHandler()
+        def obj = "plain"
+
+        expect:
+        ph.unwrapProxy(obj) == obj
+    }
+
+    void "test createProxy via AssociationQueryExecutor throws UnsupportedOperationException"() {
+        given:
+        def ph = new HibernateProxyHandler()
+        def session = Mock(Session)
+        def executor = Mock(AssociationQueryExecutor)
+
+        when:
+        ph.createProxy(session, executor, 1L)
+
+        then:
+        thrown(UnsupportedOperationException)
+    }
+
+    void "test getAssociationProxy returns null for unknown property"() {
+        given:
+        def ph = new HibernateProxyHandler()
+        def obj = new Object()
+
+        expect:
+        ph.getAssociationProxy(obj, "nonExistentAssociation") == null
     }
 }

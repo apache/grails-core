@@ -16,6 +16,31 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 ////
+[[domainClasses-gormAssociation]]
+== GORM Associations
 
-Relationships define how domain classes interact with each other. Unless specified explicitly at both ends, a relationship exists only in the direction it is defined.
+GORM supports all standard relationship types between domain classes. Each association type maps to a specific Hibernate/database pattern.
 
+[cols="1,2"]
+|===
+|Association type | Declared with
+
+|Many-to-one / One-to-one
+|A property of the target type
+
+|One-to-many (bidirectional)
+|`hasMany` + `belongsTo`
+
+|One-to-many (unidirectional)
+|`hasMany` only (join table)
+
+|Many-to-many
+|`hasMany` on both sides + `belongsTo` on one
+|===
+
+Refer to the following subsections for details on each association type:
+
+* xref:gormAssociation-manyToOneAndOneToOne[Many-to-One and One-to-One]
+* xref:gormAssociation-oneToMany[One-to-Many]
+* xref:gormAssociation-manyToMany[Many-to-Many]
+* xref:gormAssociation-basicCollectionTypes[Basic Collection Types]

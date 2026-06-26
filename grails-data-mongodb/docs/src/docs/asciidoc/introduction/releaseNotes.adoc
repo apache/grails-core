@@ -20,6 +20,12 @@ under the License.
 === Release Notes
 Below are the details of the changes across releases:
 
+==== 8.0
+
+* TTL indexes via `indexAttributes: [expireAfterSeconds: N]` in the mapping DSL
+* Text and other special indexes via `indexAttributes: [type: 'text']`
+* In-place reconciliation of changed index options, with opt-in `indexAttributes: [recreateOnConflict: true]`
+
 ==== 7.1
 
 * Support Apache Groovy 3, and Java 14

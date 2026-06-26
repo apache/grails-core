@@ -19,8 +19,11 @@
 
 package org.apache.grails.data.testing.tck.tests
 
+import grails.gorm.transactions.Rollback
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.ChildPersister
 import org.apache.grails.data.testing.tck.domains.Country
+import org.apache.grails.data.testing.tck.domains.Owner_Default_Uni_P
 import org.apache.grails.data.testing.tck.domains.Person
 import org.apache.grails.data.testing.tck.domains.Pet
 import org.apache.grails.data.testing.tck.domains.PetType
@@ -32,7 +35,7 @@ class OneToManySpec extends GrailsDataTckSpec {
 
     @Override
     void setupSpec() {
-        manager.registerDomainClasses(Country, Person, Pet, PetType)
+        manager.registerDomainClasses(Country, Person, Pet, PetType, Owner_Default_Uni_P, ChildPersister)
     }
 
     void 'test save and return unidirectional one to many'() {
@@ -64,6 +67,20 @@ class OneToManySpec extends GrailsDataTckSpec {
         c.residents != null
         c.residents.size() == 2
         c.residents.every { it instanceof Person } == true
+    }
+
+    @Rollback
+    void 'test unidirectional default cascade persists child'() {
+        when: 'a new owner is saved after adding a child'
+        def owner = new Owner_Default_Uni_P(name: 'Owner')
+        owner.addToChildren(new ChildPersister(title: 'Child'))
+        owner.save(flush: true)
+
+        then: 'the owner is saved without errors and both owner and child exist'
+        !owner.errors.hasErrors()
+        Owner_Default_Uni_P.count() == 1
+        ChildPersister.count() == 1
+        Owner_Default_Uni_P.findByName('Owner').children.size() == 1
     }
 
     void 'test save and return bidirectional one to many'() {

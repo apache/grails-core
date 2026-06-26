@@ -22,7 +22,6 @@ import grails.gorm.annotation.Entity
 import grails.gorm.transactions.Rollback
 import org.grails.orm.hibernate.HibernateDatastore
 import spock.lang.AutoCleanup
-import spock.lang.Ignore
 import spock.lang.Issue
 import spock.lang.Shared
 import spock.lang.Specification
@@ -34,20 +33,22 @@ class SaveWithInvalidEntitySpec extends Specification {
 
     @Shared @AutoCleanup HibernateDatastore hibernateDatastore = new HibernateDatastore(A, B)
 
-    /**
-     * This currently fails with a NPE. See explanation https://github.com/apache/grails-core/issues/14616#issuecomment-298943022
-     */
     @Rollback
-    @Ignore
-    @Issue('https://github.com/apache/grails-core/issues/10604')
+    @Issue('https://github.com/apache/grails-core/issues/14616')
     void "test save with an invalid entity"() {
+        given:
+        def b = new B(field2: "test")
+        def a = new A(b: b)
+
         when:
-        hibernateDatastore.currentSession.persist(new A(b:new B(field2: "test")))
+        hibernateDatastore.currentSession.persist(a)
         hibernateDatastore.currentSession.flush()
 
         then:
-        A.count() == 1
-
+        Exception e = thrown()
+        e.getClass().simpleName in ['EntityActionVetoException', 'HibernateSystemException', 'IllegalStateException', 'ConstraintViolationException']
+        b.hasErrors()
+        b.errors.hasFieldErrors('field1')
     }
 }
 
@@ -59,4 +60,8 @@ class A {
 class B {
     String field1
     String field2
+
+    static constraints = {
+        field1 nullable: false
+    }
 }

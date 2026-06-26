@@ -263,6 +263,10 @@ public class XML extends AbstractConverter<XMLStreamWriter> implements IncludeEx
     }
 
     public void render(HttpServletResponse response) throws ConverterException {
+        ConvertersConfigurationHolder.withConverterObservation("xml", () -> renderInternal(response));
+    }
+
+    private void renderInternal(HttpServletResponse response) throws ConverterException {
         response.setContentType(GrailsWebUtil.getContentType(contentType, encoding));
         try {
             render(response.getWriter());

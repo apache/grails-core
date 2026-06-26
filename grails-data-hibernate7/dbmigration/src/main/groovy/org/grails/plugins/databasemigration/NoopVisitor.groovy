@@ -19,6 +19,7 @@
 
 package org.grails.plugins.databasemigration
 
+import groovy.transform.CompileStatic
 import liquibase.changelog.ChangeSet
 import liquibase.changelog.DatabaseChangeLog
 import liquibase.changelog.filter.ChangeSetFilterResult
@@ -26,6 +27,7 @@ import liquibase.changelog.visitor.ChangeSetVisitor
 import liquibase.database.Database
 import liquibase.exception.LiquibaseException
 
+@CompileStatic
 class NoopVisitor implements ChangeSetVisitor {
 
     protected Database database
