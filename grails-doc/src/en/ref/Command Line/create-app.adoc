@@ -25,7 +25,7 @@ The `create-app` command serves as the initial step in Grails application develo
 
 [NOTE]
 ====
-In Grails 7, `create-app` is available in both the **Grails Shell CLI** and the **Forge CLI**.
+In Grails {grailsMajorVersion}, `create-app` is available in both the **Grails Shell CLI** and the **Forge CLI**.
 
 - Most users should use the **Grails Shell CLI** by default (`grails create-app bookstore`). This version supports core development commands and project lifecycle management, and includes basic `create-*` flags like `--inplace`, `--features`, and `--profile`.
 

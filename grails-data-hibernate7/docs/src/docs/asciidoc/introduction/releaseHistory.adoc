@@ -20,14 +20,14 @@ under the License.
 [[introduction-releaseHistory]]
 == Release History
 
-==== GORM for Hibernate 7 (Grails 8.x)
+==== GORM for Hibernate 7 (Grails {grailsMajorVersion}.x)
 
-GORM for Hibernate 7 is a new integration module shipping with Grails 8.x that targets Hibernate ORM 7.x and Jakarta EE 10.
+GORM for Hibernate 7 is a new integration module shipping with Grails {grailsMajorVersion}.x that targets Hibernate ORM 7.x and Jakarta EE 10.
 
 Key features and changes relative to GORM for Hibernate 5:
 
 * **Hibernate ORM 7** — Full support for Hibernate 7, including Jakarta Persistence 3.2 and the Apache License 2.0.
-* **Spring Boot 4 / Spring Framework 7** — Grails 8 vendors the removed `org.springframework.orm.hibernate5` classes into `grails-data-hibernate7-spring-orm` under the `org.grails.orm.hibernate.support.hibernate7` package.
+* **Spring Boot 4 / Spring Framework 7** — Grails {grailsMajorVersion} vendors the removed `org.springframework.orm.hibernate5` classes into `grails-data-hibernate7-spring-orm` under the `org.grails.orm.hibernate.support.hibernate7` package.
 * **HQL injection safety** — Single-argument `find`, `findAll`, `executeQuery`, and `executeUpdate` accept a plain `String` as on Hibernate 5; when a Groovy GString is passed, its `${value}` interpolations are bound as named parameters instead of being interpolated into the query text, so the idiomatic interpolated form is injection-safe by binding.
 * **Native SQL queries** — New `findWithNativeSql` / `findAllWithNativeSql` methods added.
 * **Native query temporal types** — Native SQL queries return `java.time` types by default instead of legacy `java.sql` types.
@@ -39,4 +39,4 @@ Key features and changes relative to GORM for Hibernate 5:
 ==== Previous History
 
 For the history of GORM for Hibernate 5 (Grails 7.x and earlier), see the
-https://grails.apache.org/docs/latest/guide/single.html[Grails 7 User Guide] or the GORM for Hibernate 5 documentation.
+https://grails.apache.org/docs/7.0.x/guide/single.html[Grails 7 User Guide] or the GORM for Hibernate 5 documentation.

@@ -22,9 +22,9 @@ under the License.
 
 GORM for Hibernate 7 (`grails-data-hibernate7`) requires Hibernate ORM 7.x and Jakarta EE 10 (`jakarta.*` packages).
 
-=== Grails 8 with Hibernate 7
+=== Grails {grailsMajorVersion} with Hibernate 7
 
-Grails 8 ships with Hibernate 5 as the default, but provides first-class support for Hibernate 7 via a dedicated BOM and plugin artifact.
+Grails {grailsMajorVersion} ships with Hibernate 5 as the default, but provides first-class support for Hibernate 7 via a dedicated BOM and plugin artifact.
 
 [source,groovy]
 .build.gradle

@@ -27,7 +27,7 @@ under the License.
 
 Allows a property to be set to `null`.
 
-NOTE: As of Grails 8, an unconstrained persistent property is *nullable by default*, aligning Grails with the rest of the JVM persistence/validation ecosystem (JPA/Hibernate, Spring Data, Micronaut Data and Jakarta Bean Validation). Declare `nullable: false` to make a property required. To restore the legacy required-by-default behaviour for an application, set `grails.gorm.default.nullable` to `false`:
+NOTE: As of Grails {grailsMajorVersion}, an unconstrained persistent property is *nullable by default*, aligning Grails with the rest of the JVM persistence/validation ecosystem (JPA/Hibernate, Spring Data, Micronaut Data and Jakarta Bean Validation). Declare `nullable: false` to make a property required. To restore the legacy required-by-default behaviour for an application, set `grails.gorm.default.nullable` to `false`:
 
 [source,yaml]
 .grails-app/conf/application.yml

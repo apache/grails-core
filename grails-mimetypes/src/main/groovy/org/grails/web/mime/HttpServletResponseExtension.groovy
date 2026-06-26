@@ -50,7 +50,9 @@ import org.grails.web.util.GrailsApplicationAttributes
 @CompileStatic
 class HttpServletResponseExtension {
 
-    // The ACCEPT header will not be used for content negotiation for user agents containing the following strings (defaults to the 4 major rendering engines)
+    // When set, the ACCEPT header is ignored for content negotiation for user agents matching this pattern.
+    // Defaults to null so the ACCEPT header is honored for every client, including browsers. Configure
+    // grails.mime.disable.accept.header.userAgents to opt back in to ignoring it for specific user agents.
     static Pattern disableForUserAgents
     static boolean useAcceptHeaderXhr
     static boolean useAcceptHeader
@@ -70,7 +72,7 @@ class HttpServletResponseExtension {
     }
 
     private static void useDefaultConfig() {
-        disableForUserAgents = ~/(Gecko(?i)|WebKit(?i)|Presto(?i)|Trident(?i))/
+        disableForUserAgents = null
         useAcceptHeaderXhr = true
         useAcceptHeader = true
     }
@@ -253,14 +255,12 @@ class HttpServletResponseExtension {
         if (!result) {
 
             def userAgent = request.getHeader(HttpHeaders.USER_AGENT)
-            def msie = userAgent && userAgent ==~ /msie(?i)/ ?: false
 
             def parser = new DefaultAcceptHeaderParser(getMimeTypes())
             String header = null
 
             boolean disabledForUserAgent = !(useAcceptHeaderXhr && request.xhr) && disableForUserAgents != null && userAgent ? disableForUserAgents.matcher(userAgent).find() : false
-            if (msie) header = '*/*'
-            if (!header && useAcceptHeader && !disabledForUserAgent) header = request.getHeader(HttpHeaders.ACCEPT)
+            if (useAcceptHeader && !disabledForUserAgent) header = request.getHeader(HttpHeaders.ACCEPT)
             result = parser.parse(header)
 
             // GRAILS-8341 - If no header the parser would have returned all configured mime types.  Since no format
