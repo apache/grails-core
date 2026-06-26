@@ -17,9 +17,29 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Logging is handled by the https://logback.qos.ch[Logback logging framework] and can be configured with the `grails-app/conf/logback-spring.xml` file. See the https://docs.spring.io/spring-boot/how-to/logging.html[Spring Boot Logging] and https://docs.spring.io/spring-boot/reference/features/logging.html#features.logging.logback-extensions[Logging Extensions] for all the available options.
+Logging is handled by the https://logback.qos.ch[Logback logging framework]. A new application works with *zero logging configuration*: it depends on `grails-logging`, which brings in Spring Boot's logging starter, so Logback and Spring Boot's default Logback configuration (an `INFO` root logger and a colorized console pattern) are applied automatically. See the https://docs.spring.io/spring-boot/how-to/logging.html[Spring Boot Logging] and https://docs.spring.io/spring-boot/reference/features/logging.html#features.logging.logback-extensions[Logging Extensions] documentation for all the available options.
 
-The Grails Environments `development`, `test` and `production` can be used with <springProfile name="development"> to configure environment specific logging.  This was one of the features lost when logback removed groovy configuration.  
+NOTE: As of Grails 8, newly generated applications no longer include a `grails-app/conf/logback-spring.xml` file; logging works out of the box using Spring Boot's defaults. Add the file (see below) only when you need to customize logging.
+
+For most needs, levels and patterns can be adjusted entirely from `application.yml` without any XML:
+
+[source,yaml]
+.application.yml
+----
+logging:
+    level:
+        root: INFO
+        com.example.myapp: DEBUG          # your packages
+        org.hibernate.SQL: DEBUG          # see the generated SQL
+    file:
+        name: logs/myapp.log              # setting this activates Spring Boot's file appender
+----
+
+When properties are not enough — custom appenders, structured output, or environment-specific logging — add a `grails-app/conf/logback-spring.xml` file. Use the `-spring` variant (not plain `logback.xml`), because it is processed by Spring Boot and unlocks `<springProfile>` and `<springProperty>`.
+
+The Grails Environments `development`, `test` and `production` can be used with <springProfile name="development"> to configure environment specific logging.  This was one of the features lost when logback removed groovy configuration.
+
+TIP: When generating a project with https://start.grails.org[Grails Forge], select the *Logback Configuration* feature to start with a ready-made `grails-app/conf/logback-spring.xml`.
 
 // To be re-included when a Grails 7 release of the plugin gets released
 // See: virtualdogbert/logback-groovy-config#15
