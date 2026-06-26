@@ -110,10 +110,15 @@ class MongoDbDataStoreSpringInitializer extends AbstractDatastoreInitializer {
                 mongoDatastore(MongoDatastore, mongo, configuration, eventPublisher, collectMappedClasses(DATASTORE_TYPE))
             }
 
-            mongoMappingContext(mongoDatastore: 'getMappingContext')
+            // MongoMappingContextAutoConfiguration may already register mongoMappingContext (a lazy view of
+            // mongoDatastore.getMappingContext()) so the framework grailsDomainClassMappingContext fallback backs
+            // off; register it here only when it has not, to avoid overriding that definition.
+            if (!containsRegisteredBean(delegate, beanDefinitionRegistry, 'mongoMappingContext')) {
+                mongoMappingContext(mongoDatastore: 'getMappingContext')
 
-            if (!secondaryDatastore) {
-                registerAlias('mongoMappingContext', 'grailsDomainClassMappingContext')
+                if (!secondaryDatastore) {
+                    registerAlias('mongoMappingContext', 'grailsDomainClassMappingContext')
+                }
             }
 
             mongoTransactionManager(mongoDatastore: 'getTransactionManager')
