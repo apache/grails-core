@@ -29,6 +29,7 @@ version = projectVersion
 
 ext {
     isReleaseVersion = !projectVersion.endsWith('-SNAPSHOT')
+    grailsMajorVersion = projectVersion.tokenize('.')[0]
     coreProjects = ['grails-datastore-core', 'grails-datamapping-core']
 }
 
@@ -78,6 +79,7 @@ tasks.named('asciidoctor', AsciidoctorTask) { AsciidoctorTask it ->
             'toc'                       : 'left',
             'icons'                     : 'font',
             'reproducible'              : '',
+            'grailsMajorVersion'        : grailsMajorVersion,
             'version'                   : projectVersion,
             'pluginVersion'             : projectVersion,
             'groupId'                   : project.group,

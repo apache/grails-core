@@ -152,6 +152,21 @@ class ContentNegotiationController {
     }
 
     /**
+     * Demonstrates a custom MIME type contributed via grails.mime.mergeDefaults.
+     * Only the 'vnd' type is declared in application.yml; the json and xml handlers
+     * below resolve through the framework defaults that mergeDefaults merges in.
+     */
+    def mergedFormats() {
+        def data = [message: 'Hello World', merged: true]
+
+        withFormat {
+            vnd { render(contentType: 'application/vnd.app1.v1+json', text: '{"format":"vnd","merged":true}') }
+            json { render data as JSON }
+            xml { render data as XML }
+        }
+    }
+
+    /**
      * Demonstrates multiple accept types in request.
      */
     def multiAccept() {

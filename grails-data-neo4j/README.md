@@ -16,7 +16,7 @@ limitations under the License.
 
 # GORM for Neo4j
 
-This project has not been updated for Grails 7 yet and is not included in the build.
+This project has not been updated for the current Grails release yet and is not included in the build.
 
 This project implements [GORM](https://grails.apache.org/docs/latest/grails-data/) for the Neo4j 3.x Graph Database using the Bolt Java Driver.
 
