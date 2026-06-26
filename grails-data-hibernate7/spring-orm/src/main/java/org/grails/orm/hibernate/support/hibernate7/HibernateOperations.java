@@ -23,9 +23,9 @@ import java.util.List;
 import org.hibernate.Filter;
 import org.hibernate.LockMode;
 import org.hibernate.ReplicationMode;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.dao.DataAccessException;
-import org.springframework.lang.Nullable;
 
 /**
  * Interface that specifies a common set of Hibernate operations as well as

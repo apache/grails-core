@@ -20,6 +20,7 @@ package grails.util;
 
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -952,7 +953,13 @@ public class GrailsClassUtils {
         if (configName instanceof CharSequence) {
             className = configName.toString();
         }
-        return ClassUtils.forName(className, ClassUtils.getDefaultClassLoader()).newInstance();
+        try {
+            return ClassUtils.forName(className, ClassUtils.getDefaultClassLoader()).getDeclaredConstructor().newInstance();
+        } catch (InvocationTargetException | NoSuchMethodException e) {
+            throw new InstantiationException(
+                "Could not instantiate class [" + className + "]: " + e.getMessage()
+            );
+        }
     }
 
     /**

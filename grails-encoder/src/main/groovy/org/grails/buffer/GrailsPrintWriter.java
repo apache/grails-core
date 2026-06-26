@@ -25,6 +25,7 @@ import java.io.Writer;
 import groovy.lang.GroovyObject;
 import groovy.lang.MetaClass;
 import groovy.lang.Writable;
+import org.codehaus.groovy.runtime.FormatHelper;
 import org.codehaus.groovy.runtime.GStringImpl;
 import org.codehaus.groovy.runtime.InvokerHelper;
 import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation;
@@ -133,7 +134,7 @@ public class GrailsPrintWriter extends Writer implements GrailsWrappedWriter, En
             }
         }
         else {
-            InvokerHelper.write(this, obj);
+            FormatHelper.write(this, obj);
         }
         return this;
     }

@@ -21,11 +21,12 @@ package org.grails.datastore.mapping.config
 import groovy.transform.CompileStatic
 import groovy.transform.Internal
 
+import org.jspecify.annotations.Nullable
+
 import org.springframework.beans.factory.BeanFactory
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory
 import org.springframework.beans.factory.config.ConfigurableBeanFactory
 import org.springframework.beans.factory.config.MethodInvokingFactoryBean
-import org.springframework.lang.Nullable
 
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource

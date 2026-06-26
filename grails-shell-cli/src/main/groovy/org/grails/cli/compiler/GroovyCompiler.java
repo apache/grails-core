@@ -20,6 +20,7 @@ package org.grails.cli.compiler;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -190,7 +191,7 @@ public class GroovyCompiler {
         for (String source : sources) {
             List<String> paths = ResourceUtils.getUrls(source, this.loader);
             for (String path : paths) {
-                compilationUnit.addSource(new URL(path));
+                compilationUnit.addSource(URI.create(path).toURL());
             }
         }
 

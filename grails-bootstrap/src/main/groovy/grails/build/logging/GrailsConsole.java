@@ -408,7 +408,7 @@ public class GrailsConsole implements ConsoleLogger {
             try {
                 @SuppressWarnings("unchecked")
                 Class<? extends GrailsConsole> klass = (Class<? extends GrailsConsole>) Class.forName(className);
-                return klass.newInstance();
+                return klass.getDeclaredConstructor().newInstance();
             } catch (Exception e) {
                 e.printStackTrace();
             }

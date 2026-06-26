@@ -18,6 +18,7 @@
  */
 package org.grails.gsp.compiler.tags;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -78,9 +79,9 @@ public class GrailsTagRegistry {
         Class<?> tagClass = tagRegistry.get(tagName);
 
         try {
-            return (GrailsTag) tagClass.newInstance();
+            return (GrailsTag) tagClass.getDeclaredConstructor().newInstance();
         }
-        catch (InstantiationException e) {
+        catch (InstantiationException | InvocationTargetException | NoSuchMethodException e) {
             throw new GrailsTagException("Instantiation error loading tag [" + tagName + "]: " + e.getMessage(), e);
         }
         catch (IllegalAccessException e) {
