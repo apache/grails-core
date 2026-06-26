@@ -18,7 +18,8 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import grails.mongodb.geo.*
 import grails.persistence.Entity
 
@@ -34,9 +35,9 @@ class PlaceException {
     }
 }
 
-class PlaceWithExceptionTest extends MongoDatastoreSpec {
+class PlaceWithExceptionTest extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([PlaceException])
+        manager.registerDomainClasses(PlaceException)
     }
     
     void "test place with exception handling"() {

@@ -440,17 +440,27 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
         });
     }
 
-    @Override
-    @SuppressWarnings({"PMD.DataflowAnomalyAnalysis"})
+    private static Object coerceId(Object key, Class<?> idType) {
+        if (key == null || idType == null || idType.isInstance(key)) {
+            return key;
+        }
+        if (key instanceof String s) {
+            if (idType == Long.class) return Long.parseLong(s);
+            if (idType == Integer.class) return Integer.parseInt(s);
+        }
+        return key;
+    }
+
     public List retrieveAll(final Class type, final Iterable keys) {
         final GrailsHibernatePersistentEntity persistentEntity = (GrailsHibernatePersistentEntity) getMappingContext().getPersistentEntity(type.getName());
         final String entityName = persistentEntity.getName();
         final String idName = persistentEntity.getIdentity().getName();
+        final Class<?> idType = persistentEntity.getIdentity().getType();
 
-        // Collect input keys preserving order (including duplicates)
+        // Collect input keys preserving order, coercing to the entity's ID type
         List<Object> inputKeys = new ArrayList<>();
         for (Object k : keys) {
-            inputKeys.add(k);
+            inputKeys.add(coerceId(k, idType));
         }
         if (inputKeys.isEmpty()) {
             return Collections.emptyList();

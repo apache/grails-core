@@ -426,18 +426,18 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
 
     @Override
     boolean isAttached(D instance) {
-        hibernateTemplate.contains instance
+        getHibernateTemplate().contains instance
     }
 
     @Override
     D lock(D instance) {
-        hibernateTemplate.lock(instance, LockMode.PESSIMISTIC_WRITE)
+        getHibernateTemplate().lock(instance, LockMode.PESSIMISTIC_WRITE)
         instance
     }
 
     @Override
     D attach(D instance) {
-        hibernateTemplate.execute { Session session ->
+        getHibernateTemplate().execute { Session session ->
             HibernateAttachSupport.attach(instance, session)
         }
         return instance

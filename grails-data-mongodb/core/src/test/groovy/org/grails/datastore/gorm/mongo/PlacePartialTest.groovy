@@ -18,7 +18,8 @@
  */
 package org.grails.datastore.gorm.mongo
 
-import org.apache.grails.data.mongo.core.MongoDatastoreSpec
+import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import grails.mongodb.geo.*
 import grails.persistence.Entity
 
@@ -42,9 +43,9 @@ class PlacePartial {
     }
 }
 
-class PlacePartialTest extends MongoDatastoreSpec {
+class PlacePartialTest extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.addAllDomainClasses([PlacePartial])
+        manager.registerDomainClasses(PlacePartial)
     }
     
     void "test place with only one field"() {

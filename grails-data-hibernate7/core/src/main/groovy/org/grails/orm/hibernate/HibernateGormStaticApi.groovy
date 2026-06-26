@@ -262,7 +262,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     List executeQuery(CharSequence query, Map params) {
-        return executeQuery(query, params, Collections.emptyMap())
+        return executeQuery(query, params, params)
     }
 
     @Override

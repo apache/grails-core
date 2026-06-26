@@ -32,13 +32,13 @@ import spock.lang.Specification
  */
 class HibernateDirtyCheckingSpec extends Specification {
 
-    @Shared @AutoCleanup HibernateDatastore hibernateDatastore = new HibernateDatastore(Person)
+    @Shared @AutoCleanup HibernateDatastore hibernateDatastore = new HibernateDatastore(DirtyCheckPerson)
 
     @Rollback
     @Issue('https://github.com/apache/grails-core/issues/10613')
     void    "Test that presence of beforeInsert doesn't impact dirty properties"() {
         given: 'a new person'
-        def person = new Person(name: 'John', occupation: 'Grails developer').save(flush:true)
+        def person = new DirtyCheckPerson(name: 'John', occupation: 'Grails developer').save(flush:true)
 
         when: 'the name is changed'
         person.name = 'Dave'
@@ -73,7 +73,7 @@ class HibernateDirtyCheckingSpec extends Specification {
     @Rollback
     void "test dirty checking on embedded"() {
         given: 'a new person'
-        Person person = new Person(name: 'John', occupation: 'Grails developer', address: new Address(street: "Old Town", zip: "1234")).save(flush:true)
+        DirtyCheckPerson person = new DirtyCheckPerson(name: 'John', occupation: 'Grails developer', address: new Address(street: "Old Town", zip: "1234")).save(flush:true)
 
         when: 'the name is changed'
         person.address.street = "New Town"
@@ -91,7 +91,7 @@ class HibernateDirtyCheckingSpec extends Specification {
 
         when:
         hibernateDatastore.sessionFactory.currentSession.clear()
-        person = Person.first()
+        person = DirtyCheckPerson.first()
 
         then:
         person.address.street == "New Town"
@@ -100,9 +100,9 @@ class HibernateDirtyCheckingSpec extends Specification {
     @Rollback
     void "test dirty checking on boolean true -> false"() {
         given: 'a new person'
-        new Person(name: 'John', occupation: 'Grails developer', employed: true).save(flush: true)
+        new DirtyCheckPerson(name: 'John', occupation: 'Grails developer', employed: true).save(flush: true)
         hibernateDatastore.sessionFactory.currentSession.clear()
-        Person person = Person.first()
+        DirtyCheckPerson person = DirtyCheckPerson.first()
 
         when:
         person.employed = false
@@ -115,7 +115,7 @@ class HibernateDirtyCheckingSpec extends Specification {
         when:
         person.save(flush:true)
         hibernateDatastore.sessionFactory.currentSession.clear()
-        person = Person.first()
+        person = DirtyCheckPerson.first()
 
         then:
         person.employed == false
@@ -124,9 +124,9 @@ class HibernateDirtyCheckingSpec extends Specification {
     @Rollback
     void "test dirty checking on boolean false -> true"() {
         given: 'a new person'
-        new Person(name: 'John', occupation: 'Grails developer', employed: false).save(flush: true)
+        new DirtyCheckPerson(name: 'John', occupation: 'Grails developer', employed: false).save(flush: true)
         hibernateDatastore.sessionFactory.currentSession.clear()
-        Person person = Person.first()
+        DirtyCheckPerson person = DirtyCheckPerson.first()
 
         when:
         person.employed = true
@@ -139,7 +139,7 @@ class HibernateDirtyCheckingSpec extends Specification {
         when:
         person.save(flush:true)
         hibernateDatastore.sessionFactory.currentSession.clear()
-        person = Person.first()
+        person = DirtyCheckPerson.first()
 
         then:
         person.employed == true
@@ -149,7 +149,7 @@ class HibernateDirtyCheckingSpec extends Specification {
 
 
 @Entity
-class Person {
+class DirtyCheckPerson {
 
     String name
     String occupation

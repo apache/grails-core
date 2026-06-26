@@ -459,7 +459,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
 
         if (!hasVersion) {
             ClassNode parent = AstUtils.getFurthestUnresolvedParent(classNode)
-            parent.addProperty(GormProperties.VERSION, Modifier.PUBLIC, new ClassNode(Long), constX(0L), null, null)
+            parent.addProperty(GormProperties.VERSION, Modifier.PUBLIC, new ClassNode(Long), null, null, null)
         }
     }
 
