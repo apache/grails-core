@@ -52,4 +52,44 @@ class LogbackSpec extends ApplicationContextSpec implements CommandOutputFixture
         where:
         applicationType << ApplicationType.values().toList()
     }
+
+    void "test logback-config feature is visible so it can be searched and selected"() {
+        when:
+        def feature = beanContext.getBean(LogbackConfig)
+
+        then:
+        feature.name == "logback-config"
+        feature.visible
+    }
+
+    @Unroll
+    void "test logback-config feature generates logback-spring.xml for #applicationType application"() {
+        when:
+        def output = generate(applicationType, ["logback-config"])
+
+        then:
+        output.containsKey("grails-app/conf/logback-spring.xml")
+        def config = output.get("grails-app/conf/logback-spring.xml")
+        config.contains("<configuration>")
+        config.contains('<appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">')
+        config.contains('<root level="ERROR">')
+        config.contains('<springProfile name="development">')
+
+        where:
+        applicationType << ApplicationType.values().toList()
+    }
+
+    @Unroll
+    void "test logback-config feature keeps the grails-logging dependency exactly once for #applicationType application"() {
+        when:
+        def output = generate(applicationType, ["logback-config"])
+
+        then:
+        output.containsKey("build.gradle")
+        def build = output.get("build.gradle")
+        build.count("implementation \"org.apache.grails:grails-logging\"") == 1
+
+        where:
+        applicationType << ApplicationType.values().toList()
+    }
 }
