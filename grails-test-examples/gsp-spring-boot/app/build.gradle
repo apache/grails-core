@@ -19,13 +19,9 @@
 
 // This is a Spring Boot application (NOT a Grails application) that renders views with
 // Grails GSP. End-user Spring Boot applications are not expected to adopt the Grails Gradle
-// plugins for dependency management, so this example manages dependency versions with the
-// legacy io.spring.dependency-management plugin importing the published grails-bom - which
-// itself imports spring-boot-dependencies and additionally manages the Grails-specific
-// libraries (e.g. SiteMesh) that the Grails GSP modules depend on. This is exactly how a
-// Spring Boot build consuming Grails libraries would manage versions, and is regression
-// coverage that such an application can keep using the Spring Dependency Management plugin
-// now that Grails 8 no longer applies that plugin automatically.
+// plugins for dependency management, so this example manages dependency versions with
+// grails-bom - which itself imports spring-boot-dependencies and additionally
+// manages the Grails-specific libraries (e.g. SiteMesh) that the Grails GSP modules depend on.
 plugins {
     id 'java'
     id 'war'
@@ -34,23 +30,10 @@ plugins {
     id 'org.apache.grails.buildsrc.dependency-validator'
 }
 
+// grails-gsp compiles the GSP templates at build time. It is a build-time view-compilation
+// helper and does not provide dependency management - version management here is entirely
+// the responsibility of the Grails BOM below.
 apply plugin: 'org.apache.grails.gradle.grails-gsp'
-apply plugin: 'io.spring.dependency-management'
-
-// Keep Groovy aligned with the Grails BOM, including the Groovy used for GSP compilation.
-apply from: rootProject.layout.projectDirectory.file('dependencies.gradle')
-ext.set('groovy.version', bomDependencyVersions['groovy.version'] as String)
-
-// Use the Grails BOM for versions of transitive Grails/GSP/SiteMesh dependencies.
-dependencyManagement {
-    imports {
-        mavenBom("org.apache.grails:grails-bom:${projectVersion}")
-    }
-    dependencies {
-        dependency "org.sitemesh:spring-boot-starter-sitemesh:${bomDependencyVersions['starter-sitemesh.version']}"
-        dependency "org.sitemesh:spring-webmvc-sitemesh:${bomDependencyVersions['spring-webmvc-sitemesh.version']}"
-    }
-}
 
 jar {
     processResources.exclude('**/*.gsp')
@@ -61,6 +44,8 @@ compileGroovyPages {
 }
 
 dependencies {
+    implementation platform(project(':grails-bom'))
+
     implementation project(':grails-gsp-spring-boot')
 
     implementation 'org.hibernate.validator:hibernate-validator' // validation

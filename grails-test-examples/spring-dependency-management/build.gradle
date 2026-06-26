@@ -17,19 +17,10 @@
  *  under the License.
  */
 
-// This Grails application is regression coverage for the legacy Spring Dependency
-// Management Gradle plugin (io.spring.dependency-management). Grails 8 no longer
-// applies that plugin automatically - dependency versions are managed by Gradle's
-// native platform() support via the Grails Gradle plugin. However, an existing
-// Grails 7 application that applied io.spring.dependency-management by hand must
-// continue to work. This example reproduces that scenario:
-//
-//   * grails { bom = null } opts out of the Grails Gradle plugin's automatic
-//     platform(grails-bom) injection, so version management is NOT provided by the
-//     framework's native platform.
-//   * io.spring.dependency-management is applied directly and imports grails-bom as
-//     a Maven BOM, exactly as a migrated Grails 7 build would, so that the Spring DM
-//     plugin is the source of truth for managed versions here.
+// This Grails application is regression coverage that dependency versions come from
+// grails-bom through Gradle's native platform() support. That keeps Grails-managed
+// dependencies such as SiteMesh aligned with the published Grails BOM instead of
+// Spring Boot's dependency metadata.
 plugins {
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.compile'
@@ -41,29 +32,9 @@ group = 'functionaltests'
 apply plugin: 'org.apache.grails.gradle.grails-web'
 apply plugin: 'org.apache.grails.gradle.grails-gsp'
 
-// io.spring.dependency-management is already available on the build classpath, so it is
-// applied here without a version (an explicit version in the plugins {} block fails when a
-// plugin is already on the classpath with an unknown version). A real end-user Grails build
-// would instead declare it in its own plugins {} block with a version.
-apply plugin: 'io.spring.dependency-management'
-
-// Keep Groovy and Spock aligned with the Grails BOM
-apply from: rootProject.layout.projectDirectory.file('dependencies.gradle')
-ext.set('groovy.version', bomDependencyVersions['groovy.version'] as String)
-ext.set('spock.version', bomDependencyVersions['spock.version'] as String)
-
-grails {
-    // Opt out of the native platform(grails-bom) injection; Spring DM manages versions instead.
-    bom = null
-}
-
-dependencyManagement {
-    imports {
-        mavenBom("org.apache.grails:grails-bom:${projectVersion}")
-    }
-}
-
 dependencies {
+    implementation platform(project(':grails-bom'))
+
     implementation 'org.apache.grails:grails-dependencies-starter-web'
     implementation 'org.apache.grails:grails-data-hibernate5'
     implementation 'org.apache.grails:grails-layout'
