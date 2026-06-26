@@ -1,0 +1,29 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+grails {
+    bom = 'grails-hibernate7-micronaut-bom'
+}
+
+tasks.register('inspectBomSetup') {
+    doLast {
+        def implDeps = configurations.implementation.allDependencies
+
+        def hasGrailsBom = implDeps.any { dep ->
+            dep.group == 'org.apache.grails' && dep.name == 'grails-bom'
+        }
+        println "HAS_GRAILS_BOM=${hasGrailsBom}"
+
+        def h7MicronautBom = implDeps.find { dep ->
+            dep.group == 'org.apache.grails' && dep.name == 'grails-hibernate7-micronaut-bom'
+        }
+        println "HAS_H7_MICRONAUT_BOM=${h7MicronautBom != null}"
+
+        def enforced = h7MicronautBom?.attributes?.getAttribute(org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE)?.name == org.gradle.api.attributes.Category.ENFORCED_PLATFORM
+        println "H7_MICRONAUT_BOM_ENFORCED=${enforced}"
+
+        def hasBomPropertyOverrides = project.plugins.findPlugin('org.apache.grails.gradle.bom-property-overrides') != null
+        println "HAS_BOM_PROPERTY_OVERRIDES=${hasBomPropertyOverrides}"
+    }
+}

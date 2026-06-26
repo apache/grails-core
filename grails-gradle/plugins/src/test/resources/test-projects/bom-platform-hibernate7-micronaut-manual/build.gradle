@@ -1,0 +1,43 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+dependencies {
+    implementation enforcedPlatform("org.apache.grails:grails-hibernate7-micronaut-bom:$grailsVersion")
+}
+
+tasks.register('inspectBomSetup') {
+    doLast {
+        def implDeps = configurations.implementation.allDependencies
+
+        def hasGrailsBom = implDeps.any { dep ->
+            dep.group == 'org.apache.grails' && dep.name == 'grails-bom'
+        }
+        println "HAS_GRAILS_BOM=${hasGrailsBom}"
+
+        def h7MicronautBom = implDeps.find { dep ->
+            dep.group == 'org.apache.grails' && dep.name == 'grails-hibernate7-micronaut-bom'
+        }
+        println "HAS_H7_MICRONAUT_BOM=${h7MicronautBom != null}"
+
+        def enforced = h7MicronautBom?.attributes?.getAttribute(org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE)?.name == org.gradle.api.attributes.Category.ENFORCED_PLATFORM
+        println "H7_MICRONAUT_BOM_ENFORCED=${enforced}"
+
+        def testImplDeps = configurations.testImplementation.allDependencies
+        def siblingH7MicronautBom = testImplDeps.find { dep ->
+            dep.group == 'org.apache.grails' && dep.name == 'grails-hibernate7-micronaut-bom'
+        }
+        println "SIBLING_HAS_H7_MICRONAUT_BOM=${siblingH7MicronautBom != null}"
+
+        def siblingEnforced = siblingH7MicronautBom?.attributes?.getAttribute(org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE)?.name == org.gradle.api.attributes.Category.ENFORCED_PLATFORM
+        println "SIBLING_H7_MICRONAUT_BOM_ENFORCED=${siblingEnforced}"
+
+        def siblingHasGrailsBom = testImplDeps.any { dep ->
+            dep.group == 'org.apache.grails' && dep.name == 'grails-bom'
+        }
+        println "SIBLING_HAS_GRAILS_BOM=${siblingHasGrailsBom}"
+
+        def hasBomPropertyOverrides = project.plugins.findPlugin('org.apache.grails.gradle.bom-property-overrides') != null
+        println "HAS_BOM_PROPERTY_OVERRIDES=${hasBomPropertyOverrides}"
+    }
+}
