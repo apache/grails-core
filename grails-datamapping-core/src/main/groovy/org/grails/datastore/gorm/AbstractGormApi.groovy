@@ -61,6 +61,8 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
     protected final GormRegistry registry
     protected final String qualifier
     protected MappingContext mappingContext
+    @Deprecated
+    protected PersistentEntity persistentEntity
     private List<Method> methods
     private List<Method> extendedMethods
 
@@ -74,6 +76,7 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
         this.registry = registry ?: GormRegistry.instance
         this.qualifier = ConnectionSource.DEFAULT
         this.mappingContext = datastore?.mappingContext
+        this.persistentEntity = datastore?.mappingContext?.getPersistentEntity(persistentClass?.name)
     }
 
     AbstractGormApi(Class<D> persistentClass, MappingContext mappingContext, DatastoreResolver datastoreResolver) {
@@ -86,6 +89,7 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
         this.registry = registry ?: GormRegistry.instance
         this.qualifier = qualifier ?: ConnectionSource.DEFAULT
         this.mappingContext = mappingContext
+        this.persistentEntity = mappingContext?.getPersistentEntity(persistentClass?.name)
     }
 
     @Override
