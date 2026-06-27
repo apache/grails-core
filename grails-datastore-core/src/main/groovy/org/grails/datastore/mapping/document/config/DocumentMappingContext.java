@@ -69,7 +69,7 @@ public class DocumentMappingContext extends AbstractMappingContext {
     }
 
     @Override
-    protected void initialize(ConnectionSourceSettings settings) {
+    public void initialize(ConnectionSourceSettings settings) {
 
         this.defaultMapping = settings.getDefault().getMapping();
         AbstractGormMappingFactory documentMappingFactory = (AbstractGormMappingFactory) createDocumentMappingFactory(defaultMapping);
