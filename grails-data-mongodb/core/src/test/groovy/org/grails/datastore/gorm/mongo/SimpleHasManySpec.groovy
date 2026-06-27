@@ -107,4 +107,3 @@ class Chapter implements Serializable {
 
     String title
 }
-

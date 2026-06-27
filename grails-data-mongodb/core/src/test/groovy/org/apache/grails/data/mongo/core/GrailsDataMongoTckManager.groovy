@@ -25,10 +25,11 @@ import grails.core.GrailsApplication
 import grails.gorm.validation.PersistentEntityValidator
 import groovy.util.logging.Slf4j
 import org.apache.grails.data.testing.tck.base.GrailsDataTckManager
+import spock.lang.Specification
 import org.apache.grails.testing.mongo.AbstractMongoGrailsExtension
 import org.bson.Document
 import org.grails.datastore.bson.query.BsonQuery
-import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.mongo.Birthday
 import org.grails.datastore.gorm.validation.constraints.eval.DefaultConstraintEvaluator
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstraintRegistry
@@ -65,6 +66,13 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
     MongoDatastore multiTenantMultiDataSourceDatastore
 
     @Override
+    void setup(Class<? extends Specification> spec) {
+        cleanRegistry()
+        GormRegistry.reset()
+        super.setup(spec)
+    }
+
+    @Override
     void setupSpec() {
         super.setupSpec()
         mongoDBContainer = new MongoDBContainer(AbstractMongoGrailsExtension.desiredMongoDockerName)
@@ -75,7 +83,9 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
                 (MongoSettings.SETTING_DATABASE_NAME): 'test',
                 (MongoSettings.SETTING_HOST)         : mongoDBContainer.host,
                 (MongoSettings.SETTING_PORT)         : mongoDBContainer.getMappedPort(AbstractMongoGrailsExtension.DEFAULT_MONGO_PORT) as String,
-                //TODO: 'grails.mongodb.url': "mongodb://${host}:${port as String}/myDb" as String
+                'grails.mongodb.connections': [
+                        'secondary': ['url': "mongodb://${mongoDBContainer.host}:${mongoDBContainer.getMappedPort(AbstractMongoGrailsExtension.DEFAULT_MONGO_PORT)}/tckSecondaryDB" as String]
+                ]
         ]
     }
 
@@ -147,7 +157,7 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
                         }
                     }
             for (cls in domainClasses) {
-                GormEnhancer.findValidationApi(cls).validator = null
+                GormRegistry.instance.findValidationApi(cls).validator = null
             }
         }
         finally {

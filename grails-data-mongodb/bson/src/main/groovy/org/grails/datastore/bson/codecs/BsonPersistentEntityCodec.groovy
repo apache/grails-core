@@ -50,6 +50,7 @@ import org.grails.datastore.bson.codecs.encoders.SimpleEncoder
 import org.grails.datastore.bson.codecs.encoders.TenantIdEncoder
 import org.grails.datastore.gorm.schemaless.DynamicAttributes
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
+import org.grails.datastore.mapping.dirty.checking.DirtyCheckableCollection
 import org.grails.datastore.mapping.engine.EntityAccess
 import org.grails.datastore.mapping.engine.EntityPersister
 import org.grails.datastore.mapping.model.MappingContext
@@ -257,6 +258,21 @@ class BsonPersistentEntityCodec implements Codec {
             def dirtyProperties = new ArrayList<String>(dirty.listDirtyPropertyNames())
             boolean isNew = dirtyProperties.isEmpty() && dirty.hasChanged()
             def isVersioned = entity.isVersioned()
+            
+            // Check for collections with dirty elements that aren't explicitly marked dirty
+            if (!isNew) {
+                for (prop in entity.associations) {
+                    if ((prop instanceof EmbeddedCollection) && !dirtyProperties.contains(prop.name)) {
+                        Object collectionValue = access.getProperty(prop.name)
+                        if (collectionValue instanceof DirtyCheckableCollection) {
+                            if (((DirtyCheckableCollection) collectionValue).hasChanged()) {
+                                dirtyProperties.add(prop.name)
+                            }
+                        }
+                    }
+                }
+            }
+            
             if (isNew) {
                 // if it is new it can only be an embedded entity that has now been updated
                 // so we get all properties
@@ -286,7 +302,9 @@ class BsonPersistentEntityCodec implements Codec {
                             encodeUpdate(v, createEntityAccess(((Embedded) prop).associatedEntity, v), encoderContext, true)
                         }
                         else if (prop instanceof EmbeddedCollection) {
-                            // TODO: embedded collections
+                            writer.writeName(prop.name)
+                            PropertyEncoder<? extends PersistentProperty> propertyEncoder = getPropertyEncoder(EmbeddedCollection)
+                            propertyEncoder?.encode(writer, prop, v, access, encoderContext, codecRegistry)
                         }
                         else {
                             def propKind = prop.getClass().superclass

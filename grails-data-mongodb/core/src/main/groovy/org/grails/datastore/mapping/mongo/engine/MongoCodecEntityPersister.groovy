@@ -53,6 +53,7 @@ import org.grails.datastore.mapping.model.ClassMapping
 import org.grails.datastore.mapping.model.IdentityMapping
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Basic
 import org.grails.datastore.mapping.model.types.Embedded
@@ -218,82 +219,101 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
         if (isNotUpdateForAssignedId(persistentEntity, obj, isUpdate, assignedId, si)) {
             isUpdate = false
         }
-        if (isUpdate && !getSession().isDirty(obj)) {
-            return (Serializable) id
-        } else {
-            final EntityAccess entityAccess = createEntityAccess(entity, obj)
-            boolean isAssigned = isAssignedId(entity)
-            if (!isAssigned && idIsNull) {
-                id = generateIdentifier(entity)
-                if (id != null) {
-                    entityAccess.setIdentifier(id)
-                } else {
-                    throw new DataIntegrityViolationException("Failed to generate a valid identifier for entity [$obj]")
-                }
-            } else if (idIsNull) {
-                throw new DataIntegrityViolationException("Entity [$obj] has null identifier when identifier strategy is manual assignment. Assign an appropriate identifier before persisting.")
-            } else if (isAssigned && !si.isStateless(entity)) {
-                isUpdate = mongoCodecSession.contains(obj)
+        final EntityAccess entityAccess = createEntityAccess(entity, obj)
+        boolean isAssigned = isAssignedId(entity)
+        if (!isAssigned && idIsNull) {
+            id = generateIdentifier(entity)
+            if (id != null) {
+                entityAccess.setIdentifier(id)
+            } else {
+                throw new DataIntegrityViolationException("Failed to generate a valid identifier for entity [$obj]")
             }
+        } else if (idIsNull) {
+            throw new DataIntegrityViolationException("Entity [$obj] has null identifier when identifier strategy is manual assignment. Assign an appropriate identifier before persisting.")
+        } else if (isAssigned && !si.isStateless(entity)) {
+            isUpdate = mongoCodecSession.contains(obj)
+        }
 
-            si.registerPending(obj)
-            processAssociations(mongoCodecSession, entity, entityAccess, obj, proxyFactory, isUpdate)
+        si.registerPending(obj)
+        processAssociations(mongoCodecSession, entity, entityAccess, obj, proxyFactory, isUpdate)
 
-            if (!isUpdate) {
-                MongoCodecEntityPersister self = this
-                mongoCodecSession.addPendingInsert(new PendingInsertAdapter(entity, id, obj, entityAccess) {
-                    @Override
-                    void run() {
-                        if (!cancelInsert(entity, entityAccess)) {
-                            updateCaches(entity, obj, id)
-                            addCascadeOperation(new PendingOperationAdapter(entity, id, obj) {
-                                @Override
-                                void run() {
-                                    self.firePostInsertEvent(entity, entityAccess)
-                                }
-                            })
-                        } else {
-                            setVetoed(true)
+        if (!isUpdate) {
+            MongoCodecEntityPersister self = this
+            mongoCodecSession.addPendingInsert(new PendingInsertAdapter(entity, id, obj, entityAccess) {
+                @Override
+                void run() {
+                    if (!cancelInsert(entity, entityAccess)) {
+                        updateCaches(entity, obj, id)
+                        addCascadeOperation(new PendingOperationAdapter(entity, id, obj) {
+                            @Override
+                            void run() {
+                                self.firePostInsertEvent(entity, entityAccess)
+                            }
+                        })
+                    } else {
+                        setVetoed(true)
+                    }
+                }
+            })
+        } else {
+            mongoCodecSession.addPendingUpdate(new PendingUpdateAdapter(entity, id, obj, entityAccess) {
+                @Override
+                void run() {
+                    // Take snapshot of all property values BEFORE the PreUpdate event fires
+                    Map<String, Object> beforeUpdateSnapshot = [:]
+                    boolean hasPreExistingDirty = false
+                    if (obj instanceof DirtyCheckable) {
+                        DirtyCheckable dc = (DirtyCheckable) obj
+                        hasPreExistingDirty = dc.hasChanged() || !dc.listDirtyPropertyNames().isEmpty()
+                        for (PersistentProperty prop : entity.persistentProperties) {
+                            beforeUpdateSnapshot[prop.name] = entityAccess.getProperty(prop.name)
                         }
                     }
-                })
-            } else {
-                mongoCodecSession.addPendingUpdate(new PendingUpdateAdapter(entity, id, obj, entityAccess) {
-                    @Override
-                    void run() {
-                        // Take snapshot of all property values BEFORE the PreUpdate event fires
-                        Map<String, Object> beforeUpdateSnapshot = [:]
+                    if (!cancelUpdate(entity, entityAccess)) {
+                        // Compare with snapshot and mark modified properties dirty
                         if (obj instanceof DirtyCheckable) {
+                            DirtyCheckable dirtyCheckable = (DirtyCheckable) obj
+                            boolean hasNonAutoTimestampChange = hasPreExistingDirty
+                            List<String> onlyAutoTimestampChanged = []
                             for (PersistentProperty prop : entity.persistentProperties) {
-                                beforeUpdateSnapshot[prop.name] = entityAccess.getProperty(prop.name)
-                            }
-                        }
-                        if (!cancelUpdate(entity, entityAccess)) {
-                            // Compare with snapshot and mark modified properties dirty
-                            if (obj instanceof DirtyCheckable) {
-                                DirtyCheckable dirtyCheckable = (DirtyCheckable) obj
-                                for (PersistentProperty prop : entity.persistentProperties) {
-                                    Object oldValue = beforeUpdateSnapshot[prop.name]
-                                    Object newValue = entityAccess.getProperty(prop.name)
-                                    boolean valueChanged = oldValue != newValue && (oldValue == null || !oldValue.equals(newValue))
-                                    if (valueChanged) {
-                                        dirtyCheckable.markDirty(prop.name, newValue, oldValue)
+                                Object oldValue = beforeUpdateSnapshot[prop.name]
+                                Object newValue = entityAccess.getProperty(prop.name)
+                                boolean valueChanged = oldValue != newValue && (oldValue == null || !oldValue.equals(newValue))
+                                if (valueChanged) {
+                                    dirtyCheckable.markDirty(prop.name, newValue, oldValue)
+                                    if (!hasPreExistingDirty) {
+                                        String propName = prop.name
+                                        if (propName == GormProperties.LAST_UPDATED || propName == GormProperties.DATE_CREATED) {
+                                            onlyAutoTimestampChanged.add(propName)
+                                        } else {
+                                            hasNonAutoTimestampChange = true
+                                        }
                                     }
                                 }
                             }
-                            updateCaches(entity, obj, id)
-                            addCascadeOperation(new PendingOperationAdapter(entity, id, obj) {
-                                @Override
-                                void run() {
-                                    firePostUpdateEvent(entity, entityAccess)
+                            if (!hasNonAutoTimestampChange && !onlyAutoTimestampChanged.isEmpty()) {
+                                // AutoTimestampEventListener set timestamp properties but nothing else changed.
+                                // Treat as a no-op save: reset the timestamps and veto the update.
+                                for (String propName in onlyAutoTimestampChanged) {
+                                    entityAccess.setProperty(propName, beforeUpdateSnapshot[propName])
                                 }
-                            })
-                        } else {
-                            setVetoed(true)
+                                dirtyCheckable.trackChanges()
+                                setVetoed(true)
+                                return
+                            }
                         }
+                        updateCaches(entity, obj, id)
+                        addCascadeOperation(new PendingOperationAdapter(entity, id, obj) {
+                            @Override
+                            void run() {
+                                firePostUpdateEvent(entity, entityAccess)
+                            }
+                        })
+                    } else {
+                        setVetoed(true)
                     }
-                })
-            }
+                }
+            })
         }
         return id
     }
