@@ -40,6 +40,11 @@ import org.grails.datastore.mapping.services.ServiceRegistry;
 public interface Datastore extends ServiceRegistry {
 
     /**
+     * @return The session resolver for this datastore
+     */
+    SessionResolver getSessionResolver();
+
+    /**
      * Connects to the datastore with the default connection details, normally provided via the datastore implementations constructor
      *
      * @return The session created using the default connection details.
