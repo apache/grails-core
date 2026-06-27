@@ -16,35 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
-package org.grails.datastore.gorm.jdbc
-
-import java.sql.Connection
-import java.sql.SQLException
+package org.grails.datastore.gorm
 
 import groovy.transform.CompileStatic
 
-import org.grails.datastore.gorm.jdbc.schema.SchemaHandler
+import org.grails.datastore.mapping.core.Datastore
 
 /**
- * Allows restoring the target schema prior to releasing the connection to the pool in Multi-Tenant environment
+ * Strategy interface for resolving a Datastore at call-time.
+ * This breaks the circular dependency between API objects and GormEnhancer.
  *
- * @author Graeme
- * @since 6.1.7
+ * @author Walter Duque de Estrada
+ * @since 8.0.0
  */
 @CompileStatic
-class MultiTenantConnection implements Connection {
+interface DatastoreResolver {
 
-    final @Delegate Connection target
-    final SchemaHandler schemaHandler
-
-    MultiTenantConnection(Connection target, SchemaHandler schemaHandler) {
-        this.target = target
-        this.schemaHandler = schemaHandler
-    }
-
-    @Override
-    void close() throws SQLException {
-        target.close()
-    }
+    /**
+     * @return The datastore to use for the current call
+     */
+    Datastore resolve()
 }
