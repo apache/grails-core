@@ -39,7 +39,6 @@ import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import grails.orm.HibernateCriteriaBuilder
-import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.mapping.query.api.BuildableCriteria as GrailsCriteria
@@ -134,11 +133,6 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
     }
 
     @Override
-    def propertyMissing(String name) {
-        return GormEnhancer.findStaticApi(persistentClass, name)
-    }
-
-    @Override
     GrailsCriteria createCriteria() {
         def builder = new HibernateCriteriaBuilder(persistentClass, sessionFactory)
         builder.datastore = (AbstractHibernateDatastore) datastore
@@ -209,6 +203,11 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
                 q.executeUpdate()
             }
         }
+    }
+
+    @Override
+    Integer executeUpdate(CharSequence query, Collection params) {
+        executeUpdate(query, params, [:])
     }
 
     protected <T> T withQueryEvents(Query query, Closure<T> callable) {

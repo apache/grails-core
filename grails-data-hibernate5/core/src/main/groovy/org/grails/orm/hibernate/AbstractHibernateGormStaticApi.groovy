@@ -361,6 +361,11 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
         }
     }
 
+    @Override
+    D find(CharSequence query, Collection params) {
+        find(query, params, [:])
+    }
+
     @CompileDynamic // required for Hibernate 5.2 compatibility
     def <D> D findWithSql(CharSequence sql, Map args = Collections.emptyMap()) {
         IHibernateTemplate template = hibernateTemplate
@@ -441,7 +446,7 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
             return findAll(hql, params, Collections.emptyMap())
         }
         else {
-            return super.findAll(query)
+            return findAll(query, Collections.emptyMap(), Collections.emptyMap())
         }
     }
 
@@ -453,7 +458,7 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
             return executeQuery(hql, params, Collections.emptyMap())
         }
         else {
-            return super.executeQuery(query)
+            return executeQuery(query, Collections.emptyMap(), Collections.emptyMap())
         }
     }
 
@@ -465,7 +470,7 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
             return executeUpdate(hql, params, Collections.emptyMap())
         }
         else {
-            return super.executeUpdate(query)
+            return executeUpdate(query, Collections.emptyMap(), Collections.emptyMap())
         }
     }
 
@@ -477,7 +482,7 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
             return find(hql, params, Collections.emptyMap())
         }
         else {
-            return (D) super.find(query)
+            return find(query, Collections.emptyMap(), Collections.emptyMap())
         }
     }
 
@@ -489,7 +494,7 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
             return find(hql, newParams, newParams)
         }
         else {
-            return (D) super.find(query, params)
+            return find(query, params, Collections.emptyMap())
         }
     }
 
@@ -501,7 +506,7 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
             return findAll(hql, newParams, newParams)
         }
         else {
-            return super.findAll(query, params)
+            return findAll(query, params, Collections.emptyMap())
         }
     }
 
@@ -513,7 +518,7 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
             return executeQuery(hql, newParams, newParams)
         }
         else {
-            return super.executeQuery(query, args)
+            return executeQuery(query, args, Collections.emptyMap())
         }
     }
 
@@ -525,7 +530,7 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
             return executeUpdate(hql, newParams, newParams)
         }
         else {
-            return super.executeUpdate(query, args)
+            return executeUpdate(query, args, Collections.emptyMap())
         }
     }
 
@@ -556,6 +561,11 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
             populateQueryArguments(q, args)
             createHqlQuery(session, q).list()
         }
+    }
+
+    @Override
+    List<D> findAll(CharSequence query, Collection params) {
+        findAll(query, params, [:])
     }
 
     @Override
@@ -668,6 +678,11 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
     }
 
     @Override
+    List executeQuery(CharSequence query, Collection params) {
+        executeQuery(query, params, [:])
+    }
+
+    @Override
     D findWhere(Map queryMap, Map args) {
         if (!queryMap) return null
         (D) hibernateTemplate.execute { Session session ->
@@ -700,6 +715,11 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     List<D> getAll(Serializable... ids) {
+        getAllInternal(ids as List)
+    }
+
+    @Override
+    List<D> getAll(Iterable<Serializable> ids) {
         getAllInternal(ids as List)
     }
 

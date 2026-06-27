@@ -53,6 +53,7 @@ import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.event.spi.EventSource;
 import org.hibernate.exception.GenericJDBCException;
+import org.hibernate.service.UnknownServiceException;
 import org.hibernate.query.Query;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -99,7 +100,12 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         Assert.notNull(sessionFactory, "Property 'sessionFactory' is required");
         this.sessionFactory = sessionFactory;
 
-        ConnectionProvider connectionProvider = ((SessionFactoryImplementor) sessionFactory).getServiceRegistry().getService(ConnectionProvider.class);
+        ConnectionProvider connectionProvider = null;
+        try {
+            connectionProvider = ((SessionFactoryImplementor) sessionFactory).getServiceRegistry().getService(ConnectionProvider.class);
+        } catch (UnknownServiceException ignored) {
+            // secondary/child datastores may not register ConnectionProvider
+        }
         if (connectionProvider instanceof DatasourceConnectionProviderImpl) {
             this.dataSource = ((DatasourceConnectionProviderImpl) connectionProvider).getDataSource();
             if (dataSource instanceof TransactionAwareDataSourceProxy) {

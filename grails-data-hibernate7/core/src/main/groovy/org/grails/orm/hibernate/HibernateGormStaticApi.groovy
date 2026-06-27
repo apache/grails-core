@@ -50,7 +50,6 @@ import grails.gorm.DetachedCriteria
 import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.mapping.core.connections.ConnectionSource
-import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
 import org.grails.datastore.mapping.proxy.ProxyHandler
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.query.api.BuildableCriteria as GrailsCriteria
@@ -414,6 +413,26 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         doListInternal(query, [:], positionalParams, args, false)
     }
 
+    @Override
+    List<D> findAll(CharSequence query, Collection positionalParams) {
+        findAll(query, positionalParams, [:])
+    }
+
+    @Override
+    D find(CharSequence query, Collection positionalParams) {
+        find(query, positionalParams, [:])
+    }
+
+    @Override
+    List executeQuery(CharSequence query, Collection positionalParams) {
+        executeQuery(query, positionalParams, [:])
+    }
+
+    @Override
+    Integer executeUpdate(CharSequence query, Collection positionalParams) {
+        executeUpdate(query, positionalParams, [:])
+    }
+
     private List<D> getAllInternal(List ids) {
         if (!ids) return []
         String idName = persistentEntity.identity.name
@@ -427,6 +446,11 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     List<D> getAll(Serializable... ids) {
+        getAllInternal(ids as List)
+    }
+
+    @Override
+    List<D> getAll(Iterable<Serializable> ids) {
         getAllInternal(ids as List)
     }
 
@@ -548,15 +572,6 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         List<D> result = (List<D>) hqlQuery.list()
         firePostQueryEvent(result)
         result
-    }
-
-    @Override
-    def propertyMissing(String name) {
-        if (datastore instanceof ConnectionSourcesProvider) {
-            return HibernateGormEnhancer.findStaticApi(persistentClass, name)
-        } else {
-            throw new MissingPropertyException(name, persistentClass)
-        }
     }
 
     @Override
