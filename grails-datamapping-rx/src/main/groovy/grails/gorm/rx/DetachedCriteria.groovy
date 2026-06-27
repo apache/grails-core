@@ -21,20 +21,21 @@ package grails.gorm.rx
 
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
+
+import jakarta.persistence.FetchType
+
+import rx.Observable
+import rx.Subscriber
+import rx.Subscription
+
 import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.query.criteria.AbstractDetachedCriteria
 import org.grails.datastore.mapping.query.Query
-import org.grails.datastore.mapping.query.api.Criteria
 import org.grails.datastore.mapping.query.api.ProjectionList
 import org.grails.datastore.mapping.query.api.QueryArgumentsAware
 import org.grails.datastore.mapping.query.api.QueryableCriteria
 import org.grails.datastore.rx.query.RxQuery
 import org.grails.gorm.rx.api.RxGormEnhancer
-import rx.Observable
-import rx.Subscriber
-import rx.Subscription
-
-import jakarta.persistence.FetchType
 
 /**
  * Reactive version of {@link grails.gorm.DetachedCriteria}

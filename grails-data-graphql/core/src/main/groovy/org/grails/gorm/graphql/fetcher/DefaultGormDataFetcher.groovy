@@ -19,15 +19,17 @@
 
 package org.grails.gorm.graphql.fetcher
 
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+
+import graphql.schema.DataFetcher
+import graphql.schema.DataFetchingEnvironment
+
 import grails.gorm.DetachedCriteria
 import grails.gorm.multitenancy.Tenants
 import grails.gorm.transactions.TransactionService
-import graphql.schema.DataFetcher
-import graphql.schema.DataFetchingEnvironment
-import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
-import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormEntity
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.model.PersistentEntity
@@ -79,7 +81,7 @@ abstract class DefaultGormDataFetcher<T> implements DataFetcher<T> {
     }
 
     protected Object loadEntity(PersistentEntity entity, Object argument) {
-        GormEnhancer.findStaticApi(entity.javaClass).load((Serializable)argument)
+        GormRegistry.instance.findStaticApi(entity.javaClass).load((Serializable)argument)
     }
 
     protected Map<String, Object> getIdentifierValues(DataFetchingEnvironment environment) {
@@ -141,7 +143,7 @@ abstract class DefaultGormDataFetcher<T> implements DataFetcher<T> {
     }
 
     protected GormStaticApi getStaticApi() {
-        GormEnhancer.findStaticApi(entity.javaClass)
+        GormRegistry.instance.findStaticApi(entity.javaClass)
     }
 
     abstract T get(DataFetchingEnvironment environment)
