@@ -35,6 +35,8 @@ import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCap
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
+import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
+import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
 import org.grails.datastore.mapping.reflect.NameUtils
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 
@@ -461,13 +463,24 @@ class GormRegistry {
             // Priority 2: Check current bound tenant if using default qualifier
             Datastore ds = getDatastoreDirect(normalizedClassName, normalizedQualifier)
             if (ds instanceof MultiTenantCapableDatastore) {
-                Serializable tenantId = CurrentTenantHolder.get((MultiTenantCapableDatastore) ds)
-                if (tenantId != null) {
+                MultiTenantCapableDatastore mtds = (MultiTenantCapableDatastore) ds
+                MultiTenancySettings.MultiTenancyMode mode = mtds.getMultiTenancyMode()
+                boolean strictMode = mode == MultiTenancySettings.MultiTenancyMode.DATABASE ||
+                        mode == MultiTenancySettings.MultiTenancyMode.SCHEMA
+                Serializable tenantId = CurrentTenantHolder.get(mtds)
+                if (tenantId == null && strictMode) {
+                    try {
+                        tenantId = mtds.tenantResolver.resolveTenantIdentifier()
+                    } catch (TenantNotFoundException e) {
+                        throw e
+                    }
+                }
+                if (tenantId != null && !ConnectionSource.DEFAULT.equals(tenantId.toString())) {
                     GormStaticApi api = staticApiRegistry.getDirect(normalizedClassName, tenantId.toString())
                     if (api != null) return api
                 }
             }
-            
+
             // Priority 3: Fall back to default API instance if specialized one not found,
             // but keep the qualifier so the API can handle tenant binding
             if (!ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
@@ -495,13 +508,24 @@ class GormRegistry {
 
             Datastore ds = getDatastoreDirect(normalizedClassName, normalizedQualifier)
             if (ds instanceof MultiTenantCapableDatastore) {
-                Serializable tenantId = CurrentTenantHolder.get((MultiTenantCapableDatastore) ds)
-                if (tenantId != null) {
+                MultiTenantCapableDatastore mtds = (MultiTenantCapableDatastore) ds
+                MultiTenancySettings.MultiTenancyMode mode = mtds.getMultiTenancyMode()
+                boolean strictMode = mode == MultiTenancySettings.MultiTenancyMode.DATABASE ||
+                        mode == MultiTenancySettings.MultiTenancyMode.SCHEMA
+                Serializable tenantId = CurrentTenantHolder.get(mtds)
+                if (tenantId == null && strictMode) {
+                    try {
+                        tenantId = mtds.tenantResolver.resolveTenantIdentifier()
+                    } catch (TenantNotFoundException e) {
+                        throw e
+                    }
+                }
+                if (tenantId != null && !ConnectionSource.DEFAULT.equals(tenantId.toString())) {
                     GormInstanceApi api = instanceApiRegistry.getDirect(normalizedClassName, tenantId.toString())
                     if (api != null) return api
                 }
             }
-            
+
             if (!ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
                 GormInstanceApi api = instanceApiRegistry.getDirect(normalizedClassName, ConnectionSource.DEFAULT)
                 if (api != null) return api
@@ -535,13 +559,24 @@ class GormRegistry {
 
             Datastore ds = getDatastoreDirect(normalizedClassName, normalizedQualifier)
             if (ds instanceof MultiTenantCapableDatastore) {
-                Serializable tenantId = CurrentTenantHolder.get((MultiTenantCapableDatastore) ds)
-                if (tenantId != null) {
+                MultiTenantCapableDatastore mtds = (MultiTenantCapableDatastore) ds
+                MultiTenancySettings.MultiTenancyMode mode = mtds.getMultiTenancyMode()
+                boolean strictMode = mode == MultiTenancySettings.MultiTenancyMode.DATABASE ||
+                        mode == MultiTenancySettings.MultiTenancyMode.SCHEMA
+                Serializable tenantId = CurrentTenantHolder.get(mtds)
+                if (tenantId == null && strictMode) {
+                    try {
+                        tenantId = mtds.tenantResolver.resolveTenantIdentifier()
+                    } catch (TenantNotFoundException e) {
+                        throw e
+                    }
+                }
+                if (tenantId != null && !ConnectionSource.DEFAULT.equals(tenantId.toString())) {
                     GormValidationApi api = validationApiRegistry.getDirect(normalizedClassName, tenantId.toString())
                     if (api != null) return api
                 }
             }
-            
+
             if (!ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
                 GormValidationApi api = validationApiRegistry.getDirect(normalizedClassName, ConnectionSource.DEFAULT)
                 if (api != null) return api
@@ -787,24 +822,33 @@ class GormRegistry {
     }
 
     /**
-     * Create a GormStaticApi instance
+     * Create a GormStaticApi instance.
+     * Uses a bound resolver (always returns the given datastore) at registration time so that
+     * tenant-resolving DatastoreResolvers are not invoked before any tenant context is active.
      */
     GormStaticApi createStaticApi(Class cls, Datastore datastore, DatastoreResolver resolver, String qualifier) {
-        return getApiFactory(datastore).createStaticApi(cls, datastore.mappingContext, resolver, qualifier, this)
+        DatastoreResolver boundResolver = { datastore } as DatastoreResolver
+        return getApiFactory(datastore).createStaticApi(cls, datastore.mappingContext, boundResolver, qualifier, this)
     }
 
     /**
-     * Create a GormInstanceApi instance
+     * Create a GormInstanceApi instance.
+     * Uses a bound resolver (always returns the given datastore) at registration time so that
+     * tenant-resolving DatastoreResolvers are not invoked before any tenant context is active.
      */
     GormInstanceApi createInstanceApi(Class cls, Datastore datastore, DatastoreResolver resolver, boolean failOnError, boolean markDirty) {
-        return getApiFactory(datastore).createInstanceApi(cls, datastore.mappingContext, resolver, this, failOnError, markDirty)
+        DatastoreResolver boundResolver = { datastore } as DatastoreResolver
+        return getApiFactory(datastore).createInstanceApi(cls, datastore.mappingContext, boundResolver, this, failOnError, markDirty)
     }
 
     /**
-     * Create a GormValidationApi instance
+     * Create a GormValidationApi instance.
+     * Uses a bound resolver (always returns the given datastore) at registration time so that
+     * tenant-resolving DatastoreResolvers are not invoked before any tenant context is active.
      */
     GormValidationApi createValidationApi(Class cls, Datastore datastore, DatastoreResolver resolver) {
-        return getApiFactory(datastore).createValidationApi(cls, datastore.mappingContext, resolver, this)
+        DatastoreResolver boundResolver = { datastore } as DatastoreResolver
+        return getApiFactory(datastore).createValidationApi(cls, datastore.mappingContext, boundResolver, this)
     }
 
     /**
