@@ -60,7 +60,9 @@ class GrailsHibernateTransactionManager extends HibernateTransactionManager {
 
     GrailsHibernateTransactionManager(SessionFactory sessionFactory, DataSource dataSource, FlushMode defaultFlushMode = FlushMode.AUTO) {
         super(sessionFactory)
-        setDataSource(dataSource)
+        if (dataSource != null) {
+            setDataSource(dataSource)
+        }
         this.defaultFlushMode = defaultFlushMode
         this.isJdbcBatchVersionedData = sessionFactory.getSessionFactoryOptions().isJdbcBatchVersionedData()
     }

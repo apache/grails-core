@@ -199,20 +199,30 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
         return new HibernateDatastore(singletonConnectionSources, mappingContext, eventPublisher) {
             @Override
             protected HibernateGormEnhancer initialize() {
-                return null;
+                return new HibernateGormEnhancer(this, transactionManager, getConnectionSources().getDefaultConnectionSource().getSettings());
             }
 
             @Override
             public HibernateDatastore getDatastoreForConnection(String connectionName) {
+                String myName = getConnectionSources().getDefaultConnectionSource().getName();
+                if (connectionName.equals(myName)) {
+                    return this;
+                }
                 if (connectionName.equals(Settings.SETTING_DATASOURCE) || connectionName.equals(ConnectionSource.DEFAULT)) {
                     return parent;
-                } else {
-                    HibernateDatastore hibernateDatastore = parent.datastoresByConnectionSource.get(connectionName);
-                    if (hibernateDatastore == null) {
-                        throw new ConfigurationException("DataSource not found for name [" + connectionName + "] in configuration. Please check your multiple data sources configuration and try again.");
-                    }
+                }
+                HibernateDatastore hibernateDatastore = parent.datastoresByConnectionSource.get(connectionName);
+                if (hibernateDatastore != null) {
                     return hibernateDatastore;
                 }
+                // If this child is not yet in the parent map, it is still being initialized.
+                // Sibling datastores may not exist yet; return null so GormRegistry falls back
+                // to this datastore for the unresolved qualifier. The parent will re-register
+                // all entities with the correct datastores once all children are created.
+                if (!parent.datastoresByConnectionSource.containsKey(myName)) {
+                    return null;
+                }
+                throw new ConfigurationException("DataSource not found for name [" + connectionName + "] in configuration. Please check your multiple data sources configuration and try again.");
             }
         };
     }
@@ -460,6 +470,40 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
     }
 
     @Override
+    public Session getCurrentSession() throws ConnectionNotFoundException {
+        // Priority 1: custom session resolver
+        Session resolved = getSessionResolver().resolve();
+        if (resolved != null) {
+            return resolved;
+        }
+        // Priority 2: GORM session holder (key = this datastore)
+        org.grails.datastore.mapping.transactions.SessionHolder gormHolder =
+                (org.grails.datastore.mapping.transactions.SessionHolder)
+                        TransactionSynchronizationManager.getResource(this);
+        if (gormHolder != null) {
+            Session s = gormHolder.getValidatedSession();
+            if (s != null) {
+                return s;
+            }
+        }
+        // Priority 3: Spring TX SessionFactory holder (key = SessionFactory).
+        // When withTransaction{} is active, the TX manager binds the Hibernate session here.
+        SessionFactory sf = getSessionFactory();
+        if (sf != null) {
+            Object resource = TransactionSynchronizationManager.getResource(sf);
+            if (resource instanceof org.grails.orm.hibernate.support.hibernate5.SessionHolder) {
+                org.grails.orm.hibernate.support.hibernate5.SessionHolder sfHolder = (org.grails.orm.hibernate.support.hibernate5.SessionHolder) resource;
+                org.hibernate.Session nativeSession = sfHolder.getSession();
+                if (nativeSession != null && nativeSession.isOpen()) {
+                    return new HibernateSession(this, sf);
+                }
+            }
+        }
+        throw new ConnectionNotFoundException(
+                "No Datastore Session bound to thread, and configuration does not allow creation of non-transactional one here");
+    }
+
+    @Override
     public boolean hasCurrentSession() {
         return TransactionSynchronizationManager.getResource(sessionFactory) != null;
     }
@@ -530,12 +574,6 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
         org.hibernate.Session session = this.sessionFactory.openSession();
         session.setHibernateFlushMode(org.hibernate.FlushMode.valueOf(defaultFlushModeName));
         return session;
-    }
-
-    @Override
-    public Session getCurrentSession() throws ConnectionNotFoundException {
-        // HibernateSession, just a thin wrapper around default session handling so simply return a new instance here
-        return new HibernateSession(this, sessionFactory, getDefaultFlushMode());
     }
 
     @Override
@@ -647,15 +685,45 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
             }
         };
         DefaultConnectionSource<DataSource, DataSourceSettings> dataSourceConnectionSource = new DefaultConnectionSource<>(schemaName, dataSource, tenantSettings.getDataSource());
-        ConnectionSource<SessionFactory, HibernateConnectionSourceSettings> connectionSource = factory.create(schemaName, dataSourceConnectionSource, tenantSettings);
-        SingletonConnectionSources<SessionFactory, HibernateConnectionSourceSettings> singletonConnectionSources = new SingletonConnectionSources<>(connectionSource, connectionSources.getBaseConfiguration());
-        HibernateDatastore childDatastore = new HibernateDatastore(singletonConnectionSources, (HibernateMappingContext) mappingContext, eventPublisher) {
-            @Override
-            protected HibernateGormEnhancer initialize() {
-                return null;
+        try {
+            ConnectionSource<SessionFactory, HibernateConnectionSourceSettings> connectionSource = factory.create(schemaName, dataSourceConnectionSource, tenantSettings);
+            SingletonConnectionSources<SessionFactory, HibernateConnectionSourceSettings> singletonConnectionSources = new SingletonConnectionSources<>(connectionSource, connectionSources.getBaseConfiguration());
+            HibernateDatastore childDatastore = new HibernateDatastore(singletonConnectionSources, (HibernateMappingContext) mappingContext, eventPublisher) {
+                @Override
+                protected HibernateGormEnhancer initialize() {
+                    return new HibernateGormEnhancer(this, transactionManager, getConnectionSources().getDefaultConnectionSource().getSettings());
+                }
+
+                @Override
+                public HibernateDatastore getDatastoreForConnection(String connectionName) {
+                    String myName = getConnectionSources().getDefaultConnectionSource().getName();
+                    if (connectionName.equals(myName)) {
+                        return this;
+                    }
+                    return HibernateDatastore.this.getDatastoreForConnection(connectionName);
+                }
+            };
+            datastoresByConnectionSource.put(connectionSource.getName(), childDatastore);
+        } finally {
+            TransactionSynchronizationManager.unbindResourceIfPossible(dataSource);
+        }
+    }
+
+    @Override
+    public void close() {
+        if (gormEnhancer != null) {
+            try {
+                gormEnhancer.close();
+            } catch (IOException e) {
+                // ignore
             }
-        };
-        datastoresByConnectionSource.put(connectionSource.getName(), childDatastore);
+        }
+        super.close();
+        for (HibernateDatastore datastore : datastoresByConnectionSource.values()) {
+            if (datastore != this) {
+                datastore.close();
+            }
+        }
     }
 
     private Metadata getMetadataInternal() {

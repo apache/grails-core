@@ -71,27 +71,29 @@ class HibernateRuntimeUtils {
      */
     static Errors setupErrorsProperty(Object target) {
 
+        MetaClass mc = GroovySystem.metaClassRegistry.getMetaClass(target.getClass())
         boolean isGormValidateable = target instanceof GormValidateable
 
-        MetaClass mc = isGormValidateable ? null : GroovySystem.metaClassRegistry.getMetaClass(target.getClass())
         def errors = new ValidationErrors(target)
 
         Errors originalErrors = isGormValidateable ? ((GormValidateable) target).getErrors() : (Errors) mc.getProperty(target, GormProperties.ERRORS)
-        // Copy binding failures and any existing object-level errors
-        for (Object o in originalErrors.allErrors) {
-            if (o instanceof FieldError) {
-                FieldError fe = (FieldError) o
-                if (fe.isBindingFailure()) {
-                    errors.addError(new FieldError(fe.getObjectName(),
-                            fe.field,
-                            fe.rejectedValue,
-                            fe.bindingFailure,
-                            fe.codes,
-                            fe.arguments,
-                            fe.defaultMessage))
+        if (originalErrors != null) {
+            // Copy binding failures and any existing object-level errors
+            for (Object o in originalErrors.allErrors) {
+                if (o instanceof FieldError) {
+                    FieldError fe = (FieldError) o
+                    if (fe.isBindingFailure()) {
+                        errors.addError(new FieldError(fe.getObjectName(),
+                                fe.field,
+                                fe.rejectedValue,
+                                fe.bindingFailure,
+                                fe.codes,
+                                fe.arguments,
+                                fe.defaultMessage))
+                    }
+                } else {
+                    errors.addError((ObjectError) o)
                 }
-            } else {
-                errors.addError((ObjectError) o)
             }
         }
 
@@ -139,6 +141,33 @@ class HibernateRuntimeUtils {
                 associationReflector.setProperty(inverseObject, otherSidePropertyName, target)
             }
         }
+    }
+
+    private static ThreadLocal<Boolean> insertActive = new ThreadLocal<Boolean>() {
+        @Override
+        protected Boolean initialValue() {
+            return Boolean.FALSE
+        }
+    }
+
+    static void markInsertActive() {
+        insertActive.set(Boolean.TRUE)
+    }
+
+    static void resetInsertActive() {
+        insertActive.set(Boolean.FALSE)
+    }
+
+    static boolean isInsertActive() {
+        return insertActive.get()
+    }
+
+    static void setObjectToReadWrite(Object target, SessionFactory sessionFactory) {
+        org.grails.orm.hibernate.cfg.GrailsHibernateUtil.setObjectToReadWrite(target, sessionFactory)
+    }
+
+    static void setObjectToReadyOnly(Object target, SessionFactory sessionFactory) {
+        org.grails.orm.hibernate.cfg.GrailsHibernateUtil.setObjectToReadyOnly(target, sessionFactory)
     }
 
     static Object convertValueToType(Object passedValue, Class targetType, ConversionService conversionService) {

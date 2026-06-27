@@ -43,11 +43,14 @@ dependencies {
     documentation 'org.apache.groovy:groovy-groovydoc'
     documentation 'org.apache.groovy:groovy-templates'
     documentation 'org.fusesource.jansi:jansi'
-    documentation 'jline:jline'
+    documentation 'jline:jline:2.14.6'
     documentation project(':grails-bootstrap')
     documentation project(':grails-core')
     documentation project(':grails-spring')
-    documentation 'org.hibernate:hibernate-core-jakarta'
+    documentation 'org.hibernate:hibernate-core-jakarta', {
+        exclude group:'commons-logging', module:'commons-logging'
+        exclude group:'com.h2database', module:'h2'
+    }
     coreProjects.each {
         documentation "org.apache.grails.data:$it"
     }

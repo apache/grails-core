@@ -34,7 +34,7 @@ class MultipleOneToOneSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckMana
     @Issue('https://github.com/apache/grails-data-mapping/issues/950')
     void "test mappedBy with multiple many-to-one and a single one-to-one"() {
         given:
-        Org branch = new Org(id: 1, name: "branch a").save()
+        Org branch = new Org(name: "branch a").save(flush: true)
         new OrgMember(org: branch).save(flush: true)
         def query = OrgMember.where({ branch == null })
 
@@ -47,7 +47,7 @@ class MultipleOneToOneSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckMana
 
 @Entity
 class Org {
-
+    Long id
     String name
 
     OrgMember member
@@ -58,14 +58,11 @@ class Org {
         member nullable: true
     }
 
-    static mapping = {
-        id generator: "assigned"
-    }
-
 }
 
 @Entity
 class OrgMember {
+    Long id
     static belongsTo = [org: Org]
 
     Org branch
