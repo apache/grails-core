@@ -25,6 +25,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.util.ClassUtils
 
 import grails.gorm.MultiTenant
 import org.grails.datastore.mapping.core.Datastore
@@ -89,6 +90,8 @@ class GormEnhancer implements Closeable {
 
         String qualifier = ConnectionSourceNameResolver.resolveDefaultConnectionSourceName(datastore)
         registry.initializeDatastore(datastore, qualifier)
+
+        registerConstraints(datastore)
 
         for (entity in datastore.mappingContext.persistentEntities) {
             registerEntity(entity)
@@ -216,6 +219,19 @@ class GormEnhancer implements Closeable {
             }
         } catch (Throwable e) {
             log.debug("Not running in Grails environment, cannot de-register constraints. ${e.message}")
+        }
+    }
+
+    @CompileDynamic
+    protected void registerConstraints(Datastore datastore) {
+        try {
+            String className = 'org.grails.datastore.gorm.support.ConstraintRegistrar'
+            ClassLoader classLoader = getClass().getClassLoader()
+            if (ClassUtils.isPresent(className, classLoader)) {
+                classLoader.loadClass(className).newInstance(datastore)
+            }
+        } catch (Throwable e) {
+            log.debug("Unable to register GORM constraints. Not running a Grails environment. This can be safely ignored if you are not running Grails: $e.message", e)
         }
     }
 
