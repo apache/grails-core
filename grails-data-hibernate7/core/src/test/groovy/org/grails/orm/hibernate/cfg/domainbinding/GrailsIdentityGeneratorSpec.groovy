@@ -33,6 +33,11 @@ import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsIdentityGenera
 
 class GrailsIdentityGeneratorSpec extends HibernateGormDatastoreSpec {
 
+    @Override
+    void setupSpec() {
+        manager.registerDomainClasses(TestEntity, ChildEntity)
+    }
+
     def "should configure identity generator and set column as identity"() {
         given:
         def context = Mock(GeneratorCreationContext)
