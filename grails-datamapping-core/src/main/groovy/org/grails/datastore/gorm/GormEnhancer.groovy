@@ -28,6 +28,15 @@ import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.util.ClassUtils
 
 import grails.gorm.MultiTenant
+import org.grails.datastore.gorm.finders.CountByFinder
+import org.grails.datastore.gorm.finders.FindAllByBooleanFinder
+import org.grails.datastore.gorm.finders.FindAllByFinder
+import org.grails.datastore.gorm.finders.FindByBooleanFinder
+import org.grails.datastore.gorm.finders.FindByFinder
+import org.grails.datastore.gorm.finders.FinderMethod
+import org.grails.datastore.gorm.finders.FindOrCreateByFinder
+import org.grails.datastore.gorm.finders.FindOrSaveByFinder
+import org.grails.datastore.gorm.finders.ListOrderByFinder
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
@@ -268,7 +277,7 @@ class GormEnhancer implements Closeable {
     protected void addInstanceMethods(PersistentEntity e) {
         Class cls = e.javaClass
         ExpandoMetaClass mc = MetaClassUtils.getExpandoMetaClass(cls)
-        
+
         mc.methodMissing = { String name, args ->
             def api = registry.findInstanceApi(cls, null)
             try {
@@ -294,6 +303,43 @@ class GormEnhancer implements Closeable {
         mc.propertyMissing = { String name, val ->
             registry.findInstanceApi(cls, null).setProperty(name, val)
         }
+    }
+
+    @Deprecated
+    @CompileStatic
+    protected <D> GormStaticApi<D> getStaticApi(Class<D> cls, String qualifier = ConnectionSource.DEFAULT) {
+        GormRegistry.findStaticApi(cls, qualifier) as GormStaticApi<D>
+    }
+
+    @Deprecated
+    @CompileStatic
+    protected <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, String qualifier = ConnectionSource.DEFAULT) {
+        GormRegistry.findInstanceApi(cls, qualifier) as GormInstanceApi<D>
+    }
+
+    @Deprecated
+    @CompileStatic
+    protected <D> GormValidationApi<D> getValidationApi(Class<D> cls, String qualifier = ConnectionSource.DEFAULT) {
+        GormRegistry.findValidationApi(cls, qualifier) as GormValidationApi<D>
+    }
+
+    @Deprecated
+    @CompileStatic
+    protected List<FinderMethod> createDynamicFinders() {
+        createDynamicFinders(datastore)
+    }
+
+    @Deprecated
+    @CompileStatic
+    protected List<FinderMethod> createDynamicFinders(Datastore targetDatastore) {
+        [new FindOrCreateByFinder(targetDatastore),
+         new FindOrSaveByFinder(targetDatastore),
+         new FindByFinder(targetDatastore),
+         new FindAllByFinder(targetDatastore),
+         new FindAllByBooleanFinder(targetDatastore),
+         new FindByBooleanFinder(targetDatastore),
+         new CountByFinder(targetDatastore),
+         new ListOrderByFinder(targetDatastore)] as List<FinderMethod>
     }
 
 }
