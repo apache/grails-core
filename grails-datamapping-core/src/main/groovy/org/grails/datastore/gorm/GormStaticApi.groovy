@@ -61,6 +61,16 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     protected final List<FinderMethod> finders
 
+    @Deprecated
+    GormStaticApi(Class<D> persistentClass, Datastore datastore, List<FinderMethod> finders) {
+        this(persistentClass, datastore?.mappingContext, finders, null, ConnectionSource.DEFAULT, null)
+    }
+
+    @Deprecated
+    GormStaticApi(Class<D> persistentClass, Datastore datastore, List<FinderMethod> finders, PlatformTransactionManager transactionManager) {
+        this(persistentClass, datastore?.mappingContext, finders, null, ConnectionSource.DEFAULT, null)
+    }
+
     GormStaticApi(Class<D> persistentClass, MappingContext mappingContext, List<FinderMethod> finders) {
         this(persistentClass, mappingContext, finders, null, ConnectionSource.DEFAULT, null)
     }
