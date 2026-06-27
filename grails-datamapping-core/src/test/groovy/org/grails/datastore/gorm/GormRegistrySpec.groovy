@@ -229,6 +229,9 @@ class GormRegistrySpec extends Specification {
                     getName() >> "default"
                 }
             }
+            // Spock stubs return themselves for covariant interface methods; explicit null here mirrors
+            // the real HibernateDatastore behavior where unknown connection names throw.
+            getDatastoreForConnection(_) >> null
         }
         def mappingContext = Stub(org.grails.datastore.mapping.model.MappingContext)
         def entity = Stub(PersistentEntity) {
@@ -267,6 +270,82 @@ class GormRegistrySpec extends Specification {
         
         cleanup:
         registry.metaClass = null
+        TestEntity.metaClass = null
+    }
+
+    void "execute with connection-name qualifier on DISCRIMINATOR multi-tenant entity does not override tenant context"() {
+        given: "a DISCRIMINATOR-mode child datastore that resolves its own connection qualifier"
+        def session = Stub(Session)
+        // childDatastore simulates a ChildHibernateDatastore: getDatastoreForConnection('secondary') returns itself
+        def childDatastore = Stub(MixedDatastore)
+        childDatastore.getMultiTenancyMode() >> MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR
+        childDatastore.hasCurrentSession() >> false
+        childDatastore.connect() >> session
+        childDatastore.getDatastoreForConnection("secondary") >> childDatastore
+        childDatastore.getConnectionSources() >> Stub(ConnectionSources) {
+            getDefaultConnectionSource() >> Stub(ConnectionSource) {
+                getName() >> "secondary"
+            }
+        }
+        session.getDatastore() >> childDatastore
+
+        def registry = GormRegistry.instance
+        registry.registerDatastore("secondary", childDatastore)
+
+        // The secondary static API has qualifier="secondary" and datastore=childDatastore,
+        // matching what GormRegistry.findStaticApi(entity, "secondary") returns in practice.
+        def secondaryApi = new DummyStaticApiForTest(TestEntity, childDatastore, [:], "secondary")
+        registry.registerEntityApis(TestEntity, secondaryApi, null, null)
+
+        when: "the secondary API executes inside an outer tenant context ('tenant1')"
+        def capturedTenantId = null
+        Tenants.withId(childDatastore, "tenant1") {
+            secondaryApi.withDatastoreSession { Session sess ->
+                capturedTenantId = CurrentTenantHolder.get(childDatastore)
+            }
+        }
+
+        then: "the connection qualifier does NOT override the enclosing tenant context"
+        capturedTenantId == "tenant1"
+
+        cleanup:
+        TestEntity.metaClass = null
+    }
+
+    void "execute with tenant-ID qualifier on DISCRIMINATOR multi-tenant entity binds that qualifier as tenant"() {
+        given: "a DISCRIMINATOR-mode parent datastore where 'tenant1' is not a known connection name"
+        def session = Stub(Session)
+        def datastore = Stub(MixedDatastore) {
+            getMultiTenancyMode() >> MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR
+            hasCurrentSession() >> false
+            connect() >> session
+            getConnectionSources() >> Stub(ConnectionSources) {
+                getDefaultConnectionSource() >> Stub(ConnectionSource) {
+                    getName() >> "default"
+                }
+            }
+            // 'tenant1' is not a datasource connection — getDatastoreForConnection returns null
+            getDatastoreForConnection("tenant1") >> null
+        }
+        session.getDatastore() >> datastore
+
+        def registry = GormRegistry.instance
+        registry.registerDatastore("default", datastore)
+
+        // withTenant("tenant1") produces an API with qualifier="tenant1"
+        def tenantApi = new DummyStaticApiForTest(TestEntity, datastore, [:], "tenant1")
+        registry.registerEntityApis(TestEntity, tenantApi, null, null)
+
+        when: "the tenant-qualified API executes a session callback"
+        def capturedTenantId = null
+        tenantApi.withDatastoreSession { Session sess ->
+            capturedTenantId = CurrentTenantHolder.get(datastore)
+        }
+
+        then: "the tenant ID qualifier is correctly bound as the current tenant"
+        capturedTenantId == "tenant1"
+
+        cleanup:
         TestEntity.metaClass = null
     }
 
