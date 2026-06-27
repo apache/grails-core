@@ -53,7 +53,6 @@ class GrailsDataHibernate5TckManager extends GrailsDataTckManager {
     ApplicationContext applicationContext
     HibernateDatastore multiDataSourceDatastore
     HibernateDatastore multiTenantMultiDataSourceDatastore
-    Map grailsConfig
 
     @Override
     void setup(Class<? extends Specification> spec) {
@@ -63,20 +62,17 @@ class GrailsDataHibernate5TckManager extends GrailsDataTckManager {
 
     @Override
     Session createSession() {
-        ConfigObject config = new ConfigObject()
-        if (grailsConfig) {
-            config.putAll(grailsConfig)
-        }
-        if (!config.containsKey('dataSource.dbCreate') && !config.dataSource.containsKey('dbCreate')) {
-            config.dataSource.dbCreate = "create-drop"
-        }
+        ConfigObject grailsConfig = new ConfigObject()
         boolean isTransactional = true
 
         System.setProperty('hibernate5.gorm.suite', "true")
         grailsApplication = new DefaultGrailsApplication(domainClasses, new GroovyClassLoader(GrailsDataHibernate5TckManager.getClassLoader()))
-        grailsApplication.config.putAll(config)
+        if (grailsConfig) {
+            grailsApplication.config.putAll(grailsConfig)
+        }
 
-        hibernateDatastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config), domainClasses)
+        grailsConfig.dataSource.dbCreate = "create-drop"
+        hibernateDatastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(grailsConfig), domainClasses)
         transactionManager = hibernateDatastore.getTransactionManager()
         sessionFactory = hibernateDatastore.sessionFactory
         if (transactionStatus == null && isTransactional) {

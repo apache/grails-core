@@ -101,6 +101,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     protected IHibernateTemplate hibernateTemplate
     boolean autoFlush
     protected InstanceApiHelper instanceApiHelper
+    protected PersistentEntity persistentEntity
 
     HibernateGormInstanceApi(Class<D> persistentClass, HibernateDatastore datastore, ClassLoader classLoader) {
         super(persistentClass, datastore as Datastore)
@@ -111,6 +112,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         this.failOnError = datastore.failOnError
         this.markDirty = datastore.markDirty
         this.instanceApiHelper = datastore.getInstanceApiHelper()
+        this.persistentEntity = datastore.mappingContext.getPersistentEntity(persistentClass.name)
     }
 
     @Override

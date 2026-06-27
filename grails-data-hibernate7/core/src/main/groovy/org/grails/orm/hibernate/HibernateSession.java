@@ -395,12 +395,16 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
         final String idName = persistentEntity.getIdentity().getName();
         final String hql = "from " + entityName + " as e where e." + idName + " in (:keys)";
 
-        return getHibernateTemplate().execute(session -> {
-            // Prepare the HqlQueryContext using our manual HQL string and type override
+        Collection<?> keyCollection = getIterableAsCollection(keys);
+        if (keyCollection.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<?> fetched = getHibernateTemplate().execute(session -> {
             HqlQueryContext queryContext = HqlQueryContext.prepare(
                 persistentEntity,
                 hql,
-                Map.of("keys", getIterableAsCollection(keys)),
+                Map.of("keys", keyCollection),
                 null,
                 null,
                 new HashMap<>(),
@@ -408,7 +412,6 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
                 false,
                 type
             );
-
             return HibernateHqlQueryCreator.createHqlQuery(
                 (HibernateDatastore) getDatastore(),
                 getHibernateTemplate().getSessionFactory(),
@@ -416,6 +419,22 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
                 queryContext
             ).list();
         });
+
+        // Build id → entity map, then reconstruct in input-key order with null slots for missing ids
+        Map<Object, Object> byId = new HashMap<>();
+        for (Object entity : fetched) {
+            Object id = persistentEntity.getIdentity() != null
+                ? getMappingContext().getEntityReflector(persistentEntity).getProperty(entity, idName)
+                : null;
+            if (id != null) {
+                byId.put(id, entity);
+            }
+        }
+        List<Object> ordered = new ArrayList<>();
+        for (Object key : keys) {
+            ordered.add(byId.get(key));
+        }
+        return ordered;
     }
 
     @Override

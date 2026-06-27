@@ -357,8 +357,12 @@ public abstract class Query implements Cloneable, Serializable {
         Junction conjunction = conjunction();
         for (String property : values.keySet()) {
             Object value = values.get(property);
-            Object resolved = resolvePropertyValue(entity, property, value);
-            conjunction.add(Restrictions.eq(property, resolved));
+            if (value == null) {
+                conjunction.add(Restrictions.isNull(property));
+            } else {
+                Object resolved = resolvePropertyValue(entity, property, value);
+                conjunction.add(Restrictions.eq(property, resolved));
+            }
         }
         return this;
     }

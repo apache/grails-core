@@ -77,6 +77,7 @@ import org.grails.orm.hibernate.support.HibernateRuntimeUtils
 //TODO Duplication!!
 class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
+    protected HibernateDatastore datastore
     protected GrailsHibernateTemplate hibernateTemplate
     protected ConversionService conversionService
     protected final HibernateSession hibernateSession
@@ -85,6 +86,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     protected Class identityType
     protected ClassLoader classLoader
     protected String qualifier
+    protected GrailsHibernatePersistentEntity persistentEntity
     private HibernateGormInstanceApi<D> instanceApi
 
     HibernateGormStaticApi(Class<D> persistentClass, HibernateDatastore datastore, List<FinderMethod> finders,
@@ -100,6 +102,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         )
         this.classLoader = classLoader
         this.sessionFactory = datastore.getSessionFactory()
+        this.persistentEntity = (GrailsHibernatePersistentEntity) datastore.mappingContext.getPersistentEntity(persistentClass.name)
         this.identityType = persistentEntity.identity?.type
         this.instanceApi = new HibernateGormInstanceApi<>(persistentClass, datastore, classLoader)
         this.qualifier = qualifier
@@ -329,9 +332,21 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     }
 
     @Override
+    D findWhere(Map queryMap) {
+        if (!queryMap) return null
+        findWhere(queryMap, [:])
+    }
+
+    @Override
     D findWhere(Map queryMap, Map args) {
         if (!queryMap) return null
         executeSingleHqlQuery(prepareWhereHqlQuery(queryMap, buildFindWhereArgs(args)))
+    }
+
+    @Override
+    List<D> findAllWhere(Map queryMap) {
+        if (!queryMap) return null
+        findAllWhere(queryMap, [:])
     }
 
     @Override

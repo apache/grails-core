@@ -176,6 +176,19 @@ public class HibernateQuery extends Query {
     }
 
     @Override
+    public Junction disjunction() {
+        Disjunction dis = new Disjunction();
+        detachedCriteria.add(dis);
+        return dis;
+    }
+
+    @Override
+    public Junction conjunction() {
+        Conjunction con = new Conjunction();
+        detachedCriteria.add(con);
+        return con;
+    }
+
     public void add(Criterion criterion) {
         detachedCriteria.add(criterion);
     }
@@ -274,7 +287,13 @@ public class HibernateQuery extends Query {
 
     @Override
     public Query allEq(Map<String, Object> values) {
-        values.forEach((key, value) -> detachedCriteria.eq(calculatePropertyName(key), value));
+        values.forEach((key, value) -> {
+            if (value == null) {
+                detachedCriteria.isNull(calculatePropertyName(key));
+            } else {
+                detachedCriteria.eq(calculatePropertyName(key), value);
+            }
+        });
         return this;
     }
 

@@ -20,6 +20,8 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.tests.HibernateGormDatastoreSpec
+import org.apache.grails.data.testing.tck.domains.ChildEntity
+import org.apache.grails.data.testing.tck.domains.TestEntity
 import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
 import org.hibernate.generator.GeneratorCreationContext
 import org.hibernate.mapping.BasicValue
@@ -58,6 +60,17 @@ class GrailsIdentityGeneratorSpec extends HibernateGormDatastoreSpec {
         then:
         column.isIdentity() == true
         generator != null
+    }
+
+    def "should generate non-null sequential IDs against a live H2 database"() {
+        given: 'two entities persisted via GrailsIdentityGenerator against H2'
+        def first = new TestEntity(name: 'First', age: 1, child: new ChildEntity(name: 'Child1')).save(flush: true)
+        def second = new TestEntity(name: 'Second', age: 2, child: new ChildEntity(name: 'Child2')).save(flush: true)
+
+        expect: 'H2 assigned non-null auto-increment IDs in ascending order'
+        first.id != null
+        second.id != null
+        second.id > first.id
     }
 
     def "should handle null mappedId gracefully"() {

@@ -68,7 +68,13 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     /** @deprecated Pass a {@link MappingContext} instead of a {@link Datastore}. */
     @Deprecated
     GormStaticApi(Class<D> persistentClass, Datastore datastore, List<FinderMethod> finders, PlatformTransactionManager transactionManager) {
-        this(persistentClass, datastore.mappingContext, finders, null, ConnectionSource.DEFAULT, null)
+        this(persistentClass, datastore?.mappingContext, finders,
+                datastore != null ? ({ -> datastore } as DatastoreResolver) : null,
+                ConnectionSource.DEFAULT, null)
+    }
+
+    GormStaticApi(Class<D> persistentClass, MappingContext mappingContext, List<FinderMethod> finders, DatastoreResolver resolver) {
+        this(persistentClass, mappingContext, finders, resolver, ConnectionSource.DEFAULT, null)
     }
 
     GormStaticApi(Class<D> persistentClass, MappingContext mappingContext, List<FinderMethod> finders, String qualifier) {
@@ -516,11 +522,8 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     List<D> findAll(D example, Map args) {
-        execute({ Session session ->
-            def query = session.createQuery(persistentClass)
-            populateQueryByExample(session, query, example)
-            query.list(args)
-        } as SessionCallback<List<D>>)
+        def queryMap = createQueryMapForExample(getGormPersistentEntity(), example)
+        findAllWhere(queryMap, args)
     }
 
     @Override
@@ -540,33 +543,22 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     D find(D example, Map args) {
-        execute({ Session session ->
-            def query = session.createQuery(persistentClass)
-            populateQueryByExample(session, query, example)
-            query.singleResult()
-        } as SessionCallback<D>)
+        def queryMap = createQueryMapForExample(getGormPersistentEntity(), example)
+        findWhere(queryMap, args)
     }
 
-    protected void populateQueryByExample(Session session, org.grails.datastore.mapping.query.Query query, D example) {
-        def pe = getGormPersistentEntity()
-        def persister = session.getPersister(example)
-        if (persister != null) {
-            def id = persister.getObjectIdentifier(example)
-            if (id != null) {
-                query.add(org.grails.datastore.mapping.query.Restrictions.eq(pe.identity.name, id))
-            }
-            else {
-                def ea = pe.mappingContext.createEntityAccess(pe, example)
-                for (prop in pe.persistentProperties) {
-                    if (prop instanceof org.grails.datastore.mapping.model.types.Simple || prop instanceof org.grails.datastore.mapping.model.types.Basic) {
-                        def val = ea.getProperty(prop.name)
-                        if (val != null) {
-                            query.add(org.grails.datastore.mapping.query.Restrictions.eq(prop.name, val))
-                        }
-                    }
-                }
+    private Map createQueryMapForExample(org.grails.datastore.mapping.model.PersistentEntity pe, D example) {
+        def props = pe.persistentProperties.findAll { org.grails.datastore.mapping.model.PersistentProperty prop ->
+            !(prop instanceof org.grails.datastore.mapping.model.types.Association)
+        }
+        def queryMap = [:]
+        for (org.grails.datastore.mapping.model.PersistentProperty prop in props) {
+            def val = example[prop.name]
+            if (val != null) {
+                queryMap[prop.name] = val
             }
         }
+        return queryMap
     }
 
     @Override
@@ -581,11 +573,14 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     D findWhere(Map queryMap, Map args) {
-        where {
-            for (entry in queryMap) {
-                eq(entry.key.toString(), entry.value)
-            }
-        }.find(args)
+        execute({ Session session ->
+            org.grails.datastore.mapping.query.Query q = session.createQuery(persistentClass)
+            Map<String, Object> processedQueryMap = [:]
+            queryMap.each { key, value -> processedQueryMap[key.toString()] = value }
+            q.allEq(processedQueryMap)
+            org.grails.datastore.gorm.finders.DynamicFinder.populateArgumentsForCriteria(persistentClass, q, args)
+            q.singleResult()
+        } as SessionCallback<D>)
     }
 
     @Override
@@ -595,11 +590,14 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     List<D> findAllWhere(Map queryMap, Map args) {
-        where {
-            for (entry in queryMap) {
-                eq(entry.key.toString(), entry.value)
-            }
-        }.list(args)
+        (List<D>) execute({ Session session ->
+            org.grails.datastore.mapping.query.Query q = session.createQuery(persistentClass)
+            Map<String, Object> processedQueryMap = [:]
+            queryMap.each { key, value -> processedQueryMap[key.toString()] = value }
+            q.allEq(processedQueryMap)
+            org.grails.datastore.gorm.finders.DynamicFinder.populateArgumentsForCriteria(persistentClass, q, args)
+            q.list()
+        } as SessionCallback<List>)
     }
 
     @Override

@@ -58,6 +58,12 @@ class GormEnhancer implements Closeable {
      */
     boolean includeExternal = true
 
+    /** @deprecated Use the 3-arg constructor with {@link ConnectionSourceSettings}. */
+    @Deprecated
+    GormEnhancer(Datastore datastore, PlatformTransactionManager transactionManager) {
+        this(datastore, transactionManager, new ConnectionSourceSettings())
+    }
+
     /**
      * Backward-compatible constructor for callers that pass failOnError as a boolean.
      */

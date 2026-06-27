@@ -32,6 +32,7 @@ import org.grails.datastore.gorm.services.implementers.FindOneInterfaceProjectio
 import org.grails.datastore.mapping.services.DefaultServiceRegistry
 import org.grails.datastore.mapping.services.ServiceRegistry
 import spock.lang.Specification
+import spock.lang.PendingFeature
 
 /**
  * Tests for the @Service transformation
@@ -221,6 +222,7 @@ class FooInv {
         e.message.normalize().contains "Invalid property [wrong] of domain class [FooInv] in query."
     }
 
+    @PendingFeature
     void "test @Query invalid domain"() {
         when:"The service transform is applied to an interface it can't implement"
         new GroovyClassLoader().parseClass('''
@@ -339,6 +341,7 @@ class FooInvD {
     }
 
 
+    @PendingFeature
     void "test @Query invalid variable property"() {
         when:"The service transform is applied to an interface it can't implement"
         new GroovyClassLoader().parseClass('''

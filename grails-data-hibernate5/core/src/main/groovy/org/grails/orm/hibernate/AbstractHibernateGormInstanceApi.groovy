@@ -89,6 +89,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     protected ClassLoader classLoader
     protected IHibernateTemplate hibernateTemplate
     protected ProxyHandler proxyHandler
+    protected PersistentEntity persistentEntity
 
     boolean autoFlush
 
@@ -101,6 +102,7 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         this.autoFlush = datastore.autoFlush
         this.failOnError = datastore.failOnError
         this.markDirty = datastore.markDirty
+        this.persistentEntity = datastore.mappingContext.getPersistentEntity(persistentClass.name)
     }
 
     @Override

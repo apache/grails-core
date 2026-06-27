@@ -43,6 +43,7 @@ import org.springframework.transaction.PlatformTransactionManager
 import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.finders.FinderMethod
+import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.proxy.ProxyHandler
 import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.orm.hibernate.cfg.AbstractGrailsDomainBinder
@@ -65,6 +66,7 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
     protected GrailsHibernateTemplate hibernateTemplate
     protected ConversionService conversionService
     protected final HibernateSession hibernateSession
+    protected PersistentEntity persistentEntity
 
     AbstractHibernateGormStaticApi(
             Class<D> persistentClass,
@@ -79,6 +81,7 @@ abstract class AbstractHibernateGormStaticApi<D> extends GormStaticApi<D> {
             List<FinderMethod> finders,
             PlatformTransactionManager transactionManager) {
         super(persistentClass, datastore, finders, transactionManager)
+        this.persistentEntity = datastore?.mappingContext?.getPersistentEntity(persistentClass.name)
         this.hibernateTemplate = new GrailsHibernateTemplate(datastore.getSessionFactory(), datastore)
         this.conversionService = datastore.mappingContext.conversionService
         this.proxyHandler = datastore.mappingContext.proxyHandler
