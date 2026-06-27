@@ -61,8 +61,10 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
     protected final GormRegistry registry
     protected final String qualifier
     protected MappingContext mappingContext
+
     @Deprecated
     protected PersistentEntity persistentEntity
+
     private List<Method> methods
     private List<Method> extendedMethods
 
