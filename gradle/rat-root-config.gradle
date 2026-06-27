@@ -133,6 +133,7 @@ tasks.named('rat') {
             'buildSrc/build/**', // build directories
             '**/*.log', // exclude log files
             'local-tasks.gradle', // exclude local helper scripts
+            '**/ISSUES.md', // exclude local issue tracking files (no license header)
     ] + rootProject.subprojects.collect{"${rootProject.projectDir.relativePath(it.layout.buildDirectory.get().asFile).toString()}/**/*" }
     // logger.lifecycle("Excludes for RAT task: ${allExcludes.join(', \n')}")
     excludes = allExcludes
