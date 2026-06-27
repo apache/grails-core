@@ -48,6 +48,7 @@ import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.engine.EntityPersister
 import org.grails.datastore.mapping.engine.internal.MappingUtils
+import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.mongo.AbstractMongoSession
 import org.grails.datastore.mapping.mongo.MongoCodecSession
 import org.grails.datastore.mapping.mongo.MongoDatastore
@@ -63,8 +64,15 @@ import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 @CompileStatic
 class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D> {
 
+    protected final PersistentEntity persistentEntity
+    protected final MultiTenancySettings.MultiTenancyMode multiTenancyMode
+
     MongoStaticApi(Class<D> persistentClass, Datastore datastore, List<FinderMethod> finders, PlatformTransactionManager transactionManager) {
         super(persistentClass, datastore, finders, transactionManager)
+        this.persistentEntity = datastore.mappingContext.getPersistentEntity(persistentClass.name)
+        this.multiTenancyMode = (datastore instanceof MongoDatastore)
+                ? ((MongoDatastore) datastore).multiTenancyMode
+                : MultiTenancySettings.MultiTenancyMode.NONE
     }
 
     FindIterable<D> find(Bson filter) {
