@@ -26,7 +26,6 @@ import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
 import grails.gorm.MultiTenant
-import grails.gorm.multitenancy.CurrentTenantHolder
 import grails.gorm.multitenancy.Tenants
 import org.grails.datastore.gorm.utils.ReflectionUtils
 import org.grails.datastore.mapping.core.Datastore
@@ -38,6 +37,7 @@ import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
+import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 
 /**
  * Abstract base class for GORM API objects
@@ -101,21 +101,20 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
         // Check if we have a non-default qualifier
         if (currentQualifier != null && !ConnectionSource.DEFAULT.equals(currentQualifier) && !ConnectionSource.OLD_DEFAULT.equalsIgnoreCase(currentQualifier)) {
             if (isMultiTenantEntity && isMultiTenantCapable) {
+                MultiTenancySettings.MultiTenancyMode mode = ((MultiTenantCapableDatastore) ds).getMultiTenancyMode()
+                if (mode == MultiTenancySettings.MultiTenancyMode.DATABASE) {
+                    // In DATABASE mode, ds is the connection-specific child datastore for this qualifier.
+                    // The @CurrentTenant wrapper opens the session via withNewSession(tenantId) on the
+                    // parent datastore. Execute directly — Tenants.withId would try withNewSession on
+                    // the child which has no knowledge of the other tenant connections.
+                    return DatastoreUtils.execute(ds, callback)
+                }
                 // If it's a multi-tenant entity and we have a qualifier, bind it as the tenant ID
                 return (T1) Tenants.withId((MultiTenantCapableDatastore)ds, (Serializable)currentQualifier) {
                     DatastoreUtils.execute(ds, callback)
                 }
             }
             return executeQualified(currentQualifier, callback)
-        }
-
-        // DEFAULT qualifier path: check if a tenant is already bound
-        if (isMultiTenantCapable) {
-            Serializable tenantId = CurrentTenantHolder.get((MultiTenantCapableDatastore) ds)
-            if (tenantId != null) {
-                // If a tenant is already bound, use executeQualified to delegate to a potentially specialized API
-                return executeQualified(tenantId.toString(), callback)
-            }
         }
 
         return DatastoreUtils.execute(ds, callback)

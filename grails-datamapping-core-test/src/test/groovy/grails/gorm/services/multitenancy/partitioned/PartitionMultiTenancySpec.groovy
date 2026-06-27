@@ -56,7 +56,6 @@ class PartitionMultiTenancySpec extends Specification {
         new org.grails.datastore.gorm.GormEnhancer(datastore, datastore.transactionManager, datastore.connectionSources.defaultConnectionSource.settings)
     }
 
-    @PendingFeature
     void 'Test partitioned multi-tenancy with GORM services'() {
         setup:
         BookService bookService = new BookService()

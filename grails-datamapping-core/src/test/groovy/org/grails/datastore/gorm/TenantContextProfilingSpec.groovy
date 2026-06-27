@@ -23,6 +23,7 @@ import grails.gorm.multitenancy.CurrentTenantHolder
 import grails.gorm.multitenancy.Tenants
 import org.grails.datastore.gorm.multitenancy.TenantDelegatingGormOperations
 import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
@@ -95,7 +96,7 @@ class TenantContextProfilingSpec extends Specification {
         DummyStaticApi(Class<TenantEntity> persistentClass, Datastore datastore) {
             super(persistentClass, null, [], new DatastoreResolver() {
                 @Override Datastore resolve() { return datastore }
-            })
+            }, ConnectionSource.DEFAULT)
             this.ds = datastore
         }
         

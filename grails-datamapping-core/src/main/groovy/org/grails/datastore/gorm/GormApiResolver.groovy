@@ -106,6 +106,20 @@ class GormApiResolver {
         return datastore
     }
 
+    /**
+     * Returns the root (parent) datastore that manages the given entity class, bypassing any
+     * current-tenant resolution. Used by TenantService lookups where the caller needs the
+     * multi-connection parent (not a tenant-specific child) to properly route via withNewSession.
+     */
+    Datastore findRootDatastore(Class entity) {
+        String className = entity != null ? org.grails.datastore.mapping.reflect.NameUtils.getClassName(entity) : null
+        Datastore ds = registry.getDatastoreByString(className, ConnectionSource.DEFAULT)
+        if (ds != null) {
+            return ds
+        }
+        return registry.datastoresByQualifier.get(ConnectionSource.DEFAULT)
+    }
+
     Datastore findSingleDatastore() {
         if (registry.datastoresByQualifier.size() > 1) {
             return findDatastore(null, null)
