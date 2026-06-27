@@ -66,6 +66,11 @@ class GormEnhancer implements Closeable {
      */
     boolean includeExternal = true
 
+    @Deprecated
+    GormEnhancer(Datastore datastore, PlatformTransactionManager transactionManager) {
+        this(datastore, transactionManager, new ConnectionSourceSettings())
+    }
+
     /**
      * Backward-compatible constructor for callers that pass failOnError as a boolean.
      */
@@ -303,6 +308,54 @@ class GormEnhancer implements Closeable {
         mc.propertyMissing = { String name, val ->
             registry.findInstanceApi(cls, null).setProperty(name, val)
         }
+    }
+
+    @Deprecated
+    @CompileStatic
+    static <D> GormStaticApi<D> findStaticApi(Class<D> entity) {
+        GormRegistry.findStaticApi(entity)
+    }
+
+    @Deprecated
+    @CompileStatic
+    static <D> GormStaticApi<D> findStaticApi(Class<D> entity, String qualifier) {
+        GormRegistry.findStaticApi(entity, qualifier)
+    }
+
+    @Deprecated
+    @CompileStatic
+    static <D> GormInstanceApi<D> findInstanceApi(Class<D> entity) {
+        GormRegistry.findInstanceApi(entity)
+    }
+
+    @Deprecated
+    @CompileStatic
+    static <D> GormInstanceApi<D> findInstanceApi(Class<D> entity, String qualifier) {
+        GormRegistry.findInstanceApi(entity, qualifier)
+    }
+
+    @Deprecated
+    @CompileStatic
+    static <D> GormValidationApi<D> findValidationApi(Class<D> entity) {
+        GormRegistry.findValidationApi(entity)
+    }
+
+    @Deprecated
+    @CompileStatic
+    static <D> GormValidationApi<D> findValidationApi(Class<D> entity, String qualifier) {
+        GormRegistry.findValidationApi(entity, qualifier)
+    }
+
+    @Deprecated
+    @CompileStatic
+    static Datastore findDatastore(Class entity) {
+        GormRegistry.findDatastore(entity)
+    }
+
+    @Deprecated
+    @CompileStatic
+    static Datastore findDatastore(Class entity, String qualifier) {
+        GormRegistry.findDatastore(entity, qualifier)
     }
 
     @Deprecated
