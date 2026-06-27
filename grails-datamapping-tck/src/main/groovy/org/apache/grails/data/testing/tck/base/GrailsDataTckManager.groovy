@@ -20,25 +20,82 @@ package org.apache.grails.data.testing.tck.base
 
 import spock.lang.Specification
 
+import org.apache.grails.data.testing.tck.domains.Book
+import org.apache.grails.data.testing.tck.domains.ChildEntity
+import org.apache.grails.data.testing.tck.domains.City
+import org.apache.grails.data.testing.tck.domains.ClassWithListArgBeforeValidate
+import org.apache.grails.data.testing.tck.domains.ClassWithNoArgBeforeValidate
+import org.apache.grails.data.testing.tck.domains.ClassWithOverloadedBeforeValidate
+import org.apache.grails.data.testing.tck.domains.CommonTypes
+import org.apache.grails.data.testing.tck.domains.Country
+import org.apache.grails.data.testing.tck.domains.EnumThing
+import org.apache.grails.data.testing.tck.domains.Face
+import org.apache.grails.data.testing.tck.domains.Highway
+import org.apache.grails.data.testing.tck.domains.Location
+import org.apache.grails.data.testing.tck.domains.ModifyPerson
+import org.apache.grails.data.testing.tck.domains.Nose
+import org.apache.grails.data.testing.tck.domains.OptLockNotVersioned
+import org.apache.grails.data.testing.tck.domains.OptLockVersioned
+import org.apache.grails.data.testing.tck.domains.Person
+import org.apache.grails.data.testing.tck.domains.PersonEvent
+import org.apache.grails.data.testing.tck.domains.Pet
+import org.apache.grails.data.testing.tck.domains.PetType
+import org.apache.grails.data.testing.tck.domains.Plant
+import org.apache.grails.data.testing.tck.domains.PlantCategory
+import org.apache.grails.data.testing.tck.domains.Publication
+import org.apache.grails.data.testing.tck.domains.Task
+import org.apache.grails.data.testing.tck.domains.TestEntity
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
+import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.TransactionStatus
+import org.springframework.transaction.support.DefaultTransactionDefinition
 
 abstract class GrailsDataTckManager {
 
     static final CURRENT_TEST_NAME = 'current.gorm.test'
 
     Session session
+    PlatformTransactionManager transactionManager
+    TransactionStatus transactionStatus
 
     abstract Session createSession()
 
-    private Set<Class> domainClasses = []
+    private List<Class> domainClasses = [
+            Book,
+            ChildEntity,
+            City,
+            ClassWithListArgBeforeValidate,
+            ClassWithNoArgBeforeValidate,
+            ClassWithOverloadedBeforeValidate,
+            CommonTypes,
+            Country,
+            EnumThing,
+            Face,
+            Highway,
+            Location,
+            ModifyPerson,
+            Nose,
+            OptLockNotVersioned,
+            OptLockVersioned,
+            Person,
+            PersonEvent,
+            Pet,
+            PetType,
+            Plant,
+            PlantCategory,
+            Publication,
+            Task,
+            TestEntity
+    ]
 
     /**
-     * Returns a defensive copy of the registered domain classes.
-     * Mutating this array will not affect the manager state.
+     * Returns an unmodifiable view of the domain classes list.
+     * @return An unmodifiable list of domain classes
      */
-    Class[] getDomainClasses() {
-        domainClasses as Class[]
+    List<Class> getDomainClasses() {
+        Collections.unmodifiableList(domainClasses)
     }
 
     @Deprecated
@@ -76,12 +133,23 @@ abstract class GrailsDataTckManager {
         System.setProperty(CURRENT_TEST_NAME, spec.getClass().simpleName - 'Spec')
         session = createSession()
         DatastoreUtils.bindSession(session)
+        if (session?.datastore instanceof TransactionCapableDatastore) {
+            transactionManager = ((TransactionCapableDatastore) session.datastore).transactionManager
+            if (transactionManager != null) {
+                transactionStatus = transactionManager.getTransaction(new DefaultTransactionDefinition())
+            }
+        }
     }
 
     void cleanup() {
         System.clearProperty(CURRENT_TEST_NAME)
 
         try {
+            if (transactionManager != null && transactionStatus != null && !transactionStatus.completed) {
+                transactionManager.rollback(transactionStatus)
+            }
+            transactionStatus = null
+            transactionManager = null
             if (session) {
                 session.disconnect()
                 DatastoreUtils.unbindSession(session)

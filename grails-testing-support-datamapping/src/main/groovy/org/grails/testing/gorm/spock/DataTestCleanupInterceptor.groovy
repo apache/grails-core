@@ -23,10 +23,15 @@ import groovy.transform.CompileStatic
 
 import org.spockframework.runtime.extension.IMethodInterceptor
 import org.spockframework.runtime.extension.IMethodInvocation
+import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import grails.testing.gorm.DataTest
+import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.DatastoreUtils
+import org.grails.datastore.mapping.core.Session
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.simple.SimpleMapDatastore
+import org.grails.datastore.mapping.transactions.SessionHolder
 
 @CompileStatic
 class DataTestCleanupInterceptor implements IMethodInterceptor {
@@ -38,11 +43,38 @@ class DataTestCleanupInterceptor implements IMethodInterceptor {
     }
 
     void cleanupDataTest(DataTest testInstance) {
+        SimpleMapDatastore simpleDatastore = testInstance.applicationContext.getBean(SimpleMapDatastore)
+        unbindNonDefaultConnectionSessions(simpleDatastore)
         if (testInstance.currentSession != null) {
             testInstance.currentSession.disconnect()
             DatastoreUtils.unbindSession(testInstance.currentSession)
         }
-        SimpleMapDatastore simpleDatastore = testInstance.applicationContext.getBean(SimpleMapDatastore)
         simpleDatastore.clearData()
+    }
+
+    /**
+     * Symmetric to {@code DataTestSetupInterceptor.bindNonDefaultConnectionSessions}: disconnect and
+     * unbind the per-connection sessions bound for non-default datasources so they do not leak into
+     * the next feature method on the same thread.
+     */
+    private static void unbindNonDefaultConnectionSessions(SimpleMapDatastore datastore) {
+        for (ConnectionSource connectionSource : datastore.connectionSources.allConnectionSources) {
+            String name = connectionSource.name
+            if (ConnectionSource.DEFAULT == name) {
+                continue
+            }
+            Datastore connectionDatastore = datastore.getDatastoreForConnection(name)
+            if (connectionDatastore == null) {
+                continue
+            }
+            SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.getResource(connectionDatastore)
+            if (holder != null) {
+                Session session = holder.session
+                if (session != null) {
+                    session.disconnect()
+                    DatastoreUtils.unbindSession(session)
+                }
+            }
+        }
     }
 }

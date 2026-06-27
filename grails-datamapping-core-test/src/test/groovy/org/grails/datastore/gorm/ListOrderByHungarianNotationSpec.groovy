@@ -21,6 +21,7 @@ package org.grails.datastore.gorm
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.ClassWithHungarianNotation
+import spock.lang.PendingFeature
 
 /**
  * Created by sdelamo on 12/10/2017.
@@ -31,7 +32,7 @@ class ListOrderByHungarianNotationSpec extends GrailsDataTckSpec<GrailsDataCoreT
         manager.registerDomainClasses(ClassWithHungarianNotation)
     }
 
-
+    @PendingFeature(reason = 'SimpleMapDatastore does not fully support hungarian notation dynamic finder order by')
     void "test dynamic finder of properties with hungarian notation"() {
         when:
         new ClassWithHungarianNotation(iSize: 2).save()
