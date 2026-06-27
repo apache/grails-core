@@ -40,7 +40,16 @@ trait Arguable<T> extends ExecutesClosures {
     List<CustomArgument> arguments = []
 
     private void handleArgumentClosure(CustomArgument argument, @DelegatesTo(strategy = Closure.DELEGATE_ONLY)Closure closure) {
-        ExecutesClosures.withDelegate(closure, argument)
+        // Inlined ExecutesClosures.withDelegate: Groovy 5 STC can't resolve a parent trait's static method.
+        if (closure != null) {
+            closure.resolveStrategy = Closure.DELEGATE_ONLY
+            closure.delegate = argument
+            try {
+                closure.call()
+            } finally {
+                closure.delegate = null
+            }
+        }
         argument.validate()
         arguments.add(argument)
     }
