@@ -88,6 +88,8 @@ dependencies {
     compileOnly 'org.apache.groovy:groovy', {
         // comp: CompileStatic
     }
+
+    testImplementation 'org.spockframework:spock-core'
 }
 
 apply {
