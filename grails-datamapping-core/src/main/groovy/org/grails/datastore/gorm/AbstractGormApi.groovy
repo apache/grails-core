@@ -35,6 +35,7 @@ import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.SessionCallback
 import org.grails.datastore.mapping.core.VoidSessionCallback
 import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
@@ -101,9 +102,30 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
         // Check if we have a non-default qualifier
         if (currentQualifier != null && !ConnectionSource.DEFAULT.equals(currentQualifier) && !ConnectionSource.OLD_DEFAULT.equalsIgnoreCase(currentQualifier)) {
             if (isMultiTenantEntity && isMultiTenantCapable) {
-                // If it's a multi-tenant entity and we have a qualifier, bind it as the tenant ID
-                return (T1) Tenants.withId((MultiTenantCapableDatastore)ds, (Serializable)currentQualifier) {
-                    DatastoreUtils.execute(ds, callback)
+                // Determine whether the qualifier names a datasource connection or is a tenant ID.
+                // A datasource connection qualifier resolves via getDatastoreForConnection(); a tenant ID
+                // (e.g. from withTenant("t1")) does not. When it IS a connection qualifier we must not
+                // bind it as the tenant ID — doing so overwrites the tenant context set by the
+                // TenantResolver (e.g. SystemPropertyTenantResolver) and causes discriminator filters to
+                // match the connection name instead of the real tenant.
+                boolean isConnectionQualifier = false
+                if (ds instanceof MultipleConnectionSourceCapableDatastore) {
+                    try {
+                        Datastore resolved = ((MultipleConnectionSourceCapableDatastore) ds)
+                                .getDatastoreForConnection(currentQualifier)
+                        if (resolved != null) {
+                            isConnectionQualifier = true
+                        }
+                    } catch (Exception ignored) {
+                        // qualifier is not a known datasource name; treat it as a tenant ID below
+                    }
+                }
+                if (!isConnectionQualifier) {
+                    // Qualifier is a tenant ID — bind it so the session and any discriminator filter
+                    // both see the correct tenant for this operation.
+                    return (T1) Tenants.withId((MultiTenantCapableDatastore)ds, (Serializable)currentQualifier) {
+                        DatastoreUtils.execute(ds, callback)
+                    }
                 }
             }
             return executeQualified(currentQualifier, callback)
