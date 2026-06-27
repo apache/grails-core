@@ -120,6 +120,33 @@ public class ClassUtils {
     }
 
     /**
+     * Retrieves an integer value from a Map for the given key.
+     *
+     * @param key The key that references the integer value
+     * @param map The map to look in
+     * @return An Integer value, or {@code null} if the map is null, does not contain the key, or the value is null
+     */
+    public static Integer getIntegerFromMap(String key, Map<?, ?> map) {
+        if (map == null) return null;
+        if (map.containsKey(key)) {
+            Object o = map.get(key);
+            if (o == null) return null;
+            if (o instanceof Integer) {
+                return (Integer) o;
+            }
+            if (o instanceof Number) {
+                return ((Number) o).intValue();
+            }
+            try {
+                return Integer.valueOf(o.toString());
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    /**
      * Retrieves a boolean value from a Map for the given key
      *
      * @param key The key that references the boolean value

@@ -116,11 +116,15 @@ public abstract class DatastoreUtils {
 
         Assert.notNull(datastore, "No Datastore specified");
 
+        Session session = datastore.getSessionResolver().resolve();
+        if (session != null) {
+            return session;
+        }
+
         SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(datastore);
 
         if (sessionHolder != null && !sessionHolder.isEmpty()) {
             // pre-bound Datastore Session
-            Session session;
             if (TransactionSynchronizationManager.isSynchronizationActive() &&
                     sessionHolder.doesNotHoldNonDefaultSession()) {
                 // Spring transaction management is active ->
@@ -150,7 +154,7 @@ public abstract class DatastoreUtils {
         if (logger.isDebugEnabled()) {
             logger.debug("Opening Datastore Session");
         }
-        Session session = datastore.connect();
+        session = datastore.connect();
 
         // Use same Session for further Datastore actions within the transaction.
         // Thread object will get removed by synchronization at transaction completion.
@@ -362,12 +366,60 @@ public abstract class DatastoreUtils {
     }
 
     /**
+     * Execute the given callback with a new session, regardless of whether an existing session is present
+     * @param datastore The datastore
+     * @param callback The callback
+     * @param <T> The return type
+     * @return The result of the callback
+     */
+    public static <T> T executeWithNewSession(Datastore datastore, SessionCallback<T> callback) {
+        Session session = bindNewSession(datastore.connect());
+        try {
+            return callback.doInSession(session);
+        }
+        finally {
+            SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(datastore);
+            if (sessionHolder != null) {
+                sessionHolder.removeSession(session);
+                if (sessionHolder.isEmpty()) {
+                    TransactionSynchronizationManager.unbindResource(datastore);
+                }
+            }
+            closeSessionOrRegisterDeferredClose(session, datastore);
+        }
+    }
+
+    /**
+     * Execute the given callback with a new session, regardless of whether an existing session is present
+     * @param datastore The datastore
+     * @param callback The callback
+     */
+    public static void executeWithNewSession(Datastore datastore, VoidSessionCallback callback) {
+        Session session = bindNewSession(datastore.connect());
+        try {
+            callback.doInSession(session);
+        }
+        finally {
+            SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(datastore);
+            if (sessionHolder != null) {
+                sessionHolder.removeSession(session);
+                if (sessionHolder.isEmpty()) {
+                    TransactionSynchronizationManager.unbindResource(datastore);
+                }
+            }
+            closeSessionOrRegisterDeferredClose(session, datastore);
+        }
+    }
+
+    /**
      * Bind the session to the thread with a SessionHolder keyed by its Datastore.
      * @param session the session
      * @return the session (for method chaining)
      */
     public static Session bindSession(final Session session) {
-        TransactionSynchronizationManager.bindResource(session.getDatastore(), new SessionHolder(session));
+        if (!TransactionSynchronizationManager.hasResource(session.getDatastore())) {
+            TransactionSynchronizationManager.bindResource(session.getDatastore(), new SessionHolder(session));
+        }
         return session;
     }
 
@@ -377,7 +429,9 @@ public abstract class DatastoreUtils {
      * @return the session (for method chaining)
      */
     public static Session bindSession(final Session session, Object creator) {
-        TransactionSynchronizationManager.bindResource(session.getDatastore(), new SessionHolder(session, creator));
+        if (!TransactionSynchronizationManager.hasResource(session.getDatastore())) {
+            TransactionSynchronizationManager.bindResource(session.getDatastore(), new SessionHolder(session, creator));
+        }
         return session;
     }
 
@@ -489,7 +543,7 @@ public abstract class DatastoreUtils {
         }
         else {
 
-            Map<String, Object>[] configurations = new Map[1];
+            Map<String, Object>[] configurations = (Map<String, Object>[]) new Map[1];
             configurations[0] = configuration;
             return createPropertyResolvers(configurations);
         }
