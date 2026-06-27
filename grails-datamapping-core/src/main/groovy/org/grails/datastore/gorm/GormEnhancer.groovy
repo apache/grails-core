@@ -167,6 +167,15 @@ class GormEnhancer implements Closeable {
             }
             for (qualifier in qualifiers) {
                 DATASTORES.get(qualifier).put(name, this.datastore)
+                // Evict any lazily-cached API for this qualifier so the next access
+                // re-creates it against the now-current datastore/session-factory.
+                // Required when addTenantForSchema recreates a child datastore (e.g.
+                // per-test schema setup) and this qualifier was not in apiQualifiers.
+                if (!apiQualifiers.contains(qualifier)) {
+                    STATIC_APIS.get(qualifier)?.remove(name)
+                    INSTANCE_APIS.get(qualifier)?.remove(name)
+                    VALIDATION_APIS.get(qualifier)?.remove(name)
+                }
             }
         }
     }
