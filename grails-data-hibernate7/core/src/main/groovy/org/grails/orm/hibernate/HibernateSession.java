@@ -423,9 +423,9 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
         // Build id → entity map, then reconstruct in input-key order with null slots for missing ids
         Map<Object, Object> byId = new HashMap<>();
         for (Object entity : fetched) {
-            Object id = persistentEntity.getIdentity() != null
-                ? getMappingContext().getEntityReflector(persistentEntity).getProperty(entity, idName)
-                : null;
+            Object id = persistentEntity.getIdentity() != null ?
+                getMappingContext().getEntityReflector(persistentEntity).getProperty(entity, idName) :
+                null;
             if (id != null) {
                 byId.put(id, entity);
             }
