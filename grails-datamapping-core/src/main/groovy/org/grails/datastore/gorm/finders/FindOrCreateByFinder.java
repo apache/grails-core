@@ -29,6 +29,7 @@ import groovy.lang.MissingMethodException;
 
 import org.springframework.core.convert.ConversionException;
 
+import org.grails.datastore.gorm.DatastoreResolver;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
 import org.grails.datastore.mapping.model.MappingContext;
@@ -44,8 +45,16 @@ public class FindOrCreateByFinder extends AbstractFindByFinder {
         super(Pattern.compile(methodPattern), datastore);
     }
 
+    public FindOrCreateByFinder(final String methodPattern, DatastoreResolver datastoreResolver, MappingContext mappingContext) {
+        super(Pattern.compile(methodPattern), OPERATORS, datastoreResolver, mappingContext);
+    }
+
     public FindOrCreateByFinder(final Datastore datastore) {
         this(METHOD_PATTERN, datastore);
+    }
+
+    public FindOrCreateByFinder(DatastoreResolver datastoreResolver, MappingContext mappingContext) {
+        this(METHOD_PATTERN, datastoreResolver, mappingContext);
     }
 
     public FindOrCreateByFinder(MappingContext mappingContext) {

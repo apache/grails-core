@@ -16,11 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.finders;
 
 import java.util.regex.Pattern;
 
+import org.grails.datastore.gorm.DatastoreResolver;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.core.SessionCallback;
@@ -36,13 +36,17 @@ public abstract class AbstractFindByFinder extends DynamicFinder {
         super(pattern, OPERATORS, datastore);
     }
 
+    protected AbstractFindByFinder(Pattern pattern, String[] operators, DatastoreResolver datastoreResolver, MappingContext mappingContext) {
+        super(pattern, operators, datastoreResolver, mappingContext);
+    }
+
     protected AbstractFindByFinder(Pattern pattern, MappingContext mappingContext) {
         super(pattern, OPERATORS, mappingContext);
     }
 
     @Override
     protected Object doInvokeInternal(final DynamicFinderInvocation invocation) {
-        return execute(new SessionCallback<>() {
+        return execute(new SessionCallback<Object>() {
             public Object doInSession(final Session session) {
                 Query query = buildQuery(invocation, session);
                 adjustQuery(query);

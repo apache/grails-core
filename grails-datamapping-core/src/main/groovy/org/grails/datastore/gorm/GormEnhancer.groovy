@@ -1,131 +1,94 @@
-/* Copyright (C) 2010-2025 the original author or authors.
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *    https://www.apache.org/licenses/LICENSE-2.0
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
  */
 package org.grails.datastore.gorm
 
-import java.lang.reflect.Method
-import java.lang.reflect.Modifier
-import java.util.concurrent.ConcurrentHashMap
-
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
-import org.codehaus.groovy.reflection.CachedMethod
-import org.codehaus.groovy.runtime.metaclass.ClosureStaticMetaMethod
-import org.codehaus.groovy.runtime.metaclass.MethodSelectionException
+
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 import org.springframework.transaction.PlatformTransactionManager
-import org.springframework.transaction.TransactionSystemException
 
 import grails.gorm.MultiTenant
-import grails.gorm.multitenancy.Tenants
-import org.grails.datastore.gorm.finders.CountByFinder
-import org.grails.datastore.gorm.finders.FindAllByBooleanFinder
-import org.grails.datastore.gorm.finders.FindAllByFinder
-import org.grails.datastore.gorm.finders.FindByBooleanFinder
-import org.grails.datastore.gorm.finders.FindByFinder
-import org.grails.datastore.gorm.finders.FindOrCreateByFinder
-import org.grails.datastore.gorm.finders.FindOrSaveByFinder
-import org.grails.datastore.gorm.finders.FinderMethod
-import org.grails.datastore.gorm.finders.ListOrderByFinder
-import org.grails.datastore.gorm.internal.InstanceMethodInvokingClosure
-import org.grails.datastore.gorm.internal.StaticMethodInvokingClosure
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
-import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport
-import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
 import org.grails.datastore.mapping.model.PersistentEntity
-import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
-import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
-import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.datastore.mapping.reflect.MetaClassUtils
-import org.grails.datastore.mapping.reflect.NameUtils
-import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 
 /**
- * Enhances a class with GORM behavior
+ * Enhances a class with GORM methods
  *
  * @author Graeme Rocher
  */
-@Slf4j
 @CompileStatic
 class GormEnhancer implements Closeable {
 
-    private static final Map<String, Map<String, Closure>> NAMED_QUERIES = new ConcurrentHashMap<>()
+    private static final Logger log = LoggerFactory.getLogger(GormEnhancer)
+    private static final GormEnhancerRegistry STATE_REGISTRY = GormEnhancerRegistry.getInstance()
 
-    private static final Map<String, Map<String, GormStaticApi>> STATIC_APIS = new ConcurrentHashMap<String, Map<String, GormStaticApi>>().withDefault { String key ->
-        return new ConcurrentHashMap() as Map<String, GormStaticApi>
-    }
-    private static final Map<String, Map<String, GormInstanceApi>> INSTANCE_APIS = new ConcurrentHashMap<String, Map<String, GormInstanceApi>>().withDefault { String key ->
-        return new ConcurrentHashMap() as Map<String, GormInstanceApi>
-    }
-    private static final Map<String, Map<String, GormValidationApi>> VALIDATION_APIS = new ConcurrentHashMap<String, Map<String, GormValidationApi>>().withDefault { String key ->
-        return new ConcurrentHashMap() as Map<String, GormValidationApi>
-    }
-    private static final Map<String, Map<String, Datastore>> DATASTORES = new ConcurrentHashMap<String, Map<String, Datastore>>().withDefault { String key ->
-        return new ConcurrentHashMap() as Map<String, Datastore>
-    }
-
-    private static final Map<Datastore, GormEnhancer> ENHANCERS = new ConcurrentHashMap<>()
-
-    private static final Map<Class, Datastore> DATASTORES_BY_TYPE = new ConcurrentHashMap<Class, Datastore>()
-
+    private final GormRegistry registry
+    private final List<String> connectionSourceNames
     final Datastore datastore
-    PlatformTransactionManager transactionManager
-    List<FinderMethod> finders
-    boolean failOnError
-    boolean markDirty
+    boolean failOnError = false
+    boolean markDirty = true
 
     /**
      * Whether to include external entities
      */
     boolean includeExternal = true
+
     /**
-     * Whether to enhance classes dynamically using meta programming as well, only necessary for Java classes
+     * Backward-compatible constructor for callers that pass failOnError as a boolean.
      */
-    final boolean dynamicEnhance
-
-    GormEnhancer(Datastore datastore) {
-        this(datastore, null)
-    }
-
-    GormEnhancer(Datastore datastore, PlatformTransactionManager transactionManager, boolean failOnError = false, boolean dynamicEnhance = false, boolean markDirty = true) {
-        this(datastore, transactionManager, new ConnectionSourceSettings().failOnError(failOnError).markDirty(markDirty))
+    GormEnhancer(Datastore datastore, PlatformTransactionManager transactionManager, boolean failOnError) {
+        this(datastore, transactionManager, new ConnectionSourceSettings().failOnError(failOnError))
     }
 
     /**
-     * Construct a new GormEnhancer for the given arguments
+     * Construct a new GormEnhancer for the given arguments.
      *
-     * @param datastore The datastore
-     * @param transactionManager The transaction manager
-     * @param settings The settings
+     * @param datastore The datastore (required)
+     * @param transactionManager Retained for constructor compatibility
+     * @param settings The connection source settings (required)
+     * @param registry The GORM registry (optional, defaults to singleton instance)
      */
-    GormEnhancer(Datastore datastore, PlatformTransactionManager transactionManager, ConnectionSourceSettings settings) {
+    GormEnhancer(Datastore datastore,
+                 PlatformTransactionManager ignoredTransactionManager,
+                 ConnectionSourceSettings settings,
+                 GormRegistry registry = GormRegistry.getInstance()) {
+        assert datastore != null, 'Datastore is required'
+        assert settings != null, 'ConnectionSourceSettings is required'
+        
         this.datastore = datastore
+        this.registry = registry
+        
         this.failOnError = settings.isFailOnError()
         Boolean markDirty = settings.getMarkDirty()
         this.markDirty = markDirty == null ? true : markDirty
-        this.transactionManager = transactionManager
-        this.dynamicEnhance = false
-        if (datastore != null) {
-            registerConstraints(datastore)
-        }
-        NAMED_QUERIES.clear()
-        ENHANCERS.put(datastore, this)
-        DATASTORES_BY_TYPE.put(datastore.getClass(), datastore)
+
+        this.connectionSourceNames = ConnectionSourceNameResolver.resolveConnectionSourceNames(datastore)
+
+        String qualifier = ConnectionSourceNameResolver.resolveDefaultConnectionSourceName(datastore)
+        registry.initializeDatastore(datastore, qualifier)
 
         for (entity in datastore.mappingContext.persistentEntities) {
             registerEntity(entity)
@@ -138,71 +101,14 @@ class GormEnhancer implements Closeable {
      * @param entity The entity
      */
     void registerEntity(PersistentEntity entity) {
-        Datastore datastore = this.datastore
-        if (appliesToDatastore(datastore, entity)) {
-            def cls = entity.javaClass
-
-            List<String> qualifiers = allQualifiers(this.datastore, entity)
-            List<String> apiQualifiers = apiQualifiers(entity, qualifiers)
-            def name = entity.name
-
-            if (!apiQualifiers.contains(ConnectionSource.DEFAULT)) {
-                def firstQualifier = apiQualifiers.first()
-                def staticApi = getStaticApi(cls, firstQualifier)
-                STATIC_APIS.get(ConnectionSource.DEFAULT).put(name, staticApi)
-                def instanceApi = getInstanceApi(cls, firstQualifier)
-                INSTANCE_APIS.get(ConnectionSource.DEFAULT).put(name, instanceApi)
-                def validationApi = getValidationApi(cls, firstQualifier)
-                VALIDATION_APIS.get(ConnectionSource.DEFAULT).put(name, validationApi)
-                DATASTORES.get(ConnectionSource.DEFAULT).put(name, this.datastore)
-
-            }
-            for (qualifier in apiQualifiers) {
-                def staticApi = getStaticApi(cls, qualifier)
-                STATIC_APIS.get(qualifier).put(name, staticApi)
-                def instanceApi = getInstanceApi(cls, qualifier)
-                INSTANCE_APIS.get(qualifier).put(name, instanceApi)
-                def validationApi = getValidationApi(cls, qualifier)
-                VALIDATION_APIS.get(qualifier).put(name, validationApi)
-            }
-            for (qualifier in qualifiers) {
-                DATASTORES.get(qualifier).put(name, this.datastore)
-                // Evict any lazily-cached API for this qualifier so the next access
-                // re-creates it against the now-current datastore/session-factory.
-                // Required when addTenantForSchema recreates a child datastore (e.g.
-                // per-test schema setup) and this qualifier was not in apiQualifiers.
-                if (!apiQualifiers.contains(qualifier)) {
-                    STATIC_APIS.get(qualifier)?.remove(name)
-                    INSTANCE_APIS.get(qualifier)?.remove(name)
-                    VALIDATION_APIS.get(qualifier)?.remove(name)
-                }
-            }
+        if (!entity.isExternal()) {
+            // Delegate entity registration orchestration to the registry
+            registry.registerEntity(entity, this)
+            
+            // Add dynamic methods to the class
+            addStaticMethods(entity)
+            addInstanceMethods(entity)
         }
-    }
-
-    /**
-     * Obtain the qualifiers that need eagerly-created API providers.
-     *
-     * Entities expanded to every connection source or tenant still need datastore routing entries
-     * for those qualifiers, but the expensive API providers can be created lazily when a qualifier
-     * is actually used.
-     *
-     * @param entity The persistent entity
-     * @param qualifiers All datastore qualifiers for the entity
-     * @return The qualifiers to eagerly initialize API providers for
-     */
-    protected List<String> apiQualifiers(PersistentEntity entity, List<String> qualifiers) {
-        List<String> configuredQualifiers = new ArrayList<>(ConnectionSourcesSupport.getConnectionSourceNames(entity))
-        if (configuredQualifiers.contains(ConnectionSource.ALL)) {
-            return [ConnectionSource.DEFAULT]
-        }
-
-        boolean isMultiTenant = MultiTenant.isAssignableFrom(entity.javaClass)
-        if (isMultiTenant && configuredQualifiers.equals(ConnectionSourcesSupport.DEFAULT_CONNECTION_SOURCE_NAMES)) {
-            return [ConnectionSource.DEFAULT]
-        }
-
-        return qualifiers
     }
 
     /**
@@ -212,18 +118,11 @@ class GormEnhancer implements Closeable {
      * @param entity The entity
      * @return The qualifiers
      */
+    @CompileDynamic
     List<String> allQualifiers(Datastore datastore, PersistentEntity entity) {
         List<String> qualifiers = new ArrayList<>()
         qualifiers.addAll(ConnectionSourcesSupport.getConnectionSourceNames(entity))
 
-        // For MultiTenant entities OR entities declared with ConnectionSource.ALL,
-        // expand qualifiers to include all available connection sources — BUT only
-        // if the entity does not have an explicit non-DEFAULT datasource declaration.
-        //
-        // When a MultiTenant entity declares `datasource 'secondary'`, that explicit
-        // mapping must be preserved. Expanding to all connections causes silent
-        // data routing to the wrong database (the DEFAULT datasource) for
-        // DISCRIMINATOR multi-tenancy mode.
         boolean isMultiTenant = MultiTenant.isAssignableFrom(entity.javaClass)
         boolean hasExplicitAll = qualifiers.contains(ConnectionSource.ALL)
         boolean hasExplicitNonDefaultDatasource = isMultiTenant &&
@@ -231,480 +130,154 @@ class GormEnhancer implements Closeable {
                 qualifiers.size() > 0 &&
                 !qualifiers.equals(ConnectionSourcesSupport.DEFAULT_CONNECTION_SOURCE_NAMES)
 
-        if ((isMultiTenant || hasExplicitAll) && !hasExplicitNonDefaultDatasource && (datastore instanceof ConnectionSourcesProvider)) {
+        if ((isMultiTenant || hasExplicitAll) && !hasExplicitNonDefaultDatasource) {
             qualifiers.clear()
+            if (datastore == this.datastore) {
+                qualifiers.addAll(connectionSourceNames)
+            } else {
+                def className = entity.name
+                for (String q in connectionSourceNames) {
+                    if (registry.getDatastore(className, q) == datastore) {
+                        qualifiers.add(q)
+                    }
+                }
+
+                if (qualifiers.isEmpty()) {
+                    for (String q in registry.datastoresByQualifier.keySet()) {
+                        if (registry.datastoresByQualifier.get(q) == datastore) {
+                            qualifiers.add(q)
+                        }
+                    }
+                }
+            }
+        }
+
+        if (qualifiers.isEmpty()) {
             qualifiers.add(ConnectionSource.DEFAULT)
-
-            Iterable<ConnectionSource> allConnectionSources = ((ConnectionSourcesProvider) datastore).getConnectionSources().allConnectionSources
-            Collection<String> allConnectionSourceNames = allConnectionSources.findAll() { ConnectionSource connectionSource -> connectionSource.name != ConnectionSource.DEFAULT }
-                                                                              .collect() { ((ConnectionSource) it).name }
-            qualifiers.addAll(allConnectionSourceNames)
         }
-        return qualifiers
+        return qualifiers.unique()
+    }
+
+    List<String> getConnectionSourceNames() {
+        return connectionSourceNames
     }
 
     /**
-     * Find the tenant id for the given entity
-     *
-     * @param entity
-     * @return
+     * @return The GORM registry instance
      */
-    protected static String findTenantId(Class entity) {
-        if (MultiTenant.isAssignableFrom(entity)) {
-            Datastore defaultDatastore = findDatastore(entity, ConnectionSource.DEFAULT)
-            if ((defaultDatastore instanceof MultiTenantCapableDatastore)) {
-
-                MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore) defaultDatastore
-                if (multiTenantCapableDatastore.getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DATABASE) {
-                    return Tenants.currentId(multiTenantCapableDatastore)
-                }
-                else {
-                    return ConnectionSource.DEFAULT
-                }
-            }
-            else {
-                log.debug('Return default tenant id for non-multitenant capable datastore')
-                return ConnectionSource.DEFAULT
-            }
-        }
-        else {
-            log.debug('Returning default tenant id for non-multitenant class [{}]', entity)
-            return ConnectionSource.DEFAULT
-        }
+    static GormRegistry getRegistry() {
+        return GormRegistry.instance
     }
 
-    /**
-     * Find a static API for the give entity type and qualifier (the connection name)
-     *
-     * @param entity The entity class
-     * @param qualifier The qualifier
-     * @return A static API
-     *
-     * @throws IllegalStateException if no static API is found for the type
-     */
-    static <D> GormStaticApi<D> findStaticApi(Class<D> entity, String qualifier = findTenantId(entity)) {
-        String className = NameUtils.getClassName(entity)
-        def staticApi = STATIC_APIS.get(qualifier)?.get(className)
-        if (staticApi == null) {
-            staticApi = initializeStaticApi(entity, qualifier, className)
-        }
-        if (staticApi == null) {
-            throw stateException(entity)
-        }
-        return staticApi
-    }
-
-    private static <D> GormStaticApi<D> initializeStaticApi(Class<D> entity, String qualifier, String className) {
-        GormEnhancer enhancer = findEnhancer(entity, qualifier, className)
-        if (enhancer == null) {
-            return null
-        }
-        return (GormStaticApi<D>) STATIC_APIS.get(qualifier).computeIfAbsent(className) { String ignored ->
-            enhancer.getStaticApi(entity, qualifier)
-        }
-    }
-
-    /**
-     * Find an instance API for the give entity type and qualifier (the connection name)
-     *
-     * @param entity The entity class
-     * @param qualifier The qualifier
-     * @return An instance API
-     *
-     * @throws IllegalStateException if no instance API is found for the type
-     */
-    static <D> GormInstanceApi<D> findInstanceApi(Class<D> entity, String qualifier = findTenantId(entity)) {
-        String className = NameUtils.getClassName(entity)
-        def instanceApi = INSTANCE_APIS.get(qualifier)?.get(className)
-        if (instanceApi == null) {
-            instanceApi = initializeInstanceApi(entity, qualifier, className)
-        }
-        if (instanceApi == null) {
-            throw stateException(entity)
-        }
-        return instanceApi
-    }
-
-    private static <D> GormInstanceApi<D> initializeInstanceApi(Class<D> entity, String qualifier, String className) {
-        GormEnhancer enhancer = findEnhancer(entity, qualifier, className)
-        if (enhancer == null) {
-            return null
-        }
-        return (GormInstanceApi<D>) INSTANCE_APIS.get(qualifier).computeIfAbsent(className) { String ignored ->
-            enhancer.getInstanceApi(entity, qualifier)
-        }
-    }
-
-    /**
-     * Find a validation API for the give entity type and qualifier (the connection name)
-     *
-     * @param entity The entity class
-     * @param qualifier The qualifier
-     * @return A validation API
-     *
-     * @throws IllegalStateException if no validation API is found for the type
-     */
-    static <D> GormValidationApi<D> findValidationApi(Class<D> entity, String qualifier = findTenantId(entity)) {
-        String className = NameUtils.getClassName(entity)
-        def validationApi = VALIDATION_APIS.get(qualifier)?.get(className)
-        if (validationApi == null) {
-            validationApi = initializeValidationApi(entity, qualifier, className)
-        }
-        if (validationApi == null) {
-            throw stateException(entity)
-        }
-        return validationApi
-    }
-
-    private static <D> GormValidationApi<D> initializeValidationApi(Class<D> entity, String qualifier, String className) {
-        GormEnhancer enhancer = findEnhancer(entity, qualifier, className)
-        if (enhancer == null) {
-            return null
-        }
-        return (GormValidationApi<D>) VALIDATION_APIS.get(qualifier).computeIfAbsent(className) { String ignored ->
-            enhancer.getValidationApi(entity, qualifier)
-        }
-    }
-
-    private static GormEnhancer findEnhancer(Class entity, String qualifier, String className) {
-        Datastore datastore = DATASTORES.get(qualifier)?.get(className)
-        datastore != null ? ENHANCERS.get(datastore) : null
-    }
-
-    /**
-     * Find a datastore for the give entity type and qualifier (the connection name)
-     *
-     * @param entity The entity class
-     * @param qualifier The qualifier
-     * @return A datastore
-     *
-     * @throws IllegalStateException if no datastore is found for the type
-     */
-    static Datastore findDatastore(Class entity, String qualifier = findTenantId(entity)) {
-        def datastore = DATASTORES.get(qualifier)?.get(entity.name)
-        if (datastore == null) {
-            throw stateException(entity)
-        }
-        return datastore
-    }
-
-    /**
-     * Finds a datastore by type
-     *
-     * @param datastoreType The datastore type
-     * @return The datastore
-     *
-     * @throws IllegalStateException If no datastore is found for the type
-     */
-    static Datastore findDatastoreByType(Class<? extends Datastore> datastoreType) {
-        Datastore datastore = DATASTORES_BY_TYPE.get(datastoreType)
-        if (datastore == null) {
-            throw new IllegalStateException("No GORM implementation configured for type [$datastoreType]. Ensure GORM has been initialized correctly")
-        }
-        return datastore
-    }
-
-    /**
-     * Finds a single datastore
-     *
-     * @throws IllegalStateException If no datastore is found or more than one is configured
-     */
-    static Datastore findSingleDatastore() {
-        Collection<Datastore> allDatastores = DATASTORES_BY_TYPE.values()
-        if (allDatastores.isEmpty()) {
-            throw new IllegalStateException('No GORM implementations configured. Ensure GORM has been initialized correctly')
-        }
-        else if (allDatastores.size() > 1) {
-            throw new IllegalStateException('More than one GORM implementation is configured. Specific the datastore type!')
-        }
-        else {
-            return allDatastores.first()
-        }
-    }
-
-    /**
-     * Finds a single available transaction manager
-     *
-     * @return The transaction manager
-     *
-     * @throws TransactionSystemException If the current implementation does not support transactions
-     * @throws IllegalStateException If no GORM implementation has been bootstrapped and configured
-     */
-    static PlatformTransactionManager findSingleTransactionManager(String connectionName = ConnectionSource.DEFAULT) {
-        Datastore datastore = findSingleDatastore()
-        return getTransactionManagerForConnection(datastore, connectionName)
-    }
-
-    /**
-     * Finds a single available transaction manager
-     *
-     * @return The transaction manager
-     *
-     * @throws TransactionSystemException If the current implementation does not support transactions
-     * @throws IllegalStateException If no GORM implementation has been bootstrapped and configured
-     */
-    static PlatformTransactionManager findTransactionManager(Class<? extends Datastore> datastoreType, String connectionName = ConnectionSource.DEFAULT) {
-        Datastore datastore = findDatastoreByType(datastoreType)
-        return getTransactionManagerForConnection(datastore, connectionName)
-    }
-
-    /**
-     * Find the entity for the given type
-     *
-     * @param entity The entity class
-     * @param qualifier The qualifier
-     * @return A entity
-     *
-     * @throws IllegalStateException if no entity is found for the type
-     */
-    static PersistentEntity findEntity(Class entity, String qualifier = findTenantId(entity)) {
-        findDatastore(entity, qualifier).getMappingContext().getPersistentEntity(entity.name)
+    static PersistentEntity findEntity(Class entity) {
+        GormApiResolver resolver = GormRegistry.instance.apiResolver
+        Datastore ds = resolver.findDatastore(entity, null)
+        return ds?.mappingContext?.getPersistentEntity(entity.name)
     }
 
     /**
      * Closes the enhancer clearing any stored static state
-     *
-     * @throws IOException
      */
-    @Override
     @CompileStatic
     void close() throws IOException {
-        if (!ENHANCERS.remove(datastore, this)) {
-            return
-        }
         removeConstraints()
-        DATASTORES_BY_TYPE.clear()
-        def registry = GroovySystem.metaClassRegistry
+        if (STATE_REGISTRY.getPreferredDatastore() == datastore) {
+            STATE_REGISTRY.clearPreferredDatastore()
+        }
+        registry.removeDatastore(datastore)
+        def metaClassRegistry = GroovySystem.metaClassRegistry
         for (entity in datastore.mappingContext.persistentEntities) {
-
-            List<String> qualifiers = allQualifiers(datastore, entity)
             def cls = entity.javaClass
             def className = cls.name
-            for (q in qualifiers) {
-                NAMED_QUERIES.remove(className)
-                if (STATIC_APIS.containsKey(q)) {
-                    STATIC_APIS.get(q).remove(className)
-                }
-                if (INSTANCE_APIS.containsKey(q)) {
-                    INSTANCE_APIS.get(q).remove(className)
-                }
-                if (VALIDATION_APIS.containsKey(q)) {
-                    VALIDATION_APIS.get(q).remove(className)
-                }
-                if (DATASTORES.containsKey(q)) {
-                    DATASTORES.get(q).remove(className)
-                }
-            }
-            registry.removeMetaClass(cls)
-        }
-    }
-
-    private static PlatformTransactionManager getTransactionManagerForConnection(Datastore datastore, String connectionName) {
-        if (datastore instanceof TransactionCapableDatastore && ConnectionSource.DEFAULT.equals(connectionName)) {
-            return ((TransactionCapableDatastore) datastore).getTransactionManager()
-        } else if (datastore instanceof MultipleConnectionSourceCapableDatastore) {
-            Datastore datastoreForConnection = ((MultipleConnectionSourceCapableDatastore) datastore).getDatastoreForConnection(connectionName)
-            if (datastoreForConnection instanceof TransactionCapableDatastore) {
-                return ((TransactionCapableDatastore) datastoreForConnection).getTransactionManager()
+            registry.removeEntityDatastore(className, datastore)
+            
+            boolean stillManaged = (registry.getStaticApi(className) != null)
+            
+            if (!stillManaged) {
+                metaClassRegistry.removeMetaClass(cls)
             }
         }
-        throw new TransactionSystemException("Datastore implementation ${datastore.getClass().getName()} does not support transactions!")
-    }
-
-    private static IllegalStateException stateException(Class entity) {
-        new IllegalStateException("Either class [$entity.name] is not a domain class or GORM has not been initialized correctly or has already been shutdown. Ensure GORM is loaded and configured correctly before calling any methods on a GORM entity.")
     }
 
     @CompileDynamic
     protected void removeConstraints() {
         try {
-            String className = 'org.apache.groovy.grails.validation.ConstrainedProperty'
-            ClassLoader classLoader = getClass().getClassLoader()
-            if (ClassUtils.isPresent(className, classLoader)) {
-                classLoader.loadClass(className).removeConstraint('unique')
+            def cls = Class.forName('org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator', false, GormEnhancer.classLoader)
+            if (cls != null) {
+                def factory = datastore.mappingContext.mappingFactory
+                if (factory.hasProperty('entityContext')) {
+                    def constraintsEvaluator = factory.entityContext.getBean(cls)
+                    if (constraintsEvaluator != null) {
+                        for (entity in datastore.mappingContext.persistentEntities) {
+                            constraintsEvaluator.removeConstraints(entity.javaClass)
+                        }
+                    }
+                }
             }
         } catch (Throwable e) {
-            log.debug("Not running in Grails 2 environment, cannot de-register constraints. This exception can be safely ignored if you are not using Grails 2. ${e.message}", e)
+            log.debug("Not running in Grails environment, cannot de-register constraints. ${e.message}")
         }
     }
 
-    protected void registerConstraints(Datastore datastore) {
-        try {
-            String className = 'org.grails.datastore.gorm.support.ConstraintRegistrar'
-            ClassLoader classLoader = getClass().getClassLoader()
-            if (ClassUtils.isPresent(className, classLoader)) {
-                classLoader.loadClass(className).newInstance(datastore)
-            }
-        } catch (Throwable e) {
-            log.debug("Unable to register GORM constraints. Not running a Grails environment. This can be safely ignored if you are not running Grails: $e.message", e)
-        }
-    }
-
-    @CompileStatic
-    List<FinderMethod> getFinders() {
-        if (finders == null) {
-            finders = Collections.unmodifiableList(createDynamicFinders())
-        }
-        finders
-    }
-
-    /**
-     * Enhances all persistent entities.
-     *
-     * @param onlyExtendedMethods If only to add additional methods provides by subclasses of the GORM APIs
-     */
-    @CompileStatic
-    void enhance(boolean onlyExtendedMethods = false) {
-        if (dynamicEnhance) {
-            for (PersistentEntity e in datastore.mappingContext.persistentEntities) {
-                if (e.external && !includeExternal) continue
-                enhance(e, onlyExtendedMethods)
-            }
-        }
-    }
-
-    /**
-     * Enhance and individual entity
-     *
-     * @param e The entity
-     * @param onlyExtendedMethods If only to add additional methods provides by subclasses of the GORM APIs
-     */
-    @CompileStatic
-    void enhance(PersistentEntity e, boolean onlyExtendedMethods = false) {
-        registerEntity(e)
-
-        if (!(GroovyObject.isAssignableFrom(e.javaClass)) || dynamicEnhance) {
-            addInstanceMethods(e, onlyExtendedMethods)
-
-            addStaticMethods(e, onlyExtendedMethods)
-        }
-    }
-
-    @CompileStatic
-    protected void addStaticMethods(PersistentEntity e, boolean onlyExtendedMethods) {
+    @CompileDynamic
+    protected void addStaticMethods(PersistentEntity e) {
         def cls = e.javaClass
         ExpandoMetaClass mc = MetaClassUtils.getExpandoMetaClass(cls)
-        def staticApiProvider = getStaticApi(cls)
-        for (Method m in (onlyExtendedMethods ? staticApiProvider.extendedMethods : staticApiProvider.methods)) {
-            def method = m
-            if (method != null) {
-                def methodName = method.name
-                def parameterTypes = method.parameterTypes
-                if (parameterTypes != null) {
-                    boolean realMethodExists = doesRealMethodExist(mc, methodName, parameterTypes, true)
-                    if (!realMethodExists) {
-                        registerStaticMethod(mc, methodName, parameterTypes, staticApiProvider)
-                    }
+        
+        mc.static.methodMissing = { String name, args ->
+            def api = registry.findStaticApi(cls, null)
+            try {
+                return api.invokeMethod(name, args)
+            } catch (MissingMethodException mme) {
+                if (mme.method == name && mme.type == api.class) {
+                    return api.methodMissing(name, args)
                 }
+                throw mme
+            }
+        }
+        mc.static.propertyMissing = { String name ->
+            def api = registry.findStaticApi(cls, null)
+            try {
+                return api.getProperty(name)
+            } catch (MissingPropertyException mpe) {
+                if (mpe.property == name && mpe.type == api.class) {
+                    return api.propertyMissing(name)
+                }
+                throw mpe
             }
         }
     }
 
     @CompileDynamic
-    protected void registerStaticMethod(ExpandoMetaClass mc, String methodName, Class<?>[] parameterTypes, GormStaticApi staticApiProvider) {
-        def callable = new StaticMethodInvokingClosure(staticApiProvider, methodName, parameterTypes)
-        mc.static."$methodName" = callable
-    }
-
-    protected boolean appliesToDatastore(Datastore datastore, PersistentEntity entity) {
-        !entity.isExternal()
-    }
-
-    @CompileDynamic
-    protected <D> List<AbstractGormApi<D>> getInstanceMethodApiProviders(Class<D> cls) {
-        [getInstanceApi(cls), getValidationApi(cls)]
-    }
-
-    @CompileStatic
-    protected void addInstanceMethods(PersistentEntity e, boolean onlyExtendedMethods) {
+    protected void addInstanceMethods(PersistentEntity e) {
         Class cls = e.javaClass
         ExpandoMetaClass mc = MetaClassUtils.getExpandoMetaClass(cls)
-        for (AbstractGormApi apiProvider in getInstanceMethodApiProviders(cls)) {
-
-            for (Method method in (onlyExtendedMethods ? apiProvider.extendedMethods : apiProvider.methods)) {
-                def methodName = method.name
-                Class[] parameterTypes = method.parameterTypes
-
-                if (parameterTypes) {
-                    parameterTypes = (parameterTypes.length == 1 ? [] : parameterTypes[1..-1]) as Class[]
-
-                    boolean realMethodExists = doesRealMethodExist(mc, methodName, parameterTypes, false)
-
-                    if (!realMethodExists) {
-                        registerInstanceMethod(cls, mc, apiProvider, methodName, parameterTypes)
-                    }
+        
+        mc.methodMissing = { String name, args ->
+            def api = registry.findInstanceApi(cls, null)
+            try {
+                return api.invokeMethod(name, args)
+            } catch (MissingMethodException mme) {
+                if (mme.method == name && mme.type == api.class) {
+                    return api.methodMissing(delegate, name, args)
                 }
+                throw mme
             }
+        }
+        mc.propertyMissing = { String name ->
+            def api = registry.findInstanceApi(cls, null)
+            try {
+                return api.getProperty(name)
+            } catch (MissingPropertyException mpe) {
+                if (mpe.property == name && mpe.type == api.class) {
+                    return api.propertyMissing(delegate, name)
+                }
+                throw mpe
+            }
+        }
+        mc.propertyMissing = { String name, val ->
+            registry.findInstanceApi(cls, null).setProperty(name, val)
         }
     }
 
-    protected registerInstanceMethod(Class cls, ExpandoMetaClass mc, AbstractGormApi apiProvider, String methodName, Class[] parameterTypes) {
-        // use fake object just so we have the right method signature
-        final tooCall = new InstanceMethodInvokingClosure(apiProvider, cls, methodName, parameterTypes)
-        def pt = parameterTypes
-        // Hack to workaround http://jira.codehaus.org/browse/GROOVY-4720
-        final closureMethod = new ClosureStaticMetaMethod(methodName, cls, tooCall, pt) {
-            @Override
-            int getModifiers() { Modifier.PUBLIC }
-        }
-        mc.registerInstanceMethod(closureMethod)
-    }
-
-    @CompileStatic
-    protected static boolean doesRealMethodExist(final MetaClass mc, final String methodName, final Class[] parameterTypes, boolean staticScope) {
-        boolean realMethodExists = false
-        try {
-            MetaMethod existingMethod = mc.pickMethod(methodName, parameterTypes)
-            if (existingMethod && existingMethod.isStatic() == staticScope && isRealMethod(existingMethod) && parameterTypes.length == existingMethod.parameterTypes.length)  {
-                realMethodExists = true
-            }
-        } catch (MethodSelectionException mse) {
-            // the metamethod already exists with multiple signatures, must check if the exact method exists
-            realMethodExists = mc.methods.contains { MetaMethod existingMethod ->
-                existingMethod.name == methodName && existingMethod.isStatic() == staticScope && isRealMethod(existingMethod) && ((!parameterTypes && !existingMethod.parameterTypes) || parameterTypes == existingMethod.parameterTypes)
-            }
-        }
-        return realMethodExists
-    }
-
-    @CompileStatic
-    protected static boolean isRealMethod(MetaMethod existingMethod) {
-        existingMethod instanceof CachedMethod
-    }
-
-    @CompileStatic
-    protected <D> GormStaticApi<D> getStaticApi(Class<D> cls, String qualifier = ConnectionSource.DEFAULT) {
-        new GormStaticApi<D>(cls, datastore, getFinders(), transactionManager)
-    }
-
-    @CompileStatic
-    protected <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, String qualifier = ConnectionSource.DEFAULT) {
-        def instanceApi = new GormInstanceApi<D>(cls, datastore)
-        instanceApi.failOnError = failOnError
-        instanceApi.markDirty = markDirty
-        return instanceApi
-    }
-
-    @CompileStatic
-    protected <D> GormValidationApi<D> getValidationApi(Class<D> cls, String qualifier = ConnectionSource.DEFAULT) {
-        new GormValidationApi(cls, datastore)
-    }
-
-    @CompileStatic
-    protected List<FinderMethod> createDynamicFinders() {
-        Datastore targetDatastore = datastore
-        createDynamicFinders(targetDatastore)
-    }
-
-    @CompileStatic
-    protected List<FinderMethod> createDynamicFinders(Datastore targetDatastore) {
-        [new FindOrCreateByFinder(targetDatastore),
-         new FindOrSaveByFinder(targetDatastore),
-         new FindByFinder(targetDatastore),
-         new FindAllByFinder(targetDatastore),
-         new FindAllByBooleanFinder(targetDatastore),
-         new FindByBooleanFinder(targetDatastore),
-         new CountByFinder(targetDatastore),
-         new ListOrderByFinder(targetDatastore)] as List<FinderMethod>
-    }
 }

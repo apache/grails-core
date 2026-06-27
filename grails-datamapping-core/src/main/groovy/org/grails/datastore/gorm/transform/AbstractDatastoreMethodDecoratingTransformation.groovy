@@ -26,20 +26,20 @@ import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.FieldNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.Parameter
+import org.codehaus.groovy.ast.expr.ArgumentListExpression
 import org.codehaus.groovy.ast.expr.ClassExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
-import org.codehaus.groovy.ast.stmt.Statement
 import org.codehaus.groovy.control.SourceUnit
 
 import org.springframework.beans.factory.annotation.Autowired
 
-import org.grails.datastore.gorm.GormEnhancer
-import org.grails.datastore.gorm.internal.RuntimeSupport
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
+import org.grails.datastore.mapping.reflect.AstUtils
 
 import static org.apache.groovy.ast.tools.AnnotatedNodeUtils.markAsGenerated
 import static org.codehaus.groovy.ast.ClassHelper.STRING_TYPE
@@ -47,20 +47,19 @@ import static org.codehaus.groovy.ast.ClassHelper.VOID_TYPE
 import static org.codehaus.groovy.ast.ClassHelper.make
 import static org.codehaus.groovy.ast.tools.GeneralUtils.assignS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.block
-import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
-import static org.codehaus.groovy.ast.tools.GeneralUtils.castX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.classX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.constX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.declS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.ifElseS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.indexX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.notNullX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.param
 import static org.codehaus.groovy.ast.tools.GeneralUtils.params
 import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.castX
 import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.callD
 import static org.grails.datastore.mapping.reflect.AstUtils.ZERO_PARAMETERS
-import static org.grails.datastore.mapping.reflect.AstUtils.addAnnotationOrGetExisting
-import static org.grails.datastore.mapping.reflect.AstUtils.implementsInterface
 import static org.grails.datastore.mapping.reflect.AstUtils.isSpockTest
 
 /**
@@ -92,7 +91,8 @@ abstract class AbstractDatastoreMethodDecoratingTransformation extends AbstractM
         Expression connectionName = annotationNode.getMember('connection')
         boolean hasDataSourceProperty = connectionName != null
         boolean isSpockTest = isSpockTest(declaringClassNode)
-        ClassExpression gormEnhancerExpr = classX(GormEnhancer)
+        MethodCallExpression registryExpr = new MethodCallExpression(classX(GormRegistry), 'getInstance', new ArgumentListExpression())
+        Expression apiResolverExpr = new MethodCallExpression(registryExpr, 'getApiResolver', new ArgumentListExpression())
 
         Expression datastoreAttribute = annotationNode.getMember('datastore')
         ClassNode defaultType = hasDataSourceProperty ? make(MultipleConnectionSourceCapableDatastore) : make(Datastore)
@@ -102,124 +102,106 @@ abstract class AbstractDatastoreMethodDecoratingTransformation extends AbstractM
         MethodCallExpression datastoreLookupCall
         MethodCallExpression datastoreLookupDefaultCall
         if (hasSpecificDatastore) {
-            datastoreLookupDefaultCall = callD(gormEnhancerExpr, 'findDatastoreByType', classX(datastoreType.getPlainNodeReference()))
+            datastoreLookupDefaultCall = callD(apiResolverExpr, 'findDatastoreByType', classX(datastoreType.getPlainNodeReference()))
         }
         else {
-            datastoreLookupDefaultCall = callD(gormEnhancerExpr, 'findSingleDatastore')
+            datastoreLookupDefaultCall = callD(apiResolverExpr, 'findSingleDatastore')
         }
         datastoreLookupCall = callD(datastoreLookupDefaultCall, METHOD_GET_DATASTORE_FOR_CONNECTION, varX(connectionNameParam))
 
-        if (implementsInterface(declaringClassNode, 'org.grails.datastore.mapping.services.Service')) {
-            // simplify logic for services
-            Parameter[] getTargetDatastoreParams = params(connectionNameParam)
-            VariableExpression datastoreVar = varX('datastore', make(Datastore))
+        Parameter[] getTargetDatastoreParams = params(connectionNameParam)
 
-            // Add method:
-            // protected Datastore getTargetDatastore(String connectionName)
-            //    if(datastore != null)
-            //      return datastore.getDatastoreForConnection(connectionName)
-            //    else
-            //      return GormEnhancer.findSingleDatastore().getDatastoreForConnection(connectionName)
+        FieldNode targetDatastoreField = declaringClassNode.getField(FIELD_TARGET_DATASTORE)
+        if (targetDatastoreField == null) {
+            targetDatastoreField = declaringClassNode.addField(FIELD_TARGET_DATASTORE, Modifier.PRIVATE, datastoreType, null)
+            markAsGenerated(declaringClassNode, targetDatastoreField)
+        }
 
-            if (declaringClassNode.getMethod(METHOD_GET_TARGET_DATASTORE, getTargetDatastoreParams) == null) {
-                MethodNode mn = declaringClassNode.addMethod(METHOD_GET_TARGET_DATASTORE, Modifier.PROTECTED, datastoreType, getTargetDatastoreParams, null,
-                        ifElseS(notNullX(datastoreVar),
-                                returnS(callD(castX(make(MultipleConnectionSourceCapableDatastore), datastoreVar), METHOD_GET_DATASTORE_FOR_CONNECTION, varX(connectionNameParam))),
-                                returnS(datastoreLookupCall)
-                        ))
-                markAsGenerated(declaringClassNode, mn)
-                compileMethodStatically(source, mn)
-            }
-            if (declaringClassNode.getMethod(METHOD_GET_TARGET_DATASTORE, ZERO_PARAMETERS) == null) {
-                MethodNode mn = declaringClassNode.addMethod(METHOD_GET_TARGET_DATASTORE, Modifier.PROTECTED,  datastoreType, ZERO_PARAMETERS, null,
-                        ifElseS(notNullX(datastoreVar),
-                                returnS(datastoreVar),
-                                returnS(datastoreLookupDefaultCall))
-                )
-                markAsGenerated(declaringClassNode, mn)
+        if (declaringClassNode.getMethod(METHOD_GET_TARGET_DATASTORE, getTargetDatastoreParams) == null && !AstUtils.hasProperty(declaringClassNode, 'targetDatastore')) {
+            // When $targetDatastore is explicitly set (e.g. by setTargetDatastore), it is the authoritative
+            // parent multi-datasource datastore and must be used for connection routing. Falling back to the
+            // API resolver can return a child datastore that doesn't know about sibling connections.
+            ClassNode multipleConnectionDatastoreClassNode = make('org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore')
+            Expression targetDatastoreExpr = varX(targetDatastoreField)
+            Expression lookupDefaultDatastoreExpr = datastoreLookupDefaultCall
+            org.codehaus.groovy.ast.stmt.Statement datastoreLookupCallWithConnection = ifElseS(
+                instanceofX(lookupDefaultDatastoreExpr, multipleConnectionDatastoreClassNode),
+                returnS(callD(castX(multipleConnectionDatastoreClassNode, lookupDefaultDatastoreExpr), METHOD_GET_DATASTORE_FOR_CONNECTION, varX(connectionNameParam))),
+                returnS(callD(lookupDefaultDatastoreExpr, METHOD_GET_DATASTORE_FOR_CONNECTION, varX(connectionNameParam)))
+            )
+            MethodNode mn = declaringClassNode.addMethod(METHOD_GET_TARGET_DATASTORE, Modifier.PUBLIC, datastoreType, getTargetDatastoreParams, null,
+                    ifElseS(
+                        notNullX(targetDatastoreExpr),
+                        ifElseS(
+                            instanceofX(targetDatastoreExpr, multipleConnectionDatastoreClassNode),
+                            returnS(callD(castX(multipleConnectionDatastoreClassNode, targetDatastoreExpr), METHOD_GET_DATASTORE_FOR_CONNECTION, varX(connectionNameParam))),
+                            returnS(callD(targetDatastoreExpr, METHOD_GET_DATASTORE_FOR_CONNECTION, varX(connectionNameParam)))
+                        ),
+                        datastoreLookupCallWithConnection
+                    )
+            )
+            markAsGenerated(declaringClassNode, mn)
+            if (!isSpockTest) {
                 compileMethodStatically(source, mn)
             }
         }
-        else {
-            FieldNode datastoreField = declaringClassNode.getField(FIELD_TARGET_DATASTORE)
-            if (datastoreField == null) {
-                datastoreField = declaringClassNode.addField(FIELD_TARGET_DATASTORE, Modifier.PROTECTED, datastoreType, null)
+        if (declaringClassNode.getMethod(METHOD_GET_TARGET_DATASTORE, ZERO_PARAMETERS) == null && !AstUtils.hasProperty(declaringClassNode, 'targetDatastore')) {
+            MethodNode mn = declaringClassNode.addMethod(METHOD_GET_TARGET_DATASTORE, Modifier.PUBLIC,  datastoreType, ZERO_PARAMETERS, null,
+                    ifElseS(notNullX(varX(targetDatastoreField)), returnS(varX(targetDatastoreField)), returnS(datastoreLookupDefaultCall))
+            )
+            markAsGenerated(declaringClassNode, mn)
 
-                Parameter datastoresParam = param(datastoreType.makeArray(), 'datastores')
-                VariableExpression datastoresVar = varX(datastoresParam)
-                Expression datastoreVar = callD(classX(RuntimeSupport), 'findDefaultDatastore', datastoresVar)
-
-                BlockStatement setTargetDatastoreBody
-                VariableExpression datastoreFieldVar = varX(datastoreField)
-
-                Statement assignTargetDatastore = assignS(datastoreFieldVar, datastoreVar)
-                if (hasDataSourceProperty) {
-                    // $targetDatastore = RuntimeSupport.findDefaultDatastore(datastores)
-                    // datastore = datastore.getDatastoreForConnection(connectionName)
-                    setTargetDatastoreBody = block(
-                            assignTargetDatastore,
-                            assignS(datastoreFieldVar, callX(datastoreFieldVar, METHOD_GET_DATASTORE_FOR_CONNECTION, connectionName))
-                    )
-                }
-                else {
-                    setTargetDatastoreBody = block(
-                            assignTargetDatastore
-                    )
-                }
-
-                weaveSetTargetDatastoreBody(source, annotationNode, declaringClassNode, datastoreVar, setTargetDatastoreBody)
-
-                // Add method: @Autowired void setTargetDatastore(Datastore[] datastores)
-                Parameter[] setTargetDatastoreParams = params(datastoresParam)
-                if (declaringClassNode.getMethod('setTargetDatastore', setTargetDatastoreParams) == null) {
-                    MethodNode setTargetDatastoreMethod = declaringClassNode.addMethod('setTargetDatastore', Modifier.PUBLIC, VOID_TYPE, setTargetDatastoreParams, null, setTargetDatastoreBody)
-                    markAsGenerated(declaringClassNode, setTargetDatastoreMethod)
-
-                    // Autowire setTargetDatastore via Spring
-                    addAnnotationOrGetExisting(setTargetDatastoreMethod, Autowired)
-                            .setMember('required', constX(false))
-
-                    compileMethodStatically(source, setTargetDatastoreMethod)
-                }
-
-                // Add method:
-                // protected Datastore getTargetDatastore(String connectionName)
-                //    if($targetDatastore != null)
-                //      return $targetDatastore.getDatastoreForConnection(connectionName)
-                //    else
-                //      return GormEnhancer.findSingleDatastore().getDatastoreForConnection(connectionName)
-
-                Parameter[] getTargetDatastoreParams = params(connectionNameParam)
-
-                if (declaringClassNode.getMethod(METHOD_GET_TARGET_DATASTORE, getTargetDatastoreParams) == null) {
-                    MethodNode mn = declaringClassNode.addMethod(METHOD_GET_TARGET_DATASTORE, Modifier.PROTECTED, datastoreType, getTargetDatastoreParams, null,
-                            ifElseS(notNullX(datastoreFieldVar),
-                                    returnS(callX(datastoreFieldVar, METHOD_GET_DATASTORE_FOR_CONNECTION, varX(connectionNameParam))),
-                                    returnS(datastoreLookupCall)
-                            ))
-                    markAsGenerated(declaringClassNode, mn)
-                    if (!isSpockTest) {
-                        compileMethodStatically(source, mn)
-                    }
-                }
-                if (declaringClassNode.getMethod(METHOD_GET_TARGET_DATASTORE, ZERO_PARAMETERS) == null) {
-                    MethodNode mn = declaringClassNode.addMethod(METHOD_GET_TARGET_DATASTORE, Modifier.PROTECTED,  datastoreType, ZERO_PARAMETERS, null,
-                            ifElseS(notNullX(datastoreFieldVar),
-                                    returnS(datastoreFieldVar),
-                                    returnS(datastoreLookupDefaultCall))
-                    )
-                    markAsGenerated(declaringClassNode, mn)
-
-                    if (!isSpockTest) {
-                        compileMethodStatically(source, mn)
-                    }
-                }
+            if (!isSpockTest) {
+                compileMethodStatically(source, mn)
             }
         }
-    }
+
+        // Add setter for single datastore
+        Parameter datastoreParam = param(datastoreType, 'd')
+        if (declaringClassNode.getMethod('setTargetDatastore', params(datastoreParam)) == null) {
+            BlockStatement setTargetDatastoreBody = block()
+            setTargetDatastoreBody.addStatement(
+                    assignS(varX(targetDatastoreField), varX(datastoreParam))
+            )
+            weaveSetTargetDatastoreBody(source, annotationNode, declaringClassNode, varX(datastoreParam), setTargetDatastoreBody)
+            MethodNode setterNode = declaringClassNode.addMethod('setTargetDatastore', Modifier.PUBLIC, VOID_TYPE, params(datastoreParam), null, setTargetDatastoreBody)
+            markAsGenerated(declaringClassNode, setterNode)
+        }
+
+        // Add dummy setter for compatibility
+        Parameter datastoresParam = param(datastoreType.makeArray(), 'datastores')
+        if (declaringClassNode.getMethod('setTargetDatastore', params(datastoresParam)) == null) {
+            BlockStatement setTargetDatastoresBody = block()
+            VariableExpression firstDatastore = varX('first')
+            setTargetDatastoresBody.addStatement(
+                    declS(firstDatastore, indexX(varX(datastoresParam), constX(0)))
+            )
+            setTargetDatastoresBody.addStatement(
+                    assignS(varX(targetDatastoreField), firstDatastore)
+            )
+            weaveSetTargetDatastoreBody(source, annotationNode, declaringClassNode, firstDatastore, setTargetDatastoresBody)
+
+            MethodNode setterNode = declaringClassNode.addMethod('setTargetDatastore', Modifier.PUBLIC, VOID_TYPE, params(datastoresParam), null, setTargetDatastoresBody)
+            markAsGenerated(declaringClassNode, setterNode)
+            if (!AstUtils.hasAnnotation(setterNode, Autowired)) {
+                AnnotationNode autowired = new AnnotationNode(make(Autowired))
+                autowired.addMember('required', constX(false))
+                setterNode.addAnnotation(autowired)
+            }
+        }
+        return
+        }
 
     protected void weaveSetTargetDatastoreBody(SourceUnit source, AnnotationNode annotationNode, ClassNode declaringClassNode, Expression datastoreVar, BlockStatement setTargetDatastoreBody) {
         // no-op
+    }
+
+    private static Expression instanceofX(Expression objectExpression, ClassNode type) {
+        return org.codehaus.groovy.ast.tools.GeneralUtils.binX(
+            objectExpression,
+            org.codehaus.groovy.ast.tools.GeneralUtils.INSTANCEOF,
+            classX(type)
+        )
     }
 
 }
