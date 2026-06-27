@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -230,7 +231,7 @@ public class SpringApplicationRunner {
                 List<String> paths = ResourceUtils.getUrls(source, SpringApplicationRunner.this.compiler.getLoader());
                 for (String path : paths) {
                     try {
-                        URL url = new URL(path);
+                        URL url = URI.create(path).toURL();
                         if ("file".equals(url.getProtocol())) {
                             sources.add(new File(url.getFile()));
                         }

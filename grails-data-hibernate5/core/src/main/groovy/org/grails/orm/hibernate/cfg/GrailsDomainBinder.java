@@ -18,6 +18,7 @@
  */
 package org.grails.orm.hibernate.cfg;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -254,7 +255,11 @@ public class GrailsDomainBinder implements MetadataContributor {
             namingStrategy = (NamingStrategy) strategy;
         }
         else {
-            namingStrategy = (NamingStrategy) namingStrategyClass.newInstance();
+            try {
+                namingStrategy = (NamingStrategy) namingStrategyClass.getDeclaredConstructor().newInstance();
+            } catch (NoSuchMethodException | InvocationTargetException e) {
+                throw new InstantiationException("Failed to instantiate naming strategy [" + strategy + "]: " + e.getMessage());
+            }
         }
 
         NAMING_STRATEGIES.put(datasourceName, namingStrategy);
