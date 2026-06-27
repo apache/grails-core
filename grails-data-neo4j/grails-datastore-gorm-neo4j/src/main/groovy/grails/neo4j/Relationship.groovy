@@ -20,8 +20,8 @@
 package grails.neo4j
 
 import groovy.transform.CompileStatic
-import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormEntity
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.neo4j.RelationshipPersistentEntity
 import org.grails.datastore.gorm.schemaless.DynamicAttributes
 
@@ -60,7 +60,7 @@ trait Relationship<F,T> implements DynamicAttributes, Serializable {
      */
     String type() {
         if(this.theType == null) {
-            theType = ((RelationshipPersistentEntity)GormEnhancer.findEntity(getClass())).type()
+            theType = ((RelationshipPersistentEntity) GormRegistry.instance.apiResolver.findEntity(getClass())).type()
         }
         return theType
     }

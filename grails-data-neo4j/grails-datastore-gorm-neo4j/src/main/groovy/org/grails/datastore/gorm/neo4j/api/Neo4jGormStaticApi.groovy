@@ -534,7 +534,13 @@ RETURN DISTINCT(r), from, to$skip$limit"""
             if (!queryString.contains("\$tenantId")) {
                 throw new TenantNotFoundException("Query does not specify a tenant id, but multi tenant mode is DISCRIMINATOR!")
             } else {
-                paramsMap.put(GormProperties.TENANT_IDENTITY, Tenants.currentId(Neo4jDatastore))
+                Serializable tenantId
+                if (qualifier != null && qualifier != ConnectionSource.DEFAULT) {
+                    tenantId = qualifier
+                } else {
+                    tenantId = Tenants.currentId(Neo4jDatastore)
+                }
+                paramsMap.put(GormProperties.TENANT_IDENTITY, tenantId)
             }
         }
     }
