@@ -56,6 +56,7 @@ class DefaultSchemaHandler implements SchemaHandler {
     @Override
     void useSchema(Connection connection, String name) {
         String useStatement = String.format(useSchemaStatement, quoteName(connection, name))
+        System.err.println "Executing SQL: ${useStatement}"
         log.debug('Executing SQL Set Schema Statement: {}', useStatement)
         connection
                 .createStatement()
@@ -64,12 +65,14 @@ class DefaultSchemaHandler implements SchemaHandler {
 
     @Override
     void useDefaultSchema(Connection connection) {
+        System.err.println "Executing SQL: useDefaultSchema (${defaultSchemaName})"
         useSchema(connection, defaultSchemaName)
     }
 
     @Override
     void createSchema(Connection connection, String name) {
         String schemaCreateStatement = String.format(createSchemaStatement, quoteName(connection, name))
+        System.err.println "Executing SQL: ${schemaCreateStatement}"
         log.debug('Executing SQL Create Schema Statement: {}', schemaCreateStatement)
         connection
                 .createStatement()
