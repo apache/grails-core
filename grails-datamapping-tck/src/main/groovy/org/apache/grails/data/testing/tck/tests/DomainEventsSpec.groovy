@@ -59,7 +59,6 @@ class DomainEventsSpec extends GrailsDataTckSpec {
         PersonEvent.get(p.id).name == 'Fred'
     }
 
-    @PendingFeature(reason = 'Hibernate identity generators insert immediately during persist(), before PreInsert veto can take effect')
     @Issue('GPMONGODB-262')
     void 'Test that returning false from beforeInsert evicts the event'() {
         when: 'false is returned from a beforeInsert event'
