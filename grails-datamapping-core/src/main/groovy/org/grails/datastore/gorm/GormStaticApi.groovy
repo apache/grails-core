@@ -397,7 +397,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     D last(String propertyName) {
-        last(sort: propertyName, order: 'desc')
+        last(sort: propertyName)
     }
 
     @Override
@@ -628,7 +628,9 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     def <T1> T1 withDatastoreSession(Closure<T1> callable) {
-        withSession(callable)
+        execute({ Session session ->
+            callable.call(session)
+        } as SessionCallback<T1>)
     }
 
     @Override
