@@ -33,16 +33,18 @@ import org.grails.datastore.mapping.core.Datastore
 trait Service<T> {
 
     /**
-     * @return The datastore that this service is related to
+     * The datastore that this service is related to
      */
-    @Generated
-    abstract Datastore getDatastore()
+    private Datastore datastore
 
-    /**
-     * Sets the datastore
-     * @param datastore The datastore
-     */
     @Generated
-    abstract void setDatastore(Datastore datastore)
+    Datastore getDatastore() {
+        return datastore
+    }
+
+    @Generated
+    void setDatastore(Datastore datastore) {
+        this.datastore = datastore
+    }
 
 }
