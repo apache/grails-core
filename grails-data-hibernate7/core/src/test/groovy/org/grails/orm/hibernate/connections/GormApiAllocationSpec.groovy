@@ -148,6 +148,29 @@ class GormApiAllocationSpec extends Specification {
         !hasAnyApis(H7AllocationMultipleDatasourceTenant, 'audit')
     }
 
+    void "SCHEMA multi tenant creating a second datastore for the same entity evicts stale lazy-cached tenant APIs"() {
+        given: "a SCHEMA datastore with tenant APIs lazily populated"
+        datastore = newDatastore(MultiTenancySettings.MultiTenancyMode.SCHEMA, [], H7AllocationSchemaTenant)
+        GormEnhancer.findStaticApi(H7AllocationSchemaTenant, 'tenantA')
+        GormEnhancer.findInstanceApi(H7AllocationSchemaTenant, 'tenantA')
+        GormEnhancer.findValidationApi(H7AllocationSchemaTenant, 'tenantA')
+
+        expect: "the cache holds APIs for tenantA after the first access"
+        hasAllApis(H7AllocationSchemaTenant, 'tenantA')
+
+        when: "a new SCHEMA datastore is created for the same entity (e.g. in a new test spec's setup)"
+        HibernateDatastore datastore2 = newDatastore(MultiTenancySettings.MultiTenancyMode.SCHEMA, [], H7AllocationSchemaTenant)
+
+        then: "stale cached APIs for tenantA are evicted so the next access re-creates them against the new session factory"
+        !hasAnyApis(H7AllocationSchemaTenant, 'tenantA')
+
+        and: "DEFAULT APIs are not affected"
+        hasAllApis(H7AllocationSchemaTenant, ConnectionSource.DEFAULT)
+
+        cleanup:
+        datastore2?.close()
+    }
+
     void "DISCRIMINATOR multi tenant ALL datasource creates non-default datasource APIs lazily"() {
         given:
         datastore = newDatastore(MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR, ['analytics', 'reporting'], H7AllocationAllDatasourceTenant)

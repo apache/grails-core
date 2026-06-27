@@ -148,6 +148,29 @@ class GormApiAllocationSpec extends Specification {
         !hasAnyApis(H5AllocationMultipleDatasourceTenant, 'audit')
     }
 
+    void "SCHEMA multi tenant re-registering a tenant via addTenantForSchema evicts stale lazy-cached APIs for that qualifier"() {
+        given: "a SCHEMA datastore and the first addTenantForSchema call creates tenantA's child datastore"
+        datastore = newDatastore(MultiTenancySettings.MultiTenancyMode.SCHEMA, [], H5AllocationSchemaTenant)
+        datastore.addTenantForSchema('tenantA')
+
+        and: "tenantA APIs are lazily populated on first access"
+        GormEnhancer.findStaticApi(H5AllocationSchemaTenant, 'tenantA')
+        GormEnhancer.findInstanceApi(H5AllocationSchemaTenant, 'tenantA')
+        GormEnhancer.findValidationApi(H5AllocationSchemaTenant, 'tenantA')
+
+        expect: "the cache holds APIs for tenantA after the first access"
+        hasAllApis(H5AllocationSchemaTenant, 'tenantA')
+
+        when: "addTenantForSchema is called again, re-creating the child datastore (as happens in per-test setup)"
+        datastore.addTenantForSchema('tenantA')
+
+        then: "stale cached APIs for tenantA are evicted so the next access re-creates them against the new session factory"
+        !hasAnyApis(H5AllocationSchemaTenant, 'tenantA')
+
+        and: "DEFAULT APIs are not affected"
+        hasAllApis(H5AllocationSchemaTenant, ConnectionSource.DEFAULT)
+    }
+
     void "DISCRIMINATOR multi tenant ALL datasource creates non-default datasource APIs lazily"() {
         given:
         datastore = newDatastore(MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR, ['analytics', 'reporting'], H5AllocationAllDatasourceTenant)
