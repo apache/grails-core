@@ -20,6 +20,7 @@ package org.grails.datastore.gorm
 
 import groovy.transform.CompileStatic
 import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
@@ -94,6 +95,25 @@ abstract class AbstractGormApiRegistry<T extends AbstractDatastoreApi> {
 
     boolean containsKey(String className) {
         return apis.containsKey(registry.normalizeEntityKey(className))
+    }
+
+    /**
+     * Whether an API is currently materialized for the given entity and qualifier WITHOUT triggering
+     * lazy creation. The default-qualifier API is allocated eagerly at registration; non-default
+     * (connection / tenant) APIs are allocated lazily on first access. Supports verifying the
+     * O(M+N) lazy-allocation strategy.
+     */
+    boolean isAllocated(String className, String qualifier) {
+        String normalizedClassName = registry.normalizeEntityKey(className)
+        if (normalizedClassName == null) {
+            return false
+        }
+        String normalizedQualifier = registry.normalizeQualifier(qualifier)
+        if (ConnectionSource.DEFAULT == normalizedQualifier) {
+            return apis.containsKey(normalizedClassName)
+        }
+        Map<String, T> classQualifiedApis = qualifiedApis.get(normalizedClassName)
+        return classQualifiedApis != null && classQualifiedApis.containsKey(normalizedQualifier)
     }
 
     int size() {

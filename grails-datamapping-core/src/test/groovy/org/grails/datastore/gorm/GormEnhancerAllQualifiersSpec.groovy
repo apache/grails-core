@@ -248,14 +248,11 @@ class GormEnhancerAllQualifiersSpec extends Specification {
         secondaryApi.is(defaultApi)
     }
 
-    void "registerEntity creates a distinct qualifier API lazily when the connection routes to a separate datastore"() {
-        given: "an entity on a datastore whose 'secondary' connection routes to a distinct child datastore"
+    void "registerEntity eagerly allocates APIs for an explicitly-mapped non-default datasource (bounded M side)"() {
+        given: "an entity explicitly mapped to 'secondary', which routes to a distinct child datastore"
         def registry = new GormRegistry()
-        def childMappingContext = Mock(MappingContext) {
-            getPersistentEntities() >> []
-        }
         def childDatastore = Mock(Datastore) {
-            getMappingContext() >> childMappingContext
+            getMappingContext() >> Mock(MappingContext) { getPersistentEntities() >> [] }
         }
         def datastore = mockConnectionRoutingDatastore([ConnectionSource.DEFAULT, 'secondary'], ['secondary': childDatastore])
         def enhancer = createEnhancer(datastore, registry)
@@ -264,17 +261,43 @@ class GormEnhancerAllQualifiersSpec extends Specification {
         when: "registering the entity"
         enhancer.registerEntity(entity)
 
-        then: "the DEFAULT API is created eagerly"
+        then: "the mapped 'secondary' APIs are materialized eagerly, with no prior access"
+        registry.staticApiRegistry.isAllocated(ConnectionRoutedEntity.name, 'secondary')
+        registry.instanceApiRegistry.isAllocated(ConnectionRoutedEntity.name, 'secondary')
+        registry.validationApiRegistry.isAllocated(ConnectionRoutedEntity.name, 'secondary')
+
+        and: "the 'secondary' static API is a distinct, cached instance from the DEFAULT API"
         def defaultApi = registry.getStaticApi(ConnectionRoutedEntity, ConnectionSource.DEFAULT)
-        defaultApi != null
+        def secondaryApi = registry.getStaticApi(ConnectionRoutedEntity, 'secondary')
+        !secondaryApi.is(defaultApi)
+        secondaryApi.is(registry.getStaticApi(ConnectionRoutedEntity, 'secondary'))
+    }
+
+    void "registerEntity allocates an unmapped connection's API lazily on first access (unbounded N side)"() {
+        given: "an entity on DEFAULT, with 'secondary' configured but NOT mapped to the entity"
+        def registry = new GormRegistry()
+        def childDatastore = Mock(Datastore) {
+            getMappingContext() >> Mock(MappingContext) { getPersistentEntities() >> [] }
+        }
+        def datastore = mockConnectionRoutingDatastore([ConnectionSource.DEFAULT, 'secondary'], ['secondary': childDatastore])
+        def enhancer = createEnhancer(datastore, registry)
+        def entity = mockEntity(LazyConnectionEntity, [ConnectionSource.DEFAULT])
+
+        when: "registering the entity"
+        enhancer.registerEntity(entity)
+
+        then: "the unmapped 'secondary' API is NOT materialized yet"
+        registry.staticApiRegistry.isAllocated(LazyConnectionEntity.name, ConnectionSource.DEFAULT)
+        !registry.staticApiRegistry.isAllocated(LazyConnectionEntity.name, 'secondary')
 
         when: "the qualifier-specific API is requested"
-        def secondaryApi = registry.getStaticApi(ConnectionRoutedEntity, 'secondary')
+        def secondaryApi = registry.getStaticApi(LazyConnectionEntity, 'secondary')
 
         then: "a distinct API is created lazily for the child datastore and cached on subsequent lookups"
         secondaryApi != null
-        !secondaryApi.is(defaultApi)
-        secondaryApi.is(registry.getStaticApi(ConnectionRoutedEntity, 'secondary'))
+        registry.staticApiRegistry.isAllocated(LazyConnectionEntity.name, 'secondary')
+        !secondaryApi.is(registry.getStaticApi(LazyConnectionEntity, ConnectionSource.DEFAULT))
+        secondaryApi.is(registry.getStaticApi(LazyConnectionEntity, 'secondary'))
     }
 
     void "close removes the datastore registration from the registry"() {
@@ -332,6 +355,7 @@ class GormEnhancerAllQualifiersSpec extends Specification {
     static class NonMultiTenantDefaultEntity {}
     static class NonMultiTenantAllEntity {}
     static class ConnectionRoutedEntity {}
+    static class LazyConnectionEntity {}
     static class ClosableEntity {}
 
     /**

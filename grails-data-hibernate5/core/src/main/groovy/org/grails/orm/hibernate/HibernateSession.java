@@ -168,10 +168,12 @@ public class HibernateSession extends AbstractHibernateSession {
             CriteriaQuery criteriaQuery = criteriaBuilder.createQuery(type);
             final Root root = criteriaQuery.from(type);
             final String id = persistentEntity.getIdentity().getName();
+            // Path.in(Collection) already yields a complete `id IN (...)` predicate; wrapping it in
+            // another criteriaBuilder.in(...) emitted a second empty `IN ()` (e.g. `id in (1,2) in ()`),
+            // which Hibernate rejects with a QuerySyntaxException. Pre-existing bug from the JPA 2.0
+            // criteria migration, surfaced (not introduced) by the GormRegistry work.
             criteriaQuery = criteriaQuery.where(
-                criteriaBuilder.in(
-                    root.get(id).in(getIterableAsCollection(keys))
-                )
+                root.get(id).in(getIterableAsCollection(keys))
             );
             final org.hibernate.query.Query jpaQuery = session.createQuery(criteriaQuery);
             getHibernateTemplate().applySettings(jpaQuery);
