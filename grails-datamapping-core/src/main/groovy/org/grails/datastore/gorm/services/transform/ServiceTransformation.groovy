@@ -428,8 +428,13 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
                         )
                 )
             } else {
+                // Resolve the datastore for the target domain class through the registry, which
+                // returns null when GORM is not configured rather than throwing. The service
+                // infrastructure (validation, transaction manager resolution) relies on this
+                // null-tolerant contract to degrade gracefully outside a configured GORM runtime.
+                def registryExpr = callX(classX(GormRegistry), 'getInstance')
                 datastoreGetterNode = classNode.addMethod('getDatastore', Modifier.PUBLIC, datastoreType.plainNodeReference, ZERO_PARAMETERS, null,
-                        returnS(callX(apiResolverExpr, 'findDatastore', args(classX(targetDomainClass))))
+                        returnS(callX(registryExpr, 'getDatastore', args(classX(targetDomainClass))))
                 )
             }
             markAsGenerated(classNode, datastoreGetterNode)

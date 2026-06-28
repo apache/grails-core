@@ -927,16 +927,9 @@ class GormRegistry {
         DatastoreResolver resolver = createClassDatastoreResolver(cls)
         Datastore datastore = enhancer.datastore
 
-        boolean hasSpecializedFactory = !getApiFactory(datastore).is(defaultApiFactory)
-        GormStaticApi staticApi = hasSpecializedFactory
-                ? createStaticApi(cls, datastore, resolver, ConnectionSource.DEFAULT)
-                : enhancer.getStaticApi(cls, ConnectionSource.DEFAULT)
-        GormInstanceApi instanceApi = hasSpecializedFactory
-                ? createInstanceApi(cls, datastore, resolver, enhancer.failOnError, enhancer.markDirty)
-                : enhancer.getInstanceApi(cls, ConnectionSource.DEFAULT)
-        GormValidationApi validationApi = hasSpecializedFactory
-                ? createValidationApi(cls, datastore, resolver)
-                : enhancer.getValidationApi(cls, ConnectionSource.DEFAULT)
+        GormStaticApi staticApi = createStaticApi(cls, datastore, resolver, ConnectionSource.DEFAULT)
+        GormInstanceApi instanceApi = createInstanceApi(cls, datastore, resolver, enhancer.failOnError, enhancer.markDirty)
+        GormValidationApi validationApi = createValidationApi(cls, datastore, resolver)
 
         registerEntityApis(className, staticApi, instanceApi, validationApi)
 

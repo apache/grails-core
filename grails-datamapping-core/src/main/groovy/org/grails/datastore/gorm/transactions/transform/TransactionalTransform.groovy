@@ -158,7 +158,10 @@ class TransactionalTransform extends AbstractDatastoreMethodDecoratingTransforma
     }
 
     /**
-     * Whether the given node has a transactional annotation
+     * Whether the given node carries an explicit transaction-related annotation. An explicit
+     * {@code @NotTransactional} counts as such a decision: callers use this to decide whether to
+     * impose a default transaction (read-only for reads, transactional for writes), and a method
+     * the user marked {@code @NotTransactional} must not have a default transaction imposed on it.
      *
      * @param node The node
      * @return True if it does
@@ -166,7 +169,7 @@ class TransactionalTransform extends AbstractDatastoreMethodDecoratingTransforma
     static boolean hasTransactionalAnnotation(AnnotatedNode node) {
         if (node instanceof MethodNode) {
             if (findAnnotation(node, NotTransactional)) {
-                return false
+                return true
             }
             return findTransactionalAnnotation((MethodNode) node) != null
         }

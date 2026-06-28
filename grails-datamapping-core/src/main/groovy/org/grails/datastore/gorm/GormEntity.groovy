@@ -873,8 +873,12 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      */
     @Generated
     static Object staticPropertyMissing(String property) {
+        GormStaticApi<D> api = GormRegistry.instance.resolveStaticApi((Class<D>) this)
+        if (api == null) {
+            throw new MissingPropertyException(property, this)
+        }
         try {
-            def result = currentGormStaticApi().propertyMissing(property)
+            def result = api.propertyMissing(property)
             if (result == null) {
                 throw new MissingPropertyException(property, this)
             }
@@ -895,8 +899,12 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      */
     @Generated
     static void staticPropertyMissing(String property, value) {
+        GormStaticApi<D> api = GormRegistry.instance.resolveStaticApi((Class<D>) this)
+        if (api == null) {
+            throw new MissingPropertyException(property, this)
+        }
         try {
-            currentGormStaticApi().propertyMissing(property, value)
+            api.propertyMissing(property, value)
         } catch (IllegalStateException e) {
             throw new MissingPropertyException(property, this)
         }
@@ -1474,8 +1482,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
         currentGormStaticApi().findAll(query, params, args)
     }
 
-    @Generated
-    GormInstanceApi<D> currentGormInstanceApi() {
+    private GormInstanceApi<D> currentGormInstanceApi() {
         Class<D> cls = (Class<D>) getClass()
         GormInstanceApi<D> api = GormRegistry.instance.resolveInstanceApi(cls)
         if (api == null) {
@@ -1484,8 +1491,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
         api
     }
 
-    @Generated
-    static GormStaticApi<D> currentGormStaticApi() {
+    private static GormStaticApi<D> currentGormStaticApi() {
         Class<D> cls = (Class<D>) this
         GormStaticApi<D> api = GormRegistry.instance.resolveStaticApi(cls)
         if (api == null) {
