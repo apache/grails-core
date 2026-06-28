@@ -293,7 +293,13 @@ class Tenants {
         } catch (Throwable e) {
             // ignore
         }
-        if (childDatastore != null && childDatastore.hasCurrentSession()) {
+        // Only reuse an already-bound per-tenant session for non-shared-connection modes
+        // (e.g. DATABASE), where getDatastoreForTenantId yields a distinct child datastore.
+        // Shared-connection modes (DISCRIMINATOR, SCHEMA) must run through the shared-connection
+        // path below so the closure receives the datastore's own session (which adapters may
+        // expose as a native session), rather than the resolved child datastore's session.
+        if (!multiTenantCapableDatastore.getMultiTenancyMode().isSharedConnection() &&
+                childDatastore != null && childDatastore.hasCurrentSession()) {
             return CurrentTenantHolder.withTenant(multiTenantCapableDatastore, tenantId) {
                 def i = callable.parameterTypes.length
                 switch (i) {
