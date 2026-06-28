@@ -28,6 +28,7 @@ import org.codehaus.groovy.ast.expr.PropertyExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.transform.stc.GroovyTypeCheckingExtensionSupport
 import org.codehaus.groovy.transform.stc.StaticTypesMarker
+import org.grails.compiler.injection.CompileStaticArtefactInjector
 import org.grails.core.artefact.ControllerArtefactHandler
 
 /**
@@ -91,10 +92,8 @@ class ControllerTagLibTypeCheckingExtension extends GroovyTypeCheckingExtensionS
             newScope {
                 // Both controllers and tag libraries dispatch tags at runtime through the
                 // TagLibraryInvoker trait, so both receive the same dynamic-dispatch silencing.
-                // 'TagLib' is matched as a literal because grails-core has no dependency on the
-                // taglib module; it mirrors org.grails.core.artefact.gsp.TagLibArtefactHandler.TYPE.
                 isTagDispatcher = classNode.name.endsWith(ControllerArtefactHandler.TYPE) ||
-                        classNode.name.endsWith('TagLib')
+                        classNode.name.endsWith(CompileStaticArtefactInjector.TAGLIB_TYPE)
                 dynamicNamespaceProperties = [] as Set
             }
         }
