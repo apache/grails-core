@@ -50,7 +50,6 @@ import grails.gorm.DetachedCriteria
 import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.mapping.core.connections.ConnectionSource
-import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
 import org.grails.datastore.mapping.proxy.ProxyHandler
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.query.api.BuildableCriteria as GrailsCriteria
@@ -536,11 +535,11 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     def propertyMissing(String name) {
-        if (datastore instanceof ConnectionSourcesProvider) {
-            return HibernateGormEnhancer.findStaticApi(persistentClass, name)
-        } else {
-            throw new MissingPropertyException(name, persistentClass)
-        }
+        // Delegate to the base implementation, which resolves dynamic finder property
+        // access to a finder closure before falling back to connection-source qualifier
+        // lookup. Returning a qualifier API unconditionally would break finder calls that
+        // Groovy resolves via the property channel (e.g. Entity.findByName(arg)).
+        return super.propertyMissing(name)
     }
 
     @Override
