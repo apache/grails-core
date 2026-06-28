@@ -225,7 +225,7 @@ class Foo {
 
         then:"The impl is valid - protected methods should have no transaction"
         impl.getMethod("readFoo", Serializable).getAnnotation(ReadOnly) != null
-        impl.getMethod("findFoo", Serializable).getAnnotation(ReadOnly) == null
+        impl.getDeclaredMethod("findFoo", Serializable).getAnnotation(ReadOnly) == null
         org.grails.datastore.mapping.services.Service.isAssignableFrom(impl)
 
     }
