@@ -270,10 +270,9 @@ class GormEnhancer implements Closeable {
             try {
                 return api.getProperty(name)
             } catch (MissingPropertyException mpe) {
-                if (mpe.property == name && mpe.type == api.class) {
-                    return api.propertyMissing(name)
-                }
                 throw mpe
+            } catch (Throwable t) {
+                throw new MissingPropertyException(name, cls)
             }
         }
     }

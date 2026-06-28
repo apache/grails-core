@@ -61,11 +61,6 @@ abstract class AbstractDatastoreApi {
         return datastoreResolver?.resolve()
     }
 
-    @Deprecated
-    void setDatastore(Datastore datastore) {
-        this.datastoreResolver = new StaticDatastoreResolver(datastore)
-    }
-
     private static class StaticDatastoreResolver implements DatastoreResolver {
         private final Datastore datastore
         StaticDatastoreResolver(Datastore datastore) { this.datastore = datastore }
