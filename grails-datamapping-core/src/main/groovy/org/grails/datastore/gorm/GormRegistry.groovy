@@ -31,6 +31,7 @@ import grails.gorm.multitenancy.CurrentTenantHolder
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
@@ -937,6 +938,23 @@ class GormRegistry {
         Datastore datastoreForMappings = enhancer.datastore
         List<String> qualifiers = enhancer.allQualifiers(datastore, persistentEntity)
         registerEntityDatastores(className, datastoreForMappings, qualifiers, persistentEntity)
+
+        // Eagerly allocate APIs ONLY for the datasources the entity is EXPLICITLY mapped to. This is
+        // the bounded "M" side of the O(M+N) strategy: an entity's declared datasources are a small,
+        // known, finite set, so materializing them up front is cheap and avoids first-access latency.
+        //
+        // Runtime tenant qualifiers and the ALL wildcard's connections are the unbounded "N" side
+        // (potentially many tenants, discovered at runtime) and MUST stay lazily allocated on first
+        // access: eager-allocating them would reintroduce O(M×N) memory and cannot handle tenants
+        // added at runtime (e.g. addTenantForSchema). The DEFAULT connection is already allocated above.
+        for (String mapped in ConnectionSourcesSupport.getConnectionSourceNames(persistentEntity)) {
+            String mappedQualifier = normalizeQualifier(mapped)
+            if (!ConnectionSource.DEFAULT.equals(mappedQualifier) && !ConnectionSource.ALL.equals(mappedQualifier)) {
+                getStaticApi(cls, mappedQualifier)
+                getInstanceApi(cls, mappedQualifier)
+                getValidationApi(cls, mappedQualifier)
+            }
+        }
     }
 
 }

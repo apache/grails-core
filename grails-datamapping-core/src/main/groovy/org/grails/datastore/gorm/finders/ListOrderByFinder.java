@@ -79,28 +79,29 @@ public class ListOrderByFinder extends AbstractFinder {
 
                 final Query q = session.createQuery(clazz);
                 String[] propertyNames = parts.split("And");
-                for (String propertyName : propertyNames) {
-                    q.order(Query.Order.asc(NameUtils.decapitalize(propertyName)));
-                }
 
+                // Resolve the sort direction BEFORE applying any order. Applying asc first and then
+                // trying to clear/replace it leaves the eagerly-applied asc order in the underlying
+                // criteria, so an explicit order:'desc' argument was silently ignored.
+                boolean ascending = true;
                 if (arguments.length > 0 && (arguments[0] instanceof Map)) {
                     Map args = new LinkedHashMap((Map) arguments[0]);
                     final Object order = args.remove("order");
-                    if (order != null) {
-                        if (order.toString().equalsIgnoreCase("desc")) {
-                            q.clearOrders();
-                            for (String propertyName : propertyNames) {
-                                q.order(Query.Order.desc(NameUtils.decapitalize(propertyName)));
-                            }
-                        }
+                    if (order != null && order.toString().equalsIgnoreCase("desc")) {
+                        ascending = false;
                     }
                     DynamicFinder.populateArgumentsForCriteria(clazz, q, args);
                 }
-                
+
+                for (String propertyName : propertyNames) {
+                    String property = NameUtils.decapitalize(propertyName);
+                    q.order(ascending ? Query.Order.asc(property) : Query.Order.desc(property));
+                }
+
                 if (additionalCriteria != null) {
                     applyAdditionalCriteria(q, additionalCriteria);
                 }
-                
+
                 return q.list();
             }
         });
