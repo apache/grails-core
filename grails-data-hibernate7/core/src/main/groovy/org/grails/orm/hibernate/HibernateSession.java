@@ -24,8 +24,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import jakarta.persistence.FlushModeType;
 import jakarta.persistence.LockModeType;
@@ -37,6 +39,7 @@ import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.query.MutationQuery;
 
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.core.convert.ConversionService;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
@@ -394,28 +397,69 @@ public class HibernateSession extends AbstractAttributeStoringSession implements
         final String entityName = persistentEntity.getName();
         final String idName = persistentEntity.getIdentity().getName();
         final String hql = "from " + entityName + " as e where e." + idName + " in (:keys)";
+        final Class idType = persistentEntity.getIdentity().getType();
+        final ConversionService conversionService = getMappingContext().getConversionService();
+
+        // Convert each requested id to the entity's identifier type, preserving order and
+        // duplicates. getAll() must return entities in the supplied id order with a null slot
+        // for any id that does not resolve to a row, so order is driven by the request rather
+        // than the database.
+        final List<Serializable> requestedIds = new ArrayList<>();
+        for (Object key : keys) {
+            requestedIds.add(convertToIdentifierType(key, idType, conversionService));
+        }
 
         return getHibernateTemplate().execute(session -> {
-            // Prepare the HqlQueryContext using our manual HQL string and type override
-            HqlQueryContext queryContext = HqlQueryContext.prepare(
-                persistentEntity,
-                hql,
-                Map.of("keys", getIterableAsCollection(keys)),
-                null,
-                null,
-                new HashMap<>(),
-                false,
-                false,
-                type
-            );
+            // Query only the distinct, non-null ids; a missing id simply yields no row.
+            final Set<Serializable> distinctIds = new LinkedHashSet<>();
+            for (Serializable requestedId : requestedIds) {
+                if (requestedId != null) {
+                    distinctIds.add(requestedId);
+                }
+            }
 
-            return HibernateHqlQueryCreator.createHqlQuery(
-                (HibernateDatastore) getDatastore(),
-                getHibernateTemplate().getSessionFactory(),
-                persistentEntity,
-                queryContext
-            ).list();
+            final Map<Object, Object> entitiesById = new HashMap<>();
+            if (!distinctIds.isEmpty()) {
+                HqlQueryContext queryContext = HqlQueryContext.prepare(
+                    persistentEntity,
+                    hql,
+                    Map.of("keys", distinctIds),
+                    null,
+                    null,
+                    new HashMap<>(),
+                    false,
+                    false,
+                    type
+                );
+
+                final List results = HibernateHqlQueryCreator.createHqlQuery(
+                    (HibernateDatastore) getDatastore(),
+                    getHibernateTemplate().getSessionFactory(),
+                    persistentEntity,
+                    queryContext
+                ).list();
+                for (Object entity : results) {
+                    entitiesById.put(session.getIdentifier(entity), entity);
+                }
+            }
+
+            // Reassemble in the requested order, leaving a null slot for missing ids.
+            final List ordered = new ArrayList<>(requestedIds.size());
+            for (Serializable requestedId : requestedIds) {
+                ordered.add(requestedId == null ? null : entitiesById.get(requestedId));
+            }
+            return ordered;
         });
+    }
+
+    private Serializable convertToIdentifierType(Object key, Class idType, ConversionService conversionService) {
+        if (key == null || idType.isInstance(key)) {
+            return (Serializable) key;
+        }
+        if (conversionService != null && conversionService.canConvert(key.getClass(), idType)) {
+            return (Serializable) conversionService.convert(key, idType);
+        }
+        return (Serializable) key;
     }
 
     @Override
