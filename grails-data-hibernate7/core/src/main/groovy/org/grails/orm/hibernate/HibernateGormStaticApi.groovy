@@ -90,7 +90,6 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     HibernateGormStaticApi(Class<D> persistentClass, HibernateDatastore datastore, List<FinderMethod> finders,
                            ClassLoader classLoader, PlatformTransactionManager transactionManager, String qualifier = null) {
         super(persistentClass, datastore, finders, transactionManager)
-        this.datastore = datastore
         this.hibernateTemplate = (GrailsHibernateTemplate) datastore.getHibernateTemplate()
         this.conversionService = datastore.mappingContext.conversionService
         this.proxyHandler = datastore.mappingContext.proxyHandler
