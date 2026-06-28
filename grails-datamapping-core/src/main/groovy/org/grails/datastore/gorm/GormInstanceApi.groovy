@@ -204,6 +204,12 @@ class GormInstanceApi<D> extends AbstractGormApi<D> implements GormInstanceOpera
 
         try {
             execute({ Session session ->
+                if (instance instanceof DirtyCheckable && markDirty) {
+                    // Since this is an explicit call to save() we mark the instance as dirty to
+                    // ensure it is persisted even when no tracked property has changed (e.g. a
+                    // previously-saved, now-detached instance being re-saved).
+                    ((DirtyCheckable) instance).markDirty()
+                }
                 session.persist(instance)
                 if (shouldFlush) {
                     session.flush()
