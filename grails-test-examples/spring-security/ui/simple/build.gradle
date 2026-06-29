@@ -41,7 +41,7 @@ dependencies {
     implementation 'org.apache.grails:grails-data-hibernate5'
 
     implementation "dumbster:dumbster:$dumbsterVersion", { transitive = false } // Uses javax
-    implementation "org.grails.plugins:grails-mail:5.0.2" // TODO: Import Mail
+    implementation 'org.apache.grails:grails-mail'
 
     compileOnly 'org.slf4j:slf4j-nop' // Remove warning about missing slf4j implementation during gsp compilation
 
