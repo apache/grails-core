@@ -1078,32 +1078,32 @@ include::redis.adoc[]
 [[redisInstallation]]
 === Installation and Configuration
 
-include::redis/installation.adoc[]
+include::redis/redisInstallation.adoc[]
 
 [[redisUsage]]
 === Using the redisService
 
-include::redis/usage.adoc[]
+include::redis/redisUsage.adoc[]
 
 [[redisMemoization]]
 === Memoization
 
-include::redis/memoization.adoc[]
+include::redis/redisMemoization.adoc[]
 
 [[redisMemoizationAnnotations]]
 === Memoization Annotations
 
-include::redis/memoizationAnnotations.adoc[]
+include::redis/redisMemoizationAnnotations.adoc[]
 
 [[redisMultipleServers]]
 === Multiple Redis Servers
 
-include::redis/multipleServers.adoc[]
+include::redis/redisMultipleServers.adoc[]
 
 [[redisUsefulLinks]]
 === Useful Links
 
-include::redis/usefulLinks.adoc[]
+include::redis/redisUsefulLinks.adoc[]
 
 [[plugins]]
 == Plugins

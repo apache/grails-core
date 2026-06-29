@@ -330,6 +330,14 @@ security:
       springSecurityOauth2: OAuth2 Plugin
       springSecurityRest: REST Plugin
       springSecurityUi: UI Plugin
+redis:
+  title: Redis
+  redisInstallation: Installation and Configuration
+  redisUsage: Using the redisService
+  redisMemoization: Memoization
+  redisMemoizationAnnotations: Memoization Annotations
+  redisMultipleServers: Multiple Redis Servers
+  redisUsefulLinks: Useful Links
 plugins:
   title: Plugins
   creatingAndInstallingPlugins: Creating and Installing Plugins
