@@ -71,7 +71,7 @@ public class GenericJavaBeanMarshaller extends IncludeExcludePropertyMarshaller<
             }
             for (Field field : o.getClass().getDeclaredFields()) {
                 int modifiers = field.getModifiers();
-                if (field.isAccessible() && Modifier.isPublic(modifiers) && !(Modifier.isStatic(modifiers) || Modifier.isTransient(modifiers))) {
+                if (field.canAccess(o) && Modifier.isPublic(modifiers) && !(Modifier.isStatic(modifiers) || Modifier.isTransient(modifiers))) {
                     String name = field.getName();
                     if (!shouldInclude(includeExcludeSupport, includes, excludes, o, name)) continue;
                     writer.key(field.getName());

@@ -36,6 +36,8 @@ import groovy.lang.GroovyObjectSupport;
 
 import jakarta.servlet.ServletContext;
 
+import org.jspecify.annotations.NonNull;
+
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.beans.factory.BeanFactory;
@@ -53,7 +55,6 @@ import org.springframework.core.env.Environment;
 import org.springframework.core.io.AbstractResource;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
-import org.springframework.lang.NonNull;
 import org.springframework.mock.web.MockServletContext;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.util.PathMatcher;

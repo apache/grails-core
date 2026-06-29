@@ -656,7 +656,7 @@ public class RegexUrlMapping extends AbstractUrlMapping {
                     }
                 }
                 // if the format is specified but the value is empty, ignore it
-                if (!(FORMAT_PARAMETER.equals(propertyName) && GrailsStringUtils.isEmpty(lastGroup))) {
+                if (!(FORMAT_PARAMETER.equals(propertyName) && !GrailsStringUtils.hasLength(lastGroup))) {
                     params.put(propertyName, lastGroup);
                 }
                 break;
@@ -680,7 +680,7 @@ public class RegexUrlMapping extends AbstractUrlMapping {
                         lastGroup = lastGroup.substring(1);
                     }
                     // if the format is specified but the value is empty, ignore it
-                    if (!(FORMAT_PARAMETER.equals(propertyName) && GrailsStringUtils.isEmpty(lastGroup))) {
+                    if (!(FORMAT_PARAMETER.equals(propertyName) && !GrailsStringUtils.hasLength(lastGroup))) {
                         params.put(propertyName, lastGroup);
                     }
                 }

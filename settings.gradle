@@ -205,7 +205,7 @@ include(
         'grails-datamapping-core-test',
 
         // RX projects
-        // until this can be finished ported to grails 7, we are disabling
+        // until this can be finished being ported to the current Grails release, we are disabling
         //'grails-datamapping-rx',
 
         // Testing Support
@@ -267,7 +267,7 @@ project(':grails-gsp-spring-boot').projectDir = file('grails-gsp/spring-boot')
 // Data Mapping - Documentation
 include 'grails-data-docs-guide-developer'
 project(':grails-data-docs-guide-developer').projectDir = file('grails-data-docs/guide-developer')
-// until this can be finished ported to grails 7, we are disabling
+// until this can be finished being ported to the current Grails release, we are disabling
 // include 'grails-data-docs-guide-rx'
 // project(':grails-data-docs-guide-rx').projectDir = file('docs/guide-rx')
 include 'grails-data-docs-guide-whats-new'

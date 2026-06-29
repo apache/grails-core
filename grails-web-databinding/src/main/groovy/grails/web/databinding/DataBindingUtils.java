@@ -19,6 +19,7 @@
 package grails.web.databinding;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.util.Collection;
 import java.util.Collections;
@@ -179,7 +180,15 @@ public class DataBindingUtils {
         }
         final List<DataBindingSource> dataBindingSources = collectionBindingSource.getDataBindingSources();
         for (final DataBindingSource dataBindingSource : dataBindingSources) {
-            final T newObject = targetType.newInstance();
+            final T newObject;
+            try {
+                newObject = targetType.getDeclaredConstructor().newInstance();
+            } catch (NoSuchMethodException | InvocationTargetException ex) {
+                throw new InstantiationException(
+                    "Could not instantiate class [" + targetType.getName() + "]: " + ex.getMessage()
+                );
+            }
+
             bindObjectToDomainInstance(entity, newObject, dataBindingSource, getBindingIncludeList(newObject), Collections.emptyList(), null);
             collectionToPopulate.add(newObject);
         }

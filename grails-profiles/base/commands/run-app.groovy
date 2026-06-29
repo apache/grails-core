@@ -22,7 +22,11 @@ try {
         arguments << '--quiet'
     }
 
-    arguments << '-Dgrails.management.endpoints.shutdown.enabled=true'
+    // bootRun (configured by GrailsGradlePlugin) tells the forked application to write its PID to
+    // build/run-app.pid, which stop-app reads to terminate it. Clear any stop marker left by a
+    // previous stop-app so a genuine startup failure is not mistaken for a deliberate shutdown.
+    File pidFile = org.grails.cli.gradle.RunningApplicationProcess.pidFile(buildDir)
+    org.grails.cli.gradle.RunningApplicationProcess.clearStopRequest(buildDir)
 
     arguments.addAll commandLine.remainingArgs
 
@@ -70,6 +74,14 @@ try {
         }
     }
 
+    // Best-effort guard against starting a second app for this project. The forked app writes its
+    // PID only after it has started, so two run-app invocations launched in quick succession can
+    // both pass this check; with the default fixed port the second simply fails on a port conflict.
+    if(org.grails.cli.gradle.RunningApplicationProcess.isRunning(pidFile)) {
+        console.error "An application started with run-app is already running for this project. Run 'stop-app' first."
+        return false
+    }
+
     console.updateStatus "Running application..."
 
     if(!org.grails.cli.GrailsCli.isInteractiveModeActive()) {
@@ -78,6 +90,11 @@ try {
         }
         else {
             gradle."bootRun"(*arguments)
+        }
+        // A deliberate stop is a successful build, so bootRun returns here instead of throwing.
+        if(org.grails.cli.gradle.RunningApplicationProcess.isStopRequested(buildDir)) {
+            console.updateStatus("Application stopped")
+            return true
         }
     }
     else {
@@ -125,6 +142,12 @@ catch(org.gradle.tooling.BuildCancelledException e) {
     return true
 }
 catch(Throwable e) {
+    // Fallback for a force-killed app (did not exit on SIGTERM in time): a requested stop is a clean
+    // shutdown, not a startup failure. A normal stop succeeds and is handled above.
+    if(org.grails.cli.gradle.RunningApplicationProcess.isStopRequested(buildDir)) {
+        console.updateStatus("Application stopped")
+        return true
+    }
     console.error "Failed to start server", e
     return false
 }

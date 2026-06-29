@@ -1,0 +1,12 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+tasks.register('inspectBootRunPid') {
+    doLast {
+        def task = tasks.named('bootRun').get()
+        def prefix = '-Dgrails.cli.pid.file='
+        def pidArg = task.jvmArgumentProviders.collectMany { it.asArguments() as List }.find { it.startsWith(prefix) }
+        println "PID_FILE=${pidArg ? pidArg.substring(prefix.length()) : ''}"
+    }
+}

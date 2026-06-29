@@ -18,6 +18,8 @@
  */
 package org.grails.spring;
 
+import java.lang.reflect.InvocationTargetException;
+
 import groovy.lang.Binding;
 import groovy.lang.Closure;
 import groovy.lang.Script;
@@ -95,12 +97,12 @@ public class RuntimeSpringConfigUtilities {
         }
     }
 
-    public static BeanBuilder reloadSpringResourcesConfig(RuntimeSpringConfiguration config, GrailsApplication application, Class<?> groovySpringResourcesClass) throws InstantiationException, IllegalAccessException {
+    public static BeanBuilder reloadSpringResourcesConfig(RuntimeSpringConfiguration config, GrailsApplication application, Class<?> groovySpringResourcesClass) throws InstantiationException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
         springGroovyResourcesBeanBuilder = new BeanBuilder(null, config, Thread.currentThread().getContextClassLoader());
         springGroovyResourcesBeanBuilder.setBinding(new Binding(CollectionUtils.newMap(
             "application", application,
             "grailsApplication", application))); // GRAILS-7550
-        Script script = (Script) groovySpringResourcesClass.newInstance();
+        Script script = (Script) groovySpringResourcesClass.getDeclaredConstructor().newInstance();
         script.run();
         Object beans = script.getProperty("beans");
         springGroovyResourcesBeanBuilder.beans((Closure<?>) beans);

@@ -275,12 +275,12 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         doListInternal(query, namedParams, [], args, false)
     }
 
-    D findWithNativeSql(CharSequence sql, Map args = Collections.emptyMap()) {
+    D findWithSql(CharSequence sql, Map args = Collections.emptyMap()) {
         doSingleInternal(sql, [:], [], args, true) as D
     }
 
-    List<D> findAllWithNativeSql(CharSequence query, Map args = Collections.emptyMap()) {
-        doListInternal(query, [:], [], args, true)
+    List<D> findAllWithSql(CharSequence sql, Map args = Collections.emptyMap()) {
+        doListInternal(sql, [:], [], args, true)
     }
 
     // The single-argument CharSequence overloads accept a plain String (executed as written, as

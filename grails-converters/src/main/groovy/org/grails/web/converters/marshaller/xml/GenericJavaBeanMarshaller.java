@@ -54,7 +54,7 @@ public class GenericJavaBeanMarshaller implements ObjectMarshaller<XML> {
             }
             for (Field field : o.getClass().getDeclaredFields()) {
                 int modifiers = field.getModifiers();
-                if (field.isAccessible() && Modifier.isPublic(modifiers) &&
+                if (field.canAccess(o) && Modifier.isPublic(modifiers) &&
                         !(Modifier.isStatic(modifiers) || Modifier.isTransient(modifiers))) {
                     xml.startNode(field.getName());
                     xml.convertAnother(field.get(o));

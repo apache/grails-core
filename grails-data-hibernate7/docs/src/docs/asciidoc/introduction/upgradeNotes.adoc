@@ -20,11 +20,11 @@ under the License.
 [[upgrade-notes]]
 == Upgrade Notes
 
-=== Grails 8 / Hibernate 7
+=== Grails {grailsMajorVersion} / Hibernate 7
 
 ==== Query API — Injection Safety
 
-The Grails 8 / Hibernate 7 query API keeps the Hibernate 5 calling conventions while making the idiomatic Groovy query form injection-safe by default. There is no breaking change here: the methods that accepted a plain `String` on Hibernate 5 still do.
+The Grails {grailsMajorVersion} / Hibernate 7 query API keeps the Hibernate 5 calling conventions while making the idiomatic Groovy query form injection-safe by default. There is no breaking change here: the methods that accepted a plain `String` on Hibernate 5 still do.
 
 ===== Single-argument HQL overloads
 
@@ -54,17 +54,12 @@ Book.executeQuery("from Book where title like ?1", [params.title + '%'])
 
 As in any ORM, manually concatenating untrusted input into a plain `String` (for example `"... where title = '" + userInput + "'"`) remains an injection risk and should be avoided in favour of the GString or parameterized forms above.
 
-===== `findWithSql` / `findAllWithSql` renamed
-
-`findWithSql` and `findAllWithSql` are deprecated. Use `findWithNativeSql` and `findAllWithNativeSql` instead. The old names remain as delegating aliases for backwards compatibility.
+===== SQL query helpers
 
 [source,groovy]
 ----
-// Before (deprecated)
+Book.findWithSql("select * from book where id = ${params.id}")
 Book.findAllWithSql("select * from book where ...")
-
-// After
-Book.findAllWithNativeSql("select * from book where ...")
 ----
 
 ==== Schema-per-Tenant — Schema Names Are Now Quoted

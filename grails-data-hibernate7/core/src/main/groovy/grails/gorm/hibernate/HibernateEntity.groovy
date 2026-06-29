@@ -49,7 +49,7 @@ trait HibernateEntity<D> extends GormEntity<D> {
      */
     @Generated
     static List<D> findAllWithSql(CharSequence sql) {
-        currentHibernateStaticApi().findAllWithNativeSql(sql, Collections.emptyMap())
+        currentHibernateStaticApi().findAllWithSql(sql, Collections.emptyMap())
     }
 
     /**
@@ -61,7 +61,7 @@ trait HibernateEntity<D> extends GormEntity<D> {
      */
     @Generated
     static D findWithSql(CharSequence sql) {
-        currentHibernateStaticApi().findWithNativeSql(sql, Collections.emptyMap())
+        currentHibernateStaticApi().findWithSql(sql, Collections.emptyMap())
     }
 
     /**
@@ -74,7 +74,7 @@ trait HibernateEntity<D> extends GormEntity<D> {
      */
     @Generated
     static List<D> findAllWithSql(CharSequence sql, Map args) {
-        currentHibernateStaticApi().findAllWithNativeSql(sql, args)
+        currentHibernateStaticApi().findAllWithSql(sql, args)
     }
 
     /**
@@ -87,7 +87,7 @@ trait HibernateEntity<D> extends GormEntity<D> {
      */
     @Generated
     static D findWithSql(CharSequence sql, Map args) {
-        currentHibernateStaticApi().findWithNativeSql(sql, args)
+        currentHibernateStaticApi().findWithSql(sql, args)
     }
 
     @Generated

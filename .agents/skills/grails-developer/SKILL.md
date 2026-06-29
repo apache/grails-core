@@ -1,6 +1,6 @@
 ---
 name: grails-developer
-description: Comprehensive guide for Grails 7 development, covering web applications, REST APIs, GORM, controllers, services, views, plugins, and testing with Spock and Geb
+description: Comprehensive guide for current Grails development, covering web applications, REST APIs, GORM, controllers, services, views, plugins, and testing with Spock and Geb
 license: Apache-2.0
 ---
 <!--
@@ -11,7 +11,7 @@ Licensed to the Apache Software Foundation (ASF) under one or more contributor l
 
 ## What I Do
 
-- Provide detailed guidance for building Grails 7 web applications and REST APIs.
+- Provide detailed guidance for building current Grails web applications and REST APIs.
 - Assist with GORM for data modeling, controllers for request handling, services for business logic, and views (GSP, JSON, Markup).
 - Support testing with Spock 2.3 (unit/integration tests) and Geb for browser automation.
 - Guide plugin usage and development, security implementation, and deployment strategies.
@@ -19,7 +19,7 @@ Licensed to the Apache Software Foundation (ASF) under one or more contributor l
 
 ## When to Use Me
 
-Activate this skill when developing with Grails 7, including:
+Activate this skill when developing with current Grails, including:
 
 - Building CRUD applications, RESTful APIs, or full-stack web applications.
 - Working with GORM domain classes, constraints, and relationships.
@@ -30,7 +30,7 @@ Activate this skill when developing with Grails 7, including:
 
 ## Technology Stack
 
-Grails 7 is built on:
+Current Grails is built on:
 - **Spring Boot**: 4.0.x
 - **Spring Framework**: 7.0.x
 - **Groovy**: 4.0.x
@@ -862,7 +862,7 @@ grails.plugin.springsecurity.controllerAnnotations.staticRules = [
 
 ## Resources
 
-- **Grails 7 User Guide**: https://grails.apache.org/docs/latest/guide/single.html
+- **Grails User Guide**: https://grails.apache.org/docs/latest/guide/single.html
 - **GORM Documentation**: https://grails.apache.org/docs/latest/grails-data/
 - **Grails Plugins**: https://grails.apache.org/plugins.html
 - **Groovy 4 Documentation**: https://docs.groovy-lang.org/docs/groovy-4.0.30/html/documentation/
