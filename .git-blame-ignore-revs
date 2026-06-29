@@ -1,3 +1,5 @@
 # .git-blame-ignore-revs
 # Reformat code: https://github.com/apache/grails-core/pull/14925
 20c3278683f2993e23c947c409eafa978c0aefb7
+# Redis code import required reformatting
+b5ad26220c96276d309ad8b90a8c1be958a1e0c5
