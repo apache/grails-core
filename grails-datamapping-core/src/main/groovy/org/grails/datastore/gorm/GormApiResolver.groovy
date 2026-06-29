@@ -130,6 +130,25 @@ class GormApiResolver {
         return allDatastores.first()
     }
 
+    /**
+     * Resolves the datastore for a tenant-management service lookup (e.g. the {@code @CurrentTenant}
+     * {@link grails.gorm.multitenancy.TenantService}). Unlike {@link #findDatastore}, this never
+     * resolves the current tenant: it returns the entity's primary (DEFAULT) datastore — the tenant
+     * MANAGER, where runtime schemas (e.g. {@code addTenantForSchema}) are registered — rather than a
+     * per-tenant child datastore. Falls back to the single configured datastore when the entity is
+     * not mapped to a specific datastore.
+     */
+    Datastore findServiceDatastore(Class entity) {
+        String className = entity != null ? NameUtils.getClassName(entity) : null
+        if (className != null) {
+            Datastore ds = registry.getDatastoreByString(className, ConnectionSource.DEFAULT)
+            if (ds != null) {
+                return ds
+            }
+        }
+        return findSingleDatastore()
+    }
+
     PersistentEntity findEntity(Class entity, String qualifier = null) {
         String resolvedQualifier = qualifier ?: findTenantId(entity)
         return findDatastore(entity, resolvedQualifier)?.mappingContext?.getPersistentEntity(entity.name)
