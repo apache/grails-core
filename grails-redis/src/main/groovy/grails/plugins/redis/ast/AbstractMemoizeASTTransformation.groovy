@@ -21,9 +21,24 @@ package grails.plugins.redis.ast
 
 import grails.plugins.redis.RedisService
 import grails.util.Holders
-import org.codehaus.groovy.ast.*
+import org.codehaus.groovy.ast.ASTNode
+import org.codehaus.groovy.ast.AnnotatedNode
+import org.codehaus.groovy.ast.AnnotationNode
+import org.codehaus.groovy.ast.ClassHelper
+import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.FieldNode
+import org.codehaus.groovy.ast.MethodNode
+import org.codehaus.groovy.ast.Parameter
+import org.codehaus.groovy.ast.PropertyNode
+import org.codehaus.groovy.ast.VariableScope
 import org.codehaus.groovy.ast.builder.AstBuilder
-import org.codehaus.groovy.ast.expr.*
+import org.codehaus.groovy.ast.expr.ArgumentListExpression
+import org.codehaus.groovy.ast.expr.ClosureExpression
+import org.codehaus.groovy.ast.expr.ConstantExpression
+import org.codehaus.groovy.ast.expr.Expression
+import org.codehaus.groovy.ast.expr.ListExpression
+import org.codehaus.groovy.ast.expr.MethodCallExpression
+import org.codehaus.groovy.ast.expr.StaticMethodCallExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.ReturnStatement
 import org.codehaus.groovy.ast.stmt.Statement
@@ -57,7 +72,7 @@ abstract class AbstractMemoizeASTTransformation implements ASTTransformation, Tr
     protected static final String THIS = 'this'
     protected static final String PRINTLN = 'println'
 
-    public static final ClassNode AUTOWIRED_CLASS_NODE = new ClassNode(Autowired).getPlainNodeReference()
+    static final ClassNode AUTOWIRED_CLASS_NODE = new ClassNode(Autowired).getPlainNodeReference()
 
     void visit(ASTNode[] astNodes, SourceUnit sourceUnit) {
         //return //todo: this isn't working with grails 3.0+, UGH!
@@ -96,7 +111,7 @@ abstract class AbstractMemoizeASTTransformation implements ASTTransformation, Tr
      * @param sourceUnit The SourceUnit to visit and add the variable scopes.
      */
     private static void visitVariableScopes(SourceUnit sourceUnit) {
-        VariableScopeVisitor scopeVisitor = new VariableScopeVisitor(sourceUnit);
+        VariableScopeVisitor scopeVisitor = new VariableScopeVisitor(sourceUnit)
         sourceUnit.AST.classes.each {
             scopeVisitor.visitClass(it)
         }
@@ -119,7 +134,6 @@ abstract class AbstractMemoizeASTTransformation implements ASTTransformation, Tr
         }
     }
 
-
     private static void addStarImport(SourceUnit sourceUnit, Class serviceClass) {
         if (!sourceUnit.AST.starImports.any { it.packageName =~ "${ClassHelper.make(serviceClass).packageName}" }) {
             sourceUnit.AST.addStarImport(ClassHelper.make(serviceClass).packageName)
@@ -137,7 +151,7 @@ abstract class AbstractMemoizeASTTransformation implements ASTTransformation, Tr
 
     private static void addRedisService(ClassNode cNode,
                                         String propertyName,
-                                        Class propertyType = Object.class,
+                                        Class propertyType = Object,
                                         Expression initialValue = null) {
         //def ast = new AstBuilder().buildFromString("Holders?.findApplicationContext()")
         //?.getBean('redisService')")
@@ -150,7 +164,7 @@ abstract class AbstractMemoizeASTTransformation implements ASTTransformation, Tr
                 initialValue
         )
 
-        def holderExpression = new StaticMethodCallExpression(ClassHelper.make(Holders.class), 'findApplicationContext', null)
+        def holderExpression = new StaticMethodCallExpression(ClassHelper.make(Holders), 'findApplicationContext', null)
         ArgumentListExpression argumentListExpression = new ArgumentListExpression()
         argumentListExpression.addExpression(makeConstantExpression('redisService'))
         def getBeanExpression = new MethodCallExpression(holderExpression, 'getBean', argumentListExpression)
@@ -158,13 +172,12 @@ abstract class AbstractMemoizeASTTransformation implements ASTTransformation, Tr
 
         def returnStatement = new ReturnStatement(getBeanExpression)
 
-
         def propertyNode = new PropertyNode(fieldNode, ACC_PUBLIC, returnStatement, null)
         cNode.addProperty(propertyNode)
     }
 
     private static void addRedisServiceBuilder(ClassNode cNode, String propertyName,
-                                               Class propertyType = Object.class,
+                                               Class propertyType = Object,
                                                Expression initialValue = null) {
         def ast = new AstBuilder().buildFromString("return Holders?.findApplicationContext()?.getBean('redisService')")
 
@@ -180,15 +193,14 @@ abstract class AbstractMemoizeASTTransformation implements ASTTransformation, Tr
 
         def propertyNode = new PropertyNode(fieldNode, ACC_PUBLIC, returnStatement, null)
         cNode.addProperty(propertyNode)
-
     }
 
     private static void addFieldToTransients(ClassNode parentClass, String propertyName) {
         if (parentClass != null) {
-            FieldNode transients = parentClass.getField("transients")
+            FieldNode transients = parentClass.getField('transients')
             if (!transients) {
                 transients = parentClass.addField(
-                        "transients",
+                        'transients',
                         ACC_PUBLIC | ACC_STATIC,
                         ClassHelper.DYNAMIC_TYPE,
                         new ListExpression()
@@ -235,7 +247,7 @@ abstract class AbstractMemoizeASTTransformation implements ASTTransformation, Tr
         ArgumentListExpression argumentListExpression = makeRedisServiceArgumentListExpression(memoizeProperties)
         argumentListExpression.addExpression(makeClosureExpression(methodNode))
 
-        def ast = new AstBuilder().buildFromString("getRedisService()")
+        def ast = new AstBuilder().buildFromString('getRedisService()')
 
         def getRedisServiceMethodExpression = ast[0].statements[0].expression as MethodCallExpression
         getRedisServiceMethodExpression.setSafe(true)

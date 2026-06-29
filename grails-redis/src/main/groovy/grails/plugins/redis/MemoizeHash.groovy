@@ -31,7 +31,8 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass
 @Target([ElementType.METHOD])
 @GroovyASTTransformationClass(['grails.plugins.redis.ast.MemoizeHashASTTransformation'])
 @interface MemoizeHash {
-    Class value() default {true};
-    String key() default '';
-    String expire() default '';
+
+    Class value() default { true }
+    String key() default ''
+    String expire() default ''
 }

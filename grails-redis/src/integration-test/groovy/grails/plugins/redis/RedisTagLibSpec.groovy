@@ -36,13 +36,13 @@ class RedisTagLibSpec extends Specification {
     @Autowired RedisService redisService
     RedisTagLib tagLib
 
-    protected static KEY = "RedisTagLibTests:memoize"
-    protected static CONTENTS = "expected contents"
-    protected static FAIL_BODY = "unexpected contents, should not have this"
+    protected static KEY = 'RedisTagLibTests:memoize'
+    protected static CONTENTS = 'expected contents'
+    protected static FAIL_BODY = 'unexpected contents, should not have this'
 
     def setup() {
         redisService.flushDB()
-         tagLib= grailsApplication.mainContext.getBean(RedisTagLib)
+        tagLib = grailsApplication.mainContext.getBean(RedisTagLib)
     }
 
     @Ignore
@@ -66,13 +66,13 @@ class RedisTagLibSpec extends Specification {
 
         then:
         CONTENTS == result
-        redisService.NO_EXPIRATION_TTL == redisService.ttl("no-ttl-test")
+        redisService.NO_EXPIRATION_TTL == redisService.ttl('no-ttl-test')
 
         when:
         result = tagLib.memoize([key: 'ttl-test', expire: 60], { -> CONTENTS }).toString()
 
         then:
         CONTENTS == result
-        redisService.ttl("ttl-test") > 0
+        redisService.ttl('ttl-test') > 0
     }
 }

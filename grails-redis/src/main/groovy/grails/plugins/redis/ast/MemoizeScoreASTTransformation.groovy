@@ -33,7 +33,7 @@ class MemoizeScoreASTTransformation extends MemoizeASTTransformation {
         super.generateMemoizeProperties(astNodes, sourceUnit, memoizeProperties)
         def member = astNodes[0]?.members?.member?.value
 
-        if(!member || member?.class != String) {
+        if (!member || member?.class != String) {
             addError('Internal Error: member is required for score', astNodes[0], sourceUnit)
             return
         }

@@ -32,7 +32,7 @@ class MemoizeObjectAnnotationSpec extends Specification {
     @Autowired RedisService redisService
     GsonBuilder gsonBuilder = new GsonBuilder()
 
-    public void setup() {
+    void setup() {
         redisService.flushDB()
     }
 
@@ -43,38 +43,38 @@ class MemoizeObjectAnnotationSpec extends Specification {
 import grails.plugins.redis.*
 
 class TestClass {
-	def redisService
-	def gsonBuilder
-	def key
-	def expire
+    def redisService
+    def gsonBuilder
+    def key
+    def expire
 
-	@MemoizeObject(key="#{key}", expire="#{expire}", clazz=Book.class)
-	def testAnnotatedMethod(String bookTitle, String bookAuthor, Map chapterMap){
-		Book book = new Book(author:bookAuthor, title:"Book of $bookTitle")
-		List<Chapter> chapters = []
-		chapterMap.each { chapterTitle, chapterContent ->
-			chapters << new Chapter(title:chapterTitle, content:chapterContent, length:chapterContent.size())
-		}
-		book.chapters = chapters
-		return book
-	}
+    @MemoizeObject(key="#{key}", expire="#{expire}", clazz=Book.class)
+    def testAnnotatedMethod(String bookTitle, String bookAuthor, Map chapterMap){
+        Book book = new Book(author:bookAuthor, title:"Book of $bookTitle")
+        List<Chapter> chapters = []
+        chapterMap.each { chapterTitle, chapterContent ->
+            chapters << new Chapter(title:chapterTitle, content:chapterContent, length:chapterContent.size())
+        }
+        book.chapters = chapters
+        return book
+    }
 
-	private class Book {
-		String author
-		String title
-		List<Chapter> chapters
-	}
+    private class Book {
+        String author
+        String title
+        List<Chapter> chapters
+    }
 
-	private class Chapter {
-		String title
-		String content
-		Integer length
-	}
+    private class Chapter {
+        String title
+        String content
+        Integer length
+    }
 
 }
 ''')
-        String testKey = "key123"
-        String testExpire = "1000"
+        String testKey = 'key123'
+        String testExpire = '1000'
 
         def testInstance = testClass.newInstance()
 
@@ -85,7 +85,7 @@ class TestClass {
         testInstance.key = testKey
         testInstance.expire = testExpire
 
-        when: "create instance of testClass"
+        when: 'create instance of testClass'
         def testResult = testInstance.testAnnotatedMethod('Groovy', 'Author',
                 ['Groovy': 'This is the content', 'Testing': 'Testing is important'])
 
@@ -94,11 +94,11 @@ class TestClass {
         redisService."$testKey" == '''{"author":"Author","title":"Book of Groovy","chapters":[{"title":"Groovy","content":"This is the content","length":19},{"title":"Testing","content":"Testing is important","length":20}]}'''
 
         //verify returned Book
-        testResult.author == "Author"
-        testResult.title == "Book of Groovy"
+        testResult.author == 'Author'
+        testResult.title == 'Book of Groovy'
         testResult.chapters.size() == 2
-        testResult.chapters[0].title == "Groovy"
-        testResult.chapters[1].title == "Testing"
+        testResult.chapters[0].title == 'Groovy'
+        testResult.chapters[1].title == 'Testing'
     }
 
     void testMemoizeSimpleObject() {
@@ -124,14 +124,14 @@ class TestClass {
     }
 }
 
-
 class TestSimpleObject {
+
     def redisService
     def callCount = 0
-    public static final key = "TheKey"
-    public static final Long value = 10
+    static final key = 'TheKey'
+    static final Long value = 10
 
-    @MemoizeObject(key = "#{key}", clazz = Long.class)
+    @MemoizeObject(key = '#{key}', clazz = Long)
     def testAnnotatedMethod() {
         callCount += 1
         return new Long(value)

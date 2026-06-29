@@ -32,7 +32,8 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass
 @Target([ElementType.METHOD])
 @GroovyASTTransformationClass(['grails.plugins.redis.ast.MemoizeObjectASTTransformation'])
 @interface MemoizeObject {
-	Class clazz() default {};
-    String key() default '';
-    String expire() default '';
+
+    Class clazz() default {}
+    String key() default ''
+    String expire() default ''
 }

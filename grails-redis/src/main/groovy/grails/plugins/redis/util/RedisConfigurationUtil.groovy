@@ -66,8 +66,8 @@ class RedisConfigurationUtil {
 
         delegate.with {
             def host = redisConfigMap?.host ?: 'localhost'
-            def port = redisConfigMap.containsKey("port") ? "${redisConfigMap.port}" as Integer : Protocol.DEFAULT_PORT
-            def timeout = redisConfigMap.containsKey("timeout") ? "${redisConfigMap?.timeout}" as Integer : Protocol.DEFAULT_TIMEOUT
+            def port = redisConfigMap.containsKey('port') ? "${redisConfigMap.port}" as Integer : Protocol.DEFAULT_PORT
+            def timeout = redisConfigMap.containsKey('timeout') ? "${redisConfigMap?.timeout}" as Integer : Protocol.DEFAULT_TIMEOUT
             def password = redisConfigMap?.password ?: null
             def database = redisConfigMap?.database ?: Protocol.DEFAULT_DATABASE
             def sentinels = redisConfigMap?.sentinels ?: null

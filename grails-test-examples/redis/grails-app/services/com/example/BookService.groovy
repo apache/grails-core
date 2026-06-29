@@ -19,7 +19,14 @@
 
 package com.example
 
-import grails.plugins.redis.*
+import grails.plugins.redis.Memoize
+import grails.plugins.redis.MemoizeDomainList
+import grails.plugins.redis.MemoizeDomainObject
+import grails.plugins.redis.MemoizeHash
+import grails.plugins.redis.MemoizeHashField
+import grails.plugins.redis.MemoizeList
+import grails.plugins.redis.MemoizeScore
+import grails.plugins.redis.RedisService
 import java.time.LocalDate
 
 class BookService {
@@ -50,20 +57,18 @@ class BookService {
         return map.foo
     }
 
-
-    @MemoizeDomainObject(key = '#{title}', clazz = Book.class)
+    @MemoizeDomainObject(key = '#{title}', clazz = Book)
     def createDomainObject(String title, LocalDate date) {
         println 'cache miss createDomainObject'
         def book = new Book(title: title, createDate: date).save(flush: true)
         book
     }
 
-
-    @MemoizeDomainList(key = 'getDomainListWithKeyClass:#{title}', clazz = Book.class)
+    @MemoizeDomainList(key = 'getDomainListWithKeyClass:#{title}', clazz = Book)
     def getDomainListWithKeyClass(String title, Date date) {
         redisService.domainListWithKeyClassKey = "$title $date"
         println 'cache miss getDomainListWithKeyClass'
-        Book.executeQuery("from Book b where b.title = :title", [title: title])
+        Book.executeQuery('from Book b where b.title = :title', [title: title])
     }
 
     @Memoize({ '#{text}' })

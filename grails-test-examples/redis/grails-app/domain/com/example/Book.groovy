@@ -23,7 +23,7 @@ import grails.plugins.redis.RedisService
 import groovy.transform.ToString
 import java.time.LocalDate
 
-@ToString(includes = "id,createDate")
+@ToString(includes = 'id,createDate')
 class Book {
 
     RedisService redisService
@@ -42,6 +42,6 @@ class Book {
         redisService?.memoize(title) {
             println 'cache miss'
             "$title $date"
-       }
+        }
     }
 }

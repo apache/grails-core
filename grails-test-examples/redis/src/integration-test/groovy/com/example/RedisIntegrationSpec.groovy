@@ -50,20 +50,20 @@ class RedisIntegrationSpec extends Specification implements ProxyAwareSpec {
         def cacheMissClosure = {
             calledCount += 1
             Book.withNewTransaction {
-                return Book.executeQuery("from Book b where b.title = 'book1' or b.title = 'book3'")
+                return Book.executeQuery('from Book b where b.title = \'book1\' or b.title = \'book3\'')
             }
         }
 
         when:
-        def cacheMissList = redisService.memoizeDomainList(Book, "domainkey", cacheMissClosure)
+        def cacheMissList = redisService.memoizeDomainList(Book, 'domainkey', cacheMissClosure)
 
         then:
         1 == calledCount
-        [book1, book3]*.id== cacheMissList*.id
-        NO_EXPIRATION_TTL == redisService.ttl("domainkey")
+        [book1, book3]*.id == cacheMissList*.id
+        NO_EXPIRATION_TTL == redisService.ttl('domainkey')
 
         when:
-        def cacheHitList = redisService.memoizeDomainList(Book, "domainkey", cacheMissClosure)
+        def cacheHitList = redisService.memoizeDomainList(Book, 'domainkey', cacheMissClosure)
 
         then:
         // cache hit, don't call closure again
@@ -72,22 +72,20 @@ class RedisIntegrationSpec extends Specification implements ProxyAwareSpec {
         cacheMissList*.id == cacheHitList*.id
     }
 
-
-    public void testMemoizeDomainListWithExpire() {
+    void testMemoizeDomainListWithExpire() {
         given:
         def book1 = createBook('book1')
-        KEY_DOES_NOT_EXIST == redisService.ttl("domainkey")
+        KEY_DOES_NOT_EXIST == redisService.ttl('domainkey')
 
         when:
-        def result = redisService.memoizeDomainList(Book, "domainkey", 60) { [book1] }
+        def result = redisService.memoizeDomainList(Book, 'domainkey', 60) { [book1] }
 
         then:
         [book1] == result
-        NO_EXPIRATION_TTL < redisService.ttl("domainkey")
+        NO_EXPIRATION_TTL < redisService.ttl('domainkey')
     }
 
-
-    public void testMemoizeDomainIdList() {
+    void testMemoizeDomainIdList() {
         given:
         def book1 = createBook('book1')
         def book2 = createBook('book2')
@@ -102,14 +100,14 @@ class RedisIntegrationSpec extends Specification implements ProxyAwareSpec {
         }
 
         when:
-        def cacheMissList = redisService.memoizeDomainIdList(Book, "domainkey", cacheMissClosure)
+        def cacheMissList = redisService.memoizeDomainIdList(Book, 'domainkey', cacheMissClosure)
 
         then:
         1 == calledCount
         [book1.id, book3.id] == cacheMissList
 
         when:
-        def cacheHitList = redisService.memoizeDomainIdList(Book, "domainkey", cacheMissClosure)
+        def cacheHitList = redisService.memoizeDomainIdList(Book, 'domainkey', cacheMissClosure)
 
         then:
         // cache hit, don't call closure again
@@ -118,8 +116,7 @@ class RedisIntegrationSpec extends Specification implements ProxyAwareSpec {
         cacheMissList == cacheHitList
     }
 
-
-    public void testMemoizeDomainObject() {
+    void testMemoizeDomainObject() {
         given:
         Book book1 = createBook('book1')
 
@@ -132,14 +129,14 @@ class RedisIntegrationSpec extends Specification implements ProxyAwareSpec {
         }
 
         when:
-        def cacheMissBook = redisService.memoizeDomainObject(Book, "domainkey", cacheMissClosure)
+        def cacheMissBook = redisService.memoizeDomainObject(Book, 'domainkey', cacheMissClosure)
 
         then:
         1 == calledCount
         book1.id == cacheMissBook.id
 
         when:
-        def cacheHitBook = redisService.memoizeDomainObject(Book, "domainkey", cacheMissClosure)
+        def cacheHitBook = redisService.memoizeDomainObject(Book, 'domainkey', cacheMissClosure)
 
         then:
         // cache hit, don't call closure again

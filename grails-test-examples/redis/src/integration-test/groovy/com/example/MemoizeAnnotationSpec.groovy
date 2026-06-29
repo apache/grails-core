@@ -42,17 +42,17 @@ import grails.plugins.redis.*
 class TestClass{
     RedisService redisService
 
-	def key
-	def expire
+    def key
+    def expire
 
-	@Memoize(key="#{key}", expire="#{expire}")
-	def testAnnotatedMethod(){
-		return "testValue"
-	}
+    @Memoize(key="#{key}", expire="#{expire}")
+    def testAnnotatedMethod(){
+        return "testValue"
+    }
 }
 ''')
-        String testKey = "key123"
-        String testExpire = "1000"
+        String testKey = 'key123'
+        String testExpire = '1000'
 
         when:
         def testInstance = testClass.getDeclaredConstructor().newInstance()

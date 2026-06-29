@@ -28,8 +28,8 @@ import redis.clients.jedis.exceptions.JedisConnectionException
 @Slf4j
 class RedisService {
 
-    public static final int NO_EXPIRATION_TTL = -1
-    public static final int KEY_DOES_NOT_EXIST = -2  // added in redis 2.8
+    static final int NO_EXPIRATION_TTL = -1
+    static final int KEY_DOES_NOT_EXIST = -2  // added in redis 2.8
 
     def redisPool
     GrailsApplication grailsApplication
@@ -373,7 +373,7 @@ class RedisService {
      *
      * @param key The key to delete.
      */
-    void deleteKey(String key){
+    void deleteKey(String key) {
         withRedis { Jedis redis ->
             redis.del(key)
         }

@@ -31,7 +31,8 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass
 @Target([ElementType.METHOD])
 @GroovyASTTransformationClass(['grails.plugins.redis.ast.MemoizeScoreASTTransformation'])
 @interface MemoizeScore {
-    String key() default '';
-    String member() default '';
-    String expire() default '';
+
+    String key() default ''
+    String member() default ''
+    String expire() default ''
 }

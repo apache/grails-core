@@ -108,7 +108,6 @@ class RedisMemoizeServiceSpec extends Specification {
         hash2.bar == 'bar'
     }
 
-
     def "get AST transformed hash field using maps foo as key"() {
         given:
         def map = [foo: 'foo', bar: 'bar']
@@ -133,7 +132,7 @@ class RedisMemoizeServiceSpec extends Specification {
 
         then:
         redisService.hget('foo', 'foo') == 'foo'
-        redisService.hget('foo','bar') == 'bar'
+        redisService.hget('foo', 'bar') == 'bar'
         fieldValue2 == 'foo'
         redisService.hgetAll('foo') == map
         redisService.hgetAll('foo') != map2
@@ -203,7 +202,7 @@ class RedisMemoizeServiceSpec extends Specification {
         given:
         def title = 'narwhals'
         LocalDate date = LocalDate.now()
-        Book book = new Book(title: title, createDate: date).save(flush: true, failOnError:true)
+        Book book = new Book(title: title, createDate: date).save(flush: true, failOnError: true)
         def bookString1 = book.toString()
 
         when: 'get the initial value and cache it'
@@ -221,7 +220,6 @@ class RedisMemoizeServiceSpec extends Specification {
         value2 == bookString1
         value2 != bookString2
     }
-
 
     def "get AST transformed method using simple string key property and expire"() {
         given:

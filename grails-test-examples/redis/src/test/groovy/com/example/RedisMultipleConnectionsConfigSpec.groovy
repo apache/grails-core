@@ -41,99 +41,98 @@ class RedisMultipleConnectionsConfigSpec extends Specification {
         redisService.flushDB()
         try {
             redisService.withConnection('one').flushDB()
-        } catch(redis.clients.jedis.exceptions.JedisConnectionException e) {
-            throw new Exception("You need to have redis running on port 6380 for this test exercising multiple redis connections to pass", e)
+        } catch (redis.clients.jedis.exceptions.JedisConnectionException e) {
+            throw new Exception('You need to have redis running on port 6380 for this test exercising multiple redis connections to pass', e)
         }
 
         try {
             redisService.withConnection('two').flushDB()
-        } catch(redis.clients.jedis.exceptions.JedisConnectionException e) {
-            throw new Exception("You need to have redis running on port 6381 for this test exercising multiple redis connections to pass", e)
+        } catch (redis.clients.jedis.exceptions.JedisConnectionException e) {
+            throw new Exception('You need to have redis running on port 6381 for this test exercising multiple redis connections to pass', e)
         }
-        
+
         redisServiceOne.flushDB() //redundant, but just illustrates another way to do this
         redisServiceTwo.flushDB() //redundant, but just illustrates another way to do this
     }
 
     // if this test is failing, make sure you've got redis running on ports 6380 and 6381
-    def "test multiple redis pools"() {
+    def 'test multiple redis pools'() {
         given:
-        def key = "key"
-        def data = "data"
+        def key = 'key'
+        def data = 'data'
 
         when:
-        redisService.withConnection('one').withRedis {Jedis redis ->
+        redisService.withConnection('one').withRedis { Jedis redis ->
             redis.set(key, data)
         }
 
         then: 'These will both use the same redis connection'
-        redisService.withConnection('one').withRedis {Jedis redis ->
+        redisService.withConnection('one').withRedis { Jedis redis ->
             redis.get(key) == data
         }
-        redisServiceOne.withRedis {Jedis redis ->
-            redis.get(key) == data
-        }
-
-        and:
-        redisService.withConnection('two').withRedis {Jedis redis ->
-            !redis.get(key)
-        }
-        redisServiceTwo.withRedis {Jedis redis ->
-            !redis.get(key)
-        }
-        redisService.withRedis {Jedis redis ->
-            !redis.get(key)
-        }
-        redisService.withConnection('blahblahblah').withRedis {Jedis redis ->
-            !redis.get(key)
-        }
-
-        when:
-        redisService.withConnection('two').withRedis {Jedis redis ->
-            redis.set(key, data)
-        }
-
-        then:
-        redisService.withConnection('one').withRedis {Jedis redis ->
-            redis.get(key) == data
-        }
-        redisServiceOne.withRedis {Jedis redis ->
-            redis.get(key) == data
-        }
-        redisService.withConnection('two').withRedis {Jedis redis ->
-            redis.get(key) == data
-        }
-        redisServiceTwo.withRedis {Jedis redis ->
+        redisServiceOne.withRedis { Jedis redis ->
             redis.get(key) == data
         }
 
         and:
-        redisService.withRedis {Jedis redis ->
+        redisService.withConnection('two').withRedis { Jedis redis ->
             !redis.get(key)
         }
-        redisService.withConnection('blahblahblah').withRedis {Jedis redis ->
+        redisServiceTwo.withRedis { Jedis redis ->
             !redis.get(key)
         }
-
+        redisService.withRedis { Jedis redis ->
+            !redis.get(key)
+        }
+        redisService.withConnection('blahblahblah').withRedis { Jedis redis ->
+            !redis.get(key)
+        }
 
         when:
-        redisService.withRedis {Jedis redis ->
+        redisService.withConnection('two').withRedis { Jedis redis ->
             redis.set(key, data)
         }
 
         then:
-        redisService.withConnection('one').withRedis {Jedis redis ->
+        redisService.withConnection('one').withRedis { Jedis redis ->
             redis.get(key) == data
         }
-        redisService.withConnection('two').withRedis {Jedis redis ->
+        redisServiceOne.withRedis { Jedis redis ->
             redis.get(key) == data
         }
-        redisService.withRedis {Jedis redis ->
+        redisService.withConnection('two').withRedis { Jedis redis ->
+            redis.get(key) == data
+        }
+        redisServiceTwo.withRedis { Jedis redis ->
+            redis.get(key) == data
+        }
+
+        and:
+        redisService.withRedis { Jedis redis ->
+            !redis.get(key)
+        }
+        redisService.withConnection('blahblahblah').withRedis { Jedis redis ->
+            !redis.get(key)
+        }
+
+        when:
+        redisService.withRedis { Jedis redis ->
+            redis.set(key, data)
+        }
+
+        then:
+        redisService.withConnection('one').withRedis { Jedis redis ->
+            redis.get(key) == data
+        }
+        redisService.withConnection('two').withRedis { Jedis redis ->
+            redis.get(key) == data
+        }
+        redisService.withRedis { Jedis redis ->
             redis.get(key) == data
         }
 
         //will use default connection just lke normal redisService.withRedis since blahblahblah isn't valid
-        redisService.withConnection('blahblahblah').withRedis {Jedis redis ->
+        redisService.withConnection('blahblahblah').withRedis { Jedis redis ->
             redis.get(key) == data
         }
     }

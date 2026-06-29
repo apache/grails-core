@@ -21,6 +21,7 @@ package grails.plugins.redis.ast
 import org.apache.grails.common.compiler.GroovyTransformOrder
 
 interface RedisTransformOrder {
+
     int MEMOIZE_ORDER = GroovyTransformOrder.RX_SCHEDULER_ORDER + GroovyTransformOrder.DECREMENT_PRIORITY
     int MEMOIZE_DOMAIN_LIST_ORDER = RedisTransformOrder.MEMOIZE_ORDER + GroovyTransformOrder.DECREMENT_PRIORITY
     int MEMOIZE_DOMAIN_OBJECT_ORDER = RedisTransformOrder.MEMOIZE_DOMAIN_LIST_ORDER + GroovyTransformOrder.DECREMENT_PRIORITY
