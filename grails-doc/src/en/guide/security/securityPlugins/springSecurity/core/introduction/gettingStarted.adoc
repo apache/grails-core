@@ -55,4 +55,4 @@ The Spring Security plugin streamlines configuration and setup through a combina
 
    The plugin configures Spring beans within the application context to implement various functionality components. Dependency management automatically handles the selection of appropriate jar files.
 
-By following these steps, your Grails application will be ready to leverage the Spring Security plugin for enhanced security. While in-depth knowledge of Spring Security isn't mandatory, having a basic understanding of its underlying implementation can be helpful. For more details, refer to the [Spring Security documentation](https://{htmlsingle}).
+By following these steps, your Grails application will be ready to leverage the Spring Security plugin for enhanced security. While in-depth knowledge of Spring Security isn't mandatory, having a basic understanding of its underlying implementation can be helpful. For more details, refer to the [Spring Security documentation](https://{springSecurityHtmlSingleUrl}).

@@ -27,7 +27,7 @@ The Spring Security plugin uses hashed passwords and a digest algorithm that you
 Note that if you use bcrypt (the default setting) or pbkdf2, do not configure a salt (e.g. the `dao.reflectionSaltSourceProperty` property or a custom `saltSource` bean) because these algorithms use their own internally.
 ====
 
-There are two approaches to using salted passwords in the plugin - defining a property in the `UserDetails` class to access by reflection, or by directly implementing {apidocs}org/springframework/security/authentication/dao/SaltSource.html[SaltSource] yourself.
+There are two approaches to using salted passwords in the plugin - defining a property in the `UserDetails` class to access by reflection, or by directly implementing {springSecurityApiDocsUrl}org/springframework/security/authentication/dao/SaltSource.html[SaltSource] yourself.
 
 ==== dao.reflectionSaltSourceProperty
 Set the `dao.reflectionSaltSourceProperty` configuration property:
@@ -37,7 +37,7 @@ Set the `dao.reflectionSaltSourceProperty` configuration property:
 grails.plugin.springsecurity.dao.reflectionSaltSourceProperty = 'username'
 ----
 
-This property belongs to the `UserDetails` class. By default it is an instance of `grails.plugin.springsecurity.userdetails.GrailsUser`, which extends the standard Spring Security {apidocs}org/springframework/security/core/userdetails/User.html[User class] and not your "`person`" domain class. This limits the available properties unless you use a custom UserDetailsService (<<core-userDetailsService>>).
+This property belongs to the `UserDetails` class. By default it is an instance of `grails.plugin.springsecurity.userdetails.GrailsUser`, which extends the standard Spring Security {springSecurityApiDocsUrl}org/springframework/security/core/userdetails/User.html[User class] and not your "`person`" domain class. This limits the available properties unless you use a custom UserDetailsService (<<core-userDetailsService>>).
 
 As long as the username does not change, this approach works well for the salt. If you choose a property that the user can change, the user cannot log in again after changing it unless you re-hash the password with the new value. So it's best to use a property that doesn't change.
 
@@ -45,7 +45,7 @@ Another option is to generate a random salt when creating users and store this i
 
 ==== SystemWideSaltSource and Custom SaltSource
 
-Spring Security supplies a simple `SaltSource` implementation, {apidocs}org/springframework/security/authentication/dao/SystemWideSaltSource.html[SystemWideSaltSource], which uses the same salt for each user. It's less robust than using a different value for each user but still better than no salt at all.
+Spring Security supplies a simple `SaltSource` implementation, {springSecurityApiDocsUrl}org/springframework/security/authentication/dao/SystemWideSaltSource.html[SystemWideSaltSource], which uses the same salt for each user. It's less robust than using a different value for each user but still better than no salt at all.
 
 An example override of the salt source bean using SystemWideSaltSource would look like this:
 

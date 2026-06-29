@@ -65,7 +65,7 @@ The table shows configurable URL-related properties.
 
 |failureHandler.exceptionMappings
 |_none_
-|Map of exception class name (subclass of {apidocs}org/springframework/security/core/AuthenticationException.html[AuthenticationException]) to which the URL will redirect for that exception type after authentication failure
+|Map of exception class name (subclass of {springSecurityApiDocsUrl}org/springframework/security/core/AuthenticationException.html[AuthenticationException]) to which the URL will redirect for that exception type after authentication failure
 
 |failureHandler.useForward
 |`false`

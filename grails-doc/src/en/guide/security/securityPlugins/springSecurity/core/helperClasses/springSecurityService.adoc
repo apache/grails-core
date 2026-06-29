@@ -100,9 +100,9 @@ class SomeController {
 
 ==== getAuthentication()
 
-Retrieves the current user's {apidocs}org/springframework/security/core/Authentication.html[Authentication]. If authenticated, this will typically be a {apidocs}org/springframework/security/authentication/UsernamePasswordAuthenticationToken.html[UsernamePasswordAuthenticationToken].
+Retrieves the current user's {springSecurityApiDocsUrl}org/springframework/security/core/Authentication.html[Authentication]. If authenticated, this will typically be a {springSecurityApiDocsUrl}org/springframework/security/authentication/UsernamePasswordAuthenticationToken.html[UsernamePasswordAuthenticationToken].
 
-If not authenticated and the {apidocs}org/springframework/security/web/authentication/AnonymousAuthenticationFilter.html[AnonymousAuthenticationFilter] is active (true by default) then the anonymous user's authentication will be returned. This will be an instance of `grails.plugin.springsecurity.authentication.GrailsAnonymousAuthenticationToken` with a standard `org.springframework.security.core.userdetails.User` instance as its Principal. The authentication will have a single granted role, `ROLE_ANONYMOUS`.
+If not authenticated and the {springSecurityApiDocsUrl}org/springframework/security/web/authentication/AnonymousAuthenticationFilter.html[AnonymousAuthenticationFilter] is active (true by default) then the anonymous user's authentication will be returned. This will be an instance of `grails.plugin.springsecurity.authentication.GrailsAnonymousAuthenticationToken` with a standard `org.springframework.security.core.userdetails.User` instance as its Principal. The authentication will have a single granted role, `ROLE_ANONYMOUS`.
 
 Example:
 
@@ -125,9 +125,9 @@ class SomeController {
 
 ==== getPrincipal()
 
-Retrieves the currently logged in user's `Principal`. If authenticated, the principal will be a `grails.plugin.springsecurity.userdetails.GrailsUser`, unless you have created a custom `UserDetailsService`, in which case it will be whatever implementation of {apidocs}org/springframework/security/core/userdetails/UserDetails.html[UserDetails] you use there.
+Retrieves the currently logged in user's `Principal`. If authenticated, the principal will be a `grails.plugin.springsecurity.userdetails.GrailsUser`, unless you have created a custom `UserDetailsService`, in which case it will be whatever implementation of {springSecurityApiDocsUrl}org/springframework/security/core/userdetails/UserDetails.html[UserDetails] you use there.
 
-If not authenticated and the {apidocs}org/springframework/security/web/authentication/AnonymousAuthenticationFilter.html[AnonymousAuthenticationFilter] is active (true by default) then a standard `org.springframework.security.core.userdetails.User` is used.
+If not authenticated and the {springSecurityApiDocsUrl}org/springframework/security/web/authentication/AnonymousAuthenticationFilter.html[AnonymousAuthenticationFilter] is active (true by default) then a standard `org.springframework.security.core.userdetails.User` is used.
 
 Example:
 
@@ -265,7 +265,7 @@ class RequestmapController {
 
 ==== reauthenticate()
 
-Rebuilds an {apidocs}org/springframework/security/core/Authentication.html[Authentication] for the given username and registers it in the security context. You typically use this method after updating a user's authorities or other data that is cached in the `Authentication` or `Principal`. It also removes the user from the user cache to force a refresh at next login.
+Rebuilds an {springSecurityApiDocsUrl}org/springframework/security/core/Authentication.html[Authentication] for the given username and registers it in the security context. You typically use this method after updating a user's authorities or other data that is cached in the `Authentication` or `Principal`. It also removes the user from the user cache to force a refresh at next login.
 
 Example:
 

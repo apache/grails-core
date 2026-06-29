@@ -162,7 +162,7 @@ In each approach you configure a mapping for a URL pattern to the role(s) that a
 
 With `IS_AUTHENTICATED_FULLY` you can implement a security scheme whereby users can check a remember-me checkbox during login and be auto-authenticated each time they return to your site, but must still log in with a password for some parts of the site. For example, allow regular browsing and adding items to a shopping cart with only a cookie, but require an explicit login to check out or view purchase history.
 
-For more information on `IS_AUTHENTICATED_FULLY`, `IS_AUTHENTICATED_REMEMBERED`, and `IS_AUTHENTICATED_ANONYMOUSLY`, see the Javadoc for {apidocs}org/springframework/security/access/vote/AuthenticatedVoter.html[AuthenticatedVoter]
+For more information on `IS_AUTHENTICATED_FULLY`, `IS_AUTHENTICATED_REMEMBERED`, and `IS_AUTHENTICATED_ANONYMOUSLY`, see the Javadoc for {springSecurityApiDocsUrl}org/springframework/security/access/vote/AuthenticatedVoter.html[AuthenticatedVoter]
 
 [WARNING]
 ====

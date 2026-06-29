@@ -38,19 +38,19 @@ When an accessor returns `true` for `accountExpired`, `accountLocked`, or `passw
 
 |`isAccountNonExpired()`
 |`accountExpired`
-|{apidocs}org/springframework/security/authentication/AccountExpiredException.html[AccountExpiredException]
+|{springSecurityApiDocsUrl}org/springframework/security/authentication/AccountExpiredException.html[AccountExpiredException]
 
 |`isAccountNonLocked()`
 |`accountLocked`
-|{apidocs}org/springframework/security/authentication/LockedException.html[LockedException]
+|{springSecurityApiDocsUrl}org/springframework/security/authentication/LockedException.html[LockedException]
 
 |`isCredentialsNonExpired()`
 |`passwordExpired`
-|{apidocs}org/springframework/security/authentication/CredentialsExpiredException.html[CredentialsExpiredException]
+|{springSecurityApiDocsUrl}org/springframework/security/authentication/CredentialsExpiredException.html[CredentialsExpiredException]
 
 |`isEnabled()`
 |`enabled`
-|{apidocs}org/springframework/security/authentication/DisabledException.html[DisabledException]
+|{springSecurityApiDocsUrl}org/springframework/security/authentication/DisabledException.html[DisabledException]
 |====================
 
 You can configure exception mappings in `application.groovy` to associate a URL to any or all of these exceptions to determine where to redirect after a failure, for example:

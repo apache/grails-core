@@ -96,9 +96,9 @@ You can also define the URL as a `callback` parameter in the original link, eg:
 In this case, the token will be *concatenated* to the end of the URL.
 
 Upon successful OAuth authorisation (after step 6.1 in the above diagram), an
-link:{baseGroovyApiUrl}grails/plugin/springsecurity/rest/oauth/OauthUser.html[OauthUser]
+link:{grailsApiDocsUrl}grails/plugin/springsecurity/rest/oauth/OauthUser.html[OauthUser]
 will be stored in the security context. This is done by a bean named `oauthUserDetailsService`. The
-link:{baseGroovyApiUrl}grails/plugin/springsecurity/rest/oauth/DefaultOauthUserDetailsService.html[default implementation]
+link:{grailsApiDocsUrl}grails/plugin/springsecurity/rest/oauth/DefaultOauthUserDetailsService.html[default implementation]
 delegates to the configured `userDetailsService` bean, passing the profile ID as the username:
 
 [source,groovy]

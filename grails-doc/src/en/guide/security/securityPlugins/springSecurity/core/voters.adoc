@@ -20,7 +20,7 @@ under the License.
 [[core-voters]]
 == Voters
 
-Voters are classes that implement the Spring Security {apidocs}org/springframework/security/access/AccessDecisionVoter.html[AccessDecisionVoter] interface and are used to confirm whether a successful authentication is authorized for the current request.
+Voters are classes that implement the Spring Security {springSecurityApiDocsUrl}org/springframework/security/access/AccessDecisionVoter.html[AccessDecisionVoter] interface and are used to confirm whether a successful authentication is authorized for the current request.
 
 You can register the voters to use with the `voterNames` setting; each element in the collection is the name of an existing Spring bean.
 
@@ -34,7 +34,7 @@ You can register the voters to use with the `voterNames` setting; each element i
 |Bean names of voters
 |====================
 
-The default voters include a {apidocs}org/springframework/security/access/vote/RoleHierarchyVoter.html[RoleHierarchyVoter] to ensure users have the required roles for the request, an {apidocs}org/springframework/security/access/vote/AuthenticatedVoter.html[AuthenticatedVoter] to support `IS_AUTHENTICATED_FULLY`, `IS_AUTHENTICATED_REMEMBERED`, and `IS_AUTHENTICATED_ANONYMOUSLY` tokens, a {apidocs}org/springframework/security/web/access/expression/WebExpressionVoter.html[WebExpressionVoter] to evaluate SpEL expressions, and a `grails.plugin.springsecurity.access.vote.ClosureVoter` to invoke annotation closures.
+The default voters include a {springSecurityApiDocsUrl}org/springframework/security/access/vote/RoleHierarchyVoter.html[RoleHierarchyVoter] to ensure users have the required roles for the request, an {springSecurityApiDocsUrl}org/springframework/security/access/vote/AuthenticatedVoter.html[AuthenticatedVoter] to support `IS_AUTHENTICATED_FULLY`, `IS_AUTHENTICATED_REMEMBERED`, and `IS_AUTHENTICATED_ANONYMOUSLY` tokens, a {springSecurityApiDocsUrl}org/springframework/security/web/access/expression/WebExpressionVoter.html[WebExpressionVoter] to evaluate SpEL expressions, and a `grails.plugin.springsecurity.access.vote.ClosureVoter` to invoke annotation closures.
 
 To customize this list, you define a `voterNames` attribute with a list of bean names. Any existing bean that implements the interface can be used, whether it is declared by this plugin, in your application's resources.groovy, another plugin, or any other source.
 

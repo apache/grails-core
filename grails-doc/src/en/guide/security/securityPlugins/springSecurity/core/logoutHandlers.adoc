@@ -20,9 +20,9 @@ under the License.
 [[core-logoutHandlers]]
 == Logout Handlers
 
-You register a list of logout handlers by implementing the {apidocs}org/springframework/security/web/authentication/logout/LogoutHandler.html[LogoutHandler] interface. The list is called when a user explicitly logs out.
+You register a list of logout handlers by implementing the {springSecurityApiDocsUrl}org/springframework/security/web/authentication/logout/LogoutHandler.html[LogoutHandler] interface. The list is called when a user explicitly logs out.
 
-By default, a `securityContextLogoutHandler` bean is registered to clear the {apidocs}org/springframework/security/core/context/SecurityContextHolder.html[SecurityContextHolder]. Also, unless you are using Facebook or OpenID, `rememberMeServices` bean is registered to reset your cookie. (Facebook and OpenID authenticate externally so we don't have access to the password to create a remember-me cookie.) If you are using Facebook, a `facebookLogoutHandler` is registered to reset its session cookies.
+By default, a `securityContextLogoutHandler` bean is registered to clear the {springSecurityApiDocsUrl}org/springframework/security/core/context/SecurityContextHolder.html[SecurityContextHolder]. Also, unless you are using Facebook or OpenID, `rememberMeServices` bean is registered to reset your cookie. (Facebook and OpenID authenticate externally so we don't have access to the password to create a remember-me cookie.) If you are using Facebook, a `facebookLogoutHandler` is registered to reset its session cookies.
 
 To customize this list, you define a `logout.handlerNames` attribute with a list of bean names.
 

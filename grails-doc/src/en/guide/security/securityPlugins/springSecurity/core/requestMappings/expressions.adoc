@@ -20,7 +20,7 @@ under the License.
 [[core-expressions]]
 === Using Expressions to Create Descriptive, Fine-Grained Rules
 
-Spring Security uses the {spring_framework_reference}expressions.html[Spring Expression Language (SpEL)], which allows you to declare the rules for guarding URLs more descriptively than does the traditional approach, and also allows much more fine-grained rules. Where you traditionally would specify a list of role names and/or special tokens (for example, `IS_AUTHENTICATED_FULLY`), with https://{htmlsingle}#el-access[Spring Security's expression support], you can instead use the embedded scripting language to define simple or complex access rules.
+Spring Security uses the {springFrameworkReferenceUrl}expressions.html[Spring Expression Language (SpEL)], which allows you to declare the rules for guarding URLs more descriptively than does the traditional approach, and also allows much more fine-grained rules. Where you traditionally would specify a list of role names and/or special tokens (for example, `IS_AUTHENTICATED_FULLY`), with https://{springSecurityHtmlSingleUrl}#el-access[Spring Security's expression support], you can instead use the embedded scripting language to define simple or complex access rules.
 
 You can use expressions with any of the previously described approaches to securing application URLs. For example, consider this annotated controller:
 
@@ -70,7 +70,7 @@ grails.plugin.springsecurity.controllerAnnotations.staticRules = [
 ]
 ----
 
-The Spring Security docs have a https://{htmlsingle}#el-common-built-in[table listing the standard expressions], which is copied here for reference:
+The Spring Security docs have a https://{springSecurityHtmlSingleUrl}#el-common-built-in[table listing the standard expressions], which is copied here for reference:
 
 .Spring Security expressions
 [cols="50,50"]

@@ -64,7 +64,7 @@ Note that configuration properties such as `grails.plugin.springsecurity.rest.to
 used. Every submodule of the above list will automatically configure the token store appropriately
 
 If you want your own token storage system, you need to implement
-link:{baseGroovyApiUrl}grails/plugin/springsecurity/rest/token/storage/TokenStorageService.html[TokenStorageService]
+link:{grailsApiDocsUrl}grails/plugin/springsecurity/rest/token/storage/TokenStorageService.html[TokenStorageService]
 and register it in `resources.groovy` as `tokenStorageService`.
 
 == Plugin configuration

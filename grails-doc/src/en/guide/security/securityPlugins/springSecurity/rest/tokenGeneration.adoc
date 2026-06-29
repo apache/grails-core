@@ -26,11 +26,11 @@ more information about how this plugin uses JWT's, check the <<rest-jwt>> sectio
 === Claims
 
 It is possible, to include additional claims in the JWT generated. To do so, you can plug one or more implementations of the interface
-{baseGroovyApiUrl}grails/plugin/springsecurity/rest/token/generation/jwt/CustomClaimProvider.html[CustomClaimProvider],
+{grailsApiDocsUrl}grails/plugin/springsecurity/rest/token/generation/jwt/CustomClaimProvider.html[CustomClaimProvider],
 and register them in Spring.
 
 The plugin comes prepackaged with a
-{baseGroovyApiUrl}grails/plugin/springsecurity/rest/token/generation/jwt/IssuerClaimProvider.html[IssuerClaimProvider],
+{grailsApiDocsUrl}grails/plugin/springsecurity/rest/token/generation/jwt/IssuerClaimProvider.html[IssuerClaimProvider],
 that sets the `iss` field of the JWT claim set, and which value is configurable using the following configuration property:
 `grails.plugin.springsecurity.rest.token.generation.jwt.issuer`.
 
@@ -100,8 +100,8 @@ When using encrypted JWT's, those are the possible configuration options:
 
 If you are not using JWT, but any stateful strategy like Memcached or GORM, the following strategies are available:
 
-* {baseGroovyApiUrl}grails/plugin/springsecurity/rest/token/generation/SecureRandomTokenGenerator.html[Using java.security.SecureRandom].
-* {baseGroovyApiUrl}grails/plugin/springsecurity/rest/token/generation/UUIDTokenGenerator.html[Using java.util.UUID].
+* {grailsApiDocsUrl}grails/plugin/springsecurity/rest/token/generation/SecureRandomTokenGenerator.html[Using java.security.SecureRandom].
+* {grailsApiDocsUrl}grails/plugin/springsecurity/rest/token/generation/UUIDTokenGenerator.html[Using java.util.UUID].
 
 The strategy used is configurable:
 
@@ -121,5 +121,5 @@ Both of them generate tokens of 32 alphanumeric characters.
 
 That should be enough for most of the human beings. But if you still want to provide your own implementation,
 simply write a class implementing
-link:{baseGroovyApiUrl}grails/plugin/springsecurity/rest/token/generation/TokenGenerator.html[TokenGenerator]
+link:{grailsApiDocsUrl}grails/plugin/springsecurity/rest/token/generation/TokenGenerator.html[TokenGenerator]
 and wire it up in `resources.groovy` as `tokenGenerator`.

@@ -103,7 +103,7 @@ the chapter about token validation first.
 ====
 
 If you want your own implementation, simply create a class implementing
-link:{baseGroovyApiUrl}grails/plugin/springsecurity/rest/token/rendering/AccessTokenJsonRenderer.html[AccessTokenJsonRenderer]
+link:{grailsApiDocsUrl}grails/plugin/springsecurity/rest/token/rendering/AccessTokenJsonRenderer.html[AccessTokenJsonRenderer]
 and wire it up in `resources.groovy` with name `accessTokenJsonRenderer`.
 
 [NOTE]

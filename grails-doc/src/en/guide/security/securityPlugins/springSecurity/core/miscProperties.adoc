@@ -47,7 +47,7 @@ under the License.
 
 |useHttpSession EventPublisher
 |`false`
-|If `true`, an {apidocs}org/springframework/security/web/session/HttpSessionEventPublisher.html[HttpSession EventPublisher] will be configured
+|If `true`, an {springSecurityApiDocsUrl}org/springframework/security/web/session/HttpSessionEventPublisher.html[HttpSession EventPublisher] will be configured
 
 |cacheUsers
 |`false`
@@ -99,7 +99,7 @@ under the License.
 
 |registerLoggerListener
 |`false`
-|If `true`, registers a {apidocs}org/springframework/security/access/event/LoggerListener.html[LoggerListener] that logs interceptor-related application events
+|If `true`, registers a {springSecurityApiDocsUrl}org/springframework/security/access/event/LoggerListener.html[LoggerListener] that logs interceptor-related application events
 
 |scr.allowSessionCreation
 |`true`
@@ -119,7 +119,7 @@ under the License.
 
 |sch.strategyName
 |`SecurityContextHolder.MODE_THREADLOCAL`
-|The strategy to use for storing the `SecurityContext` - can be one of `MODE_THREADLOCAL`, `MODE_INHERITABLETHREADLOCAL`, or `MODE_GLOBAL`, or the name of a class implementing {apidocs}org/springframework/security/core/context/SecurityContextHolderStrategy.html[SecurityContextHolderStrategy]
+|The strategy to use for storing the `SecurityContext` - can be one of `MODE_THREADLOCAL`, `MODE_INHERITABLETHREADLOCAL`, or `MODE_GLOBAL`, or the name of a class implementing {springSecurityApiDocsUrl}org/springframework/security/core/context/SecurityContextHolderStrategy.html[SecurityContextHolderStrategy]
 
 |debug.useFilter
 |`false`

@@ -76,7 +76,7 @@ Spring Security supports creating a remember-me cookie so that users are not req
 |Number of characters in the cookie's `token` attribute
 
 |atr.rememberMeClass
-|{apidocs}org/springframework/security/authentication/RememberMeAuthenticationToken.html[RememberMeAuthenticationToken]
+|{springSecurityApiDocsUrl}org/springframework/security/authentication/RememberMeAuthenticationToken.html[RememberMeAuthenticationToken]
 |remember-me authentication class
 |====================
 
@@ -88,7 +88,7 @@ You are most likely to change these attributes:
 
 ==== Persistent Logins
 
-The remember-me cookie is very secure, but for an even stronger solution you can use persistent logins that store the username in the database. See the https://{htmlsingle}#remember-me[Spring Security docs] for a description of the implementation.
+The remember-me cookie is very secure, but for an even stronger solution you can use persistent logins that store the username in the database. See the https://{springSecurityHtmlSingleUrl}#remember-me[Spring Security docs] for a description of the implementation.
 
 Persistent login is also useful for authentication schemes like Facebook, where you do not manage passwords in your database, but most of the other user information is stored locally. Without a password you cannot use the standard cookie format, so persistent logins enable remember-me cookies in these scenarios.
 

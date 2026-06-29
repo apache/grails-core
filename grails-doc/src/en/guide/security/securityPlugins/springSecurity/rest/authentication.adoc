@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-The {baseGroovyApiUrl}grails/plugin/springsecurity/rest/RestAuthenticationFilter.html[authentication filter]
+The {grailsApiDocsUrl}grails/plugin/springsecurity/rest/RestAuthenticationFilter.html[authentication filter]
 uses the default `authenticationManager` bean, which in turn uses all the registered authentication
 providers. See the https://apache.github.io/grails-spring-security/latest/index.html#authenticationProviders[Spring Security Core guide]
 for more information about how to define your own providers. Note that you can easily plug any Spring Security sub-plugin
@@ -110,7 +110,7 @@ grails.plugin.springsecurity.rest.login.passwordPropertyName = 'pwd'
 ----
 
 If your JSON request format is different, you can plug your own implementation by defining a class which extends
-{baseGroovyApiUrl}grails/plugin/springsecurity/rest/credentials/AbstractJsonPayloadCredentialsExtractor.html[AbstractJsonPayloadCredentialsExtractor].
+{grailsApiDocsUrl}grails/plugin/springsecurity/rest/credentials/AbstractJsonPayloadCredentialsExtractor.html[AbstractJsonPayloadCredentialsExtractor].
 The default implementation looks like this:
 
 [source,groovy]
@@ -147,7 +147,7 @@ Note that the name of the parameters can also be customised:
 ====
 Logout is not possible when using JWT tokens (the default strategy), as no state is kept in the server. If
 you still want to have logout, you can provide your own implementation by creating a subclass of
-link:{baseGroovyApiUrl}grails/plugin/springsecurity/rest/token/storage/jwt/JwtTokenStorageService.html[JwtTokenStorageService]
+link:{grailsApiDocsUrl}grails/plugin/springsecurity/rest/token/storage/jwt/JwtTokenStorageService.html[JwtTokenStorageService]
 and overriding the methods `storeToken` and `removeToken`.
 
 Then, register your implementation in `resources.groovy` as `tokenStorageService`.
@@ -157,7 +157,7 @@ let the tokens expire (they will expire anyway, unlike with other storages like 
 on every access).
 ====
 
-The {baseGroovyApiUrl}grails/plugin/springsecurity/rest/RestLogoutFilter.html[logout filter]
+The {grailsApiDocsUrl}grails/plugin/springsecurity/rest/RestLogoutFilter.html[logout filter]
 exposes an endpoint for deleting tokens. It will read the token from an HTTP header. If found, will delete it from the
 storage, sending a 200 response. Otherwise, it will send a 404 response.
 

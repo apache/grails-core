@@ -20,7 +20,7 @@ under the License.
 [[core-authenticationProviders]]
 == Authentication Providers
 
-The plugin registers authentication providers that perform authentication by implementing the {apidocs}org/springframework/security/authentication/AuthenticationProvider.html[AuthenticationProvider] interface.
+The plugin registers authentication providers that perform authentication by implementing the {springSecurityApiDocsUrl}org/springframework/security/authentication/AuthenticationProvider.html[AuthenticationProvider] interface.
 
 .Authentication provider configuration options
 [cols="30,30,40"]
