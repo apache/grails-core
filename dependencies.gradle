@@ -37,7 +37,7 @@ ext {
             'jna.version'                   : '5.17.0',
             'jquery.version'                : '3.7.1',
             'objenesis.version'             : '3.4',
-            'spring-boot.version'           : '3.5.14',
+            'spring-boot.version'           : '3.5.16',
     ]
 
     // Note: the name of the dependency must be the prefix of the property name so properties in the pom are resolved correctly
@@ -75,7 +75,7 @@ ext {
             'commons-lang3.version'         : '3.20.0',
             'geb-spock.version'             : '8.0.1',
             'groovy.version'                : '4.0.32',
-            'jackson.version'               : '2.21.2',
+            'jackson.version'               : '2.21.4',
             'jquery.version'                : '3.7.1',
             'hibernate-groovy-proxy.version': '1.1',
             'jakarta-servlet-api.version'   : '6.1.0',
