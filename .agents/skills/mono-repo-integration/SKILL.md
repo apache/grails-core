@@ -136,6 +136,10 @@ The apps were physically moved to `grails-test-examples/<name>/...` back in Init
 ### Phase 5 — Cleanup & verify
 - Remove now-empty imported folders.
 - Match property/naming style to existing conventions (e.g. `xxxVersion`).
+- **CodeNarc**: the imported source will almost certainly trip `codeStyle` (wildcard imports, tabs, `if(`, unnecessary GStrings/semicolons, brace spacing, missing trailing newline, class-starts-with-blank-line). Fix mechanically until `:grails-<name>:codenarcMain` passes; test-example apps don't apply `grails-code-style`, so they aren't style-checked.
+- **SBOM (`cyclonedxBom`)**: a merged plugin pulls transitives the SBOM plugin can't auto-resolve a license for, failing with "Could not determine License id for dependency: …". Trace it (`./gradlew :grails-<name>:dependencyInsight --dependency <group:artifact> --configuration runtimeClasspath`) to confirm what pulls it and that the license is ASF-acceptable, then add a mapping to `LICENSE_MAPPING` (and a `LICENSES` entry if the license has no SPDX id) in `build-logic/plugins/.../SbomPlugin.groovy` — the same place `jline`/`sitemesh` are mapped. (Redis: `org.json:json` via `jedis`, relicensed to Public Domain → mapped.)
+- **RAT** noise: a local working copy often has stale `bin/`/`build/` artifacts that `rat` flags; filter the report to your new files (excluding `build/`/`bin/`) to confirm the contribution itself is clean.
+- **Gradle can't run in the sandbox here** (wrapper needs `~/.gradle`; signing needs the 1Password agent) — run every `./gradlew` with the sandbox disabled, and `export GRADLE_OPTS="-Xms2G -Xmx5G"`.
 - Build and test:
   ```bash
   ./gradlew build -PskipTests                       # compiles + wires
