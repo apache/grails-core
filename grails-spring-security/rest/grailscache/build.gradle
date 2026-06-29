@@ -49,7 +49,7 @@ dependencies {
     implementation project(':grails-spring-security-core'), {
         // impl: SecurityFilterPosition, SpringSecurityUtils
     }
-    implementation project(':spring-security-rest'), {
+    implementation project(':grails-spring-security-rest'), {
         // impl: SecureRandomTokenGenerator
     }
     implementation 'jakarta.annotation:jakarta.annotation-api', {

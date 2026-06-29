@@ -393,11 +393,11 @@ project(':grails-spring-security-core').projectDir = new File(settingsDir, 'grai
 project(':grails-spring-security-ldap').projectDir = new File(settingsDir, 'grails-spring-security/ldap/plugin')
 project(':grails-spring-security-oauth2').projectDir = new File(settingsDir, 'grails-spring-security/oauth2/plugin')
 project(':grails-spring-security-rest').projectDir = new File(settingsDir, 'grails-spring-security/rest/core')
-project(':grails-spring-security-rest-gorm').projectDir = new File(settingsDir, 'grails-spring-security/gorm')
-project(':grails-spring-security-rest-grailscache').projectDir = new File(settingsDir, 'grails-spring-security/grailscache')
-project(':grails-spring-security-rest-memcached').projectDir = new File(settingsDir, 'grails-spring-security/memcached')
-project(':grails-spring-security-rest-redis').projectDir = new File(settingsDir, 'grails-spring-security/redis')
-project(':grails-spring-security-rest-testapp-profile').projectDir = new File(settingsDir, 'grails-spring-security/testapp-profile')
+project(':grails-spring-security-rest-gorm').projectDir = new File(settingsDir, 'grails-spring-security/rest/gorm')
+project(':grails-spring-security-rest-grailscache').projectDir = new File(settingsDir, 'grails-spring-security/rest/grailscache')
+project(':grails-spring-security-rest-memcached').projectDir = new File(settingsDir, 'grails-spring-security/rest/memcached')
+project(':grails-spring-security-rest-redis').projectDir = new File(settingsDir, 'grails-spring-security/rest/redis')
+project(':grails-spring-security-rest-testapp-profile').projectDir = new File(settingsDir, 'grails-spring-security/rest/testapp-profile')
 project(':grails-spring-security-ui').projectDir = new File(settingsDir, 'grails-spring-security/ui/plugin')
 
 // Spring Security Functional Tests

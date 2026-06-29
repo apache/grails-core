@@ -37,7 +37,7 @@ dependencies {
 
     implementation platform(project(':grails-bom'))
 
-    api project(':spring-security-rest'), {
+    api project(':grails-spring-security-rest'), {
         // api: TokenNotFoundException, TokenStorageService
         // impl: SecureRandomTokenGenerator
     }
