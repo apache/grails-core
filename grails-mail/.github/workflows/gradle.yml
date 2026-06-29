@@ -1,0 +1,71 @@
+name: "Java CI"
+on:
+  push:
+    branches:
+      - '[4-9]+.[0-9]+.x'
+  pull_request:
+    branches:
+      - '[4-9]+.[0-9]+.x'
+  workflow_dispatch:
+jobs:
+  test_project:
+    name: "Test Project"
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: true
+      matrix:
+        java: [17, 21]
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: liberica
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: "🏃 Run tests"
+        run: ./gradlew check
+      - name: "🏃 Run integration tests"
+        working-directory: ./examples/testapp1
+        run: ./gradlew integrationTest
+  publish_snapshot:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    name: "Build Project and Publish Snapshot release"
+    needs: test_project
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write # updates gh-pages branch
+      packages: write # publishes snapshot to GitHub Packages
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: liberica
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+      - name: "🔨 Build Project"
+        run: ./gradlew build
+      - name: "📤 Publish Snapshot version to Artifactory (repo.grails.org)"
+        env:
+          GRAILS_PUBLISH_RELEASE: 'false'
+          MAVEN_PUBLISH_USERNAME: ${{ secrets.MAVEN_PUBLISH_USERNAME }}
+          MAVEN_PUBLISH_PASSWORD: ${{ secrets.MAVEN_PUBLISH_PASSWORD }}
+          MAVEN_PUBLISH_URL: 'https://repo.grails.org/artifactory/plugins3-snapshots-local'
+        run: ./gradlew publish
+      - name: "📖 Generate Snapshot Documentation"
+        run: ./gradlew docs
+      - name: "📤 Publish Snapshot Documentation to Github Pages"
+        uses: apache/grails-github-actions/deploy-github-pages@asf
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GRADLE_PUBLISH_RELEASE: 'false'
+          SOURCE_FOLDER: build/docs

@@ -1,0 +1,25 @@
+plugins {
+    id 'groovy-gradle-plugin'
+}
+
+file('../../../gradle.properties').withInputStream {
+    def gradleProperties = new Properties()
+    gradleProperties.load(it)
+    gradleProperties.each { k, v -> ext.set(k, v) }
+}
+
+repositories {
+    maven { url = 'https://repo.grails.org/grails/restricted' }
+    maven {
+        url = 'https://repository.apache.org/content/groups/snapshots'
+        content {
+            includeVersionByRegex('org[.]apache[.](grails|groovy).*', '.*', '.*-SNAPSHOT')
+        }
+    }
+}
+
+dependencies {
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
+    implementation 'cloud.wondrify:asset-pipeline-gradle'
+    implementation 'org.apache.grails:grails-gradle-plugins'
+}

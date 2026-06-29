@@ -1,0 +1,66 @@
+file('../../gradle.properties').withInputStream {
+    // Inherit versions from main project
+    def mainProjectProps = new Properties()
+    mainProjectProps.load(it)
+    mainProjectProps
+            .findAll { !findProperty(it.key.toString()) }
+            .findAll {it.key.toString().endsWith('Version') }
+            .each { k, v -> ext.set(k, v) }
+}
+
+version = '0.1'
+group = 'testapp1'
+
+apply plugin: 'org.apache.grails.gradle.grails-web'
+apply plugin: 'org.apache.grails.gradle.grails-gsp'
+apply plugin: 'cloud.wondrify.asset-pipeline'
+
+repositories {
+    maven { url = 'https://repo.grails.org/grails/restricted' }
+    maven {
+        url = 'https://repository.apache.org/content/groups/snapshots'
+        content {
+            includeVersionByRegex('org[.]apache[.](grails|groovy).*', '.*', '.*-SNAPSHOT')
+        }
+    }
+}
+
+dependencies {
+
+    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
+
+    implementation "com.icegreen:greenmail:$greenmailVersion"
+    implementation 'org.grails.plugins:grails-mail'
+    implementation 'org.apache.grails:grails-core'
+    implementation 'org.apache.grails:grails-controllers'
+    implementation 'org.apache.grails:grails-gsp'
+    implementation 'org.apache.grails:grails-layout'
+
+    testAndDevelopmentOnly 'org.webjars.npm:bootstrap'
+    testAndDevelopmentOnly 'org.webjars.npm:bootstrap-icons'
+    testAndDevelopmentOnly 'org.webjars.npm:jquery'
+
+    runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
+    runtimeOnly 'org.fusesource.jansi:jansi'
+    runtimeOnly 'org.apache.grails:grails-services'
+    runtimeOnly 'org.apache.grails:grails-url-mappings'
+    runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'
+    runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
+    runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
+
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
+    integrationTestImplementation 'org.apache.grails.testing:grails-testing-support-core'
+    integrationTestImplementation 'org.spockframework:spock-core'
+
+}
+
+compileJava.options.release = javaVersion.toInteger()
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+    }
+}

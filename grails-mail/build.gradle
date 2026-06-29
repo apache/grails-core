@@ -1,0 +1,87 @@
+import java.time.Instant
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+
+version = projectVersion
+group = 'org.grails.plugins'
+
+apply plugin: 'groovy'
+apply plugin: 'java-library'
+apply plugin: 'org.apache.grails.gradle.grails-plugin'
+apply plugin: 'org.apache.grails.gradle.grails-publish'
+
+repositories {
+    mavenCentral()
+    maven { url = 'https://repo.grails.org/grails/restricted' }
+    maven {
+        url = 'https://repository.apache.org/content/groups/snapshots'
+        content {
+            includeVersionByRegex('org[.]apache[.](grails|groovy).*', '.*', '.*-SNAPSHOT')
+        }
+    }
+}
+
+ext {
+    buildInstant = java.util.Optional.ofNullable(System.getenv("SOURCE_DATE_EPOCH"))
+            .filter(s -> !s.isEmpty())
+            .map(Long::parseLong)
+            .map(Instant::ofEpochSecond)
+            .orElseGet(Instant::now)
+    formattedBuildDate = DateTimeFormatter.ISO_INSTANT.format(buildInstant)
+    buildDate = (buildInstant as Instant).atZone(ZoneOffset.UTC) // for reproducible builds
+}
+
+dependencies {
+
+    compileOnly platform("org.apache.grails:grails-bom:$grailsVersion")
+    compileOnly 'org.apache.grails:grails-dependencies-starter-web'
+
+    // avoid pulling the bom in to set this version, instead use a property
+    implementation "org.eclipse.angus:jakarta.mail:$jakartaMailImplVersion", {
+        // impl: SMTPMessage
+    }
+
+    compileOnlyApi 'jakarta.mail:jakarta.mail-api', {
+        // api: Message, Session
+        // impl: MimeMessage, MimeUtility
+    }
+
+    testImplementation platform("org.apache.grails:grails-bom:$grailsVersion")
+    testImplementation 'org.apache.grails:grails-dependencies-starter-web'
+    testImplementation 'org.apache.grails:grails-dependencies-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+grailsPublish {
+    githubSlug = 'grails-plugins/grails-mail'
+    license {
+        name = 'Apache-2.0'
+    }
+    title = 'Grails Mail Plugin'
+    desc = 'Provides Mail support to a running Grails application'
+    developers = [
+        candrews: 'Craig Andrews',
+        ldaley: 'Luke Daley',
+        pledbrook: 'Peter Ledbrook',
+        jeffscottbrown: 'Jeff Brown',
+        graemerocher: 'Graeme Rocher',
+        marcpalmer: 'Marc Palmer',
+        sbglasius: 'Søren Berg Glasius',
+        matrei: 'Mattias Reichel'
+    ]
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+    }
+}
+
+compileJava.options.release = javaVersion.toInteger()
+
+apply from: layout.projectDirectory.file('gradle/docs-config.gradle')
+
+grails {
+    springDependencyManagement = false
+}

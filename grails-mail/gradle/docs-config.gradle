@@ -1,0 +1,67 @@
+import org.asciidoctor.gradle.jvm.AsciidoctorTask
+
+apply plugin: 'org.asciidoctor.jvm.convert'
+
+tasks.withType(Groovydoc).configureEach {
+    access = GroovydocAccess.PROTECTED
+    processScripts = false
+    includeMainForScripts = false
+    includeAuthor = false
+    destinationDir = layout.buildDirectory.dir('docs/api').get().asFile
+}
+
+tasks.withType(AsciidoctorTask).configureEach {
+    baseDir = layout.projectDirectory.dir('src/docs')
+    sourceDir = layout.projectDirectory.dir('src/docs')
+    outputDir = layout.buildDirectory.dir('docs/manual')
+    sources {
+        include 'index.adoc'
+    }
+    jvm {
+        jvmArgs += [
+            '--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED',
+            '--add-opens', 'java.base/java.io=ALL-UNNAMED'
+        ]
+    }
+    attributes = [
+        copyright            : 'Apache License, Version 2.0',
+        docinfo1             : 'true',
+        doctype              : 'book',
+        encoding             : 'utf-8',
+        icons                : 'font',
+        id                   : "$rootProject.name:$projectVersion",
+        idprefix             : '',
+        idseparator          : '-',
+        lang                 : 'en',
+        linkattrs            : true,
+        numbered             : '',
+        producer             : 'Asciidoctor',
+        revnumber            : projectVersion,
+        setanchors           : true,
+        'source-highlighter' : 'prettify',
+        toc                  : 'left',
+        toc2                 : '',
+        toclevels            : '2',
+        projectVersion       : projectVersion
+    ]
+}
+
+tasks.register('docs') {
+    group = 'documentation'
+    def outputFile = layout.buildDirectory.file('docs/index.html')
+    inputs.files(tasks.named('asciidoctor'), tasks.named('groovydoc'))
+    outputs.file(outputFile)
+    doLast {
+        File redirectPage = outputFile.get().asFile
+        redirectPage.delete()
+        redirectPage.text = '''
+        <html lang="en">
+            <head>
+                <title>Redirecting...</title>
+                <meta http-equiv="refresh" content="0; url=manual/index.html" />
+            </head>
+            <body></body>
+        </html>
+        '''.stripIndent(8)
+    }
+}

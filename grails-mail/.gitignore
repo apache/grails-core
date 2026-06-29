@@ -1,0 +1,21 @@
+# Eclipse
+.classpath
+.project
+.gradle/
+build/
+.settings/
+target-eclipse/
+
+# Intellij
+.idea/
+*.iml
+*.iws
+
+*.log
+test/reports
+target
+.DS_Store
+plugin.xml
+*.zip
+web-app
+

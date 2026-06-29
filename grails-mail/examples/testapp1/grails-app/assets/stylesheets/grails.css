@@ -1,0 +1,77 @@
+table.scaffold tr>td:first-child, tr>th:first-child {
+    padding-left: 1.25em;
+}
+
+table.scaffold tr>td:last-child, tr>th:last-child {
+    padding-right: 1.25em;
+}
+
+table.scaffold th {
+    background-image: linear-gradient(
+            to bottom,
+            #ffffff 0%,
+            #f8f8f8 30%,
+            #eaeaea 70%,
+            #d4d4d4 100%
+    );
+    border-bottom: 2px solid #b3b3b3; /* Adding a subtle shadow effect */
+    box-shadow: 0 2px 3px rgba(0, 0, 0, 0.1); /* Adding a drop shadow */
+}
+
+[data-bs-theme=dark] table.scaffold th {
+    background-image: linear-gradient(
+            to bottom,
+            #4a4a4a 0%,
+            #3e3e3e 30%,
+            #2a2a2a 70%,
+            #1e1e1e 100%
+    );
+    border-bottom: 2px solid #141414; /* Adding a subtle shadow effect */
+    box-shadow: 0 2px 3px rgba(0, 0, 0, 0.3); /* Adding a drop shadow */
+}
+
+table.scaffold thead th {
+    white-space: nowrap;
+}
+
+table.scaffold th a {
+    display: block;
+    text-decoration: none;
+}
+
+table.scaffold th a:link, th a:visited {
+    color: #666666;
+}
+
+table.scaffold th a:hover, th a:focus {
+    color: #333333;
+}
+
+table.scaffold th.sortable a {
+    background-position: right;
+    background-repeat: no-repeat;
+    padding-right: 1.1em;
+}
+
+table.scaffold th {
+    position: relative;
+}
+
+
+table.scaffold th.asc a:after {
+    content: '▲';
+    position: absolute;
+    right: 10px;
+    font-size: 0.8em;
+}
+
+table.scaffold th.desc a:after {
+    content: '▼';
+    position: absolute;
+    right: 10px;
+    font-size: 0.8em;
+}
+
+table.scaffold th:hover {
+    background: #f5f5f5 !important;
+}
