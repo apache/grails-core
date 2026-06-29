@@ -49,18 +49,6 @@ ext {
     profileProjects = [ /* Will be populated by subprojects loop below */]
 }
 
-// TODO: For spring security tests
-//allprojects {
-//    configurations.configureEach {
-//        resolutionStrategy.eachDependency { DependencyResolveDetails details ->
-//            if (details.requested.group == 'org.seleniumhq.selenium') {
-//                details.useVersion('4.25.0')
-//                details.because('Temporary workaround because of https://issues.chromium.org/issues/42323769')
-//            }
-//        }
-//    }
-//}
-
 subprojects {
 
     for (String testPrefix : testProjectsStartWith) {
