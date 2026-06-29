@@ -289,6 +289,13 @@ declare -a redis_mappings=(
 mappings+=("${redis_mappings[@]}")
 
 
+echo "Mapping grails-mail artifacts"
+declare -a mail_mappings=(
+  "org[.]grails[.]plugins:grails-mail|org.apache.grails:grails-mail"
+)
+mappings+=("${mail_mappings[@]}")
+
+
 echo "Mapping grails-security artifacts"
 declare -a security_mappings=(
   "org[.]grails[.]plugins:spring-security-ui|org.apache.grails:grails-spring-security-ui"
