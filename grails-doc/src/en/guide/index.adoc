@@ -1070,6 +1070,36 @@ include::security/securityPlugins/springSecurity.adoc[]
 
 include::security/securityPlugins/shiro.adoc[]
 
+[[mail]]
+== Mail
+
+include::mail.adoc[]
+
+[[mailConfiguration]]
+=== Configuration
+
+include::mail/mailConfiguration.adoc[]
+
+[[mailSendingEmails]]
+=== Sending Emails
+
+include::mail/mailSendingEmails.adoc[]
+
+[[mailMessageContent]]
+=== Message Content
+
+include::mail/mailMessageContent.adoc[]
+
+[[mailAttachments]]
+=== Attachments
+
+include::mail/mailAttachments.adoc[]
+
+[[mailTesting]]
+=== Testing
+
+include::mail/mailTesting.adoc[]
+
 [[redis]]
 == Redis
 

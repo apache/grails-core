@@ -330,6 +330,13 @@ security:
       springSecurityOauth2: OAuth2 Plugin
       springSecurityRest: REST Plugin
       springSecurityUi: UI Plugin
+mail:
+  title: Mail
+  mailConfiguration: Configuration
+  mailSendingEmails: Sending Emails
+  mailMessageContent: Message Content
+  mailAttachments: Attachments
+  mailTesting: Testing
 redis:
   title: Redis
   redisInstallation: Installation and Configuration

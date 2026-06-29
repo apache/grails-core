@@ -1,0 +1,48 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+Typically, you don't want to actually send email as part of your automated tests. Besides wrapping all calls to `sendMail` in an environment-sensitive guard (which is a very bad idea), you can use one of the following techniques to deal with this.
+
+==== Disabling Email Sending
+
+You can effectively disable email sending globally in your test by setting the following value in your application for the test environment:
+
+[source,groovy]
+----
+grails.mail.disabled = true
+----
+
+This will effectively cause all calls to `sendMail()` to be a non-operation, with a warning being logged that mail is disabled. The advantage of this technique is that it is cheap. The disadvantage is that it makes it impossible to test that email would be sent and to inspect any aspects of the sent mail.
+
+==== Using an Override Address
+
+You can _override_ any and all recipient email addresses in `sendMail()` calls to force messages to be delivered to a certain mailbox:
+
+[source,groovy]
+----
+grails.mail.overrideAddress = 'test@myorg.com'
+----
+
+All `to`, `cc` and `bcc` addresses will be replaced by this value if set. The advantage of this mechanism is that it allows you to test using a real SMTP server. The disadvantage is that it requires a real SMTP server and makes it difficult to test address determination logic.
+
+==== Using an in-memory SMTP server
+
+The preferred approach is to run an in-memory SMTP server (such as https://greenmail-mail-test.github.io/greenmail/[GreenMail]) inside your application. This allows you to fully exercise your email-sending code and to inspect sent email to assert correct values for recipient addresses and so on.
+
+The advantage of this approach is that it is as close as possible to the real world and gives you access to the sent email in your tests. The disadvantage is that it is another dependency.
