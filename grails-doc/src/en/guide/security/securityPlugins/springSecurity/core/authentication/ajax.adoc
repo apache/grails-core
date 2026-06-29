@@ -20,7 +20,7 @@ under the License.
 [[core-ajax]]
 === Ajax Authentication
 
-The typical pattern of using web site authentication to access restricted pages involves intercepting access requests for secure pages, redirecting to a login page (possibly off-site, for example when using a Single Sign-on implementation such as https://github.com/apache/grails-spring-security[CAS]), and redirecting back to the originally-requested page after a successful login. Each page can also have a login link to allow explicit logins at any time.
+The typical pattern of using web site authentication to access restricted pages involves intercepting access requests for secure pages, redirecting to a login page (possibly off-site, for example when using a Single Sign-on implementation such as xref:springSecurityCas.adoc#springSecurityCas[CAS]), and redirecting back to the originally-requested page after a successful login. Each page can also have a login link to allow explicit logins at any time.
 
 Another option is to also have a login link on each page and to use JavaScript to present a login form within the current page in a popup. The JavaScript code submits the authentication request and displays success or error messages as appropriate.
 

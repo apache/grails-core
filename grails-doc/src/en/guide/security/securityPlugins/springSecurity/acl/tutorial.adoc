@@ -45,7 +45,7 @@ and run the `compile` command to resolve the dependencies:
 $ grails compile
 ....
 
-This will transitively install the https://github.com/apache/grails-spring-security[Spring Security Core] plugin, so you'll need to configure that by running the `s2-quickstart` script:
+This will transitively install the xref:springSecurityCore.adoc#springSecurityCore[Spring Security Core] plugin, so you'll need to configure that by running the `s2-quickstart` script:
 
 ....
 $ grails s2-quickstart com.testacl User Role

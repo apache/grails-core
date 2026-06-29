@@ -20,6 +20,6 @@ under the License.
 [[oauth2-introduction]]
 == Introduction to the Spring Security OAuth2 Plugin
 
-The OAuth2 Plugin adds oAuth v2 sign-on support to Grails applications that use Spring Security. It depends on the https://github.com/apache/grails-spring-security[Spring Security Core plugin].
+The OAuth2 Plugin adds oAuth v2 sign-on support to Grails applications that use Spring Security. It depends on the xref:springSecurityCore.adoc#springSecurityCore[Spring Security Core plugin].
 
 It comes with a number of preconfigured OAuth2 providers, but you can implement any provider you like, that is extending the https://github.com/scribejava/scribejava/blob/master/scribejava-core/src/main/java/com/github/scribejava/core/builder/api/DefaultApi20.java[Scribejava DefaultApi20]

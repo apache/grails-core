@@ -22,7 +22,7 @@ under the License.
 
 ACL management should be done using the API exposed by `AclService` and `AclUtilService`. Both services have a much more intuitive and convenient high-level approach to managing ACLs, ACEs, etc. The functionality in this plugin is to provide a CRUD interface for fine-grained ACL management.
 
-The ACL menu is only available if the https://github.com/apache/grails-spring-security[ACL plugin] is installed.
+The ACL menu is only available if the xref:springSecurityAcl.adoc#springSecurityAcl[ACL plugin] is installed.
 
 include::acls/aclClass.adoc[]
 

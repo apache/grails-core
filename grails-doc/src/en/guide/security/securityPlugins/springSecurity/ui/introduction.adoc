@@ -29,7 +29,7 @@ https://docs.grails.org/latest/guide[Grails Core documentation].
 
 Non-default functionality is available only if the feature is available. This includes:
 
-* ACL Controllers and Views, which are enabled if the https://github.com/apache/grails-spring-security[ACL Plugin] is installed.
+* ACL Controllers and Views, which are enabled if the xref:springSecurityAcl.adoc#springSecurityAcl[ACL Plugin] is installed.
 * Requestmaps support, which is available if `grails.plugin.springsecurity.securityConfigType` is set to `"Requestmap"` or `SecurityConfigType.Requestmap` in `application.groovy`.
 * Persistent cookies support, which is enabled if it has been configured with the `s2-create-persistent-token` script.
 
