@@ -75,6 +75,7 @@ ext {
             'commons-lang3.version'         : '3.20.0',
             'geb-spock.version'             : '8.0.1',
             'groovy.version'                : '4.0.32',
+            'guava.version'                 : '33.6.0-jre',
             'jackson.version'               : '2.21.4',
             'jquery.version'                : '3.7.1',
             'hibernate-groovy-proxy.version': '1.1',
@@ -146,6 +147,7 @@ ext {
             'groovy-xml'                  : "org.apache.groovy:groovy-xml:${bomDependencyVersions['groovy.version']}",
             'groovy-yaml'                 : "org.apache.groovy:groovy-yaml:${bomDependencyVersions['groovy.version']}",
             // end - restate the groovy-bom here because the spring dependency management
+            'guava'                       : "com.google.guava:guava:${bomDependencyVersions['guava.version']}",
             'jquery'                      : "org.webjars.npm:jquery:${bomDependencyVersions['jquery.version']}",
             // start - boot & selenium conflict, so pin the version we want (newest)
             'jakarta-servlet-api'         : "jakarta.servlet:jakarta.servlet-api:${bomDependencyVersions['jakarta-servlet-api.version']}",
@@ -230,14 +232,12 @@ ext {
         customBomVersions = [
                 'javaparser-core.version': '3.27.0', // micronaut requires 3.27, groovy 4 ships with 3.28 but is compatible with 3.27
                 'asm.version'            : '9.9.1',
-                'guava.version'          : '33.5.0-jre',
         ]
         combinedVersions += customBomVersions
         customBomDependencies = [
                 'javaparser-core': "com.github.javaparser:javaparser-core:${combinedVersions['javaparser-core.version']}",
                 'asm'            : "org.ow2.asm:asm:${combinedVersions['asm.version']}",
                 'asm-util'       : "org.ow2.asm:asm-util:${combinedVersions['asm.version']}",
-                'guava'          : "com.google.guava:guava:${combinedVersions['guava.version']}",
         ]
         combinedDependencies += customBomDependencies
     }
