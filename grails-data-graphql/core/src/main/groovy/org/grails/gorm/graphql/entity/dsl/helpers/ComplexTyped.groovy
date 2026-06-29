@@ -132,7 +132,10 @@ trait ComplexTyped<T> extends ExecutesClosures {
     private void handleField(@DelegatesTo(strategy = Closure.DELEGATE_ONLY)Closure closure, Field field) {
         field.nullable(defaultNull)
         // Inlined ExecutesClosures.withDelegate: GROOVY-12106 - Groovy 5 STC can't resolve an
-        // inherited parent-trait static from a sub-trait body. Remove once GROOVY-12106 is fixed.
+        // inherited parent-trait static from a sub-trait body. The ticket is now Resolved/Fixed
+        // for 5.0.7, but the latest published 5.0.7-SNAPSHOT (build 18, 20260628.011302) was cut
+        // before the fix merged and still fails STC here. Restore the plain
+        // withDelegate(closure, (Object)field) call once a snapshot containing the fix is consumed.
         if (closure != null) {
             closure.resolveStrategy = Closure.DELEGATE_ONLY
             closure.delegate = field
