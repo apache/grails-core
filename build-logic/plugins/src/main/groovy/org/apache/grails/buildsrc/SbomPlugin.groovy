@@ -75,6 +75,10 @@ class SbomPlugin implements Plugin<Project> {
                     id : 'BSD-3-Clause',
                     url: 'https://opensource.org/license/bsd-3-clause/'
             ],
+            'MIT'         : [
+                    id : 'MIT',
+                    url: 'https://opensource.org/license/mit/'
+            ],
             // Variant of Apache 1.1 license. Approved by legal LEGAL-707
             'OpenSymphony': [
                     // id is optional and the opensymphony license doesn't have an SPDX id
@@ -101,7 +105,11 @@ class SbomPlugin implements Plugin<Project> {
             'pkg:maven/com.oracle.coherence.ce/coherence-bom@22.06.2?type=pom': 'UPL-1.0', // does not have map based on license id
             'pkg:maven/opensymphony/sitemesh@2.6.0?type=jar'                  : 'OpenSymphony', // custom license approved by legal LEGAL-707
             'pkg:maven/org.jruby/jzlib@1.1.5?type=jar'                        : 'BSD-3-Clause', // https://web.archive.org/web/20240822213507/http://www.jcraft.com/jzlib/LICENSE.txt shows it's a 3 clause
-            'pkg:maven/org.json/json@20250107?type=jar'                       : 'Public-Domain'// required due to jedis, https://issues.apache.org/jira/browse/LEGAL-666 approves this usage
+            'pkg:maven/org.json/json@20250107?type=jar'                       : 'Public-Domain', // required due to jedis, https://issues.apache.org/jira/browse/LEGAL-666 approves this usage
+            // Bouncy Castle Licence is the MIT license (https://www.bouncycastle.org/licence.html); pulled in transitively by the CAS client
+            'pkg:maven/org.bouncycastle/bcpkix-jdk15on@1.70?type=jar'         : 'MIT',
+            'pkg:maven/org.bouncycastle/bcprov-jdk15on@1.70?type=jar'         : 'MIT',
+            'pkg:maven/org.bouncycastle/bcutil-jdk15on@1.70?type=jar'         : 'MIT'
     ]
 
     // we don't distribute these so these licenses are considered acceptable, but we still prefer ASF licenses.
