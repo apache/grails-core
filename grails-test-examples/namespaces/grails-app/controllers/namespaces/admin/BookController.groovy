@@ -19,31 +19,27 @@
 
 package namespaces.admin
 
-class PageController {
+class BookController {
 
     static namespace = "admin"
 
     def index() {
-        render view: "/page/index", model: [pageTitle: "Admin Page"]
-    }
-
-    def links() {
-        render view: "/page/namespaceLinks", model: [pageTitle: "Admin Namespace Links"]
+        render view: "/book/index", model: [pageTitle: "Admin Book"]
     }
 
     def list() {
-        render view: "/page/namespaceLinks", model: [pageTitle: "Admin Namespace Links"]
+        render view: "/book/index", model: [pageTitle: "Admin Book List"]
     }
 
-    def redirectToBook() {
-        redirect controller: "book", action: "index"
+    def save() {
+        render "Admin Book Save"
     }
 
-    def chainToBook() {
-        chain controller: "book", action: "index"
+    def alternateSave() {
+        render "Admin Book Alternate Save"
     }
 
-    def redirectToRootReport() {
-        redirect controller: "report", action: "index", namespace: null
+    def included() {
+        render "Admin Book Include"
     }
 }

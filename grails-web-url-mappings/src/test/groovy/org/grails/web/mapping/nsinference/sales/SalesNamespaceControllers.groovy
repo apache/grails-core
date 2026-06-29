@@ -16,34 +16,16 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+package org.grails.web.mapping.nsinference.sales
 
-package namespaces.admin
+import grails.artefact.Artefact
 
-class PageController {
-
-    static namespace = "admin"
-
-    def index() {
-        render view: "/page/index", model: [pageTitle: "Admin Page"]
-    }
-
-    def links() {
-        render view: "/page/namespaceLinks", model: [pageTitle: "Admin Namespace Links"]
-    }
-
-    def list() {
-        render view: "/page/namespaceLinks", model: [pageTitle: "Admin Namespace Links"]
-    }
-
-    def redirectToBook() {
-        redirect controller: "book", action: "index"
-    }
-
-    def chainToBook() {
-        chain controller: "book", action: "index"
-    }
-
-    def redirectToRootReport() {
-        redirect controller: "report", action: "index", namespace: null
-    }
+/**
+ * A {@code sales}-namespaced controller whose logical name {@code report} also exists in the
+ * {@code admin} namespace, used to exercise the ambiguous multiple-namespaced resolution case.
+ */
+@Artefact('Controller')
+class ReportController {
+    static namespace = 'sales'
+    def index() {}
 }

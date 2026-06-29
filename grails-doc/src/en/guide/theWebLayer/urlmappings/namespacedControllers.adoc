@@ -73,7 +73,7 @@ class UrlMappings {
 }
 ----
 
-Reverse URL mappings also require that the `namespace` be specified.
+Reverse URL mappings may specify the `namespace` explicitly.
 
 [source,groovy]
 ----
@@ -81,9 +81,16 @@ Reverse URL mappings also require that the `namespace` be specified.
 <g:link controller="admin" namespace="users">Click For User Admin</g:link>
 ----
 
-When resolving a URL mapping (forward or reverse) to a namespaced controller,
-a mapping will only match if the `namespace` has been provided.  If
-the application provides several controllers with the same name in different
+Most links do not need a `namespace` attribute. When a link, redirect, chain, form action, pagination link, sortable column link, or include targets a controller and omits `namespace`, Grails resolves the namespace for the target controller automatically.
+
+If the target is the controller currently handling the request, Grails uses the current request namespace. If exactly one controller has the target name, Grails uses that controller's namespace, whether the controller is namespaced or not. In the normal case, `controller` and `action` are enough to generate the correct URL.
+
+Ambiguity only occurs when the same controller name is defined by multiple controllers in different namespaces. That architecture is discouraged and should be avoided. When it does happen, Grails prefers a non-namespaced controller if one exists, otherwise a controller in the current request namespace. Any remaining ambiguity must be resolved by specifying `namespace` explicitly.
+
+An explicit `namespace` always wins. Use `namespace="reports"` in GSP markup, or `namespace: 'reports'` in Groovy code, to target a specific namespace. Use `namespace=""` in GSP markup, or `namespace: null` in Groovy code, to target a non-namespaced controller.
+
+When resolving a URL mapping to a namespaced controller, the selected namespace
+must identify one target controller. If the application provides several controllers with the same name in different
 packages, at most 1 of them may be defined without a `namespace` property.  If
 there are multiple controllers with the same name that do not define a
 `namespace` property, the framework will not know how to distinguish between

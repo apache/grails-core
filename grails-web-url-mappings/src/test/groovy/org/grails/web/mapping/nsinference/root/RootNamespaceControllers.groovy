@@ -16,34 +16,25 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+package org.grails.web.mapping.nsinference.root
 
-package namespaces.admin
+import grails.artefact.Artefact
 
-class PageController {
+/**
+ * A non-namespaced (root) controller whose logical name {@code author} also exists in the
+ * {@code admin} namespace, used to exercise the ambiguous root-plus-namespaced resolution case.
+ */
+@Artefact('Controller')
+class AuthorController {
+    def index() {}
+    def list() {}
+}
 
-    static namespace = "admin"
-
-    def index() {
-        render view: "/page/index", model: [pageTitle: "Admin Page"]
-    }
-
-    def links() {
-        render view: "/page/namespaceLinks", model: [pageTitle: "Admin Namespace Links"]
-    }
-
-    def list() {
-        render view: "/page/namespaceLinks", model: [pageTitle: "Admin Namespace Links"]
-    }
-
-    def redirectToBook() {
-        redirect controller: "book", action: "index"
-    }
-
-    def chainToBook() {
-        chain controller: "book", action: "index"
-    }
-
-    def redirectToRootReport() {
-        redirect controller: "report", action: "index", namespace: null
-    }
+/**
+ * A non-namespaced (root) controller whose logical name {@code home} exists only at the root,
+ * used to exercise the root-only resolution case.
+ */
+@Artefact('Controller')
+class HomeController {
+    def index() {}
 }

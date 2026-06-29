@@ -92,6 +92,7 @@ Attributes
 
 * `action` (optional) - the name of the action to use in the include
 * `controller` (optional) - the name of the controller to use in the include
+* `namespace` (optional) - the namespace of the controller to use in the include. If omitted, the namespace is inferred from the target controller; you only need to set it when more than one controller shares the name. Use `namespace=""` to target a non-namespaced controller.
 * `id` (optional) - the id to use in the include
 * `view` (optional) - The name of the view to use in the include
 * `params` (optional) - a Map of request parameters

@@ -151,8 +151,20 @@ trait ResponseRedirector implements WebAttributes {
     void chain(Map args) {
         String controller = (args.controller ?: GrailsNameUtils.getLogicalPropertyName(getClass().name, ControllerArtefactHandler.TYPE)).toString()
         String action = args.action?.toString()
-        String namespace = args.remove('namespace')
         String plugin = args.remove('plugin')?.toString()
+        // Honor an explicit namespace so a blank one (namespace="" or namespace: null) opts out to the
+        // non-namespaced controller; otherwise infer the namespace for the target controller so chain()
+        // stays consistent with redirect() and link generation.
+        String namespace
+        if (args.containsKey('namespace')) {
+            namespace = args.remove('namespace')?.toString()
+            if (namespace != null && namespace.trim().isEmpty()) {
+                namespace = null
+            }
+        }
+        else {
+            namespace = getGrailsLinkGenerator().getDefaultNamespace(controller, plugin)
+        }
         def id = args.id
         def params = CollectionUtils.getOrCreateChildMap(args, 'params')
         def model = CollectionUtils.getOrCreateChildMap(args, 'model')

@@ -17,33 +17,15 @@
  *  under the License.
  */
 
-package namespaces.admin
+package namespaces
 
-class PageController {
+class AppLinkTagLib {
 
-    static namespace = "admin"
+    static namespace = "app"
+    static defaultEncodeAs = [taglib: "none"]
 
-    def index() {
-        render view: "/page/index", model: [pageTitle: "Admin Page"]
-    }
-
-    def links() {
-        render view: "/page/namespaceLinks", model: [pageTitle: "Admin Namespace Links"]
-    }
-
-    def list() {
-        render view: "/page/namespaceLinks", model: [pageTitle: "Admin Namespace Links"]
-    }
-
-    def redirectToBook() {
-        redirect controller: "book", action: "index"
-    }
-
-    def chainToBook() {
-        chain controller: "book", action: "index"
-    }
-
-    def redirectToRootReport() {
-        redirect controller: "report", action: "index", namespace: null
+    def bookLink = { attrs ->
+        String elementId = attrs.id ?: "appBookLink"
+        out << "<a id=\"${elementId}\" href=\"${g.createLink(controller: 'book', action: 'index')}\">Custom Book Link</a>"
     }
 }
