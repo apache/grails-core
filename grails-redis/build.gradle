@@ -18,7 +18,15 @@
  */
 
 plugins {
+    id 'groovy'
     id 'java-library'
+    id 'project-report'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.gradle.grails-code-style'
     id 'org.apache.grails.gradle.grails-plugin'
     id 'org.apache.grails.gradle.grails-gsp'
 }
@@ -28,20 +36,41 @@ group = 'org.apache.grails'
 
 dependencies {
 
-    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
+    implementation platform(project(':grails-bom'))
 
     api 'redis.clients:jedis', {
         // api: Jedis, JedisConnectionException
         // impl: JedisPool, JedisPoolConfig, JedisSentinelPool, Pipeline, Protocol, Transaction
     }
     api 'com.google.code.gson:gson', {
-        // api: Gson(transform)
+        // api: Gson (used by the @MemoizeObject AST transform)
     }
 
-    compileOnly 'org.apache.grails:grails-dependencies-starter-web'
+    implementation project(':grails-datamapping-core'), {
+        // impl: @Transactional(runtime)
+    }
 
-    testImplementation 'org.apache.grails:grails-dependencies-test'
+    compileOnly project(':grails-core'), { // Provided as this is a Grails plugin
+        // api: GrailsApplication, GrailsAutoConfiguration, Plugin, @PluginSource, Holders
+    }
+    compileOnly project(':grails-common'), {
+        // comp: GroovyTransformOrder (AST transform ordering)
+    }
+    compileOnly project(':grails-web-gsp-taglib'), {
+        // comp: TagLib artefact (RedisTagLib)
+    }
+    compileOnly 'org.apache.groovy:groovy' // Provided as this is a Grails plugin (AST transforms)
+    compileOnly 'org.springframework:spring-beans' // @Autowired
+    compileOnly 'org.springframework:spring-core' // org.springframework.asm.Opcodes
+    compileOnly 'org.slf4j:slf4j-api' // @Slf4j
+    compileOnly 'org.slf4j:slf4j-nop' // Remove warning about missing slf4j implementation during gsp compilation
 
+    integrationTestImplementation project(':grails-testing-support-redis')
+    integrationTestImplementation project(':grails-testing-support-web')
+    integrationTestImplementation project(':grails-testing-support-datamapping')
+    integrationTestImplementation 'org.spockframework:spock-core'
+
+    integrationTestRuntimeOnly 'net.bytebuddy:byte-buddy'
 }
 
 grails {
@@ -50,8 +79,5 @@ grails {
 
 apply {
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/java-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/publish-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
-    from rootProject.layout.projectDirectory.file('gradle/reproducible-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/redis-test-config.gradle')
 }

@@ -62,6 +62,7 @@ tasks.withType(Test).configureEach { Test task ->
     boolean isHibernate5 = !project.name.startsWith('grails-test-examples-hibernate5')
     boolean isMongo = !project.name.startsWith('grails-test-examples-mongodb')
     boolean isSpringSecurity = !project.name.startsWith('grails-test-examples-spring-security')
+    boolean isRedis = !project.name.startsWith('grails-test-examples-redis')
 
     onlyIf {
         if (project.hasProperty('skipFunctionalTests')) {
@@ -82,6 +83,12 @@ tasks.withType(Test).configureEach { Test task ->
 
         if (project.hasProperty('onlySpringSecurityTests')) {
             if (isSpringSecurity) {
+                return false
+            }
+        }
+
+        if (project.hasProperty('onlyRedisTests')) {
+            if (isRedis) {
                 return false
             }
         }

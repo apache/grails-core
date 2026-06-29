@@ -25,10 +25,10 @@ dependencies {
 tasks.withType(Test).configureEach {
     onlyIf {
         ![
+                'skipRedisTests',
                 'onlyFunctionalTests',
-                'skipHibernate5Tests',
+                'onlyHibernate5Tests',
                 'onlyMongodbTests',
-                'onlyRedisTests',
                 'onlySpringSecurityTests',
                 'onlyCoreTests',
                 'skipTests'
@@ -38,34 +38,14 @@ tasks.withType(Test).configureEach {
     }
 
     useJUnitPlatform()
-    systemProperty('hibernate5.gorm.suite', System.getProperty('hibernate5.gorm.suite') ?: true)
-    reports.html.required = !isCiBuild
-    reports.junitXml.required = !isCiBuild
     testLogging {
-        events('passed', 'skipped', 'failed')
-        showExceptions = true
         exceptionFormat = 'full'
-        showCauses = true
-        showStackTraces = true
+        events 'passed', 'skipped', 'failed'
+    }
+    beforeTest { descriptor -> logger.quiet(" -- $descriptor") }
 
-        // set options for log level DEBUG and INFO
-        debug {
-            events('started', 'passed', 'skipped', 'failed', 'standardOut', 'standardError')
-            exceptionFormat = 'full'
-        }
-        info.events = debug.events
-        info.exceptionFormat = debug.exceptionFormat
-    }
-    afterTest { desc, result ->
-        logger.quiet(' -- Executed test {} [{}] with result: {}', desc.name, desc.className, result.resultType)
-    }
-    afterSuite { desc, result ->
-        if (!desc.parent) { // will match the outermost suite
-            def output = "Results: ${result.resultType} (${result.testCount} tests, ${result.successfulTestCount} successes, ${result.failedTestCount} failures, ${result.skippedTestCount} skipped)"
-            def startItem = '|  ', endItem = '  |'
-            def repeatLength = startItem.length() + output.length() + endItem.length()
-            def dashes = '-' * repeatLength
-            logger.quiet('\n{}\n{}{}{}\n{}', dashes, startItem, output, endItem, dashes)
-        }
+    // Forwarded to org.apache.grails.testing.redis extensions to control the Testcontainers Redis image version
+    if (project.hasProperty('redisContainerVersion')) {
+        systemProperty('redisContainerVersion', project.property('redisContainerVersion'))
     }
 }
