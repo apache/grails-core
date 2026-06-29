@@ -23,7 +23,9 @@ import groovy.transform.CompileStatic
 import org.springframework.transaction.PlatformTransactionManager
 
 import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.finders.DynamicFinder
+import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.mongo.MongoDatastore
 import org.grails.datastore.mapping.mongo.connections.MongoConnectionSourceSettings
 
@@ -57,6 +59,12 @@ class MongoGormEnhancer extends GormEnhancer {
 
     MongoGormEnhancer(MongoDatastore datastore) {
         this(datastore, null)
+    }
+
+    @Override
+    protected void registerConstraints(Datastore datastore) {
+        super.registerConstraints(datastore)
+        GormRegistry.instance.registerApiFactory(MongoDatastore, new MongoGormApiFactory())
     }
 
 }
