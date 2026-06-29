@@ -87,7 +87,7 @@ class MailService implements InitializingBean, DisposableBean {
         mailConfigurationProperties.disabled
     }
 
-    void setPoolSize(Integer poolSize){
+    void setPoolSize(Integer poolSize) {
         mailExecutorService.setMaximumPoolSize(poolSize ?: DEFAULT_POOL_SIZE)
         mailExecutorService.setCorePoolSize(poolSize ?: DEFAULT_POOL_SIZE)
     }

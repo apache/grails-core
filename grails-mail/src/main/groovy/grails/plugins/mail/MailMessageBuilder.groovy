@@ -123,7 +123,7 @@ class MailMessageBuilder {
             executorService.execute({
                 try {
                     send(sendingMsg)
-                } catch(Throwable t) {
+                } catch (Throwable t) {
                     log.error('Failed to send email', t)
                 }
             } as Runnable)

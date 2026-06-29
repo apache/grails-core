@@ -181,7 +181,7 @@ class MailMessageContentRenderer {
         /**
          * Establish an environment with a specific locale
          */
-         static Object with(ApplicationContext applicationContext, Writer out, Locale locale, Closure block) {
+        static Object with(ApplicationContext applicationContext, Writer out, Locale locale, Closure block) {
             def env = new RenderEnvironment(applicationContext, out, locale)
             env.init()
             try {
@@ -287,7 +287,7 @@ class MailMessageContentRenderer {
                         return serverBaseURI.scheme
                     }
                     if (methodName == 'getServerName') {
-                        if(serverBaseURI == null) {
+                        if (serverBaseURI == null) {
                             throw new UnsupportedOperationException('You cannot read the servername in non-request rendering operations')
                         }
                         return serverBaseURI.host
