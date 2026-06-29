@@ -74,7 +74,3 @@ I chose pac4j because:
 . It's deadly simple and works just fine.
 
 I'm also aware of a pac4j-spring-security module. See my previous response on HTTP sessions.
-
-== Project History
-
-Originally this plugin was written by Alvaro Sanchez-Mariscal (https://twitter.com/alvaro_sanchez[Twitter]).  It is currently maintained by the Grails Stewards.

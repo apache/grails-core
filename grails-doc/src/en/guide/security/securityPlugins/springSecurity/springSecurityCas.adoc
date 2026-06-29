@@ -23,8 +23,6 @@ include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecu
 
 include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/cas/configuration.adoc[leveloffset=+1]
 
-include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/cas/history.adoc[leveloffset=+1]
-
 == API Reference
 
 The CAS plugin Groovydoc API documentation for historical (pre-merge) releases is available at the link:{grailsSpringSecurityLegacyDocs}/cas-plugin/groovydoc/index.html[legacy Spring Security CAS plugin API reference].

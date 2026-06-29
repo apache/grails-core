@@ -33,8 +33,6 @@ include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecu
 
 include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/acl/TagLibraries.adoc[leveloffset=+1]
 
-include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/acl/history.adoc[leveloffset=+1]
-
 == API Reference
 
 The ACL plugin Groovydoc API documentation for historical (pre-merge) releases is available at the link:{grailsSpringSecurityLegacyDocs}/acl-plugin/groovydoc/index.html[legacy Spring Security ACL plugin API reference].
