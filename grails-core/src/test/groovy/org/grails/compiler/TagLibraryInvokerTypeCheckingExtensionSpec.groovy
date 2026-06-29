@@ -21,7 +21,7 @@ package org.grails.compiler
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import spock.lang.Specification
 
-class ControllerTagLibTypeCheckingExtensionSpec extends Specification {
+class TagLibraryInvokerTypeCheckingExtensionSpec extends Specification {
 
     void 'undefined method on a declared service field still fails compilation'() {
         given:
@@ -100,7 +100,7 @@ class ControllerTagLibTypeCheckingExtensionSpec extends Specification {
 
             @CompileStatic(extensions = [
                 'org.grails.compiler.StubDslTypeCheckingExtension',
-                'org.grails.compiler.ControllerTagLibTypeCheckingExtension'
+                'org.grails.compiler.TagLibraryInvokerTypeCheckingExtension'
             ])
             class JobController {
                 def index() {
@@ -121,7 +121,7 @@ class ControllerTagLibTypeCheckingExtensionSpec extends Specification {
         def c = gcl.parseClass('''
             import groovy.transform.CompileStatic
 
-            @CompileStatic(extensions = ['org.grails.compiler.ControllerTagLibTypeCheckingExtension'])
+            @CompileStatic(extensions = ['org.grails.compiler.TagLibraryInvokerTypeCheckingExtension'])
             class BookController {
                 def index() {
                     link(controller: 'home')

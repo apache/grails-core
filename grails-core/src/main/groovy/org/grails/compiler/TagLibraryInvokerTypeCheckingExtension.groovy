@@ -80,7 +80,7 @@ import org.grails.core.artefact.ControllerArtefactHandler
  *
  * @since 8.0
  */
-class ControllerTagLibTypeCheckingExtension extends GroovyTypeCheckingExtensionSupport.TypeCheckingDSL {
+class TagLibraryInvokerTypeCheckingExtension extends GroovyTypeCheckingExtensionSupport.TypeCheckingDSL {
 
     @Override
     Object run() {

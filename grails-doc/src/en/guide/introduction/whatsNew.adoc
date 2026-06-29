@@ -60,7 +60,7 @@ class BookController {
 }
 ----
 
-The new `ControllerTagLibTypeCheckingExtension` (bundled with `@GrailsCompileStatic`) recognises controller classes by convention and marks tag dispatch points as permissible dynamic calls, while leaving the rest of the controller fully type-checked.
+`@GrailsCompileStatic` recognises controllers and tag libraries by convention and marks tag dispatch points as permissible dynamic calls, while leaving the rest of the class fully type-checked.
 
 ==== Opt All Controllers, Services and Tag Libraries into GrailsCompileStatic
 

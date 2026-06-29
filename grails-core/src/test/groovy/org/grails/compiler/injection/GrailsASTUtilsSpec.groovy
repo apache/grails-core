@@ -112,7 +112,7 @@ class GrailsASTUtilsSpec extends Specification {
     void 'the Grails compile static extensions match those declared by @GrailsCompileStatic'() {
         expect:
         GrailsASTUtils.GRAILS_COMPILE_STATIC_EXTENSIONS.size() == 9
-        'org.grails.compiler.ControllerTagLibTypeCheckingExtension' in GrailsASTUtils.GRAILS_COMPILE_STATIC_EXTENSIONS
+        'org.grails.compiler.TagLibraryInvokerTypeCheckingExtension' in GrailsASTUtils.GRAILS_COMPILE_STATIC_EXTENSIONS
     }
 
     private static ClassNode annotated(Class annotation) {

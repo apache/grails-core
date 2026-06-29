@@ -145,7 +145,7 @@ public class GrailsASTUtils {
             "org.grails.compiler.RelationshipManagementMethodTypeCheckingExtension",
             "org.grails.compiler.ValidateableTypeCheckingExtension",
             "org.grails.compiler.WhereQueryTypeCheckingExtension",
-            "org.grails.compiler.ControllerTagLibTypeCheckingExtension"));
+            "org.grails.compiler.TagLibraryInvokerTypeCheckingExtension"));
     public static final Parameter[] ZERO_PARAMETERS = new Parameter[0];
     public static final ArgumentListExpression ZERO_ARGUMENTS = new ArgumentListExpression();
 
