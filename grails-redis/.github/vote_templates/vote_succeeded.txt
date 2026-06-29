@@ -1,0 +1,12 @@
+The vote has passed with <X> +1 binding votes and <Y> +1 additional votes.
+
+<IF NEW EMAIL>
+Vote thread: <VOTE THREAD PERMALINK>
+</IF NEW EMAIL>
+
+I'll proceed with the release and announce it shortly.
+
+Thanks to everyone who participated in the vote!
+
+Regards
+<NAME>
