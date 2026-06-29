@@ -540,12 +540,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     List<D> findAll(D example, Map args) {
-        execute({ Session session ->
-            def query = session.createQuery(persistentClass)
-            populateQueryByExample(session, query, example)
-            org.grails.datastore.gorm.finders.DynamicFinder.populateArgumentsForCriteria(persistentClass, query, args)
-            query.list()
-        } as SessionCallback<List<D>>)
+        findAllWhere(createQueryMapForExample(example), args)
     }
 
     @Override
@@ -565,33 +560,29 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     D find(D example, Map args) {
-        execute({ Session session ->
-            def query = session.createQuery(persistentClass)
-            populateQueryByExample(session, query, example)
-            query.singleResult()
-        } as SessionCallback<D>)
+        findWhere(createQueryMapForExample(example), args)
     }
 
-    protected void populateQueryByExample(Session session, org.grails.datastore.mapping.query.Query query, D example) {
+    protected Map createQueryMapForExample(D example) {
         def pe = getGormPersistentEntity()
-        def persister = session.getPersister(example)
-        if (persister != null) {
-            def id = persister.getObjectIdentifier(example)
+        Map queryMap = [:]
+        def identity = pe.identity
+        if (identity != null) {
+            def id = org.codehaus.groovy.runtime.InvokerHelper.getProperty(example, identity.name)
             if (id != null) {
-                query.add(org.grails.datastore.mapping.query.Restrictions.eq(pe.identity.name, id))
+                queryMap.put(identity.name, id)
+                return queryMap
             }
-            else {
-                def ea = pe.mappingContext.createEntityAccess(pe, example)
-                for (prop in pe.persistentProperties) {
-                    if (prop instanceof org.grails.datastore.mapping.model.types.Simple || prop instanceof org.grails.datastore.mapping.model.types.Basic) {
-                        def val = ea.getProperty(prop.name)
-                        if (val != null) {
-                            query.add(org.grails.datastore.mapping.query.Restrictions.eq(prop.name, val))
-                        }
-                    }
+        }
+        for (prop in pe.persistentProperties) {
+            if (prop instanceof org.grails.datastore.mapping.model.types.Simple || prop instanceof org.grails.datastore.mapping.model.types.Basic) {
+                def val = org.codehaus.groovy.runtime.InvokerHelper.getProperty(example, prop.name)
+                if (val != null) {
+                    queryMap.put(prop.name, val)
                 }
             }
         }
+        return queryMap
     }
 
     @Override
