@@ -31,8 +31,8 @@ import spock.lang.Unroll
 
 /**
  * Exhaustive tests for namespace inference performed by
- * {@link org.grails.web.mapping.DefaultLinkGenerator#getDefaultNamespace(String)} and the way it
- * feeds into {@link org.grails.web.mapping.DefaultLinkGenerator#link(java.util.Map, String)}.
+ * {@link org.grails.web.mapping.DefaultLinkGenerator#getDefaultNamespace(String, String)} and the way
+ * it feeds into {@link org.grails.web.mapping.DefaultLinkGenerator#link(java.util.Map, String)}.
  *
  * <p>The registered controllers establish these logical-name to namespace mappings:</p>
  * <ul>
