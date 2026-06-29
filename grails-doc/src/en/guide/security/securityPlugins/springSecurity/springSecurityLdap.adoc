@@ -17,11 +17,11 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-include::ldap/introduction.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/ldap/introduction.adoc[leveloffset=+1]
 
-include::ldap/usage.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/ldap/usage.adoc[leveloffset=+1]
 
-include::ldap/configuration.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/ldap/configuration.adoc[leveloffset=+1]
 
 == API Reference
 

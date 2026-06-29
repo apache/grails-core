@@ -17,27 +17,27 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-include::ui/introduction.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/ui/introduction.adoc[leveloffset=+1]
 
-include::ui/user.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/ui/user.adoc[leveloffset=+1]
 
-include::ui/role.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/ui/role.adoc[leveloffset=+1]
 
-include::ui/requestmap.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/ui/requestmap.adoc[leveloffset=+1]
 
-include::ui/userRegistration.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/ui/userRegistration.adoc[leveloffset=+1]
 
-include::ui/forgotPassword.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/ui/forgotPassword.adoc[leveloffset=+1]
 
-include::ui/acls.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/ui/acls.adoc[leveloffset=+1]
 
-include::ui/persistentCookie.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/ui/persistentCookie.adoc[leveloffset=+1]
 
-include::ui/configUI.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/ui/configUI.adoc[leveloffset=+1]
 
-include::ui/customization.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/ui/customization.adoc[leveloffset=+1]
 
-include::ui/scripts.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/ui/scripts.adoc[leveloffset=+1]
 
 == API Reference
 

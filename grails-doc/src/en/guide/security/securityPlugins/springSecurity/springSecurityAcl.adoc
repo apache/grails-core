@@ -17,23 +17,23 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-include::acl/introduction.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/acl/introduction.adoc[leveloffset=+1]
 
-include::acl/installing.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/acl/installing.adoc[leveloffset=+1]
 
-include::acl/usage.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/acl/usage.adoc[leveloffset=+1]
 
-include::acl/tutorial.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/acl/tutorial.adoc[leveloffset=+1]
 
-include::acl/sampleApp.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/acl/sampleApp.adoc[leveloffset=+1]
 
-include::acl/AclUtilService.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/acl/AclUtilService.adoc[leveloffset=+1]
 
-include::acl/Scripts.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/acl/Scripts.adoc[leveloffset=+1]
 
-include::acl/TagLibraries.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/acl/TagLibraries.adoc[leveloffset=+1]
 
-include::acl/history.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/acl/history.adoc[leveloffset=+1]
 
 == API Reference
 

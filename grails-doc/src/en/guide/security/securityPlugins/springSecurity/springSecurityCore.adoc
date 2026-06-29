@@ -17,59 +17,59 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-include::core/introduction.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/core/introduction.adoc[leveloffset=+1]
 
-include::core/whatsNew.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/core/whatsNew.adoc[leveloffset=+1]
 
-include::core/domainClasses.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/core/domainClasses.adoc[leveloffset=+1]
 
-include::core/requestMappings.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/core/requestMappings.adoc[leveloffset=+1]
 
-include::core/helperClasses.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/core/helperClasses.adoc[leveloffset=+1]
 
-include::core/events.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/core/events.adoc[leveloffset=+1]
 
-include::core/domainClassProperties.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/core/domainClassProperties.adoc[leveloffset=+1]
 
-include::core/authentication.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/core/authentication.adoc[leveloffset=+1]
 
-include::core/authenticationProviders.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/core/authenticationProviders.adoc[leveloffset=+1]
 
-include::core/userDetailsService.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/core/userDetailsService.adoc[leveloffset=+1]
 
-include::core/passwords.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/core/passwords.adoc[leveloffset=+1]
 
-include::core/urlProperties.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/core/urlProperties.adoc[leveloffset=+1]
 
-include::core/hierarchicalRoles.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/core/hierarchicalRoles.adoc[leveloffset=+1]
 
-include::core/switchUser.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/core/switchUser.adoc[leveloffset=+1]
 
-include::core/filters.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/core/filters.adoc[leveloffset=+1]
 
-include::core/channelSecurity.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/core/channelSecurity.adoc[leveloffset=+1]
 
-include::core/ip.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/core/ip.adoc[leveloffset=+1]
 
-include::core/sessionFixation.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/core/sessionFixation.adoc[leveloffset=+1]
 
-include::core/logoutHandlers.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/core/logoutHandlers.adoc[leveloffset=+1]
 
-include::core/voters.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/core/voters.adoc[leveloffset=+1]
 
-include::core/miscProperties.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/core/miscProperties.adoc[leveloffset=+1]
 
-include::core/tutorials.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/core/tutorials.adoc[leveloffset=+1]
 
-include::core/examples.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/core/examples.adoc[leveloffset=+1]
 
-include::core/controllerMethods.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/core/controllerMethods.adoc[leveloffset=+1]
 
-include::core/i18n.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/core/i18n.adoc[leveloffset=+1]
 
-include::core/scripts.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/core/scripts.adoc[leveloffset=+1]
 
-include::core/debugging.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/core/debugging.adoc[leveloffset=+1]
 
 == API Reference
 

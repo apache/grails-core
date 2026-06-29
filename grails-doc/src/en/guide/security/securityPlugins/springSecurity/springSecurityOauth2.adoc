@@ -17,13 +17,13 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-include::oauth2/introduction.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/oauth2/introduction.adoc[leveloffset=+1]
 
-include::oauth2/installation.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/oauth2/installation.adoc[leveloffset=+1]
 
-include::oauth2/configuration.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/oauth2/configuration.adoc[leveloffset=+1]
 
-include::oauth2/extensions.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/oauth2/extensions.adoc[leveloffset=+1]
 
 == API Reference
 

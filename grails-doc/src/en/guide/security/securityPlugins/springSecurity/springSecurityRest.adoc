@@ -17,39 +17,39 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-include::rest/introduction.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/rest/introduction.adoc[leveloffset=+1]
 
-include::rest/whatsNew60.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/rest/whatsNew60.adoc[leveloffset=+1]
 
-include::rest/whatsNew50.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/rest/whatsNew50.adoc[leveloffset=+1]
 
-include::rest/whatsNew20.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/rest/whatsNew20.adoc[leveloffset=+1]
 
-include::rest/whatsNew15.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/rest/whatsNew15.adoc[leveloffset=+1]
 
-include::rest/whatsNew14.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/rest/whatsNew14.adoc[leveloffset=+1]
 
-include::rest/configuration.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/rest/configuration.adoc[leveloffset=+1]
 
-include::rest/events.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/rest/events.adoc[leveloffset=+1]
 
-include::rest/authentication.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/rest/authentication.adoc[leveloffset=+1]
 
-include::rest/tokenGeneration.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/rest/tokenGeneration.adoc[leveloffset=+1]
 
-include::rest/tokenStorage.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/rest/tokenStorage.adoc[leveloffset=+1]
 
-include::rest/tokenRendering.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/rest/tokenRendering.adoc[leveloffset=+1]
 
-include::rest/tokenValidation.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/rest/tokenValidation.adoc[leveloffset=+1]
 
-include::rest/cors.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/rest/cors.adoc[leveloffset=+1]
 
-include::rest/oauth.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/rest/oauth.adoc[leveloffset=+1]
 
-include::rest/debugging.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/rest/debugging.adoc[leveloffset=+1]
 
-include::rest/faq.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/rest/faq.adoc[leveloffset=+1]
 
 == API Reference
 

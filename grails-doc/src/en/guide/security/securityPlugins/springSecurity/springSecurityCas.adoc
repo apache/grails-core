@@ -17,13 +17,13 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-include::cas/introduction.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/cas/introduction.adoc[leveloffset=+1]
 
-include::cas/usage.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/cas/usage.adoc[leveloffset=+1]
 
-include::cas/configuration.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/cas/configuration.adoc[leveloffset=+1]
 
-include::cas/history.adoc[leveloffset=+1]
+include::{sourcedir}/grails-doc/src/en/guide/security/securityPlugins/springSecurity/cas/history.adoc[leveloffset=+1]
 
 == API Reference
 
