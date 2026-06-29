@@ -617,10 +617,6 @@ publishGuideTask.configure { PublishGuideTask publish ->
                 // Spring Security plugin documentation (merged into grails-core in Grails 7).
                 // Historical, independently-versioned releases remain published at the legacy site.
                 'grailsSpringSecurityLegacyDocs': 'https://apache.github.io/grails-spring-security/snapshot',
-                'springSecurityVersion'    : 'current',
-                'springFrameworkVersion'   : springVersion,
-                'projectVersion'           : projectVersion,
-                'revnumber'                : projectVersion,
                 'apidocs'                  : 'https://docs.spring.io/spring-security/site/docs/current/api/',
                 'apidocs_spring'           : "https://docs.spring.io/spring-framework/docs/${springVersion}/javadoc-api/",
                 'htmlsingle'               : 'https://docs.spring.io/spring-security/reference/current/',

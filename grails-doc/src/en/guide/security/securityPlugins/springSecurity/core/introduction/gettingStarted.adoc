@@ -28,7 +28,7 @@ Begin by installing the Spring Security plugin into your Grails project. Add the
 
 [source,gradle,subs="+attributes"]
 ----
-implementation 'org.apache.grails:grails-spring-security:{revnumber}'
+implementation 'org.apache.grails:grails-spring-security'
 ----
 
 .Step 2: Run the Initialization Script

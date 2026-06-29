@@ -37,7 +37,7 @@ There isn't much that you need to do in your application to be a CAS client. Add
 ----
 dependencies {
    ...
-   implementation 'org.apache.grails:grails-spring-security-cas:{projectVersion}'
+   implementation 'org.apache.grails:grails-spring-security-cas'
    ...
 ----
 

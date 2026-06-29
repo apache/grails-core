@@ -40,7 +40,7 @@ Ensure you have the following set up:
 ----
 dependencies {
     // ... other dependencies
-    implementation 'org.apache.grails:grails-spring-security:{revnumber}'
+    implementation 'org.apache.grails:grails-spring-security'
 }
 ----
 +
@@ -60,7 +60,7 @@ dependencies {
 ----
 +
 
-8. The Spring Security Core Plugin {revnumber} is now installed and integrated into your Grails project.
+8. The Spring Security Core Plugin {version} is now installed and integrated into your Grails project.
 
 9. You can start using the plugin's features and commands in your application.
 

@@ -28,7 +28,7 @@ Add an entry in the dependencies block of your `build.gradle file, changing the 
 ----
 dependencies {
    ...
-   implementation 'org.apache.grails:grails-spring-security-acl:{projectVersion}'
+   implementation 'org.apache.grails:grails-spring-security-acl'
    ...
 ----
 
