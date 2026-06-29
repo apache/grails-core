@@ -85,6 +85,11 @@ class SbomPlugin implements Plugin<Project> {
                     id : 'UPL-1.0',
                     url: 'https://oss.oracle.com/licenses/upl/'
             ],
+            // public domain dedication; no SPDX id. ONLY approved libraries should use this.
+            'Public-Domain': [
+                    name: 'Public Domain',
+                    url : 'https://github.com/stleary/JSON-java/blob/master/LICENSE'
+            ],
     ]
 
     private static Map<String, String> LICENSE_MAPPING = [
@@ -95,7 +100,8 @@ class SbomPlugin implements Plugin<Project> {
             'pkg:maven/com.oracle.coherence.ce/coherence-bom@25.03.1?type=pom': 'UPL-1.0', // does not have map based on license id
             'pkg:maven/com.oracle.coherence.ce/coherence-bom@22.06.2?type=pom': 'UPL-1.0', // does not have map based on license id
             'pkg:maven/opensymphony/sitemesh@2.6.0?type=jar'                  : 'OpenSymphony', // custom license approved by legal LEGAL-707
-            'pkg:maven/org.jruby/jzlib@1.1.5?type=jar'                        : 'BSD-3-Clause'// https://web.archive.org/web/20240822213507/http://www.jcraft.com/jzlib/LICENSE.txt shows it's a 3 clause
+            'pkg:maven/org.jruby/jzlib@1.1.5?type=jar'                        : 'BSD-3-Clause', // https://web.archive.org/web/20240822213507/http://www.jcraft.com/jzlib/LICENSE.txt shows it's a 3 clause
+            'pkg:maven/org.json/json@20250107?type=jar'                       : 'Public-Domain'// required due to jedis, https://issues.apache.org/jira/browse/LEGAL-666 approves this usage
     ]
 
     // we don't distribute these so these licenses are considered acceptable, but we still prefer ASF licenses.
