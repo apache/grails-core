@@ -1070,6 +1070,41 @@ include::security/securityPlugins/springSecurity.adoc[]
 
 include::security/securityPlugins/shiro.adoc[]
 
+[[redis]]
+== Redis
+
+include::redis.adoc[]
+
+[[redisInstallation]]
+=== Installation and Configuration
+
+include::redis/installation.adoc[]
+
+[[redisUsage]]
+=== Using the redisService
+
+include::redis/usage.adoc[]
+
+[[redisMemoization]]
+=== Memoization
+
+include::redis/memoization.adoc[]
+
+[[redisMemoizationAnnotations]]
+=== Memoization Annotations
+
+include::redis/memoizationAnnotations.adoc[]
+
+[[redisMultipleServers]]
+=== Multiple Redis Servers
+
+include::redis/multipleServers.adoc[]
+
+[[redisUsefulLinks]]
+=== Useful Links
+
+include::redis/usefulLinks.adoc[]
+
 [[plugins]]
 == Plugins
 
