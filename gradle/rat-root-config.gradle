@@ -47,6 +47,7 @@ tasks.named('rat') {
             '**/*.png', '**/*.svg', '**/*.ico', '**/*.eps', '**/*.icns', '**/*.jpg', '**/*.jpeg', '**/*.gif', // Image files
             '**/*.db', // H2 database test files
             '**/*.gitkeep', // Empty Gitkeep file
+            '**/*.ldif', // LDAP test data files
             'grails-fields/grails-app/views/layouts/_fields/*.gsp', // template files that people are expected to use in the end application
             'grails-fields/grails-app/views/templates/_fields/*.gsp', // template files that people are expected to use in the end application
             'grails-geb/src/main/templates/*.groovy', // template files that people are expected to use in the end application
