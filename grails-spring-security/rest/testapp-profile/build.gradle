@@ -39,7 +39,7 @@ tasks.register('generateProfileConfig') {
         from 'profile.yml.tmpl'
         into '.'
         rename { String fileName -> fileName.replaceAll '\\.tmpl', '' }
-        expand(pluginVersion: project.version, grailsVersion: findProperty('grailsVersion'))
+        expand(pluginVersion: project.version, grailsVersion: findProperty('projectVersion'))
     }
 
     file('features').eachDir { feature ->
@@ -47,13 +47,13 @@ tasks.register('generateProfileConfig') {
             from "features/${feature.name}/feature.yml.tmpl"
             into "features/${feature.name}/"
             rename { String fileName -> fileName.replaceAll '\\.tmpl', '' }
-            expand(pluginVersion: project.version, grailsVersion: findProperty('grailsVersion'))
+            expand(pluginVersion: project.version, grailsVersion: findProperty('projectVersion'))
         }
     }
 }
 
 dependencies {
-    profileRuntimeApi "org.apache.grails.profiles:base:${findProperty('grailsVersion')}"
+    profileRuntimeApi project(':grails-profiles-base')
 }
 
 tasks.named('compileProfile') {
