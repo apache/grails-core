@@ -20,6 +20,8 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.tests.HibernateGormDatastoreSpec
+import org.apache.grails.data.testing.tck.domains.ChildEntity
+import org.apache.grails.data.testing.tck.domains.TestEntity
 import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
 import org.hibernate.generator.GeneratorCreationContext
 import org.hibernate.mapping.BasicValue
