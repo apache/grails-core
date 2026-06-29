@@ -22,6 +22,9 @@ import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.FieldNode
+import org.codehaus.groovy.ast.PropertyNode
+import org.codehaus.groovy.ast.expr.ClosureExpression
 import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.classgen.GeneratorContext
@@ -43,6 +46,12 @@ import org.grails.core.artefact.ServiceArtefactHandler
  * statically unless it already declares its own {@code @CompileStatic}, {@code @CompileDynamic},
  * {@code @TypeChecked}, {@code @GrailsCompileStatic} or {@code @GrailsTypeChecked} annotation - an
  * explicit choice on the class always wins.</p>
+ *
+ * <p>The tag library opt-in additionally skips tag libraries that still define tags the deprecated way -
+ * as closure fields rather than methods - because such tags cannot be compiled statically when they
+ * dispatch to other tags. These are left dynamically compiled and a warning is emitted; migrate the tags
+ * to methods (e.g. {@code def myTag(Map attrs, Closure body)}) to opt them in, or annotate the class with
+ * {@code @GrailsCompileStatic} to force static compilation regardless.</p>
  *
  * @author Grails
  * @since 8.0
@@ -71,17 +80,17 @@ class CompileStaticArtefactInjector implements GrailsArtefactClassInjector {
 
     @Override
     void performInjection(SourceUnit source, GeneratorContext context, ClassNode classNode) {
-        maybeApplyCompileStatic(classNode)
+        maybeApplyCompileStatic(source, classNode)
     }
 
     @Override
     void performInjection(SourceUnit source, ClassNode classNode) {
-        maybeApplyCompileStatic(classNode)
+        maybeApplyCompileStatic(source, classNode)
     }
 
     @Override
     void performInjectionOnAnnotatedClass(SourceUnit source, ClassNode classNode) {
-        maybeApplyCompileStatic(classNode)
+        maybeApplyCompileStatic(source, classNode)
     }
 
     @Override
@@ -89,7 +98,7 @@ class CompileStaticArtefactInjector implements GrailsArtefactClassInjector {
         true
     }
 
-    private static void maybeApplyCompileStatic(ClassNode classNode) {
+    private static void maybeApplyCompileStatic(SourceUnit source, ClassNode classNode) {
         String artefactType = resolveArtefactType(classNode)
         if (artefactType == null) {
             return
@@ -101,8 +110,39 @@ class CompileStaticArtefactInjector implements GrailsArtefactClassInjector {
             GrailsASTUtils.addGrailsCompileStaticAnnotation(classNode)
         }
         else if (artefactType == TAGLIB_TYPE && Boolean.getBoolean(COMPILE_STATIC_TAGLIBS_PROPERTY)) {
+            if (hasClosureFieldTag(classNode)) {
+                GrailsASTUtils.warning(source, classNode, legacyTagLibWarning(classNode))
+                return
+            }
             GrailsASTUtils.addGrailsCompileStaticAnnotation(classNode)
         }
+    }
+
+    /**
+     * Detects a tag library that still declares tags the deprecated way - as closure fields (a public,
+     * non-static closure-valued property or field) rather than methods. This matches how Grails identifies
+     * tags at runtime, and such closure-field tags cannot be compiled statically when they dispatch to
+     * other tags, so the tag library opt-in skips them.
+     */
+    private static boolean hasClosureFieldTag(ClassNode classNode) {
+        for (PropertyNode property : classNode.getProperties()) {
+            if (!property.isStatic() && property.getInitialExpression() instanceof ClosureExpression) {
+                return true
+            }
+        }
+        for (FieldNode field : classNode.getFields()) {
+            if (field.isPublic() && !field.isStatic() && field.getInitialExpression() instanceof ClosureExpression) {
+                return true
+            }
+        }
+        false
+    }
+
+    private static String legacyTagLibWarning(ClassNode classNode) {
+        'Tag library ' + classNode.getName() + ' defines one or more tags as closure fields (the deprecated form), ' +
+                'so it was skipped by the grails { compileStatic { tagLibs = true } } opt-in and left dynamically compiled. ' +
+                'Migrate its tags to methods (e.g. def myTag(Map attrs, Closure body)) to compile it statically, ' +
+                'or annotate the class with @GrailsCompileStatic to force static compilation.'
     }
 
     private static String resolveArtefactType(ClassNode classNode) {

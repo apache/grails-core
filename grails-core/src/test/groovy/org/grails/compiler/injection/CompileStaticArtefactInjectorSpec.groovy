@@ -149,6 +149,64 @@ class CompileStaticArtefactInjectorSpec extends Specification {
         noExceptionThrown()
     }
 
+    void 'a legacy closure-field tag library is left dynamic when the taglibs opt-in is enabled'() {
+        given:
+        System.setProperty(CompileStaticArtefactInjector.COMPILE_STATIC_TAGLIBS_PROPERTY, 'true')
+
+        when: 'a taglib declares its tag the deprecated way - as a closure field that would fail static compilation'
+        compileArtefactSource('TagLib', 'LegacyClosureTagLib', '''
+            class LegacyClosureTagLib {
+                def hello = { attrs ->
+                    Integer number = 5
+                    number.noSuchMethodHere()
+                }
+            }
+        ''')
+
+        then: 'the injector skips it, so it compiles dynamically rather than failing static compilation'
+        noExceptionThrown()
+    }
+
+    void 'a static closure field does not make a tag library look legacy'() {
+        given:
+        System.setProperty(CompileStaticArtefactInjector.COMPILE_STATIC_TAGLIBS_PROPERTY, 'true')
+
+        when: 'a taglib has a static closure helper (not a tag) plus a method that would fail static compilation'
+        compileArtefactSource('TagLib', 'StaticHelperTagLib', '''
+            class StaticHelperTagLib {
+                static Closure helper = { -> }
+                def execute() {
+                    Integer number = 5
+                    number.noSuchMethodHere()
+                }
+            }
+        ''')
+
+        then: 'it is still compiled statically - the static closure is not treated as a tag'
+        MultipleCompilationErrorsException e = thrown()
+        e.message.contains('noSuchMethodHere')
+    }
+
+    void 'a method-based tag library with a static non-closure field is still compiled statically'() {
+        given:
+        System.setProperty(CompileStaticArtefactInjector.COMPILE_STATIC_TAGLIBS_PROPERTY, 'true')
+
+        when: 'a method-based taglib declares a namespace and a method that would fail static compilation'
+        compileArtefactSource('TagLib', 'NamespacedTagLib', '''
+            class NamespacedTagLib {
+                static namespace = 'g'
+                def execute() {
+                    Integer number = 5
+                    number.noSuchMethodHere()
+                }
+            }
+        ''')
+
+        then: 'it is compiled statically'
+        MultipleCompilationErrorsException e = thrown()
+        e.message.contains('noSuchMethodHere')
+    }
+
     /**
      * Compiles a single artefact class, reproducing how the production global transform drives the
      * injector: stamp {@code @Artefact(type)} and run the injector at canonicalization, then compile
@@ -156,8 +214,7 @@ class CompileStaticArtefactInjectorSpec extends Specification {
      * {@link MultipleCompilationErrorsException} if static compilation rejects the class.
      */
     private void compileArtefact(String type, String className, String extraAnnotation = '') {
-        CompilationUnit cu = new CompilationUnit(new GroovyClassLoader())
-        cu.addSource(className, """
+        compileArtefactSource(type, className, """
             ${extraAnnotation}
             class ${className} {
                 def execute() {
@@ -166,15 +223,25 @@ class CompileStaticArtefactInjectorSpec extends Specification {
                 }
             }
         """)
+    }
+
+    /**
+     * Compiles the given source for a single artefact class, stamping {@code @Artefact(type)} and running
+     * the injector at canonicalization exactly as {@link #compileArtefact} does, but with a caller-supplied
+     * class definition so legacy closure-field tag libraries can be exercised.
+     */
+    private void compileArtefactSource(String type, String className, String source) {
+        CompilationUnit cu = new CompilationUnit(new GroovyClassLoader())
+        cu.addSource(className, source)
         CompileStaticArtefactInjector injector = new CompileStaticArtefactInjector()
         cu.addPhaseOperation(new CompilationUnit.PrimaryClassNodeOperation() {
             @Override
-            void call(SourceUnit source, GeneratorContext context, ClassNode cn) throws CompilationFailedException {
+            void call(SourceUnit src, GeneratorContext context, ClassNode cn) throws CompilationFailedException {
                 if (cn.nameWithoutPackage == className) {
                     AnnotationNode artefact = new AnnotationNode(ClassHelper.make(Artefact))
                     artefact.addMember('value', new ConstantExpression(type))
                     cn.addAnnotation(artefact)
-                    injector.performInjectionOnAnnotatedClass(source, cn)
+                    injector.performInjectionOnAnnotatedClass(src, cn)
                 }
             }
         }, Phases.CANONICALIZATION)

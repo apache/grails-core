@@ -165,7 +165,7 @@ When an opt-in is enabled, every matching artefact is compiled exactly as if it 
 
 [NOTE]
 ====
-For tag libraries, define tags as methods (for example `def myTag(Map attrs, Closure body)`). The deprecated closure-field form (`def myTag = { attrs, body -> }`) cannot be statically compiled when it dispatches to other tags; such a tag library should be migrated to method-based tags or kept dynamic with a per-class `@CompileDynamic`.
+For tag libraries, define tags as methods (for example `def myTag(Map attrs, Closure body)`). A tag library that still declares tags the deprecated way — as closure fields (`def myTag = { attrs, body -> }`) — cannot be statically compiled when it dispatches to other tags, so the `tagLibs` opt-in automatically skips it: it is left dynamically compiled and a build warning is emitted. Migrate such a tag library to method-based tags to opt it in, or annotate it with `@GrailsCompileStatic` to force static compilation regardless.
 ====
 
 An individual class always wins over the build-wide default by declaring its own compilation annotation. A class annotated with `@CompileDynamic` (or `@GrailsCompileStatic`, `@CompileStatic`, `@GrailsTypeChecked` or `@TypeChecked`) keeps its own setting and is never overridden by the opt-in:
