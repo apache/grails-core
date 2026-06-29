@@ -58,7 +58,7 @@ dependencies {
     testImplementation 'org.apache.grails:grails-testing-support-datamapping'
     testImplementation 'org.spockframework:spock-core'
 
-    integrationTestImplementation testFixtures(project(':ui-examples-common'))
+    integrationTestImplementation testFixtures(project(':grails-test-examples-spring-security-ui-common'))
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
 }
 
