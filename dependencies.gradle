@@ -23,6 +23,7 @@
 ext {
     gradleBomDependencyVersions = [
             'ant.version'                   : '1.10.15',
+            'asm.version'                   : '9.10',
             'asciidoctor-gradle-jvm.version': '4.0.5',
             'asciidoctorj.version'          : '3.0.0',
             'asset-pipeline-gradle.version' : '5.0.34',
@@ -50,6 +51,8 @@ ext {
     gradleBomDependencies = [
             'ant'                   : "org.apache.ant:ant:${gradleBomDependencyVersions['ant.version']}",
             'ant-junit'             : "org.apache.ant:ant-junit:${gradleBomDependencyVersions['ant.version']}",
+            'asm'                   : "org.ow2.asm:asm:${gradleBomDependencyVersions['asm.version']}",
+            'asm-util'              : "org.ow2.asm:asm-util:${gradleBomDependencyVersions['asm.version']}",
             'asciidoctor-gradle-jvm': "org.asciidoctor:asciidoctor-gradle-jvm:${gradleBomDependencyVersions['asciidoctor-gradle-jvm.version']}",
             'asciidoctorj'          : "org.asciidoctor:asciidoctorj:${gradleBomDependencyVersions['asciidoctorj.version']}",
             'asset-pipeline-gradle' : "cloud.wondrify:asset-pipeline-gradle:${gradleBomDependencyVersions['asset-pipeline-gradle.version']}",
@@ -70,10 +73,12 @@ ext {
             'asset-pipeline-bom.version'    : '5.0.34',
             'bootstrap-icons.version'       : '1.13.1',
             'bootstrap.version'             : '5.3.8',
-            'commons-codec.version'         : '1.18.0',
+            'commons-codec.version'         : '1.19.0',
+            'commons-compress.version'      : '1.28.0',
             'commons-lang3.version'         : '3.20.0',
             'geb-spock.version'             : '8.0.1',
             'groovy.version'                : '4.0.32',
+            'h2.version'                    : '2.4.240',
             'jackson.version'               : '2.21.4',
             'jquery.version'                : '3.7.1',
             'hibernate-groovy-proxy.version': '1.1',
@@ -83,6 +88,7 @@ ext {
             'junit-platform.version'        : '1.13.3',
             'mongodb.version'               : '5.5.2',
             'opentelemetry.version'         : '1.55.0',
+            'plexus-utils.version'          : '4.0.3',
             'rxjava.version'                : '1.3.8',
             'rxjava2.version'               : '2.2.21',
             'rxjava3.version'               : '3.1.12',
@@ -106,9 +112,11 @@ ext {
     bomDependencies = [
             'bootstrap'                   : "org.webjars.npm:bootstrap:${bomDependencyVersions['bootstrap.version']}",
             'bootstrap-icons'             : "org.webjars.npm:bootstrap-icons:${bomDependencyVersions['bootstrap-icons.version']}",
-            'commons-codec'               : "commons-codec:commons-codec:${bomDependencyVersions['commons-codec.version']}",
+            'commons-codec'                                : "commons-codec:commons-codec:${bomDependencyVersions['commons-codec.version']}",
+            'commons-compress'                             : "org.apache.commons:commons-compress:${bomDependencyVersions['commons-compress.version']}",
             'commons-lang3'               : "org.apache.commons:commons-lang3:${bomDependencyVersions['commons-lang3.version']}",
             'geb-spock'                   : "org.apache.groovy.geb:geb-spock:${bomDependencyVersions['geb-spock.version']}",
+            'h2'                                           : "com.h2database:h2:${bomDependencyVersions['h2.version']}",
             // start - restate the groovy-bom includes here because the spring dependency management will pick the library from spring-boot-dependencies otherwise
             'groovy'                      : "org.apache.groovy:groovy:${bomDependencyVersions['groovy.version']}",
             'groovy-ant'                  : "org.apache.groovy:groovy-ant:${bomDependencyVersions['groovy.version']}",
@@ -177,11 +185,12 @@ ext {
             'opentelemetry-sdk-extension-autoconfigure-spi'  : "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi:${bomDependencyVersions['opentelemetry.version']}",
             'opentelemetry-sdk-extension-autoconfigure'      : "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:${bomDependencyVersions['opentelemetry.version']}",
             // end - pin opentelemetry to prevent bom conflicts
-            'rxjava'                      : "io.reactivex:rxjava:${bomDependencyVersions['rxjava.version']}",
-            'rxjava2'                     : "io.reactivex.rxjava2:rxjava:${bomDependencyVersions['rxjava2.version']}",
-            'rxjava3'                     : "io.reactivex.rxjava3:rxjava:${bomDependencyVersions['rxjava3.version']}",
-            'sitemesh'                    : "opensymphony:sitemesh:${bomDependencyVersions['sitemesh.version']}",
-            'starter-sitemesh'            : "org.sitemesh:spring-boot-starter-sitemesh:${bomDependencyVersions['starter-sitemesh.version']}",
+            'plexus-utils'                                   : "org.codehaus.plexus:plexus-utils:${bomDependencyVersions['plexus-utils.version']}",
+            'rxjava'                                         : "io.reactivex:rxjava:${bomDependencyVersions['rxjava.version']}",
+            'rxjava2'                                        : "io.reactivex.rxjava2:rxjava:${bomDependencyVersions['rxjava2.version']}",
+            'rxjava3'                                        : "io.reactivex.rxjava3:rxjava:${bomDependencyVersions['rxjava3.version']}",
+            'sitemesh'                                       : "opensymphony:sitemesh:${bomDependencyVersions['sitemesh.version']}",
+            'starter-sitemesh'                               : "org.sitemesh:spring-boot-starter-sitemesh:${bomDependencyVersions['starter-sitemesh.version']}",
     ]
 
     // Because pom exclusions aren't properly supported by gradle, we can't inherit the grails-gradle-bom
@@ -219,7 +228,7 @@ ext {
     else if (project.name == 'grails-micronaut-bom') {
         customBomVersions = [
                 'javaparser-core.version': '3.27.0', // micronaut requires 3.27, groovy 4 ships with 3.28 but is compatible with 3.27
-                'asm.version'            : '9.9.1',
+                'asm.version'            : '9.10',
                 'guava.version'          : '33.5.0-jre',
         ]
         combinedVersions += customBomVersions

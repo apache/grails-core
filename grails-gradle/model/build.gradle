@@ -48,6 +48,10 @@ dependencies {
     compileOnly 'org.codehaus.groovy:groovy'
     compileOnly 'org.codehaus.groovy:groovy-xml'
 
+    // Use explicit ASM instead of groovyjarjarasm to support Java 17+ class files (major version 61+).
+    // api scope is required so Groovy's type checker can resolve ASM references when compiling dependents.
+    api 'org.ow2.asm:asm'
+
     testImplementation 'org.codehaus.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
     testImplementation 'org.junit.platform:junit-platform-runner'

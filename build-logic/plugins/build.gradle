@@ -38,6 +38,7 @@ dependencies {
     implementation "${gradleBomDependencies['grails-publish-plugin']}"
     implementation "org.gradle.crypto.checksum:org.gradle.crypto.checksum.gradle.plugin:${gradleProperties.gradleChecksumPluginVersion}"
     implementation "org.cyclonedx.bom:org.cyclonedx.bom.gradle.plugin:${gradleProperties.gradleCycloneDxPluginVersion}"
+    implementation "org.sonatype.gradle.plugins:scan-gradle-plugin:${gradleProperties.sonatypeScanPluginVersion}"
 }
 
 gradlePlugin {
@@ -77,6 +78,10 @@ gradlePlugin {
         register('grailsDependencyValidator') {
             id = 'org.apache.grails.buildsrc.dependency-validator'
             implementationClass = 'org.apache.grails.buildsrc.GrailsDependencyValidatorPlugin'
+        }
+        register('vulnerabilityScanPlugin') {
+            id = 'org.apache.grails.buildsrc.vulnerability-scan'
+            implementationClass = 'org.apache.grails.buildsrc.VulnerabilityScanPlugin'
         }
     }
 }

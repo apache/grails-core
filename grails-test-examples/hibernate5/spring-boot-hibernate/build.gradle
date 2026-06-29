@@ -23,6 +23,7 @@ plugins {
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.springframework.boot'
     id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
 }
 
 version = projectVersion
