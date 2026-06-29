@@ -65,4 +65,37 @@ class BomPlatformFunctionalSpec extends GradleSpecification {
         and: 'property-based version overrides are still enabled for the declared BOM'
         result.output.contains('HAS_BOM_PROPERTY_OVERRIDES=true')
     }
+
+    def "plugin applies configured Hibernate 7 Micronaut BOM as enforced platform"() {
+        given:
+        setupTestResourceProject('bom-platform-hibernate7-micronaut-auto')
+
+        when:
+        def result = executeTask('inspectBomSetup')
+
+        then:
+        result.output.contains('HAS_MICRONAUT_LIBRARY=true')
+        result.output.contains('HAS_H7_MICRONAUT_BOM=true')
+        result.output.contains('H7_MICRONAUT_BOM_ENFORCED=true')
+        result.output.contains('HAS_GRAILS_BOM=false')
+        result.output.contains('HAS_BOM_PROPERTY_OVERRIDES=true')
+    }
+
+    def "plugin recognizes manually declared Hibernate 7 Micronaut BOM as the single Grails BOM"() {
+        given:
+        setupTestResourceProject('bom-platform-hibernate7-micronaut-manual')
+
+        when:
+        def result = executeTask('inspectBomSetup')
+
+        then:
+        result.output.contains('HAS_GRAILS_BOM=false')
+        result.output.contains('HAS_MICRONAUT_LIBRARY=true')
+        result.output.contains('HAS_H7_MICRONAUT_BOM=true')
+        result.output.contains('H7_MICRONAUT_BOM_ENFORCED=true')
+        result.output.contains('SIBLING_HAS_H7_MICRONAUT_BOM=true')
+        result.output.contains('SIBLING_H7_MICRONAUT_BOM_ENFORCED=true')
+        result.output.contains('SIBLING_HAS_GRAILS_BOM=false')
+        result.output.contains('HAS_BOM_PROPERTY_OVERRIDES=true')
+    }
 }

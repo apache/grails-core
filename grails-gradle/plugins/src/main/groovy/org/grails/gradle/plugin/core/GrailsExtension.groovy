@@ -126,12 +126,10 @@ class GrailsExtension {
      * Whether the Micronaut auto-setup should run when the `grails-micronaut` plugin is detected.
      * When enabled, the Grails Gradle plugin:
      * <ul>
-     *   <li>validates that `grails-micronaut-bom` is applied as `enforcedPlatform` and fails the build
-     *       at configuration time with an actionable error if not (`grails-micronaut-bom` is the single
-     *       source of truth for the Micronaut platform version);</li>
-     *   <li>configures the Spring Boot `bootJar`/`bootWar` tasks to use the {@code CLASSIC} loader
-     *       implementation (required for {@code java -jar} compatibility with the Micronaut-Spring
-     *       integration).</li>
+     *   <li>validates that a Micronaut-compatible Grails BOM is applied as `enforcedPlatform` and fails
+     *       the build at configuration time with an actionable error if not;</li>
+     *   <li>keeps Micronaut dependency management aligned with the Grails BOM variant selected by the
+     *       application.</li>
      * </ul>
      * Disabling this is rarely appropriate; consumer projects should normally apply the BOM as
      * `enforcedPlatform` so that the Micronaut platform cannot override grails-bom-managed versions.
@@ -190,7 +188,8 @@ class GrailsExtension {
      * </pre>
      *
      * <p>The Micronaut variants ({@code grails-micronaut-bom},
-     * {@code grails-hibernate5-micronaut-bom}) are applied as an {@code enforcedPlatform}
+     * {@code grails-hibernate5-micronaut-bom}, and {@code grails-hibernate7-micronaut-bom})
+     * are applied as an {@code enforcedPlatform}
      * because the Micronaut platform would otherwise override their managed versions via
      * conflict resolution. All other BOMs are applied as a regular {@code platform}.</p>
      *

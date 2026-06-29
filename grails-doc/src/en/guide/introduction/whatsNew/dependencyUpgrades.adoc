@@ -19,9 +19,11 @@ under the License.
 
 Grails {version} ships with the following foundational dependency versions:
 
+* Java 21 minimum baseline
 * Groovy {groovyVersion}
 * Spring Framework {springVersion}
 * Spring Boot {springBootVersion}
 * Gradle {gradleVersion}
 * Spock {spockVersion}
 
+See the link:{versionsRef}Grails%20BOM.html[Grails BOM dependency table] for the complete managed dependency set, including the Hibernate and Micronaut BOM variants.
