@@ -1,87 +1,91 @@
-import java.time.Instant
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
 
-version = projectVersion
-group = 'org.grails.plugins'
-
-apply plugin: 'groovy'
-apply plugin: 'java-library'
-apply plugin: 'org.apache.grails.gradle.grails-plugin'
-apply plugin: 'org.apache.grails.gradle.grails-publish'
-
-repositories {
-    mavenCentral()
-    maven { url = 'https://repo.grails.org/grails/restricted' }
-    maven {
-        url = 'https://repository.apache.org/content/groups/snapshots'
-        content {
-            includeVersionByRegex('org[.]apache[.](grails|groovy).*', '.*', '.*-SNAPSHOT')
-        }
-    }
+plugins {
+    id 'groovy'
+    id 'java-library'
+    id 'project-report'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-plugin'
+    id 'org.apache.grails.gradle.grails-gsp'
 }
 
+version = projectVersion
+group = 'org.apache.grails'
+
 ext {
-    buildInstant = java.util.Optional.ofNullable(System.getenv("SOURCE_DATE_EPOCH"))
-            .filter(s -> !s.isEmpty())
-            .map(Long::parseLong)
-            .map(Instant::ofEpochSecond)
-            .orElseGet(Instant::now)
-    formattedBuildDate = DateTimeFormatter.ISO_INSTANT.format(buildInstant)
-    buildDate = (buildInstant as Instant).atZone(ZoneOffset.UTC) // for reproducible builds
+    pomTitle = 'Grails Mail Plugin'
+    pomDescription = 'Provides mail support for Grails applications'
 }
 
 dependencies {
 
-    compileOnly platform("org.apache.grails:grails-bom:$grailsVersion")
-    compileOnly 'org.apache.grails:grails-dependencies-starter-web'
-
-    // avoid pulling the bom in to set this version, instead use a property
-    implementation "org.eclipse.angus:jakarta.mail:$jakartaMailImplVersion", {
-        // impl: SMTPMessage
-    }
+    implementation platform(project(':grails-bom'))
 
     compileOnlyApi 'jakarta.mail:jakarta.mail-api', {
         // api: Message, Session
         // impl: MimeMessage, MimeUtility
     }
 
-    testImplementation platform("org.apache.grails:grails-bom:$grailsVersion")
-    testImplementation 'org.apache.grails:grails-dependencies-starter-web'
-    testImplementation 'org.apache.grails:grails-dependencies-test'
+    implementation 'org.eclipse.angus:jakarta.mail', {
+        // impl: SMTPMessage (version managed by the BOM)
+    }
+    implementation project(':grails-gsp-core'), {
+        // impl: GroovyPagesTemplateEngine, GroovyPageTemplate
+    }
+
+    compileOnly project(':grails-core'), { // Provided as this is a Grails plugin
+        // api: GrailsApplication, Plugin, GrailsPluginManager, @Artefact, @Enhances
+        // impl: Config
+    }
+    compileOnly project(':grails-web-common'), {
+        // impl: GrailsWebRequest, WrappedResponseHolder
+    }
+    compileOnly project(':grails-web-url-mappings'), {
+        // impl: LinkGenerator
+    }
+    compileOnly project(':grails-web-gsp-taglib'), {
+        // comp: TagLib artefact (PlainTextMailTagLib), GroovyPagesUriService
+    }
+    compileOnly 'jakarta.servlet:jakarta.servlet-api' // Cookie, HttpServletRequest, HttpServletResponse
+    compileOnly 'jakarta.inject:jakarta.inject-api' // @Inject
+    compileOnly 'org.springframework:spring-beans' // @Autowired, @Qualifier, DisposableBean, InitializingBean
+    compileOnly 'org.springframework:spring-context' // ApplicationContext, @Bean
+    compileOnly 'org.springframework.boot:spring-boot' // Bindable, Binder, ConfigurationPropertySources
+    compileOnly 'org.springframework.boot:spring-boot-autoconfigure' // @AutoConfiguration, @ConditionalOnProperty, @ConfigurationProperties
+    compileOnly 'org.apache.groovy:groovy' // Provided as this is a Grails plugin
+    compileOnly 'org.slf4j:slf4j-api' // @Slf4j
+
+    testImplementation project(':grails-testing-support-web')
+    testImplementation 'jakarta.mail:jakarta.mail-api'
+    testImplementation 'org.spockframework:spock-core'
+
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
-grailsPublish {
-    githubSlug = 'grails-plugins/grails-mail'
-    license {
-        name = 'Apache-2.0'
-    }
-    title = 'Grails Mail Plugin'
-    desc = 'Provides Mail support to a running Grails application'
-    developers = [
-        candrews: 'Craig Andrews',
-        ldaley: 'Luke Daley',
-        pledbrook: 'Peter Ledbrook',
-        jeffscottbrown: 'Jeff Brown',
-        graemerocher: 'Graeme Rocher',
-        marcpalmer: 'Marc Palmer',
-        sbglasius: 'Søren Berg Glasius',
-        matrei: 'Mattias Reichel'
-    ]
-}
-
-tasks.withType(Test).configureEach {
-    useJUnitPlatform()
-    testLogging {
-        events 'passed', 'skipped', 'failed'
-    }
-}
-
-compileJava.options.release = javaVersion.toInteger()
-
-apply from: layout.projectDirectory.file('gradle/docs-config.gradle')
-
-grails {
-    springDependencyManagement = false
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 }

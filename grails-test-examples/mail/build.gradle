@@ -1,41 +1,46 @@
-file('../../gradle.properties').withInputStream {
-    // Inherit versions from main project
-    def mainProjectProps = new Properties()
-    mainProjectProps.load(it)
-    mainProjectProps
-            .findAll { !findProperty(it.key.toString()) }
-            .findAll {it.key.toString().endsWith('Version') }
-            .each { k, v -> ext.set(k, v) }
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+plugins {
+    id 'groovy'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.gradle.grails-web'
+    id 'org.apache.grails.gradle.grails-gsp'
+    id 'cloud.wondrify.asset-pipeline'
 }
 
-version = '0.1'
-group = 'testapp1'
-
-apply plugin: 'org.apache.grails.gradle.grails-web'
-apply plugin: 'org.apache.grails.gradle.grails-gsp'
-apply plugin: 'cloud.wondrify.asset-pipeline'
-
-repositories {
-    maven { url = 'https://repo.grails.org/grails/restricted' }
-    maven {
-        url = 'https://repository.apache.org/content/groups/snapshots'
-        content {
-            includeVersionByRegex('org[.]apache[.](grails|groovy).*', '.*', '.*-SNAPSHOT')
-        }
-    }
-}
+version = projectVersion
+group = 'examples'
 
 dependencies {
 
-    implementation platform("org.apache.grails:grails-bom:$grailsVersion")
+    implementation platform(project(':grails-bom'))
 
-    implementation "com.icegreen:greenmail:$greenmailVersion"
-    implementation 'org.grails.plugins:grails-mail'
+    implementation 'org.apache.grails:grails-mail'
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails:grails-controllers'
     implementation 'org.apache.grails:grails-gsp'
     implementation 'org.apache.grails:grails-layout'
+    implementation "com.icegreen:greenmail:$greenmailVersion"
 
+    testAndDevelopmentOnly platform(project(':grails-bom'))
     testAndDevelopmentOnly 'org.webjars.npm:bootstrap'
     testAndDevelopmentOnly 'org.webjars.npm:bootstrap-icons'
     testAndDevelopmentOnly 'org.webjars.npm:jquery'
@@ -53,14 +58,10 @@ dependencies {
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
     integrationTestImplementation 'org.apache.grails.testing:grails-testing-support-core'
     integrationTestImplementation 'org.spockframework:spock-core'
-
 }
 
-compileJava.options.release = javaVersion.toInteger()
-
-tasks.withType(Test).configureEach {
-    useJUnitPlatform()
-    testLogging {
-        events 'passed', 'skipped', 'failed'
-    }
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-webjar-asset-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
 }

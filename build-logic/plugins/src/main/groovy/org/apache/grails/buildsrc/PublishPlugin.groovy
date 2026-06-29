@@ -253,6 +253,7 @@ class PublishPlugin implements Plugin<Project> {
             emeritus('bobbywarner', 'Bobby Warner', project),
             emeritus('briancoles', 'Brian Coles', project),
             emeritus('burtbeckwith', 'Burt Beckwith', project),
+            emeritus('candrews', 'Craig Andrews', project),
             emeritus('davidkron', 'David Kron', project),
             emeritus('davidseiler', 'David Seiler', project),
             emeritus('delight', 'Konstantinos Kostarellis', project),
