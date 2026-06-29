@@ -35,22 +35,28 @@ import spock.lang.Shared
 @RestoreSystemProperties
 class SchemaBasedMultiTenancySpec extends AutoStartedMongoSpec {
 
-    @AutoCleanup MongoDatastore datastore
+    @Shared @AutoCleanup MongoDatastore datastore
 
     @Override
     boolean shouldInitializeDatastore() {
         false
     }
 
-    void setup() {
-        // Ensure tenant property is cleared before each test for test isolation
-        System.clearProperty(SystemPropertyTenantResolver.PROPERTY_NAME)
+    void setupSpec() {
+        // Clear singleton GormRegistry state leaked by prior specs (e.g. DATABASE-mode tenancy specs)
+        // so this SCHEMA-mode datastore is the one resolved for the shared multi-tenant entities.
+        org.grails.datastore.gorm.GormRegistry.reset()
         Map config = [
                 (MongoSettings.SETTING_URL): "mongodb://${mongoHost}:${mongoPort}/defaultDb" as String,
                 "grails.gorm.multiTenancy.mode"               :"SCHEMA",
                 "grails.gorm.multiTenancy.tenantResolverClass":SystemPropertyTenantResolver
         ]
         this.datastore = new MongoDatastore(config, getDomainClasses() as Class[])
+    }
+
+    void setup() {
+        // Ensure tenant property is cleared before each test for test isolation
+        System.clearProperty(SystemPropertyTenantResolver.PROPERTY_NAME)
     }
 
     void "Test no tenant id"() {
