@@ -93,6 +93,12 @@ tasks.withType(Test).configureEach { Test task ->
             }
         }
 
+        if (project.hasProperty('skipRedisTests')) {
+            if (!isRedis) {
+                return false
+            }
+        }
+
         if (project.hasProperty('onlyCoreTests')) {
             return false
         }

@@ -404,9 +404,6 @@ project(':grails-spring-security-rest-redis').projectDir = new File(settingsDir,
 project(':grails-spring-security-rest-testapp-profile').projectDir = new File(settingsDir, 'grails-spring-security/rest/testapp-profile')
 project(':grails-spring-security-ui').projectDir = new File(settingsDir, 'grails-spring-security/ui/plugin')
 
-// Redis
-project(':grails-redis').projectDir = new File(settingsDir, 'grails-redis/plugin')
-
 // Spring Security Functional Tests
 include(
         'grails-test-examples-spring-security-acl-functional-test-app',
@@ -438,6 +435,10 @@ project(':grails-test-examples-spring-security-ldap-retrieve-group-roles').proje
 project(':grails-test-examples-spring-security-ui-common').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/ui/common')
 project(':grails-test-examples-spring-security-ui-extended').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/ui/extended')
 project(':grails-test-examples-spring-security-ui-simple').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/ui/simple')
+
+// Redis Functional Tests
+include 'grails-test-examples-redis'
+project(':grails-test-examples-redis').projectDir = new File(settingsDir, 'grails-test-examples/redis')
 
 // Functional Tests
 include(

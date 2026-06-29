@@ -73,11 +73,8 @@ dependencies {
     integrationTestRuntimeOnly 'net.bytebuddy:byte-buddy'
 }
 
-grails {
-    springDependencyManagement = false
-}
-
 apply {
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/redis-test-config.gradle')
 }
