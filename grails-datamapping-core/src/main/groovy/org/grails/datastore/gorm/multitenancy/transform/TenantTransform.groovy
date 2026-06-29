@@ -113,10 +113,13 @@ class TenantTransform extends AbstractDatastoreMethodDecoratingTransformation {
             // For services, resolve entirely via static bridge to avoid MetaClass recursion
             def registryExpr = new org.codehaus.groovy.ast.expr.MethodCallExpression(classX(GormRegistry), 'getInstance', org.codehaus.groovy.ast.expr.ArgumentListExpression.EMPTY_ARGUMENTS)
             def apiResolverExpr = new org.codehaus.groovy.ast.expr.MethodCallExpression(registryExpr, 'getApiResolver', org.codehaus.groovy.ast.expr.ArgumentListExpression.EMPTY_ARGUMENTS)
-            // Use the domain class from the @Service annotation
+            // Use the domain class from the @Service annotation. Resolve via findServiceDatastore (NOT
+            // findDatastore): the TenantService must be looked up on the entity's primary (tenant-manager)
+            // datastore where runtime schemas are registered. findDatastore would resolve the current
+            // tenant's child datastore, which cannot see schemas added at runtime via addTenantForSchema.
             AnnotationNode serviceAnn = findAnnotation(classNode, grails.gorm.services.Service)
             Expression domainClassExpr = serviceAnn?.getMember('value') ?: classX(org.codehaus.groovy.ast.ClassHelper.OBJECT_TYPE)
-            datastoreExpr = callX(apiResolverExpr, 'findDatastore', args(domainClassExpr))
+            datastoreExpr = callX(apiResolverExpr, 'findServiceDatastore', args(domainClassExpr))
         }
         else {
             // Static bridge for regular objects too, to keep it stateless and avoid field injection
