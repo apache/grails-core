@@ -187,6 +187,9 @@ include(
         'grails-spring-security-rest-testapp-profile',
         'grails-spring-security-ui',
 
+        // Redis
+        'grails-redis',
+
         // Testing Support
         'grails-testing-support-core',
         'grails-testing-support-datamapping',
@@ -195,6 +198,7 @@ include(
         'grails-testing-support-dbcleanup-postgresql',
         'grails-testing-support-http-client',
         'grails-testing-support-mongodb',
+        'grails-testing-support-redis',
         'grails-testing-support-views-gson',
         'grails-testing-support-web',
 
@@ -399,6 +403,9 @@ project(':grails-spring-security-rest-memcached').projectDir = new File(settings
 project(':grails-spring-security-rest-redis').projectDir = new File(settingsDir, 'grails-spring-security/rest/redis')
 project(':grails-spring-security-rest-testapp-profile').projectDir = new File(settingsDir, 'grails-spring-security/rest/testapp-profile')
 project(':grails-spring-security-ui').projectDir = new File(settingsDir, 'grails-spring-security/ui/plugin')
+
+// Redis
+project(':grails-redis').projectDir = new File(settingsDir, 'grails-redis/plugin')
 
 // Spring Security Functional Tests
 include(
