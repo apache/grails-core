@@ -247,18 +247,6 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
     }
 
     @Override
-    D first(Map m) {
-        def list = list(m)
-        list.isEmpty() ? null : list.first()
-    }
-
-    @Override
-    D last(Map m) {
-        def list = list(m)
-        list.isEmpty() ? null : list.last()
-    }
-
-    @Override
     D find(CharSequence query, Map namedParams, Map args) {
         doSingleInternal(query, namedParams, [], args, false)
     }
