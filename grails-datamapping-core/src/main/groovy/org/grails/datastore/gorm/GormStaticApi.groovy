@@ -543,7 +543,8 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
         execute({ Session session ->
             def query = session.createQuery(persistentClass)
             populateQueryByExample(session, query, example)
-            query.list(args)
+            org.grails.datastore.gorm.finders.DynamicFinder.populateArgumentsForCriteria(persistentClass, query, args)
+            query.list()
         } as SessionCallback<List<D>>)
     }
 
