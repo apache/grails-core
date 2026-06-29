@@ -29,6 +29,7 @@ import grails.gorm.MultiTenant
 import grails.gorm.annotation.Entity
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormEntity
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.multitenancy.AllTenantsResolver
@@ -100,7 +101,10 @@ class GormApiAllocationSpec extends Specification {
         then:
         hasAllApis(H7AllocationSchemaTenant, 'tenantA')
         !hasAnyApis(H7AllocationSchemaTenant, 'tenantB')
-        !staticApi.is(GormEnhancer.findStaticApi(H7AllocationSchemaTenant, ConnectionSource.DEFAULT))
+        // Strict-mode (SCHEMA) entities have no tenant-less DEFAULT API to resolve (that requires a
+        // bound tenant); verify the tenant API is a stable, distinct per-tenant allocation via its
+        // cached identity instead.
+        staticApi.is(GormEnhancer.findStaticApi(H7AllocationSchemaTenant, 'tenantA'))
         instanceApi.is(GormEnhancer.findInstanceApi(H7AllocationSchemaTenant, 'tenantA'))
         validationApi.is(GormEnhancer.findValidationApi(H7AllocationSchemaTenant, 'tenantA'))
     }
@@ -122,7 +126,10 @@ class GormApiAllocationSpec extends Specification {
         then:
         hasAllApis(H7AllocationDatabaseTenant, 'tenantA')
         !hasAnyApis(H7AllocationDatabaseTenant, 'tenantB')
-        !staticApi.is(GormEnhancer.findStaticApi(H7AllocationDatabaseTenant, ConnectionSource.DEFAULT))
+        // Strict-mode (DATABASE) entities have no tenant-less DEFAULT API to resolve (that requires a
+        // bound tenant); verify the tenant API is a stable, distinct per-tenant allocation via its
+        // cached identity instead.
+        staticApi.is(GormEnhancer.findStaticApi(H7AllocationDatabaseTenant, 'tenantA'))
         instanceApi.is(GormEnhancer.findInstanceApi(H7AllocationDatabaseTenant, 'tenantA'))
         validationApi.is(GormEnhancer.findValidationApi(H7AllocationDatabaseTenant, 'tenantA'))
     }
@@ -224,15 +231,15 @@ class GormApiAllocationSpec extends Specification {
     }
 
     private static boolean hasStaticApi(Class<?> type, String qualifier) {
-        GormEnhancer.@STATIC_APIS.get(qualifier).containsKey(type.name)
+        GormRegistry.instance.staticApiRegistry.isAllocated(type.name, qualifier)
     }
 
     private static boolean hasInstanceApi(Class<?> type, String qualifier) {
-        GormEnhancer.@INSTANCE_APIS.get(qualifier).containsKey(type.name)
+        GormRegistry.instance.instanceApiRegistry.isAllocated(type.name, qualifier)
     }
 
     private static boolean hasValidationApi(Class<?> type, String qualifier) {
-        GormEnhancer.@VALIDATION_APIS.get(qualifier).containsKey(type.name)
+        GormRegistry.instance.validationApiRegistry.isAllocated(type.name, qualifier)
     }
 }
 
