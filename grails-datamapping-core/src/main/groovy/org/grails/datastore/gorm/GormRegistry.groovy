@@ -759,9 +759,18 @@ class GormRegistry {
             registerEntityDatastore(normalizedClassName, normalizedQualifier, qualifierDatastore)
         }
 
-        // If the entity does not explicitly include DEFAULT, route DEFAULT to the first explicit connection.
+        // If the entity does not explicitly include DEFAULT, route its unqualified (no-connection)
+        // operations. Real datastores manage a session per connection, so DEFAULT goes to the first
+        // explicit connection's datastore. A single-session mock (the in-memory datastore used by
+        // unit tests) keeps unqualified operations on the parent it manages — its connection
+        // children exist only for explicit access and have no harness-flushed session.
         if (!qualifiers.collect { String it -> normalizeQualifier(it) }.contains(ConnectionSource.DEFAULT)) {
-            registerEntityDatastore(normalizedClassName, ConnectionSource.DEFAULT, primaryDatastore)
+            Datastore defaultConnectionDatastore = primaryDatastore
+            if (defaultDatastore instanceof MultipleConnectionSourceCapableDatastore &&
+                    !((MultipleConnectionSourceCapableDatastore) defaultDatastore).routesUnqualifiedToMappedConnection()) {
+                defaultConnectionDatastore = defaultDatastore
+            }
+            registerEntityDatastore(normalizedClassName, ConnectionSource.DEFAULT, defaultConnectionDatastore)
         }
     }
 
