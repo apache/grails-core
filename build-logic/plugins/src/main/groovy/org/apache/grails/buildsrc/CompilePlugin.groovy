@@ -110,7 +110,9 @@ class CompilePlugin implements Plugin<Project> {
                 // encoding needs to be the same since it's different across platforms
                 it.options.encoding = StandardCharsets.UTF_8.name()
                 it.options.fork = true
-                it.options.forkOptions.jvmArgs = ['-Xms128M', '-Xmx2G']
+                // always set an isolated build to ensure grails.factories aren't accidentally merged since every project
+                // in this mono repo should be an isolated projected
+                it.options.forkOptions.jvmArgs = ['-Xms128M', '-Xmx2G', '-Dgrails.isolated.build=true']
                 if (System.getenv('SUPPRESS_DEPRECATION_WARNINGS') == 'true') {
                     it.options.compilerArgs += ['-Xlint:-removal']
                 }
