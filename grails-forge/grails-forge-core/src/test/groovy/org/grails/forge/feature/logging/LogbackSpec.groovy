@@ -52,4 +52,32 @@ class LogbackSpec extends ApplicationContextSpec implements CommandOutputFixture
         where:
         applicationType << ApplicationType.values().toList()
     }
+
+    @Unroll
+    void "test logback-spring.xml disables Jansi for #applicationType application"() {
+        when:
+        def output = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS))
+
+        then: "Jansi is disabled so its global System.out replacement does not break console logging after a Spring Boot DevTools restart (issue #15663)"
+        def logback = output.get("grails-app/conf/logback-spring.xml")
+        logback.contains("<withJansi>false</withJansi>")
+        !logback.contains("<withJansi>true</withJansi>")
+
+        where:
+        applicationType << ApplicationType.values().toList()
+    }
+
+    @Unroll
+    void "test build.gradle does not inline bootRun console color config for #applicationType application"() {
+        when:
+        def output = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS))
+
+        then: "The Grails Gradle plugin configures bootRun console colors instead of generated end-user build.gradle files (issue #15663)"
+        def build = output.get("build.gradle")
+        !build.contains("tasks.matching { it.name == 'bootRun' }.configureEach {")
+        !build.contains("spring.output.ansi.console-available")
+
+        where:
+        applicationType << ApplicationType.values().toList()
+    }
 }
