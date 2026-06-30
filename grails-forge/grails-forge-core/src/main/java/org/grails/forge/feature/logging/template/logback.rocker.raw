@@ -17,14 +17,18 @@ specific language governing permissions and limitations
 under the License.
 *@
 
-@args (String projectName, String packageName, boolean jansi)
+@args (String projectName, String packageName)
 
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-        <withJansi>@jansi</withJansi>
+        <!-- Jansi is intentionally disabled. It replaces System.out globally, which is
+             incompatible with some reloading tools: after a Spring Boot DevTools restart
+             the replaced stream breaks console logging. Console colors are supplied by
+             Spring Boot's %clr converter via CONSOLE_LOG_PATTERN and do not need Jansi. -->
+        <withJansi>false</withJansi>
         <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
             <level>${CONSOLE_LOG_THRESHOLD}</level>
         </filter>
