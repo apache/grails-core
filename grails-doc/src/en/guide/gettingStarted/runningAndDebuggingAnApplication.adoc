@@ -39,8 +39,8 @@ $ grails
 grails> run-app
 | Grails application running at http://localhost:8080 in environment: development
 grails> stop-app
-| Shutting down application...
-| Application shutdown.
+| Stopping application...
+| Application stopped.
 grails> run-app
 | Grails application running at http://localhost:8080 in environment: development
 ----

@@ -29,6 +29,7 @@ import org.codehaus.groovy.control.CompilerConfiguration
 
 import org.springframework.boot.ResourceBanner
 import org.springframework.boot.SpringApplication
+import org.springframework.boot.context.ApplicationPidFileWriter
 import org.springframework.boot.web.context.WebServerApplicationContext
 import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.core.env.ConfigurableEnvironment
@@ -63,6 +64,15 @@ class GrailsApp extends SpringApplication {
 
     private static final String GRAILS_BANNER = 'grails-banner.txt'
     private static final String SPRING_PROFILES = 'spring.profiles.active'
+
+    /**
+     * System property holding the path of the PID file the application should write on startup.
+     * It is set by {@code GrailsGradlePlugin} on the {@code bootRun} task as
+     * {@code grails.cli.pid.file}. When present, the PID file lets the CLI {@code stop-app} command
+     * terminate this process. It is never set for a normally deployed application, so production
+     * runs are unaffected.
+     */
+    private static final String CLI_PID_FILE_PROPERTY = 'grails.cli.pid.file'
 
     private static boolean developmentModeActive = false
     private static DirectoryWatcher directoryWatcher
@@ -100,6 +110,7 @@ class GrailsApp extends SpringApplication {
 
     @Override
     ConfigurableApplicationContext run(String... args) {
+        configureCliPidFileWriter()
         ConfigurableApplicationContext applicationContext = super.run(args)
         Environment environment = Environment.getCurrent()
 
@@ -115,6 +126,22 @@ class GrailsApp extends SpringApplication {
 
         printRunStatus(applicationContext)
         return applicationContext
+    }
+
+    /**
+     * Registers a Spring Boot {@link ApplicationPidFileWriter} when the CLI has supplied a PID file
+     * path through the {@code grails.cli.pid.file} system property, so the forked development
+     * application writes its own process id to the location the {@code stop-app} command reads.
+     *
+     * <p>The writer is registered before {@code super.run()} so it receives the early
+     * {@code ApplicationPreparedEvent} that triggers the write. The property is only present on the
+     * CLI/Gradle {@code run-app} path, so a normally deployed application is unaffected.</p>
+     */
+    protected void configureCliPidFileWriter() {
+        String pidFilePath = System.getProperty(CLI_PID_FILE_PROPERTY)
+        if (pidFilePath) {
+            addListeners(new ApplicationPidFileWriter(pidFilePath))
+        }
     }
 
     @Override

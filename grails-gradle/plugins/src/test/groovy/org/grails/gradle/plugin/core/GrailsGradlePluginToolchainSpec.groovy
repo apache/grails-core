@@ -122,6 +122,17 @@ class GrailsGradlePluginToolchainSpec extends GradleSpecification {
         result.output.contains('MAX_HEAP=768m')
     }
 
+    def "BootRun tasks enable Spring Boot console colors"() {
+        given:
+        setupTestResourceProject('bootrun-console-ansi')
+
+        when:
+        def result = executeTask('inspectBootRunSysProps')
+
+        then:
+        result.output.contains('CONSOLE_AVAILABLE=true')
+    }
+
     def "custom heap sizes are not overridden by fork settings"() {
         given:
         setupTestResourceProject('fork-settings-custom')
@@ -132,5 +143,49 @@ class GrailsGradlePluginToolchainSpec extends GradleSpecification {
         then:
         result.output.contains('MIN_HEAP=512m')
         result.output.contains('MAX_HEAP=2g')
+    }
+
+    def "bootRun supplies the default run-app PID file under the project build directory"() {
+        given:
+        def runner = setupTestResourceProject('boot-run-pid')
+
+        when:
+        def result = executeTask('inspectBootRunPid')
+
+        then:
+        pidFileFromOutput(result.output)?.canonicalFile ==
+                new File(runner.projectDir, "build${File.separator}run-app.pid").canonicalFile
+    }
+
+    def "bootRun supplies the default run-app PID file for a grails-web application"() {
+        given:
+        def runner = setupTestResourceProject('boot-run-pid-web')
+
+        when:
+        def result = executeTask('inspectBootRunPid')
+
+        then:
+        pidFileFromOutput(result.output)?.canonicalFile ==
+                new File(runner.projectDir, "build${File.separator}run-app.pid").canonicalFile
+    }
+
+    def "bootRun ignores a CLI supplied run-app PID file and uses the hard-coded location"() {
+        given:
+        def runner = setupTestResourceProject('boot-run-pid')
+        File cliPidFile = new File('from-cli.pid').absoluteFile
+        String pidFileProperty = "-Dgrails.cli.pid.file=${cliPidFile.absolutePath}".toString()
+
+        when:
+        def result = executeTask('inspectBootRunPid', [pidFileProperty])
+
+        then:
+        pidFileFromOutput(result.output)?.canonicalFile ==
+                new File(runner.projectDir, "build${File.separator}run-app.pid").canonicalFile
+        !result.output.contains(cliPidFile.absolutePath)
+    }
+
+    private static File pidFileFromOutput(String output) {
+        String line = output.readLines().find { it.startsWith('PID_FILE=') }
+        line ? new File(line.substring('PID_FILE='.length())) : null
     }
 }

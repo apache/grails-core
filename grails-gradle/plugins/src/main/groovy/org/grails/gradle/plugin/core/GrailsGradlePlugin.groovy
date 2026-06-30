@@ -90,6 +90,8 @@ import javax.inject.Inject
 class GrailsGradlePlugin extends GroovyPlugin {
 
     public static final String APPLICATION_CONTEXT_COMMAND_CLASS = 'grails.dev.commands.ApplicationCommand'
+    private static final String CLI_PID_FILE_PROPERTY = 'grails.cli.pid.file'
+    private static final String RUN_APP_PID_FILE_NAME = 'run-app.pid'
 
     List<Class<Plugin>> basePluginClasses = [IntegrationTestGradlePlugin] as List<Class<Plugin>>
     List<String> excludedGrailsAppSourceDirs = ['migrations', 'assets']
@@ -143,6 +145,8 @@ class GrailsGradlePlugin extends GroovyPlugin {
         configureConsoleTask(project)
 
         configureForkSettings(project, grailsVersion)
+
+        configureBootRunPidFile(project)
 
         configureJavaCompatibilityArgs(project)
 
@@ -593,6 +597,29 @@ class GrailsGradlePlugin extends GroovyPlugin {
         configureToolchainForForkTasks(project)
     }
 
+    protected void configureBootRunPidFile(Project project) {
+        // Producer side of the run-app PID contract: the forked app writes its PID to 'run-app.pid'
+        // under the Gradle build directory. The CLI stop-app command resolves the PID file
+        // independently of Gradle, via BuildSettings.TARGET_DIR (the conventional <projectDir>/build).
+        // These two locations coincide only for the DEFAULT Gradle build directory; because this uses
+        // project.layout.buildDirectory, customizing it (layout.buildDirectory) would write the PID
+        // file where stop-app does not look, so that customization is not supported for stop-app.
+        Provider<RegularFile> pidFile = project.layout.buildDirectory.file(RUN_APP_PID_FILE_NAME)
+        project.pluginManager.withPlugin('org.springframework.boot') {
+            project.tasks.withType(BootRun).configureEach { BootRun task ->
+                // The path is resolved lazily at execution time via a CommandLineArgumentProvider
+                // (see GrailsAppBaseDirProvider) so it stays configuration-cache safe and does not
+                // force the build directory provider during configuration. The forked application
+                // reads this location so stop-app can locate and terminate it.
+                task.jvmArgumentProviders.add(new RunAppPidFileProvider(CLI_PID_FILE_PROPERTY, pidFile))
+
+                // Report a deliberate stop as a successful build (see BootRunExitCodeVerifier).
+                task.ignoreExitValue = true
+                task.doLast(new BootRunExitCodeVerifier())
+            }
+        }
+    }
+
     /**
      * Configures {@link JavaExec} tasks to inherit the project's Java toolchain.
      *
@@ -819,6 +846,12 @@ class GrailsGradlePlugin extends GroovyPlugin {
             project.tasks.withType(BootRun).configureEach { BootRun it ->
                 it.dependsOn(findMainClassTask)
                 it.mainClass.convention(GrailsGradlePlugin.getMainClassProvider(project))
+                // Tell Spring Boot's AnsiOutput a console is available under bootRun (System.console()
+                // is null there, so DETECT mode would otherwise emit no colors). This is set on every
+                // OS on purpose: it is not a force-on. AnsiOutput's DETECT mode still gates Windows out
+                // internally (return !OS_NAME.contains("win")), so legacy Windows consoles never receive
+                // raw ANSI escapes, while macOS/Linux and modern terminals get colored bootRun output.
+                it.systemProperty('spring.output.ansi.console-available', 'true')
             }
 
             project.tasks.withType(ResolveMainClassName).configureEach {
