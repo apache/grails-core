@@ -25,10 +25,9 @@ import org.gradle.api.tasks.Copy
 import org.gradle.process.ExecSpec
 import org.gradle.process.ExecOperations
 import javax.inject.Inject
-import org.apache.tools.ant.taskdefs.condition.Os
 
 @CompileStatic
-class GrailsFormatPlugin implements Plugin<Project> {
+class GrailsIJFormatterPlugin implements Plugin<Project> {
 
     @Override
     void apply(Project project) {
@@ -50,8 +49,7 @@ class GrailsFormatPlugin implements Plugin<Project> {
 
     private static void registerFormattingTasks(Project project) {
         ExecOperationsSupport execSupport = project.objects.newInstance(ExecOperationsSupport)
-        def ideaExecProvider = project.providers.gradleProperty('idea.exec')
-                .orElse(Os.isFamily(Os.FAMILY_WINDOWS) ? 'format.bat' : 'idea')
+        def ideaExecProvider = project.providers.gradleProperty('idea.exec').orElse('idea')
         def formatFilesProvider = project.providers.gradleProperty('formatFiles')
         def rootProjectDir = project.rootProject.projectDir
         def projectDir = project.projectDir
@@ -72,9 +70,7 @@ class GrailsFormatPlugin implements Plugin<Project> {
                 try {
                     execSupport.execOperations.exec { ExecSpec exec ->
                         exec.commandLine ideaExec
-                        if (ideaExec == 'idea') {
-                            exec.args 'format'
-                        }
+                        exec.args 'format'
                         exec.args '-s', settingsFile.absolutePath
                         exec.args '-mask', '*.java,*.groovy'
                         exec.args '-r'
@@ -85,10 +81,10 @@ class GrailsFormatPlugin implements Plugin<Project> {
                         }
                     }
                 } catch (Exception e) {
-                    task.logger.error("IntelliJ formatter failed to execute.")
-                    task.logger.error("Please ensure IntelliJ command line tools are installed and available on your PATH.")
-                    task.logger.error("See: https://www.jetbrains.com/help/idea/working-with-the-ide-features-from-command-line.html")
-                    throw new RuntimeException("IntelliJ formatter failed. See logs for details.", e)
+                    task.logger.error('IntelliJ formatter failed to execute: {}', e.message)
+                    task.logger.error('Please ensure IntelliJ command line tools are installed and available on your PATH.')
+                    task.logger.error('See: https://www.jetbrains.com/help/idea/working-with-the-ide-features-from-command-line.html')
+                    throw new RuntimeException('IntelliJ formatter failed. See logs for details.', e)
                 }
             }
         }

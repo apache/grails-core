@@ -16,7 +16,7 @@
  */
 
 plugins {
-    id 'org.apache.grails.gradle.grails-format'
+    id 'org.apache.grails.gradle.grails-ij-formatter'
 }
 
 import java.time.Instant
