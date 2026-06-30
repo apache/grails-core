@@ -131,24 +131,9 @@ trait ComplexTyped<T> extends ExecutesClosures {
 
     private void handleField(@DelegatesTo(strategy = Closure.DELEGATE_ONLY)Closure closure, Field field) {
         field.nullable(defaultNull)
-        // Inlined ExecutesClosures.withDelegate: GROOVY-12106 - Groovy 5 STC can't resolve an
-        // inherited parent-trait static from a sub-trait body. The GROOVY-12106 fix (in 5.0.7,
-        // build 18+) is order-dependent and does NOT cover this case: it lives in the STC
-        // extension and only fires after TraitReceiverTransformer rewrites the call into the
-        // super-trait helper-static form. When the sub-trait is transformed before the
-        // super-trait's $Trait$Helper exists (Arguable/ComplexTyped sort before ExecutesClosures),
-        // that rewrite is skipped and the fixed STC branch is never reached - verified failing on
-        // the fix build; a separate upstream transform-order defect (cf. GROOVY-11743). Restore the
-        // plain withDelegate(closure, (Object)field) call once that is fixed upstream.
-        if (closure != null) {
-            closure.resolveStrategy = Closure.DELEGATE_ONLY
-            closure.delegate = field
-            try {
-                closure.call()
-            } finally {
-                closure.delegate = null
-            }
-        }
+        // GROOVY-12106: STC could not resolve this inherited ExecutesClosures static from a sub-trait
+        // body; fixed in Groovy 5.0.7, so the plain inherited-static call compiles again.
+        withDelegate(closure, (Object) field)
         handleField(field)
     }
 
