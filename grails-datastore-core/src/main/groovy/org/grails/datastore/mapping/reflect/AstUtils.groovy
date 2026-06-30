@@ -80,7 +80,15 @@ class AstUtils {
     public static final ClassNode TYPE_CHECKED_TYPE = ClassHelper.make(TypeChecked)
     public static final Object TRANSFORM_APPLIED_MARKER = new Object()
     public static final String DOMAIN_TYPE = 'Domain'
+    /**
+     * @deprecated Use Parameter.EMPTY_ARRAY instead.
+     */
+    @Deprecated(forRemoval = true, since = '8.0')
     public static final Parameter[] ZERO_PARAMETERS = new Parameter[0]
+    /**
+     * @deprecated Use ClassNode.EMPTY_ARRAY instead.
+     */
+    @Deprecated(forRemoval = true, since = '8.0')
     public static final ClassNode[] EMPTY_CLASS_ARRAY = new ClassNode[0]
     public static final Token ASSIGNMENT_OPERATOR = Token.newSymbol(Types.ASSIGNMENT_OPERATOR, 0, 0)
     public static final ArgumentListExpression ZERO_ARGUMENTS = new ArgumentListExpression()

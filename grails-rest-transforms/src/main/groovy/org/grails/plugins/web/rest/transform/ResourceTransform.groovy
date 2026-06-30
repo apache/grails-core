@@ -44,6 +44,7 @@ import org.codehaus.groovy.ast.expr.MapExpression
 import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.expr.TupleExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
+import org.codehaus.groovy.ast.VariableScope
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.EmptyStatement
 import org.codehaus.groovy.ast.stmt.ExpressionStatement
@@ -83,7 +84,6 @@ import static java.lang.reflect.Modifier.PRIVATE
 import static java.lang.reflect.Modifier.PUBLIC
 import static java.lang.reflect.Modifier.STATIC
 import static org.grails.compiler.injection.GrailsASTUtils.VOID_CLASS_NODE
-import static org.grails.compiler.injection.GrailsASTUtils.ZERO_PARAMETERS
 import static org.grails.compiler.injection.GrailsASTUtils.applyDefaultMethodTarget
 import static org.grails.compiler.injection.GrailsASTUtils.buildThisExpression
 import static org.grails.compiler.injection.GrailsASTUtils.nonGeneric
@@ -199,7 +199,7 @@ class ResourceTransform implements ASTTransformation, CompilationUnitAware, Tran
                     newControllerClassNode.addField(urlMappingsField)
                     final urlMappingsSetterParam = new Parameter(urlMappingsClassNode, 'um')
                     final controllerMethodAnnotation = new AnnotationNode(new ClassNode(ControllerMethod).getPlainNodeReference())
-                    MethodNode urlMappingsSetter = new MethodNode('setUrlMappings', PUBLIC, VOID_CLASS_NODE, [urlMappingsSetterParam] as Parameter[], null, new ExpressionStatement(new BinaryExpression(new VariableExpression(urlMappingsField.name), Token.newSymbol(Types.EQUAL, 0, 0), new VariableExpression(urlMappingsSetterParam))))
+                    MethodNode urlMappingsSetter = new MethodNode('setUrlMappings', PUBLIC, VOID_CLASS_NODE, [urlMappingsSetterParam] as Parameter[], ClassNode.EMPTY_ARRAY, new ExpressionStatement(new BinaryExpression(new VariableExpression(urlMappingsField.name), Token.newSymbol(Types.EQUAL, 0, 0), new VariableExpression(urlMappingsSetterParam))))
                     final autowiredAnnotation = new AnnotationNode(AUTOWIRED_CLASS_NODE)
                     autowiredAnnotation.addMember('required', ConstantExpression.FALSE)
 
@@ -232,11 +232,13 @@ class ResourceTransform implements ASTTransformation, CompilationUnitAware, Tran
 
                     final resourcesUrlMapping = new MethodCallExpression(buildThisExpression(), uri, new MapExpression([ new MapEntryExpression(new ConstantExpression('resources'), new ConstantExpression(domainPropertyName))]))
                     final urlMappingsClosure = new ClosureExpression(null, new ExpressionStatement(resourcesUrlMapping))
+                    // A synthesised ClosureExpression must carry a VariableScope; ClosureWriter NPEs on a null scope.
+                    urlMappingsClosure.setVariableScope(new VariableScope())
 
                     def addMappingsMethodCall = applyDefaultMethodTarget(new MethodCallExpression(urlMappingsVar, 'addMappings', urlMappingsClosure), urlMappingsClassNode)
                     methodBody.addStatement(new IfStatement(new BooleanExpression(urlMappingsVar), new ExpressionStatement(addMappingsMethodCall), new EmptyStatement()))
 
-                    def initialiseUrlMappingsMethod = new MethodNode('initializeUrlMappings', PUBLIC, VOID_CLASS_NODE, ZERO_PARAMETERS, null, methodBody)
+                    def initialiseUrlMappingsMethod = new MethodNode('initializeUrlMappings', PUBLIC, VOID_CLASS_NODE, Parameter.EMPTY_ARRAY, ClassNode.EMPTY_ARRAY, methodBody)
                     initialiseUrlMappingsMethod.addAnnotation(new AnnotationNode(new ClassNode(PostConstruct).getPlainNodeReference()))
                     initialiseUrlMappingsMethod.addAnnotation(controllerMethodAnnotation)
                     newControllerClassNode.addMethod(initialiseUrlMappingsMethod)
@@ -265,7 +267,7 @@ class ResourceTransform implements ASTTransformation, CompilationUnitAware, Tran
     ConstructorNode addConstructor(ClassNode controllerClassNode, ClassNode domainClassNode, boolean readOnly) {
         BlockStatement constructorBody = new BlockStatement()
         constructorBody.addStatement(new ExpressionStatement(new ConstructorCallExpression(ClassNode.SUPER, new TupleExpression(new ClassExpression(domainClassNode), new ConstantExpression(readOnly, true)))))
-        ConstructorNode constructorNode = controllerClassNode.addConstructor(Modifier.PUBLIC, ZERO_PARAMETERS, ClassNode.EMPTY_ARRAY, constructorBody)
+        ConstructorNode constructorNode = controllerClassNode.addConstructor(Modifier.PUBLIC, Parameter.EMPTY_ARRAY, ClassNode.EMPTY_ARRAY, constructorBody)
         AnnotatedNodeUtils.markAsGenerated(controllerClassNode, constructorNode)
         return constructorNode
     }

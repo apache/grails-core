@@ -32,8 +32,16 @@ public interface GrailsArtefactClassInjector extends ClassInjector {
 
     ArgumentListExpression ZERO_ARGS = new ArgumentListExpression();
 
+    /**
+     * @deprecated Use ClassNode.EMPTY_ARRAY instead.
+     */
+    @Deprecated(forRemoval = true, since = "8.0")
     ClassNode[] EMPTY_CLASS_ARRAY = new ClassNode[0];
 
+    /**
+     * @deprecated Use Parameter.EMPTY_ARRAY instead.
+     */
+    @Deprecated(forRemoval = true, since = "8.0")
     Parameter[] ZERO_PARAMETERS = new Parameter[0];
 
     String[] getArtefactTypes();

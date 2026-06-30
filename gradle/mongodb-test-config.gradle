@@ -20,6 +20,8 @@
 dependencies {
     // https://docs.gradle.org/8.3/userguide/upgrading_version_8.html#test_framework_implementation_dependencies
     add('testRuntimeOnly', 'org.junit.platform:junit-platform-launcher')
+    add('testRuntimeOnly', 'net.bytebuddy:byte-buddy')
+    add('testRuntimeOnly', 'org.objenesis:objenesis')
 }
 
 tasks.named('compileTestGroovy', GroovyCompile) {

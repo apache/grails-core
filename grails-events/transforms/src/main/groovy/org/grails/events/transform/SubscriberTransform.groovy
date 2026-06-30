@@ -54,7 +54,6 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.callThisX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.classX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.constX
-import static org.grails.datastore.mapping.reflect.AstUtils.ZERO_PARAMETERS
 
 /**
  * An AST transformation that adds the {@link AnnotatedSubscriber}
@@ -145,7 +144,7 @@ class SubscriberTransform extends AbstractTraitApplyingGormASTTransformation {
                 def listOfMethodType = GenericsUtils.makeClassSafeWithGenerics(List, ClassHelper.make(Method))
                 listExpression = new ListExpression()
                 ExpressionStatement body = new ExpressionStatement(listExpression)
-                declaringClass.addMethod('getSubscribedMethods', Modifier.PUBLIC, listOfMethodType, ZERO_PARAMETERS, null, body)
+                declaringClass.addMethod('getSubscribedMethods', Modifier.PUBLIC, listOfMethodType, Parameter.EMPTY_ARRAY, ClassNode.EMPTY_ARRAY, body)
             }
             else if (getSubscribersMethod.getAnnotations(ClassHelper.make(Traits.TraitBridge))) {
                 def currentCode = getSubscribersMethod.code

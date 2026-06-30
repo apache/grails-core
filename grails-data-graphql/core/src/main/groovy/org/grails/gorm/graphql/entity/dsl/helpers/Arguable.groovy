@@ -40,7 +40,9 @@ trait Arguable<T> extends ExecutesClosures {
     List<CustomArgument> arguments = []
 
     private void handleArgumentClosure(CustomArgument argument, @DelegatesTo(strategy = Closure.DELEGATE_ONLY)Closure closure) {
-        withDelegate(closure, (Object)argument)
+        // GROOVY-12106: STC could not resolve this inherited ExecutesClosures static from a sub-trait
+        // body; fixed in Groovy 5.0.7, so the plain inherited-static call compiles again.
+        withDelegate(closure, (Object) argument)
         argument.validate()
         arguments.add(argument)
     }

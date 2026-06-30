@@ -165,8 +165,8 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
                 '$$_hibernate_getInterceptor',
                 Modifier.PUBLIC,
                 persistentAttributeInterceptorClassNode,
-                AstUtils.ZERO_PARAMETERS,
-                null,
+                Parameter.EMPTY_ARRAY,
+                ClassNode.EMPTY_ARRAY,
                 returnS(varX(interceptorField))
         )
         classNode.addMethod(getInterceptorMethod)
@@ -180,7 +180,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
                 Modifier.PUBLIC,
                 ClassHelper.VOID_TYPE,
                 params(p1),
-                null,
+                ClassNode.EMPTY_ARRAY,
                 assignS(varX(interceptorField), varX(p1))
         )
         classNode.addMethod(setInterceptorMethod)
@@ -192,8 +192,8 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
                 '$$_hibernate_getEntityInstance',
                 Modifier.PUBLIC,
                 ClassHelper.OBJECT_TYPE,
-                AstUtils.ZERO_PARAMETERS,
-                null,
+                Parameter.EMPTY_ARRAY,
+                ClassNode.EMPTY_ARRAY,
                 returnS(varX('this'))
         )
         classNode.addMethod(getEntityInstanceMethod)
@@ -205,8 +205,8 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
                 '$$_hibernate_getEntityEntry',
                 Modifier.PUBLIC,
                 entityEntryClassNode,
-                AstUtils.ZERO_PARAMETERS,
-                null,
+                Parameter.EMPTY_ARRAY,
+                ClassNode.EMPTY_ARRAY,
                 returnS(varX(entityEntryHolderField))
         )
         classNode.addMethod(getEntityEntryMethod)
@@ -220,7 +220,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
                 Modifier.PUBLIC,
                 ClassHelper.VOID_TYPE,
                 params(entityEntryParam),
-                null,
+                ClassNode.EMPTY_ARRAY,
                 assignS(varX(entityEntryHolderField), varX(entityEntryParam))
         )
         classNode.addMethod(setEntityEntryMethod)
@@ -232,8 +232,8 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
                 '$$_hibernate_getPreviousManagedEntity',
                 Modifier.PUBLIC,
                 managedEntityClassNode,
-                AstUtils.ZERO_PARAMETERS,
-                null,
+                Parameter.EMPTY_ARRAY,
+                ClassNode.EMPTY_ARRAY,
                 returnS(varX(previousManagedEntityField))
         )
         classNode.addMethod(getPreviousManagedEntityMethod)
@@ -245,8 +245,8 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
                 '$$_hibernate_getNextManagedEntity',
                 Modifier.PUBLIC,
                 managedEntityClassNode,
-                AstUtils.ZERO_PARAMETERS,
-                null,
+                Parameter.EMPTY_ARRAY,
+                ClassNode.EMPTY_ARRAY,
                 returnS(varX(nextManagedEntityField))
         )
         classNode.addMethod(getNextManagedEntityMethod)
@@ -260,7 +260,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
                 Modifier.PUBLIC,
                 ClassHelper.VOID_TYPE,
                 params(previousParam),
-                null,
+                ClassNode.EMPTY_ARRAY,
                 assignS(varX(previousManagedEntityField), varX(previousParam))
         )
         classNode.addMethod(setPreviousManagedEntityMethod)
@@ -274,7 +274,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
                 Modifier.PUBLIC,
                 ClassHelper.VOID_TYPE,
                 params(nextParam),
-                null,
+                ClassNode.EMPTY_ARRAY,
                 assignS(varX(nextManagedEntityField), varX(nextParam))
         )
         classNode.addMethod(setNextManagedEntityMethod)

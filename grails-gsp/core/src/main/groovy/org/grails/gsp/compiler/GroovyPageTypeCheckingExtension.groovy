@@ -22,11 +22,14 @@ package org.grails.gsp.compiler
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.CodeVisitorSupport
+import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.ListExpression
 import org.codehaus.groovy.ast.expr.PropertyExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.transform.stc.GroovyTypeCheckingExtensionSupport
+import org.codehaus.groovy.transform.stc.StaticTypesMarker
 
 /**
  * CompileStatic type checking extension for GSPs
@@ -44,6 +47,7 @@ class GroovyPageTypeCheckingExtension extends GroovyTypeCheckingExtensionSupport
             newScope {
                 allowedTagLibs = [] as Set
                 dynamicProperties = [] as Set
+                undeclaredDynamicVariables = [] as Set
             }
             AnnotationNode configAnnotation = classNode.getAnnotations(configAnnotationClassNode)?.find { it }
             if (configAnnotation) {
@@ -69,10 +73,74 @@ class GroovyPageTypeCheckingExtension extends GroovyTypeCheckingExtensionSupport
         }
 
         methodNotFound { receiver, name, argList, argTypes, call ->
-            if (isThisTheReceiver(call) || (call.objectExpression != null && currentScope.dynamicProperties.contains(call.objectExpression))) {
+            if (isThisTheReceiver(call)) {
+                return makeDynamic(call)
+            }
+            def objectExpression = call.objectExpression
+            if (objectExpression == null) {
+                return null
+            }
+            if (currentScope.dynamicProperties.contains(objectExpression)) {
+                return makeDynamic(call)
+            }
+            // GROOVY-12041: Groovy 5 resolves receivers inherited through getProperty(String) as dynamic
+            // before unresolvedVariable/unresolvedProperty can record them. Use the marker Groovy places on
+            // those expressions, but still require the receiver name to be an allowed taglib namespace.
+            if (isAllowedDynamicTaglibNamespace(objectExpression)) {
+                return makeDynamic(call)
+            }
+            if (objectExpression instanceof VariableExpression && isUndeclaredDynamicVariable(objectExpression)) {
+                reportUndeclaredDynamicVariable(objectExpression)
                 return makeDynamic(call)
             }
         }
+
+        afterVisitMethod { MethodNode methodNode ->
+            reportUndeclaredDynamicVariables(methodNode)
+        }
+    }
+
+    private void reportUndeclaredDynamicVariables(MethodNode methodNode) {
+        methodNode.code?.visit(new CodeVisitorSupport() {
+            @Override
+            void visitVariableExpression(VariableExpression expression) {
+                if (isUndeclaredDynamicVariable(expression)) {
+                    reportUndeclaredDynamicVariable(expression)
+                }
+                super.visitVariableExpression(expression)
+            }
+        })
+    }
+
+    private boolean isUndeclaredDynamicVariable(VariableExpression expression) {
+        if (expression.thisExpression || expression.superExpression) {
+            return false
+        }
+        if (currentScope.allowedTagLibs.contains(expression.name)) {
+            return false
+        }
+        expression.getNodeMetaData(StaticTypesMarker.DYNAMIC_RESOLUTION) != null
+    }
+
+    private void reportUndeclaredDynamicVariable(VariableExpression expression) {
+        if (currentScope.undeclaredDynamicVariables.add(expression.name)) {
+            typeCheckingVisitor.addStaticTypeError("The variable [${expression.name}] is undeclared.", expression)
+        }
+    }
+
+    private boolean isAllowedDynamicTaglibNamespace(Expression objectExpression) {
+        if (objectExpression.getNodeMetaData(StaticTypesMarker.DYNAMIC_RESOLUTION) == null) {
+            return false
+        }
+
+        String namespaceName = null
+        if (objectExpression instanceof VariableExpression) {
+            namespaceName = ((VariableExpression) objectExpression).name
+        } else if (objectExpression instanceof PropertyExpression && isThisTheReceiver(objectExpression)) {
+            namespaceName = ((PropertyExpression) objectExpression).propertyAsString
+        }
+
+        namespaceName != null && currentScope.allowedTagLibs.contains(namespaceName)
     }
 
     def isThisTheReceiver(expr) {

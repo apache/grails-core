@@ -25,11 +25,12 @@ dependencies {
     // TODO: Remove jline:jline (JLine 2) when upgrading to Groovy 5 (groovy-groovysh 5.x uses JLine 3)
     add('documentation', 'jline:jline')
     add('documentation', 'com.github.javaparser:javaparser-core')
-    add('documentation', "org.apache.groovy:groovy:${bomDependencyVersions['groovy.version']}")
-    add('documentation', "org.apache.groovy:groovy-groovydoc:${bomDependencyVersions['groovy.version']}")
-    add('documentation', "org.apache.groovy:groovy-ant:${bomDependencyVersions['groovy.version']}")
-    add('documentation', "org.apache.groovy:groovy-docgenerator:${bomDependencyVersions['groovy.version']}")
-    add('documentation', "org.apache.groovy:groovy-templates:${bomDependencyVersions['groovy.version']}")
+    // Use Gradle's embedded Groovy (gradle-groovy.version), not the project's main Groovy version.
+    add('documentation', "org.apache.groovy:groovy:${gradleBomDependencyVersions['gradle-groovy.version']}")
+    add('documentation', "org.apache.groovy:groovy-groovydoc:${gradleBomDependencyVersions['gradle-groovy.version']}")
+    add('documentation', "org.apache.groovy:groovy-ant:${gradleBomDependencyVersions['gradle-groovy.version']}")
+    add('documentation', "org.apache.groovy:groovy-docgenerator:${gradleBomDependencyVersions['gradle-groovy.version']}")
+    add('documentation', "org.apache.groovy:groovy-templates:${gradleBomDependencyVersions['gradle-groovy.version']}")
 }
 
 ext {

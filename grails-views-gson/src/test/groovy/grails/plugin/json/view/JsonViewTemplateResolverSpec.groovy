@@ -78,6 +78,8 @@ class JsonViewTemplateResolverSpec extends Specification {
         request.getHeader(HttpHeaders.ACCEPT_VERSION) >> "1.1"
         request.getHeader(HttpHeaders.ACCEPT) >> "text/html"
         request.getLocale() >> Locale.ENGLISH
+        // resolveView(viewName, request, response) and buildQualifiers use the request/response passed
+        // directly, so there is no need to stub GrailsWebRequest's final getRequest()/getResponse().
         webRequest.getCurrentRequest() >> request
         def templateResolver = Mock(TemplateResolver)
         viewResolver.templateResolver = templateResolver

@@ -119,11 +119,24 @@ class ControllerTagLibTypeCheckingExtension extends GroovyTypeCheckingExtensionS
             if (!currentScope?.isController) return null
             if (isAlreadyResolved(call)) return null
             if (isThisReceiver(call)) return makeDynamic(call)
-            if (call instanceof MethodCallExpression && call.objectExpression in currentScope.dynamicNamespaceProperties) return makeDynamic(call)
+            if (call instanceof MethodCallExpression) {
+                Expression objectExpression = ((MethodCallExpression) call).objectExpression
+                if (objectExpression in currentScope.dynamicNamespaceProperties) return makeDynamic(call)
+                // GROOVY-12041: on Groovy 5, getProperty(String) receivers are pre-resolved as dynamic
+                // and unresolvedVariable / unresolvedProperty no longer record namespace dispatchers.
+                if (isDynamicNamespaceReceiver(objectExpression)) return makeDynamic(call)
+            }
             null
         }
 
         null
+    }
+
+    private boolean isDynamicNamespaceReceiver(Expression objectExpression) {
+        if (objectExpression.getNodeMetaData(StaticTypesMarker.DYNAMIC_RESOLUTION) == null) return false
+        if (objectExpression instanceof VariableExpression) return !((VariableExpression) objectExpression).isThisExpression()
+        if (objectExpression instanceof PropertyExpression) return isThisReceiver(objectExpression)
+        false
     }
 
     private boolean isThisReceiver(Expression expr) {

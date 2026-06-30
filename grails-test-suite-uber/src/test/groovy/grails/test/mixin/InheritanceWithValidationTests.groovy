@@ -53,7 +53,7 @@ class AbstractCustomPropertyValue implements Validateable {
     boolean valid = false
 
     static constraints = {
-        valid (validator: validator)
+        valid (validator: AbstractCustomPropertyValue.validator)
     }
 
     static transients = ['valid']

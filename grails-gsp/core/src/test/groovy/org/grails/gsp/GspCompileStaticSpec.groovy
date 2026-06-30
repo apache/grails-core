@@ -26,6 +26,7 @@ import spock.lang.Specification
 
 
 class GspCompileStaticSpec extends Specification {
+
     GroovyPagesTemplateEngine gpte
 
     def setup() {
@@ -252,4 +253,3 @@ class SampleTagLib {
         "Hello ${attrs.code}"
     }
 }
-

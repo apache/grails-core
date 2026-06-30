@@ -302,7 +302,7 @@ class UrlMappingTagLib implements TagLibrary {
         Map linkParams = [:]
         if (params.id) linkParams.put('id', params.id)
         def paramsAttr = attrs.remove('params')
-        if (paramsAttr instanceof Map) linkParams.putAll(paramsAttr)
+        if (paramsAttr instanceof Map) linkParams.putAll(paramsAttr as Map)
         linkParams.sort = property
 
         // propagate "max" and "offset" standard params

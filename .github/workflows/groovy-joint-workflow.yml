@@ -47,23 +47,40 @@ jobs:
         with:
           path: ~/.m2/repository
           key: cache-local-maven-${{ github.sha }}
-      - name: "📥 Checkout Grails Core to fetch Gradle Plugin versions it uses"
+      - name: "📥 Checkout Grails Core files needed for the Groovy joint-build"
+        # Sparse-checkout fetches only the two paths this job actually needs:
+        #   - dependencies.gradle: parsed below to derive the matching Apache
+        #     Groovy branch (GROOVY_<major>_0_X) for this Grails branch.
+        #   - .github/scripts/groovy-joint-build.init.gradle: passed to
+        #     ./gradlew --init-script when publishing Groovy to local Maven so
+        #     the joint build reuses our Develocity / build-cache settings.
+        # Both paths must be listed here; otherwise the init-script step fails
+        # with "The specified initialization script ... does not exist."
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           sparse-checkout-cone-mode: false
-          sparse-checkout: settings.gradle
-      - name: "📝 Store the Gradle Plugin versions used in this project"
-        id: gradle-plugin-versions
+          sparse-checkout: |
+            dependencies.gradle
+            .github/scripts/groovy-joint-build.init.gradle
+      - name: "📝 Derive matching Apache Groovy branch from dependencies.gradle"
+        id: groovy-branch
         run: |
-          DEVELOCITY_PLUGIN_VERSION=$(grep -m 1 'id\s*\(\"com.gradle.develocity\"\|'"'com.gradle.develocity'"'\)\s*version' settings.gradle | sed -E "s/.*version[[:space:]]*['\"]?([0-9]+\.[0-9]+(\.[0-9]+)?)['\"]?.*/\1/" | tr -d [:space:])
-          COMMON_CUSTOM_USER_DATA_PLUGIN_VERSION=$(grep -m 1 'id\s*\(\"com.gradle.common-custom-user-data-gradle-plugin\"\|'"'com.gradle.common-custom-user-data-gradle-plugin'"'\)\s*version' settings.gradle | sed -E "s/.*version[[:space:]]*['\"]?([0-9]+\.[0-9]+(\.[0-9]+)?)['\"]?.*/\1/" | tr -d [:space:])
-          echo "Project uses Develocity Plugin version: $DEVELOCITY_PLUGIN_VERSION"
-          echo "Project uses Common Custom User Data Plugin version: $COMMON_CUSTOM_USER_DATA_PLUGIN_VERSION"
-          echo "develocity_plugin_version=$DEVELOCITY_PLUGIN_VERSION" >> $GITHUB_OUTPUT
-          echo "common_custom_user_data_plugin_version=$COMMON_CUSTOM_USER_DATA_PLUGIN_VERSION" >> $GITHUB_OUTPUT
-          rm settings.gradle
-      - name: "📥 Checkout Groovy 4_0_X (Grails 7 and later)"
-        run: git clone --depth 1 https://github.com/apache/groovy.git -b GROOVY_4_0_X --single-branch
+          # Extract the major version of `groovy.version` declared in this branch's
+          # dependencies.gradle (e.g. '5.0.5' -> '5', '4.0.31' -> '4') and use it to
+          # pick the matching Apache Groovy development branch (GROOVY_<major>_0_X).
+          # This keeps `7.0.x` PRs validating against Groovy 4 and `8.0.x` PRs
+          # validating against Groovy 5 without hard-coding the branch here.
+          GROOVY_MAJOR=$(grep -m 1 "'groovy\.version'" dependencies.gradle | sed -E "s/.*'([0-9]+)\.[0-9]+\.[0-9]+.*/\1/" | tr -d '[:space:]')
+          if [ -z "$GROOVY_MAJOR" ]; then
+            echo "::error::Could not determine Apache Groovy major version from dependencies.gradle"
+            exit 1
+          fi
+          GROOVY_BRANCH="GROOVY_${GROOVY_MAJOR}_0_X"
+          echo "Validating against Apache Groovy branch: $GROOVY_BRANCH"
+          echo "value=$GROOVY_BRANCH" >> $GITHUB_OUTPUT
+          rm dependencies.gradle
+      - name: "📥 Checkout Apache Groovy (${{ steps.groovy-branch.outputs.value }})"
+        run: git clone --depth 1 https://github.com/apache/groovy.git -b ${{ steps.groovy-branch.outputs.value }} --single-branch
       - name: "🐘 Setup Gradle"
         uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
         with:
@@ -78,54 +95,11 @@ jobs:
           GROOVY_VERSION=$(cat gradle.properties | grep groovyVersion | cut -d\= -f2 |  tr -d '[:space:]')
           echo "Groovy version $GROOVY_VERSION stored"
           echo "value=$GROOVY_VERSION" >> $GITHUB_OUTPUT
-      - name: "🐘 Configure Gradle Plugins (Step 1/3)"
-        id: develocity-conf-1
-        run: |
-          echo "VALUE<<EOF" >> $GITHUB_OUTPUT
-          echo "plugins { " >> $GITHUB_OUTPUT
-          echo "    id 'com.gradle.develocity' version '${{ steps.gradle-plugin-versions.outputs.develocity_plugin_version }}'" >> $GITHUB_OUTPUT 
-          echo "    id 'com.gradle.common-custom-user-data-gradle-plugin' version '${{ steps.gradle-plugin-versions.outputs.common_custom_user_data_plugin_version }}'" >> $GITHUB_OUTPUT 
-          echo "}" >> $GITHUB_OUTPUT 
-          echo "" >> $GITHUB_OUTPUT 
-          echo "EOF" >> $GITHUB_OUTPUT
-      - name: "🐘 Configure Gradle Plugins (Step 2/3)"
-        id: develocity-conf-2
-        run: |
-          echo "VALUE<<EOF" >> $GITHUB_OUTPUT
-          echo "def isAuthenticated = System.getenv('DEVELOCITY_ACCESS_KEY ') != null" >> $GITHUB_OUTPUT
-          echo "develocity {" >> $GITHUB_OUTPUT
-          echo "    server = 'https://develocity.apache.org'" >> $GITHUB_OUTPUT
-          echo "    buildScan {" >> $GITHUB_OUTPUT
-          echo "        tag('groovy')" >> $GITHUB_OUTPUT
-          echo "        tag('grails-core')" >> $GITHUB_OUTPUT
-          echo "        publishing.onlyIf { isAuthenticated }" >> $GITHUB_OUTPUT
-          echo "        uploadInBackground = false" >> $GITHUB_OUTPUT
-          echo "    }" >> $GITHUB_OUTPUT
-          echo "}" >> $GITHUB_OUTPUT
-          echo "buildCache {" >> $GITHUB_OUTPUT
-          echo "    local { enabled = false }" >> $GITHUB_OUTPUT
-          echo "    remote(develocity.buildCache) {" >> $GITHUB_OUTPUT
-          echo "        push = isAuthenticated" >> $GITHUB_OUTPUT
-          echo "        enabled = true" >> $GITHUB_OUTPUT
-          echo "    }" >> $GITHUB_OUTPUT
-          echo "}" >> $GITHUB_OUTPUT
-          echo "" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-      - name: "🐘 Configure Gradle Plugins (step 3/3)"
-        run: |
-          cd groovy
-          # Delete existing plugins from settings.gradle file
-          sed -i '32,37d' settings.gradle
-          # Add Develocity setup related configuration after line no 31 in settings.gradle
-          echo "${{ steps.develocity-conf-1.outputs.value }}" | sed -i -e "31r /dev/stdin" settings.gradle
-          # Delete existing buildCache configuration from gradle/build-scans.gradle file
-          sed -i '23,46d' gradle/build-scans.gradle
-          # Add Develocity setup related configuration after line no 22 in gradle/build-scans.gradle
-          echo "${{ steps.develocity-conf-2.outputs.value }}" | sed -i -e "22r /dev/stdin" gradle/build-scans.gradle
       - name: "🔨 Publish Groovy to local maven repository (no docs)"
         run: |
           cd groovy
-          ./gradlew pTML -x groovydoc -x javadoc -x javadocAll -x groovydocAll -x asciidoc -x docGDK
+          ./gradlew pTML -x groovydoc -x javadoc -x javadocAll -x groovydocAll -x asciidoc -x docGDK \
+            --init-script $GITHUB_WORKSPACE/.github/scripts/groovy-joint-build.init.gradle
   build_grails:
     needs: [build_groovy]
     runs-on: ubuntu-latest

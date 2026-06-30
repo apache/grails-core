@@ -137,4 +137,3 @@ class ConverterObservationSpec extends Specification {
         new ConvertersConfigurationInitializer(applicationContext: applicationContext).initialize()
     }
 }
-

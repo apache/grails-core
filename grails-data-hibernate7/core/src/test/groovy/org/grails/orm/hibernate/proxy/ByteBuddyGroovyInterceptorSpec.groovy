@@ -20,7 +20,6 @@ package org.grails.orm.hibernate.proxy
 
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.annotation.Entity
-import org.apache.grails.data.testing.tck.domains.Location
 import org.hibernate.Hibernate
 import org.hibernate.proxy.HibernateProxy
 

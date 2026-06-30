@@ -166,7 +166,7 @@ class DefaultDelegateAsyncTransactionalMethodTransformer implements DelegateAsyn
                     )
                 )
             )
-            method = new MethodNode(METHOD_NAME_SET_TRANSACTION_MANAGER, Modifier.PUBLIC, ClassHelper.VOID_TYPE, parameters, [] as ClassNode[], methodBody)
+            method = new MethodNode(METHOD_NAME_SET_TRANSACTION_MANAGER, Modifier.PUBLIC, ClassHelper.VOID_TYPE, parameters, ClassNode.EMPTY_ARRAY, methodBody)
             classNode.addMethod(method)
 
         }

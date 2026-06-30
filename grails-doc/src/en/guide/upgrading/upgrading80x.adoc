@@ -1243,18 +1243,60 @@ grails.gorm.default.constraints = {
 }
 ----
 
-==== 28. MIME Types Are Now Framework Defaults
+==== 28. Apache Groovy 5 Behavior Changes
+
+Grails 8 upgrades from Apache Groovy 4 to Apache Groovy 5.
+Most applications need no changes, but a few stricter behaviors can affect application code.
+
+===== 28.1 Assigning a static field from a static closure requires the class name
+
+Under Groovy 5 with static compilation (`@CompileStatic` / `@GrailsCompileStatic`), assigning to a static field from inside a static closure - such as the `constraints`, `mapping`, or `namedQueries` blocks of a statically compiled class - no longer resolves an unqualified field name to the enclosing class's static field.
+Qualify the assignment with the class name:
+
+[source,groovy]
+----
+@GrailsCompileStatic
+class Book implements Validateable {
+    static boolean constraintsClosureCalled = false
+
+    static constraints = {
+        // Groovy 4: an unqualified assignment resolved to Book.constraintsClosureCalled
+        // Groovy 5: the field must be qualified with the class name
+        Book.constraintsClosureCalled = true
+    }
+}
+----
+
+Reading a static field is unaffected; only assignment from within the static closure needs the class-name qualifier.
+
+===== 28.2 Probing a `ConfigObject` for a missing key
+
+In Groovy 5, indexing a `groovy.util.ConfigObject` with the subscript operator for a key that does not exist creates and inserts an empty nested `ConfigObject` for that key, rather than reading back as a falsy value.
+Code that walks a configuration source with `[]` and expects a missing key to be `null` should test for the key explicitly before reading it:
+
+[source,groovy]
+----
+// Under Groovy 5 this inserts an empty entry for a missing key
+def value = configObject[key]
+
+// Probe without creating an entry
+def value = configObject.containsKey(key) ? configObject.get(key) : null
+----
+
+Grails applies this guard internally when resolving Spring profile activation keys; you only need it in application code that navigates a raw `ConfigObject` by subscript.
+
+==== 29. MIME Types Are Now Framework Defaults
 
 Grails 8 ships the full set of supported MIME types as built-in framework defaults.
 Previously every newly generated application declared a `grails.mime.types` block in `grails-app/conf/application.yml`; the Grails Forge and the application profiles no longer generate that block, because the framework now supplies the same defaults out of the box.
 
-The built-in defaults cover `all`, `atom`, `css`, `csv`, `form`, `html`, `js`, `json`, `multipartForm`, `pdf`, `rss`, `text`, `hal` and `xml` — the same set new applications historically declared.
+The built-in defaults cover `all`, `atom`, `css`, `csv`, `form`, `html`, `js`, `json`, `multipartForm`, `pdf`, `rss`, `text`, `hal` and `xml`, the same set new applications historically declared.
 
 **No action is required.**
-A declared `grails.mime.types` still *replaces* the defaults, exactly as in Grails 7 — your existing block remains authoritative and you get precisely the types you declared (including a deliberately narrowed set). New applications simply no longer need the block, because the framework supplies these defaults when none is configured.
+A declared `grails.mime.types` still *replaces* the defaults, exactly as in Grails 7. Your existing block remains authoritative and you get precisely the types you declared (including a deliberately narrowed set). New applications simply no longer need the block, because the framework supplies these defaults when none is configured.
 
 **Optional: merge instead of replace.**
-If you would rather add to the defaults than re-declare them, set `grails.mime.mergeDefaults` to `true`. Your declared entries are then merged over the built-in defaults — an entry replaces the default for its extension, and any extension you do not declare keeps its default — so you can register a single custom type without restating the full list:
+If you would rather add to the defaults than re-declare them, set `grails.mime.mergeDefaults` to `true`. Your declared entries are then merged over the built-in defaults. An entry replaces the default for its extension, and any extension you do not declare keeps its default, so you can register a single custom type without restating the full list:
 
 [source,yaml]
 .application.yml
@@ -1266,7 +1308,7 @@ grails:
             custom: application/vnd.example+json
 ----
 
-==== 29. Accept Header Honored for All Clients
+==== 30. Accept Header Honored for All Clients
 
 Grails 8 honors the HTTP `Accept` header for content negotiation for **every** client by default, including browsers.
 
@@ -1283,7 +1325,7 @@ In Grails 8 such a request correctly receives JSON.
 Browser page loads still resolve to HTML because modern browsers rank `text/html` highest, and `withFormat { html { } json { } }` continues to serve HTML to browsers and JSON to clients that ask for it.
 
 **`respond` endpoints without an HTML view now error for browser requests.**
-Because browsers now negotiate `text/html`, an action that uses `respond(...)` but has no corresponding HTML view (GSP) can no longer return JSON to a browser by accident — it negotiates `html` and attempts to render the missing view, which results in an error.
+Because browsers now negotiate `text/html`, an action that uses `respond(...)` but has no corresponding HTML view (GSP) can no longer return JSON to a browser by accident. It negotiates `html` and attempts to render the missing view, which results in an error.
 Previously the browser's `Accept` header was ignored, so such an endpoint happened to return JSON.
 If you have browser-facing `respond` endpoints, add an HTML view for the action (or `render` an appropriate response directly).
 API clients that send a specific `Accept` such as `application/json` are unaffected.

@@ -23,8 +23,6 @@ import grails.compiler.ast.ClassInjector
 
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import org.grails.compiler.injection.GrailsAwareClassLoader
-import org.grails.compiler.web.ControllerActionTransformer
-
 import spock.lang.Specification
 
 class ControllerActionTransformerCompilationErrorsSpec extends Specification {

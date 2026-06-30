@@ -206,7 +206,7 @@ class IntegrationTestAstTransformation implements ASTTransformation, TransformWi
         def args = new ArgumentListExpression(new VariableExpression('this'), new ConstantExpression(AutowireCapableBeanFactory.AUTOWIRE_BY_NAME), new ConstantExpression(Boolean.FALSE))
         def autoMethodCall = new MethodCallExpression(getBeanFactoryMethodCall, 'autowireBeanProperties', args)
         body.addStatement(new ExpressionStatement(autoMethodCall))
-        classNode.addMethod('setApplicationContext', Modifier.PUBLIC, ClassHelper.VOID_TYPE, [p] as Parameter[], null, body)
+        classNode.addMethod('setApplicationContext', Modifier.PUBLIC, ClassHelper.VOID_TYPE, [p] as Parameter[], ClassNode.EMPTY_ARRAY, body)
     }
 
     protected void enhanceGebSpecWithPort(ClassNode classNode) {
@@ -238,7 +238,7 @@ class IntegrationTestAstTransformation implements ASTTransformation, TransformWi
             args.addExpression(new ConstantExpression('geb.build.baseUrl'))
             args.addExpression(baseUrlVariableExpression)
             methodBody.addStatement(new ExpressionStatement(new MethodCallExpression(systemClassExpression, 'setProperty', args)))
-            def method = new MethodNode('configureGebBaseUrl', Modifier.PUBLIC, ClassHelper.VOID_TYPE, [contextPathParameter, serverPortParameter] as Parameter[], null, methodBody)
+            def method = new MethodNode('configureGebBaseUrl', Modifier.PUBLIC, ClassHelper.VOID_TYPE, [contextPathParameter, serverPortParameter] as Parameter[], ClassNode.EMPTY_ARRAY, methodBody)
             method.addAnnotation(new AnnotationNode(ClassHelper.make(Autowired)))
             classNode.addMethod(method)
         }
