@@ -61,6 +61,7 @@ dependencies {
 }
 
 apply {
+    from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/spring-security-test-config.gradle')
 }
