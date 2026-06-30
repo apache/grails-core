@@ -20,14 +20,11 @@ package org.grails.forge.feature.logging;
 
 import jakarta.inject.Singleton;
 import org.grails.forge.application.ApplicationType;
-import org.grails.forge.application.OperatingSystem;
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
 import org.grails.forge.feature.DefaultFeature;
 import org.grails.forge.feature.Feature;
-import org.grails.forge.feature.logging.template.logback;
 import org.grails.forge.options.Options;
-import org.grails.forge.template.RockerTemplate;
 
 import java.util.Set;
 
@@ -61,17 +58,11 @@ public class Logback implements LoggingFeature, DefaultFeature {
 
     @Override
     public void apply(GeneratorContext generatorContext) {
-        OperatingSystem operatingSystem = generatorContext.getOperatingSystem();
-        boolean jansi = false;
-
-        if (operatingSystem != OperatingSystem.WINDOWS) {
-            jansi = true;
-        }
-
-        String projectName = generatorContext.getProject().getName();
-        String packageName = generatorContext.getProject().getPackageName();
-
-        generatorContext.addTemplate("loggingConfig", new RockerTemplate("grails-app/conf/logback-spring.xml", logback.template(projectName, packageName, jansi)));
+        // Only add the logging library. Do not generate grails-app/conf/logback-spring.xml:
+        // grails-logging brings spring-boot-starter-logging, so Logback and Spring Boot's
+        // default configuration apply automatically when the app supplies no config. This
+        // matches Spring Boot 4.x's zero-config logging convention. Users add their own
+        // logback-spring.xml only when they need to customize.
         generatorContext.addDependency(Dependency.builder()
                 .groupId("org.apache.grails")
                 .artifactId("grails-logging")
