@@ -43,7 +43,7 @@ dependencies {
     // enable compilation of AbstractS2UiDomainController subclasses.
     compileOnlyApi project(':grails-converters')
 
-    implementation project(':grails-spring-security-core')
+    implementation project(':grails-spring-security')
     implementation project(':grails-controllers')
     implementation project(':grails-converters')
     implementation project(':grails-gsp')

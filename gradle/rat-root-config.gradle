@@ -73,7 +73,7 @@ tasks.named('rat') {
             'grails-gradle/**/build/**', // grails-gradle does not have a build package name so exclude any build directories
             'grails-forge/*/build/**', // grails-forge build directories
             'grails-forge/build/**', // grails-forge build directories
-            'grails-spring-security/core/plugin/src/main/templates/**', // template files that people are expected to use in the end application
+            'grails-spring-security/plugin/src/main/templates/**', // template files that people are expected to use in the end application
             'grails-spring-security/ldap/examples/functional-test-app/grails-app/ldap-servers/d1/data/users.ldif', // test database that does not support comments
             'grails-spring-security/oauth2/plugin/src/main/templates/**', // template files that people are expected to use in the end application
             'grails-spring-security/rest/testapp-profile/commands/**', // template files that people are expected to use in the end application

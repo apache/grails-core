@@ -38,7 +38,7 @@ dependencies {
 
 	implementation platform(project(':grails-bom'))
 
-	api project(':grails-spring-security-core'), {
+	api project(':grails-spring-security'), {
 		// api: GrailsUserDetailsService, SpringSecurityService
 		// impl: GormUserDetailsService, GrailsUser, ReflectionUtils, @Secured(runtime), SecurityContextHolder,
 		//       SpringSecurityUtils

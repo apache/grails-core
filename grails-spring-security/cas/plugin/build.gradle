@@ -42,7 +42,7 @@ dependencies {
 	compileOnly project(':grails-web-boot')
 
 	profile project(':grails-profiles-web-plugin')
-	api project(':grails-spring-security-core')
+	api project(':grails-spring-security')
 
 	api 'org.apereo.cas.client:cas-client-core'
 	api 'org.springframework.security:spring-security-cas', {

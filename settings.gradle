@@ -176,7 +176,7 @@ include(
         // Note: Spring Security documentation is now part of grails-doc (grails-doc/src/en/guide/security).
         'grails-spring-security-acl',
         'grails-spring-security-cas',
-        'grails-spring-security-core',
+        'grails-spring-security',
         'grails-spring-security-ldap',
         'grails-spring-security-oauth2',
         'grails-spring-security-rest',
@@ -396,7 +396,7 @@ project(':grails-profiles-web-plugin').projectDir = file('grails-profiles/web-pl
 // Spring Security
 project(':grails-spring-security-acl').projectDir = new File(settingsDir, 'grails-spring-security/acl/plugin')
 project(':grails-spring-security-cas').projectDir = new File(settingsDir, 'grails-spring-security/cas/plugin')
-project(':grails-spring-security-core').projectDir = new File(settingsDir, 'grails-spring-security/core/plugin')
+project(':grails-spring-security').projectDir = new File(settingsDir, 'grails-spring-security/plugin')
 project(':grails-spring-security-ldap').projectDir = new File(settingsDir, 'grails-spring-security/ldap/plugin')
 project(':grails-spring-security-oauth2').projectDir = new File(settingsDir, 'grails-spring-security/oauth2/plugin')
 project(':grails-spring-security-rest').projectDir = new File(settingsDir, 'grails-spring-security/rest/core')

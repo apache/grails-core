@@ -52,7 +52,7 @@ dependencies {
         // api: UserDetails, UserDetailsService
     }
 
-    implementation project(':grails-spring-security-core'), {
+    implementation project(':grails-spring-security'), {
         // impl: SecurityFilterPosition, SpringSecurityUtils
     }
     implementation 'redis.clients:jedis', {

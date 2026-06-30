@@ -35,10 +35,6 @@ plugins {
 version = projectVersion
 group = 'org.apache.grails'
 
-ext {
-    pomArtifactId = 'grails-spring-security'
-}
-
 dependencies {
 
 	implementation platform(project(':grails-bom'))

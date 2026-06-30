@@ -37,7 +37,7 @@ dependencies {
 
     implementation platform(project(':grails-bom'))
 
-    api project(':grails-spring-security-core'), {
+    api project(':grails-spring-security'), {
         // api: NullAuthenticationEventPublisher, SecurityEventListener
         // impl: BeanTypeResolver, @Secured(runtime), SecurityFilterPosition, SpringSecurityUtils
     }

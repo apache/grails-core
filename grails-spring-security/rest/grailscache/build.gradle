@@ -46,7 +46,7 @@ dependencies {
         // api: UserDetails
     }
 
-    implementation project(':grails-spring-security-core'), {
+    implementation project(':grails-spring-security'), {
         // impl: SecurityFilterPosition, SpringSecurityUtils
     }
     implementation project(':grails-spring-security-rest'), {

@@ -80,7 +80,7 @@ def publishedProjects = [
         'grails-spring',
         'grails-spring-security-acl',
         'grails-spring-security-cas',
-        'grails-spring-security-core',
+        'grails-spring-security',
         'grails-spring-security-ldap',
         'grails-spring-security-oauth2',
         'grails-spring-security-rest',

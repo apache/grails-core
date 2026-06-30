@@ -65,7 +65,7 @@ dependencies {
         }
     }
 
-    api project(':grails-spring-security-core')
+    api project(':grails-spring-security')
     api 'org.springframework.security:spring-security-acl'
 }
 

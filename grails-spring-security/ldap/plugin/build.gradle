@@ -36,7 +36,7 @@ group = 'org.apache.grails'
 dependencies {
 	implementation platform(project(':grails-bom'))
 
-	api project(':grails-spring-security-core')
+	api project(':grails-spring-security')
 	api 'org.springframework.security:spring-security-ldap', {
 		['apacheds-core', 'apacheds-core-entry', 'apacheds-protocol-ldap', 'apacheds-protocol-shared',
 		 'apacheds-server-jndi', 'commons-logging', 'fest-assert', 'jcl-over-slf4j', 'junit',
