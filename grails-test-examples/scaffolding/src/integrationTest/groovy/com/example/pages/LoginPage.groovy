@@ -36,6 +36,8 @@ class LoginPage extends Page {
         this.username = username
         this.password = password
         loginButton.click()
-        waitFor(30) { title != pageTitle }
+        // Wait for a definitive authenticated signal: the login page must be fully replaced
+        // (title changed AND the login form is gone), not merely a transient title change.
+        waitFor(30) { title != pageTitle && $('input', name: 'username').empty }
     }
 }
