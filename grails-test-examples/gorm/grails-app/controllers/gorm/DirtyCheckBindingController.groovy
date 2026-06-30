@@ -20,7 +20,7 @@
 package gorm
 
 /**
- * Controller used by the functional tests for issue 15681 and PR 15699. It binds the incoming request
+ * Controller used by the functional tests for issues 15681 and 15795. It binds the incoming request
  * parameters to a new domain instance and renders the resulting {@code id}, {@code version} and
  * {@code description} so the tests can assert over HTTP which properties were bound.
  */

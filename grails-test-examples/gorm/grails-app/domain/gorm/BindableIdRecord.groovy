@@ -23,7 +23,7 @@ package gorm
  * Concrete GORM domain class (located in {@code grails-app/domain}) that extends an abstract
  * {@code @DirtyCheck} base which declares an explicit {@code id bindable: true} constraint. The subclass
  * declares no constraint of its own, so the bindable constraint must be inherited and {@code id} must be
- * bound by data binding. See PR 15699.
+ * bound by data binding. See issue 15795.
  */
 class BindableIdRecord extends AbstractBindableIdRecord {
 

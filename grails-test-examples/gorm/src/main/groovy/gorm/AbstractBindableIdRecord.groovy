@@ -26,8 +26,8 @@ import grails.gorm.dirty.checking.DirtyCheck
  * {@link DirtyCheck} that explicitly opts {@code id} into data binding via a {@code bindable: true} constraint.
  * A concrete domain subclass which declares no constraint of its own must inherit this constraint, so that
  * {@code id} is bound. This guards against the regression described in
- * <a href="https://github.com/apache/grails-core/pull/15699">PR 15699</a>, where the inherited-whitelist filter
- * stripped explicitly bindable special properties declared up the hierarchy.
+ * <a href="https://github.com/apache/grails-core/issues/15795">issue 15795</a>, where the inherited-whitelist
+ * filter stripped explicitly bindable special properties declared up the hierarchy.
  */
 @DirtyCheck
 abstract class AbstractBindableIdRecord {

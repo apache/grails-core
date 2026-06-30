@@ -117,7 +117,7 @@ class DefaultASTDatabindingHelperDomainClassSpecialPropertiesSpec extends
         obj.version == null
     }
 
-    @Issue('https://github.com/apache/grails-core/pull/15795')
+    @Issue('https://github.com/apache/grails-core/issues/15795')
     void 'Test explicit bindable:true on a special property declared in a @DirtyCheck abstract base is inherited by the domain subclass'() {
         when: 'a domain subclass inherits a bindable:true id constraint from its abstract base and declares no constraint of its own'
         def obj = new DomainInheritingBindableId(id: 11L, version: 4L, name: 'Ada', title: 'Countess')
@@ -133,7 +133,7 @@ class DefaultASTDatabindingHelperDomainClassSpecialPropertiesSpec extends
         obj.version == null
     }
 
-    @Issue('https://github.com/apache/grails-core/pull/15795')
+    @Issue('https://github.com/apache/grails-core/issues/15795')
     void 'Test a bindable:false override in the domain subclass wins over an inherited bindable:true special property constraint'() {
         when: 'a domain subclass overrides the inherited bindable:true id constraint with bindable:false'
         def obj = new DomainOverridingBindableIdToFalse(id: 22L, version: 6L, name: 'Linus', title: 'Engineer')
@@ -144,6 +144,23 @@ class DefaultASTDatabindingHelperDomainClassSpecialPropertiesSpec extends
 
         and: 'the subclass override prevents id from being bound and version stays excluded'
         obj.id == null
+        obj.version == null
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15795')
+    void 'Test an explicit bindable:true special property constraint propagates through an intermediate plain abstract level'() {
+        when: 'a domain class extends a plain abstract class which extends a @DirtyCheck base declaring id bindable:true'
+        def obj = new DomainInheritingBindableIdThroughIntermediate(id: 33L, version: 8L, grandparentName: 'g', parentName: 'p', childName: 'c')
+
+        then: 'the explicitly bindable id is bound even though the constraint is declared two levels up'
+        obj.id == 33L
+
+        and: 'all regular properties throughout the hierarchy are bound'
+        obj.grandparentName == 'g'
+        obj.parentName == 'p'
+        obj.childName == 'c'
+
+        and: 'version, which was not made explicitly bindable, remains excluded'
         obj.version == null
     }
 
@@ -237,6 +254,25 @@ class DomainOverridingBindableIdToFalse extends AbstractDirtyCheckedBaseWithBind
     static constraints = {
         id bindable: false
     }
+}
+
+@DirtyCheck
+abstract class AbstractDirtyCheckedGrandparentWithBindableId {
+    String grandparentName
+
+    static constraints = {
+        id bindable: true
+    }
+}
+
+@CompileStatic
+abstract class AbstractPlainParentOfBindableId extends AbstractDirtyCheckedGrandparentWithBindableId {
+    String parentName
+}
+
+@Entity
+class DomainInheritingBindableIdThroughIntermediate extends AbstractPlainParentOfBindableId {
+    String childName
 }
 
 @DirtyCheck
