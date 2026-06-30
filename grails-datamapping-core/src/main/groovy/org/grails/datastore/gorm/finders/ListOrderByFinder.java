@@ -94,7 +94,11 @@ public class ListOrderByFinder extends AbstractFinder {
                 }
 
                 for (String propertyName : propertyNames) {
-                    String property = NameUtils.decapitalize(propertyName);
+                    // Lower-case only the first character: a GORM property's name is the method-name
+                    // segment with its first letter de-capitalised. JavaBeans-style decapitalize()
+                    // leaves a name whose first two letters are upper-case unchanged (e.g. "ISize"),
+                    // which would not match a Hungarian-notation property such as "iSize".
+                    String property = NameUtils.decapitalizeFirstChar(propertyName);
                     q.order(ascending ? Query.Order.asc(property) : Query.Order.desc(property));
                 }
 

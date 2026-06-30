@@ -150,7 +150,11 @@ class GormEnhancer implements Closeable {
         if ((isMultiTenant || hasExplicitAll) && !hasExplicitNonDefaultDatasource) {
             qualifiers.clear()
             if (datastore == this.datastore) {
-                qualifiers.addAll(connectionSourceNames)
+                // Resolve the datastore's connection sources freshly rather than from the cached
+                // list captured at construction: schema/database tenants added at runtime via
+                // addTenantForSchema re-register entities through this enhancer, and those new
+                // connections must be picked up here or the tenant's datastore is never mapped.
+                qualifiers.addAll(ConnectionSourceNameResolver.resolveConnectionSourceNames(datastore))
             } else {
                 def className = entity.name
                 for (String q in connectionSourceNames) {
