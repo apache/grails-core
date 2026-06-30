@@ -61,7 +61,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     @Generated
     @CompileDynamic
     def propertyMissing(String name) {
-        GormEnhancer.findInstanceApi(getClass()).propertyMissing(this, name)
+        GormRegistry.instance.findInstanceApi(getClass()).propertyMissing(this, name)
     }
 
     /**
@@ -453,7 +453,7 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      */
     @Generated
     static PersistentEntity getGormPersistentEntity() {
-        currentGormStaticApi().persistentEntity
+        currentGormStaticApi().getGormPersistentEntity()
     }
 
     @Generated
@@ -542,6 +542,25 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
     @Generated
     static List<Serializable> saveAll(Iterable<?> objectsToSave) {
         currentGormStaticApi().saveAll(objectsToSave)
+    }
+
+    /**
+     * Deletes all objects
+     * @return The number of objects deleted
+     */
+    @Generated
+    static Number deleteAll() {
+        currentGormStaticApi().deleteAll()
+    }
+
+    /**
+     * Deletes all objects for the given arguments
+     * @param params The arguments
+     * @return The number of objects deleted
+     */
+    @Generated
+    static Number deleteAll(Map params) {
+        currentGormStaticApi().deleteAll(params)
     }
 
     /**
@@ -854,10 +873,20 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      */
     @Generated
     static Object staticPropertyMissing(String property) {
-        try {
-            currentGormStaticApi().propertyMissing(property)
-        } catch (IllegalStateException e) {
+        GormStaticApi<D> api = GormRegistry.instance.resolveStaticApi((Class<D>) this)
+        if (api == null) {
             throw new MissingPropertyException(property, this)
+        }
+        try {
+            def result = api.propertyMissing(property)
+            if (result == null) {
+                throw new MissingPropertyException(property, this)
+            }
+            return result
+        } catch (MissingPropertyException e) {
+            throw e
+        } catch (Throwable e) {
+            throw new MissingPropertyException(property, this, e)
         }
     }
 
@@ -870,8 +899,12 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      */
     @Generated
     static void staticPropertyMissing(String property, value) {
+        GormStaticApi<D> api = GormRegistry.instance.resolveStaticApi((Class<D>) this)
+        if (api == null) {
+            throw new MissingPropertyException(property, this)
+        }
         try {
-            currentGormStaticApi().propertyMissing(property, value)
+            api.propertyMissing(property, value)
         } catch (IllegalStateException e) {
             throw new MissingPropertyException(property, this)
         }
@@ -1449,13 +1482,21 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
         currentGormStaticApi().findAll(query, params, args)
     }
 
-    @Generated
     private GormInstanceApi<D> currentGormInstanceApi() {
-        (GormInstanceApi<D>) GormEnhancer.findInstanceApi(getClass())
+        Class<D> cls = (Class<D>) getClass()
+        GormInstanceApi<D> api = GormRegistry.instance.resolveInstanceApi(cls)
+        if (api == null) {
+            throw new IllegalStateException("No GORM implementation configured for class [${cls.name}]. Ensure GORM has been initialized correctly")
+        }
+        api
     }
 
-    @Generated
     private static GormStaticApi<D> currentGormStaticApi() {
-        (GormStaticApi<D>) GormEnhancer.findStaticApi(this)
+        Class<D> cls = (Class<D>) this
+        GormStaticApi<D> api = GormRegistry.instance.resolveStaticApi(cls)
+        if (api == null) {
+            throw new IllegalStateException("No GORM implementation configured for class [${cls.name}]. Ensure GORM has been initialized correctly")
+        }
+        api
     }
 }

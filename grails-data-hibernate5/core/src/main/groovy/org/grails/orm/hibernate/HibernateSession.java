@@ -19,9 +19,13 @@
 package org.grails.orm.hibernate;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import jakarta.persistence.FlushModeType;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -34,6 +38,7 @@ import org.hibernate.SessionFactory;
 import org.hibernate.proxy.HibernateProxy;
 
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.core.convert.ConversionService;
 
 import org.grails.datastore.gorm.timestamp.DefaultTimestampProvider;
 import org.grails.datastore.mapping.model.PersistentEntity;
@@ -163,21 +168,63 @@ public class HibernateSession extends AbstractHibernateSession {
 
     public List retrieveAll(final Class type, final Iterable keys) {
         final PersistentEntity persistentEntity = getMappingContext().getPersistentEntity(type.getName());
-        return getHibernateTemplate().execute(session -> {
-            final CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
-            CriteriaQuery criteriaQuery = criteriaBuilder.createQuery(type);
-            final Root root = criteriaQuery.from(type);
-            final String id = persistentEntity.getIdentity().getName();
-            criteriaQuery = criteriaQuery.where(
-                criteriaBuilder.in(
-                    root.get(id).in(getIterableAsCollection(keys))
-                )
-            );
-            final org.hibernate.query.Query jpaQuery = session.createQuery(criteriaQuery);
-            getHibernateTemplate().applySettings(jpaQuery);
+        final Class idType = persistentEntity.getIdentity().getType();
+        final ConversionService conversionService = getMappingContext().getConversionService();
 
-            return new HibernateHqlQuery(this, persistentEntity, jpaQuery).list();
+        // Convert each requested id to the entity's identifier type, preserving order and
+        // duplicates. getAll() must return entities in the supplied id order with a null slot
+        // for any id that does not resolve to a row, so order is driven by the request rather
+        // than the database.
+        final List<Serializable> requestedIds = new ArrayList<>();
+        for (Object key : keys) {
+            requestedIds.add(convertToIdentifierType(key, idType, conversionService));
+        }
+
+        return getHibernateTemplate().execute(session -> {
+            // Query only the distinct, non-null ids; a missing id simply yields no row.
+            final Set<Serializable> distinctIds = new LinkedHashSet<>();
+            for (Serializable requestedId : requestedIds) {
+                if (requestedId != null) {
+                    distinctIds.add(requestedId);
+                }
+            }
+
+            final Map<Object, Object> entitiesById = new HashMap<>();
+            if (!distinctIds.isEmpty()) {
+                final CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder();
+                CriteriaQuery criteriaQuery = criteriaBuilder.createQuery(type);
+                final Root root = criteriaQuery.from(type);
+                final String id = persistentEntity.getIdentity().getName();
+                // Path.in(Collection) already yields a complete `id IN (...)` predicate; wrapping it
+                // in another criteriaBuilder.in(...) emitted a second empty `IN ()`
+                // (e.g. `id in (1,2) in ()`), which Hibernate rejects with a QuerySyntaxException.
+                criteriaQuery = criteriaQuery.where(root.get(id).in(distinctIds));
+                final org.hibernate.query.Query jpaQuery = session.createQuery(criteriaQuery);
+                getHibernateTemplate().applySettings(jpaQuery);
+
+                final List results = new HibernateHqlQuery(this, persistentEntity, jpaQuery).list();
+                for (Object entity : results) {
+                    entitiesById.put(session.getIdentifier(entity), entity);
+                }
+            }
+
+            // Reassemble in the requested order, leaving a null slot for missing ids.
+            final List ordered = new ArrayList<>(requestedIds.size());
+            for (Serializable requestedId : requestedIds) {
+                ordered.add(requestedId == null ? null : entitiesById.get(requestedId));
+            }
+            return ordered;
         });
+    }
+
+    private Serializable convertToIdentifierType(Object key, Class idType, ConversionService conversionService) {
+        if (key == null || idType.isInstance(key)) {
+            return (Serializable) key;
+        }
+        if (conversionService != null && conversionService.canConvert(key.getClass(), idType)) {
+            return (Serializable) conversionService.convert(key, idType);
+        }
+        return (Serializable) key;
     }
 
     public Query createQuery(Class type) {

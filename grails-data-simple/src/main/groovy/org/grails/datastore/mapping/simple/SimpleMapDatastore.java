@@ -358,10 +358,28 @@ public class SimpleMapDatastore extends AbstractDatastore implements Closeable, 
     public Datastore getDatastoreForConnection(String connectionName) {
 
         SimpleMapDatastore childDatastore = datastoresByConnectionSource.get(connectionName);
-        if (childDatastore == null) {
-            throw new ConfigurationException("No datastore found for connection named [" + connectionName + "]");
+        if (childDatastore != null) {
+            return childDatastore;
         }
-        return childDatastore;
+        // A leaf datastore (one created for a single connection/tenant, e.g. a per-tenant child)
+        // has no children of its own, but it IS the datastore for its own connection. Resolving its
+        // own name to itself keeps nested tenant resolution idempotent: an API already bound to the
+        // tenant's datastore can still be wrapped in Tenants.withId(tenantId) without failing. This
+        // mirrors ChildHibernateDatastore, which delegates the same lookup back through its parent.
+        if (connectionName != null &&
+                connectionName.equals(connectionSources.getDefaultConnectionSource().getName())) {
+            return this;
+        }
+        throw new ConfigurationException("No datastore found for connection named [" + connectionName + "]");
+    }
+
+    @Override
+    public boolean routesUnqualifiedToMappedConnection() {
+        // This in-memory mock manages a single session on the parent datastore; its per-connection
+        // children exist only for explicit connection access. An entity mapped to a non-default
+        // datasource must therefore keep its unqualified operations on the parent, not on a child
+        // whose session the unit-test harness never flushes.
+        return false;
     }
 
     @Override

@@ -40,6 +40,7 @@ import grails.gorm.multitenancy.Tenant
 import grails.gorm.multitenancy.TenantService
 import grails.gorm.multitenancy.WithoutTenant
 import org.apache.grails.common.compiler.GroovyTransformOrder
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.transform.AbstractDatastoreMethodDecoratingTransformation
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
 import org.grails.datastore.mapping.reflect.AstUtils
@@ -62,6 +63,9 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
 import static org.codehaus.groovy.ast.tools.GeneralUtils.throwS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.callD
+import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
+import static org.grails.datastore.mapping.reflect.AstUtils.implementsInterface
+import static org.grails.datastore.mapping.reflect.AstUtils.findAnnotation
 import static org.grails.datastore.mapping.reflect.AstUtils.copyParameters
 import static org.grails.datastore.mapping.reflect.AstUtils.varThis
 
@@ -100,8 +104,32 @@ class TenantTransform extends AbstractDatastoreMethodDecoratingTransformation {
         VariableScope variableScope = methodNode.getVariableScope()
         VariableExpression tenantServiceVar = varX('$tenantService', tenantServiceClassNode)
         variableScope.putDeclaredVariable(tenantServiceVar)
+
+        Expression datastoreExpr
+        boolean isService = implementsInterface(classNode, 'org.grails.datastore.mapping.services.Service') ||
+                AstUtils.findAnnotation(classNode, grails.gorm.services.Service) != null
+
+        if (isService) {
+            // For services, resolve entirely via static bridge to avoid MetaClass recursion
+            def registryExpr = new org.codehaus.groovy.ast.expr.MethodCallExpression(classX(GormRegistry), 'getInstance', org.codehaus.groovy.ast.expr.ArgumentListExpression.EMPTY_ARGUMENTS)
+            def apiResolverExpr = new org.codehaus.groovy.ast.expr.MethodCallExpression(registryExpr, 'getApiResolver', org.codehaus.groovy.ast.expr.ArgumentListExpression.EMPTY_ARGUMENTS)
+            // Use the domain class from the @Service annotation. Resolve via findServiceDatastore (NOT
+            // findDatastore): the TenantService must be looked up on the entity's primary (tenant-manager)
+            // datastore where runtime schemas are registered. findDatastore would resolve the current
+            // tenant's child datastore, which cannot see schemas added at runtime via addTenantForSchema.
+            AnnotationNode serviceAnn = findAnnotation(classNode, grails.gorm.services.Service)
+            Expression domainClassExpr = serviceAnn?.getMember('value') ?: classX(org.codehaus.groovy.ast.ClassHelper.OBJECT_TYPE)
+            datastoreExpr = callX(apiResolverExpr, 'findServiceDatastore', args(domainClassExpr))
+        }
+        else {
+            // Static bridge for regular objects too, to keep it stateless and avoid field injection
+            def registryExpr = new org.codehaus.groovy.ast.expr.MethodCallExpression(classX(GormRegistry), 'getInstance', org.codehaus.groovy.ast.expr.ArgumentListExpression.EMPTY_ARGUMENTS)
+            def apiResolverExpr = new org.codehaus.groovy.ast.expr.MethodCallExpression(registryExpr, 'getApiResolver', org.codehaus.groovy.ast.expr.ArgumentListExpression.EMPTY_ARGUMENTS)
+            datastoreExpr = callX(apiResolverExpr, 'findSingleDatastore')
+        }
+
         newMethodBody.addStatement(
-            declS(tenantServiceVar, callD(ServiceRegistry, 'targetDatastore', 'getService', classX(tenantServiceClassNode)))
+            declS(tenantServiceVar, callX(castX(make(ServiceRegistry), datastoreExpr), 'getService', classX(tenantServiceClassNode)))
         )
 
         ClassNode serializableClassNode = make(Serializable)

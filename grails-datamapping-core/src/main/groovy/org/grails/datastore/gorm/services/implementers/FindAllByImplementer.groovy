@@ -113,9 +113,17 @@ class FindAllByImplementer extends AbstractArrayOrIterableResultImplementer impl
         }
         else {
             // validate the properties
-            for (String propertyName in matchSpec.propertyNames) {
+            for (int i = 0; i < matchSpec.propertyNames.size(); i++) {
+                String propertyName = matchSpec.propertyNames[i]
                 if (!hasProperty(domainClassNode, propertyName)) {
                     error(abstractMethodNode.declaringClass.module.context, abstractMethodNode, "Cannot implement finder for non-existent property [$propertyName] of class [$domainClassNode.name]")
+                }
+                else if (i < parameters.length) {
+                    Parameter parameter = parameters[i]
+                    if (!isValidParameter(domainClassNode, parameter, propertyName)) {
+                        org.codehaus.groovy.ast.ClassNode propertyType = org.grails.datastore.gorm.transform.AstPropertyResolveUtils.getPropertyType(domainClassNode, propertyName)
+                        error(abstractMethodNode.declaringClass.module.context, abstractMethodNode, "Cannot implement dynamic finder [$methodName] for domain class [$domainClassNode.name]. The property [$propertyName] has type [$propertyType.name] which is not compatible with the argument type [$parameter.type.name].")
+                    }
                 }
             }
 

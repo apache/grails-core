@@ -16,24 +16,24 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+package org.grails.datastore.gorm
 
-package org.grails.datastore.mapping.core.connections
+import groovy.transform.CompileStatic
 
 import org.grails.datastore.mapping.core.Datastore
 
 /**
- * A {@link Datastore} capable of configuring multiple {@link Datastore} with individually named {@link ConnectionSource} instances
+ * Strategy interface for resolving a Datastore at call-time.
+ * This breaks the circular dependency between API objects and GormEnhancer.
  *
- * @author Graeme Rocher
- * @since 6.1
+ * @author Walter Duque de Estrada
+ * @since 8.0.0
  */
-interface MultipleConnectionSourceCapableDatastore extends Datastore {
+@CompileStatic
+interface DatastoreResolver {
 
     /**
-     * Lookup a {@link Datastore} by {@link ConnectionSource} name
-     *
-     * @param connectionName The connection name
-     * @return The {@link Datastore}
+     * @return The datastore to use for the current call
      */
-    Datastore getDatastoreForConnection(String connectionName)
+    Datastore resolve()
 }

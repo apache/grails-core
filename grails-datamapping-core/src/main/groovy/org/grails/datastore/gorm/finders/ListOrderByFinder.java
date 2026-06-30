@@ -25,18 +25,21 @@ import java.util.regex.Pattern;
 
 import groovy.lang.Closure;
 
+import org.grails.datastore.gorm.DatastoreResolver;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.core.SessionCallback;
+import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.reflect.NameUtils;
 
 /**
- * The "listOrderBy*" static persistent method. Allows ordered listing of instances based on their properties.
+ * The "listOrderBy*" static persistent method. This method allows queries on the properties of the class of the form
+ * listOrderBy[Property]([Map] args)
  *
  * eg.
- * Account.listOrderByHolder();
- * Account.listOrderByHolder(max); // max results
+ * Book.listOrderByTitle(max:10)
+ * Book.listOrderByTitleAndAuthor(max:10)
  *
  * @author Graeme Rocher
  */
@@ -44,56 +47,67 @@ public class ListOrderByFinder extends AbstractFinder {
     private static final Pattern METHOD_PATTERN = Pattern.compile("(listOrderBy)(\\w+)");
     private Pattern pattern = METHOD_PATTERN;
 
-    public ListOrderByFinder(Datastore datastore) {
+    public ListOrderByFinder(final Datastore datastore) {
         super(datastore);
+    }
+
+    public ListOrderByFinder(DatastoreResolver datastoreResolver, MappingContext mappingContext) {
+        super(datastoreResolver);
     }
 
     public void setPattern(String pattern) {
         this.pattern = Pattern.compile(pattern);
     }
 
-    @SuppressWarnings("rawtypes")
+    public boolean isMethodMatch(String methodName) {
+        return pattern.matcher(methodName).find();
+    }
+
+    @Override
     public Object invoke(final Class clazz, final String methodName, final Object[] arguments) {
         return invoke(clazz, methodName, null, arguments);
     }
 
-    @SuppressWarnings("rawtypes")
+    @Override
     public Object invoke(final Class clazz, final String methodName, final Closure additionalCriteria, final Object[] arguments) {
-
-        Matcher match = pattern.matcher(methodName);
-        match.find();
-
-        String nameInSignature = match.group(2);
-        final String propertyName = NameUtils.decapitalizeFirstChar(nameInSignature);
-
-        return execute(new SessionCallback<>() {
+        return execute(new SessionCallback<Object>() {
+            @Override
             public Object doInSession(final Session session) {
-                Query q = session.createQuery(clazz);
-                applyAdditionalCriteria(q, additionalCriteria);
+                final Matcher matcher = pattern.matcher(methodName);
+                matcher.find();
+                String parts = matcher.group(2);
 
+                final Query q = session.createQuery(clazz);
+                String[] propertyNames = parts.split("And");
+
+                // Resolve the sort direction BEFORE applying any order. Applying asc first and then
+                // trying to clear/replace it leaves the eagerly-applied asc order in the underlying
+                // criteria, so an explicit order:'desc' argument was silently ignored.
                 boolean ascending = true;
                 if (arguments.length > 0 && (arguments[0] instanceof Map)) {
-                    final Map args = new LinkedHashMap((Map) arguments[0]);
-                    final Object order = args.remove(DynamicFinder.ARGUMENT_ORDER);
-                    if (order != null && "desc".equalsIgnoreCase(order.toString())) {
+                    Map args = new LinkedHashMap((Map) arguments[0]);
+                    final Object order = args.remove("order");
+                    if (order != null && order.toString().equalsIgnoreCase("desc")) {
                         ascending = false;
                     }
                     DynamicFinder.populateArgumentsForCriteria(clazz, q, args);
                 }
 
-                q.order(ascending ? Query.Order.asc(propertyName) : Query.Order.desc(propertyName));
-                q.projections().distinct();
-                return invokeQuery(q);
+                for (String propertyName : propertyNames) {
+                    // Lower-case only the first character: a GORM property's name is the method-name
+                    // segment with its first letter de-capitalised. JavaBeans-style decapitalize()
+                    // leaves a name whose first two letters are upper-case unchanged (e.g. "ISize"),
+                    // which would not match a Hungarian-notation property such as "iSize".
+                    String property = NameUtils.decapitalizeFirstChar(propertyName);
+                    q.order(ascending ? Query.Order.asc(property) : Query.Order.desc(property));
+                }
+
+                if (additionalCriteria != null) {
+                    applyAdditionalCriteria(q, additionalCriteria);
+                }
+
+                return q.list();
             }
         });
     }
-
-    protected Object invokeQuery(Query q) {
-        return q.list();
-    }
-
-    public boolean isMethodMatch(String methodName) {
-        return pattern.matcher(methodName.subSequence(0, methodName.length())).find();
-    }
-
 }

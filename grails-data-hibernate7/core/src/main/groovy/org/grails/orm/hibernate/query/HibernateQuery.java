@@ -194,6 +194,30 @@ public class HibernateQuery extends Query {
         detachedCriteria.add(disjunction);
     }
 
+    // The factory junctions must operate on detachedCriteria (the source this query builds its JPA
+    // criteria from); core's implementations add to the unused base `criteria` field, which would
+    // silently drop the junction (e.g. countByXOrY losing its disjunction and counting all rows).
+    @Override
+    public Junction disjunction() {
+        Disjunction disjunction = new Disjunction();
+        detachedCriteria.add(disjunction);
+        return disjunction;
+    }
+
+    @Override
+    public Junction conjunction() {
+        Conjunction conjunction = new Conjunction();
+        detachedCriteria.add(conjunction);
+        return conjunction;
+    }
+
+    @Override
+    public Junction negation() {
+        Negation negation = new Negation();
+        detachedCriteria.add(negation);
+        return negation;
+    }
+
     @Override
     public Query eq(String property, Object value) {
         detachedCriteria.eq(calculatePropertyName(property), value);

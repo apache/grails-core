@@ -39,7 +39,6 @@ import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import grails.orm.HibernateCriteriaBuilder
-import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.mapping.query.api.BuildableCriteria as GrailsCriteria
@@ -135,7 +134,11 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
 
     @Override
     def propertyMissing(String name) {
-        return GormEnhancer.findStaticApi(persistentClass, name)
+        // Delegate to the base implementation, which resolves dynamic finder property
+        // access to a finder closure before falling back to connection-source qualifier
+        // lookup. Returning a qualifier API unconditionally would break finder calls that
+        // Groovy resolves via the property channel (e.g. Entity.findByName(arg)).
+        return super.propertyMissing(name)
     }
 
     @Override
