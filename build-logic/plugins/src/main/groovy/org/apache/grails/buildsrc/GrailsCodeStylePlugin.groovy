@@ -25,7 +25,6 @@ import groovy.transform.CompileStatic
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.file.Directory
 import org.gradle.api.plugins.quality.Checkstyle
 import org.gradle.api.plugins.quality.CheckstyleExtension
 import org.gradle.api.plugins.quality.CheckstylePlugin
@@ -58,8 +57,6 @@ class GrailsCodeStylePlugin implements Plugin<Project> {
         // Unfortunately, the codenarc plugin is still using a non-lazy property.
         // Rather than rewrite the plugin to use afterEvaluate,
         // this plugin uses properties to override the configuration location by default
-
-
         gce.checkstyleDirectory.set(project.provider {
             def directory = project.hasProperty(CHECKSTYLE_DIR_PROPERTY) ?
                     project.rootProject.layout.projectDirectory.dir(project.property(CHECKSTYLE_DIR_PROPERTY) as String) :
