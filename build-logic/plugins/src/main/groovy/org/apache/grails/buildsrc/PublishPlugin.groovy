@@ -22,6 +22,9 @@ package org.apache.grails.buildsrc
 import java.util.concurrent.atomic.AtomicBoolean
 
 import groovy.transform.CompileStatic
+
+import org.gradle.api.provider.Provider
+
 import org.apache.grails.gradle.publish.GrailsPublishExtension
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -32,6 +35,8 @@ import org.gradle.api.publish.maven.MavenArtifact
 import org.gradle.api.publish.maven.MavenPomDeveloper
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.publish.maven.tasks.AbstractPublishToMaven
+import org.gradle.api.tasks.SourceSet
+import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.crypto.checksum.Checksum
@@ -372,24 +377,39 @@ class PublishPlugin implements Plugin<Project> {
                 return
             }
 
+            SourceSetContainer sourceSets = project.extensions.getByType(SourceSetContainer)
             project.tasks.withType(Jar).configureEach { Jar jar ->
-                if (jar.archiveClassifier.orNull == 'javadoc') {
-                    // only the source jar & the binary jar have the license files
-                    return
+                def fallbackLicense = findRootGrailsCoreDir(project).file('licenses/LICENSE-Apache-2.0.txt')
+                def fallbackNotice = findRootGrailsCoreDir(project).file('grails-core/src/main/resources/META-INF/NOTICE')
+
+                Provider<Boolean> isNotJavadocJar = jar.archiveClassifier.map { it != 'javadoc' }.orElse(true)
+
+                SourceSet sourceSet = sourceSets.find {
+                    it.jarTaskName == jar.name || it.sourcesJarTaskName == jar.name
+                } ?: sourceSets.named('main').get()
+
+                Set<File> resourceDirs = sourceSet ? sourceSet.resources.srcDirs : ([] as Set<File>)
+
+                Provider<Boolean> needsLicense = project.providers.provider {
+                    isNotJavadocJar.get() &&
+                            resourceDirs.every { File dir ->
+                                !new File(dir, 'META-INF/LICENSE').isFile()
+                            }
                 }
 
-                def licenseInProject = project.layout.projectDirectory.file('src/main/resources/META-INF/LICENSE')
-                def needsLicense = project.providers.provider { !licenseInProject.asFile.exists() }
-                def fallbackLicense = findRootGrailsCoreDir(project).file('licenses/LICENSE-Apache-2.0.txt')
                 jar.from(fallbackLicense) { CopySpec spec ->
                     spec.into('META-INF')
                     spec.rename { 'LICENSE' }
                     spec.include { needsLicense.get() }
                 }
 
-                def noticeInProject = project.layout.projectDirectory.file('src/main/resources/META-INF/NOTICE')
-                def needsNotice = project.providers.provider { !noticeInProject.asFile.exists() }
-                def fallbackNotice = findRootGrailsCoreDir(project).file('grails-core/src/main/resources/META-INF/NOTICE')
+                Provider<Boolean> needsNotice = project.providers.provider {
+                    isNotJavadocJar.get() &&
+                            resourceDirs.every { File dir ->
+                                !new File(dir, 'META-INF/NOTICE').isFile()
+                            }
+                }
+
                 jar.from(fallbackNotice) { CopySpec spec ->
                     spec.into('META-INF')
                     spec.include { needsNotice.get() }
@@ -398,14 +418,16 @@ class PublishPlugin implements Plugin<Project> {
                 jar.doFirst {
                     if (needsLicense.get()) {
                         jar.logger.info(
-                                'Project specific LICENSE file not found in {}, adding fallback license to {}.',
+                                'No META-INF/LICENSE in the [{}] source set of [{}], adding fallback license to [{}].',
+                                sourceSet?.name,
                                 project.name,
                                 jar.archiveFileName.orNull
                         )
                     }
                     if (needsNotice.get()) {
                         jar.logger.info(
-                                'Project specific NOTICE file not found in [{}], adding default NOTICE to [{}].',
+                                'No META-INF/NOTICE in the [{}] source set of [{}], adding default NOTICE to [{}].',
+                                sourceSet?.name,
                                 project.name,
                                 jar.archiveFileName.orNull
                         )
