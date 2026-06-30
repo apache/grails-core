@@ -84,18 +84,6 @@ subprojects {
             cacheChangingModulesFor(cacheHours, 'hours')
         }
     }
-
-    tasks.withType(Test).configureEach {
-        systemProperty 'logging.level.org.testcontainers', 'WARN'
-        systemProperty 'logging.level.com.github.dockerjava', 'WARN'
-        systemProperty 'logging.level.tc', 'WARN'
-        systemProperty 'logging.level.asset.pipeline', 'WARN'
-        systemProperty 'logging.level.org.springframework', 'WARN'
-        systemProperty 'logging.level.org.hibernate', 'WARN'
-        systemProperty 'logging.level.com.zaxxer.hikari', 'WARN'
-        systemProperty 'logging.level.grails.config.external', 'WARN'
-        systemProperty 'logging.level.org.apache.grails', 'WARN'
-    }
 }
 
 interface ExecSupport {

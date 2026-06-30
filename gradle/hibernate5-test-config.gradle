@@ -28,7 +28,6 @@ tasks.withType(Test).configureEach {
     outputs.cacheIf { !doNotCacheTests }
     outputs.upToDateWhen { !doNotCacheTests }
 
-
     onlyIf {
         ![
                 'onlyFunctionalTests',
