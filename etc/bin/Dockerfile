@@ -20,7 +20,7 @@
 FROM bellsoft/liberica-openjdk-debian:21.0.7
 
 USER root
-RUN apt-get update && apt-get install -y curl unzip coreutils libdigest-sha-perl gpg vim sudo psmisc locales groovy rsync nano
+RUN apt-get update && apt-get install -y ca-certificates curl unzip coreutils libdigest-sha-perl gpg vim sudo psmisc locales groovy rsync nano
 
 # Secondary Liberica JDK for the Grails-Micronaut "island" (grails-micronaut,
 # grails-micronaut-bom). Micronaut 5 platform GA targets JVM 25 bytecode, so
