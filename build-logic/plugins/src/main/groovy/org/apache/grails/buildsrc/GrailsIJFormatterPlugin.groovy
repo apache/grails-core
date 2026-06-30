@@ -54,7 +54,6 @@ class GrailsIJFormatterPlugin implements Plugin<Project> {
 
     private static void registerFormattingTasks(Project project) {
         project.tasks.register('formatCode') { task ->
-            task.group = 'verification'
             task.description = 'Formats Java and Groovy source files using the IntelliJ command line formatter'
 
             ExecOperationsSupport execSupport = project.objects.newInstance(ExecOperationsSupport)
