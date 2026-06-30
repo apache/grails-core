@@ -32,6 +32,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplicat
 import org.springframework.boot.servlet.autoconfigure.HttpEncodingAutoConfiguration;
 import org.springframework.boot.servlet.filter.OrderedCharacterEncodingFilter;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.boot.webmvc.autoconfigure.DispatcherServletAutoConfiguration;
 import org.springframework.boot.webmvc.autoconfigure.DispatcherServletRegistrationBean;
 import org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration;
 import org.springframework.context.ApplicationContext;
@@ -51,7 +52,7 @@ import org.grails.web.servlet.mvc.GrailsDispatcherServlet;
 import org.grails.web.servlet.mvc.GrailsWebRequestFilter;
 
 @AutoConfiguration(
-        before = {HttpEncodingAutoConfiguration.class, WebMvcAutoConfiguration.class},
+        before = {DispatcherServletAutoConfiguration.class, HttpEncodingAutoConfiguration.class, WebMvcAutoConfiguration.class},
         after = {GrailsDomainClassAutoConfiguration.class}
 )
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
