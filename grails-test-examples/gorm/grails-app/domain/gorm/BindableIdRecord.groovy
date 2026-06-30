@@ -20,21 +20,14 @@
 package gorm
 
 /**
- * Controller used by the functional tests for issue 15681 and PR 15699. It binds the incoming request
- * parameters to a new domain instance and renders the resulting {@code id}, {@code version} and
- * {@code description} so the tests can assert over HTTP which properties were bound.
+ * Concrete GORM domain class (located in {@code grails-app/domain}) that extends an abstract
+ * {@code @DirtyCheck} base which declares an explicit {@code id bindable: true} constraint. The subclass
+ * declares no constraint of its own, so the bindable constraint must be inherited and {@code id} must be
+ * bound by data binding. See PR 15699.
  */
-class DirtyCheckBindingController {
+class BindableIdRecord extends AbstractBindableIdRecord {
 
-    def bind() {
-        def record = new DirtyCheckedRecord()
-        bindData(record, params)
-        render "id=${record.id}|version=${record.version}|description=${record.description}"
-    }
-
-    def bindInheritedBindableId() {
-        def record = new BindableIdRecord()
-        bindData(record, params)
-        render "id=${record.id}|version=${record.version}|description=${record.description}"
+    static constraints = {
+        description nullable: true
     }
 }

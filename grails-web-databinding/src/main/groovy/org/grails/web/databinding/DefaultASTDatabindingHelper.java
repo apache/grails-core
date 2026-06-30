@@ -54,6 +54,8 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
 
     private static Map<ClassNode, Set<String>> CLASS_NODE_TO_WHITE_LIST_PROPERTY_NAMES = new HashMap<>();
 
+    private static Map<ClassNode, Set<String>> CLASS_NODE_TO_EXPLICITLY_BINDABLE_SPECIAL_PROPERTY_NAMES = new HashMap<>();
+
     @SuppressWarnings("serial")
     private static final List<ClassNode> SIMPLE_TYPES = new ArrayList<>() {
         {
@@ -141,17 +143,35 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
         return propertyNames;
     }
 
+    private Set<String> getExplicitlyBindableSpecialPropertyNamesForParentClass(final SourceUnit sourceUnit, final ClassNode parentClassNode) {
+        if (!CLASS_NODE_TO_EXPLICITLY_BINDABLE_SPECIAL_PROPERTY_NAMES.containsKey(parentClassNode)) {
+            getPropertyNamesToIncludeInWhiteList(sourceUnit, parentClassNode);
+        }
+        final Set<String> explicitlyBindable = CLASS_NODE_TO_EXPLICITLY_BINDABLE_SPECIAL_PROPERTY_NAMES.get(parentClassNode);
+        return explicitlyBindable != null ? explicitlyBindable : new HashSet<>();
+    }
+
     private Set<String> getPropertyNamesToIncludeInWhiteList(final SourceUnit sourceUnit, final ClassNode classNode) {
         final Set<String> propertyNamesToIncludeInWhiteList = new HashSet<>();
         final Set<String> unbindablePropertyNames = new HashSet<>();
         final Set<String> bindablePropertyNames = new HashSet<>();
+
+        // Special properties (id/version/dateCreated/lastUpdated) made bindable via an explicit constraint
+        // somewhere in the class hierarchy. These are tracked separately so the inherited-whitelist filter
+        // below can tell an explicit bindable: true from a special property that merely landed in a non-domain
+        // parent's whitelist by default (for example id/version injected onto a @DirtyCheck base class).
+        final Set<String> explicitlyBindableSpecialPropertyNames = new HashSet<>();
         final boolean isDomainClass = GrailsASTUtils.isDomainClass(classNode, sourceUnit);
         if (!classNode.getSuperClass().equals(new ClassNode(Object.class))) {
             final Set<String> parentClassPropertyNames = getPropertyNamesToIncludeInWhiteListForParentClass(sourceUnit, classNode.getSuperClass());
+            final Set<String> parentExplicitlyBindableSpecialPropertyNames = getExplicitlyBindableSpecialPropertyNamesForParentClass(sourceUnit, classNode.getSuperClass());
+            explicitlyBindableSpecialPropertyNames.addAll(parentExplicitlyBindableSpecialPropertyNames);
             for (final String parentPropertyName : parentClassPropertyNames) {
                 // A domain class never binds its special properties (id/version/dateCreated/lastUpdated) by
                 // default, so don't inherit them from a non-domain parent such as a @DirtyCheck base class.
-                if (isDomainClass && DOMAIN_CLASS_PROPERTIES_TO_EXCLUDE_BY_DEFAULT.contains(parentPropertyName)) {
+                // An explicit bindable: true constraint declared up the hierarchy is honoured, however.
+                if (isDomainClass && DOMAIN_CLASS_PROPERTIES_TO_EXCLUDE_BY_DEFAULT.contains(parentPropertyName) &&
+                        !parentExplicitlyBindableSpecialPropertyNames.contains(parentPropertyName)) {
                     continue;
                 }
                 bindablePropertyNames.add(parentPropertyName);
@@ -183,9 +203,13 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
                                 if (Boolean.TRUE.equals(bindableValue)) {
                                     unbindablePropertyNames.remove(propertyName);
                                     bindablePropertyNames.add(propertyName);
+                                    if (DOMAIN_CLASS_PROPERTIES_TO_EXCLUDE_BY_DEFAULT.contains(propertyName)) {
+                                        explicitlyBindableSpecialPropertyNames.add(propertyName);
+                                    }
                                 } else {
                                     bindablePropertyNames.remove(propertyName);
                                     unbindablePropertyNames.add(propertyName);
+                                    explicitlyBindableSpecialPropertyNames.remove(propertyName);
                                 }
                             } else {
                                 GrailsASTUtils.warning(sourceUnit, valueExpression, "The bindable constraint for property [" +
@@ -233,6 +257,7 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
             }
         }
         CLASS_NODE_TO_WHITE_LIST_PROPERTY_NAMES.put(classNode, propertyNamesToIncludeInWhiteList);
+        CLASS_NODE_TO_EXPLICITLY_BINDABLE_SPECIAL_PROPERTY_NAMES.put(classNode, explicitlyBindableSpecialPropertyNames);
         Map<String, ClassNode> allAssociationMap = GrailsASTUtils.getAllAssociationMap(classNode);
         for (String associationName : allAssociationMap.keySet()) {
             if (!propertyNamesToIncludeInWhiteList.contains(associationName) && !unbindablePropertyNames.contains(associationName)) {
