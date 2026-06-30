@@ -18,7 +18,8 @@
  */
 package org.grails.datastore.mapping.core
 
-import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.Callable
+import java.util.concurrent.Executors
 
 import org.springframework.core.env.MapPropertySource
 import org.springframework.core.env.PropertyResolver
@@ -47,70 +48,45 @@ class DatastoreUtilsSpec extends Specification {
         given:
         Datastore datastore = Mock()
         Session session = Mock()
-        def repeatedCloseMessage = new AtomicReference<String>()
 
         when:
-        runOnVirtualThread {
-            DatastoreUtils.initDeferredClose(datastore)
-            DatastoreUtils.closeSessionOrRegisterDeferredClose(session, datastore)
-            DatastoreUtils.processDeferredClose(datastore)
-            try {
+        def repeatedCloseMessage = Executors.newVirtualThreadPerTaskExecutor().withCloseable { executor ->
+            executor.submit({
+                DatastoreUtils.initDeferredClose(datastore)
+                DatastoreUtils.closeSessionOrRegisterDeferredClose(session, datastore)
                 DatastoreUtils.processDeferredClose(datastore)
-            }
-            catch (IllegalStateException e) {
-                repeatedCloseMessage.set(e.message)
-            }
+                try {
+                    DatastoreUtils.processDeferredClose(datastore)
+                    null
+                }
+                catch (IllegalStateException e) {
+                    e.message
+                }
+            } as Callable<String>).get()
         }
 
         then:
         1 * session.disconnect()
-        repeatedCloseMessage.get().contains('Deferred close not active')
+        repeatedCloseMessage.contains('Deferred close not active')
     }
 
     void "soft thread local map does not expose parent entries to child threads"() {
         given:
         def threadLocal = new SoftThreadLocalMap()
         threadLocal.get().put('tenant', 'parent')
-        def childTenant = new AtomicReference<String>()
 
         when:
-        runOnVirtualThread {
-            childTenant.set(threadLocal.get().get('tenant') as String)
+        def childTenant = Executors.newVirtualThreadPerTaskExecutor().withCloseable { executor ->
+            executor.submit({
+                threadLocal.get().get('tenant') as String
+            } as Callable<String>).get()
         }
 
         then:
-        childTenant.get() == null
+        childTenant == null
         threadLocal.get().get('tenant') == 'parent'
 
         cleanup:
         threadLocal.remove()
-    }
-
-    private static <T> T runOnVirtualThread(Closure<T> callable) {
-        def result = new AtomicReference<T>()
-        def error = new AtomicReference<Throwable>()
-        Runnable runnable = {
-            try {
-                result.set(callable.call())
-            }
-            catch (Throwable t) {
-                error.set(t)
-            }
-        } as Runnable
-
-        try {
-            Thread thread = Thread.class.getMethod('startVirtualThread', Runnable).invoke(null, runnable) as Thread
-            thread.join()
-        }
-        catch (NoSuchMethodException ignored) {
-            Thread thread = new Thread(runnable)
-            thread.start()
-            thread.join()
-        }
-
-        if (error.get() != null) {
-            throw error.get()
-        }
-        result.get()
     }
 }

@@ -18,6 +18,8 @@
  */
 package org.grails.web.converters.configuration
 
+import java.util.concurrent.Callable
+import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicReference
 
 import grails.converters.JSON
@@ -35,21 +37,21 @@ class ConvertersConfigurationHolderSpec extends Specification {
         given:
         def defaultConfiguration = new DefaultConverterConfiguration<JSON>()
         def scopedConfiguration = new DefaultConverterConfiguration<JSON>()
-        def scopedResult = new AtomicReference<ConverterConfiguration<JSON>>()
-        def clearedResult = new AtomicReference<ConverterConfiguration<JSON>>()
         ConvertersConfigurationHolder.setDefaultConfiguration(JSON, defaultConfiguration)
 
         when:
-        runOnVirtualThread {
-            ConvertersConfigurationHolder.setThreadLocalConverterConfiguration(JSON, scopedConfiguration)
-            scopedResult.set(ConvertersConfigurationHolder.getConverterConfiguration(JSON))
-            ConvertersConfigurationHolder.setThreadLocalConverterConfiguration(JSON, null)
-            clearedResult.set(ConvertersConfigurationHolder.getConverterConfiguration(JSON))
+        def scopedConfigurations = Executors.newVirtualThreadPerTaskExecutor().withCloseable { executor ->
+            executor.submit({
+                ConvertersConfigurationHolder.setThreadLocalConverterConfiguration(JSON, scopedConfiguration)
+                def threadLocalConfiguration = ConvertersConfigurationHolder.getConverterConfiguration(JSON)
+                ConvertersConfigurationHolder.setThreadLocalConverterConfiguration(JSON, null)
+                [threadLocalConfiguration, ConvertersConfigurationHolder.getConverterConfiguration(JSON)]
+            } as Callable<List<ConverterConfiguration<JSON>>>).get()
         }
 
         then:
-        scopedResult.get().is(scopedConfiguration)
-        clearedResult.get().is(defaultConfiguration)
+        scopedConfigurations[0].is(scopedConfiguration)
+        scopedConfigurations[1].is(defaultConfiguration)
         ConvertersConfigurationHolder.getConverterConfiguration(JSON).is(defaultConfiguration)
     }
 
@@ -120,31 +122,4 @@ class ConvertersConfigurationHolderSpec extends Specification {
         ConvertersConfigurationHolder.getThreadLocalConverterConfiguration(JSON) == null
     }
 
-    private static <T> T runOnVirtualThread(Closure<T> callable) {
-        def result = new AtomicReference<T>()
-        def error = new AtomicReference<Throwable>()
-        Runnable runnable = {
-            try {
-                result.set(callable.call())
-            }
-            catch (Throwable t) {
-                error.set(t)
-            }
-        } as Runnable
-
-        try {
-            Thread thread = Thread.class.getMethod('startVirtualThread', Runnable).invoke(null, runnable) as Thread
-            thread.join()
-        }
-        catch (NoSuchMethodException ignored) {
-            Thread thread = new Thread(runnable)
-            thread.start()
-            thread.join()
-        }
-
-        if (error.get() != null) {
-            throw error.get()
-        }
-        result.get()
-    }
 }
