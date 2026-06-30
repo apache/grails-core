@@ -45,6 +45,9 @@ abstract class AbstractSecuritySpec extends ContainerGebSpec {
 			password = 'password'
 			loginButton.click()
 		}
+		// Wait for the post-login redirect to settle before the test navigates, otherwise the
+		// redirect can land after the test's own `go(...)` and leave the browser on the home page.
+		waitFor { !currentUrl.contains('/login/') }
 	}
 
 	protected void logout() {
