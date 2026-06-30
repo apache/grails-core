@@ -35,6 +35,7 @@ import org.springframework.core.env.ConfigurableEnvironment
 import org.springframework.core.io.ResourceLoader
 
 import grails.compiler.ast.ClassInjector
+import grails.config.Settings
 import grails.core.GrailsApplication
 import grails.io.IOUtils
 import grails.plugins.GrailsPlugin
@@ -70,10 +71,6 @@ class GrailsApp extends SpringApplication {
      * runs are unaffected.
      */
     private static final String CLI_PID_FILE_PROPERTY = 'grails.cli.pid.file'
-
-    private static final String ALLOW_BEAN_DEFINITION_OVERRIDING = 'spring.main.allow-bean-definition-overriding'
-
-    private static final String ALLOW_CIRCULAR_REFERENCES = 'spring.main.allow-circular-references'
 
     private static boolean developmentModeActive = false
     private static DirectoryWatcher directoryWatcher
@@ -147,8 +144,8 @@ class GrailsApp extends SpringApplication {
 
     @Override
     protected ConfigurableApplicationContext createApplicationContext() {
-        setAllowBeanDefinitionOverriding(isAllowedByConfig(ALLOW_BEAN_DEFINITION_OVERRIDING))
-        setAllowCircularReferences(isAllowedByConfig(ALLOW_CIRCULAR_REFERENCES))
+        setAllowBeanDefinitionOverriding(isAllowedByConfig(Settings.SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING))
+        setAllowCircularReferences(isAllowedByConfig(Settings.SPRING_MAIN_ALLOW_CIRCULAR_REFERENCES))
         ConfigurableApplicationContext applicationContext = super.createApplicationContext()
 
         if (enableBeanCreationProfiler) {

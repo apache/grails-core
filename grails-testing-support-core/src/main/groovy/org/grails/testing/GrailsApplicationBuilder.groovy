@@ -46,6 +46,7 @@ import org.springframework.util.ClassUtils
 import org.springframework.web.context.ConfigurableWebApplicationContext
 
 import grails.boot.config.GrailsApplicationPostProcessor
+import grails.config.Settings
 import grails.core.GrailsApplication
 import grails.core.GrailsApplicationLifeCycle
 import grails.core.support.proxy.DefaultProxyHandler
@@ -72,10 +73,6 @@ class GrailsApplicationBuilder {
     )
 
     static final Set DEFAULT_INCLUDED_PLUGINS = ['core', 'eventBus'] as Set
-
-    private static final String ALLOW_BEAN_DEFINITION_OVERRIDING = 'spring.main.allow-bean-definition-overriding'
-
-    private static final String ALLOW_CIRCULAR_REFERENCES = 'spring.main.allow-circular-references'
 
     Closure doWithSpring
     Closure doWithConfig
@@ -177,8 +174,8 @@ class GrailsApplicationBuilder {
         // after prepareContext so that application.yml (loaded by ConfigDataApplicationContextInitializer)
         // and other property sources are available, and before refresh so the values take effect.
         def environment = context.environment
-        beanFactory.allowBeanDefinitionOverriding = environment.getProperty(ALLOW_BEAN_DEFINITION_OVERRIDING, Boolean, Boolean.TRUE)
-        beanFactory.allowCircularReferences = environment.getProperty(ALLOW_CIRCULAR_REFERENCES, Boolean, Boolean.TRUE)
+        beanFactory.allowBeanDefinitionOverriding = environment.getProperty(Settings.SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING, Boolean, Boolean.TRUE)
+        beanFactory.allowCircularReferences = environment.getProperty(Settings.SPRING_MAIN_ALLOW_CIRCULAR_REFERENCES, Boolean, Boolean.TRUE)
         context.refresh()
         context.registerShutdownHook()
         return context
