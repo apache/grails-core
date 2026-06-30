@@ -19,6 +19,7 @@
 package grails.plugin.springsecurity.web.authentication.rememberme
 
 import groovy.util.logging.Slf4j
+
 import org.springframework.security.web.authentication.rememberme.PersistentRememberMeToken
 import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository
 
@@ -35,66 +36,66 @@ import grails.plugin.springsecurity.SpringSecurityUtils
 @Slf4j
 class GormPersistentTokenRepository implements PersistentTokenRepository, GrailsApplicationAware {
 
-	/** Dependency injection for grailsApplication. */
-	GrailsApplication grailsApplication
+    /** Dependency injection for grailsApplication. */
+    GrailsApplication grailsApplication
 
-	void createNewToken(PersistentRememberMeToken token) {
-		def clazz = lookupDomainClass()
-		if (!clazz) return
+    void createNewToken(PersistentRememberMeToken token) {
+        def clazz = lookupDomainClass()
+        if (!clazz) return
 
-		// join an existing transaction if one is active
-		clazz.withTransaction { status ->
-			clazz.newInstance(username: token.username, series: token.series,
-					token: token.tokenValue, lastUsed: token.date).save()
-		}
-	}
+        // join an existing transaction if one is active
+        clazz.withTransaction { status ->
+            clazz.newInstance(username: token.username, series: token.series,
+                    token: token.tokenValue, lastUsed: token.date).save()
+        }
+    }
 
-	PersistentRememberMeToken getTokenForSeries(String seriesId) {
-		def persistentToken
-		def clazz = lookupDomainClass()
-		if (clazz) {
-			// join an existing transaction if one is active
-			clazz.withTransaction { status ->
-				persistentToken = clazz.get(seriesId)
-			}
-		}
-		if (!persistentToken) {
-			return null
-		}
+    PersistentRememberMeToken getTokenForSeries(String seriesId) {
+        def persistentToken
+        def clazz = lookupDomainClass()
+        if (clazz) {
+            // join an existing transaction if one is active
+            clazz.withTransaction { status ->
+                persistentToken = clazz.get(seriesId)
+            }
+        }
+        if (!persistentToken) {
+            return null
+        }
 
-		new PersistentRememberMeToken(persistentToken.username, persistentToken.series, persistentToken.token, persistentToken.lastUsed)
-	}
+        new PersistentRememberMeToken(persistentToken.username, persistentToken.series, persistentToken.token, persistentToken.lastUsed)
+    }
 
-	void removeUserTokens(String username) {
-		def clazz = lookupDomainClass()
-		if (!clazz) return
+    void removeUserTokens(String username) {
+        def clazz = lookupDomainClass()
+        if (!clazz) return
 
-		clazz.withTransaction { status ->
-			// can't use 'where' query with variable class, probably confuses the AST, so create the same DetachedCriteria
-			new DetachedCriteria(clazz).eq('username', username).deleteAll()
-		}
-	}
+        clazz.withTransaction { status ->
+            // can't use 'where' query with variable class, probably confuses the AST, so create the same DetachedCriteria
+            new DetachedCriteria(clazz).eq('username', username).deleteAll()
+        }
+    }
 
-	void updateToken(String series, String tokenValue, Date lastUsed) {
-		def clazz = lookupDomainClass()
-		if (!clazz) return
+    void updateToken(String series, String tokenValue, Date lastUsed) {
+        def clazz = lookupDomainClass()
+        if (!clazz) return
 
-		// join an existing transaction if one is active
-		clazz.withTransaction { status ->
-			def persistentLogin = clazz.get(series)
-			persistentLogin?.token = tokenValue
-			persistentLogin?.lastUsed = lastUsed
-		}
-	}
+        // join an existing transaction if one is active
+        clazz.withTransaction { status ->
+            def persistentLogin = clazz.get(series)
+            persistentLogin?.token = tokenValue
+            persistentLogin?.lastUsed = lastUsed
+        }
+    }
 
-	protected Class lookupDomainClass() {
-		def conf = SpringSecurityUtils.securityConfig
-		String domainClassName = conf.rememberMe.persistentToken.domainClassName ?: ''
-		def clazz = SpringSecurityUtils.securityConfig.userLookup.useExternalClasses ?
-			Class.forName(domainClassName) : grailsApplication.getClassForName(domainClassName)
-		if (!clazz) {
-			log.error "Persistent token class not found: '{}'", domainClassName
-		}
-		clazz
-	}
+    protected Class lookupDomainClass() {
+        def conf = SpringSecurityUtils.securityConfig
+        String domainClassName = conf.rememberMe.persistentToken.domainClassName ?: ''
+        def clazz = SpringSecurityUtils.securityConfig.userLookup.useExternalClasses ?
+                Class.forName(domainClassName) : grailsApplication.getClassForName(domainClassName)
+        if (!clazz) {
+            log.error "Persistent token class not found: '{}'", domainClassName
+        }
+        clazz
+    }
 }

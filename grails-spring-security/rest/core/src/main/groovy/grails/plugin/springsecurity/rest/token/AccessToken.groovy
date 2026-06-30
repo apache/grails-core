@@ -18,9 +18,11 @@
  */
 package grails.plugin.springsecurity.rest.token
 
-import com.nimbusds.jwt.JWT
 import groovy.transform.CompileStatic
 import groovy.transform.ToString
+
+import com.nimbusds.jwt.JWT
+
 import org.springframework.security.authentication.AbstractAuthenticationToken
 import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.userdetails.UserDetails
@@ -74,7 +76,7 @@ class AccessToken extends AbstractAuthenticationToken {
 
     void setAuthenticated(boolean isAuthenticated) throws IllegalArgumentException {
         if (isAuthenticated) {
-            throw new IllegalArgumentException("Cannot set this token to trusted - use constructor which takes a GrantedAuthority list instead")
+            throw new IllegalArgumentException('Cannot set this token to trusted - use constructor which takes a GrantedAuthority list instead')
         }
 
         super.setAuthenticated(false)

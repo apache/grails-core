@@ -18,11 +18,12 @@
  */
 package grails.plugin.springsecurity.web.access
 
-import groovy.util.logging.Slf4j
-
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy
+
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 
 import jakarta.servlet.FilterChain
 import jakarta.servlet.ServletRequest
@@ -38,7 +39,6 @@ import org.springframework.security.web.FilterInvocation
 import org.springframework.security.web.access.DefaultWebInvocationPrivilegeEvaluator
 
 import grails.util.GrailsUtil
-import groovy.transform.CompileStatic
 
 /**
  * <code>createFilterInvocation()</code> is private in the base class so this is required to create
@@ -51,118 +51,122 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class GrailsWebInvocationPrivilegeEvaluator extends DefaultWebInvocationPrivilegeEvaluator {
 
-	protected static final FilterChain DUMMY_CHAIN = new FilterChain() {
-		void doFilter(ServletRequest req, ServletResponse res) {
-			throw new UnsupportedOperationException('GrailsWebInvocationPrivilegeEvaluator does not support filter chains')
-		}
-	}
+    protected static final FilterChain DUMMY_CHAIN = new FilterChain() {
 
-	protected static final HttpServletResponse DUMMY_RESPONSE = DummyResponseCreator.createInstance()
+        void doFilter(ServletRequest req, ServletResponse res) {
+            throw new UnsupportedOperationException('GrailsWebInvocationPrivilegeEvaluator does not support filter chains')
+        }
+    }
 
-	protected AbstractSecurityInterceptor interceptor
+    protected static final HttpServletResponse DUMMY_RESPONSE = DummyResponseCreator.createInstance()
 
-	/**
-	 * Constructor.
-	 * @param securityInterceptor the security interceptor
-	 */
-	GrailsWebInvocationPrivilegeEvaluator(final AbstractSecurityInterceptor securityInterceptor) {
-		super(securityInterceptor)
-		interceptor = securityInterceptor
-	}
+    protected AbstractSecurityInterceptor interceptor
 
-	@Override
-	boolean isAllowed(String contextPath, String uri, String method, Authentication authentication) {
-		assert uri, 'uri parameter is required'
+    /**
+     * Constructor.
+     * @param securityInterceptor the security interceptor
+     */
+    GrailsWebInvocationPrivilegeEvaluator(final AbstractSecurityInterceptor securityInterceptor) {
+        super(securityInterceptor)
+        interceptor = securityInterceptor
+    }
 
-		if (contextPath == null) {
-			contextPath = '/ctxpath'
-		}
+    @Override
+    boolean isAllowed(String contextPath, String uri, String method, Authentication authentication) {
+        assert uri, 'uri parameter is required'
 
-		FilterInvocation fi = createFilterInvocation(contextPath, uri, method)
-		log.trace "isAllowed: contextPath '{}' uri '{}' method '{}' Authentication {} FilterInvocation {}",
-				contextPath, uri, method, authentication, fi
+        if (contextPath == null) {
+            contextPath = '/ctxpath'
+        }
 
-		Collection<ConfigAttribute> attrs = interceptor.obtainSecurityMetadataSource().getAttributes(fi)
-		if (attrs == null) {
-			log.trace 'No ConfigAttributes found'
-			return !interceptor.rejectPublicInvocations
-		}
+        FilterInvocation fi = createFilterInvocation(contextPath, uri, method)
+        log.trace "isAllowed: contextPath '{}' uri '{}' method '{}' Authentication {} FilterInvocation {}",
+                contextPath, uri, method, authentication, fi
 
-		if (!authentication) {
-			log.trace 'Not authenticated'
-			return false
-		}
+        Collection<ConfigAttribute> attrs = interceptor.obtainSecurityMetadataSource().getAttributes(fi)
+        if (attrs == null) {
+            log.trace 'No ConfigAttributes found'
+            return !interceptor.rejectPublicInvocations
+        }
 
-		try {
-			interceptor.accessDecisionManager.decide authentication, fi, attrs
-			log.trace "{} allowed for {}", fi, authentication
-			true
-		}
-		catch (AccessDeniedException unauthorized) {
-			if (log.debugEnabled) {
-				log.debug "$fi denied for $authentication", GrailsUtil.deepSanitize(unauthorized)
-			}
-			false
-		}
-	}
+        if (!authentication) {
+            log.trace 'Not authenticated'
+            return false
+        }
 
-	protected FilterInvocation createFilterInvocation(String contextPath, String uri, String method) {
-		assert uri, 'URI required'
-		new FilterInvocation(DummyRequestCreator.createInstance(contextPath, method, contextPath + uri), DUMMY_RESPONSE, DUMMY_CHAIN)
-	}
+        try {
+            interceptor.accessDecisionManager.decide authentication, fi, attrs
+            log.trace '{} allowed for {}', fi, authentication
+            true
+        }
+        catch (AccessDeniedException unauthorized) {
+            if (log.debugEnabled) {
+                log.debug "$fi denied for $authentication", GrailsUtil.deepSanitize(unauthorized)
+            }
+            false
+        }
+    }
+
+    protected FilterInvocation createFilterInvocation(String contextPath, String uri, String method) {
+        assert uri, 'URI required'
+        new FilterInvocation(DummyRequestCreator.createInstance(contextPath, method, contextPath + uri), DUMMY_RESPONSE, DUMMY_CHAIN)
+    }
 }
 
 @CompileStatic
 class DummyRequestCreator {
 
-	static HttpServletRequest createInstance(String contextPath, String httpMethod, String requestURI) {
-		Map<String, Object> attributes = [:]
+    static HttpServletRequest createInstance(String contextPath, String httpMethod, String requestURI) {
+        Map<String, Object> attributes = [:]
 
-		(HttpServletRequest)Proxy.newProxyInstance(HttpServletRequest.classLoader,
-				[HttpServletRequest] as Class[], new InvocationHandler() {
-			def invoke(proxy, Method method, Object[] args) {
+        (HttpServletRequest) Proxy.newProxyInstance(HttpServletRequest.classLoader,
+                [HttpServletRequest] as Class[], new InvocationHandler() {
 
-				String methodName = method.name
+            def invoke(proxy, Method method, Object[] args) {
 
-				if ('getContextPath' == methodName) return contextPath
-				if ('getMethod' == methodName) return httpMethod
-				if ('getRequestURI' == methodName) return requestURI
-				if ('setAttribute' == methodName) {
-					attributes[(String)args[0]] = args[1]
-					return null
-				}
-				if ('getAttribute' == methodName) {
-					return attributes[args[0]]
-				}
+                String methodName = method.name
 
-				if ('getProtocol' == methodName || 'getScheme' == methodName) return 'http'
-				if ('getServerName' == methodName) return 'localhost'
-				if ('getServerPort' == methodName) return 8080
+                if ('getContextPath' == methodName) return contextPath
+                if ('getMethod' == methodName) return httpMethod
+                if ('getRequestURI' == methodName) return requestURI
+                if ('setAttribute' == methodName) {
+                    attributes[(String) args[0]] = args[1]
+                    return null
+                }
+                if ('getAttribute' == methodName) {
+                    return attributes[args[0]]
+                }
 
-				if (methodName.startsWith('is')) return false
+                if ('getProtocol' == methodName || 'getScheme' == methodName) return 'http'
+                if ('getServerName' == methodName) return 'localhost'
+                if ('getServerPort' == methodName) return 8080
 
-				if ('getParameterMap' == methodName) return Collections.emptyMap()
+                if (methodName.startsWith('is')) return false
 
-				if ('getAttributeNames' == methodName ||
-				    'getHeaderNames' == methodName ||
-				    'getHeaders' == methodName ||
-				    'getLocales' == methodName ||
-				    'getParameterNames' == methodName) {
-					return Collections.enumeration(Collections.emptySet())
-				}
-			}
-		})
-	}
+                if ('getParameterMap' == methodName) return Collections.emptyMap()
+
+                if ('getAttributeNames' == methodName ||
+                        'getHeaderNames' == methodName ||
+                        'getHeaders' == methodName ||
+                        'getLocales' == methodName ||
+                        'getParameterNames' == methodName) {
+                    return Collections.enumeration(Collections.emptySet())
+                }
+            }
+        })
+    }
 }
 
 @CompileStatic
 class DummyResponseCreator {
-	static HttpServletResponse createInstance() {
-		(HttpServletResponse)Proxy.newProxyInstance(HttpServletResponse.classLoader,
-				[HttpServletResponse] as Class[], new InvocationHandler() {
-			def invoke(proxy, Method method, Object[] args) {
-				throw new UnsupportedOperationException()
-			}
-		})
-	}
+
+    static HttpServletResponse createInstance() {
+        (HttpServletResponse) Proxy.newProxyInstance(HttpServletResponse.classLoader,
+                [HttpServletResponse] as Class[], new InvocationHandler() {
+
+            def invoke(proxy, Method method, Object[] args) {
+                throw new UnsupportedOperationException()
+            }
+        })
+    }
 }

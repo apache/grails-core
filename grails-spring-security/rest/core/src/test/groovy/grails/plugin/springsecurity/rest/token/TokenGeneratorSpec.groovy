@@ -18,13 +18,15 @@
  */
 package grails.plugin.springsecurity.rest.token
 
-import grails.plugin.springsecurity.rest.token.generation.SecureRandomTokenGenerator
-import grails.plugin.springsecurity.rest.token.generation.UUIDTokenGenerator
 import org.apache.commons.lang3.StringUtils
-import org.springframework.security.core.authority.SimpleGrantedAuthority
-import org.springframework.security.core.userdetails.User
 import spock.lang.Specification
 import spock.lang.Unroll
+
+import org.springframework.security.core.authority.SimpleGrantedAuthority
+import org.springframework.security.core.userdetails.User
+
+import grails.plugin.springsecurity.rest.token.generation.SecureRandomTokenGenerator
+import grails.plugin.springsecurity.rest.token.generation.UUIDTokenGenerator
 
 class TokenGeneratorSpec extends Specification {
 

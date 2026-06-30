@@ -18,12 +18,13 @@
  */
 package grails.plugin.springsecurity.web.access.intercept
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+
 import org.springframework.http.HttpMethod
 
 import grails.plugin.springsecurity.InterceptedUrl
 import grails.plugin.springsecurity.ReflectionUtils
-import groovy.transform.CompileStatic
 
 /**
  * @author Burt Beckwith
@@ -32,43 +33,43 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class RequestmapFilterInvocationDefinition extends AbstractFilterInvocationDefinition {
 
-	@Override
-	protected void initialize() {
-		if (initialized) {
-			return
-		}
+    @Override
+    protected void initialize() {
+        if (initialized) {
+            return
+        }
 
-		try {
-			reset()
-			initialized = true
-		}
-		catch (RuntimeException e) {
-			log.warn("Exception initializing; this is ok if it's at startup and due " +
-			         'to GORM not being initialized yet since the first web request will ' +
-			         're-initialize. Error message is: {}', e.message)
-		}
-	}
+        try {
+            reset()
+            initialized = true
+        }
+        catch (RuntimeException e) {
+            log.warn("Exception initializing; this is ok if it's at startup and due " +
+                    'to GORM not being initialized yet since the first web request will ' +
+                    're-initialize. Error message is: {}', e.message)
+        }
+    }
 
-	/**
-	 * Call at startup or when <code>Requestmap</code> instances have been added, removed, or changed.
-	 */
-	@Override
-	synchronized void reset() {
-		resetConfigs()
+    /**
+     * Call at startup or when <code>Requestmap</code> instances have been added, removed, or changed.
+     */
+    @Override
+    synchronized void reset() {
+        resetConfigs()
 
-		loadRequestmaps().each { InterceptedUrl iu -> compileAndStoreMapping(iu) }
+        loadRequestmaps().each { InterceptedUrl iu -> compileAndStoreMapping(iu) }
 
-		log.trace 'configs: {}', configAttributeMap
-	}
+        log.trace 'configs: {}', configAttributeMap
+    }
 
-	protected List<InterceptedUrl> loadRequestmaps() {
-		boolean supportsHttpMethod = ReflectionUtils.requestmapClassSupportsHttpMethod()
+    protected List<InterceptedUrl> loadRequestmaps() {
+        boolean supportsHttpMethod = ReflectionUtils.requestmapClassSupportsHttpMethod()
 
-		ReflectionUtils.loadAllRequestmaps().collect { requestmap ->
-			String urlPattern = ReflectionUtils.getRequestmapUrl(requestmap)
-			String configAttribute = ReflectionUtils.getRequestmapConfigAttribute(requestmap)
-			HttpMethod method = supportsHttpMethod ? ReflectionUtils.getRequestmapHttpMethod(requestmap) : null
-			new InterceptedUrl(urlPattern, split(configAttribute), method)
-		}
-	}
+        ReflectionUtils.loadAllRequestmaps().collect { requestmap ->
+            String urlPattern = ReflectionUtils.getRequestmapUrl(requestmap)
+            String configAttribute = ReflectionUtils.getRequestmapConfigAttribute(requestmap)
+            HttpMethod method = supportsHttpMethod ? ReflectionUtils.getRequestmapHttpMethod(requestmap) : null
+            new InterceptedUrl(urlPattern, split(configAttribute), method)
+        }
+    }
 }

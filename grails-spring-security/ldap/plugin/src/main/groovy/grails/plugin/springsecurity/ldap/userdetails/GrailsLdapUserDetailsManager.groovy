@@ -18,7 +18,6 @@
  */
 package grails.plugin.springsecurity.ldap.userdetails
 
-import grails.plugin.springsecurity.userdetails.GrailsUserDetailsService
 import groovy.transform.CompileStatic
 
 import org.springframework.ldap.core.ContextSource
@@ -26,17 +25,19 @@ import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UsernameNotFoundException
 import org.springframework.security.ldap.userdetails.LdapUserDetailsManager
 
+import grails.plugin.springsecurity.userdetails.GrailsUserDetailsService
+
 /**
  * @author <a href='mailto:burt@burtbeckwith.com'>Burt Beckwith</a>
  */
 @CompileStatic
 class GrailsLdapUserDetailsManager extends LdapUserDetailsManager implements GrailsUserDetailsService {
 
-	GrailsLdapUserDetailsManager(ContextSource contextSource) {
-		super(contextSource)
-	}
+    GrailsLdapUserDetailsManager(ContextSource contextSource) {
+        super(contextSource)
+    }
 
-	UserDetails loadUserByUsername(String username, boolean loadRoles) throws UsernameNotFoundException {
-		super.loadUserByUsername username
-	}
+    UserDetails loadUserByUsername(String username, boolean loadRoles) throws UsernameNotFoundException {
+        super.loadUserByUsername username
+    }
 }

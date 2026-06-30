@@ -24,28 +24,28 @@ import groovy.transform.ToString
 /**
  * @author <a href='mailto:burt@burtbeckwith.com'>Burt Beckwith</a>
  */
-@EqualsAndHashCode(includes=['aclObjectIdentity', 'aceOrder', 'sid', 'mask',
-                             'granting', 'auditSuccess', 'auditFailure'])
-@ToString(excludes='version', includeNames=true)
+@EqualsAndHashCode(includes = ['aclObjectIdentity', 'aceOrder', 'sid', 'mask',
+        'granting', 'auditSuccess', 'auditFailure'])
+@ToString(excludes = 'version', includeNames = true)
 class AclEntry implements Serializable {
 
-	private static final long serialVersionUID = 1
+    private static final long serialVersionUID = 1
 
-	AclObjectIdentity aclObjectIdentity
-	int aceOrder
-	AclSid sid
-	int mask
-	boolean granting
-	boolean auditSuccess
-	boolean auditFailure
+    AclObjectIdentity aclObjectIdentity
+    int aceOrder
+    AclSid sid
+    int mask
+    boolean granting
+    boolean auditSuccess
+    boolean auditFailure
 
-	static mapping = {
-		version false
-		sid column: 'sid'
-		aclObjectIdentity column: 'acl_object_identity'
-	}
+    static mapping = {
+        version false
+        sid column: 'sid'
+        aclObjectIdentity column: 'acl_object_identity'
+    }
 
-	static constraints = {
-		aceOrder unique: 'aclObjectIdentity'
-	}
+    static constraints = {
+        aceOrder unique: 'aclObjectIdentity'
+    }
 }

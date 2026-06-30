@@ -18,13 +18,14 @@
  */
 package grails.plugin.springsecurity
 
-import grails.gorm.transactions.Transactional
-import org.grails.datastore.mapping.reflect.ClassPropertyFetcher
 import org.springframework.core.annotation.AnnotationUtils
 import org.springframework.security.authentication.AuthenticationTrustResolverImpl
 import org.springframework.security.authentication.TestingAuthenticationToken
 import org.springframework.security.core.context.SecurityContextHolder as SCH
 import org.springframework.security.core.userdetails.User
+
+import grails.gorm.transactions.Transactional
+import org.grails.datastore.mapping.reflect.ClassPropertyFetcher
 
 /**
  * Unit tests for SpringSecurityService.
@@ -33,74 +34,74 @@ import org.springframework.security.core.userdetails.User
  */
 class SpringSecurityServiceSpec extends AbstractUnitSpec {
 
-	private SpringSecurityService service = new SpringSecurityService()
+    private SpringSecurityService service = new SpringSecurityService()
 
-	void 'transactional'() {
-		expect:
-		!ClassPropertyFetcher.forClass(SpringSecurityService).getPropertyValue('transactional')
-		SpringSecurityService.methods.any { AnnotationUtils.findAnnotation(it, Transactional) }
-	}
+    void 'transactional'() {
+        expect:
+        !ClassPropertyFetcher.forClass(SpringSecurityService).getPropertyValue('transactional')
+        SpringSecurityService.methods.any { AnnotationUtils.findAnnotation(it, Transactional) }
+    }
 
-	void 'principal authenticated'() {
-		expect:
-		!service.principal
+    void 'principal authenticated'() {
+        expect:
+        !service.principal
 
-		when:
-		authenticate 'role1'
+        when:
+        authenticate 'role1'
 
-		then:
-		service.principal
-	}
+        then:
+        service.principal
+    }
 
-	void 'encodePassword'() {
-		when:
-		service.passwordEncoder = [encode: { String pwd  -> pwd + '_encoded' }]
+    void 'encodePassword'() {
+        when:
+        service.passwordEncoder = [encode: { String pwd -> pwd + '_encoded' }]
 
-		then:
-		'passw0rd_encoded' == service.encodePassword('passw0rd')
-	}
+        then:
+        'passw0rd_encoded' == service.encodePassword('passw0rd')
+    }
 
-	void 'clearCachedRequestmaps'() {
-		when:
-		boolean resetCalled = false
-		service.objectDefinitionSource = [reset: { -> resetCalled = true }]
+    void 'clearCachedRequestmaps'() {
+        when:
+        boolean resetCalled = false
+        service.objectDefinitionSource = [reset: { -> resetCalled = true }]
 
-		service.clearCachedRequestmaps()
+        service.clearCachedRequestmaps()
 
-		then:
-		resetCalled
-	}
+        then:
+        resetCalled
+    }
 
-	void 'getAuthentication'() {
-		expect:
-		!service.authentication?.principal
+    void 'getAuthentication'() {
+        expect:
+        !service.authentication?.principal
 
-		when:
-		authenticate 'role1'
+        when:
+        authenticate 'role1'
 
-		then:
-		service.authentication
-	}
+        then:
+        service.authentication
+    }
 
-	void 'isLoggedIn'() {
-		when:
-		service.authenticationTrustResolver = new AuthenticationTrustResolverImpl()
+    void 'isLoggedIn'() {
+        when:
+        service.authenticationTrustResolver = new AuthenticationTrustResolverImpl()
 
-		then:
-		!service.isLoggedIn()
+        then:
+        !service.isLoggedIn()
 
-		when:
-		authenticate 'role1'
+        when:
+        authenticate 'role1'
 
-		then:
-		service.isLoggedIn()
-	}
+        then:
+        service.isLoggedIn()
+    }
 
-	private void authenticate(roles) {
-		def authorities = SpringSecurityUtils.parseAuthoritiesString(roles)
-		def principal = new User('username', 'password', true, true, true, true, authorities)
-		def authentication = new TestingAuthenticationToken(principal, null, authorities)
-		authentication.authenticated = true
-		SCH.context.authentication = authentication
-	}
+    private void authenticate(roles) {
+        def authorities = SpringSecurityUtils.parseAuthoritiesString(roles)
+        def principal = new User('username', 'password', true, true, true, true, authorities)
+        def authentication = new TestingAuthenticationToken(principal, null, authorities)
+        authentication.authenticated = true
+        SCH.context.authentication = authentication
+    }
 }

@@ -18,7 +18,11 @@
  */
 package grails.plugin.springsecurity.acl.cache
 
+import javax.cache.configuration.Configuration
+import javax.cache.configuration.MutableConfiguration
+
 import groovy.transform.CompileStatic
+
 import org.springframework.beans.factory.FactoryBean
 import org.springframework.beans.factory.InitializingBean
 import org.springframework.cache.jcache.JCacheCache
@@ -28,9 +32,6 @@ import org.springframework.security.acls.domain.SpringCacheBasedAclCache
 import org.springframework.security.acls.model.MutableAcl
 import org.springframework.security.acls.model.PermissionGrantingStrategy
 import org.springframework.util.Assert
-
-import javax.cache.configuration.Configuration
-import javax.cache.configuration.MutableConfiguration
 
 @CompileStatic
 class SpringAclCacheFactoryBean implements FactoryBean<SpringCacheBasedAclCache>, InitializingBean {
@@ -54,10 +55,10 @@ class SpringAclCacheFactoryBean implements FactoryBean<SpringCacheBasedAclCache>
 
     @Override
     void afterPropertiesSet() throws Exception {
-        Assert.notNull(cacheManager, "cacheManager is required")
-        Assert.notNull(cacheName, "cacheName is required")
-        Assert.notNull(permissionGrantingStrategy, "permissionGrantingStrategy is required")
-        Assert.notNull(aclAuthorizationStrategy, "aclAuthorizationStrategy is required")
+        Assert.notNull(cacheManager, 'cacheManager is required')
+        Assert.notNull(cacheName, 'cacheName is required')
+        Assert.notNull(permissionGrantingStrategy, 'permissionGrantingStrategy is required')
+        Assert.notNull(aclAuthorizationStrategy, 'aclAuthorizationStrategy is required')
         if (!cacheConfig) {
             cacheConfig = new MutableConfiguration<Object, MutableAcl>()
                     .setTypes(Object, MutableAcl)

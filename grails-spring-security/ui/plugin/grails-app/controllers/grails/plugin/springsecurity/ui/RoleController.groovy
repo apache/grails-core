@@ -26,106 +26,102 @@ import grails.util.GrailsNameUtils
  */
 class RoleController extends AbstractS2UiDomainController {
 
-	/** Dependency injection for the 'uiRoleStrategy' bean. */
-	RoleStrategy uiRoleStrategy
+    /** Dependency injection for the 'uiRoleStrategy' bean. */
+    RoleStrategy uiRoleStrategy
 
-	def create() {
-		super.create()
-	}
+    def save() {
+        withForm {
+            doSave uiRoleStrategy.saveRole(params)
+        }.invalidToken {
+            doSaveWithInvalidToken(params.authority)
+        }
+    }
 
-	def save() {
-		withForm {
-			doSave uiRoleStrategy.saveRole(params)
-		}.invalidToken {
-			doSaveWithInvalidToken(params.authority)
-		}
-	}
+    def update() {
+        withForm {
+            doUpdate { role ->
+                uiRoleStrategy.updateRole params, role
+            }
+        }.invalidToken {
+            doUpdateWithInvalidToken(params.authority)
+        }
+    }
 
-	def edit() {
-		super.edit()
-	}
+    def delete() {
+        withForm {
+            tryDelete { role ->
+                uiRoleStrategy.deleteRole role
+            }
+        }.invalidToken {
+            doDeleteWithInvalidToken()
+        }
+    }
 
-	def update() {
-		withForm {
-			doUpdate { role ->
-				uiRoleStrategy.updateRole params, role
-			}
-		}.invalidToken {
-			doUpdateWithInvalidToken(params.authority)
-		}
-	}
+    def search() {
 
-	def delete() {
-		withForm {
-			tryDelete { role ->
-				uiRoleStrategy.deleteRole role
-			}
-		}.invalidToken {
-			doDeleteWithInvalidToken()
-		}
-	}
+        if (!isSearch()) {
+            // show the form
+            return
+        }
 
-	def search() {
+        boolean useOffset = params.containsKey('offset')
+        params.sort = 'authority'
+        if (!param('authority')) params.authority = 'ROLE_'
 
-		if (!isSearch()) {
-			// show the form
-			return
-		}
+        def results = doSearch {
+            like 'authority', delegate
+        }
 
-		boolean useOffset = params.containsKey('offset')
-		params.sort = 'authority'
-		if (!param('authority')) params.authority = 'ROLE_'
+        if (results.totalCount == 1 && !useOffset) {
+            forward action: 'edit', params: [name: results[0][authorityNameField]]
+            return
+        }
 
-		def results = doSearch {
-			like 'authority', delegate
-		}
+        renderSearch([results: results, totalCount: results.totalCount], 'authority')
+    }
 
-		if (results.totalCount == 1 && !useOffset) {
-			forward action: 'edit', params: [name: results[0][authorityNameField]]
-			return
-		}
+    protected lookupFromParams() {
+        def role = params.name ? Role.findWhere((authorityNameField): params.name) : null
+        role ?: byId()
+    }
 
-		renderSearch([results: results, totalCount: results.totalCount], 'authority')
-	}
+    protected getTabData() {
+        [
+                [name: 'roleinfo', icon: 'icon_role', message: message(code: 'spring.security.ui.role.info')],
+                [name: 'users', icon: 'icon_users', message: message(code: 'spring.security.ui.role.users')]
+        ]
+    }
 
-	protected lookupFromParams() {
-		def role = params.name ? Role.findWhere((authorityNameField): params.name) : null
-		role ?: byId()
-	}
+    protected Map model(role, String action) {
 
-	protected getTabData() {[
-		[name: 'roleinfo', icon: 'icon_role',  message: message(code: 'spring.security.ui.role.info')],
-		[name: 'users',    icon: 'icon_users', message: message(code: 'spring.security.ui.role.users')]
-	]}
+        def model = [role: role, tabData: tabData]
 
-	protected Map model(role, String action) {
+        if (action == 'edit' || action == 'update') {
+            maxAndOffset()
+            model.users = UserRole."findAllBy$roleClassSimpleName"(role, params)*."$userField"
+            model.userCount = UserRole."countBy$roleClassSimpleName"(role)
+        }
 
-		def model = [role: role, tabData: tabData]
+        model
+    }
 
-		if (action == 'edit' || action == 'update') {
-			maxAndOffset()
-			model.users = UserRole."findAllBy$roleClassSimpleName"(role, params)*."$userField"
-			model.userCount = UserRole."countBy$roleClassSimpleName"(role)
-		}
+    protected Class<?> getClazz() { Role }
 
-		model
-	}
+    protected String getClassLabelCode() { 'role.label' }
 
-	protected Class<?> getClazz() { Role }
-	protected String getClassLabelCode() { 'role.label' }
-	protected int getAutoCompleteMinLength() { 2 }
+    protected int getAutoCompleteMinLength() { 2 }
 
-	protected String roleClassSimpleName
-	protected String userField
+    protected String roleClassSimpleName
+    protected String userField
 
-	void afterPropertiesSet() {
-		super.afterPropertiesSet()
+    void afterPropertiesSet() {
+        super.afterPropertiesSet()
 
-		if (!conf.authority.className) {
-			return
-		}
+        if (!conf.authority.className) {
+            return
+        }
 
-		roleClassSimpleName = Role.simpleName
-		userField = GrailsNameUtils.getPropertyName(User.simpleName)
-	}
+        roleClassSimpleName = Role.simpleName
+        userField = GrailsNameUtils.getPropertyName(User.simpleName)
+    }
 }

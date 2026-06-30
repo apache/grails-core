@@ -18,19 +18,22 @@
  */
 package grails.plugin.springsecurity.rest.authentication
 
-import grails.plugin.springsecurity.rest.RestTokenCreationEvent
-import grails.plugin.springsecurity.rest.token.AccessToken
 import groovy.transform.CompileStatic
+
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.security.authentication.DefaultAuthenticationEventPublisher
+
+import grails.plugin.springsecurity.rest.RestTokenCreationEvent
+import grails.plugin.springsecurity.rest.token.AccessToken
 
 /*
  * Default implementation of the {@link RestAuthenticationEventPublisher}.
  */
+
 @CompileStatic
 class DefaultRestAuthenticationEventPublisher extends DefaultAuthenticationEventPublisher implements RestAuthenticationEventPublisher {
 
-    private ApplicationEventPublisher applicationEventPublisher;
+    private ApplicationEventPublisher applicationEventPublisher
 
     public DefaultRestAuthenticationEventPublisher() {
         this(null)
@@ -41,12 +44,12 @@ class DefaultRestAuthenticationEventPublisher extends DefaultAuthenticationEvent
         this.setApplicationEventPublisher(publisher)
     }
 
-    public void setApplicationEventPublisher(ApplicationEventPublisher publisher) {
+    void setApplicationEventPublisher(ApplicationEventPublisher publisher) {
         super.setApplicationEventPublisher(publisher)
         this.applicationEventPublisher = publisher
     }
 
-    public void publishTokenCreation(AccessToken accessToken) {
+    void publishTokenCreation(AccessToken accessToken) {
         if (applicationEventPublisher != null) {
             applicationEventPublisher.publishEvent(new RestTokenCreationEvent(accessToken))
         }

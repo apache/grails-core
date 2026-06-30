@@ -18,7 +18,22 @@
  */
 package grails.plugin.springsecurity.rest
 
+import java.nio.charset.StandardCharsets
+
+import groovy.util.logging.Slf4j
+
 import com.nimbusds.jwt.JWT
+import org.pac4j.core.client.IndirectClient
+import org.pac4j.core.context.CallContext
+import org.pac4j.core.context.session.SessionStore
+import org.pac4j.core.exception.http.FoundAction
+import org.pac4j.core.exception.http.RedirectionAction
+import org.pac4j.jee.context.JEEContext
+import org.pac4j.jee.context.session.JEESessionStoreFactory
+
+import org.springframework.http.HttpStatus
+import org.springframework.security.core.userdetails.User
+
 import grails.core.GrailsApplication
 import grails.plugin.springsecurity.annotation.Secured
 import grails.plugin.springsecurity.rest.authentication.RestAuthenticationEventPublisher
@@ -27,21 +42,7 @@ import grails.plugin.springsecurity.rest.token.AccessToken
 import grails.plugin.springsecurity.rest.token.generation.jwt.AbstractJwtTokenGenerator
 import grails.plugin.springsecurity.rest.token.rendering.AccessTokenJsonRenderer
 import grails.plugin.springsecurity.rest.token.storage.TokenStorageService
-import groovy.util.logging.Slf4j
-import org.apache.commons.codec.binary.Base64
 import org.grails.plugins.codecs.URLCodec
-import org.pac4j.core.client.IndirectClient
-import org.pac4j.core.context.CallContext
-import org.pac4j.core.context.session.SessionStore
-import org.pac4j.core.exception.http.FoundAction
-import org.pac4j.core.exception.http.RedirectionAction
-import org.pac4j.jee.context.JEEContext
-import org.pac4j.jee.context.session.JEESessionStore
-import org.pac4j.jee.context.session.JEESessionStoreFactory
-import org.springframework.http.HttpStatus
-import org.springframework.security.core.userdetails.User
-
-import java.nio.charset.StandardCharsets
 
 @Slf4j
 @Secured(['permitAll'])
@@ -49,7 +50,7 @@ class RestOauthController {
 
     static allowedMethods = [accessToken: 'POST']
     private static final SessionStore SESSION_STORE = JEESessionStoreFactory.INSTANCE.newSessionStore(null)
-    final String CALLBACK_ATTR = "spring-security-rest-callback"
+    final String CALLBACK_ATTR = 'spring-security-rest-callback'
 
     CallbackErrorHandler callbackErrorHandler
     RestOauthService restOauthService
@@ -66,22 +67,22 @@ class RestOauthController {
      */
     def authenticate(String provider, String callback) {
         IndirectClient client = restOauthService.getClient(provider)
-        
+
         if (callback) {
             try {
-                if (Base64.isBase64(callback.getBytes())){
+                if (Base64.isBase64(callback.getBytes())) {
                     callback = new String(callback.decodeBase64(), StandardCharsets.UTF_8)
                 }
                 log.debug "Trying to store in the HTTP session a user specified callback URL: ${callback}"
                 session[CALLBACK_ATTR] = new URL(callback).toString()
             } catch (MalformedURLException mue) {
-                log.warn "The URL is malformed, is it base64 encoded? Not storing it."
+                log.warn 'The URL is malformed, is it base64 encoded? Not storing it.'
             }
         }
 
         CallContext callContext = new CallContext(new JEEContext(request, response), SESSION_STORE)
         RedirectionAction redirectAction = client.getRedirectionAction(callContext).get()
-        if(redirectAction instanceof FoundAction) {
+        if (redirectAction instanceof FoundAction) {
             log.debug "Redirecting to ${redirectAction.location}"
             redirect url: redirectAction.location
         } else {
@@ -98,10 +99,10 @@ class RestOauthController {
         CallContext context = new CallContext(new JEEContext(request, response), SESSION_STORE)
         def frontendCallbackUrl
         if (session[CALLBACK_ATTR]) {
-            log.debug "Found callback URL in the HTTP session"
+            log.debug 'Found callback URL in the HTTP session'
             frontendCallbackUrl = session[CALLBACK_ATTR]
         } else {
-            log.debug "Found callback URL in the configuration file"
+            log.debug 'Found callback URL in the configuration file'
             frontendCallbackUrl = grailsApplication.config['grails.plugin.springsecurity.rest.oauth.frontendCallbackUrl']
         }
 
@@ -137,34 +138,34 @@ class RestOauthController {
     def accessToken() {
         String grantType = params['grant_type']
         if (!grantType || grantType != 'refresh_token') {
-            render status: HttpStatus.BAD_REQUEST, text: "Invalid grant_type"
+            render status: HttpStatus.BAD_REQUEST, text: 'Invalid grant_type'
             return
         }
 
         String refreshToken = params['refresh_token']
         log.debug "Trying to generate an access token for the refresh token: ${refreshToken}"
-        if(!refreshToken) {
-            log.debug "Refresh token is missing. Replying with bad request"
-            render status: HttpStatus.BAD_REQUEST, text: "Refresh token is required"
+        if (!refreshToken) {
+            log.debug 'Refresh token is missing. Replying with bad request'
+            render status: HttpStatus.BAD_REQUEST, text: 'Refresh token is required'
             return
         }
 
         // only JWT tokens can be refreshed
-        if(!AbstractJwtTokenGenerator.isAssignableFrom(tokenGenerator.getClass())) {
-            log.debug("Token type does not support refresh tokens")
+        if (!AbstractJwtTokenGenerator.isAssignableFrom(tokenGenerator.getClass())) {
+            log.debug('Token type does not support refresh tokens')
             render status: HttpStatus.FORBIDDEN
             return
         }
 
         try {
             JWT jwt = jwtService.parse(refreshToken)
-            if(!jwt || !jwt.JWTClaimsSet.getBooleanClaim(AbstractJwtTokenGenerator.REFRESH_ONLY_CLAIM)) {
+            if (!jwt || !jwt.JWTClaimsSet.getBooleanClaim(AbstractJwtTokenGenerator.REFRESH_ONLY_CLAIM)) {
                 log.debug("Token ${refreshToken} is not a refresh token")
                 render status: HttpStatus.FORBIDDEN
                 return
             }
         }
-        catch(e) {
+        catch (e) {
             log.debug("Invalid refresh token: ${refreshToken}", e)
             render status: HttpStatus.FORBIDDEN
             return
@@ -183,9 +184,9 @@ class RestOauthController {
 
             response.addHeader 'Cache-Control', 'no-store'
             response.addHeader 'Pragma', 'no-cache'
-            render contentType: 'application/json', encoding: 'UTF-8',  text:  accessTokenJsonRenderer.generateJson(accessToken)
+            render contentType: 'application/json', encoding: 'UTF-8', text: accessTokenJsonRenderer.generateJson(accessToken)
         } catch (e) {
-            log.debug("Could not load by refresh token", e)
+            log.debug('Could not load by refresh token', e)
             render status: HttpStatus.FORBIDDEN
         }
     }

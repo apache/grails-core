@@ -18,7 +18,9 @@
  */
 package grails.plugin.springsecurity.userdetails
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+
 import org.springframework.context.MessageSource
 import org.springframework.context.MessageSourceAware
 import org.springframework.context.support.MessageSourceAccessor
@@ -28,8 +30,6 @@ import org.springframework.security.authentication.LockedException
 import org.springframework.security.core.SpringSecurityMessageSource
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UserDetailsChecker
-
-import groovy.transform.CompileStatic
 
 /**
  * Copy of the private class in AbstractUserDetailsAuthenticationProvider
@@ -41,33 +41,33 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class DefaultPreAuthenticationChecks implements UserDetailsChecker, MessageSourceAware {
 
-	protected MessageSourceAccessor messages = SpringSecurityMessageSource.accessor
+    protected MessageSourceAccessor messages = SpringSecurityMessageSource.accessor
 
-	@Override
-	void setMessageSource(MessageSource messageSource) {
-		this.messages = new MessageSourceAccessor(messageSource)
-	}
+    @Override
+    void setMessageSource(MessageSource messageSource) {
+        this.messages = new MessageSourceAccessor(messageSource)
+    }
 
-	void check(UserDetails user) {
-		if (!user.accountNonLocked) {
-			log.debug 'User account is locked'
+    void check(UserDetails user) {
+        if (!user.accountNonLocked) {
+            log.debug 'User account is locked'
 
-			throw new LockedException(messages.getMessage('AbstractUserDetailsAuthenticationProvider.locked',
-				'User account is locked'))
-		}
+            throw new LockedException(messages.getMessage('AbstractUserDetailsAuthenticationProvider.locked',
+                    'User account is locked'))
+        }
 
-		if (!user.enabled) {
-			log.debug('User account is disabled')
+        if (!user.enabled) {
+            log.debug('User account is disabled')
 
-			throw new DisabledException(messages.getMessage('AbstractUserDetailsAuthenticationProvider.disabled',
-				'User is disabled'))
-		}
+            throw new DisabledException(messages.getMessage('AbstractUserDetailsAuthenticationProvider.disabled',
+                    'User is disabled'))
+        }
 
-		if (!user.accountNonExpired) {
-			log.debug('User account is expired')
+        if (!user.accountNonExpired) {
+            log.debug('User account is expired')
 
-			throw new AccountExpiredException(messages.getMessage('AbstractUserDetailsAuthenticationProvider.expired',
-				'User account has expired'))
-		}
-	}
+            throw new AccountExpiredException(messages.getMessage('AbstractUserDetailsAuthenticationProvider.expired',
+                    'User account has expired'))
+        }
+    }
 }

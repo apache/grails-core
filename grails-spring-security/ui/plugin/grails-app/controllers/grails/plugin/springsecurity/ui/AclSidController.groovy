@@ -23,61 +23,56 @@ package grails.plugin.springsecurity.ui
  */
 class AclSidController extends AbstractS2UiDomainController {
 
-	def create() {
-		super.create()
-	}
+    def save() {
+        withForm {
+            doSave uiAclStrategy.saveAclSid(params)
+        }.invalidToken {
+            doSaveWithInvalidToken(params.username)
+        }
+    }
 
-	def save() {
-		withForm {
-			doSave uiAclStrategy.saveAclSid(params)
-		}.invalidToken {
-			doSaveWithInvalidToken(params.username)
-		}
-	}
+    def update() {
+        withForm {
+            doUpdate { aclSid ->
+                uiAclStrategy.updateAclSid params, aclSid
+            }
+        }.invalidToken {
+            doUpdateWithInvalidToken(params.username)
+        }
+    }
 
-	def edit() {
-		super.edit()
-	}
+    def delete() {
+        withForm {
+            tryDelete { aclSid ->
+                uiAclStrategy.deleteAclSid aclSid
+            }
+        }.invalidToken {
+            doDeleteWithInvalidToken()
+        }
+    }
 
-	def update() {
-		withForm {
-			doUpdate { aclSid ->
-				uiAclStrategy.updateAclSid params, aclSid
-			}
-		}.invalidToken {
-			doUpdateWithInvalidToken(params.username)
-		}
-	}
+    def search() {
+        if (!isSearch()) {
+            // show the form
+            return
+        }
 
-	def delete() {
-		withForm {
-			tryDelete { aclSid ->
-				uiAclStrategy.deleteAclSid aclSid
-			}
-		}.invalidToken {
-			doDeleteWithInvalidToken()
-		}
-	}
+        def results = doSearch { ->
+            eqBoolean 'principal', delegate
+            like 'sid', delegate
+        }
 
-	def search() {
-		if (!isSearch()) {
-			// show the form
-			return
-		}
+        renderSearch([results: results, totalCount: results.totalCount],
+                'principal', 'sid')
+    }
 
-		def results = doSearch { ->
-			eqBoolean 'principal', delegate
-			like 'sid', delegate
-		}
+    protected Class<?> getClazz() { AclSid }
 
-		renderSearch([results: results, totalCount: results.totalCount],
-		             'principal', 'sid')
-	}
+    protected String getClassLabelCode() { 'aclSid.label' }
 
-	protected Class<?> getClazz() { AclSid }
-	protected String getClassLabelCode() { 'aclSid.label' }
-	protected String getSimpleClassName() { 'AclSid' }
-	protected Map model(aclSid, String action) {
-		[aclSid: aclSid]
-	}
+    protected String getSimpleClassName() { 'AclSid' }
+
+    protected Map model(aclSid, String action) {
+        [aclSid: aclSid]
+    }
 }

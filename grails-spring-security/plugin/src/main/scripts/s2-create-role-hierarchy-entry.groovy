@@ -25,13 +25,13 @@ import grails.codegen.model.Model
  */
 
 description 'Creates a domain class for a persistent role hierarchy for the Spring Security Core plugin', {
-	usage '''
+    usage '''
 grails s2-create-role-hierarchy-entry [DOMAIN CLASS NAME]
 
 Example: grails s2-create-role-hierarchy-entry com.yourapp.RoleHierarchyEntry
 '''
 
-	argument name: 'Domain class name', description: 'The domain class full name with package'
+    argument name: 'Domain class name', description: 'The domain class full name with package'
 }
 
 String fullClassName = args[0]
@@ -40,11 +40,11 @@ Model model = model(fullClassName)
 addStatus "\nCreating role hierarchy entry class $fullClassName"
 
 render template: template('RoleHierarchyEntry.groovy.template'),
-       destination: file("grails-app/domain/$model.packagePath/${model.simpleName}.groovy"),
-       model: model, overwrite: false
+        destination: file("grails-app/domain/$model.packagePath/${model.simpleName}.groovy"),
+        model: model, overwrite: false
 
 file('grails-app/conf/application.groovy').withWriterAppend { BufferedWriter writer ->
-	writer.newLine()
-	writer.writeLine "grails.plugin.springsecurity.roleHierarchyEntryClassName = '$fullClassName'"
-	writer.newLine()
+    writer.newLine()
+    writer.writeLine "grails.plugin.springsecurity.roleHierarchyEntryClassName = '$fullClassName'"
+    writer.newLine()
 }

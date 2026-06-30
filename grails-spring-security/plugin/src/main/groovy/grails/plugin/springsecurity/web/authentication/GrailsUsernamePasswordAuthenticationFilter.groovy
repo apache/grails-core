@@ -18,15 +18,17 @@
  */
 package grails.plugin.springsecurity.web.authentication
 
-import grails.plugin.springsecurity.SpringSecurityUtils
 import groovy.transform.CompileStatic
-import org.springframework.security.core.Authentication
-import org.springframework.security.core.AuthenticationException
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
 
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import jakarta.servlet.http.HttpSession
+
+import org.springframework.security.core.Authentication
+import org.springframework.security.core.AuthenticationException
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
+
+import grails.plugin.springsecurity.SpringSecurityUtils
 
 /**
  * Extends the default {@link UsernamePasswordAuthenticationFilter} to store the
@@ -38,28 +40,28 @@ import jakarta.servlet.http.HttpSession
 @CompileStatic
 class GrailsUsernamePasswordAuthenticationFilter extends UsernamePasswordAuthenticationFilter {
 
-	/** Whether to store the last attempted username in the session. */
-	Boolean storeLastUsername
+    /** Whether to store the last attempted username in the session. */
+    Boolean storeLastUsername
 
-	@Override
-	Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
+    @Override
+    Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
 
-		if (storeLastUsername) {
-			// Place the last username attempted into HttpSession for views
-			HttpSession session = request.getSession(false)
-			if (!session && allowSessionCreation) {
-				session = request.session
-			}
+        if (storeLastUsername) {
+            // Place the last username attempted into HttpSession for views
+            HttpSession session = request.getSession(false)
+            if (!session && allowSessionCreation) {
+                session = request.session
+            }
 
-			session?.setAttribute SpringSecurityUtils.SPRING_SECURITY_LAST_USERNAME_KEY, (obtainUsername(request) ?: '').trim()
-		}
+            session?.setAttribute SpringSecurityUtils.SPRING_SECURITY_LAST_USERNAME_KEY, (obtainUsername(request) ?: '').trim()
+        }
 
-		super.attemptAuthentication request, response
-	}
+        super.attemptAuthentication request, response
+    }
 
-	@Override
-	void afterPropertiesSet() {
-		super.afterPropertiesSet()
-		assert storeLastUsername != null, 'storeLastUsername must be set'
-	}
+    @Override
+    void afterPropertiesSet() {
+        super.afterPropertiesSet()
+        assert storeLastUsername != null, 'storeLastUsername must be set'
+    }
 }

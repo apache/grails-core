@@ -18,8 +18,8 @@
  */
 package grails.plugin.springsecurity.annotation
 
-import org.grails.web.servlet.mvc.GrailsWebRequest
-import org.grails.web.util.GrailsApplicationAttributes
+import groovy.transform.CompileStatic
+
 import org.springframework.context.ApplicationContext
 import org.springframework.security.access.PermissionEvaluator
 import org.springframework.security.access.hierarchicalroles.RoleHierarchy
@@ -29,7 +29,8 @@ import org.springframework.security.web.FilterInvocation
 import org.springframework.security.web.access.expression.WebSecurityExpressionRoot
 
 import grails.web.servlet.mvc.GrailsParameterMap
-import groovy.transform.CompileStatic
+import org.grails.web.servlet.mvc.GrailsWebRequest
+import org.grails.web.util.GrailsApplicationAttributes
 
 /**
  * Set as the delegate of a closure in @Secured annotations; provides access to the request and application context,
@@ -40,18 +41,18 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class SecuredClosureDelegate extends WebSecurityExpressionRoot {
 
-	ApplicationContext ctx
+    ApplicationContext ctx
 
-	SecuredClosureDelegate(Authentication a, FilterInvocation fi, ApplicationContext ctx) {
-		super(a, fi)
-		this.ctx = ctx
-		setTrustResolver ctx.getBean('authenticationTrustResolver', AuthenticationTrustResolver)
-		setRoleHierarchy ctx.getBean('roleHierarchy', RoleHierarchy)
-		setPermissionEvaluator ctx.getBean('permissionEvaluator', PermissionEvaluator)
-	}
+    SecuredClosureDelegate(Authentication a, FilterInvocation fi, ApplicationContext ctx) {
+        super(a, fi)
+        this.ctx = ctx
+        setTrustResolver ctx.getBean('authenticationTrustResolver', AuthenticationTrustResolver)
+        setRoleHierarchy ctx.getBean('roleHierarchy', RoleHierarchy)
+        setPermissionEvaluator ctx.getBean('permissionEvaluator', PermissionEvaluator)
+    }
 
-	GrailsParameterMap getParams() {
-		GrailsWebRequest gwr = (GrailsWebRequest)request.getAttribute(GrailsApplicationAttributes.WEB_REQUEST)
-		gwr?.params
-	}
+    GrailsParameterMap getParams() {
+        GrailsWebRequest gwr = (GrailsWebRequest) request.getAttribute(GrailsApplicationAttributes.WEB_REQUEST)
+        gwr?.params
+    }
 }

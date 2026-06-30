@@ -18,13 +18,15 @@
  */
 package grails.plugin.springsecurity.acl.access
 
+import java.lang.reflect.Method
+
 import groovy.transform.CompileStatic
+
 import org.aopalliance.intercept.MethodInvocation
+
 import org.springframework.security.access.AccessDecisionVoter
 import org.springframework.security.access.ConfigAttribute
 import org.springframework.security.core.Authentication
-
-import java.lang.reflect.Method
 
 /**
  * Dummy voter that votes yes on Groovy methods like getMetaClass() since they wouldn't be
@@ -35,28 +37,28 @@ import java.lang.reflect.Method
 @CompileStatic
 class GroovyAwareAclVoter implements AccessDecisionVoter<MethodInvocation> {
 
-	protected static final List<String> NON_SECURABLE_METHODS = [
-			'invokeMethod', 'getMetaClass', 'setMetaClass', 'getProperty', 'setProperty',
-			'isTransactional', 'getTransactional', 'setTransactional']
-	static {
-		for (Method m in Object.methods) {
-			NON_SECURABLE_METHODS << m.name
-		}
-	}
+    protected static final List<String> NON_SECURABLE_METHODS = [
+            'invokeMethod', 'getMetaClass', 'setMetaClass', 'getProperty', 'setProperty',
+            'isTransactional', 'getTransactional', 'setTransactional']
+    static {
+        for (Method m in Object.methods) {
+            NON_SECURABLE_METHODS << m.name
+        }
+    }
 
-	boolean supports(ConfigAttribute attribute) {
-		true
-	}
+    boolean supports(ConfigAttribute attribute) {
+        true
+    }
 
-	boolean supports(Class<?> clazz) {
-		clazz.isAssignableFrom MethodInvocation
-	}
+    boolean supports(Class<?> clazz) {
+        clazz.isAssignableFrom MethodInvocation
+    }
 
-	int vote(Authentication authentication, MethodInvocation object, Collection<ConfigAttribute> attributes) {
-		if (NON_SECURABLE_METHODS.contains(object.method.name)) {
-			return ACCESS_GRANTED
-		}
+    int vote(Authentication authentication, MethodInvocation object, Collection<ConfigAttribute> attributes) {
+        if (NON_SECURABLE_METHODS.contains(object.method.name)) {
+            return ACCESS_GRANTED
+        }
 
-		ACCESS_ABSTAIN
-	}
+        ACCESS_ABSTAIN
+    }
 }

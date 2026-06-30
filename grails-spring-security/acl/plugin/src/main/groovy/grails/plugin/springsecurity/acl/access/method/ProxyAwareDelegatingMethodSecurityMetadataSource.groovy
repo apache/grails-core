@@ -18,15 +18,17 @@
  */
 package grails.plugin.springsecurity.acl.access.method
 
-import grails.plugin.springsecurity.acl.util.ProxyUtils
+import java.lang.reflect.Method
+
 import groovy.transform.CompileStatic
+
 import org.springframework.beans.factory.InitializingBean
 import org.springframework.security.access.ConfigAttribute
 import org.springframework.security.access.method.AbstractMethodSecurityMetadataSource
 import org.springframework.security.access.method.MethodSecurityMetadataSource
 import org.springframework.util.Assert
 
-import java.lang.reflect.Method
+import grails.plugin.springsecurity.acl.util.ProxyUtils
 
 /**
  * Replacement for DelegatingMethodSecurityMetadataSource which is final.
@@ -42,106 +44,107 @@ import java.lang.reflect.Method
  */
 @CompileStatic
 class ProxyAwareDelegatingMethodSecurityMetadataSource
-extends AbstractMethodSecurityMetadataSource
-implements InitializingBean {
+        extends AbstractMethodSecurityMetadataSource
+        implements InitializingBean {
 
-	protected static final List<ConfigAttribute> NULL_CONFIG_ATTRIBUTE = Collections.emptyList()
+    protected static final List<ConfigAttribute> NULL_CONFIG_ATTRIBUTE = Collections.emptyList()
 
-	protected List<MethodSecurityMetadataSource> methodSecurityMetadataSources
-	protected final Map<DefaultCacheKey, Collection<ConfigAttribute>> cache = [:]
+    protected List<MethodSecurityMetadataSource> methodSecurityMetadataSources
+    protected final Map<DefaultCacheKey, Collection<ConfigAttribute>> cache = [:]
 
-	Collection<ConfigAttribute> getAttributes(Method m, Class<?> tc) {
+    Collection<ConfigAttribute> getAttributes(Method m, Class<?> tc) {
 
-		Method method = ProxyUtils.unproxy(m)
-		Class<?> targetClass = ProxyUtils.unproxy(tc)
+        Method method = ProxyUtils.unproxy(m)
+        Class<?> targetClass = ProxyUtils.unproxy(tc)
 
-		DefaultCacheKey cacheKey = new DefaultCacheKey(method, targetClass)
-		synchronized (cache) {
-			Collection<ConfigAttribute> cached = cache[cacheKey]
-			// Check for canonical value indicating there is no config attribute,
-			if (cached == NULL_CONFIG_ATTRIBUTE) {
-				return null
-			}
+        DefaultCacheKey cacheKey = new DefaultCacheKey(method, targetClass)
+        synchronized (cache) {
+            Collection<ConfigAttribute> cached = cache[cacheKey]
+            // Check for canonical value indicating there is no config attribute,
+            if (cached == NULL_CONFIG_ATTRIBUTE) {
+                return null
+            }
 
-			if (cached != null) {
-				return cached
-			}
+            if (cached != null) {
+                return cached
+            }
 
-			// No cached value, so query the sources to find a result
-			Collection<ConfigAttribute> attributes
-			for (MethodSecurityMetadataSource s in methodSecurityMetadataSources) {
-				attributes = s.getAttributes(method, targetClass)
-				if (attributes) {
-					break
-				}
-			}
+            // No cached value, so query the sources to find a result
+            Collection<ConfigAttribute> attributes
+            for (MethodSecurityMetadataSource s in methodSecurityMetadataSources) {
+                attributes = s.getAttributes(method, targetClass)
+                if (attributes) {
+                    break
+                }
+            }
 
-			// Put it in the cache.
-			if (attributes == null) {
-				cache[cacheKey] = NULL_CONFIG_ATTRIBUTE
-				return null
-			}
+            // Put it in the cache.
+            if (attributes == null) {
+                cache[cacheKey] = NULL_CONFIG_ATTRIBUTE
+                return null
+            }
 
-			logger.debug "Adding security method [$cacheKey] with attributes $attributes"
+            logger.debug "Adding security method [$cacheKey] with attributes $attributes"
 
-			cache[cacheKey] = attributes
+            cache[cacheKey] = attributes
 
-			attributes
-		}
-	}
+            attributes
+        }
+    }
 
-	Collection<ConfigAttribute> getAllConfigAttributes() {
-		Set<ConfigAttribute> set = new HashSet<ConfigAttribute>()
-		for (MethodSecurityMetadataSource s in methodSecurityMetadataSources) {
-			Collection<ConfigAttribute> attrs = s.allConfigAttributes
-			if (attrs) {
-				set.addAll attrs
-			}
-		}
-		set
-	}
+    Collection<ConfigAttribute> getAllConfigAttributes() {
+        Set<ConfigAttribute> set = new HashSet<ConfigAttribute>()
+        for (MethodSecurityMetadataSource s in methodSecurityMetadataSources) {
+            Collection<ConfigAttribute> attrs = s.allConfigAttributes
+            if (attrs) {
+                set.addAll attrs
+            }
+        }
+        set
+    }
 
-	/**
-	 * Dependency injection for the sources.
-	 * @param sources  the sources
-	 */
-	void setMethodSecurityMetadataSources(List<MethodSecurityMetadataSource> sources) {
-		methodSecurityMetadataSources = sources
-	}
+    /**
+     * Dependency injection for the sources.
+     * @param sources  the sources
+     */
+    void setMethodSecurityMetadataSources(List<MethodSecurityMetadataSource> sources) {
+        methodSecurityMetadataSources = sources
+    }
 
-	void afterPropertiesSet() {
-		Assert.notEmpty methodSecurityMetadataSources, 'A list of MethodSecurityMetadataSources is required'
-	}
+    void afterPropertiesSet() {
+        Assert.notEmpty methodSecurityMetadataSources, 'A list of MethodSecurityMetadataSources is required'
+    }
 
-	@CompileStatic
-	static class DefaultCacheKey {
-		protected final Method method
-		protected final Class<?> targetClass
+    @CompileStatic
+    static class DefaultCacheKey {
 
-		DefaultCacheKey(Method m, Class<?> target) {
-			method = m
-			targetClass = target
-		}
+        protected final Method method
+        protected final Class<?> targetClass
 
-		@Override
-		boolean equals(other) {
-			if (is(other)) {
-				return true
-			}
+        DefaultCacheKey(Method m, Class<?> target) {
+            method = m
+            targetClass = target
+        }
 
-			if (other instanceof DefaultCacheKey) {
-				return method == other.method && targetClass == other?.targetClass
-			}
-		}
+        @Override
+        boolean equals(other) {
+            if (is(other)) {
+                return true
+            }
 
-		@Override
-		int hashCode() {
-			method.hashCode() * 21 + (targetClass?.hashCode() ?: 0)
-		}
+            if (other instanceof DefaultCacheKey) {
+                return method == other.method && targetClass == other?.targetClass
+            }
+        }
 
-		@Override
-		String toString() {
-			'CacheKey[' + (targetClass?.name ?: '-') + '; ' + method + ']'
-		}
-	}
+        @Override
+        int hashCode() {
+            method.hashCode() * 21 + (targetClass?.hashCode() ?: 0)
+        }
+
+        @Override
+        String toString() {
+            'CacheKey[' + (targetClass?.name ?: '-') + '; ' + method + ']'
+        }
+    }
 }

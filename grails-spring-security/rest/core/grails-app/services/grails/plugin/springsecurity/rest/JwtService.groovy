@@ -18,6 +18,11 @@
  */
 package grails.plugin.springsecurity.rest
 
+import java.util.zip.GZIPInputStream
+import java.util.zip.GZIPOutputStream
+
+import groovy.util.logging.Slf4j
+
 import com.nimbusds.jose.JOSEException
 import com.nimbusds.jose.crypto.MACVerifier
 import com.nimbusds.jose.crypto.RSADecrypter
@@ -26,13 +31,11 @@ import com.nimbusds.jwt.JWT
 import com.nimbusds.jwt.JWTParser
 import com.nimbusds.jwt.PlainJWT
 import com.nimbusds.jwt.SignedJWT
-import grails.plugin.springsecurity.rest.token.generation.jwt.RSAKeyProvider
-import grails.util.Holders
-import groovy.util.logging.Slf4j
+
 import org.springframework.security.core.userdetails.UserDetails
 
-import java.util.zip.GZIPInputStream
-import java.util.zip.GZIPOutputStream
+import grails.plugin.springsecurity.rest.token.generation.jwt.RSAKeyProvider
+import grails.util.Holders
 
 /**
  * Helper to perform actions with JWT tokens
@@ -53,15 +56,15 @@ class JwtService {
     JWT parse(String tokenValue) {
         JWT jwt = JWTParser.parse(tokenValue)
 
-        if (jwt instanceof  SignedJWT) {
-            log.debug "Parsed an HMAC signed JWT"
+        if (jwt instanceof SignedJWT) {
+            log.debug 'Parsed an HMAC signed JWT'
 
             SignedJWT signedJwt = jwt as SignedJWT
-            if(!signedJwt.verify(new MACVerifier(jwtSecret))) {
+            if (!signedJwt.verify(new MACVerifier(jwtSecret))) {
                 throw new JOSEException('Invalid signature')
             }
         } else if (jwt instanceof EncryptedJWT) {
-            log.debug "Parsed an RSA encrypted JWT"
+            log.debug 'Parsed an RSA encrypted JWT'
 
             EncryptedJWT encryptedJWT = jwt as EncryptedJWT
             RSADecrypter decrypter = new RSADecrypter(keyProvider.privateKey)
@@ -69,7 +72,7 @@ class JwtService {
             // Decrypt
             encryptedJWT.decrypt(decrypter)
         } else if (jwt instanceof PlainJWT) {
-            log.debug "Parsed a plain JWT"
+            log.debug 'Parsed a plain JWT'
             if (jwtSecret || keyProvider) {
                 throw new JOSEException('Unsigned/unencrypted JWT not expected')
             }
@@ -99,7 +102,6 @@ class JwtService {
     }
 
 }
-
 
 @Slf4j
 class ContextClassLoaderAwareObjectInputStream extends ObjectInputStream {

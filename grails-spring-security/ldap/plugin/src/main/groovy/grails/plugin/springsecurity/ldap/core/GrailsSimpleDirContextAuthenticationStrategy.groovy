@@ -34,16 +34,16 @@ import org.springframework.ldap.core.support.SimpleDirContextAuthenticationStrat
 @Slf4j
 class GrailsSimpleDirContextAuthenticationStrategy extends SimpleDirContextAuthenticationStrategy {
 
-	/** Dependency injection for the userDn. */
-	String userDn
+    /** Dependency injection for the userDn. */
+    String userDn
 
-	@Override
-	void setupEnvironment(Hashtable<String, Object> env, String dn, String password) {
-		super.setupEnvironment env, dn, password
+    @Override
+    void setupEnvironment(Hashtable<String, Object> env, String dn, String password) {
+        super.setupEnvironment env, dn, password
 
-		// Remove the pooling flag unless we are authenticating as the 'manager' user.
-		if (userDn != dn && env.remove(AbstractContextSource.SUN_LDAP_POOLING_FLAG)) {
-			log.debug 'Removed pooling flag for user {}', dn
-		}
-	}
+        // Remove the pooling flag unless we are authenticating as the 'manager' user.
+        if (userDn != dn && env.remove(AbstractContextSource.SUN_LDAP_POOLING_FLAG)) {
+            log.debug 'Removed pooling flag for user {}', dn
+        }
+    }
 }

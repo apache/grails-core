@@ -18,6 +18,8 @@
  */
 package grails.plugin.springsecurity
 
+import groovy.transform.CompileStatic
+
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
 import org.springframework.context.ApplicationEvent
@@ -28,8 +30,6 @@ import org.springframework.security.authentication.event.AbstractAuthenticationF
 import org.springframework.security.authentication.event.AuthenticationSuccessEvent
 import org.springframework.security.authentication.event.InteractiveAuthenticationSuccessEvent
 import org.springframework.security.web.authentication.switchuser.AuthenticationSwitchUserEvent
-
-import groovy.transform.CompileStatic
 
 /**
  * Registers as an event listener and delegates handling of security-related events
@@ -64,33 +64,29 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class SecurityEventListener implements ApplicationListener<ApplicationEvent>, ApplicationContextAware {
 
-	ApplicationContext applicationContext
+    ApplicationContext applicationContext
 
-	void onApplicationEvent(ApplicationEvent e) {
-		if (e instanceof AbstractAuthenticationEvent) {
-			if (e instanceof InteractiveAuthenticationSuccessEvent) {
-				call e, 'onInteractiveAuthenticationSuccessEvent'
-			}
-			else if (e instanceof AbstractAuthenticationFailureEvent) {
-				call e, 'onAbstractAuthenticationFailureEvent'
-			}
-			else if (e instanceof AuthenticationSuccessEvent) {
-				call e, 'onAuthenticationSuccessEvent'
-			}
-			else if (e instanceof AuthenticationSwitchUserEvent) {
-				call e, 'onAuthenticationSwitchUserEvent'
-			}
-		}
-		else if (e instanceof AbstractAuthorizationEvent) {
-			call e, 'onAuthorizationEvent'
-		}
-	}
+    void onApplicationEvent(ApplicationEvent e) {
+        if (e instanceof AbstractAuthenticationEvent) {
+            if (e instanceof InteractiveAuthenticationSuccessEvent) {
+                call e, 'onInteractiveAuthenticationSuccessEvent'
+            } else if (e instanceof AbstractAuthenticationFailureEvent) {
+                call e, 'onAbstractAuthenticationFailureEvent'
+            } else if (e instanceof AuthenticationSuccessEvent) {
+                call e, 'onAuthenticationSuccessEvent'
+            } else if (e instanceof AuthenticationSwitchUserEvent) {
+                call e, 'onAuthenticationSwitchUserEvent'
+            }
+        } else if (e instanceof AbstractAuthorizationEvent) {
+            call e, 'onAuthorizationEvent'
+        }
+    }
 
-	@SuppressWarnings('rawtypes')
-	protected void call(ApplicationEvent e, String closureName) {
-		def closure = SpringSecurityUtils.securityConfig[closureName]
-		if (closure instanceof Closure) {
-			closure e, applicationContext
-		}
- 	}
+    @SuppressWarnings('rawtypes')
+    protected void call(ApplicationEvent e, String closureName) {
+        def closure = SpringSecurityUtils.securityConfig[closureName]
+        if (closure instanceof Closure) {
+            closure e, applicationContext
+        }
+    }
 }

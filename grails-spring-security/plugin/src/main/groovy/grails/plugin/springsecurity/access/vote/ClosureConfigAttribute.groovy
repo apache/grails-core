@@ -18,9 +18,9 @@
  */
 package grails.plugin.springsecurity.access.vote
 
-import org.springframework.security.access.ConfigAttribute
-
 import groovy.transform.CompileStatic
+
+import org.springframework.security.access.ConfigAttribute
 
 /**
  * @author Burt Beckwith
@@ -28,17 +28,17 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class ClosureConfigAttribute implements ConfigAttribute {
 
-	private static final long serialVersionUID = 1
+    private static final long serialVersionUID = 1
 
-	final Closure<?> closure
+    final Closure<?> closure
 
-	/**
-	 * Constructor.
-	 * @param closure the closure
-	 */
-	ClosureConfigAttribute(Closure<?> closure) {
-		this.closure = closure
-	}
+    /**
+     * Constructor.
+     * @param closure the closure
+     */
+    ClosureConfigAttribute(Closure<?> closure) {
+        this.closure = closure
+    }
 
-	String getAttribute() {}
+    String getAttribute() {}
 }

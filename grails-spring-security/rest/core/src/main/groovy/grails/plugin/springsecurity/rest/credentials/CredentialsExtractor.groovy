@@ -18,9 +18,9 @@
  */
 package grails.plugin.springsecurity.rest.credentials
 
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
-
 import jakarta.servlet.http.HttpServletRequest
+
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 
 /**
  * Extracts username and password from the request and creates and {@link UsernamePasswordAuthenticationToken}

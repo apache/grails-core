@@ -19,16 +19,18 @@
 package grails.plugin.springsecurity.rest.token.storage.jwt
 
 import com.nimbusds.jose.JWSAlgorithm
+import spock.lang.Issue
+import spock.lang.Specification
+
+import org.springframework.security.core.userdetails.User
+import org.springframework.security.core.userdetails.UserDetails
+import org.springframework.security.core.userdetails.UserDetailsService
+
 import grails.plugin.springsecurity.rest.JwtService
 import grails.plugin.springsecurity.rest.token.AccessToken
 import grails.plugin.springsecurity.rest.token.generation.jwt.SignedJwtTokenGenerator
 import grails.plugin.springsecurity.rest.token.storage.TokenNotFoundException
 import grails.testing.services.ServiceUnitTest
-import org.springframework.security.core.userdetails.User
-import org.springframework.security.core.userdetails.UserDetails
-import org.springframework.security.core.userdetails.UserDetailsService
-import spock.lang.Issue
-import spock.lang.Specification
 
 /**
  * Created by @marcos-carceles on 03/03/15.
@@ -39,7 +41,7 @@ class JwtTokenStorageServiceSpec extends Specification implements ServiceUnitTes
     SignedJwtTokenGenerator tokenGenerator
 
     void setup() {
-        service = new JwtTokenStorageService(jwtService: new JwtService(jwtSecret: 'fooo'*8))
+        service = new JwtTokenStorageService(jwtService: new JwtService(jwtSecret: 'fooo' * 8))
         tokenGenerator = new SignedJwtTokenGenerator(jwtSecret: service.jwtService.jwtSecret, defaultExpiration: 60, jwtTokenStorageService: service, customClaimProviders: [], jwsAlgorithm: JWSAlgorithm.HS256)
         tokenGenerator.afterPropertiesSet()
     }
@@ -55,7 +57,7 @@ class JwtTokenStorageServiceSpec extends Specification implements ServiceUnitTes
         user.username == 'testUser'
 
         when:
-        service.loadUserByToken(accessToken.accessToken.replaceAll(/...$/,'bar'))
+        service.loadUserByToken(accessToken.accessToken.replaceAll(/...$/, 'bar'))
 
         then:
         thrown(TokenNotFoundException)

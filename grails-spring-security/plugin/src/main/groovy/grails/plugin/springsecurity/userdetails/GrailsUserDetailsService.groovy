@@ -31,16 +31,16 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException
  */
 interface GrailsUserDetailsService extends UserDetailsService {
 
-	/**
-	 * Locates the user based on the username.
-	 *
-	 * @param username the username identifying the user whose data is required.
-	 * @param loadRoles whether to load roles at the same time as loading the user
-	 *
-	 * @return a fully populated user record (never <code>null</code>)
-	 *
-	 * @throws UsernameNotFoundException if the user could not be found
-	 * @throws DataAccessException if user could not be found for a repository-specific reason
-	 */
-	UserDetails loadUserByUsername(String username, boolean loadRoles) throws UsernameNotFoundException, DataAccessException
+    /**
+     * Locates the user based on the username.
+     *
+     * @param username the username identifying the user whose data is required.
+     * @param loadRoles whether to load roles at the same time as loading the user
+     *
+     * @return a fully populated user record (never <code>null</code>)
+     *
+     * @throws UsernameNotFoundException if the user could not be found
+     * @throws DataAccessException if user could not be found for a repository-specific reason
+     */
+    UserDetails loadUserByUsername(String username, boolean loadRoles) throws UsernameNotFoundException, DataAccessException
 }

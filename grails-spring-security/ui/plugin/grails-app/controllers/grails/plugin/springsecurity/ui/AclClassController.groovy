@@ -23,59 +23,54 @@ package grails.plugin.springsecurity.ui
  */
 class AclClassController extends AbstractS2UiDomainController {
 
-	def create() {
-		super.create()
-	}
+    def save() {
+        withForm {
+            doSave uiAclStrategy.saveAclClass(params)
+        }.invalidToken {
+            doSaveWithInvalidToken(params.username)
+        }
+    }
 
-	def save() {
-		withForm {
-			doSave uiAclStrategy.saveAclClass(params)
-		}.invalidToken {
-			doSaveWithInvalidToken(params.username)
-		}
-	}
+    def update() {
+        withForm {
+            doUpdate { aclClass ->
+                uiAclStrategy.updateAclClass params, aclClass
+            }
+        }.invalidToken {
+            doUpdateWithInvalidToken(params.username)
+        }
+    }
 
-	def edit() {
-		super.edit()
-	}
+    def delete() {
+        withForm {
+            tryDelete { aclClass ->
+                uiAclStrategy.deleteAclClass aclClass
+            }
+        }.invalidToken {
+            doDeleteWithInvalidToken()
+        }
+    }
 
-	def update() {
-		withForm {
-			doUpdate { aclClass ->
-				uiAclStrategy.updateAclClass params, aclClass
-			}
-		}.invalidToken {
-			doUpdateWithInvalidToken(params.username)
-		}
-	}
+    def search() {
+        if (!isSearch()) {
+            // show the form
+            return
+        }
 
-	def delete() {
-		withForm {
-			tryDelete { aclClass ->
-				uiAclStrategy.deleteAclClass aclClass
-			}
-		}.invalidToken {
-			doDeleteWithInvalidToken()
-		}
-	}
+        def results = doSearch { ->
+            like 'className', delegate
+        }
 
-	def search() {
-		if (!isSearch()) {
-			// show the form
-			return
-		}
+        renderSearch([results: results, totalCount: results.totalCount], 'className')
+    }
 
-		def results = doSearch { ->
-			like 'className', delegate
-		}
+    protected Class<?> getClazz() { AclClass }
 
-		renderSearch([results: results, totalCount: results.totalCount], 'className')
-	}
+    protected String getClassLabelCode() { 'aclClass.label' }
 
-	protected Class<?> getClazz() { AclClass }
-	protected String getClassLabelCode() { 'aclClass.label' }
-	protected String getSimpleClassName() { 'AclClass' }
-	protected Map model(aclClass, String action) {
-		[aclClass: aclClass]
-	}
+    protected String getSimpleClassName() { 'AclClass' }
+
+    protected Map model(aclClass, String action) {
+        [aclClass: aclClass]
+    }
 }

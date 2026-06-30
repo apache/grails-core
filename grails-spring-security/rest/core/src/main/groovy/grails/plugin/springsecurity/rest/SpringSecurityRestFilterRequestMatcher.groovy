@@ -20,9 +20,10 @@ package grails.plugin.springsecurity.rest
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import org.springframework.security.web.util.matcher.RequestMatcher
 
 import jakarta.servlet.http.HttpServletRequest
+
+import org.springframework.security.web.util.matcher.RequestMatcher
 
 /**
  * Determines whether a given request matches against a configured endpoint URL
@@ -41,7 +42,7 @@ class SpringSecurityRestFilterRequestMatcher implements RequestMatcher {
 
     @Override
     boolean matches(HttpServletRequest request) {
-        String actualUri =  request.requestURI - request.contextPath
+        String actualUri = request.requestURI - request.contextPath
         log.debug "Actual URI is ${actualUri}; endpoint URL is ${endpointUrl}"
         return actualUri == endpointUrl
     }

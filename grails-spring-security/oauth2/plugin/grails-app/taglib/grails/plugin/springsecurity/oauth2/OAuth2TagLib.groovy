@@ -19,12 +19,13 @@
 package grails.plugin.springsecurity.oauth2
 
 import com.github.scribejava.core.model.OAuth2AccessToken
+
 import grails.plugin.springsecurity.SpringSecurityService
 import org.grails.taglib.GrailsTagException
 
 class OAuth2TagLib {
 
-    static namespace = "oauth2"
+    static namespace = 'oauth2'
 
     SpringSecurityOauth2BaseService springSecurityOauth2BaseService
     SpringSecurityService springSecurityService

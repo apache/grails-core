@@ -20,11 +20,13 @@ package grails.plugin.springsecurity.rest.token.storage
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import org.grails.plugin.cache.GrailsCacheManager
+
+import jakarta.annotation.PostConstruct
+
 import org.springframework.cache.Cache
 import org.springframework.security.core.userdetails.UserDetails
 
-import jakarta.annotation.PostConstruct
+import org.grails.plugin.cache.GrailsCacheManager
 
 /**
  * Uses <a href="http://grails.org/plugin/cache">Grails Cache plugin</a> to store and retrieve tokens.
@@ -66,16 +68,16 @@ class GrailsCacheTokenStorageService implements TokenStorageService {
     void init() {
         if (!grailsCacheManager) {
             throw new IllegalStateException('GrailsCacheManager was not injected. ' +
-                'Install cache plugin to use this implementation of TokenStorageService')
+                    'Install cache plugin to use this implementation of TokenStorageService')
         }
         if (!cacheName) {
             throw new IllegalStateException('Cache name for TokenStorageService was not injected. ' +
-                'Use grails.plugin.springsecurity.rest.token.storage.grailsCacheName to specify a cache name')
+                    'Use grails.plugin.springsecurity.rest.token.storage.grailsCacheName to specify a cache name')
         }
         cache = grailsCacheManager.getCache(cacheName)
         if (!cache) {
             throw new IllegalStateException("Could not retrieve a cache for name $cacheName. " +
-                "Did you specify a cache '$cacheName' in the cache configuration?")
+                    "Did you specify a cache '$cacheName' in the cache configuration?")
         }
         log.debug "${this.class.simpleName} initialized successfully"
     }

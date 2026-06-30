@@ -18,11 +18,12 @@
  */
 package grails.plugin.springsecurity.rest
 
-import grails.testing.services.ServiceUnitTest
-import grails.web.mapping.LinkGenerator
 import org.pac4j.oauth.client.*
 import spock.lang.Specification
 import spock.lang.Unroll
+
+import grails.testing.services.ServiceUnitTest
+import grails.web.mapping.LinkGenerator
 
 /**
  * Created by Svante on 2014-10-15.
@@ -71,16 +72,16 @@ class RestOauthServiceSpec extends Specification implements ServiceUnitTest<Rest
         client.secret == grailsApplication.config["grails.plugin.springsecurity.rest.oauth.${provider}.secret"]
 
         where:
-        provider        | clientClass
-        'dropbox'       | DropBoxClient
-        'foursquare'    | FoursquareClient
-        'linkedin'      | LinkedIn2Client
-        'paypal'        | PayPalClient
-        'twitter'       | TwitterClient
-        'vk'            | VkClient
-        'windowslive'   | WindowsLiveClient
-        'wordpress'     | WordPressClient
-        'yahoo'         | YahooClient
+        provider      | clientClass
+        'dropbox'     | DropBoxClient
+        'foursquare'  | FoursquareClient
+        'linkedin'    | LinkedIn2Client
+        'paypal'      | PayPalClient
+        'twitter'     | TwitterClient
+        'vk'          | VkClient
+        'windowslive' | WindowsLiveClient
+        'wordpress'   | WordPressClient
+        'yahoo'       | YahooClient
     }
 
 

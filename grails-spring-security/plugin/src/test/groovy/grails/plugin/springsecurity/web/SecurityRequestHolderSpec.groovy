@@ -28,41 +28,41 @@ import grails.plugin.springsecurity.SecurityTestUtils
  */
 class SecurityRequestHolderSpec extends AbstractUnitSpec {
 
-	void 'set and get'() {
-		expect:
-		!SecurityRequestHolder.request
-		!SecurityRequestHolder.response
+    void 'set and get'() {
+        expect:
+        !SecurityRequestHolder.request
+        !SecurityRequestHolder.response
 
-		when:
-		SecurityRequestHolder.set request, response
+        when:
+        SecurityRequestHolder.set request, response
 
-		then:
-		request.is(SecurityRequestHolder.request)
-		response.is(SecurityRequestHolder.response)
-	}
+        then:
+        request.is(SecurityRequestHolder.request)
+        response.is(SecurityRequestHolder.response)
+    }
 
-	void 'reset'() {
-		expect:
-		!SecurityRequestHolder.request
-		!SecurityRequestHolder.response
+    void 'reset'() {
+        expect:
+        !SecurityRequestHolder.request
+        !SecurityRequestHolder.response
 
-		when:
-		SecurityRequestHolder.set request, response
+        when:
+        SecurityRequestHolder.set request, response
 
-		then:
-		request.is(SecurityRequestHolder.request)
-		response.is(SecurityRequestHolder.response)
+        then:
+        request.is(SecurityRequestHolder.request)
+        response.is(SecurityRequestHolder.response)
 
-		when:
-		SecurityRequestHolder.reset()
+        when:
+        SecurityRequestHolder.reset()
 
-		then:
-		!SecurityRequestHolder.request
-		!SecurityRequestHolder.response
-	}
+        then:
+        !SecurityRequestHolder.request
+        !SecurityRequestHolder.response
+    }
 
-	void testPrivateConstructor() {
-		expect:
-		SecurityTestUtils.testPrivateConstructor SecurityRequestHolder
-	}
+    void testPrivateConstructor() {
+        expect:
+        SecurityTestUtils.testPrivateConstructor SecurityRequestHolder
+    }
 }

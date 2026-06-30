@@ -18,8 +18,9 @@
  */
 package grails.plugin.springsecurity.ui.strategy
 
-import grails.plugin.springsecurity.ui.SpringSecurityUiService
 import groovy.transform.CompileStatic
+
+import grails.plugin.springsecurity.ui.SpringSecurityUiService
 
 /**
  * @author <a href='mailto:burt@burtbeckwith.com'>Burt Beckwith</a>
@@ -27,13 +28,13 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class DefaultPersistentLoginStrategy implements PersistentLoginStrategy {
 
-	SpringSecurityUiService springSecurityUiService
+    SpringSecurityUiService springSecurityUiService
 
-	void updatePersistentLogin(Map properties, persistentLogin) {
-		springSecurityUiService.updatePersistentLogin properties, persistentLogin
-	}
+    void updatePersistentLogin(Map properties, persistentLogin) {
+        springSecurityUiService.updatePersistentLogin properties, persistentLogin
+    }
 
-	void deletePersistentLogin(persistentLogin) {
-		springSecurityUiService.deletePersistentLogin persistentLogin
-	}
+    void deletePersistentLogin(persistentLogin) {
+        springSecurityUiService.deletePersistentLogin persistentLogin
+    }
 }

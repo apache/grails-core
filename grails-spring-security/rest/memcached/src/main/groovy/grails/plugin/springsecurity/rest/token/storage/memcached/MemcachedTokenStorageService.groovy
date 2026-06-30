@@ -18,13 +18,16 @@
  */
 package grails.plugin.springsecurity.rest.token.storage.memcached
 
-import grails.plugin.springsecurity.rest.token.storage.TokenNotFoundException
-import grails.plugin.springsecurity.rest.token.storage.TokenStorageService
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+
 import net.spy.memcached.CASValue
 import net.spy.memcached.MemcachedClient
+
 import org.springframework.security.core.userdetails.UserDetails
+
+import grails.plugin.springsecurity.rest.token.storage.TokenNotFoundException
+import grails.plugin.springsecurity.rest.token.storage.TokenStorageService
 
 /**
  * Stores and retrieves tokens in a memcached server. This implementation stores the whole {@link UserDetails} object
@@ -66,7 +69,7 @@ class MemcachedTokenStorageService implements TokenStorageService {
         }
     }
 
-    @SuppressWarnings("GroovyVariableNotAssigned")
+    @SuppressWarnings('GroovyVariableNotAssigned')
     private UserDetails findExistingUserDetails(String tokenValue) {
         log.debug "Searching in Memcached for UserDetails of token ${tokenValue}"
         CASValue<Object> result = memcachedClient.getAndTouch(tokenValue, expiration)
@@ -75,7 +78,7 @@ class MemcachedTokenStorageService implements TokenStorageService {
             userDetails = result.getValue() as UserDetails
             log.debug "UserDetails found: ${userDetails}"
         } else {
-            log.debug "UserDetails not found"
+            log.debug 'UserDetails not found'
         }
         return userDetails
     }

@@ -18,6 +18,7 @@
  */
 package grails.plugin.springsecurity.web.authentication.logout
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 
 import jakarta.servlet.FilterChain
@@ -33,8 +34,6 @@ import org.springframework.security.web.authentication.logout.LogoutFilter
 import org.springframework.security.web.authentication.logout.LogoutHandler
 import org.springframework.security.web.authentication.logout.LogoutSuccessHandler
 
-import groovy.transform.CompileStatic
-
 /**
  * @author Burt Beckwith
  */
@@ -42,46 +41,47 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class MutableLogoutFilter extends LogoutFilter {
 
-	protected final LogoutSuccessHandler logoutSuccessHandler
+    protected final LogoutSuccessHandler logoutSuccessHandler
 
-	/** Dependency injection for the logout handlers. */
-	List<LogoutHandler> handlers
+    /** Dependency injection for the logout handlers. */
+    List<LogoutHandler> handlers
 
-	/**
-	 * Constructor.
-	 * @param successHandler the logout success handler
-	 */
-	MutableLogoutFilter(LogoutSuccessHandler successHandler) {
-		super(successHandler, new DummyLogoutHandler())
-		logoutSuccessHandler = successHandler
-	}
+    /**
+     * Constructor.
+     * @param successHandler the logout success handler
+     */
+    MutableLogoutFilter(LogoutSuccessHandler successHandler) {
+        super(successHandler, new DummyLogoutHandler())
+        logoutSuccessHandler = successHandler
+    }
 
-	@Override
-	void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
+    @Override
+    void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
 
-		HttpServletRequest request = (HttpServletRequest) req
-		HttpServletResponse response = (HttpServletResponse) res
+        HttpServletRequest request = (HttpServletRequest) req
+        HttpServletResponse response = (HttpServletResponse) res
 
-		if (!requiresLogout(request, response)) {
-			chain.doFilter request, response
-			return
-		}
+        if (!requiresLogout(request, response)) {
+            chain.doFilter request, response
+            return
+        }
 
-		Authentication auth = SecurityContextHolder.context.authentication
-		log.debug "Logging out user '{}' and transferring to logout destination", auth
+        Authentication auth = SecurityContextHolder.context.authentication
+        log.debug "Logging out user '{}' and transferring to logout destination", auth
 
-		handlers.each { LogoutHandler handler -> handler.logout request, response, auth }
+        handlers.each { LogoutHandler handler -> handler.logout request, response, auth }
 
-		logoutSuccessHandler.onLogoutSuccess request, response, auth
-	}
+        logoutSuccessHandler.onLogoutSuccess request, response, auth
+    }
 
-	/**
-	 * Null logout handler that's used to provide a non-empty list of handlers to the base class.
-	 * The real handlers will be after construction.
-	 */
-	protected static class DummyLogoutHandler implements LogoutHandler {
-		void logout(HttpServletRequest req, HttpServletResponse res, Authentication a) {
-			// do nothing
-		}
-	}
+    /**
+     * Null logout handler that's used to provide a non-empty list of handlers to the base class.
+     * The real handlers will be after construction.
+     */
+    protected static class DummyLogoutHandler implements LogoutHandler {
+
+        void logout(HttpServletRequest req, HttpServletResponse res, Authentication a) {
+            // do nothing
+        }
+    }
 }

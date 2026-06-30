@@ -18,14 +18,16 @@
  */
 package grails.plugin.springsecurity.rest.rfc6750
 
-import grails.plugin.springsecurity.rest.token.AccessToken
-import grails.plugin.springsecurity.rest.token.bearer.BearerTokenReader
-import org.grails.plugins.testing.GrailsMockHttpServletRequest
-import org.springframework.http.MediaType
-import org.springframework.mock.web.MockHttpServletResponse
 import spock.lang.Issue
 import spock.lang.Specification
 import spock.lang.Unroll
+
+import org.springframework.http.MediaType
+import org.springframework.mock.web.MockHttpServletResponse
+
+import grails.plugin.springsecurity.rest.token.AccessToken
+import grails.plugin.springsecurity.rest.token.bearer.BearerTokenReader
+import org.grails.plugins.testing.GrailsMockHttpServletRequest
 
 /**
  * Created by ajbrown on 6/25/14.
@@ -45,8 +47,8 @@ class BearerTokenReaderSpec extends Specification {
     @Unroll
     def "token value can be read from #method request Authorization header (prefixed with 'Bearer ')"() {
         given:
-        def token    = 'mytestotkenvalue'
-        request.addHeader( 'Authorization', 'Bearer ' + token )
+        def token = 'mytestotkenvalue'
+        request.addHeader('Authorization', 'Bearer ' + token)
         request.method = method
         request.contentType = MediaType.TEXT_PLAIN_VALUE
 
@@ -54,7 +56,7 @@ class BearerTokenReaderSpec extends Specification {
         tokenReader.findToken(request) == new AccessToken(token)
 
         where:
-        method << [ 'GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS' ]
+        method << ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
     }
 
     @Unroll
@@ -68,7 +70,7 @@ class BearerTokenReaderSpec extends Specification {
         tokenReader.findToken(request) == null
 
         where:
-        method << [ 'GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS' ]
+        method << ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
     }
 
     @Unroll
@@ -76,21 +78,21 @@ class BearerTokenReaderSpec extends Specification {
         given:
         def token = 'mytesttokenvalue'
         request.contentType = MediaType.APPLICATION_FORM_URLENCODED_VALUE
-        request.addParameter( 'access_token', token )
+        request.addParameter('access_token', token)
         request.method = method
 
         expect:
         tokenReader.findToken(request) == new AccessToken(token)
 
         where:
-        method << [ 'POST', 'PUT', 'PATCH' ]
+        method << ['POST', 'PUT', 'PATCH']
     }
 
     @Unroll
     def "token value will not be read from #method request Authorization header not prefix with 'Bearer'"() {
         given:
         def token = 'abadtokenvalue'
-        request.addHeader( 'Authorization', token )
+        request.addHeader('Authorization', token)
         request.method = method
         request.contentType = MediaType.TEXT_PLAIN_VALUE
 
@@ -99,14 +101,14 @@ class BearerTokenReaderSpec extends Specification {
 
         where:
 
-        method << [ 'GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS' ]
+        method << ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
     }
 
     @Unroll
     def "token value will not be read from #method request body if not form encoded"() {
         given:
         def token = 'abadtokenvalue'
-        request.addParameter( 'access_token', token )
+        request.addParameter('access_token', token)
         request.contentType = MediaType.MULTIPART_FORM_DATA_VALUE
         request.method = method
 
@@ -114,7 +116,7 @@ class BearerTokenReaderSpec extends Specification {
         !tokenReader.findToken(request)
 
         where:
-        method << [ 'GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS' ]
+        method << ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
     }
 
     @Unroll
@@ -122,14 +124,14 @@ class BearerTokenReaderSpec extends Specification {
         given:
         def token = 'mytesttokenvalue'
         request.contentType = MediaType.APPLICATION_FORM_URLENCODED_VALUE
-        request.addParameter( 'access_token', token )
+        request.addParameter('access_token', token)
         request.method = method
 
         expect:
         !tokenReader.findToken(request)
 
         where:
-        method << [ 'GET' ]
+        method << ['GET']
     }
 
     @Unroll

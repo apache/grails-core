@@ -18,20 +18,20 @@
  */
 security {
 
-	acl {
+    acl {
 
-		active = true
+        active = true
 
-		authority {
-			changeOwnership       = 'ROLE_ADMIN'
-			modifyAuditingDetails = 'ROLE_ADMIN'
-			changeAclDetails      = 'ROLE_ADMIN'
-		}
-	}
+        authority {
+            changeOwnership = 'ROLE_ADMIN'
+            modifyAuditingDetails = 'ROLE_ADMIN'
+            changeAclDetails = 'ROLE_ADMIN'
+        }
+    }
 
-	/**  Run-As Authentication Replacement */
-	useRunAs = false
-	runAs {
-		key = 'grails_spring_security_run_as' // should be changed
-	}
+    /**  Run-As Authentication Replacement */
+    useRunAs = false
+    runAs {
+        key = 'grails_spring_security_run_as' // should be changed
+    }
 }

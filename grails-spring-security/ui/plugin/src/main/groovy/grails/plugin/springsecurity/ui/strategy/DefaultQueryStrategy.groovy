@@ -18,8 +18,9 @@
  */
 package grails.plugin.springsecurity.ui.strategy
 
-import grails.plugin.springsecurity.ui.SpringSecurityUiService
 import groovy.transform.CompileStatic
+
+import grails.plugin.springsecurity.ui.SpringSecurityUiService
 
 /**
  * @author <a href='mailto:burt@burtbeckwith.com'>Burt Beckwith</a>
@@ -27,13 +28,13 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class DefaultQueryStrategy implements QueryStrategy {
 
-	SpringSecurityUiService springSecurityUiService
+    SpringSecurityUiService springSecurityUiService
 
-	Closure<?> buildProjection(String path, String criterionMethod, List args) {
-		springSecurityUiService.buildProjection path, criterionMethod, args
-	}
+    Closure<?> buildProjection(String path, String criterionMethod, List args) {
+        springSecurityUiService.buildProjection path, criterionMethod, args
+    }
 
-	def runCriteria(Class<?> clazz, List<Closure<?>> criterias, Map paginateParams) {
-		springSecurityUiService.runCriteria clazz, criterias, paginateParams
-	}
+    def runCriteria(Class<?> clazz, List<Closure<?>> criterias, Map paginateParams) {
+        springSecurityUiService.runCriteria clazz, criterias, paginateParams
+    }
 }

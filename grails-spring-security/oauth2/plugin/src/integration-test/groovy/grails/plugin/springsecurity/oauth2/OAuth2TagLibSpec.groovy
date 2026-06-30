@@ -20,10 +20,11 @@
 package grails.plugin.springsecurity.oauth2
 
 import com.github.scribejava.core.model.OAuth2AccessToken
+import spock.lang.Specification
+
 import grails.plugin.springsecurity.SpringSecurityService
 import grails.testing.mixin.integration.Integration
 import grails.testing.web.taglib.TagLibUnitTest
-import spock.lang.Specification
 
 /**
  * Always code as if the guy who ends up maintaining your code
@@ -35,14 +36,14 @@ import spock.lang.Specification
  * @author MatrixCrawler
  */
 @Integration
-class OAuth2TagLibSpec extends Specification implements TagLibUnitTest<OAuth2TagLib>{
+class OAuth2TagLibSpec extends Specification implements TagLibUnitTest<OAuth2TagLib> {
 
     void "ifLoggedInWith should print body if session is valid"() {
         given:
         def springSecurityService = Mock(SpringSecurityService)
-        springSecurityService.isLoggedIn() >> {true}
+        springSecurityService.isLoggedIn() >> { true }
         def springSecurityOauth2BaseService = Mock(SpringSecurityOauth2BaseService)
-        springSecurityOauth2BaseService.sessionKeyForAccessToken(provider) >> {'OAuth2: access - t:' + provider}
+        springSecurityOauth2BaseService.sessionKeyForAccessToken(provider) >> { 'OAuth2: access - t:' + provider }
         session[springSecurityOauth2BaseService.sessionKeyForAccessToken(provider)] = new OAuth2AccessToken("${provider}_token", "${provider}_rawResponse=rawResponse")
 
         tagLib.springSecurityService = springSecurityService
@@ -63,9 +64,9 @@ class OAuth2TagLibSpec extends Specification implements TagLibUnitTest<OAuth2Tag
     void "ifLoggedInWith should print empty string if session is invalid"() {
         given:
         def springSecurityService = Mock(SpringSecurityService)
-        springSecurityService.isLoggedIn() >> {true}
+        springSecurityService.isLoggedIn() >> { true }
         def springSecurityOauth2BaseService = Mock(SpringSecurityOauth2BaseService)
-        springSecurityOauth2BaseService.sessionKeyForAccessToken(provider) >> {'OAuth2: access - t:' + provider}
+        springSecurityOauth2BaseService.sessionKeyForAccessToken(provider) >> { 'OAuth2: access - t:' + provider }
         session[springSecurityOauth2BaseService.sessionKeyForAccessToken(provider)] = token
         tagLib.springSecurityService = springSecurityService
         tagLib.springSecurityOauth2BaseService = springSecurityOauth2BaseService
@@ -84,7 +85,7 @@ class OAuth2TagLibSpec extends Specification implements TagLibUnitTest<OAuth2Tag
     void "ifLoggedInWith should print empty string if user is not logged in"() {
         given:
         def springSecurityService = Mock(SpringSecurityService)
-        springSecurityService.isLoggedIn() >> {false}
+        springSecurityService.isLoggedIn() >> { false }
         tagLib.springSecurityService = springSecurityService
         def template = '<oauth2:ifLoggedInWith provider="unknown">Logged in using unknown provider</oauth2:ifLoggedInWith>'
         when:
@@ -97,7 +98,7 @@ class OAuth2TagLibSpec extends Specification implements TagLibUnitTest<OAuth2Tag
         given:
         def message = "Not_Logged_In"
         def springSecurityService = Mock(SpringSecurityService)
-        springSecurityService.isLoggedIn() >> {false}
+        springSecurityService.isLoggedIn() >> { false }
         tagLib.springSecurityService = springSecurityService
         def template = "<oauth2:ifNotLoggedInWith provider=\"facebook\">${message}</oauth2:ifNotLoggedInWith>"
         when:

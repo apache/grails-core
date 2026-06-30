@@ -28,6 +28,7 @@ package grails.plugin.springsecurity.oauth2.exception;
  * Created by Johannes on 06.04.2016.
  */
 public class OAuth2Exception extends RuntimeException {
+
     public OAuth2Exception(String message) {
         super(message);
     }

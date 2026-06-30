@@ -18,9 +18,10 @@
  */
 package grails.plugin.springsecurity.acl
 
-import grails.gorm.dirty.checking.DirtyCheck
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
+
+import grails.gorm.dirty.checking.DirtyCheck
 
 /**
  * Abstract base class for the AclObjectIdentity domain class. The default implementation
@@ -28,18 +29,18 @@ import groovy.transform.ToString
  *
  * @author <a href='mailto:burt@burtbeckwith.com'>Burt Beckwith</a>
  */
-@EqualsAndHashCode(includes=['aclClass', 'parent', 'owner', 'entriesInheriting'])
-@ToString(includeNames=true)
+@EqualsAndHashCode(includes = ['aclClass', 'parent', 'owner', 'entriesInheriting'])
+@ToString(includeNames = true)
 @DirtyCheck
 abstract class AbstractAclObjectIdentity implements Serializable {
 
-	AclClass aclClass
-	AclObjectIdentity parent
-	AclSid owner
-	boolean entriesInheriting
+    AclClass aclClass
+    AclObjectIdentity parent
+    AclSid owner
+    boolean entriesInheriting
 
-	static constraints = {
-		parent nullable: true
-		owner nullable: true
-	}
+    static constraints = {
+        parent nullable: true
+        owner nullable: true
+    }
 }

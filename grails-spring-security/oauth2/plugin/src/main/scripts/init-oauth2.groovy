@@ -17,8 +17,10 @@
  *  under the License.
  */
 
-import grails.codegen.model.Model
+
 import groovy.transform.Field
+
+import grails.codegen.model.Model
 
 @Field String usageMessage = '''
    grails init-oauth2 <domain-class-package> <user-class-name> <oauthid-class-name>

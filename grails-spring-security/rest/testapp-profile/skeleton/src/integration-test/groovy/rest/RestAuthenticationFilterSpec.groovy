@@ -18,16 +18,17 @@
  */
 package rest
 
-import grails.plugins.rest.client.RestResponse
 import spock.lang.IgnoreIf
 import spock.lang.Issue
 import spock.lang.Unroll
+
+import grails.plugins.rest.client.RestResponse
 
 @IgnoreIf({ System.getProperty('useBearerToken', 'false').toBoolean() })
 class RestAuthenticationFilterSpec extends AbstractRestSpec {
 
     @Unroll
-	void "#httpMethod requests without parameters/JSON generate #statusCode responses"() {
+    void "#httpMethod requests without parameters/JSON generate #statusCode responses"() {
 
         when:
         def response = sendEmptyRequest(httpMethod)
@@ -36,12 +37,12 @@ class RestAuthenticationFilterSpec extends AbstractRestSpec {
         response.status == statusCode
 
         where:
-        httpMethod  | statusCode
-        'get'       | 405
-        'post'      | 400
-        'put'       | 405
-        'delete'    | 405
-	}
+        httpMethod | statusCode
+        'get'      | 405
+        'post'     | 400
+        'put'      | 405
+        'delete'   | 405
+    }
 
 
     @Unroll
@@ -53,11 +54,11 @@ class RestAuthenticationFilterSpec extends AbstractRestSpec {
         response.status == status
 
         where:
-        httpMethod  | status
-        'get'       | 200   //The client follows redirects in GET requests. In this case, to /login/auth
-        'post'      | 302   //In the rest of the cases, 302 to /login/auth
-        'put'       | 302
-        'delete'    | 302
+        httpMethod | status
+        'get'      | 200   //The client follows redirects in GET requests. In this case, to /login/auth
+        'post'     | 302   //In the rest of the cases, 302 to /login/auth
+        'put'      | 302
+        'delete'   | 302
 
     }
 
@@ -103,7 +104,7 @@ class RestAuthenticationFilterSpec extends AbstractRestSpec {
             restBuilder."${httpMethod}"("${baseUrl}/api/login")
         } else {
             restBuilder."${httpMethod}"("${baseUrl}/api/login") {
-                json {  }
+                json {}
             }
         }
     }

@@ -37,26 +37,26 @@ import java.lang.annotation.Target
 @Documented
 @interface Secured {
 
-	/**
-	 * Default value for httpMethod().
-	 */
-	String ANY_METHOD = 'ANY'
+    /**
+     * Default value for httpMethod().
+     */
+    String ANY_METHOD = 'ANY'
 
-	/**
-	 * Defines the security configuration attributes (e.g. ROLE_USER, ROLE_ADMIN, IS_AUTHENTICATED_REMEMBERED, etc.)
-	 * @return the names of the roles, expressions, and tokens
-	 */
-	String[] value() default []
+    /**
+     * Defines the security configuration attributes (e.g. ROLE_USER, ROLE_ADMIN, IS_AUTHENTICATED_REMEMBERED, etc.)
+     * @return the names of the roles, expressions, and tokens
+     */
+    String[] value() default []
 
-	/**
-	 * Optional attribute to specify the HTTP method required.
-	 * @return the method
-	 */
-	String httpMethod() default 'ANY'
+    /**
+     * Optional attribute to specify the HTTP method required.
+     * @return the method
+     */
+    String httpMethod() default 'ANY'
 
-	/**
-	 * Optional attribute to specify a closure that will be evaluated to decide if access should be allowed.
-	 * @return the closure class
-	 */
-	Class<?> closure() default Secured
+    /**
+     * Optional attribute to specify a closure that will be evaluated to decide if access should be allowed.
+     * @return the closure class
+     */
+    Class<?> closure() default Secured
 }

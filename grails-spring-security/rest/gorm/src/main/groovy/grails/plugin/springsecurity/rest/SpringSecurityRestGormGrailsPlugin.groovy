@@ -49,31 +49,33 @@ class SpringSecurityRestGormGrailsPlugin extends Plugin {
     def organization = [name: 'Grails', url: 'https://www.grails.org/']
 
     def issueManagement = [system: 'GitHub', url: 'https://github.com/apache/grails-spring-security/issues']
-    def scm = [ url: 'https://github.com/apache/grails-spring-security']
+    def scm = [url: 'https://github.com/apache/grails-spring-security']
 
-    Closure doWithSpring() { {->
-        def conf = SpringSecurityUtils.securityConfig
-        if (!conf || !conf.active || !conf.rest.active) {
-            return
+    Closure doWithSpring() {
+        { ->
+            def conf = SpringSecurityUtils.securityConfig
+            if (!conf || !conf.active || !conf.rest.active) {
+                return
+            }
+
+            boolean printStatusMessages = (conf.printStatusMessages instanceof Boolean) ? conf.printStatusMessages : true
+
+            if (printStatusMessages) {
+                println '\t... with GORM support'
+            }
+
+            SpringSecurityUtils.loadSecondaryConfig 'DefaultRestGormSecurityConfig'
+            conf = SpringSecurityUtils.securityConfig
+
+            SpringSecurityUtils.registerFilter 'restLogoutFilter', SecurityFilterPosition.LOGOUT_FILTER.order - 1
+
+            tokenStorageService(GormTokenStorageService) {
+                userDetailsService = ref('userDetailsService')
+            }
+
+            tokenGenerator(SecureRandomTokenGenerator)
         }
-
-        boolean printStatusMessages = (conf.printStatusMessages instanceof Boolean) ? conf.printStatusMessages : true
-
-        if (printStatusMessages) {
-            println '\t... with GORM support'
-        }
-
-        SpringSecurityUtils.loadSecondaryConfig 'DefaultRestGormSecurityConfig'
-        conf = SpringSecurityUtils.securityConfig
-
-        SpringSecurityUtils.registerFilter 'restLogoutFilter', SecurityFilterPosition.LOGOUT_FILTER.order - 1
-
-        tokenStorageService(GormTokenStorageService) {
-            userDetailsService = ref('userDetailsService')
-        }
-
-        tokenGenerator(SecureRandomTokenGenerator)
-    }}
+    }
 
     void doWithApplicationContext() {
         def conf = SpringSecurityUtils.securityConfig

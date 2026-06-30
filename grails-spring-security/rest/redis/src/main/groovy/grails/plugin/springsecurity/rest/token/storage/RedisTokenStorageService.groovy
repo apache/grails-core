@@ -18,14 +18,17 @@
  */
 package grails.plugin.springsecurity.rest.token.storage
 
-import grails.plugins.redis.RedisService
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+
+import redis.clients.jedis.Jedis
+
 import org.springframework.core.convert.converter.Converter
 import org.springframework.core.serializer.support.SerializingConverter
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UserDetailsService
-import redis.clients.jedis.Jedis
+
+import grails.plugins.redis.RedisService
 
 @Slf4j
 @CompileStatic
@@ -37,7 +40,7 @@ class RedisTokenStorageService implements TokenStorageService {
     /** Expiration in seconds */
     Integer expiration = 3600
 
-    private static final String PREFIX = "spring:security:token:"
+    private static final String PREFIX = 'spring:security:token:'
 
     Converter<Object, byte[]> serializer = new SerializingConverter()
 
@@ -80,7 +83,7 @@ class RedisTokenStorageService implements TokenStorageService {
         }
     }
 
-    private static String buildKey(String token){
+    private static String buildKey(String token) {
         "$PREFIX$token"
     }
 
@@ -91,13 +94,13 @@ class RedisTokenStorageService implements TokenStorageService {
     }
 
     private byte[] serialize(Object object) {
-        if(object == null) {
+        if (object == null) {
             return new byte[0]
         } else {
             try {
                 return serializer.convert(object)
             } catch (Exception var3) {
-                throw new Exception("Cannot serialize", var3)
+                throw new Exception('Cannot serialize', var3)
             }
         }
     }

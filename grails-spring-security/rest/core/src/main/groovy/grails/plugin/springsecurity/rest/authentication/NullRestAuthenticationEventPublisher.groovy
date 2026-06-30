@@ -18,18 +18,20 @@
  */
 package grails.plugin.springsecurity.rest.authentication
 
+import groovy.transform.CompileStatic
+
 import grails.plugin.springsecurity.authentication.NullAuthenticationEventPublisher
 import grails.plugin.springsecurity.rest.token.AccessToken
-import groovy.transform.CompileStatic
 
 /*
  * Default implementation of the {@link RestAuthenticationEventPublisher} if security events are not listened to.
  */
+
 @CompileStatic
 class NullRestAuthenticationEventPublisher extends NullAuthenticationEventPublisher implements RestAuthenticationEventPublisher {
 
     @Override
-    public void publishTokenCreation(AccessToken accessToken) {
+    void publishTokenCreation(AccessToken accessToken) {
         // do nothing
     }
 }

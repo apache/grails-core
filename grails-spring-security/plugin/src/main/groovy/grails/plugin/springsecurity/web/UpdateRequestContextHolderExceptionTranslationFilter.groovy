@@ -18,14 +18,7 @@
  */
 package grails.plugin.springsecurity.web
 
-import grails.async.web.AsyncGrailsWebRequest
 import groovy.transform.CompileStatic
-import org.grails.web.servlet.mvc.GrailsWebRequest
-import org.grails.web.util.WebUtils
-import org.springframework.security.web.AuthenticationEntryPoint
-import org.springframework.security.web.access.ExceptionTranslationFilter
-import org.springframework.security.web.savedrequest.RequestCache
-import org.springframework.web.context.request.RequestContextHolder
 
 import jakarta.servlet.FilterChain
 import jakarta.servlet.ServletException
@@ -33,6 +26,15 @@ import jakarta.servlet.ServletRequest
 import jakarta.servlet.ServletResponse
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+
+import org.springframework.security.web.AuthenticationEntryPoint
+import org.springframework.security.web.access.ExceptionTranslationFilter
+import org.springframework.security.web.savedrequest.RequestCache
+import org.springframework.web.context.request.RequestContextHolder
+
+import grails.async.web.AsyncGrailsWebRequest
+import org.grails.web.servlet.mvc.GrailsWebRequest
+import org.grails.web.util.WebUtils
 
 /**
  * Replaces the current GrailsWebRequest with one that delegates to the real current instance but uses the request and
@@ -44,49 +46,48 @@ import jakarta.servlet.http.HttpServletResponse
 @CompileStatic
 class UpdateRequestContextHolderExceptionTranslationFilter extends ExceptionTranslationFilter {
 
-	UpdateRequestContextHolderExceptionTranslationFilter(AuthenticationEntryPoint authenticationEntryPoint) {
-		super(authenticationEntryPoint)
-	}
+    UpdateRequestContextHolderExceptionTranslationFilter(AuthenticationEntryPoint authenticationEntryPoint) {
+        super(authenticationEntryPoint)
+    }
 
-	UpdateRequestContextHolderExceptionTranslationFilter(AuthenticationEntryPoint authenticationEntryPoint, RequestCache requestCache) {
-		super(authenticationEntryPoint, requestCache)
-	}
+    UpdateRequestContextHolderExceptionTranslationFilter(AuthenticationEntryPoint authenticationEntryPoint, RequestCache requestCache) {
+        super(authenticationEntryPoint, requestCache)
+    }
 
-	void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
-		HttpServletRequest request = (HttpServletRequest) req;
-		HttpServletResponse response = (HttpServletResponse) res;
-		GrailsWebRequest current = (GrailsWebRequest)RequestContextHolder.requestAttributes
-		if (current && !(current instanceof DelegatingGrailsWebRequest) && !(current instanceof DelegatingAsyncGrailsWebRequest)) {
-			if (current instanceof AsyncGrailsWebRequest) {
-				WebUtils.storeGrailsWebRequest new DelegatingAsyncGrailsWebRequest(request, response, current)
-			}
-			else {
-				WebUtils.storeGrailsWebRequest new DelegatingGrailsWebRequest(request, response, current)
-			}
-		}
+    void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
+        HttpServletRequest request = (HttpServletRequest) req
+        HttpServletResponse response = (HttpServletResponse) res
+        GrailsWebRequest current = (GrailsWebRequest) RequestContextHolder.requestAttributes
+        if (current && !(current instanceof DelegatingGrailsWebRequest) && !(current instanceof DelegatingAsyncGrailsWebRequest)) {
+            if (current instanceof AsyncGrailsWebRequest) {
+                WebUtils.storeGrailsWebRequest new DelegatingAsyncGrailsWebRequest(request, response, current)
+            } else {
+                WebUtils.storeGrailsWebRequest new DelegatingGrailsWebRequest(request, response, current)
+            }
+        }
 
-		super.doFilter request, response, chain
-	}
+        super.doFilter request, response, chain
+    }
 }
 
 @CompileStatic
 class DelegatingGrailsWebRequest extends GrailsWebRequest {
 
-	@Delegate
-	GrailsWebRequest current
+    @Delegate
+    GrailsWebRequest current
 
-	DelegatingGrailsWebRequest(HttpServletRequest request, HttpServletResponse response, GrailsWebRequest current) {
-		super(request, response, current.attributes)
-	}
+    DelegatingGrailsWebRequest(HttpServletRequest request, HttpServletResponse response, GrailsWebRequest current) {
+        super(request, response, current.attributes)
+    }
 }
 
 @CompileStatic
 class DelegatingAsyncGrailsWebRequest extends AsyncGrailsWebRequest {
 
-	@Delegate
-	AsyncGrailsWebRequest current
+    @Delegate
+    AsyncGrailsWebRequest current
 
-	DelegatingAsyncGrailsWebRequest(HttpServletRequest request, HttpServletResponse response, AsyncGrailsWebRequest current) {
-		super(request, response, current.attributes)
-	}
+    DelegatingAsyncGrailsWebRequest(HttpServletRequest request, HttpServletResponse response, AsyncGrailsWebRequest current) {
+        super(request, response, current.attributes)
+    }
 }

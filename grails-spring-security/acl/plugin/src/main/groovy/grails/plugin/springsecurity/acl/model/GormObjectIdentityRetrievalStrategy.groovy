@@ -18,9 +18,10 @@
  */
 package grails.plugin.springsecurity.acl.model
 
-import grails.plugin.springsecurity.acl.util.ProxyUtils
 import org.springframework.security.acls.domain.ObjectIdentityImpl
 import org.springframework.security.acls.model.ObjectIdentity
+
+import grails.plugin.springsecurity.acl.util.ProxyUtils
 
 /**
  * The default implementation uses Class.forName() which doesn't work in Grails.
@@ -29,11 +30,11 @@ import org.springframework.security.acls.model.ObjectIdentity
  */
 class GormObjectIdentityRetrievalStrategy implements ObjectIdentityRetrievalStrategyAndGenerator {
 
-	ObjectIdentity getObjectIdentity(domainObject) {
-		createObjectIdentity domainObject.id, ProxyUtils.unproxy(domainObject.getClass()).name
-	}
+    ObjectIdentity getObjectIdentity(domainObject) {
+        createObjectIdentity domainObject.id, ProxyUtils.unproxy(domainObject.getClass()).name
+    }
 
-	ObjectIdentity createObjectIdentity(Serializable id, String type) {
-	   new ObjectIdentityImpl(type, id)
-	}
+    ObjectIdentity createObjectIdentity(Serializable id, String type) {
+        new ObjectIdentityImpl(type, id)
+    }
 }

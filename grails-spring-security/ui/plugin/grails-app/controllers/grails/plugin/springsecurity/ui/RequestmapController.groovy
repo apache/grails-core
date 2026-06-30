@@ -18,100 +18,95 @@
  */
 package grails.plugin.springsecurity.ui
 
+import org.springframework.http.HttpMethod
+
 import grails.plugin.springsecurity.ReflectionUtils
 import grails.plugin.springsecurity.ui.strategy.RequestmapStrategy
-import org.springframework.http.HttpMethod
 
 /**
  * @author <a href='mailto:burt@burtbeckwith.com'>Burt Beckwith</a>
  */
 class RequestmapController extends AbstractS2UiDomainController {
 
-	/** Dependency injection for the 'uiRequestmapStrategy' bean. */
-	RequestmapStrategy uiRequestmapStrategy
+    /** Dependency injection for the 'uiRequestmapStrategy' bean. */
+    RequestmapStrategy uiRequestmapStrategy
 
-	def springSecurityService
+    def springSecurityService
 
-	def create() {
-		super.create()
-	}
+    def save() {
+        withForm {
+            if (!(param('url'))) {
+                params.remove('url')
+            }
+            doSave(uiRequestmapStrategy.saveRequestmap(params)) {
+                springSecurityService.clearCachedRequestmaps()
+            }
+        }.invalidToken {
+            doSaveWithInvalidToken(params.url)
+        }
+    }
 
-	def save() {
-		withForm {
-			if (!(param('url'))) {
-				params.remove('url')
-			}
-			doSave(uiRequestmapStrategy.saveRequestmap(params)) {
-				springSecurityService.clearCachedRequestmaps()
-			}
-		}.invalidToken {
-			doSaveWithInvalidToken(params.url)
-		}
-	}
+    def update() {
+        withForm {
+            if (!(param('url'))) {
+                params.remove('url')
+            }
+            doUpdate { requestmap ->
+                uiRequestmapStrategy.updateRequestmap params, requestmap
+            }
+        }.invalidToken {
+            doUpdateWithInvalidToken(params.url)
+        }
+    }
 
-	def edit() {
-		super.edit()
-	}
+    def delete() {
+        withForm {
+            tryDelete { requestmap ->
+                uiRequestmapStrategy.deleteRequestmap requestmap
+            }
+        }.invalidToken {
+            doDeleteWithInvalidToken()
+        }
+    }
 
-	def update() {
-		withForm {
-			if (!(param('url'))) {
-				params.remove('url')
-			}
-			doUpdate { requestmap ->
-				uiRequestmapStrategy.updateRequestmap params, requestmap
-			}
-		}.invalidToken {
-			doUpdateWithInvalidToken(params.url)
-		}
-	}
+    def search() {
+        if (!isSearch()) {
+            // show the form
+            return [hasHttpMethod: hasHttpMethod]
+        }
 
-	def delete() {
-		withForm {
-			tryDelete { requestmap ->
-				uiRequestmapStrategy.deleteRequestmap requestmap
-			}
-		}.invalidToken {
-			doDeleteWithInvalidToken()
-		}
-	}
+        def results = doSearch { ->
+            like 'configAttribute', delegate
+            like 'url', delegate
+            if (param('httpMethod')) {
+                eq 'httpMethod', HttpMethod.valueOf(params.httpMethod), delegate
+            }
+        }
 
-	def search() {
-		if (!isSearch()) {
-			// show the form
-			return [hasHttpMethod: hasHttpMethod]
-		}
+        renderSearch([results: results, totalCount: results.totalCount, hasHttpMethod: hasHttpMethod],
+                'configAttribute', 'httpMethod', 'url')
+    }
 
-		def results = doSearch { ->
-			like 'configAttribute', delegate
-			like 'url', delegate
-			if (param('httpMethod')) {
-				eq 'httpMethod', HttpMethod.valueOf(params.httpMethod), delegate
-			}
-		}
+    protected Class<?> getClazz() { Requestmap }
 
-		renderSearch([results: results, totalCount: results.totalCount, hasHttpMethod: hasHttpMethod],
-		              'configAttribute', 'httpMethod', 'url')
-	}
+    protected String getClassLabelCode() { 'requestmap.label' }
 
-	protected Class<?> getClazz() { Requestmap }
-	protected String getClassLabelCode() { 'requestmap.label' }
-	protected Map model(requestmap, String action) {
-		[requestmap: requestmap, hasHttpMethod: hasHttpMethod]
-	}
+    protected Map model(requestmap, String action) {
+        [requestmap: requestmap, hasHttpMethod: hasHttpMethod]
+    }
 
-	protected boolean hasHttpMethod
-	protected Class<?> Requestmap
+    protected boolean hasHttpMethod
+    protected Class<?> Requestmap
 
-	void afterPropertiesSet() {
-		super.afterPropertiesSet()
+    void afterPropertiesSet() {
+        super.afterPropertiesSet()
 
-		if (!conf.requestMap.className) {
-			return
-		}
+        if (!conf.requestMap.className) {
+            return
+        }
 
-		hasHttpMethod = ReflectionUtils.requestmapClassSupportsHttpMethod()
+        hasHttpMethod = ReflectionUtils.requestmapClassSupportsHttpMethod()
 
-		Requestmap = getDomainClassClass(conf.requestMap.className)
-	}
+        Requestmap = getDomainClassClass(conf.requestMap.className)
+    }
 }

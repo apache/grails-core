@@ -18,10 +18,10 @@
  */
 package grails.plugin.springsecurity.web
 
+import groovy.transform.CompileStatic
+
 import org.springframework.security.web.FilterChainProxy
 import org.springframework.security.web.FilterChainProxy.FilterChainValidator
-
-import groovy.transform.CompileStatic
 
 /**
  * No-op validator.
@@ -30,7 +30,8 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 class NullFilterChainValidator implements FilterChainValidator {
-	void validate(FilterChainProxy filterChainProxy) {
-		// do nothing
-	}
+
+    void validate(FilterChainProxy filterChainProxy) {
+        // do nothing
+    }
 }

@@ -19,10 +19,11 @@
 
 package grails.plugin.springsecurity.rest
 
-import org.springframework.mock.web.MockHttpServletRequest
-import org.springframework.mock.web.MockServletContext
 import spock.lang.Specification
 import spock.lang.Unroll
+
+import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.mock.web.MockServletContext
 
 class SpringSecurityRestFilterRequestMatcherSpec extends Specification {
 
@@ -41,10 +42,10 @@ class SpringSecurityRestFilterRequestMatcherSpec extends Specification {
         matchesResult == matches
 
         where:
-        contextPath         | uri                   || matches
-        "/"                 | "/api/login"          || true
-        "/"                 | "/api/loginxxx"       || false
-        "/foo"              | "/api/login/foo"      || false
+        contextPath | uri              || matches
+        "/"         | "/api/login"     || true
+        "/"         | "/api/loginxxx"  || false
+        "/foo"      | "/api/login/foo" || false
     }
 
 }

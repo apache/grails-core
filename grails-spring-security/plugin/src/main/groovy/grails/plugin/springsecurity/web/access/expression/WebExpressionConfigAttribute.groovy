@@ -18,10 +18,10 @@
  */
 package grails.plugin.springsecurity.web.access.expression
 
+import groovy.transform.CompileStatic
+
 import org.springframework.expression.Expression
 import org.springframework.security.access.ConfigAttribute
-
-import groovy.transform.CompileStatic
 
 /**
  * Simple expression configuration attribute for use in web request authorizations.
@@ -33,22 +33,22 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class WebExpressionConfigAttribute implements ConfigAttribute {
 
-	private static final long serialVersionUID = 1
+    private static final long serialVersionUID = 1
 
-	final Expression authorizeExpression
+    final Expression authorizeExpression
 
-	/**
-	 * Constructor.
-	 * @param authorizeExpression the expression
-	 */
-	WebExpressionConfigAttribute(Expression authorizeExpression) {
-		this.authorizeExpression = authorizeExpression
-	}
+    /**
+     * Constructor.
+     * @param authorizeExpression the expression
+     */
+    WebExpressionConfigAttribute(Expression authorizeExpression) {
+        this.authorizeExpression = authorizeExpression
+    }
 
-	String getAttribute() {}
+    String getAttribute() {}
 
-	@Override
-	String toString() {
-		authorizeExpression.expressionString
-	}
+    @Override
+    String toString() {
+        authorizeExpression.expressionString
+    }
 }

@@ -18,12 +18,14 @@
  */
 package grails.plugin.springsecurity.rest.token.storage
 
+import groovy.util.logging.Slf4j
+
+import org.springframework.security.core.userdetails.UserDetails
+import org.springframework.security.core.userdetails.UserDetailsService
+
 import grails.core.GrailsApplication
 import grails.plugin.springsecurity.SpringSecurityUtils
 import grails.util.Holders
-import groovy.util.logging.Slf4j
-import org.springframework.security.core.userdetails.UserDetails
-import org.springframework.security.core.userdetails.UserDetailsService
 
 /**
  * GORM implementation for token storage. It will look for tokens on the DB using a domain class that will contain the

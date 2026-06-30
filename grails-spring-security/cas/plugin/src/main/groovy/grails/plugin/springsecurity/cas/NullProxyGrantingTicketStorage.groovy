@@ -18,9 +18,9 @@
  */
 package grails.plugin.springsecurity.cas
 
-import org.apereo.cas.client.proxy.ProxyGrantingTicketStorage
-
 import groovy.transform.CompileStatic
+
+import org.apereo.cas.client.proxy.ProxyGrantingTicketStorage
 
 /**
  * No-op implementation.
@@ -29,7 +29,10 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 class NullProxyGrantingTicketStorage implements ProxyGrantingTicketStorage {
-	void cleanUp() {}
-	String retrieve(String proxyGrantingTicketIou) {}
-	void save(String proxyGrantingTicketIou, String proxyGrantingTicket) {}
+
+    void cleanUp() {}
+
+    String retrieve(String proxyGrantingTicketIou) {}
+
+    void save(String proxyGrantingTicketIou, String proxyGrantingTicket) {}
 }

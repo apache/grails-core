@@ -23,12 +23,12 @@ package grails.plugin.springsecurity
  */
 enum SecurityConfigType {
 
-	/** Annotations in controllers. */
-	Annotation,
+    /** Annotations in controllers. */
+    Annotation,
 
-	/** Requestmap domain class. */
-	Requestmap,
+    /** Requestmap domain class. */
+    Requestmap,
 
-	/** Map defined in Config.groovy. */
-	InterceptUrlMap
+    /** Map defined in Config.groovy. */
+    InterceptUrlMap
 }

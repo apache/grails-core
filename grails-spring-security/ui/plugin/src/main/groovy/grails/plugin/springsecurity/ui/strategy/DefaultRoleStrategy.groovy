@@ -18,8 +18,9 @@
  */
 package grails.plugin.springsecurity.ui.strategy
 
-import grails.plugin.springsecurity.ui.SpringSecurityUiService
 import groovy.transform.CompileStatic
+
+import grails.plugin.springsecurity.ui.SpringSecurityUiService
 
 /**
  * @author <a href='mailto:burt@burtbeckwith.com'>Burt Beckwith</a>
@@ -27,17 +28,17 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class DefaultRoleStrategy implements RoleStrategy {
 
-	SpringSecurityUiService springSecurityUiService
+    SpringSecurityUiService springSecurityUiService
 
-	def saveRole(Map properties) {
-		springSecurityUiService.saveRole properties
-	}
+    def saveRole(Map properties) {
+        springSecurityUiService.saveRole properties
+    }
 
-	void updateRole(Map properties, role) {
-		springSecurityUiService.updateRole properties, role
-	}
+    void updateRole(Map properties, role) {
+        springSecurityUiService.updateRole properties, role
+    }
 
-	void deleteRole(role) {
-		springSecurityUiService.deleteRole role
-	}
+    void deleteRole(role) {
+        springSecurityUiService.deleteRole role
+    }
 }

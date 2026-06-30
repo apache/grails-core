@@ -19,6 +19,7 @@
 package grails.plugin.springsecurity.rest.token.generation.jwt
 
 import com.nimbusds.jwt.JWTClaimsSet
+
 import org.springframework.security.core.userdetails.UserDetails
 
 /**

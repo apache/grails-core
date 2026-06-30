@@ -18,18 +18,17 @@
  */
 package grails.plugin.springsecurity.web.authentication.preauth.x509
 
-import groovy.util.logging.Slf4j
-import org.springframework.context.MessageSourceAware
-
 import java.security.cert.X509Certificate
 
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+
 import org.springframework.context.MessageSource
+import org.springframework.context.MessageSourceAware
 import org.springframework.context.support.MessageSourceAccessor
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.core.SpringSecurityMessageSource
 import org.springframework.security.web.authentication.preauth.x509.X509PrincipalExtractor
-
-import groovy.transform.CompileStatic
 
 /**
  * @author Burt Beckwith
@@ -38,35 +37,35 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class ClosureX509PrincipalExtractor implements X509PrincipalExtractor, MessageSourceAware {
 
-	protected MessageSourceAccessor messages = SpringSecurityMessageSource.accessor
+    protected MessageSourceAccessor messages = SpringSecurityMessageSource.accessor
 
-	/** Dependency injection for the closure to use to extract the username. */
-	Closure<?> closure
+    /** Dependency injection for the closure to use to extract the username. */
+    Closure<?> closure
 
-	def extractPrincipal(X509Certificate clientCert) {
-		String subjectDN = clientCert.subjectDN.name
+    def extractPrincipal(X509Certificate clientCert) {
+        String subjectDN = clientCert.subjectDN.name
 
-		log.debug "Subject DN is '{}'", subjectDN
+        log.debug "Subject DN is '{}'", subjectDN
 
-		def username = closure.call(subjectDN)
-		if (username == null) {
-			final String code = 'SubjectDnX509PrincipalExtractor.noMatching'
-			final String defaultMessage = 'No matching pattern was found in subject DN: {}'
-			Object[] args = [subjectDN] as Object[]
-			throw new BadCredentialsException(messages.getMessage(code, args, defaultMessage))
-		}
+        def username = closure.call(subjectDN)
+        if (username == null) {
+            final String code = 'SubjectDnX509PrincipalExtractor.noMatching'
+            final String defaultMessage = 'No matching pattern was found in subject DN: {}'
+            Object[] args = [subjectDN] as Object[]
+            throw new BadCredentialsException(messages.getMessage(code, args, defaultMessage))
+        }
 
-		log.debug "Extracted Principal name is '{}'", username
+        log.debug "Extracted Principal name is '{}'", username
 
-		username
-	}
+        username
+    }
 
-	/**
-	 * Dependency injection for the message source.
-	 * @param messageSource the message source
-	 */
-	@Override
-	void setMessageSource(MessageSource messageSource) {
-		messages = new MessageSourceAccessor(messageSource)
-	}
+    /**
+     * Dependency injection for the message source.
+     * @param messageSource the message source
+     */
+    @Override
+    void setMessageSource(MessageSource messageSource) {
+        messages = new MessageSourceAccessor(messageSource)
+    }
 }

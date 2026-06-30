@@ -18,10 +18,9 @@
  */
 package grails.plugin.springsecurity.ui
 
+class ForgotPasswordCommand implements CommandObject, grails.validation.Validateable {
 
-class ForgotPasswordCommand implements CommandObject, grails.validation.Validateable  {
     String username
-
 
     static constraints = {
     }

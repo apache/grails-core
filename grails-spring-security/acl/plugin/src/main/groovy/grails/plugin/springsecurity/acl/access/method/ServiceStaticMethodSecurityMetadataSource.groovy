@@ -18,13 +18,15 @@
  */
 package grails.plugin.springsecurity.acl.access.method
 
-import grails.plugin.springsecurity.acl.util.ProxyUtils
+import java.lang.reflect.Method
+
 import groovy.transform.CompileStatic
+
 import org.springframework.security.access.ConfigAttribute
 import org.springframework.security.access.SecurityConfig
 import org.springframework.security.access.method.AbstractFallbackMethodSecurityMetadataSource
 
-import java.lang.reflect.Method
+import grails.plugin.springsecurity.acl.util.ProxyUtils
 
 /**
  * <code>MethodSecurityMetadataSource</code> that's populated by 'springSecurityACL' blocks in services.
@@ -34,49 +36,49 @@ import java.lang.reflect.Method
 @CompileStatic
 class ServiceStaticMethodSecurityMetadataSource extends AbstractFallbackMethodSecurityMetadataSource {
 
-	protected final Map<String, Map<String, List<ConfigAttribute>>> methodConfigs = [:]
-	protected final Map<String, List<ConfigAttribute>> classConfigs = [:]
+    protected final Map<String, Map<String, List<ConfigAttribute>>> methodConfigs = [:]
+    protected final Map<String, List<ConfigAttribute>> classConfigs = [:]
 
-	@Override
-	protected Collection<ConfigAttribute> findAttributes(Class<?> clazz) {
-		classConfigs.get(ProxyUtils.unproxy(clazz).name)
-	}
+    @Override
+    protected Collection<ConfigAttribute> findAttributes(Class<?> clazz) {
+        classConfigs.get(ProxyUtils.unproxy(clazz).name)
+    }
 
-	@Override
-	protected Collection<ConfigAttribute> findAttributes(Method method, Class<?> targetClass) {
-		methodConfigs.get(ProxyUtils.unproxy(targetClass).name)?.get(ProxyUtils.unproxy(method).name)
-	}
+    @Override
+    protected Collection<ConfigAttribute> findAttributes(Method method, Class<?> targetClass) {
+        methodConfigs.get(ProxyUtils.unproxy(targetClass).name)?.get(ProxyUtils.unproxy(method).name)
+    }
 
-	Collection<ConfigAttribute> getAllConfigAttributes() {}
+    Collection<ConfigAttribute> getAllConfigAttributes() {}
 
-	/**
-	 * Dependency injection for class-scope rules.
-	 * @param classConfigNames  keys are class names, values are one or more tokens to apply,
-	 * e.g. ROLE_ADMIN, AFTER_ACL_COLLECTION_READ.
-	 */
-	void setClassConfigNames(Map<String, List<String>> classConfigNames) {
-		if (classConfigNames) {
-			populateMap classConfigs, classConfigNames
-		}
-	}
+    /**
+     * Dependency injection for class-scope rules.
+     * @param classConfigNames  keys are class names, values are one or more tokens to apply,
+     * e.g. ROLE_ADMIN, AFTER_ACL_COLLECTION_READ.
+     */
+    void setClassConfigNames(Map<String, List<String>> classConfigNames) {
+        if (classConfigNames) {
+            populateMap classConfigs, classConfigNames
+        }
+    }
 
-	/**
-	 * Dependency injection for method-scope rules.
-	 * @param methodConfigNames  keys are class names, values are maps with method name keys and
-	 * values are one or more tokens to apply, e.g. ROLE_ADMIN, AFTER_ACL_COLLECTION_READ.
-	 */
-	void setMethodConfigNames(Map<String, Map<String, List<String>>> methodConfigNames) {
-		methodConfigNames.each { String key, Map<String, List<String>> value ->
-			Map<String, List<ConfigAttribute>> configs = [:]
-			populateMap configs, value
-			//methodConfigs[key] = configs // workaround for groovy 2.5.6 bug
-			methodConfigs.put(key,configs)
-		}
-	}
+    /**
+     * Dependency injection for method-scope rules.
+     * @param methodConfigNames  keys are class names, values are maps with method name keys and
+     * values are one or more tokens to apply, e.g. ROLE_ADMIN, AFTER_ACL_COLLECTION_READ.
+     */
+    void setMethodConfigNames(Map<String, Map<String, List<String>>> methodConfigNames) {
+        methodConfigNames.each { String key, Map<String, List<String>> value ->
+            Map<String, List<ConfigAttribute>> configs = [:]
+            populateMap configs, value
+            //methodConfigs[key] = configs // workaround for groovy 2.5.6 bug
+            methodConfigs.put(key, configs)
+        }
+    }
 
-	protected void populateMap(Map<String, List<ConfigAttribute>> dest, Map<String, List<String>> source) {
-		source.each { String key, List<String> value ->
-			dest.put(key,value.collect { String config -> new SecurityConfig(config) } as List<ConfigAttribute>)
-		}
-	}
+    protected void populateMap(Map<String, List<ConfigAttribute>> dest, Map<String, List<String>> source) {
+        source.each { String key, List<String> value ->
+            dest.put(key, value.collect { String config -> new SecurityConfig(config) } as List<ConfigAttribute>)
+        }
+    }
 }

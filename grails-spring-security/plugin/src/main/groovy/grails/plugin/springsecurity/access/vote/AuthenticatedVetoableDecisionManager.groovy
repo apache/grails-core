@@ -18,6 +18,8 @@
  */
 package grails.plugin.springsecurity.access.vote
 
+import groovy.transform.CompileStatic
+
 import org.springframework.security.access.AccessDecisionVoter
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.access.ConfigAttribute
@@ -25,8 +27,6 @@ import org.springframework.security.access.vote.AbstractAccessDecisionManager
 import org.springframework.security.access.vote.AuthenticatedVoter
 import org.springframework.security.authentication.InsufficientAuthenticationException
 import org.springframework.security.core.Authentication
-
-import groovy.transform.CompileStatic
 
 /**
  * Uses the affirmative-based logic for roles, i.e. any in the list will grant access, but allows
@@ -38,34 +38,34 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class AuthenticatedVetoableDecisionManager extends AbstractAccessDecisionManager {
 
-	AuthenticatedVetoableDecisionManager(List<AccessDecisionVoter> decisionVoters) {
-		super(decisionVoters)
-	}
+    AuthenticatedVetoableDecisionManager(List<AccessDecisionVoter> decisionVoters) {
+        super(decisionVoters)
+    }
 
-	void decide(Authentication authentication, object, Collection<ConfigAttribute> configAttributes)
-			throws AccessDeniedException, InsufficientAuthenticationException {
+    void decide(Authentication authentication, object, Collection<ConfigAttribute> configAttributes)
+            throws AccessDeniedException, InsufficientAuthenticationException {
 
-		boolean authenticatedVotersGranted = checkAuthenticatedVoters(authentication, object, configAttributes)
-		boolean otherVotersGranted = checkOtherVoters(authentication, object, configAttributes)
+        boolean authenticatedVotersGranted = checkAuthenticatedVoters(authentication, object, configAttributes)
+        boolean otherVotersGranted = checkOtherVoters(authentication, object, configAttributes)
 
-		logger.trace "decide(): authenticatedVotersGranted=$authenticatedVotersGranted otherVotersGranted=$otherVotersGranted"
+        logger.trace "decide(): authenticatedVotersGranted=$authenticatedVotersGranted otherVotersGranted=$otherVotersGranted"
 
-		if (!authenticatedVotersGranted && !otherVotersGranted) {
-			checkAllowIfAllAbstainDecisions()
-		}
-	}
+        if (!authenticatedVotersGranted && !otherVotersGranted) {
+            checkAllowIfAllAbstainDecisions()
+        }
+    }
 
-	/**
-	 * Allow any {@link AuthenticatedVoter} to veto. If any voter denies,
-	 * throw an exception; if any grant, return <code>true</code>;
-	 * otherwise return <code>false</code> if all abstain.
-	 */
-	@SuppressWarnings(['rawtypes', 'unchecked'])
-	protected boolean checkAuthenticatedVoters(Authentication authentication, object, Collection<ConfigAttribute> configAttributes) {
+    /**
+     * Allow any {@link AuthenticatedVoter} to veto. If any voter denies,
+     * throw an exception; if any grant, return <code>true</code>;
+     * otherwise return <code>false</code> if all abstain.
+     */
+    @SuppressWarnings(['rawtypes', 'unchecked'])
+    protected boolean checkAuthenticatedVoters(Authentication authentication, object, Collection<ConfigAttribute> configAttributes) {
 
-		boolean grant = false
-		for (AccessDecisionVoter voter in decisionVoters) {
-			if (voter instanceof AuthenticatedVoter) {
+        boolean grant = false
+        for (AccessDecisionVoter voter in decisionVoters) {
+            if (voter instanceof AuthenticatedVoter) {
                 boolean voterSupportsSecurityContext = object == null || voter.supports(object.class)
                 if (voterSupportsSecurityContext) {
                     int result = voter.vote(authentication, object, configAttributes)
@@ -75,24 +75,24 @@ class AuthenticatedVetoableDecisionManager extends AbstractAccessDecisionManager
                         default: break // abstain
                     }
                 }
-			}
-		}
+            }
+        }
 
-		grant
-	}
+        grant
+    }
 
-	/**
-	 * Check the other (non-{@link AuthenticatedVoter}) voters. If any voter grants,
-	 * return true. If any voter denies, throw exception. Otherwise return <code>false</code>
-	 * to indicate that all abstained.
-	 */
-	@SuppressWarnings(['rawtypes', 'unchecked'])
-	protected boolean checkOtherVoters(Authentication authentication, object, Collection<ConfigAttribute> configAttributes) {
-		int denyCount = 0
-		for (AccessDecisionVoter voter in getDecisionVoters()) {
-			if (voter instanceof AuthenticatedVoter) {
-				continue
-			}
+    /**
+     * Check the other (non-{@link AuthenticatedVoter}) voters. If any voter grants,
+     * return true. If any voter denies, throw exception. Otherwise return <code>false</code>
+     * to indicate that all abstained.
+     */
+    @SuppressWarnings(['rawtypes', 'unchecked'])
+    protected boolean checkOtherVoters(Authentication authentication, object, Collection<ConfigAttribute> configAttributes) {
+        int denyCount = 0
+        for (AccessDecisionVoter voter in getDecisionVoters()) {
+            if (voter instanceof AuthenticatedVoter) {
+                continue
+            }
             boolean voterSupportsSecurityContext = object == null || voter.supports(object.class)
             if (voterSupportsSecurityContext) {
                 int result = voter.vote(authentication, object, configAttributes)
@@ -102,17 +102,17 @@ class AuthenticatedVetoableDecisionManager extends AbstractAccessDecisionManager
                     default: break // abstain
                 }
             }
-		}
+        }
 
-		if (denyCount) {
-			deny()
-		}
+        if (denyCount) {
+            deny()
+        }
 
-		// all abstain
-		false
-	}
+        // all abstain
+        false
+    }
 
-	protected void deny() {
-		throw new AccessDeniedException(messages.getMessage('AbstractAccessDecisionManager.accessDenied', 'Access is denied'))
-	}
+    protected void deny() {
+        throw new AccessDeniedException(messages.getMessage('AbstractAccessDecisionManager.accessDenied', 'Access is denied'))
+    }
 }

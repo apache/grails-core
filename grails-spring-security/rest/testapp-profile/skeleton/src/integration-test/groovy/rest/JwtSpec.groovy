@@ -19,14 +19,16 @@
 package rest
 
 import com.nimbusds.jwt.JWT
-import grails.plugin.springsecurity.rest.JwtService
-import grails.plugins.rest.client.RestResponse
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.security.core.userdetails.User
-import org.springframework.security.provisioning.InMemoryUserDetailsManager
 import spock.lang.IgnoreIf
 import spock.lang.Issue
 import spock.lang.Unroll
+
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.security.core.userdetails.User
+import org.springframework.security.provisioning.InMemoryUserDetailsManager
+
+import grails.plugin.springsecurity.rest.JwtService
+import grails.plugins.rest.client.RestResponse
 
 @IgnoreIf({ !System.getProperty('useBearerToken', 'false').toBoolean() })
 class JwtSpec extends AbstractRestSpec {
@@ -145,11 +147,11 @@ class JwtSpec extends AbstractRestSpec {
         response.status == status
 
         where:
-        method      | status
-        'get'       | 405
-        'post'      | 200
-        'put'       | 405
-        'delete'    | 405
+        method   | status
+        'get'    | 405
+        'post'   | 200
+        'put'    | 405
+        'delete' | 405
     }
 
     void "an invalid refresh token is rejected as forbidden"() {
@@ -218,11 +220,11 @@ class JwtSpec extends AbstractRestSpec {
         userDetailsManager.deleteUser('foo')
 
         where:
-        updatedUser                                                 | status
-        new User('foo', '{noop}password', false, true, true, true, [])    | "disabled"
-        new User('foo', '{noop}password', true, false, true, true, [])    | "expired"
-        new User('foo', '{noop}password', true, true, false, true, [])    | "credentials expired"
-        new User('foo', '{noop}password', true, true, true, false, [])    | "locked"
+        updatedUser                                                    | status
+        new User('foo', '{noop}password', false, true, true, true, []) | "disabled"
+        new User('foo', '{noop}password', true, false, true, true, []) | "expired"
+        new User('foo', '{noop}password', true, true, false, true, []) | "credentials expired"
+        new User('foo', '{noop}password', true, true, true, false, []) | "locked"
     }
 
 }

@@ -19,19 +19,21 @@
 package grails.plugin.springsecurity.web.authentication.preauth.x509
 
 import groovy.transform.CompileStatic
-import org.springframework.security.core.Authentication
-import org.springframework.security.web.authentication.AuthenticationSuccessHandler
 
 import jakarta.servlet.ServletException
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+
+import org.springframework.security.core.Authentication
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler
 
 /**
  * @author Burt Beckwith
  */
 @CompileStatic
 class NullAuthenticationSuccessHandler implements AuthenticationSuccessHandler {
-	void onAuthenticationSuccess(HttpServletRequest req, HttpServletResponse res, Authentication a) throws IOException, ServletException {
-		// no-op
-	}
+
+    void onAuthenticationSuccess(HttpServletRequest req, HttpServletResponse res, Authentication a) throws IOException, ServletException {
+        // no-op
+    }
 }

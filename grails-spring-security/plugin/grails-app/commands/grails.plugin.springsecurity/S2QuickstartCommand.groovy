@@ -110,14 +110,15 @@ Example: ./grailsw s2-quickstart --uiOnly
 
     private void initializeTemplateAttributes() {
         templateAttributes = Collections.unmodifiableMap([
-                packageName        : userModel.packageName,
-                userClassName      : userModel.simpleName,
-                userClassProperty  : userModel.modelName,
-                roleClassName      : roleModel.simpleName,
-                roleClassProperty  : roleModel.modelName,
+                packageName: userModel.packageName,
+                userClassName: userModel.simpleName,
+                userClassProperty: userModel.modelName,
+                roleClassName: roleModel.simpleName,
+                roleClassProperty: roleModel.modelName,
                 requestmapClassName: requestmapModel?.simpleName,
-                groupClassName     : roleGroupModel?.simpleName,
-                groupClassProperty : roleGroupModel?.modelName])
+                groupClassName: roleGroupModel?.simpleName,
+                groupClassProperty: roleGroupModel?.modelName
+        ])
     }
 
     private void initialize() {
@@ -191,7 +192,7 @@ Example: ./grailsw s2-quickstart --uiOnly
                                Model groupModel) {
 
         final Properties props = new Properties()
-        file("gradle.properties")?.withInputStream { props.load(it) }
+        file('gradle.properties')?.withInputStream { props.load(it) }
         
         generateFile('PersonWithoutInjection', userModel.packagePath, userModel.simpleName)
         if (salt) {
@@ -207,19 +208,18 @@ Example: ./grailsw s2-quickstart --uiOnly
                     'src/main/groovy')
         }
         List<Map<String, String>> beans = []
-        beans.add([import    : "import ${userModel.packageName}.${userModel.simpleName}PasswordEncoderListener".toString(),
+        beans.add([import: "import ${userModel.packageName}.${userModel.simpleName}PasswordEncoderListener".toString(),
                    definition: "${userModel.propertyName}PasswordEncoderListener(${userModel.simpleName}PasswordEncoderListener)".toString()])
 
-        if(new File('grails-app/conf/spring/resources.groovy').exists()) {
+        if (new File('grails-app/conf/spring/resources.groovy').exists()) {
             addBeans(beans, 'grails-app/conf/spring/resources.groovy')
         } else {
             //we could be generating this in a plugin... we should look for a Plugin class
             File pluginClassFile = findPluginClass()
-            if(pluginClassFile  != null) {
-                 addBeansToPlugin(beans, pluginClassFile)
+            if (pluginClassFile != null) {
+                addBeansToPlugin(beans, pluginClassFile)
             }
-          }
-
+        }
 
         generateFile('Authority', roleModel.packagePath, roleModel.simpleName)
         generateFile('PersonAuthority', roleModel.packagePath, userModel.simpleName + roleModel.simpleName)
@@ -294,13 +294,13 @@ Example: ./grailsw s2-quickstart --uiOnly
                 writer.writeLine("                userDomainClassName: '${packageName}.$userClassName'")
                 writer.writeLine("                authorityJoinClassName: '${packageName}.$userClassName$roleClassName'")
             }
-            if(!uiOnly || useRoleGroups) {
+            if (!uiOnly || useRoleGroups) {
                 writer.writeLine('        authority:')
-                if(!uiOnly) {
+                if (!uiOnly) {
                     writer.writeLine("            className: '${packageName}.$roleClassName'")
                 }
-                if(useRoleGroups) {
-                    writer.writeLine("            groupAuthorityNameField: authorities")
+                if (useRoleGroups) {
+                    writer.writeLine('            groupAuthorityNameField: authorities')
                 }
             }
 
@@ -309,7 +309,7 @@ Example: ./grailsw s2-quickstart --uiOnly
             }
             if (requestmapClassName) {
                 writer.writeLine("            requestMap.className: '${packageName}.$requestmapClassName'")
-                writer.writeLine("            securityConfigType: Requestmap")
+                writer.writeLine('            securityConfigType: Requestmap')
             }
             writer.writeLine('            controllerAnnotations:')
             writer.writeLine('                staticRules:')
@@ -392,8 +392,8 @@ Example: ./grailsw s2-quickstart --uiOnly
         if (pluginClassFile.exists()) {
             pluginClassFile.eachLine { line, nb ->
                 lines << line
-                if(line.trim().startsWith('package ')) {
-                     beans.forEach(bean -> lines.add(bean.import))
+                if (line.trim().startsWith('package ')) {
+                    beans.forEach(bean -> lines.add(bean.import))
                 }
                 if (line.contains('doWithSpring()')) {
                     beans.each { Map bean ->
@@ -410,11 +410,10 @@ Example: ./grailsw s2-quickstart --uiOnly
         }
     }
 
-
     private File findPluginClass() {
         File pluginClass = null
-        new File("src/main/groovy").eachFileRecurse { fl ->
-            if (fl.isFile() && fl.name.endsWith("GrailsPlugin.groovy")) {
+        new File('src/main/groovy').eachFileRecurse { fl ->
+            if (fl.isFile() && fl.name.endsWith('GrailsPlugin.groovy')) {
                 pluginClass = fl
             }
         }

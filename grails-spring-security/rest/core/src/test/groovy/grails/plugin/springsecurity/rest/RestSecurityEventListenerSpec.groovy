@@ -18,16 +18,17 @@
  */
 package grails.plugin.springsecurity.rest
 
-import grails.plugin.springsecurity.SpringSecurityUtils
-import grails.plugin.springsecurity.rest.token.AccessToken
-import org.springframework.context.ApplicationContext
-import org.springframework.context.ApplicationEvent
-import org.springframework.context.support.GenericApplicationContext
-import org.springframework.security.authentication.event.InteractiveAuthenticationSuccessEvent
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Subject
 
+import org.springframework.context.ApplicationContext
+import org.springframework.context.ApplicationEvent
+import org.springframework.context.support.GenericApplicationContext
+import org.springframework.security.authentication.event.InteractiveAuthenticationSuccessEvent
+
+import grails.plugin.springsecurity.SpringSecurityUtils
+import grails.plugin.springsecurity.rest.token.AccessToken
 
 @Subject(RestSecurityEventListener)
 class RestSecurityEventListenerSpec extends Specification {

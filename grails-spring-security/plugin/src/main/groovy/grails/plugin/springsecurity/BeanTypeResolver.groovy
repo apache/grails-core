@@ -18,8 +18,9 @@
  */
 package grails.plugin.springsecurity
 
-import grails.core.GrailsApplication
 import groovy.transform.CompileStatic
+
+import grails.core.GrailsApplication
 
 /**
  * Used in doWithSpring to allow overriding of the class of individual Spring beans by setting a property in the config.
@@ -36,19 +37,19 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class BeanTypeResolver {
 
-	protected ConfigObject conf
-	protected GrailsApplication grailsApplication
+    protected ConfigObject conf
+    protected GrailsApplication grailsApplication
 
-	BeanTypeResolver(ConfigObject securityConfig, GrailsApplication application) {
-		conf = securityConfig
-		grailsApplication = application
-	}
+    BeanTypeResolver(ConfigObject securityConfig, GrailsApplication application) {
+        conf = securityConfig
+        grailsApplication = application
+    }
 
-	Class resolveType(String beanName, Class defaultType) {
-		def override = conf[beanName + 'BeanClass']
-		if (override instanceof CharSequence) {
-			override = Class.forName(override.toString(), false, Thread.currentThread().contextClassLoader)
-		}
-		override ?: defaultType
-	}
+    Class resolveType(String beanName, Class defaultType) {
+        def override = conf[beanName + 'BeanClass']
+        if (override instanceof CharSequence) {
+            override = Class.forName(override.toString(), false, Thread.currentThread().contextClassLoader)
+        }
+        override ?: defaultType
+    }
 }

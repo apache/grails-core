@@ -18,15 +18,17 @@
  */
 package redis
 
-import grails.plugin.springsecurity.rest.token.storage.RedisTokenStorageService
-import grails.plugin.springsecurity.rest.token.storage.TokenNotFoundException
-import grails.plugins.redis.RedisService
-import grails.testing.mixin.integration.Integration
+import spock.lang.Specification
+
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.security.core.userdetails.User
 import org.springframework.security.core.userdetails.UserDetails
-import spock.lang.Specification
+
+import grails.plugin.springsecurity.rest.token.storage.RedisTokenStorageService
+import grails.plugin.springsecurity.rest.token.storage.TokenNotFoundException
+import grails.plugins.redis.RedisService
+import grails.testing.mixin.integration.Integration
 
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.DEFINED_PORT
 

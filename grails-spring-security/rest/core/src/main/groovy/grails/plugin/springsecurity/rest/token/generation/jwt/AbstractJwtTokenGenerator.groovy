@@ -18,22 +18,26 @@
  */
 package grails.plugin.springsecurity.rest.token.generation.jwt
 
-import com.nimbusds.jwt.JWT
-import com.nimbusds.jwt.JWTClaimsSet
-import grails.plugin.springsecurity.rest.JwtService
-import grails.plugin.springsecurity.rest.token.AccessToken
-import grails.plugin.springsecurity.rest.token.generation.TokenGenerator
-import grails.plugin.springsecurity.rest.token.storage.jwt.JwtTokenStorageService
 import groovy.time.TimeCategory
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+
+import com.nimbusds.jwt.JWT
+import com.nimbusds.jwt.JWTClaimsSet
+
 import org.springframework.security.core.userdetails.UserDetails
+
+import grails.plugin.springsecurity.rest.JwtService
+import grails.plugin.springsecurity.rest.token.AccessToken
+import grails.plugin.springsecurity.rest.token.generation.TokenGenerator
+import grails.plugin.springsecurity.rest.token.storage.jwt.JwtTokenStorageService
 
 @Slf4j
 @CompileStatic
 abstract class AbstractJwtTokenGenerator implements TokenGenerator {
-    static String REFRESH_ONLY_CLAIM = "refresh_only"
+
+    static String REFRESH_ONLY_CLAIM = 'refresh_only'
 
     Integer defaultExpiration
     Integer defaultRefreshExpiration
@@ -54,19 +58,19 @@ abstract class AbstractJwtTokenGenerator implements TokenGenerator {
     }
 
     AccessToken generateAccessToken(UserDetails details, boolean withRefreshToken, Integer expiration = this.defaultExpiration, Integer refreshExpiration = this.defaultRefreshExpiration) {
-        log.debug "Serializing the principal received"
+        log.debug 'Serializing the principal received'
         String serializedPrincipal = serializePrincipal(details)
 
         JWTClaimsSet.Builder builder = generateClaims(details, serializedPrincipal, expiration)
 
-        log.debug "Generating access token..."
+        log.debug 'Generating access token...'
         JWT accessTokenJwt = generateAccessToken(builder.build())
         String accessToken = accessTokenJwt.serialize()
 
         JWT refreshTokenJwt = null
         String refreshToken = null
         if (withRefreshToken) {
-            log.debug "Generating refresh token..."
+            log.debug 'Generating refresh token...'
             refreshTokenJwt = generateRefreshToken(details, serializedPrincipal, refreshExpiration)
             refreshToken = refreshTokenJwt.serialize()
         }
@@ -96,7 +100,7 @@ abstract class AbstractJwtTokenGenerator implements TokenGenerator {
             customClaimProvider.provideCustomClaims(builder, details, serializedPrincipal, expiration)
         }
 
-        log.debug "Generated claim set: {}", builder.build().toJSONObject().toString()
+        log.debug 'Generated claim set: {}', builder.build().toJSONObject().toString()
         return builder
     }
 

@@ -45,7 +45,7 @@ class S2CreateRoleHierarchyEntryCommand implements GrailsApplicationCommand, Com
     boolean handle() {
 
         if (args.size() == 0) {
-            consoleLogger.error("Usage: " + USAGE_MESSAGE)
+            consoleLogger.error('Usage: ' + USAGE_MESSAGE)
             return FAILURE
         }
 

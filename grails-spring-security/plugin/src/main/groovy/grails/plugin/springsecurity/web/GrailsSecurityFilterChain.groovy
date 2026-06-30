@@ -20,12 +20,13 @@ package grails.plugin.springsecurity.web
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import org.springframework.security.web.SecurityFilterChain
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher
-import org.springframework.security.web.util.matcher.RequestMatcher
 
 import jakarta.servlet.Filter
 import jakarta.servlet.http.HttpServletRequest
+
+import org.springframework.security.web.SecurityFilterChain
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher
+import org.springframework.security.web.util.matcher.RequestMatcher
 
 /**
  * Based on org.springframework.security.web.DefaultSecurityFilterChain which is final.
@@ -36,22 +37,22 @@ import jakarta.servlet.http.HttpServletRequest
 @Slf4j
 class GrailsSecurityFilterChain implements SecurityFilterChain {
 
-	final RequestMatcher requestMatcher
-	final List<Filter> filters
-	final String matcherPattern
+    final RequestMatcher requestMatcher
+    final List<Filter> filters
+    final String matcherPattern
 
-	GrailsSecurityFilterChain(String matcherPattern, List<Filter> filters) {
-		this.filters = filters.collect() // copy
-		this.matcherPattern = matcherPattern
-		requestMatcher = new AntPathRequestMatcher(matcherPattern, null, false)
-		log.info 'Creating filter chain: {}, {}', requestMatcher, filters
-	}
+    GrailsSecurityFilterChain(String matcherPattern, List<Filter> filters) {
+        this.filters = filters.collect() // copy
+        this.matcherPattern = matcherPattern
+        requestMatcher = new AntPathRequestMatcher(matcherPattern, null, false)
+        log.info 'Creating filter chain: {}, {}', requestMatcher, filters
+    }
 
-	boolean matches(HttpServletRequest request) {
-		requestMatcher.matches request
-	}
+    boolean matches(HttpServletRequest request) {
+        requestMatcher.matches request
+    }
 
-	String toString() {
-		"[$requestMatcher, $filters]"
-	}
+    String toString() {
+        "[$requestMatcher, $filters]"
+    }
 }

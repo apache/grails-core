@@ -18,6 +18,8 @@
  */
 package grails.plugin.springsecurity.web.filter
 
+import groovy.transform.CompileStatic
+
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 
@@ -27,8 +29,6 @@ import org.springframework.security.web.authentication.RememberMeServices
 import org.springframework.security.web.authentication.rememberme.RememberMeAuthenticationFilter
 import org.springframework.security.web.savedrequest.RequestCache
 
-import groovy.transform.CompileStatic
-
 /**
  * Stores a SavedRequest so remember-me autologin gets redirected to requested url.
  *
@@ -37,34 +37,35 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class GrailsRememberMeAuthenticationFilter extends RememberMeAuthenticationFilter {
 
-	protected RequestCache requestCache
+    protected RequestCache requestCache
 
-	/** Dependency injection for createSessionOnSuccess. */
-	boolean createSessionOnSuccess = true
+    /** Dependency injection for createSessionOnSuccess. */
+    boolean createSessionOnSuccess = true
 
-	GrailsRememberMeAuthenticationFilter(AuthenticationManager authenticationManager, RememberMeServices rememberMeServices,
-	                                     RequestCache requestCache) {
-		super(authenticationManager, rememberMeServices)
-		this.requestCache = requestCache
-	}
+    GrailsRememberMeAuthenticationFilter(AuthenticationManager authenticationManager, RememberMeServices rememberMeServices,
+                                         RequestCache requestCache) {
+        super(authenticationManager, rememberMeServices)
+        this.requestCache = requestCache
+    }
 
-	@Override
-	protected void onSuccessfulAuthentication(HttpServletRequest request, HttpServletResponse response, Authentication authResult) {
-		if (!requestCache.getRequest(request, response)) {
-			requestCache.saveRequest request, response
-		}
+    @Override
+    protected void onSuccessfulAuthentication(HttpServletRequest request, HttpServletResponse response, Authentication authResult) {
+        if (!requestCache.getRequest(request, response)) {
+            requestCache.saveRequest request, response
+        }
 
-		try {
-			if (createSessionOnSuccess) {
-				request.session
-			}
-		}
-		catch (IllegalStateException ignored) {}
-	}
+        try {
+            if (createSessionOnSuccess) {
+                request.session
+            }
+        }
+        catch (IllegalStateException ignored) {
+        }
+    }
 
-	@Override
-	void afterPropertiesSet() {
-		super.afterPropertiesSet()
-		assert requestCache, 'requestCache is required'
-	}
+    @Override
+    void afterPropertiesSet() {
+        super.afterPropertiesSet()
+        assert requestCache, 'requestCache is required'
+    }
 }

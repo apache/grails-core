@@ -18,12 +18,12 @@
  */
 package grails.plugin.springsecurity.web.authentication.switchuser
 
+import groovy.transform.CompileStatic
+
 import org.springframework.security.core.Authentication
 import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.web.authentication.switchuser.SwitchUserAuthorityChanger
-
-import groovy.transform.CompileStatic
 
 /**
  * No-op implementation.
@@ -33,8 +33,8 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class NullSwitchUserAuthorityChanger implements SwitchUserAuthorityChanger {
 
-	Collection<? extends GrantedAuthority> modifyGrantedAuthorities(UserDetails targetUser,
-			Authentication currentAuthentication, Collection<? extends GrantedAuthority> authoritiesToBeGranted) {
-		authoritiesToBeGranted
-	}
+    Collection<? extends GrantedAuthority> modifyGrantedAuthorities(UserDetails targetUser,
+                                                                    Authentication currentAuthentication, Collection<? extends GrantedAuthority> authoritiesToBeGranted) {
+        authoritiesToBeGranted
+    }
 }

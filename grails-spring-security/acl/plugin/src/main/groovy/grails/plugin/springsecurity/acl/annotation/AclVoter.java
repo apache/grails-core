@@ -25,8 +25,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import org.springframework.security.acls.domain.BasePermission;
-
 /**
  * Annotation for Controllers or Services at the class level or per-action/per-method,
  * defining what roles and/or ACL voters are required for the entire controller or action.
@@ -39,23 +37,23 @@ import org.springframework.security.acls.domain.BasePermission;
 @Documented
 public @interface AclVoter {
 
-	/**
-	 * The bean name of the associated Voter.
-	 * @return  the name
-	 */
-	String name();
+    /**
+     * The bean name of the associated Voter.
+     * @return  the name
+     */
+    String name();
 
-   /**
-    * The config attribute, e.g. <code>ACL_REPORT_WRITE</code>.
-    * @return  the attribute
-    */
-   String configAttribute();
+    /**
+     * The config attribute, e.g. <code>ACL_REPORT_WRITE</code>.
+     * @return  the attribute
+     */
+    String configAttribute();
 
-   /**
-    * The {@link BasePermission} constant names that are required.
-    * Defaults to {@link BasePermission#READ}.
-    *
-    * @return  the names
-    */
-   String[] permissions() default { "READ" };
+    /**
+     * The {@link org.springframework.security.acls.domain.BasePermission} constant names that are required.
+     * Defaults to {@link org.springframework.security.acls.domain.BasePermission#READ}.
+     *
+     * @return  the names
+     */
+    String[] permissions() default {"READ"};
 }

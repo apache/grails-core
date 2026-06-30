@@ -18,15 +18,18 @@
  */
 package grails.plugin.springsecurity.rest.token.rendering
 
-import grails.converters.JSON
-import grails.plugin.springsecurity.rest.oauth.OauthUser
-import grails.plugin.springsecurity.rest.token.AccessToken
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+
 import org.pac4j.core.profile.CommonProfile
+
 import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.util.Assert
+
+import grails.converters.JSON
+import grails.plugin.springsecurity.rest.oauth.OauthUser
+import grails.plugin.springsecurity.rest.token.AccessToken
 
 /**
  * Generates a JSON response like the following: <code>{"username":"john.doe","roles":["USER","ADMIN"],"access_token":"1a2b3c4d"}</code>.
@@ -44,12 +47,12 @@ class DefaultAccessTokenJsonRenderer implements AccessTokenJsonRenderer {
     Boolean useBearerToken
 
     String generateJson(AccessToken accessToken) {
-        Assert.isInstanceOf(UserDetails, accessToken.principal, "A UserDetails implementation is required")
+        Assert.isInstanceOf(UserDetails, accessToken.principal, 'A UserDetails implementation is required')
         UserDetails userDetails = accessToken.principal as UserDetails
 
         Map result = [
-            (usernamePropertyName) : userDetails.username,
-            (authoritiesPropertyName) : accessToken.authorities.collect { GrantedAuthority role -> role.authority }
+                (usernamePropertyName): userDetails.username,
+                (authoritiesPropertyName): accessToken.authorities.collect { GrantedAuthority role -> role.authority }
         ]
 
         if (useBearerToken) {
@@ -63,12 +66,12 @@ class DefaultAccessTokenJsonRenderer implements AccessTokenJsonRenderer {
             if (accessToken.refreshToken) result.refresh_token = accessToken.refreshToken
 
         } else {
-                result["$tokenPropertyName".toString()] = accessToken.accessToken
+            result["$tokenPropertyName".toString()] = accessToken.accessToken
         }
 
         if (userDetails instanceof OauthUser) {
             CommonProfile profile = (userDetails as OauthUser).userProfile
-            if(profile) {
+            if (profile) {
                 result.email = profile.email
                 result.displayName = profile.displayName
             }

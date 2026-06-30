@@ -18,16 +18,18 @@
  */
 package memcached
 
-import grails.plugin.springsecurity.rest.token.storage.TokenNotFoundException
-import grails.plugin.springsecurity.rest.token.storage.memcached.MemcachedTokenStorageService
 import net.spy.memcached.MemcachedClient
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.security.core.userdetails.User
-import org.springframework.security.core.userdetails.UserDetails
 import rest.AbstractRestSpec
 import spock.lang.Issue
 import spock.lang.Shared
 import spock.lang.Unroll
+
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.security.core.userdetails.User
+import org.springframework.security.core.userdetails.UserDetails
+
+import grails.plugin.springsecurity.rest.token.storage.TokenNotFoundException
+import grails.plugin.springsecurity.rest.token.storage.memcached.MemcachedTokenStorageService
 
 class MemcachedSpec extends AbstractRestSpec {
 
@@ -56,9 +58,9 @@ class MemcachedSpec extends AbstractRestSpec {
         memcachedClient.get(key) == object
 
         where:
-        key         | object
-        'String'    | 'My cool string value'
-        'Date'      | new Date()
+        key      | object
+        'String' | 'My cool string value'
+        'Date'   | new Date()
     }
 
     @Issue("https://github.com/grails/grails-spring-security-rest/issues/86")

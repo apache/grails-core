@@ -18,19 +18,26 @@
  */
 package grails.plugin.springsecurity.web.filter
 
-import grails.util.GrailsUtil
 import groovy.transform.TypeChecked
 import groovy.util.logging.Slf4j
+
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletRequestWrapper
+import jakarta.servlet.http.HttpServletResponse
+import jakarta.servlet.http.HttpSession
+
 import org.springframework.security.web.FilterChainProxy
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.util.UrlUtils
 import org.springframework.web.filter.GenericFilterBean
 
-import jakarta.servlet.*
-import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpServletRequestWrapper
-import jakarta.servlet.http.HttpServletResponse
-import jakarta.servlet.http.HttpSession
+import jakarta.servlet.Filter
+import jakarta.servlet.FilterChain
+import jakarta.servlet.ServletException
+import jakarta.servlet.ServletRequest
+import jakarta.servlet.ServletResponse
+
+import grails.util.GrailsUtil
 
 /**
  * Based on the package-scope org.springframework.security.config.debug.DebugFilter.
@@ -43,103 +50,100 @@ import jakarta.servlet.http.HttpSession
 @TypeChecked
 class DebugFilter extends GenericFilterBean {
 
-	protected static final String ALREADY_FILTERED_ATTR_NAME = DebugFilter.name + '.FILTERED'
-	protected static final String JAVA_LANG_EXCEPTION = 'java.lang.Exception'
-	protected static final int JAVA_LANG_EXCEPTION_LENGTH = JAVA_LANG_EXCEPTION.length()
+    protected static final String ALREADY_FILTERED_ATTR_NAME = DebugFilter.name + '.FILTERED'
+    protected static final String JAVA_LANG_EXCEPTION = 'java.lang.Exception'
+    protected static final int JAVA_LANG_EXCEPTION_LENGTH = JAVA_LANG_EXCEPTION.length()
 
-	final FilterChainProxy filterChainProxy
+    final FilterChainProxy filterChainProxy
 
-	DebugFilter(FilterChainProxy fcp) {
-		filterChainProxy = fcp
-	}
+    DebugFilter(FilterChainProxy fcp) {
+        filterChainProxy = fcp
+    }
 
-	void doFilter(ServletRequest req, ServletResponse res, FilterChain filterChain) throws ServletException, IOException {
+    void doFilter(ServletRequest req, ServletResponse res, FilterChain filterChain) throws ServletException, IOException {
 
-		HttpServletRequest request = (HttpServletRequest)req
-		HttpServletResponse response = (HttpServletResponse)res
+        HttpServletRequest request = (HttpServletRequest) req
+        HttpServletResponse response = (HttpServletResponse) res
 
-		List<Filter> filters = getFilters(request)
-		debugLog false, "Request received for '{}':\n\n{}\n\nservletPath:{}\npathInfo:{}\n\n{}",
-				UrlUtils.buildRequestUrl(request), request, request.servletPath, request.pathInfo, formatFilters(filters)
+        List<Filter> filters = getFilters(request)
+        debugLog false, "Request received for '{}':\n\n{}\n\nservletPath:{}\npathInfo:{}\n\n{}",
+                UrlUtils.buildRequestUrl(request), request, request.servletPath, request.pathInfo, formatFilters(filters)
 
-		if (!request.getAttribute(ALREADY_FILTERED_ATTR_NAME)) {
-			invokeWithWrappedRequest request, response, filterChain
-		}
-		else {
-			filterChainProxy.doFilter request, response, filterChain
-		}
-	}
+        if (!request.getAttribute(ALREADY_FILTERED_ATTR_NAME)) {
+            invokeWithWrappedRequest request, response, filterChain
+        } else {
+            filterChainProxy.doFilter request, response, filterChain
+        }
+    }
 
-	protected void invokeWithWrappedRequest(HttpServletRequest request, HttpServletResponse response,
-			FilterChain filterChain) throws IOException, ServletException {
+    protected void invokeWithWrappedRequest(HttpServletRequest request, HttpServletResponse response,
+                                            FilterChain filterChain) throws IOException, ServletException {
 
-		request.setAttribute ALREADY_FILTERED_ATTR_NAME, true
+        request.setAttribute ALREADY_FILTERED_ATTR_NAME, true
 
-		request = new HttpServletRequestWrapper(request) {
+        request = new HttpServletRequestWrapper(request) {
 
-			@Override
-			HttpSession getSession() {
-				boolean sessionExists = super.getSession(false)
-				HttpSession session = super.session
+            @Override
+            HttpSession getSession() {
+                boolean sessionExists = super.getSession(false)
+                HttpSession session = super.session
 
-				if (!sessionExists) {
-					debugLog true, 'New HTTP session created: {}', session.id
-				}
+                if (!sessionExists) {
+                    debugLog true, 'New HTTP session created: {}', session.id
+                }
 
-				session
-			}
+                session
+            }
 
-			@Override
-			HttpSession getSession(boolean create) {
-				create ? session : super.getSession(false)
-			}
-		}
+            @Override
+            HttpSession getSession(boolean create) {
+                create ? session : super.getSession(false)
+            }
+        }
 
-		try {
-			filterChainProxy.doFilter request, response, filterChain
-		}
-		finally {
-			request.removeAttribute ALREADY_FILTERED_ATTR_NAME
-		}
-	}
+        try {
+            filterChainProxy.doFilter request, response, filterChain
+        }
+        finally {
+            request.removeAttribute ALREADY_FILTERED_ATTR_NAME
+        }
+    }
 
-	protected String formatFilters(List<Filter> filters) {
-		StringBuilder sb = new StringBuilder('Security filter chain: ')
-		if (filters == null) {
-			sb << 'no match'
-		}
-		else if (filters.empty) {
-			sb << "[] empty (bypassed by security='none') "
-		}
-		else {
-			sb << '[\n'
-			filters.each { Filter f -> sb << '  ' << f.getClass().simpleName << '\n' }
-			sb << ']'
-		}
+    protected String formatFilters(List<Filter> filters) {
+        StringBuilder sb = new StringBuilder('Security filter chain: ')
+        if (filters == null) {
+            sb << 'no match'
+        } else if (filters.empty) {
+            sb << "[] empty (bypassed by security='none') "
+        } else {
+            sb << '[\n'
+            filters.each { Filter f -> sb << '  ' << f.getClass().simpleName << '\n' }
+            sb << ']'
+        }
 
-		sb
-	}
+        sb
+    }
 
-	protected List<Filter> getFilters(HttpServletRequest request) {
-		filterChainProxy.filterChains.find({ SecurityFilterChain chain -> chain.matches(request) })?.filters
-	}
+    protected List<Filter> getFilters(HttpServletRequest request) {
+        filterChainProxy.filterChains.find({ SecurityFilterChain chain -> chain.matches(request) })?.filters
+    }
 
-	protected void debugLog(boolean dumpStack, String message, Object... args) {
-		StringBuilder output = new StringBuilder(256)
-		output << '\n\n************************************************************\n\n'
-		output << message << '\n'
+    protected void debugLog(boolean dumpStack, String message, Object... args) {
+        StringBuilder output = new StringBuilder(256)
+        output << '\n\n************************************************************\n\n'
+        output << message << '\n'
 
-		if (dumpStack) {
-			StringWriter os = new StringWriter()
-			GrailsUtil.deepSanitize(new Exception()).printStackTrace(new PrintWriter(os))
-			StringBuffer buffer = os.buffer
-			// Remove the exception in case it scares people.
-			int start = buffer.indexOf(JAVA_LANG_EXCEPTION)
-			buffer.replace start, start + JAVA_LANG_EXCEPTION_LENGTH, ''
-			output << '\nCall stack: \n' << os
-		}
+        if (dumpStack) {
+            StringWriter os = new StringWriter()
+            GrailsUtil.deepSanitize(new Exception()).printStackTrace(new PrintWriter(os))
+            StringBuffer buffer = os.buffer
+            // Remove the exception in case it scares people.
+            int start = buffer.indexOf(JAVA_LANG_EXCEPTION)
+            buffer.replace start, start + JAVA_LANG_EXCEPTION_LENGTH, ''
+            output << '\nCall stack: \n' << os
+        }
 
-		output << '\n\n************************************************************\n\n'
-		log.info output.toString(), args
-	}
+        output << '\n\n************************************************************\n\n'
+        log.info output.toString(), args
+    }
 }

@@ -25,6 +25,7 @@ import com.github.scribejava.core.model.OAuthRequest
 import com.github.scribejava.core.model.Response
 import com.github.scribejava.core.model.Verb
 import com.github.scribejava.core.oauth.OAuth20Service
+
 import grails.plugin.springsecurity.oauth2.token.OAuth2SpringToken
 import grails.plugin.springsecurity.oauth2.util.OAuth2ProviderConfiguration
 
@@ -100,7 +101,7 @@ abstract class OAuth2AbstractProviderService implements OAuth2ProviderService {
      * @return
      */
     String getAuthUrl(Map<String, String> params) {
-        final String secretState = getProviderID() + "-secret-" + new Random().nextInt(999_999)
+        final String secretState = getProviderID() + '-secret-' + new Random().nextInt(999_999)
         return authService.createAuthorizationUrlBuilder()
                 .state(secretState)
                 .additionalParams(params)

@@ -39,9 +39,10 @@ import org.codehaus.groovy.transform.GroovyASTTransformationClass
 @Documented
 @GroovyASTTransformationClass('grails.plugin.springsecurity.annotation.AuthoritiesTransformation')
 @interface Authorities {
-	/**
-	 * The property file key; the property value will be a comma-delimited list of role names.
-	 * @return the key
-	 */
-	String value()
+
+    /**
+     * The property file key; the property value will be a comma-delimited list of role names.
+     * @return the key
+     */
+    String value()
 }

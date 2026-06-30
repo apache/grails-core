@@ -19,6 +19,7 @@
 package grails.plugin.springsecurity.rest.token.storage
 
 import groovy.transform.InheritConstructors
+
 import org.springframework.security.core.AuthenticationException
 
 /**

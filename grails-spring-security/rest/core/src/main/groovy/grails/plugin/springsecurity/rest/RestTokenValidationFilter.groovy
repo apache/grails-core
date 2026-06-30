@@ -18,17 +18,9 @@
  */
 package grails.plugin.springsecurity.rest
 
-import grails.plugin.springsecurity.rest.authentication.RestAuthenticationEventPublisher
-import grails.plugin.springsecurity.rest.token.AccessToken
-import grails.plugin.springsecurity.rest.token.reader.TokenReader
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import org.springframework.security.core.AuthenticationException
-import org.springframework.security.core.context.SecurityContextHolder
-import org.springframework.security.web.authentication.AuthenticationFailureHandler
-import org.springframework.security.web.authentication.AuthenticationSuccessHandler
-import org.springframework.web.filter.GenericFilterBean
 
 import jakarta.servlet.FilterChain
 import jakarta.servlet.ServletException
@@ -36,6 +28,16 @@ import jakarta.servlet.ServletRequest
 import jakarta.servlet.ServletResponse
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+
+import org.springframework.security.core.AuthenticationException
+import org.springframework.security.core.context.SecurityContextHolder
+import org.springframework.security.web.authentication.AuthenticationFailureHandler
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler
+import org.springframework.web.filter.GenericFilterBean
+
+import grails.plugin.springsecurity.rest.authentication.RestAuthenticationEventPublisher
+import grails.plugin.springsecurity.rest.token.AccessToken
+import grails.plugin.springsecurity.rest.token.reader.TokenReader
 
 /**
  * This filter starts the token validation flow. It extracts the token from the configured header name, and pass it to
@@ -78,11 +80,11 @@ class RestTokenValidationFilter extends GenericFilterBean {
             if (accessToken) {
                 log.debug "Token found: ${accessToken.accessToken}"
 
-                log.debug "Trying to authenticate the token"
+                log.debug 'Trying to authenticate the token'
                 accessToken = restAuthenticationProvider.authenticate(accessToken) as AccessToken
 
                 if (accessToken.authenticated) {
-                    log.debug "Token authenticated. Storing the authentication result in the security context"
+                    log.debug 'Token authenticated. Storing the authentication result in the security context'
                     log.debug "Authentication result: ${accessToken}"
                     SecurityContextHolder.context.setAuthentication(accessToken)
 
@@ -92,7 +94,7 @@ class RestTokenValidationFilter extends GenericFilterBean {
                 }
 
             } else {
-                log.debug "Token not found"
+                log.debug 'Token not found'
                 processFilterChain(request, response, chain, accessToken)
             }
         } catch (AuthenticationException ae) {
@@ -109,21 +111,21 @@ class RestTokenValidationFilter extends GenericFilterBean {
         HttpServletResponse httpResponse = response as HttpServletResponse
 
         if (!active) {
-            log.debug "Token validation is disabled. Continuing the filter chain"
+            log.debug 'Token validation is disabled. Continuing the filter chain'
             chain.doFilter(request, response)
             return
         }
 
         if (authenticationResult?.accessToken) {
             if (requestMatcher.matches(httpRequest)) {
-                log.debug "Validation endpoint called. Generating response."
+                log.debug 'Validation endpoint called. Generating response.'
                 authenticationSuccessHandler.onAuthenticationSuccess(httpRequest, httpResponse, authenticationResult)
             } else {
-                log.debug "Continuing the filter chain"
+                log.debug 'Continuing the filter chain'
                 chain.doFilter(request, response)
             }
         } else {
-            log.debug "Request does not contain any token. Letting it continue through the filter chain"
+            log.debug 'Request does not contain any token. Letting it continue through the filter chain'
             chain.doFilter(request, response)
         }
 

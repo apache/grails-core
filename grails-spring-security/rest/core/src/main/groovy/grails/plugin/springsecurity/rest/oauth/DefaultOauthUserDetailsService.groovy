@@ -18,16 +18,19 @@
  */
 package grails.plugin.springsecurity.rest.oauth
 
-import grails.plugin.springsecurity.SpringSecurityUtils
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+
 import org.pac4j.core.profile.UserProfile
+
 import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UserDetailsChecker
 import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.core.userdetails.UsernameNotFoundException
+
+import grails.plugin.springsecurity.SpringSecurityUtils
 
 //tag::class[]
 /**
@@ -49,7 +52,7 @@ class DefaultOauthUserDetailsService implements OauthUserDetailsService {
             throws UsernameNotFoundException {
 
         String userDomainClass = userDomainClassName()
-        if ( !userDomainClass ) {
+        if (!userDomainClass) {
             return instantiateOauthUser(userProfile, defaultRoles)
         }
         loadUserByUserProfileWhenUserDomainClassIsSet(userProfile, defaultRoles)

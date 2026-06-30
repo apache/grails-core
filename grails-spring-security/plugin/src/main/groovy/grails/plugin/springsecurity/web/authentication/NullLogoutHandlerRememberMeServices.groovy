@@ -18,6 +18,8 @@
  */
 package grails.plugin.springsecurity.web.authentication
 
+import groovy.transform.CompileStatic
+
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 
@@ -25,14 +27,13 @@ import org.springframework.security.core.Authentication
 import org.springframework.security.web.authentication.NullRememberMeServices
 import org.springframework.security.web.authentication.logout.LogoutHandler
 
-import groovy.transform.CompileStatic
-
 /**
  * @author Burt Beckwith
  */
 @CompileStatic
 class NullLogoutHandlerRememberMeServices extends NullRememberMeServices implements LogoutHandler {
-	void logout(HttpServletRequest req, HttpServletResponse res, Authentication a) {
-		// no-op
-	}
+
+    void logout(HttpServletRequest req, HttpServletResponse res, Authentication a) {
+        // no-op
+    }
 }

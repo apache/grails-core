@@ -18,10 +18,10 @@
  */
 package grails.plugin.springsecurity.ldap.core
 
-import groovy.transform.CompileStatic
-
 import javax.naming.NamingException
 import javax.naming.directory.Attributes
+
+import groovy.transform.CompileStatic
 
 import org.springframework.ldap.core.AttributesMapper
 import org.springframework.security.core.authority.SimpleGrantedAuthority
@@ -34,17 +34,17 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority
 @CompileStatic
 class GrailsLdapRoleMapper implements AttributesMapper {
 
-	/**
-	 * Dependency injection for <code>groupRoleAttributeName</code>.
-	 */
-	String groupRoleAttributeName
+    /**
+     * Dependency injection for <code>groupRoleAttributeName</code>.
+     */
+    String groupRoleAttributeName
 
-	/**
-	 * Dependency injection for <code>rolePrefix</code>.
-	 */
-	String rolePrefix = 'ROLE_'
+    /**
+     * Dependency injection for <code>rolePrefix</code>.
+     */
+    String rolePrefix = 'ROLE_'
 
-	def mapFromAttributes(Attributes attributes) throws NamingException {
-		new SimpleGrantedAuthority(rolePrefix + attributes.get(groupRoleAttributeName).all.next().toString().toUpperCase())
-	}
+    def mapFromAttributes(Attributes attributes) throws NamingException {
+        new SimpleGrantedAuthority(rolePrefix + attributes.get(groupRoleAttributeName).all.next().toString().toUpperCase())
+    }
 }

@@ -20,11 +20,13 @@ package grails.plugin.springsecurity.cas
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
+
 import org.apereo.cas.client.proxy.Cas20ProxyRetriever
 import org.apereo.cas.client.proxy.ProxyGrantingTicketStorageImpl
 import org.apereo.cas.client.session.SingleSignOutFilter
 import org.apereo.cas.client.session.SingleSignOutHttpSessionListener
 import org.apereo.cas.client.validation.Cas20ServiceTicketValidator
+
 import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.boot.web.servlet.ServletListenerRegistrationBean
 import org.springframework.core.Ordered
@@ -41,120 +43,123 @@ import grails.plugins.Plugin
 @CompileStatic
 class SpringSecurityCasGrailsPlugin extends Plugin {
 
-	String grailsVersion = '7.0.0 > *'
-	String author = 'Burt Beckwith'
-	String authorEmail = ''
-	String title = 'Jasig CAS support for the Spring Security plugin.'
-	String description = 'Jasig CAS support for the Spring Security plugin.'
-	String documentation = 'https://apache.github.io/grails-spring-security'
-	String license = 'APACHE'
-	List loadAfter = ['springSecurityCore']
-	def organization = [name: 'Grails', url: 'https://www.grails.org']
-	def issueManagement = [url: 'https://github.com/apache/grails-spring-security/issues']
-	def scm = [url: 'https://github.com/apache/grails-spring-security']
-	def profiles = ['web']
+    String grailsVersion = '7.0.0 > *'
+    String author = 'Burt Beckwith'
+    String authorEmail = ''
+    String title = 'Jasig CAS support for the Spring Security plugin.'
+    String description = 'Jasig CAS support for the Spring Security plugin.'
+    String documentation = 'https://apache.github.io/grails-spring-security'
+    String license = 'APACHE'
+    List loadAfter = ['springSecurityCore']
+    def organization = [name: 'Grails', url: 'https://www.grails.org']
+    def issueManagement = [url: 'https://github.com/apache/grails-spring-security/issues']
+    def scm = [url: 'https://github.com/apache/grails-spring-security']
+    def profiles = ['web']
 
-	@CompileDynamic
-	Closure doWithSpring() {{ ->
+    @CompileDynamic
+    Closure doWithSpring() {
+        { ->
 
-		def conf = SpringSecurityUtils.securityConfig
-		if (!conf || !conf.active) {
-			return
-		}
+            def conf = SpringSecurityUtils.securityConfig
+            if (!conf || !conf.active) {
+                return
+            }
 
-		SpringSecurityUtils.loadSecondaryConfig 'DefaultCasSecurityConfig'
-		// have to get again after overlaying DefaultCasSecurityConfig
-		conf = SpringSecurityUtils.securityConfig
+            SpringSecurityUtils.loadSecondaryConfig 'DefaultCasSecurityConfig'
+            // have to get again after overlaying DefaultCasSecurityConfig
+            conf = SpringSecurityUtils.securityConfig
 
-		if (!conf.cas.active) {
-			return
-		}
+            if (!conf.cas.active) {
+                return
+            }
 
-		boolean printStatusMessages = (conf.printStatusMessages instanceof Boolean) ? conf.printStatusMessages : true
+            boolean printStatusMessages = (conf.printStatusMessages instanceof Boolean) ? conf.printStatusMessages : true
 
-		if (printStatusMessages) {
-			println '\nConfiguring Spring Security CAS ...'
-		}
+            if (printStatusMessages) {
+                println '\nConfiguring Spring Security CAS ...'
+            }
 
-		['serverUrlPrefix', 'loginUri', 'serviceUrl'].each { requiredConfigKey ->
-			if (!conf.cas[requiredConfigKey]) {
-				throw new IllegalStateException("cas.${requiredConfigKey} is not set: this is a required configuration value when cas.active is true")
-			}
-		}
+            ['serverUrlPrefix', 'loginUri', 'serviceUrl'].each { requiredConfigKey ->
+                if (!conf.cas[requiredConfigKey]) {
+                    throw new IllegalStateException("cas.${requiredConfigKey} is not set: this is a required configuration value when cas.active is true")
+                }
+            }
 
-		if (conf.cas.useSingleSignout) {
+            if (conf.cas.useSingleSignout) {
 
-			// session fixation prevention breaks single signout because
-			// the service ticket is mapped to the session id which changes
-			conf.useSessionFixationPrevention = false
+                // session fixation prevention breaks single signout because
+                // the service ticket is mapped to the session id which changes
+                conf.useSessionFixationPrevention = false
 
-			singleSignOutFilter(SingleSignOutFilter) {
-				ignoreInitConfiguration = true
-			}
+                singleSignOutFilter(SingleSignOutFilter) {
+                    ignoreInitConfiguration = true
+                }
 
-			singleSignOutFilterRegistrationBean(FilterRegistrationBean) {
-				name = 'CAS Single Sign Out Filter'
-				filter = ref('singleSignOutFilter')
-				order = Ordered.HIGHEST_PRECEDENCE
-			}
+                singleSignOutFilterRegistrationBean(FilterRegistrationBean) {
+                    name = 'CAS Single Sign Out Filter'
+                    filter = ref('singleSignOutFilter')
+                    order = Ordered.HIGHEST_PRECEDENCE
+                }
 
-			singleSignOutHttpSessionListener(ServletListenerRegistrationBean, new SingleSignOutHttpSessionListener())
-		}
+                singleSignOutHttpSessionListener(ServletListenerRegistrationBean, new SingleSignOutHttpSessionListener())
+            }
 
-		SpringSecurityUtils.registerProvider 'casAuthenticationProvider'
-		SpringSecurityUtils.registerFilter 'casAuthenticationFilter', SecurityFilterPosition.CAS_FILTER
+            SpringSecurityUtils.registerProvider 'casAuthenticationProvider'
+            SpringSecurityUtils.registerFilter 'casAuthenticationFilter', SecurityFilterPosition.CAS_FILTER
 
-		// TODO  document NullProxyGrantingTicketStorage
-		casProxyGrantingTicketStorage(ProxyGrantingTicketStorageImpl)
+            // TODO  document NullProxyGrantingTicketStorage
+            casProxyGrantingTicketStorage(ProxyGrantingTicketStorageImpl)
 
-		authenticationEntryPoint(CasAuthenticationEntryPoint) {
-			serviceProperties = ref('casServiceProperties')
-			loginUrl = conf.cas.serverUrlPrefix + conf.cas.loginUri
-		}
+            authenticationEntryPoint(CasAuthenticationEntryPoint) {
+                serviceProperties = ref('casServiceProperties')
+                loginUrl = conf.cas.serverUrlPrefix + conf.cas.loginUri
+            }
 
-		casServiceProperties(ServiceProperties) {
-			service = conf.cas.serviceUrl
-			sendRenew = conf.cas.sendRenew // false
-			artifactParameter = conf.cas.artifactParameter // 'ticket'
-			serviceParameter = conf.cas.serviceParameter // 'service'
-		}
+            casServiceProperties(ServiceProperties) {
+                service = conf.cas.serviceUrl
+                sendRenew = conf.cas.sendRenew // false
+                artifactParameter = conf.cas.artifactParameter // 'ticket'
+                serviceParameter = conf.cas.serviceParameter // 'service'
+            }
 
-		casAuthenticationFilter(CasAuthenticationFilter) {
-			authenticationManager = ref('authenticationManager')
-			sessionAuthenticationStrategy = ref('sessionAuthenticationStrategy')
-			authenticationSuccessHandler = ref('authenticationSuccessHandler')
-			authenticationFailureHandler = ref('authenticationFailureHandler')
-			rememberMeServices = ref('rememberMeServices')
-			authenticationDetailsSource = ref('authenticationDetailsSource')
-			serviceProperties = ref('casServiceProperties')
-			proxyGrantingTicketStorage = ref('casProxyGrantingTicketStorage')
-			filterProcessesUrl = conf.cas.filterProcessesUrl // '/login/cas'
-			continueChainBeforeSuccessfulAuthentication = conf.apf.continueChainBeforeSuccessfulAuthentication // false
-			allowSessionCreation = conf.apf.allowSessionCreation // true
-			proxyReceptorUrl = conf.cas.proxyReceptorUrl
-		}
+            casAuthenticationFilter(CasAuthenticationFilter) {
+                authenticationManager = ref('authenticationManager')
+                sessionAuthenticationStrategy = ref('sessionAuthenticationStrategy')
+                authenticationSuccessHandler = ref('authenticationSuccessHandler')
+                authenticationFailureHandler = ref('authenticationFailureHandler')
+                rememberMeServices = ref('rememberMeServices')
+                authenticationDetailsSource = ref('authenticationDetailsSource')
+                serviceProperties = ref('casServiceProperties')
+                proxyGrantingTicketStorage = ref('casProxyGrantingTicketStorage')
+                filterProcessesUrl = conf.cas.filterProcessesUrl // '/login/cas'
+                continueChainBeforeSuccessfulAuthentication = conf.apf.continueChainBeforeSuccessfulAuthentication
+                // false
+                allowSessionCreation = conf.apf.allowSessionCreation // true
+                proxyReceptorUrl = conf.cas.proxyReceptorUrl
+            }
 
-		casProxyRetriever(Cas20ProxyRetriever, conf.cas.serverUrlPrefix, conf.cas.serverUrlEncoding /*'UTF-8'*/)
+            casProxyRetriever(Cas20ProxyRetriever, conf.cas.serverUrlPrefix, conf.cas.serverUrlEncoding /*'UTF-8'*/)
 
-		casTicketValidator(Cas20ServiceTicketValidator, conf.cas.serverUrlPrefix) {
-			proxyRetriever = ref('casProxyRetriever')
-			proxyGrantingTicketStorage = ref('casProxyGrantingTicketStorage')
-			proxyCallbackUrl = conf.cas.proxyCallbackUrl
-			renew = conf.cas.sendRenew // false
-		}
+            casTicketValidator(Cas20ServiceTicketValidator, conf.cas.serverUrlPrefix) {
+                proxyRetriever = ref('casProxyRetriever')
+                proxyGrantingTicketStorage = ref('casProxyGrantingTicketStorage')
+                proxyCallbackUrl = conf.cas.proxyCallbackUrl
+                renew = conf.cas.sendRenew // false
+            }
 
-		casStatelessTicketCache(NullStatelessTicketCache)
+            casStatelessTicketCache(NullStatelessTicketCache)
 
-		casAuthenticationProvider(CasAuthenticationProvider) {
-			authenticationUserDetailsService = ref('authenticationUserDetailsService')
-			serviceProperties = ref('casServiceProperties')
-			ticketValidator = ref('casTicketValidator')
-			statelessTicketCache = ref('casStatelessTicketCache')
-			key = conf.cas.key // 'grails-spring-security-cas'
-		}
+            casAuthenticationProvider(CasAuthenticationProvider) {
+                authenticationUserDetailsService = ref('authenticationUserDetailsService')
+                serviceProperties = ref('casServiceProperties')
+                ticketValidator = ref('casTicketValidator')
+                statelessTicketCache = ref('casStatelessTicketCache')
+                key = conf.cas.key // 'grails-spring-security-cas'
+            }
 
-		if (printStatusMessages) {
-			println '... finished configuring Spring Security CAS\n'
-		}
-	}}
+            if (printStatusMessages) {
+                println '... finished configuring Spring Security CAS\n'
+            }
+        }
+    }
 }

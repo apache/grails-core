@@ -18,78 +18,79 @@
  */
 package grails.plugin.springsecurity.web.authentication
 
+import org.springframework.security.authentication.BadCredentialsException
+import org.springframework.security.web.RedirectStrategy
+
 import grails.plugin.springsecurity.AbstractUnitSpec
 import grails.plugin.springsecurity.SpringSecurityUtils
 import grails.plugin.springsecurity.web.SecurityRequestHolder
-import org.springframework.security.authentication.BadCredentialsException
-import org.springframework.security.web.RedirectStrategy
 
 /**
  * @author Burt Beckwith
  */
 class AjaxAwareAuthenticationFailureHandlerSpec extends AbstractUnitSpec {
 
-	private final AjaxAwareAuthenticationFailureHandler handler = new AjaxAwareAuthenticationFailureHandler()
+    private final AjaxAwareAuthenticationFailureHandler handler = new AjaxAwareAuthenticationFailureHandler()
 
-	void setup() {
-		SecurityRequestHolder.set request, response
-	}
+    void setup() {
+        SecurityRequestHolder.set request, response
+    }
 
-	void 'onAuthenticationFailure not Ajax'() {
-		when:
-		String defaultFailureUrl = '/defaultFailureUrl'
-		handler.defaultFailureUrl = defaultFailureUrl
-		handler.ajaxAuthenticationFailureUrl = '/ajaxAuthenticationFailureUrl'
+    void 'onAuthenticationFailure not Ajax'() {
+        when:
+        String defaultFailureUrl = '/defaultFailureUrl'
+        handler.defaultFailureUrl = defaultFailureUrl
+        handler.ajaxAuthenticationFailureUrl = '/ajaxAuthenticationFailureUrl'
 
-		boolean redirectCalled = false
-		def sendRedirect = { req, res, url ->
-			redirectCalled = true
-			assert defaultFailureUrl == url
-		}
-		handler.redirectStrategy = [sendRedirect: sendRedirect] as RedirectStrategy
+        boolean redirectCalled = false
+        def sendRedirect = { req, res, url ->
+            redirectCalled = true
+            assert defaultFailureUrl == url
+        }
+        handler.redirectStrategy = [sendRedirect: sendRedirect] as RedirectStrategy
 
-		SpringSecurityUtils.securityConfig = [ajaxHeader: 'ajaxHeader'] as ConfigObject
+        SpringSecurityUtils.securityConfig = [ajaxHeader: 'ajaxHeader'] as ConfigObject
 
-		handler.onAuthenticationFailure request, response, new BadCredentialsException('fail')
+        handler.onAuthenticationFailure request, response, new BadCredentialsException('fail')
 
-		then:
-		redirectCalled
-	}
+        then:
+        redirectCalled
+    }
 
-	void 'onAuthenticationFailure Ajax'() {
-		when:
-		String ajaxAuthenticationFailureUrl = '/ajaxAuthenticationFailureUrl'
-		handler.defaultFailureUrl = '/defaultFailureUrl'
-		handler.ajaxAuthenticationFailureUrl = ajaxAuthenticationFailureUrl
+    void 'onAuthenticationFailure Ajax'() {
+        when:
+        String ajaxAuthenticationFailureUrl = '/ajaxAuthenticationFailureUrl'
+        handler.defaultFailureUrl = '/defaultFailureUrl'
+        handler.ajaxAuthenticationFailureUrl = ajaxAuthenticationFailureUrl
 
-		boolean redirectCalled = false
-		def sendRedirect = { req, res, url ->
-			redirectCalled = true
-			assert ajaxAuthenticationFailureUrl == url
-		}
-		handler.redirectStrategy = [sendRedirect: sendRedirect] as RedirectStrategy
+        boolean redirectCalled = false
+        def sendRedirect = { req, res, url ->
+            redirectCalled = true
+            assert ajaxAuthenticationFailureUrl == url
+        }
+        handler.redirectStrategy = [sendRedirect: sendRedirect] as RedirectStrategy
 
-		SpringSecurityUtils.securityConfig = [ajaxHeader: 'ajaxHeader'] as ConfigObject
+        SpringSecurityUtils.securityConfig = [ajaxHeader: 'ajaxHeader'] as ConfigObject
 
-		request.addHeader 'ajaxHeader', 'XMLHttpRequest'
-		handler.onAuthenticationFailure request, response, new BadCredentialsException('fail')
+        request.addHeader 'ajaxHeader', 'XMLHttpRequest'
+        handler.onAuthenticationFailure request, response, new BadCredentialsException('fail')
 
-		then:
-		redirectCalled
-	}
+        then:
+        redirectCalled
+    }
 
-	void 'afterPropertiesSet'() {
-		when:
-		handler.afterPropertiesSet()
+    void 'afterPropertiesSet'() {
+        when:
+        handler.afterPropertiesSet()
 
-		then:
-		thrown AssertionError
+        then:
+        thrown AssertionError
 
-		when:
-		handler.ajaxAuthenticationFailureUrl = 'url'
-		handler.afterPropertiesSet()
+        when:
+        handler.ajaxAuthenticationFailureUrl = 'url'
+        handler.afterPropertiesSet()
 
-		then:
-		notThrown AssertionError
-	}
+        then:
+        notThrown AssertionError
+    }
 }

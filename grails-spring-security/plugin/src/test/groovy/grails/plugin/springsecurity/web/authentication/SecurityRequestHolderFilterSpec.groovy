@@ -18,37 +18,37 @@
  */
 package grails.plugin.springsecurity.web.authentication
 
+import jakarta.servlet.FilterChain
+
 import grails.plugin.springsecurity.AbstractUnitSpec
 import grails.plugin.springsecurity.web.SecurityRequestHolder
 import grails.plugin.springsecurity.web.SecurityRequestHolderFilter
-
-import jakarta.servlet.FilterChain
 
 /**
  * @author Burt Beckwith
  */
 class SecurityRequestHolderFilterSpec extends AbstractUnitSpec {
 
-	private SecurityRequestHolderFilter filter = new SecurityRequestHolderFilter()
+    private SecurityRequestHolderFilter filter = new SecurityRequestHolderFilter()
 
-	void 'doFilter'() {
-		expect:
-		!SecurityRequestHolder.request
-		!SecurityRequestHolder.response
+    void 'doFilter'() {
+        expect:
+        !SecurityRequestHolder.request
+        !SecurityRequestHolder.response
 
-		when:
-		boolean chainCalled = false
-		def chain = [doFilter: { req, res ->
-			assert SecurityRequestHolder.request
-			assert SecurityRequestHolder.response
-			chainCalled = true
-		}] as FilterChain
+        when:
+        boolean chainCalled = false
+        def chain = [doFilter: { req, res ->
+            assert SecurityRequestHolder.request
+            assert SecurityRequestHolder.response
+            chainCalled = true
+        }] as FilterChain
 
-		filter.doFilter request, response, chain
+        filter.doFilter request, response, chain
 
-		then:
-		chainCalled
-		!SecurityRequestHolder.request
-		!SecurityRequestHolder.response
-	}
+        then:
+        chainCalled
+        !SecurityRequestHolder.request
+        !SecurityRequestHolder.response
+    }
 }

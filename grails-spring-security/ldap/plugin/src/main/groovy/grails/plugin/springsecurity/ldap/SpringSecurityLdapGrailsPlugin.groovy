@@ -40,225 +40,224 @@ import grails.plugin.springsecurity.ldap.userdetails.GrailsLdapUserDetailsManage
 import grails.plugin.springsecurity.userdetails.GormUserDetailsService
 import grails.plugins.Plugin
 
-@SuppressWarnings("GroovyUnusedDeclaration")
+@SuppressWarnings('GroovyUnusedDeclaration')
 class SpringSecurityLdapGrailsPlugin extends Plugin {
 
-	String grailsVersion = '7.0.0 > *'
-	List loadAfter = ['springSecurityCore']
-	String author = 'Burt Beckwith'
-	String authorEmail = ''
-	String title = 'LDAP authentication support for the Spring Security plugin.'
-	String description = 'LDAP authentication support for the Spring Security plugin.'
-	String documentation = 'https://apache.github.io/grails-spring-security'
-	String license = 'APACHE'
-	def organization = [name: 'Grails', url: 'https://www.grails.org']
-	def issueManagement = [url: 'https://github.com/apache/grails-spring-security/issues']
-	def scm = [url: 'https://github.com/apache/grails-spring-security']
+    String grailsVersion = '7.0.0 > *'
+    List loadAfter = ['springSecurityCore']
+    String author = 'Burt Beckwith'
+    String authorEmail = ''
+    String title = 'LDAP authentication support for the Spring Security plugin.'
+    String description = 'LDAP authentication support for the Spring Security plugin.'
+    String documentation = 'https://apache.github.io/grails-spring-security'
+    String license = 'APACHE'
+    def organization = [name: 'Grails', url: 'https://www.grails.org']
+    def issueManagement = [url: 'https://github.com/apache/grails-spring-security/issues']
+    def scm = [url: 'https://github.com/apache/grails-spring-security']
 
-	Closure doWithSpring() {{ ->
+    Closure doWithSpring() {
+        { ->
 
-		def conf = SpringSecurityUtils.securityConfig
-		if (!conf || !conf.active) {
-			return
-		}
+            def conf = SpringSecurityUtils.securityConfig
+            if (!conf || !conf.active) {
+                return
+            }
 
-		SpringSecurityUtils.loadSecondaryConfig 'DefaultLdapSecurityConfig'
-		// have to get again after overlaying DefaultLdapSecurityConfig
-		conf = SpringSecurityUtils.securityConfig
+            SpringSecurityUtils.loadSecondaryConfig 'DefaultLdapSecurityConfig'
+            // have to get again after overlaying DefaultLdapSecurityConfig
+            conf = SpringSecurityUtils.securityConfig
 
-		if (!conf.ldap.active) {
-			return
-		}
+            if (!conf.ldap.active) {
+                return
+            }
 
-		boolean printStatusMessages = (conf.printStatusMessages instanceof Boolean) ? conf.printStatusMessages : true
+            boolean printStatusMessages = (conf.printStatusMessages instanceof Boolean) ? conf.printStatusMessages : true
 
-		if (printStatusMessages) {
-			println '\nConfiguring Spring Security LDAP ...'
-		}
+            if (printStatusMessages) {
+                println '\nConfiguring Spring Security LDAP ...'
+            }
 
-		SpringSecurityUtils.registerProvider 'ldapAuthProvider'
+            SpringSecurityUtils.registerProvider 'ldapAuthProvider'
 
-		Class<?> contextFactoryClass = classForName(conf.ldap.context.contextFactoryClassName) // com.sun.jndi.ldap.LdapCtxFactory
-		Class<?> dirObjectFactoryClass = classForName(conf.ldap.context.dirObjectFactoryClassName) // org.springframework.ldap.core.support.DefaultDirObjectFactory
+            Class<?> contextFactoryClass = classForName(conf.ldap.context.contextFactoryClassName)
+            // com.sun.jndi.ldap.LdapCtxFactory
+            Class<?> dirObjectFactoryClass = classForName(conf.ldap.context.dirObjectFactoryClassName)
+            // org.springframework.ldap.core.support.DefaultDirObjectFactory
 
-		authenticationStrategy(GrailsSimpleDirContextAuthenticationStrategy) {
-			userDn = conf.ldap.context.managerDn // 'cn=admin,dc=example,dc=com'
-		}
+            authenticationStrategy(GrailsSimpleDirContextAuthenticationStrategy) {
+                userDn = conf.ldap.context.managerDn // 'cn=admin,dc=example,dc=com'
+            }
 
-		contextSource(DefaultSpringSecurityContextSource, conf.ldap.context.server) { // 'ldap://localhost:389'
-			authenticationSource = ref('ldapAuthenticationSource')
-			authenticationStrategy = ref('authenticationStrategy')
-			userDn = conf.ldap.context.managerDn // 'cn=admin,dc=example,dc=com'
-			password = conf.ldap.context.managerPassword // 'secret'
-			contextFactory = contextFactoryClass
-			dirObjectFactory = dirObjectFactoryClass
-			baseEnvironmentProperties = conf.ldap.context.baseEnvironmentProperties // none
-			cacheEnvironmentProperties = conf.ldap.context.cacheEnvironmentProperties // true
-			anonymousReadOnly = conf.ldap.context.anonymousReadOnly // false
-			referral = conf.ldap.context.referral // null
-		}
+            contextSource(DefaultSpringSecurityContextSource, conf.ldap.context.server) { // 'ldap://localhost:389'
+                authenticationSource = ref('ldapAuthenticationSource')
+                authenticationStrategy = ref('authenticationStrategy')
+                userDn = conf.ldap.context.managerDn // 'cn=admin,dc=example,dc=com'
+                password = conf.ldap.context.managerPassword // 'secret'
+                contextFactory = contextFactoryClass
+                dirObjectFactory = dirObjectFactoryClass
+                baseEnvironmentProperties = conf.ldap.context.baseEnvironmentProperties // none
+                cacheEnvironmentProperties = conf.ldap.context.cacheEnvironmentProperties // true
+                anonymousReadOnly = conf.ldap.context.anonymousReadOnly // false
+                referral = conf.ldap.context.referral // null
+            }
 
-		ldapAuthenticationSource(SimpleAuthenticationSource) {
-			principal = conf.ldap.context.managerDn // 'cn=admin,dc=example,dc=com'
-			credentials = conf.ldap.context.managerPassword // 'secret'
-		}
+            ldapAuthenticationSource(SimpleAuthenticationSource) {
+                principal = conf.ldap.context.managerDn // 'cn=admin,dc=example,dc=com'
+                credentials = conf.ldap.context.managerPassword // 'secret'
+            }
 
-		String[] searchAttributesToReturn = toStringArray(conf.ldap.search.attributesToReturn) // null - all
-		ldapUserSearch(FilterBasedLdapUserSearch, conf.ldap.search.base, conf.ldap.search.filter, contextSource) {
-			searchSubtree = conf.ldap.search.searchSubtree // true
-			derefLinkFlag = conf.ldap.search.derefLink // false
-			searchTimeLimit = conf.ldap.search.timeLimit // 0 (unlimited)
-			returningAttributes = searchAttributesToReturn
-		}
+            String[] searchAttributesToReturn = toStringArray(conf.ldap.search.attributesToReturn) // null - all
+            ldapUserSearch(FilterBasedLdapUserSearch, conf.ldap.search.base, conf.ldap.search.filter, contextSource) {
+                searchSubtree = conf.ldap.search.searchSubtree // true
+                derefLinkFlag = conf.ldap.search.derefLink // false
+                searchTimeLimit = conf.ldap.search.timeLimit // 0 (unlimited)
+                returningAttributes = searchAttributesToReturn
+            }
 
-		String[] attributesToReturn = toStringArray(conf.ldap.authenticator.attributesToReturn) // null - all
-		String[] dnPatterns = toStringArray(conf.ldap.authenticator.dnPatterns) // null
-		if (conf.ldap.authenticator.useBind) {
-			ldapAuthenticator(BindAuthenticator, contextSource) {
-				userSearch = ldapUserSearch
-				if (attributesToReturn != null) {
-					userAttributes = attributesToReturn
-				}
-				if (dnPatterns) {
-					userDnPatterns = dnPatterns
-				}
-			}
-		}
-		else {
-			ldapAuthenticator(PasswordComparisonAuthenticator, contextSource) {
-				userSearch = ldapUserSearch
-				if (attributesToReturn != null) {
-					userAttributes = attributesToReturn
-				}
-				if (dnPatterns) {
-					userDnPatterns = dnPatterns
-				}
-				passwordAttributeName = conf.ldap.authenticator.passwordAttributeName
-				passwordEncoder = ref('passwordEncoder')
-			}
-		}
+            String[] attributesToReturn = toStringArray(conf.ldap.authenticator.attributesToReturn) // null - all
+            String[] dnPatterns = toStringArray(conf.ldap.authenticator.dnPatterns) // null
+            if (conf.ldap.authenticator.useBind) {
+                ldapAuthenticator(BindAuthenticator, contextSource) {
+                    userSearch = ldapUserSearch
+                    if (attributesToReturn != null) {
+                        userAttributes = attributesToReturn
+                    }
+                    if (dnPatterns) {
+                        userDnPatterns = dnPatterns
+                    }
+                }
+            } else {
+                ldapAuthenticator(PasswordComparisonAuthenticator, contextSource) {
+                    userSearch = ldapUserSearch
+                    if (attributesToReturn != null) {
+                        userAttributes = attributesToReturn
+                    }
+                    if (dnPatterns) {
+                        userDnPatterns = dnPatterns
+                    }
+                    passwordAttributeName = conf.ldap.authenticator.passwordAttributeName
+                    passwordEncoder = ref('passwordEncoder')
+                }
+            }
 
-		if (conf.ldap.mapper.userDetailsClass == 'person') {
-			ldapUserDetailsMapper(PersonContextMapper)
-		}
-		else if (conf.ldap.mapper.userDetailsClass == 'inetOrgPerson') {
-			ldapUserDetailsMapper(InetOrgPersonContextMapper)
-		}
-		else {
-			ldapUserDetailsMapper(LdapUserDetailsMapper) {
-				convertToUpperCase = conf.ldap.mapper.convertToUpperCase // true
-				passwordAttributeName = conf.ldap.mapper.passwordAttributeName // 'userPassword'
-				rolePrefix = conf.ldap.authorities.prefix // 'ROLE_'
-				if (conf.ldap.mapper.roleAttributes) {
-					roleAttributes = conf.ldap.mapper.roleAttributes
-				}
-			}
-		}
+            if (conf.ldap.mapper.userDetailsClass == 'person') {
+                ldapUserDetailsMapper(PersonContextMapper)
+            } else if (conf.ldap.mapper.userDetailsClass == 'inetOrgPerson') {
+                ldapUserDetailsMapper(InetOrgPersonContextMapper)
+            } else {
+                ldapUserDetailsMapper(LdapUserDetailsMapper) {
+                    convertToUpperCase = conf.ldap.mapper.convertToUpperCase // true
+                    passwordAttributeName = conf.ldap.mapper.passwordAttributeName // 'userPassword'
+                    rolePrefix = conf.ldap.authorities.prefix // 'ROLE_'
+                    if (conf.ldap.mapper.roleAttributes) {
+                        roleAttributes = conf.ldap.mapper.roleAttributes
+                    }
+                }
+            }
 
-		if (conf.ldap.authorities.retrieveGroupRoles) {
-			ldapAuthoritiesPopulator(GrailsLdapAuthoritiesPopulator, contextSource, conf.ldap.authorities.groupSearchBase) {
-				groupRoleAttribute = conf.ldap.authorities.groupRoleAttribute // 'cn'
-				groupSearchFilter = conf.ldap.authorities.groupSearchFilter // 'uniquemember={0}'
-				searchSubtree = conf.ldap.authorities.searchSubtree // true
-				if (conf.ldap.authorities.defaultRole) {
-					defaultRole = conf.ldap.authorities.defaultRole
-				}
-				ignorePartialResultException = conf.ldap.authorities.ignorePartialResultException // false
-				if (conf.ldap.useRememberMe && conf.ldap.authorities.retrieveDatabaseRoles) { // false
-					userDetailsService = ref('ldapRememberMeUserDetailsService')
-				}
-				else {
-					userDetailsService = ref('userDetailsService')
-				}
-				retrieveDatabaseRoles = conf.ldap.authorities.retrieveDatabaseRoles // false
-				// Use to cleanup LDAP (Active Directory) Group names
-				// Spaces are automatically converted to underscores
-				rolePrefix = conf.ldap.authorities.prefix // 'ROLE_'
-				roleStripPrefix = conf.ldap.authorities.clean.prefix // null
-				roleStripSuffix = conf.ldap.authorities.clean.suffix // null
-				roleConvertDashes = conf.ldap.authorities.clean.dashes // false
-				roleToUpperCase = conf.ldap.authorities.clean.uppercase // false
-			}
-		}
-		else if (conf.ldap.authorities.retrieveDatabaseRoles) {
-			ldapAuthoritiesPopulator(DatabaseOnlyLdapAuthoritiesPopulator) {
-				if (conf.ldap.authorities.defaultRole) {
-					defaultRole = conf.ldap.authorities.defaultRole
-				}
-				if (conf.ldap.useRememberMe) {
-					userDetailsService = ref('ldapRememberMeUserDetailsService')
-				}
-				else {
-					userDetailsService = ref('userDetailsService')
-				}
-			}
-		}
-		else {
-			ldapAuthoritiesPopulator(NullLdapAuthoritiesPopulator)
-		}
+            if (conf.ldap.authorities.retrieveGroupRoles) {
+                ldapAuthoritiesPopulator(GrailsLdapAuthoritiesPopulator, contextSource, conf.ldap.authorities.groupSearchBase) {
+                    groupRoleAttribute = conf.ldap.authorities.groupRoleAttribute // 'cn'
+                    groupSearchFilter = conf.ldap.authorities.groupSearchFilter // 'uniquemember={0}'
+                    searchSubtree = conf.ldap.authorities.searchSubtree // true
+                    if (conf.ldap.authorities.defaultRole) {
+                        defaultRole = conf.ldap.authorities.defaultRole
+                    }
+                    ignorePartialResultException = conf.ldap.authorities.ignorePartialResultException // false
+                    if (conf.ldap.useRememberMe && conf.ldap.authorities.retrieveDatabaseRoles) { // false
+                        userDetailsService = ref('ldapRememberMeUserDetailsService')
+                    } else {
+                        userDetailsService = ref('userDetailsService')
+                    }
+                    retrieveDatabaseRoles = conf.ldap.authorities.retrieveDatabaseRoles // false
+                    // Use to cleanup LDAP (Active Directory) Group names
+                    // Spaces are automatically converted to underscores
+                    rolePrefix = conf.ldap.authorities.prefix // 'ROLE_'
+                    roleStripPrefix = conf.ldap.authorities.clean.prefix // null
+                    roleStripSuffix = conf.ldap.authorities.clean.suffix // null
+                    roleConvertDashes = conf.ldap.authorities.clean.dashes // false
+                    roleToUpperCase = conf.ldap.authorities.clean.uppercase // false
+                }
+            } else if (conf.ldap.authorities.retrieveDatabaseRoles) {
+                ldapAuthoritiesPopulator(DatabaseOnlyLdapAuthoritiesPopulator) {
+                    if (conf.ldap.authorities.defaultRole) {
+                        defaultRole = conf.ldap.authorities.defaultRole
+                    }
+                    if (conf.ldap.useRememberMe) {
+                        userDetailsService = ref('ldapRememberMeUserDetailsService')
+                    } else {
+                        userDetailsService = ref('userDetailsService')
+                    }
+                }
+            } else {
+                ldapAuthoritiesPopulator(NullLdapAuthoritiesPopulator)
+            }
 
-		ldapAuthoritiesMapper(NullAuthoritiesMapper)
+            ldapAuthoritiesMapper(NullAuthoritiesMapper)
 
-		ldapAuthProvider(LdapAuthenticationProvider, ldapAuthenticator, ldapAuthoritiesPopulator) {
-			userDetailsContextMapper = ref('ldapUserDetailsMapper')
-			hideUserNotFoundExceptions = conf.ldap.auth.hideUserNotFoundExceptions // true
-			useAuthenticationRequestCredentials = conf.ldap.auth.useAuthPassword // true
-			authoritiesMapper = ref('ldapAuthoritiesMapper')
-		}
+            ldapAuthProvider(LdapAuthenticationProvider, ldapAuthenticator, ldapAuthoritiesPopulator) {
+                userDetailsContextMapper = ref('ldapUserDetailsMapper')
+                hideUserNotFoundExceptions = conf.ldap.auth.hideUserNotFoundExceptions // true
+                useAuthenticationRequestCredentials = conf.ldap.auth.useAuthPassword // true
+                authoritiesMapper = ref('ldapAuthoritiesMapper')
+            }
 
-		if (conf.ldap.useRememberMe) {
-			if (!conf.rememberMe.persistent) {
-				println "\n\nERROR: LDAP remember-me requires persistent remember-me; run the s2-create-persistent-token script to configure this\n\n"
-				System.exit 1
-			}
+            if (conf.ldap.useRememberMe) {
+                if (!conf.rememberMe.persistent) {
+                    println '\n\nERROR: LDAP remember-me requires persistent remember-me; run the s2-create-persistent-token script to configure this\n\n'
+                    System.exit 1
+                }
 
-			// needed just for database role lookups
-			if (conf.ldap.authorities.retrieveGroupRoles) {
-				ldapRememberMeUserDetailsService(GormUserDetailsService) {
-					grailsApplication = grailsApplication
-				}
-			}
+                // needed just for database role lookups
+                if (conf.ldap.authorities.retrieveGroupRoles) {
+                    ldapRememberMeUserDetailsService(GormUserDetailsService) {
+                        grailsApplication = grailsApplication
+                    }
+                }
 
-			String[] detailsAttributesToRetrieve = toStringArray(conf.ldap.rememberMe.detailsManager.attributesToRetrieve) // null - all
-			userDetailsService(GrailsLdapUserDetailsManager, ref('contextSource')) {
-				usernameMapper = ref('ldapUsernameMapper')
-				userDetailsMapper = ref('ldapUserDetailsMapper')
-				roleMapper = ref('ldapRoleMapper')
-				passwordAttributeName = conf.ldap.rememberMe.detailsManager.passwordAttributeName // 'userPassword'
-				groupSearchBase = conf.ldap.rememberMe.detailsManager.groupSearchBase // 'cn=groups'
-				groupRoleAttributeName = conf.ldap.rememberMe.detailsManager.groupRoleAttributeName // 'cn'
-				groupMemberAttributeName = conf.ldap.rememberMe.detailsManager.groupMemberAttributeName // 'uniquemember'
-				if (detailsAttributesToRetrieve != null) {
-					attributesToRetrieve = detailsAttributesToRetrieve
-				}
-			}
+                String[] detailsAttributesToRetrieve = toStringArray(conf.ldap.rememberMe.detailsManager.attributesToRetrieve)
+                // null - all
+                userDetailsService(GrailsLdapUserDetailsManager, ref('contextSource')) {
+                    usernameMapper = ref('ldapUsernameMapper')
+                    userDetailsMapper = ref('ldapUserDetailsMapper')
+                    roleMapper = ref('ldapRoleMapper')
+                    passwordAttributeName = conf.ldap.rememberMe.detailsManager.passwordAttributeName // 'userPassword'
+                    groupSearchBase = conf.ldap.rememberMe.detailsManager.groupSearchBase // 'cn=groups'
+                    groupRoleAttributeName = conf.ldap.rememberMe.detailsManager.groupRoleAttributeName // 'cn'
+                    groupMemberAttributeName = conf.ldap.rememberMe.detailsManager.groupMemberAttributeName
+                    // 'uniquemember'
+                    if (detailsAttributesToRetrieve != null) {
+                        attributesToRetrieve = detailsAttributesToRetrieve
+                    }
+                }
 
-			ldapRoleMapper(GrailsLdapRoleMapper) {
-				rolePrefix = conf.ldap.authorities.prefix // 'ROLE_'
-				groupRoleAttributeName = conf.ldap.rememberMe.detailsManager.groupRoleAttributeName // 'cn'
-			}
+                ldapRoleMapper(GrailsLdapRoleMapper) {
+                    rolePrefix = conf.ldap.authorities.prefix // 'ROLE_'
+                    groupRoleAttributeName = conf.ldap.rememberMe.detailsManager.groupRoleAttributeName // 'cn'
+                }
 
-			ldapUsernameMapper(DefaultLdapUsernameToDnMapper,
-				conf.ldap.rememberMe.usernameMapper.userDnBase,
-				conf.ldap.rememberMe.usernameMapper.usernameAttribute)
-		}
+                ldapUsernameMapper(DefaultLdapUsernameToDnMapper,
+                        conf.ldap.rememberMe.usernameMapper.userDnBase,
+                        conf.ldap.rememberMe.usernameMapper.usernameAttribute)
+            }
 
-		if (printStatusMessages) {
-			println '... finished configuring Spring Security LDAP\n'
-		}
-	}}
+            if (printStatusMessages) {
+                println '... finished configuring Spring Security LDAP\n'
+            }
+        }
+    }
 
-	private String[] toStringArray(value) {
-		if (value == null) {
-			return null
-		}
-		if (value instanceof String) {
-			value = [value]
-		}
-		value as String[]
-	}
+    private String[] toStringArray(value) {
+        if (value == null) {
+            return null
+        }
+        if (value instanceof String) {
+            value = [value]
+        }
+        value as String[]
+    }
 
-	private Class<?> classForName(String name) {
-		Class.forName name, true, Thread.currentThread().contextClassLoader
-	}
+    private Class<?> classForName(String name) {
+        Class.forName name, true, Thread.currentThread().contextClassLoader
+    }
 }

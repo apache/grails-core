@@ -18,16 +18,18 @@
  */
 package grails.plugin.springsecurity
 
+import groovy.transform.CompileStatic
+
 import grails.boot.GrailsApp
 import grails.boot.config.GrailsAutoConfiguration
-import groovy.transform.CompileStatic
 
 /**
  * @author Burt Beckwith
  */
 @CompileStatic
 class Application extends GrailsAutoConfiguration {
-	static void main(String[] args) {
-		GrailsApp.run Application
-	}
+
+    static void main(String[] args) {
+        GrailsApp.run Application
+    }
 }

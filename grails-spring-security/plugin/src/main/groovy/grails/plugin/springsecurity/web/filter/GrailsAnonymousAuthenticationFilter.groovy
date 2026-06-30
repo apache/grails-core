@@ -18,6 +18,7 @@
  */
 package grails.plugin.springsecurity.web.filter
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 
 import jakarta.servlet.FilterChain
@@ -33,7 +34,6 @@ import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.filter.GenericFilterBean
 
 import grails.plugin.springsecurity.authentication.GrailsAnonymousAuthenticationToken
-import groovy.transform.CompileStatic
 
 /**
  * Replaces org.springframework.security.web.authentication.AnonymousAuthenticationFilter.
@@ -44,37 +44,36 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class GrailsAnonymousAuthenticationFilter extends GenericFilterBean {
 
-	/** Dependency injection for authenticationDetailsSource. */
-	AuthenticationDetailsSource<HttpServletRequest, ?> authenticationDetailsSource
+    /** Dependency injection for authenticationDetailsSource. */
+    AuthenticationDetailsSource<HttpServletRequest, ?> authenticationDetailsSource
 
-	/** Dependency injection for the key. */
-	String key
+    /** Dependency injection for the key. */
+    String key
 
-	@Override
-	void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
-		applyAnonymousForThisRequest((HttpServletRequest)req)
-		chain.doFilter req, res
-	}
+    @Override
+    void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) throws IOException, ServletException {
+        applyAnonymousForThisRequest((HttpServletRequest) req)
+        chain.doFilter req, res
+    }
 
-	protected void applyAnonymousForThisRequest(HttpServletRequest request) {
-		SecurityContext context = SecurityContextHolder.context
-		if (!context.authentication) {
-			context.authentication = createAuthentication(request)
-			log.debug "Populated SecurityContextHolder with anonymous token: '{}'", context.authentication
-		}
-		else {
-			log.debug "SecurityContextHolder not populated with anonymous token, as it already contained: '{}'", context.authentication
-		}
-	}
+    protected void applyAnonymousForThisRequest(HttpServletRequest request) {
+        SecurityContext context = SecurityContextHolder.context
+        if (!context.authentication) {
+            context.authentication = createAuthentication(request)
+            log.debug "Populated SecurityContextHolder with anonymous token: '{}'", context.authentication
+        } else {
+            log.debug "SecurityContextHolder not populated with anonymous token, as it already contained: '{}'", context.authentication
+        }
+    }
 
-	protected Authentication createAuthentication(HttpServletRequest request) {
-		new GrailsAnonymousAuthenticationToken(key, authenticationDetailsSource.buildDetails(request))
-	}
+    protected Authentication createAuthentication(HttpServletRequest request) {
+        new GrailsAnonymousAuthenticationToken(key, authenticationDetailsSource.buildDetails(request))
+    }
 
-   @Override
-	void afterPropertiesSet() throws ServletException {
-   	super.afterPropertiesSet()
-   	assert authenticationDetailsSource, 'authenticationDetailsSource must be set'
-   	assert key, 'key must be set'
-   }
+    @Override
+    void afterPropertiesSet() throws ServletException {
+        super.afterPropertiesSet()
+        assert authenticationDetailsSource, 'authenticationDetailsSource must be set'
+        assert key, 'key must be set'
+    }
 }

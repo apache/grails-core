@@ -18,11 +18,14 @@
  */
 package grails.plugin.springsecurity.rest.authentication
 
-import grails.plugin.springsecurity.rest.token.AccessToken
 import groovy.transform.CompileStatic
+
 import org.springframework.security.authentication.AuthenticationEventPublisher
+
+import grails.plugin.springsecurity.rest.token.AccessToken
 
 @CompileStatic
 public interface RestAuthenticationEventPublisher extends AuthenticationEventPublisher {
-    public void publishTokenCreation(AccessToken accessToken)
+
+    void publishTokenCreation(AccessToken accessToken)
 }

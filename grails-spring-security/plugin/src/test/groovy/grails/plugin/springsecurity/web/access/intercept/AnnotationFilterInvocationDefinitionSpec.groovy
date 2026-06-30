@@ -18,22 +18,11 @@
  */
 package grails.plugin.springsecurity.web.access.intercept
 
-import grails.core.GrailsClass
-import grails.plugin.springsecurity.AbstractUnitSpec
-import grails.plugin.springsecurity.InterceptedUrl
-import grails.plugin.springsecurity.access.vote.ClosureConfigAttribute
-import grails.plugin.springsecurity.annotation.Secured
-import grails.web.CamelCaseUrlConverter
-import grails.web.mapping.UrlMappingInfo
-import grails.web.mapping.UrlMappingsHolder
 import groovy.util.logging.Slf4j
-import org.grails.core.DefaultGrailsControllerClass
-import org.grails.core.artefact.ControllerArtefactHandler
-import org.grails.web.mapping.DefaultUrlMappingEvaluator
-import org.grails.web.mapping.DefaultUrlMappingsHolder
-import org.grails.web.mime.HttpServletResponseExtension
-import org.grails.web.servlet.mvc.GrailsWebRequest
-import org.grails.web.util.WebUtils
+
+import spock.lang.Ignore
+import spock.lang.Shared
+
 import org.springframework.http.HttpMethod
 import org.springframework.mock.web.MockFilterChain
 import org.springframework.mock.web.MockHttpServletRequest
@@ -42,8 +31,22 @@ import org.springframework.security.access.SecurityConfig
 import org.springframework.security.web.FilterInvocation
 import org.springframework.web.context.WebApplicationContext
 import org.springframework.web.context.request.RequestContextHolder
-import spock.lang.Ignore
-import spock.lang.Shared
+
+import grails.core.GrailsClass
+import grails.plugin.springsecurity.AbstractUnitSpec
+import grails.plugin.springsecurity.InterceptedUrl
+import grails.plugin.springsecurity.access.vote.ClosureConfigAttribute
+import grails.plugin.springsecurity.annotation.Secured
+import grails.web.CamelCaseUrlConverter
+import grails.web.mapping.UrlMappingInfo
+import grails.web.mapping.UrlMappingsHolder
+import org.grails.core.DefaultGrailsControllerClass
+import org.grails.core.artefact.ControllerArtefactHandler
+import org.grails.web.mapping.DefaultUrlMappingEvaluator
+import org.grails.web.mapping.DefaultUrlMappingsHolder
+import org.grails.web.mime.HttpServletResponseExtension
+import org.grails.web.servlet.mvc.GrailsWebRequest
+import org.grails.web.util.WebUtils
 
 /**
  * Unit tests for AnnotationFilterInvocationDefinition.
@@ -52,268 +55,272 @@ import spock.lang.Shared
  */
 class AnnotationFilterInvocationDefinitionSpec extends AbstractUnitSpec {
 
-	private @Shared HttpServletResponseExtension httpServletResponseExtension = new HttpServletResponseExtension()
-	private @Shared AnnotationFilterInvocationDefinition fid = new AnnotationFilterInvocationDefinition(
-			httpServletResponseExtension: httpServletResponseExtension)
+    private @Shared
+    HttpServletResponseExtension httpServletResponseExtension = new HttpServletResponseExtension()
+    private @Shared
+    AnnotationFilterInvocationDefinition fid = new AnnotationFilterInvocationDefinition(
+            httpServletResponseExtension: httpServletResponseExtension)
 
-	void 'supports'() {
-		expect:
-		fid.supports FilterInvocation
-	}
+    void 'supports'() {
+        expect:
+        fid.supports FilterInvocation
+    }
 
-	void 'lowercaseAndStripQuerystring'() {
-		expect:
-		'/foo/bar' == fid.lowercaseAndStripQuerystring('/foo/BAR')
-		'/foo/bar' == fid.lowercaseAndStripQuerystring('/foo/bar')
-		'/foo/bar' == fid.lowercaseAndStripQuerystring('/foo/BAR?x=1')
-	}
+    void 'lowercaseAndStripQuerystring'() {
+        expect:
+        '/foo/bar' == fid.lowercaseAndStripQuerystring('/foo/BAR')
+        '/foo/bar' == fid.lowercaseAndStripQuerystring('/foo/bar')
+        '/foo/bar' == fid.lowercaseAndStripQuerystring('/foo/BAR?x=1')
+    }
 
-	void 'lowercaseAndStringQuerystring removes fragement'() {
-		expect:
-		'/foo/bar' == fid.lowercaseAndStripQuerystring('/foo/BAR#tableOfContents')
-	}
+    void 'lowercaseAndStringQuerystring removes fragement'() {
+        expect:
+        '/foo/bar' == fid.lowercaseAndStripQuerystring('/foo/BAR#tableOfContents')
+    }
 
-	void 'getAttributes for null arg'() {
-		when:
-		fid.getAttributes null
+    void 'getAttributes for null arg'() {
+        when:
+        fid.getAttributes null
 
-		then:
-		thrown AssertionError
-	}
+        then:
+        thrown AssertionError
+    }
 
-	void 'getAttributes when supports is false'() {
-		when:
-		fid.getAttributes 'foo'
+    void 'getAttributes when supports is false'() {
+        when:
+        fid.getAttributes 'foo'
 
-		then:
-		thrown AssertionError
-	}
+        then:
+        thrown AssertionError
+    }
 
-	void 'getAttributes'() {
-		setup:
-		def chain = new MockFilterChain()
-		FilterInvocation filterInvocation = new FilterInvocation(request, response, chain)
+    void 'getAttributes'() {
+        setup:
+        def chain = new MockFilterChain()
+        FilterInvocation filterInvocation = new FilterInvocation(request, response, chain)
 
-		fid = new MockAnnotationFilterInvocationDefinition(httpServletResponseExtension: httpServletResponseExtension)
+        fid = new MockAnnotationFilterInvocationDefinition(httpServletResponseExtension: httpServletResponseExtension)
 
-		def urlMappingsHolder = [matchAll: { String uri, String httpMethod, String version -> [] as UrlMappingInfo[] }] as UrlMappingsHolder
-		fid.initialize([], urlMappingsHolder, [] as GrailsClass[])
-		WebUtils.storeGrailsWebRequest new GrailsWebRequest(request, response, servletContext)
+        def urlMappingsHolder = [matchAll: { String uri, String httpMethod, String version -> [] as UrlMappingInfo[] }] as UrlMappingsHolder
+        fid.initialize([], urlMappingsHolder, [] as GrailsClass[])
+        WebUtils.storeGrailsWebRequest new GrailsWebRequest(request, response, servletContext)
 
-		when:
-		String pattern = '/foo/**'
-		def configAttribute = [new SecurityConfig('ROLE_ADMIN')]
-		fid.storeMapping pattern, null, configAttribute
+        when:
+        String pattern = '/foo/**'
+        def configAttribute = [new SecurityConfig('ROLE_ADMIN')]
+        fid.storeMapping pattern, null, configAttribute
 
-		request.requestURI = '/foo/bar'
-		fid.url = request.requestURI
+        request.requestURI = '/foo/bar'
+        fid.url = request.requestURI
 
-		then:
-		configAttribute == fid.getAttributes(filterInvocation)
+        then:
+        configAttribute == fid.getAttributes(filterInvocation)
 
-		when:
-		fid.rejectIfNoRule = false
-		request.requestURI = '/bar/foo'
-		fid.url = request.requestURI
+        when:
+        fid.rejectIfNoRule = false
+        request.requestURI = '/bar/foo'
+        fid.url = request.requestURI
 
-		then:
-		!fid.getAttributes(filterInvocation)
+        then:
+        !fid.getAttributes(filterInvocation)
 
-		when:
-		fid.rejectIfNoRule = true
+        when:
+        fid.rejectIfNoRule = true
 
-		then:
-		AbstractFilterInvocationDefinition.DENY == fid.getAttributes(filterInvocation)
+        then:
+        AbstractFilterInvocationDefinition.DENY == fid.getAttributes(filterInvocation)
 
-		when:
-		String moreSpecificPattern = '/foo/ba*'
-		def moreSpecificConfigAttribute = [new SecurityConfig('ROLE_SUPERADMIN')]
-		fid.storeMapping moreSpecificPattern, null, moreSpecificConfigAttribute
+        when:
+        String moreSpecificPattern = '/foo/ba*'
+        def moreSpecificConfigAttribute = [new SecurityConfig('ROLE_SUPERADMIN')]
+        fid.storeMapping moreSpecificPattern, null, moreSpecificConfigAttribute
 
-		request.requestURI = '/foo/bar'
-		fid.url = request.requestURI
+        request.requestURI = '/foo/bar'
+        fid.url = request.requestURI
 
-		then:
-		moreSpecificConfigAttribute == fid.getAttributes(filterInvocation)
-	}
+        then:
+        moreSpecificConfigAttribute == fid.getAttributes(filterInvocation)
+    }
 
-	void 'determineUrl for static request'() {
-		when:
-		def request = new MockHttpServletRequest()
-		def response = new MockHttpServletResponse()
-		def filterChain = new MockFilterChain()
+    void 'determineUrl for static request'() {
+        when:
+        def request = new MockHttpServletRequest()
+        def response = new MockHttpServletResponse()
+        def filterChain = new MockFilterChain()
 
-		request.requestURI = 'requestURI'
+        request.requestURI = 'requestURI'
 
-		fid = new MockAnnotationFilterInvocationDefinition(httpServletResponseExtension: httpServletResponseExtension)
+        fid = new MockAnnotationFilterInvocationDefinition(httpServletResponseExtension: httpServletResponseExtension)
 
-		def urlMappingsHolder = [matchAll: { String uri, String httpMethod, String version -> [] as UrlMappingInfo[] }] as UrlMappingsHolder
-		fid.initialize([], urlMappingsHolder, [] as GrailsClass[])
-		WebUtils.storeGrailsWebRequest new GrailsWebRequest(request, response, servletContext)
+        def urlMappingsHolder = [matchAll: { String uri, String httpMethod, String version -> [] as UrlMappingInfo[] }] as UrlMappingsHolder
+        fid.initialize([], urlMappingsHolder, [] as GrailsClass[])
+        WebUtils.storeGrailsWebRequest new GrailsWebRequest(request, response, servletContext)
 
-		FilterInvocation filterInvocation = new FilterInvocation(request, response, filterChain)
+        FilterInvocation filterInvocation = new FilterInvocation(request, response, filterChain)
 
-		then:
-		'requesturi' == fid.determineUrl(filterInvocation)
-	}
+        then:
+        'requesturi' == fid.determineUrl(filterInvocation)
+    }
 
-	void 'determineUrl for dynamic request'() {
-		when:
-		def request = new MockHttpServletRequest()
-		def response = new MockHttpServletResponse()
-		def filterChain = new MockFilterChain()
+    void 'determineUrl for dynamic request'() {
+        when:
+        def request = new MockHttpServletRequest()
+        def response = new MockHttpServletResponse()
+        def filterChain = new MockFilterChain()
 
-		request.requestURI = 'requestURI'
+        request.requestURI = 'requestURI'
 
-		fid = new MockAnnotationFilterInvocationDefinition(url: 'FOO?x=1', application: grailsApplication,
-		                                                   httpServletResponseExtension: httpServletResponseExtension)
+        fid = new MockAnnotationFilterInvocationDefinition(url: 'FOO?x=1', application: grailsApplication,
+                httpServletResponseExtension: httpServletResponseExtension)
 
-		UrlMappingInfo[] mappings = [[getControllerName: { -> 'foo' },
-		                              getActionName: { -> 'bar' },
-		                              configure: { GrailsWebRequest r -> },
-		                              getRedirectInfo: { -> }] as UrlMappingInfo]
-		def urlMappingsHolder = [matchAll: { String uri, String httpMethod, String version -> mappings }] as UrlMappingsHolder
-		fid.initialize([], urlMappingsHolder, [] as GrailsClass[])
-		WebUtils.storeGrailsWebRequest new GrailsWebRequest(request, response, servletContext)
+        UrlMappingInfo[] mappings = [[getControllerName: { -> 'foo' },
+                                      getActionName    : { -> 'bar' },
+                                      configure        : { GrailsWebRequest r -> },
+                                      getRedirectInfo  : { -> }] as UrlMappingInfo]
+        def urlMappingsHolder = [matchAll: { String uri, String httpMethod, String version -> mappings }] as UrlMappingsHolder
+        fid.initialize([], urlMappingsHolder, [] as GrailsClass[])
+        WebUtils.storeGrailsWebRequest new GrailsWebRequest(request, response, servletContext)
 
-		FilterInvocation filterInvocation = new FilterInvocation(request, response, filterChain)
+        FilterInvocation filterInvocation = new FilterInvocation(request, response, filterChain)
 
-		then:
-		'foo' == fid.determineUrl(filterInvocation)
-	}
+        then:
+        'foo' == fid.determineUrl(filterInvocation)
+    }
 
-	@Ignore
-	void 'initialize'() {
-		when:
-		def mappings = {
+    @Ignore
+    void 'initialize'() {
+        when:
+        def mappings = {
 
-			"/admin/user/$action?/$id?"(controller: 'adminUser')
+            "/admin/user/$action?/$id?"(controller: 'adminUser')
 
-			"/$controller/$action?/$id?" {}
+            "/$controller/$action?/$id?" {}
 
-			"/"(view: '/index')
+            "/"(view: '/index')
 
-			/**** Error Mappings ****/
+            /**** Error Mappings ****/
 
-			"403"(controller: 'errors', action: 'accessDenied')
-			"404"(controller: 'errors', action: 'notFound')
-			"405"(controller: 'errors', action: 'notAllowed')
-			"500"(view: '/error')
-		}
+            "403"(controller: 'errors', action: 'accessDenied')
+            "404"(controller: 'errors', action: 'notFound')
+            "405"(controller: 'errors', action: 'notAllowed')
+            "500"(view: '/error')
+        }
 
-		servletContext.setAttribute WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, applicationContext
+        servletContext.setAttribute WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, applicationContext
 
-		def mappingEvaluator = new DefaultUrlMappingEvaluator(servletContext)
+        def mappingEvaluator = new DefaultUrlMappingEvaluator(servletContext)
 
-		def urlMappingsHolder = new DefaultUrlMappingsHolder(
-				mappings.collect { mappingEvaluator.evaluateMappings(mappings) }.flatten())
+        def urlMappingsHolder = new DefaultUrlMappingsHolder(
+                mappings.collect { mappingEvaluator.evaluateMappings(mappings) }.flatten())
 
-		List<Map<String, Collection<String>>> staticRules = [[pattern: '/js/admin/**', access: ['ROLE_ADMIN']]]
-		GrailsClass[] controllerClasses = [new DefaultGrailsControllerClass(ClassAnnotatedController),
-		                                   new DefaultGrailsControllerClass(MethodAnnotatedController)]
-		controllerClasses.each { cc -> grailsApplication.addArtefact(ControllerArtefactHandler.TYPE, cc) }
+        List<Map<String, Collection<String>>> staticRules = [[pattern: '/js/admin/**', access: ['ROLE_ADMIN']]]
+        GrailsClass[] controllerClasses = [new DefaultGrailsControllerClass(ClassAnnotatedController),
+                                           new DefaultGrailsControllerClass(MethodAnnotatedController)]
+        controllerClasses.each { cc -> grailsApplication.addArtefact(ControllerArtefactHandler.TYPE, cc) }
 
-		fid.roleVoter = applicationContext.getBean('roleVoter')
-		fid.authenticatedVoter = applicationContext.getBean('authenticatedVoter')
-		fid.grailsUrlConverter = new CamelCaseUrlConverter()
+        fid.roleVoter = applicationContext.getBean('roleVoter')
+        fid.authenticatedVoter = applicationContext.getBean('authenticatedVoter')
+        fid.grailsUrlConverter = new CamelCaseUrlConverter()
 
-		fid.initialize staticRules, urlMappingsHolder, controllerClasses
+        fid.initialize staticRules, urlMappingsHolder, controllerClasses
 
-		then:
-		16 == fid.configAttributeMap.size()
+        then:
+        16 == fid.configAttributeMap.size()
 
-		when:
-		InterceptedUrl iu
+        when:
+        InterceptedUrl iu
 
-		then:
-		for (key in ['/classannotated', '/classannotated.*', '/classannotated/**']) {
-			iu = fid.getInterceptedUrl(key, null)
-			assert 1 == iu.configAttributes.size()
-			assert 'ROLE_ADMIN' == iu.configAttributes.iterator().next().attribute
-			assert !iu.httpMethod
-		}
+        then:
+        for (key in ['/classannotated', '/classannotated.*', '/classannotated/**']) {
+            iu = fid.getInterceptedUrl(key, null)
+            assert 1 == iu.configAttributes.size()
+            assert 'ROLE_ADMIN' == iu.configAttributes.iterator().next().attribute
+            assert !iu.httpMethod
+        }
 
-		for (key in ['/classannotated/list', '/classannotated/list.*', '/classannotated/list/**']) {
-			iu = fid.getInterceptedUrl(key, null)
-			assert 2 == iu.configAttributes.size()
-			assert ['ROLE_FOO', 'ROLE_SUPERADMIN'] as Set == iu.configAttributes*.attribute as Set
-			assert !iu.httpMethod
-		}
+        for (key in ['/classannotated/list', '/classannotated/list.*', '/classannotated/list/**']) {
+            iu = fid.getInterceptedUrl(key, null)
+            assert 2 == iu.configAttributes.size()
+            assert ['ROLE_FOO', 'ROLE_SUPERADMIN'] as Set == iu.configAttributes*.attribute as Set
+            assert !iu.httpMethod
+        }
 
-		for (key in ['/methodannotated/list', '/methodannotated/list.*', '/methodannotated/list/**']) {
-			iu = fid.getInterceptedUrl(key, null)
-			assert 1 == iu.configAttributes.size()
-			assert 'ROLE_ADMIN' == iu.configAttributes.iterator().next().attribute
-			assert !iu.httpMethod
-		}
+        for (key in ['/methodannotated/list', '/methodannotated/list.*', '/methodannotated/list/**']) {
+            iu = fid.getInterceptedUrl(key, null)
+            assert 1 == iu.configAttributes.size()
+            assert 'ROLE_ADMIN' == iu.configAttributes.iterator().next().attribute
+            assert !iu.httpMethod
+        }
 
-		for (key in ['/methodannotated/bar', '/methodannotated/bar.*', '/methodannotated/bar/**']) {
-			iu = fid.getInterceptedUrl(key, HttpMethod.PUT)
-			assert 1 == iu.configAttributes.size()
-			assert 'ROLE_ADMIN' == iu.configAttributes.iterator().next().attribute
-			assert HttpMethod.PUT == iu.httpMethod
-		}
+        for (key in ['/methodannotated/bar', '/methodannotated/bar.*', '/methodannotated/bar/**']) {
+            iu = fid.getInterceptedUrl(key, HttpMethod.PUT)
+            assert 1 == iu.configAttributes.size()
+            assert 'ROLE_ADMIN' == iu.configAttributes.iterator().next().attribute
+            assert HttpMethod.PUT == iu.httpMethod
+        }
 
-		for (key in ['/methodannotated/foo', '/methodannotated/foo.*', '/methodannotated/foo/**']) {
-			iu = fid.getInterceptedUrl(key, null)
-			assert 1 == iu.configAttributes.size()
-			assert iu.configAttributes.iterator().next() instanceof ClosureConfigAttribute
-			assert !iu.httpMethod
-		}
+        for (key in ['/methodannotated/foo', '/methodannotated/foo.*', '/methodannotated/foo/**']) {
+            iu = fid.getInterceptedUrl(key, null)
+            assert 1 == iu.configAttributes.size()
+            assert iu.configAttributes.iterator().next() instanceof ClosureConfigAttribute
+            assert !iu.httpMethod
+        }
 
-		when:
-		iu = fid.getInterceptedUrl('/js/admin/**', null)
+        when:
+        iu = fid.getInterceptedUrl('/js/admin/**', null)
 
-		then:
-		1 == iu.configAttributes.size()
-		'ROLE_ADMIN' == iu.configAttributes.iterator().next().attribute
-	}
+        then:
+        1 == iu.configAttributes.size()
+        'ROLE_ADMIN' == iu.configAttributes.iterator().next().attribute
+    }
 
-	void 'findConfigAttribute'() {
-		when:
-		String pattern = '/foo/**'
-		def configAttributes = [new SecurityConfig('ROLE_ADMIN')]
-		fid.storeMapping pattern, null, configAttributes
+    void 'findConfigAttribute'() {
+        when:
+        String pattern = '/foo/**'
+        def configAttributes = [new SecurityConfig('ROLE_ADMIN')]
+        fid.storeMapping pattern, null, configAttributes
 
-		then:
-		configAttributes == fid.findConfigAttributes('/foo/bar', null)
-		!fid.findConfigAttributes('/bar/foo', null)
-	}
+        then:
+        configAttributes == fid.findConfigAttributes('/foo/bar', null)
+        !fid.findConfigAttributes('/bar/foo', null)
+    }
 
-	void cleanup() {
-		RequestContextHolder.resetRequestAttributes()
-	}
+    void cleanup() {
+        RequestContextHolder.resetRequestAttributes()
+    }
 }
 
 @Slf4j
 class MockAnnotationFilterInvocationDefinition extends AnnotationFilterInvocationDefinition {
-	String url
-	protected String findGrailsUrl(UrlMappingInfo mapping) { url }
+
+    String url
+
+    protected String findGrailsUrl(UrlMappingInfo mapping) { url }
 }
 
 @Secured('ROLE_ADMIN')
 class ClassAnnotatedController {
 
-	def index() {}
+    def index() {}
 
-	@Secured(['ROLE_SUPERADMIN', 'ROLE_FOO'])
-	def list() { [results: []] }
+    @Secured(['ROLE_SUPERADMIN', 'ROLE_FOO'])
+    def list() { [results: []] }
 }
 
 class MethodAnnotatedController {
 
-	def index() {}
+    def index() {}
 
-	@Secured('ROLE_ADMIN')
-	def list() { [results: []] }
+    @Secured('ROLE_ADMIN')
+    def list() { [results: []] }
 
-	@Secured(closure = {
-		assert request
-		assert ctx
-		authentication.name == 'admin1'
-	})
-	def foo() { [results: []] }
+    @Secured(closure = {
+        assert request
+        assert ctx
+        authentication.name == 'admin1'
+    })
+    def foo() { [results: []] }
 
-	@Secured(value=['ROLE_ADMIN'], httpMethod='PUT')
-	def bar() { [results: []] }
+    @Secured(value = ['ROLE_ADMIN'], httpMethod = 'PUT')
+    def bar() { [results: []] }
 }

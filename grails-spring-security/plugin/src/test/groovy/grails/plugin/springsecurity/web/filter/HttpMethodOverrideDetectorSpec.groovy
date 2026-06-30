@@ -19,8 +19,9 @@
 
 package grails.plugin.springsecurity.web.filter
 
-import grails.plugin.springsecurity.AbstractUnitSpec
 import org.springframework.http.HttpMethod
+
+import grails.plugin.springsecurity.AbstractUnitSpec
 
 class HttpMethodOverrideDetectorSpec extends AbstractUnitSpec {
 

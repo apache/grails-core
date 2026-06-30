@@ -18,6 +18,15 @@
  */
 package grails.plugin.springsecurity.rest.token.rendering
 
+import org.pac4j.core.profile.CommonProfile
+import spock.lang.Issue
+import spock.lang.Shared
+import spock.lang.Specification
+import spock.lang.Unroll
+
+import org.springframework.security.core.authority.SimpleGrantedAuthority
+import org.springframework.security.core.userdetails.User
+
 import grails.converters.JSON
 import grails.core.DefaultGrailsApplication
 import grails.plugin.springsecurity.ReflectionUtils
@@ -25,16 +34,8 @@ import grails.plugin.springsecurity.SpringSecurityUtils
 import grails.plugin.springsecurity.rest.RestOauthController
 import grails.plugin.springsecurity.rest.oauth.OauthUser
 import grails.plugin.springsecurity.rest.token.AccessToken
-import grails.testing.gorm.DataTest
 import grails.testing.web.controllers.ControllerUnitTest
 import org.grails.spring.GrailsApplicationContext
-import org.pac4j.core.profile.CommonProfile
-import org.springframework.security.core.authority.SimpleGrantedAuthority
-import org.springframework.security.core.userdetails.User
-import spock.lang.Issue
-import spock.lang.Shared
-import spock.lang.Specification
-import spock.lang.Unroll
 
 class DefaultRestAuthenticationTokenJsonRendererSpec extends Specification implements ControllerUnitTest<RestOauthController> {
 
@@ -50,8 +51,8 @@ class DefaultRestAuthenticationTokenJsonRendererSpec extends Specification imple
         SpringSecurityUtils.loadSecondaryConfig 'DefaultRestSecurityConfig'
 
         renderer = new DefaultAccessTokenJsonRenderer(authoritiesPropertyName: 'roles',
-                                                                  tokenPropertyName: 'access_token',
-                                                                  usernamePropertyName: 'username')
+                tokenPropertyName: 'access_token',
+                usernamePropertyName: 'username')
     }
 
     @Unroll
@@ -71,9 +72,9 @@ class DefaultRestAuthenticationTokenJsonRendererSpec extends Specification imple
         jsonResult == generatedJson
 
         where:
-        roles                                                                                   | generatedJson
-        [new SimpleGrantedAuthority('USER'), new SimpleGrantedAuthority('ADMIN')]     | '{"username":"john.doe","roles":["USER","ADMIN"],"access_token":"1a2b3c4d"}'
-        []                                                                                      | '{"username":"john.doe","roles":[],"access_token":"1a2b3c4d"}'
+        roles                                                                     | generatedJson
+        [new SimpleGrantedAuthority('USER'), new SimpleGrantedAuthority('ADMIN')] | '{"username":"john.doe","roles":["USER","ADMIN"],"access_token":"1a2b3c4d"}'
+        []                                                                        | '{"username":"john.doe","roles":[],"access_token":"1a2b3c4d"}'
     }
 
     void "Render JSON with custom properties"() {
@@ -87,8 +88,8 @@ class DefaultRestAuthenticationTokenJsonRendererSpec extends Specification imple
 
         AccessTokenJsonRenderer customRenderer =
                 new DefaultAccessTokenJsonRenderer(authoritiesPropertyName: 'authorities',
-                                                               tokenPropertyName: 'token',
-                                                               usernamePropertyName: 'login')
+                        tokenPropertyName: 'token',
+                        usernamePropertyName: 'login')
 
         when:
         def jsonResult = customRenderer.generateJson(token)
@@ -97,9 +98,9 @@ class DefaultRestAuthenticationTokenJsonRendererSpec extends Specification imple
         jsonResult == generatedJson
 
         where:
-        roles                                                                                   | generatedJson
-        [new SimpleGrantedAuthority('USER'), new SimpleGrantedAuthority('ADMIN')]     | '{"login":"john.doe","authorities":["USER","ADMIN"],"token":"1a2b3c4d"}'
-        []                                                                                      | '{"login":"john.doe","authorities":[],"token":"1a2b3c4d"}'
+        roles                                                                     | generatedJson
+        [new SimpleGrantedAuthority('USER'), new SimpleGrantedAuthority('ADMIN')] | '{"login":"john.doe","authorities":["USER","ADMIN"],"token":"1a2b3c4d"}'
+        []                                                                        | '{"login":"john.doe","authorities":[],"token":"1a2b3c4d"}'
 
 
     }
@@ -135,8 +136,8 @@ class DefaultRestAuthenticationTokenJsonRendererSpec extends Specification imple
         renderer.useBearerToken = true
 
         when:
-        def result = renderer.generateJson( token )
-        def json = JSON.parse( result )
+        def result = renderer.generateJson(token)
+        def json = JSON.parse(result)
 
         then:
         result.size()

@@ -18,37 +18,39 @@
  */
 package grails.plugin.springsecurity
 
-import grails.plugin.springsecurity.web.SecurityRequestHolder
-import grails.testing.web.GrailsWebUnitTest
+import spock.lang.Specification
+
 import org.springframework.security.access.vote.AuthenticatedVoter
 import org.springframework.security.access.vote.RoleVoter
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.web.access.expression.DefaultWebSecurityExpressionHandler
-import spock.lang.Specification
+
+import grails.plugin.springsecurity.web.SecurityRequestHolder
+import grails.testing.web.GrailsWebUnitTest
 
 /**
  * @author Burt Beckwith
  */
 abstract class AbstractUnitSpec extends Specification implements GrailsWebUnitTest {
 
-	void setupSpec() {
-		defineBeans {
-			webExpressionHandler(DefaultWebSecurityExpressionHandler)
-			roleVoter(RoleVoter)
-			authenticatedVoter(AuthenticatedVoter)
-		}
-	}
+    void setupSpec() {
+        defineBeans {
+            webExpressionHandler(DefaultWebSecurityExpressionHandler)
+            roleVoter(RoleVoter)
+            authenticatedVoter(AuthenticatedVoter)
+        }
+    }
 
-	void setup() {
-		ReflectionUtils.application = SpringSecurityUtils.application = grailsApplication
-	}
+    void setup() {
+        ReflectionUtils.application = SpringSecurityUtils.application = grailsApplication
+    }
 
-	void cleanup() {
-		SecurityContextHolder.clearContext()
-		SecurityRequestHolder.reset()
-		SecurityTestUtils.logout()
-		SpringSecurityUtils.resetSecurityConfig()
-		ReflectionUtils.application = null
-		SpringSecurityUtils.application = null
-	}
+    void cleanup() {
+        SecurityContextHolder.clearContext()
+        SecurityRequestHolder.reset()
+        SecurityTestUtils.logout()
+        SpringSecurityUtils.resetSecurityConfig()
+        ReflectionUtils.application = null
+        SpringSecurityUtils.application = null
+    }
 }

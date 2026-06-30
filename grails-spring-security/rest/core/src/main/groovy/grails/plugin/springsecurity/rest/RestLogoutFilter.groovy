@@ -18,13 +18,8 @@
  */
 package grails.plugin.springsecurity.rest
 
-import grails.plugin.springsecurity.rest.token.AccessToken
-import grails.plugin.springsecurity.rest.token.reader.TokenReader
-import grails.plugin.springsecurity.rest.token.storage.TokenNotFoundException
-import grails.plugin.springsecurity.rest.token.storage.TokenStorageService
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import org.springframework.web.filter.GenericFilterBean
 
 import jakarta.servlet.FilterChain
 import jakarta.servlet.ServletException
@@ -32,6 +27,13 @@ import jakarta.servlet.ServletRequest
 import jakarta.servlet.ServletResponse
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+
+import org.springframework.web.filter.GenericFilterBean
+
+import grails.plugin.springsecurity.rest.token.AccessToken
+import grails.plugin.springsecurity.rest.token.reader.TokenReader
+import grails.plugin.springsecurity.rest.token.storage.TokenNotFoundException
+import grails.plugin.springsecurity.rest.token.storage.TokenStorageService
 
 /**
  * Filter exposing an endpoint for deleting tokens. It will read the token from an HTTP header. If found, will delete it
@@ -70,14 +72,14 @@ class RestLogoutFilter extends GenericFilterBean {
                 log.debug "Token found: ${accessToken}"
 
                 try {
-                    log.debug "Trying to remove the token"
+                    log.debug 'Trying to remove the token'
                     tokenStorageService.removeToken accessToken.accessToken
                 } catch (TokenNotFoundException ignored) {
-                    servletResponse.sendError HttpServletResponse.SC_NOT_FOUND, "Token not found"
+                    servletResponse.sendError HttpServletResponse.SC_NOT_FOUND, 'Token not found'
                 }
             } else {
                 log.debug "Token is missing. Sending a ${HttpServletResponse.SC_BAD_REQUEST} Bad Request response"
-                servletResponse.sendError HttpServletResponse.SC_BAD_REQUEST, "Token header is missing"
+                servletResponse.sendError HttpServletResponse.SC_BAD_REQUEST, 'Token header is missing'
             }
 
         } else {

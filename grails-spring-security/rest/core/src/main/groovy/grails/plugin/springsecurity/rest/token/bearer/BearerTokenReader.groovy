@@ -18,12 +18,14 @@
  */
 package grails.plugin.springsecurity.rest.token.bearer
 
-import grails.plugin.springsecurity.rest.token.AccessToken
-import grails.plugin.springsecurity.rest.token.reader.TokenReader
 import groovy.util.logging.Slf4j
-import org.springframework.http.MediaType
 
 import jakarta.servlet.http.HttpServletRequest
+
+import org.springframework.http.MediaType
+
+import grails.plugin.springsecurity.rest.token.AccessToken
+import grails.plugin.springsecurity.rest.token.reader.TokenReader
 
 /**
  * RFC 6750 implementation of a {@link TokenReader}
@@ -40,21 +42,21 @@ class BearerTokenReader implements TokenReader {
      */
     @Override
     AccessToken findToken(HttpServletRequest request) {
-        log.debug "Looking for bearer token in Authorization header, query string or Form-Encoded body parameter"
+        log.debug 'Looking for bearer token in Authorization header, query string or Form-Encoded body parameter'
         String tokenValue = null
         String header = request.getHeader('Authorization')
 
-        if (header?.startsWith('Bearer') && header.length()>=8) {
-            log.debug "Found bearer token in Authorization header"
+        if (header?.startsWith('Bearer') && header.length() >= 8) {
+            log.debug 'Found bearer token in Authorization header'
             tokenValue = header.substring(7)
         } else if (isFormEncoded(request) && !request.get) {
-            log.debug "Found bearer token in request body"
+            log.debug 'Found bearer token in request body'
             tokenValue = request.parameterMap['access_token']?.first()
         } else if (request.queryString?.contains('access_token')) {
-            log.debug "Found bearer token in query string"
+            log.debug 'Found bearer token in query string'
             tokenValue = request.getParameter('access_token')
         } else {
-            log.debug "No token found"
+            log.debug 'No token found'
         }
 
         log.debug "Token: ${tokenValue}"

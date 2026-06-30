@@ -19,6 +19,7 @@
 package grails.plugin.springsecurity.acl.domain
 
 import groovy.transform.CompileStatic
+
 import org.springframework.security.acls.domain.AuditLogger
 import org.springframework.security.acls.model.AccessControlEntry
 
@@ -29,7 +30,8 @@ import org.springframework.security.acls.model.AccessControlEntry
  */
 @CompileStatic
 class NullAclAuditLogger implements AuditLogger {
-	void logIfNeeded(boolean granted, AccessControlEntry ace) {
-		// do nothing
-	}
+
+    void logIfNeeded(boolean granted, AccessControlEntry ace) {
+        // do nothing
+    }
 }

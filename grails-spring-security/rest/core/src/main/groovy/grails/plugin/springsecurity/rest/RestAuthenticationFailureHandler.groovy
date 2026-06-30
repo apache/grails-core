@@ -20,12 +20,13 @@ package grails.plugin.springsecurity.rest
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import org.springframework.security.core.AuthenticationException
-import org.springframework.security.web.authentication.AuthenticationFailureHandler
 
 import jakarta.servlet.ServletException
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+
+import org.springframework.security.core.AuthenticationException
+import org.springframework.security.web.authentication.AuthenticationFailureHandler
 
 /**
  * Sets the configured status code.

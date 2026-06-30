@@ -18,9 +18,28 @@
  */
 package grails.plugin.springsecurity.rest
 
+import groovy.util.logging.Slf4j
+
 import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
+
+import org.springframework.security.crypto.argon2.Argon2PasswordEncoder
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
+import org.springframework.security.crypto.password.DelegatingPasswordEncoder
+import org.springframework.security.crypto.password.LdapShaPasswordEncoder
+import org.springframework.security.crypto.password.Md4PasswordEncoder
+import org.springframework.security.crypto.password.MessageDigestPasswordEncoder
+import org.springframework.security.crypto.password.NoOpPasswordEncoder
+import org.springframework.security.crypto.password.PasswordEncoder
+import org.springframework.security.crypto.password.Pbkdf2PasswordEncoder
+import org.springframework.security.crypto.password.StandardPasswordEncoder
+import org.springframework.security.crypto.scrypt.SCryptPasswordEncoder
+import org.springframework.security.web.access.AccessDeniedHandlerImpl
+import org.springframework.security.web.access.ExceptionTranslationFilter
+import org.springframework.security.web.authentication.Http403ForbiddenEntryPoint
+import org.springframework.security.web.savedrequest.NullRequestCache
+
 import grails.core.GrailsApplication
 import grails.plugin.springsecurity.BeanTypeResolver
 import grails.plugin.springsecurity.SecurityFilterPosition
@@ -48,22 +67,6 @@ import grails.plugin.springsecurity.rest.token.reader.HttpHeaderTokenReader
 import grails.plugin.springsecurity.rest.token.rendering.DefaultAccessTokenJsonRenderer
 import grails.plugin.springsecurity.rest.token.storage.jwt.JwtTokenStorageService
 import grails.plugins.Plugin
-import groovy.util.logging.Slf4j
-import org.springframework.security.crypto.argon2.Argon2PasswordEncoder
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
-import org.springframework.security.crypto.password.DelegatingPasswordEncoder
-import org.springframework.security.crypto.password.LdapShaPasswordEncoder
-import org.springframework.security.crypto.password.Md4PasswordEncoder
-import org.springframework.security.crypto.password.MessageDigestPasswordEncoder
-import org.springframework.security.crypto.password.NoOpPasswordEncoder
-import org.springframework.security.crypto.password.PasswordEncoder
-import org.springframework.security.crypto.password.Pbkdf2PasswordEncoder
-import org.springframework.security.crypto.password.StandardPasswordEncoder
-import org.springframework.security.crypto.scrypt.SCryptPasswordEncoder
-import org.springframework.security.web.access.AccessDeniedHandlerImpl
-import org.springframework.security.web.access.ExceptionTranslationFilter
-import org.springframework.security.web.authentication.Http403ForbiddenEntryPoint
-import org.springframework.security.web.savedrequest.NullRequestCache
 
 @Slf4j
 class SpringSecurityRestGrailsPlugin extends Plugin {
@@ -90,224 +93,226 @@ class SpringSecurityRestGrailsPlugin extends Plugin {
     def organization = [name: 'Grails', url: 'https://www.grails.org']
 
     def issueManagement = [system: 'GitHub', url: 'https://github.com/apache/grails-spring-security/issues']
-    def scm = [ url: 'https://github.com/apache/grails-spring-security']
+    def scm = [url: 'https://github.com/apache/grails-spring-security']
     GrailsApplication grailsApplication
 
-    Closure doWithSpring() { {->
-        if (!springSecurityPluginsAreActive()){
-            return
-        }
+    Closure doWithSpring() {
+        { ->
+            if (!springSecurityPluginsAreActive()) {
+                return
+            }
 
-        def conf = SpringSecurityUtils.securityConfig
-        SpringSecurityUtils.loadSecondaryConfig 'DefaultRestSecurityConfig'
-        conf = SpringSecurityUtils.securityConfig
+            def conf = SpringSecurityUtils.securityConfig
+            SpringSecurityUtils.loadSecondaryConfig 'DefaultRestSecurityConfig'
+            conf = SpringSecurityUtils.securityConfig
 
-        boolean printStatusMessages = (conf.printStatusMessages instanceof Boolean) ? conf.printStatusMessages : true
+            boolean printStatusMessages = (conf.printStatusMessages instanceof Boolean) ? conf.printStatusMessages : true
 
-        if (printStatusMessages) {
-            println "\nConfiguring Spring Security REST ${plugin.version}..."
-        }
+            if (printStatusMessages) {
+                println "\nConfiguring Spring Security REST ${plugin.version}..."
+            }
 
-        ///*
-        SpringSecurityUtils.registerProvider 'restAuthenticationProvider'
+            ///*
+            SpringSecurityUtils.registerProvider 'restAuthenticationProvider'
 
-        /* restAuthenticationFilter */
-        if(conf.rest.login.active) {
-            SpringSecurityUtils.registerFilter 'restAuthenticationFilter', SecurityFilterPosition.FORM_LOGIN_FILTER.order + 1
+            /* restAuthenticationFilter */
+            if (conf.rest.login.active) {
+                SpringSecurityUtils.registerFilter 'restAuthenticationFilter', SecurityFilterPosition.FORM_LOGIN_FILTER.order + 1
 
-            restAuthenticationFilterRequestMatcher(SpringSecurityRestFilterRequestMatcher, conf.rest.login.endpointUrl)
+                restAuthenticationFilterRequestMatcher(SpringSecurityRestFilterRequestMatcher, conf.rest.login.endpointUrl)
 
-            restAuthenticationFilter(RestAuthenticationFilter) {
-                authenticationManager = ref('authenticationManager')
+                restAuthenticationFilter(RestAuthenticationFilter) {
+                    authenticationManager = ref('authenticationManager')
+                    authenticationSuccessHandler = ref('restAuthenticationSuccessHandler')
+                    authenticationFailureHandler = ref('restAuthenticationFailureHandler')
+                    authenticationDetailsSource = ref('authenticationDetailsSource')
+                    credentialsExtractor = ref('credentialsExtractor')
+                    endpointUrl = conf.rest.login.endpointUrl
+                    tokenGenerator = ref('tokenGenerator')
+                    tokenStorageService = ref('tokenStorageService')
+                    authenticationEventPublisher = ref('authenticationEventPublisher')
+                    requestMatcher = ref('restAuthenticationFilterRequestMatcher')
+                }
+
+                def paramsClosure = {
+                    usernamePropertyName = conf.rest.login.usernamePropertyName // username
+                    passwordPropertyName = conf.rest.login.passwordPropertyName // password
+                }
+
+                if (conf.rest.login.useRequestParamsCredentials) {
+                    credentialsExtractor(RequestParamsCredentialsExtractor, paramsClosure)
+                } else if (conf.rest.login.useJsonCredentials) {
+                    credentialsExtractor(DefaultJsonPayloadCredentialsExtractor, paramsClosure)
+                }
+
+                /* restLogoutFilter */
+                restLogoutFilterRequestMatcher(SpringSecurityRestFilterRequestMatcher, conf.rest.logout.endpointUrl)
+
+                restLogoutFilter(RestLogoutFilter) {
+                    endpointUrl = conf.rest.logout.endpointUrl
+                    headerName = conf.rest.token.validation.headerName
+                    tokenStorageService = ref('tokenStorageService')
+                    tokenReader = ref('tokenReader')
+                    requestMatcher = ref('restLogoutFilterRequestMatcher')
+                }
+            }
+
+            restAuthenticationSuccessHandler(RestAuthenticationSuccessHandler) {
+                renderer = ref('accessTokenJsonRenderer')
+            }
+
+            accessTokenJsonRenderer(DefaultAccessTokenJsonRenderer) {
+                usernamePropertyName = conf.rest.token.rendering.usernamePropertyName
+                tokenPropertyName = conf.rest.token.rendering.tokenPropertyName
+                authoritiesPropertyName = conf.rest.token.rendering.authoritiesPropertyName
+                useBearerToken = conf.rest.token.validation.useBearerToken
+            }
+
+            if (conf.rest.token.validation.useBearerToken) {
+                tokenReader(BearerTokenReader)
+                restAuthenticationFailureHandler(BearerTokenAuthenticationFailureHandler) {
+                    tokenReader = ref('tokenReader')
+                }
+                restAuthenticationEntryPoint(BearerTokenAuthenticationEntryPoint) {
+                    tokenReader = ref('tokenReader')
+                }
+                restAccessDeniedHandler(BearerTokenAccessDeniedHandler) {
+                    errorPage = null //403
+                }
+
+            } else {
+                restAuthenticationEntryPoint(Http403ForbiddenEntryPoint)
+                tokenReader(HttpHeaderTokenReader) {
+                    headerName = conf.rest.token.validation.headerName
+                }
+                restAuthenticationFailureHandler(RestAuthenticationFailureHandler) {
+                    statusCode = conf.rest.login.failureStatusCode ?: HttpServletResponse.SC_UNAUTHORIZED
+                }
+                restAccessDeniedHandler(AccessDeniedHandlerImpl) {
+                    errorPage = null //403
+                }
+            }
+
+            /* restTokenValidationFilter */
+            SpringSecurityUtils.registerFilter 'restTokenValidationFilter', SecurityFilterPosition.ANONYMOUS_FILTER.order + 1
+            SpringSecurityUtils.registerFilter 'restExceptionTranslationFilter', SecurityFilterPosition.EXCEPTION_TRANSLATION_FILTER.order - 5
+
+            restTokenValidationFilterRequestMatcher(SpringSecurityRestFilterRequestMatcher, conf.rest.token.validation.endpointUrl)
+
+            restTokenValidationFilter(RestTokenValidationFilter) {
+                headerName = conf.rest.token.validation.headerName
+                validationEndpointUrl = conf.rest.token.validation.endpointUrl
+                active = conf.rest.token.validation.active
+                tokenReader = ref('tokenReader')
+                enableAnonymousAccess = conf.rest.token.validation.enableAnonymousAccess
                 authenticationSuccessHandler = ref('restAuthenticationSuccessHandler')
                 authenticationFailureHandler = ref('restAuthenticationFailureHandler')
-                authenticationDetailsSource = ref('authenticationDetailsSource')
-                credentialsExtractor = ref('credentialsExtractor')
-                endpointUrl = conf.rest.login.endpointUrl
-                tokenGenerator = ref('tokenGenerator')
-                tokenStorageService = ref('tokenStorageService')
+                restAuthenticationProvider = ref('restAuthenticationProvider')
                 authenticationEventPublisher = ref('authenticationEventPublisher')
-                requestMatcher = ref('restAuthenticationFilterRequestMatcher')
+                requestMatcher = ref('restTokenValidationFilterRequestMatcher')
             }
 
-            def paramsClosure = {
-                usernamePropertyName = conf.rest.login.usernamePropertyName // username
-                passwordPropertyName = conf.rest.login.passwordPropertyName // password
+            restExceptionTranslationFilter(ExceptionTranslationFilter, ref('restAuthenticationEntryPoint'), ref('restRequestCache')) {
+                accessDeniedHandler = ref('restAccessDeniedHandler')
+                authenticationTrustResolver = ref('authenticationTrustResolver')
+                throwableAnalyzer = ref('throwableAnalyzer')
             }
 
-            if (conf.rest.login.useRequestParamsCredentials) {
-                credentialsExtractor(RequestParamsCredentialsExtractor, paramsClosure)
-            } else if (conf.rest.login.useJsonCredentials) {
-                credentialsExtractor(DefaultJsonPayloadCredentialsExtractor, paramsClosure)
-            }
+            restRequestCache(NullRequestCache)
 
-            /* restLogoutFilter */
-            restLogoutFilterRequestMatcher(SpringSecurityRestFilterRequestMatcher, conf.rest.logout.endpointUrl)
+            /* tokenGenerator */
+            tokenGenerator(SecureRandomTokenGenerator)
 
-            restLogoutFilter(RestLogoutFilter) {
-                endpointUrl = conf.rest.logout.endpointUrl
-                headerName = conf.rest.token.validation.headerName
-                tokenStorageService = ref('tokenStorageService')
-                tokenReader = ref('tokenReader')
-                requestMatcher = ref('restLogoutFilterRequestMatcher')
-            }
-        }
+            callbackErrorHandler(DefaultCallbackErrorHandler)
 
-        restAuthenticationSuccessHandler(RestAuthenticationSuccessHandler) {
-            renderer = ref('accessTokenJsonRenderer')
-        }
+            String jwtSecretValue = conf.rest.token.storage.jwt.secret
 
-        accessTokenJsonRenderer(DefaultAccessTokenJsonRenderer) {
-            usernamePropertyName = conf.rest.token.rendering.usernamePropertyName
-            tokenPropertyName = conf.rest.token.rendering.tokenPropertyName
-            authoritiesPropertyName = conf.rest.token.rendering.authoritiesPropertyName
-            useBearerToken = conf.rest.token.validation.useBearerToken
-        }
-
-        if(conf.rest.token.validation.useBearerToken ) {
-            tokenReader(BearerTokenReader)
-            restAuthenticationFailureHandler(BearerTokenAuthenticationFailureHandler){
-                tokenReader = ref('tokenReader')
-            }
-            restAuthenticationEntryPoint(BearerTokenAuthenticationEntryPoint) {
-                tokenReader = ref('tokenReader')
-            }
-            restAccessDeniedHandler(BearerTokenAccessDeniedHandler) {
-                errorPage = null //403
-            }
-
-        } else {
-            restAuthenticationEntryPoint(Http403ForbiddenEntryPoint)
-            tokenReader(HttpHeaderTokenReader) {
-                headerName = conf.rest.token.validation.headerName
-            }
-            restAuthenticationFailureHandler(RestAuthenticationFailureHandler) {
-                statusCode = conf.rest.login.failureStatusCode?:HttpServletResponse.SC_UNAUTHORIZED
-            }
-            restAccessDeniedHandler(AccessDeniedHandlerImpl) {
-                errorPage = null //403
-            }
-        }
-
-        /* restTokenValidationFilter */
-        SpringSecurityUtils.registerFilter 'restTokenValidationFilter', SecurityFilterPosition.ANONYMOUS_FILTER.order + 1
-        SpringSecurityUtils.registerFilter 'restExceptionTranslationFilter', SecurityFilterPosition.EXCEPTION_TRANSLATION_FILTER.order - 5
-
-        restTokenValidationFilterRequestMatcher(SpringSecurityRestFilterRequestMatcher, conf.rest.token.validation.endpointUrl)
-
-        restTokenValidationFilter(RestTokenValidationFilter) {
-            headerName = conf.rest.token.validation.headerName
-            validationEndpointUrl = conf.rest.token.validation.endpointUrl
-            active = conf.rest.token.validation.active
-            tokenReader = ref('tokenReader')
-            enableAnonymousAccess = conf.rest.token.validation.enableAnonymousAccess
-            authenticationSuccessHandler = ref('restAuthenticationSuccessHandler')
-            authenticationFailureHandler = ref('restAuthenticationFailureHandler')
-            restAuthenticationProvider = ref('restAuthenticationProvider')
-            authenticationEventPublisher = ref('authenticationEventPublisher')
-            requestMatcher = ref('restTokenValidationFilterRequestMatcher')
-        }
-
-        restExceptionTranslationFilter(ExceptionTranslationFilter, ref('restAuthenticationEntryPoint'), ref('restRequestCache')) {
-            accessDeniedHandler = ref('restAccessDeniedHandler')
-            authenticationTrustResolver = ref('authenticationTrustResolver')
-            throwableAnalyzer = ref('throwableAnalyzer')
-        }
-
-        restRequestCache(NullRequestCache)
-
-        /* tokenGenerator */
-        tokenGenerator(SecureRandomTokenGenerator)
-
-        callbackErrorHandler(DefaultCallbackErrorHandler)
-        
-        String jwtSecretValue = conf.rest.token.storage.jwt.secret
-
-        /* tokenStorageService - defaults to JWT */
-        jwtService(JwtService) {
-            jwtSecret = jwtSecretValue
-        }
-        tokenStorageService(JwtTokenStorageService) {
-            jwtService = ref('jwtService')
-            userDetailsService = ref('userDetailsService')
-        }
-
-        issuerClaimProvider(IssuerClaimProvider) {
-            issuerName = conf.rest.token.generation.jwt.issuer
-        }
-
-        if (conf.rest.token.storage.jwt.useEncryptedJwt) {
+            /* tokenStorageService - defaults to JWT */
             jwtService(JwtService) {
-                keyProvider = ref('keyProvider')
-            }
-            tokenGenerator(EncryptedJwtTokenGenerator) {
-                jwtTokenStorageService = ref('tokenStorageService')
-                keyProvider = ref('keyProvider')
-                defaultExpiration = conf.rest.token.storage.jwt.expiration
-                defaultRefreshExpiration = conf.rest.token.storage.jwt.refreshExpiration
-                jweAlgorithm = JWEAlgorithm.parse(conf.rest.token.generation.jwt.jweAlgorithm)
-                encryptionMethod = EncryptionMethod.parse(conf.rest.token.generation.jwt.encryptionMethod)
-            }
-
-            if (conf.rest.token.storage.jwt.privateKeyPath instanceof CharSequence &&
-                    conf.rest.token.storage.jwt.publicKeyPath instanceof CharSequence) {
-                keyProvider(FileRSAKeyProvider) {
-                    privateKeyPath = conf.rest.token.storage.jwt.privateKeyPath
-                    publicKeyPath = conf.rest.token.storage.jwt.publicKeyPath
-                }
-            } else {
-                keyProvider(DefaultRSAKeyProvider)
-            }
-
-        } else if (conf.rest.token.storage.jwt.useSignedJwt) {
-            checkJwtSecret(jwtSecretValue)
-
-            tokenGenerator(SignedJwtTokenGenerator) {
-                jwtTokenStorageService = ref('tokenStorageService')
                 jwtSecret = jwtSecretValue
-                defaultExpiration = conf.rest.token.storage.jwt.expiration
-                defaultRefreshExpiration = conf.rest.token.storage.jwt.refreshExpiration
-                jwsAlgorithm = JWSAlgorithm.parse(conf.rest.token.generation.jwt.algorithm)
             }
+            tokenStorageService(JwtTokenStorageService) {
+                jwtService = ref('jwtService')
+                userDetailsService = ref('userDetailsService')
+            }
+
+            issuerClaimProvider(IssuerClaimProvider) {
+                issuerName = conf.rest.token.generation.jwt.issuer
+            }
+
+            if (conf.rest.token.storage.jwt.useEncryptedJwt) {
+                jwtService(JwtService) {
+                    keyProvider = ref('keyProvider')
+                }
+                tokenGenerator(EncryptedJwtTokenGenerator) {
+                    jwtTokenStorageService = ref('tokenStorageService')
+                    keyProvider = ref('keyProvider')
+                    defaultExpiration = conf.rest.token.storage.jwt.expiration
+                    defaultRefreshExpiration = conf.rest.token.storage.jwt.refreshExpiration
+                    jweAlgorithm = JWEAlgorithm.parse(conf.rest.token.generation.jwt.jweAlgorithm)
+                    encryptionMethod = EncryptionMethod.parse(conf.rest.token.generation.jwt.encryptionMethod)
+                }
+
+                if (conf.rest.token.storage.jwt.privateKeyPath instanceof CharSequence &&
+                        conf.rest.token.storage.jwt.publicKeyPath instanceof CharSequence) {
+                    keyProvider(FileRSAKeyProvider) {
+                        privateKeyPath = conf.rest.token.storage.jwt.privateKeyPath
+                        publicKeyPath = conf.rest.token.storage.jwt.publicKeyPath
+                    }
+                } else {
+                    keyProvider(DefaultRSAKeyProvider)
+                }
+
+            } else if (conf.rest.token.storage.jwt.useSignedJwt) {
+                checkJwtSecret(jwtSecretValue)
+
+                tokenGenerator(SignedJwtTokenGenerator) {
+                    jwtTokenStorageService = ref('tokenStorageService')
+                    jwtSecret = jwtSecretValue
+                    defaultExpiration = conf.rest.token.storage.jwt.expiration
+                    defaultRefreshExpiration = conf.rest.token.storage.jwt.refreshExpiration
+                    jwsAlgorithm = JWSAlgorithm.parse(conf.rest.token.generation.jwt.algorithm)
+                }
+            }
+
+            /* restAuthenticationProvider */
+            restAuthenticationProvider(RestAuthenticationProvider) {
+                tokenStorageService = ref('tokenStorageService')
+                useJwt = true
+                jwtService = ref('jwtService')
+            }
+
+            /* oauthUserDetailsService */
+            oauthUserDetailsService(DefaultOauthUserDetailsService) {
+                userDetailsService = ref('userDetailsService')
+                preAuthenticationChecks = ref('preAuthenticationChecks')
+            }
+
+            // SecurityEventListener
+            if (conf.useSecurityEventListener) {
+                restSecurityEventListener(RestSecurityEventListener)
+
+                authenticationEventPublisher(DefaultRestAuthenticationEventPublisher)
+            } else {
+                authenticationEventPublisher(NullRestAuthenticationEventPublisher)
+            }
+
+            String algorithm = conf.password.algorithm
+            Class beanTypeResolverClass = conf.beanTypeResolverClass ?: BeanTypeResolver
+            def beanTypeResolver = beanTypeResolverClass.newInstance(conf, grailsApplication)
+
+            passwordEncoder(beanTypeResolver.resolveType('passwordEncoder', DelegatingPasswordEncoder), algorithm, idToPasswordEncoder(conf))
+
+            if (printStatusMessages) {
+                println '... finished configuring Spring Security REST\n'
+            }
+
         }
-
-        /* restAuthenticationProvider */
-        restAuthenticationProvider(RestAuthenticationProvider) {
-            tokenStorageService = ref('tokenStorageService')
-            useJwt = true
-            jwtService = ref('jwtService')
-        }
-
-        /* oauthUserDetailsService */
-        oauthUserDetailsService(DefaultOauthUserDetailsService) {
-            userDetailsService = ref('userDetailsService')
-            preAuthenticationChecks = ref('preAuthenticationChecks')
-        }
-
-        // SecurityEventListener
-        if (conf.useSecurityEventListener) {
-            restSecurityEventListener(RestSecurityEventListener)
-
-            authenticationEventPublisher(DefaultRestAuthenticationEventPublisher)
-        } else {
-            authenticationEventPublisher(NullRestAuthenticationEventPublisher)
-        }
-
-        String algorithm = conf.password.algorithm
-        Class beanTypeResolverClass = conf.beanTypeResolverClass ?: BeanTypeResolver
-        def beanTypeResolver = beanTypeResolverClass.newInstance(conf, grailsApplication)
-
-        passwordEncoder(beanTypeResolver.resolveType('passwordEncoder', DelegatingPasswordEncoder), algorithm, idToPasswordEncoder(conf))
-
-        if (printStatusMessages) {
-            println '... finished configuring Spring Security REST\n'
-        }
-
-    }}
+    }
 
     @Override
     void doWithApplicationContext() {
-        if (!springSecurityPluginsAreActive()){
+        if (!springSecurityPluginsAreActive()) {
             return
         }
         def customClaimProvidersList = applicationContext.getBeanNamesForType(CustomClaimProvider).collect {
@@ -332,7 +337,6 @@ class SpringSecurityRestGrailsPlugin extends Plugin {
             throw new Exception('A JWT secret must be defined. Please provide a value for the config property: grails.plugin.springsecurity.rest.token.storage.jwt.secret')
         }
     }
-
 
     Map<String, PasswordEncoder> idToPasswordEncoder(ConfigObject conf) {
 

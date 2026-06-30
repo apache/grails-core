@@ -23,27 +23,27 @@ package grails.plugin.springsecurity.ui.strategy
  */
 interface AclStrategy {
 
-	def saveAclClass(Map properties)
+    def saveAclClass(Map properties)
 
-	void updateAclClass(Map properties, aclClass)
+    void updateAclClass(Map properties, aclClass)
 
-	void deleteAclClass(aclClass)
+    void deleteAclClass(aclClass)
 
-	def saveAclEntry(Map properties)
+    def saveAclEntry(Map properties)
 
-	void updateAclEntry(Map properties, aclEntry)
+    void updateAclEntry(Map properties, aclEntry)
 
-	void deleteAclEntry(aclEntry)
+    void deleteAclEntry(aclEntry)
 
-	def saveAclSid(Map properties)
+    def saveAclSid(Map properties)
 
-	void updateAclSid(Map properties, aclSid)
+    void updateAclSid(Map properties, aclSid)
 
-	void deleteAclSid(aclSid)
+    void deleteAclSid(aclSid)
 
-	def saveAclObjectIdentity(Map properties)
+    def saveAclObjectIdentity(Map properties)
 
-	void updateAclObjectIdentity(Map properties, aclObjectIdentity)
+    void updateAclObjectIdentity(Map properties, aclObjectIdentity)
 
-	void deleteAclObjectIdentity(aclObjectIdentity)
+    void deleteAclObjectIdentity(aclObjectIdentity)
 }

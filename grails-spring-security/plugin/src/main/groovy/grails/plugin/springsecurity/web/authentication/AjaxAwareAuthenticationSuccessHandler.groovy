@@ -18,6 +18,8 @@
  */
 package grails.plugin.springsecurity.web.authentication
 
+import groovy.transform.CompileStatic
+
 import jakarta.servlet.ServletException
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -27,7 +29,6 @@ import org.springframework.security.web.authentication.SavedRequestAwareAuthenti
 import org.springframework.security.web.savedrequest.RequestCache
 
 import grails.plugin.springsecurity.SpringSecurityUtils
-import groovy.transform.CompileStatic
 
 /**
  * @author Burt Beckwith
@@ -35,43 +36,42 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class AjaxAwareAuthenticationSuccessHandler extends SavedRequestAwareAuthenticationSuccessHandler {
 
-	protected RequestCache requestCache
+    protected RequestCache requestCache
 
-	/** Dependency injection for the Ajax success url, e.g. '/login/ajaxSuccess'. */
-	String ajaxSuccessUrl
+    /** Dependency injection for the Ajax success url, e.g. '/login/ajaxSuccess'. */
+    String ajaxSuccessUrl
 
-	@Override
-	void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
-			Authentication authentication) throws ServletException, IOException {
+    @Override
+    void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
+                                 Authentication authentication) throws ServletException, IOException {
 
-		boolean ajax = SpringSecurityUtils.isAjax(request)
+        boolean ajax = SpringSecurityUtils.isAjax(request)
 
-		// GPSPRINGSECURITYCORE-240
-		if (ajax) {
-			requestCache.removeRequest request, response
-		}
+        // GPSPRINGSECURITYCORE-240
+        if (ajax) {
+            requestCache.removeRequest request, response
+        }
 
-		try {
-			if (ajax) {
-				clearAuthenticationAttributes request
-				if (logger.debugEnabled) {
-					logger.debug 'Redirecting to Ajax Success Url: ' + ajaxSuccessUrl
-				}
-				redirectStrategy.sendRedirect request, response, ajaxSuccessUrl
-			}
-			else {
-				super.onAuthenticationSuccess request, response, authentication
-			}
-		}
-		finally {
-			// always remove the saved request
-			requestCache.removeRequest request, response
-		}
-	}
+        try {
+            if (ajax) {
+                clearAuthenticationAttributes request
+                if (logger.debugEnabled) {
+                    logger.debug 'Redirecting to Ajax Success Url: ' + ajaxSuccessUrl
+                }
+                redirectStrategy.sendRedirect request, response, ajaxSuccessUrl
+            } else {
+                super.onAuthenticationSuccess request, response, authentication
+            }
+        }
+        finally {
+            // always remove the saved request
+            requestCache.removeRequest request, response
+        }
+    }
 
-	@Override
-	void setRequestCache(RequestCache cache) {
-		super.setRequestCache cache
-		requestCache = cache
-	}
+    @Override
+    void setRequestCache(RequestCache cache) {
+        super.setRequestCache cache
+        requestCache = cache
+    }
 }

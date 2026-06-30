@@ -18,18 +18,20 @@
  */
 package grails.plugin.springsecurity.rest
 
-import grails.plugin.springsecurity.rest.token.storage.TokenNotFoundException
-import org.springframework.mock.web.MockHttpServletRequest
-import org.springframework.mock.web.MockHttpServletResponse
-import org.springframework.security.core.AuthenticationException
-import spock.lang.Specification
-
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 
+import spock.lang.Specification
+
+import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.mock.web.MockHttpServletResponse
+import org.springframework.security.core.AuthenticationException
+
+import grails.plugin.springsecurity.rest.token.storage.TokenNotFoundException
+
 class RestAuthenticationFailureHandlerSpec extends Specification {
 
-	void "it returns #statusCode when authentication fails"() {
+    void "it returns #statusCode when authentication fails"() {
         given:
         RestAuthenticationFailureHandler handler = new RestAuthenticationFailureHandler()
         HttpServletRequest request = new MockHttpServletRequest()
@@ -45,5 +47,5 @@ class RestAuthenticationFailureHandlerSpec extends Specification {
 
         where:
         statusCode << [401, 403]
-	}
+    }
 }

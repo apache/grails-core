@@ -18,8 +18,9 @@
  */
 package grails.plugin.springsecurity.rest.token.generation
 
-import grails.plugin.springsecurity.rest.token.AccessToken
 import org.springframework.security.core.userdetails.UserDetails
+
+import grails.plugin.springsecurity.rest.token.AccessToken
 
 /**
  * Implementations of this interface must provide a token generation strategy

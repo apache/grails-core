@@ -22,6 +22,7 @@ import com.github.scribejava.core.builder.api.DefaultApi20
 import com.github.scribejava.core.model.OAuth2AccessToken
 import com.github.scribejava.core.model.Response
 import com.github.scribejava.core.oauth.OAuth20Service
+
 import grails.plugin.springsecurity.oauth2.token.OAuth2SpringToken
 import grails.plugin.springsecurity.oauth2.util.OAuth2ProviderConfiguration
 

@@ -18,7 +18,11 @@
  */
 package grails.plugin.springsecurity.cache
 
+import javax.cache.configuration.Configuration
+import javax.cache.configuration.MutableConfiguration
+
 import groovy.transform.CompileStatic
+
 import org.springframework.beans.factory.FactoryBean
 import org.springframework.beans.factory.InitializingBean
 import org.springframework.cache.jcache.JCacheCache
@@ -26,9 +30,6 @@ import org.springframework.cache.jcache.JCacheCacheManager
 import org.springframework.security.core.userdetails.User
 import org.springframework.security.core.userdetails.cache.SpringCacheBasedUserCache
 import org.springframework.util.Assert
-
-import javax.cache.configuration.Configuration
-import javax.cache.configuration.MutableConfiguration
 
 @CompileStatic
 class SpringUserCacheFactoryBean implements FactoryBean<SpringCacheBasedUserCache>, InitializingBean {
@@ -50,8 +51,8 @@ class SpringUserCacheFactoryBean implements FactoryBean<SpringCacheBasedUserCach
 
     @Override
     void afterPropertiesSet() throws Exception {
-        Assert.notNull(cacheManager, "cacheManager mandatory")
-        Assert.notNull(cacheName, "cacheName mandatory")
+        Assert.notNull(cacheManager, 'cacheManager mandatory')
+        Assert.notNull(cacheName, 'cacheName mandatory')
         if (!cacheConfig) {
             cacheConfig = new MutableConfiguration<String, User>()
                     .setTypes(String, User)

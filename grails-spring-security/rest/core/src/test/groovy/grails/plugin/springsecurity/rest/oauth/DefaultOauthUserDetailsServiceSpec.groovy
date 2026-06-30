@@ -18,26 +18,28 @@
  */
 package grails.plugin.springsecurity.rest.oauth
 
-import grails.core.DefaultGrailsApplication
-import grails.plugin.springsecurity.ReflectionUtils
-import grails.plugin.springsecurity.SpringSecurityUtils
-import grails.plugin.springsecurity.userdetails.DefaultPreAuthenticationChecks
-import org.grails.spring.GrailsApplicationContext
 import org.pac4j.core.profile.CommonProfile
+import spock.lang.Shared
+import spock.lang.Specification
+
 import org.springframework.security.authentication.AccountStatusException
 import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.userdetails.User
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.provisioning.InMemoryUserDetailsManager
-import spock.lang.IgnoreRest
-import spock.lang.Shared
-import spock.lang.Specification
+
+import grails.core.DefaultGrailsApplication
+import grails.plugin.springsecurity.ReflectionUtils
+import grails.plugin.springsecurity.SpringSecurityUtils
+import grails.plugin.springsecurity.userdetails.DefaultPreAuthenticationChecks
+import org.grails.spring.GrailsApplicationContext
 
 class DefaultOauthUserDetailsServiceSpec extends Specification {
 
     @Shared
     def application
+
     def setupSpec() {
         application = new DefaultGrailsApplication()
         application.mainContext = new GrailsApplicationContext()
@@ -50,8 +52,8 @@ class DefaultOauthUserDetailsServiceSpec extends Specification {
 
     void "it load users either existing or not"() {
         given:
-        application.config.merge(['grails.plugin.springsecurity.userLookup.userDomainClassName':'demo.User'])
-        
+        application.config.merge(['grails.plugin.springsecurity.userLookup.userDomainClassName': 'demo.User'])
+
         OauthUserDetailsService service = new DefaultOauthUserDetailsService()
         service.preAuthenticationChecks = new DefaultPreAuthenticationChecks()
         service.userDetailsService = new InMemoryUserDetailsManager([])
@@ -66,9 +68,9 @@ class DefaultOauthUserDetailsServiceSpec extends Specification {
         oauthUser.authorities.size() == authorities
 
         where:
-        username    | authorities
-        'test'      | 0
-        'jimi'      | 2
+        username | authorities
+        'test'   | 0
+        'jimi'   | 2
     }
 
     void "when a user exists but it's disabled, it throws an exception"() {
@@ -109,5 +111,6 @@ class DefaultOauthUserDetailsServiceSpec extends Specification {
 }
 
 class MockGrantedAuthority implements GrantedAuthority {
+
     String authority
 }

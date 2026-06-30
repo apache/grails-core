@@ -18,20 +18,23 @@
  */
 package grails.plugin.springsecurity.rest.token.storage.jwt
 
-import com.nimbusds.jose.JOSEException
-import com.nimbusds.jwt.JWT
-import grails.plugin.springsecurity.rest.JwtService
-import grails.plugin.springsecurity.rest.token.generation.jwt.AbstractJwtTokenGenerator
-import grails.plugin.springsecurity.rest.token.storage.TokenNotFoundException
-import grails.plugin.springsecurity.rest.token.storage.TokenStorageService
+import java.text.ParseException
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+
+import com.nimbusds.jose.JOSEException
+import com.nimbusds.jwt.JWT
+
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.userdetails.User
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UserDetailsService
 
-import java.text.ParseException
+import grails.plugin.springsecurity.rest.JwtService
+import grails.plugin.springsecurity.rest.token.generation.jwt.AbstractJwtTokenGenerator
+import grails.plugin.springsecurity.rest.token.storage.TokenNotFoundException
+import grails.plugin.springsecurity.rest.token.storage.TokenStorageService
 
 /**
  * Re-hydrates JWT's with HMAC protection or JWE encryption
@@ -54,7 +57,7 @@ class JwtTokenStorageService implements TokenStorageService {
             }
 
             boolean isRefresh = jwt.JWTClaimsSet.getBooleanClaim(AbstractJwtTokenGenerator.REFRESH_ONLY_CLAIM) || jwt.JWTClaimsSet.expirationTime == null
-            if(isRefresh) {
+            if (isRefresh) {
                 return loadUserFromRefreshToken(jwt)
             }
 
@@ -71,10 +74,10 @@ class JwtTokenStorageService implements TokenStorageService {
      * Load user details for an access token
      */
     protected UserDetails loadUserFromAccessToken(JWT jwt) {
-        log.debug "Verified JWT, trying to deserialize the principal object"
+        log.debug 'Verified JWT, trying to deserialize the principal object'
         try {
             UserDetails details = JwtService.deserialize(jwt.JWTClaimsSet.getStringClaim('principal'))
-            log.debug "UserDetails deserialized: {}", details
+            log.debug 'UserDetails deserialized: {}', details
             if (details) {
                 return details
             }
@@ -82,7 +85,7 @@ class JwtTokenStorageService implements TokenStorageService {
             log.debug(exception.message)
         }
 
-        log.debug "Returning a org.springframework.security.core.userdetails.User instance"
+        log.debug 'Returning a org.springframework.security.core.userdetails.User instance'
 
         List<SimpleGrantedAuthority> roles = jwt.JWTClaimsSet.getStringArrayClaim('roles')?.collect { String role -> new SimpleGrantedAuthority(role) }
         return new User(jwt.JWTClaimsSet.subject, 'N/A', roles)
@@ -97,20 +100,20 @@ class JwtTokenStorageService implements TokenStorageService {
     protected UserDetails loadUserFromRefreshToken(JWT jwt) {
         UserDetails principal = userDetailsService.loadUserByUsername(jwt.JWTClaimsSet.subject)
 
-        if(!principal){
-            throw new TokenNotFoundException("Token no longer valid, principal not found")
+        if (!principal) {
+            throw new TokenNotFoundException('Token no longer valid, principal not found')
         }
-        if(!principal.enabled){
-            throw new TokenNotFoundException("Token no longer valid, account disabled")
+        if (!principal.enabled) {
+            throw new TokenNotFoundException('Token no longer valid, account disabled')
         }
-        if(!principal.accountNonExpired){
-            throw new TokenNotFoundException("Token no longer valid, account expired")
+        if (!principal.accountNonExpired) {
+            throw new TokenNotFoundException('Token no longer valid, account expired')
         }
-        if(!principal.accountNonLocked){
-            throw new TokenNotFoundException("Token no longer valid, account locked")
+        if (!principal.accountNonLocked) {
+            throw new TokenNotFoundException('Token no longer valid, account locked')
         }
-        if(!principal.credentialsNonExpired){
-            throw new TokenNotFoundException("Token no longer valid, credentials expired")
+        if (!principal.credentialsNonExpired) {
+            throw new TokenNotFoundException('Token no longer valid, credentials expired')
         }
 
         return principal
@@ -118,12 +121,12 @@ class JwtTokenStorageService implements TokenStorageService {
 
     @Override
     void storeToken(String tokenValue, UserDetails principal) {
-        log.debug "Nothing to store as this is a stateless implementation"
+        log.debug 'Nothing to store as this is a stateless implementation'
     }
 
     @Override
     void removeToken(String tokenValue) throws TokenNotFoundException {
-        log.debug "Nothing to remove as this is a stateless implementation"
+        log.debug 'Nothing to remove as this is a stateless implementation'
         throw new TokenNotFoundException("Token ${tokenValue} cannot be removed as this is a stateless implementation")
     }
 

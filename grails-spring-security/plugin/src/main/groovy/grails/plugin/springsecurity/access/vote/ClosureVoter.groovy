@@ -18,15 +18,17 @@
  */
 package grails.plugin.springsecurity.access.vote
 
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
 import org.springframework.security.access.AccessDecisionVoter
 import org.springframework.security.access.ConfigAttribute
 import org.springframework.security.core.Authentication
 import org.springframework.security.web.FilterInvocation
+
 import grails.plugin.springsecurity.annotation.SecuredClosureDelegate
-import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
 
 /**
  * @author Burt Beckwith
@@ -35,40 +37,40 @@ import groovy.util.logging.Slf4j
 @CompileStatic
 class ClosureVoter implements AccessDecisionVoter<FilterInvocation>, ApplicationContextAware {
 
-	ApplicationContext applicationContext
+    ApplicationContext applicationContext
 
-	int vote(Authentication authentication, FilterInvocation fi, Collection<ConfigAttribute> attributes) {
-		assert authentication, 'authentication cannot be null'
-		assert fi, 'object cannot be null'
-		assert attributes != null, 'attributes cannot be null'
+    int vote(Authentication authentication, FilterInvocation fi, Collection<ConfigAttribute> attributes) {
+        assert authentication, 'authentication cannot be null'
+        assert fi, 'object cannot be null'
+        assert attributes != null, 'attributes cannot be null'
 
-		log.trace 'vote() Authentication {}, FilterInvocation {} ConfigAttributes {}', authentication, fi, attributes
+        log.trace 'vote() Authentication {}, FilterInvocation {} ConfigAttributes {}', authentication, fi, attributes
 
-		ClosureConfigAttribute attribute = (ClosureConfigAttribute)attributes.find { it instanceof ClosureConfigAttribute }
+        ClosureConfigAttribute attribute = (ClosureConfigAttribute) attributes.find { it instanceof ClosureConfigAttribute }
 
-		if (!attribute) {
-			log.trace 'No ClosureConfigAttribute found'
-			return ACCESS_ABSTAIN
-		}
+        if (!attribute) {
+            log.trace 'No ClosureConfigAttribute found'
+            return ACCESS_ABSTAIN
+        }
 
-		Closure<?> closure = (Closure<?>) attribute.closure.clone()
-		closure.delegate = new SecuredClosureDelegate(authentication, fi, applicationContext)
-		def result = closure.call()
-		if (result instanceof Boolean) {
-			log.trace 'Closure result: {}', result
-			return result ? ACCESS_GRANTED : ACCESS_DENIED
-		}
+        Closure<?> closure = (Closure<?>) attribute.closure.clone()
+        closure.delegate = new SecuredClosureDelegate(authentication, fi, applicationContext)
+        def result = closure.call()
+        if (result instanceof Boolean) {
+            log.trace 'Closure result: {}', result
+            return result ? ACCESS_GRANTED : ACCESS_DENIED
+        }
 
-		log.warn 'vote() returning ACCESS_DENIED because the return value from the closure call was {}, not boolean', result?.getClass()?.name
+        log.warn 'vote() returning ACCESS_DENIED because the return value from the closure call was {}, not boolean', result?.getClass()?.name
 
-		ACCESS_DENIED
-	}
+        ACCESS_DENIED
+    }
 
-	boolean supports(ConfigAttribute attribute) {
-		attribute instanceof ClosureConfigAttribute
-	}
+    boolean supports(ConfigAttribute attribute) {
+        attribute instanceof ClosureConfigAttribute
+    }
 
-	boolean supports(Class<?> clazz) {
-		clazz.isAssignableFrom FilterInvocation
-	}
+    boolean supports(Class<?> clazz) {
+        clazz.isAssignableFrom FilterInvocation
+    }
 }

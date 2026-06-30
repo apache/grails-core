@@ -18,12 +18,14 @@
  */
 package grails.plugin.springsecurity.rest
 
-import grails.plugin.springsecurity.rest.token.AccessToken
 import org.springframework.context.ApplicationEvent
+
+import grails.plugin.springsecurity.rest.token.AccessToken
 
 /*
  * Stores the {@link AccessToken} for authentication success event handlers.
  */
+
 class RestTokenCreationEvent extends ApplicationEvent {
 
     @Delegate
@@ -31,6 +33,6 @@ class RestTokenCreationEvent extends ApplicationEvent {
 
     RestTokenCreationEvent(Object source) {
         super(source)
-        this.accessToken = (AccessToken)source
+        this.accessToken = (AccessToken) source
     }
 }

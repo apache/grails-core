@@ -23,9 +23,9 @@ package grails.plugin.springsecurity.ui.strategy
  */
 interface RoleStrategy {
 
-	def saveRole(Map properties)
+    def saveRole(Map properties)
 
-	void updateRole(Map properties, role)
+    void updateRole(Map properties, role)
 
-	void deleteRole(role)
+    void deleteRole(role)
 }

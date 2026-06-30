@@ -49,33 +49,35 @@ class SpringSecurityRestGrailsCacheGrailsPlugin extends Plugin {
     def organization = [name: 'Grails', url: 'https://www.grails.org']
 
     def issueManagement = [system: 'GitHub', url: 'https://github.com/apache/grails-spring-security/issues']
-    def scm = [ url: 'https://github.com/apache/grails-spring-security']
+    def scm = [url: 'https://github.com/apache/grails-spring-security']
 
-    Closure doWithSpring() { {->
-        def conf = SpringSecurityUtils.securityConfig
-        if (!conf || !conf.active || !conf.rest.active) {
-            return
+    Closure doWithSpring() {
+        { ->
+            def conf = SpringSecurityUtils.securityConfig
+            if (!conf || !conf.active || !conf.rest.active) {
+                return
+            }
+
+            boolean printStatusMessages = (conf.printStatusMessages instanceof Boolean) ? conf.printStatusMessages : true
+
+            if (printStatusMessages) {
+                println '\t... with Grails cache support'
+            }
+
+            SpringSecurityUtils.loadSecondaryConfig 'DefaultRestGrailsCacheSecurityConfig'
+            conf = SpringSecurityUtils.securityConfig
+
+            SpringSecurityUtils.registerFilter 'restLogoutFilter', SecurityFilterPosition.LOGOUT_FILTER.order - 1
+
+            tokenStorageService(GrailsCacheTokenStorageService) {
+                grailsCacheManager = ref('grailsCacheManager')
+                cacheName = conf.rest.token.storage.grailsCacheName
+            }
+
+            tokenGenerator(SecureRandomTokenGenerator)
+
         }
-
-        boolean printStatusMessages = (conf.printStatusMessages instanceof Boolean) ? conf.printStatusMessages : true
-
-        if (printStatusMessages) {
-            println '\t... with Grails cache support'
-        }
-
-        SpringSecurityUtils.loadSecondaryConfig 'DefaultRestGrailsCacheSecurityConfig'
-        conf = SpringSecurityUtils.securityConfig
-
-        SpringSecurityUtils.registerFilter 'restLogoutFilter', SecurityFilterPosition.LOGOUT_FILTER.order - 1
-
-        tokenStorageService(GrailsCacheTokenStorageService) {
-            grailsCacheManager = ref('grailsCacheManager')
-            cacheName = conf.rest.token.storage.grailsCacheName
-        }
-
-        tokenGenerator(SecureRandomTokenGenerator)
-
-    }}
+    }
 
     void doWithApplicationContext() {
         def conf = SpringSecurityUtils.securityConfig

@@ -18,20 +18,23 @@
  */
 package grails.plugin.springsecurity.rest
 
-import com.nimbusds.jwt.JWT
-import grails.plugin.springsecurity.rest.token.AccessToken
-import grails.plugin.springsecurity.rest.token.generation.jwt.AbstractJwtTokenGenerator
-import grails.plugin.springsecurity.rest.token.storage.TokenNotFoundException
-import grails.plugin.springsecurity.rest.token.storage.TokenStorageService
 import groovy.time.TimeCategory
 import groovy.time.TimeDuration
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+
+import com.nimbusds.jwt.JWT
+
 import org.springframework.security.authentication.AuthenticationProvider
 import org.springframework.security.core.Authentication
 import org.springframework.security.core.AuthenticationException
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.util.Assert
+
+import grails.plugin.springsecurity.rest.token.AccessToken
+import grails.plugin.springsecurity.rest.token.generation.jwt.AbstractJwtTokenGenerator
+import grails.plugin.springsecurity.rest.token.storage.TokenNotFoundException
+import grails.plugin.springsecurity.rest.token.storage.TokenStorageService
 
 /**
  * Authenticates a request based on the token passed. This is called by {@link RestTokenValidationFilter}.
@@ -52,7 +55,7 @@ class RestAuthenticationProvider implements AuthenticationProvider {
      */
     Authentication authenticate(Authentication authentication) throws AuthenticationException {
         log.debug "Use JWT: ${useJwt}"
-        Assert.isInstanceOf(AccessToken, authentication, "Only AccessToken is supported")
+        Assert.isInstanceOf(AccessToken, authentication, 'Only AccessToken is supported')
         AccessToken authenticationRequest = authentication as AccessToken
         AccessToken authenticationResult = new AccessToken(authenticationRequest.accessToken)
 
@@ -82,7 +85,7 @@ class RestAuthenticationProvider implements AuthenticationProvider {
             }
 
             authenticationResult = new AccessToken(userDetails, userDetails.authorities, authenticationRequest.accessToken, null, expiration, jwt, null)
-            log.debug "Authentication result: {}", authenticationResult
+            log.debug 'Authentication result: {}', authenticationResult
         }
 
         return authenticationResult

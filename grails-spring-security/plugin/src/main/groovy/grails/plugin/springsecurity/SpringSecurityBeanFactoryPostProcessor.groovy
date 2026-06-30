@@ -19,6 +19,7 @@
 package grails.plugin.springsecurity
 
 import groovy.transform.CompileStatic
+
 import org.springframework.beans.BeansException
 import org.springframework.beans.MutablePropertyValues
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor
@@ -36,40 +37,40 @@ import org.springframework.boot.web.servlet.FilterRegistrationBean
 @CompileStatic
 class SpringSecurityBeanFactoryPostProcessor implements BeanFactoryPostProcessor {
 
-	protected static final String AUTOCONFIG_NAME = 'org.springframework.boot.autoconfigure.security.SecurityFilterAutoConfiguration'
-	protected static final String SECURITY_PROPERTIES_NAME = 'securityProperties'
+    protected static final String AUTOCONFIG_NAME = 'org.springframework.boot.autoconfigure.security.SecurityFilterAutoConfiguration'
+    protected static final String SECURITY_PROPERTIES_NAME = 'securityProperties'
 
-	void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
-		if (beanFactory instanceof BeanDefinitionRegistry) {
-			removeAutoconfigBeans beanFactory
-			disableFilterRegistrationBeans beanFactory
-		}
-	}
+    void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+        if (beanFactory instanceof BeanDefinitionRegistry) {
+            removeAutoconfigBeans beanFactory
+            disableFilterRegistrationBeans beanFactory
+        }
+    }
 
-	protected void removeAutoconfigBeans(BeanDefinitionRegistry beanFactory) {
-		if (beanFactory.containsBeanDefinition(AUTOCONFIG_NAME)) {
-			beanFactory.removeBeanDefinition AUTOCONFIG_NAME
-		}
+    protected void removeAutoconfigBeans(BeanDefinitionRegistry beanFactory) {
+        if (beanFactory.containsBeanDefinition(AUTOCONFIG_NAME)) {
+            beanFactory.removeBeanDefinition AUTOCONFIG_NAME
+        }
 
-		if (beanFactory.containsBeanDefinition(SECURITY_PROPERTIES_NAME)) {
-			if (beanFactory.getBeanDefinition(SECURITY_PROPERTIES_NAME).factoryBeanName == AUTOCONFIG_NAME) {
-				beanFactory.removeBeanDefinition SECURITY_PROPERTIES_NAME
-			}
-		}
-	}
+        if (beanFactory.containsBeanDefinition(SECURITY_PROPERTIES_NAME)) {
+            if (beanFactory.getBeanDefinition(SECURITY_PROPERTIES_NAME).factoryBeanName == AUTOCONFIG_NAME) {
+                beanFactory.removeBeanDefinition SECURITY_PROPERTIES_NAME
+            }
+        }
+    }
 
-	/**
-	 * Need to add a FilterRegistrationBean with enabled set to false to prevent Boot from
-	 * registering all of the filters in the filterchains again as regular filters.
-	 */
-	protected void disableFilterRegistrationBeans(BeanDefinitionRegistry beanFactory) {
-		SortedMap<Integer, String> filterNames = ReflectionUtils.findFilterChainNames(SpringSecurityUtils.securityConfig)
-		for (String name in filterNames.values()) {
-			beanFactory.registerBeanDefinition name + 'DeregistrationBean', new GenericBeanDefinition(
-					beanClass: FilterRegistrationBean,
-					propertyValues: new MutablePropertyValues(
-							enabled: false,
-							filter: new RuntimeBeanReference(name)))
-		}
-	}
+    /**
+     * Need to add a FilterRegistrationBean with enabled set to false to prevent Boot from
+     * registering all of the filters in the filterchains again as regular filters.
+     */
+    protected void disableFilterRegistrationBeans(BeanDefinitionRegistry beanFactory) {
+        SortedMap<Integer, String> filterNames = ReflectionUtils.findFilterChainNames(SpringSecurityUtils.securityConfig)
+        for (String name in filterNames.values()) {
+            beanFactory.registerBeanDefinition name + 'DeregistrationBean', new GenericBeanDefinition(
+                    beanClass: FilterRegistrationBean,
+                    propertyValues: new MutablePropertyValues(
+                            enabled: false,
+                            filter: new RuntimeBeanReference(name)))
+        }
+    }
 }

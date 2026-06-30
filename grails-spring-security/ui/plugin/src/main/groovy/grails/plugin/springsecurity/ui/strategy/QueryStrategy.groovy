@@ -23,32 +23,32 @@ package grails.plugin.springsecurity.ui.strategy
  */
 interface QueryStrategy {
 
-	/**
-	 * Build a closure that can be run inside a Criteria query that dynamically represents a proection
-	 * into joined classes, e.g. for an AclEntry query:
-	 *
-	 *    aclObjectIdentity {
-	 *       aclClass {
-	 *          eq 'id', classId
-	 *       }
-	 *    }
-	 *
-	 *    you would call
-	 *
-	 *    buildProjection 'aclObjectIdentity.aclClass', 'eq', 'id', classId)
-	 *
-	 * @param path the projection path
-	 * @param criterionMethod the inner method to call
-	 * @param args the method args
-	 * @return the closure
-	 */
-	Closure<?> buildProjection(String path, String criterionMethod, List args)
+    /**
+     * Build a closure that can be run inside a Criteria query that dynamically represents a proection
+     * into joined classes, e.g. for an AclEntry query:
+     *
+     *    aclObjectIdentity {
+     *       aclClass {
+     *          eq 'id', classId
+     *       }
+     *    }
+     *
+     *    you would call
+     *
+     *    buildProjection 'aclObjectIdentity.aclClass', 'eq', 'id', classId)
+     *
+     * @param path the projection path
+     * @param criterionMethod the inner method to call
+     * @param args the method args
+     * @return the closure
+     */
+    Closure<?> buildProjection(String path, String criterionMethod, List args)
 
-	/**
-	 * Run a Criteria auery for the given class, method, and subcriterias.
-	 * @param clazz the domain class
-	 * @param criterias zero or more closures to invoke in the context of the criteria's builder
-	 * @param paginateParams pagination params
-	 */
-	def runCriteria(Class<?> clazz, List<Closure<?>> criterias, Map paginateParams)
+    /**
+     * Run a Criteria auery for the given class, method, and subcriterias.
+     * @param clazz the domain class
+     * @param criterias zero or more closures to invoke in the context of the criteria's builder
+     * @param paginateParams pagination params
+     */
+    def runCriteria(Class<?> clazz, List<Closure<?>> criterias, Map paginateParams)
 }

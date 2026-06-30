@@ -18,7 +18,9 @@
  */
 package grails.plugin.springsecurity.userdetails
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+
 import org.springframework.context.MessageSource
 import org.springframework.context.MessageSourceAware
 import org.springframework.context.support.MessageSourceAccessor
@@ -26,8 +28,6 @@ import org.springframework.security.authentication.CredentialsExpiredException
 import org.springframework.security.core.SpringSecurityMessageSource
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UserDetailsChecker
-
-import groovy.transform.CompileStatic
 
 /**
  * Copy of the private class in AbstractUserDetailsAuthenticationProvider
@@ -39,20 +39,20 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class DefaultPostAuthenticationChecks implements UserDetailsChecker, MessageSourceAware {
 
-	protected MessageSourceAccessor messages = SpringSecurityMessageSource.accessor
+    protected MessageSourceAccessor messages = SpringSecurityMessageSource.accessor
 
-	@Override
-	void setMessageSource(MessageSource messageSource) {
-		this.messages = new MessageSourceAccessor(messageSource)
-	}
+    @Override
+    void setMessageSource(MessageSource messageSource) {
+        this.messages = new MessageSourceAccessor(messageSource)
+    }
 
-	void check(UserDetails user) {
-		if (!user.credentialsNonExpired) {
-			log.debug 'User account credentials have expired'
+    void check(UserDetails user) {
+        if (!user.credentialsNonExpired) {
+            log.debug 'User account credentials have expired'
 
-			throw new CredentialsExpiredException(messages.getMessage(
-					'AbstractUserDetailsAuthenticationProvider.credentialsExpired',
-					'User credentials have expired'))
-		}
-	}
+            throw new CredentialsExpiredException(messages.getMessage(
+                    'AbstractUserDetailsAuthenticationProvider.credentialsExpired',
+                    'User credentials have expired'))
+        }
+    }
 }

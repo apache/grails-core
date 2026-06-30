@@ -18,12 +18,12 @@
  */
 package grails.plugin.springsecurity.web.access
 
+import groovy.transform.CompileStatic
+
 import jakarta.servlet.ServletException
 
 import org.springframework.security.web.util.ThrowableAnalyzer
 import org.springframework.security.web.util.ThrowableCauseExtractor
-
-import groovy.transform.CompileStatic
 
 /**
  * Copy of org.springframework.security.web.access.ExceptionTranslationFilter.DefaultThrowableAnalyzer which is private.
@@ -33,15 +33,16 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class DefaultThrowableAnalyzer extends ThrowableAnalyzer {
 
-	@Override
-	protected void initExtractorMap() {
-		super.initExtractorMap()
+    @Override
+    protected void initExtractorMap() {
+        super.initExtractorMap()
 
-		registerExtractor ServletException, new ThrowableCauseExtractor() {
-			Throwable extractCause(Throwable throwable) {
-				ThrowableAnalyzer.verifyThrowableHierarchy throwable, ServletException
-				((ServletException)throwable).rootCause
-			}
-		}
-	}
+        registerExtractor ServletException, new ThrowableCauseExtractor() {
+
+            Throwable extractCause(Throwable throwable) {
+                ThrowableAnalyzer.verifyThrowableHierarchy throwable, ServletException
+                ((ServletException) throwable).rootCause
+            }
+        }
+    }
 }

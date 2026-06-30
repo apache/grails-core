@@ -18,11 +18,11 @@
  */
 package grails.plugin.springsecurity.access.intercept
 
+import groovy.transform.CompileStatic
+
 import org.springframework.security.access.ConfigAttribute
 import org.springframework.security.access.intercept.AfterInvocationManager
 import org.springframework.security.core.Authentication
-
-import groovy.transform.CompileStatic
 
 /**
  * No-op implementation.
@@ -32,15 +32,15 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class NullAfterInvocationManager implements AfterInvocationManager {
 
-	def decide(Authentication a, o, Collection<ConfigAttribute> attrs, returnedObject) {
-		returnedObject
-	}
+    def decide(Authentication a, o, Collection<ConfigAttribute> attrs, returnedObject) {
+        returnedObject
+    }
 
-	boolean supports(ConfigAttribute attribute) {
-		false
-	}
+    boolean supports(ConfigAttribute attribute) {
+        false
+    }
 
-	boolean supports(Class<?> clazz) {
-		true
-	}
+    boolean supports(Class<?> clazz) {
+        true
+    }
 }

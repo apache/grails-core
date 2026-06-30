@@ -18,12 +18,11 @@
  */
 package rest
 
+import spock.lang.IgnoreIf
+import spock.lang.Subject
+
 import grails.plugin.springsecurity.rest.RestTokenValidationFilter
 import grails.plugins.rest.client.RestResponse
-import grails.util.Holders
-import spock.lang.IgnoreIf
-import spock.lang.Issue
-import spock.lang.Subject
 
 @IgnoreIf({ System.getProperty('useBearerToken', 'false').toBoolean() })
 @Subject(RestTokenValidationFilter)

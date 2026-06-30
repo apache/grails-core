@@ -22,18 +22,20 @@ import com.nimbusds.jose.JOSEException
 import com.nimbusds.jwt.JWT
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.PlainJWT
+import spock.lang.Ignore
+import spock.lang.Specification
+
+import org.springframework.security.core.authority.SimpleGrantedAuthority
+import org.springframework.security.core.userdetails.User
+import org.springframework.security.core.userdetails.UserDetails
+
 import grails.plugin.springsecurity.rest.token.AccessToken
 import grails.plugin.springsecurity.rest.token.generation.jwt.EncryptedJwtTokenGenerator
 import grails.plugin.springsecurity.rest.token.generation.jwt.RSAKeyProvider
 import grails.plugin.springsecurity.rest.token.generation.jwt.SignedJwtTokenGenerator
 import grails.testing.services.ServiceUnitTest
-import org.springframework.security.core.authority.SimpleGrantedAuthority
-import org.springframework.security.core.userdetails.User
-import org.springframework.security.core.userdetails.UserDetails
-import spock.lang.Ignore
-import spock.lang.Specification
 
-class JwtServiceSpec extends Specification implements TokenGeneratorSupport, ServiceUnitTest<JwtService>  {
+class JwtServiceSpec extends Specification implements TokenGeneratorSupport, ServiceUnitTest<JwtService> {
 
     void "it can serialize and deserialize compressed objects"() {
         given:
@@ -87,7 +89,7 @@ class JwtServiceSpec extends Specification implements TokenGeneratorSupport, Ser
         return (System.nanoTime() - start) / 1_000_000
     }
 
-    void "denying unsigned JWT when not expected" (){
+    void "denying unsigned JWT when not expected"() {
         given:
         PlainJWT jwt = new PlainJWT(new JWTClaimsSet.Builder().build())
         service.jwtSecret = "mysecret"
@@ -100,7 +102,7 @@ class JwtServiceSpec extends Specification implements TokenGeneratorSupport, Ser
         exception.message == 'Unsigned/unencrypted JWT not expected'
     }
 
-    void "denying unencrypted JWT when not expected" (){
+    void "denying unencrypted JWT when not expected"() {
         given:
         PlainJWT jwt = new PlainJWT(new JWTClaimsSet.Builder().build())
         service.keyProvider = Mock(RSAKeyProvider)

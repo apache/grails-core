@@ -30,47 +30,47 @@ import grails.plugin.springsecurity.web.SecurityRequestHolder
  */
 class AjaxAwareAuthenticationEntryPointSpec extends AbstractUnitSpec {
 
-	private static final String loginFormUrl = '/loginFormUrl'
-	private static final String ajaxLoginFormUrl = '/ajaxLoginFormUrl'
+    private static final String loginFormUrl = '/loginFormUrl'
+    private static final String ajaxLoginFormUrl = '/ajaxLoginFormUrl'
 
-	private final AjaxAwareAuthenticationEntryPoint entryPoint = new AjaxAwareAuthenticationEntryPoint(loginFormUrl)
+    private final AjaxAwareAuthenticationEntryPoint entryPoint = new AjaxAwareAuthenticationEntryPoint(loginFormUrl)
 
-	void setup() {
-		entryPoint.useForward = true
-		entryPoint.ajaxLoginFormUrl = ajaxLoginFormUrl
-		ReflectionUtils.setConfigProperty 'ajaxHeader', SpringSecurityUtils.AJAX_HEADER
-		SecurityRequestHolder.set request, response
-	}
+    void setup() {
+        entryPoint.useForward = true
+        entryPoint.ajaxLoginFormUrl = ajaxLoginFormUrl
+        ReflectionUtils.setConfigProperty 'ajaxHeader', SpringSecurityUtils.AJAX_HEADER
+        SecurityRequestHolder.set request, response
+    }
 
-	void 'commence() with Ajax false'() {
-		when:
-		entryPoint.commence request, response, null
+    void 'commence() with Ajax false'() {
+        when:
+        entryPoint.commence request, response, null
 
-		then:
-		loginFormUrl == response.forwardedUrl
-	}
+        then:
+        loginFormUrl == response.forwardedUrl
+    }
 
-	void 'commence() with Ajax true'() {
-		when:
-		request.addHeader SpringSecurityUtils.AJAX_HEADER, 'XMLHttpRequest'
+    void 'commence() with Ajax true'() {
+        when:
+        request.addHeader SpringSecurityUtils.AJAX_HEADER, 'XMLHttpRequest'
 
-		entryPoint.commence request, response, null
+        entryPoint.commence request, response, null
 
-		then:
-		ajaxLoginFormUrl == response.forwardedUrl
-	}
+        then:
+        ajaxLoginFormUrl == response.forwardedUrl
+    }
 
-	void 'setAjaxLoginFormUrl'() {
-		when:
-		entryPoint.ajaxLoginFormUrl = 'foo'
+    void 'setAjaxLoginFormUrl'() {
+        when:
+        entryPoint.ajaxLoginFormUrl = 'foo'
 
-		then:
-		thrown AssertionError
+        then:
+        thrown AssertionError
 
-		when:
-		entryPoint.ajaxLoginFormUrl = '/foo'
+        when:
+        entryPoint.ajaxLoginFormUrl = '/foo'
 
-		then:
-		notThrown AssertionError
-	}
+        then:
+        notThrown AssertionError
+    }
 }

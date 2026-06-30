@@ -24,21 +24,21 @@ import groovy.transform.ToString
 /**
  * @author <a href='mailto:burt@burtbeckwith.com'>Burt Beckwith</a>
  */
-@EqualsAndHashCode(includes=['sid', 'principal'])
-@ToString(excludes='version', includeNames=true)
+@EqualsAndHashCode(includes = ['sid', 'principal'])
+@ToString(excludes = 'version', includeNames = true)
 class AclSid implements Serializable {
 
-	private static final long serialVersionUID = 1
+    private static final long serialVersionUID = 1
 
-	String sid
-	boolean principal
+    String sid
+    boolean principal
 
-	static mapping = {
-		version false
-	}
+    static mapping = {
+        version false
+    }
 
-	static constraints = {
-		principal unique: 'sid'
-		sid blank: false, size: 1..255
-	}
+    static constraints = {
+        principal unique: 'sid'
+        sid blank: false, size: 1..255
+    }
 }

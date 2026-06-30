@@ -18,9 +18,9 @@
  */
 package grails.plugin.springsecurity.userdetails
 
-import org.springframework.security.core.userdetails.UsernameNotFoundException
-
 import groovy.transform.CompileStatic
+
+import org.springframework.security.core.userdetails.UsernameNotFoundException
 
 /**
  * Lightweight exception that avoids the cost of filling in the stack frames.
@@ -29,15 +29,16 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 class NoStackUsernameNotFoundException extends UsernameNotFoundException {
-	private static final long serialVersionUID = 1
 
-	NoStackUsernameNotFoundException() {
-		super('User not found')
-	}
+    private static final long serialVersionUID = 1
 
-	@Override
-	synchronized Throwable fillInStackTrace() {
-		// do nothing
-		this
-	}
+    NoStackUsernameNotFoundException() {
+        super('User not found')
+    }
+
+    @Override
+    synchronized Throwable fillInStackTrace() {
+        // do nothing
+        this
+    }
 }

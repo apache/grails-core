@@ -26,6 +26,14 @@ import com.nimbusds.jwt.EncryptedJWT
 import com.nimbusds.jwt.JWT
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.JWTParser
+import spock.lang.Issue
+import spock.lang.Specification
+import spock.lang.Unroll
+
+import org.springframework.security.core.authority.SimpleGrantedAuthority
+import org.springframework.security.core.userdetails.User
+import org.springframework.security.core.userdetails.UserDetails
+
 import grails.plugin.springsecurity.rest.JwtService
 import grails.plugin.springsecurity.rest.TokenGeneratorSupport
 import grails.plugin.springsecurity.rest.token.AccessToken
@@ -37,14 +45,8 @@ import grails.plugin.springsecurity.rest.token.generation.jwt.IssuerClaimProvide
 import grails.plugin.springsecurity.rest.token.generation.jwt.SignedJwtTokenGenerator
 import grails.plugin.springsecurity.rest.token.storage.jwt.JwtTokenStorageService
 import grails.spring.BeanBuilder
-import org.springframework.security.core.authority.SimpleGrantedAuthority
-import org.springframework.security.core.userdetails.User
-import org.springframework.security.core.userdetails.UserDetails
-import spock.lang.Issue
-import spock.lang.Specification
-import spock.lang.Unroll
 
-class JwtTokenGeneratorSpec extends Specification implements TokenGeneratorSupport  {
+class JwtTokenGeneratorSpec extends Specification implements TokenGeneratorSupport {
 
     @Unroll
     void "#jwtTokenGenerator.class.simpleName generates access tokens with refresh tokens that can be rehydrated back"() {
@@ -152,9 +154,9 @@ class JwtTokenGeneratorSpec extends Specification implements TokenGeneratorSuppo
         given:
         SignedJwtTokenGenerator tokenGenerator = setupSignedJwtTokenGenerator()
         CustomClaimProvider claimProvider = [
-            provideCustomClaims: { JWTClaimsSet.Builder builder, UserDetails details, String principal, Integer expiration ->
-                builder.claim("favouriteTeam", "Real Madrid")
-            }
+                provideCustomClaims: { JWTClaimsSet.Builder builder, UserDetails details, String principal, Integer expiration ->
+                    builder.claim("favouriteTeam", "Real Madrid")
+                }
         ] as CustomClaimProvider
         tokenGenerator.customClaimProviders << claimProvider
         UserDetails userDetails = new User('username', 'password', [new SimpleGrantedAuthority('ROLE_USER')])
@@ -210,7 +212,7 @@ class JwtTokenGeneratorSpec extends Specification implements TokenGeneratorSuppo
 
             jwtService(JwtService) {
                 keyProvider = ref('keyProvider')
-                jwtSecret = 'foo123'*8
+                jwtSecret = 'foo123' * 8
             }
             tokenStorageService(JwtTokenStorageService) {
                 jwtService = ref('jwtService')
@@ -228,7 +230,7 @@ class JwtTokenGeneratorSpec extends Specification implements TokenGeneratorSuppo
             } else {
                 tokenGenerator(SignedJwtTokenGenerator) {
                     jwtTokenStorageService = ref('tokenStorageService')
-                    jwtSecret = 'foo123'*8
+                    jwtSecret = 'foo123' * 8
                     defaultExpiration = 3600
                     customClaimProviders = customClaimProviderList
                     jwsAlgorithm = JWSAlgorithm.HS256

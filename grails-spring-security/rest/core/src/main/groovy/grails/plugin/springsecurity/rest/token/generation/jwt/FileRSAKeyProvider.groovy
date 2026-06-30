@@ -18,15 +18,16 @@
  */
 package grails.plugin.springsecurity.rest.token.generation.jwt
 
-import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
-import org.springframework.beans.factory.InitializingBean
-
 import java.security.KeyFactory
 import java.security.interfaces.RSAPrivateKey
 import java.security.interfaces.RSAPublicKey
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
+
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+
+import org.springframework.beans.factory.InitializingBean
 
 /**
  * Loads RSA public/private key's from files
@@ -46,8 +47,8 @@ class FileRSAKeyProvider implements RSAKeyProvider, InitializingBean {
 
     @Override
     void afterPropertiesSet() throws Exception {
-        log.debug "Loading public/private key from DER files"
-        KeyFactory kf = KeyFactory.getInstance("RSA")
+        log.debug 'Loading public/private key from DER files'
+        KeyFactory kf = KeyFactory.getInstance('RSA')
 
         def key = new File(publicKeyPath)
         log.debug "Public key path: ${key.absolutePath}"

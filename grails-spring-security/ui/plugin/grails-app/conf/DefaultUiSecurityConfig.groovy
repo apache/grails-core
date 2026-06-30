@@ -18,29 +18,29 @@
  */
 security {
 
-	ui {
+    ui {
 
-		encodePassword = false
+        encodePassword = false
 
-		forgotPassword {
-			emailFrom = 'Do Not Reply <do.not.reply@localhost>'
-			postResetUrl = null // use defaultTargetUrl if not set
-			validationUserLookUpProperty = 'user'
-			requireForgotPassEmailValidation = 'true'
-		}
+        forgotPassword {
+            emailFrom = 'Do Not Reply <do.not.reply@localhost>'
+            postResetUrl = null // use defaultTargetUrl if not set
+            validationUserLookUpProperty = 'user'
+            requireForgotPassEmailValidation = 'true'
+        }
 
-		gsp {
-			layoutRegister = 'register'
-			layoutUi       = 'springSecurityUI'
-		}
+        gsp {
+            layoutRegister = 'register'
+            layoutUi = 'springSecurityUI'
+        }
 
-		register {
-			defaultRoleNames = ['ROLE_USER']
-			emailFrom = 'Do Not Reply <do.not.reply@localhost>'
-			postRegisterUrl = null // use defaultTargetUrl if not set
-			requireEmailValidation = 'true' //set this to false if you don't want an e-mail validation
-		}
+        register {
+            defaultRoleNames = ['ROLE_USER']
+            emailFrom = 'Do Not Reply <do.not.reply@localhost>'
+            postRegisterUrl = null // use defaultTargetUrl if not set
+            requireEmailValidation = 'true' //set this to false if you don't want an e-mail validation
+        }
 
-		switchUserRoleName = 'ROLE_SWITCH_USER'
-	}
+        switchUserRoleName = 'ROLE_SWITCH_USER'
+    }
 }

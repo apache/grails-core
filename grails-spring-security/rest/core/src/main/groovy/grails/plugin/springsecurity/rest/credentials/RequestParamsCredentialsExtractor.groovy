@@ -20,9 +20,10 @@ package grails.plugin.springsecurity.rest.credentials
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 
 import jakarta.servlet.http.HttpServletRequest
+
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 
 /**
  * Extracts credentials from request parameters
@@ -38,7 +39,7 @@ class RequestParamsCredentialsExtractor implements CredentialsExtractor {
         String username = httpServletRequest.getParameter(usernamePropertyName)
         String password = httpServletRequest.getParameter(passwordPropertyName)
 
-        log.debug "Extracted credentials from request params. Username: ${username}, password: ${password?.size()?'[PROTECTED]':'[MISSING]'}"
+        log.debug "Extracted credentials from request params. Username: ${username}, password: ${password?.size() ? '[PROTECTED]' : '[MISSING]'}"
 
         new UsernamePasswordAuthenticationToken(username, password)
     }

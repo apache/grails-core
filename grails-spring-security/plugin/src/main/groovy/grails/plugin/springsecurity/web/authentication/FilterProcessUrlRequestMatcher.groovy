@@ -18,12 +18,12 @@
  */
 package grails.plugin.springsecurity.web.authentication
 
+import groovy.transform.CompileStatic
+
 import jakarta.servlet.http.HttpServletRequest
 
 import org.springframework.security.web.util.UrlUtils
 import org.springframework.security.web.util.matcher.RequestMatcher
-
-import groovy.transform.CompileStatic
 
 /**
  * Based on the class of the same name which is a private static inner class in
@@ -36,23 +36,23 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class FilterProcessUrlRequestMatcher implements RequestMatcher {
 
-	final String filterProcessesUrl
+    final String filterProcessesUrl
 
-	FilterProcessUrlRequestMatcher(String filterProcessesUrl) {
-		assert filterProcessesUrl, 'filterProcessesUrl must be specified'
-		assert UrlUtils.isValidRedirectUrl(filterProcessesUrl), "$filterProcessesUrl isn't a valid redirect URL"
-		this.filterProcessesUrl = filterProcessesUrl
-	}
+    FilterProcessUrlRequestMatcher(String filterProcessesUrl) {
+        assert filterProcessesUrl, 'filterProcessesUrl must be specified'
+        assert UrlUtils.isValidRedirectUrl(filterProcessesUrl), "$filterProcessesUrl isn't a valid redirect URL"
+        this.filterProcessesUrl = filterProcessesUrl
+    }
 
-	boolean matches(HttpServletRequest request) {
-		String uri = request.requestURI
+    boolean matches(HttpServletRequest request) {
+        String uri = request.requestURI
 
-		int pathParamIndex = uri.indexOf(';')
-		if (pathParamIndex > 0) {
-			// strip everything after the first semi-colon
-			uri = uri.substring(0, pathParamIndex)
-		}
+        int pathParamIndex = uri.indexOf(';')
+        if (pathParamIndex > 0) {
+            // strip everything after the first semi-colon
+            uri = uri.substring(0, pathParamIndex)
+        }
 
-		request.contextPath ? uri.endsWith(request.contextPath + filterProcessesUrl) : uri.endsWith(filterProcessesUrl)
-	}
+        request.contextPath ? uri.endsWith(request.contextPath + filterProcessesUrl) : uri.endsWith(filterProcessesUrl)
+    }
 }

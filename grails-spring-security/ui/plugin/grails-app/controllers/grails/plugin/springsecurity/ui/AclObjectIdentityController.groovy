@@ -23,72 +23,67 @@ package grails.plugin.springsecurity.ui
  */
 class AclObjectIdentityController extends AbstractS2UiDomainController {
 
-	def create() {
-		super.create()
-	}
+    def save() {
+        withForm {
+            doSave uiAclStrategy.saveAclObjectIdentity(params)
+        }.invalidToken {
+            doSaveWithInvalidToken(params.username)
+        }
+    }
 
-	def save() {
-		withForm {
-			doSave uiAclStrategy.saveAclObjectIdentity(params)
-		}.invalidToken {
-			doSaveWithInvalidToken(params.username)
-		}
-	}
+    def update() {
+        withForm {
+            doUpdate { aclObjectIdentity ->
+                uiAclStrategy.updateAclObjectIdentity params, aclObjectIdentity
+            }
+        }.invalidToken {
+            doUpdateWithInvalidToken(params.username)
+        }
+    }
 
-	def edit() {
-		super.edit()
-	}
+    def delete() {
+        withForm {
+            tryDelete { aclObjectIdentity ->
+                uiAclStrategy.deleteAclObjectIdentity aclObjectIdentity
+            }
+        }.invalidToken {
+            doDeleteWithInvalidToken()
+        }
+    }
 
-	def update() {
-		withForm {
-			doUpdate { aclObjectIdentity ->
-				uiAclStrategy.updateAclObjectIdentity params, aclObjectIdentity
-			}
-		}.invalidToken {
-			doUpdateWithInvalidToken(params.username)
-		}
-	}
+    def search() {
+        if (!isSearch('aclClass.id', 'owner.id')) {
+            // show the form
+            return [classes: AclClass.list(), sids: AclSid.list()]
+        }
 
-	def delete() {
-		withForm {
-			tryDelete { aclObjectIdentity ->
-				uiAclStrategy.deleteAclObjectIdentity aclObjectIdentity
-			}
-		}.invalidToken {
-			doDeleteWithInvalidToken()
-		}
-	}
+        def results = doSearch { ->
+            eqLongId 'aclClass', delegate
+            eqLong 'objectId', delegate
+            eqLongId 'owner', delegate
+            eqLongId 'parent', delegate
+            eqBoolean 'entriesInheriting', delegate
+        }
 
-	def search() {
-		if (!isSearch('aclClass.id', 'owner.id')) {
-			// show the form
-			return [classes: AclClass.list(), sids: AclSid.list()]
-		}
+        renderSearch([results: results, totalCount: results.totalCount,
+                      classes: AclClass.list(), sids: AclSid.list()],
+                'aclClass.id', 'entriesInheriting', 'objectId', 'owner.id', 'parent.id')
+    }
 
-		def results = doSearch { ->
-			eqLongId  'aclClass', delegate
-			eqLong    'objectId', delegate
-			eqLongId  'owner', delegate
-			eqLongId  'parent', delegate
-			eqBoolean 'entriesInheriting', delegate
-		}
+    protected Class<?> getClazz() { AclObjectIdentity }
 
-		renderSearch([results: results, totalCount: results.totalCount,
-		              classes: AclClass.list(), sids: AclSid.list()],
-		             'aclClass.id', 'entriesInheriting', 'objectId', 'owner.id', 'parent.id')
-	}
+    protected String getClassLabelCode() { 'aclObjectIdentity.label' }
 
-	protected Class<?> getClazz() { AclObjectIdentity }
-	protected String getClassLabelCode() { 'aclObjectIdentity.label' }
-	protected String getSimpleClassName() { 'AclObjectIdentity' }
-	protected Map model(aclObjectIdentity, String action) {
-		[aclObjectIdentity: aclObjectIdentity, classes: AclClass.list(), sids: AclSid.list()]
-	}
+    protected String getSimpleClassName() { 'AclObjectIdentity' }
 
-	protected Class<?> AclObjectIdentity
+    protected Map model(aclObjectIdentity, String action) {
+        [aclObjectIdentity: aclObjectIdentity, classes: AclClass.list(), sids: AclSid.list()]
+    }
 
-	void afterPropertiesSet() {
-		super.afterPropertiesSet()
-		AclObjectIdentity = getDomainClassClass('grails.plugin.springsecurity.acl.AclObjectIdentity')
-	}
+    protected Class<?> AclObjectIdentity
+
+    void afterPropertiesSet() {
+        super.afterPropertiesSet()
+        AclObjectIdentity = getDomainClassClass('grails.plugin.springsecurity.acl.AclObjectIdentity')
+    }
 }

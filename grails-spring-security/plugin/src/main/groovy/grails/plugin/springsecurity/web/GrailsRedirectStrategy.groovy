@@ -20,12 +20,13 @@ package grails.plugin.springsecurity.web
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import org.springframework.security.web.PortResolver
-import org.springframework.security.web.RedirectStrategy
-import org.springframework.security.web.util.UrlUtils
 
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+
+import org.springframework.security.web.PortResolver
+import org.springframework.security.web.RedirectStrategy
+import org.springframework.security.web.util.UrlUtils
 
 /**
  * Builds absolute urls when using header check channel security to prevent the
@@ -37,33 +38,33 @@ import jakarta.servlet.http.HttpServletResponse
 @Slf4j
 class GrailsRedirectStrategy implements RedirectStrategy {
 
-	/** Dependency injection for the port resolver. */
-	PortResolver portResolver
+    /** Dependency injection for the port resolver. */
+    PortResolver portResolver
 
-	/** Dependency injection for useHeaderCheckChannelSecurity. */
-	boolean useHeaderCheckChannelSecurity
+    /** Dependency injection for useHeaderCheckChannelSecurity. */
+    boolean useHeaderCheckChannelSecurity
 
-	void sendRedirect(HttpServletRequest request, HttpServletResponse response, String url) throws IOException {
-		String redirectUrl = calculateRedirectUrl(request, url)
-		redirectUrl = response.encodeRedirectURL(redirectUrl)
+    void sendRedirect(HttpServletRequest request, HttpServletResponse response, String url) throws IOException {
+        String redirectUrl = calculateRedirectUrl(request, url)
+        redirectUrl = response.encodeRedirectURL(redirectUrl)
 
-		log.debug "Redirecting to '{}'", redirectUrl
+        log.debug "Redirecting to '{}'", redirectUrl
 
-		response.sendRedirect redirectUrl
-	}
+        response.sendRedirect redirectUrl
+    }
 
-	protected String calculateRedirectUrl(HttpServletRequest request, String url) {
-		if (UrlUtils.isAbsoluteUrl(url)) {
-			return url
-		}
+    protected String calculateRedirectUrl(HttpServletRequest request, String url) {
+        if (UrlUtils.isAbsoluteUrl(url)) {
+            return url
+        }
 
-		url = request.contextPath + url
+        url = request.contextPath + url
 
-		if (!useHeaderCheckChannelSecurity) {
-			return url
-		}
+        if (!useHeaderCheckChannelSecurity) {
+            return url
+        }
 
-		UrlUtils.buildFullRequestUrl request.scheme, request.serverName,
-				portResolver.getServerPort(request), url, null
-	}
+        UrlUtils.buildFullRequestUrl request.scheme, request.serverName,
+                portResolver.getServerPort(request), url, null
+    }
 }

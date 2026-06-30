@@ -18,19 +18,22 @@
  */
 package grails.plugin.springsecurity.oauth2
 
+import groovy.util.logging.Slf4j
+
 import com.github.scribejava.core.model.OAuth2AccessToken
+import org.apache.commons.lang3.StringUtils
+import org.apache.commons.lang3.exception.ExceptionUtils
+import org.apache.commons.validator.routines.UrlValidator
+
+import org.springframework.security.core.context.SecurityContextHolder
+import org.springframework.web.servlet.ModelAndView
+
 import grails.plugin.springsecurity.SpringSecurityService
 import grails.plugin.springsecurity.SpringSecurityUtils
 import grails.plugin.springsecurity.annotation.Secured
 import grails.plugin.springsecurity.oauth2.exception.OAuth2Exception
 import grails.plugin.springsecurity.oauth2.token.OAuth2SpringToken
 import grails.plugin.springsecurity.userdetails.GrailsUser
-import groovy.util.logging.Slf4j
-import org.apache.commons.lang3.StringUtils
-import org.apache.commons.lang3.exception.ExceptionUtils
-import org.apache.commons.validator.routines.UrlValidator
-import org.springframework.security.core.context.SecurityContextHolder
-import org.springframework.web.servlet.ModelAndView
 
 /**
  * Controller for handling OAuth authentication request and
@@ -53,7 +56,7 @@ class SpringSecurityOAuth2Controller {
     def authenticate() {
         String providerName = params.provider
         if (StringUtils.isBlank(providerName)) {
-            throw new OAuth2Exception("No provider defined")
+            throw new OAuth2Exception('No provider defined')
         }
         log.debug "authenticate ${providerName}"
         String url = springSecurityOauth2BaseService.getAuthorizationUrl(providerName)
@@ -70,11 +73,11 @@ class SpringSecurityOAuth2Controller {
      */
     def callback() {
         String providerName = params.provider
-        log.debug("Callback for " + providerName)
+        log.debug('Callback for ' + providerName)
 
         // Check if we got an AuthCode from the server query
         String authCode = params.code
-        log.debug("AuthCode: " + authCode)
+        log.debug('AuthCode: ' + authCode)
         if (!authCode || authCode.isEmpty()) {
             throw new OAuth2Exception("No AuthCode in callback for provider '${providerName}'")
         }
@@ -84,7 +87,7 @@ class SpringSecurityOAuth2Controller {
         try {
             accessToken = providerService.getAccessToken(authCode)
         } catch (Exception exception) {
-            log.error("Could not authenticate with oAuth2. " + ExceptionUtils.getMessage(exception), exception)
+            log.error('Could not authenticate with oAuth2. ' + ExceptionUtils.getMessage(exception), exception)
             log.debug(ExceptionUtils.getStackTrace(exception))
             redirect(uri: springSecurityOauth2BaseService.getFailureUrl(providerName))
             return
@@ -122,7 +125,7 @@ class SpringSecurityOAuth2Controller {
 
             def redirectUrl = springSecurityOauth2BaseService.getAskToLinkOrCreateAccountUri()
             if (!redirectUrl) {
-                log.warn "grails.plugin.springsecurity.oauth.registration.askToLinkOrCreateAccountUri configuration option must be set"
+                log.warn 'grails.plugin.springsecurity.oauth.registration.askToLinkOrCreateAccountUri configuration option must be set'
                 throw new OAuth2Exception('Internal error')
             }
             log.debug "Redirecting to askToLinkOrCreateAccountUri: ${redirectUrl}"
@@ -136,7 +139,7 @@ class SpringSecurityOAuth2Controller {
             OAuth2SpringToken oAuth2SpringToken = session[SPRING_SECURITY_OAUTH_TOKEN] as OAuth2SpringToken
             // Check for token in session
             if (!oAuth2SpringToken) {
-                log.warn("ask: OAuthToken not found in session")
+                log.warn('ask: OAuthToken not found in session')
                 throw new OAuth2Exception('Authentication error')
             }
             // Try to add the token to the OAuthID's
@@ -154,7 +157,7 @@ class SpringSecurityOAuth2Controller {
         }
         // There seems to be a new one in the town aka 'There is no one logged in'
         // Ask to create a new account or link an existing user to it
-        return new ModelAndView("/springSecurityOAuth2/ask", [:])
+        return new ModelAndView('/springSecurityOAuth2/ask', [:])
     }
 
     /**
@@ -164,13 +167,13 @@ class SpringSecurityOAuth2Controller {
     def linkAccount(OAuth2LinkAccountCommand command) {
         OAuth2SpringToken oAuth2SpringToken = session[SPRING_SECURITY_OAUTH_TOKEN] as OAuth2SpringToken
         if (!oAuth2SpringToken) {
-            log.warn "linkAccount: OAuthToken not found in session"
+            log.warn 'linkAccount: OAuthToken not found in session'
             throw new OAuth2Exception('Authentication error')
         }
         if (request.post) {
             if (!springSecurityOauth2BaseService.authenticationIsValid(command.username, command.password)) {
                 log.info "Authentication error for use ${command.username}"
-                command.errors.rejectValue("username", "OAuthLinkAccountCommand.authentication.error")
+                command.errors.rejectValue('username', 'OAuthLinkAccountCommand.authentication.error')
                 render view: 'ask', model: [linkAccountCommand: command]
                 return
             }
@@ -187,7 +190,7 @@ class SpringSecurityOAuth2Controller {
                         return false
                     }
                 } else {
-                    command.errors.rejectValue("username", "OAuthLinkAccountCommand.username.not.exists")
+                    command.errors.rejectValue('username', 'OAuthLinkAccountCommand.username.not.exists')
                 }
                 status.setRollbackOnly()
                 return false
@@ -206,7 +209,7 @@ class SpringSecurityOAuth2Controller {
     def createAccount(OAuth2CreateAccountCommand command) {
         OAuth2SpringToken oAuth2SpringToken = session[SPRING_SECURITY_OAUTH_TOKEN] as OAuth2SpringToken
         if (!oAuth2SpringToken) {
-            log.warn "createAccount: OAuthToken not found in session"
+            log.warn 'createAccount: OAuthToken not found in session'
             throw new OAuth2Exception('Authentication error')
         }
         if (request.post) {
@@ -227,7 +230,7 @@ class SpringSecurityOAuth2Controller {
                     def Role = springSecurityOauth2BaseService.lookupRoleClass()
                     def roles = springSecurityOauth2BaseService.roleNames
                     for (roleName in roles) {
-                        log.debug("Creating role " + roleName + " for user " + user.username)
+                        log.debug('Creating role ' + roleName + ' for user ' + user.username)
                         // Make sure that the role exists.
                         UserRole.create user, Role.findOrSaveByAuthority(roleName)
                     }
@@ -312,6 +315,7 @@ class OAuth2CreateAccountCommand {
  * A bean for storing link account commands
  */
 class OAuth2LinkAccountCommand {
+
     String username
     String password
 

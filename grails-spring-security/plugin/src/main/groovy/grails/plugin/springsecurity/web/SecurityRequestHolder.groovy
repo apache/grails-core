@@ -18,10 +18,10 @@
  */
 package grails.plugin.springsecurity.web
 
+import groovy.transform.CompileStatic
+
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
-
-import groovy.transform.CompileStatic
 
 /**
  * Uses a {@link ThreadLocal} to store the current request and response.
@@ -31,44 +31,44 @@ import groovy.transform.CompileStatic
 @CompileStatic
 final class SecurityRequestHolder {
 
-	private static final ThreadLocal<HttpServletRequest> REQUEST_HOLDER = new ThreadLocal<HttpServletRequest>()
-	private static final ThreadLocal<HttpServletResponse> RESPONSE_HOLDER = new ThreadLocal<HttpServletResponse>()
+    private static final ThreadLocal<HttpServletRequest> REQUEST_HOLDER = new ThreadLocal<HttpServletRequest>()
+    private static final ThreadLocal<HttpServletResponse> RESPONSE_HOLDER = new ThreadLocal<HttpServletResponse>()
 
-	private SecurityRequestHolder() {
-		// static only
-	}
+    private SecurityRequestHolder() {
+        // static only
+    }
 
-	/**
-	 * Clear the saved request.
-	 */
-	static void reset() {
-		REQUEST_HOLDER.remove()
-		RESPONSE_HOLDER.remove()
-	}
+    /**
+     * Clear the saved request.
+     */
+    static void reset() {
+        REQUEST_HOLDER.remove()
+        RESPONSE_HOLDER.remove()
+    }
 
-	/**
-	 * Set the current request and response.
-	 * @param request the request
-	 * @param response the response
-	 */
-	static void set(HttpServletRequest request, HttpServletResponse response) {
-		REQUEST_HOLDER.set request
-		RESPONSE_HOLDER.set response
-	}
+    /**
+     * Set the current request and response.
+     * @param request the request
+     * @param response the response
+     */
+    static void set(HttpServletRequest request, HttpServletResponse response) {
+        REQUEST_HOLDER.set request
+        RESPONSE_HOLDER.set response
+    }
 
-	/**
-	 * Get the current request.
-	 * @return the request
-	 */
-	static HttpServletRequest getRequest() {
-		REQUEST_HOLDER.get()
-	}
+    /**
+     * Get the current request.
+     * @return the request
+     */
+    static HttpServletRequest getRequest() {
+        REQUEST_HOLDER.get()
+    }
 
-	/**
-	 * Get the current response.
-	 * @return the response
-	 */
-	static HttpServletResponse getResponse() {
-		RESPONSE_HOLDER.get()
-	}
+    /**
+     * Get the current response.
+     * @return the response
+     */
+    static HttpServletResponse getResponse() {
+        RESPONSE_HOLDER.get()
+    }
 }

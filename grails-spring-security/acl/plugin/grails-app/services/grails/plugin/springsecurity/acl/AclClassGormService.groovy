@@ -19,9 +19,10 @@
 
 package grails.plugin.springsecurity.acl
 
+import groovy.transform.CompileStatic
+
 import grails.gorm.DetachedCriteria
 import grails.gorm.transactions.ReadOnly
-import groovy.transform.CompileStatic
 
 @CompileStatic
 class AclClassGormService {
@@ -31,7 +32,7 @@ class AclClassGormService {
         findQueryByClassName(className).get()
     }
 
-    protected DetachedCriteria<AclClass> findQueryByClassName(String classNameParam ) {
+    protected DetachedCriteria<AclClass> findQueryByClassName(String classNameParam) {
         AclClass.where { className == classNameParam }
     }
 }

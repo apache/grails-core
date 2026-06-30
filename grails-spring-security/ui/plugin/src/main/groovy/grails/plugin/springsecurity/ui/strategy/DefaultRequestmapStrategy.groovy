@@ -18,8 +18,9 @@
  */
 package grails.plugin.springsecurity.ui.strategy
 
-import grails.plugin.springsecurity.ui.SpringSecurityUiService
 import groovy.transform.CompileStatic
+
+import grails.plugin.springsecurity.ui.SpringSecurityUiService
 
 /**
  * @author <a href='mailto:burt@burtbeckwith.com'>Burt Beckwith</a>
@@ -27,17 +28,17 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class DefaultRequestmapStrategy implements RequestmapStrategy {
 
-	SpringSecurityUiService springSecurityUiService
+    SpringSecurityUiService springSecurityUiService
 
-	def saveRequestmap(Map properties) {
-		springSecurityUiService.saveRequestmap properties
-	}
+    def saveRequestmap(Map properties) {
+        springSecurityUiService.saveRequestmap properties
+    }
 
-	void updateRequestmap(Map properties, requestmap) {
-		springSecurityUiService.updateRequestmap properties, requestmap
-	}
+    void updateRequestmap(Map properties, requestmap) {
+        springSecurityUiService.updateRequestmap properties, requestmap
+    }
 
-	void deleteRequestmap(requestmap) {
-		springSecurityUiService.deleteRequestmap requestmap
-	}
+    void deleteRequestmap(requestmap) {
+        springSecurityUiService.deleteRequestmap requestmap
+    }
 }

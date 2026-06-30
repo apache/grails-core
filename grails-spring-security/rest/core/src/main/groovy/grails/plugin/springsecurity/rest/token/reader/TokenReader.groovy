@@ -18,9 +18,9 @@
  */
 package grails.plugin.springsecurity.rest.token.reader
 
-import grails.plugin.springsecurity.rest.token.AccessToken
-
 import jakarta.servlet.http.HttpServletRequest
+
+import grails.plugin.springsecurity.rest.token.AccessToken
 
 public interface TokenReader {
 

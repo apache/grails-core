@@ -28,32 +28,33 @@ import org.springframework.security.access.ConfigAttribute
 /**
  * @author Burt Beckwith
  */
-@EqualsAndHashCode(includes='pattern,httpMethod')
-@ToString(includeNames=true)
+@EqualsAndHashCode(includes = 'pattern,httpMethod')
+@ToString(includeNames = true)
 @CompileStatic
 class InterceptedUrl {
-	String pattern
-	Collection<ConfigAttribute> configAttributes = Collections.emptyList()
-	HttpMethod httpMethod
-	boolean filters = true
-	Boolean https // true->https, false->http, null->any
-	Class<?> closureClass
 
-	InterceptedUrl(String pattern, Collection<String> tokens, HttpMethod httpMethod) {
-		this.pattern = pattern
-		this.configAttributes = ReflectionUtils.buildConfigAttributes(tokens)
-		this.httpMethod = httpMethod
-	}
+    String pattern
+    Collection<ConfigAttribute> configAttributes = Collections.emptyList()
+    HttpMethod httpMethod
+    boolean filters = true
+    Boolean https // true->https, false->http, null->any
+    Class<?> closureClass
 
-	InterceptedUrl(String pattern, HttpMethod httpMethod, Collection<ConfigAttribute> configAttributes) {
-		this.pattern = pattern
-		this.httpMethod = httpMethod
-		this.configAttributes = configAttributes
-	}
+    InterceptedUrl(String pattern, Collection<String> tokens, HttpMethod httpMethod) {
+        this.pattern = pattern
+        this.configAttributes = ReflectionUtils.buildConfigAttributes(tokens)
+        this.httpMethod = httpMethod
+    }
 
-	InterceptedUrl(String pattern, Class<?> closureClass, HttpMethod httpMethod) {
-		this.pattern = pattern
-		this.closureClass = closureClass
-		this.httpMethod = httpMethod
-	}
+    InterceptedUrl(String pattern, HttpMethod httpMethod, Collection<ConfigAttribute> configAttributes) {
+        this.pattern = pattern
+        this.httpMethod = httpMethod
+        this.configAttributes = configAttributes
+    }
+
+    InterceptedUrl(String pattern, Class<?> closureClass, HttpMethod httpMethod) {
+        this.pattern = pattern
+        this.closureClass = closureClass
+        this.httpMethod = httpMethod
+    }
 }

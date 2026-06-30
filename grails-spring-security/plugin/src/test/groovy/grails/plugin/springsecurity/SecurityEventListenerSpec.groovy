@@ -34,72 +34,72 @@ import org.springframework.security.web.authentication.switchuser.Authentication
  */
 class SecurityEventListenerSpec extends AbstractUnitSpec {
 
-	private SecurityEventListener listener = new SecurityEventListener()
-	private closures = new ConfigObject()
+    private SecurityEventListener listener = new SecurityEventListener()
+    private closures = new ConfigObject()
 
-	void setup() {
-		SpringSecurityUtils.securityConfig = closures
-	}
+    void setup() {
+        SpringSecurityUtils.securityConfig = closures
+    }
 
-	void 'Test handling InteractiveAuthenticationSuccessEvent'() {
-		when:
-		boolean called = false
-		closures.onInteractiveAuthenticationSuccessEvent = { e, appCtx -> called = true }
+    void 'Test handling InteractiveAuthenticationSuccessEvent'() {
+        when:
+        boolean called = false
+        closures.onInteractiveAuthenticationSuccessEvent = { e, appCtx -> called = true }
 
-		listener.onApplicationEvent(new InteractiveAuthenticationSuccessEvent(
-				new TestingAuthenticationToken('', ''), getClass()))
+        listener.onApplicationEvent(new InteractiveAuthenticationSuccessEvent(
+                new TestingAuthenticationToken('', ''), getClass()))
 
-		then:
-		called
-	}
+        then:
+        called
+    }
 
-	void 'Test handling AbstractAuthenticationFailureEvent'() {
-		when:
-		boolean called = false
-		closures.onAbstractAuthenticationFailureEvent = { e, appCtx -> called = true }
+    void 'Test handling AbstractAuthenticationFailureEvent'() {
+        when:
+        boolean called = false
+        closures.onAbstractAuthenticationFailureEvent = { e, appCtx -> called = true }
 
-		listener.onApplicationEvent new AuthenticationFailureBadCredentialsEvent(
-				new TestingAuthenticationToken('', ''), new BadCredentialsException('bad credentials'))
+        listener.onApplicationEvent new AuthenticationFailureBadCredentialsEvent(
+                new TestingAuthenticationToken('', ''), new BadCredentialsException('bad credentials'))
 
-		then:
-		called
-	}
+        then:
+        called
+    }
 
-	void 'Test handling AuthenticationSuccessEvent'() {
-		when:
-		boolean called = false
-		closures.onAuthenticationSuccessEvent = { e, appCtx -> called = true }
+    void 'Test handling AuthenticationSuccessEvent'() {
+        when:
+        boolean called = false
+        closures.onAuthenticationSuccessEvent = { e, appCtx -> called = true }
 
-		listener.onApplicationEvent(new AuthenticationSuccessEvent(
-				new TestingAuthenticationToken('', '')))
+        listener.onApplicationEvent(new AuthenticationSuccessEvent(
+                new TestingAuthenticationToken('', '')))
 
-		then:
-		called
-	}
+        then:
+        called
+    }
 
-	void 'Test handling AbstractAuthorizationEvent'() {
-		when:
-		boolean called = false
-		closures.onAuthorizationEvent = { e, appCtx -> called = true }
+    void 'Test handling AbstractAuthorizationEvent'() {
+        when:
+        boolean called = false
+        closures.onAuthorizationEvent = { e, appCtx -> called = true }
 
-		listener.onApplicationEvent new AbstractAuthorizationEvent(42) {}
+        listener.onApplicationEvent new AbstractAuthorizationEvent(42) {}
 
-		then:
-		called
-	}
+        then:
+        called
+    }
 
-	void 'Test handling AuthenticationSwitchUserEvent'() {
-		when:
-		boolean called = false
-		closures.onAuthenticationSwitchUserEvent = { e, appCtx -> called = true }
+    void 'Test handling AuthenticationSwitchUserEvent'() {
+        when:
+        boolean called = false
+        closures.onAuthenticationSwitchUserEvent = { e, appCtx -> called = true }
 
-		def authentication = SecurityTestUtils.authenticate(['ROLE_FOO'])
-		def targetUser = new User('username', 'password', true, true, true,
-				true, authentication.authorities)
+        def authentication = SecurityTestUtils.authenticate(['ROLE_FOO'])
+        def targetUser = new User('username', 'password', true, true, true,
+                true, authentication.authorities)
 
-		listener.onApplicationEvent(new AuthenticationSwitchUserEvent(authentication, targetUser))
+        listener.onApplicationEvent(new AuthenticationSwitchUserEvent(authentication, targetUser))
 
-		then:
-		called
-	}
+        then:
+        called
+    }
 }

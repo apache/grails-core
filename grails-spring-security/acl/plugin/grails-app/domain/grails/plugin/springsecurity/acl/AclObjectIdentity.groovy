@@ -24,23 +24,23 @@ import groovy.transform.ToString
 /**
  * @author <a href='mailto:burt@burtbeckwith.com'>Burt Beckwith</a>
  */
-@EqualsAndHashCode(includes='objectId', callSuper=true)
-@ToString(includeNames=true, includeSuper=true)
+@EqualsAndHashCode(includes = 'objectId', callSuper = true)
+@ToString(includeNames = true, includeSuper = true)
 class AclObjectIdentity extends AbstractAclObjectIdentity {
 
-	private static final long serialVersionUID = 1
+    private static final long serialVersionUID = 1
 
-	Long objectId
+    Long objectId
 
-	static mapping = {
-		version false
-		aclClass column: 'object_id_class'
-		owner column: 'owner_sid'
-		parent column: 'parent_object'
-		objectId column: 'object_id_identity'
-	}
+    static mapping = {
+        version false
+        aclClass column: 'object_id_class'
+        owner column: 'owner_sid'
+        parent column: 'parent_object'
+        objectId column: 'object_id_identity'
+    }
 
-	static constraints = {
-		objectId unique: 'aclClass'
-	}
+    static constraints = {
+        objectId unique: 'aclClass'
+    }
 }

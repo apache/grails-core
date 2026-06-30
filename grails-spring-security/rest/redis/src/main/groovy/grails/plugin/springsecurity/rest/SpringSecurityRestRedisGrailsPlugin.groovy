@@ -23,7 +23,7 @@ import grails.plugin.springsecurity.SecurityFilterPosition
 import grails.plugin.springsecurity.SpringSecurityUtils
 import grails.plugin.springsecurity.rest.token.generation.SecureRandomTokenGenerator
 import grails.plugin.springsecurity.rest.token.storage.RedisTokenStorageService
-import grails.plugins.*
+import grails.plugins.Plugin
 
 class SpringSecurityRestRedisGrailsPlugin extends Plugin {
 
@@ -49,34 +49,35 @@ class SpringSecurityRestRedisGrailsPlugin extends Plugin {
     def organization = [name: 'Grails', url: 'https://www.grails.org']
 
     def issueManagement = [system: 'GitHub', url: 'https://github.com/apache/grails-spring-security/issues']
-    def scm = [ url: 'https://github.com/apache/grails-spring-security']
+    def scm = [url: 'https://github.com/apache/grails-spring-security']
 
+    Closure doWithSpring() {
+        { ->
+            def conf = SpringSecurityUtils.securityConfig
+            if (!conf || !conf.active || !conf.rest.active) {
+                return
+            }
 
-    Closure doWithSpring() { {->
-        def conf = SpringSecurityUtils.securityConfig
-        if (!conf || !conf.active || !conf.rest.active) {
-            return
+            boolean printStatusMessages = (conf.printStatusMessages instanceof Boolean) ? conf.printStatusMessages : true
+
+            if (printStatusMessages) {
+                println '\t... with Redis support'
+            }
+
+            SpringSecurityUtils.loadSecondaryConfig 'DefaultRestRedisSecurityConfig'
+            conf = SpringSecurityUtils.securityConfig
+
+            SpringSecurityUtils.registerFilter 'restLogoutFilter', SecurityFilterPosition.LOGOUT_FILTER.order - 1
+
+            tokenStorageService(RedisTokenStorageService) {
+                redisService = ref('redisService')
+                userDetailsService = ref('userDetailsService')
+                expiration = conf.rest.token.storage.redis.expiration
+            }
+
+            tokenGenerator(SecureRandomTokenGenerator)
         }
-
-        boolean printStatusMessages = (conf.printStatusMessages instanceof Boolean) ? conf.printStatusMessages : true
-
-        if (printStatusMessages) {
-            println '\t... with Redis support'
-        }
-
-        SpringSecurityUtils.loadSecondaryConfig 'DefaultRestRedisSecurityConfig'
-        conf = SpringSecurityUtils.securityConfig
-
-        SpringSecurityUtils.registerFilter 'restLogoutFilter', SecurityFilterPosition.LOGOUT_FILTER.order - 1
-
-        tokenStorageService(RedisTokenStorageService) {
-            redisService = ref('redisService')
-            userDetailsService = ref('userDetailsService')
-            expiration = conf.rest.token.storage.redis.expiration
-        }
-
-        tokenGenerator(SecureRandomTokenGenerator)
-    }}
+    }
 
     void doWithApplicationContext() {
         def conf = SpringSecurityUtils.securityConfig

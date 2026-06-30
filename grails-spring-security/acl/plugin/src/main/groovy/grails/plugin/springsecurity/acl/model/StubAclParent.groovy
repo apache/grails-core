@@ -19,6 +19,7 @@
 package grails.plugin.springsecurity.acl.model
 
 import groovy.transform.CompileStatic
+
 import org.springframework.security.acls.domain.ObjectIdentityImpl
 import org.springframework.security.acls.model.AccessControlEntry
 import org.springframework.security.acls.model.Acl
@@ -34,43 +35,43 @@ import org.springframework.security.acls.model.Sid
 @CompileStatic
 class StubAclParent implements Acl {
 
-	private static final long serialVersionUID = 1
+    private static final long serialVersionUID = 1
 
-	final Long id
+    final Long id
 
-	/**
-	 * Constructor.
-	 * @param id  the id
-	 */
-	StubAclParent(Long id) {
-		this.id = id
-	}
+    /**
+     * Constructor.
+     * @param id  the id
+     */
+    StubAclParent(Long id) {
+        this.id = id
+    }
 
-	List<AccessControlEntry> getEntries() {
-		throw new UnsupportedOperationException('Stub only')
-	}
+    List<AccessControlEntry> getEntries() {
+        throw new UnsupportedOperationException('Stub only')
+    }
 
-	ObjectIdentity getObjectIdentity() {
-		return new ObjectIdentityImpl(getClass(), 0)
-	}
+    ObjectIdentity getObjectIdentity() {
+        return new ObjectIdentityImpl(getClass(), 0)
+    }
 
-	Sid getOwner() {
-		throw new UnsupportedOperationException('Stub only')
-	}
+    Sid getOwner() {
+        throw new UnsupportedOperationException('Stub only')
+    }
 
-	Acl getParentAcl() {
-		throw new UnsupportedOperationException('Stub only')
-	}
+    Acl getParentAcl() {
+        throw new UnsupportedOperationException('Stub only')
+    }
 
-	boolean isEntriesInheriting() {
-		throw new UnsupportedOperationException('Stub only')
-	}
+    boolean isEntriesInheriting() {
+        throw new UnsupportedOperationException('Stub only')
+    }
 
-	boolean isGranted(List<Permission> permission, List<Sid> sids, boolean administrativeMode) {
-		throw new UnsupportedOperationException('Stub only')
-	}
+    boolean isGranted(List<Permission> permission, List<Sid> sids, boolean administrativeMode) {
+        throw new UnsupportedOperationException('Stub only')
+    }
 
-	boolean isSidLoaded(List<Sid> sids) {
-		throw new UnsupportedOperationException('Stub only')
-	}
+    boolean isSidLoaded(List<Sid> sids) {
+        throw new UnsupportedOperationException('Stub only')
+    }
 }

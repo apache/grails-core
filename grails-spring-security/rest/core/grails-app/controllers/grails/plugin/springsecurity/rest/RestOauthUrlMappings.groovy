@@ -25,7 +25,7 @@ class RestOauthUrlMappings {
 
         name oauth: "/oauth/${action}/${provider}"(controller: 'restOauth')
 
-        "/oauth/access_token"(controller: 'restOauth', action: 'accessToken')
+        '/oauth/access_token'(controller: 'restOauth', action: 'accessToken')
 
     }
 }

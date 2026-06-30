@@ -18,9 +18,9 @@
  */
 package rest
 
-import grails.plugins.rest.client.RestResponse
-import grails.util.Holders
 import spock.lang.IgnoreIf
+
+import grails.plugins.rest.client.RestResponse
 
 @IgnoreIf({ System.getProperty('useBearerToken', 'false').toBoolean() })
 class ValidateEndpointSpec extends AbstractRestSpec {

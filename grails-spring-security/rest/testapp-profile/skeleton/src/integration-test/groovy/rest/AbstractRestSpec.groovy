@@ -18,11 +18,13 @@
  */
 package rest
 
-import grails.plugins.rest.client.RestBuilder
-import grails.testing.mixin.integration.Integration
-import org.springframework.boot.test.context.SpringBootTest
 import spock.lang.Shared
 import spock.lang.Specification
+
+import org.springframework.boot.test.context.SpringBootTest
+
+import grails.plugins.rest.client.RestBuilder
+import grails.testing.mixin.integration.Integration
 
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.DEFINED_PORT
 

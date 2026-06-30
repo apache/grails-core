@@ -25,40 +25,40 @@ import org.springframework.transaction.TransactionStatus
  */
 interface PropertiesStrategy {
 
-	Map<Class<?>, Map<String, String>> findClassMappings()
+    Map<Class<?>, Map<String, String>> findClassMappings()
 
-	/**
-	 * Gets the property from the instance. paramName is a hard-coded 'params' name
-	 * (e.g. 'username') and the actual property name is looked up from the security
-	 * config in case it was overridden.
-	 *
-	 * @param instance the instance
-	 * @param paramName the 'params' name
-	 * @return the value or null if it's not callable
-	 * @throws grails.plugin.springsecurity.ui.InvalidValueException if there's a problem getting the property
-	 */
-	def getProperty(instance, String paramName)
+    /**
+     * Gets the property from the instance. paramName is a hard-coded 'params' name
+     * (e.g. 'username') and the actual property name is looked up from the security
+     * config in case it was overridden.
+     *
+     * @param instance the instance
+     * @param paramName the 'params' name
+     * @return the value or null if it's not callable
+     * @throws grails.plugin.springsecurity.ui.InvalidValueException if there's a problem getting the property
+     */
+    def getProperty(instance, String paramName)
 
-	/**
-	 * Sets the properties in the instance (creating it first if instanceOrClass is a Class) from the
-	 * provided map. The keys are hard-coded 'params' names (e.g. 'username') and the actual property
-	 * names are looked up from the security config in case they've been overridden.
-	 *
-	 * @param data the data
-	 * @param instanceOrClass an instance or Class
-	 * @param the current TransactionStatus if in a transaction, to pass to the error strategy
-	 * @return the instance passed or the new instance created from a Class
-	 * @throws grails.plugin.springsecurity.ui.InvalidValueException if there's a problem setting a property
-	 */
-	def setProperties(Map data, instanceOrClass, TransactionStatus transactionStatus)
+    /**
+     * Sets the properties in the instance (creating it first if instanceOrClass is a Class) from the
+     * provided map. The keys are hard-coded 'params' names (e.g. 'username') and the actual property
+     * names are looked up from the security config in case they've been overridden.
+     *
+     * @param data the data
+     * @param instanceOrClass an instance or Class
+     * @param the current TransactionStatus if in a transaction, to pass to the error strategy
+     * @return the instance passed or the new instance created from a Class
+     * @throws grails.plugin.springsecurity.ui.InvalidValueException if there's a problem setting a property
+     */
+    def setProperties(Map data, instanceOrClass, TransactionStatus transactionStatus)
 
-	/**
-	 * Lookup the property name based on the 'params' name, e.g. the overridden name for 'username'.
-	 * The controller name is used since there's no instance to know its class.
-	 *
-	 * @param paramName the 'params' name
-	 * @param controllerName the taglib 'controllerName' property
-	 * @return the actual property name in the domain class
-	 */
-	String paramNameToPropertyName(String paramName, String controllerName)
+    /**
+     * Lookup the property name based on the 'params' name, e.g. the overridden name for 'username'.
+     * The controller name is used since there's no instance to know its class.
+     *
+     * @param paramName the 'params' name
+     * @param controllerName the taglib 'controllerName' property
+     * @return the actual property name in the domain class
+     */
+    String paramNameToPropertyName(String paramName, String controllerName)
 }

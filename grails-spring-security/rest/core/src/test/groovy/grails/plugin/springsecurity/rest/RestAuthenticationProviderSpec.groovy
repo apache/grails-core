@@ -19,17 +19,19 @@
 
 package grails.plugin.springsecurity.rest
 
-import grails.plugin.springsecurity.rest.token.AccessToken
-import grails.plugin.springsecurity.rest.token.generation.jwt.SignedJwtTokenGenerator
-import grails.plugin.springsecurity.rest.token.storage.TokenNotFoundException
-import grails.plugin.springsecurity.rest.token.storage.jwt.JwtTokenStorageService
+import spock.lang.Issue
+import spock.lang.Specification
+
 import org.springframework.security.core.Authentication
 import org.springframework.security.core.userdetails.User
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.provisioning.InMemoryUserDetailsManager
-import spock.lang.Issue
-import spock.lang.Specification
+
+import grails.plugin.springsecurity.rest.token.AccessToken
+import grails.plugin.springsecurity.rest.token.generation.jwt.SignedJwtTokenGenerator
+import grails.plugin.springsecurity.rest.token.storage.TokenNotFoundException
+import grails.plugin.springsecurity.rest.token.storage.jwt.JwtTokenStorageService
 
 class RestAuthenticationProviderSpec extends Specification implements TokenGeneratorSupport {
 

@@ -46,14 +46,14 @@ For example: ./grailsw s2-create-persistent-token com.yourapp.PersistentLogin
     boolean handle() {
 
         if (args.size() == 0) {
-            consoleLogger.error("Usage: " + USAGE_MESSAGE)
+            consoleLogger.error('Usage: ' + USAGE_MESSAGE)
             return FAILURE
         }
 
         final String domainClass = args[0]
         final Model domainModel = model(domainClass)
-        consoleLogger.addStatus ("\nCreating persistent token class $domainClass")
-        render(template: template("PersistentLogin.groovy.template"),
+        consoleLogger.addStatus("\nCreating persistent token class $domainClass")
+        render(template: template('PersistentLogin.groovy.template'),
                 destination: file("grails-app/domain/$domainModel.packagePath/${domainModel.simpleName}.groovy"),
                 model: domainModel,
                 overrite: false

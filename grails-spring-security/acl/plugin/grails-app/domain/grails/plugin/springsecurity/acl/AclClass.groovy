@@ -24,20 +24,20 @@ import groovy.transform.ToString
 /**
  * @author <a href='mailto:burt@burtbeckwith.com'>Burt Beckwith</a>
  */
-@EqualsAndHashCode(includes='className')
-@ToString(excludes='version', includeNames=true)
+@EqualsAndHashCode(includes = 'className')
+@ToString(excludes = 'version', includeNames = true)
 class AclClass implements Serializable {
 
-	private static final long serialVersionUID = 1
+    private static final long serialVersionUID = 1
 
-	String className
+    String className
 
-	static mapping = {
-		className column: 'class'
-		version false
-	}
+    static mapping = {
+        className column: 'class'
+        version false
+    }
 
-	static constraints = {
-		className unique: true, blank: false
-	}
+    static constraints = {
+        className unique: true, blank: false
+    }
 }

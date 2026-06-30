@@ -18,51 +18,53 @@
  */
 package grails.plugin.springsecurity.ui
 
-import grails.core.GrailsApplication
-import grails.plugin.springsecurity.SpringSecurityUtils
 import org.springframework.beans.factory.InitializingBean
 import org.springframework.beans.factory.annotation.Autowired
+
+import grails.core.GrailsApplication
+import grails.plugin.springsecurity.SpringSecurityUtils
 
 /**
  * @author <a href='mailto:burt@burtbeckwith.com'>Burt Beckwith</a>
  */
 abstract class AbstractS2UiController implements InitializingBean {
 
-	static scope = 'singleton'
+    static scope = 'singleton'
 
-	// needed for afterPropertiesSet since accessing the Trait's
-	// grailsApplication looks for a current thread-bound request
-	private @Autowired GrailsApplication application
+    // needed for afterPropertiesSet since accessing the Trait's
+    // grailsApplication looks for a current thread-bound request
+    private @Autowired
+    GrailsApplication application
 
-	protected findUserByUsername(String username) {
-		if (username) {
-			return User.findWhere((usernamePropertyName): username)
-		}
-	}
+    protected findUserByUsername(String username) {
+        if (username) {
+            return User.findWhere((usernamePropertyName): username)
+        }
+    }
 
-	protected Class<?> getDomainClassClass(String name) {
-		if (name) {
-			return application.getDomainClass(name)?.clazz
-		}
-	}
+    protected Class<?> getDomainClassClass(String name) {
+        if (name) {
+            return application.getDomainClass(name)?.clazz
+        }
+    }
 
-	protected static getConf() {
-		SpringSecurityUtils.securityConfig
-	}
+    protected static getConf() {
+        SpringSecurityUtils.securityConfig
+    }
 
-	protected String authorityNameField
-	protected String usernamePropertyName
+    protected String authorityNameField
+    protected String usernamePropertyName
 
-	protected Class<?> Role
-	protected Class<?> User
-	protected Class<?> UserRole
+    protected Class<?> Role
+    protected Class<?> User
+    protected Class<?> UserRole
 
-	void afterPropertiesSet() {
-		authorityNameField = conf.authority.nameField ?: ''
-		usernamePropertyName = conf.userLookup.usernamePropertyName ?: ''
+    void afterPropertiesSet() {
+        authorityNameField = conf.authority.nameField ?: ''
+        usernamePropertyName = conf.userLookup.usernamePropertyName ?: ''
 
-		Role = getDomainClassClass(conf.authority.className ?: '')
-		User = getDomainClassClass(conf.userLookup.userDomainClassName ?: '')
-		UserRole = getDomainClassClass(conf.userLookup.authorityJoinClassName ?: '')
-	}
+        Role = getDomainClassClass(conf.authority.className ?: '')
+        User = getDomainClassClass(conf.userLookup.userDomainClassName ?: '')
+        UserRole = getDomainClassClass(conf.userLookup.authorityJoinClassName ?: '')
+    }
 }

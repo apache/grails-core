@@ -19,6 +19,7 @@
 package grails.plugin.springsecurity.rest.oauth
 
 import org.pac4j.core.profile.UserProfile
+
 import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.core.userdetails.UsernameNotFoundException

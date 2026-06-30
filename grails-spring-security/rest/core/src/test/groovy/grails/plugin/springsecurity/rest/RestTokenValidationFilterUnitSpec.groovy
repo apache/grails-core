@@ -18,11 +18,11 @@
  */
 package grails.plugin.springsecurity.rest
 
-import grails.plugin.springsecurity.rest.authentication.RestAuthenticationEventPublisher
-import grails.plugin.springsecurity.rest.token.AccessToken
-import grails.plugin.springsecurity.rest.token.reader.TokenReader
-import grails.plugin.springsecurity.rest.token.storage.TokenNotFoundException
-import org.grails.plugins.testing.GrailsMockHttpServletRequest
+import jakarta.servlet.FilterChain
+
+import spock.lang.Specification
+import spock.lang.Subject
+
 import org.springframework.mock.web.MockFilterChain
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.security.core.Authentication
@@ -30,17 +30,19 @@ import org.springframework.security.core.AuthenticationException
 import org.springframework.security.core.userdetails.User
 import org.springframework.security.web.authentication.AuthenticationFailureHandler
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler
-import spock.lang.Specification
-import spock.lang.Subject
 
-import jakarta.servlet.FilterChain
+import grails.plugin.springsecurity.rest.authentication.RestAuthenticationEventPublisher
+import grails.plugin.springsecurity.rest.token.AccessToken
+import grails.plugin.springsecurity.rest.token.reader.TokenReader
+import grails.plugin.springsecurity.rest.token.storage.TokenNotFoundException
+import org.grails.plugins.testing.GrailsMockHttpServletRequest
 
 @Subject(RestTokenValidationFilter)
 class RestTokenValidationFilterUnitSpec extends Specification {
 
     def filter = new RestTokenValidationFilter(active: true)
 
-    def request  = new GrailsMockHttpServletRequest()
+    def request = new GrailsMockHttpServletRequest()
     def response = new MockHttpServletResponse()
     def chain = new MockFilterChain()
 
@@ -58,9 +60,9 @@ class RestTokenValidationFilterUnitSpec extends Specification {
         given:
         String token = 'mytokenvalue'
         filter.restAuthenticationProvider = new StubRestAuthenticationProvider(
-            validToken: token,
-            username: 'user',
-            password: 'password'
+                validToken: token,
+                username: 'user',
+                password: 'password'
         )
 
 
@@ -70,7 +72,7 @@ class RestTokenValidationFilterUnitSpec extends Specification {
         then:
         response.status == 200
         1 * filter.tokenReader.findToken(request) >> new AccessToken(token)
-        0 * filter.authenticationFailureHandler.onAuthenticationFailure( _, _, _ )
+        0 * filter.authenticationFailureHandler.onAuthenticationFailure(_, _, _)
         1 * filter.authenticationEventPublisher.publishAuthenticationSuccess(_ as Authentication)
         notThrown(TokenNotFoundException)
     }

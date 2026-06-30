@@ -23,9 +23,9 @@ package grails.plugin.springsecurity.ui.strategy
  */
 interface RequestmapStrategy {
 
-	def saveRequestmap(Map properties)
+    def saveRequestmap(Map properties)
 
-	void updateRequestmap(Map properties, requestmap)
+    void updateRequestmap(Map properties, requestmap)
 
-	void deleteRequestmap(requestmap)
+    void deleteRequestmap(requestmap)
 }

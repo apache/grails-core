@@ -18,132 +18,127 @@
  */
 package grails.plugin.springsecurity.ui
 
-import grails.plugin.springsecurity.ui.strategy.UserStrategy
 import groovy.transform.CompileStatic
+
+import grails.plugin.springsecurity.ui.strategy.UserStrategy
 
 /**
  * @author <a href='mailto:burt@burtbeckwith.com'>Burt Beckwith</a>
  */
 class UserController extends AbstractS2UiDomainController {
 
-	/** Dependency injection for the 'uiUserStrategy' bean. */
-	UserStrategy uiUserStrategy
+    /** Dependency injection for the 'uiUserStrategy' bean. */
+    UserStrategy uiUserStrategy
 
-	def create() {
-		super.create()
-	}
+    def save() {
+        withForm {
+            doSave uiUserStrategy.saveUser(params, roleNamesFromParams(), params.password)
+        }.invalidToken {
+            doSaveWithInvalidToken(params.username)
+        }
+    }
 
-	def save() {
-		withForm {
-			doSave uiUserStrategy.saveUser(params, roleNamesFromParams(), params.password)
-		}.invalidToken {
-			doSaveWithInvalidToken(params.username)
-		}
-	}
+    def update() {
+        withForm {
+            doUpdate { user ->
+                uiUserStrategy.updateUser params, user, roleNamesFromParams()
+            }
+        }.invalidToken {
+            doUpdateWithInvalidToken(params.username)
+        }
+    }
 
-	def edit() {
-		super.edit()
-	}
+    def delete() {
+        withForm {
+            tryDelete { user ->
+                uiUserStrategy.deleteUser user
+            }
+        }.invalidToken {
+            doDeleteWithInvalidToken()
+        }
+    }
 
-	def update() {
-		withForm {
-			doUpdate { user ->
-				uiUserStrategy.updateUser params, user, roleNamesFromParams()
-			}
-		}.invalidToken {
-			doUpdateWithInvalidToken(params.username)
-		}
-	}
+    def search() {
+        if (!isSearch()) {
+            // show the form
+            return
+        }
 
-	def delete() {
-		withForm{
-			tryDelete { user ->
-				uiUserStrategy.deleteUser user
-			}
-		}.invalidToken {
-			doDeleteWithInvalidToken()
-		}
-	}
+        def results = doSearch { ->
+            like 'username', delegate
+            eqBoolean 'accountExpired', delegate
+            eqBoolean 'accountLocked', delegate
+            eqBoolean 'enabled', delegate
+            eqBoolean 'passwordExpired', delegate
+        }
 
-	def search() {
-		if (!isSearch()) {
-			// show the form
-			return
-		}
+        renderSearch results: results, totalCount: results.totalCount,
+                'accountExpired', 'accountLocked', 'enabled', 'passwordExpired', 'username'
+    }
 
-		def results = doSearch { ->
-			like 'username', delegate
-			eqBoolean 'accountExpired', delegate
-			eqBoolean 'accountLocked', delegate
-			eqBoolean 'enabled', delegate
-			eqBoolean 'passwordExpired', delegate
-		}
+    protected lookupFromParams() {
+        findUserByUsername(params.username) ?: byId()
+    }
 
-		renderSearch results: results, totalCount: results.totalCount,
-		            'accountExpired', 'accountLocked', 'enabled', 'passwordExpired', 'username'
-	}
+    protected List<String> roleNamesFromParams() {
+        params.keySet().findAll { it.contains('ROLE_') && params[it] == 'on' } as List
+    }
 
-	protected lookupFromParams() {
-		findUserByUsername(params.username) ?: byId()
-	}
+    protected Map buildUserModel(user) {
 
-	protected List<String> roleNamesFromParams() {
-		params.keySet().findAll { it.contains('ROLE_') && params[it] == 'on' } as List
-	}
+        Set userRoleNames = user[authoritiesPropertyName].collect { it[authorityNameField] }
+        Map roleMap = buildRoleMap(userRoleNames, sortedRoles())
 
-	protected Map buildUserModel(user) {
+        [roleMap: roleMap, tabData: tabData, user: user]
+    }
 
-		Set userRoleNames = user[authoritiesPropertyName].collect { it[authorityNameField] }
-		Map roleMap = buildRoleMap(userRoleNames, sortedRoles())
+    @CompileStatic
+    protected Map buildRoleMap(Set userRoleNames, List sortedRoles) {
+        Map granted = [:]
+        Map notGranted = [:]
+        for (role in sortedRoles) {
+            String authority = role[authorityNameField]
+            if (userRoleNames?.contains(authority)) {
+                granted[(role)] = true
+            } else {
+                notGranted[(role)] = false
+            }
+        }
+        granted + notGranted
+    }
 
-		[roleMap: roleMap, tabData: tabData, user: user]
-	}
+    protected List sortedRoles() {
+        Role.list().sort { it[authorityNameField] }
+    }
 
-	@CompileStatic
-	protected Map buildRoleMap(Set userRoleNames, List sortedRoles) {
-		Map granted = [:]
-		Map notGranted = [:]
-		for (role in sortedRoles) {
-			String authority = role[authorityNameField]
-			if (userRoleNames?.contains(authority)) {
-				granted[(role)] = true
-			} else {
-				notGranted[(role)] = false
-			}
-		}
-		granted + notGranted
-	}
+    protected getTabData() {
+        [
+                [name: 'userinfo', icon: 'icon_user', message: message(code: 'spring.security.ui.user.info')],
+                [name: 'roles', icon: 'icon_role', message: message(code: 'spring.security.ui.user.roles')]
+        ]
+    }
 
-	protected List sortedRoles() {
-		Role.list().sort { it[authorityNameField] }
-	}
+    protected Class<?> getClazz() { User }
 
-	protected getTabData() {[
-		[name: 'userinfo', icon: 'icon_user', message: message(code: 'spring.security.ui.user.info')],
-		[name: 'roles',    icon: 'icon_role', message: message(code: 'spring.security.ui.user.roles')]
-	]}
+    protected String getClassLabelCode() { 'user.label' }
 
-	protected Class<?> getClazz() { User }
-	protected String getClassLabelCode() { 'user.label' }
+    protected Map model(user, String action) {
+        if (action == 'edit' || action == 'update') {
+            buildUserModel user
+        } else {
+            [user: user, authorityList: sortedRoles(), tabData: tabData]
+        }
+    }
 
-	protected Map model(user, String action) {
-		if (action == 'edit' || action == 'update') {
-			buildUserModel user
-		}
-		else {
-			[user: user, authorityList: sortedRoles(), tabData: tabData]
-		}
-	}
+    protected String authoritiesPropertyName
 
-	protected String authoritiesPropertyName
+    void afterPropertiesSet() {
+        super.afterPropertiesSet()
 
-	void afterPropertiesSet() {
-		super.afterPropertiesSet()
+        if (!conf.userLookup.userDomainClassName) {
+            return
+        }
 
-		if (!conf.userLookup.userDomainClassName) {
-			return
-		}
-
-		authoritiesPropertyName = conf.userLookup.authoritiesPropertyName ?: ''
-	}
+        authoritiesPropertyName = conf.userLookup.authoritiesPropertyName ?: ''
+    }
 }

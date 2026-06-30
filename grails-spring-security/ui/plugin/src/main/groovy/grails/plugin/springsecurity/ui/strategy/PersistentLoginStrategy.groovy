@@ -23,7 +23,7 @@ package grails.plugin.springsecurity.ui.strategy
  */
 interface PersistentLoginStrategy {
 
-	void updatePersistentLogin(Map properties, persistentLogin)
+    void updatePersistentLogin(Map properties, persistentLogin)
 
-	void deletePersistentLogin(persistentLogin)
+    void deletePersistentLogin(persistentLogin)
 }

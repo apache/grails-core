@@ -29,7 +29,7 @@ package grails.plugin.springsecurity.ui.strategy
  */
 interface MailStrategy {
 
-	def sendVerifyRegistrationMail(Map params)
+    def sendVerifyRegistrationMail(Map params)
 
-	def sendForgotPasswordMail(Map params)
+    def sendForgotPasswordMail(Map params)
 }

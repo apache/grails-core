@@ -25,61 +25,59 @@ import grails.plugin.springsecurity.ui.strategy.PersistentLoginStrategy
  */
 class PersistentLoginController extends AbstractS2UiDomainController {
 
-	/** Dependency injection for the 'uiPersistentLoginStrategy' bean. */
-	PersistentLoginStrategy uiPersistentLoginStrategy
+    /** Dependency injection for the 'uiPersistentLoginStrategy' bean. */
+    PersistentLoginStrategy uiPersistentLoginStrategy
 
-	def edit() {
-		super.edit()
-	}
+    def update() {
+        withForm {
+            doUpdate { persistentLogin ->
+                uiPersistentLoginStrategy.updatePersistentLogin params, persistentLogin
+            }
+        }.invalidToken {
+            doUpdateWithInvalidToken(params.username)
+        }
+    }
 
-	def update() {
-		withForm {
-			doUpdate { persistentLogin ->
-				uiPersistentLoginStrategy.updatePersistentLogin params, persistentLogin
-			}
-		}.invalidToken {
-			doUpdateWithInvalidToken(params.username)
-		}
-	}
+    def delete() {
+        withForm {
+            tryDelete { persistentLogin ->
+                uiPersistentLoginStrategy.deletePersistentLogin persistentLogin
+            }
+        }.invalidToken {
+            doDeleteWithInvalidToken()
+        }
+    }
 
-	def delete() {
-		withForm {
-			tryDelete { persistentLogin ->
-				uiPersistentLoginStrategy.deletePersistentLogin persistentLogin
-			}
-		}.invalidToken {
-			doDeleteWithInvalidToken()
-		}
-	}
+    def search() {
+        if (!isSearch()) {
+            // show the form
+            return
+        }
 
-	def search() {
-		if (!isSearch()) {
-			// show the form
-			return
-		}
+        def results = doSearch { ->
+            like 'series', delegate
+            like 'token', delegate
+            like 'username', delegate
+        }
 
-		def results = doSearch { ->
-			like 'series', delegate
-			like 'token', delegate
-			like 'username', delegate
-		}
+        renderSearch([results: results, totalCount: results.totalCount],
+                'series', 'token', 'username')
+    }
 
-		renderSearch([results: results, totalCount: results.totalCount],
-		             'series', 'token', 'username')
-	}
+    protected Class<?> getClazz() { PersistentLogin }
 
-	protected Class<?> getClazz() { PersistentLogin }
-	protected String getClassLabelCode() { 'persistentLogin.label' }
-	protected Map model(persistentLogin, String action) {
-		[persistentLogin: persistentLogin]
-	}
+    protected String getClassLabelCode() { 'persistentLogin.label' }
 
-	protected Class<?> PersistentLogin
+    protected Map model(persistentLogin, String action) {
+        [persistentLogin: persistentLogin]
+    }
 
-	void afterPropertiesSet() {
-		super.afterPropertiesSet()
-		if (conf.rememberMe.persistentToken.domainClassName) {
-			PersistentLogin = getDomainClassClass(conf.rememberMe.persistentToken.domainClassName)
-		}
-	}
+    protected Class<?> PersistentLogin
+
+    void afterPropertiesSet() {
+        super.afterPropertiesSet()
+        if (conf.rememberMe.persistentToken.domainClassName) {
+            PersistentLogin = getDomainClassClass(conf.rememberMe.persistentToken.domainClassName)
+        }
+    }
 }

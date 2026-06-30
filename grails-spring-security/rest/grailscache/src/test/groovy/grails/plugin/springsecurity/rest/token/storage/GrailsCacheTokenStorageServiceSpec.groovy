@@ -18,10 +18,12 @@
  */
 package grails.plugin.springsecurity.rest.token.storage
 
+import spock.lang.Specification
+
+import org.springframework.security.core.userdetails.User
+
 import grails.plugin.cache.GrailsConcurrentMapCacheManager
 import org.grails.plugin.cache.GrailsCacheManager
-import org.springframework.security.core.userdetails.User
-import spock.lang.Specification
 
 class GrailsCacheTokenStorageServiceSpec extends Specification {
 

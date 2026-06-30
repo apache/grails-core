@@ -36,9 +36,9 @@ import java.lang.annotation.Target;
 @Documented
 public @interface AclVoters {
 
-	/**
-	 * The wrapped annotations.
-	 * @return  the annotations.
-	 */
-	AclVoter[] value() default {};
+    /**
+     * The wrapped annotations.
+     * @return  the annotations.
+     */
+    AclVoter[] value() default {};
 }

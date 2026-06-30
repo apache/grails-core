@@ -19,10 +19,11 @@
 package grails.plugin.springsecurity.rest.token.storage.memcached
 
 import groovy.transform.CompileStatic
+
 import net.spy.memcached.transcoders.SerializingTranscoder
 
 @CompileStatic
-public class CustomSerializingTranscoder extends SerializingTranscoder{
+public class CustomSerializingTranscoder extends SerializingTranscoder {
 
     @Override
     protected Object deserialize(byte[] bytes) {
@@ -32,6 +33,7 @@ public class CustomSerializingTranscoder extends SerializingTranscoder{
         try {
             ByteArrayInputStream bs = new ByteArrayInputStream(bytes)
             inputStream = new ObjectInputStream(bs) {
+
                 @Override
                 protected Class<?> resolveClass(ObjectStreamClass objectStreamClass) throws IOException, ClassNotFoundException {
                     try {
@@ -40,7 +42,7 @@ public class CustomSerializingTranscoder extends SerializingTranscoder{
                         return super.resolveClass(objectStreamClass)
                     }
                 }
-            };
+            }
             return inputStream.readObject()
         } catch (Exception e) {
             e.printStackTrace()

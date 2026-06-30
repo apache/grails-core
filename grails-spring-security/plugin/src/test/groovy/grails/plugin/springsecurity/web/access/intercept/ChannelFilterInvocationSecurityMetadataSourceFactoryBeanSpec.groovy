@@ -18,75 +18,76 @@
  */
 package grails.plugin.springsecurity.web.access.intercept
 
-import grails.plugin.springsecurity.AbstractUnitSpec
 import org.springframework.security.web.access.intercept.DefaultFilterInvocationSecurityMetadataSource
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher
+
+import grails.plugin.springsecurity.AbstractUnitSpec
 
 /**
  * @author Burt Beckwith
  */
 class ChannelFilterInvocationSecurityMetadataSourceFactoryBeanSpec extends AbstractUnitSpec {
 
-	private ChannelFilterInvocationSecurityMetadataSourceFactoryBean factory = new ChannelFilterInvocationSecurityMetadataSourceFactoryBean()
+    private ChannelFilterInvocationSecurityMetadataSourceFactoryBean factory = new ChannelFilterInvocationSecurityMetadataSourceFactoryBean()
 
-	void 'getObjectType'() {
-		expect:
-		DefaultFilterInvocationSecurityMetadataSource.is(factory.objectType)
-	}
+    void 'getObjectType'() {
+        expect:
+        DefaultFilterInvocationSecurityMetadataSource.is(factory.objectType)
+    }
 
-	void 'isSingleton'() {
-		expect:
-		factory.singleton
-	}
+    void 'isSingleton'() {
+        expect:
+        factory.singleton
+    }
 
-	void 'afterPropertiesSet'() {
-		when:
-		factory.afterPropertiesSet()
+    void 'afterPropertiesSet'() {
+        when:
+        factory.afterPropertiesSet()
 
-		then:
-		thrown AssertionError
+        then:
+        thrown AssertionError
 
-		when:
-		factory.afterPropertiesSet()
+        when:
+        factory.afterPropertiesSet()
 
-		then:
-		thrown AssertionError
+        then:
+        thrown AssertionError
 
-		when:
-		factory.definition = [[pattern: '/foo1/**', access: 'secure_only']]
-		factory.afterPropertiesSet()
+        when:
+        factory.definition = [[pattern: '/foo1/**', access: 'secure_only']]
+        factory.afterPropertiesSet()
 
-		then:
-		thrown AssertionError
+        then:
+        thrown AssertionError
 
-		when:
-		factory.definition = [[pattern: '/foo1/**', access: 'REQUIRES_SECURE_CHANNEL']]
-		factory.afterPropertiesSet()
+        when:
+        factory.definition = [[pattern: '/foo1/**', access: 'REQUIRES_SECURE_CHANNEL']]
+        factory.afterPropertiesSet()
 
-		then:
-		notThrown AssertionError
-	}
+        then:
+        notThrown AssertionError
+    }
 
-	void 'getObject'() {
-		when:
-		factory.definition = [
-			[pattern: '/foo1/**', access: 'REQUIRES_SECURE_CHANNEL'],
-			[pattern: '/foo2/**', access: 'REQUIRES_INSECURE_CHANNEL'],
-			[pattern: '/foo3/**', access: 'ANY_CHANNEL']
-		]
-		factory.afterPropertiesSet()
+    void 'getObject'() {
+        when:
+        factory.definition = [
+                [pattern: '/foo1/**', access: 'REQUIRES_SECURE_CHANNEL'],
+                [pattern: '/foo2/**', access: 'REQUIRES_INSECURE_CHANNEL'],
+                [pattern: '/foo3/**', access: 'ANY_CHANNEL']
+        ]
+        factory.afterPropertiesSet()
 
-		def object = factory.object
+        def object = factory.object
 
-		then:
-		object instanceof DefaultFilterInvocationSecurityMetadataSource
+        then:
+        object instanceof DefaultFilterInvocationSecurityMetadataSource
 
-		when:
-		def map = object.@requestMap
+        when:
+        def map = object.@requestMap
 
-		then:
-		'REQUIRES_SECURE_CHANNEL'   == map[new AntPathRequestMatcher('/foo1/**', null, false)].attribute[0]
-		'REQUIRES_INSECURE_CHANNEL' == map[new AntPathRequestMatcher('/foo2/**', null, false)].attribute[0]
-		'ANY_CHANNEL'               == map[new AntPathRequestMatcher('/foo3/**', null, false)].attribute[0]
-	}
+        then:
+        'REQUIRES_SECURE_CHANNEL' == map[new AntPathRequestMatcher('/foo1/**', null, false)].attribute[0]
+        'REQUIRES_INSECURE_CHANNEL' == map[new AntPathRequestMatcher('/foo2/**', null, false)].attribute[0]
+        'ANY_CHANNEL' == map[new AntPathRequestMatcher('/foo3/**', null, false)].attribute[0]
+    }
 }

@@ -23,11 +23,11 @@ package grails.plugin.springsecurity.ui
  */
 class RegistrationCode {
 
-	String username
-	String token = UUID.randomUUID().toString().replaceAll('-', '')
-	Date dateCreated
+    String username
+    String token = UUID.randomUUID().toString().replaceAll('-', '')
+    Date dateCreated
 
-	static mapping = {
-		version false
-	}
+    static mapping = {
+        version false
+    }
 }

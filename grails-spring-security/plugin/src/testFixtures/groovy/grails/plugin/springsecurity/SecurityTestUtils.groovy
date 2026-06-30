@@ -18,13 +18,13 @@
  */
 package grails.plugin.springsecurity
 
+import java.lang.reflect.Modifier
+
 import org.springframework.security.authentication.TestingAuthenticationToken
 import org.springframework.security.core.Authentication
 import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.context.SecurityContextHolder as SCH
-
-import java.lang.reflect.Modifier
 
 /**
  * Utility methods for security unit tests.
@@ -33,47 +33,47 @@ import java.lang.reflect.Modifier
  */
 class SecurityTestUtils {
 
-	/**
-	 * Register a currently authenticated user.
-	 * @return the authentication
-	 */
-	static Authentication authenticate() {
-		authenticate null, null, null
-	}
+    /**
+     * Register a currently authenticated user.
+     * @return the authentication
+     */
+    static Authentication authenticate() {
+        authenticate null, null, null
+    }
 
-	/**
-	 * Register a currently authenticated user.
-	 *
-	 * @param principal the principal
-	 * @param credentials the password
-	 * @param authorities the roles
-	 * @return the authentication
-	 */
-	static Authentication authenticate(principal, credentials, List<GrantedAuthority> authorities) {
-		Authentication authentication = authorities != null ? new TestingAuthenticationToken(principal, credentials, authorities) :  new TestingAuthenticationToken(principal, credentials)
-		authentication.authenticated = true
-		SCH.context.authentication = authentication
-		authentication
-	}
+    /**
+     * Register a currently authenticated user.
+     *
+     * @param principal the principal
+     * @param credentials the password
+     * @param authorities the roles
+     * @return the authentication
+     */
+    static Authentication authenticate(principal, credentials, List<GrantedAuthority> authorities) {
+        Authentication authentication = authorities != null ? new TestingAuthenticationToken(principal, credentials, authorities) : new TestingAuthenticationToken(principal, credentials)
+        authentication.authenticated = true
+        SCH.context.authentication = authentication
+        authentication
+    }
 
-	static Authentication authenticate(roleNames) {
-		authenticate null, null, roleNames.collect { new SimpleGrantedAuthority(it) }
-	}
+    static Authentication authenticate(roleNames) {
+        authenticate null, null, roleNames.collect { new SimpleGrantedAuthority(it) }
+    }
 
-	/**
-	 * De-register the currently authenticated user.
-	 */
-	static void logout() {
-		SCH.clearContext()
-	}
+    /**
+     * De-register the currently authenticated user.
+     */
+    static void logout() {
+        SCH.clearContext()
+    }
 
-	static boolean testPrivateConstructor(Class clazz) {
-		assert 1 == clazz.declaredConstructors.length
-		def constructor = clazz.getDeclaredConstructor()
-		assert Modifier.isPrivate(constructor.modifiers)
-		assert !constructor.accessible
-		constructor.accessible = true
-		constructor.newInstance()
-		true
-	}
+    static boolean testPrivateConstructor(Class clazz) {
+        assert 1 == clazz.declaredConstructors.length
+        def constructor = clazz.getDeclaredConstructor()
+        assert Modifier.isPrivate(constructor.modifiers)
+        assert !constructor.accessible
+        constructor.accessible = true
+        constructor.newInstance()
+        true
+    }
 }

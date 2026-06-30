@@ -18,11 +18,11 @@
  */
 package grails.plugin.springsecurity.authentication
 
+import groovy.transform.CompileStatic
+
 import org.springframework.security.authentication.AuthenticationEventPublisher
 import org.springframework.security.core.Authentication
 import org.springframework.security.core.AuthenticationException
-
-import groovy.transform.CompileStatic
 
 /**
  * @author Burt Beckwith
@@ -30,11 +30,11 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class NullAuthenticationEventPublisher implements AuthenticationEventPublisher {
 
-	void publishAuthenticationFailure(AuthenticationException e, Authentication a) {
-		// do nothing
-	}
+    void publishAuthenticationFailure(AuthenticationException e, Authentication a) {
+        // do nothing
+    }
 
-	void publishAuthenticationSuccess(Authentication a) {
-		// do nothing
-	}
+    void publishAuthenticationSuccess(Authentication a) {
+        // do nothing
+    }
 }

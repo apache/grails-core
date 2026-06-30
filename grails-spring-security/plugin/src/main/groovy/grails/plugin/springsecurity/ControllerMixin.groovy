@@ -18,9 +18,10 @@
  */
 package grails.plugin.springsecurity
 
+import org.springframework.security.core.context.SecurityContextHolder
+
 import grails.artefact.Enhances
 import org.grails.core.artefact.ControllerArtefactHandler
-import org.springframework.security.core.context.SecurityContextHolder
 
 /**
  * @author Burt Beckwith
@@ -28,19 +29,19 @@ import org.springframework.security.core.context.SecurityContextHolder
 @Enhances(ControllerArtefactHandler.TYPE)
 trait ControllerMixin {
 
-	def getPrincipal() {
-		SecurityContextHolder.context?.authentication?.principal
-	}
+    def getPrincipal() {
+        SecurityContextHolder.context?.authentication?.principal
+    }
 
-	boolean isLoggedIn() {
-		springSecurityService().isLoggedIn()
-	}
+    boolean isLoggedIn() {
+        springSecurityService().isLoggedIn()
+    }
 
-	def getAuthenticatedUser() {
-		springSecurityService().currentUser
-	}
+    def getAuthenticatedUser() {
+        springSecurityService().currentUser
+    }
 
-	private springSecurityService() {
-		grailsApplication.mainContext.springSecurityService
-	}
+    private springSecurityService() {
+        grailsApplication.mainContext.springSecurityService
+    }
 }

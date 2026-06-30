@@ -18,10 +18,11 @@
  */
 package grails.plugin.springsecurity.web.access.intercept
 
-import grails.plugin.springsecurity.InterceptedUrl
-import grails.plugin.springsecurity.ReflectionUtils
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+
+import grails.plugin.springsecurity.InterceptedUrl
+import grails.plugin.springsecurity.ReflectionUtils
 
 /**
  * @author Burt Beckwith
@@ -30,39 +31,39 @@ import groovy.util.logging.Slf4j
 @CompileStatic
 class InterceptUrlMapFilterInvocationDefinition extends AbstractFilterInvocationDefinition {
 
-	@Override
-	protected void initialize() {
-		if (!initialized) {
-			reset()
-		}
-	}
+    @Override
+    protected void initialize() {
+        if (!initialized) {
+            reset()
+        }
+    }
 
-	@Override
-	protected boolean stopAtFirstMatch() {
-		true
-	}
+    @Override
+    protected boolean stopAtFirstMatch() {
+        true
+    }
 
-	@SuppressWarnings('unchecked')
-	@Override
-	void reset() {
-		def interceptUrlMap = ReflectionUtils.getConfigProperty('interceptUrlMap')
+    @SuppressWarnings('unchecked')
+    @Override
+    void reset() {
+        def interceptUrlMap = ReflectionUtils.getConfigProperty('interceptUrlMap')
 
-		if (interceptUrlMap instanceof Map) {
-			throw new IllegalArgumentException("interceptUrlMap defined as a Map is not supported; must be specified as a " +
-					"List of Maps as described in section 'Configuring Request Mappings to Secure URLs' of the reference documentation")
-		}
+        if (interceptUrlMap instanceof Map) {
+            throw new IllegalArgumentException('interceptUrlMap defined as a Map is not supported; must be specified as a ' +
+                    "List of Maps as described in section 'Configuring Request Mappings to Secure URLs' of the reference documentation")
+        }
 
-		if (!(interceptUrlMap instanceof List)) {
-			log.warn "interceptUrlMap config property isn't a List of Maps"
-			return
-		}
+        if (!(interceptUrlMap instanceof List)) {
+            log.warn "interceptUrlMap config property isn't a List of Maps"
+            return
+        }
 
-		resetConfigs()
+        resetConfigs()
 
-		ReflectionUtils.splitMap((List<Map<String, Object>>)interceptUrlMap).each { InterceptedUrl iu -> compileAndStoreMapping iu }
+        ReflectionUtils.splitMap((List<Map<String, Object>>) interceptUrlMap).each { InterceptedUrl iu -> compileAndStoreMapping iu }
 
-		initialized = true
+        initialized = true
 
-		log.trace 'configs: {}', configAttributeMap
-	}
+        log.trace 'configs: {}', configAttributeMap
+    }
 }

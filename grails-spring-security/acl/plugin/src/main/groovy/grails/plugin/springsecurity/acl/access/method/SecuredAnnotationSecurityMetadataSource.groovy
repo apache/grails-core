@@ -18,15 +18,17 @@
  */
 package grails.plugin.springsecurity.acl.access.method
 
-import grails.plugin.springsecurity.acl.util.ProxyUtils
-import grails.plugin.springsecurity.annotation.Secured
+import java.lang.annotation.Annotation
+import java.lang.reflect.Method
+
 import groovy.transform.CompileStatic
+
 import org.springframework.security.access.ConfigAttribute
 import org.springframework.security.access.SecurityConfig
 import org.springframework.security.access.method.AbstractFallbackMethodSecurityMetadataSource
 
-import java.lang.annotation.Annotation
-import java.lang.reflect.Method
+import grails.plugin.springsecurity.acl.util.ProxyUtils
+import grails.plugin.springsecurity.annotation.Secured
 
 /**
  * Based on the Spring Security class of the same name but supports the plugin's @Secured annotation
@@ -37,41 +39,41 @@ import java.lang.reflect.Method
 @CompileStatic
 class SecuredAnnotationSecurityMetadataSource extends AbstractFallbackMethodSecurityMetadataSource {
 
-	protected Collection<String> serviceClassNames
+    protected Collection<String> serviceClassNames
 
-	@Override
-	protected Collection<ConfigAttribute> findAttributes(Class<?> clazz) {
-		Class<?> actualClass = ProxyUtils.unproxy(clazz)
-		if (isService(actualClass)) {
-			return processAnnotation(actualClass.getAnnotation(Secured))
-		}
-	}
+    @Override
+    protected Collection<ConfigAttribute> findAttributes(Class<?> clazz) {
+        Class<?> actualClass = ProxyUtils.unproxy(clazz)
+        if (isService(actualClass)) {
+            return processAnnotation(actualClass.getAnnotation(Secured))
+        }
+    }
 
-	@Override
-	protected Collection<ConfigAttribute> findAttributes(Method method, Class<?> targetClass) {
-		Method actualMethod = ProxyUtils.unproxy(method)
-		if (isService(actualMethod.declaringClass)) {
-			return processAnnotation(actualMethod.getAnnotation(Secured))
-		}
-	}
+    @Override
+    protected Collection<ConfigAttribute> findAttributes(Method method, Class<?> targetClass) {
+        Method actualMethod = ProxyUtils.unproxy(method)
+        if (isService(actualMethod.declaringClass)) {
+            return processAnnotation(actualMethod.getAnnotation(Secured))
+        }
+    }
 
-	Collection<ConfigAttribute> getAllConfigAttributes() {}
+    Collection<ConfigAttribute> getAllConfigAttributes() {}
 
-	protected List<ConfigAttribute> processAnnotation(Annotation a) {
-		if (a instanceof Secured) {
-			a.value().collect { String token -> ((ConfigAttribute)new SecurityConfig(token)) }
-		}
-	}
+    protected List<ConfigAttribute> processAnnotation(Annotation a) {
+        if (a instanceof Secured) {
+            a.value().collect { String token -> ((ConfigAttribute) new SecurityConfig(token)) }
+        }
+    }
 
-	protected boolean isService(Class<?> clazz) {
-		serviceClassNames.any { String name -> name == clazz.name }
-	}
+    protected boolean isService(Class<?> clazz) {
+        serviceClassNames.any { String name -> name == clazz.name }
+    }
 
-	/**
-	 * Dependency injection for current service class names.
-	 * @param names the names
-	 */
-	void setServiceClassNames(Collection<String> names) {
-		serviceClassNames = names
-	}
+    /**
+     * Dependency injection for current service class names.
+     * @param names the names
+     */
+    void setServiceClassNames(Collection<String> names) {
+        serviceClassNames = names
+    }
 }

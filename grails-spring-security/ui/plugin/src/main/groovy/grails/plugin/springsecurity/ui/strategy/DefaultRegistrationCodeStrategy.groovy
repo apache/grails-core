@@ -18,12 +18,12 @@
  */
 package grails.plugin.springsecurity.ui.strategy
 
+import groovy.transform.CompileStatic
 
 import grails.plugin.springsecurity.ui.RegisterCommand
 import grails.plugin.springsecurity.ui.RegistrationCode
 import grails.plugin.springsecurity.ui.ResetPasswordCommand
 import grails.plugin.springsecurity.ui.SpringSecurityUiService
-import groovy.transform.CompileStatic
 
 /**
  * @author <a href='mailto:burt@burtbeckwith.com'>Burt Beckwith</a>
@@ -31,53 +31,53 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class DefaultRegistrationCodeStrategy implements RegistrationCodeStrategy {
 
-	SpringSecurityUiService springSecurityUiService
+    SpringSecurityUiService springSecurityUiService
 
-	void updateRegistrationCode(Map properties, RegistrationCode registrationCode) {
-		springSecurityUiService.updateRegistrationCode properties, registrationCode
-	}
+    void updateRegistrationCode(Map properties, RegistrationCode registrationCode) {
+        springSecurityUiService.updateRegistrationCode properties, registrationCode
+    }
 
-	void deleteRegistrationCode(RegistrationCode registrationCode) {
-		springSecurityUiService.deleteRegistrationCode registrationCode
-	}
+    void deleteRegistrationCode(RegistrationCode registrationCode) {
+        springSecurityUiService.deleteRegistrationCode registrationCode
+    }
 
-	RegistrationCode register(user, String password) {
-		springSecurityUiService.register user, password
-	}
+    RegistrationCode register(user, String password) {
+        springSecurityUiService.register user, password
+    }
 
-	def verifyRegistration(String token) {
-		springSecurityUiService.verifyRegistration(token)
-	}
+    def verifyRegistration(String token) {
+        springSecurityUiService.verifyRegistration(token)
+    }
 
-	def validateForgotPasswordExtraSecurity(params,user,forgotPasswordExtraValidationDomainClassName, forgotPasswordExtraValidation, String validationUserLookUpProperty){
-		springSecurityUiService.validateForgotPasswordExtraSecurity(params,user,forgotPasswordExtraValidationDomainClassName,forgotPasswordExtraValidation,validationUserLookUpProperty)
-	}
+    def validateForgotPasswordExtraSecurity(params, user, forgotPasswordExtraValidationDomainClassName, forgotPasswordExtraValidation, String validationUserLookUpProperty) {
+        springSecurityUiService.validateForgotPasswordExtraSecurity(params, user, forgotPasswordExtraValidationDomainClassName, forgotPasswordExtraValidation, validationUserLookUpProperty)
+    }
 
-	def createUser(RegisterCommand command) {
-		springSecurityUiService.createUser command
-	}
+    def createUser(RegisterCommand command) {
+        springSecurityUiService.createUser command
+    }
 
-	def finishRegistration(RegistrationCode registrationCode) {
-		springSecurityUiService.finishRegistration registrationCode
-	}
+    def finishRegistration(RegistrationCode registrationCode) {
+        springSecurityUiService.finishRegistration registrationCode
+    }
 
-	RegistrationCode sendForgotPasswordMail(String username) {
+    RegistrationCode sendForgotPasswordMail(String username) {
         springSecurityUiService.sendForgotPasswordMail(username)
-	}
+    }
 
-	RegistrationCode sendForgotPasswordMail(String username, String emailAddress, Closure emailBodyGenerator) {
-        springSecurityUiService.sendForgotPasswordMail(username, emailAddress, emailBodyGenerator,true)
-	}
+    RegistrationCode sendForgotPasswordMail(String username, String emailAddress, Closure emailBodyGenerator) {
+        springSecurityUiService.sendForgotPasswordMail(username, emailAddress, emailBodyGenerator, true)
+    }
 
-	RegistrationCode sendForgotPasswordMail(String username,  String emailAddress,  Boolean sendMail) {
-		springSecurityUiService.sendForgotPasswordMail username, emailAddress, sendMail
-	}
+    RegistrationCode sendForgotPasswordMail(String username, String emailAddress, Boolean sendMail) {
+        springSecurityUiService.sendForgotPasswordMail username, emailAddress, sendMail
+    }
 
-	RegistrationCode sendForgotPasswordMail(String username, String emailAddress, Closure emailBodyGenerator, Boolean sendMail) {
-		springSecurityUiService.sendForgotPasswordMail username, emailAddress, emailBodyGenerator, sendMail
-	}
+    RegistrationCode sendForgotPasswordMail(String username, String emailAddress, Closure emailBodyGenerator, Boolean sendMail) {
+        springSecurityUiService.sendForgotPasswordMail username, emailAddress, emailBodyGenerator, sendMail
+    }
 
-	def resetPassword(ResetPasswordCommand command, RegistrationCode registrationCode) {
-		springSecurityUiService.resetPassword command, registrationCode
-	}
+    def resetPassword(ResetPasswordCommand command, RegistrationCode registrationCode) {
+        springSecurityUiService.resetPassword command, registrationCode
+    }
 }

@@ -18,27 +18,30 @@
  */
 package grails.plugin.springsecurity.rest
 
+import java.beans.PropertyDescriptor
+
+import groovy.util.logging.Slf4j
+
 import com.google.common.cache.CacheBuilder
 import com.google.common.cache.LoadingCache
+import org.pac4j.core.client.IndirectClient
+import org.pac4j.core.context.CallContext
+import org.pac4j.core.credentials.Credentials
+import org.pac4j.core.profile.UserProfile
+
+import org.springframework.beans.BeanWrapperImpl
+import org.springframework.security.core.authority.SimpleGrantedAuthority
+import org.springframework.security.core.context.SecurityContextHolder
+
+import grails.core.GrailsApplication
 import grails.plugin.springsecurity.rest.authentication.RestAuthenticationEventPublisher
 import grails.plugin.springsecurity.rest.oauth.OauthUser
 import grails.plugin.springsecurity.rest.oauth.OauthUserDetailsService
 import grails.plugin.springsecurity.rest.token.AccessToken
 import grails.plugin.springsecurity.rest.token.generation.TokenGenerator
 import grails.plugin.springsecurity.rest.token.storage.TokenStorageService
-import grails.core.GrailsApplication
 import grails.util.Holders
 import grails.web.mapping.LinkGenerator
-import groovy.util.logging.Slf4j
-import org.pac4j.core.client.IndirectClient
-import org.pac4j.core.context.CallContext
-import org.pac4j.core.credentials.Credentials
-import org.pac4j.core.profile.UserProfile
-import org.springframework.beans.BeanWrapperImpl
-import org.springframework.security.core.authority.SimpleGrantedAuthority
-import org.springframework.security.core.context.SecurityContextHolder
-
-import java.beans.PropertyDescriptor
 
 /**
  * Deals with pac4j library to fetch a user profile from the selected OAuth provider, and stores it on the security context
@@ -55,7 +58,7 @@ class RestOauthService {
     OauthUserDetailsService oauthUserDetailsService
     RestAuthenticationEventPublisher authenticationEventPublisher
 
-    private transient LoadingCache<String, IndirectClient> clientCache = CacheBuilder.newBuilder().<String, IndirectClient>build { String provider ->
+    private transient LoadingCache<String, IndirectClient> clientCache = CacheBuilder.newBuilder().<String, IndirectClient> build { String provider ->
         log.debug "Creating OAuth client for provider: ${provider}"
 
         def clientClass = grailsApplication.config["grails.plugin.springsecurity.rest.oauth.${provider}.client"]
@@ -68,9 +71,9 @@ class RestOauthService {
 
         BeanWrapperImpl clientInvokerHelper = new BeanWrapperImpl(client)
         for (PropertyDescriptor propertyDescriptor : clientInvokerHelper.getPropertyDescriptors()) {
-            if(propertyDescriptor.writeMethod) {
+            if (propertyDescriptor.writeMethod) {
                 String propertyName = propertyDescriptor.name
-                if(propertyName != "client" && grailsApplication.config.containsKey("grails.plugin.springsecurity.rest.oauth.${provider}.${propertyName}")) {
+                if (propertyName != 'client' && grailsApplication.config.containsKey("grails.plugin.springsecurity.rest.oauth.${provider}.${propertyName}")) {
                     clientInvokerHelper.setPropertyValue(propertyName, grailsApplication.config["grails.plugin.springsecurity.rest.oauth.${provider}.${propertyName}"])
                 }
             }
@@ -88,7 +91,7 @@ class RestOauthService {
         Credentials credentials = client.getCredentials(context).orElse(null)
         client.validateCredentials(context, credentials)
 
-        log.debug "Querying provider to fetch User ID"
+        log.debug 'Querying provider to fetch User ID'
         client.getUserProfile(context, credentials).orElse(null)
     }
 
@@ -106,7 +109,7 @@ class RestOauthService {
         AccessToken accessToken = tokenGenerator.generateAccessToken(userDetails)
         log.debug "Generated REST authentication token: ${accessToken}"
 
-        log.debug "Storing token on the token storage"
+        log.debug 'Storing token on the token storage'
         tokenStorageService.storeToken(accessToken)
 
         authenticationEventPublisher.publishTokenCreation(accessToken)

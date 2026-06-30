@@ -15,11 +15,12 @@
  */
 package grails.plugin.springsecurity.oauth2
 
+import groovy.transform.CompileStatic
+
 import grails.build.logging.ConsoleLogger
 import grails.build.logging.GrailsConsole
 import grails.codegen.model.Model
 import grails.dev.commands.GrailsApplicationCommand
-import groovy.transform.CompileStatic
 
 /**
  * Creates domain classes and updates config settings for the Spring Security OAuth2 plugin.
@@ -45,7 +46,7 @@ Example: ./gradlew runCommand "-Pargs=init-oauth2 com.yourapp User OAuthID"
     private Model oAuthIDClassModel
     private Map<String, String> templateAttributes
 
-    String description = "Creates domain class and update the config settings fpr the Grails Spring Security OAuth2 plugin"
+    String description = 'Creates domain class and update the config settings fpr the Grails Spring Security OAuth2 plugin'
 
     @Delegate
     ConsoleLogger consoleLogger = GrailsConsole.getInstance()
@@ -72,7 +73,7 @@ Example: ./gradlew runCommand "-Pargs=init-oauth2 com.yourapp User OAuthID"
                 .withWriterAppend { BufferedWriter writer ->
                     writer.newLine()
                     writer.newLine()
-                    writer.writeLine("// Added by the Spring Security OAuth2 Google Plugin:")
+                    writer.writeLine('// Added by the Spring Security OAuth2 Google Plugin:')
                     writer.writeLine("grails.plugin.springsecurity.oauth2.domainClass = '${packageName}.${oAuthIDClassModel.simpleName}'")
                 }
     }
@@ -85,10 +86,10 @@ Example: ./gradlew runCommand "-Pargs=init-oauth2 com.yourapp User OAuthID"
 
     private void initializeTemplateAttributes() {
         templateAttributes = Collections.unmodifiableMap([
-                userClassFullName : userClassModel.fullName,
-                userClassName     : userClassModel.simpleName,
+                userClassFullName: userClassModel.fullName,
+                userClassName: userClassModel.simpleName,
                 oAuthIDPackageName: packageName,
-                oAuthIDClassName  : oAuthIDClassModel.simpleName,
+                oAuthIDClassName: oAuthIDClassModel.simpleName,
         ])
     }
 

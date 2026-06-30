@@ -18,11 +18,13 @@
  */
 package grails.plugin.springsecurity.rest
 
-import grails.plugin.springsecurity.SecurityEventListener
 import groovy.transform.CompileStatic
+
 import org.springframework.context.ApplicationContextAware
 import org.springframework.context.ApplicationEvent
 import org.springframework.context.ApplicationListener
+
+import grails.plugin.springsecurity.SecurityEventListener
 
 /**
  * Registers as an event listener and delegates handling of security-related events
@@ -52,9 +54,9 @@ import org.springframework.context.ApplicationListener
 @CompileStatic
 public class RestSecurityEventListener extends SecurityEventListener implements ApplicationListener<ApplicationEvent>, ApplicationContextAware {
 
-    public void onApplicationEvent(final ApplicationEvent e) {
+    void onApplicationEvent(final ApplicationEvent e) {
         if (e instanceof RestTokenCreationEvent) {
-            call(e, "onRestTokenCreationEvent")
+            call(e, 'onRestTokenCreationEvent')
         } else {
             super.onApplicationEvent(e)
         }

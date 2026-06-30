@@ -18,9 +18,17 @@
  */
 package grails.plugin.springsecurity.rest
 
+import groovy.transform.InheritConstructors
+
 import com.nimbusds.jwt.JWT
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.PlainJWT
+import spock.lang.Issue
+import spock.lang.Specification
+
+import org.springframework.security.core.userdetails.User
+import org.springframework.security.core.userdetails.UsernameNotFoundException
+
 import grails.plugin.springsecurity.rest.authentication.RestAuthenticationEventPublisher
 import grails.plugin.springsecurity.rest.error.DefaultCallbackErrorHandler
 import grails.plugin.springsecurity.rest.token.AccessToken
@@ -28,11 +36,6 @@ import grails.plugin.springsecurity.rest.token.generation.jwt.AbstractJwtTokenGe
 import grails.plugin.springsecurity.rest.token.rendering.AccessTokenJsonRenderer
 import grails.plugin.springsecurity.rest.token.storage.TokenStorageService
 import grails.testing.web.controllers.ControllerUnitTest
-import groovy.transform.InheritConstructors
-import org.springframework.security.core.userdetails.User
-import org.springframework.security.core.userdetails.UsernameNotFoundException
-import spock.lang.Issue
-import spock.lang.Specification
 
 import static org.springframework.http.HttpStatus.*
 
@@ -45,7 +48,7 @@ class RestOauthControllerSpec extends Specification implements ControllerUnitTes
     private frontendCallbackBaseUrl = "http://config.com/welcome#token="
 
     def setup() {
-        grailsApplication.config.merge(['grails.plugin.springsecurity.rest.oauth.frontendCallbackUrl' : { String tokenValue ->
+        grailsApplication.config.merge(['grails.plugin.springsecurity.rest.oauth.frontendCallbackUrl': { String tokenValue ->
             frontendCallbackBaseUrl + tokenValue
         }])
 

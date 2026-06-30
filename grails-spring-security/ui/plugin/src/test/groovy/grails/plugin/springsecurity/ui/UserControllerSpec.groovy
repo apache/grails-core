@@ -18,12 +18,14 @@
  */
 package grails.plugin.springsecurity.ui
 
-import grails.testing.web.controllers.ControllerUnitTest
 import spock.lang.Specification
 import spock.lang.Unroll
 
+import grails.testing.web.controllers.ControllerUnitTest
+
 @Unroll
 class UserControllerSpec extends Specification implements ControllerUnitTest<UserController> {
+
     static final Map ADMIN_ROLE = [authority: "ROLE_ADMIN"]
     static final Map SUPER_ADMIN_ROLE = [authority: "ROLE_SUPER_ADMIN"]
     static final Map USER_ROLE = [authority: "ROLE_USER"]

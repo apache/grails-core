@@ -19,9 +19,10 @@
 package grails.plugin.springsecurity.rest.credentials
 
 import groovy.util.logging.Slf4j
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 
 import jakarta.servlet.http.HttpServletRequest
+
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 
 //tag::class[]
 /**
@@ -40,11 +41,11 @@ class DefaultJsonPayloadCredentialsExtractor extends AbstractJsonPayloadCredenti
             String username = jsonBody."${usernamePropertyName}"
             String password = jsonBody."${passwordPropertyName}"
 
-            log.debug "Extracted credentials from JSON payload. Username: ${username}, password: ${password?.size()?'[PROTECTED]':'[MISSING]'}"
+            log.debug "Extracted credentials from JSON payload. Username: ${username}, password: ${password?.size() ? '[PROTECTED]' : '[MISSING]'}"
 
             new UsernamePasswordAuthenticationToken(username, password)
         } else {
-            log.debug "No JSON body sent in the request"
+            log.debug 'No JSON body sent in the request'
             return null
         }
     }

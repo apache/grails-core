@@ -20,13 +20,13 @@
 import grails.codegen.model.Model
 
 description 'Creates a persistent token domain class for the Spring Security Core plugin', {
-	usage '''
+    usage '''
 grails s2-create-persistent-token [DOMAIN CLASS NAME]
 
 Example: grails s2-create-persistent-token com.yourapp.PersistentLogin
 '''
 
-	argument name: 'Domain class name', description: 'The domain class full name with package'
+    argument name: 'Domain class name', description: 'The domain class full name with package'
 }
 
 String fullClassName = args[0]
@@ -35,12 +35,12 @@ Model model = model(fullClassName)
 addStatus "\nCreating persistent token class $fullClassName"
 
 render template: template('PersistentLogin.groovy.template'),
-       destination: file("grails-app/domain/$model.packagePath/${model.simpleName}.groovy"),
-       model: model, overwrite: false
+        destination: file("grails-app/domain/$model.packagePath/${model.simpleName}.groovy"),
+        model: model, overwrite: false
 
 file('grails-app/conf/application.groovy').withWriterAppend { BufferedWriter writer ->
-	writer.newLine()
-	writer.writeLine 'grails.plugin.springsecurity.rememberMe.persistent = true'
-	writer.writeLine "grails.plugin.springsecurity.rememberMe.persistentToken.domainClassName = '$fullClassName'"
-	writer.newLine()
+    writer.newLine()
+    writer.writeLine 'grails.plugin.springsecurity.rememberMe.persistent = true'
+    writer.writeLine "grails.plugin.springsecurity.rememberMe.persistentToken.domainClassName = '$fullClassName'"
+    writer.newLine()
 }

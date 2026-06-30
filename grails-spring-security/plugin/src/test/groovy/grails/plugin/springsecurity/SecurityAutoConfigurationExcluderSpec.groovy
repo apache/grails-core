@@ -213,7 +213,7 @@ class SecurityAutoConfigurationExcluderSpec extends Specification {
         and: 'one of them registers SecurityAutoConfigurationExcluder as an AutoConfigurationImportFilter'
         allContents.any { content ->
             content.contains('org.springframework.boot.autoconfigure.AutoConfigurationImportFilter') &&
-                content.contains('grails.plugin.springsecurity.SecurityAutoConfigurationExcluder')
+                    content.contains('grails.plugin.springsecurity.SecurityAutoConfigurationExcluder')
         }
     }
 }

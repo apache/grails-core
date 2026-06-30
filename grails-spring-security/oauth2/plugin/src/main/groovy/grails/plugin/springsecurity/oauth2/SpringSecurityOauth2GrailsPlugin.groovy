@@ -19,10 +19,11 @@
 
 package grails.plugin.springsecurity.oauth2
 
+import groovy.util.logging.Slf4j
+
 import grails.plugin.springsecurity.ReflectionUtils
 import grails.plugin.springsecurity.SpringSecurityUtils
 import grails.plugins.Plugin
-import groovy.util.logging.Slf4j
 
 @Slf4j
 class SpringSecurityOauth2GrailsPlugin extends Plugin {
@@ -66,9 +67,9 @@ This plugin provides the capability to authenticate via oauth. Depends on grails
             }
 
             SpringSecurityUtils.loadSecondaryConfig('DefaultSpringSecurityOAuth2Config')
-            SpringSecurityUtils.securityConfig.controllerAnnotations.staticRules.add([pattern:'/oauth2/**', access:['permitAll']])
+            SpringSecurityUtils.securityConfig.controllerAnnotations.staticRules.add([pattern: '/oauth2/**', access: ['permitAll']])
 
-            grailsApplication.getArtefact('Domain','User')
+            grailsApplication.getArtefact('Domain', 'User')
 
             if (printStatusMessages) {
                 println('... finished configuring Spring Security OAuth2\n')

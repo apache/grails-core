@@ -18,6 +18,9 @@
  */
 package grails.plugin.springsecurity.rest.token.generation.jwt
 
+import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
+
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.JWSHeader
 import com.nimbusds.jose.JWSSigner
@@ -25,8 +28,7 @@ import com.nimbusds.jose.crypto.MACSigner
 import com.nimbusds.jwt.JWT
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
-import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
+
 import org.springframework.beans.factory.InitializingBean
 
 /**

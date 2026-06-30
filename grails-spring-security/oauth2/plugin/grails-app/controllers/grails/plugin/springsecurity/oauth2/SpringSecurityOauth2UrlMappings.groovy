@@ -33,9 +33,9 @@ class SpringSecurityOauth2UrlMappings {
             "/oauth2/$provider/callback"(controller: 'springSecurityOAuth2', action: 'callback')
             "/oauth2/$provider/success"(controller: 'springSecurityOAuth2', action: 'onSuccess')
             "/oauth2/$provider/failure"(controller: 'springSecurityOAuth2', action: 'onFailure')
-            "/oauth2/ask"(controller: 'springSecurityOAuth2', action: 'ask')
-            "/oauth2/linkaccount"(controller: 'springSecurityOAuth2', action: 'linkAccount')
-            "/oauth2/createaccount"(controller: 'springSecurityOAuth2', action: 'createAccount')
+            '/oauth2/ask'(controller: 'springSecurityOAuth2', action: 'ask')
+            '/oauth2/linkaccount'(controller: 'springSecurityOAuth2', action: 'linkAccount')
+            '/oauth2/createaccount'(controller: 'springSecurityOAuth2', action: 'createAccount')
             '500'(controller: 'login', action: 'auth', exception: OAuth2Exception)
         }
     }

@@ -18,15 +18,17 @@
  */
 package grails.plugin.springsecurity.rest
 
-import grails.plugin.springsecurity.rest.token.AccessToken
-import grails.plugin.springsecurity.rest.token.rendering.AccessTokenJsonRenderer
 import groovy.transform.CompileStatic
-import org.springframework.security.core.Authentication
-import org.springframework.security.web.authentication.AuthenticationSuccessHandler
 
 import jakarta.servlet.ServletException
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+
+import org.springframework.security.core.Authentication
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler
+
+import grails.plugin.springsecurity.rest.token.AccessToken
+import grails.plugin.springsecurity.rest.token.rendering.AccessTokenJsonRenderer
 
 /**
  * Generates a JSON response using a {@link AccessTokenJsonRenderer}.

@@ -25,21 +25,21 @@ import org.springframework.transaction.TransactionStatus
  */
 interface ErrorsStrategy {
 
-	/**
-	 * @param t the exception
-	 * @param bean a domain class or @Validateable instance
-	 * @param properties the properties being used to create or update the instance (or null if deleting)
-	 * @param source caller, to help determine how to handle the errors (typically the ui service or a controller)
-	 * @param operation where the problem happened, will typically be the method name
-	 * @param transactionStatus the current transactionStatus (to call setRollbackOnly(), etc.)
-	 */
-	void handleException(Throwable t, bean, Map properties, source, String operation, TransactionStatus transactionStatus)
+    /**
+     * @param t the exception
+     * @param bean a domain class or @Validateable instance
+     * @param properties the properties being used to create or update the instance (or null if deleting)
+     * @param source caller, to help determine how to handle the errors (typically the ui service or a controller)
+     * @param operation where the problem happened, will typically be the method name
+     * @param transactionStatus the current transactionStatus (to call setRollbackOnly(), etc.)
+     */
+    void handleException(Throwable t, bean, Map properties, source, String operation, TransactionStatus transactionStatus)
 
-	/**
-	 * @param bean a domain class or @Validateable instance
-	 * @param source caller, to help determine how to handle the errors (typically the ui service or a controller)
-	 * @param operation where the problem happened, will typically be the method name
-	 * @param transactionStatus the current transactionStatus (to call setRollbackOnly(), etc.)
-	 */
-	void handleValidationErrors(bean, source, String operation, TransactionStatus transactionStatus)
+    /**
+     * @param bean a domain class or @Validateable instance
+     * @param source caller, to help determine how to handle the errors (typically the ui service or a controller)
+     * @param operation where the problem happened, will typically be the method name
+     * @param transactionStatus the current transactionStatus (to call setRollbackOnly(), etc.)
+     */
+    void handleValidationErrors(bean, source, String operation, TransactionStatus transactionStatus)
 }

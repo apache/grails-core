@@ -16,11 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+
 import org.openqa.selenium.Dimension
-import org.openqa.selenium.phantomjs.PhantomJSDriver
-import org.openqa.selenium.remote.DesiredCapabilities
 import org.openqa.selenium.firefox.FirefoxDriver
 import org.openqa.selenium.firefox.FirefoxProfile
+import org.openqa.selenium.phantomjs.PhantomJSDriver
+import org.openqa.selenium.remote.DesiredCapabilities
 
 environments {
     phantomJs {

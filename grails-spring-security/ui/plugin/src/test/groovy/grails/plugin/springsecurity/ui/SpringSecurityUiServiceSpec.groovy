@@ -18,11 +18,12 @@
  */
 package grails.plugin.springsecurity.ui
 
+import spock.lang.Specification
+import spock.lang.Unroll
+
 import grails.plugin.springsecurity.SpringSecurityUtils
 import grails.plugin.springsecurity.ui.strategy.DefaultPropertiesStrategy
 import grails.testing.services.ServiceUnitTest
-import spock.lang.Specification
-import spock.lang.Unroll
 
 @Unroll
 class SpringSecurityUiServiceSpec extends Specification implements ServiceUnitTest<SpringSecurityUiService> {

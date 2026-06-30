@@ -18,15 +18,17 @@
  */
 package grails.plugin.springsecurity.rest
 
+import spock.lang.Specification
+import spock.lang.Subject
+
+import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.mock.web.MockHttpServletResponse
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException
+
 import grails.plugin.springsecurity.rest.token.AccessToken
 import grails.plugin.springsecurity.rest.token.bearer.BearerTokenAuthenticationFailureHandler
 import grails.plugin.springsecurity.rest.token.bearer.BearerTokenReader
 import grails.plugin.springsecurity.rest.token.storage.TokenNotFoundException
-import org.springframework.mock.web.MockHttpServletRequest
-import org.springframework.mock.web.MockHttpServletResponse
-import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException
-import spock.lang.Specification
-import spock.lang.Subject
 
 @Subject(BearerTokenAuthenticationFailureHandler)
 class BearerTokenAuthenticationFailureHandlerSpec extends Specification {
@@ -40,7 +42,7 @@ class BearerTokenAuthenticationFailureHandlerSpec extends Specification {
 
     def "when bad credentials credentials are sent, it responds 401"() {
         given:
-        def request  = new MockHttpServletRequest()
+        def request = new MockHttpServletRequest()
         def response = new MockHttpServletResponse()
 
         when:
@@ -49,12 +51,12 @@ class BearerTokenAuthenticationFailureHandlerSpec extends Specification {
 
         then:
         response.status == 401
-        response.getHeader( 'WWW-Authenticate' ) == 'Bearer'
+        response.getHeader('WWW-Authenticate') == 'Bearer'
     }
 
     def "it will send a 401 status and WWW-Authenticate header with an error param when credentials are invalid"() {
         given:
-        def request  = new MockHttpServletRequest()
+        def request = new MockHttpServletRequest()
         def response = new MockHttpServletResponse()
 
         when:

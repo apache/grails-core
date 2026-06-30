@@ -18,10 +18,11 @@
  */
 package grails.plugin.springsecurity.rest.credentials
 
-import grails.converters.JSON
 import groovy.transform.CompileStatic
 
 import jakarta.servlet.http.HttpServletRequest
+
+import grails.converters.JSON
 
 /**
  * Base class for JSON-based credentials extractors. It helps building a JSON object from the request body

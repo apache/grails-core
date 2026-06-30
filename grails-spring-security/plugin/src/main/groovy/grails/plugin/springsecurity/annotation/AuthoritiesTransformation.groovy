@@ -14,6 +14,7 @@
  */
 package grails.plugin.springsecurity.annotation
 
+import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.AnnotatedNode
 import org.codehaus.groovy.ast.AnnotationNode
@@ -27,9 +28,8 @@ import org.codehaus.groovy.control.messages.SyntaxErrorMessage
 import org.codehaus.groovy.syntax.SyntaxException
 import org.codehaus.groovy.transform.ASTTransformation
 import org.codehaus.groovy.transform.GroovyASTTransformation
-import org.springframework.util.StringUtils
 
-import groovy.transform.CompileStatic
+import org.springframework.util.StringUtils
 
 /**
  * See http://burtbeckwith.com/blog/?p=1398 for the motivation for this.
@@ -37,87 +37,87 @@ import groovy.transform.CompileStatic
  * @author Burt Beckwith
  */
 @CompileStatic
-@GroovyASTTransformation(phase=CompilePhase.CANONICALIZATION)
+@GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
 class AuthoritiesTransformation implements ASTTransformation {
 
-	protected static ClassNode SECURED = new ClassNode(Secured)
+    protected static ClassNode SECURED = new ClassNode(Secured)
 
-	void visit(ASTNode[] astNodes, SourceUnit sourceUnit) {
-		ASTNode firstNode = astNodes[0]
-		ASTNode secondNode = astNodes[1]
-		try {
-			if (!(firstNode instanceof AnnotationNode) || !(secondNode instanceof AnnotatedNode)) {
-				throw new IllegalArgumentException("Internal error: wrong types: ${firstNode.getClass().name} / ${secondNode.getClass().name}")
-			}
+    void visit(ASTNode[] astNodes, SourceUnit sourceUnit) {
+        ASTNode firstNode = astNodes[0]
+        ASTNode secondNode = astNodes[1]
+        try {
+            if (!(firstNode instanceof AnnotationNode) || !(secondNode instanceof AnnotatedNode)) {
+                throw new IllegalArgumentException("Internal error: wrong types: ${firstNode.getClass().name} / ${secondNode.getClass().name}")
+            }
 
-			AnnotationNode rolesAnnotationNode = (AnnotationNode) firstNode
-			AnnotatedNode annotatedNode = (AnnotatedNode) secondNode
+            AnnotationNode rolesAnnotationNode = (AnnotationNode) firstNode
+            AnnotatedNode annotatedNode = (AnnotatedNode) secondNode
 
-			AnnotationNode secured = createAnnotation(rolesAnnotationNode, sourceUnit)
-			if (secured) {
-				annotatedNode.addAnnotation secured
-			}
-		}
-		catch (e) {
-			reportError e.message, sourceUnit, firstNode
-		}
-	}
+            AnnotationNode secured = createAnnotation(rolesAnnotationNode, sourceUnit)
+            if (secured) {
+                annotatedNode.addAnnotation secured
+            }
+        }
+        catch (e) {
+            reportError e.message, sourceUnit, firstNode
+        }
+    }
 
-	protected AnnotationNode createAnnotation(AnnotationNode rolesNode, SourceUnit sourceUnit) throws IOException {
-		Expression value = rolesNode.members.value
-		if (!(value instanceof ConstantExpression)) {
-			reportError("annotation @Authorities value isn't a ConstantExpression: $value", sourceUnit, rolesNode)
-			return null
-		}
+    protected AnnotationNode createAnnotation(AnnotationNode rolesNode, SourceUnit sourceUnit) throws IOException {
+        Expression value = rolesNode.members.value
+        if (!(value instanceof ConstantExpression)) {
+            reportError("annotation @Authorities value isn't a ConstantExpression: $value", sourceUnit, rolesNode)
+            return null
+        }
 
-		String fieldName = value.text
-		String[] authorityNames = getAuthorityNames(fieldName, rolesNode, sourceUnit)
-		if (authorityNames == null) {
-			return null
-		}
+        String fieldName = value.text
+        String[] authorityNames = getAuthorityNames(fieldName, rolesNode, sourceUnit)
+        if (authorityNames == null) {
+            return null
+        }
 
-		buildAnnotationNode authorityNames
-	}
+        buildAnnotationNode authorityNames
+    }
 
-	protected AnnotationNode buildAnnotationNode(String[] authorityNames) {
-		AnnotationNode securedAnnotationNode = new AnnotationNode(SECURED)
-		List<Expression> nameExpressions = authorityNames.collect { String authorityName ->
-			new ConstantExpression(authorityName)
-		} as List<Expression>
-		securedAnnotationNode.addMember 'value', new ListExpression(nameExpressions)
-		securedAnnotationNode
-	}
+    protected AnnotationNode buildAnnotationNode(String[] authorityNames) {
+        AnnotationNode securedAnnotationNode = new AnnotationNode(SECURED)
+        List<Expression> nameExpressions = authorityNames.collect { String authorityName ->
+            new ConstantExpression(authorityName)
+        } as List<Expression>
+        securedAnnotationNode.addMember 'value', new ListExpression(nameExpressions)
+        securedAnnotationNode
+    }
 
-	protected String[] getAuthorityNames(String fieldName, AnnotationNode rolesNode, SourceUnit sourceUnit) throws IOException {
+    protected String[] getAuthorityNames(String fieldName, AnnotationNode rolesNode, SourceUnit sourceUnit) throws IOException {
 
-		Properties properties = new Properties()
-		File propertyFile = new File('roles.properties')
-		if (!propertyFile.exists()) {
-			reportError('Property file roles.properties not found', sourceUnit, rolesNode)
-			return null
-		}
+        Properties properties = new Properties()
+        File propertyFile = new File('roles.properties')
+        if (!propertyFile.exists()) {
+            reportError('Property file roles.properties not found', sourceUnit, rolesNode)
+            return null
+        }
 
-		properties.load new FileReader(propertyFile)
+        properties.load new FileReader(propertyFile)
 
-		def value = properties.getProperty(fieldName)
-		if (value == null) {
-			reportError("No value for property '$fieldName'", sourceUnit, rolesNode)
-			return null
-		}
+        def value = properties.getProperty(fieldName)
+        if (value == null) {
+            reportError("No value for property '$fieldName'", sourceUnit, rolesNode)
+            return null
+        }
 
-		List<String> names = []
-		for (String auth in StringUtils.commaDelimitedListToStringArray(value.toString())) {
-			auth = auth.trim()
-			if (auth) {
-				names << auth
-			}
-		}
+        List<String> names = []
+        for (String auth in StringUtils.commaDelimitedListToStringArray(value.toString())) {
+            auth = auth.trim()
+            if (auth) {
+                names << auth
+            }
+        }
 
-		names as String[]
-	}
+        names as String[]
+    }
 
-	protected void reportError(String message, SourceUnit sourceUnit, ASTNode node) {
-		SyntaxException se = new SyntaxException(message, node.lineNumber, node.columnNumber)
-		sourceUnit.errorCollector.addErrorAndContinue new SyntaxErrorMessage(se, sourceUnit)
-	}
+    protected void reportError(String message, SourceUnit sourceUnit, ASTNode node) {
+        SyntaxException se = new SyntaxException(message, node.lineNumber, node.columnNumber)
+        sourceUnit.errorCollector.addErrorAndContinue new SyntaxErrorMessage(se, sourceUnit)
+    }
 }

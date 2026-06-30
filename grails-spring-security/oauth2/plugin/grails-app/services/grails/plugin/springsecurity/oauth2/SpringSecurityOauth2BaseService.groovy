@@ -18,7 +18,16 @@
  */
 package grails.plugin.springsecurity.oauth2
 
+import groovy.util.logging.Slf4j
+
 import com.github.scribejava.core.model.OAuth2AccessToken
+import org.apache.commons.lang3.exception.ExceptionUtils
+
+import org.springframework.security.authentication.AuthenticationManager
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.core.AuthenticationException
+import org.springframework.security.core.userdetails.UserDetails
+
 import grails.core.GrailsApplication
 import grails.gorm.transactions.Transactional
 import grails.plugin.springsecurity.SpringSecurityUtils
@@ -30,12 +39,6 @@ import grails.plugin.springsecurity.oauth2.util.OAuth2ProviderConfiguration
 import grails.plugin.springsecurity.userdetails.GormUserDetailsService
 import grails.plugin.springsecurity.userdetails.GrailsUser
 import grails.plugin.springsecurity.userdetails.GrailsUserDetailsService
-import groovy.util.logging.Slf4j
-import org.apache.commons.lang3.exception.ExceptionUtils
-import org.springframework.security.authentication.AuthenticationManager
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
-import org.springframework.security.core.AuthenticationException
-import org.springframework.security.core.userdetails.UserDetails
 
 @Transactional
 @Slf4j
@@ -82,7 +85,7 @@ class SpringSecurityOauth2BaseService {
         try {
             authenticationManager.authenticate new UsernamePasswordAuthenticationToken(username, password)
         } catch (AuthenticationException exception) {
-            log.warn("Authentication is invalid")
+            log.warn('Authentication is invalid')
             log.trace(ExceptionUtils.getStackTrace(exception))
             valid = false
         }
@@ -115,8 +118,8 @@ class SpringSecurityOauth2BaseService {
         boolean passwordExpired = passwordExpiredPropertyName ? user."${passwordExpiredPropertyName}" : false
 
         // authorities
-        UserDetails userDetails = userDetailsService.loadUserByUsername(username,true)
-        def authorities= userDetails.authorities
+        UserDetails userDetails = userDetailsService.loadUserByUsername(username, true)
+        def authorities = userDetails.authorities
 
         oAuthToken.principal = new GrailsUser(username, password, enabled, !accountExpired, !passwordExpired,
                 !accountLocked, authorities ?: [GormUserDetailsService.NO_ROLE], user.id)
@@ -131,23 +134,23 @@ class SpringSecurityOauth2BaseService {
      * @param providerService
      */
     void registerProvider(OAuth2ProviderService providerService) throws OAuth2Exception {
-        log.debug("Registering provider: " + providerService.getProviderID())
+        log.debug('Registering provider: ' + providerService.getProviderID())
         if (providerServiceMap.containsKey(providerService.getProviderID())) {
             // There is already a provider under that name
-            log.warn("There is already a provider with the name " + providerService.getProviderID() + " registered")
+            log.warn('There is already a provider with the name ' + providerService.getProviderID() + ' registered')
         } else {
             String baseURL = getBaseUrl()
-            def callbackURL = getConfigValue(providerService.providerID, "callback") ? baseURL + getConfigValue(providerService.providerID, "callback") : baseURL + "/oauth2/" + providerService.getProviderID() + "/callback"
-            log.debug("Callback URL: " + callbackURL)
-            def successUrl = getConfigValue(providerService.providerID, "successUri") ? baseURL + getConfigValue(providerService.providerID, "successUri") : null
-            log.debug("Success URL: " + successUrl)
-            def failureUrl = getConfigValue(providerService.providerID, "failureUri") ? baseURL + getConfigValue(providerService.providerID, "failureUri") : null
-            log.debug("Failure URL: " + failureUrl)
-            def scopes = getConfigValue(providerService.providerID, "scopes") ?: null
-            log.debug("Additional Scopes: " + scopes)
-            def apiKey = System.getenv("${providerService.getProviderID().toUpperCase()}_API_KEY") ?: getConfigValue(providerService.providerID, "api_key")
-            def apiSecret = System.getenv("${providerService.getProviderID().toUpperCase()}_API_SECRET") ?: getConfigValue(providerService.providerID, "api_secret")
-            log.debug("API Key: " + apiKey + ", Secret: " + apiSecret)
+            def callbackURL = getConfigValue(providerService.providerID, 'callback') ? baseURL + getConfigValue(providerService.providerID, 'callback') : baseURL + '/oauth2/' + providerService.getProviderID() + '/callback'
+            log.debug('Callback URL: ' + callbackURL)
+            def successUrl = getConfigValue(providerService.providerID, 'successUri') ? baseURL + getConfigValue(providerService.providerID, 'successUri') : null
+            log.debug('Success URL: ' + successUrl)
+            def failureUrl = getConfigValue(providerService.providerID, 'failureUri') ? baseURL + getConfigValue(providerService.providerID, 'failureUri') : null
+            log.debug('Failure URL: ' + failureUrl)
+            def scopes = getConfigValue(providerService.providerID, 'scopes') ?: null
+            log.debug('Additional Scopes: ' + scopes)
+            def apiKey = System.getenv("${providerService.getProviderID().toUpperCase()}_API_KEY") ?: getConfigValue(providerService.providerID, 'api_key')
+            def apiSecret = System.getenv("${providerService.getProviderID().toUpperCase()}_API_SECRET") ?: getConfigValue(providerService.providerID, 'api_secret')
+            log.debug('API Key: ' + apiKey + ', Secret: ' + apiSecret)
             if (apiKey == null || apiKey.isEmpty()) {
                 throw new OAuth2Exception("API Key for provider '" + providerService.providerID + "' is missing")
             }
@@ -184,7 +187,7 @@ class SpringSecurityOauth2BaseService {
      */
     String getSuccessUrl(String providerName) {
         def providerService = getProviderService(providerName)
-        providerService.successUrl ?: baseUrl + "/oauth2/" + providerName + "/success"
+        providerService.successUrl ?: baseUrl + '/oauth2/' + providerName + '/success'
     }
 
     /**
@@ -193,7 +196,7 @@ class SpringSecurityOauth2BaseService {
      */
     String getFailureUrl(String providerName) {
         def providerService = getProviderService(providerName)
-        providerService.failureUrl ?: baseUrl + "/oauth2/" + providerName + "/success"
+        providerService.failureUrl ?: baseUrl + '/oauth2/' + providerName + '/success'
     }
 
     /**
@@ -211,7 +214,7 @@ class SpringSecurityOauth2BaseService {
      */
     OAuth2AbstractProviderService getProviderService(String providerID) {
         if (!providerServiceMap.get(providerID)) {
-            log.error("There is no providerService for " + providerID)
+            log.error('There is no providerService for ' + providerID)
             throw new OAuth2Exception("No provider '${providerID}'")
         }
         providerServiceMap.get(providerID)

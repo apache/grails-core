@@ -18,13 +18,16 @@
  */
 package grails.plugin.springsecurity.rest
 
-import grails.plugin.springsecurity.rest.authentication.RestAuthenticationEventPublisher
-import grails.plugin.springsecurity.rest.credentials.CredentialsExtractor
-import grails.plugin.springsecurity.rest.token.AccessToken
-import grails.plugin.springsecurity.rest.token.generation.TokenGenerator
-import grails.plugin.springsecurity.rest.token.storage.TokenStorageService
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+
+import jakarta.servlet.FilterChain
+import jakarta.servlet.ServletException
+import jakarta.servlet.ServletRequest
+import jakarta.servlet.ServletResponse
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
+
 import org.springframework.security.authentication.AuthenticationDetailsSource
 import org.springframework.security.authentication.AuthenticationManager
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
@@ -36,12 +39,11 @@ import org.springframework.security.web.authentication.AuthenticationFailureHand
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler
 import org.springframework.web.filter.GenericFilterBean
 
-import jakarta.servlet.FilterChain
-import jakarta.servlet.ServletException
-import jakarta.servlet.ServletRequest
-import jakarta.servlet.ServletResponse
-import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpServletResponse
+import grails.plugin.springsecurity.rest.authentication.RestAuthenticationEventPublisher
+import grails.plugin.springsecurity.rest.credentials.CredentialsExtractor
+import grails.plugin.springsecurity.rest.token.AccessToken
+import grails.plugin.springsecurity.rest.token.generation.TokenGenerator
+import grails.plugin.springsecurity.rest.token.storage.TokenStorageService
 
 /**
  * This filter starts the initial authentication flow. It uses the configured {@link AuthenticationManager} bean, allowing
@@ -80,7 +82,7 @@ class RestAuthenticationFilter extends GenericFilterBean {
 
         //Only apply filter to the configured URL
         if (requestMatcher.matches(httpServletRequest)) {
-            log.debug "Applying authentication filter to this request"
+            log.debug 'Applying authentication filter to this request'
 
             //Only POST is supported
             if (httpServletRequest.method != 'POST') {
@@ -93,18 +95,18 @@ class RestAuthenticationFilter extends GenericFilterBean {
             Authentication authenticationResult
 
             UsernamePasswordAuthenticationToken authenticationRequest = credentialsExtractor.extractCredentials(httpServletRequest)
-        
+
             boolean authenticationRequestIsCorrect = (authenticationRequest?.principal && authenticationRequest?.credentials)
-            
-            if(authenticationRequestIsCorrect){
+
+            if (authenticationRequestIsCorrect) {
                 authenticationRequest.details = authenticationDetailsSource.buildDetails(httpServletRequest)
-                
+
                 try {
-                    log.debug "Trying to authenticate the request"
+                    log.debug 'Trying to authenticate the request'
                     authenticationResult = authenticationManager.authenticate(authenticationRequest)
-              
+
                     if (authenticationResult.authenticated) {
-                        log.debug "Request authenticated. Storing the authentication result in the security context"
+                        log.debug 'Request authenticated. Storing the authentication result in the security context'
                         log.debug "Authentication result: ${authenticationResult}"
 
                         AccessToken accessToken = tokenGenerator.generateAccessToken(authenticationResult.principal as UserDetails)
@@ -115,21 +117,21 @@ class RestAuthenticationFilter extends GenericFilterBean {
                         authenticationSuccessHandler.onAuthenticationSuccess(httpServletRequest, httpServletResponse, accessToken)
                         SecurityContextHolder.context.setAuthentication(accessToken)
                     } else {
-                        log.debug "Not authenticated. Rest authentication token not generated."
+                        log.debug 'Not authenticated. Rest authentication token not generated.'
                     }
                 } catch (AuthenticationException ae) {
                     log.debug "Authentication failed: ${ae.message}"
                     authenticationFailureHandler.onAuthenticationFailure(httpServletRequest, httpServletResponse, ae)
                 }
-            
-            }else{
-                log.debug "Username and/or password parameters are missing."
-                if(!authentication){
+
+            } else {
+                log.debug 'Username and/or password parameters are missing.'
+                if (!authentication) {
                     log.debug "Setting status to ${HttpServletResponse.SC_BAD_REQUEST}"
                     httpServletResponse.setStatus(HttpServletResponse.SC_BAD_REQUEST)
                     return
-                }else{
-                    log.debug "Using authentication already in security context."
+                } else {
+                    log.debug 'Using authentication already in security context.'
                     authenticationResult = authentication
                 }
             }
@@ -137,7 +139,6 @@ class RestAuthenticationFilter extends GenericFilterBean {
         } else {
             chain.doFilter(request, response)
         }
-
 
     }
 }

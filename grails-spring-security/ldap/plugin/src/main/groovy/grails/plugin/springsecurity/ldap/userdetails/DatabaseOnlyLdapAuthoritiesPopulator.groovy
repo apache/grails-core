@@ -18,18 +18,18 @@
  */
 package grails.plugin.springsecurity.ldap.userdetails
 
-import grails.plugin.springsecurity.userdetails.GrailsUserDetailsService
 import groovy.transform.CompileStatic
 
 import org.springframework.beans.factory.InitializingBean
 import org.springframework.ldap.core.DirContextOperations
 import org.springframework.security.core.GrantedAuthority
-import org.springframework.security.core.authority.AuthorityUtils
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UsernameNotFoundException
 import org.springframework.security.ldap.userdetails.LdapAuthoritiesPopulator
 import org.springframework.util.Assert
+
+import grails.plugin.springsecurity.userdetails.GrailsUserDetailsService
 
 /**
  * @author <a href='mailto:burt@burtbeckwith.com'>Burt Beckwith</a>
@@ -37,44 +37,44 @@ import org.springframework.util.Assert
 @CompileStatic
 class DatabaseOnlyLdapAuthoritiesPopulator implements LdapAuthoritiesPopulator, InitializingBean {
 
-	protected GrantedAuthority defaultRole
+    protected GrantedAuthority defaultRole
 
-	/** Dependency injection for the user details service. */
-	GrailsUserDetailsService userDetailsService
+    /** Dependency injection for the user details service. */
+    GrailsUserDetailsService userDetailsService
 
-	Collection<GrantedAuthority> getGrantedAuthorities(DirContextOperations userData, String username) {
+    Collection<GrantedAuthority> getGrantedAuthorities(DirContextOperations userData, String username) {
 
-		def roles = [] as Set<GrantedAuthority>
-		if (defaultRole) {
-			roles << defaultRole
-		}
+        def roles = [] as Set<GrantedAuthority>
+        if (defaultRole) {
+            roles << defaultRole
+        }
 
-		UserDetails dbDetails
-		try {
-			dbDetails = userDetailsService.loadUserByUsername(username, true)
-		}
-		catch (UsernameNotFoundException ignored) {
-			// just looking for roles, so ignore the UsernameNotFoundException
-		}
+        UserDetails dbDetails
+        try {
+            dbDetails = userDetailsService.loadUserByUsername(username, true)
+        }
+        catch (UsernameNotFoundException ignored) {
+            // just looking for roles, so ignore the UsernameNotFoundException
+        }
 
-		if (dbDetails?.authorities != null) {
-			roles.addAll(dbDetails.authorities)
-		}
+        if (dbDetails?.authorities != null) {
+            roles.addAll(dbDetails.authorities)
+        }
 
-		roles
-	}
+        roles
+    }
 
-	/**
-	 * The default role which will be assigned to all users.
-	 *
-	 * @param defaultRoleName the role name, including any desired prefix.
-	 */
-	void setDefaultRole(String defaultRoleName) {
-		Assert.notNull defaultRoleName, 'The defaultRole property cannot be set to null'
-		defaultRole = new SimpleGrantedAuthority(defaultRoleName)
-	}
+    /**
+     * The default role which will be assigned to all users.
+     *
+     * @param defaultRoleName the role name, including any desired prefix.
+     */
+    void setDefaultRole(String defaultRoleName) {
+        Assert.notNull defaultRoleName, 'The defaultRole property cannot be set to null'
+        defaultRole = new SimpleGrantedAuthority(defaultRoleName)
+    }
 
-	void afterPropertiesSet() {
-		Assert.notNull userDetailsService, 'userDetailsService must be specified'
-	}
+    void afterPropertiesSet() {
+        Assert.notNull userDetailsService, 'userDetailsService must be specified'
+    }
 }

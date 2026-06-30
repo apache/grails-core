@@ -18,11 +18,13 @@
  */
 package grails.plugin.springsecurity.web.access.intercept
 
-import grails.plugin.springsecurity.AbstractUnitSpec
-import grails.plugin.springsecurity.InterceptedUrl
 import groovy.util.logging.Slf4j
+
 import org.springframework.mock.web.MockFilterChain
 import org.springframework.security.web.FilterInvocation
+
+import grails.plugin.springsecurity.AbstractUnitSpec
+import grails.plugin.springsecurity.InterceptedUrl
 
 /**
  * Unit tests for RequestmapFilterInvocationDefinition.
@@ -31,121 +33,122 @@ import org.springframework.security.web.FilterInvocation
  */
 class RequestmapFilterInvocationDefinitionSpec extends AbstractUnitSpec {
 
-	private RequestmapFilterInvocationDefinition fid = new TestRequestmapFilterInvocationDefinition()
+    private RequestmapFilterInvocationDefinition fid = new TestRequestmapFilterInvocationDefinition()
 
-	void 'split'() {
-		expect:
-		['ROLE_1', 'ROLE_2', 'ROLE_3', 'ROLE_4', 'ROLE_5'] == fid.split('ROLE_1, ROLE_2,,,ROLE_3 ,ROLE_4,ROLE_5')
-		['hasAnyRole("ROLE_1","ROLE_2")'] == fid.split('hasAnyRole("ROLE_1","ROLE_2")')
-	}
+    void 'split'() {
+        expect:
+        ['ROLE_1', 'ROLE_2', 'ROLE_3', 'ROLE_4', 'ROLE_5'] == fid.split('ROLE_1, ROLE_2,,,ROLE_3 ,ROLE_4,ROLE_5')
+        ['hasAnyRole("ROLE_1","ROLE_2")'] == fid.split('hasAnyRole("ROLE_1","ROLE_2")')
+    }
 
-	void 'storeMapping'() {
-		expect:
-		!fid.configAttributeMap
+    void 'storeMapping'() {
+        expect:
+        !fid.configAttributeMap
 
-		when:
-		fid.storeMapping '/foo/bar', null, ['ROLE_ADMIN']
+        when:
+        fid.storeMapping '/foo/bar', null, ['ROLE_ADMIN']
 
-		then:
-		1 == fid.configAttributeMap.size()
+        then:
+        1 == fid.configAttributeMap.size()
 
-		when:
-		fid.storeMapping '/foo/bar', null, ['ROLE_USER']
+        when:
+        fid.storeMapping '/foo/bar', null, ['ROLE_USER']
 
-		then:
-		1 == fid.configAttributeMap.size()
+        then:
+        1 == fid.configAttributeMap.size()
 
-		when:
-		fid.storeMapping '/other/path', null, ['ROLE_SUPERUSER']
+        when:
+        fid.storeMapping '/other/path', null, ['ROLE_SUPERUSER']
 
-		then:
-		2 == fid.configAttributeMap.size()
-	}
+        then:
+        2 == fid.configAttributeMap.size()
+    }
 
-	void 'reset'() {
-		when:
-		fid.roleVoter = applicationContext.getBean('roleVoter')
-		fid.authenticatedVoter = applicationContext.getBean('authenticatedVoter')
+    void 'reset'() {
+        when:
+        fid.roleVoter = applicationContext.getBean('roleVoter')
+        fid.authenticatedVoter = applicationContext.getBean('authenticatedVoter')
 
-		then:
-		!fid.configAttributeMap
+        then:
+        !fid.configAttributeMap
 
-		when:
-		fid.reset()
+        when:
+        fid.reset()
 
-		then:
-		2 == fid.configAttributeMap.size()
-	}
+        then:
+        2 == fid.configAttributeMap.size()
+    }
 
-	void 'initialize'() {
-		when:
-		fid.roleVoter = applicationContext.getBean('roleVoter')
-		fid.authenticatedVoter = applicationContext.getBean('authenticatedVoter')
+    void 'initialize'() {
+        when:
+        fid.roleVoter = applicationContext.getBean('roleVoter')
+        fid.authenticatedVoter = applicationContext.getBean('authenticatedVoter')
 
-		then:
-		!fid.configAttributeMap
+        then:
+        !fid.configAttributeMap
 
-		when:
-		fid.initialize()
+        when:
+        fid.initialize()
 
-		then:
-		2 == fid.configAttributeMap.size()
+        then:
+        2 == fid.configAttributeMap.size()
 
-		when:
-		fid.resetConfigs()
+        when:
+        fid.resetConfigs()
 
-		fid.initialize()
+        fid.initialize()
 
-		then:
-		!fid.configAttributeMap
-	}
+        then:
+        !fid.configAttributeMap
+    }
 
-	void 'determineUrl'() {
-		when:
-		def chain = new MockFilterChain()
-		request.contextPath = '/context'
+    void 'determineUrl'() {
+        when:
+        def chain = new MockFilterChain()
+        request.contextPath = '/context'
 
-		request.requestURI = '/context/foo'
+        request.requestURI = '/context/foo'
 
-		then:
-		'/foo' == fid.determineUrl(new FilterInvocation(request, response, chain))
+        then:
+        '/foo' == fid.determineUrl(new FilterInvocation(request, response, chain))
 
-		when:
-		request.requestURI = '/context/fOo/Bar?x=1&y=2'
+        when:
+        request.requestURI = '/context/fOo/Bar?x=1&y=2'
 
-		then:
-		'/foo/bar' == fid.determineUrl(new FilterInvocation(request, response, chain))
-	}
+        then:
+        '/foo/bar' == fid.determineUrl(new FilterInvocation(request, response, chain))
+    }
 
-	void "test determineUrl with segmented url"() {
-		when:
-		def chain = new MockFilterChain()
-		request.contextPath = '/context'
-		request.requestURI = '/context/foo;f1=WWW/bar;s1=1;s2=2/index.html;i1=1;i2=2'
+    void "test determineUrl with segmented url"() {
+        when:
+        def chain = new MockFilterChain()
+        request.contextPath = '/context'
+        request.requestURI = '/context/foo;f1=WWW/bar;s1=1;s2=2/index.html;i1=1;i2=2'
 
-		then:
-		'/foo/bar/index.html' == fid.determineUrl(new FilterInvocation(request, response, chain))
-	}
+        then:
+        '/foo/bar/index.html' == fid.determineUrl(new FilterInvocation(request, response, chain))
+    }
 
-	void "test determineUrl context path and query params are stripped from url"() {
-		when:
-		def chain = new MockFilterChain()
-		request.contextPath = '/context'
-		request.requestURI = '/context/foo/bar/index.html?type=HelloWorld'
+    void "test determineUrl context path and query params are stripped from url"() {
+        when:
+        def chain = new MockFilterChain()
+        request.contextPath = '/context'
+        request.requestURI = '/context/foo/bar/index.html?type=HelloWorld'
 
-		then:
-		'/foo/bar/index.html' == fid.determineUrl(new FilterInvocation(request, response, chain))
-	}
+        then:
+        '/foo/bar/index.html' == fid.determineUrl(new FilterInvocation(request, response, chain))
+    }
 
-	void 'supports'() {
-		expect:
-		fid.supports FilterInvocation
-	}
+    void 'supports'() {
+        expect:
+        fid.supports FilterInvocation
+    }
 }
 
 @Slf4j
 class TestRequestmapFilterInvocationDefinition extends RequestmapFilterInvocationDefinition {
-	protected List<InterceptedUrl> loadRequestmaps() {
-		[new InterceptedUrl('/foo/bar', ['ROLE_USER'], null), new InterceptedUrl('/admin/**', ['ROLE_ADMIN'], null)]
-	}
+
+    protected List<InterceptedUrl> loadRequestmaps() {
+        [new InterceptedUrl('/foo/bar', ['ROLE_USER'], null), new InterceptedUrl('/admin/**', ['ROLE_ADMIN'], null)]
+    }
 }

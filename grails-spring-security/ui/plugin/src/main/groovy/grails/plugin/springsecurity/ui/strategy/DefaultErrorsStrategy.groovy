@@ -18,9 +18,11 @@
  */
 package grails.plugin.springsecurity.ui.strategy
 
-import grails.plugin.springsecurity.ui.SpringSecurityUiService
 import groovy.transform.CompileStatic
+
 import org.springframework.transaction.TransactionStatus
+
+import grails.plugin.springsecurity.ui.SpringSecurityUiService
 
 /**
  * @author <a href='mailto:burt@burtbeckwith.com'>Burt Beckwith</a>
@@ -28,14 +30,14 @@ import org.springframework.transaction.TransactionStatus
 @CompileStatic
 class DefaultErrorsStrategy implements ErrorsStrategy {
 
-	SpringSecurityUiService springSecurityUiService
+    SpringSecurityUiService springSecurityUiService
 
-	void handleValidationErrors(bean, source, String operation, TransactionStatus transactionStatus) {
-		springSecurityUiService.handleValidationErrors bean, source, operation, transactionStatus
-	}
+    void handleValidationErrors(bean, source, String operation, TransactionStatus transactionStatus) {
+        springSecurityUiService.handleValidationErrors bean, source, operation, transactionStatus
+    }
 
-	void handleException(Throwable t, bean, Map properties, source, String operation,
-			TransactionStatus transactionStatus) {
-		springSecurityUiService.handleException t, bean, properties, source, operation, transactionStatus
-	}
+    void handleException(Throwable t, bean, Map properties, source, String operation,
+                         TransactionStatus transactionStatus) {
+        springSecurityUiService.handleException t, bean, properties, source, operation, transactionStatus
+    }
 }

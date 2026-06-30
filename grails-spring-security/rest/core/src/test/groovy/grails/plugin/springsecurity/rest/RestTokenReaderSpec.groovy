@@ -18,12 +18,14 @@
  */
 package grails.plugin.springsecurity.rest
 
-import grails.plugin.springsecurity.rest.token.reader.HttpHeaderTokenReader
-import org.springframework.mock.web.MockHttpServletRequest
-import org.springframework.mock.web.MockHttpServletResponse
 import spock.lang.Specification
 import spock.lang.Subject
 import spock.lang.Unroll
+
+import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.mock.web.MockHttpServletResponse
+
+import grails.plugin.springsecurity.rest.token.reader.HttpHeaderTokenReader
 
 @Subject(HttpHeaderTokenReader)
 class RestTokenReaderSpec extends Specification {
@@ -35,18 +37,18 @@ class RestTokenReaderSpec extends Specification {
 
     @Unroll
     def "token value can be read from a custom header in a #method request"() {
-        def token  = 'mytokenvalue'
+        def token = 'mytokenvalue'
         def header = 'mycustomheader'
 
         tokenReader.headerName = header
-        request.addHeader( header, token )
+        request.addHeader(header, token)
         request.method = method
 
         expect:
         tokenReader.findToken(request).accessToken == token
 
         where:
-        method << [ 'GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS' ]
+        method << ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
     }
 
 }

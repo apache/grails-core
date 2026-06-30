@@ -18,13 +18,16 @@
  */
 package grails.plugin.springsecurity.rest.token.generation
 
-import grails.plugin.springsecurity.rest.token.AccessToken
+import java.security.SecureRandom
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+
 import org.apache.commons.lang3.RandomStringUtils
+
 import org.springframework.security.core.userdetails.UserDetails
 
-import java.security.SecureRandom
+import grails.plugin.springsecurity.rest.token.AccessToken
 
 /**
  * A {@link TokenGenerator} implementation using {@link java.security.SecureRandom}

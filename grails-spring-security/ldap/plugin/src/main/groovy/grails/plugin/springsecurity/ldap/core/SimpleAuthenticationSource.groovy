@@ -29,6 +29,7 @@ import org.springframework.ldap.core.AuthenticationSource
  */
 @CompileStatic
 class SimpleAuthenticationSource implements AuthenticationSource {
-	String credentials
-	String principal
+
+    String credentials
+    String principal
 }

@@ -18,8 +18,9 @@
  */
 package grails.plugin.springsecurity.ui.strategy
 
-import grails.plugin.springsecurity.ui.SpringSecurityUiService
 import groovy.transform.CompileStatic
+
+import grails.plugin.springsecurity.ui.SpringSecurityUiService
 
 /**
  * @author <a href='mailto:burt@burtbeckwith.com'>Burt Beckwith</a>
@@ -27,53 +28,53 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class DefaultAclStrategy implements AclStrategy {
 
-	SpringSecurityUiService springSecurityUiService
+    SpringSecurityUiService springSecurityUiService
 
-	def saveAclClass(Map properties) {
-		springSecurityUiService.saveAclClass properties
-	}
+    def saveAclClass(Map properties) {
+        springSecurityUiService.saveAclClass properties
+    }
 
-	void updateAclClass(Map properties, aclClass) {
-		springSecurityUiService.updateAclClass properties, aclClass
-	}
+    void updateAclClass(Map properties, aclClass) {
+        springSecurityUiService.updateAclClass properties, aclClass
+    }
 
-	void deleteAclClass(aclClass) {
-		springSecurityUiService.deleteAclClass aclClass
-	}
+    void deleteAclClass(aclClass) {
+        springSecurityUiService.deleteAclClass aclClass
+    }
 
-	def saveAclEntry(Map properties) {
-		springSecurityUiService.saveAclEntry properties
-	}
+    def saveAclEntry(Map properties) {
+        springSecurityUiService.saveAclEntry properties
+    }
 
-	void updateAclEntry(Map properties, aclEntry) {
-		springSecurityUiService.updateAclEntry properties, aclEntry
-	}
+    void updateAclEntry(Map properties, aclEntry) {
+        springSecurityUiService.updateAclEntry properties, aclEntry
+    }
 
-	void deleteAclEntry(aclEntry) {
-		springSecurityUiService.deleteAclEntry aclEntry
-	}
+    void deleteAclEntry(aclEntry) {
+        springSecurityUiService.deleteAclEntry aclEntry
+    }
 
-	def saveAclSid(Map properties) {
-		springSecurityUiService.saveAclSid properties
-	}
+    def saveAclSid(Map properties) {
+        springSecurityUiService.saveAclSid properties
+    }
 
-	void updateAclSid(Map properties, aclSid) {
-		springSecurityUiService.updateAclSid properties, aclSid
-	}
+    void updateAclSid(Map properties, aclSid) {
+        springSecurityUiService.updateAclSid properties, aclSid
+    }
 
-	void deleteAclSid(aclSid) {
-		springSecurityUiService.deleteAclSid aclSid
-	}
+    void deleteAclSid(aclSid) {
+        springSecurityUiService.deleteAclSid aclSid
+    }
 
-	def saveAclObjectIdentity(Map properties) {
-		springSecurityUiService.saveAclObjectIdentity properties
-	}
+    def saveAclObjectIdentity(Map properties) {
+        springSecurityUiService.saveAclObjectIdentity properties
+    }
 
-	void updateAclObjectIdentity(Map properties, aclObjectIdentity) {
-		springSecurityUiService.updateAclObjectIdentity properties, aclObjectIdentity
-	}
+    void updateAclObjectIdentity(Map properties, aclObjectIdentity) {
+        springSecurityUiService.updateAclObjectIdentity properties, aclObjectIdentity
+    }
 
-	void deleteAclObjectIdentity(aclObjectIdentity) {
-		springSecurityUiService.deleteAclObjectIdentity aclObjectIdentity
-	}
+    void deleteAclObjectIdentity(aclObjectIdentity) {
+        springSecurityUiService.deleteAclObjectIdentity aclObjectIdentity
+    }
 }

@@ -18,8 +18,9 @@
  */
 package rest
 
-import grails.plugins.rest.client.RestResponse
 import spock.lang.Unroll
+
+import grails.plugins.rest.client.RestResponse
 
 class RestLogoutFilterSpec extends AbstractRestSpec {
 
@@ -80,11 +81,11 @@ class RestLogoutFilterSpec extends AbstractRestSpec {
         response.status == statusCode
 
         where:
-        httpMethod  | statusCode
-        'get'       | 405
-        'post'      | 200
-        'put'       | 405
-        'delete'    | 405
+        httpMethod | statusCode
+        'get'      | 405
+        'post'     | 200
+        'put'      | 405
+        'delete'   | 405
     }
 
 

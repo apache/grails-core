@@ -26,14 +26,14 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class InvalidValueException extends RuntimeException {
 
-	final String propertyName
-	final String paramName
-	final instance
+    final String propertyName
+    final String paramName
+    final instance
 
-	InvalidValueException(String propertyName, String paramName, instance, Throwable cause) {
-		super("Problem setting property $propertyName", cause)
-		this.propertyName = propertyName
-		this.paramName = paramName
-		this.instance = instance
-	}
+    InvalidValueException(String propertyName, String paramName, instance, Throwable cause) {
+        super("Problem setting property $propertyName", cause)
+        this.propertyName = propertyName
+        this.paramName = paramName
+        this.instance = instance
+    }
 }

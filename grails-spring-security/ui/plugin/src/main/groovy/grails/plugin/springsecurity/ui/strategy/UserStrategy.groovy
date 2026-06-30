@@ -23,9 +23,9 @@ package grails.plugin.springsecurity.ui.strategy
  */
 interface UserStrategy {
 
-	def saveUser(Map properties, List<String> roleNames, String password)
+    def saveUser(Map properties, List<String> roleNames, String password)
 
-	void updateUser(Map properties, user, List<String> roleNames)
+    void updateUser(Map properties, user, List<String> roleNames)
 
-	void deleteUser(user)
+    void deleteUser(user)
 }

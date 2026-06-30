@@ -18,9 +18,11 @@
  */
 package grails.plugin.springsecurity.ui.strategy
 
-import grails.plugin.springsecurity.ui.SpringSecurityUiService
 import groovy.transform.CompileStatic
+
 import org.springframework.transaction.TransactionStatus
+
+import grails.plugin.springsecurity.ui.SpringSecurityUiService
 
 /**
  * @author <a href='mailto:burt@burtbeckwith.com'>Burt Beckwith</a>
@@ -28,21 +30,21 @@ import org.springframework.transaction.TransactionStatus
 @CompileStatic
 class DefaultPropertiesStrategy implements PropertiesStrategy {
 
-	SpringSecurityUiService springSecurityUiService
+    SpringSecurityUiService springSecurityUiService
 
-	Map<Class<?>, Map<String, String>> findClassMappings() {
-		springSecurityUiService.findClassMappings()
-	}
+    Map<Class<?>, Map<String, String>> findClassMappings() {
+        springSecurityUiService.findClassMappings()
+    }
 
-	def getProperty(instance, String paramName) {
-		springSecurityUiService.getProperty instance, paramName
-	}
+    def getProperty(instance, String paramName) {
+        springSecurityUiService.getProperty instance, paramName
+    }
 
-	def setProperties(Map data, instanceOrClass, TransactionStatus transactionStatus) {
-		springSecurityUiService.setProperties data, instanceOrClass, transactionStatus
-	}
+    def setProperties(Map data, instanceOrClass, TransactionStatus transactionStatus) {
+        springSecurityUiService.setProperties data, instanceOrClass, transactionStatus
+    }
 
-	String paramNameToPropertyName(String paramName, String controllerName) {
-		springSecurityUiService.paramNameToPropertyName paramName, controllerName
-	}
+    String paramNameToPropertyName(String paramName, String controllerName) {
+        springSecurityUiService.paramNameToPropertyName paramName, controllerName
+    }
 }

@@ -18,15 +18,17 @@
  */
 package grails.plugin.springsecurity.rest.token.storage
 
-import grails.plugin.springsecurity.rest.token.AccessToken
-import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.Authentication
+import org.springframework.security.core.userdetails.UserDetails
+
+import grails.plugin.springsecurity.rest.token.AccessToken
 
 /**
  * Implementations of this trait are responsible to load user information from a token storage system, and to store
  * token information into it.
  */
 trait TokenStorageService {
+
     /**
      * Returns a principal object given the passed token value
      * @throws TokenNotFoundException if no token is found in the storage

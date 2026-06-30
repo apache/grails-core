@@ -18,11 +18,11 @@
  */
 package grails.plugin.springsecurity.authentication
 
+import groovy.transform.CompileStatic
+
 import org.springframework.security.authentication.AuthenticationProvider
 import org.springframework.security.core.Authentication
 import org.springframework.security.core.AuthenticationException
-
-import groovy.transform.CompileStatic
 
 /**
  * @author Burt Beckwith
@@ -30,11 +30,11 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class GrailsAnonymousAuthenticationProvider implements AuthenticationProvider {
 
-	Authentication authenticate(Authentication authentication) throws AuthenticationException {
-		supports(authentication.getClass()) ? authentication : null
-	}
+    Authentication authenticate(Authentication authentication) throws AuthenticationException {
+        supports(authentication.getClass()) ? authentication : null
+    }
 
-	boolean supports(Class<?> authenticationClass) {
-		GrailsAnonymousAuthenticationToken.isAssignableFrom authenticationClass
-	}
+    boolean supports(Class<?> authenticationClass) {
+        GrailsAnonymousAuthenticationToken.isAssignableFrom authenticationClass
+    }
 }

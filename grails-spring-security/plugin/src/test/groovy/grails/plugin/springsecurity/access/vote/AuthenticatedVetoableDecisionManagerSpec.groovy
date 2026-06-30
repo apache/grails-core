@@ -18,7 +18,6 @@
  */
 package grails.plugin.springsecurity.access.vote
 
-import grails.plugin.springsecurity.AbstractUnitSpec
 import org.springframework.security.access.AccessDecisionVoter
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.access.ConfigAttribute
@@ -32,6 +31,8 @@ import org.springframework.security.core.Authentication
 import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 
+import grails.plugin.springsecurity.AbstractUnitSpec
+
 /**
  * Unit tests for AuthenticatedVetoableDecisionManager.
  *
@@ -39,97 +40,100 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority
  */
 class AuthenticatedVetoableDecisionManagerSpec extends AbstractUnitSpec {
 
-	protected AccessDecisionVoter UnsupportedVoter = new AccessDecisionVoter(){
-		@Override
-		boolean supports(ConfigAttribute attribute) {
-			return false
-		}
+    protected AccessDecisionVoter UnsupportedVoter = new AccessDecisionVoter() {
 
-		@Override
-		int vote(Authentication authentication, Object object, Collection collection) {
-			return ACCESS_GRANTED
-		}
+        @Override
+        boolean supports(ConfigAttribute attribute) {
+            return false
+        }
 
-		@Override
-		boolean supports(Class clazz) {
-			return clazz.equals(Object.class)
-		}
-	}
-	private AuthenticatedVetoableDecisionManager manager = new AuthenticatedVetoableDecisionManager([new AuthenticatedVoter(), new RoleVoter()])
-	private AuthenticatedVetoableDecisionManager unsupportedVoterManager = new AuthenticatedVetoableDecisionManager([UnsupportedVoter])
-	void 'decide with one role'() {
-		when:
-			
-		manager.decide createAuthentication(['ROLE_USER']), null, createDefinition(['ROLE_USER', 'ROLE_ADMIN'])
+        @Override
+        int vote(Authentication authentication, Object object, Collection collection) {
+            return ACCESS_GRANTED
+        }
 
-		then:
-		notThrown AccessDeniedException
-	}
+        @Override
+        boolean supports(Class clazz) {
+            return clazz.equals(Object.class)
+        }
+    }
+    private AuthenticatedVetoableDecisionManager manager = new AuthenticatedVetoableDecisionManager([new AuthenticatedVoter(), new RoleVoter()])
+    private AuthenticatedVetoableDecisionManager unsupportedVoterManager = new AuthenticatedVetoableDecisionManager([UnsupportedVoter])
 
-	void 'decide with more than required roles'() {
-		when:
-		manager.decide createAuthentication(['ROLE_USER', 'ROLE_ADMIN']), null, createDefinition(['ROLE_USER'])
+    void 'decide with one role'() {
+        when:
 
-		then:
-		notThrown AccessDeniedException
-	}
+        manager.decide createAuthentication(['ROLE_USER']), null, createDefinition(['ROLE_USER', 'ROLE_ADMIN'])
 
-	void 'decide insufficient roles'() {
-		when:
-		manager.decide createAuthentication(['ROLE_USER']), null, createDefinition(['ROLE_ADMIN'])
+        then:
+        notThrown AccessDeniedException
+    }
 
-		then:
-		thrown AccessDeniedException
-	}
+    void 'decide with more than required roles'() {
+        when:
+        manager.decide createAuthentication(['ROLE_USER', 'ROLE_ADMIN']), null, createDefinition(['ROLE_USER'])
 
-	void 'decide with IS_AUTHENTICATED_FULLY'() {
-		when:
-		manager.decide createAuthentication(['ROLE_USER']), null, createDefinition(['ROLE_USER', 'IS_AUTHENTICATED_FULLY'])
+        then:
+        notThrown AccessDeniedException
+    }
 
-		then:
-		notThrown AccessDeniedException
-	}
+    void 'decide insufficient roles'() {
+        when:
+        manager.decide createAuthentication(['ROLE_USER']), null, createDefinition(['ROLE_ADMIN'])
 
-	void 'decide with IS_AUTHENTICATED_FULLY and remember-me'() {
-		when:
-		def auth = new RememberMeAuthenticationToken('key', 'principal', namesToAuthorities(['ROLE_USER']))
-		manager.decide auth, null, createDefinition(['ROLE_USER', 'IS_AUTHENTICATED_FULLY'])
+        then:
+        thrown AccessDeniedException
+    }
 
-		then:
-		thrown AccessDeniedException
-	}
+    void 'decide with IS_AUTHENTICATED_FULLY'() {
+        when:
+        manager.decide createAuthentication(['ROLE_USER']), null, createDefinition(['ROLE_USER', 'IS_AUTHENTICATED_FULLY'])
 
-	void 'decide with AnonymousAuthenticationToken'() {
-		when:
-		def auth = new AnonymousAuthenticationToken('key', 'principal', namesToAuthorities(['ROLE_USER']))
-		manager.decide auth, null, createDefinition(['ROLE_USER', 'IS_AUTHENTICATED_FULLY'])
+        then:
+        notThrown AccessDeniedException
+    }
 
-		then:
-		thrown AccessDeniedException
-	}
-	
-	void 'should succeed with supported object'(){
-		when:
-			unsupportedVoterManager.decide createAuthentication([]), new Object(), createDefinition(['ROLE_USER'])
-		then:
-			notThrown AccessDeniedException
-	}
-	void 'should fail with unsupported object'(){
-		when:
-			unsupportedVoterManager.decide createAuthentication([]), 'not object', createDefinition(['ROLE_USER'])
-		then:
-			thrown AccessDeniedException
-	}
+    void 'decide with IS_AUTHENTICATED_FULLY and remember-me'() {
+        when:
+        def auth = new RememberMeAuthenticationToken('key', 'principal', namesToAuthorities(['ROLE_USER']))
+        manager.decide auth, null, createDefinition(['ROLE_USER', 'IS_AUTHENTICATED_FULLY'])
 
-	private Authentication createAuthentication(roleNames) {
-		new TestingAuthenticationToken(null, null, namesToAuthorities(roleNames))
-	}
+        then:
+        thrown AccessDeniedException
+    }
 
-	private List<GrantedAuthority> namesToAuthorities(roleNames) {
-		roleNames.collect { new SimpleGrantedAuthority(it) }
-	}
+    void 'decide with AnonymousAuthenticationToken'() {
+        when:
+        def auth = new AnonymousAuthenticationToken('key', 'principal', namesToAuthorities(['ROLE_USER']))
+        manager.decide auth, null, createDefinition(['ROLE_USER', 'IS_AUTHENTICATED_FULLY'])
 
-	private createDefinition(roleNames) {
-		roleNames.collect { new SecurityConfig(it) }
-	}
+        then:
+        thrown AccessDeniedException
+    }
+
+    void 'should succeed with supported object'() {
+        when:
+        unsupportedVoterManager.decide createAuthentication([]), new Object(), createDefinition(['ROLE_USER'])
+        then:
+        notThrown AccessDeniedException
+    }
+
+    void 'should fail with unsupported object'() {
+        when:
+        unsupportedVoterManager.decide createAuthentication([]), 'not object', createDefinition(['ROLE_USER'])
+        then:
+        thrown AccessDeniedException
+    }
+
+    private Authentication createAuthentication(roleNames) {
+        new TestingAuthenticationToken(null, null, namesToAuthorities(roleNames))
+    }
+
+    private List<GrantedAuthority> namesToAuthorities(roleNames) {
+        roleNames.collect { new SimpleGrantedAuthority(it) }
+    }
+
+    private createDefinition(roleNames) {
+        roleNames.collect { new SecurityConfig(it) }
+    }
 }
