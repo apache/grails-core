@@ -21,9 +21,11 @@ package grails.web.databinding;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -43,6 +45,7 @@ import grails.core.GrailsApplication;
 import grails.databinding.CollectionDataBindingSource;
 import grails.databinding.DataBinder;
 import grails.databinding.DataBindingSource;
+import grails.databinding.SimpleMapDataBindingSource;
 import grails.util.Environment;
 import grails.util.Holders;
 import grails.validation.ValidationErrors;
@@ -169,6 +172,10 @@ public class DataBindingUtils {
      * @since 2.3
      */
     public static <T> void bindToCollection(final Class<T> targetType, final Collection<T> collectionToPopulate, final CollectionDataBindingSource collectionBindingSource) throws InstantiationException, IllegalAccessException {
+        bindToCollection(targetType, collectionToPopulate, collectionBindingSource, null);
+    }
+
+    public static <T> void bindToCollection(final Class<T> targetType, final Collection<T> collectionToPopulate, final CollectionDataBindingSource collectionBindingSource, final List include) throws InstantiationException, IllegalAccessException {
         final GrailsApplication application = Holders.findApplication();
         PersistentEntity entity = null;
         if (application != null) {
@@ -189,15 +196,23 @@ public class DataBindingUtils {
                 );
             }
 
-            bindObjectToDomainInstance(entity, newObject, dataBindingSource, getBindingIncludeList(newObject), Collections.emptyList(), null);
+            DataBindingSource sourceToBind = dataBindingSource;
+            if (include != null) {
+                sourceToBind = createSecureDataBindingSource(dataBindingSource, include, null);
+            }
+            bindObjectToDomainInstance(entity, newObject, sourceToBind, include == null ? getBindingIncludeList(newObject) : include, Collections.emptyList(), null);
             collectionToPopulate.add(newObject);
         }
     }
 
     public static <T> void bindToCollection(final Class<T> targetType, final Collection<T> collectionToPopulate, final ServletRequest request) throws InstantiationException, IllegalAccessException {
+        bindToCollection(targetType, collectionToPopulate, request, null);
+    }
+
+    public static <T> void bindToCollection(final Class<T> targetType, final Collection<T> collectionToPopulate, final ServletRequest request, final List include) throws InstantiationException, IllegalAccessException {
         final GrailsApplication grailsApplication = Holders.findApplication();
         final CollectionDataBindingSource collectionDataBindingSource = createCollectionDataBindingSource(grailsApplication, targetType, request);
-        bindToCollection(targetType, collectionToPopulate, collectionDataBindingSource);
+        bindToCollection(targetType, collectionToPopulate, collectionDataBindingSource, include);
     }
 
     /**
@@ -216,15 +231,239 @@ public class DataBindingUtils {
             include = getBindingIncludeList(object);
         }
         GrailsApplication application = Holders.findApplication();
-        PersistentEntity entity = null;
+        PersistentEntity entity = findPersistentEntity(application, object);
+        return bindObjectToDomainInstance(entity, object, source, include, exclude, filter);
+    }
+
+    private static PersistentEntity findPersistentEntity(GrailsApplication application, Object object) {
         if (application != null) {
             try {
-                entity = application.getMappingContext().getPersistentEntity(object.getClass().getName());
+                return application.getMappingContext().getPersistentEntity(object.getClass().getName());
             } catch (GrailsConfigurationException e) {
-                //no-op
+                return null;
             }
         }
-        return bindObjectToDomainInstance(entity, object, source, include, exclude, filter);
+        return null;
+    }
+
+    public static DataBindingSource createSecureDataBindingSource(Object object, Object source, List allowedParams, String filter) {
+        GrailsApplication application = Holders.findApplication();
+        DataBindingSource bindingSource = createDataBindingSource(application, object.getClass(), source);
+        return createSecureDataBindingSource(bindingSource, allowedParams, filter);
+    }
+
+    public static BindingResult secureBindObjectToInstance(Object object, Object source, List allowedParams, String filter, boolean nullMissing) {
+        BindingResult bindingResult = null;
+        GrailsApplication grailsApplication = Holders.findApplication();
+        PersistentEntity entity = findPersistentEntity(grailsApplication, object);
+
+        try {
+            final DataBindingSource bindingSource = createDataBindingSource(grailsApplication, object.getClass(), source);
+            final DataBindingSource secureBindingSource = createSecureDataBindingSource(bindingSource, allowedParams, filter);
+            final DataBinder grailsWebDataBinder = getGrailsWebDataBinder(grailsApplication);
+            grailsWebDataBinder.bind(object, secureBindingSource, null, allowedParams, Collections.emptyList());
+            if (nullMissing) {
+                assignNullToMissingAllowedProperties(object, secureBindingSource, allowedParams);
+            }
+        } catch (InvalidRequestBodyException e) {
+            String messageCode = "invalidRequestBody";
+            Class objectType = object.getClass();
+            String defaultMessage = "An error occurred parsing the body of the request";
+            String[] codes = getMessageCodes(messageCode, objectType);
+            bindingResult = new BeanPropertyBindingResult(object, objectType.getName());
+            bindingResult.addError(new ObjectError(bindingResult.getObjectName(), codes, null, defaultMessage));
+        } catch (Exception e) {
+            bindingResult = new BeanPropertyBindingResult(object, object.getClass().getName());
+            bindingResult.addError(new ObjectError(bindingResult.getObjectName(), e.getMessage()));
+        }
+
+        return processBindingResult(entity, object, bindingResult);
+    }
+
+    public static DataBindingSource createSecureDataBindingSource(DataBindingSource bindingSource, List allowedParams, String filter) {
+        Map secureSource = new LinkedHashMap();
+        for (Object allowedParam : allowedParams) {
+            if (allowedParam instanceof CharSequence) {
+                String propertyName = allowedParam.toString();
+                String sourcePropertyName = filter == null ? propertyName : filter + "." + propertyName;
+                copyAllowedProperty(secureSource, propertyName, bindingSource, sourcePropertyName);
+                copyAllowedCheckboxMarker(secureSource, propertyName, bindingSource, sourcePropertyName);
+            }
+        }
+        return new SimpleMapDataBindingSource(secureSource);
+    }
+
+    private static void copyAllowedCheckboxMarker(Map secureSource, String targetPropertyName, Object source, String sourcePropertyName) {
+        String targetMarkerPropertyName = checkboxMarkerPropertyName(targetPropertyName);
+        String sourceMarkerPropertyName = checkboxMarkerPropertyName(sourcePropertyName);
+        copyAllowedProperty(secureSource, targetMarkerPropertyName, source, sourceMarkerPropertyName);
+    }
+
+    private static String checkboxMarkerPropertyName(String propertyName) {
+        int separator = propertyName.lastIndexOf('.');
+        if (separator == -1) {
+            return "_" + propertyName;
+        }
+        return propertyName.substring(0, separator + 1) + "_" + propertyName.substring(separator + 1);
+    }
+
+    private static boolean copyAllowedProperty(Map secureSource, String targetPropertyName, Object source, String sourcePropertyName) {
+        if (containsSourceProperty(source, sourcePropertyName)) {
+            putNestedValue(secureSource, targetPropertyName, getSourcePropertyValue(source, sourcePropertyName));
+            return true;
+        }
+        int separator = sourcePropertyName.indexOf('.');
+        if (separator == -1) {
+            return false;
+        }
+        String sourceRootPropertyName = sourcePropertyName.substring(0, separator);
+        if (!containsSourceProperty(source, sourceRootPropertyName)) {
+            return false;
+        }
+        Object nestedSource = getSourcePropertyValue(source, sourceRootPropertyName);
+        String nestedSourcePropertyName = sourcePropertyName.substring(separator + 1);
+        if (nestedSource instanceof Collection) {
+            return copyAllowedCollectionProperty(secureSource, targetPropertyName, (Collection) nestedSource, nestedSourcePropertyName);
+        }
+        return copyAllowedProperty(secureSource, targetPropertyName, nestedSource, nestedSourcePropertyName);
+    }
+
+    private static boolean copyAllowedCollectionProperty(Map secureSource, String targetPropertyName, Collection collection, String sourcePropertyName) {
+        int separator = targetPropertyName.indexOf('.');
+        if (separator == -1) {
+            return false;
+        }
+        String targetRootPropertyName = targetPropertyName.substring(0, separator);
+        String nestedTargetPropertyName = targetPropertyName.substring(separator + 1);
+        List filteredCollection = getOrCreateNestedCollection(secureSource, targetRootPropertyName, collection.size());
+        int index = 0;
+        boolean copied = false;
+        for (Object item : collection) {
+            Map filteredItem = (Map) filteredCollection.get(index);
+            if (copyAllowedProperty(filteredItem, nestedTargetPropertyName, item, sourcePropertyName)) {
+                copied = true;
+            }
+            index++;
+        }
+        return copied;
+    }
+
+    private static List getOrCreateNestedCollection(Map secureSource, String propertyName, int size) {
+        Object existingValue = secureSource.get(propertyName);
+        List collection;
+        if (existingValue instanceof List) {
+            collection = (List) existingValue;
+        }
+        else {
+            collection = new ArrayList(size);
+            secureSource.put(propertyName, collection);
+        }
+        while (collection.size() < size) {
+            collection.add(new LinkedHashMap());
+        }
+        return collection;
+    }
+
+    private static void putNestedValue(Map secureSource, String propertyName, Object value) {
+        int separator = propertyName.indexOf('.');
+        if (separator == -1) {
+            secureSource.put(propertyName, value);
+            return;
+        }
+        String rootPropertyName = propertyName.substring(0, separator);
+        Map nestedSource = getOrCreateNestedMap(secureSource, rootPropertyName);
+        putNestedValue(nestedSource, propertyName.substring(separator + 1), value);
+    }
+
+    private static Map getOrCreateNestedMap(Map secureSource, String propertyName) {
+        Object existingValue = secureSource.get(propertyName);
+        if (existingValue instanceof Map) {
+            return (Map) existingValue;
+        }
+        Map nestedSource = new LinkedHashMap();
+        secureSource.put(propertyName, nestedSource);
+        return nestedSource;
+    }
+
+    private static boolean containsSourceProperty(Object source, String propertyName) {
+        if (source instanceof DataBindingSource) {
+            return ((DataBindingSource) source).containsProperty(propertyName);
+        }
+        if (source instanceof Map) {
+            return ((Map) source).containsKey(propertyName);
+        }
+        return false;
+    }
+
+    private static Object getSourcePropertyValue(Object source, String propertyName) {
+        if (source instanceof DataBindingSource) {
+            return ((DataBindingSource) source).getPropertyValue(propertyName);
+        }
+        return ((Map) source).get(propertyName);
+    }
+
+    public static void assignNullToMissingAllowedProperties(Object object, Object source, List allowedParams) {
+        assignNullToMissingAllowedProperties(object, source, allowedParams, null);
+    }
+
+    public static void assignNullToMissingAllowedProperties(Object object, Object source, List allowedParams, String filter) {
+        GrailsApplication application = Holders.findApplication();
+        DataBindingSource bindingSource = createDataBindingSource(application, object.getClass(), source);
+        assignNullToMissingAllowedProperties(object, bindingSource, allowedParams, filter);
+    }
+
+    private static void assignNullToMissingAllowedProperties(Object object, DataBindingSource bindingSource, List allowedParams, String filter) {
+        for (Object allowedParam : allowedParams) {
+            if (allowedParam instanceof CharSequence) {
+                String propertyName = allowedParam.toString();
+                if (propertyName.indexOf('*') == -1 && !bindingSourceContainsProperty(bindingSource, propertyName, filter)) {
+                    setPropertyToNull(object, propertyName);
+                }
+            }
+        }
+    }
+
+    private static boolean bindingSourceContainsProperty(DataBindingSource bindingSource, String propertyName, String filter) {
+        String sourcePropertyName = filter == null ? propertyName : filter + "." + propertyName;
+        return containsPropertyPath(bindingSource, sourcePropertyName) || containsPropertyPath(bindingSource, checkboxMarkerPropertyName(sourcePropertyName));
+    }
+
+    private static boolean containsPropertyPath(Object source, String propertyName) {
+        if (containsSourceProperty(source, propertyName)) {
+            return true;
+        }
+        int separator = propertyName.indexOf('.');
+        if (separator == -1) {
+            return false;
+        }
+        String rootPropertyName = propertyName.substring(0, separator);
+        if (!containsSourceProperty(source, rootPropertyName)) {
+            return false;
+        }
+        Object nestedSource = getSourcePropertyValue(source, rootPropertyName);
+        String nestedPropertyName = propertyName.substring(separator + 1);
+        if (nestedSource instanceof Collection) {
+            for (Object item : (Collection) nestedSource) {
+                if (containsPropertyPath(item, nestedPropertyName)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        return containsPropertyPath(nestedSource, nestedPropertyName);
+    }
+
+    private static void setPropertyToNull(Object object, String propertyName) {
+        String[] propertyNames = propertyName.split("\\.");
+        Object currentObject = object;
+        for (int i = 0; i < propertyNames.length - 1 && currentObject != null; i++) {
+            MetaClass mc = GroovySystem.getMetaClassRegistry().getMetaClass(currentObject.getClass());
+            currentObject = mc.getProperty(currentObject, propertyNames[i]);
+        }
+        if (currentObject != null) {
+            MetaClass mc = GroovySystem.getMetaClassRegistry().getMetaClass(currentObject.getClass());
+            mc.setProperty(currentObject, propertyNames[propertyNames.length - 1], null);
+        }
     }
 
     /**
@@ -263,6 +502,10 @@ public class DataBindingUtils {
             bindingResult.addError(new ObjectError(bindingResult.getObjectName(), e.getMessage()));
         }
 
+        return processBindingResult(entity, object, bindingResult);
+    }
+
+    private static BindingResult processBindingResult(PersistentEntity entity, Object object, BindingResult bindingResult) {
         if (entity != null && bindingResult != null) {
             BindingResult newResult = new ValidationErrors(object);
             for (Object error : bindingResult.getAllErrors()) {

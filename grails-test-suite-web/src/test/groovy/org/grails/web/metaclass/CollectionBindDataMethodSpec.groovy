@@ -157,6 +157,26 @@ class CollectionBindDataMethodSpec extends Specification implements ControllerUn
         people[3].firstName == 'Maynard'
         people[3].lastName == 'Keenan'
     }
+
+    void 'Test secureBindData with the request using JSON only binds allowed properties'() {
+        when:
+        request.json = '''
+  [{"firstName": "Danny", "lastName" : "Carey"},
+   {"firstName": "Adam", "lastName" : "Jones"}]
+'''
+        def model = controller.secureCreatePeopleWithRequest()
+        def people = model.people
+
+        then:
+        people instanceof List
+        people.size() == 2
+        people[0] instanceof Person
+        people[0].firstName == 'Danny'
+        people[0].lastName == null
+        people[1] instanceof Person
+        people[1].firstName == 'Adam'
+        people[1].lastName == null
+    }
 }
 
 @Artefact('Controller')
@@ -179,6 +199,14 @@ class DemoController {
         def listOfPeople = []
 
         bindData Person, listOfPeople, bindingSource
+
+        [people: listOfPeople]
+    }
+
+    def secureCreatePeopleWithRequest() {
+        def listOfPeople = []
+
+        secureBindData Person, listOfPeople, request, ['firstName']
 
         [people: listOfPeople]
     }

@@ -120,6 +120,122 @@ class BindDataMethodTests extends Specification implements ControllerUnitTest<Bi
         target.name == 'Lee Butts'
         target.email == null
     }
+
+    void 'Test secureBindData binds only allowed params'() {
+        when:
+        def model = controller.secureBindWithAllowedParams()
+        def target = model.target
+
+        then:
+        target.name == 'Marc Palmer'
+        target.email == null
+    }
+
+    void 'Test secureBindData with empty allowed params binds no params'() {
+        when:
+        def model = controller.secureBindWithEmptyAllowedParams()
+        def target = model.target
+
+        then:
+        target.name == 'Existing'
+        target.email == 'existing@example.com'
+    }
+
+    void 'Test secureBindData nulls missing allowed params when requested'() {
+        when:
+        def model = controller.secureBindWithNullMissing()
+        def target = model.target
+
+        then:
+        target.name == 'Marc Palmer'
+        target.email == null
+    }
+
+    void 'Test secureBindData supports prefix filter'() {
+        when:
+        def model = controller.secureBindWithPrefixFilter()
+        def target = model.target
+
+        then:
+        target.name == 'Lee Butts'
+        target.email == null
+    }
+
+    void 'Test secureBindData only binds allowed nested map properties'() {
+        when:
+        def model = controller.secureBindWithNestedMap()
+        def target = model.target
+
+        then:
+        target.address.country == 'gbr'
+        target.address.city == null
+    }
+
+    void 'Test secureBindData nullMissing preserves supplied nested map properties'() {
+        when:
+        def model = controller.secureBindWithNestedMapAndNullMissing()
+        def target = model.target
+
+        then:
+        target.address.country == 'gbr'
+        target.address.city == null
+    }
+
+    void 'Test secureBindData returns binding errors for invalid JSON'() {
+        given:
+        request.method = 'POST'
+        request.json = '''
+            {
+    "name": [foo.[} this is unparseable JSON{[
+'''
+
+        when:
+        def model = controller.secureBindWithMalformedJson()
+        def bindingResult = model.bindingResult
+
+        then:
+        bindingResult.hasErrors()
+        bindingResult.errorCount == 1
+        bindingResult.allErrors[0].defaultMessage == 'An error occurred parsing the body of the request'
+        bindingResult.allErrors[0].code == 'invalidRequestBody'
+        'invalidRequestBody' in bindingResult.allErrors[0].codes
+        'org.grails.web.servlet.CommandObject.invalidRequestBody' in bindingResult.allErrors[0].codes
+    }
+
+    void 'Test secureBindData nullMissing supports JSON request bodies'() {
+        given:
+        request.method = 'POST'
+        request.json = '{"name":"Marc Palmer"}'
+
+        when:
+        def model = controller.secureBindWithJsonAndNullMissing()
+        def target = model.target
+
+        then:
+        target.name == 'Marc Palmer'
+        target.email == null
+    }
+
+    void 'Test secureBindData supports unchecked checkbox marker parameters'() {
+        when:
+        params._active = 'on'
+        def model = controller.secureBindWithUncheckedCheckboxMarker()
+        def target = model.target
+
+        then:
+        target.active == false
+    }
+
+    void 'Test secureBindData nullMissing preserves unchecked checkbox marker parameters'() {
+        when:
+        params._active = 'on'
+        def model = controller.secureBindWithUncheckedCheckboxMarkerAndNullMissing()
+        def target = model.target
+
+        then:
+        target.active == false
+        target.email == null
+    }
 }
 
 @Artefact('Controller')
@@ -183,14 +299,76 @@ class BindingController {
         bindData target, [ 'mark.name' : 'Marc Palmer', 'mark.email' : 'dontwantthis', 'lee.name': 'Lee Butts', 'lee.email': 'lee@mail.com'], disallowed, filter
         [target: target]
     }
+
+    def secureBindWithAllowedParams() {
+        def target = new CommandObject()
+        secureBindData target, [name: 'Marc Palmer', email: 'dontwantthis'], ['name']
+        [target: target]
+    }
+
+    def secureBindWithEmptyAllowedParams() {
+        def target = new CommandObject(name: 'Existing', email: 'existing@example.com')
+        secureBindData target, [name: 'Marc Palmer', email: 'dontwantthis'], []
+        [target: target]
+    }
+
+    def secureBindWithNullMissing() {
+        def target = new CommandObject(name: 'Existing', email: 'existing@example.com')
+        secureBindData(target, [name: 'Marc Palmer'], ['name', 'email'], nullMissing: true)
+        [target: target]
+    }
+
+    def secureBindWithPrefixFilter() {
+        def target = new CommandObject()
+        secureBindData target, ['mark.name': 'Marc Palmer', 'mark.email': 'dontwantthis', 'lee.name': 'Lee Butts', 'lee.email': 'lee@mail.com'], ['name'], 'lee'
+        [target: target]
+    }
+
+    def secureBindWithNestedMap() {
+        def target = new CommandObject()
+        secureBindData target, [address: [country: 'gbr', city: 'dontwantthis']], ['address.country']
+        [target: target]
+    }
+
+    def secureBindWithNestedMapAndNullMissing() {
+        def target = new CommandObject(address: new Address(country: 'existing', city: 'existing'))
+        secureBindData(target, [address: [country: 'gbr']], ['address.country', 'address.city'], nullMissing: true)
+        [target: target]
+    }
+
+    def secureBindWithMalformedJson() {
+        def target = new CommandObject()
+        def bindingResult = secureBindData target, request, ['name']
+        [target: target, bindingResult: bindingResult]
+    }
+
+    def secureBindWithJsonAndNullMissing() {
+        def target = new CommandObject(name: 'Existing', email: 'existing@example.com')
+        secureBindData(target, request, ['name', 'email'], nullMissing: true)
+        [target: target]
+    }
+
+    def secureBindWithUncheckedCheckboxMarker() {
+        def target = new CommandObject(active: true)
+        secureBindData target, params, ['active']
+        [target: target]
+    }
+
+    def secureBindWithUncheckedCheckboxMarkerAndNullMissing() {
+        def target = new CommandObject(active: true, email: 'existing@example.com')
+        secureBindData(target, params, ['active', 'email'], nullMissing: true)
+        [target: target]
+    }
 }
 
 class CommandObject {
     String name
     String email
+    Boolean active
     Address address = new Address()
 }
 
 class Address {
     String country
+    String city
 }

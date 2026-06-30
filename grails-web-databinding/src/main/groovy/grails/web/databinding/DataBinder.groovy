@@ -21,6 +21,8 @@ package grails.web.databinding
 import groovy.transform.CompileStatic
 import groovy.transform.Generated
 
+import jakarta.servlet.ServletRequest
+
 import org.springframework.validation.BindingResult
 
 import grails.databinding.CollectionDataBindingSource
@@ -68,6 +70,64 @@ trait DataBinder {
         List includeList = convertToListIfCharSequence(includeExclude?.include)
         List excludeList = convertToListIfCharSequence(includeExclude?.exclude)
         DataBindingUtils.bindObjectToInstance(target, bindingSource, includeList, excludeList, filter)
+    }
+
+    @Generated
+    BindingResult secureBindData(target, bindingSource, List allowedParams) {
+        secureBindData(target, bindingSource, allowedParams, null, Collections.EMPTY_MAP)
+    }
+
+    @Generated
+    BindingResult secureBindData(Map options, target, bindingSource, List allowedParams) {
+        secureBindData(target, bindingSource, allowedParams, null, options)
+    }
+
+    @Generated
+    BindingResult secureBindData(target, bindingSource, List allowedParams, String filter) {
+        secureBindData(target, bindingSource, allowedParams, filter, Collections.EMPTY_MAP)
+    }
+
+    @Generated
+    BindingResult secureBindData(Map options, target, bindingSource, List allowedParams, String filter) {
+        secureBindData(target, bindingSource, allowedParams, filter, options)
+    }
+
+    @Generated
+    BindingResult secureBindData(target, bindingSource, List allowedParams, Map options) {
+        secureBindData(target, bindingSource, allowedParams, null, options)
+    }
+
+    @Generated
+    BindingResult secureBindData(target, bindingSource, List allowedParams, String filter, Map options) {
+        if (allowedParams == null) {
+            throw new IllegalArgumentException('secureBindData requires allowedParams to be a List of property names')
+        }
+        if (allowedParams.isEmpty()) {
+            return null
+        }
+        DataBindingUtils.secureBindObjectToInstance(target, bindingSource, allowedParams, filter, Boolean.TRUE.equals(options?.nullMissing))
+    }
+
+    @Generated
+    void secureBindData(Class targetType, Collection collectionToPopulate, CollectionDataBindingSource collectionBindingSource, List allowedParams) {
+        if (allowedParams == null) {
+            throw new IllegalArgumentException('secureBindData requires allowedParams to be a List of property names')
+        }
+        if (allowedParams.isEmpty()) {
+            return
+        }
+        DataBindingUtils.bindToCollection(targetType, collectionToPopulate, collectionBindingSource, allowedParams)
+    }
+
+    @Generated
+    void secureBindData(Class targetType, Collection collectionToPopulate, ServletRequest request, List allowedParams) {
+        if (allowedParams == null) {
+            throw new IllegalArgumentException('secureBindData requires allowedParams to be a List of property names')
+        }
+        if (allowedParams.isEmpty()) {
+            return
+        }
+        DataBindingUtils.bindToCollection(targetType, collectionToPopulate, request, allowedParams)
     }
 
     @Generated
