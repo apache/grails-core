@@ -17,9 +17,9 @@
  *  under the License.
  */
 
-package org.grails.datastore.mapping.core.connections
+package org.grails.datastore.mapping.core.connections;
 
-import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.core.Datastore;
 
 /**
  * A {@link Datastore} capable of configuring multiple {@link Datastore} with individually named {@link ConnectionSource} instances
@@ -27,7 +27,7 @@ import org.grails.datastore.mapping.core.Datastore
  * @author Graeme Rocher
  * @since 6.1
  */
-interface MultipleConnectionSourceCapableDatastore extends Datastore {
+public interface MultipleConnectionSourceCapableDatastore extends Datastore {
 
     /**
      * Lookup a {@link Datastore} by {@link ConnectionSource} name
@@ -35,5 +35,22 @@ interface MultipleConnectionSourceCapableDatastore extends Datastore {
      * @param connectionName The connection name
      * @return The {@link Datastore}
      */
-    Datastore getDatastoreForConnection(String connectionName)
+    Datastore getDatastoreForConnection(String connectionName);
+
+    /**
+     * Whether an entity mapped only to non-default connection sources should route its unqualified
+     * (no explicit connection) operations to its first mapped connection's datastore.
+     *
+     * Real datastores manage an independent session per connection, so such an entity's default
+     * operations belong to that mapped connection's datastore. The in-memory mock used for unit
+     * testing manages a single session on this (parent) datastore and only fabricates isolated
+     * children for explicit connection access, so it overrides this to keep unqualified operations
+     * on the parent — otherwise they would target a child whose session the test harness never
+     * flushes.
+     *
+     * @return {@code true} to route unqualified operations to the mapped connection datastore
+     */
+    default boolean routesUnqualifiedToMappedConnection() {
+        return true;
+    }
 }
