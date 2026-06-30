@@ -15,5 +15,4 @@
   ~  KIND, either express or implied.  See the License for the
   ~  specific language governing permissions and limitations
   ~  under the License.
-  --%>
-${part1}<text:newLine/>${part2}
+  --%>${part1}<text:newLine/>${part2}
