@@ -70,8 +70,3 @@ etc/bin/results
 node_modules/
 local-tasks.gradle
 local-init.gradle
-.junie/
-.antigravitycli/
-.clinerules
-.cursorrules
-.windsurfrules
