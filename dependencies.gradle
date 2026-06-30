@@ -71,7 +71,7 @@ ext {
             'cas-client-core.version'       : '4.0.4',
             'bootstrap-icons.version'       : '1.13.1',
             'bootstrap.version'             : '5.3.8',
-            'commons-codec.version'         : '1.18.0',
+            'commons-codec.version'         : '1.21.0',
             'commons-lang3.version'         : '3.20.0',
             'geb-spock.version'             : '8.0.1',
             'groovy.version'                : '4.0.32',
