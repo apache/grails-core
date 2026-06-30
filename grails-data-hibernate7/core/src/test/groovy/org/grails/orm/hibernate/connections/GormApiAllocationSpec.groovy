@@ -62,6 +62,15 @@ class GormApiAllocationSpec extends Specification {
         !hasAnyApis(H7AllocationDefaultTenant, 'tenantA')
     }
 
+    void "instance API mirrors the datastore markDirty and defaults to false, not the enhancer default of true"() {
+        when: "a datastore is created without explicit grails.gorm.markDirty configuration"
+        datastore = newDatastore(MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR, [], H7AllocationDefaultTenant)
+
+        then: "Hibernate manages its own dirty checking, so the instance API must not force-mark entities dirty"
+        !datastore.markDirty
+        !GormEnhancer.findInstanceApi(H7AllocationDefaultTenant, ConnectionSource.DEFAULT).markDirty
+    }
+
     void "DISCRIMINATOR multi tenant default datasource with multiple configured datasources creates non-default APIs lazily"() {
         given:
         datastore = newDatastore(MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR, ['analytics', 'reporting'], H7AllocationDefaultTenant)

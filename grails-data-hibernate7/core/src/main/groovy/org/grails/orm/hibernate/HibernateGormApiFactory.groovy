@@ -56,7 +56,11 @@ class HibernateGormApiFactory implements GormApiFactory {
         HibernateDatastore hds = (HibernateDatastore) resolver.resolve()
         GormInstanceApi<D> instanceApi = new HibernateGormInstanceApi<D>(persistentClass, hds, classLoader)
         instanceApi.failOnError = failOnError
-        instanceApi.markDirty = markDirty
+        // The Hibernate datastore is authoritative for dirty marking (resolved from
+        // SETTING_MARK_DIRTY, default false). Hibernate performs its own snapshot dirty checking,
+        // so force-marking every save() dirty would re-update unchanged entities and fire spurious
+        // beforeUpdate/afterUpdate events. The generic enhancer default (true) must not override it.
+        instanceApi.markDirty = hds.markDirty
         return instanceApi
     }
 
