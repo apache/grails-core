@@ -18,9 +18,13 @@
  */
 package org.grails.datastore.mapping.core
 
+import java.util.concurrent.Callable
+import java.util.concurrent.Executors
+
 import org.springframework.core.env.MapPropertySource
 import org.springframework.core.env.PropertyResolver
 import org.springframework.core.env.StandardEnvironment
+
 import spock.lang.Specification
 
 /**
@@ -38,5 +42,51 @@ class DatastoreUtilsSpec extends Specification {
         expect:
         env != null
         resolver.getProperty('grails.foo') == 'baz'
+    }
+
+    void "deferred close lifecycle is isolated on a virtual thread"() {
+        given:
+        Datastore datastore = Mock()
+        Session session = Mock()
+
+        when:
+        def repeatedCloseMessage = Executors.newVirtualThreadPerTaskExecutor().withCloseable { executor ->
+            executor.submit({
+                DatastoreUtils.initDeferredClose(datastore)
+                DatastoreUtils.closeSessionOrRegisterDeferredClose(session, datastore)
+                DatastoreUtils.processDeferredClose(datastore)
+                try {
+                    DatastoreUtils.processDeferredClose(datastore)
+                    null
+                }
+                catch (IllegalStateException e) {
+                    e.message
+                }
+            } as Callable<String>).get()
+        }
+
+        then:
+        1 * session.disconnect()
+        repeatedCloseMessage.contains('Deferred close not active')
+    }
+
+    void "soft thread local map does not expose parent entries to child threads"() {
+        given:
+        def threadLocal = new SoftThreadLocalMap()
+        threadLocal.get().put('tenant', 'parent')
+
+        when:
+        def childTenant = Executors.newVirtualThreadPerTaskExecutor().withCloseable { executor ->
+            executor.submit({
+                threadLocal.get().get('tenant') as String
+            } as Callable<String>).get()
+        }
+
+        then:
+        childTenant == null
+        threadLocal.get().get('tenant') == 'parent'
+
+        cleanup:
+        threadLocal.remove()
     }
 }
