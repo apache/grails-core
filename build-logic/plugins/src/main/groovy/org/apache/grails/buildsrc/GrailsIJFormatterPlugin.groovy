@@ -23,8 +23,6 @@ import org.apache.tools.ant.taskdefs.condition.Os
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.file.Directory
-import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Copy
 import org.gradle.process.ExecResult
 import org.gradle.process.ExecSpec
@@ -57,18 +55,18 @@ class GrailsIJFormatterPlugin implements Plugin<Project> {
         project.tasks.register('formatCode') { task ->
             task.description = 'Formats Java and Groovy source files using the IntelliJ command line formatter'
 
-            ExecOperationsSupport execSupport = project.objects.newInstance(ExecOperationsSupport)
-            Provider<String> formatExecProvider = project.providers.gradleProperty('format.exec')
-            Provider<String> formatFilesProvider = project.providers.gradleProperty('formatFiles')
+            def execSupport = project.objects.newInstance(ExecOperationsSupport)
+            def formatExecProvider = project.providers.gradleProperty('format.exec')
+            def formatFilesProvider = project.providers.gradleProperty('formatFiles')
 
-            Directory rootProjectDir = project.rootProject.layout.projectDirectory
-            Directory projectDir = project.layout.projectDirectory
-            File formatterHome = new File(project.gradle.gradleUserHomeDir, 'grails-ij-formatter')
+            def rootProjectDir = project.rootProject.layout.projectDirectory
+            def projectDir = project.layout.projectDirectory
+            def formatterHome = new File(project.gradle.gradleUserHomeDir, 'grails-ij-formatter')
 
             task.doLast {
-                String formatExec = resolveFormatExecutable(formatExecProvider.getOrNull())
-                String filesToFormat = formatFilesProvider.getOrNull()
-                File settingsFile = rootProjectDir.file('.idea/codeStyles/Project.xml').getAsFile()
+                def formatExec = resolveFormatExecutable(formatExecProvider.getOrNull())
+                def filesToFormat = formatFilesProvider.getOrNull()
+                def settingsFile = rootProjectDir.file('.idea/codeStyles/Project.xml').getAsFile()
 
                 if (!settingsFile.exists()) {
                     throw new GradleException("IntelliJ code style settings not found at ${settingsFile.absolutePath}")
@@ -77,22 +75,22 @@ class GrailsIJFormatterPlugin implements Plugin<Project> {
                 // The formatter is the full IDE in headless mode, and the platform allows only one instance per
                 // config/system directory. Point it at a private set of directories so it can run even while the
                 // developer has IntelliJ IDEA open against the default ones.
-                File ideaProperties = writeIsolatedInstanceProperties(formatterHome)
+                def ideaProperties = writeIsolatedInstanceProperties(formatterHome)
 
-                ByteArrayOutputStream output = new ByteArrayOutputStream()
+                def output = new ByteArrayOutputStream()
                 ExecResult result
                 try {
                     result = execSupport.execOperations.exec { ExecSpec exec ->
-                        exec.commandLine formatExec
-                        exec.args '-s', settingsFile.absolutePath
-                        exec.args '-mask', '*.java,*.groovy'
-                        exec.args '-r'
+                        exec.commandLine(formatExec)
+                        exec.args('-s', settingsFile.absolutePath)
+                        exec.args('-mask', '*.java,*.groovy')
+                        exec.args('-r')
                         if (filesToFormat) {
                             exec.args(filesToFormat.split(','))
                         } else {
-                            exec.args projectDir.getAsFile().absolutePath
+                            exec.args(projectDir.getAsFile().absolutePath)
                         }
-                        exec.environment 'IDEA_PROPERTIES', ideaProperties.absolutePath
+                        exec.environment('IDEA_PROPERTIES', ideaProperties.absolutePath)
                         exec.standardOutput = output
                         exec.errorOutput = output
                         exec.ignoreExitValue = true
@@ -101,7 +99,7 @@ class GrailsIJFormatterPlugin implements Plugin<Project> {
                     throw new GradleException("Failed to start the IntelliJ formatter '${formatExec}': ${e.message}", e)
                 }
 
-                String formatterOutput = output.toString()
+                def formatterOutput = output.toString()
                 task.logger.info(formatterOutput)
                 // With the isolated instance above this should not happen, but fail loudly rather than let a commit
                 // proceed with unformatted code if the formatter still could not acquire its instance.
@@ -132,19 +130,19 @@ class GrailsIJFormatterPlugin implements Plugin<Project> {
             return override
         }
 
-        boolean windows = Os.isFamily(Os.FAMILY_WINDOWS)
-        String formatScript = windows ? 'format.bat' : 'format.sh'
+        def windows = Os.isFamily(Os.FAMILY_WINDOWS)
+        def formatScript = windows ? 'format.bat' : 'format.sh'
 
-        File onPath = findOnPath(formatScript)
+        def onPath = findOnPath(formatScript)
         if (onPath) {
             return onPath.absolutePath
         }
 
-        List<String> launchers = windows ? WINDOWS_LAUNCHERS : UNIX_LAUNCHERS
-        for (String launcher : launchers) {
-            File found = findOnPath(launcher)
+        def launchers = windows ? WINDOWS_LAUNCHERS : UNIX_LAUNCHERS
+        for (launcher in launchers) {
+            def found = findOnPath(launcher)
             if (found) {
-                File sibling = new File(found.canonicalFile.parentFile, formatScript)
+                def sibling = new File(found.canonicalFile.parentFile, formatScript)
                 if (sibling.isFile()) {
                     return sibling.absolutePath
                 }
@@ -185,15 +183,15 @@ class GrailsIJFormatterPlugin implements Plugin<Project> {
     }
 
     private static File findOnPath(String name) {
-        String pathEnv = System.getenv('PATH')
+        def pathEnv = System.getenv('PATH')
         if (!pathEnv) {
             return null
         }
-        for (String dir : pathEnv.split(File.pathSeparator)) {
+        for (dir in pathEnv.split(File.pathSeparator)) {
             if (!dir) {
                 continue
             }
-            File candidate = new File(dir, name)
+            def candidate = new File(dir, name)
             if (candidate.isFile()) {
                 return candidate
             }
