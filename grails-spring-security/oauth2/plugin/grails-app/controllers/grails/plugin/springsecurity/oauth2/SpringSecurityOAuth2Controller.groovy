@@ -26,8 +26,8 @@ import grails.plugin.springsecurity.oauth2.exception.OAuth2Exception
 import grails.plugin.springsecurity.oauth2.token.OAuth2SpringToken
 import grails.plugin.springsecurity.userdetails.GrailsUser
 import groovy.util.logging.Slf4j
-import org.apache.commons.lang.StringUtils
-import org.apache.commons.lang.exception.ExceptionUtils
+import org.apache.commons.lang3.StringUtils
+import org.apache.commons.lang3.exception.ExceptionUtils
 import org.apache.commons.validator.routines.UrlValidator
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.servlet.ModelAndView

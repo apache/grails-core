@@ -62,6 +62,7 @@ dependencies {
 	implementation 'commons-validator:commons-validator', {
 		// impl: UrlValidator
 	}
+	implementation 'org.apache.commons:commons-lang3' // StringUtils, ExceptionUtils
 	implementation 'jline:jline', {
 		// comp: ConsoleReader
 	}
