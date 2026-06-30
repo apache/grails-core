@@ -24,6 +24,11 @@ plugins {
 
 dependencies {
     implementation platform(project(':grails-bom'))
+    testFixturesImplementation platform(project(':grails-bom'))
     testFixturesImplementation testFixtures('org.apache.grails:grails-spring-security')
     testFixturesImplementation testFixtures('org.apache.grails:grails-geb')
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
 }

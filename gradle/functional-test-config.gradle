@@ -87,6 +87,12 @@ tasks.withType(Test).configureEach { Test task ->
             }
         }
 
+        if (project.hasProperty('skipSpringSecurityTests')) {
+            if (!isSpringSecurity) {
+                return false
+            }
+        }
+
         if (project.hasProperty('onlyRedisTests')) {
             if (isRedis) {
                 return false
@@ -152,6 +158,10 @@ tasks.withType(Test).configureEach { Test task ->
         systemProperty('grails.geb.atCheckWaiting.enabled', 'true')
         systemProperty('grails.geb.timeouts.timeout', '10')
     }
+
+    systemProperty('geb.build.reportsDir', reporting.file("$projectDir/build/geb-reports"))
+    systemProperty('grails.geb.reporting.directory', reporting.file("$projectDir/build/geb-reports").canonicalFile.absolutePath)
+    systemProperty('TESTCONFIG', System.getProperty('TESTCONFIG'))
 }
 
 tasks.named('groovydoc').configure {
