@@ -258,7 +258,7 @@ public abstract class DatastoreUtils {
             closeSession(session);
         }
         if (holderMap.isEmpty()) {
-            deferredCloseHolder.set(null);
+            deferredCloseHolder.remove();
         }
     }
 

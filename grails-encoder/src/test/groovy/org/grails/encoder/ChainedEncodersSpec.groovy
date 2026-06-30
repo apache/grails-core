@@ -18,6 +18,8 @@
  */
 package org.grails.encoder;
 
+import java.util.concurrent.atomic.AtomicReference
+
 import groovy.json.StringEscapeUtils
 
 import org.grails.encoder.impl.HTMLEncoder
@@ -60,6 +62,26 @@ class ChainedEncodersSpec extends Specification {
             resultStr != unescapedStr
             unescapedStr == '&lt;1&gt; Hello World;'
     }
+
+    def "chaining StreamingEncoders should be possible on a virtual thread"() {
+        given:
+            def encoders = [new HTMLEncoder(), new JavaScriptEncoder()]
+            def source = new StreamCharBuffer()
+            source.writer.write('<1> Hello World;')
+
+        when:
+            def resultStr = runOnVirtualThread {
+                def resultBuffer = new StreamCharBuffer()
+                resultBuffer.setAllowSubBuffers(false)
+                ChainedEncoders.chainEncode(source, resultBuffer.writer.encodedAppender, encoders)
+                resultBuffer.toString()
+            }
+            def unescapedStr = StringEscapeUtils.unescapeJavaScript(resultStr)
+
+        then:
+            resultStr != unescapedStr
+            unescapedStr == '&lt;1&gt; Hello World;'
+    }
     
     def "chaining Encoders (mixed) should be possible"() {
         given:
@@ -96,5 +118,33 @@ class ChainedEncodersSpec extends Specification {
         public void markEncoded(CharSequence string) {
             
         }
+    }
+
+    private static <T> T runOnVirtualThread(Closure<T> callable) {
+        def result = new AtomicReference<T>()
+        def error = new AtomicReference<Throwable>()
+        Runnable runnable = {
+            try {
+                result.set(callable.call())
+            }
+            catch (Throwable t) {
+                error.set(t)
+            }
+        } as Runnable
+
+        try {
+            Thread thread = Thread.class.getMethod('startVirtualThread', Runnable).invoke(null, runnable) as Thread
+            thread.join()
+        }
+        catch (NoSuchMethodException ignored) {
+            Thread thread = new Thread(runnable)
+            thread.start()
+            thread.join()
+        }
+
+        if (error.get() != null) {
+            throw error.get()
+        }
+        result.get()
     }
 }

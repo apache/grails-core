@@ -70,11 +70,7 @@ public class ConvertersConfigurationHolder {
     private ThreadLocal<Map<Class<? extends Converter>, ConverterConfiguration>> threadLocalConfiguration = createThreadLocalConfiguration();
 
     protected static ThreadLocal<Map<Class<? extends Converter>, ConverterConfiguration>> createThreadLocalConfiguration() {
-        return new ThreadLocal<>() {
-            protected Map<java.lang.Class<? extends Converter>, ConverterConfiguration> initialValue() {
-                return new HashMap<>();
-            }
-        };
+        return new ThreadLocal<>();
     }
 
     private ConvertersConfigurationHolder() {
@@ -162,11 +158,33 @@ public class ConvertersConfigurationHolder {
     }
 
     public static <C extends Converter> ConverterConfiguration<C> getThreadLocalConverterConfiguration(Class<C> converterClass) throws ConverterException {
-        return getInstance().threadLocalConfiguration.get().get(converterClass);
+        Map<Class<? extends Converter>, ConverterConfiguration> configurations = getThreadLocalConverterConfigurations(false);
+        return configurations != null ? configurations.get(converterClass) : null;
     }
 
     public static <C extends Converter> void setThreadLocalConverterConfiguration(Class<C> converterClass, ConverterConfiguration<C> cfg) throws ConverterException {
-        getInstance().threadLocalConfiguration.get().put(converterClass, cfg);
+        Map<Class<? extends Converter>, ConverterConfiguration> configurations = getThreadLocalConverterConfigurations(cfg != null);
+        if (cfg == null) {
+            if (configurations != null) {
+                configurations.remove(converterClass);
+                if (configurations.isEmpty()) {
+                    getInstance().threadLocalConfiguration.remove();
+                }
+            }
+        }
+        else {
+            configurations.put(converterClass, cfg);
+        }
+    }
+
+    private static Map<Class<? extends Converter>, ConverterConfiguration> getThreadLocalConverterConfigurations(boolean create) {
+        ThreadLocal<Map<Class<? extends Converter>, ConverterConfiguration>> threadLocalConfiguration = getInstance().threadLocalConfiguration;
+        Map<Class<? extends Converter>, ConverterConfiguration> configurations = threadLocalConfiguration.get();
+        if (configurations == null && create) {
+            configurations = new HashMap<>();
+            threadLocalConfiguration.set(configurations);
+        }
+        return configurations;
     }
 
     public static <C extends Converter> void setNamedConverterConfiguration(Class<C> converterClass, String name, ConverterConfiguration<C> cfg) throws ConverterException {

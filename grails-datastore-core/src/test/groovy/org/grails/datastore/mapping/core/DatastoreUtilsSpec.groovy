@@ -18,9 +18,12 @@
  */
 package org.grails.datastore.mapping.core
 
+import java.util.concurrent.atomic.AtomicReference
+
 import org.springframework.core.env.MapPropertySource
 import org.springframework.core.env.PropertyResolver
 import org.springframework.core.env.StandardEnvironment
+
 import spock.lang.Specification
 
 /**
@@ -38,5 +41,76 @@ class DatastoreUtilsSpec extends Specification {
         expect:
         env != null
         resolver.getProperty('grails.foo') == 'baz'
+    }
+
+    void "deferred close lifecycle is isolated on a virtual thread"() {
+        given:
+        Datastore datastore = Mock()
+        Session session = Mock()
+        def repeatedCloseMessage = new AtomicReference<String>()
+
+        when:
+        runOnVirtualThread {
+            DatastoreUtils.initDeferredClose(datastore)
+            DatastoreUtils.closeSessionOrRegisterDeferredClose(session, datastore)
+            DatastoreUtils.processDeferredClose(datastore)
+            try {
+                DatastoreUtils.processDeferredClose(datastore)
+            }
+            catch (IllegalStateException e) {
+                repeatedCloseMessage.set(e.message)
+            }
+        }
+
+        then:
+        1 * session.disconnect()
+        repeatedCloseMessage.get().contains('Deferred close not active')
+    }
+
+    void "soft thread local map does not expose parent entries to child threads"() {
+        given:
+        def threadLocal = new SoftThreadLocalMap()
+        threadLocal.get().put('tenant', 'parent')
+        def childTenant = new AtomicReference<String>()
+
+        when:
+        runOnVirtualThread {
+            childTenant.set(threadLocal.get().get('tenant') as String)
+        }
+
+        then:
+        childTenant.get() == null
+        threadLocal.get().get('tenant') == 'parent'
+
+        cleanup:
+        threadLocal.remove()
+    }
+
+    private static <T> T runOnVirtualThread(Closure<T> callable) {
+        def result = new AtomicReference<T>()
+        def error = new AtomicReference<Throwable>()
+        Runnable runnable = {
+            try {
+                result.set(callable.call())
+            }
+            catch (Throwable t) {
+                error.set(t)
+            }
+        } as Runnable
+
+        try {
+            Thread thread = Thread.class.getMethod('startVirtualThread', Runnable).invoke(null, runnable) as Thread
+            thread.join()
+        }
+        catch (NoSuchMethodException ignored) {
+            Thread thread = new Thread(runnable)
+            thread.start()
+            thread.join()
+        }
+
+        if (error.get() != null) {
+            throw error.get()
+        }
+        result.get()
     }
 }
