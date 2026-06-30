@@ -170,26 +170,18 @@ class GrailsIJFormatterPlugin implements Plugin<Project> {
      * running IDE. The directories are reused between runs to avoid re-initialising on every commit.
      */
     private static File writeIsolatedInstanceProperties(File home) {
-        File config = new File(home, 'config')
-        File system = new File(home, 'system')
-        File plugins = new File(home, 'plugins')
-        File log = new File(home, 'log')
-        for (File dir : [config, system, plugins, log]) {
-            dir.mkdirs()
+        def props = new Properties()
+        ['config', 'system', 'plugins', 'log'].each {
+            props.setProperty(
+                    "idea.${it}.path",
+                    new File(home, it).tap { it.mkdirs() }.absolutePath
+            )
         }
-        Properties props = new Properties()
-        props.setProperty('idea.config.path', config.absolutePath)
-        props.setProperty('idea.system.path', system.absolutePath)
-        props.setProperty('idea.plugins.path', plugins.absolutePath)
-        props.setProperty('idea.log.path', log.absolutePath)
-        File propsFile = new File(home, 'idea.properties')
-        OutputStream out = new FileOutputStream(propsFile)
-        try {
-            props.store(out, 'Isolated IntelliJ instance for command line formatting')
-        } finally {
-            out.close()
+        def propsFile = new File(home, 'idea.properties')
+        propsFile.withOutputStream {
+            props.store(it, 'Isolated IntelliJ instance for command line formatting')
         }
-        return propsFile
+        propsFile
     }
 
     private static File findOnPath(String name) {
