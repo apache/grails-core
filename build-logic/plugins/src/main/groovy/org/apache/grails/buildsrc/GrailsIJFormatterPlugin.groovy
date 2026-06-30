@@ -47,7 +47,9 @@ class GrailsIJFormatterPlugin implements Plugin<Project> {
                 it.description = 'Installs the git pre-commit hook for automatic code formatting'
                 it.from(project.rootProject.layout.projectDirectory.file('etc/hooks/pre-commit'))
                 it.into(project.rootProject.layout.projectDirectory.dir('.git/hooks'))
-                it.fileMode = 0755
+                it.filePermissions {
+                    it.unix('0755')
+                }
             }
         }
     }
