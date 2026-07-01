@@ -31,7 +31,6 @@ import jakarta.persistence.FlushModeType;
 
 import com.mongodb.WriteConcern;
 import com.mongodb.client.FindIterable;
-import com.mongodb.client.MongoClient;
 import com.mongodb.client.model.DeleteManyModel;
 import com.mongodb.client.model.InsertOneModel;
 import com.mongodb.client.model.UpdateOneModel;
@@ -62,8 +61,6 @@ import org.grails.datastore.mapping.mongo.engine.MongoEntityPersister;
 import org.grails.datastore.mapping.mongo.query.MongoQuery;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
-import org.grails.datastore.mapping.transactions.SessionOnlyTransaction;
-import org.grails.datastore.mapping.transactions.Transaction;
 
 /**
  * A {@link org.grails.datastore.mapping.core.Session} implementation for the Mongo document store.
@@ -199,7 +196,7 @@ public class MongoSession extends AbstractMongoSession {
             }
 
             for (PersistentEntity persistentEntity : writeModels.keySet()) {
-                com.mongodb.client.MongoCollection collection = getCollection(persistentEntity);
+                com.mongodb.client.MongoCollection<Document> collection = getCollection(persistentEntity);
                 final WriteConcern wc = getWriteConcern();
                 if (wc != null) {
                     collection = collection.withWriteConcern(wc);
@@ -207,8 +204,7 @@ public class MongoSession extends AbstractMongoSession {
                 final List<WriteModel<Document>> writes = writeModels.get(persistentEntity);
                 if (!writes.isEmpty()) {
 
-                    final com.mongodb.bulk.BulkWriteResult bulkWriteResult = collection
-                            .bulkWrite(writes);
+                    final com.mongodb.bulk.BulkWriteResult bulkWriteResult = bulkWrite(collection, writes);
 
                     if (!bulkWriteResult.wasAcknowledged()) {
                         errorOccured = true;
@@ -287,11 +283,6 @@ public class MongoSession extends AbstractMongoSession {
     }
 
     @Override
-    protected Transaction<MongoClient> beginTransactionInternal() {
-        return new SessionOnlyTransaction<>(getNativeInterface(), this);
-    }
-
-    @Override
     public void delete(Iterable objects) {
         final Map<PersistentEntity, List> toDelete = getDeleteMap(objects);
 
@@ -342,8 +333,8 @@ public class MongoSession extends AbstractMongoSession {
         final PersistentEntity entity = criteria.getPersistentEntity();
         final Document nativeQuery = buildNativeDocumentQueryFromCriteria(criteria, entity);
 
-        final com.mongodb.client.MongoCollection collection = getCollection(entity);
-        final DeleteResult deleteResult = collection.deleteMany(nativeQuery);
+        final com.mongodb.client.MongoCollection<Document> collection = getCollection(entity);
+        final DeleteResult deleteResult = deleteMany(collection, nativeQuery);
         if (deleteResult.wasAcknowledged()) {
             return deleteResult.getDeletedCount();
         }
@@ -356,10 +347,10 @@ public class MongoSession extends AbstractMongoSession {
     public long updateAll(QueryableCriteria criteria, Map<String, Object> properties) {
         final PersistentEntity entity = criteria.getPersistentEntity();
         final Document nativeQuery = buildNativeDocumentQueryFromCriteria(criteria, entity);
-        final com.mongodb.client.MongoCollection collection = getCollection(entity);
+        final com.mongodb.client.MongoCollection<Document> collection = getCollection(entity);
         final UpdateOptions updateOptions = new UpdateOptions();
         updateOptions.upsert(false);
-        final UpdateResult updateResult = collection.updateMany(nativeQuery, new Document("$set", properties), updateOptions);
+        final UpdateResult updateResult = updateMany(collection, nativeQuery, new Document("$set", properties), updateOptions);
         if (updateResult.wasAcknowledged()) {
             try {
                 return updateResult.getModifiedCount();

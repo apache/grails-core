@@ -124,3 +124,34 @@ grails.mongodb.default.mapping = {
 The `*` method is used to indicate that the setting applies to all properties.
 
 You can also set a global default for the storage type of `String id` fields via `grails.mongodb.stringIds.defaultStoredAs` (values `string` or `objectid`). See <<idGeneration,Identity Generation>> for details.
+
+==== Multi-Document Transactions
+
+
+By default a GORM transaction for MongoDB is a client-side unit of work: pending inserts, updates and deletes are batched and flushed to the server when the transaction commits, but each write is applied individually and is not rolled back if a later operation fails.
+
+Since MongoDB 4.0, the server supports multi-document ACID transactions. To have GORM run transactional operations inside a real server-side transaction — so that all writes within a `withTransaction` block (or a `@Transactional` service method) commit or roll back atomically — enable:
+
+[source,groovy]
+----
+grails {
+    mongodb {
+        transactional = true
+    }
+}
+----
+
+With this enabled, a GORM transaction starts a MongoDB session and transaction; on commit all buffered writes are committed together, and on rollback they are discarded on the server:
+
+[source,groovy]
+----
+Person.withTransaction {
+    new Person(name: "Fred").save()
+    new Person(name: "Wilma").save()
+    // both inserts commit together, or neither is applied if an exception is thrown
+}
+----
+
+NOTE: Multi-document transactions require a replica set or a sharded cluster; they are not supported on a standalone `mongod`. If `transactional` is enabled but a standalone topology is detected, GORM logs a warning once and falls back to the default client-side flush behavior. Identifier generation for native (`Long`) identity uses an independent counter and is intentionally not enrolled in the transaction, mirroring the non-transactional semantics of database sequences.
+
+WARNING: A per-transaction timeout is not supported for MongoDB server-side transactions. The session and transaction are started before the transaction manager applies a timeout, so a timeout on the `withTransaction` or `@Transactional` definition cannot be honored. Rather than silently ignore it, GORM throws a `TransactionUsageException` when a non-default timeout is requested. The server enforces its own maximum transaction duration via `transactionLifetimeLimitSeconds` (60 seconds by default).

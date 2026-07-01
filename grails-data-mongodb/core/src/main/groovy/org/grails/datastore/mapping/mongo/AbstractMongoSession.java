@@ -19,8 +19,18 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.mongodb.WriteConcern;
+import com.mongodb.bulk.BulkWriteResult;
+import com.mongodb.client.AggregateIterable;
+import com.mongodb.client.ClientSession;
+import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoClient;
+import com.mongodb.client.model.FindOneAndDeleteOptions;
+import com.mongodb.client.model.UpdateOptions;
+import com.mongodb.client.model.WriteModel;
+import com.mongodb.client.result.DeleteResult;
+import com.mongodb.client.result.UpdateResult;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 
 import org.springframework.context.ApplicationEventPublisher;
 
@@ -31,6 +41,8 @@ import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.mongo.config.MongoCollection;
 import org.grails.datastore.mapping.mongo.config.MongoMappingContext;
+import org.grails.datastore.mapping.transactions.SessionOnlyTransaction;
+import org.grails.datastore.mapping.transactions.Transaction;
 
 /**
  * Abstract implementation on the {@link org.grails.datastore.mapping.core.Session} interface for MongoDB
@@ -47,6 +59,9 @@ public abstract class AbstractMongoSession extends AbstractSession<MongoClient> 
     protected MongoDatastore mongoDatastore;
     protected WriteConcern writeConcern = null;
     protected boolean errorOccured = false;
+    // Confined to the owning session's single thread (per the AbstractSession contract), so it needs
+    // no synchronization; it is null unless a server-side transaction is active on this session.
+    protected ClientSession clientSession;
     protected Map<PersistentEntity, String> mongoCollections = new ConcurrentHashMap<>();
     protected Map<PersistentEntity, String> mongoDatabases = new ConcurrentHashMap<>();
 
@@ -198,6 +213,121 @@ public abstract class AbstractMongoSession extends AbstractSession<MongoClient> 
     @Override
     public MongoMappingContext getMappingContext() {
         return (MongoMappingContext) super.getMappingContext();
+    }
+
+    /**
+     * @return the active {@link ClientSession} for the current MongoDB transaction, or {@code null}
+     * if no server-side transaction is in progress
+     */
+    public ClientSession getClientSession() {
+        return clientSession;
+    }
+
+    /**
+     * @return {@code true} if a server-side MongoDB transaction is currently active on this session
+     */
+    public boolean hasActiveTransaction() {
+        return clientSession != null && clientSession.hasActiveTransaction();
+    }
+
+    /**
+     * Detaches the {@link ClientSession} from this session once its transaction has completed.
+     * Called by {@link MongoTransaction} after commit or rollback closes the session.
+     */
+    void clearClientSession() {
+        this.clientSession = null;
+    }
+
+    /**
+     * Closes and detaches the {@link ClientSession} if one is still attached. Used defensively when a
+     * transaction did not complete through {@link MongoTransaction}, so a session is never leaked.
+     */
+    protected void closeClientSessionQuietly() {
+        if (clientSession != null) {
+            try {
+                clientSession.close();
+            }
+            catch (RuntimeException ignored) {
+                // best effort
+            }
+            finally {
+                clientSession = null;
+            }
+        }
+    }
+
+    @Override
+    public void disconnect() {
+        try {
+            closeClientSessionQuietly();
+        }
+        finally {
+            super.disconnect();
+        }
+    }
+
+    @Override
+    protected Transaction beginTransactionInternal() {
+        if (getDatastore().isTransactionsEnabled()) {
+            // Defensive: if a previous transaction did not complete cleanly, close its orphaned
+            // session before starting a new one so it cannot leak.
+            closeClientSessionQuietly();
+            ClientSession session = getNativeInterface().startSession();
+            try {
+                session.startTransaction();
+            }
+            catch (RuntimeException e) {
+                session.close();
+                throw e;
+            }
+            this.clientSession = session;
+            return new MongoTransaction(this, session);
+        }
+        return new SessionOnlyTransaction<>(getNativeInterface(), this);
+    }
+
+    // The driver exposes a session-less and a ClientSession overload for every operation, and the
+    // session argument cannot be null. These helpers pass the ClientSession only while a transaction
+    // is active on this session (see hasActiveTransaction()), and use the session-less overload
+    // otherwise, so call sites stay readable.
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    public BulkWriteResult bulkWrite(com.mongodb.client.MongoCollection collection, List<? extends WriteModel> writes) {
+        return hasActiveTransaction() ? collection.bulkWrite(clientSession, writes) : collection.bulkWrite(writes);
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    public DeleteResult deleteMany(com.mongodb.client.MongoCollection collection, Bson filter) {
+        return hasActiveTransaction() ? collection.deleteMany(clientSession, filter) : collection.deleteMany(filter);
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    public UpdateResult updateMany(com.mongodb.client.MongoCollection collection, Bson filter, Bson update, UpdateOptions options) {
+        return hasActiveTransaction() ? collection.updateMany(clientSession, filter, update, options) : collection.updateMany(filter, update, options);
+    }
+
+    public <T> FindIterable<T> find(com.mongodb.client.MongoCollection<T> collection, Bson filter) {
+        return hasActiveTransaction() ? collection.find(clientSession, filter) : collection.find(filter);
+    }
+
+    public <R> FindIterable<R> find(com.mongodb.client.MongoCollection<?> collection, Bson filter, Class<R> resultClass) {
+        return hasActiveTransaction() ? collection.find(clientSession, filter, resultClass) : collection.find(filter, resultClass);
+    }
+
+    public <T> AggregateIterable<T> aggregate(com.mongodb.client.MongoCollection<T> collection, List<? extends Bson> pipeline) {
+        return hasActiveTransaction() ? collection.aggregate(clientSession, pipeline) : collection.aggregate(pipeline);
+    }
+
+    public <T> T findOneAndDelete(com.mongodb.client.MongoCollection<T> collection, Bson filter) {
+        return hasActiveTransaction() ? collection.findOneAndDelete(clientSession, filter) : collection.findOneAndDelete(filter);
+    }
+
+    public <T> T findOneAndDelete(com.mongodb.client.MongoCollection<T> collection, Bson filter, FindOneAndDeleteOptions options) {
+        return hasActiveTransaction() ? collection.findOneAndDelete(clientSession, filter, options) : collection.findOneAndDelete(filter, options);
+    }
+
+    public long countDocuments(com.mongodb.client.MongoCollection<?> collection, Bson filter) {
+        return hasActiveTransaction() ? collection.countDocuments(clientSession, filter) : collection.countDocuments(filter);
     }
 
     /**
