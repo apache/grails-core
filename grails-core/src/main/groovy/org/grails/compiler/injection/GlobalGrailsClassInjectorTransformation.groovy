@@ -187,7 +187,7 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
      * @return {@code true} when the {@code grails.isolated.build} system property is {@code true}.
      */
     static boolean isIsolatedBuild() {
-        return Boolean.parseBoolean(System.getProperty(ISOLATED_BUILD_PROPERTY))
+        System.getProperty(ISOLATED_BUILD_PROPERTY, 'false').toBoolean()
     }
 
     static File resolveCompilationTargetDirectory(SourceUnit source) {
