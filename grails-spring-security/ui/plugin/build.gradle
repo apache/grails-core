@@ -89,6 +89,14 @@ assets {
     excludes = ['webjars/**']
 }
 
+// Package the canonical license texts referenced by META-INF/LICENSE
+tasks.withType(Jar).configureEach { jarTask ->
+    jarTask.into('META-INF/licenses') {
+        from rootProject.layout.projectDirectory.file('licenses/LICENSE-MIT.txt')
+        include { jarTask.archiveClassifier.getOrElse('') != 'javadoc' }
+    }
+}
+
 apply {
     from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')

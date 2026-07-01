@@ -205,7 +205,9 @@
 
 The following files are licensed under the Eclipse Public License 2.0:
 
-    META-INF/org/grails/gsp/jsp/web-jsptaglibrary_3_0.xsd
+    org/grails/gsp/jsp/web-jsptaglibrary_3_0.xsd
+
+See licenses/LICENSE-EPL2.txt for the full license terms.
 
 --------------------------------------------------------------------------
 
@@ -214,3 +216,5 @@ The following files are licensed under the CDDL 1.0:
     org/grails/gsp/jsp/web-app_4_0.xsd
     org/grails/gsp/jsp/web-app_5_0.xsd
     org/grails/gsp/jsp/web-app_6_0.xsd
+
+See licenses/LICENSE-CDDL.txt for the full license terms.
