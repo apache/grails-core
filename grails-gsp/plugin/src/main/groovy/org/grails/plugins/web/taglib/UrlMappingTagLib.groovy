@@ -80,8 +80,20 @@ class UrlMappingTagLib implements TagLibrary {
                 id: attrs.id as String,
                 params: attrs.params as Map)
 
-            if (attrs.namespace != null) {
-                mapping.namespace = attrs.namespace as String
+            // Honor an explicit namespace so a blank one (namespace="" or namespace: null) opts out to
+            // the non-namespaced controller; otherwise infer the namespace for the target controller so
+            // g:include stays consistent with link generation.
+            if (attrs.containsKey('namespace')) {
+                String explicitNamespace = attrs.namespace as String
+                if (explicitNamespace?.trim()) {
+                    mapping.namespace = explicitNamespace
+                }
+            }
+            else if (attrs.controller) {
+                String inferredNamespace = linkGenerator.getDefaultNamespace(attrs.controller as String, attrs.plugin as String)
+                if (inferredNamespace != null) {
+                    mapping.namespace = inferredNamespace
+                }
             }
             if (attrs.plugin != null) {
                 mapping.pluginName = attrs.plugin as String
@@ -289,6 +301,9 @@ class UrlMappingTagLib implements TagLibrary {
 
         def property = attrs.remove('property')
         def action = attrs.action ? attrs.remove('action') : (actionName ?: 'list')
+        // Only forward namespace when the tag actually supplied one, so that an omitted namespace
+        // lets the link generator infer the current controller's namespace.
+        boolean hasNamespace = attrs.containsKey('namespace')
         def namespace = attrs.remove('namespace')
 
         def defaultOrder = attrs.remove('defaultOrder')
@@ -352,7 +367,9 @@ class UrlMappingTagLib implements TagLibrary {
         }
 
         linkAttrs.action = action
-        linkAttrs.namespace = namespace
+        if (hasNamespace) {
+            linkAttrs.namespace = namespace
+        }
 
         writer << callLink((Map) linkAttrs) {
             title

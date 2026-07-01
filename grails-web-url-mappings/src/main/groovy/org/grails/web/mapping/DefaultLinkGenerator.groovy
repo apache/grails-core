@@ -44,6 +44,10 @@ import grails.web.mapping.LinkGenerator
 import grails.web.mapping.UrlCreator
 import grails.web.mapping.UrlMapping
 import grails.web.mapping.UrlMappingsHolder
+import grails.core.GrailsApplication
+import grails.core.GrailsClass
+import grails.core.GrailsControllerClass
+import org.grails.core.artefact.ControllerArtefactHandler
 import org.grails.core.artefact.DomainClassArtefactHandler
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
@@ -82,6 +86,12 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
 
     @Autowired(required = false)
     UrlConverter grailsUrlConverter = new CamelCaseUrlConverter()
+
+    @Autowired(required = false)
+    GrailsApplication grailsApplication
+
+    private volatile Map<String, Set<String>> controllerNamespacesByName
+    private volatile GrailsClass[] cachedControllers
 
     @Value('${grails.resources.pattern:/static/**}')
     String resourcePattern = Settings.DEFAULT_RESOURCE_PATTERN
@@ -247,11 +257,19 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
                     params.put(ATTRIBUTE_ID, id)
                 }
                 def pluginName = attrs.get(UrlMapping.PLUGIN)?.toString()
-                def namespace = attrs.get(UrlMapping.NAMESPACE)?.toString()
-                if (namespace == null) {
-                    if (controller == requestStateLookupStrategy.controllerName) {
-                        namespace = requestStateLookupStrategy.controllerNamespace
+                // An explicit namespace attribute always wins so that a blank one (namespace="" or
+                // namespace: null) can opt out and target a non-namespaced controller. A blank value is
+                // normalised to null because reverse mappings key non-namespaced controllers on null.
+                // Only when no namespace was supplied do we infer one for the target controller.
+                String namespace
+                if (attrs.containsKey(UrlMapping.NAMESPACE)) {
+                    namespace = attrs.get(UrlMapping.NAMESPACE)?.toString()
+                    if (namespace != null && namespace.trim().isEmpty()) {
+                        namespace = null
                     }
+                }
+                else {
+                    namespace = getDefaultNamespace(controller, pluginName)
                 }
                 UrlCreator mapping = urlMappingsHolder.getReverseMappingNoDefault(controller, action, namespace, pluginName, httpMethod, params)
                 if (mapping == null && isDefaultAction) {
@@ -286,6 +304,116 @@ class DefaultLinkGenerator implements LinkGenerator, PluginManagerAware {
             }
         }
         return writer.toString()
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    String getDefaultNamespace(String controller, String pluginName) {
+        if (controller == null) {
+            return null
+        }
+        String currentControllerName = requestStateLookupStrategy.controllerName
+        // Preserve the historical behaviour of reusing the current request namespace when the link
+        // targets the controller currently handling the request.
+        if (controller == currentControllerName) {
+            return requestStateLookupStrategy.controllerNamespace
+        }
+
+        // A plugin-provided target is resolved within that plugin, so do not infer a namespace from
+        // the application's own controllers, which could pick an unrelated same-named controller.
+        if (pluginName != null) {
+            return null
+        }
+
+        Set<String> namespaces = getControllerNamespacesByName().get(controller)
+        if (namespaces == null || namespaces.isEmpty()) {
+            return null
+        }
+
+        // The normal case: exactly one controller has this name, so use its namespace (which may be
+        // the non-namespaced/default one). Links therefore "just work" from controller and action
+        // alone, with no namespace attribute required.
+        if (namespaces.size() == 1) {
+            return namespaces.iterator().next()
+        }
+
+        // Otherwise the same controller name is defined in more than one namespace - a discouraged
+        // design that the caller is expected to disambiguate with an explicit namespace. Fall back to
+        // a sensible default rather than guessing: prefer the non-namespaced controller when one
+        // exists, then a controller in the current request namespace; leave anything still ambiguous
+        // to the existing reverse-mapping default.
+        if (namespaces.contains(null)) {
+            return null
+        }
+        String currentNamespace = requestStateLookupStrategy.controllerNamespace
+        if (currentNamespace != null && namespaces.contains(currentNamespace)) {
+            return currentNamespace
+        }
+        return null
+    }
+
+    private Map<String, Set<String>> getControllerNamespacesByName() {
+        GrailsApplication application = grailsApplication
+        if (application == null) {
+            return Collections.emptyMap()
+        }
+        // getArtefacts returns a cached array that is replaced with a new instance whenever the set of
+        // controllers changes (late registration in tests, a development-mode reload, or a namespace
+        // edit). Comparing the array identity rebuilds the index on any such change while staying O(1)
+        // on the common path where nothing changed.
+        GrailsClass[] controllers = application.getArtefacts(ControllerArtefactHandler.TYPE)
+        Map<String, Set<String>> index = controllerNamespacesByName
+        if (index == null || !controllers.is(cachedControllers)) {
+            index = buildControllerNamespaceIndex(controllers)
+            controllerNamespacesByName = index
+            cachedControllers = controllers
+        }
+        return index
+    }
+
+    /**
+     * @return {@code true} if at least one registered controller declares a namespace. Used by the
+     * caching link generator to decide whether a request's namespace context must be folded into the
+     * cache key for link shapes whose target controller it cannot cheaply resolve (resource links).
+     */
+    protected boolean hasNamespacedControllers() {
+        for (Set<String> namespaces in getControllerNamespacesByName().values()) {
+            for (String namespace in namespaces) {
+                if (namespace != null) {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
+    private Map<String, Set<String>> buildControllerNamespaceIndex(GrailsClass[] controllers) {
+        Map<String, Set<String>> index = new HashMap<>()
+        for (GrailsClass gc in controllers) {
+            GrailsControllerClass controllerClass = (GrailsControllerClass) gc
+            String name = controllerClass.logicalPropertyName
+            if (name == null) {
+                continue
+            }
+            Set<String> namespaces = index.get(name)
+            if (namespaces == null) {
+                namespaces = new HashSet<>()
+                index.put(name, namespaces)
+            }
+            namespaces.add(controllerClass.namespace)
+        }
+        return index
+    }
+
+    /**
+     * Clears the cached controller-to-namespace index so it is rebuilt on next use. Invoked when the
+     * set of controllers may have changed (for example during development-mode reloads).
+     */
+    void resetControllerNamespaceCache() {
+        controllerNamespacesByName = null
+        cachedControllers = null
     }
 
     @CompileStatic(TypeCheckingMode.SKIP)

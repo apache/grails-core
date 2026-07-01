@@ -30,6 +30,10 @@ class UrlMappings {
             namespace = "admin"
         }
 
+        "/frontend/$controller/$action?/$id?(.$format)?"{
+            namespace = "frontend"
+        }
+
         "/"(view:"/index")
         "500"(view:'/error')
     }

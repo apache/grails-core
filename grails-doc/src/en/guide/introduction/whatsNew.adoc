@@ -49,6 +49,13 @@ The Grails Gradle extension now defaults `preserveParameterNames` to `true`, so 
 Tag library unit tests also clean up and rebuild TagLib metadata automatically between features.
 Tests that use `TagLibUnitTest` no longer need to manage `purgeTagLibMetaClass`, and specs that mock additional tag libraries continue to work across feature methods.
 
+==== Namespace-Aware Link Generation
+
+Links, form actions, pagination links, sortable column links, redirects, chains, and includes now resolve the target controller namespace automatically when `namespace` is omitted.
+In the normal case, where only one controller has the target name, `controller` and `action` are enough to generate the correct namespaced or non-namespaced URL.
+If multiple controllers share the same name, specify `namespace` to choose one explicitly.
+Use `namespace=""` in GSP markup, or `namespace: null` in Groovy code, to target a non-namespaced controller.
+
 ==== @GrailsCompileStatic on Controllers That Use Tag Libraries
 
 Controllers annotated with `@GrailsCompileStatic` can now invoke tag library methods without compile-time errors.

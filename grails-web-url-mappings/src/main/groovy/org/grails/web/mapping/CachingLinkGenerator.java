@@ -52,6 +52,10 @@ public class CachingLinkGenerator extends DefaultLinkGenerator {
     private static final String COMMA_SEPARATOR = ", ";
     private static final String KEY_VALUE_SEPARATOR = ":";
     private static final String THIS_MAP = "(this Map)";
+    // Synthetic cache-key entries that capture the request context namespace inference depends on for
+    // resource links, whose target controller this class does not resolve.
+    private static final String REQUEST_CONTROLLER_KEY = "__grailsRequestController";
+    private static final String REQUEST_NAMESPACE_KEY = "__grailsRequestNamespace";
 
     private Cache<String, Object> linkCache;
 
@@ -109,10 +113,41 @@ public class CachingLinkGenerator extends DefaultLinkGenerator {
                 map.put(UrlMapping.CONTROLLER, requestControllerName);
                 map.put(UrlMapping.ACTION, action);
             }
-            if (map.get(UrlMapping.NAMESPACE) == null && map.get(UrlMapping.CONTROLLER) == requestControllerName) {
-                String namespace = getRequestStateLookupStrategy().getControllerNamespace();
-                if (GrailsStringUtils.isNotEmpty(namespace)) {
-                    map.put(UrlMapping.NAMESPACE, namespace);
+            // Fold the effective namespace into the cache key whenever none was supplied explicitly,
+            // so an inferred namespace (not just the current-controller case) is part of the key and
+            // links generated from different request namespaces never collide. The target controller
+            // may be supplied at the top level or nested in a url attribute map (for example
+            // <g:link url="[controller:'book']"/>); the plugin, like link(), is read from the top
+            // level. For these shapes we fold the precisely resolved namespace, which keeps the key
+            // tight and the cache hit rate high.
+            if (!map.containsKey(UrlMapping.NAMESPACE)) {
+                Object controllerValue = map.get(UrlMapping.CONTROLLER);
+                Object pluginValue = map.get(UrlMapping.PLUGIN);
+                Object urlValue = map.get(ATTRIBUTE_URL);
+                if (controllerValue == null && urlValue instanceof Map) {
+                    controllerValue = ((Map) urlValue).get(UrlMapping.CONTROLLER);
+                }
+                if (controllerValue != null) {
+                    String namespace = getDefaultNamespace(controllerValue.toString(),
+                            pluginValue == null ? null : pluginValue.toString());
+                    if (GrailsStringUtils.isNotEmpty(namespace)) {
+                        map.put(UrlMapping.NAMESPACE, namespace);
+                    }
+                }
+                else if (map.get(RESOURCE_PREFIX) != null && hasNamespacedControllers()) {
+                    // A resource link derives its controller through more involved resolution that we
+                    // do not duplicate here. When namespaced controllers exist a namespace could be
+                    // inferred, so fold the request context the inference depends on into the key so
+                    // resource links from different request namespaces never collide on a cached URL.
+                    // (A non-null request namespace always implies a namespaced controller is
+                    // registered, so this condition also covers the same-controller resource case.)
+                    String requestNamespace = getRequestStateLookupStrategy().getControllerNamespace();
+                    if (GrailsStringUtils.isNotEmpty(requestControllerName)) {
+                        map.put(REQUEST_CONTROLLER_KEY, requestControllerName);
+                    }
+                    if (GrailsStringUtils.isNotEmpty(requestNamespace)) {
+                        map.put(REQUEST_NAMESPACE_KEY, requestNamespace);
+                    }
                 }
             }
             boolean first = true;
@@ -198,5 +233,6 @@ public class CachingLinkGenerator extends DefaultLinkGenerator {
 
     public void clearCache() {
         linkCache.invalidateAll();
+        resetControllerNamespaceCache();
     }
 }

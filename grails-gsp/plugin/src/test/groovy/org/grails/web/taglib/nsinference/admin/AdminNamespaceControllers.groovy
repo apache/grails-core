@@ -16,34 +16,41 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
+package org.grails.web.taglib.nsinference.admin
 
-package namespaces.admin
+import grails.artefact.Artefact
 
-class PageController {
-
-    static namespace = "admin"
+@Artefact('Controller')
+class AuthorController {
+    static namespace = 'admin'
 
     def index() {
-        render view: "/page/index", model: [pageTitle: "Admin Page"]
-    }
-
-    def links() {
-        render view: "/page/namespaceLinks", model: [pageTitle: "Admin Namespace Links"]
+        render 'admin author index'
     }
 
     def list() {
-        render view: "/page/namespaceLinks", model: [pageTitle: "Admin Namespace Links"]
+        render 'admin author list'
+    }
+}
+
+@Artefact('Controller')
+class BookController {
+    static namespace = 'admin'
+
+    def index() {
+        render 'admin book index'
     }
 
-    def redirectToBook() {
-        redirect controller: "book", action: "index"
+    def list() {
+        render 'admin book list'
     }
+}
 
-    def chainToBook() {
-        chain controller: "book", action: "index"
-    }
+@Artefact('Controller')
+class ReportController {
+    static namespace = 'admin'
 
-    def redirectToRootReport() {
-        redirect controller: "report", action: "index", namespace: null
+    def index() {
+        render 'admin report index'
     }
 }
