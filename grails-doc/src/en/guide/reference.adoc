@@ -352,6 +352,11 @@ include::ref/Controllers/allowedMethods.adoc[]
 
 include::ref/Controllers/bindData.adoc[]
 
+[[ref-controllers-secureBindData]]
+==== secureBindData
+
+include::ref/Controllers/secureBindData.adoc[]
+
 [[ref-controllers-chain]]
 ==== chain
 

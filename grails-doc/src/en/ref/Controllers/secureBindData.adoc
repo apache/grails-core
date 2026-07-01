@@ -1,0 +1,68 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+== secureBindData
+
+=== Purpose
+
+Binds request parameters to an object or collection using an explicit allowlist of property names.
+
+=== Examples
+
+[source,groovy]
+----
+// binds only firstName and lastName
+secureBindData(target, params, ['firstName', 'lastName'])
+
+// binds only allowed author.* parameters
+secureBindData(target, params, ['firstName', 'lastName'], 'author')
+
+// clears allowed properties that are missing from the request
+secureBindData(target, params, ['firstName', 'lastName'], nullMissing: true)
+
+// binds request body items into a collection using an allowlist for each item
+secureBindData(Person, people, request, ['firstName', 'lastName'])
+----
+
+=== Description
+
+Usage: `secureBindData(target, params, allowedParams, prefix*)`
+
+Usage: `secureBindData(options, target, params, allowedParams, prefix*)`
+
+Usage: `secureBindData(targetType, collectionToPopulate, request, allowedParams)`
+
+Arguments:
+
+* `target` - The target object to bind to
+* `params` - A `Map` of source parameters, often the link:params.html[params] object when used in a controller
+* `allowedParams` - A required list of property names or nested property paths that may be bound
+* `prefix` - (Optional) A string representing a prefix to use to filter parameters. The method will automatically append a '.' when matching the prefix to parameters, so you can use 'author' to filter for parameters such as 'author.name'.
+* `options` - (Optional) A map of binding options. The `nullMissing` option clears allowed properties that are missing from the source.
+* `targetType` - The type of object to create when binding to a collection
+* `collectionToPopulate` - The collection to populate
+* `request` - The request body source for collection binding
+
+The `allowedParams` list is required. In controllers, calling `secureBindData` without an explicit allowlist is a compilation error.
+
+An empty allowlist binds no properties. This differs from link:bindData.html[bindData] with an empty `include` list, which leaves all otherwise-bindable properties eligible for binding.
+
+Use nested property paths such as `homeAddress.street` to allow nested binding. Properties not named in `allowedParams` are ignored.
+
+Refer to the section on link:{guidePath}theWebLayer.html#dataBinding[data binding] in the user guide for more information.

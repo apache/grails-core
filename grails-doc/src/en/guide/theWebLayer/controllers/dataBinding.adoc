@@ -1087,4 +1087,46 @@ bindData(p, params, [include: ['firstName', 'lastName']])
 
 NOTE: If an empty List is provided as a value for the `include` parameter then all fields will be subject to binding if they are not explicitly excluded.
 
+For new code that binds request parameters, prefer link:{controllersRef}secureBindData.html[secureBindData]. It requires the list of allowed properties:
+
+[source,groovy]
+----
+def p = new Person()
+secureBindData(p, params, ['firstName', 'lastName'])
+----
+
+Use nested property paths when allowing nested binding:
+
+[source,groovy]
+----
+def p = new Person()
+secureBindData(p, params, ['firstName', 'homeAddress.street', 'homeAddress.city'])
+----
+
+Prefix filtering is supported:
+
+[source,groovy]
+----
+def p = new Person()
+secureBindData(p, params, ['firstName', 'lastName'], 'author')
+----
+
+You can also clear allowed properties that are missing from the request:
+
+[source,groovy]
+----
+def p = Person.get(1)
+secureBindData(p, params, ['firstName', 'lastName'], nullMissing: true)
+----
+
+When binding a request body into a collection, `secureBindData` also requires the allowed properties for each created item:
+
+[source,groovy]
+----
+def people = []
+secureBindData(Person, people, request, ['firstName', 'lastName'])
+----
+
+An empty allowlist binds no properties. This differs from `bindData` with an empty `include` list, which leaves all otherwise-bindable properties eligible for binding.
+
 The link:{constraintsRef}bindable.html[bindable] constraint can be used to globally prevent data binding for certain properties.

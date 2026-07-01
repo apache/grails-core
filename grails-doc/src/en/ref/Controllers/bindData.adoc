@@ -62,6 +62,8 @@ Arguments:
 
 NOTE: Note that if an empty List or no List is provided as a value for the `include` parameter then all statically typed instance properties will be subject to binding if they are not explicitly excluded. See the link:{constraintsRefFromRef}bindable.html[bindable] constraint documentation for more information on how to control what is bindable and what is not.
 
+For new code that binds untrusted request parameters, prefer link:secureBindData.html[secureBindData]. It requires an explicit allowlist, treats an empty allowlist as binding no properties, and fails controller compilation if the allowlist is omitted.
+
 The underlying implementation uses Spring's Data Binding framework. If the target is a domain class, type conversion errors are stored in the `errors` property of the domain class.
 
 Refer to the section on link:{guidePath}theWebLayer.html#dataBinding[data binding] in the user guide for more information.

@@ -25,8 +25,10 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import groovy.lang.Closure;
@@ -36,6 +38,7 @@ import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.AnnotationNode;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.CodeVisitorSupport;
 import org.codehaus.groovy.ast.ConstructorNode;
 import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.MethodNode;
@@ -189,6 +192,7 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
             new ClassNode(Action.class));
     private static final String ACTION_MEMBER_TARGET = "commandObjects";
     public static final String EXCEPTION_HANDLER_META_DATA_FIELD_NAME = "$exceptionHandlerMetaData";
+    private static final String SECURE_BIND_DATA_METHOD_NAME = "secureBindData";
 
     private static final TupleExpression EMPTY_TUPLE = new TupleExpression();
     @SuppressWarnings({"unchecked"})
@@ -237,6 +241,7 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
     public void performInjectionOnAnnotatedClass(SourceUnit source, GeneratorContext context, ClassNode classNode) {
         final String className = classNode.getName();
         if (className.endsWith(ControllerArtefactHandler.TYPE)) {
+            validateSecureBindDataCalls(source, classNode);
             processMethods(classNode, source, context);
             processClosures(classNode, source, context);
         }
@@ -257,6 +262,252 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
             }
         }
         return isExceptionHandler;
+    }
+
+    private void validateSecureBindDataCalls(SourceUnit source, ClassNode classNode) {
+        Set<ClassNode> visitedClasses = new HashSet<>();
+        Set<MethodNode> visitedMethods = new HashSet<>();
+        Set<ClassNode> visitedTraitHelpers = new HashSet<>();
+        validateSecureBindDataCalls(source, classNode, classNode, visitedClasses, visitedMethods, visitedTraitHelpers);
+    }
+
+    private void validateSecureBindDataCalls(SourceUnit source, ClassNode controllerClassNode, ClassNode classNode, Set<ClassNode> visitedClasses, Set<MethodNode> visitedMethods, Set<ClassNode> visitedTraitHelpers) {
+        if (classNode == null || OBJECT_CLASS.equals(classNode) || !visitedClasses.add(classNode)) {
+            return;
+        }
+        SecureBindDataCallVisitor visitor = new SecureBindDataCallVisitor(source, controllerClassNode, classNode);
+        for (MethodNode method : classNode.getMethods()) {
+            if (method.getCode() != null && visitedMethods.add(method)) {
+                method.getCode().visit(visitor);
+            }
+            validateTraitHelperSecureBindDataCalls(source, method, controllerClassNode, visitedTraitHelpers);
+        }
+        for (PropertyNode property : classNode.getProperties()) {
+            Expression initialExpression = property.getInitialExpression();
+            if (initialExpression instanceof ClosureExpression) {
+                ((ClosureExpression) initialExpression).getCode().visit(visitor);
+            }
+        }
+        validateSecureBindDataCalls(source, controllerClassNode, classNode.getSuperClass(), visitedClasses, visitedMethods, visitedTraitHelpers);
+    }
+
+    private void validateTraitHelperSecureBindDataCalls(SourceUnit source, MethodNode method, ClassNode controllerClassNode, Set<ClassNode> visitedTraitHelpers) {
+        List<AnnotationNode> traitBridges = method.getAnnotations(new ClassNode(Traits.TraitBridge.class));
+        if (traitBridges.size() == 1) {
+            Expression traitClass = traitBridges.get(0).getMember("traitClass");
+            if (traitClass instanceof ClassExpression) {
+                ClassNode helperClass = Traits.findHelper(traitClass.getType());
+                if (helperClass != null && visitedTraitHelpers.add(helperClass)) {
+                    SecureBindDataCallVisitor visitor = new SecureBindDataCallVisitor(source, controllerClassNode, traitClass.getType(), traitClass.getType());
+                    for (MethodNode helperMethod : helperClass.getMethods()) {
+                        if (helperMethod.getCode() != null) {
+                            helperMethod.getCode().visit(visitor);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private static class SecureBindDataCallVisitor extends CodeVisitorSupport {
+
+        private final SourceUnit source;
+        private final ClassNode controllerClassNode;
+        private final ClassNode visitedClassNode;
+        private final ClassNode traitClassNode;
+
+        SecureBindDataCallVisitor(SourceUnit source, ClassNode controllerClassNode, ClassNode visitedClassNode) {
+            this(source, controllerClassNode, visitedClassNode, null);
+        }
+
+        SecureBindDataCallVisitor(SourceUnit source, ClassNode controllerClassNode, ClassNode visitedClassNode, ClassNode traitClassNode) {
+            this.source = source;
+            this.controllerClassNode = controllerClassNode;
+            this.visitedClassNode = visitedClassNode;
+            this.traitClassNode = traitClassNode;
+        }
+
+        @Override
+        public void visitMethodCallExpression(MethodCallExpression call) {
+            super.visitMethodCallExpression(call);
+            if (isControllerSecureBindDataCall(call) && !hasAllowedParamsArgument(call)) {
+                GrailsASTUtils.error(source, call,
+                        "secureBindData requires an explicit allowedParams list. Use secureBindData(target, params, allowedParams).");
+            }
+        }
+
+        private boolean isControllerSecureBindDataCall(MethodCallExpression call) {
+            if (!SECURE_BIND_DATA_METHOD_NAME.equals(call.getMethodAsString())) {
+                return false;
+            }
+            if (matchesDeclaredControllerMethod(call)) {
+                return false;
+            }
+            Expression objectExpression = call.getObjectExpression();
+            return call.isImplicitThis() ||
+                    (objectExpression instanceof VariableExpression && isControllerReceiver((VariableExpression) objectExpression));
+        }
+
+        private boolean matchesDeclaredControllerMethod(MethodCallExpression call) {
+            MethodNode methodTarget = call.getMethodTarget();
+            if (methodTarget != null && !methodTarget.isStatic() && declaresControllerMethod(methodTarget)) {
+                return true;
+            }
+
+            List<Expression> arguments = getArguments(call);
+            if (arguments == null) {
+                return false;
+            }
+            ClassNode currentClassNode = controllerClassNode;
+            while (currentClassNode != null && !OBJECT_CLASS.equals(currentClassNode)) {
+                List<MethodNode> declaredMethods = currentClassNode.getDeclaredMethods(SECURE_BIND_DATA_METHOD_NAME);
+                if (declaredMethods != null) {
+                    for (MethodNode method : declaredMethods) {
+                        if ((currentClassNode.equals(visitedClassNode) || !method.isPrivate()) && acceptsArguments(method, arguments)) {
+                            return true;
+                        }
+                    }
+                }
+                currentClassNode = currentClassNode.getSuperClass();
+            }
+            if (traitClassNode != null) {
+                List<MethodNode> declaredTraitMethods = traitClassNode.getDeclaredMethods(SECURE_BIND_DATA_METHOD_NAME);
+                if (declaredTraitMethods != null) {
+                    for (MethodNode method : declaredTraitMethods) {
+                        if (acceptsArguments(method, arguments)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        private boolean declaresControllerMethod(MethodNode methodTarget) {
+            ClassNode currentClassNode = controllerClassNode;
+            while (currentClassNode != null && !OBJECT_CLASS.equals(currentClassNode)) {
+                if (currentClassNode.equals(methodTarget.getDeclaringClass())) {
+                    return true;
+                }
+                currentClassNode = currentClassNode.getSuperClass();
+            }
+            return false;
+        }
+
+        private List<Expression> getArguments(MethodCallExpression call) {
+            Expression arguments = call.getArguments();
+            if (!(arguments instanceof TupleExpression)) {
+                return null;
+            }
+            return ((TupleExpression) arguments).getExpressions();
+        }
+
+        private boolean acceptsArguments(MethodNode method, List<Expression> arguments) {
+            if (method.isStatic()) {
+                return false;
+            }
+            Parameter[] parameters = method.getParameters();
+            int argumentCount = arguments.size();
+            int requiredParameterCount = 0;
+            for (Parameter parameter : parameters) {
+                if (!parameter.hasInitialExpression()) {
+                    requiredParameterCount++;
+                }
+            }
+            if (parameters.length > 0 && parameters[parameters.length - 1].getType().isArray()) {
+                if (argumentCount < requiredParameterCount - 1) {
+                    return false;
+                }
+            }
+            else if (argumentCount < requiredParameterCount || argumentCount > parameters.length) {
+                return false;
+            }
+
+            for (int i = 0; i < argumentCount; i++) {
+                if (!acceptsArgument(parameters, i, arguments.get(i))) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        private boolean acceptsArgument(Parameter[] parameters, int argumentIndex, Expression argument) {
+            ClassNode parameterType = getParameterType(parameters, argumentIndex);
+            if (parameterType == null || OBJECT_CLASS.equals(parameterType) || ClassHelper.OBJECT_TYPE.equals(parameterType)) {
+                return true;
+            }
+            ClassNode argumentType = argument.getType();
+            if (argumentType == null || OBJECT_CLASS.equals(argumentType) || ClassHelper.OBJECT_TYPE.equals(argumentType)) {
+                return isParamsArgument(argument) && acceptsMapArgument(parameterType);
+            }
+            return argumentType.equals(parameterType) || argumentType.isDerivedFrom(parameterType) || argumentType.implementsInterface(parameterType);
+        }
+
+        private boolean isParamsArgument(Expression argument) {
+            return argument instanceof VariableExpression && "params".equals(((VariableExpression) argument).getName());
+        }
+
+        private boolean acceptsMapArgument(ClassNode parameterType) {
+            return parameterType.equals(ClassHelper.MAP_TYPE) || parameterType.isDerivedFrom(ClassHelper.MAP_TYPE) || parameterType.implementsInterface(ClassHelper.MAP_TYPE);
+        }
+
+        private ClassNode getParameterType(Parameter[] parameters, int argumentIndex) {
+            int parameterIndex = Math.min(argumentIndex, parameters.length - 1);
+            ClassNode parameterType = parameters[parameterIndex].getType();
+            if (parameters.length > 0 && parameterIndex == parameters.length - 1 && parameterType.isArray()) {
+                return parameterType.getComponentType();
+            }
+            return parameterType;
+        }
+
+        private boolean isControllerReceiver(VariableExpression objectExpression) {
+            String variableName = objectExpression.getName();
+            return "this".equals(variableName) || "$self".equals(variableName);
+        }
+
+        private boolean hasAllowedParamsArgument(MethodCallExpression call) {
+            Expression arguments = call.getArguments();
+            if (!(arguments instanceof TupleExpression)) {
+                return false;
+            }
+            List<Expression> expressions = ((TupleExpression) arguments).getExpressions();
+            if (expressions.isEmpty()) {
+                return false;
+            }
+
+            return hasAllowedParamsAt(expressions, 2) || hasAllowedParamsAt(expressions, 3);
+        }
+
+        private boolean hasAllowedParamsAt(List<Expression> expressions, int allowedParamsIndex) {
+            if (allowedParamsIndex >= expressions.size()) {
+                return false;
+            }
+            Expression allowedParams = expressions.get(allowedParamsIndex);
+            if (allowedParams instanceof ConstantExpression || allowedParams instanceof MapExpression) {
+                return false;
+            }
+            if (allowedParams instanceof VariableExpression) {
+                return isAllowedParamsVariable((VariableExpression) allowedParams);
+            }
+            return true;
+        }
+
+        private boolean isAllowedParamsVariable(VariableExpression allowedParams) {
+            String variableName = allowedParams.getName();
+            if ("params".equals(variableName) || "request".equals(variableName)) {
+                return false;
+            }
+
+            ClassNode variableType = allowedParams.getType();
+            if (variableType == null || OBJECT_CLASS.equals(variableType) || ClassHelper.OBJECT_TYPE.equals(variableType)) {
+                return true;
+            }
+            return acceptsAllowedParamsType(variableType, ClassHelper.LIST_TYPE) || acceptsAllowedParamsType(variableType, new ClassNode(Collection.class));
+        }
+
+        private boolean acceptsAllowedParamsType(ClassNode variableType, ClassNode allowedParamsType) {
+            return variableType.equals(allowedParamsType) || variableType.isDerivedFrom(allowedParamsType) || variableType.implementsInterface(allowedParamsType);
+        }
     }
 
     private void processMethods(ClassNode classNode, SourceUnit source,
