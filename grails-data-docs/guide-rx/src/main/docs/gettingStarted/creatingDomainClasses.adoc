@@ -23,7 +23,7 @@ When using RxGORM each entity that you persist to the database is known as a dom
 
 If you are using RxGORM within Grails you can create a domain class with the `create-domain-class` command provided by the command line. Alternatively if you are not using Grails simply creating a Groovy class within `src/main/groovy` of your project will suffice.
 
-A domain class must as a minimum implement the link:../api/grails/gorm/rx/RxEntity.html[RxEntity] trait.
+A domain class must as a minimum implement the link:../../api/grails/gorm/rx/RxEntity.html[RxEntity] trait.
 
 However, when using RxGORM for MongoDB you should instead implement the `grails.gorm.rx.mongodb.RxMongoEntity` trait. For example:
 

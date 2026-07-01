@@ -21,7 +21,7 @@ The way the provided operations respond after deleting a GORM entity instance an
 
 == Delete Response
 
-Delete responses are handled by a link:{api}/org/grails/gorm/graphql/response/delete/GraphQLDeleteResponseHandler.html[GraphQLDeleteResponseHandler]. The default implementation responds with an object that has a single property, `success`. You can register your own handler to override the default.
+Delete responses are handled by a link:../../../api/org/grails/gorm/graphql/response/delete/GraphQLDeleteResponseHandler.html[GraphQLDeleteResponseHandler]. The default implementation responds with an object that has a single property, `success`. You can register your own handler to override the default.
 
 For reference, see the link:https://github.com/apache/grails-core/blob/HEAD/grails-data-graphql/core/src/main/groovy/org/grails/gorm/graphql/response/delete/DefaultGraphQLDeleteResponseHandler.groovy[default handler].
 
@@ -49,7 +49,7 @@ graphQLDeleteResponseHandler(MyDeleteResponseHandler)
 
 == Validation Error Response
 
-Validation error responses are handled by a link:{api}/org/grails/gorm/graphql/response/errors/GraphQLErrorsResponseHandler.html[GraphQLErrorsResponseHandler].
+Validation error responses are handled by a link:../../../api/org/grails/gorm/graphql/response/errors/GraphQLErrorsResponseHandler.html[GraphQLErrorsResponseHandler].
 
 For reference, see the link:https://github.com/apache/grails-core/blob/HEAD/grails-data-graphql/core/src/main/groovy/org/grails/gorm/graphql/response/errors/DefaultGraphQLErrorsResponseHandler.groovy[default handler].
 

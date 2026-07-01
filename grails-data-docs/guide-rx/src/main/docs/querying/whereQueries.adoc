@@ -27,7 +27,7 @@ def query = Book.where {
 }
 ----
 
-Note that no query is actually executed directly, instead the `where(Closure)` method returns an instance of link:../api/grails/gorm/rx/DetachedCriteria.html[DetachedCriteria].
+Note that no query is actually executed directly, instead the `where(Closure)` method returns an instance of link:../../api/grails/gorm/rx/DetachedCriteria.html[DetachedCriteria].
 
 Like an `rx.Observable`, the `DetachedCriteria` class can be subscribed to:
 

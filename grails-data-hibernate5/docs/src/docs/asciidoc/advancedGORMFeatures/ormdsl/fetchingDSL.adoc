@@ -181,7 +181,7 @@ def person = Person.where { id == 1 }.join("pet").get()
 assert person.pet instanceof Dog
 ----
 
-In the above example the `pet` association is no longer lazy because it is being retrieved along with the `Person` and thus no proxies are necessary. There are cases when it makes sense for a proxy to be returned, mostly in the case where its impossible to know if the data will be used or not. For those cases in order to access properties of the subclasses, the proxy must be unwrapped. To unwrap a proxy inject an instance of link:../api/org/grails/datastore/mapping/proxy/ProxyHandler.html[ProxyHandler] and pass the proxy to the `unwrap` method.
+In the above example the `pet` association is no longer lazy because it is being retrieved along with the `Person` and thus no proxies are necessary. There are cases when it makes sense for a proxy to be returned, mostly in the case where its impossible to know if the data will be used or not. For those cases in order to access properties of the subclasses, the proxy must be unwrapped. To unwrap a proxy inject an instance of link:../../../api/org/grails/datastore/mapping/proxy/ProxyHandler.html[ProxyHandler] and pass the proxy to the `unwrap` method.
 
 [source,groovy]
 ----
@@ -189,7 +189,7 @@ def person = Person.get(1)
 assert proxyHandler.unwrap(person.pet) instanceof Dog
 ----
 
-For cases where dependency injection is impractical or not available, a helper method link:../api/org/grails/orm/hibernate/cfg/GrailsHibernateUtil.html#unwrapIfProxy(java.lang.Object)[GrailsHibernateUtil.unwrapIfProxy(Object)] can be used instead.
+For cases where dependency injection is impractical or not available, a helper method link:../../../api/org/grails/orm/hibernate/cfg/GrailsHibernateUtil.html#unwrapIfProxy(java.lang.Object)[GrailsHibernateUtil.unwrapIfProxy(Object)] can be used instead.
 
 Unwrapping a proxy is different than initializing it. Initializing a proxy simply populates the underlying instance with data from the database, however unwrapping a returns the inner target.
 

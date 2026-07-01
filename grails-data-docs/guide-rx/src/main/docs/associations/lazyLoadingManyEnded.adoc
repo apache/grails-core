@@ -21,7 +21,7 @@ under the License.
 
 In the previous section we discussed the implications of association proxies for single-ended associations. However, the same applies with many-ended associations.
 
-In the case of collection types, these implement the link:../api/grails/gorm/rx/collection/RxPersistentCollection.html[RxPersistentCollection] and again can be subscribed to:
+In the case of collection types, these implement the link:../../api/grails/gorm/rx/collection/RxPersistentCollection.html[RxPersistentCollection] and again can be subscribed to:
 
 
 [source,groovy]

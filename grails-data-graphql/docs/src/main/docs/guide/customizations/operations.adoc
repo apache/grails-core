@@ -97,7 +97,7 @@ By configuring the list operation to paginate, instead of a list of results bein
 
 ==== Customization
 
-It is possible to customize how the pagination response is created through the creation of a link:{api}/org/grails/gorm/graphql/response/pagination/GraphQLPaginationResponseHandler.html[GraphQLPaginationResponseHandler].
+It is possible to customize how the pagination response is created through the creation of a link:../../../api/org/grails/gorm/graphql/response/pagination/GraphQLPaginationResponseHandler.html[GraphQLPaginationResponseHandler].
 
 How you can supply your own pagination response handler depends on whether the library is being used standalone or part of a Grails application.
 
@@ -123,7 +123,7 @@ beans = {
 }
 ----
 
-NOTE: Data fetchers must respond according to the object type definition created by the pagination response handler. When supplying your own data fetcher, implement link:{api}/org/grails/gorm/graphql/fetcher/PaginatingGormDataFetcher.html[PaginatingGormDataFetcher] and the response handler will be populated for you. The response handler is responsible for creating the response in order to assure it is compatible.
+NOTE: Data fetchers must respond according to the object type definition created by the pagination response handler. When supplying your own data fetcher, implement link:../../../api/org/grails/gorm/graphql/fetcher/PaginatingGormDataFetcher.html[PaginatingGormDataFetcher] and the response handler will be populated for you. The response handler is responsible for creating the response in order to assure it is compatible.
 
 == Custom Operations
 
@@ -231,24 +231,24 @@ The above example will function properly, however it is missing out on one of th
 |===
 |Type|Class
 |GET
-|link:{api}/org/grails/gorm/graphql/fetcher/impl/SingleEntityDataFetcher.html[SingleEntityDataFetcher]
+|link:../../../api/org/grails/gorm/graphql/fetcher/impl/SingleEntityDataFetcher.html[SingleEntityDataFetcher]
 |LIST
-|link:{api}/org/grails/gorm/graphql/fetcher/impl/EntityDataFetcher.html[EntityDataFetcher]
+|link:../../../api/org/grails/gorm/graphql/fetcher/impl/EntityDataFetcher.html[EntityDataFetcher]
 |LIST (Paginated Response)
-|link:{api}/org/grails/gorm/graphql/fetcher/impl/PaginatedEntityDataFetcher.html[PaginatedEntityDataFetcher]
+|link:../../../api/org/grails/gorm/graphql/fetcher/impl/PaginatedEntityDataFetcher.html[PaginatedEntityDataFetcher]
 |CREATE
-|link:{api}/org/grails/gorm/graphql/fetcher/impl/CreateEntityDataFetcher.html[CreateEntityDataFetcher]
+|link:../../../api/org/grails/gorm/graphql/fetcher/impl/CreateEntityDataFetcher.html[CreateEntityDataFetcher]
 |UPDATE
-|link:{api}/org/grails/gorm/graphql/fetcher/impl/UpdateEntityDataFetcher.html[UpdateEntityDataFetcher]
+|link:../../../api/org/grails/gorm/graphql/fetcher/impl/UpdateEntityDataFetcher.html[UpdateEntityDataFetcher]
 |DELETE
-|link:{api}/org/grails/gorm/graphql/fetcher/impl/DeleteEntityDataFetcher.html[EntityDataFetcher]
+|link:../../../api/org/grails/gorm/graphql/fetcher/impl/DeleteEntityDataFetcher.html[EntityDataFetcher]
 |===
 
-If the data fetcher you wish to create does not fit well in any of the above use cases, you can extend directly from link:{api}/org/grails/gorm/graphql/fetcher/DefaultGormDataFetcher.html[DefaultGormDataFetcher], which has all of the query optimization logic.
+If the data fetcher you wish to create does not fit well in any of the above use cases, you can extend directly from link:../../../api/org/grails/gorm/graphql/fetcher/DefaultGormDataFetcher.html[DefaultGormDataFetcher], which has all of the query optimization logic.
 
-All of the classes above have a constructor which takes in a link:{gormapi}org/grails/datastore/mapping/model/PersistentEntity.html[PersistentEntity]. The easiest way to get a persistent entity from a domain class is to execute the static `gormPersistentEntity` method.
+All of the classes above have a constructor which takes in a link:../../../api/org/grails/datastore/mapping/model/PersistentEntity.html[PersistentEntity]. The easiest way to get a persistent entity from a domain class is to execute the static `gormPersistentEntity` method.
 
-Using the above information, we can change the `authorByName` to extend from the link:{api}/org/grails/gorm/graphql/fetcher/impl/SingleEntityDataFetcher.html[SingleEntityDataFetcher] class because we are returning a single `Author`.
+Using the above information, we can change the `authorByName` to extend from the link:../../../api/org/grails/gorm/graphql/fetcher/impl/SingleEntityDataFetcher.html[SingleEntityDataFetcher] class because we are returning a single `Author`.
 
 
 [source,groovy]

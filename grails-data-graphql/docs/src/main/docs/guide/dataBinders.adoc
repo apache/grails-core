@@ -21,7 +21,7 @@ Data binders are responsible for taking the domain argument to a create or updat
 
 == Get The Manager
 
-To register a data binders, you need to get a reference to the link:{api}/org/grails/gorm/graphql/binding/GraphQLDataBinderManager.html[GraphQLDataBinderManager]. If you are using the manager provided by default, how you access it will depend on whether you are using the plugin or standalone.
+To register a data binders, you need to get a reference to the link:../../../api/org/grails/gorm/graphql/binding/GraphQLDataBinderManager.html[GraphQLDataBinderManager]. If you are using the manager provided by default, how you access it will depend on whether you are using the plugin or standalone.
 
 === Standalone
 
