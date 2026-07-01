@@ -18,6 +18,8 @@
  */
 package org.grails.orm.hibernate
 
+import java.util.UUID
+
 import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.HibernateEntity
 import grails.gorm.tests.HibernateGormDatastoreSpec
@@ -28,6 +30,7 @@ import org.hibernate.HibernateException
 import org.hibernate.LockMode
 import org.hibernate.Session
 import org.springframework.dao.DataAccessException
+import org.springframework.transaction.support.TransactionSynchronizationManager
 
 class GrailsHibernateTemplateSpec extends HibernateGormDatastoreSpec {
 
@@ -1129,6 +1132,46 @@ class GrailsHibernateTemplateSpec extends HibernateGormDatastoreSpec {
         template.exposeNativeSession = true
     }
 
+    void "executeWithNewSession succeeds and restores TSM when DataSource holder is pre-bound without a SessionFactory holder"() {
+        given: "synchronization is already active from the outer test transaction"
+        assert TransactionSynchronizationManager.isSynchronizationActive()
+
+        and: "a fresh secondary datastore whose SF is not bound in the active outer transaction"
+        // Reproduces the production scenario: SQLErrorCodesFactory.getErrorCodes() calls
+        // DataSourceUtils.getConnection() while a parent-transaction sync is active,
+        // binding DS to TSM without a matching SF holder.  Without the fix,
+        // executeWithNewSession skipped the DS unbind when SF was absent, leaving DS
+        // bound so HibernateTransactionManager.doBegin threw "Already value bound".
+        HibernateDatastore localDatastore = new HibernateDatastore(
+            org.grails.datastore.mapping.core.DatastoreUtils.createPropertyResolver([
+                'dataSource.url'        : "jdbc:h2:mem:h7TsmTest_${UUID.randomUUID().toString().replace('-', '')};LOCK_TIMEOUT=10000".toString(),
+                'dataSource.dbCreate'   : 'create-drop',
+                'dataSource.dialect'    : org.hibernate.dialect.H2Dialect.name,
+                'hibernate.hbm2ddl.auto': 'create-drop',
+            ]), H7TemplateTsmBook)
+        GrailsHibernateTemplate localTemplate = new GrailsHibernateTemplate(localDatastore.sessionFactory)
+        javax.sql.DataSource ds = localTemplate.@dataSource
+        // SQLErrorCodesFactory.getErrorCodes() calls DataSourceUtils.getConnection() while sync
+        // is active, binding DS to TSM.  Assert the precondition: DS bound, SF not bound.
+        assert TransactionSynchronizationManager.hasResource(ds)
+        assert !TransactionSynchronizationManager.hasResource(localDatastore.sessionFactory)
+
+        when: "executeWithNewSession is called with DS bound but SF not bound in TSM"
+        localTemplate.executeWithNewSession { sess -> }
+
+        then: "no exception is thrown — the bug caused 'Already value bound' for the DataSource"
+        noExceptionThrown()
+
+        and: "the DataSource resource is accessible in TSM after the nested-session scope exits"
+        TransactionSynchronizationManager.hasResource(ds)
+
+        cleanup:
+        if (ds != null && TransactionSynchronizationManager.hasResource(ds)) {
+            TransactionSynchronizationManager.unbindResource(ds)
+        }
+        localDatastore?.close()
+    }
+
     void "test executeWithNewSession does not release connection for MultiTenantDataSource"() {
         given: "A template with a multi-tenant data source"
         def mockMultiTenantDataSource = Mock(org.grails.datastore.gorm.jdbc.MultiTenantDataSource)
@@ -1166,6 +1209,12 @@ class GrailsHibernateTemplateSpec extends HibernateGormDatastoreSpec {
 
 @Entity
 class TemplateBook implements HibernateEntity<TemplateBook> {
+    String title
+    String author
+}
+
+@Entity
+class H7TemplateTsmBook implements HibernateEntity<H7TemplateTsmBook> {
     String title
     String author
 }

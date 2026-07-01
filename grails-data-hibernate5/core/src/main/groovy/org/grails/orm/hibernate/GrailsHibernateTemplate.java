@@ -154,9 +154,15 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
             // if there are already bound holders, unbind them so they can be restored later
             if (sessionHolder != null) {
                 TransactionSynchronizationManager.unbindResource(sessionFactory);
-                if (previousConnectionHolder != null) {
-                    TransactionSynchronizationManager.unbindResource(dataSource);
-                }
+            }
+            // Unbind any pre-existing connection holder independently of the session holder: a
+            // DataSource binding can exist without a matching SessionFactory binding when, for
+            // example, Spring's SQLErrorCodesFactory eagerly acquires a connection via
+            // DataSourceUtils during SQLErrorCodeSQLExceptionTranslator initialisation while a
+            // parent-transaction synchronisation is already active.  Leaving it bound causes
+            // HibernateTransactionManager.doBegin to throw "Already value bound" at line 565.
+            if (previousConnectionHolder != null) {
+                TransactionSynchronizationManager.unbindResource(dataSource);
             }
 
             // create and bind a new session holder for the new session
@@ -206,9 +212,12 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
                 // now restore any previous state
                 if (previousHolder != null) {
                     TransactionSynchronizationManager.bindResource(sessionFactory, previousHolder);
-                    if (previousConnectionHolder != null) {
-                        TransactionSynchronizationManager.bindResource(dataSource, previousConnectionHolder);
-                    }
+                }
+                // Restore the connection holder independently of the session holder so that
+                // the parent-transaction's ConnectionSynchronization (re-registered above) can
+                // still release it when the outer transaction completes.
+                if (previousConnectionHolder != null) {
+                    TransactionSynchronizationManager.bindResource(dataSource, previousConnectionHolder);
                 }
 
             }
