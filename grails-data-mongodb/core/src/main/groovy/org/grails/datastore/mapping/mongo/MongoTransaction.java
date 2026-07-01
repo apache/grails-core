@@ -45,8 +45,9 @@ import org.grails.datastore.mapping.transactions.Transaction;
  * re-executing the transaction body, which the
  * {@link org.grails.datastore.mapping.transactions.DatastoreTransactionManager} — a Spring
  * {@code PlatformTransactionManager} — cannot do (it only begins, commits and rolls back; the
- * application code between those is not re-runnable at this layer). Such retry belongs to the
- * transaction orchestration layer if added later.</p>
+ * application code between those is not re-runnable at this layer). Such retry is left to the
+ * application (as Spring Data MongoDB's own {@code MongoTransactionManager} does), since re-running
+ * the body would repeat its side effects.</p>
  *
  * @since 8.0
  */
