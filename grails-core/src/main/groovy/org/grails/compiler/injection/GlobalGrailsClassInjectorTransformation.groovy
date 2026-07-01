@@ -176,7 +176,25 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
         generatePluginXml(pluginClassNode, pluginVersion, transformedClasses, pluginXmlFile)
     }
 
+    /**
+     * The system property signalling that each project compiles into its own isolated output
+     * directory. When set, the transform must never fall back to a shared/guessed location, which can
+     * leak one module's generated metadata into another.
+     */
+    public static final String ISOLATED_BUILD_PROPERTY = 'grails.isolated.build'
+
+    /**
+     * @return {@code true} when the {@code grails.isolated.build} system property is {@code true}.
+     */
+    static boolean isIsolatedBuild() {
+        System.getProperty(ISOLATED_BUILD_PROPERTY, 'false').toBoolean()
+    }
+
     static File resolveCompilationTargetDirectory(SourceUnit source) {
+        resolveCompilationTargetDirectory(source, isolatedBuild)
+    }
+
+    static File resolveCompilationTargetDirectory(SourceUnit source, boolean isolatedBuild) {
         File targetDirectory = null
         if (source.getClass().name == 'org.codehaus.jdt.groovy.control.EclipseSourceUnit') {
             targetDirectory = GroovyEclipseCompilationHelper.resolveEclipseCompilationTargetDirectory(source)
@@ -184,6 +202,17 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
             targetDirectory = source.configuration.targetDirectory
         }
         if (targetDirectory == null) {
+            // The relative fallback is resolved against the compiler's working directory, which is shared
+            // across every module of a multi-project build (e.g. the reused Gradle compiler worker). That
+            // makes it a single path for all modules, so one module's generated grails.factories /
+            // grails-plugin.xml can leak into another. In an isolated build, fail loudly instead.
+            if (isolatedBuild) {
+                throw new IllegalStateException(
+                        "Unable to resolve the compilation target directory for '${source?.name}' while the " +
+                        "'${ISOLATED_BUILD_PROPERTY}' system property is set. Refusing to fall back to the shared " +
+                        "relative 'build/classes/main' path, which would leak generated metadata between modules. " +
+                        'Ensure the Groovy compiler supplies CompilerConfiguration.targetDirectory.')
+            }
             targetDirectory = new File('build/classes/main')
         }
         return targetDirectory
