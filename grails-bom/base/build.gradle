@@ -57,8 +57,6 @@ dependencies {
         exclude group: 'org.liquibase'
         exclude group: 'org.hibernate'
         exclude group: 'org.hibernate.orm'
-        exclude group: 'jakarta.servlet'
-        exclude group: 'jakarta.validation'
     }
 
     for (def entry : bomPlatformDependencies.entrySet()) {
