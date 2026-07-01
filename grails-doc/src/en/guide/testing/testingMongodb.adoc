@@ -1,0 +1,60 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+The `grails-testing-support-mongodb` library provides support for testing GORM for MongoDB with Testcontainers. This library is suitable for both unit and integration testing.
+
+== Installation
+
+To use the MongoDB testing support, add the following dependency to your `build.gradle`:
+
+[source,groovy,subs="attributes"]
+testImplementation "org.apache.grails.testing:grails-testing-support-mongodb"
+
+== Usage
+
+You can use the `grails.test.mongodb.MongoSpec` trait to test MongoDB interactions. This trait will automatically start a MongoDB container using Testcontainers if one is not already running.
+
+[source,groovy]
+----
+import grails.test.mongodb.MongoSpec
+import spock.lang.Specification
+
+class MyMongoSpec extends Specification implements MongoSpec {
+
+    void "test mongo connection"() {
+        expect:
+        mongoClient != null
+    }
+}
+----
+
+The `MongoSpec` trait ensures that a MongoDB container is running and provides a `mongoClient` bean.
+
+== Advanced Configuration
+
+The testing support uses `AbstractMongoGrailsExtension` to manage the container. You can configure the MongoDB version using the `mongodbContainerVersion` system property, which defaults to `7.0.19`.
+
+Example of setting the version in `build.gradle`:
+
+[source,groovy]
+----
+tasks.withType(Test) {
+    systemProperty "mongodbContainerVersion", "7.0.25"
+}
+----

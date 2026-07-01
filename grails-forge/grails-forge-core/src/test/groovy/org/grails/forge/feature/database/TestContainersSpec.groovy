@@ -69,7 +69,7 @@ class TestContainersSpec extends ApplicationContextSpec {
                 .render()
 
         then:
-        template.contains('testImplementation "org.testcontainers:mongodb"')
+        template.contains('testImplementation "org.apache.grails.testing:grails-testing-support-mongodb"')
         template.contains('testImplementation "org.testcontainers:testcontainers"')
     }
 
@@ -80,7 +80,7 @@ class TestContainersSpec extends ApplicationContextSpec {
                 .render()
 
         then:
-        template.contains('testImplementation "org.testcontainers:mongodb"')
+        template.contains('testImplementation "org.apache.grails.testing:grails-testing-support-mongodb"')
         template.contains('testImplementation "org.testcontainers:testcontainers"')
     }
 

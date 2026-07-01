@@ -83,7 +83,10 @@ public class TestContainers implements Feature {
         }
 
         if (generatorContext.isFeaturePresent(MongoFeature.class) || generatorContext.isFeaturePresent(MongoGorm.class)) {
-            generatorContext.addDependency(testContainerTestDependency("mongodb"));
+            generatorContext.addDependency(Dependency.builder()
+                    .groupId("org.apache.grails.testing")
+                    .artifactId("grails-testing-support-mongodb")
+                    .testImplementation());
         }
     }
 
