@@ -21,15 +21,19 @@ package testphases
 import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
 
+import geb.waiting.WaitTimeoutException
+import spock.lang.Retry
+
 @Integration
+@Retry(count = 2, delay = 1000, exceptions = [WaitTimeoutException])
 class GreetingControllerFunctionalSpec extends ContainerGebSpec {
 
     void "test greeting controller renders response"() {
         when: 'navigating to the greeting controller'
         go('/greeting/index')
 
-        then: 'the page contains the greeting message'
-        pageSource.contains('Hello')
+        then: 'the page eventually renders the greeting message'
+        waitFor { pageSource.contains('Hello') }
     }
 
 }

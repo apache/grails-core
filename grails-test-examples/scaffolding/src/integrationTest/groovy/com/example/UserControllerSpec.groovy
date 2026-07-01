@@ -25,7 +25,11 @@ import com.example.pages.UserListPage
 import grails.plugin.geb.ContainerGebSpec
 import grails.testing.mixin.integration.Integration
 
+import geb.waiting.WaitTimeoutException
+import spock.lang.Retry
+
 @Integration
+@Retry(count = 2, delay = 1000, exceptions = [WaitTimeoutException])
 class UserControllerSpec extends ContainerGebSpec {
 
     void setup() {

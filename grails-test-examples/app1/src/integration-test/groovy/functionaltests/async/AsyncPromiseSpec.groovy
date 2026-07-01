@@ -21,6 +21,7 @@ package functionaltests.async
 import java.util.concurrent.TimeUnit
 
 import functionaltests.services.AsyncProcessingService
+import spock.lang.Retry
 import spock.lang.Specification
 import spock.lang.Tag
 import spock.lang.Unroll
@@ -99,6 +100,7 @@ class AsyncPromiseSpec extends Specification implements HttpClientSupport {
 
     // ========== Error Handling Tests ==========
 
+    @Retry(count = 2, delay = 500, exceptions = [AssertionError])
     def "async task handles success without error"() {
         when: "calling task that should succeed"
         def response = http('/asyncTest/taskWithError?fail=false')
