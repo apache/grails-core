@@ -124,29 +124,25 @@ class FooGrailsPlugin {
             xml.resources.resource.text() == "FooBar"
     }
 
+    @RestoreSystemProperties
     void "isIsolatedBuild reflects the grails.isolated.build system property"() {
-        given:
-            String original = System.getProperty('grails.isolated.build')
-
         when:
             System.setProperty('grails.isolated.build', value)
 
         then:
             GlobalGrailsClassInjectorTransformation.isIsolatedBuild() == expected
 
-        cleanup:
-            if (original != null) {
-                System.setProperty('grails.isolated.build', original)
-            } else {
-                System.clearProperty('grails.isolated.build')
-            }
-
         where:
             value   || expected
             'true'  || true
             'false' || false
             'TRUE'  || true
-            'yes'   || false
+            'y'     || true
+            'null'  || false
+            '1'     || true
+            '0'     || false
+            '-1'    || false
+            ''      || false
     }
 
     private SourceUnit sourceUnitWithTarget(File targetDirectory) {
