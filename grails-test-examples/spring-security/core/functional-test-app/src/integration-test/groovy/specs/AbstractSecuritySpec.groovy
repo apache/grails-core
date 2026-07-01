@@ -79,6 +79,11 @@ abstract class AbstractSecuritySpec extends ContainerGebSpec {
 			loginPage.rememberMe.click()
 		}
 		loginPage.loginButton.click()
+		// Wait for the post-login redirect to settle before the caller reads the page. With the
+		// remote-Chrome (ContainerGebSpec) driver the submit navigation is async, so an assertion
+		// can otherwise run while the browser is still on the login form. Every caller of login()
+		// expects authentication to succeed, so waiting to leave the login page is safe here.
+		waitFor { !currentUrl.contains('/login/') }
 	}
 
 	protected void logout() {
