@@ -63,3 +63,12 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 }
+
+tasks.register('codecMetaClassBenchmark', JavaExec) {
+    group = 'verification'
+    description = 'Runs the codec metaclass registration benchmark for Grails issue 15374.'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'org.grails.encoder.CodecMetaClassBenchmark'
+    systemProperties System.properties.findAll { key, value -> key.toString().startsWith('grails.codec.benchmark.') }
+    dependsOn testClasses
+}
