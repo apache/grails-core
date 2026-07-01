@@ -32,6 +32,8 @@ import org.springframework.data.mongodb.core.mapping.MongoMappingContext
 import org.springframework.data.mongodb.core.query.Query
 import org.springframework.data.mongodb.repository.MongoRepository
 import org.springframework.data.mongodb.repository.support.MongoRepositoryFactory
+import org.springframework.transaction.CannotCreateTransactionException
+import org.springframework.transaction.TransactionUsageException
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.transaction.support.TransactionTemplate
 import spock.lang.AutoCleanup
@@ -155,6 +157,41 @@ class UnifiedMongoTransactionSpec extends AutoStartedMongoSpec {
 
         and: "no Spring Data resource holder remains bound to the thread after completion"
         !TransactionSynchronizationManager.hasResource(factory)
+    }
+
+    void "test a per-transaction timeout on the unified manager is rejected and binds no Spring Data resource"() {
+        given: "a unified transaction template that requests an explicit timeout"
+        def timeoutTemplate = new TransactionTemplate(new GormSharedSessionMongoTransactionManager(datastore, factory))
+        timeoutTemplate.timeout = 5
+
+        when: "a transaction touching both stacks is attempted"
+        timeoutTemplate.execute {
+            new GormThing(name: "gorm").save(flush: true)
+            mongoTemplate.insert(new SpringDataThing(name: "springData"))
+            return null
+        }
+
+        then: "the unified begin is refused before the Spring Data holder is bound"
+        def e = thrown(CannotCreateTransactionException)
+        e.cause instanceof TransactionUsageException
+
+        and: "no Spring Data resource holder was left bound to the thread"
+        !TransactionSynchronizationManager.hasResource(factory)
+
+        and: "neither stack persisted anything"
+        gormCount() == 0
+        springDataCount() == 0
+
+        when: "a normal transaction runs afterward"
+        transactionTemplate.execute {
+            new GormThing(name: "later").save(flush: true)
+            mongoTemplate.insert(new SpringDataThing(name: "laterSD"))
+            return null
+        }
+
+        then: "the unified manager still works - the rejected begin left no corrupt state"
+        gormCount() == 1
+        springDataCount() == 1
     }
 
     void "test a Spring Data repository works over the shared connection"() {
