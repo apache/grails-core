@@ -134,7 +134,7 @@ trait ResponseRenderer extends WebAttributes {
         GrailsWebRequest webRequest = (GrailsWebRequest) RequestContextHolder.currentRequestAttributes()
         HttpServletResponse response = webRequest.currentResponse
         webRequest.renderView = false
-        applyContentType(response, null, object)
+        applyContentType(response, null, object, true, 'text/plain')
 
         try {
             response.writer.write(object.inspect())
@@ -391,14 +391,12 @@ trait ResponseRenderer extends WebAttributes {
                     if (!hasContentType) {
                         hasContentType = detectContentTypeFromFileName(webRequest, response, argMap, fileName)
                     }
-                    if (fnO) {
-                        response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "$DISPOSITION_HEADER_PREFIX\"$fileName\"")
-                    }
                 }
                 if (!hasContentType) {
                     throw new ControllerExecutionException(
                             'Argument [file] of render method specified without valid [contentType] argument')
                 }
+                applyFileDisposition(response, argMap, fileName)
 
                 InputStream input
                 try {
@@ -432,7 +430,7 @@ trait ResponseRenderer extends WebAttributes {
                 response.contentType = GrailsWebUtil.getContentType(MimeType.JSON.name, DEFAULT_ENCODING)
                 renderWritable((JSONElement) argMap, response)
             } else {
-                applyContentType(response, argMap, argMap)
+                applyContentType(response, argMap, argMap, true, 'text/plain')
                 try {
                     response.writer.write(argMap.inspect())
                 }
@@ -520,8 +518,12 @@ trait ResponseRenderer extends WebAttributes {
     }
 
     private boolean applyContentType(HttpServletResponse response, Map argMap, Object renderArgument, boolean useDefault) {
+        applyContentType(response, argMap, renderArgument, useDefault, TEXT_HTML)
+    }
+
+    private boolean applyContentType(HttpServletResponse response, Map argMap, Object renderArgument, boolean useDefault, String defaultContentType) {
         boolean contentTypeIsDefault = true
-        String contentType = resolveContentTypeBySourceType(renderArgument, useDefault ? TEXT_HTML : null)
+        String contentType = resolveContentTypeBySourceType(renderArgument, useDefault ? defaultContentType : null)
         String encoding = DEFAULT_ENCODING
         if (argMap != null) {
             if (argMap.containsKey(ARGUMENT_CONTENT_TYPE)) {
@@ -538,6 +540,23 @@ trait ResponseRenderer extends WebAttributes {
             return true
         }
         false
+    }
+
+    private void applyFileDisposition(HttpServletResponse response, Map argMap, String fileName) {
+        if (response.getHeader(HttpHeaders.CONTENT_DISPOSITION) != null) {
+            return
+        }
+        if (Boolean.TRUE.equals(argMap.get('inline'))) {
+            return
+        }
+        String disposition = fileName ? "$DISPOSITION_HEADER_PREFIX\"${escapeContentDispositionFilename(fileName)}\"" : 'attachment'
+        response.setHeader(HttpHeaders.CONTENT_DISPOSITION, disposition)
+    }
+
+    private String escapeContentDispositionFilename(String fileName) {
+        fileName.replace('\\', '\\\\')
+                .replace('"', '\\"')
+                .replaceAll('[\\x00-\\x1F\\x7F]', '_')
     }
 
     private void setContentType(HttpServletResponse response, String contentType, String encoding) {
