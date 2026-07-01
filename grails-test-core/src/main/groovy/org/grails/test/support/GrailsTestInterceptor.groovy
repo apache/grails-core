@@ -31,6 +31,7 @@ class GrailsTestInterceptor {
     private String[] testClassSuffixes
 
     private GrailsTestTransactionInterceptor transactionInterceptor
+    private GrailsTestSessionInterceptor sessionInterceptor
     private GrailsTestRequestEnvironmentInterceptor requestEnvironmentInterceptor
 
     GrailsTestInterceptor(Object test, GrailsTestMode mode, ApplicationContext appCtx, String[] testClassSuffixes) {
@@ -42,12 +43,14 @@ class GrailsTestInterceptor {
 
     void init() {
         autowireIfNecessary()
+        initSessionIfNecessary()
         initTransactionIfNecessary()
         initRequestEnvironmentIfNecessary()
     }
 
     void destroy() {
         destroyTransactionIfNecessary()
+        destroySessionIfNecessary()
         requestEnvironmentInterceptor?.destroy()
     }
 
@@ -62,6 +65,25 @@ class GrailsTestInterceptor {
 
     protected autowireIfNecessary() {
         if (mode.autowire) createAutowirer().autowire(test)
+    }
+
+    protected initSessionIfNecessary() {
+        // Check if we should bind sessions without transactions
+        // This happens when:
+        // 1. Not wrapping in transaction (to avoid conflict)
+        // 2. Either mode.bindSession is true OR test has @WithSession annotation
+        if (!mode.wrapInTransaction) {
+            def localSessionInterceptor = createSessionInterceptor()
+            if (mode.bindSession || localSessionInterceptor.shouldBindSessions(test)) {
+                sessionInterceptor = localSessionInterceptor
+                sessionInterceptor.init()
+            }
+        }
+    }
+
+    protected destroySessionIfNecessary() {
+        sessionInterceptor?.destroy()
+        sessionInterceptor = null
     }
 
     protected initTransactionIfNecessary() {
@@ -100,6 +122,10 @@ class GrailsTestInterceptor {
 
     protected GrailsTestTransactionInterceptor createTransactionInterceptor() {
         new GrailsTestTransactionInterceptor(appCtx)
+    }
+
+    protected GrailsTestSessionInterceptor createSessionInterceptor() {
+        new GrailsTestSessionInterceptor(appCtx)
     }
 
     protected GrailsTestRequestEnvironmentInterceptor createRequestEnvironmentInterceptor() {

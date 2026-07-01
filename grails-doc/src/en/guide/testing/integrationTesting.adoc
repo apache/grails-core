@@ -137,6 +137,56 @@ NOTE: It isn't possible to make `grails.gorm.transactions.Rollback` behave the s
 This has the downside that you cannot implement it differently for different cases (as Spring does for testing).
 
 
+==== Session Binding Without Transactions
+
+By default, integration tests wrap each test method in a transaction. However, this doesn't always match the runtime behavior of your application. In a running Grails application, the Open Session In View (OISV) pattern provides a Hibernate session for the duration of the request, but operations outside of `@Transactional` methods don't have an active transaction.
+
+To test code that relies on having a session but not a transaction (matching the application's runtime behavior), you can use the `@WithSession` annotation:
+
+[source,groovy]
+----
+import grails.testing.mixin.integration.Integration
+import grails.testing.mixin.integration.WithSession
+import spock.lang.*
+
+@Integration
+@WithSession
+class ExampleServiceSpec extends Specification {
+
+    // Disable automatic transaction wrapping
+    static transactional = false
+    
+    void "test non-transactional service method"() {
+        when: "calling a service method that does SELECT operations"
+        def count = MyDomain.count()  // Works with session only
+        
+        then: "the operation succeeds"
+        count >= 0
+        
+        when: "trying to save with flush"
+        new MyDomain(name: "test").save(flush: true)
+        
+        then: "it fails because no transaction is active"
+        thrown(Exception)  // Matches runtime behavior
+    }
+}
+----
+
+The `@WithSession` annotation:
+
+* Binds a Hibernate session to the test thread without starting a transaction
+* Mimics the OISV pattern used in running applications
+* Allows testing of service methods that rely on session availability but are not transactional
+* Can be applied at class or method level
+* Supports specifying specific datasources: `@WithSession(datasources = ["secondary"])`
+
+This is particularly useful when:
+
+* Testing non-transactional service methods that perform read operations
+* Ensuring test behavior matches production behavior
+* Debugging issues where tests pass but the application fails (or vice versa) due to transaction differences
+
+
 ==== DirtiesContext
 
 

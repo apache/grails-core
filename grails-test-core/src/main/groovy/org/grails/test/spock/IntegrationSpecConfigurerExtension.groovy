@@ -61,7 +61,10 @@ class IntegrationSpecConfigurerExtension implements IAnnotationDrivenExtension<A
 
         IntegrationSpecMethodInterceptor(ApplicationContext applicationContext) {
             this.applicationContext = applicationContext
-            this.mode = new GrailsTestMode(autowire: true, wrapInTransaction: true, wrapInRequestEnvironment: true)
+            // By default, bind session for integration tests to match application behavior
+            // Transaction wrapping is still true for backward compatibility
+            // Tests can opt-out by setting transactional = false and use @WithSession
+            this.mode = new GrailsTestMode(autowire: true, wrapInTransaction: true, wrapInRequestEnvironment: true, bindSession: true)
 
         }
 
