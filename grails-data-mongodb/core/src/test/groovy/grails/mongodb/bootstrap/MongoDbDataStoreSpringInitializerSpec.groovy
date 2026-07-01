@@ -33,6 +33,7 @@ import org.grails.datastore.mapping.mongo.MongoDatastore
 import org.grails.datastore.mapping.mongo.config.MongoMappingContext
 import org.grails.datastore.mapping.mongo.config.MongoSettings
 import org.grails.datastore.mapping.query.Query
+import org.springframework.beans.factory.support.RootBeanDefinition
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import spock.lang.Ignore
 import spock.lang.Issue
@@ -204,6 +205,43 @@ class MongoDbDataStoreSpringInitializerSpec extends AutoStartedMongoSpec {
         Person.findByBirthday(birthday).birthday == birthday
         !Person.findByBirthday(new Birthday(new Date() - 7))
 
+    }
+
+    void "Test a lazy pre-registered mongoMappingContext delegating to the datastore is used, and custom marshallers still work"() {
+        given: "a lazy mongoMappingContext delegating to mongoDatastore.getMappingContext() plus the alias, as MongoMappingContextAutoConfiguration registers them before the datastore is defined"
+        def initializer = makeInitializer([
+                (MongoSettings.SETTING_HOST): mongoHost,
+                (MongoSettings.SETTING_PORT): mongoPort,
+        ], Person)
+        AnnotationConfigApplicationContext applicationContext = new AnnotationConfigApplicationContext()
+        applicationContext.beanFactory.registerSingleton('birthdayMarshaller', new BirthdayCustomTypeMarshaller())
+        RootBeanDefinition mappingContextDefinition = new RootBeanDefinition()
+        mappingContextDefinition.setFactoryBeanName('mongoDatastore')
+        mappingContextDefinition.setFactoryMethodName('getMappingContext')
+        mappingContextDefinition.setLazyInit(true)
+        applicationContext.registerBeanDefinition('mongoMappingContext', mappingContextDefinition)
+        applicationContext.registerAlias('mongoMappingContext', 'grailsDomainClassMappingContext')
+
+        when: "the initializer configures the datastore (and skips re-registering mongoMappingContext)"
+        initializer.configureForBeanDefinitionRegistry(applicationContext)
+        applicationContext.refresh()
+        MongoDatastore mongoDatastore = applicationContext.getBean(MongoDatastore)
+
+        then: "mongoMappingContext and its alias resolve to the datastore's own single context"
+        applicationContext.getBean('mongoMappingContext').is(mongoDatastore.mappingContext)
+        applicationContext.getBean('grailsDomainClassMappingContext').is(mongoDatastore.mappingContext)
+
+        when: "an entity with a custom-marshalled type is persisted"
+        Person.DB.drop()
+        def birthday = new Birthday(new Date())
+        new Person(name: 'Bob', home: Point.valueOf(10, 10), birthday: birthday).save(flush: true)
+
+        then: "the Spring-registered marshaller is honoured through the shared context"
+        Person.findByBirthday(birthday).birthday == birthday
+        !Person.findByBirthday(new Birthday(new Date() - 7))
+
+        cleanup:
+        mongoDatastore?.destroy()
     }
 
     private MongoDbDataStoreSpringInitializer makeInitializer(Map config, Class... domainClasses) {

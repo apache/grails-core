@@ -24,6 +24,7 @@ import groovy.transform.CompileStatic
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.autoconfigure.AutoConfiguration
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication
 import org.springframework.context.MessageSource
 import org.springframework.context.annotation.Bean
@@ -56,6 +57,7 @@ class GrailsDomainClassAutoConfiguration {
 
     @Lazy
     @Bean(name = 'grailsDomainClassMappingContext')
+    @ConditionalOnMissingBean(name = 'grailsDomainClassMappingContext')
     DefaultMappingContextFactoryBean grailsDomainClassMappingContext(List<ConstraintFactory> factories) {
         new DefaultMappingContextFactoryBean(grailsApplication, messageSources).tap {
             constraintFactories = factories ?: []
