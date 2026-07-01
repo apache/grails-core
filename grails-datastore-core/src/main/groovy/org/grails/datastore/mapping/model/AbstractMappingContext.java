@@ -91,7 +91,11 @@ public abstract class AbstractMappingContext implements MappingContext, Initiali
         return this.multiTenancyMode;
     }
 
-    protected void initialize(ConnectionSourceSettings settings) {
+    public void setMultiTenancyMode(MultiTenancySettings.MultiTenancyMode multiTenancyMode) {
+        this.multiTenancyMode = multiTenancyMode;
+    }
+
+    public void initialize(ConnectionSourceSettings settings) {
         FieldEntityAccess.clearReflectors();
         this.multiTenancyMode = settings.getMultiTenancy().getMode();
 
