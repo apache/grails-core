@@ -286,8 +286,7 @@ trait Controller implements ResponseRenderer, ResponseRedirector, RequestForward
     @Generated
     TokenResponseHandler withForm(GrailsWebRequest webRequest, Closure callable) {
         TokenResponseHandler handler
-        if (isTokenValid(webRequest)) {
-            resetToken(webRequest)
+        if (consumeToken(webRequest)) {
             handler = new ValidResponseHandler(callable?.call())
         }
         else {
@@ -303,7 +302,7 @@ trait Controller implements ResponseRenderer, ResponseRedirector, RequestForward
      *
      * @param request The servlet request
      */
-    private synchronized boolean isTokenValid(GrailsWebRequest webRequest) {
+    private boolean consumeToken(GrailsWebRequest webRequest) {
         final request = webRequest.getCurrentRequest()
         SynchronizerTokensHolder tokensHolderInSession = (SynchronizerTokensHolder) request.getSession(false)?.getAttribute(SynchronizerTokensHolder.HOLDER)
         if (!tokensHolderInSession) return false
@@ -314,27 +313,11 @@ trait Controller implements ResponseRenderer, ResponseRedirector, RequestForward
         String urlInRequest = webRequest.params[SynchronizerTokensHolder.TOKEN_URI]
         if (!urlInRequest) return false
 
-        try {
-            return tokensHolderInSession.isValid(urlInRequest, tokenInRequest)
+        boolean valid = tokensHolderInSession.isValidAndResetToken(urlInRequest, tokenInRequest)
+        if (tokensHolderInSession.isEmpty()) {
+            request.getSession(false)?.removeAttribute(SynchronizerTokensHolder.HOLDER)
         }
-        catch (IllegalArgumentException) {
-            return false
-        }
-    }
-
-    /**
-     * Resets the token in the request
-     */
-    private synchronized resetToken(GrailsWebRequest webRequest) {
-        final request = webRequest.getCurrentRequest()
-        SynchronizerTokensHolder tokensHolderInSession = (SynchronizerTokensHolder) request.getSession(false)?.getAttribute(SynchronizerTokensHolder.HOLDER)
-        String urlInRequest = webRequest.params[SynchronizerTokensHolder.TOKEN_URI]
-        String tokenInRequest = webRequest.params[SynchronizerTokensHolder.TOKEN_KEY]
-
-        if (urlInRequest && tokenInRequest) {
-            tokensHolderInSession.resetToken(urlInRequest, tokenInRequest)
-        }
-        if (tokensHolderInSession.isEmpty()) request.getSession(false)?.removeAttribute(SynchronizerTokensHolder.HOLDER)
+        return valid
     }
 
     @Generated
