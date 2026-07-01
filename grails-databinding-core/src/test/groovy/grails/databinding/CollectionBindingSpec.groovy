@@ -18,8 +18,8 @@
  */
 package grails.databinding
 
-import grails.databinding.SimpleDataBinder;
-import grails.databinding.SimpleMapDataBindingSource;
+import grails.databinding.errors.BindingError
+import grails.databinding.events.DataBindingListenerAdapter
 import spock.lang.Specification
 
 class CollectionBindingSpec extends Specification {
@@ -111,6 +111,60 @@ class CollectionBindingSpec extends Specification {
         company.departments[2].numberOfEmployees == 99
     }
 
+    void 'Test negative indexed binding to a List is rejected'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def company = new Company()
+        def listener = new CollectionBindingListener()
+
+        when:
+        binder.bind company, new SimpleMapDataBindingSource([
+                'departments[-1]': [name: 'Bad Department'],
+                'departments[0]': [name: 'Department Zero']]), listener
+
+        then:
+        company.departments.size() == 1
+        company.departments[0].name == 'Department Zero'
+        listener.bindingErrors.size() == 1
+        listener.bindingErrors[0].propertyName == 'departments[-1]'
+        listener.bindingErrors[0].rejectedValue == [name: 'Bad Department']
+    }
+
+    void 'Test malformed indexed binding to a List is rejected'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def company = new Company()
+        def listener = new CollectionBindingListener()
+
+        when:
+        binder.bind company, new SimpleMapDataBindingSource([
+                'departments[bad]': [name: 'Bad Department'],
+                'departments[0]': [name: 'Department Zero']]), listener
+
+        then:
+        company.departments.size() == 1
+        company.departments[0].name == 'Department Zero'
+        listener.bindingErrors.size() == 1
+        listener.bindingErrors[0].propertyName == 'departments[bad]'
+        listener.bindingErrors[0].rejectedValue == [name: 'Bad Department']
+    }
+
+    void 'Test negative indexed binding to an array is rejected'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def library = new Library()
+        def listener = new CollectionBindingListener()
+
+        when:
+        binder.bind library, new SimpleMapDataBindingSource(['codes[-1]': 'bad', 'codes[0]': 'good']), listener
+
+        then:
+        library.codes as List == ['good']
+        listener.bindingErrors.size() == 1
+        listener.bindingErrors[0].propertyName == 'codes[-1]'
+        listener.bindingErrors[0].rejectedValue == 'bad'
+    }
+
     void 'Test binding to an untyped List'() {
         given:
         def binder = new SimpleDataBinder()
@@ -156,9 +210,22 @@ class Company {
     List<Department> departments
 }
 
+class Library {
+    String[] codes
+}
+
 class Department {
     String name
     Integer numberOfEmployees
     List listOfCodes
     Set setOfCodes
+}
+
+class CollectionBindingListener extends DataBindingListenerAdapter {
+
+    List<BindingError> bindingErrors = []
+
+    void bindingError(BindingError error, errors) {
+        bindingErrors << error
+    }
 }

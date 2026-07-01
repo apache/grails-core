@@ -434,6 +434,10 @@ class GrailsWebDataBinder extends SimpleDataBinder {
                 if (referencedType != null && isDomainClass(referencedType)) {
                     needsBinding = false
                     if (Set.isAssignableFrom(metaProperty.type)) {
+                        Integer index = parseIndexedPropertyIndex(obj, indexedPropertyReferenceDescriptor, val, listener, errors)
+                        if (index == null) {
+                            return
+                        }
                         def collection = initializeCollection(obj, propName, metaProperty.type)
                         def instance
                         if (collection != null) {
@@ -448,7 +452,7 @@ class GrailsWebDataBinder extends SimpleDataBinder {
                                 Exception e = new IllegalArgumentException(message)
                                 addBindingError(obj, propName, idValue, e, listener, errors)
                             } else {
-                                addElementToCollectionAt(obj, propName, collection, Integer.parseInt(indexedPropertyReferenceDescriptor.index), instance)
+                                addElementToCollectionAt(obj, propName, collection, index, instance)
                             }
                         }
                         if (instance != null) {
@@ -459,8 +463,11 @@ class GrailsWebDataBinder extends SimpleDataBinder {
                             }
                         }
                     } else if (Collection.isAssignableFrom(metaProperty.type)) {
+                        Integer idx = parseIndexedPropertyIndex(obj, indexedPropertyReferenceDescriptor, val, listener, errors)
+                        if (idx == null) {
+                            return
+                        }
                         def collection = initializeCollection(obj, propName, metaProperty.type)
-                        def idx = Integer.parseInt(indexedPropertyReferenceDescriptor.index)
                         if ('null' == idValue) {
                             if (idx < collection.size()) {
                                 def element = collection[idx]
