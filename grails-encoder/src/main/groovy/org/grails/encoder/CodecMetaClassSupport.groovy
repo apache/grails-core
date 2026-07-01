@@ -18,6 +18,10 @@
  */
 package org.grails.encoder
 
+import java.lang.ref.WeakReference
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
+
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.runtime.GStringImpl
 import org.codehaus.groovy.runtime.NullObject
@@ -38,6 +42,8 @@ class CodecMetaClassSupport {
     static final Object[] EMPTY_ARGS = []
     static final String ENCODE_AS_PREFIX = 'encodeAs'
     static final String DECODE_PREFIX = 'decode'
+    private static final Set<MetaMethodRegistrationKey> REGISTERED_META_METHODS = Collections.newSetFromMap(new ConcurrentHashMap<MetaMethodRegistrationKey, Boolean>())
+    private static final AtomicLong META_METHOD_REGISTRATION_COUNT = new AtomicLong()
 
     /**
      * Adds "encodeAs*" and "decode*" metamethods for given codecClass
@@ -101,14 +107,14 @@ class CodecMetaClassSupport {
             }
         }
 
-        addMetaMethod(targetMetaClasses, encodeMethodName, encoderClosure)
+        addMetaMethod(targetMetaClasses, encodeMethodName, encoderClosure, cacheLookup, codecFactory)
         if (codecFactory.encoder) {
-            addAliasMetaMethods(targetMetaClasses, codecFactory.encoder.codecIdentifier.codecAliases, encodeMethodNameClosure, encoderClosure)
+            addAliasMetaMethods(targetMetaClasses, codecFactory.encoder.codecIdentifier.codecAliases, encodeMethodNameClosure, encoderClosure, cacheLookup, codecFactory)
         }
 
-        addMetaMethod(targetMetaClasses, decodeMethodName, decoderClosure)
+        addMetaMethod(targetMetaClasses, decodeMethodName, decoderClosure, cacheLookup, codecFactory)
         if (codecFactory.decoder) {
-            addAliasMetaMethods(targetMetaClasses, codecFactory.decoder.codecIdentifier.codecAliases, decodeMethodNameClosure, decoderClosure)
+            addAliasMetaMethods(targetMetaClasses, codecFactory.decoder.codecIdentifier.codecAliases, decodeMethodNameClosure, decoderClosure, cacheLookup, codecFactory)
         }
     }
 
@@ -130,12 +136,18 @@ class CodecMetaClassSupport {
 
     @CompileStatic
     private addAliasMetaMethods(List<ExpandoMetaClass> targetMetaClasses, Set<String> aliases, Closure<String> methodNameClosure, Closure methodClosure) {
+        addAliasMetaMethods(targetMetaClasses, aliases, methodNameClosure, methodClosure, false, null)
+    }
+
+    @CompileStatic
+    private addAliasMetaMethods(List<ExpandoMetaClass> targetMetaClasses, Set<String> aliases, Closure<String> methodNameClosure, Closure methodClosure,
+            boolean cacheLookup, CodecFactory codecFactory) {
         aliases?.each { String aliasName ->
-            addMetaMethod(targetMetaClasses, methodNameClosure(aliasName), methodClosure)
+            addMetaMethod(targetMetaClasses, methodNameClosure(aliasName), methodClosure, cacheLookup, codecFactory)
         }
     }
 
-    private String resolveCodecName(CodecFactory codecFactory) {
+    private static String resolveCodecName(CodecFactory codecFactory) {
         codecFactory.encoder?.codecIdentifier?.codecName ?: codecFactory.decoder?.codecIdentifier?.codecName
     }
 
@@ -152,8 +164,102 @@ class CodecMetaClassSupport {
     }
 
     protected void addMetaMethod(List<ExpandoMetaClass> targetMetaClasses, String methodName, Closure closure) {
+        addMetaMethod(targetMetaClasses, methodName, closure, false, null)
+    }
+
+    protected void addMetaMethod(List<ExpandoMetaClass> targetMetaClasses, String methodName, Closure closure, boolean cacheLookup, CodecFactory codecFactory) {
         targetMetaClasses.each { ExpandoMetaClass emc ->
-            emc."${methodName}" << closure
+            if (!cacheLookup) {
+                emc."${methodName}" << closure
+                META_METHOD_REGISTRATION_COUNT.incrementAndGet()
+            }
+            else {
+                synchronized (emc) {
+                    if (shouldRegisterMetaMethod(emc, methodName, codecFactory)) {
+                        emc."${methodName}" << closure
+                        META_METHOD_REGISTRATION_COUNT.incrementAndGet()
+                    }
+                }
+            }
+        }
+    }
+
+    @CompileStatic
+    protected static long getMetaMethodRegistrationCount() {
+        META_METHOD_REGISTRATION_COUNT.get()
+    }
+
+    @CompileStatic
+    protected static int getMetaMethodRegistrationKeyCount() {
+        REGISTERED_META_METHODS.size()
+    }
+
+    @CompileStatic
+    protected static void clearMetaMethodRegistrationState() {
+        REGISTERED_META_METHODS.clear()
+        META_METHOD_REGISTRATION_COUNT.set(0L)
+    }
+
+    @CompileStatic
+    private static boolean shouldRegisterMetaMethod(ExpandoMetaClass emc, String methodName, CodecFactory codecFactory) {
+        removeStaleMetaMethodRegistrationKeys()
+        MetaMethodRegistrationKey key = registrationKey(emc, methodName, codecFactory)
+        REGISTERED_META_METHODS.add(key) || emc.getMetaMethod(methodName, EMPTY_ARGS) == null
+    }
+
+    @CompileStatic
+    private static void removeStaleMetaMethodRegistrationKeys() {
+        REGISTERED_META_METHODS.removeIf { MetaMethodRegistrationKey key -> key.stale }
+    }
+
+    @CompileStatic
+    private static MetaMethodRegistrationKey registrationKey(ExpandoMetaClass emc, String methodName, CodecFactory codecFactory) {
+        new MetaMethodRegistrationKey(emc.getTheClass().getName(), methodName, codecFactory)
+    }
+
+    @CompileStatic
+    private static class MetaMethodRegistrationKey {
+
+        private final String targetClassName
+        private final String methodName
+        private final WeakReference<CodecFactory> codecFactoryReference
+        private final int codecFactoryIdentityHashCode
+
+        MetaMethodRegistrationKey(String targetClassName, String methodName, CodecFactory codecFactory) {
+            this.targetClassName = targetClassName
+            this.methodName = methodName
+            this.codecFactoryReference = new WeakReference<CodecFactory>(codecFactory)
+            this.codecFactoryIdentityHashCode = System.identityHashCode(codecFactory)
+        }
+
+        @Override
+        boolean equals(Object other) {
+            if (this.is(other)) {
+                return true
+            }
+            if (!(other instanceof MetaMethodRegistrationKey)) {
+                return false
+            }
+
+            MetaMethodRegistrationKey otherKey = (MetaMethodRegistrationKey) other
+            CodecFactory codecFactory = codecFactoryReference.get()
+            CodecFactory otherCodecFactory = otherKey.codecFactoryReference.get()
+            codecFactory != null &&
+                    otherCodecFactory != null &&
+                    codecFactory.is(otherCodecFactory) &&
+                    targetClassName == otherKey.targetClassName &&
+                    methodName == otherKey.methodName
+        }
+
+        @Override
+        int hashCode() {
+            int result = targetClassName.hashCode()
+            result = 31 * result + methodName.hashCode()
+            31 * result + codecFactoryIdentityHashCode
+        }
+
+        boolean isStale() {
+            codecFactoryReference.get() == null
         }
     }
 }
