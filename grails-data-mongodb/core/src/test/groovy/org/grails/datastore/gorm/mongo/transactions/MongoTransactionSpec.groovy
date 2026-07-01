@@ -23,7 +23,10 @@ import grails.gorm.annotation.Entity
 import com.mongodb.client.model.Filters
 import org.apache.grails.testing.mongo.AutoStartedMongoSpec
 import org.grails.datastore.mapping.mongo.MongoDatastore
+import org.springframework.transaction.CannotCreateTransactionException
 import org.springframework.transaction.TransactionDefinition
+import org.springframework.transaction.TransactionUsageException
+import org.springframework.transaction.support.TransactionTemplate
 import spock.lang.AutoCleanup
 import spock.lang.Shared
 
@@ -47,13 +50,14 @@ class MongoTransactionSpec extends AutoStartedMongoSpec {
                 'grails.mongodb.url'          : dbContainer.getReplicaSetUrl('myDb'),
                 'grails.mongodb.transactional': true
         ]
-        datastore = new MongoDatastore(config, TxPerson, TxPet)
+        datastore = new MongoDatastore(config, TxPerson, TxPet, TxCounter)
     }
 
     void setup() {
         TxPerson.withNewSession {
             TxPerson.DB.drop()
             TxPet.DB.drop()
+            TxCounter.DB.drop()
         }
     }
 
@@ -150,6 +154,58 @@ class MongoTransactionSpec extends AutoStartedMongoSpec {
         and: "only the inner transaction's write survived - suspend/resume kept the two sessions separate"
         TxPerson.withNewSession { TxPerson.findAll()*.name } == ["inner"]
     }
+
+    void "test native Long identifier generation works for entities committed in a transaction"() {
+        when: "two entities with a native Long id are saved in one transaction"
+        TxCounter.withTransaction {
+            new TxCounter(name: "a").save()
+            new TxCounter(name: "b").save()
+        }
+
+        then: "both are persisted with generated, monotonically increasing Long ids"
+        List<TxCounter> saved = TxCounter.withNewSession { TxCounter.list().sort { it.id } }
+        saved*.name == ["a", "b"]
+        saved.every { it.id instanceof Long }
+        saved[1].id > saved[0].id
+    }
+
+    void "test a rolled back transaction discards a native Long id entity (id generation is non-transactional)"() {
+        when: "a native Long id entity is flushed in a transaction that then fails"
+        TxCounter.withTransaction {
+            new TxCounter(name: "doomed").save(flush: true)
+            throw new RuntimeException("boom")
+        }
+
+        then:
+        thrown(RuntimeException)
+
+        and: "the document was rolled back even though the id counter is not enrolled in the transaction"
+        TxCounter.withNewSession { TxCounter.count() } == 0
+    }
+
+    void "test a per-transaction timeout is rejected rather than silently ignored"() {
+        given: "a transaction template that requests an explicit timeout"
+        def txTemplate = new TransactionTemplate(datastore.transactionManager)
+        txTemplate.timeout = 5
+
+        when: "a transactional operation is attempted"
+        txTemplate.execute {
+            new TxPerson(name: "Fred").save(flush: true)
+        }
+
+        then: "beginning the transaction is refused, wrapping the usage exception that explains why"
+        def e = thrown(CannotCreateTransactionException)
+        e.cause instanceof TransactionUsageException
+
+        and: "nothing was persisted"
+        TxPerson.withNewSession { TxPerson.count() } == 0
+
+        and: "the datastore remains usable - the rejected transaction's session was cleaned up, not leaked"
+        TxPerson.withTransaction {
+            new TxPerson(name: "Wilma").save()
+        }
+        TxPerson.withNewSession { TxPerson.count() } == 1
+    }
 }
 
 @Entity
@@ -159,5 +215,11 @@ class TxPerson {
 
 @Entity
 class TxPet {
+    String name
+}
+
+@Entity
+class TxCounter {
+    Long id
     String name
 }

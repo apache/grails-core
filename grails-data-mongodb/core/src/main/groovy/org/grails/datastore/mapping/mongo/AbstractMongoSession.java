@@ -285,46 +285,47 @@ public abstract class AbstractMongoSession extends AbstractSession<MongoClient> 
     }
 
     // The driver exposes a session-less and a ClientSession overload for every operation, and the
-    // session argument cannot be null. These helpers branch once so call sites stay readable and
-    // behave identically (session-less) when no transaction is active.
+    // session argument cannot be null. These helpers pass the ClientSession only while a transaction
+    // is active on this session (see hasActiveTransaction()), and use the session-less overload
+    // otherwise, so call sites stay readable.
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     public BulkWriteResult bulkWrite(com.mongodb.client.MongoCollection collection, List<? extends WriteModel> writes) {
-        return clientSession != null ? collection.bulkWrite(clientSession, writes) : collection.bulkWrite(writes);
+        return hasActiveTransaction() ? collection.bulkWrite(clientSession, writes) : collection.bulkWrite(writes);
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     public DeleteResult deleteMany(com.mongodb.client.MongoCollection collection, Bson filter) {
-        return clientSession != null ? collection.deleteMany(clientSession, filter) : collection.deleteMany(filter);
+        return hasActiveTransaction() ? collection.deleteMany(clientSession, filter) : collection.deleteMany(filter);
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     public UpdateResult updateMany(com.mongodb.client.MongoCollection collection, Bson filter, Bson update, UpdateOptions options) {
-        return clientSession != null ? collection.updateMany(clientSession, filter, update, options) : collection.updateMany(filter, update, options);
+        return hasActiveTransaction() ? collection.updateMany(clientSession, filter, update, options) : collection.updateMany(filter, update, options);
     }
 
     public <T> FindIterable<T> find(com.mongodb.client.MongoCollection<T> collection, Bson filter) {
-        return clientSession != null ? collection.find(clientSession, filter) : collection.find(filter);
+        return hasActiveTransaction() ? collection.find(clientSession, filter) : collection.find(filter);
     }
 
     public <R> FindIterable<R> find(com.mongodb.client.MongoCollection<?> collection, Bson filter, Class<R> resultClass) {
-        return clientSession != null ? collection.find(clientSession, filter, resultClass) : collection.find(filter, resultClass);
+        return hasActiveTransaction() ? collection.find(clientSession, filter, resultClass) : collection.find(filter, resultClass);
     }
 
     public <T> AggregateIterable<T> aggregate(com.mongodb.client.MongoCollection<T> collection, List<? extends Bson> pipeline) {
-        return clientSession != null ? collection.aggregate(clientSession, pipeline) : collection.aggregate(pipeline);
+        return hasActiveTransaction() ? collection.aggregate(clientSession, pipeline) : collection.aggregate(pipeline);
     }
 
     public <T> T findOneAndDelete(com.mongodb.client.MongoCollection<T> collection, Bson filter) {
-        return clientSession != null ? collection.findOneAndDelete(clientSession, filter) : collection.findOneAndDelete(filter);
+        return hasActiveTransaction() ? collection.findOneAndDelete(clientSession, filter) : collection.findOneAndDelete(filter);
     }
 
     public <T> T findOneAndDelete(com.mongodb.client.MongoCollection<T> collection, Bson filter, FindOneAndDeleteOptions options) {
-        return clientSession != null ? collection.findOneAndDelete(clientSession, filter, options) : collection.findOneAndDelete(filter, options);
+        return hasActiveTransaction() ? collection.findOneAndDelete(clientSession, filter, options) : collection.findOneAndDelete(filter, options);
     }
 
     public long countDocuments(com.mongodb.client.MongoCollection<?> collection, Bson filter) {
-        return clientSession != null ? collection.countDocuments(clientSession, filter) : collection.countDocuments(filter);
+        return hasActiveTransaction() ? collection.countDocuments(clientSession, filter) : collection.countDocuments(filter);
     }
 
     /**
