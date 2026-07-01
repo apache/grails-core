@@ -17,6 +17,8 @@ specific language governing permissions and limitations
 under the License.
 ////
 
+= Adding Methods at Compile Time
+
 Grails makes it easy to add new traits to existing artefact types from a plugin. For example say you wanted to add methods for manipulating dates to controllers. This can be done by defining a trait in `src/main/groovy`:
 
 [source,groovy]
@@ -56,7 +58,7 @@ class ControllerTraitInjector implements TraitInjector {
 
 The above `TraitInjector` will add the `SomeTrait` to all controllers. The `getArtefactTypes` method defines the types of artefacts that the trait should be applied to.
 
-==== Applying traits conditionally
+== Applying traits conditionally
 A `TraitInjector` implementation can also implement the link:{api}grails/compiler/ast/SupportsClassNode.html[SupportsClassNode] interface to apply traits to only those artefacts which satisfy a custom requirement.
 For example, if a trait should only be applied if the target artefact class has a specific annotation, it can be done as below
 

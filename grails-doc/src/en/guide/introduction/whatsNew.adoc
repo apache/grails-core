@@ -19,7 +19,7 @@ under the License.
 
 This section covers all the new features introduced in Grails 7
 
-=== Overview
+==== Overview
 
 Grails 7 is a major release that includes new features, improvements, and dependency upgrades.
 This release focuses on enhancing the developer experience, improving performance, and ensuring compatibility with the latest technologies.
@@ -27,12 +27,12 @@ This release focuses on enhancing the developer experience, improving performanc
 For detailed information on how to upgrade to Grails 7, including major dependency changes, please see the xref:upgrading#upgrading60x[Upgrading from Grails 6 to Grails 7] section.
 Notable new features are included below.
 
-=== External Configuration
+==== External Configuration
 
 The https://github.com/sbglasius/external-config[external configuration plugin] is now integrated into Grails.
 See the xref:conf.adoc#externalConfiguration[Configuration] section for details.
 
-=== Ubiquitous Containerized Browser Testing with Geb
+==== Ubiquitous Containerized Browser Testing with Geb
 
 The https://github.com/apache/grails-core/tree/HEAD/grails-geb#readme[Grails Geb Plugin] has received a significant update, introducing test fixtures that enable ubiquitous containerized browser testing.
 
