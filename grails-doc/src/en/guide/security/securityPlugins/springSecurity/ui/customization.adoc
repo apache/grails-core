@@ -1,0 +1,341 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[ui-customization]]
+== Customization
+
+Most aspects of the plugin are configurable.
+
+=== s2ui-override script
+
+The plugin's controllers and GSPs are easily overridden using the `s2ui-override` script. The general syntax for running the script is
+
+....
+grails s2ui-override <type> [<controller-package>]
+....
+
+The script will copy an empty controller that extends the corresponding plugin controller into your application so you can override individual actions and methods as needed. It also copies the controller's GSPs. The exceptions are 'auth' and 'layout' which only copy GSPs.
+
+For `auth` and `layout`, you do not supply a package name.
+
+For example:
+....
+grails s2ui-override auth
+....
+
+For the other types `aclclass`, `aclentry`, `aclobjectidentity`, `aclsid`, `persistentlogin`,`register`, `registrationcode`, `requestmap`, `role`, `securityinfo`, `user`, you supply a package name as command parameter. That it is to say:
+
+....
+grails s2ui-override persistentlogin com.company.myapp
+....
+
+The files copied for each type are summarized here:
+
+* aclclass
+** `controller/AclClassController.groovy`
+** `views/aclClass/create.gsp`
+** `views/aclClass/edit.gsp`
+** `views/aclClass/search.gsp`
+
+* aclentry
+** `controller/AclEntryController.groovy`
+** `views/aclEntry/create.gsp`
+** `views/aclEntry/edit.gsp`
+** `views/aclEntry/search.gsp`
+
+* aclobjectidentity
+** `controller/AclObjectIdentityController.groovy`
+** `views/aclObjectIdentity/create.gsp`
+** `views/aclObjectIdentity/edit.gsp`
+** `views/aclObjectIdentity/search.gsp`
+
+* aclsid
+** `controller/AclSidController.groovy`
+** `views/aclSid/create.gsp`
+** `views/aclSid/edit.gsp`
+** `views/aclSid/search.gsp`
+
+* auth
+** `views/login/auth.gsp`
+
+* layout
+** `views/layouts/springSecurityUI.gsp`
+** `views/includes/_ajaxLogin.gsp`
+
+* persistentlogin
+** `controller/PersistentLoginController.groovy`
+** `views/persistentLogin/edit.gsp`
+** `views/persistentLogin/search.gsp`
+
+* register
+** `controller/RegisterController.groovy`
+** `views/layouts/email.gsp`
+** `views/register/forgotPassword.gsp`
+** `views/register/_forgotPasswordMail.gsp`
+** `views/register/register.gsp`
+** `views/register/resetPassword.gsp`
+** `views/register/_verifyRegistrationMail.gsp`
+
+* registrationcode
+** `controller/RegistrationCodeController.groovy`
+** `views/registrationCode/edit.gsp`
+** `views/registrationCode/search.gsp`
+
+* requestmap
+** `controller/RequestmapController.groovy`
+** `views/requestmap/create.gsp`
+** `views/requestmap/edit.gsp`
+** `views/requestmap/search.gsp`
+
+* role
+** `controller/RoleController.groovy`
+** `views/role/create.gsp`
+** `views/role/edit.gsp`
+** `views/role/search.gsp`
+
+* securityinfo
+** `controller/SecurityInfoController.groovy`
+** `views/securityInfo/config.gsp`
+** `views/securityInfo/currentAuth.gsp`
+** `views/securityInfo/filterChains.gsp`
+** `views/securityInfo/logoutHandlers.gsp`
+** `views/securityInfo/mappings.gsp`
+** `views/securityInfo/providers.gsp`
+** `views/securityInfo/secureChannel.gsp`
+** `views/securityInfo/usercache.gsp`
+** `views/securityInfo/voters.gsp`
+
+* user
+** `controller/UserController.groovy`
+** `views/user/create.gsp`
+** `views/user/edit.gsp`
+** `views/user/search.gsp`
+
+=== I18N
+
+All of the plugin's displayed strings are localized and stored in the plugin's `grails-app/i18n/messages.spring-security-ui.properties` file. You can override any of these values by putting an override in your application's `grails-app/i18n/messages.properties` file.
+
+=== application.groovy attributes
+
+There are a few configuration options specified in `DefaultUiSecurityConfig.groovy` that can be overridden in your application's `grails-app/conf/application.groovy`
+
+==== Registration attributes
+
+These settings are used in the registration workflow; see the <<ui-userRegistration>> section for more details:
+
+* grails.plugin.springsecurity.ui.register.defaultRoleNames
+* grails.plugin.springsecurity.ui.register.emailBody
+* grails.plugin.springsecurity.ui.register.emailFrom
+* grails.plugin.springsecurity.ui.register.emailSubject
+* grails.plugin.springsecurity.ui.register.postRegisterUrl
+
+==== Forgot Password attributes
+
+These settings are used in the forgot-password workflow; see the <<ui-forgotPassword>> section for more details:
+
+* grails.plugin.springsecurity.ui.forgotPassword.emailBody
+* grails.plugin.springsecurity.ui.forgotPassword.emailFrom
+* grails.plugin.springsecurity.ui.forgotPassword.emailSubject
+* grails.plugin.springsecurity.ui.forgotPassword.postResetUrl
+
+==== GSP layout attributes
+
+The `layout` attribute in the GSPs is configurable. If this is the only change you want to make in some or all of the GSPs then you can avoid copying the GSPs into your application just to make this change.
+
+The default value for the registration workflow GSPs (`forgotPassword.gsp`, `register.gsp`, and `resetPassword.gsp`) is "`register`" and the default for the rest is "`springSecurityUI`". These values can be overridden with the `grails.plugin.springsecurity.ui.gsp.layoutRegister` and `grails.plugin.springsecurity.ui.gsp.layoutUi` settings.
+
+==== Miscellaneous attributes
+
+The role name required to be able to run as another user defaults to `ROLE_SWITCH_USER` but you can override this name with the `grails.plugin.springsecurity.ui.switchUserRoleName` setting.
+
+=== CSS and JavaScript
+
+The plugin uses the https://github.com/wondrify/asset-pipeline[Asset Pipeline] plugin to manage its resources. This makes it very easy to provide your own version of some or all of the static resources since asset-pipeline will always use a file in the application's `assets` directory instead of a plugin's if it exists.
+
+Instead of depending on either the jQuery or jQuery UI plugins, this plugin includes its own copy of jquery.js, jquery-ui.js, and jquery-ui.css. Note that the versions are not hard-coded, but instead they take advantage of the feature in asset-pipeline where you can embed Groovy code in a file to specify the name and path.
+
+The layouts use `grails-app/assets/javascripts/jquery.js`, which contains this:
+
+[source,javascript]
+----
+//=require jquery/jquery-${grails.plugin.springsecurity.ui.Constants.JQUERY_VERSION}.js
+----
+
+This resolves to `grails-app/assets/javascripts/jquery/jquery-2.1.4.js`, and to use your own version, either use the same approach in a file called `jquery.js` or rename your file to `jquery.js`.
+
+Likewise for jQuery UI, the JavaScript file is `grails-app/assets/javascripts/jquery-ui.js`, which contains this
+
+[source,javascript]
+----
+//=require jquery-ui/jquery-ui-${grails.plugin.springsecurity.ui.Constants.JQUERY_UI_VERSION}.js
+----
+
+and the CSS file `grails-app/assets/stylesheets/jquery-ui.css`, which contains
+
+[source,css]
+----
+/*
+ *= require smoothness/jquery-ui-${grails.plugin.springsecurity.ui.Constants.JQUERY_UI_VERSION}.css
+ */
+----
+
+The JavaScript file resolves to `grails-app/assets/javascripts/jquery-ui/jquery-ui-1.10.3.custom.js`, and to use your own version, either use the same approach in a file called `jquery-ui.js` or rename your file to `jquery-ui.js`.
+
+The CSS file resolves to `grails-app/assets/stylesheets/smoothness/jquery-ui-1.10.3.custom.css`, and to use your own version, either use the same approach in a file called `jquery-ui.js` or rename your file to `jquery-ui.js`.
+
+Use your own `jquery-ui.js` and/or `jquery-ui.css` to override the plugin's.
+
+The `springSecurityUI.gsp` layout includes `grails-app/assets/stylesheets/spring-security-ui.css`, which has no style declarations and only includes other CSS files:
+
+[source,css]
+----
+/*
+ *= require reset.css
+ *= require jquery-ui.css
+ *= require jquery.jdMenu.css
+ *= require jquery.jdMenu.slate.css
+ *= require jquery.jgrowl.css
+ *= require spring-security-ui-common.css
+ */
+----
+
+and `grails-app/assets/javascripts/spring-security-ui.js` which has no JavaScript code and only includes other JavaScript files:
+
+[source,javascript]
+----
+//= require jquery.js
+//= require jquery-ui.js
+//= require jquery/jquery.jgrowl.js
+//= require jquery/jquery.positionBy.js
+//= require jquery/jquery.bgiframe.js
+//= require jquery/jquery.jdMenu.js
+//= require jquery/jquery.form.js
+//= require spring-security-ui-ajaxLogin.js
+----
+
+The `register.gsp` layout layout includes `grails-app/assets/stylesheets/spring-security-ui-register.css`, which has no style declarations and only includes other CSS files:
+
+[source,css]
+----
+/*
+ *= require reset.css
+ *= require jquery-ui.css
+ *= require jquery.jgrowl.css
+ *= require spring-security-ui-common.css
+ */
+----
+
+and `grails-app/assets/javascripts/spring-security-ui-register.js` which has no JavaScript code and only includes other JavaScript files:
+
+[source,javascript]
+----
+//= require jquery.js
+//= require jquery-ui.js
+//= require jquery/jquery.jgrowl.js
+----
+
+The remaining JavaScript files are
+
+* grails-app/assets/javascripts/spring-security-ui-ajaxLogin.js
+* grails-app/assets/javascripts/jquery/jquery.bgiframe.js
+* grails-app/assets/javascripts/jquery/jquery.dataTables.js
+* grails-app/assets/javascripts/jquery/jquery.form.js
+* grails-app/assets/javascripts/jquery/jquery.jdMenu.js
+* grails-app/assets/javascripts/jquery/jquery.jgrowl.js
+* grails-app/assets/javascripts/jquery/jquery.positionBy.js
+
+and the remaining CSS files are
+
+* grails-app/assets/stylesheets/jquery.dataTables.css
+* grails-app/assets/stylesheets/jquery.jdMenu.css
+* grails-app/assets/stylesheets/jquery.jdMenu.slate.css
+* grails-app/assets/stylesheets/jquery.jgrowl.css
+* grails-app/assets/stylesheets/reset.css
+* grails-app/assets/stylesheets/spring-security-ui-auth.css
+* grails-app/assets/stylesheets/spring-security-ui-common.css
+
+=== Password Hashing
+
+In recent versions of the Spring Security Core plugin, the "`User`" domain class is generated by the `s2-quickstart` script with code to automatically hash the password. This makes the code simpler (for example in controllers where you create users or update user passwords) but older generated classes don't have this generated code. This presents a problem for plugins like this one since it's not possible to reliably determine if the domain class hashes the password or if you use the older approach of explicitly calling `springSecurityService.encodePassword()`.
+
+The unfortunate consequence of mixing a newer domain class that does password hashing with controllers that call `springSecurityService.encodePassword()` is the the passwords get double-hashed, and users aren't able to login. So to get around this there's a configuration option you can set to tell this plugin's controllers whether to hash or not: `grails.plugin.springsecurity.ui.encodePassword`.
+
+This option defaults to `false`, so if you have an older domain class that doesn't handle hashing just enable this plugin's hashing:
+
+[source,groovy]
+----
+grails.plugin.springsecurity.ui.encodePassword = true
+----
+
+h4. Strategy classes
+
+The plugin's `SpringSecurityUiService` implements several "`strategy`" interfaces to make it possible to override its functionality in a more fine-grained way.
+
+These are defined by interfaces in the `grails.plugin.springsecurity.ui.strategy` package:
+
+* `AclStrategy`
+* `ErrorsStrategy`
+* `MailStrategy`
+* `PersistentLoginStrategy`
+* `PropertiesStrategy`
+* `QueryStrategy`
+* `RegistrationCodeStrategy`
+* `RequestmapStrategy`
+* `RoleStrategy`
+* `UserStrategy`
+
+The controllers, taglib, and even the service never call strategy methods directly on the service, only via a strategy interface.
+
+Each interface has a default implementation, e.g. `DefaultAclStrategy`, `DefaultErrorsStrategy`, etc., and these simply delegate to `SpringSecurityUiService` (except for `MailStrategy`, which has `MailPluginMailStrategy` as its default implementation which uses the Mail plugin to send emails). Each of the default implementations is registered as a Spring bean:
+
+* `uiAclStrategy`
+* `uiErrorsStrategy`
+* `uiMailStrategy`
+* `uiPersistentLoginStrategy`
+* `uiPropertiesStrategy`
+* `uiQueryStrategy`
+* `uiRegistrationCodeStrategy`
+* `uiRequestmapStrategy`
+* `uiRoleStrategy`
+* `uiUserStrategy`
+
+To override the functionality defined in one of the strategy interfaces, register your own implementation of the interface in your application's `grails-app/conf/spring/resources.groovy`, e.g.
+
+[source,groovy]
+----
+import com.myapp.MyRequestmapStrategy
+
+beans = {
+   uiRequestmapStrategy(MyRequestmapStrategy)
+}
+----
+
+and yours will be used instead.
+
+=== Password Verification
+
+By default the registration controller has rather strict requirements for valid passwords; they must be between 8 and 64 characters and must include at least one uppercase letter, at least one number, and at least one symbol from "`!@#$%^&`". You can customize these rules with these application.groovy attributes:
+
+[width="100%",options="header"]
+|====================
+| *Property* | *Default Value*
+| grails.plugin.springsecurity.ui.password.minLength | 8
+| grails.plugin.springsecurity.ui.password.maxLength | 64
+| grails.plugin.springsecurity.ui.password.validationRegex | "\^.\*(?=.*\\d)(?=.\*[a-zA-Z])(?=.*[!@#$%^&]).*$"
+|====================

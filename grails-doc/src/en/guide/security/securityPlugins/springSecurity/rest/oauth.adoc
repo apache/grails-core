@@ -1,0 +1,282 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+This plugin is meant to be used in applications serving a REST API's to pure Javascript clients. The main authentication
+flow of this plugin is to allow you to authenticate your users against any Spring Security-compatible user directory
+(like a DB or an LDAP server).
+
+However, there might be situations where you want to delegate the authentication against a third-party provider, like
+Google or Facebook. Unfortunately, your pure Javascript front-end application cannot request the providers directly using
+OAuth, because then the access keys will be made public.
+
+So is this plugin's responsibility to provide endpoints so your Grails backend acts as a proxy for your front-end client.
+
+The flow is something like the following:
+
+.OAuth delegation protocol
+image::images/oauth.png[]
+
+. The client application requests and endpoint that requires authentication, so the server responds with a 401 response (*).
+
+. The client redirects the user to the login form (*).
+
+. This time, instead of using username and password, the user clicks on "Login with Google" button.
+
+. Browser navigates to a Grails URL. Grails will generate a Google Login URL, giving Google a Grails callback URL.
+
+. Browser navigates to Google Login. User logs in, and Google redirects the browser to the Grails callback URL.
+
+. Browser navigates to that Grails callback URL. Then, Grails will use OAuth to fetch user information (like email) from
+  Google. Based on that, will generate a REST API token and fetch and store principal information. The response from
+  Grails will be a front-end URL where the token is a parameter.
+
+. The browser will navigate to that URL, and the Javascript logic will read the token from the URL and store it locally.
+
+. The client sends again a request to the protected resource, passing the token as an HTTP header (*).
+
+The steps flagged with (*) remain unchanged from the normal flow.
+
+The Grails callback URL mentioned above has this general format: `${grails.serverURL}/oauth/callback/${providerName}`.
+You will need to configure such URL in your OAuth 2.0 provider.
+
+To support OAuth, this plugin uses https://github.com/leleuj/pac4j[Profile & Authentication Client for Java]. So you
+can use any OAuth 2.0 provider they support. This includes at the time of writing:
+
+* Dropbox.
+* Facebook.
+* GitHub.
+* Google.
+* LinkedIn.
+* Windows Live.
+* Wordpress.
+* Yahoo.
+* Paypal.
+
+Note that OAuth 1.0a providers also work, like Twitter.
+
+If your provider is not supported by pac4j, you can write your own. Please refer to the
+https://github.com/pac4j/pac4j/wiki/Clients#creating-your-own-client[pac4j documentation] for that.
+
+The plugin also supports https://www.apereo.org/projects/cas[CAS (Central Authentication Service)] using the OAuth
+authentication flow. See CAS Authentication for details.
+
+To start the OAuth authentication flow, from your frontend application, generate a link to
+`<YOUR_GRAILS_APP>/oauth/authenticate/<provider>`. The user clicking on that link represents step 4 in the previous
+diagram.
+
+Note that you can define the frontend callback URL in `application.groovy` under
+`grails.plugin.springsecurity.rest.oauth.frontendCallbackUrl`. You need to define a closure that will be called with
+the token value as parameter:
+
+[source,groovy]
+----
+grails.plugin.springsecurity.rest.oauth.frontendCallbackUrl = { String tokenValue -> "http://my.frontend-app.com/welcome.token=${tokenValue}" }
+----
+
+You can also define the URL as a `callback` parameter in the original link, eg:
+
+`http://your-grails-api.com/oauth/authenticate/google?callback=http://your-frontend-app.com/auth-success.html?token=`
+
+In this case, the token will be *concatenated* to the end of the URL.
+
+Upon successful OAuth authorisation (after step 6.1 in the above diagram), an
+link:{grailsApiDocsUrl}grails/plugin/springsecurity/rest/oauth/OauthUser.html[OauthUser]
+will be stored in the security context. This is done by a bean named `oauthUserDetailsService`. The
+link:{grailsApiDocsUrl}grails/plugin/springsecurity/rest/oauth/DefaultOauthUserDetailsService.html[default implementation]
+delegates to the configured `userDetailsService` bean, passing the profile ID as the username:
+
+[source,groovy]
+.Listing {counter:listing}. DefaultOauthUserDetailsService
+----
+include::{springSecurityRestSourceDir}/grails/plugin/springsecurity/rest/oauth/DefaultOauthUserDetailsService.groovy[tags=class]
+----
+
+If you want to provide your own implementation, define it in `resources.groovy` with bean name `oauthUserDetailsService`.
+Make sure you implements the interface `OauthUserDetailsService`
+
+If you want to do any additional post-OAuth authorisation check, you should do it on your `loadUserByUserProfile`
+implementation. This is useful if you want to allow your corporate users to log into your application using their Gmail
+account. In this case, you should decide based on OAuth20Profile.getEmail(), for instance:
+
+[source,groovy]
+.Listing {counter:listing}. Custom loadUserByUserProfile implementation
+----
+OauthUser loadUserByUserProfile(OAuth20Profile userProfile, Collection<GrantedAuthority> defaultRoles) throws UsernameNotFoundException {
+    if (userProfile.email.endsWith('example.org')) {
+        return new OauthUser(userProfile.id, 'N/A', defaultRoles, userProfile)
+    } else {
+        throw new UsernameNotFoundException("User with email ${userProfile.email} is not allowed. Only `example.org` accounts are allowed.")
+    }
+}
+----
+
+In case of any OAuth authentication failure, the plugin will redirect back to the frontend application anyway, so it
+has a chance to render a proper error message and/or offer the user the option to try again. In that case, the token
+parameter will be empty, and both `error` and `message` params will be appended:
+
+`http://your-frontend-app.com/auth-success.html?token=&error=403&message=User+with+email+jimmy%40gmail.com+now+allowed.+Only+%40example.com+accounts+are+allowed`
+
+Below are some examples on how to configure it for Google, Facebook and Twitter.
+
+[[rest-oauth]]
+== Google
+
+Define the following block in your `application.groovy`:
+
+[source,groovy]
+.Listing {counter:listing}. Google OAuth sample configuration
+----
+grails {
+    plugin {
+        springsecurity {
+
+            rest {
+
+                oauth {
+
+                    frontendCallbackUrl = { String tokenValue -> "http://my.frontend-app.com/welcome#token=${tokenValue}" }
+
+                    google {
+
+                        client = org.pac4j.oauth.client.Google2Client
+                        key = 'xxxx.apps.googleusercontent.com'
+                        secret = 'xxx'
+                        scope = org.pac4j.oauth.client.Google2Client.Google2Scope.EMAIL_AND_PROFILE
+                        defaultRoles = ['ROLE_USER', 'ROLE_GOOGLE']
+
+                    }
+                }
+            }
+        }
+    }
+}
+----
+
+[WARNING]
+====
+The `scope` can be from any value of the enum `org.pac4j.oauth.client.Google2Client.Google2Scope`. But if you use the
+default `OauthUserDetailsService`, you need to use `EMAIL_AND_PROFILE`. That is because the default implementation
+uses the profile ID as the username, and that is only returned by Google if `EMAIL_AND_PROFILE` scope is used.
+====
+
+=== Facebook
+
+Define the following block in your `application.groovy`:
+
+[source,groovy]
+.Listing {counter:listing}. Facebook OAuth sample configuration
+----
+grails {
+    plugin {
+        springsecurity {
+
+            rest {
+
+                oauth {
+
+                    frontendCallbackUrl = { String tokenValue -> "http://my.frontend-app.com/welcome#token=${tokenValue}" }
+
+                    facebook {
+
+                        client = org.pac4j.oauth.client.FacebookClient
+                        key = 'xxx'
+                        secret = 'yyy'
+                        scope = 'email,user_location'
+                        fields = 'id,name,first_name,middle_name,last_name,username'
+                        defaultRoles = ['ROLE_USER', 'ROLE_FACEBOOK']
+                    }
+                }
+            }
+        }
+    }
+}
+----
+
+The `scope` is a comma-separated list, *without blanks*, of Facebook permissions. See the
+https://developers.facebook.com/docs/reference/login/[Facebook documentation] for more details.
+
+`fields` may contain a comma-separated list, *without blanks*, of
+https://developers.facebook.com/docs/graph-api/reference/user/[user fields].
+
+Both `scope` and `fields` are optional, but it's highly recommendable to fine tune those lists so you don't ask for
+information you don't need.
+
+=== Twitter
+
+Define the following block in your `application.groovy`:
+
+[source,groovy]
+.Listing {counter:listing}. Twitter OAuth sample configuration
+----
+grails {
+    plugin {
+        springsecurity {
+
+            rest {
+
+                oauth {
+
+                    frontendCallbackUrl = { String tokenValue -> "http://my.frontend-app.com/welcome#token=${tokenValue}" }
+
+                    twitter {
+
+                        client = org.pac4j.oauth.client.TwitterClient
+                        key = 'xxx'
+                        secret = 'yyy'
+                        defaultRoles = ['ROLE_USER', 'ROLE_TWITTER']
+                    }
+                }
+            }
+        }
+    }
+}
+----
+
+There is no additional configuration for Twitter.
+
+=== CAS (Central Authentication Service)
+
+Define the following block in your `application.groovy`:
+
+[source,groovy]
+.Listing {counter:listing}. CAS sample configuration
+----
+grails {
+    plugin {
+        springsecurity {
+
+            rest {
+
+                oauth {
+
+                    frontendCallbackUrl = { String tokenValue -> "http://my.frontend-app.com/welcome#token=${tokenValue}" }
+
+                    cas {
+
+                        client = org.pac4j.cas.client.CasClient
+                        configuration = new org.pac4j.cas.config.CasConfiguration("https://my.cas-server.com/cas/login")
+                    }
+                }
+            }
+        }
+    }
+}
+----
+
+Set `configuration` to an instance of `org.pac4j.cas.config.CasConfiguration` passing the login URL of your CAS server as the argument of the constructor.

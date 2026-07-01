@@ -1,0 +1,76 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-examples]]
+== Example Applications
+
+Sometimes the best way to learn is by example. We have an ever-expanding list of example apps created to do just that... help you learn how to utilize the grails-spring-security plugin in your current application.
+
+=== The Repos
+A comprehensive list of example spring security apps may be found at:
+
+==== https://github.com/grails-spring-security-samples
+
+=== The Example Apps
+==== spring-security-ui
+A sample Grails App which uses the Grails Spring Security UI and Spring Security Core Plugins.
+
+The Spring Security UI plugin provides CRUD screens and other user management workflows.
+
+https://github.com/grails-spring-security-samples/spring-security-ui
+
+==== grails-spring-security-spring-boot-actuators
+A sample Grails App which secures a Spring Boot Actuator endpoint using the Spring Security Core Plugin.
+
+Spring Boot Actuators provide ways to monitor the health and performance of your application along with other metadata information.
+
+https://github.com/grails-spring-security-samples/grails-spring-security-spring-boot-actuators
+
+==== grails-ssc-mongodb
+A sample Grails App which uses the Spring Security Core Plugin and MongoDB.
+
+MongoDB is an open source, document-oriented database.
+
+https://github.com/grails-spring-security-samples/grails-ssc-mongodb
+
+==== grails-spring-security-params
+A sample Grails App which uses the Spring Security Core Plugin to demonstrate how to use a closure with the `@Secured` annotation.
+
+https://github.com/grails-spring-security-samples/grails-spring-security-params
+
+==== grails-spring-security-group
+A sample Grails App which uses the Spring Security Core Plugin and Group Authentication as described in the documentation.
+
+Rather than granting authorities directly to a “person”, you can create a “group”, map authorities to it, and then map a “person” to that “group”. For applications that have a one or more groups of users who need the same level of access, having one or more “group” instances makes managing changes to access levels easier.
+
+https://github.com/grails-spring-security-samples/grails-spring-security-group
+
+==== grails-spring-security-hierarchical-roles
+A sample Grails App which uses the Spring Security Core Plugin and Hierarchical Roles as described in the documentation.
+
+Hierarchical roles are a convenient way to reduce clutter in your request mappings.
+
+https://github.com/grails-spring-security-samples/grails-spring-security-hierarchical-roles
+
+==== grails-spring-security-ajax
+A sample Grails App which uses the Spring Security Core Plugin and Ajax Authentication as described in the documentation.
+
+The Spring Security Core Plugin supports Ajax logins, but you need to create your own client-side code.
+
+https://github.com/grails-spring-security-samples/grails-spring-security-ajax

@@ -1,0 +1,120 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+The Mail plugin is capable of adding attachments to messages as independent files and inline resources. To enable attachment support, you *MUST* indicate that the message is to be _multipart_ as the *first* thing you do in the mail DSL.
+
+[source,groovy]
+----
+sendMail {
+    multipart true
+}
+----
+
+==== File Attachments
+
+The term "file attachments" here refers to the attachment being received as a file, not necessarily using a file in your application to form the attachment.
+
+The following methods are available in the mail DSL to attach files:
+
+[source,groovy]
+----
+// Bytes
+attach(String fileName, String contentType, byte[] bytes)
+
+// Files
+attach(File file)
+attach(String fileName, File file)
+attach(String fileName, String contentType, File file)
+
+// InputStream
+attach(String fileName, String contentType, InputStreamSource source)
+----
+
+There are 3 things that need to be provided when creating a file attachment:
+
+* file name - what the email client will call the file
+* content type - what mime type the email client will treat the file as
+* content source - the actual attachment
+
+The Mail plugin supports using either a `byte[]`, `File`, or https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/core/io/InputStreamSource.html[`InputStreamSource`] as the content source.
+
+In the case of the variants that take a `File` that do not specify a file name, the name of the file will be used. In the case of the variants that take a `File` that do not specify a content type, the content type will be guessed based on the file extension.
+
+[source,groovy]
+----
+sendMail {
+    multipart true
+    to 'someone@org.com'
+    attach 'yourfile.txt', 'text/plain', 'Hello!' as byte[]
+}
+----
+
+==== Inline Attachments
+
+It is also possible to attach content as inline resources. This is particularly useful in the case of HTML email where you wish to embed images in the message. In this case you specify a _content id_ instead of a file name for the attachment, and then reference this content id in your mail message.
+
+To attach an image as an inline resource you could do:
+
+[source,groovy]
+----
+sendMail {
+    multipart true
+    to 'someone@org.com'
+    inline 'logo', 'image/jpeg', new File('logo.jpg')
+    html view: '/email/welcome'
+}
+----
+
+Then in your view you reference the inline attachment using the `cid:` (content id) namespace:
+
+[source,html]
+----
+<html>
+  <body>
+    <img src="cid:logo" />
+    <p>Welcome Aboard!</p>
+  </body>
+</html>
+----
+
+The following methods are available in the mail DSL to inline-attach files:
+
+[source,groovy]
+----
+// Bytes
+inline(String fileName, String contentType, byte[] bytes)
+
+// Files
+inline(File file)
+inline(String fileName, File file)
+inline(String fileName, String contentType, File file)
+
+// InputStream
+inline(String fileName, String contentType, InputStreamSource source)
+----
+
+There are 3 things that need to be provided when creating an inline attachment:
+
+* content id - the identifier of the resource
+* content type - what mime type the email client will treat the content as
+* content source - the actual content
+
+The Mail plugin supports using either a `byte[]`, `File`, or https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/core/io/InputStreamSource.html[`InputStreamSource`] as the content source.
+
+In the case of the variants that take a `File` that do not specify a content id, the name of the file will be used. In the case of the variants that take a `File` that do not specify a content type, the content type will be guessed based on the file extension.

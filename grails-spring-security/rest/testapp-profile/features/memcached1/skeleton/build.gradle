@@ -1,0 +1,6 @@
+
+integrationTest {
+    systemProperty 'useBearerToken', 'false'
+    systemProperty 'useFacebook', 'true'
+    systemProperty 'geb.env', System.getProperty('geb.env', 'phantomJs')
+}

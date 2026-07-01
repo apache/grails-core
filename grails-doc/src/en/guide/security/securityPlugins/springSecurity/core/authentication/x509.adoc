@@ -1,0 +1,61 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-x509]]
+=== Certificate (X.509) Login Authentication
+
+Another authentication mechanism supported by Spring Security is certificate-based, or "`mutual authentication`". It requires HTTPS, and you must configure the server to require a client certificate (ordinarily only the server provides a certificate). Your username is extracted from the client certificate if it is valid, and you are "`pre-authenticated`". As long as a corresponding username exists in the database, your authentication succeeds and you are not asked for a password. Your `Authentication` contains the authorities associated with your username.
+
+The table describes available configuration options.
+
+.X.509 configuration options
+[cols="30,30,40"]
+|====================
+| *Property* | *Default Value* | *Meaning*
+
+|useX509
+|`false`
+|Whether to support certificate-based logins
+
+|x509.continueFilterChainOnUnsuccessfulAuthentication
+|`true`
+|Whether to proceed when an authentication attempt fails to allow other authentication mechanisms to process the request
+
+|x509.subjectDnRegex
+|"`CN=(.*?)(?:,\|$)`"
+|Regular expression for extracting the username from the certificate's subject name
+
+|x509.checkForPrincipalChanges
+|`false`
+|Whether to re-extract the username from the certificate and check that it's still the current user when a valid `Authentication` already exists
+
+|x509.invalidateSessionOnPrincipalChange
+|`true`
+|Whether to invalidate the session if the principal changed (based on a `checkForPrincipalChanges` check)
+
+|x509.subjectDnClosure
+|_none_
+|If set, the plugin's `ClosureX509PrincipalExtractor` class is used to extract information from the X.509 certificate using the specified closure
+
+|x509.throwExceptionWhenTokenRejected
+|`false`
+|If `true` thrown a `BadCredentialsException`
+|====================
+
+The details of configuring your server for SSL and configuring browser certificates are beyond the scope of this document. If you use Tomcat, see its https://tomcat.apache.org/tomcat-8.0-doc/ssl-howto.html[SSL documentation]. To get a test environment working, see the instructions in https://stackoverflow.com/q/1180397/160313[this discussion at Stack Overflow].

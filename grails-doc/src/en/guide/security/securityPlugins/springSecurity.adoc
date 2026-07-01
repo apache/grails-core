@@ -19,6 +19,16 @@ under the License.
 
 The Spring Security plugins are built on the https://spring.io/projects/spring-security[Spring Security] project which provides a flexible, extensible framework for building all sorts of authentication and authorization schemes. The plugins are modular so you can install just the functionality that you need for your application. The Spring Security plugins are the official security plugins for Grails and are actively maintained and supported.
 
-There is a https://github.com/apache/grails-spring-security[Spring Security Core] plugin which supports form-based authentication, encrypted/salted passwords, HTTP Basic authentication, etc. and secondary dependent plugins provide alternate functionality such as https://github.com/apache/grails-spring-security[ACL support], https://github.com/apache/grails-spring-security[single sign-on with Jasig CAS], https://github.com/apache/grails-spring-security[LDAP authentication], https://github.com/grails-plugins/grails-spring-security-kerberos[Kerberos authentication], and a plugin providing https://github.com/apache/grails-spring-security[user interface extensions] and security workflows.
+The *Core* plugin supports form-based authentication, encrypted/salted passwords, HTTP Basic authentication, etc. and secondary dependent plugins provide alternate functionality such as ACL support, single sign-on with Jasig CAS, LDAP authentication, OAuth2 client support, REST token authentication, and a plugin providing user interface extensions and security workflows.
 
-See the https://github.com/apache/grails-spring-security[Spring Security Core] plugin page for basic information and https://apache.github.io/grails-spring-security/[user guide] for detailed information.
+The reference documentation for each plugin is included in the following sections:
+
+* <<springSecurityCore,Core Plugin>> &#8212; the foundational authentication and authorization plugin.
+* <<springSecurityAcl,ACL Plugin>> &#8212; domain-instance-level access control lists.
+* <<springSecurityCas,CAS Plugin>> &#8212; single sign-on with Apereo (Jasig) CAS.
+* <<springSecurityLdap,LDAP Plugin>> &#8212; authentication against an LDAP server.
+* <<springSecurityOauth2,OAuth2 Plugin>> &#8212; authentication using external OAuth2 providers.
+* <<springSecurityRest,REST Plugin>> &#8212; token-based authentication for stateless REST APIs.
+* <<springSecurityUi,UI Plugin>> &#8212; CRUD screens and workflows for managing users, roles and request maps.
+
+NOTE: These plugins were previously developed and released independently from the https://github.com/apache/grails-spring-security[grails-spring-security] repository. As of Grails 7 their source has been merged into Grails core and they are documented here. For documentation of earlier, independently versioned releases, see the link:{grailsSpringSecurityLegacyDocs}/[legacy Spring Security plugin documentation].

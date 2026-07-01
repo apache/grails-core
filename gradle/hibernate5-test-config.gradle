@@ -28,6 +28,8 @@ tasks.withType(Test).configureEach {
                 'onlyFunctionalTests',
                 'skipHibernate5Tests',
                 'onlyMongodbTests',
+                'onlyRedisTests',
+                'onlySpringSecurityTests',
                 'onlyCoreTests',
                 'skipTests'
         ].find {

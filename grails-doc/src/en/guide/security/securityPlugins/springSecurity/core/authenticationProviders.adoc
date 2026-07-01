@@ -1,0 +1,60 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-authenticationProviders]]
+== Authentication Providers
+
+The plugin registers authentication providers that perform authentication by implementing the {springSecurityApiDocsUrl}org/springframework/security/authentication/AuthenticationProvider.html[AuthenticationProvider] interface.
+
+.Authentication provider configuration options
+[cols="30,30,40"]
+|====================
+| *Property* | *Default Value* | *Meaning*
+
+|providerNames
+|`['daoAuthenticationProvider', 'anonymousAuthenticationProvider', 'rememberMeAuthenticationProvider']`
+|Bean names of authentication providers
+|====================
+
+Use `daoAuthenticationProvider` to authenticate using the User and Role database tables, `rememberMeAuthenticationProvider` to log in with a rememberMe cookie, and `anonymousAuthenticationProvider` to create an "`anonymous`" authentication if no other provider authenticates.
+
+To customize this list, you define a `providerNames` attribute with a list of bean names. The beans must be declared either by the plugin, or yourself in `resources.groovy`. Suppose you have a custom `MyAuthenticationProvider` in `resources.groovy`:
+
+[source,groovy]
+.Listing {counter:listing}. Registering a custom authentication provider bean in `resources.groovy`
+----
+import com.foo.MyAuthenticationProvider
+
+beans = {
+   myAuthenticationProvider(MyAuthenticationProvider) {
+      // attributes
+   }
+}
+----
+
+You register the provider in `grails-app/conf/application.groovy` as:
+
+[source,groovy]
+.Listing {counter:listing}. Registering a custom authentication provider name in `grails.plugin.springsecurity.providerNames`
+----
+grails.plugin.springsecurity.providerNames = [
+   'myAuthenticationProvider',
+   'anonymousAuthenticationProvider',
+   'rememberMeAuthenticationProvider']
+----

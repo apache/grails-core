@@ -1,0 +1,70 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-eventNotification]]
+=== Event Notification
+
+You can set up event notifications in two ways. The sections that follow describe each approach in more detail.
+
+* Register an event listener, ignoring events that do not interest you. Spring allows only partial event subscription; you use generics to register the class of events that interest you, and you are notified of that class and all subclasses.
+* Register one or more callback closures in `grails-app/conf/application.groovy` that take advantage of the plugin's `grails.plugin.springsecurity.SecurityEventListener`. The listener does the filtering for you.
+
+==== AuthenticationEventPublisher
+
+Spring Security publishes events using an {springSecurityApiDocsUrl}org/springframework/security/authentication/AuthenticationEventPublisher.html[AuthenticationEventPublisher] which in turn fire events using the {springFrameworkApiDocsUrl}org/springframework/context/ApplicationEventPublisher.html[ApplicationEventPublisher]. By default no events are fired since the `AuthenticationEventPublisher` instance registered is a `grails.plugin.springsecurity.authentication.NullAuthenticationEventPublisher`. But you can enable event publishing by setting `grails.plugin.springsecurity.useSecurityEventListener = true` in `grails-app/conf/application.groovy`.
+
+You can use the `useSecurityEventListener` setting to temporarily disable and enable the callbacks, or enable them per-environment.
+
+==== UsernameNotFoundException
+
+Most authentication exceptions trigger an event with a similar name as described in this table:
+
+.Exceptions and associated events
+[cols="50,50"]
+|====================
+| *Exception* | *Event*
+
+|`AccountExpiredException`
+|`AuthenticationFailureExpiredEvent`
+
+|`AuthenticationServiceException`
+|`AuthenticationFailureServiceExceptionEvent`
+
+|`LockedException`
+|`AuthenticationFailureLockedEvent`
+
+|`CredentialsExpiredException`
+|`AuthenticationFailureCredentialsExpiredEvent`
+
+|`DisabledException`
+|`AuthenticationFailureDisabledEvent`
+
+|`BadCredentialsException`
+|`AuthenticationFailureBadCredentialsEvent`
+
+|`UsernameNotFoundException`
+|`AuthenticationFailureBadCredentialsEvent`
+
+|`ProviderNotFoundException`
+|`AuthenticationFailureProviderNotFoundEvent`
+|====================
+
+This holds for all exceptions except `UsernameNotFoundException` which triggers an `AuthenticationFailureBadCredentialsEvent` just like a `BadCredentialsException`. This is a good idea since it doesn't expose extra information - there's no differentiation between a bad password and a missing user. In addition, by default a missing user will trigger a `BadCredentialsException` for the same reasons. You can configure Spring Security to re-throw the original `UsernameNotFoundException` instead of converting it to a `BadCredentialsException` by setting `grails.plugin.springsecurity.dao.hideUserNotFoundExceptions = false` in `grails-app/conf/application.groovy`.
+
+Fortunately all subclasses of {springSecurityApiDocsUrl}org/springframework/security/authentication/event/AbstractAuthenticationFailureEvent.html[AbstractAuthenticationFailureEvent] have a `getException()` method that gives you access to the exception that triggered the event, so you can use that to differentiate between a bad password and a missing user (if `hideUserNotFoundExceptions=false`).

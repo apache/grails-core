@@ -1,0 +1,136 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-miscProperties]]
+== Miscellaneous Properties
+
+.Miscellaneous Properties
+[cols="30,30,40"]
+|====================
+| *Property* | *Default Value* | *Meaning*
+
+|active
+|`true`
+|Whether the plugin is enabled
+
+|printStatusMessages
+|`true`
+|Whether to print status messages such as "`Configuring Spring Security Core ...`"
+
+|rejectIfNoRule
+|`true`
+|"`strict`" mode where a request mapping is required for all resources; if `true` make sure to allow `permitAll` for "`/`", "`/js/pass:[**]`", "`/css/pass:[**]`", "`/images/pass:[**]`", "`/login/pass:[**]`", "`/logout/pass:[**]`", and so on
+
+|anon.key
+|"`foo`"
+|anonymousProcessingFilter key
+
+|atr.anonymousClass
+|`grails.plugin.springsecurity.authentication. GrailsAnonymousAuthenticationToken`
+|Anonymous token class
+
+|useHttpSession EventPublisher
+|`false`
+|If `true`, an {springSecurityApiDocsUrl}org/springframework/security/web/session/HttpSessionEventPublisher.html[HttpSession EventPublisher] will be configured
+
+|cacheUsers
+|`false`
+|If `true`, logins are cached using an `EhCache`. See "`Account Locking and Forcing Password Change`", under "`User Cache`": <<core-locking>>
+
+|useSecurity EventListener
+|`false`
+|If `true`, configure `SecurityEventListener`. See <<core-events>>
+
+|dao.reflectionSaltSourceProperty
+|_none_
+|Which property to use for the reflection-based salt source. See <<core-salt>>
+
+|dao.hideUserNotFoundExceptions
+|`true`
+|if `true`, throws a new `BadCredentialsException` if a username is not found or the password is incorrect, but if `false` re-throws the `UsernameNot FoundException` thrown by `UserDetailsService` (considered less secure than throwing `BadCredentialsException` for both exceptions)
+
+|requestCache.createSession
+|`true`
+|Whether caching `SavedRequest` can trigger the creation of a session
+
+|roleHierarchy
+|_none_
+|Hierarchical role definition. See <<core-hierarchicalRoles>>
+
+|voterNames
+|`['authenticatedVoter', 'roleVoter', 'closureVoter']`
+|Bean names of voters. See <<voters>>
+
+|providerNames
+|`['daoAuthenticationProvider', 'anonymousAuthenticationProvider', 'rememberMeAuthenticationProvider']`
+|Bean names of authentication providers. See <<core-authenticationProviders>>
+
+|securityConfigType
+|"`Annotation`"
+|Type of request mapping to use, one of "`Annotation`", "`Requestmap`", or "`InterceptUrlMap`" (or the corresponding enum value from `SecurityConfigType`). See <<core-requestMappings>>
+
+|controllerAnnotations.lowercase
+|`true`
+|Whether to do URL comparisons using lowercase
+
+|controllerAnnotations.staticRules
+|_none_
+|Extra rules that cannot be mapped using annotations
+
+|interceptUrlMap
+|_none_
+|Request mapping definition when using "`InterceptUrlMap`". See <<core-configGroovyMap>>
+
+|registerLoggerListener
+|`false`
+|If `true`, registers a {springSecurityApiDocsUrl}org/springframework/security/access/event/LoggerListener.html[LoggerListener] that logs interceptor-related application events
+
+|scr.allowSessionCreation
+|`true`
+|Whether to allow creating a session in the `securityContextRepository` bean
+
+|scr.disableUrlRewriting
+|`true`
+|Whether to disable URL rewriting (and the jsessionid attribute)
+
+|scr.springSecurityContextKey
+|`HttpSessionSecurityContextRepository. SPRING_SECURITY_CONTEXT_KEY`
+|The HTTP session key to store the `SecurityContext` under
+
+|scpf.forceEagerSessionCreation
+|`false`
+|Whether to eagerly create a session in the `securityContextRepository` bean
+
+|sch.strategyName
+|`SecurityContextHolder.MODE_THREADLOCAL`
+|The strategy to use for storing the `SecurityContext` - can be one of `MODE_THREADLOCAL`, `MODE_INHERITABLETHREADLOCAL`, or `MODE_GLOBAL`, or the name of a class implementing {springSecurityApiDocsUrl}org/springframework/security/core/context/SecurityContextHolderStrategy.html[SecurityContextHolderStrategy]
+
+|debug.useFilter
+|`false`
+|Whether to use the `DebugFilter` to log request debug information to the console
+
+|providerManager.eraseCredentialsAfterAuthentication
+|`true`
+|Whether to remove the password from the `Authentication` and its child objects after successful authentication
+
+|excludeSpringSecurityAutoConfiguration
+|`true`
+|Whether to automatically exclude Spring Boot security auto-configuration classes that conflict with the plugin. Set to `false` to allow Spring Boot's security auto-configurations to load alongside the plugin. See <<installation>>
+
+|====================

@@ -1,0 +1,47 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[ui-introduction]]
+== Introduction to the Spring Security UI Plugin
+
+The Spring Security UI plugin provides CRUD screens and other user management workflows.
+
+The CRUD screens are protected from cross-site request forgery (CSRF) attacks through the use of the `useToken` attribute
+in forms. For more details, refer to the
+https://docs.grails.org/latest/guide/theWebLayer.html#formtokens[Handling Duplicate Form Submissions] section in the
+https://docs.grails.org/latest/guide[Grails Core documentation].
+
+Non-default functionality is available only if the feature is available. This includes:
+
+* ACL Controllers and Views, which are enabled if the xref:springSecurityAcl.adoc#springSecurityAcl[ACL Plugin] is installed.
+* Requestmaps support, which is available if `grails.plugin.springsecurity.securityConfigType` is set to `"Requestmap"` or `SecurityConfigType.Requestmap` in `application.groovy`.
+* Persistent cookies support, which is enabled if it has been configured with the `s2-create-persistent-token` script.
+
+=== Installation
+
+Add an entry in the `dependencies` block of your `build.gradle` file, changing the version as needed:
+
+[source,groovy]
+[subs="attributes"]
+.`build.gradle`
+----
+implementation 'org.apache.grails:grails-spring-security-ui'
+----
+
+Also be sure to update the version when new releases are available.

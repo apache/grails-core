@@ -1,0 +1,107 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-installation]]
+== Installation
+
+=== Prerequisites
+
+Ensure you have the following set up:
+
+* A Grails project
+* A working internet connection
+
+=== Installation Steps
+
+1. Open your Grails project.
+
+2. Locate your `build.gradle` file in the root directory of your project.
+
+3. Add the Spring Security Core Plugin dependency to the `dependencies` section in your `build.gradle`:
+
++
+[source,groovy,subs="+attributes"]
+----
+dependencies {
+    // ... other dependencies
+    implementation 'org.apache.grails:grails-spring-security'
+}
+----
++
+
+4. Save the `build.gradle` file.
+
+5. Open a terminal or command prompt.
+
+6. Navigate to your project's root directory using the `cd` command.
+
+7. Run the following Gradle command to update your project's dependencies:
+
++
+[source,bash]
+----
+./gradlew clean build
+----
++
+
+8. The Spring Security Core Plugin {version} is now installed and integrated into your Grails project.
+
+9. You can start using the plugin's features and commands in your application.
+
+10. Run the <<core-s2-quickstart>> script to generate domain classes and add the initial configuration settings in `application.groovy`:
+
++
+[source,bash]
+```
+./grailsw s2-quickstart com.yourapp User Role
+```
+
+=== Spring Boot Auto-Configuration
+
+The plugin automatically excludes Spring Boot security auto-configuration classes (such as `SecurityAutoConfiguration`, `SecurityFilterAutoConfiguration`, and `UserDetailsServiceAutoConfiguration`) that conflict with the plugin's own security setup. This means you do not need to manually add `spring.autoconfigure.exclude` entries to your `application.yml`.
+
+If you need to disable this automatic exclusion - for example, to use Spring Boot's security auto-configuration directly alongside the plugin - set the following property in `application.yml`:
+
+[source,yaml]
+----
+grails:
+  plugin:
+    springsecurity:
+      excludeSpringSecurityAutoConfiguration: false
+----
+
+=== Verifying Installation
+
+To verify that the plugin has been successfully installed, you can run a simple test:
+
+1. In your Grails project, create a new controller or use an existing one.
+
+2. Add a secure annotation, such as `@Secured(['ROLE_USER'])`, to a method in your controller.
+
+3. Run your Grails application using the command:
+
++
+[source,bash]
+----
+./gradlew bootRun
+----
++
+
+4. Access the URL associated with the method you secured. If the plugin is correctly installed, it should enforce the security constraint you defined.
+

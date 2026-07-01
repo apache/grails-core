@@ -1,0 +1,4 @@
+${packageDeclaration}
+
+class RegistrationCodeController extends grails.plugin.springsecurity.ui.RegistrationCodeController {
+}

@@ -1,0 +1,197 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-urlProperties]]
+== URL Properties
+
+The table shows configurable URL-related properties.
+
+.URL-related Properties
+[cols="30,30,40"]
+|====================
+| *Property* | *Default Value* | *Meaning*
+
+|apf.filterProcessesUrl
+|"`/login/authenticate`"
+|Login form post URL, intercepted by Spring Security filter
+
+|apf.usernameParameter
+|"`username`"
+|Login form username parameter
+
+|apf.passwordParameter
+|"`password`"
+|Login form password parameter
+
+|apf.allowSessionCreation
+|`true`
+|Whether to allow authentication to create an HTTP session
+
+|apf.postOnly
+|`true`
+|Whether to allow only POST login requests
+
+|apf.continueChainBefore SuccessfulAuthentication
+|`false`
+|whether to continue calling subsequent filters in the filter chain
+
+|apf.storeLastUsername
+|`false`
+|Whether to store the login username in the HTTP session
+
+|failureHandler.defaultFailureUrl
+|"`/login/authfail?login_error=1`"
+|Redirect URL for failed logins
+
+|failureHandler.ajaxAuthFailUrl
+|"`/login/authfail?ajax=true`"
+|Redirect URL for failed Ajax logins
+
+|failureHandler.exceptionMappings
+|_none_
+|Map of exception class name (subclass of {springSecurityApiDocsUrl}org/springframework/security/core/AuthenticationException.html[AuthenticationException]) to which the URL will redirect for that exception type after authentication failure
+
+|failureHandler.useForward
+|`false`
+|Whether to render the error page (`true`) or redirect (`false`)
+
+|failureHandler.allowSessionCreation
+|`true`
+|Whether to enable session creation to store the authentication failure exception
+
+|successHandler.defaultTargetUrl
+|"`/`"
+|Default post-login URL if there is no saved request that triggered the login
+
+|successHandler.alwaysUseDefault
+|`false`
+|If `true`, always redirects to the value of `successHandler.defaultTargetUrl` after successful authentication; otherwise redirects to to originally-requested page
+
+|successHandler.targetUrlParameter
+|"`spring-security-redirect`"
+|Name of optional login form parameter that specifies destination after successful login
+
+|successHandler.useReferer
+|`false`
+|Whether to use the HTTP `Referer` header to determine post-login destination
+
+|successHandler.ajaxSuccessUrl
+|"`/login/ajaxSuccess`"
+|URL for redirect after successful Ajax login
+
+|auth.loginFormUrl
+|"`/login/auth`"
+|URL of login page
+
+|auth.forceHttps
+|`false`
+|If `true`, redirects login page requests to HTTPS
+
+|auth.ajaxLoginFormUrl
+|"`/login/authAjax`"
+|URL of Ajax login page
+
+|auth.useForward
+|`false`
+|Whether to render the login page (`true`) or redirect (`false`)
+
+|logout.afterLogoutUrl
+|"`/`"
+|URL for redirect after logout
+
+|logout.filterProcessesUrl
+|"`/logoff`"
+|Logout URL, intercepted by Spring Security filter
+
+|logout.handlerNames
+|`['rememberMeServices', 'securityContextLogoutHandler']`
+|Logout handler bean names. See <<core-logoutHandlers>>
+
+|logout.clearAuthentication
+|`true`
+|If `true` removes the `Authentication` from the `SecurityContext` to prevent issues with concurrent requests
+
+|logout.invalidateHttpSession
+|`true`
+|Whether to invalidate the HTTP session when logging out
+
+|logout.targetUrlParameter
+|_none_
+|the querystring parameter name for the post-logout URL
+
+|logout.alwaysUseDefaultTargetUrl
+|`false`
+|whether to always use the `afterLogoutUrl` as the post-logout URL
+
+|logout.redirectToReferer
+|`false`
+|whether to use the `Referer` header value as the post-logout URL
+
+|logout.postOnly
+|`true`
+|If `true` only POST requests will be allowed to logout
+
+|adh.errorPage
+|"`/login/denied`"
+|Location of the 403 error page (or set to `null` to send a 403 error and not render a page)
+
+|adh.ajaxErrorPage
+|"`/login/ajaxDenied`"
+|Location of the 403 error page for Ajax requests
+
+|adh.useForward
+|`true`
+|If `true` a forward will be used to render the error page, otherwise a redirect is used
+
+|ajaxHeader
+|"`X-Requested-With`"
+|Header name sent by Ajax library, used to detect Ajax
+
+|ajaxCheckClosure
+|_none_
+|An optional closure that can determine if a request is Ajax
+
+|redirectStrategy.contextRelative
+|`false`
+|If `true`, the redirect URL will be the value after the request context path. This results in the loss of protocol information (HTTP or HTTPS), so causes problems if a redirect is being performed to change from HTTP to HTTPS or vice versa
+
+|switchUser URLs
+|
+|See <<core-switchUser>>, under *Customizing URLs*
+
+|fii.alwaysReauthenticate
+|`false`
+|If `true`, re-authenticates when there is a `Authentication` in the `SecurityContext`
+
+|fii.rejectPublicInvocations
+|`true`
+|Disallow URL access when there is no request mapping
+
+|fii.validateConfigAttributes
+|`true`
+|Whether to check that all `ConfigAttribute` instances are valid at startup
+
+|fii.publishAuthorizationSuccess
+|`false`
+|Whether to publish an `AuthorizedEvent` after successful access check
+
+|fii.observeOncePerRequest
+|`true`
+|If `false` allow checks to happen multiple times, for example when JSP forwards are being used and filter security is desired on each included fragment of the HTTP request
+|====================

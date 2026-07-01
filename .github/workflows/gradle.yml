@@ -265,6 +265,117 @@ jobs:
           -PskipCodeStyle
           -PskipHibernate5Tests
           -PskipMongodbTests
+          -PskipSpringSecurityTests
+          -PskipRedisTests
+  security:
+    name: "Spring Security Tests"
+    if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        java: [ 17, 21, 25 ]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: liberica
+          java-version: ${{ matrix.java }}
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        with:
+          cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
+      - name: "🔍 Setup TestLens"
+        uses: testlens-app/setup-testlens@d96a555133c275a00949d2cc77b70fe9a4242ebf # v1.9.2
+      - name: "🏃 Run Functional Tests"
+        run: >
+          ./gradlew bootJar check
+          --continue
+          --rerun-tasks
+          --stacktrace
+          -PgebAtCheckWaiting
+          -PonlySpringSecurityTests
+          -PskipCodeStyle
+  securityConfig:
+    name: "Spring Security Config Functional Tests"
+    if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Each value boots the core functional-test-app with a different Spring Security configuration.
+        # The specs are gated with @IgnoreIf({ System.getProperty('TESTCONFIG') != '<config>' }), so a
+        # config only runs when TESTCONFIG matches. TESTCONFIG is applied at app startup, so every config
+        # must be its own run. Carried over from the standalone grails-spring-security CI — do not drop
+        # configs (add, don't remove) when the app's security configurations change.
+        test-config: [ 'static', 'annotation', 'requestmap', 'basic', 'basicCacheUsers', 'misc', 'putWithParams', 'bcrypt', 'issue503' ]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: liberica
+          java-version: 17
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        with:
+          cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
+      - name: "🔍 Setup TestLens"
+        uses: testlens-app/setup-testlens@d96a555133c275a00949d2cc77b70fe9a4242ebf # v1.9.2
+      - name: "🏃 Run Spring Security Functional Tests (TESTCONFIG=${{ matrix.test-config }})"
+        run: >
+          ./gradlew
+          :grails-test-examples-spring-security-core-functional-test-app:check
+          --continue
+          --rerun-tasks
+          --stacktrace
+          -DTESTCONFIG=${{ matrix.test-config }}
+          -PgebAtCheckWaiting
+          -PskipCodeStyle
+  redis:
+    name: "Redis Tests"
+    if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        java: [ 17, 21, 25 ]
+        redis-version: [ '7.4', '8.0' ] # Redis container version exercised via Testcontainers
+    steps:
+      - name: "Output Agent IP" # in the event RAO blocks this agent, this can be used to debug it
+        run: curl -s https://api.ipify.org
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: liberica
+          java-version: ${{ matrix.java }}
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        with:
+          cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
+          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY  }}
+      - name: "🔍 Setup TestLens"
+        uses: testlens-app/setup-testlens@d96a555133c275a00949d2cc77b70fe9a4242ebf # v1.9.2
+      - name: "🏃 Run Redis Tests"
+        run: >
+          ./gradlew bootJar check
+          --continue
+          --rerun-tasks
+          --stacktrace
+          -PonlyRedisTests
+          -PredisContainerVersion=${{ matrix.redis-version }}
+          -PskipCodeStyle
   mongodbFunctional:
     if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
     name: "Mongodb Functional Tests"
@@ -376,16 +487,19 @@ jobs:
           name: grails-gradle-artifacts.txt
           path: grails-gradle/build/grails-gradle-artifacts.txt
   publish:
-    needs: [ publishGradle, build, functional, hibernate5Functional, mongodbFunctional ]
+    needs: [ publishGradle, build, functional, security, securityConfig, redis, hibernate5Functional, mongodbFunctional ]
     if: >-
-      ${{ always() && 
-          github.repository_owner == 'apache' && 
-          (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && 
-          needs.publishGradle.result == 'success' && 
-          (needs.build.result == 'success' || needs.build.result == 'skipped') && 
-          (needs.functional.result == 'success' || needs.functional.result == 'skipped') && 
-          (needs.hibernate5Functional.result == 'success' || needs.hibernate5Functional.result == 'skipped') && 
-          (needs.mongodbFunctional.result == 'success' || needs.mongodbFunctional.result == 'skipped') 
+      ${{ always() &&
+          github.repository_owner == 'apache' &&
+          (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+          needs.publishGradle.result == 'success' &&
+          (needs.build.result == 'success' || needs.build.result == 'skipped') &&
+          (needs.functional.result == 'success' || needs.functional.result == 'skipped') &&
+          (needs.security.result == 'success' || needs.security.result == 'skipped') &&
+          (needs.securityConfig.result == 'success' || needs.securityConfig.result == 'skipped') &&
+          (needs.redis.result == 'success' || needs.redis.result == 'skipped') &&
+          (needs.hibernate5Functional.result == 'success' || needs.hibernate5Functional.result == 'skipped') &&
+          (needs.mongodbFunctional.result == 'success' || needs.mongodbFunctional.result == 'skipped')
       }}
     runs-on: ubuntu-24.04
     steps:

@@ -1,0 +1,82 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-i18n]]
+== Internationalization
+
+The plugin includes i18n messages in several languages. To customize or translate these, add messages for the following keys to your i18n resource bundle(s) for each exception:
+
+.i18n messages for exceptions
+[cols="30,30,40"]
+|====================
+| *Message* | *Default Value* | *Exception*
+
+|springSecurity.errors.login.expired
+|"`Sorry, your account has expired.`"
+|`AccountExpiredException`
+
+|springSecurity.errors.login.passwordExpired
+|"`Sorry, your password has expired.`"
+|`CredentialsExpiredException`
+
+|springSecurity.errors.login.disabled
+|"`Sorry, your account is disabled.`"
+|`DisabledException`
+
+|springSecurity.errors.login.locked
+|"`Sorry, your account is locked.`"
+|`LockedException`
+
+|springSecurity.errors.login.fail
+|"`Sorry, we were not able to find a user with that username and password.`"
+|Other exceptions
+|====================
+
+You can customize all messages in auth.gsp and denied.gsp:
+
+.i18n messages for GSPs
+[cols="50,50"]
+|====================
+| *Message* | *Default Value*
+
+|springSecurity.login.title
+|"`Login`"
+
+|springSecurity.login.header
+|"`Please Login`"
+
+|springSecurity.login.button
+|"`Login`"
+
+|springSecurity.login.username.label
+|"`Username`"
+
+|springSecurity.login.password.label
+|"`Password`"
+
+|springSecurity.login.remember.me.label
+|"`Remember me`"
+
+|springSecurity.denied.title
+|"`Denied`"
+
+|springSecurity.denied.message
+|"`Sorry, you're not authorized to view this page.`"
+
+|====================

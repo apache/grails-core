@@ -1,0 +1,99 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+	id 'groovy'
+	id 'java-library'
+	id 'project-report'
+	id 'java-test-fixtures'
+	id 'org.apache.grails.buildsrc.properties'
+	id 'org.apache.grails.buildsrc.dependency-validator'
+	id 'org.apache.grails.buildsrc.compile'
+	id 'org.apache.grails.buildsrc.publish'
+	id 'org.apache.grails.buildsrc.sbom'
+	id 'org.apache.grails.gradle.grails-code-style'
+	id 'org.apache.grails.gradle.grails-gsp'
+	id 'org.apache.grails.gradle.grails-plugin'
+}
+
+version = projectVersion
+group = 'org.apache.grails'
+
+dependencies {
+
+	implementation platform(project(':grails-bom'))
+
+	api project(':grails-async') // AsyncGrailsWebRequest is used in public API
+	api project(':grails-mimetypes')
+	api project(':grails-datastore-core') // API because used in templates
+	api project(':grails-datamapping-core') // API because used in templates
+	api project(':grails-events-transforms') // API because used in templates
+	api project(':grails-web-common')
+	api project(':grails-web-url-mappings')
+	api 'org.springframework:spring-beans'
+	api 'org.springframework:spring-context'
+	api 'org.springframework:spring-web'
+	api 'org.springframework.security:spring-security-core'
+	api 'org.springframework.security:spring-security-web'
+
+	implementation 'org.apache.commons:commons-text'
+	implementation 'org.ehcache:ehcache', {
+        capabilities {
+            requireCapability('org.ehcache:ehcache-jakarta')
+        }
+    }
+	implementation project(':grails-converters')
+	implementation project(':grails-events') // Events Plugin is required to implement EventBus
+	implementation project(':grails-rest-transforms')
+	implementation project(':grails-bootstrap')
+	implementation 'org.springframework:spring-context-support'
+	implementation 'org.springframework:spring-core'
+	implementation 'org.springframework:spring-tx'
+	implementation 'org.springframework.boot:spring-boot'
+	implementation 'org.springframework.security:spring-security-crypto'
+
+	compileOnly 'jakarta.servlet:jakarta.servlet-api' // Provided
+	compileOnly 'jline:jline' // for shell commands
+	compileOnly project(':grails-core') // Provided as this is a Grails Plugin
+	compileOnly 'org.apache.groovy:groovy' // Compile-time annotations
+	compileOnly 'org.slf4j:slf4j-nop' // Prevents warnings about missing slf4j implementation during compilation
+	compileOnly 'org.springframework.boot:spring-boot-autoconfigure' // AutoConfigurationImportFilter SPI
+
+	runtimeOnly project(':grails-services') // A service is defined in the plugin
+
+	testFixturesImplementation(platform(project(':grails-bom')))
+	testFixturesImplementation 'org.springframework.security:spring-security-core'
+	testFixturesImplementation 'org.springframework.security:spring-security-config'
+
+	testImplementation project(':grails-testing-support-datamapping')
+	testImplementation project(':grails-testing-support-web')
+	testImplementation 'org.springframework:spring-test'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.security:spring-security-config'
+	testImplementation 'org.spockframework:spock-core'
+
+	testRuntimeOnly 'net.bytebuddy:byte-buddy'
+	testRuntimeOnly 'org.slf4j:slf4j-nop' // Prevents warnings about missing slf4j implementation during tests
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
+	from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+	from rootProject.layout.projectDirectory.file('gradle/spring-security-test-config.gradle')
+}

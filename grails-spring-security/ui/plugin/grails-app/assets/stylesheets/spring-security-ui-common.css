@@ -1,0 +1,304 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+/* standard tags */
+a {
+	color:           #363636;
+	cursor:          pointer;
+	text-decoration: none;
+}
+
+a:hover {
+	color:           #f30;
+	text-decoration: underline;
+}
+
+a:link, a:visited {
+	color: #039;
+}
+
+body {
+	background:   #fff;
+	color:        #333;
+	line-height:  1.5;
+	margin-left:  0px;
+	margin-right: 0px;
+	min-width:    980px;
+}
+
+body, input, select, textarea {
+	font-family: Tahoma, verdana, arial, helvetica, sans-serif;
+	font-size:   0.9em;
+}
+
+caption {
+	font-family:    "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
+	font-weight:    bold;
+	text-align:     center;
+	font-size:      1.5em;
+	padding: 20px 0;
+}
+
+h3 {
+	color:         #222222;
+	font-size:     1.2em;
+	font-weight:   bold;
+	line-height:   1;
+	margin-bottom: 1em;
+	text-align:    center;
+}
+
+input[type=checkbox], input[type=radio] {
+	height: 20px;
+	width:  20px;
+}
+
+ol, ul {
+	list-style: none;
+}
+
+table {
+	border-collapse: separate;
+	border-spacing:  0;
+	margin-bottom:   1.4em;
+	vertical-align:  middle;
+}
+
+table.info {
+	width: 100%;
+}
+
+table.info thead th {
+	background: #444;
+	color:      white;
+}
+
+td {
+	font-weight:    normal;
+}
+
+td, th {
+	padding:        8px 10px 8px 5px;
+	text-align:     left;
+	vertical-align: middle;
+}
+
+th {
+	font-weight: bold;
+}
+
+thead th {
+	background: #999;
+}
+
+tr.even td {
+	background: #ccc;
+}
+
+tr.odd td {
+	background: white;
+}
+
+/* DataTables - including here so asset-pipeline updates the paths correctly */
+table.dataTable thead .sorting {
+  background-image: url("../images/sort_both.png");
+}
+table.dataTable thead .sorting_asc {
+  background-image: url("../images/sort_asc.png");
+}
+table.dataTable thead .sorting_asc_disabled {
+  background-image: url("../images/sort_asc_disabled.png");
+}
+table.dataTable thead .sorting_desc {
+  background-image: url("../images/sort_desc.png");
+}
+table.dataTable thead .sorting_desc_disabled {
+  background-image: url("../images/sort_desc_disabled.png");
+}
+
+/* jdMenu overrides */
+ul.jd_menu,
+ul.jd_menu ul {
+	height: 26px;
+}
+
+ul.jd_menu li {
+	font-family: Tahoma, verdana, arial, helvetica, sans-serif;
+	font-size:   1em;
+	height:      20px;
+	line-height: 15px;
+}
+
+ul.jd_menu li,
+ul.jd_menu li a,
+ul.jd_menu li.jdm_active,
+ul.jd_menu li.jdm_hover {
+	color: #222;
+}
+
+ul.jd_menu li li {
+	width: 300px;
+}
+
+/* jGrowl overrides */
+.jGrowl {
+	font-family: Tahoma, verdana, arial, helvetica, sans-serif;
+	font-size:   1em;
+}
+
+.jGrowl-closer {
+	font-size: 1.1em;
+}
+
+.jGrowl-notification {
+	min-height: 60px;
+}
+
+.jGrowl-notification .jGrowl-header {
+	font-size: 1.25em;
+}
+
+/* Spring Security UI */
+
+.s2ui_center {
+	margin-left:  auto;
+	margin-right: auto;
+}
+
+.s2ui_error {
+	-moz-border-radius:    2px;
+	-webkit-border-radius: 2px;
+	color:                 #D8000C;
+	font-weight:           normal;
+}
+
+.s2ui_error p {
+	margin: 2px;
+}
+
+.s2ui_form {
+	height:     450px;
+	padding:    5px;
+	position:   relative;
+	text-align: center;
+}
+
+.s2ui_hidden_button {
+	background: white;
+	border:     0;
+	float:      right;
+	height:     0;
+	left:       1px;
+	margin:     0;
+	padding:    0;
+	position:   absolute;
+	width:      0;
+	z-index:    -1000;
+}
+
+.s2ui_required {
+	color:       red;
+	font-weight: bold;
+}
+
+.s2ui_section {
+	border:  1px solid #f2f2f2;
+	padding: 18px;
+}
+
+#s2ui_content {
+	float:       left;
+	margin-left: 12px;
+	margin-top:  6px;
+	width:       96%;
+}
+
+#s2ui_header_body {
+	width: 100%;
+}
+
+#s2ui_header_title {
+	color:      black;
+	font-size:  1.5em;
+	margin-top: 5px;
+	text-align: center;
+}
+
+#s2ui_login_link_container {
+	float:    right;
+	position: absolute;
+	right:    10px;
+	top:      28px;
+}
+
+#s2ui_main {
+	margin: 0px;
+	width:  100%;
+}
+
+/* pagination */
+
+.paginateButtons {
+	color:       #666;
+	font-family: Tahoma, verdana, arial, helvetica, sans-serif;
+	font-size:   0.9em;
+	overflow:    hidden;
+	padding:     10px 3px;
+}
+
+.paginateButtons a {
+	background:   #fff;
+	border-color: #ccc #aaa #aaa #ccc;
+	border:       1px solid #ccc;
+	color:        #666;
+	margin:       0 3px;
+	padding:      2px 6px;
+}
+
+.paginateButtons span {
+	padding: 2px 3px;
+}
+
+/* tab icons */
+
+.icon, .ui-tabs .ui-tabs-nav li a.icon {
+	background-repeat:   no-repeat;
+	padding-left:        24px;
+	background-position: 4px center;
+}
+
+.icon_error {
+	background-image: url('icons/error.svg');
+}
+
+.icon_info {
+	background-image: url('icons/info.svg');
+}
+
+.icon_role {
+	background-image: url('icons/role.svg');
+}
+
+.icon_user {
+	background-image: url('icons/user.svg');
+}
+
+.icon_users {
+	background-image: url('icons/users.svg');
+}

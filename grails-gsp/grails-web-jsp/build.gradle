@@ -111,6 +111,15 @@ dependencies {
 //    compileOnly "jakarta.el:jakarta.el-api:$elApiVersion" // Provided by servlet container
 }
 
+// Package the canonical license texts referenced by META-INF/LICENSE
+tasks.withType(Jar).configureEach { jarTask ->
+    jarTask.into('META-INF/licenses') {
+        from rootProject.layout.projectDirectory.file('licenses/LICENSE-EPL2.txt')
+        from rootProject.layout.projectDirectory.file('licenses/LICENSE-CDDL.txt')
+        include { jarTask.archiveClassifier.getOrElse('') != 'javadoc' }
+    }
+}
+
 apply {
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')

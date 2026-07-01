@@ -545,7 +545,8 @@ publishGuideTask.configure { PublishGuideTask publish ->
     )
 
     publish.properties = project.provider {
-        def projectVersionForURL = projectVersion.endsWith('-SNAPSHOT') ? 'SNAPSHOT' : projectVersion
+        // grails.apache.org/docs publishes snapshot builds under the 'snapshot' path and releases under their version
+        def grailsDocsVersion = projectVersion.endsWith('-SNAPSHOT') ? 'snapshot' : projectVersion
         def springVersion = getVersion('spring-core')
         def springBootVersion = getVersion('spring-boot')
         def spockVersion = getVersion("spock-core")
@@ -587,7 +588,6 @@ publishGuideTask.configure { PublishGuideTask publish ->
                 'springVersion'            : springVersion,
                 'gradleVersion'            : gradle.gradleVersion,
                 'GrailsVersion'            : projectVersion,
-                'grailsVersionForURL'      : projectVersionForURL,
                 'version'                  : projectVersion,
                 'gormVersion'              : projectVersion,
                 'hibernate5Version'        : getVersion("hibernate-core-jakarta"),
@@ -614,6 +614,16 @@ publishGuideTask.configure { PublishGuideTask publish ->
                 'constraintsRef'           : constraintsRef,
                 'constraintsRefFromRef'    : '../' + constraintsRef,
                 'versionsRef'              : '../ref/Versions/',
+                // Spring Security plugin documentation (merged into grails-core in Grails 7).
+                // Historical, independently-versioned releases remain published at the legacy site.
+                'grailsSpringSecurityLegacyDocs': 'https://apache.github.io/grails-spring-security/snapshot',
+                'springSecurityApiDocsUrl' : 'https://docs.spring.io/spring-security/site/docs/current/api/',
+                'springFrameworkApiDocsUrl': "https://docs.spring.io/spring-framework/docs/${springVersion}/javadoc-api/",
+                'springSecurityHtmlSingleUrl': 'https://docs.spring.io/spring-security/reference/current/',
+                'springFrameworkReferenceUrl': "https://docs.spring.io/spring-framework/reference/${springVersion}/",
+                'grailsApiDocsUrl'         : "https://grails.apache.org/docs/${grailsDocsVersion}/api/",
+                'springSecurityLdapApiLink': 'https://docs.spring.io/spring-security/site/docs/current/api',
+                'springSecurityLdapLink'   : 'https://docs.spring.io/spring-security/reference/current/servlet/authentication/passwords/ldap.html',
 
         ] as Map<String, String>
     }
@@ -621,7 +631,9 @@ publishGuideTask.configure { PublishGuideTask publish ->
         [
                 'cacheExampleSourceDir': rootProject.layout.projectDirectory.dir('grails-test-examples/cache').asFile,
                 'sourcedir'            : rootProject.layout.projectDirectory.asFile,
-                'functionalSourceDir'  : rootProject.layout.projectDirectory.dir('grails-test-examples').asFile
+                'functionalSourceDir'  : rootProject.layout.projectDirectory.dir('grails-test-examples').asFile,
+                'springSecurityRestSourceDir': rootProject.layout.projectDirectory.dir('grails-spring-security/rest/core/src/main/groovy').asFile,
+                'customUserDetailsContextMapperPath': rootProject.layout.projectDirectory.dir('grails-test-examples/spring-security/ldap/custom-user-details-context-mapper').asFile
         ] as Map<String, String>
     }
 }

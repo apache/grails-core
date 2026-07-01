@@ -1,0 +1,72 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-hashing]]
+=== Password Hashing
+
+By default the plugin uses the bcrypt algorithm to hash passwords. You can customize this with the `grails.plugin.springsecurity.password.algorithm` attribute as described below. In addition you can increase the security of your passwords by adding a salt, which can be a property of the `UserDetails` instance, a global static value, or any custom value you want.
+
+https://en.wikipedia.org/wiki/Bcrypt[bcrypt] is a much more secure alternative to the message digest approaches since it supports a customizable work level which when increased takes more computation time to hash the users' passwords, but also dramatically increases the cost of brute force attacks. Given how easy it is to https://www.google.com/search?q=gpu%20password%20cracking[use GPUs to crack passwords], you should definitely consider using bcrypt for new projects and switching to it for existing projects. Note that due to the approach used by bcrypt, you cannot add an additional salt like you can with the message digest algorithms.
+
+Enable bcrypt by using the `'bcrypt'` value for the `algorithm` config attribute:
+
+[source,groovy]
+----
+grails.plugin.springsecurity.password.algorithm = 'bcrypt'
+----
+
+and optionally changing the number of rekeying rounds (which will affect the time it takes to hash passwords), e.g.
+
+[source,groovy]
+----
+grails.plugin.springsecurity.password.bcrypt.logrounds = 15
+----
+
+Note that the number of rounds must be between 4 and 31.
+
+https://en.wikipedia.org/wiki/PBKDF2[PBKDF2] is also supported.
+
+The table shows configurable password hashing attributes.
+
+If you want to use a message digest hashing algorithm, see https://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html[this Java page] for the available algorithms.
+
+.Password Hashing configuration options
+[cols="30,30,40"]
+|====================
+| *Property* | *Default* | *Description*
+
+|password.algorithm
+|"`bcrypt`"
+|passwordEncoder algorithm; "`bcrypt`" to use bcrypt, "`pbkdf2`" to use PBKDF2, or any message digest algorithm that is supported in your JDK
+
+|password.encodeHashAsBase64
+|`false`
+|If `true`, Base64-encode the hashed password
+
+|password.bcrypt.logrounds
+|`10`
+|the number of rekeying rounds to use when using bcrypt
+
+|password.hash.iterations
+|`10000`
+|the number of iterations which will be executed on the hashed password/salt when using a message digest algorithm
+|====================
+
+NOTE: The bcrypt `logrounds` and `iterations` are set to a lower number to improve speed while testing.
+If you rely on them to be higher, set them manually when testing.

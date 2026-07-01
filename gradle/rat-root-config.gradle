@@ -47,6 +47,7 @@ tasks.named('rat') {
             '**/*.png', '**/*.svg', '**/*.ico', '**/*.eps', '**/*.icns', '**/*.jpg', '**/*.jpeg', '**/*.gif', // Image files
             '**/*.db', // H2 database test files
             '**/*.gitkeep', // Empty Gitkeep file
+            '**/*.ldif', // LDAP test data files
             'grails-fields/grails-app/views/layouts/_fields/*.gsp', // template files that people are expected to use in the end application
             'grails-fields/grails-app/views/templates/_fields/*.gsp', // template files that people are expected to use in the end application
             'grails-geb/src/main/templates/*.groovy', // template files that people are expected to use in the end application
@@ -72,12 +73,27 @@ tasks.named('rat') {
             'grails-gradle/**/build/**', // grails-gradle does not have a build package name so exclude any build directories
             'grails-forge/*/build/**', // grails-forge build directories
             'grails-forge/build/**', // grails-forge build directories
+            'grails-spring-security/plugin/src/main/templates/**', // template files that people are expected to use in the end application
+            'grails-spring-security/ldap/examples/functional-test-app/grails-app/ldap-servers/d1/data/users.ldif', // test database that does not support comments
+            'grails-spring-security/oauth2/plugin/src/main/templates/**', // template files that people are expected to use in the end application
+            'grails-spring-security/rest/testapp-profile/commands/**', // template files that people are expected to use in the end application
+            'grails-spring-security/rest/testapp-profile/features/**', // template files that people are expected to use in the end application
+            'grails-spring-security/rest/testapp-profile/profile.yml', // generated file
+            'grails-spring-security/rest/testapp-profile/profile.yml.tmpl', // template that will be included in an end application
+            'grails-spring-security/rest/testapp-profile/skeleton/**', // template files that people are expected to use in the end application
+            'grails-spring-security/rest/testapp-profile/templates/**', // template files that people are expected to use in the end application
+            'grails-spring-security/ui/plugin/grails-app/assets/javascripts/jquery/jquery.jdMenu.js', // See license file, MIT licensed
+            'grails-spring-security/ui/plugin/grails-app/assets/javascripts/jquery/jquery.positionBy.js', // See license file, MIT licensed
+            'grails-spring-security/ui/plugin/grails-app/assets/stylesheets/jquery.jdMenu.css', // See license file, MIT licensed
+            'grails-spring-security/ui/plugin/grails-app/assets/stylesheets/jquery.jdMenu.slate.css', // See license file, MIT licensed
+            'grails-spring-security/ui/plugin/src/main/templates/**', // template files that people are expected to use in the end application
             'build-logic/build/**', // grails-forge build directories
             'grails-forge/.idea/**', // grails-forge idea directories
             'grails-gradle/.idea/**', // grails-gradle idea directories
             'build-logic/.idea/**', // grails-gradle idea directories
             'build/**', // build directories
             'buildSrc/build/**', // build directories
+            '**/spring-configuration-metadata.json', // JSON files cannot contain license headers
     ] + rootProject.subprojects.collect{"${rootProject.projectDir.relativePath(it.layout.buildDirectory.get().asFile).toString()}/**/*" }
     // logger.lifecycle("Excludes for RAT task: ${allExcludes.join(', \n')}")
     excludes = allExcludes

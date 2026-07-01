@@ -172,6 +172,27 @@ include(
         // until this can be finished ported to grails 7, we are disabling
         //'grails-datamapping-rx',
 
+        // Spring Security
+        // Note: Spring Security documentation is now part of grails-doc (grails-doc/src/en/guide/security).
+        'grails-spring-security-acl',
+        'grails-spring-security-cas',
+        'grails-spring-security',
+        'grails-spring-security-ldap',
+        'grails-spring-security-oauth2',
+        'grails-spring-security-rest',
+        'grails-spring-security-rest-gorm',
+        'grails-spring-security-rest-grailscache',
+        'grails-spring-security-rest-memcached',
+        'grails-spring-security-rest-redis',
+        'grails-spring-security-rest-testapp-profile',
+        'grails-spring-security-ui',
+
+        // Mail
+        'grails-mail',
+
+        // Redis
+        'grails-redis',
+
         // Testing Support
         'grails-testing-support-core',
         'grails-testing-support-datamapping',
@@ -180,6 +201,7 @@ include(
         'grails-testing-support-dbcleanup-postgresql',
         'grails-testing-support-http-client',
         'grails-testing-support-mongodb',
+        'grails-testing-support-redis',
         'grails-testing-support-views-gson',
         'grails-testing-support-web',
 
@@ -370,6 +392,60 @@ project(':grails-profiles-web').projectDir = file('grails-profiles/web')
 
 include 'grails-profiles-web-plugin'
 project(':grails-profiles-web-plugin').projectDir = file('grails-profiles/web-plugin')
+
+// Spring Security
+project(':grails-spring-security-acl').projectDir = new File(settingsDir, 'grails-spring-security/acl/plugin')
+project(':grails-spring-security-cas').projectDir = new File(settingsDir, 'grails-spring-security/cas/plugin')
+project(':grails-spring-security').projectDir = new File(settingsDir, 'grails-spring-security/plugin')
+project(':grails-spring-security-ldap').projectDir = new File(settingsDir, 'grails-spring-security/ldap/plugin')
+project(':grails-spring-security-oauth2').projectDir = new File(settingsDir, 'grails-spring-security/oauth2/plugin')
+project(':grails-spring-security-rest').projectDir = new File(settingsDir, 'grails-spring-security/rest/core')
+project(':grails-spring-security-rest-gorm').projectDir = new File(settingsDir, 'grails-spring-security/rest/gorm')
+project(':grails-spring-security-rest-grailscache').projectDir = new File(settingsDir, 'grails-spring-security/rest/grailscache')
+project(':grails-spring-security-rest-memcached').projectDir = new File(settingsDir, 'grails-spring-security/rest/memcached')
+project(':grails-spring-security-rest-redis').projectDir = new File(settingsDir, 'grails-spring-security/rest/redis')
+project(':grails-spring-security-rest-testapp-profile').projectDir = new File(settingsDir, 'grails-spring-security/rest/testapp-profile')
+project(':grails-spring-security-ui').projectDir = new File(settingsDir, 'grails-spring-security/ui/plugin')
+
+// Spring Security Functional Tests
+include(
+        'grails-test-examples-spring-security-acl-functional-test-app',
+        'grails-test-examples-spring-security-acl-integration-test-app',
+        'grails-test-examples-spring-security-cas-test1',
+        'grails-test-examples-spring-security-core-functional-test-app',
+        'grails-test-examples-spring-security-core-integration-test-app',
+        'grails-test-examples-spring-security-core-misc-functional-test-app-group',
+        'grails-test-examples-spring-security-core-misc-functional-test-app-roles',
+        'grails-test-examples-spring-security-ldap-custom-user-details-context-mapper',
+        'grails-test-examples-spring-security-ldap-functional-test-app',
+        'grails-test-examples-spring-security-ldap-retrieve-db-roles',
+        'grails-test-examples-spring-security-ldap-retrieve-group-roles',
+        'grails-test-examples-spring-security-ui-common',
+        'grails-test-examples-spring-security-ui-extended',
+        'grails-test-examples-spring-security-ui-simple',
+)
+project(':grails-test-examples-spring-security-acl-functional-test-app').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/acl/functional-test-app')
+project(':grails-test-examples-spring-security-acl-integration-test-app').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/acl/integration-test-app')
+project(':grails-test-examples-spring-security-cas-test1').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/cas/test1')
+project(':grails-test-examples-spring-security-core-functional-test-app').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/core/functional-test-app')
+project(':grails-test-examples-spring-security-core-integration-test-app').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/core/integration-test-app')
+project(':grails-test-examples-spring-security-core-misc-functional-test-app-group').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/core/misc-functional-test-app/group')
+project(':grails-test-examples-spring-security-core-misc-functional-test-app-roles').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/core/misc-functional-test-app/roles')
+project(':grails-test-examples-spring-security-ldap-custom-user-details-context-mapper').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/ldap/custom-user-details-context-mapper')
+project(':grails-test-examples-spring-security-ldap-functional-test-app').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/ldap/functional-test-app')
+project(':grails-test-examples-spring-security-ldap-retrieve-db-roles').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/ldap/retrieve-db-roles')
+project(':grails-test-examples-spring-security-ldap-retrieve-group-roles').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/ldap/retrieve-group-roles')
+project(':grails-test-examples-spring-security-ui-common').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/ui/common')
+project(':grails-test-examples-spring-security-ui-extended').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/ui/extended')
+project(':grails-test-examples-spring-security-ui-simple').projectDir = new File(settingsDir, 'grails-test-examples/spring-security/ui/simple')
+
+// Mail Functional Tests
+include 'grails-test-examples-mail'
+project(':grails-test-examples-mail').projectDir = new File(settingsDir, 'grails-test-examples/mail')
+
+// Redis Functional Tests
+include 'grails-test-examples-redis'
+project(':grails-test-examples-redis').projectDir = new File(settingsDir, 'grails-test-examples/redis')
 
 // Functional Tests
 include(

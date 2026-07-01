@@ -1,0 +1,146 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[acl-acls]]
+=== Working with ACLs
+
+==== Suggested application changes
+
+To properly display access denied exceptions (e.g. when a user tries to perform an action but doesn't have a grant authorizing it), you should create a mapping in `grails-app/controllers/UrlMappings.groovy` for error code 403. In addition, it's possible to trigger a https://docs.spring.io/spring-security/site/docs/6.4.x/api/org/springframework/security/acls/model/NotFoundException.html[NotFoundException] which will create an error 500, but should be treated like a 403 error, so you should add mappings for these conditions:
+
+[source,groovy]
+----
+import org.springframework.security.access.AccessDeniedException
+import org.springframework.security.acls.model.NotFoundException
+
+class UrlMappings {
+
+   static mappings = {
+
+      ...
+
+      "403"(controller: "errors", action: "error403")
+      "500"(controller: "errors", action: "error500")
+      "500"(controller: "errors", action: "error403",
+            exception: AccessDeniedException)
+      "500"(controller: "errors", action: "error403",
+            exception: NotFoundException)
+   }
+}
+----
+
+These depend on an `ErrorsController`:
+
+[source,groovy]
+----
+package com.yourcompany.yourapp
+
+import grails.plugin.springsecurity.annotation.Secured
+
+@Secured('permitAll')
+class ErrorsController {
+
+   def error403() {}
+
+   def error500() {
+      render view: '/error'
+   }
+}
+----
+
+and a `grails-app/views/errors/error403.gsp` similar to this:
+
+[source,html]
+----
+<html>
+<head>
+<title>Access denied!</title>
+<meta name='layout' content='main' />
+</head>
+
+<body>
+<h1>Access Denied</h1>
+<p>We're sorry, but you are not authorized to
+   perform the requested operation.</p>
+</body>
+</html>
+----
+
+==== actionSubmit
+
+Grails has a convenient feature where it supports multiple submit actions per form via the `<g:actionSubmit>` tag. This is done by posting to the `index` action but with a special parameter that indicates which action to invoke. This is a problem in general for security since any URL rules for edit, delete, save, etc. will be bypassed. It's an even more significant issue with ACLs because of the way that the access denied exception interacts with the `actionSubmit` processing. If you don't make any adjustments for this, your users will see a blank page when they attempt to submit a form and the action is disallowed. The solution is to remove `actionSubmit` buttons and replace them with regular submit buttons. This requires one form per button, and without adjusting the CSS the buttons will look differently than if they were in-line `actionSubmit` buttons, but that is fixable with the appropriate CSS changes.
+
+[NOTE]
+====
+Note that this is not an issue when using the generated GSPs in Grails 3 because they've been reworked to use the fields plugin, but if you have an older application that you've upgraded or if you have GSPs that don't use the newer approach, you will need to avoid using `actionSubmit`.
+====
+
+It's simple to adjust the `actionSubmit` buttons and you'll need to change them in `show.gsp` and `edit.gsp`; `list.gsp` (or `index.gsp`) and `show.gsp` don't need any changes. In `show.gsp`, replace the two actionSubmit buttons with these two forms (maintain the g:message tags; the strings are hard-coded here to reduce clutter):
+
+[source,xml]
+----
+<div class="buttons">
+   <g:form action='edit'>
+      <g:hiddenField name="id" value="${reportInstance?.id}" />
+      <span class="button">
+         <g:submitButton class="edit" name="Edit" />
+      </span>
+   </g:form>
+   <g:form action='delete'>
+      <g:hiddenField name="id" value="${reportInstance?.id}" />
+      <span class="button">
+         <g:submitButton class="delete" name="Delete"
+                         onclick="return confirm('Are you sure?');" />
+      </span>
+   </g:form>
+</div>
+----
+
+In `edit.gsp`, change the `<form>` tag to
+
+[source,xml]
+----
+<g:form action='update'>
+----
+
+and convert the update button to a regular submit button:
+
+[source,xml]
+----
+<div class="buttons">
+   <span class="button">
+      <g:submitButton class="save" name="Update" />
+   </span>
+</div>
+----
+
+and move the delete button out of the form into its own form just below the main form:
+
+[source,xml]
+----
+<g:form action='delete'>
+   <g:hiddenField name="id" value="${reportInstance?.id}" />
+   <div class="buttons">
+      <span class="button">
+         <g:submitButton class="delete" name="Delete"
+                         onclick="return confirm('Are you sure?');" />
+      </span>
+   </div>
+</g:form>
+----

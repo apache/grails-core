@@ -1,0 +1,87 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+If you use multiple, non-clustered Redis servers and want to perform discrete operations on each from a single application, you can configure additional named connections under the `connections` block. The standard configuration block (described in <<redisInstallation,Installation and Configuration>>) describes the default connection; each named connection accepts the same options, including its own `poolConfig` and its own host/port *or* sentinels/masterName combination.
+
+[source,yaml]
+----
+grails:
+    redis:
+        poolConfig:
+            # pool-specific tweaks for the default connection
+            # numTestsPerEvictionRun: 4
+
+        # the default connection requires either a host & port combo, or a sentinels & masterName combo
+        host: localhost
+        port: 6379
+        # sentinels:
+        #     - host1:6379
+        #     - host2:6379
+        # masterName: mymaster
+
+        connections:
+            cache:
+                poolConfig:
+                    # pool-specific tweaks for the 'cache' connection
+                host: localhost
+                port: 6380
+                # sentinels / masterName may be used here instead of host/port
+            search:
+                poolConfig:
+                    # pool-specific tweaks for the 'search' connection
+                host: localhost
+                port: 6381
+----
+
+Connection names must be unique. For each named connection, a service bean is wired in addition to the default `redisService` bean, with the capitalized connection name appended — the example above creates `redisServiceCache` and `redisServiceSearch`. The connection-specific pool beans (`redisPoolCache` and `redisPoolSearch`) are created using the same convention.
+
+Alternatively, you can keep using the default `redisService` bean and refer to a connection by name with `withConnection`, e.g. `redisService.withConnection('cache').withRedis { ... }`. Whether you inject the connection-specific beans or use `withConnection` on the default bean, the result is the same — `withConnection` is simply a pass-through to the named beans.
+
+[source,groovy]
+----
+class FooService {
+
+    def redisService
+    // connection-specific beans; you can use these or the `withConnection` method
+    def redisServiceCache
+    def redisServiceSearch
+
+    def doWork() {
+        redisService.withRedis { Jedis redis ->
+            redis.set('foo', 'bar')
+        }
+
+        redisService.withConnection('cache').withTransaction { Transaction transaction ->
+            transaction.set('foo', 'bar')
+        }
+
+        redisServiceSearch.withPipeline { Pipeline pipeline ->
+            pipeline.set('foo', 'bar')
+        }
+
+        redisServiceCache.memoize('somecachekey') {
+            return cacheData
+        }
+
+        redisService.withConnection('search').memoizeDomainList(Book, 'domainkey') {
+            return Book.findAllByTitleInList(['book1', 'book3'])
+        }
+    }
+}
+----

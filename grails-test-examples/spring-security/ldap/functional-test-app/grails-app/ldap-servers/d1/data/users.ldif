@@ -1,0 +1,55 @@
+dn: ou=groups,dc=d1,dc=example,dc=com
+objectclass: organizationalUnit
+objectclass: top
+ou: groups
+
+dn: cn=USER,ou=groups,dc=d1,dc=example,dc=com
+objectclass: groupOfUniqueNames
+cn: USER
+objectclass: top
+uniqueMember: cn=person1,dc=d1,dc=example,dc=com
+uniqueMember: cn=person2,dc=d1,dc=example,dc=com
+uniqueMember: cn=person3,dc=d1,dc=example,dc=com
+
+dn: cn=ADMIN,ou=groups,dc=d1,dc=example,dc=com
+objectclass: groupOfUniqueNames
+objectclass: top
+cn: ADMIN
+uniqueMember: cn=person2,dc=d1,dc=example,dc=com
+
+dn: cn=foo bar,ou=groups,dc=d1,dc=example,dc=com
+objectclass: groupOfUniqueNames
+objectclass: top
+cn: foo bar
+uniqueMember: cn=person1,dc=d1,dc=example,dc=com
+
+dn: cn=person1,dc=d1,dc=example,dc=com
+objectClass: uidObject
+objectClass: person
+objectClass: top
+objectClass: organizationalPerson
+uid: person1
+userPassword: {SHA}44rSFJQ9qtHWTBAvrsKd5K/p2j0=
+cn: person1
+sn: jones
+
+dn: cn=person2,dc=d1,dc=example,dc=com
+objectClass: uidObject
+objectClass: person
+objectClass: top
+objectClass: organizationalPerson
+uid: person2
+userPassword: {SHA}KqYKj/f81HPTIeAUav2eJt85UUc=
+cn: person2
+sn: jones
+
+dn: cn=person3,dc=d1,dc=example,dc=com
+objectClass: uidObject
+objectClass: person
+objectClass: top
+objectClass: organizationalPerson
+uid: person3
+userPassword: {SHA}ERnP037iRzV+A0oI2ETuol9v0g8=
+cn: person3
+sn: jones
+

@@ -1,0 +1,19 @@
+
+task restoreKeys() {
+    def dir = file("${System.getProperty("user.home")}/.grails/spring-security-rest")
+
+    copy {
+        from dir
+        include "*.der"
+
+        into "grails-app/conf/"
+    }
+}
+
+integrationTest {
+    systemProperty 'useBearerToken', 'true'
+    systemProperty 'useFacebook', 'false'
+    systemProperty 'geb.env', System.getProperty('geb.env', 'phantomJs')
+}
+
+test.dependsOn restoreKeys

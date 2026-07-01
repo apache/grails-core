@@ -61,6 +61,8 @@ List<String> debugArguments = [
 tasks.withType(Test).configureEach { Test task ->
     boolean isHibernate5 = !project.name.startsWith('grails-test-examples-hibernate5')
     boolean isMongo = !project.name.startsWith('grails-test-examples-mongodb')
+    boolean isSpringSecurity = !project.name.startsWith('grails-test-examples-spring-security')
+    boolean isRedis = !project.name.startsWith('grails-test-examples-redis')
 
     onlyIf {
         if (project.hasProperty('skipFunctionalTests')) {
@@ -75,6 +77,30 @@ tasks.withType(Test).configureEach { Test task ->
 
         if (project.hasProperty('onlyMongodbTests')) {
             if (isMongo) {
+                return false
+            }
+        }
+
+        if (project.hasProperty('onlySpringSecurityTests')) {
+            if (isSpringSecurity) {
+                return false
+            }
+        }
+
+        if (project.hasProperty('skipSpringSecurityTests')) {
+            if (!isSpringSecurity) {
+                return false
+            }
+        }
+
+        if (project.hasProperty('onlyRedisTests')) {
+            if (isRedis) {
+                return false
+            }
+        }
+
+        if (project.hasProperty('skipRedisTests')) {
+            if (!isRedis) {
                 return false
             }
         }
@@ -132,6 +158,10 @@ tasks.withType(Test).configureEach { Test task ->
         systemProperty('grails.geb.atCheckWaiting.enabled', 'true')
         systemProperty('grails.geb.timeouts.timeout', '10')
     }
+
+    systemProperty('geb.build.reportsDir', reporting.file("$projectDir/build/geb-reports"))
+    systemProperty('grails.geb.reporting.directory', reporting.file("$projectDir/build/geb-reports").canonicalFile.absolutePath)
+    systemProperty('TESTCONFIG', System.getProperty('TESTCONFIG'))
 }
 
 tasks.named('groovydoc').configure {

@@ -41,7 +41,7 @@ dependencies {
     api 'com.h2database:h2'
     api 'jakarta.servlet:jakarta.servlet-api'
 
-    implementation "org.apache.grails:grails-spring-security:$grailsSpringSecurityVersion"
+    implementation 'org.apache.grails:grails-spring-security'
 
     console 'org.apache.grails:grails-console'
 

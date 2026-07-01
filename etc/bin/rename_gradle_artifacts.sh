@@ -289,13 +289,20 @@ declare -a redis_mappings=(
 mappings+=("${redis_mappings[@]}")
 
 
+echo "Mapping grails-mail artifacts"
+declare -a mail_mappings=(
+  "org[.]grails[.]plugins:grails-mail|org.apache.grails:grails-mail"
+)
+mappings+=("${mail_mappings[@]}")
+
+
 echo "Mapping grails-security artifacts"
 declare -a security_mappings=(
   "org[.]grails[.]plugins:spring-security-ui|org.apache.grails:grails-spring-security-ui"
   "org[.]grails[.]plugins:spring-security-rest-testapp-profile|org.apache.grails.profiles:spring-security-rest-testapp"
   "org[.]grails[.]plugins:spring-security-rest-redis|org.apache.grails:grails-spring-security-rest-redis"
   "org[.]grails[.]plugins:spring-security-rest-memcached|org.apache.grails:grails-spring-security-rest-memcached"
-  "org[.]grails[.]plugins:spring-security-rest-grailscache|org.apache.grails:grails-spring-security-grails-cache"
+  "org[.]grails[.]plugins:spring-security-rest-grailscache|org.apache.grails:grails-spring-security-rest-grailscache"
   "org[.]grails[.]plugins:spring-security-rest-gorm|org.apache.grails:grails-spring-security-rest-datamapping"
   "org[.]grails[.]plugins:spring-security-rest|org.apache.grails:grails-spring-security-rest"
   "org[.]grails[.]plugins:spring-security-oauth2|org.apache.grails:grails-spring-security-oauth2"
@@ -310,7 +317,7 @@ declare -a excluded_security_mappings=(
   "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]spring-security-rest-testapp-profile['\"]|exclude module:'spring-security-rest-testapp'"
   "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]spring-security-rest-redis['\"]|exclude module:'grails-spring-security-rest-redis'"
   "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]spring-security-rest-memcached['\"]|exclude module:'grails-spring-security-rest-memcached'"
-  "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]spring-security-rest-grailscache['\"]|exclude module:'grails-spring-security-grails-cache'"
+  "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]spring-security-rest-grailscache['\"]|exclude module:'grails-spring-security-rest-grailscache'"
   "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]spring-security-rest-gorm['\"]|exclude module:'grails-spring-security-rest-datamapping'"
   "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]spring-security-oauth2['\"]|exclude module:'grails-spring-security-oauth2'"
   "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]spring-security-ldap['\"]|exclude module:'grails-spring-security-ldap'"

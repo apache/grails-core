@@ -38,8 +38,8 @@ dependencies {
     implementation 'org.apache.grails:grails-rest-transforms'
     implementation 'org.apache.grails:grails-services'
     implementation 'org.apache.grails:grails-web-boot'
-    implementation "org.apache.grails:grails-spring-security:$grailsSpringSecurityVersion"
-    implementation "org.apache.grails:grails-spring-security-rest:$grailsSpringSecurityVersion"
+    implementation 'org.apache.grails:grails-spring-security'
+    implementation 'org.apache.grails:grails-spring-security-rest'
     implementation 'org.apache.grails:grails-views-gson'
 
     runtimeOnly 'org.apache.grails:grails-url-mappings'

@@ -1,0 +1,19 @@
+Apache Grails
+Copyright 2005-2025 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+Additional Licenses
+------------------
+
+The following files are licensed under the MIT license:
+
+    grails-app/assets/javascripts/jquery/jquery.jdMenu.js
+    grails-app/assets/javascripts/jquery/jquery.positionBy.js
+    grails-app/assets/stylesheets/jquery.jdMenu.slate.css
+    grails-app/assets/stylesheets/jquery.jdMenu.css
+
+See licenses/LICENSE-MIT.txt for the full license terms.
+The jquery.jdMenu.js and jquery.positionBy.js files have the following copyright notice:
+Copyright (c) 2006,2007 Jonathan Sharp (http://jdsharp.us).
