@@ -846,6 +846,12 @@ class GrailsGradlePlugin extends GroovyPlugin {
             project.tasks.withType(BootRun).configureEach { BootRun it ->
                 it.dependsOn(findMainClassTask)
                 it.mainClass.convention(GrailsGradlePlugin.getMainClassProvider(project))
+                // Tell Spring Boot's AnsiOutput a console is available under bootRun (System.console()
+                // is null there, so DETECT mode would otherwise emit no colors). This is set on every
+                // OS on purpose: it is not a force-on. AnsiOutput's DETECT mode still gates Windows out
+                // internally (return !OS_NAME.contains("win")), so legacy Windows consoles never receive
+                // raw ANSI escapes, while macOS/Linux and modern terminals get colored bootRun output.
+                it.systemProperty('spring.output.ansi.console-available', 'true')
             }
 
             project.tasks.withType(ResolveMainClassName).configureEach {
