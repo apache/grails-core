@@ -28,24 +28,24 @@ import org.codehaus.groovy.ast.expr.PropertyExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.transform.stc.GroovyTypeCheckingExtensionSupport
 import org.codehaus.groovy.transform.stc.StaticTypesMarker
+import org.grails.compiler.injection.CompileStaticArtefactInjector
 import org.grails.core.artefact.ControllerArtefactHandler
 
 /**
- * A type-checking extension that allows {@code @GrailsCompileStatic} controllers
- * to invoke tag library methods without compile-time errors.
+ * A type-checking extension that allows {@code @GrailsCompileStatic} controllers and
+ * tag libraries to invoke tag library methods without compile-time errors.
  *
- * <p>Tag calls in controllers are dispatched at runtime through
+ * <p>Tag calls in controllers and tag libraries are dispatched at runtime through
  * {@code TagLibraryInvoker#methodMissing} and
  * {@code TagLibraryInvoker#propertyMissing}. These hooks are
  * invisible to the static type checker, so this extension marks the affected
  * expressions as dynamic, silencing the false-positive errors while preserving
- * full type checking for all other code in the controller.
+ * full type checking for all other code in the class.
  *
- * <p>Controller detection mirrors {@code ControllerActionTransformer}: a class is
- * treated as a controller when its qualified name ends with {@code "Controller"}.
- * Note that inner classes whose simple name ends with {@code "Controller"} (e.g.,
- * a {@code FooController} defined inside a service) will also receive this
- * silencing treatment.
+ * <p>Detection is by name suffix: a class is treated as tag-dispatching when its
+ * qualified name ends with {@code "Controller"} or {@code "TagLib"} (both carry the
+ * {@code TagLibraryInvoker} trait at runtime). Note that inner classes whose simple
+ * name ends with one of those suffixes will also receive this silencing treatment.
  *
  * <p>Two calling patterns are supported:
  * <ul>
@@ -62,15 +62,15 @@ import org.grails.core.artefact.ControllerArtefactHandler
  * {@code NamespacedTagDispatcher} for namespace names, not for individual tag names.
  * Use the method-call form ({@code link(...)}) instead.
  *
- * <p><strong>Scope note:</strong> Unresolved variable references in controllers are
- * made dynamic so that namespace dispatcher calls (e.g., {@code g.message(...)})
+ * <p><strong>Scope note:</strong> Unresolved variable references in controllers and tag
+ * libraries are made dynamic so that namespace dispatcher calls (e.g., {@code g.message(...)})
  * compile. As a consequence, an undeclared identifier used as a dispatch receiver
  * (e.g., a misspelled service name like {@code svcTypo.list()}) will also compile
  * without error. Type-safety for method calls on <em>declared</em> fields and
  * local variables is fully preserved.
  *
  * <p><strong>Composition with other extensions:</strong> because this is a catch-all
- * handler for unresolved calls in controllers, it must run <em>after</em> any other
+ * handler for unresolved calls in controllers and tag libraries, it must run <em>after</em> any other
  * type-checking extension that resolves DSL-style calls (e.g. a criteria extension).
  * When another extension has already resolved a call — flagged on the node via
  * {@code StaticTypesMarker.DYNAMIC_RESOLUTION} — this extension defers and leaves the
@@ -80,7 +80,7 @@ import org.grails.core.artefact.ControllerArtefactHandler
  *
  * @since 8.0
  */
-class ControllerTagLibTypeCheckingExtension extends GroovyTypeCheckingExtensionSupport.TypeCheckingDSL {
+class TagLibraryInvokerTypeCheckingExtension extends GroovyTypeCheckingExtensionSupport.TypeCheckingDSL {
 
     @Override
     Object run() {
@@ -90,7 +90,10 @@ class ControllerTagLibTypeCheckingExtension extends GroovyTypeCheckingExtensionS
 
         beforeVisitClass { ClassNode classNode ->
             newScope {
-                isController = classNode.name.endsWith(ControllerArtefactHandler.TYPE)
+                // Both controllers and tag libraries dispatch tags at runtime through the
+                // TagLibraryInvoker trait, so both receive the same dynamic-dispatch silencing.
+                isTagDispatcher = classNode.name.endsWith(ControllerArtefactHandler.TYPE) ||
+                        classNode.name.endsWith(CompileStaticArtefactInjector.TAGLIB_TYPE)
                 dynamicNamespaceProperties = [] as Set
             }
         }
@@ -100,7 +103,7 @@ class ControllerTagLibTypeCheckingExtension extends GroovyTypeCheckingExtensionS
         }
 
         unresolvedVariable { VariableExpression ve ->
-            if (currentScope?.isController) {
+            if (currentScope?.isTagDispatcher && canMakeDynamic()) {
                 currentScope.dynamicNamespaceProperties << ve
                 return makeDynamic(ve)
             }
@@ -108,7 +111,7 @@ class ControllerTagLibTypeCheckingExtension extends GroovyTypeCheckingExtensionS
         }
 
         unresolvedProperty { PropertyExpression pe ->
-            if (currentScope?.isController && isThisReceiver(pe)) {
+            if (currentScope?.isTagDispatcher && canMakeDynamic() && isThisReceiver(pe)) {
                 currentScope.dynamicNamespaceProperties << pe
                 return makeDynamic(pe)
             }
@@ -116,7 +119,7 @@ class ControllerTagLibTypeCheckingExtension extends GroovyTypeCheckingExtensionS
         }
 
         methodNotFound { ClassNode receiver, String name, ArgumentListExpression argList, ClassNode[] argTypes, MethodCall call ->
-            if (!currentScope?.isController) return null
+            if (!currentScope?.isTagDispatcher || !canMakeDynamic()) return null
             if (isAlreadyResolved(call)) return null
             if (isThisReceiver(call)) return makeDynamic(call)
             if (call instanceof MethodCallExpression && call.objectExpression in currentScope.dynamicNamespaceProperties) return makeDynamic(call)
@@ -124,6 +127,17 @@ class ControllerTagLibTypeCheckingExtension extends GroovyTypeCheckingExtensionS
         }
 
         null
+    }
+
+    /**
+     * {@code makeDynamic} stores its dynamic-resolution marker on the enclosing method, so it can only be
+     * used inside a method body. Tags defined the deprecated way - as closure fields rather than methods -
+     * are type-checked as field initializers with no enclosing method; silencing there would throw an NPE.
+     * In that case we defer, leaving the call to be reported as a normal type error rather than crashing
+     * the compiler. Method-based tags (the supported form) always have an enclosing method.
+     */
+    private boolean canMakeDynamic() {
+        getEnclosingMethod() != null
     }
 
     private boolean isThisReceiver(Expression expr) {

@@ -21,7 +21,7 @@ package org.grails.compiler
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import spock.lang.Specification
 
-class ControllerTagLibTypeCheckingExtensionSpec extends Specification {
+class TagLibraryInvokerTypeCheckingExtensionSpec extends Specification {
 
     void 'undefined method on a declared service field still fails compilation'() {
         given:
@@ -100,7 +100,7 @@ class ControllerTagLibTypeCheckingExtensionSpec extends Specification {
 
             @CompileStatic(extensions = [
                 'org.grails.compiler.StubDslTypeCheckingExtension',
-                'org.grails.compiler.ControllerTagLibTypeCheckingExtension'
+                'org.grails.compiler.TagLibraryInvokerTypeCheckingExtension'
             ])
             class JobController {
                 def index() {
@@ -121,7 +121,7 @@ class ControllerTagLibTypeCheckingExtensionSpec extends Specification {
         def c = gcl.parseClass('''
             import groovy.transform.CompileStatic
 
-            @CompileStatic(extensions = ['org.grails.compiler.ControllerTagLibTypeCheckingExtension'])
+            @CompileStatic(extensions = ['org.grails.compiler.TagLibraryInvokerTypeCheckingExtension'])
             class BookController {
                 def index() {
                     link(controller: 'home')
@@ -131,5 +131,91 @@ class ControllerTagLibTypeCheckingExtensionSpec extends Specification {
 
         then: 'compilation succeeds — the tag call is made dynamic'
         c
+    }
+
+    void 'a @GrailsCompileStatic tag library can invoke a tag on this'() {
+        given:
+        def gcl = new GroovyClassLoader(getClass().classLoader)
+
+        when: 'a @GrailsCompileStatic taglib with a method-based tag invokes a tag on this'
+        def c = gcl.parseClass('''
+            import grails.compiler.GrailsCompileStatic
+
+            @GrailsCompileStatic
+            class GreetingTagLib {
+                static namespace = "greet"
+
+                def hello(Map attrs) {
+                    render(template: '/shared/header')
+                }
+            }
+        ''')
+
+        then: 'compilation succeeds — tag dispatch in the taglib is made dynamic'
+        c
+    }
+
+    void 'a @GrailsCompileStatic tag library can invoke a namespaced tag'() {
+        given:
+        def gcl = new GroovyClassLoader(getClass().classLoader)
+
+        when: 'a @GrailsCompileStatic taglib with a method-based tag invokes a tag via a namespace dispatcher'
+        def c = gcl.parseClass('''
+            import grails.compiler.GrailsCompileStatic
+
+            @GrailsCompileStatic
+            class MessageTagLib {
+
+                def shout(Map attrs) {
+                    g.message(code: 'greeting')
+                }
+            }
+        ''')
+
+        then: 'compilation succeeds — the namespaced tag call is made dynamic'
+        c
+    }
+
+    void 'type errors are still caught in a @GrailsCompileStatic tag library'() {
+        given:
+        def gcl = new GroovyClassLoader(getClass().classLoader)
+
+        when: 'a @GrailsCompileStatic taglib contains a static type error'
+        gcl.parseClass('''
+            import grails.compiler.GrailsCompileStatic
+
+            @GrailsCompileStatic
+            class BrokenTagLib {
+
+                def render(Map attrs) {
+                    int count = "not a number"
+                }
+            }
+        ''')
+
+        then: 'compilation fails — static type checking is preserved in tag libraries'
+        thrown(MultipleCompilationErrorsException)
+    }
+
+    void 'a deprecated closure-field tag that dispatches tags fails cleanly rather than crashing the compiler'() {
+        given:
+        def gcl = new GroovyClassLoader(getClass().classLoader)
+
+        when: 'a @GrailsCompileStatic taglib defines a tag the deprecated way - as a closure field - that invokes a tag'
+        gcl.parseClass('''
+            import grails.compiler.GrailsCompileStatic
+
+            @GrailsCompileStatic
+            class LegacyTagLib {
+
+                Closure hello = { attrs ->
+                    render(template: '/shared/header')
+                }
+            }
+        ''')
+
+        then: 'a normal compilation error is reported (the extension defers because there is no enclosing method), not a compiler NPE'
+        MultipleCompilationErrorsException e = thrown()
+        !e.message.contains('NullPointerException')
     }
 }

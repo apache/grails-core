@@ -132,3 +132,52 @@ class BookController {
 Only controller classes (those whose name ends with `Controller`) receive this treatment.
 All other code in the controller remains fully type-checked.
 If you need to opt a single method out of static compilation, use `@GrailsCompileStatic(TypeCheckingMode.SKIP)` on that method.
+
+===== Applying GrailsCompileStatic Across All Controllers, Services and Tag Libraries
+
+Rather than annotating each class individually, static compilation can be enabled for every controller, service and tag library in an application. The Grails Gradle plugin exposes these opt-ins in the nested `compileStatic` block of the `grails` build configuration:
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    compileStatic {
+        controllers = true   // compile every grails-app/controllers class with @GrailsCompileStatic
+        services = true      // compile every grails-app/services class with @GrailsCompileStatic
+        tagLibs = true       // compile every grails-app/taglib class with @GrailsCompileStatic
+    }
+}
+----
+
+The options are lazy properties that are read when the Groovy compile task runs, so they may be configured from anywhere in the build regardless of ordering. All three are disabled by default and are independent, so each artefact type can be enabled on its own. To turn them all on at once, use the `all` shortcut instead:
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    compileStatic {
+        all = true     // shortcut for controllers + services + tag libraries
+    }
+}
+----
+
+When an opt-in is enabled, every matching artefact is compiled exactly as if it were annotated with `@GrailsCompileStatic`, including the Grails-specific dispatch that the annotation already permits — dynamic finders, constraints and mapping DSLs, and tag library calls in both controllers and tag libraries.
+
+[NOTE]
+====
+For tag libraries, define tags as methods (for example `def myTag(Map attrs, Closure body)`). A tag library that still declares tags the deprecated way — as closure fields (`def myTag = { attrs, body -> }`) — cannot be statically compiled when it dispatches to other tags, so the `tagLibs` opt-in automatically skips it: it is left dynamically compiled and a build warning is emitted. Migrate such a tag library to method-based tags to opt it in, or annotate it with `@GrailsCompileStatic` to force static compilation regardless.
+====
+
+An individual class always wins over the build-wide default by declaring its own compilation annotation. A class annotated with `@CompileDynamic` (or `@GrailsCompileStatic`, `@CompileStatic`, `@GrailsTypeChecked` or `@TypeChecked`) keeps its own setting and is never overridden by the opt-in:
+
+[source,groovy]
+----
+import groovy.transform.CompileDynamic
+
+@CompileDynamic
+class LegacyController {
+    // compiled dynamically even when compileStatic { controllers = true } is enabled
+}
+----
+
+As with any move to static compilation, enabling these options trades the flexibility of dynamic dispatch (such as runtime metaprogramming contributed by plugins) for the benefits of static compilation. Introduce them incrementally and rely on the per-class opt-out for code that still needs dynamic behaviour.
