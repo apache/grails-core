@@ -359,6 +359,9 @@ project(':grails-data-mongodb-docs').projectDir = new File(settingsDir, 'grails-
 include 'grails-data-mongodb-spring-boot'
 project(':grails-data-mongodb-spring-boot').projectDir = new File(settingsDir, 'grails-data-mongodb/boot-plugin')
 
+include 'grails-data-mongodb-spring-data'
+project(':grails-data-mongodb-spring-data').projectDir = new File(settingsDir, 'grails-data-mongodb/spring-data')
+
 include 'grails-data-mongodb'
 project(':grails-data-mongodb').projectDir = new File(settingsDir, 'grails-data-mongodb/grails-plugin')
 

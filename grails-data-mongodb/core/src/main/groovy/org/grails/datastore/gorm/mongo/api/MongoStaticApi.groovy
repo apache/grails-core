@@ -71,9 +71,9 @@ class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D
         withSession { AbstractMongoSession session ->
             def entity = session.mappingContext.getPersistentEntity(persistentClass.name)
             filter = wrapFilterWithMultiTenancy(filter)
-            return session.getCollection(entity)
+            MongoCollection<D> collection = session.getCollection(entity)
                     .withDocumentClass(persistentClass)
-                    .find(filter)
+            return session.find(collection, filter)
         }
     }
 
@@ -84,10 +84,8 @@ class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D
             filter = wrapFilterWithMultiTenancy(filter)
             MongoCollection<D> mongoCollection = session.getCollection(entity)
                                                         .withDocumentClass(persistentClass)
-            D result = options ? mongoCollection
-                                    .findOneAndDelete(filter, options) :
-                                mongoCollection
-                                    .findOneAndDelete(filter)
+            D result = options ? session.findOneAndDelete(mongoCollection, filter, options) :
+                                 session.findOneAndDelete(mongoCollection, filter)
 
             return result
         }
@@ -97,8 +95,7 @@ class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D
         withSession { AbstractMongoSession session ->
             def entity = session.mappingContext.getPersistentEntity(persistentClass.name)
             filter = wrapFilterWithMultiTenancy(filter)
-            return session.getCollection(entity)
-                    .countDocuments(filter)
+            return session.countDocuments(session.getCollection(entity), filter)
         }
     }
 
@@ -201,7 +198,7 @@ class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D
             }
 
             List<? extends Bson> newPipeline = preparePipeline(pipeline)
-            AggregateIterable aggregateIterable = mongoCollection.aggregate(newPipeline)
+            AggregateIterable aggregateIterable = session.aggregate(mongoCollection, newPipeline)
             if (doWithAggregate != null) {
                 aggregateIterable = doWithAggregate.apply(aggregateIterable)
             }
@@ -216,7 +213,7 @@ class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D
             List<? extends Bson> newPipeline = preparePipeline(pipeline)
             def mongoCollection = session.getCollection(persistentEntity)
                     .withReadPreference(readPreference)
-            def aggregateIterable = mongoCollection.aggregate(newPipeline)
+            def aggregateIterable = session.aggregate(mongoCollection, newPipeline)
             if (doWithAggregate != null) {
                 aggregateIterable = doWithAggregate.apply(aggregateIterable)
             }
@@ -243,7 +240,7 @@ class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D
                 search = Filters.text(query)
             }
             search = wrapFilterWithMultiTenancy(search)
-            FindIterable cursor = coll.find(search)
+            FindIterable cursor = session.find(coll, search)
 
             int offset = options.offset instanceof Number ? ((Number)options.offset).intValue() : 0
             int max = options.max instanceof Number ? ((Number)options.max).intValue() : -1
@@ -277,7 +274,7 @@ class MongoStaticApi<D> extends GormStaticApi<D> implements MongoAllOperations<D
 
             def score = Projections.metaTextScore('score')
             search = wrapFilterWithMultiTenancy(search)
-            FindIterable cursor = coll.find(search)
+            FindIterable cursor = session.find(coll, search)
                                             .projection(score)
                                             .sort(score)
                                             .limit(limit)

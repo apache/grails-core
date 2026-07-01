@@ -300,7 +300,7 @@ public class MongoEntityPersister extends AbstractMongoObectEntityPersister<Docu
                         .getNativeInterface()
                         .getDatabase(mongoSession.getDatabase(persistentEntity))
                         .getCollection(mongoSession.getCollectionName(persistentEntity));
-        return collection.find(createDBObjectWithKey(key)).limit(1).first();
+        return mongoSession.find(collection, createDBObjectWithKey(key)).limit(1).first();
     }
 
     private Document removeNullEntries(Document nativeEntry) {
@@ -403,7 +403,7 @@ public class MongoEntityPersister extends AbstractMongoObectEntityPersister<Docu
         MongoQuery query = (MongoQuery) mongoSession.createQuery(getPersistentEntity().getJavaClass());
         query.in(getPersistentEntity().getIdentity().getName(), keys);
 
-        dbCollection.deleteMany(query.getMongoQuery());
+        mongoSession.deleteMany(dbCollection, query.getMongoQuery());
 
     }
 

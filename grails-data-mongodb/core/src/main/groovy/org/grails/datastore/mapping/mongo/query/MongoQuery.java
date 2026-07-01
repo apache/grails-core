@@ -490,13 +490,12 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
             }
             final Object dbObject;
             if (criteria.isEmpty()) {
-                FindIterable<Document> cursor = collection
-                        .find(createQueryObject(entity));
+                FindIterable<Document> cursor = mongoSession.find(collection, createQueryObject(entity));
 
                 dbObject = ((FindIterable<Document>) setHint(cursor)).limit(1)
                         .first();
             } else {
-                FindIterable<Document> cursor = collection.find(getMongoQuery());
+                FindIterable<Document> cursor = mongoSession.find(collection, getMongoQuery());
 
                 dbObject = ((FindIterable<Document>) setHint(cursor)).limit(1)
                         .first();
@@ -537,7 +536,7 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
         List<ProjectedProperty> projectedKeys = aggregatePipeline.getProjectedKeys();
         List projectedResults = new ArrayList();
 
-        AggregateIterable<Document> aggregatedResults = collection.aggregate(aggregationPipeline);
+        AggregateIterable<Document> aggregatedResults = mongoSession.aggregate(collection, aggregationPipeline);
         aggregatedResults = (AggregateIterable<Document>) setHint(aggregatedResults);
         final MongoCursor<Document> aggregateCursor = aggregatedResults.iterator();
 
@@ -620,7 +619,7 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
             );
         }
 
-        final FindIterable<Document> iterable = collection.find(query);
+        final FindIterable<Document> iterable = mongoSession.find(collection, query);
         if (offset != null && offset > 0) {
             iterable.skip(offset);
         }

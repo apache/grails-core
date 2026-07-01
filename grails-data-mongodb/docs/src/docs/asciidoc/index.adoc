@@ -54,6 +54,9 @@ include::gettingStarted/springBoot.adoc[]
 [[outsideGrails]]
 include::gettingStarted/outsideGrails.adoc[]
 
+[[springDataInterop]]
+include::gettingStarted/springDataInterop.adoc[]
+
 [[objectMapping]]
 include::objectMapping.adoc[]
 
