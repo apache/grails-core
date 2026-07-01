@@ -191,7 +191,7 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
     }
 
     static File resolveCompilationTargetDirectory(SourceUnit source) {
-        resolveCompilationTargetDirectory(source, isIsolatedBuild())
+        resolveCompilationTargetDirectory(source, isolatedBuild)
     }
 
     static File resolveCompilationTargetDirectory(SourceUnit source, boolean isolatedBuild) {
