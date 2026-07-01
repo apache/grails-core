@@ -41,7 +41,7 @@ dependencies {
         // api: TokenNotFoundException, TokenStorageService
         // impl: SecureRandomTokenGenerator
     }
-    api "org.apache.grails:grails-redis:5.0.1", { // TODO: Import into project
+    api project(':grails-redis'), {
         // api: RedisService
     }
     api 'org.springframework:spring-core', {
