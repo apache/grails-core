@@ -59,6 +59,8 @@ public abstract class AbstractMongoSession extends AbstractSession<MongoClient> 
     protected MongoDatastore mongoDatastore;
     protected WriteConcern writeConcern = null;
     protected boolean errorOccured = false;
+    // Confined to the owning session's single thread (per the AbstractSession contract), so it needs
+    // no synchronization; it is null unless a server-side transaction is active on this session.
     protected ClientSession clientSession;
     protected Map<PersistentEntity, String> mongoCollections = new ConcurrentHashMap<>();
     protected Map<PersistentEntity, String> mongoDatabases = new ConcurrentHashMap<>();
