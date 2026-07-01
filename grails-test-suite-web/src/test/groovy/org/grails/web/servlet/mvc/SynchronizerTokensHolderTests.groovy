@@ -93,6 +93,39 @@ class SynchronizerTokensHolderTests {
     }
 
     @Test
+    void testExistingOversizedUrlMapIsTrimmedWhenGeneratingToken() {
+        SynchronizerTokensHolder holder = new SynchronizerTokensHolder()
+        String firstUrl = 'url0'
+        holder.currentTokens[firstUrl] = [UUID.randomUUID()] as LinkedHashSet<UUID>
+        (1..(SynchronizerTokensHolder.DEFAULT_MAX_TOKEN_URLS + 5)).each { Integer index ->
+            holder.currentTokens["url${index}".toString()] = [UUID.randomUUID()] as LinkedHashSet<UUID>
+        }
+
+        String newToken = holder.generateToken('new-url')
+
+        assertEquals SynchronizerTokensHolder.DEFAULT_MAX_TOKEN_URLS, holder.currentTokens.size()
+        assertFalse holder.currentTokens.containsKey(firstUrl)
+        assertTrue holder.isValid('new-url', newToken)
+    }
+
+    @Test
+    void testExistingOversizedUrlMapKeepsUrlReceivingNewToken() {
+        SynchronizerTokensHolder holder = new SynchronizerTokensHolder()
+        String refreshedUrl = 'url1'
+        holder.currentTokens['url0'] = [UUID.randomUUID()] as LinkedHashSet<UUID>
+        holder.currentTokens[refreshedUrl] = [UUID.randomUUID()] as LinkedHashSet<UUID>
+        (2..(SynchronizerTokensHolder.DEFAULT_MAX_TOKEN_URLS + 5)).each { Integer index ->
+            holder.currentTokens["url${index}".toString()] = [UUID.randomUUID()] as LinkedHashSet<UUID>
+        }
+
+        String newToken = holder.generateToken(refreshedUrl)
+
+        assertEquals SynchronizerTokensHolder.DEFAULT_MAX_TOKEN_URLS, holder.currentTokens.size()
+        assertTrue holder.currentTokens.containsKey(refreshedUrl)
+        assertTrue holder.isValid(refreshedUrl, newToken)
+    }
+
+    @Test
     void testGeneratedTokensAreBoundedPerUrl() {
         SynchronizerTokensHolder holder = new SynchronizerTokensHolder()
         String url = 'url1'
@@ -105,6 +138,23 @@ class SynchronizerTokensHolderTests {
         assertEquals SynchronizerTokensHolder.DEFAULT_MAX_TOKENS_PER_URL, holder.currentTokens[url].size()
         assertFalse holder.isValid(url, firstToken)
         assertTrue holder.isValid(url, lastToken)
+    }
+
+    @Test
+    void testExistingOversizedTokenSetIsTrimmedWhenGeneratingToken() {
+        SynchronizerTokensHolder holder = new SynchronizerTokensHolder()
+        String url = 'url1'
+        UUID firstToken = UUID.randomUUID()
+        holder.currentTokens[url] = [firstToken] as LinkedHashSet<UUID>
+        (1..(SynchronizerTokensHolder.DEFAULT_MAX_TOKENS_PER_URL + 5)).each {
+            holder.currentTokens[url].add(UUID.randomUUID())
+        }
+
+        String newToken = holder.generateToken(url)
+
+        assertEquals SynchronizerTokensHolder.DEFAULT_MAX_TOKENS_PER_URL, holder.currentTokens[url].size()
+        assertFalse holder.currentTokens[url].contains(firstToken)
+        assertTrue holder.isValid(url, newToken)
     }
 
     @Test

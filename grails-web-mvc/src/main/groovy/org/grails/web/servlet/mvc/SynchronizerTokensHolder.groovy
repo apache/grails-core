@@ -88,11 +88,13 @@ class SynchronizerTokensHolder implements Serializable {
     }
 
     protected Set<UUID> getTokens(String url) {
-        if (!currentTokens.containsKey(url)) {
-            currentTokens[url] = new LinkedHashSet<UUID>()
+        Set<UUID> tokens = currentTokens.remove(url)
+        if (tokens == null) {
+            tokens = new LinkedHashSet<UUID>()
         }
 
-        currentTokens[url]
+        currentTokens[url] = tokens
+        tokens
     }
 
     private Set<UUID> getExistingTokens(String url) {
@@ -113,13 +115,13 @@ class SynchronizerTokensHolder implements Serializable {
     }
 
     private void removeEldestTokenUrlIfNecessary() {
-        if (currentTokens.size() > DEFAULT_MAX_TOKEN_URLS) {
+        while (currentTokens.size() > DEFAULT_MAX_TOKEN_URLS) {
             currentTokens.remove(currentTokens.keySet().iterator().next())
         }
     }
 
     private void removeEldestTokenIfNecessary(Set<UUID> tokens) {
-        if (tokens.size() > DEFAULT_MAX_TOKENS_PER_URL) {
+        while (tokens.size() > DEFAULT_MAX_TOKENS_PER_URL) {
             tokens.remove(tokens.iterator().next())
         }
     }
