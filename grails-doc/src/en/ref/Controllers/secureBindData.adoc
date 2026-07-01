@@ -30,6 +30,9 @@ Binds request parameters to an object or collection using an explicit allowlist 
 // binds only firstName and lastName
 secureBindData(target, params, ['firstName', 'lastName'])
 
+// indexed request parameters use logical allowlist paths
+secureBindData(team, params, ['name', 'members.name', 'members.role'])
+
 // binds only allowed author.* parameters
 secureBindData(target, params, ['firstName', 'lastName'], 'author')
 
@@ -43,6 +46,8 @@ secureBindData(Person, people, request, ['firstName', 'lastName'])
 === Description
 
 Usage: `secureBindData(target, params, allowedParams, prefix*)`
+
+Usage: `secureBindData(target, params, allowedParams, Map options)`
 
 Usage: `secureBindData(options, target, params, allowedParams, prefix*)`
 
@@ -64,5 +69,7 @@ The `allowedParams` list is required. In controllers, calling `secureBindData` w
 An empty allowlist binds no properties. This differs from link:bindData.html[bindData] with an empty `include` list, which leaves all otherwise-bindable properties eligible for binding.
 
 Use nested property paths such as `homeAddress.street` to allow nested binding. Properties not named in `allowedParams` are ignored.
+
+Use logical collection and map paths in `allowedParams`. For example, `members.name` allows request parameters such as `members[0].name`, and `contributors.expertise` allows map parameters such as `contributors[lead].expertise`. The same logical paths are used with `nullMissing`; missing allowed nested values are cleared on the matching indexed collection or map element.
 
 Refer to the section on link:{guidePath}theWebLayer.html#dataBinding[data binding] in the user guide for more information.

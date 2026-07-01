@@ -1103,6 +1103,14 @@ def p = new Person()
 secureBindData(p, params, ['firstName', 'homeAddress.street', 'homeAddress.city'])
 ----
 
+Use logical collection and map paths in the allowlist. The same allowlist path applies to indexed request parameters, so `members.name` allows `members[0].name` and `contributors.expertise` allows `contributors[lead].expertise`:
+
+[source,groovy]
+----
+def team = new Team()
+secureBindData(team, params, ['name', 'members.name', 'members.role'])
+----
+
 Prefix filtering is supported:
 
 [source,groovy]

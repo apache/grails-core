@@ -236,6 +236,211 @@ class BindDataMethodTests extends Specification implements ControllerUnitTest<Bi
         target.active == false
         target.email == null
     }
+
+    void 'Test secureBindData supports indexed parameter roots'() {
+        when:
+        params.'members[0].name' = 'Alice'
+        params.'members[0].role' = 'Lead'
+        params.'members[0].email' = 'blocked@example.com'
+        params.'members[1].name' = 'Bob'
+        params.'members[1].role' = 'Developer'
+        def model = controller.secureBindWithIndexedParams()
+        def target = model.target
+
+        then:
+        target.members.size() == 2
+        target.members[0].name == 'Alice'
+        target.members[0].role == 'Lead'
+        target.members[0].email == null
+        target.members[1].name == 'Bob'
+        target.members[1].role == 'Developer'
+    }
+
+    void 'Test secureBindData supports prefixed indexed parameter roots'() {
+        when:
+        params.'team.members[0].name' = 'Alice'
+        params.'team.members[0].role' = 'Lead'
+        params.'team.members[0].email' = 'blocked@example.com'
+        params.'team[0].members[0].name' = 'Blocked'
+        params.'other.members[0].name' = 'Blocked'
+        def model = controller.secureBindWithPrefixedIndexedParams()
+        def target = model.target
+
+        then:
+        target.members.size() == 1
+        target.members[0].name == 'Alice'
+        target.members[0].role == 'Lead'
+        model.bindingResult == null || !model.bindingResult.hasErrors()
+        target.members[0].email == null
+    }
+
+    void 'Test secureBindData supports prefixed indexed map roots'() {
+        when:
+        def model = controller.secureBindWithPrefixedIndexedMapSource()
+        def target = model.target
+
+        then:
+        target.members.size() == 1
+        target.members[0].name == 'Alice'
+        target.members[0].role == 'Lead'
+        target.members[0].email == null
+    }
+
+    void 'Test secureBindData supports indexed map keys containing dots'() {
+        when:
+        params.'contributors[jane.doe].name' = 'Jane'
+        params.'contributors[jane.doe].role' = 'Architect'
+        params.'contributors[jane.doe].email' = 'blocked@example.com'
+        def model = controller.secureBindWithDottedMapKey()
+        def target = model.target
+
+        then:
+        target.contributors.size() == 1
+        target.contributors['jane.doe'].name == 'Jane'
+        target.contributors['jane.doe'].role == 'Architect'
+        target.contributors['jane.doe'].email == null
+    }
+
+    void 'Test secureBindData supports nested indexed properties inside indexed map roots'() {
+        when:
+        def model = controller.secureBindWithNestedIndexedMapRoot()
+        def target = model.target
+
+        then:
+        target.members.size() == 1
+        target.members[0].addresses.size() == 1
+        target.members[0].addresses[0].city == 'Portland'
+        target.members[0].addresses[0].country == null
+    }
+
+    void 'Test secureBindData supports map-valued map roots'() {
+        when:
+        def model = controller.secureBindWithMapValuedMapRoot()
+        def target = model.target
+
+        then:
+        target.contributors.size() == 2
+        target.contributors.name.name == 'Named Entry'
+        target.contributors.name.email == null
+        target.contributors.lead.name == 'Jane'
+        target.contributors.lead.role == 'Architect'
+        target.contributors.lead.email == null
+    }
+
+    void 'Test secureBindData drops scalar entries from map-valued map roots'() {
+        when:
+        def model = controller.secureBindWithScalarMapEntryOnMapRoot()
+        def target = model.target
+
+        then:
+        target.contributors.size() == 1
+        !target.contributors.containsKey('name')
+        target.contributors.lead.name == 'Jane'
+        target.contributors.lead.role == 'Architect'
+    }
+
+    void 'Test secureBindData drops scalar-only map-valued map roots'() {
+        when:
+        def model = controller.secureBindWithScalarOnlyMapRoot()
+        def target = model.target
+
+        then:
+        target.contributors.isEmpty()
+    }
+
+    void 'Test secureBindData drops flat scalar params for typed map roots'() {
+        when:
+        params.'contributors.name' = 'blocked'
+        def model = controller.secureBindWithFlatScalarMapRootParam()
+        def target = model.target
+
+        then:
+        target.contributors.isEmpty()
+    }
+
+    void 'Test secureBindData preserves direct map-valued allowed properties'() {
+        when:
+        def model = controller.secureBindWithDirectMapValuedProperty()
+        def target = model.target
+
+        then:
+        target.address.preferences == [theme: 'dark', locale: 'en']
+        target.address.country == null
+    }
+
+    void 'Test secureBindData preserves direct keys on map-valued properties'() {
+        when:
+        def model = controller.secureBindWithDirectMapKeyProperty()
+        def target = model.target
+
+        then:
+        target.preferences == [theme: 'dark']
+    }
+
+    void 'Test secureBindData preserves direct keys on typed scalar map-valued properties'() {
+        when:
+        def model = controller.secureBindWithTypedScalarMapKeyProperty()
+        def target = model.target
+
+        then:
+        target.dates == [start: new Date(0)]
+    }
+
+    void 'Test secureBindData supports typed map roots nested inside collection elements'() {
+        when:
+        def model = controller.secureBindWithTypedMapRootInsideCollection()
+        def target = model.target
+
+        then:
+        target.departments.size() == 1
+        target.departments[0].contributors.size() == 1
+        target.departments[0].contributors.lead.name == 'Jane'
+        target.departments[0].contributors.lead.role == 'Architect'
+        target.departments[0].contributors.lead.email == null
+    }
+
+    void 'Test secureBindData nullMissing preserves indexed parameter roots'() {
+        when:
+        params.'members[0].name' = 'Alice'
+        def model = controller.secureBindWithIndexedParamsAndNullMissing()
+        def target = model.target
+
+        then:
+        target.members.size() == 1
+        target.members[0].name == 'Alice'
+        target.members[0].role == null
+        model.bindingResult == null || !model.bindingResult.hasErrors()
+    }
+
+    void 'Test secureBindData nullMissing preserves nested indexed parameter roots'() {
+        when:
+        params.'departments[0].members[0].name' = 'Alice'
+        def model = controller.secureBindWithNestedIndexedParamsAndNullMissing()
+        def target = model.target
+
+        then:
+        target.departments.size() == 1
+        target.departments[0].members.size() == 1
+        target.departments[0].members[0].name == 'Alice'
+        target.departments[0].members[0].role == null
+        model.bindingResult == null || !model.bindingResult.hasErrors()
+    }
+
+    void 'Test secureBindData nullMissing supports JSON collection roots'() {
+        given:
+        request.method = 'POST'
+        request.json = '{"members":[{"name":"Alice"}]}'
+
+        when:
+        def model = controller.secureBindWithJsonCollectionAndNullMissing()
+        def target = model.target
+
+        then:
+        target.members.size() == 1
+        target.members[0].name == 'Alice'
+        target.members[0].role == null
+        model.bindingResult == null || !model.bindingResult.hasErrors()
+    }
 }
 
 @Artefact('Controller')
@@ -326,7 +531,7 @@ class BindingController {
 
     def secureBindWithNestedMap() {
         def target = new CommandObject()
-        secureBindData target, [address: [country: 'gbr', city: 'dontwantthis']], ['address.country']
+        secureBindData target, [address: [country: 'gbr', city: [country: 'blocked']]], ['address.country']
         [target: target]
     }
 
@@ -359,6 +564,125 @@ class BindingController {
         secureBindData(target, params, ['active', 'email'], nullMissing: true)
         [target: target]
     }
+
+    def secureBindWithIndexedParams() {
+        def target = new CommandObject()
+        secureBindData target, params, ['members.name', 'members.role']
+        [target: target]
+    }
+
+    def secureBindWithPrefixedIndexedParams() {
+        def target = new CommandObject()
+        secureBindData target, params, ['members.name', 'members.role'], 'team'
+        [target: target]
+    }
+
+    def secureBindWithPrefixedIndexedMapSource() {
+        def target = new CommandObject()
+        secureBindData target, [
+            'team.members[0]': [name: 'Alice', role: 'Lead', email: 'blocked@example.com'],
+            'team[0].members[0]': [name: 'Blocked']
+        ], ['members.name', 'members.role'], 'team'
+        [target: target]
+    }
+
+    def secureBindWithDottedMapKey() {
+        def target = new CommandObject()
+        secureBindData target, params, ['contributors.name', 'contributors.role']
+        [target: target]
+    }
+
+    def secureBindWithNestedIndexedMapRoot() {
+        def target = new CommandObject()
+        secureBindData target, [
+            'members[0]': ['addresses[0].city': 'Portland', 'addresses[0].country': 'blocked']
+        ], ['members.addresses.city']
+        [target: target]
+    }
+
+    def secureBindWithMapValuedMapRoot() {
+        def target = new CommandObject()
+        secureBindData target, [
+            contributors: [
+                name: [name: 'Named Entry', email: 'blocked@example.com'],
+                lead: [name: 'Jane', role: 'Architect', email: 'blocked@example.com']
+            ]
+        ], ['contributors.name', 'contributors.role']
+        [target: target]
+    }
+
+    def secureBindWithScalarMapEntryOnMapRoot() {
+        def target = new CommandObject()
+        secureBindData target, [
+            contributors: [
+                name: 'blocked',
+                lead: [name: 'Jane', role: 'Architect', email: 'blocked@example.com']
+            ]
+        ], ['contributors.name', 'contributors.role']
+        [target: target]
+    }
+
+    def secureBindWithScalarOnlyMapRoot() {
+        def target = new CommandObject()
+        secureBindData target, [contributors: [name: 'blocked']], ['contributors.name']
+        [target: target]
+    }
+
+    def secureBindWithFlatScalarMapRootParam() {
+        def target = new CommandObject()
+        secureBindData target, params, ['contributors.name']
+        [target: target]
+    }
+
+    def secureBindWithDirectMapValuedProperty() {
+        def target = new CommandObject()
+        secureBindData target, [
+            address: [preferences: [theme: 'dark', locale: 'en'], country: 'blocked']
+        ], ['address.preferences']
+        [target: target]
+    }
+
+    def secureBindWithDirectMapKeyProperty() {
+        def target = new CommandObject()
+        secureBindData target, [preferences: [theme: 'dark', locale: 'blocked']], ['preferences.theme']
+        [target: target]
+    }
+
+    def secureBindWithTypedScalarMapKeyProperty() {
+        def target = new CommandObject()
+        secureBindData target, [dates: [start: new Date(0), end: new Date(1)]], ['dates.start']
+        [target: target]
+    }
+
+    def secureBindWithTypedMapRootInsideCollection() {
+        def target = new CommandObject()
+        secureBindData target, [
+            departments: [[
+                contributors: [
+                    lead: [name: 'Jane', role: 'Architect', email: 'blocked@example.com']
+                ]
+            ]]
+        ], ['departments.contributors.name', 'departments.contributors.role']
+        [target: target]
+    }
+
+    def secureBindWithIndexedParamsAndNullMissing() {
+        def target = new CommandObject(members: [new Member(name: 'Existing', role: 'Existing')])
+        def bindingResult = secureBindData(target, params, ['members.name', 'members.role'], nullMissing: true)
+        [target: target, bindingResult: bindingResult]
+    }
+
+    def secureBindWithNestedIndexedParamsAndNullMissing() {
+        def target = new CommandObject(departments: [new Department(members: [new Member(name: 'Existing', role: 'Existing')])])
+        def bindingResult = secureBindData(target, params, ['departments.members.name', 'departments.members.role'], nullMissing: true)
+        [target: target, bindingResult: bindingResult]
+    }
+
+    def secureBindWithJsonCollectionAndNullMissing() {
+        def target = new CommandObject(members: [new Member(name: 'Existing', role: 'Existing')])
+        def bindingResult = secureBindData(target, request, ['members.name', 'members.role'], nullMissing: true)
+        [target: target, bindingResult: bindingResult]
+    }
 }
 
 class CommandObject {
@@ -366,9 +690,27 @@ class CommandObject {
     String email
     Boolean active
     Address address = new Address()
+    List<Member> members = []
+    List<Department> departments = []
+    Map<String, Member> contributors = [:]
+    Map preferences = [:]
+    Map<String, Date> dates = [:]
 }
 
 class Address {
     String country
     String city
+    Map preferences = [:]
+}
+
+class Member {
+    String name
+    String role
+    String email
+    List<Address> addresses = []
+}
+
+class Department {
+    List<Member> members = []
+    Map<String, Member> contributors = [:]
 }
