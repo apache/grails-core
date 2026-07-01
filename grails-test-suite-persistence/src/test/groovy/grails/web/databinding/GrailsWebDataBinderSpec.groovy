@@ -956,6 +956,66 @@ class GrailsWebDataBinderSpec extends Specification implements DataTest {
         publisher.publications[0].title == 'Definitive Guide To Grails 2'
     }
 
+    void 'Test negative indexed domain association binding to a List is rejected'() {
+
+        given:
+        def bindingErrors = [] as List<BindingError>
+        def listener = new DataBindingListenerAdapter() {
+            @Override void bindingError(BindingError error, Object errors) {
+                bindingErrors << error
+            }
+        }
+        def publication = new Publication(title: 'Definitive Guide To Grails', author: new Author(name: 'Author Name'))
+        def publisher = new Publisher(name: 'Apress').save()
+        publisher.addToPublications(publication)
+        publisher.save(flush: true)
+
+        when:
+        binder.bind(publisher, new SimpleMapDataBindingSource([
+            'publications[-1]': [
+                id: publication.id,
+                title: 'Definitive Guide To Grails 2'
+            ]
+        ]), listener)
+
+        then:
+        publisher.publications.size() == 1
+        publisher.publications[0].title == 'Definitive Guide To Grails'
+        bindingErrors.size() == 1
+        bindingErrors[0].propertyName == 'publications[-1]'
+        bindingErrors[0].rejectedValue == [id: publication.id, title: 'Definitive Guide To Grails 2']
+    }
+
+    void 'Test malformed indexed domain association binding to a List is rejected'() {
+
+        given:
+        def bindingErrors = [] as List<BindingError>
+        def listener = new DataBindingListenerAdapter() {
+            @Override void bindingError(BindingError error, Object errors) {
+                bindingErrors << error
+            }
+        }
+        def publication = new Publication(title: 'Definitive Guide To Grails', author: new Author(name: 'Author Name'))
+        def publisher = new Publisher(name: 'Apress').save()
+        publisher.addToPublications(publication)
+        publisher.save(flush: true)
+
+        when:
+        binder.bind(publisher, new SimpleMapDataBindingSource([
+            'publications[bad]': [
+                id: publication.id,
+                title: 'Definitive Guide To Grails 2'
+            ]
+        ]), listener)
+
+        then:
+        publisher.publications.size() == 1
+        publisher.publications[0].title == 'Definitive Guide To Grails'
+        bindingErrors.size() == 1
+        bindingErrors[0].propertyName == 'publications[bad]'
+        bindingErrors[0].rejectedValue == [id: publication.id, title: 'Definitive Guide To Grails 2']
+    }
+
     void 'Test using @BindUsing to initialize property with a type other than the declared type'() {
 
         given:
