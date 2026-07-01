@@ -284,21 +284,21 @@ ul.jd_menu li li {
 }
 
 .icon_error {
-	background-image: url('famfamfam/exclamation.png');
+	background-image: url('icons/error.svg');
 }
 
 .icon_info {
-	background-image: url('famfamfam/information.png');
+	background-image: url('icons/info.svg');
 }
 
 .icon_role {
-	background-image: url('famfamfam/lock.png');
+	background-image: url('icons/role.svg');
 }
 
 .icon_user {
-	background-image: url('famfamfam/user.png');
+	background-image: url('icons/user.svg');
 }
 
 .icon_users {
-	background-image: url('famfamfam/group.png');
+	background-image: url('icons/users.svg');
 }
