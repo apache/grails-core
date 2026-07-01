@@ -28,6 +28,7 @@ import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.Phases
 import org.codehaus.groovy.control.SourceUnit
 import spock.lang.Specification
+import spock.util.environment.RestoreSystemProperties
 
 /**
  * Created by graemerocher on 19/09/14.
@@ -184,9 +185,10 @@ class FooGrailsPlugin {
 
         then: "the build fails loudly rather than writing to a shared location"
             IllegalStateException e = thrown()
-            e.message.contains('GRAILS_ISOLATED_BUILD=true')
+            e.message.contains(GlobalGrailsClassInjectorTransformation.ISOLATED_BUILD_PROPERTY)
     }
 
+    @RestoreSystemProperties
     void "findSourceDirectory prefers the per-project base.dir system property when set"() {
         given: "base.dir points at an existing directory"
             File baseDir = File.createTempDir()
@@ -200,10 +202,10 @@ class FooGrailsPlugin {
             resolved == baseDir
 
         cleanup:
-            System.clearProperty('base.dir')
             baseDir.deleteDir()
     }
 
+    @RestoreSystemProperties
     void "findSourceDirectory walks up to the project directory when base.dir is not set"() {
         given: "no base.dir and a standard per-project compile target"
             System.clearProperty('base.dir')

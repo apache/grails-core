@@ -208,9 +208,9 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
             // grails-plugin.xml can leak into another. In an isolated build, fail loudly instead.
             if (isolatedBuild) {
                 throw new IllegalStateException(
-                        "Unable to resolve the compilation target directory for '${source?.name}' while " +
-                        'GRAILS_ISOLATED_BUILD=true. Refusing to fall back to the shared relative ' +
-                        "'build/classes/main' path, which would leak generated metadata between modules. " +
+                        "Unable to resolve the compilation target directory for '${source?.name}' while the " +
+                        "'${ISOLATED_BUILD_PROPERTY}' system property is set. Refusing to fall back to the shared " +
+                        "relative 'build/classes/main' path, which would leak generated metadata between modules. " +
                         'Ensure the Groovy compiler supplies CompilerConfiguration.targetDirectory.')
             }
             targetDirectory = new File('build/classes/main')
