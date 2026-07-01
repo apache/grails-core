@@ -42,7 +42,6 @@ dependencies {
     api 'jakarta.persistence:jakarta.persistence-api'
     api 'jakarta.annotation:jakarta.annotation-api'
 
-    implementation 'com.github.ben-manes.caffeine:caffeine'
     api 'org.apache.groovy:groovy'
     implementation 'org.apache.groovy:groovy-json'
     api 'org.springframework.boot:spring-boot'
@@ -86,14 +85,13 @@ dependencies {
     testImplementation 'org.objenesis:objenesis'
 }
 
-TaskProvider<WriteProperties> writeProps = tasks.register('writeGrailsProperties', WriteProperties)
-writeProps.configure { WriteProperties it ->
-    it.destinationFile = project.layout.buildDirectory.file('grails.build.properties')
-    it.property('grails.version', project.version)
+tasks.register('writeGrailsProperties', WriteProperties) {
+    destinationFile = project.layout.buildDirectory.file('grails.build.properties')
+    property('grails.version', project.version)
 }
 
-tasks.named('processResources', ProcessResources).configure { ProcessResources it ->
-    it.from writeProps
+tasks.named('processResources', ProcessResources) {
+    from(tasks.named('writeGrailsProperties'))
 }
 
 apply {

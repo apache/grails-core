@@ -62,7 +62,6 @@ dependencies {
             exclude group: 'jakarta.inject', module: 'jakarta.inject-api'
             exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api'
             exclude group: 'org.apache.grails.bootstrap', module: 'grails-bootstrap'
-            exclude group: 'org.apache.grails.data', module: 'grails-datastore-core'
             exclude group: 'org.apache.grails', module: 'grails-spring'
             exclude group: 'org.springframework', module: 'spring-beans'
             exclude group: 'org.springframework', module: 'spring-context'

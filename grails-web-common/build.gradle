@@ -53,7 +53,10 @@ dependencies {
 
     api 'org.springframework:spring-webmvc'
     api 'org.springframework:spring-context-support'
-    implementation 'com.github.ben-manes.caffeine:caffeine'
+
+    implementation 'com.github.ben-manes.caffeine:caffeine', {
+        // impl: Cache, Caffeine
+    }
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
     compileOnly 'org.springframework:spring-test', {

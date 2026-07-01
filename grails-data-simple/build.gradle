@@ -81,9 +81,6 @@ dependencies {
         // api: PlatformTransactionManager
     }
 
-    // RemovalListener (caffeine)
-    implementation "com.github.ben-manes.caffeine:caffeine"
-
     compileOnly 'org.apache.groovy:groovy', {
         // comp: CompileStatic
     }
