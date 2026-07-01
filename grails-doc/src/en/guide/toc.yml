@@ -325,6 +325,7 @@ security:
 plugins:
   title: Plugins
   creatingAndInstallingPlugins: Creating and Installing Plugins
+  pluginBestPractices: Plugin Best Practices
   repositories: Plugin Repositories
   providingBasicArtefacts: Providing Basic Artefacts
   evaluatingConventions: Evaluating Conventions
