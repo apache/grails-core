@@ -36,9 +36,8 @@ Use these repository docs as the source of truth before changing an application:
 | `grails-doc/src/en/guide/upgrading/upgrading80x.adoc` | Main Grails 7 to Grails 8 upgrade guide |
 | `grails-doc/src/en/guide/introduction/whatsNew.adoc` | Grails 8 feature and platform overview |
 | `grails-doc/src/en/guide/introduction/whatsNew/dependencyUpgrades.adoc` | Current platform dependency baseline |
-| `grails-doc/src/en/ref/Versions/Grails BOM.adoc` | Default BOM dependency matrix |
-| `grails-doc/src/en/ref/Versions/Grails BOM Micronaut.adoc` | Micronaut BOM dependency matrix |
-| `grails-doc/src/en/guide/conf/micronaut.adoc` | Micronaut BOM and JDK 25 requirements |
+| `grails-doc/src/en/ref/Dependency Versions.adoc` | BOM variants and dependency-version entry points |
+| `grails-doc/src/en/guide/conf/micronaut.adoc` | Micronaut BOM usage, Hibernate-specific Micronaut BOMs, and JDK 25 requirements |
 | `grails-doc/src/en/guide/theWebLayer/contentNegotiation.adoc` | MIME defaults and Accept header behavior |
 | `grails-data-hibernate7/docs/src/docs/asciidoc/introduction/upgradeNotes.adoc` | Hibernate 7 GORM query and tenant-schema notes |
 | `grails-data-hibernate7/dbmigration/README.md` | Database migration plugin version line for Grails 8 and Hibernate 7 |
