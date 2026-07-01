@@ -27,7 +27,10 @@ pluginManagement {
 plugins {
 	id 'com.gradle.develocity' version '4.1.1'
 	id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.3'
+	id 'com.autonomousapps.build-health' version '3.5.1'
 }
+
+apply from: file('../gradle/dependency-analysis.settings.gradle')
 
 def isCI = System.getenv().containsKey('CI')
 def isLocal = !isCI
