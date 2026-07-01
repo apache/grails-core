@@ -17,6 +17,7 @@
 
 plugins {
     id 'org.apache.grails.gradle.grails-violation-aggregation'
+    id 'org.apache.grails.gradle.grails-ij-formatter'
 }
 
 import java.time.Instant

@@ -83,6 +83,10 @@ gradlePlugin {
             id = 'org.apache.grails.gradle.grails-violation-aggregation'
             implementationClass = 'org.apache.grails.buildsrc.GrailsViolationAggregationPlugin'
         }
+        register('grailsIJFormatter') {
+            id = 'org.apache.grails.gradle.grails-ij-formatter'
+            implementationClass = 'org.apache.grails.buildsrc.GrailsIJFormatterPlugin'
+        }
         register('groovydocEnhancer') {
             id = 'org.apache.grails.buildsrc.groovydoc-enhancer'
             implementationClass = 'org.apache.grails.buildsrc.GroovydocEnhancerPlugin'
