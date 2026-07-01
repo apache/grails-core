@@ -18,8 +18,6 @@
  */
 package org.grails.web.servlet.mvc
 
-import java.util.concurrent.CopyOnWriteArraySet
-
 import jakarta.servlet.http.HttpSession
 
 /**
@@ -35,51 +33,95 @@ class SynchronizerTokensHolder implements Serializable {
     public static final String HOLDER = 'SYNCHRONIZER_TOKENS_HOLDER'
     public static final String TOKEN_KEY = 'SYNCHRONIZER_TOKEN'
     public static final String TOKEN_URI = 'SYNCHRONIZER_URI'
+    public static final int DEFAULT_MAX_TOKEN_URLS = 100
+    public static final int DEFAULT_MAX_TOKENS_PER_URL = 100
 
-    Map<String, Set<UUID>> currentTokens = [:]
+    Map<String, Set<UUID>> currentTokens = new LinkedHashMap<String, Set<UUID>>()
 
-    boolean isValid(String url, String token) {
-        try {
-            getTokens(url).contains(UUID.fromString(token))
-        }
-        catch (IllegalArgumentException e) {
-            false
-        }
+    synchronized boolean isValid(String url, String token) {
+        UUID uuid = parseToken(token)
+        uuid != null && getExistingTokens(url)?.contains(uuid)
     }
 
-    String generateToken(String url) {
+    synchronized String generateToken(String url) {
         final UUID uuid = UUID.randomUUID()
-        getTokens(url).add(uuid)
+        Set<UUID> tokens = getTokens(url)
+        tokens.add(uuid)
+        removeEldestTokenIfNecessary(tokens)
+        removeEldestTokenUrlIfNecessary()
         return uuid
     }
 
-    void resetToken(String url) {
+    synchronized void resetToken(String url) {
         currentTokens.remove(url)
     }
 
-    void resetToken(String url, String token) {
+    synchronized void resetToken(String url, String token) {
         if (url && token) {
-            final Set set = getTokens(url)
-            try {
-                set.remove(UUID.fromString(token))
+            final Set<UUID> set = getExistingTokens(url)
+            UUID uuid = parseToken(token)
+            if (uuid != null) {
+                set?.remove(uuid)
             }
-            catch (IllegalArgumentException ignored) {}
-            if (set.isEmpty()) {
+            if (set?.isEmpty()) {
                 currentTokens.remove(url)
             }
         }
     }
 
-    boolean isEmpty() {
+    synchronized boolean isValidAndResetToken(String url, String token) {
+        UUID uuid = parseToken(token)
+        if (uuid == null) {
+            return false
+        }
+
+        final Set<UUID> set = getExistingTokens(url)
+        boolean valid = set != null && set.remove(uuid)
+        if (set?.isEmpty()) {
+            currentTokens.remove(url)
+        }
+        valid
+    }
+
+    synchronized boolean isEmpty() {
         return currentTokens.isEmpty() || currentTokens.every { String url, Set<UUID> uuids -> uuids.isEmpty() }
     }
 
     protected Set<UUID> getTokens(String url) {
         if (!currentTokens.containsKey(url)) {
-            currentTokens[url] = new CopyOnWriteArraySet<UUID>()
+            currentTokens[url] = new LinkedHashSet<UUID>()
         }
 
         currentTokens[url]
+    }
+
+    private Set<UUID> getExistingTokens(String url) {
+        url ? currentTokens[url] : null
+    }
+
+    private UUID parseToken(String token) {
+        if (!token) {
+            return null
+        }
+
+        try {
+            UUID.fromString(token)
+        }
+        catch (IllegalArgumentException ignored) {
+            null
+        }
+    }
+
+    private void removeEldestTokenUrlIfNecessary() {
+        if (currentTokens.size() > DEFAULT_MAX_TOKEN_URLS) {
+            currentTokens.remove(currentTokens.keySet().iterator().next())
+        }
+    }
+
+    private void removeEldestTokenIfNecessary(Set<UUID> tokens) {
+        if (tokens.size() > DEFAULT_MAX_TOKENS_PER_URL) {
+            tokens.remove(tokens.iterator().next())
+        }
     }
 
     static SynchronizerTokensHolder store(HttpSession session) {
