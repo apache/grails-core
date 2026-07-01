@@ -186,6 +186,9 @@ include(
         // Test Report
         'grails-data-test-report',
 
+        // Profile Tests
+        'grails-profiles-tests',
+
         // wrapper
         'grails-wrapper',
 

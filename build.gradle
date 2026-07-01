@@ -45,7 +45,8 @@ ext {
 
     testProjectsStartWith = [
             'grails-test-suite',
-            'grails-test-examples'
+            'grails-test-examples',
+            'grails-profiles-tests'
     ]
     testProjects = [ /* Will be populated by subprojects loop below */]
     docProjects = [ /* Will be populated by subprojects loop below */]
