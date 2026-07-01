@@ -144,8 +144,8 @@ class GrailsApp extends SpringApplication {
 
     @Override
     protected ConfigurableApplicationContext createApplicationContext() {
-        setAllowBeanDefinitionOverriding(isAllowedByConfig(Settings.SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING))
-        setAllowCircularReferences(isAllowedByConfig(Settings.SPRING_MAIN_ALLOW_CIRCULAR_REFERENCES))
+        setAllowBeanDefinitionOverriding(configuredEnvironment.getProperty(Settings.SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING, Boolean, Boolean.TRUE))
+        setAllowCircularReferences(configuredEnvironment.getProperty(Settings.SPRING_MAIN_ALLOW_CIRCULAR_REFERENCES, Boolean, Boolean.TRUE))
         ConfigurableApplicationContext applicationContext = super.createApplicationContext()
 
         if (enableBeanCreationProfiler) {
@@ -154,20 +154,6 @@ class GrailsApp extends SpringApplication {
             applicationContext.addApplicationListener(processor)
         }
         return applicationContext
-    }
-
-    /**
-     * Resolves a boolean {@code spring.main} setting from the configured environment, defaulting to
-     * {@code true} when the property is absent to preserve Grails' historical context behavior.
-     *
-     * @param propertyName the fully qualified property name to resolve
-     * @return the configured value, or {@code true} when unset or the environment is unavailable
-     */
-    private boolean isAllowedByConfig(String propertyName) {
-        if (configuredEnvironment == null) {
-            return true
-        }
-        return configuredEnvironment.getProperty(propertyName, Boolean, Boolean.TRUE)
     }
 
     @Override
