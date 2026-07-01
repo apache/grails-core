@@ -49,6 +49,7 @@ import grails.config.Settings;
 import grails.core.GrailsApplication;
 import grails.core.support.GrailsApplicationAware;
 import grails.util.Environment;
+import grails.util.GrailsUtil;
 import grails.web.mapping.UrlMappingInfo;
 import grails.web.mapping.UrlMappingsHolder;
 import grails.web.mapping.exceptions.UrlMappingException;
@@ -131,6 +132,7 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
     public void setGrailsApplication(GrailsApplication grailsApplication) {
         this.grailsApplication = grailsApplication;
         createStackFilterer();
+        GrailsUtil.initializeStackFilterer(grailsApplication);
         this.auditorAwareLookup = new AuditorAwareLookup(grailsApplication.getMainContext());
     }
 
