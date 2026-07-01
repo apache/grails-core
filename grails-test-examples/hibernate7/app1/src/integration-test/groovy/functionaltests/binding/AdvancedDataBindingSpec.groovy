@@ -233,6 +233,95 @@ class AdvancedDataBindingSpec extends Specification implements HttpClientSupport
         }
     }
 
+    def "test secureBindData binds nested allowed properties and blocks unlisted properties"() {
+        when:
+        def response = http(
+                '/advancedDataBinding/secureBindEmployee?firstName=Secure&email=blocked%40example.com&homeAddress.street=123+Secure+St&homeAddress.city=Portland&workAddress.street=999+Blocked+Ave',
+        )
+
+        then:
+        response.assertStatus(200)
+        with(response.json()) {
+            firstName == 'Secure'
+            email == null
+            homeAddress.street == '123 Secure St'
+            homeAddress.city == 'Portland'
+            homeAddress.state == null
+            workAddress == null
+        }
+    }
+
+    def "test secureBindData binds allowed List collection properties"() {
+        when:
+        def response = http(
+                '/advancedDataBinding/secureBindTeamWithMembers?name=Security&members%5B0%5D.name=Alice&members%5B0%5D.role=Lead&members%5B1%5D.name=Bob&members%5B1%5D.role=Developer',
+        )
+
+        then:
+        response.assertStatus(200)
+        with(response.json()) {
+            name == 'Security'
+            members.size() == 2
+            members[0].name == 'Alice'
+            members[0].role == 'Lead'
+            members[1].name == 'Bob'
+            members[1].role == 'Developer'
+        }
+    }
+
+    def "test secureBindData binds allowed Map collection properties"() {
+        when:
+        def response = http(
+                '/advancedDataBinding/secureBindProjectWithContributors?name=SecureCore&contributors%5Blead%5D.name=John&contributors%5Blead%5D.expertise=Architecture&contributors%5Bdev%5D.name=Jane&contributors%5Bdev%5D.expertise=Testing',
+        )
+
+        then:
+        response.assertStatus(200)
+        with(response.json()) {
+            name == 'SecureCore'
+            contributors.lead.name == 'John'
+            contributors.lead.expertise == 'Architecture'
+            contributors.dev.name == 'Jane'
+            contributors.dev.expertise == 'Testing'
+        }
+    }
+
+    def "test secureBindData supports prefix filtering"() {
+        when:
+        def response = http(
+                '/advancedDataBinding/secureBindWithPrefix?employee.firstName=Prefix&employee.lastName=Allowed&employee.email=blocked%40example.com&other.firstName=Ignored',
+        )
+
+        then:
+        response.assertJson(200, [
+                firstName: 'Prefix',
+                lastName : 'Allowed',
+                email    : null
+        ])
+    }
+
+    def "test secureBindData nullMissing clears missing allowed properties"() {
+        when:
+        def response = http('/advancedDataBinding/secureBindWithNullMissing?firstName=Updated')
+
+        then:
+        response.assertJson(200, [
+                firstName: 'Updated',
+                email    : null
+        ])
+    }
+
+    def "test secureBindData with empty allowlist binds no properties"() {
+        when:
+        def response = http('/advancedDataBinding/secureBindWithEmptyAllowlist?firstName=Blocked&email=blocked%40example.com')
+
+        then:
+        response.assertJson(200, [
+                firstName: 'Existing',
+                email    : 'existing@example.com'
+        ])
+    }
+
     // ========== Selective Property Binding Tests ==========
 
     def "test selective property binding using subscript operator"() {

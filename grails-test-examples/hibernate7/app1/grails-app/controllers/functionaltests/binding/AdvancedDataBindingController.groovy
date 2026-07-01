@@ -109,7 +109,75 @@ class AdvancedDataBindingController {
             contributors: contributorsMap
         ] as JSON)
     }
-    
+
+    def secureBindEmployee() {
+        def employee = new Employee()
+        secureBindData(employee, params, ['firstName', 'homeAddress.street', 'homeAddress.city'])
+        render([
+            firstName: employee.firstName,
+            email: employee.email,
+            homeAddress: employee.homeAddress ? [
+                street: employee.homeAddress.street,
+                city: employee.homeAddress.city,
+                state: employee.homeAddress.state
+            ] : null,
+            workAddress: employee.workAddress ? [
+                street: employee.workAddress.street,
+                city: employee.workAddress.city,
+                state: employee.workAddress.state
+            ] : null
+        ] as JSON)
+    }
+
+    def secureBindTeamWithMembers() {
+        def team = new Team()
+        secureBindData(team, params, ['name', 'members.name', 'members.role'])
+        render([
+            name: team.name,
+            members: team.members?.findAll { it != null }?.collect { [name: it.name, role: it.role] } ?: []
+        ] as JSON)
+    }
+
+    def secureBindProjectWithContributors() {
+        def project = new Project()
+        secureBindData(project, params, ['name', 'contributors.name', 'contributors.expertise'])
+        def contributorsMap = project.contributors?.collectEntries { k, v ->
+            [k, [name: v?.name, expertise: v?.expertise]]
+        } ?: [:]
+        render([
+            name: project.name,
+            contributors: contributorsMap
+        ] as JSON)
+    }
+
+    def secureBindWithPrefix() {
+        def employee = new Employee()
+        secureBindData(employee, params, ['firstName', 'lastName'], 'employee')
+        render([
+            firstName: employee.firstName,
+            lastName: employee.lastName,
+            email: employee.email
+        ] as JSON)
+    }
+
+    def secureBindWithNullMissing() {
+        def employee = new Employee(firstName: 'Existing', email: 'existing@example.com')
+        secureBindData(employee, params, ['firstName', 'email'], nullMissing: true)
+        render([
+            firstName: employee.firstName,
+            email: employee.email
+        ] as JSON)
+    }
+
+    def secureBindWithEmptyAllowlist() {
+        def employee = new Employee(firstName: 'Existing', email: 'existing@example.com')
+        secureBindData(employee, params, [])
+        render([
+            firstName: employee.firstName,
+            email: employee.email
+        ] as JSON)
+    }
+
     /**
      * Test binding with @RequestParameter annotation.
      */
