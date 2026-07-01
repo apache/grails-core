@@ -21,6 +21,35 @@ rootProject.subprojects
         .findAll { !(it.name in testProjects) && !(it.name in docProjects) && !(it.name in cliProjects) }
         .each { project.evaluationDependsOn(it.path) }
 
+// After evaluationDependsOn, grails-bom is fully evaluated and its ext properties are set.
+// Read sitemesh versions to override any stale version from a published snapshot BOM.
+// The gsp-spring-boot test app imports the PUBLISHED grails-bom snapshot via
+// io.spring.dependency-management.  If that snapshot predates the sitemesh 3.3.0-M1 bump
+// (spring-webmvc-sitemesh only exists as a standalone artifact starting at 3.3.0-M1), the
+// plugin's managed-version rule silently downgrades to 3.2.2 which cannot be resolved.
+// This eachDependency rule runs after the spring plugin's rule and wins (last useVersion wins).
+def grailsBomProject = rootProject.subprojects.find { it.name == 'grails-bom' }
+Map localBomVersions = grailsBomProject?.hasProperty('bomDependencyVersions')
+        ? (grailsBomProject.bomDependencyVersions as Map)
+        : Collections.emptyMap()
+
+configurations.configureEach {
+    resolutionStrategy.eachDependency {
+        if (requested.group == 'org.sitemesh') {
+            String localVersion = null
+            if (requested.name == 'spring-webmvc-sitemesh') {
+                localVersion = localBomVersions['spring-webmvc-sitemesh.version']
+            } else if (requested.name == 'spring-boot-starter-sitemesh') {
+                localVersion = localBomVersions['starter-sitemesh.version']
+            }
+            if (localVersion) {
+                useVersion(localVersion)
+                because('Prevent stale published snapshot BOM from applying a non-existent sitemesh version')
+            }
+        }
+    }
+}
+
 configurations.configureEach {
     resolutionStrategy.dependencySubstitution {
         // Test projects will often include dependencies from local projects. This will ensure any dependencies
