@@ -51,6 +51,20 @@ interface Settings {
     String SPRING_TRANSACTION_MANAGEMENT = 'grails.spring.transactionManagement.proxies'
 
     /**
+     * Whether the application context allows a bean definition to override another registered under the
+     * same name. Maps to the Spring Boot {@code spring.main.allow-bean-definition-overriding} property;
+     * Grails defaults it to {@code true} (Spring Boot defaults it to {@code false}).
+     */
+    String SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING = 'spring.main.allow-bean-definition-overriding'
+
+    /**
+     * Whether the application context allows circular references between beans. Maps to the Spring Boot
+     * {@code spring.main.allow-circular-references} property; Grails defaults it to {@code true}
+     * (Spring Boot defaults it to {@code false}).
+     */
+    String SPRING_MAIN_ALLOW_CIRCULAR_REFERENCES = 'spring.main.allow-circular-references'
+
+    /**
      * Which plugins to include in the plugin manager
      */
     String PLUGIN_INCLUDES = 'grails.plugin.includes'

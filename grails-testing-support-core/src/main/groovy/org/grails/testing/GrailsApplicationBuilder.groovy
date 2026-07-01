@@ -46,6 +46,7 @@ import org.springframework.util.ClassUtils
 import org.springframework.web.context.ConfigurableWebApplicationContext
 
 import grails.boot.config.GrailsApplicationPostProcessor
+import grails.config.Settings
 import grails.core.GrailsApplication
 import grails.core.GrailsApplicationLifeCycle
 import grails.core.support.proxy.DefaultProxyHandler
@@ -158,6 +159,16 @@ class GrailsApplicationBuilder {
                     .newInstance()
         }
 
+        def beanFactory = context.beanFactory as DefaultListableBeanFactory
+        // Initialize the environment before any bean definitions are registered so that the spring.main.*
+        // bean definition overriding and circular reference settings govern the whole context lifecycle
+        // rather than being applied after beans have already been defined. Both default to true (the
+        // historical Grails behavior) and can be turned off via the standard spring.main.* properties.
+        new ConfigDataApplicationContextInitializer().initialize(context)
+        def environment = context.environment
+        beanFactory.allowBeanDefinitionOverriding = environment.getProperty(Settings.SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING, Boolean, Boolean.TRUE)
+        beanFactory.allowCircularReferences = environment.getProperty(Settings.SPRING_MAIN_ALLOW_CIRCULAR_REFERENCES, Boolean, Boolean.TRUE)
+
         def classLoader = this.class.classLoader
         ImportCandidates.load(AutoConfiguration, classLoader).asList().findAll {
             it.startsWith('org.grails')
@@ -166,10 +177,6 @@ class GrailsApplicationBuilder {
             ((AnnotationConfigRegistry) context).register(ClassUtils.forName(it, classLoader))
         }
 
-        def beanFactory = (context.beanFactory as DefaultListableBeanFactory).tap {
-            allowBeanDefinitionOverriding = true
-            allowCircularReferences = true
-        }
         prepareContext(context, beanFactory)
         context.refresh()
         context.registerShutdownHook()
@@ -180,7 +187,6 @@ class GrailsApplicationBuilder {
         def discovery = registerPluginDiscoveryBean(applicationContext, beanFactory)
         registerGrailsAppPostProcessorBean(beanFactory, discovery)
         AnnotationConfigUtils.registerAnnotationConfigProcessors((BeanDefinitionRegistry) beanFactory)
-        new ConfigDataApplicationContextInitializer().initialize(applicationContext)
     }
 
     protected PluginDiscovery registerPluginDiscoveryBean(ConfigurableApplicationContext applicationContext, ConfigurableBeanFactory beanFactory) {
