@@ -119,6 +119,48 @@ tasks.register('publishAllToMavenLocal') {
     }
 }
 
+tasks.register('verifySkillsJarsSources') {
+    description = 'Verifies the SkillsJars publication path points at the agent-local skill sources.'
+    group = 'verification'
+
+    def agentSkillsDir = layout.projectDirectory.dir('.agents/skills')
+    def skillsJarsLink = layout.projectDirectory.file('skills')
+
+    inputs.dir(agentSkillsDir)
+    inputs.files(skillsJarsLink)
+
+    doLast {
+        def expectedTarget = '.agents/skills'
+        def skillsPath = skillsJarsLink.asFile.toPath()
+        def actualTarget = null
+
+        if (java.nio.file.Files.isSymbolicLink(skillsPath)) {
+            actualTarget = java.nio.file.Files.readSymbolicLink(skillsPath).toString().replace('\\', '/')
+        }
+        else if (skillsJarsLink.asFile.isFile()) {
+            actualTarget = skillsJarsLink.asFile.getText('UTF-8').trim().replace('\\', '/')
+        }
+
+        if (actualTarget != expectedTarget) {
+            throw new GradleException("The SkillsJars publication path must be a symlink to ${expectedTarget}, but found ${actualTarget ?: 'no link target'}.")
+        }
+
+        def gitMode = providers.exec {
+            commandLine 'git', 'ls-files', '-s', 'skills'
+        }.standardOutput.asText.get().trim().split(' ')[0]
+        if (gitMode != '120000') {
+            throw new GradleException("The SkillsJars publication path must be committed as a symlink with git mode 120000, but found mode ${gitMode ?: 'none'}.")
+        }
+
+        def skillMarkers = fileTree(agentSkillsDir).matching {
+            include '**/SKILL.md'
+        }.files
+        if (skillMarkers.empty) {
+            throw new GradleException("No SkillsJars skill marker files found under ${expectedTarget}.")
+        }
+    }
+}
+
 apply {
     from layout.projectDirectory.file('gradle/publish-root-config.gradle')
     from layout.projectDirectory.file('gradle/rat-root-config.gradle')
