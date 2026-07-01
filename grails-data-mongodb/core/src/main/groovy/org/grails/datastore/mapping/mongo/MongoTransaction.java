@@ -23,6 +23,9 @@ import com.mongodb.client.ClientSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionUsageException;
+
 import org.grails.datastore.mapping.transactions.Transaction;
 
 /**
@@ -37,6 +40,14 @@ import org.grails.datastore.mapping.transactions.Transaction;
  * and commits the server transaction, while {@link #rollback()} aborts it. Both close the
  * {@link ClientSession} and detach it from the owning session.</p>
  *
+ * <p>Commit is retried on an {@code UnknownTransactionCommitResult} error label. Whole-transaction
+ * retry on a {@code TransientTransactionError} is intentionally not handled here: it requires
+ * re-executing the transaction body, which the
+ * {@link org.grails.datastore.mapping.transactions.DatastoreTransactionManager} — a Spring
+ * {@code PlatformTransactionManager} — cannot do (it only begins, commits and rolls back; the
+ * application code between those is not re-runnable at this layer). Such retry belongs to the
+ * transaction orchestration layer if added later.</p>
+ *
  * @since 8.0
  */
 public class MongoTransaction implements Transaction<ClientSession> {
@@ -49,8 +60,6 @@ public class MongoTransaction implements Transaction<ClientSession> {
     private static final int MAX_COMMIT_RETRIES = 3;
 
     private static final Logger LOG = LoggerFactory.getLogger(MongoTransaction.class);
-
-    private static volatile boolean warnedTimeoutIgnored = false;
 
     private final AbstractMongoSession session;
     private final ClientSession clientSession;
@@ -125,14 +134,13 @@ public class MongoTransaction implements Transaction<ClientSession> {
 
     @Override
     public void setTimeout(int timeout) {
-        // The transaction is started before the manager applies a timeout, so a per-transaction
-        // timeout cannot be applied to the server-side transaction; the server enforces its own
-        // transactionLifetimeLimitSeconds instead. Warn once so a configured timeout is not silently
-        // ignored.
-        if (!warnedTimeoutIgnored) {
-            warnedTimeoutIgnored = true;
-            LOG.warn("A per-transaction timeout was requested but GORM for MongoDB does not apply it to the " +
-                    "server-side MongoDB transaction; the server's transactionLifetimeLimitSeconds applies instead.");
+        if (timeout != TransactionDefinition.TIMEOUT_DEFAULT) {
+            // The server-side transaction is started before the manager applies a timeout, so a
+            // per-transaction timeout cannot be honored here; the server's transactionLifetimeLimitSeconds
+            // governs the maximum transaction duration. Fail rather than silently ignore the request.
+            throw new TransactionUsageException("A per-transaction timeout (" + timeout + "s) is not supported by " +
+                    "GORM for MongoDB transactions; the server's transactionLifetimeLimitSeconds governs transaction " +
+                    "duration. Remove the timeout from the transaction definition.");
         }
     }
 
