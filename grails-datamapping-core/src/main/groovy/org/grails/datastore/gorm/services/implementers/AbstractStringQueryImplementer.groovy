@@ -87,16 +87,6 @@ abstract class AbstractStringQueryImplementer extends AbstractReadOperationImple
         }
         else if (expr instanceof ConstantExpression) {
             transformed = expr
-            String queryText = expr.text
-            if (queryText.contains('$')) {
-                SourceUnit sourceUnit = abstractMethodNode.declaringClass.module.context
-                if (queryText.contains('wrong')) {
-                    AstUtils.error(sourceUnit, abstractMethodNode, "Invalid property [wrong] of domain class [${domainClassNode.name}] in query.")
-                }
-                else if (queryText.contains('java.lang.String')) {
-                    AstUtils.error(sourceUnit, abstractMethodNode, 'Invalid query class [java.lang.String]. Referenced classes in queries must be domain classes')
-                }
-            }
         }
 
         if (transformed != null) {

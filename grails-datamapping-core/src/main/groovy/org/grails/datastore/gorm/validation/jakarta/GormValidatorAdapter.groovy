@@ -52,7 +52,6 @@ class GormValidatorAdapter extends SpringValidatorAdapter implements CascadingVa
 
     @Override
     void validate(Object obj, Errors errors, boolean cascade) {
-        println "GormValidatorAdapter.validate called with cascade=${cascade}"
         CASCADE_VALIDATION.set(cascade)
         try {
             validate(obj, errors)

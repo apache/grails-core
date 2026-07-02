@@ -135,6 +135,9 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
                 validator = currentMappingContext.getEntityValidator(persistentEntity)
             }
         }
+        if (validator != null) {
+            internalValidator = validator
+        }
         return validator
     }
 
