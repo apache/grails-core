@@ -66,6 +66,8 @@ Arguments:
 
 The `allowedParams` list is required. In controllers, calling `secureBindData` without an explicit allowlist is a compilation error.
 
+WARNING: `allowedParams` must be developer-controlled. It must be a literal list of property names, such as `['firstName', 'lastName']`, or a reference to a `static final` constant list. Building the list from `params`, `request`, or any other request-derived data is a compilation error in controllers, since it would let an attacker choose which properties are bindable and defeat the purpose of `secureBindData`.
+
 An empty allowlist binds no properties. This differs from link:bindData.html[bindData] with an empty `include` list, which leaves all otherwise-bindable properties eligible for binding.
 
 Use nested property paths such as `homeAddress.street` to allow nested binding. Properties not named in `allowedParams` are ignored.

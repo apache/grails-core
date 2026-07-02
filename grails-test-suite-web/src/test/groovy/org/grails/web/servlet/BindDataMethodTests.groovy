@@ -19,6 +19,8 @@
 package org.grails.web.servlet
 
 import grails.artefact.Artefact
+import grails.databinding.BindUsing
+import grails.databinding.BindingFormat
 import grails.testing.web.controllers.ControllerUnitTest
 import spock.lang.Specification
 
@@ -87,7 +89,7 @@ class BindDataMethodTests extends Specification implements ControllerUnitTest<Bi
         target.email == 'lee@mail.com'
     }
 
-    void 'GAP: bindData does not crash on a non-numeric indexed parameter for a List property'() {
+    void 'Test bindData ignores a non-numeric indexed parameter for a List property'() {
         when: 'a crafted request uses a non-numeric bracket index against a plain bindData call (no secureBindData involved)'
         params.'members[abc].name' = 'Hacked'
         def model = controller.bindWithNonNumericIndex()
@@ -439,7 +441,7 @@ class BindDataMethodTests extends Specification implements ControllerUnitTest<Bi
         model.bindingResult == null || !model.bindingResult.hasErrors()
     }
 
-    void 'GAP: secureBindData nullMissing does not crash on a non-numeric indexed parameter root'() {
+    void 'Test secureBindData nullMissing ignores a non-numeric indexed parameter root'() {
         when: 'a crafted request uses a non-numeric bracket index against a List-typed allowed property'
         params.'members[abc].role' = 'Lead'
         def model = controller.secureBindWithIndexedParamsAndNullMissing()
@@ -452,7 +454,7 @@ class BindDataMethodTests extends Specification implements ControllerUnitTest<Bi
         target.members[0].role == 'Existing'
     }
 
-    void 'GAP: secureBindData nullMissing does not crash on an out-of-range indexed parameter root'() {
+    void 'Test secureBindData nullMissing ignores an out-of-range indexed parameter root'() {
         when: 'a crafted request uses an indexed root beyond the auto-grow limit, which the binder silently ignores but nullMissing still tries to null out'
         params.'members[300].name' = 'Alice'
         def model = controller.secureBindWithIndexedParamsAndNullMissing()
@@ -479,6 +481,42 @@ class BindDataMethodTests extends Specification implements ControllerUnitTest<Bi
         target.members[0].name == 'Alice'
         target.members[0].role == null
         model.bindingResult == null || !model.bindingResult.hasErrors()
+    }
+
+    void 'Test secureBindData applies a @BindUsing property when it is allowed'() {
+        when:
+        def model = controller.secureBindWithBindUsingAllowed()
+        def target = model.target
+
+        then:
+        target.loudName == 'QUIET'
+    }
+
+    void 'Test secureBindData does not bind a @BindUsing property that is not allowed'() {
+        when:
+        def model = controller.secureBindWithBindUsingDisallowed()
+        def target = model.target
+
+        then:
+        target.loudName == null
+    }
+
+    void 'Test secureBindData applies a @BindingFormat property when it is allowed'() {
+        when:
+        def model = controller.secureBindWithBindingFormatAllowed()
+        def target = model.target
+
+        then:
+        target.formattedDate == Date.parse('MMddyyyy', '12252025')
+    }
+
+    void 'Test secureBindData does not bind a @BindingFormat property that is not allowed'() {
+        when:
+        def model = controller.secureBindWithBindingFormatDisallowed()
+        def target = model.target
+
+        then:
+        target.formattedDate == null
     }
 }
 
@@ -728,6 +766,30 @@ class BindingController {
         def bindingResult = secureBindData(target, request, ['members.name', 'members.role'], nullMissing: true)
         [target: target, bindingResult: bindingResult]
     }
+
+    def secureBindWithBindUsingAllowed() {
+        def target = new SecureBindFormattedCommand()
+        secureBindData target, [loudName: 'quiet', formattedDate: '12252025'], ['loudName']
+        [target: target]
+    }
+
+    def secureBindWithBindUsingDisallowed() {
+        def target = new SecureBindFormattedCommand()
+        secureBindData target, [loudName: 'quiet', formattedDate: '12252025'], ['formattedDate']
+        [target: target]
+    }
+
+    def secureBindWithBindingFormatAllowed() {
+        def target = new SecureBindFormattedCommand()
+        secureBindData target, [loudName: 'quiet', formattedDate: '12252025'], ['formattedDate']
+        [target: target]
+    }
+
+    def secureBindWithBindingFormatDisallowed() {
+        def target = new SecureBindFormattedCommand()
+        secureBindData target, [loudName: 'quiet', formattedDate: '12252025'], ['loudName']
+        [target: target]
+    }
 }
 
 class CommandObject {
@@ -758,4 +820,14 @@ class Member {
 class Department {
     List<Member> members = []
     Map<String, Member> contributors = [:]
+}
+
+class SecureBindFormattedCommand {
+    @BindUsing({ obj, source ->
+        source['loudName']?.toString()?.toUpperCase()
+    })
+    String loudName
+
+    @BindingFormat('MMddyyyy')
+    Date formattedDate
 }

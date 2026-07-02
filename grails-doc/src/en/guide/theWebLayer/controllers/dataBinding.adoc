@@ -1095,6 +1095,8 @@ def p = new Person()
 secureBindData(p, params, ['firstName', 'lastName'])
 ----
 
+WARNING: The allowlist must be developer-controlled: a literal list of property names, or a reference to a `static final` constant list. Building it from `params`, `request`, or other request-derived data is a compilation error, since it would let an attacker choose which properties are bindable.
+
 Use nested property paths when allowing nested binding:
 
 [source,groovy]
