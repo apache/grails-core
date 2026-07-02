@@ -45,6 +45,7 @@ import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.ast.ModuleNode;
 import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.PropertyNode;
+import org.codehaus.groovy.ast.Variable;
 import org.codehaus.groovy.ast.expr.ArgumentListExpression;
 import org.codehaus.groovy.ast.expr.BinaryExpression;
 import org.codehaus.groovy.ast.expr.BooleanExpression;
@@ -275,17 +276,16 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
         if (classNode == null || OBJECT_CLASS.equals(classNode) || !visitedClasses.add(classNode)) {
             return;
         }
-        SecureBindDataCallVisitor visitor = new SecureBindDataCallVisitor(source, controllerClassNode, classNode);
         for (MethodNode method : classNode.getMethods()) {
             if (method.getCode() != null && visitedMethods.add(method)) {
-                method.getCode().visit(visitor);
+                method.getCode().visit(new SecureBindDataCallVisitor(source, controllerClassNode, classNode));
             }
             validateTraitHelperSecureBindDataCalls(source, method, controllerClassNode, visitedTraitHelpers);
         }
         for (PropertyNode property : classNode.getProperties()) {
             Expression initialExpression = property.getInitialExpression();
             if (initialExpression instanceof ClosureExpression) {
-                ((ClosureExpression) initialExpression).getCode().visit(visitor);
+                ((ClosureExpression) initialExpression).getCode().visit(new SecureBindDataCallVisitor(source, controllerClassNode, classNode));
             }
         }
         validateSecureBindDataCalls(source, controllerClassNode, classNode.getSuperClass(), visitedClasses, visitedMethods, visitedTraitHelpers);
@@ -298,9 +298,9 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
             if (traitClass instanceof ClassExpression) {
                 ClassNode helperClass = Traits.findHelper(traitClass.getType());
                 if (helperClass != null && visitedTraitHelpers.add(helperClass)) {
-                    SecureBindDataCallVisitor visitor = new SecureBindDataCallVisitor(source, controllerClassNode, traitClass.getType(), traitClass.getType());
                     for (MethodNode helperMethod : helperClass.getMethods()) {
                         if (helperMethod.getCode() != null) {
+                            SecureBindDataCallVisitor visitor = new SecureBindDataCallVisitor(source, controllerClassNode, traitClass.getType(), traitClass.getType());
                             helperMethod.getCode().visit(visitor);
                         }
                     }
@@ -311,10 +311,22 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
 
     private static class SecureBindDataCallVisitor extends CodeVisitorSupport {
 
+        private enum AllowedParamsCheck {
+            NOT_PRESENT, NOT_APPLICABLE, LITERAL, NON_LITERAL
+        }
+
+        private static final String MISSING_ALLOWED_PARAMS_MESSAGE =
+                "secureBindData requires an explicit allowedParams list. Use secureBindData(target, params, allowedParams).";
+
+        private static final String NON_LITERAL_ALLOWED_PARAMS_MESSAGE =
+                "secureBindData requires allowedParams to be a literal list of property names, or a reference to a constant list. " +
+                        "A dynamically built list can be attacker-controlled and defeats the purpose of secureBindData.";
+
         private final SourceUnit source;
         private final ClassNode controllerClassNode;
         private final ClassNode visitedClassNode;
         private final ClassNode traitClassNode;
+        private final Map<String, Expression> localVariableInitializers = new HashMap<>();
 
         SecureBindDataCallVisitor(SourceUnit source, ClassNode controllerClassNode, ClassNode visitedClassNode) {
             this(source, controllerClassNode, visitedClassNode, null);
@@ -328,11 +340,26 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
         }
 
         @Override
+        public void visitBinaryExpression(BinaryExpression expression) {
+            super.visitBinaryExpression(expression);
+            if (expression.getOperation().getType() == Types.ASSIGN && expression.getLeftExpression() instanceof VariableExpression) {
+                String variableName = ((VariableExpression) expression.getLeftExpression()).getName();
+                localVariableInitializers.put(variableName, expression.getRightExpression());
+            }
+        }
+
+        @Override
         public void visitMethodCallExpression(MethodCallExpression call) {
             super.visitMethodCallExpression(call);
-            if (isControllerSecureBindDataCall(call) && !hasAllowedParamsArgument(call)) {
-                GrailsASTUtils.error(source, call,
-                        "secureBindData requires an explicit allowedParams list. Use secureBindData(target, params, allowedParams).");
+            if (!isControllerSecureBindDataCall(call)) {
+                return;
+            }
+            AllowedParamsCheck check = checkAllowedParamsArgument(call);
+            if (check == AllowedParamsCheck.NOT_PRESENT || check == AllowedParamsCheck.NOT_APPLICABLE) {
+                GrailsASTUtils.error(source, call, MISSING_ALLOWED_PARAMS_MESSAGE);
+            }
+            else if (check == AllowedParamsCheck.NON_LITERAL) {
+                GrailsASTUtils.error(source, call, NON_LITERAL_ALLOWED_PARAMS_MESSAGE);
             }
         }
 
@@ -465,48 +492,84 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
             return "this".equals(variableName) || "$self".equals(variableName);
         }
 
-        private boolean hasAllowedParamsArgument(MethodCallExpression call) {
+        private AllowedParamsCheck checkAllowedParamsArgument(MethodCallExpression call) {
             Expression arguments = call.getArguments();
             if (!(arguments instanceof TupleExpression)) {
-                return false;
+                return AllowedParamsCheck.NOT_PRESENT;
             }
             List<Expression> expressions = ((TupleExpression) arguments).getExpressions();
             if (expressions.isEmpty()) {
-                return false;
+                return AllowedParamsCheck.NOT_PRESENT;
             }
 
-            return hasAllowedParamsAt(expressions, 2) || hasAllowedParamsAt(expressions, 3);
+            AllowedParamsCheck atArgumentTwo = checkAllowedParamsAt(expressions, 2);
+            if (atArgumentTwo == AllowedParamsCheck.LITERAL || atArgumentTwo == AllowedParamsCheck.NON_LITERAL) {
+                return atArgumentTwo;
+            }
+            return checkAllowedParamsAt(expressions, 3);
         }
 
-        private boolean hasAllowedParamsAt(List<Expression> expressions, int allowedParamsIndex) {
+        private AllowedParamsCheck checkAllowedParamsAt(List<Expression> expressions, int allowedParamsIndex) {
             if (allowedParamsIndex >= expressions.size()) {
-                return false;
+                return AllowedParamsCheck.NOT_PRESENT;
             }
             Expression allowedParams = expressions.get(allowedParamsIndex);
             if (allowedParams instanceof ConstantExpression || allowedParams instanceof MapExpression) {
-                return false;
+                return AllowedParamsCheck.NOT_APPLICABLE;
+            }
+            if (allowedParams instanceof ListExpression) {
+                return isLiteralListExpression(allowedParams) ? AllowedParamsCheck.LITERAL : AllowedParamsCheck.NON_LITERAL;
             }
             if (allowedParams instanceof VariableExpression) {
-                return isAllowedParamsVariable((VariableExpression) allowedParams);
+                return checkAllowedParamsVariable((VariableExpression) allowedParams);
             }
-            return true;
+            // Any other expression shape (method calls, ternaries, property access, GStrings, etc.)
+            // could be built from request-controlled data, so it can never be treated as a safe literal.
+            return AllowedParamsCheck.NON_LITERAL;
         }
 
-        private boolean isAllowedParamsVariable(VariableExpression allowedParams) {
+        private AllowedParamsCheck checkAllowedParamsVariable(VariableExpression allowedParams) {
             String variableName = allowedParams.getName();
             if ("params".equals(variableName) || "request".equals(variableName)) {
-                return false;
+                return AllowedParamsCheck.NOT_APPLICABLE;
             }
 
             ClassNode variableType = allowedParams.getType();
-            if (variableType == null || OBJECT_CLASS.equals(variableType) || ClassHelper.OBJECT_TYPE.equals(variableType)) {
-                return true;
+            boolean plausibleAllowedParamsType = variableType == null || OBJECT_CLASS.equals(variableType) ||
+                    ClassHelper.OBJECT_TYPE.equals(variableType) ||
+                    acceptsAllowedParamsType(variableType, ClassHelper.LIST_TYPE) ||
+                    acceptsAllowedParamsType(variableType, new ClassNode(Collection.class));
+            if (!plausibleAllowedParamsType) {
+                return AllowedParamsCheck.NOT_APPLICABLE;
             }
-            return acceptsAllowedParamsType(variableType, ClassHelper.LIST_TYPE) || acceptsAllowedParamsType(variableType, new ClassNode(Collection.class));
+
+            return resolvesToLiteralList(allowedParams) ? AllowedParamsCheck.LITERAL : AllowedParamsCheck.NON_LITERAL;
         }
 
         private boolean acceptsAllowedParamsType(ClassNode variableType, ClassNode allowedParamsType) {
             return variableType.equals(allowedParamsType) || variableType.isDerivedFrom(allowedParamsType) || variableType.implementsInterface(allowedParamsType);
+        }
+
+        private boolean resolvesToLiteralList(VariableExpression allowedParams) {
+            Variable accessedVariable = allowedParams.getAccessedVariable();
+            if (accessedVariable instanceof FieldNode) {
+                FieldNode field = (FieldNode) accessedVariable;
+                boolean isConstantField = Modifier.isStatic(field.getModifiers()) && Modifier.isFinal(field.getModifiers());
+                return isConstantField && isLiteralListExpression(field.getInitialExpression());
+            }
+            return isLiteralListExpression(localVariableInitializers.get(allowedParams.getName()));
+        }
+
+        private boolean isLiteralListExpression(Expression expression) {
+            if (!(expression instanceof ListExpression)) {
+                return false;
+            }
+            for (Expression element : ((ListExpression) expression).getExpressions()) {
+                if (!(element instanceof ConstantExpression)) {
+                    return false;
+                }
+            }
+            return true;
         }
     }
 

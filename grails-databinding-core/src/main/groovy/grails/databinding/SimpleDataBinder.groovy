@@ -333,13 +333,19 @@ class SimpleDataBinder implements DataBinder {
         }
 
         if (propertyType.isArray()) {
-            def index = Integer.parseInt(indexedPropertyReferenceDescriptor.index)
+            Integer index = parseIndex(indexedPropertyReferenceDescriptor.index)
+            if (index == null) {
+                return
+            }
             def array = initializeArray(obj, propName, propertyType.componentType, index)
             if (array != null) {
                 addElementToArrayAt(array, index, val)
             }
         } else if (Collection.isAssignableFrom(propertyType)) {
-            def index = Integer.parseInt(indexedPropertyReferenceDescriptor.index)
+            Integer index = parseIndex(indexedPropertyReferenceDescriptor.index)
+            if (index == null) {
+                return
+            }
             Collection collectionInstance = initializeCollection(obj, propName, propertyType)
             def indexedInstance = null
             if (!(Set.isAssignableFrom(propertyType))) {
@@ -391,6 +397,15 @@ class SimpleDataBinder implements DataBinder {
                     mapInstance[indexedPropertyReferenceDescriptor.index] = val
                 }
             }
+        }
+    }
+
+    protected Integer parseIndex(String index) {
+        try {
+            Integer.parseInt(index)
+        }
+        catch (NumberFormatException e) {
+            null
         }
     }
 

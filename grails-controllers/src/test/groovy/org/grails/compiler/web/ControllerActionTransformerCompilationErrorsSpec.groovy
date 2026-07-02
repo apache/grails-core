@@ -488,7 +488,7 @@ class ControllerActionTransformerCompilationErrorsSpec extends Specification {
             e.message.contains 'secureBindData requires an explicit allowedParams list. Use secureBindData(target, params, allowedParams).'
     }
 
-    void 'GAP: secureBindData does not reject an allowedParams list built from request data'() {
+    void 'Test secureBindData rejects an allowedParams list built from request data'() {
         when: 'A controller builds its allowedParams list from request-controlled data rather than a literal'
             gcl.parseClass('''
             class TaintedAllowedParamsController {
@@ -505,6 +505,116 @@ class ControllerActionTransformerCompilationErrorsSpec extends Specification {
             ''')
 
         then: 'the compiler should reject an allowedParams list that is not a compile-time literal, since callers can smuggle attacker-controlled field names past the framework validation otherwise'
+            MultipleCompilationErrorsException e = thrown()
+            e.message.contains 'secureBindData requires allowedParams to be a literal list of property names, or a reference to a constant list. A dynamically built list can be attacker-controlled and defeats the purpose of secureBindData.'
+    }
+
+    void 'Test secureBindData rejects an allowedParams list built from a method call'() {
+        when: 'A controller passes the result of a method call directly as allowedParams'
+            gcl.parseClass('''
+            class MethodCallAllowedParamsController {
+                def save() {
+                    def target = new Person()
+                    secureBindData(target, params, computeAllowedParams())
+                }
+
+                List computeAllowedParams() {
+                    ['name']
+                }
+            }
+
+            class Person {
+                String name
+            }
+            ''')
+
+        then:
+            MultipleCompilationErrorsException e = thrown()
+            e.message.contains 'secureBindData requires allowedParams to be a literal list of property names, or a reference to a constant list. A dynamically built list can be attacker-controlled and defeats the purpose of secureBindData.'
+    }
+
+    void 'Test secureBindData rejects an allowedParams list literal with a non-constant element'() {
+        when: 'A controller mixes a literal list with a variable-derived element'
+            gcl.parseClass('''
+            class MixedLiteralAllowedParamsController {
+                def save() {
+                    def target = new Person()
+                    def extraField = params.extraField
+                    secureBindData(target, params, ['name', extraField])
+                }
+            }
+
+            class Person {
+                String name
+            }
+            ''')
+
+        then:
+            MultipleCompilationErrorsException e = thrown()
+            e.message.contains 'secureBindData requires allowedParams to be a literal list of property names, or a reference to a constant list. A dynamically built list can be attacker-controlled and defeats the purpose of secureBindData.'
+    }
+
+    void 'Test secureBindData rejects an allowedParams variable reassigned from request data'() {
+        when: 'A controller reassigns an allowedParams variable after its initial literal declaration'
+            gcl.parseClass('''
+            class ReassignedAllowedParamsController {
+                def save() {
+                    def target = new Person()
+                    List allowedParams = ['name']
+                    allowedParams = params.fields?.tokenize(',')
+                    secureBindData(target, params, allowedParams)
+                }
+            }
+
+            class Person {
+                String name
+            }
+            ''')
+
+        then:
+            MultipleCompilationErrorsException e = thrown()
+            e.message.contains 'secureBindData requires allowedParams to be a literal list of property names, or a reference to a constant list. A dynamically built list can be attacker-controlled and defeats the purpose of secureBindData.'
+    }
+
+    void 'Test secureBindData accepts an allowedParams reference to a static final constant list'() {
+        when: 'A controller reuses a compile-time constant list of allowed fields across actions'
+            gcl.parseClass('''
+            class ConstantAllowedParamsController {
+                static final List ALLOWED_FIELDS = ['name']
+
+                def save() {
+                    def target = new Person()
+                    secureBindData(target, params, ALLOWED_FIELDS)
+                }
+            }
+
+            class Person {
+                String name
+            }
+            ''')
+
+        then:
+            noExceptionThrown()
+    }
+
+    void 'Test secureBindData rejects an allowedParams reference to a non-final field'() {
+        when: 'A controller declares a mutable field intended to hold the allowed field list'
+            gcl.parseClass('''
+            class MutableFieldAllowedParamsController {
+                static List allowedFields = ['name']
+
+                def save() {
+                    def target = new Person()
+                    secureBindData(target, params, allowedFields)
+                }
+            }
+
+            class Person {
+                String name
+            }
+            ''')
+
+        then:
             MultipleCompilationErrorsException e = thrown()
             e.message.contains 'secureBindData requires allowedParams to be a literal list of property names, or a reference to a constant list. A dynamically built list can be attacker-controlled and defeats the purpose of secureBindData.'
     }

@@ -412,15 +412,15 @@ public class DataBindingUtils {
 
     private static boolean isStructuredMapValueType(Class valueType) {
         Package valuePackage = valueType.getPackage();
-        return !valueType.isPrimitive()
-            && (valuePackage == null || !valuePackage.getName().startsWith("java."))
-            && !CharSequence.class.isAssignableFrom(valueType)
-            && !Number.class.isAssignableFrom(valueType)
-            && !Boolean.class.isAssignableFrom(valueType)
-            && !Enum.class.isAssignableFrom(valueType)
-            && !Map.class.isAssignableFrom(valueType)
-            && !Collection.class.isAssignableFrom(valueType)
-            && !Object.class.equals(valueType);
+        return !valueType.isPrimitive() &&
+            (valuePackage == null || !valuePackage.getName().startsWith("java.")) &&
+            !CharSequence.class.isAssignableFrom(valueType) &&
+            !Number.class.isAssignableFrom(valueType) &&
+            !Boolean.class.isAssignableFrom(valueType) &&
+            !Enum.class.isAssignableFrom(valueType) &&
+            !Map.class.isAssignableFrom(valueType) &&
+            !Collection.class.isAssignableFrom(valueType) &&
+            !Object.class.equals(valueType);
     }
 
     private static Class getMapValueType(Object target, Class targetType, String propertyName) {
@@ -1113,9 +1113,14 @@ public class DataBindingUtils {
 
     private static Object getIndexedValue(Object indexedProperty, String index) {
         if (indexedProperty instanceof List) {
-            return ((List) indexedProperty).get(Integer.parseInt(index));
+            List list = (List) indexedProperty;
+            Integer parsedIndex = parseIndex(index);
+            return parsedIndex != null && parsedIndex >= 0 && parsedIndex < list.size() ? list.get(parsedIndex) : null;
         }
-        return ((Map) indexedProperty).get(index);
+        if (indexedProperty instanceof Map) {
+            return ((Map) indexedProperty).get(index);
+        }
+        return null;
     }
 
     private static void setPropertyValueToNull(Object object, String propertyName) {
@@ -1130,10 +1135,23 @@ public class DataBindingUtils {
         Object indexedProperty = mc.getProperty(object, propertyName.substring(0, bracket));
         String index = propertyName.substring(bracket + 1, propertyName.indexOf(']', bracket));
         if (indexedProperty instanceof List) {
-            ((List) indexedProperty).set(Integer.parseInt(index), null);
+            List list = (List) indexedProperty;
+            Integer parsedIndex = parseIndex(index);
+            if (parsedIndex != null && parsedIndex >= 0 && parsedIndex < list.size()) {
+                list.set(parsedIndex, null);
+            }
         }
-        else {
+        else if (indexedProperty instanceof Map) {
             ((Map) indexedProperty).put(index, null);
+        }
+    }
+
+    private static Integer parseIndex(String index) {
+        try {
+            return Integer.valueOf(index);
+        }
+        catch (NumberFormatException e) {
+            return null;
         }
     }
 

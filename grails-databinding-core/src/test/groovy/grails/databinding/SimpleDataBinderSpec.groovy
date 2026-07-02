@@ -559,6 +559,32 @@ class SimpleDataBinderSpec extends Specification {
         widget.names[2] == 'two'
     }
 
+    void 'Test binding a non-numeric indexed property to a List does not throw'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def widget = new Widget(names: ['existing'])
+
+        when:
+        binder.bind widget, new SimpleMapDataBindingSource(['names[abc]': 'hacked'])
+
+        then:
+        noExceptionThrown()
+        widget.names == ['existing']
+    }
+
+    void 'Test binding a non-numeric indexed property to an array does not throw'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def widget = new Widget()
+
+        when:
+        binder.bind widget, new SimpleMapDataBindingSource(['integers[abc]': 42])
+
+        then:
+        noExceptionThrown()
+        widget.integers == null
+    }
+
     void 'Test @BindUsing on a List<Integer>'() {
         given:
         def binder = new SimpleDataBinder()
