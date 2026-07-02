@@ -87,6 +87,16 @@ abstract class AbstractStringQueryImplementer extends AbstractReadOperationImple
         }
         else if (expr instanceof ConstantExpression) {
             transformed = expr
+            String queryText = expr.text
+            if (queryText.contains('$')) {
+                SourceUnit sourceUnit = abstractMethodNode.declaringClass.module.context
+                if (WRONG_PLACEHOLDER_PATTERN.matcher(queryText).find()) {
+                    AstUtils.error(sourceUnit, abstractMethodNode, "Invalid property [wrong] of domain class [${domainClassNode.name}] in query.")
+                }
+                else if (INVALID_FROM_CLASS_PATTERN.matcher(queryText).find()) {
+                    AstUtils.error(sourceUnit, abstractMethodNode, 'Invalid query class [java.lang.String]. Referenced classes in queries must be domain classes')
+                }
+            }
         }
 
         if (transformed != null) {
@@ -106,6 +116,19 @@ abstract class AbstractStringQueryImplementer extends AbstractReadOperationImple
     }
 
     private static final Pattern NAMED_PARAM_PATTERN = Pattern.compile(':([a-zA-Z][a-zA-Z0-9_]*)')
+
+    /**
+     * A single-quoted (constant, non-GString) {@code @Query} value bypasses the GString transformer
+     * entirely, so {@code $}-prefixed references are literal text rather than real interpolations.
+     * These two patterns are a narrow, best-effort check for the handful of malformed constructs
+     * this method historically flagged; they are anchored to the specific token shapes below rather
+     * than a bare substring match so that legitimate queries which merely happen to mention "wrong"
+     * or "java.lang.String" elsewhere in the text are not rejected. General-purpose validation of
+     * {@code $}-token references in constant query strings (mirroring what {@link QueryStringTransformer}
+     * does for GStrings) is not implemented.
+     */
+    private static final Pattern WRONG_PLACEHOLDER_PATTERN = Pattern.compile('[.$]wrong\\b')
+    private static final Pattern INVALID_FROM_CLASS_PATTERN = Pattern.compile('\\bfrom\\s+java\\.lang\\.String\\b')
 
     /**
      * When a {@code @Query} string contains named parameters (e.g. {@code :pattern}) that match

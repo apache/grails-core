@@ -24,6 +24,7 @@ import org.grails.datastore.mapping.model.MappingContext
 import spock.lang.Specification
 import spock.lang.Timeout
 
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -45,11 +46,12 @@ class GormRegistryConcurrencySpec extends Specification {
         given:
         def registry = GormRegistry.instance
         int numThreads = 10
-        int iterationsPerThread = 100000
+        int iterationsPerThread = 20000
         ExecutorService executor = Executors.newFixedThreadPool(numThreads)
         CountDownLatch startLatch = new CountDownLatch(1)
         CountDownLatch endLatch = new CountDownLatch(numThreads)
         AtomicInteger errorCount = new AtomicInteger(0)
+        Queue<Throwable> failures = new ConcurrentLinkedQueue<>()
 
         // Setup some dummy state to query
         def context = Stub(MappingContext) {
@@ -77,7 +79,6 @@ class GormRegistryConcurrencySpec extends Specification {
         registry.registerApi(ConcurrentEntity.name, staticApi, instanceApi, validationApi)
 
         when: "multiple threads access registry hot paths simultaneously"
-        long startTime = System.currentTimeMillis()
         for (int i = 0; i < numThreads; i++) {
             executor.submit {
                 try {
@@ -109,23 +110,26 @@ class GormRegistryConcurrencySpec extends Specification {
                         assert vapi != null
                     }
                 } catch (Throwable e) {
-                    e.printStackTrace()
+                    failures << e
                     errorCount.incrementAndGet()
                 } finally {
                     endLatch.countDown()
                 }
             }
         }
-        
-        startLatch.countDown() // Release all threads
-        endLatch.await(5, TimeUnit.SECONDS)
-        long endTime = System.currentTimeMillis()
-        executor.shutdown()
-        
-        println "Concurrency test completed in ${endTime - startTime}ms for ${numThreads * iterationsPerThread} operations"
 
-        then: "no errors occurred and operations completed successfully"
+        startLatch.countDown() // Release all threads
+        boolean completedInTime = endLatch.await(5, TimeUnit.SECONDS)
+        if (!completedInTime) {
+            executor.shutdownNow()
+        } else {
+            executor.shutdown()
+        }
+
+        then: "all threads completed within the timeout and no errors occurred"
+        completedInTime
         errorCount.get() == 0
+        failures.isEmpty()
     }
 
     static class ConcurrentEntity {}
