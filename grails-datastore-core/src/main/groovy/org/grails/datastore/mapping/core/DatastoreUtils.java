@@ -417,8 +417,12 @@ public abstract class DatastoreUtils {
      * @return the session (for method chaining)
      */
     public static Session bindSession(final Session session) {
-        if (!TransactionSynchronizationManager.hasResource(session.getDatastore())) {
+        SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(session.getDatastore());
+        if (sessionHolder == null) {
             TransactionSynchronizationManager.bindResource(session.getDatastore(), new SessionHolder(session));
+        }
+        else {
+            sessionHolder.addSession(session);
         }
         return session;
     }
@@ -429,8 +433,12 @@ public abstract class DatastoreUtils {
      * @return the session (for method chaining)
      */
     public static Session bindSession(final Session session, Object creator) {
-        if (!TransactionSynchronizationManager.hasResource(session.getDatastore())) {
+        SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(session.getDatastore());
+        if (sessionHolder == null) {
             TransactionSynchronizationManager.bindResource(session.getDatastore(), new SessionHolder(session, creator));
+        }
+        else {
+            sessionHolder.addSession(session);
         }
         return session;
     }
