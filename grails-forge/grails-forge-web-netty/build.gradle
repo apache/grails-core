@@ -19,6 +19,7 @@
 import org.gradle.api.tasks.JavaExec
 
 plugins {
+    id 'groovy'
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'io.micronaut.application' version "$micronautApplicationPluginVersion"
@@ -50,8 +51,14 @@ dependencies {
 
     testImplementation 'io.micronaut:micronaut-http-client'
     testImplementation 'io.micronaut.test:micronaut-test-spock'
+    testImplementation 'org.apache.groovy:groovy'
+    testImplementation "org.spockframework:spock-core", {
+        exclude group: 'org.apache.groovy', module: 'groovy-all'
+    }
+    testImplementation 'org.apache.groovy:groovy-test'
 
     testCompileOnly 'io.micronaut:micronaut-inject-groovy'
+    testRuntimeOnly "org.objenesis:objenesis:$objenesisVersion"
 }
 tasks.named('test', Test) {
     useJUnitPlatform()

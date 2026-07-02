@@ -6,6 +6,24 @@ datasources:
     #password: 'secret'
     driver-class-name: org.postgresql.Driver
     dialect: POSTGRES
+grails:
+  forge:
+    analytics:
+      caller-subject: ${GRAILS_FORGE_ANALYTICS_CALLER_SUBJECT}
+micronaut:
+  security:
+    authentication: bearer
+    redirect:
+      enabled: false
+    token:
+      jwt:
+        claims-validators:
+          issuer: https://accounts.google.com
+          audience: ${GRAILS_FORGE_ANALYTICS_AUDIENCE}
+        signatures:
+          jwks:
+            google:
+              url: https://www.googleapis.com/oauth2/v3/certs
 ---
 flyway:
   enabled: enabled

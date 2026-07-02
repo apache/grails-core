@@ -26,6 +26,8 @@ import io.micronaut.http.annotation.Get;
 import io.micronaut.http.annotation.Post;
 import io.micronaut.scheduling.TaskExecutors;
 import io.micronaut.scheduling.annotation.ExecuteOn;
+import io.micronaut.security.annotation.Secured;
+import io.micronaut.security.rules.SecurityRule;
 import org.grails.forge.analytics.Generated;
 
 import jakarta.transaction.Transactional;
@@ -47,26 +49,31 @@ public class AnalyticsController {
     }
 
     @Get("/top/features")
+    @Secured(SecurityRule.IS_ANONYMOUS)
     List<TotalDTO> topFeatures() {
         return featureRepository.topFeatures();
     }
 
     @Get("/top/jdks")
+    @Secured(SecurityRule.IS_ANONYMOUS)
     List<TotalDTO> topJdks() {
         return featureRepository.topJdkVersion();
     }
 
     @Get("/top/buildTools")
+    @Secured(SecurityRule.IS_ANONYMOUS)
     List<TotalDTO> topBuilds() {
         return featureRepository.topBuildTools();
     }
 
     @Get("/top/gorm")
+    @Secured(SecurityRule.IS_ANONYMOUS)
     List<TotalDTO> topGorm() {
         return featureRepository.topGorm();
     }
 
     @Get("/top/reloading")
+    @Secured(SecurityRule.IS_ANONYMOUS)
     List<TotalDTO> topReloading() {
         return featureRepository.topReloading();
     }
@@ -77,6 +84,7 @@ public class AnalyticsController {
      * @return A future
      */
     @Post("/report")
+    @Secured(SecurityRule.IS_AUTHENTICATED)
     @Transactional
     @ExecuteOn(TaskExecutors.IO)
     HttpStatus applicationGenerated(@NonNull @Body Generated generated) {

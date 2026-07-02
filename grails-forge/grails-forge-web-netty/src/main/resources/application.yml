@@ -29,6 +29,10 @@ micronaut:
         url: https://api.github.com
 grails:
   forge:
+      security:
+        hsts:
+          enabled: ${GRAILS_FORGE_HSTS_ENABLED:true}
+          header-value: ${GRAILS_FORGE_HSTS_HEADER:max-age=31536000; includeSubDomains; preload}
       redirect-url: ${GITHUB_REDIRECT_URL:'https://start.grails.org/'}
       github:
         client-id: ${GITHUB_OAUTH_APP_CLIENT_ID}
@@ -41,6 +45,9 @@ gcp:
       auth:
         patterns:
           - /analytics/**
+        services:
+          analytics:
+            audience: ${GRAILS_FORGE_ANALYTICS_AUDIENCE}
 jackson:
   mapper:
     ACCEPT_CASE_INSENSITIVE_ENUMS: true

@@ -201,6 +201,7 @@ Create two databases `grailsforge-production` and `grailsforge-snapshot`
 | `MICRONAUT_ENVIRONMENTS`                         | `gcp`                                                                                                                                  |
 | `MICRONAUT_HTTP_SERVICES_ANALYTICS_READ_TIMEOUT` | `20s`                                                                                                                                  |
 | `MICRONAUT_HTTP_SERVICES_ANALYTICS_URL`          | URL of cloud run `grailsforge-analytics-latest`                                                                                        |
+| `GRAILS_FORGE_ANALYTICS_AUDIENCE`                | URL of cloud run `grailsforge-analytics-latest`                                                                                        |
 | `GITHUB_OAUTH_APP_CLIENT_ID`                     | The Client ID shared after creating GitHub OAuth App                                                                                   |
 | `GITHUB_OAUTH_APP_CLIENT_SECRET`                 | The Client secret shared after creating the GitHub OAuth app                                                                           |
 | `GITHUB_USER_AGENT`                              | URL of the grails-forge-ui static website. For example, `https://start.grails.org/`. The default value is `https://start.grails.org/`. |
@@ -214,6 +215,8 @@ Create two databases `grailsforge-production` and `grailsforge-snapshot`
 | `DB_NAME`                      | `grailsforge-production`                         |
 | `MICRONAUT_ENV_DEDUCTION`      | `false`                                          |
 | `MICRONAUT_ENVIRONMENTS`       | `gcp`                                            |
+| `GRAILS_FORGE_ANALYTICS_AUDIENCE` | URL of cloud run `grailsforge-analytics-latest` |
+| `GRAILS_FORGE_ANALYTICS_CALLER_SUBJECT` | Unique ID of the service account used by `grailsforge-latest` |
 | `DATASOURCES_DEFAULT_USERNAME` | `***`                                            |
 | `DATASOURCES_DEFAULT_PASSWORD` | `***`                                            |
 | `DATASOURCES_DEFAULT_URL`      | `jdbc:postgresql:///grailsforge-production`      |
@@ -229,6 +232,7 @@ Create two databases `grailsforge-production` and `grailsforge-snapshot`
 | `MICRONAUT_ENVIRONMENTS`                         | `gcp`                                                                                                                                                  |
 | `MICRONAUT_HTTP_SERVICES_ANALYTICS_READ_TIMEOUT` | `20s`                                                                                                                                                  |
 | `MICRONAUT_HTTP_SERVICES_ANALYTICS_URL`          | URL of cloud run `grailsforge-analytics-snapshot`                                                                                                      |
+| `GRAILS_FORGE_ANALYTICS_AUDIENCE`                | URL of cloud run `grailsforge-analytics-snapshot`                                                                                                      |
 | `GITHUB_OAUTH_APP_CLIENT_ID`                     | The Client ID shared after creating GitHub OAuth App                                                                                                   |
 | `GITHUB_OAUTH_APP_CLIENT_SECRET`                 | The Client secret shared after creating the GitHub OAuth app                                                                                           |
 | `GITHUB_USER_AGENT`                              | URL of the grails-forge-ui static website. The default value is `https://start.grails.org/`. |
@@ -243,8 +247,8 @@ Create two databases `grailsforge-production` and `grailsforge-snapshot`
 | `DB_NAME`                      | `grailsforge-snapshot`                           |
 | `MICRONAUT_ENV_DEDUCTION`      | `false`                                          |
 | `MICRONAUT_ENVIRONMENTS`       | `gcp`                                            |
+| `GRAILS_FORGE_ANALYTICS_AUDIENCE` | URL of cloud run `grailsforge-analytics-snapshot` |
+| `GRAILS_FORGE_ANALYTICS_CALLER_SUBJECT` | Unique ID of the service account used by `grailsforge-snapshot` |
 | `DATASOURCES_DEFAULT_USERNAME` | `***`                                            |
 | `DATASOURCES_DEFAULT_PASSWORD` | `***`                                            |
 | `DATASOURCES_DEFAULT_URL`      | `jdbc:postgresql:///grailsforge-snapshot`        |
-
-

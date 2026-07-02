@@ -18,6 +18,7 @@
  */
 
 plugins {
+    id 'groovy'
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'io.micronaut.application' version "$micronautApplicationPluginVersion"
@@ -37,6 +38,7 @@ dependencies {
     implementation "com.google.cloud.sql:postgres-socket-factory:$postgresSocketFactoryVersion"
     implementation 'io.micronaut.data:micronaut-data-jdbc'
     implementation 'io.micronaut.flyway:micronaut-flyway'
+    implementation 'io.micronaut.security:micronaut-security-jwt'
     implementation 'io.micronaut.sql:micronaut-jdbc-hikari'
     implementation 'org.postgresql:postgresql'
 
@@ -54,7 +56,15 @@ dependencies {
 
     testImplementation 'ch.qos.logback:logback-classic'
     testImplementation 'io.micronaut:micronaut-http-client'
+    testImplementation 'io.micronaut.test:micronaut-test-spock'
+    testImplementation 'org.apache.groovy:groovy'
+    testImplementation "org.spockframework:spock-core", {
+        exclude group: 'org.apache.groovy', module: 'groovy-all'
+    }
+    testImplementation 'org.apache.groovy:groovy-test'
     testImplementation 'org.testcontainers:postgresql'
+    testRuntimeOnly 'net.bytebuddy:byte-buddy'
+    testRuntimeOnly "org.objenesis:objenesis:$objenesisVersion"
 }
 application {
     mainClass = 'org.grails.forge.analytics.postgres.Main'
