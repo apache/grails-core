@@ -333,7 +333,7 @@ class SimpleDataBinder implements DataBinder {
         }
 
         if (propertyType.isArray()) {
-            Integer index = parseIndex(indexedPropertyReferenceDescriptor.index)
+            def index = parseIndex(indexedPropertyReferenceDescriptor.index)
             if (index == null) {
                 return
             }
@@ -342,7 +342,7 @@ class SimpleDataBinder implements DataBinder {
                 addElementToArrayAt(array, index, val)
             }
         } else if (Collection.isAssignableFrom(propertyType)) {
-            Integer index = parseIndex(indexedPropertyReferenceDescriptor.index)
+            def index = parseIndex(indexedPropertyReferenceDescriptor.index)
             if (index == null) {
                 return
             }
