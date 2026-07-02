@@ -125,6 +125,7 @@ class RenderMethodTests extends Specification implements ControllerUnitTest<Rend
         controller.renderObject()
 
         then: 'the object string value is written to the response'
+        response.contentType.startsWith('text/plain')
         response.contentAsString == 'bar'
     }
 
@@ -149,6 +150,7 @@ class RenderMethodTests extends Specification implements ControllerUnitTest<Rend
         controller.renderMap()
 
         then: 'the response contains the map representation'
+        response.contentType.startsWith('text/plain')
         response.contentAsString == "['a':1, 'b':2]"
     }
 

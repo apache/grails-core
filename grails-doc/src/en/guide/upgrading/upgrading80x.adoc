@@ -1304,3 +1304,23 @@ grails:
                         - Presto
                         - Trident
 ----
+
+==== 30. Render Defaults Harden Unsafe Content
+
+Grails 8 hardens controller `render(...)` defaults for responses that could otherwise be interpreted as browser-rendered HTML.
+Rendering an arbitrary object with `render(object)`, or rendering a map that does not contain a recognized render argument, now writes the Groovy `inspect()` value as `text/plain` by default instead of `text/html`.
+
+File renders now set `Content-Disposition: attachment` by default.
+If a `fileName` is supplied, unsafe filename characters are escaped before the value is written to the `Content-Disposition` header.
+
+Set an explicit `contentType` when a response should use another media type, and set `inline: true` when a file response should not receive the default attachment header.
+The hardened defaults only apply when no content type has been set, so assigning `response.contentType` before calling `render(object)` also overrides them.
+If you need a custom disposition, set the `Content-Disposition` response header explicitly before rendering the file; Grails preserves an existing header.
+
+For example:
+
+[source,groovy]
+----
+render(text: myObject.inspect(), contentType: 'text/html')
+render(file: new File(absolutePath), inline: true)
+----
