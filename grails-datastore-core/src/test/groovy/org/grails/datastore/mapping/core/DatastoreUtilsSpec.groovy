@@ -24,8 +24,11 @@ import java.util.concurrent.Executors
 import org.springframework.core.env.MapPropertySource
 import org.springframework.core.env.PropertyResolver
 import org.springframework.core.env.StandardEnvironment
+import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import spock.lang.Specification
+
+import org.grails.datastore.mapping.transactions.SessionHolder
 
 /**
  * Created by graemerocher on 01/03/2017.
@@ -88,5 +91,50 @@ class DatastoreUtilsSpec extends Specification {
 
         cleanup:
         threadLocal.remove()
+    }
+
+    void "bindSession adds the session to the existing holder instead of dropping it when a session is already bound"() {
+        given:
+        Datastore datastore = Mock()
+        Session first = Mock()
+        Session second = Mock()
+        first.getDatastore() >> datastore
+        second.getDatastore() >> datastore
+
+        when:
+        DatastoreUtils.bindSession(first)
+        DatastoreUtils.bindSession(second)
+        SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.getResource(datastore)
+
+        then:
+        holder.containsSession(first)
+        holder.containsSession(second)
+        holder.getSession() == second
+
+        cleanup:
+        TransactionSynchronizationManager.unbindResourceIfPossible(datastore)
+    }
+
+    void "bindSession with a creator preserves the original holder's creator when adding to an existing holder"() {
+        given:
+        Datastore datastore = Mock()
+        Session first = Mock()
+        Session second = Mock()
+        first.getDatastore() >> datastore
+        second.getDatastore() >> datastore
+        Object originalCreator = new Object()
+
+        when:
+        DatastoreUtils.bindSession(first, originalCreator)
+        DatastoreUtils.bindSession(second, new Object())
+        SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.getResource(datastore)
+
+        then:
+        holder.containsSession(first)
+        holder.containsSession(second)
+        holder.creator == originalCreator
+
+        cleanup:
+        TransactionSynchronizationManager.unbindResourceIfPossible(datastore)
     }
 }
