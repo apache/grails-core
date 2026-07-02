@@ -487,4 +487,25 @@ class ControllerActionTransformerCompilationErrorsSpec extends Specification {
             MultipleCompilationErrorsException e = thrown()
             e.message.contains 'secureBindData requires an explicit allowedParams list. Use secureBindData(target, params, allowedParams).'
     }
+
+    void 'GAP: secureBindData does not reject an allowedParams list built from request data'() {
+        when: 'A controller builds its allowedParams list from request-controlled data rather than a literal'
+            gcl.parseClass('''
+            class TaintedAllowedParamsController {
+                def save() {
+                    def target = new Person()
+                    List allowedParams = params.fields?.tokenize(',')
+                    secureBindData(target, params, allowedParams)
+                }
+            }
+
+            class Person {
+                String name
+            }
+            ''')
+
+        then: 'the compiler should reject an allowedParams list that is not a compile-time literal, since callers can smuggle attacker-controlled field names past the framework validation otherwise'
+            MultipleCompilationErrorsException e = thrown()
+            e.message.contains 'secureBindData requires allowedParams to be a literal list of property names, or a reference to a constant list. A dynamically built list can be attacker-controlled and defeats the purpose of secureBindData.'
+    }
 }

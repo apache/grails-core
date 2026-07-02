@@ -87,6 +87,19 @@ class BindDataMethodTests extends Specification implements ControllerUnitTest<Bi
         target.email == 'lee@mail.com'
     }
 
+    void 'GAP: bindData does not crash on a non-numeric indexed parameter for a List property'() {
+        when: 'a crafted request uses a non-numeric bracket index against a plain bindData call (no secureBindData involved)'
+        params.'members[abc].name' = 'Hacked'
+        def model = controller.bindWithNonNumericIndex()
+        def target = model.target
+
+        then: 'the malformed index should be ignored rather than blowing up the whole binding result'
+        model.bindingResult == null || !model.bindingResult.hasErrors()
+        target.members.size() == 1
+        target.members[0].name == 'Existing'
+        target.members[0].role == 'Existing'
+    }
+
     void 'Test bindData With Disallowed And GrailsParameterMap'() {
         when:
         params.name = 'Marc Palmer'
@@ -426,6 +439,32 @@ class BindDataMethodTests extends Specification implements ControllerUnitTest<Bi
         model.bindingResult == null || !model.bindingResult.hasErrors()
     }
 
+    void 'GAP: secureBindData nullMissing does not crash on a non-numeric indexed parameter root'() {
+        when: 'a crafted request uses a non-numeric bracket index against a List-typed allowed property'
+        params.'members[abc].role' = 'Lead'
+        def model = controller.secureBindWithIndexedParamsAndNullMissing()
+        def target = model.target
+
+        then: 'the malformed index should be ignored rather than blowing up the whole binding result'
+        model.bindingResult == null || !model.bindingResult.hasErrors()
+        target.members.size() == 1
+        target.members[0].name == 'Existing'
+        target.members[0].role == 'Existing'
+    }
+
+    void 'GAP: secureBindData nullMissing does not crash on an out-of-range indexed parameter root'() {
+        when: 'a crafted request uses an indexed root beyond the auto-grow limit, which the binder silently ignores but nullMissing still tries to null out'
+        params.'members[300].name' = 'Alice'
+        def model = controller.secureBindWithIndexedParamsAndNullMissing()
+        def target = model.target
+
+        then: 'the out-of-range index should be ignored rather than blowing up the whole binding result'
+        model.bindingResult == null || !model.bindingResult.hasErrors()
+        target.members.size() == 1
+        target.members[0].name == 'Existing'
+        target.members[0].role == 'Existing'
+    }
+
     void 'Test secureBindData nullMissing supports JSON collection roots'() {
         given:
         request.method = 'POST'
@@ -487,6 +526,12 @@ class BindingController {
         def target = new CommandObject()
         bindData target, params, [exclude:['email']]
         [target: target]
+    }
+
+    def bindWithNonNumericIndex() {
+        def target = new CommandObject(members: [new Member(name: 'Existing', role: 'Existing')])
+        def bindingResult = bindData(target, params)
+        [target: target, bindingResult: bindingResult]
     }
 
     def bindWithPrefixFilterAndDisallowed() {
