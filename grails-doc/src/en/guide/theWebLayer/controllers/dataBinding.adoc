@@ -128,13 +128,15 @@ assert band.albums[1].numberOfTracks == 7
 
 That code would work in the same way if `albums` were an array instead of a `List`.
 
+NOTE: When binding to an array, a `Collection`, or a many-ended domain association by index, the value inside square brackets must be a non-negative integer. Entries such as `albums[-1]` or `albums[bogus]` are rejected as binding errors. The error field name includes the offending indexed segment, that binding path is skipped, and the target array, collection, or association is not changed by that entry. Map keys are not interpreted as numeric indexes, so keys such as `players[guitar]` remain valid map keys.
+
 Note that when binding to a `Set` the structure of the `Map` being bound to the `Set` is the same as that of a `Map` being bound to a `List` but since a `Set` is unordered, the indexes don't necessarily correspond to the order of elements in the `Set`.  In the code example above, if `albums` were a `Set` instead of a `List`, the `bindingMap` could look exactly the same but 'Foxtrot' might be the first album in the `Set` or it might be the second.  When updating existing elements in a `Set` the `Map` being assigned to the `Set` must have `id` elements in it which represent the element in the `Set` being updated, as in the following example:
 
 [source,groovy]
 ----
 /*
  * The value of the indexes 0 and 1 in albums[0] and albums[1] are arbitrary
- * values that can be anything as long as they are unique within the Map.
+ * non-negative integers that only need to be unique within the Map.
  * They do not correspond to the order of elements in albums because albums
  * is a Set.
  */
@@ -516,7 +518,7 @@ class AccountingController {
 ==== Data binding and type conversion errors
 
 
-Sometimes when performing data binding it is not possible to convert a particular String into a particular target type. This results in a type conversion error. Grails will retain type conversion errors inside the link:{domainClassesRef}errors.html[errors] property of a Grails domain class. For example:
+Sometimes when performing data binding it is not possible to convert a particular String into a particular target type. This results in a type conversion error. Grails will retain type conversion errors inside the link:{domainClassesRef}errors.html[errors] property of a Grails domain class. Invalid indexed array, collection, and many-ended association binding paths, such as negative or non-integer indexes, are also retained as binding errors, and the field name identifies the indexed path that was rejected. For example:
 
 [source,groovy]
 ----
