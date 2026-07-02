@@ -825,7 +825,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
     }
 
     /**
-     * Creates an "in\" Criterion based on the specified property name and list of values.
+     * Creates an "in" Criterion based on the specified property name and list of values.
      *
      * @param propertyName The property name
      * @param values The values
@@ -840,7 +840,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
     }
 
     /**
-     * Creates an "in\" Criterion based on the specified property name and list of values.
+     * Creates an "in" Criterion based on the specified property name and list of values.
      *
      * @param propertyName The property name
      * @param values The values
@@ -853,7 +853,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
     }
 
     /**
-     * Creates an "in\" Criterion based on the specified property name and list of values.
+     * Creates an "in" Criterion based on the specified property name and list of values.
      *
      * @param propertyName The property name
      * @param values The values
@@ -865,7 +865,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
     }
 
     /**
-     * Creates an "in\" Criterion based on the specified property name and list of values.
+     * Creates an "in" Criterion based on the specified property name and list of values.
      *
      * @param propertyName The property name
      * @param values The values
@@ -1039,7 +1039,7 @@ public abstract class AbstractCriteriaBuilder extends GroovyObjectSupport implem
      * Orders by the specified property name and direction
      *
      * @param propertyName The property name to order by
-     * @param direction Either "asc\" for ascending or \"desc\" for descending
+     * @param direction Either "asc" for ascending or "desc" for descending
      *
      * @return A Order instance
      */

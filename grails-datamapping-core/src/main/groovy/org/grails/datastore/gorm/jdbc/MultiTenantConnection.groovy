@@ -45,6 +45,12 @@ class MultiTenantConnection implements Connection {
 
     @Override
     void close() throws SQLException {
-        target.close()
+        try {
+            if (!isClosed()) {
+                schemaHandler.useDefaultSchema(this)
+            }
+        } finally {
+            target.close()
+        }
     }
 }
