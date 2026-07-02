@@ -15,9 +15,9 @@
 package org.grails.datastore.mapping.core;
 
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import groovy.lang.Closure;
 import groovy.lang.GroovySystem;
@@ -34,6 +34,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.PayloadApplicationEvent;
+import org.springframework.context.event.GenericApplicationListenerAdapter;
+import org.springframework.core.ResolvableType;
 import org.springframework.core.convert.converter.ConverterRegistry;
 import org.springframework.core.env.PropertyResolver;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -63,7 +65,7 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
     protected static final Logger LOG = LoggerFactory.getLogger(AbstractDatastore.class);
 
     private static final class DefaultApplicationEventPublisher implements ApplicationEventPublisher {
-        private final List<ApplicationListener> listeners = new ArrayList<>();
+        private final List<ApplicationListener> listeners = new CopyOnWriteArrayList<>();
 
         @Override
         public void publishEvent(ApplicationEvent event) {
@@ -72,11 +74,14 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
 
         @Override
         public void publishEvent(Object event) {
-            for (ApplicationListener listener : new ArrayList<>(listeners)) {
-                if (event instanceof ApplicationEvent) {
-                    listener.onApplicationEvent((ApplicationEvent) event);
-                } else {
-                    listener.onApplicationEvent(new PayloadApplicationEvent(this, event));
+            ApplicationEvent applicationEvent = (event instanceof ApplicationEvent) ?
+                    (ApplicationEvent) event :
+                    new PayloadApplicationEvent(this, event);
+            ResolvableType eventType = ResolvableType.forInstance(applicationEvent);
+            for (ApplicationListener listener : listeners) {
+                GenericApplicationListenerAdapter adapter = new GenericApplicationListenerAdapter(listener);
+                if (adapter.supportsEventType(eventType)) {
+                    adapter.onApplicationEvent(applicationEvent);
                 }
             }
         }

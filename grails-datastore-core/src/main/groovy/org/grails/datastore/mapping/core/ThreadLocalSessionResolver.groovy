@@ -19,8 +19,6 @@
 
 package org.grails.datastore.mapping.core
 
-import java.util.concurrent.ConcurrentHashMap
-
 import groovy.transform.CompileStatic
 
 /**
@@ -33,7 +31,7 @@ import groovy.transform.CompileStatic
 class ThreadLocalSessionResolver<S extends Session> implements SessionResolver<S> {
 
     private final ThreadLocal<S> currentSession = new ThreadLocal<>()
-    private final Map<String, S> qualifiedSessions = new ConcurrentHashMap<>()
+    private final ThreadLocal<Map<String, S>> qualifiedSessions = ThreadLocal.<Map<String, S>> withInitial { new HashMap<String, S>() }
 
     @Override
     S resolve() {
@@ -42,7 +40,7 @@ class ThreadLocalSessionResolver<S extends Session> implements SessionResolver<S
 
     @Override
     S resolve(String qualifier) {
-        return qualifiedSessions.get(qualifier)
+        return qualifiedSessions.get().get(qualifier)
     }
 
     @Override
@@ -52,15 +50,16 @@ class ThreadLocalSessionResolver<S extends Session> implements SessionResolver<S
     }
 
     void bind(String qualifier, S session) {
-        qualifiedSessions.put(qualifier, session)
+        qualifiedSessions.get().put(qualifier, session)
     }
 
     @Override
     void unbind() {
         currentSession.remove()
+        qualifiedSessions.remove()
     }
-    
+
     void unbind(String qualifier) {
-        qualifiedSessions.remove(qualifier)
+        qualifiedSessions.get().remove(qualifier)
     }
 }
