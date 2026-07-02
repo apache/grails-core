@@ -279,7 +279,7 @@ public class DataBindingUtils {
             bindingResult.addError(new ObjectError(bindingResult.getObjectName(), codes, null, defaultMessage));
         } catch (Exception e) {
             bindingResult = new BeanPropertyBindingResult(object, object.getClass().getName());
-            bindingResult.addError(new ObjectError(bindingResult.getObjectName(), e.getMessage()));
+            bindingResult.addError(new ObjectError(bindingResult.getObjectName(), resolveBindingErrorMessage(e)));
         }
 
         return processBindingResult(entity, object, bindingResult);
@@ -1155,6 +1155,11 @@ public class DataBindingUtils {
         }
     }
 
+    private static String resolveBindingErrorMessage(Exception e) {
+        String message = e.getMessage();
+        return message != null ? message : e.getClass().getName();
+    }
+
     /**
      * Binds the given source object to the given target object performing type conversion if necessary
      *
@@ -1188,7 +1193,7 @@ public class DataBindingUtils {
             bindingResult.addError(new ObjectError(bindingResult.getObjectName(), codes, null, defaultMessage));
         } catch (Exception e) {
             bindingResult = new BeanPropertyBindingResult(object, object.getClass().getName());
-            bindingResult.addError(new ObjectError(bindingResult.getObjectName(), e.getMessage()));
+            bindingResult.addError(new ObjectError(bindingResult.getObjectName(), resolveBindingErrorMessage(e)));
         }
 
         return processBindingResult(entity, object, bindingResult);
