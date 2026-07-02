@@ -6,28 +6,29 @@ Licensed to the Apache Software Foundation (ASF) under one or more contributor l
 
 # Grails Agent Skills
 
-The canonical Grails agent skills live in this directory. Skills that are only useful while working in the Grails framework repository stay here and are not published through SkillsJars.
+The canonical Grails agent skills live in this directory. Skills that are only useful while working in the Grails framework repository stay here and are not published.
 
-The repository root `skills/` directory contains normal skill directories for app-facing skills that are useful when building or upgrading end-user Grails applications. Each published directory contains only a `SKILL.md` symbolic link back to the canonical source in `.agents/skills`, so [SkillsJars](https://www.skillsjars.com/) can discover and package the skills without duplicating content. SkillsJars deploys from public GitHub repositories by scanning `skills/**/SKILL.md` and then publishes one Maven Central artifact per discovered skill under `com.skillsjars`.
+App-facing skills that are useful when building or upgrading end-user Grails applications are published to Maven Central as individual artifacts. Each published skill has its own Gradle project under `grails-skills/`. The project packages the skill's `SKILL.md` into a jar via a symlink back to the canonical source in this directory, so there is no content duplication.
 
-| Published skill | Source skill | Use |
-|-----------------|--------------|-----|
-| `grails-developer` | `.agents/skills/grails-developer` | Building current Grails web applications, REST APIs, GORM models, controllers, services, views, plugins, and tests |
-| `grails-8-upgrade` | `.agents/skills/grails-8-upgrade` | Upgrading Grails applications from Grails 7.x to Grails 8 |
+| Published skill | Gradle project | Maven coordinates | Source skill | Use |
+|-----------------|----------------|-------------------|--------------|-----|
+| `grails-developer` | `grails-skills/developer` | `org.apache.grails.skills:grails-developer` | `.agents/skills/grails-developer` | Building current Grails web applications, REST APIs, GORM models, controllers, services, views, plugins, and tests |
+| `grails-8-upgrade` | `grails-skills/upgrade-guide-8` | `org.apache.grails.skills:grails-8-upgrade` | `.agents/skills/grails-8-upgrade` | Upgrading Grails applications from Grails 7.x to Grails 8 |
 
-The repository-specific `hibernate-developer`, `test-fixer`, and `violation-fixer` skills are intentionally not linked from `skills/` because they are for Grails framework development. Contributors already receive them from this repository when working on Grails core.
+The repository-specific `hibernate-developer`, `test-fixer`, `violation-fixer`, `groovy-developer`, and `java-developer` skills are intentionally not published because they are for Grails framework development. Contributors already receive them from this repository when working on Grails core.
 
-Run this check before publishing or updating a skill:
+Each `grails-skills/<name>/src/main/resources/SKILL.md` is a symbolic link to the canonical source under `.agents/skills/<name>/SKILL.md`. Edit the canonical source; the published jar always packages the current content.
+
+To add a new published skill:
+
+1. Add the canonical `SKILL.md` under `.agents/skills/<name>/`.
+2. Create a Gradle project under `grails-skills/<project>/` with a `build.gradle` that applies `java` and `org.apache.grails.buildsrc.publish`, sets `group = 'org.apache.grails.skills'`, and declares `pomArtifactId`, `pomTitle`, and `pomDescription`.
+3. Symlink `grails-skills/<project>/src/main/resources/SKILL.md` to the canonical source.
+4. Register the project in `settings.gradle` and add it to the `publishedProjects` list in `gradle/publish-root-config.gradle`.
+
+Build a skill jar locally with:
 
 ```bash
-./gradlew verifySkillsJarsSources
+./gradlew :grails-skills-developer:build
+./gradlew :grails-skills-developer:publishToMavenLocal
 ```
-
-After changes are merged to the public branch, publish them from SkillsJars by submitting:
-
-| Field | Value |
-|-------|-------|
-| GitHub Org | `apache` |
-| GitHub Repo | `grails-core` |
-
-Expected coordinates use the `apache__grails-core__<skill-name>` artifact pattern, for example `com.skillsjars:apache__grails-core__grails-developer:<date>-<commit>`.

@@ -140,6 +140,9 @@ def publishedProjects = [
         'grails-data-graphql-core',
         // wrapper
         'grails-wrapper',
+        // agent skills
+        'grails-skills-developer',
+        'grails-skills-upgrade-guide-8',
         // profiles
         'grails-profiles-base',
         'grails-profiles-plugin',
