@@ -19,12 +19,15 @@
 
 package grails.gorm.tests
 
+
+import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
 import grails.gorm.annotation.Entity
+import spock.lang.PendingFeature
 
 /**
  * @author graemerocher
  */
-class NativeIdentityGeneratorSpec extends GormDatastoreSpec {
+class NativeIdentityGeneratorSpec extends Neo4jGormDatastoreSpec {
 
 //    @Ignore // currently not working, CREATE returns no results
     void "Test native id generator save and query"() {
@@ -33,7 +36,7 @@ class NativeIdentityGeneratorSpec extends GormDatastoreSpec {
         def c2 = new Competition(name:"League Cup")
         c1.save(flush:true)
         c2.save(flush:true)
-        session.clear()
+        manager.session.clear()
 
         then:"The id is generated from the native datastore"
         c1.id == 0L
@@ -42,13 +45,14 @@ class NativeIdentityGeneratorSpec extends GormDatastoreSpec {
         Competition.get(c2.id).id == 1L
     }
 
+    @PendingFeature(reason = "Neo4jGormApiFactory isn't registered with GormRegistry yet (PR2 scope) - Competition's static API always resolves to the generic GormStaticApi, whose saveAll() has its own bug (returns flush()'s null instead of the persisted ids). Neo4jGormStaticApi#saveAll already fixes this but is unreachable until PR2 wires up the factory")
     void "Test native id generator save multiple"() {
         when:"An entity with a native id is persisted"
         def c1 = new Competition(name:"FA Cup")
         def c2 = new Competition(name:"League Cup")
         def results = Competition.saveAll(c1, c2)
-        session.flush()
-        session.clear()
+        manager.session.flush()
+        manager.session.clear()
 
         then:"The id is generated from the native datastore"
         c1.id != null
@@ -58,9 +62,8 @@ class NativeIdentityGeneratorSpec extends GormDatastoreSpec {
         Competition.get(c2.id).id == c2.id
     }
 
-    @Override
-    List getDomainClasses() {
-        [Competition]
+    void setupSpec() {
+        manager.registerDomainClasses(Competition)
     }
 }
 

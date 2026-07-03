@@ -19,16 +19,20 @@
 
 package grails.gorm.tests
 
+
+import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
 import org.springframework.dao.DataIntegrityViolationException
 import spock.lang.Issue
+import spock.lang.PendingFeature
 
 /**
  * @author graemerocher
  */
-class OneToManyUpdateSpec extends GormDatastoreSpec {
+class OneToManyUpdateSpec extends Neo4jGormDatastoreSpec {
 
 
     @Issue('https://github.com/apache/grails-data-mapping/issues/575')
+    @PendingFeature(reason = "Neo4jGormApiFactory isn't registered with GormRegistry yet (PR2 scope) - Club.cypherStatic(...) resolves to the generic GormStaticApi instead of Neo4jGormStaticApi")
     void "Test updates to one to many don't create duplicate relationships"() {
         given:" a one to many relationship"
         Club club = new Club(name:"Manchester United")
@@ -43,9 +47,9 @@ class OneToManyUpdateSpec extends GormDatastoreSpec {
         !tournament.errors.hasErrors()
 
         when:"it is first read"
-        session.clear()
+        manager.session.clear()
         tournament = Tournament.get(tournament.id)
-        session.clear()
+        manager.session.clear()
         Team team = Team.first()
 
         then: "the relationship is correct"
@@ -63,7 +67,7 @@ class OneToManyUpdateSpec extends GormDatastoreSpec {
         !tournament.errors.hasErrors()
 
         when:
-        session.clear()
+        manager.session.clear()
 
         tournament = Tournament.get(tournament.id)
 
@@ -79,7 +83,7 @@ class OneToManyUpdateSpec extends GormDatastoreSpec {
         def secondTeam = tournament.teams.find { it.name == "Second Team"}
         tournament.removeFromTeams(secondTeam)
         tournament.save(flush:true)
-        session.clear()
+        manager.session.clear()
 
         tournament = Tournament.get(tournament.id)
         result = Club.cypherStatic('MATCH (from:Tournament)-[r:TEAMS]->(to:Team) WHERE ID(from) = \$id  RETURN r', [id:tournament.id])
@@ -96,7 +100,7 @@ class OneToManyUpdateSpec extends GormDatastoreSpec {
         given:
         Club c = new Club(name: "Manchester United").save(validate:false)
         Team t = new Team(name: "First Team", club: c).save(flush:true, validate:false)
-        session.clear()
+        manager.session.clear()
 
         when:"A instance is retrieved"
         t = Team.first()
@@ -109,7 +113,7 @@ class OneToManyUpdateSpec extends GormDatastoreSpec {
         t.club = null
         assert t.hasChanged('club')
         t.save(flush:true, validate:false)
-        session.clear()
+        manager.session.clear()
 
         t = Team.first()
         then:"The association was cleared"
@@ -127,7 +131,7 @@ class OneToManyUpdateSpec extends GormDatastoreSpec {
         given:
         Club c = new Club(name: "Manchester United").save(validate:false)
         Team t = new Team(name: "First Team", club: c).save(flush:true, validate:false)
-        session.clear()
+        manager.session.clear()
 
         when:"A instance is retrieved"
         t = Team.first()
@@ -145,8 +149,7 @@ class OneToManyUpdateSpec extends GormDatastoreSpec {
 
     }
 
-    @Override
-    List getDomainClasses() {
-        [Tournament, Club, Team]
+    void setupSpec() {
+        manager.registerDomainClasses(Tournament, Club, Team)
     }
 }

@@ -34,7 +34,7 @@ import org.neo4j.driver.types.Entity
 import org.neo4j.driver.types.Node
 import org.neo4j.driver.types.Relationship
 
-import javax.persistence.LockModeType
+import jakarta.persistence.LockModeType
 
 
 /**

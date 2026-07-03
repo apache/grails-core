@@ -19,27 +19,29 @@
 
 package grails.gorm.tests
 
+
+import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
 import org.grails.datastore.gorm.proxy.GroovyProxyFactory
 import org.springframework.dao.DataIntegrityViolationException
+import org.apache.grails.data.testing.tck.domains.Location
 
 /**
  * @author graemerocher
  */
-class GroovyProxySpec extends GormDatastoreSpec {
+class GroovyProxySpec extends Neo4jGormDatastoreSpec {
 
-    @Override
-    List getDomainClasses() {
-        [Location]
+    void setupSpec() {
+        manager.registerDomainClasses(Location)
     }
 
     void "Test creation and behavior of Groovy proxies"() {
         setup:
         if(useGroovyProxyFactory) {
-            session.mappingContext.proxyFactory = new GroovyProxyFactory()
+            manager.session.mappingContext.proxyFactory = new GroovyProxyFactory()
         }
 
         def id = new Location(name:"United Kingdom", code:"UK").save(flush:true)?.id
-        session.clear()
+        manager.session.clear()
 
         when:
         def location = Location.proxy(id)
@@ -67,7 +69,7 @@ class GroovyProxySpec extends GormDatastoreSpec {
     void "Test setting metaClass property on proxy"() {
         setup:
         if(useGroovyProxyFactory) {
-            session.mappingContext.proxyFactory = new GroovyProxyFactory()
+            manager.session.mappingContext.proxyFactory = new GroovyProxyFactory()
         }
 
         when:
@@ -82,7 +84,7 @@ class GroovyProxySpec extends GormDatastoreSpec {
     void "Test calling setMetaClass method on proxy"() {
         setup:
         if(useGroovyProxyFactory) {
-            session.mappingContext.proxyFactory = new GroovyProxyFactory()
+            manager.session.mappingContext.proxyFactory = new GroovyProxyFactory()
         }
 
         when:
@@ -97,10 +99,10 @@ class GroovyProxySpec extends GormDatastoreSpec {
     void "Test creation and behavior of Groovy proxies with method call"() {
         setup:
         if(useGroovyProxyFactory) {
-            session.mappingContext.proxyFactory = new GroovyProxyFactory()
+            manager.session.mappingContext.proxyFactory = new GroovyProxyFactory()
         }
         def id = new Location(name:"United Kingdom", code:"UK").save(flush:true)?.id
-        session.clear()
+        manager.session.clear()
 
         when:
         def location = Location.proxy(id)

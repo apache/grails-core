@@ -19,7 +19,8 @@
 
 package org.grails.datastore.gorm.neo4j
 
-import grails.gorm.tests.Person
+import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
+import org.apache.grails.data.testing.tck.domains.Person
 import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.TransactionStatus
 import spock.lang.Ignore
@@ -27,11 +28,10 @@ import spock.lang.Ignore
 /**
  * @author graemerocher
  */
-class TransactionPropagationSpec extends GormDatastoreSpec {
+class TransactionPropagationSpec extends Neo4jGormDatastoreSpec {
 
-    @Override
-    List getDomainClasses() {
-        [Person]
+    void setupSpec() {
+        manager.registerDomainClasses(Person)
     }
 
     void "Test nested setRollbackOnly() transaction"() {
@@ -44,7 +44,7 @@ class TransactionPropagationSpec extends GormDatastoreSpec {
             }
 
         }
-        session.disconnect()
+        manager.session.disconnect()
 
         then:"Both transactions are rolled back"
         Person.count() == 0
@@ -81,7 +81,7 @@ class TransactionPropagationSpec extends GormDatastoreSpec {
 
             }
         } finally {
-            session.disconnect()
+            manager.session.disconnect()
         }
 
         then:"Both transactions are rolled back"

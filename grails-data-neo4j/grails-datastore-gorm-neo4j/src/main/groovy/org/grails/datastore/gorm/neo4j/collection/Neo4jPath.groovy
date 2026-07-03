@@ -123,8 +123,9 @@ class Neo4jPath<S extends Neo4jEntity<S>, E extends Neo4jEntity<E>> implements P
     }
 
     @Override
-    Iterator<Path.Segment> iterator() {
-        return new Neo4jPathIterator(datastore, neo4jPath.iterator())
+    @SuppressWarnings("unchecked")
+    Iterator<Path.Segment<S, E>> iterator() {
+        return (Iterator<Path.Segment<S, E>>) new Neo4jPathIterator(datastore, neo4jPath.iterator())
     }
 
     static class Neo4jPathIterator implements Iterator<Path.Segment> {

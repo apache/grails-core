@@ -21,6 +21,9 @@ package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
 import grails.neo4j.Neo4jEntity
+import org.apache.grails.data.testing.tck.domains.Face
+import org.apache.grails.data.testing.tck.domains.Person
+import org.apache.grails.data.testing.tck.domains.PetType
 
 /**
  * @author graemerocher

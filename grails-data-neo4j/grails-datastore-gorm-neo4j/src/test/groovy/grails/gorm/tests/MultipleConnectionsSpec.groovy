@@ -25,7 +25,6 @@ import org.grails.datastore.gorm.neo4j.Neo4jDatastore
 import org.grails.datastore.gorm.neo4j.config.Settings
 import org.neo4j.driver.exceptions.ClientException
 import org.neo4j.driver.exceptions.ServiceUnavailableException
-import org.springframework.util.SocketUtils
 import spock.lang.AutoCleanup
 import spock.lang.Ignore
 import spock.lang.Shared
@@ -39,8 +38,12 @@ import spock.lang.Specification
 // when the Neo4j server is down so this test is no longer possible
 class MultipleConnectionsSpec extends Specification {
 
-    @Shared int port1 = SocketUtils.findAvailableTcpPort(7700)
-    @Shared int port2 = SocketUtils.findAvailableTcpPort(7700)
+    private static int findAvailableTcpPort() {
+        new ServerSocket(0).withCloseable { it.localPort }
+    }
+
+    @Shared int port1 = findAvailableTcpPort()
+    @Shared int port2 = findAvailableTcpPort()
     @Shared Map config = [
             (Settings.SETTING_NEO4J_URL) : "bolt://localhost:7687",
             (Settings.SETTING_NEO4J_BUILD_INDEX) :false,

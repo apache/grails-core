@@ -30,7 +30,6 @@ import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.GStringExpression
 import org.codehaus.groovy.ast.stmt.Statement
-import org.grails.datastore.gorm.services.implementers.AnnotatedServiceImplementer
 import org.grails.datastore.gorm.transactions.transform.TransactionalTransform
 import org.grails.datastore.mapping.reflect.AstUtils
 
@@ -46,7 +45,7 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
  * @since 6.1
  */
 @CompileStatic
-class UpdateCypherQueryImplementer extends FindAllCypherQueryImplementer implements AnnotatedServiceImplementer<Cypher> {
+class UpdateCypherQueryImplementer extends FindAllCypherQueryImplementer {
 
     @Override
     int getOrder() {

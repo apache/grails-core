@@ -19,6 +19,8 @@
 
 package grails.gorm.tests
 
+
+import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
 import grails.gorm.annotation.Entity
 import grails.gorm.dirty.checking.DirtyCheck
 import grails.neo4j.Neo4jEntity
@@ -34,22 +36,26 @@ import spock.lang.IgnoreIf
 import spock.lang.Issue
 
 import java.util.concurrent.TimeUnit
+import org.apache.grails.data.testing.tck.domains.CommonTypes
+import org.apache.grails.data.testing.tck.domains.Plant
+import org.apache.grails.data.testing.tck.domains.PlantCategory
+import org.apache.grails.data.testing.tck.domains.Task
+import org.apache.grails.data.testing.tck.domains.TestEntity
 
 /**
  * some more unrelated testcases, in more belong together logically, consider refactoring them into a seperate spec
  */
-class MiscSpec extends GormDatastoreSpec {
+class MiscSpec extends Neo4jGormDatastoreSpec {
 
-    @Override
-    List getDomainClasses() {
-        [ Club, Team, Tournament, User, Role, Pet, TestEntity, Plant, PlantCategory, Task, TestEntity, CommonTypes, Timestamped ]
+    void setupSpec() {
+        manager.registerDomainClasses(Club, Team, Tournament, User, Role, Pet, TestEntity, Plant, PlantCategory, Task, TestEntity, CommonTypes, Timestamped)
     }
 
     def "test object identity, see if cache is being used"() {
         setup:
             new User(username: 'user1').save()
             new User(username: 'user2').save(flush:true)
-            session.clear()
+            manager.session.clear()
 
         when:  "retrieve the same object twice"
             def user = User.findByUsername('user1')
@@ -67,7 +73,7 @@ class MiscSpec extends GormDatastoreSpec {
             user.addToRoles new Role(role: 'role1')
             user.addToRoles new Role(role: 'role2')
             user.save(flush:true)
-            session.clear()
+            manager.session.clear()
 
         when:
             user = User.findByUsername('user1')
@@ -108,13 +114,13 @@ class MiscSpec extends GormDatastoreSpec {
         given:
             def t = new TestEntity(name:"Bob")
             t.save(flush:true)
-            session.clear()
+            manager.session.clear()
         when:
             t = TestEntity.get(t.id)
             t.name = "Sam"
             t.save()  // explicit save necessary
-            session.flush()
-            session.clear()
+            manager.session.flush()
+            manager.session.clear()
         then:
             TestEntity.findByName("Bob") == null
             TestEntity.findByName("Sam") != null
@@ -123,17 +129,17 @@ class MiscSpec extends GormDatastoreSpec {
     void "test if addtoXXXX gets persisted correctly"() {
         given:
         new PlantCategory(name: 'category').save(flush:true)
-        session.clear()
+        manager.session.clear()
 
         when:
         def category = PlantCategory.findByName('category')
-        session.clear()
+        manager.session.clear()
 
         category = PlantCategory.get(category.id)
         def plant1 = new Plant(name:'plant1')
         category.addToPlants(plant1).save()
         category.save(flush:true)
-        session.clear()
+        manager.session.clear()
         category = PlantCategory.get(category.id)
 
         then:
@@ -154,8 +160,8 @@ class MiscSpec extends GormDatastoreSpec {
             user2.addToFriends( user1)
             user1.save()
             user2.save()
-            session.flush()
-            session.clear()
+            manager.session.flush()
+            manager.session.clear()
 
         when:
             user1 = User.get(user1.id)
@@ -173,7 +179,7 @@ class MiscSpec extends GormDatastoreSpec {
         club.addToTeams(team).save()
         def tournament = new Tournament(name:'tournament')
         tournament.addToTeams(team).save(flush:true)
-        session.clear()
+        manager.session.clear()
 
         when:
         tournament = Tournament.get(tournament.id)
@@ -190,7 +196,7 @@ class MiscSpec extends GormDatastoreSpec {
         when:
         GParsPool.withPool(concurrency) {
             (1..count).eachParallel { counter ->
-                def session = boltDriver.session()
+                def session = manager.boltDriver.session()
                 def tx = session.beginTransaction()
 
                 tx.run("CREATE (n1:Team \$props)", [props:[name:"Team $count".toString()]])
@@ -235,16 +241,16 @@ class MiscSpec extends GormDatastoreSpec {
         setup: "by default test suite runs without indexes, so we need to build them"
 
         Thread.start {
-            def tx = serverControls.graph().beginTx()
+            def tx = manager.serverControls.graph().beginTx()
             try {
-                session.datastore.setupIndexing()
+                manager.session.datastore.setupIndexing()
                 tx.success()
             } finally {
                 tx.close()
             }
-            tx = serverControls.graph().beginTx()
+            tx = manager.serverControls.graph().beginTx()
             try {
-                serverControls.graph().schema().awaitIndexesOnline(10, TimeUnit.SECONDS)
+                manager.serverControls.graph().schema().awaitIndexesOnline(10, TimeUnit.SECONDS)
                 tx.success()
             } finally {
                 tx.close()
@@ -255,14 +261,14 @@ class MiscSpec extends GormDatastoreSpec {
         def task1 = new Task(name: 'task1')
         task1.save()
 //        new Task(name: 'task2').save(flush: true)
-        session.clear()
+        manager.session.clear()
 
         when:
 
         def indexedProperties
-        def tx = serverControls.graph().beginTx()
+        def tx = manager.serverControls.graph().beginTx()
         try {
-            indexedProperties = serverControls.graph().schema().getIndexes(Label.label("Task")).collect {
+            indexedProperties = manager.serverControls.graph().schema().getIndexes(Label.label("Task")).collect {
                 IteratorUtil.single(it.propertyKeys)
             }
             tx.success()
@@ -279,7 +285,7 @@ class MiscSpec extends GormDatastoreSpec {
         setup:
         def club = new Club(name: 'club')
         club.save(flush: true)
-        session.clear()
+        manager.session.clear()
 
         expect:
         club.version == 0
@@ -291,7 +297,7 @@ class MiscSpec extends GormDatastoreSpec {
         club.version == 0
 
         when:
-        session.flush()
+        manager.session.flush()
 
         then:
         club.version == 0
@@ -299,8 +305,8 @@ class MiscSpec extends GormDatastoreSpec {
         when:
         club = Club.findByName('club')
         club.save()
-        session.flush()
-        session.clear()
+        manager.session.flush()
+        manager.session.clear()
 
         then: //non timestamped domains won't increment the version because no properties are dirty
         Club.findByName('club').version == 0
@@ -361,7 +367,7 @@ class MiscSpec extends GormDatastoreSpec {
         when:
             def pet = new Pet(birthDate: new Date(), name: 'Cosima').save(flush: true)
         then:
-            IteratorUtil.single(session.transaction.nativeTransaction.run("MATCH (p:Pet {name:\$1}) RETURN p.birthDate as birthDate", ["1":'Cosima'])).birthDate.asNumber() instanceof Long
+            IteratorUtil.single(manager.session.transaction.nativeTransaction.run("MATCH (p:Pet {name:\$1}) RETURN p.birthDate as birthDate", ["1":'Cosima'])).birthDate.asNumber() instanceof Long
     }
 
     @Issue("https://github.com/SpringSource/grails-data-mapping/issues/52")
@@ -372,7 +378,7 @@ class MiscSpec extends GormDatastoreSpec {
             def pet = new Pet(birthDate: date, name:'Cosima').save(flush: true)
 
         when: "write birthDate as a String"
-            session.transaction.nativeTransaction.run("MATCH (p:Pet {name:\$1}) SET p.birthDate=\$2",
+            manager.session.transaction.nativeTransaction.run("MATCH (p:Pet {name:\$1}) SET p.birthDate=\$2",
                 ['1':'Cosima', '2':date.time.toString()])
             pet = Pet.get(pet.id)
         then: "the string stored date gets parsed correctly"
@@ -384,7 +390,7 @@ class MiscSpec extends GormDatastoreSpec {
         when:
         def team = new Team(name: 'name', binaryData: 'abc'.bytes)
         team.save(flush: true)
-        def value = IteratorUtil.single(session.transaction.nativeTransaction.run("MATCH (p:Team {name:\$1}) RETURN p.binaryData as binaryData",
+        def value = IteratorUtil.single(manager.session.transaction.nativeTransaction.run("MATCH (p:Team {name:\$1}) RETURN p.binaryData as binaryData",
             ["1":'name'])).binaryData
 
         then:
@@ -398,7 +404,7 @@ class MiscSpec extends GormDatastoreSpec {
         Team team = new Team(name: "team",
                 club: new Club(name: 'club')
         ).save(flush: true)
-        session.clear()
+        manager.session.clear()
         team = Team.get(team.id)
 
         def bos = new ByteArrayOutputStream()
@@ -425,7 +431,7 @@ class MiscSpec extends GormDatastoreSpec {
         Tournament tournament = new Tournament(name: "tournament",
                 teams: [new Team(name: 'team1'), new Team(name: 'team2')]
         ).save(flush: true)
-        session.clear()
+        manager.session.clear()
         tournament = Tournament.get(tournament.id)
 
         def bos = new ByteArrayOutputStream()
@@ -439,7 +445,7 @@ class MiscSpec extends GormDatastoreSpec {
         when:
         def firstTeam = deserializedTournament.teams[0]
         deserializedTournament.teams.remove(firstTeam)
-        session.flush()
+        manager.session.flush()
 
         tournament = Tournament.get(tournament.id)
 
@@ -461,8 +467,8 @@ class MiscSpec extends GormDatastoreSpec {
         setup:
         def argentina = new Team(name: 'Argentina').save(validate:false)
         def germany = new Team(name: 'Germany').save(validate:false)
-        session.flush()
-        session.clear()
+        manager.session.flush()
+        manager.session.clear()
 
         when: "by error we put Manual Neuer to Argentina"
         def manuel = new Player(name: 'Manuel Neuer', team: argentina).save(flush:true)
@@ -471,14 +477,14 @@ class MiscSpec extends GormDatastoreSpec {
         Team.findByName('Argentina').players.size()==1
 
         when:
-        session.flush()
-        session.clear()
+        manager.session.flush()
+        manager.session.clear()
         manuel = Player.findByName('Manuel Neuer')
         manuel.team = germany
         manuel.save(validate:false)
 
-        session.flush()
-        session.clear()
+        manager.session.flush()
+        manager.session.clear()
 
         then:
         Team.findByName('Germany').players.size()==1
@@ -488,8 +494,8 @@ class MiscSpec extends GormDatastoreSpec {
     def "lastUpdated is updated"() {
         setup:
         new Timestamped(name: "test").save()
-        session.flush()
-        session.clear()
+        manager.session.flush()
+        manager.session.clear()
 
         when:
         def ts = Timestamped.findByName("test")
@@ -503,8 +509,8 @@ class MiscSpec extends GormDatastoreSpec {
         when: //domains with timestamps will persist the last updated
               //even if nothing is dirty
         ts.save()
-        session.flush()
-        session.clear()
+        manager.session.flush()
+        manager.session.clear()
         def newTs = Timestamped.findByName("test")
 
         then:

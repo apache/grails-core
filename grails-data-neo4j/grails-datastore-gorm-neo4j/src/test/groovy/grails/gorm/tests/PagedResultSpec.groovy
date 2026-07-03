@@ -19,16 +19,19 @@
 
 package grails.gorm.tests
 
+
+import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
 import grails.gorm.PagedResultList
 import spock.lang.Ignore
+import org.apache.grails.data.testing.tck.domains.Person
 
 /**
  *
  */
-class PagedResultSpec extends GormDatastoreSpec{
-    @Override
-    List getDomainClasses() {
-        [Person]
+class PagedResultSpec extends Neo4jGormDatastoreSpec{
+
+    void setupSpec() {
+        manager.registerDomainClasses(Person)
     }
 //@Ignore("temprary disabled due to implicit required sorting based on Comparable")
     void "Test that a paged result list is returned from the list() method with pagination params"() {

@@ -19,6 +19,8 @@
 
 package grails.gorm.tests
 
+
+import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
 import grails.gorm.annotation.Entity
 import grails.neo4j.Neo4jEntity
 import org.grails.datastore.gorm.neo4j.GraphPersistentEntity
@@ -26,7 +28,7 @@ import org.grails.datastore.gorm.neo4j.GraphPersistentEntity
 /**
  * Created by graemerocher on 24/10/16.
  */
-class CustomLabelWithDynamicAssociationSpec extends GormDatastoreSpec {
+class CustomLabelWithDynamicAssociationSpec extends Neo4jGormDatastoreSpec {
 
     void "test custom labels with dynamic associations"() {
         when:"A club is saved"
@@ -34,7 +36,7 @@ class CustomLabelWithDynamicAssociationSpec extends GormDatastoreSpec {
         c.captain = new Player1(name: "Cantona", club: c)
         c.otherPlayers = [ new Player1(name: "Giggs", club: c)]
         c.save(flush:true)
-        session.clear()
+        manager.session.clear()
 
         c = Club1.first()
 
@@ -43,9 +45,9 @@ class CustomLabelWithDynamicAssociationSpec extends GormDatastoreSpec {
         c.otherPlayers.size() == 1
 
     }
-    @Override
-    List getDomainClasses() {
-        [Club1, Player1]
+
+    void setupSpec() {
+        manager.registerDomainClasses(Club1, Player1)
     }
 }
 

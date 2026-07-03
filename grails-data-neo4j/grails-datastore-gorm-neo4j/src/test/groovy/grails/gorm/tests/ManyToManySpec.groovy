@@ -19,6 +19,8 @@
 
 package grails.gorm.tests
 
+
+import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
 import grails.gorm.annotation.Entity
 import grails.gorm.dirty.checking.DirtyCheck
 import org.grails.datastore.gorm.neo4j.util.IteratorUtil
@@ -26,13 +28,12 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import spock.lang.Issue
 
-class ManyToManySpec extends GormDatastoreSpec {
+class ManyToManySpec extends Neo4jGormDatastoreSpec {
 
     private static Logger log = LoggerFactory.getLogger(ManyToManySpec.class);
 
-    @Override
-    List getDomainClasses() {
-        [Role, User, MBook, MBookworm, BidirectionalFriends]
+    void setupSpec() {
+        manager.registerDomainClasses(Role, User, MBook, MBookworm, BidirectionalFriends)
     }
 
     /*def setupSpec() {
@@ -43,7 +44,7 @@ class ManyToManySpec extends GormDatastoreSpec {
         setup:
             def user = new User(username: 'user1').addToRoles(new Role(role:'role1'))
             user.save(flush:true)
-            session.clear()
+            manager.session.clear()
 
         when:
             user = User.findByUsername('user1')
@@ -72,7 +73,7 @@ class ManyToManySpec extends GormDatastoreSpec {
             def user = new User(username: 'initial')
             user.addToRoles(Role.findByRole('ROLE_ADMIN'))
             user.save(flush:true)
-            session.clear()
+            manager.session.clear()
 
         when:
             ['user1': ['ROLE_USER'],
@@ -84,8 +85,8 @@ class ManyToManySpec extends GormDatastoreSpec {
                 user.save()
             }
 
-            session.flush()
-            session.clear()
+            manager.session.flush()
+            manager.session.clear()
 
         then:
             3 == User.count()
@@ -101,8 +102,8 @@ class ManyToManySpec extends GormDatastoreSpec {
             def roleUser = new Role(role:'ROLE_USER').save()
             def roleSpecial = new Role(role:'ROLE_SPECIAL').save()
             def user = new User(username: 'user', roles: [roleUser]).save()
-            session.flush()
-            session.clear()
+            manager.session.flush()
+            manager.session.clear()
 
         when:
             user = User.get(user.id)
@@ -114,8 +115,8 @@ class ManyToManySpec extends GormDatastoreSpec {
 
         when: "using setter for a bidi collection"
             user.roles = [ roleAdmin, roleUser, roleSpecial ]  // should be tracked by dirtycheckable
-            session.flush()
-            session.clear()
+            manager.session.flush()
+            manager.session.clear()
             user = User.get(user.id)
 
         then:
@@ -129,7 +130,7 @@ class ManyToManySpec extends GormDatastoreSpec {
         setup:
         def user = new User(username: 'person1')
         user.save(flush:true)
-        session.clear()
+        manager.session.clear()
 
         when: "creating a lonely user"
         user = User.findByUsername('person1')
@@ -144,8 +145,8 @@ class ManyToManySpec extends GormDatastoreSpec {
         user.addToFriends(username:'friend1')
         user.addToFoes(username:'foe1')
         user.save()
-        session.flush()
-        session.clear()
+        manager.session.flush()
+        manager.session.clear()
         user = User.findByUsername('person1')
 
         then: "friends and foes are found"
@@ -159,8 +160,8 @@ class ManyToManySpec extends GormDatastoreSpec {
         when: "setting bestbuddy"
         user.bestBuddy = User.findByUsername('friend1') // new User(username:'bestBuddy')
         user.save()
-        session.flush()
-        session.clear()
+        manager.session.flush()
+        manager.session.clear()
         user = User.findByUsername('person1')
 
         then: "bestBuddy is there"
@@ -174,13 +175,13 @@ class ManyToManySpec extends GormDatastoreSpec {
 
     }
 
-    def "test if addToXXX modifies the nodespace even if it's the only operation in a session"() {
+    def "test if addToXXX modifies the nodespace even if it's the only operation in a manager.session"() {
         when:
         def friend = new User(username: 'friend').save()
         def user = new User(username: 'user').save(flush:true)
         user.addToFriends(friend)
-        session.flush()
-        session.clear()
+        manager.session.flush()
+        manager.session.clear()
         user = User.get(user.id)
 
         then:
@@ -195,8 +196,8 @@ class ManyToManySpec extends GormDatastoreSpec {
         randy.save(failOnError: true)
         def encyclopedia = new MBook(name: 'Encyclopedia Volume 1', checkedOutBy: randy)
         encyclopedia.save(failOnError: true)
-        session.flush()
-        session.clear()
+        manager.session.flush()
+        manager.session.clear()
 
         when:
         randy = MBookworm.findByName('Randy')
@@ -210,15 +211,15 @@ class ManyToManySpec extends GormDatastoreSpec {
         setup:
         def foo = new User(username: 'foo').save()
         def bar = new User(username: 'bar').save()
-        session.flush()
-        session.clear()
+        manager.session.flush()
+        manager.session.clear()
 
         when: "we change a object after save"
         def role = new Role(role:'myRole').save(flush:true)
         role = Role.get(role.id)
         role.people = [foo, bar]
-        session.flush()
-        session.clear()
+        manager.session.flush()
+        manager.session.clear()
 
         then:
         Role.findById(role.id).people.size() == 2
@@ -229,14 +230,14 @@ class ManyToManySpec extends GormDatastoreSpec {
     def "should version not increase when adding relationships"() {
         setup:
         def felix = new BidirectionalFriends(name: 'felix').save(flush: true)
-        session.clear()
+        manager.session.clear()
 
         when: "adding 100 people being friend with felix"
         (0..<100).each {
             new BidirectionalFriends(name: "buddy$it", friends: [felix]).save()
         }
-        session.flush()
-        session.clear()
+        manager.session.flush()
+        manager.session.clear()
         def fetchedFelix = BidirectionalFriends.findByName("felix")
 
         then:
@@ -246,7 +247,7 @@ class ManyToManySpec extends GormDatastoreSpec {
         fetchedFelix.friends.size() == 100
 
         when: "we have 100 relationships"
-        def result = session.transaction.nativeTransaction.run("MATCH (:BidirectionalFriends {name:\$1})<-[:FRIENDS]-(o) return count(o) as c", ["1":"felix"])
+        def result = manager.session.transaction.nativeTransaction.run("MATCH (:BidirectionalFriends {name:\$1})<-[:FRIENDS]-(o) return count(o) as c", ["1":"felix"])
 
         then:
         IteratorUtil.single(result)["c"].asNumber() == 100

@@ -19,6 +19,8 @@
 
 package grails.gorm.tests
 
+
+import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
 import grails.gorm.annotation.Entity
 import javassist.util.proxy.ProxyObject
 import org.grails.datastore.gorm.neo4j.collection.Neo4jList
@@ -29,7 +31,7 @@ import org.grails.datastore.gorm.neo4j.collection.Neo4jSet
 /**
  * @author graemerocher
  */
-class EagerFetchingSpec extends GormDatastoreSpec {
+class EagerFetchingSpec extends Neo4jGormDatastoreSpec {
 
     void "Test eager fetch with query"() {
         given:
@@ -38,7 +40,7 @@ class EagerFetchingSpec extends GormDatastoreSpec {
         club.addToTeams(new Team(name: 'FCB Team 1'))
         club.addToTeams(new Team(name: 'FCB Team 2'))
         club.save(flush:true,validate:false)
-        session.clear()
+        manager.session.clear()
 
         when:"an object query is executed"
         club = Club.get(club.id)
@@ -54,7 +56,7 @@ class EagerFetchingSpec extends GormDatastoreSpec {
         League.count() == 1
 
         when:"A join query is executed"
-        session.clear()
+        manager.session.clear()
         club = Club.findByName('FC Bayern Muenchen', [fetch:[teams:'eager']])
 
         then:"A join query was issued and so the collection is initialized"
@@ -65,18 +67,18 @@ class EagerFetchingSpec extends GormDatastoreSpec {
         club.teams[1].name == 'FCB Team 2'
 
         when:"A lazy to one association is queried"
-        session.clear()
+        manager.session.clear()
         def team = Team.findByName('FCB Team 1')
 
         then:"The association is a proxy"
-        !session.mappingContext.proxyFactory.isInitialized(team, 'club')
+        !manager.session.mappingContext.proxyFactory.isInitialized(team, 'club')
 
         when:"A an eager fetch is used"
-        session.clear()
+        manager.session.clear()
          team = Team.findByName('FCB Team 1', [fetch:[club:'eager']])
 
         then:"The association is a not proxy"
-        !session.mappingContext.proxyFactory.isProxy(team.club)
+        !manager.session.mappingContext.proxyFactory.isProxy(team.club)
     }
 
 
@@ -90,7 +92,7 @@ class EagerFetchingSpec extends GormDatastoreSpec {
         league.addToClubs(club)
         league.teams.addAll(club.teams)
         league.save(flush:true,validate:false)
-        session.clear()
+        manager.session.clear()
 
         when:"an object query is executed"
         league = League.findById(league.id)
@@ -101,9 +103,9 @@ class EagerFetchingSpec extends GormDatastoreSpec {
         league.teams instanceof Neo4jSet
         league.teams.size() == 2
     }
-    @Override
-    List getDomainClasses() {
-        [League, Club, Team]
+
+    void setupSpec() {
+        manager.registerDomainClasses(League, Club, Team)
     }
 }
 

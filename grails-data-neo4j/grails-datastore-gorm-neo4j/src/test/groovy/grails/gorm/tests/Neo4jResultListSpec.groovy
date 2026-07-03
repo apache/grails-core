@@ -19,11 +19,12 @@
 
 package grails.gorm.tests
 
-class Neo4jResultListSpec extends GormDatastoreSpec {
 
-    @Override
-    List getDomainClasses() {
-        [Pet]
+import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
+class Neo4jResultListSpec extends Neo4jGormDatastoreSpec {
+
+    void setupSpec() {
+        manager.registerDomainClasses(Pet)
     }
 
 
@@ -32,7 +33,7 @@ class Neo4jResultListSpec extends GormDatastoreSpec {
         new Pet(name: "foo", age: 10).save(flush:true, failOnError:true)
         new Pet(name: "bar", age: null).save(flush:true, failOnError:true)
         new Pet(name: "", age: 12).save(flush:true, failOnError:true)
-        session.clear()
+        manager.session.clear()
 
         when:
         def list = Pet.list()

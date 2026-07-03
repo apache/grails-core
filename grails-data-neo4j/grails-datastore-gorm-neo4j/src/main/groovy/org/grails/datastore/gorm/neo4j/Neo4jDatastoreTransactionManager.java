@@ -28,7 +28,7 @@ import org.springframework.transaction.TransactionException;
 import org.springframework.transaction.support.DefaultTransactionStatus;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-import javax.persistence.FlushModeType;
+import jakarta.persistence.FlushModeType;
 import java.io.IOException;
 
 /**

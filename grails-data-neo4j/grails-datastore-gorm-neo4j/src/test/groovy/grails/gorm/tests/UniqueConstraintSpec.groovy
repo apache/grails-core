@@ -19,6 +19,8 @@
 
 package grails.gorm.tests
 
+
+import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
 import grails.gorm.annotation.Entity
 
 /**
@@ -35,12 +37,12 @@ import org.springframework.validation.Errors
 import org.springframework.validation.Validator
 import spock.lang.Issue
 
-import javax.persistence.FlushModeType
+import jakarta.persistence.FlushModeType
 
 /**
  * Tests the unique constraint
  */
-class UniqueConstraintSpec extends GormDatastoreSpec {
+class UniqueConstraintSpec extends Neo4jGormDatastoreSpec {
 
     @Issue('https://github.com/apache/grails-core/issues/9596')
     void "Test update secondary property when using unique constraint"() {
@@ -54,11 +56,11 @@ class UniqueConstraintSpec extends GormDatastoreSpec {
         o.desc == 'foo description'
 
         when:"A secondary property is updated"
-        session.clear()
+        manager.session.clear()
         o = UniqueGroup.findByName("foo")
         o.desc = 'description changed'
         o.save(flush:true)
-        session.clear()
+        manager.session.clear()
         o = UniqueGroup.findByName("foo")
 
         then:"The object was saved"
@@ -103,8 +105,8 @@ class UniqueConstraintSpec extends GormDatastoreSpec {
         new UniqueGroup(name:"foo").save()
         def two = new UniqueGroup(name:"bar").save()
 
-        session.flush()
-        session.clear()
+        manager.session.flush()
+        manager.session.clear()
 
         when:
         two.name="foo"
@@ -116,7 +118,7 @@ class UniqueConstraintSpec extends GormDatastoreSpec {
         UniqueGroup.get(two.id).name=="bar"
 
         when:
-        session.clear()
+        manager.session.clear()
         two = UniqueGroup.get(two.id)
 
         then:
@@ -124,9 +126,8 @@ class UniqueConstraintSpec extends GormDatastoreSpec {
 
     }
 
-    @Override
-    List getDomainClasses() {
-        [UniqueGroup, GroupWithin]
+    void setupSpec() {
+        manager.registerDomainClasses(UniqueGroup, GroupWithin)
     }
 }
 

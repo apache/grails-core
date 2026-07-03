@@ -19,13 +19,15 @@
 
 package grails.gorm.tests
 
+
+import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
 /**
  * @author graemerocher
  */
-class LikeQuerySpec extends GormDatastoreSpec {
-    @Override
-    List getDomainClasses() {
-        [Pet]
+class LikeQuerySpec extends Neo4jGormDatastoreSpec {
+
+    void setupSpec() {
+        manager.registerDomainClasses(Pet)
     }
 
     void "Test for like query"() {
@@ -38,8 +40,8 @@ class LikeQuerySpec extends GormDatastoreSpec {
         new Pet(name: "**").save(flush:true, failOnError:true)
         new Pet(name: "***").save(flush:true, failOnError:true)
 
-        session.transaction.commit()
-        session.clear()
+        manager.session.transaction.commit()
+        manager.session.clear()
 
         when:
 
@@ -72,8 +74,8 @@ class LikeQuerySpec extends GormDatastoreSpec {
         new Pet(name: "*").save(flush:true, failOnError:true)
         new Pet(name: "**").save(flush:true, failOnError:true)
         new Pet(name: "***").save(flush:true, failOnError:true)
-        session.transaction.commit()
-        session.clear()
+        manager.session.transaction.commit()
+        manager.session.clear()
 
         when:
         def results = Pet.findAllByNameIlike(search)
@@ -106,7 +108,7 @@ class LikeQuerySpec extends GormDatastoreSpec {
         new Pet(name: "*").save(flush:true, failOnError:true)
         new Pet(name: "**").save(flush:true, failOnError:true)
         new Pet(name: "***").save(flush:true, failOnError:true)
-        session.clear()
+        manager.session.clear()
 
         when:
         def results = Pet.findAllByNameRlike(search)

@@ -19,12 +19,20 @@
 
 package grails.gorm.tests
 
+import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
 import org.grails.datastore.mapping.model.types.OneToOne
+import org.apache.grails.data.testing.tck.domains.Face
+import org.apache.grails.data.testing.tck.domains.Nose
+import org.apache.grails.data.testing.tck.domains.Person
 
 /**
  * Created by graemerocher on 14/03/2017.
  */
-class OneToOneSpec extends GormDatastoreSpec {
+class OneToOneSpec extends Neo4jGormDatastoreSpec {
+
+    void setupSpec() {
+        manager.registerDomainClasses(Person, Pet, Face, Nose)
+    }
 
     def "Test persist and retrieve unidirectional many-to-one"() {
         given:"A domain model with a many-to-one"
@@ -32,7 +40,7 @@ class OneToOneSpec extends GormDatastoreSpec {
         def pet = new Pet(name:"Dino", owner:person)
         person.save()
         pet.save(flush:true)
-        session.clear()
+        manager.session.clear()
 
         when:"The association is queried"
         pet = Pet.findByName("Dino")
@@ -50,7 +58,7 @@ class OneToOneSpec extends GormDatastoreSpec {
         def nose = new Nose(hasFreckles: true, face:face)
         face.nose = nose
         face.save(flush:true)
-        session.clear()
+        manager.session.clear()
 
         when:"The association is queried"
         face = Face.get(face.id)
@@ -65,7 +73,7 @@ class OneToOneSpec extends GormDatastoreSpec {
         face.nose.hasFreckles == true
 
         when:"The inverse association is queried"
-        session.clear()
+        manager.session.clear()
         nose = Nose.get(nose.id)
 
         then:"The domain model is valid"

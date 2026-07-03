@@ -17,9 +17,6 @@
  *  under the License.
  */
 
-sourceCompatibility = "1.11"
-targetCompatibility = "1.11"
-
 // TODO: Use bom
 //configurations.configureEach {
 //    exclude group: 'org.apache.grails.data', module: 'grails-data-simple'

@@ -19,21 +19,23 @@
 
 package grails.gorm.tests
 
+
+import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
 import grails.gorm.annotation.Entity
 import grails.neo4j.Neo4jEntity
+import org.apache.grails.data.testing.tck.domains.Child
 
-class InheritanceProxySpec extends GormDatastoreSpec {
+class InheritanceProxySpec extends Neo4jGormDatastoreSpec {
 
-    @Override
-    List getDomainClasses() {
-        [Child, ChessClub, PrivateChessClub]
+    void setupSpec() {
+        manager.registerDomainClasses(Child, ChessClub, PrivateChessClub)
     }
 
     void "test a proxy is not created"() {
         given:
         new PrivateChessClub(name: "x").save()
-        session.flush()
-        session.clear()
+        manager.session.flush()
+        manager.session.clear()
 
         when:
         PrivateChessClub club = (PrivateChessClub) ChessClub.findByName("x")

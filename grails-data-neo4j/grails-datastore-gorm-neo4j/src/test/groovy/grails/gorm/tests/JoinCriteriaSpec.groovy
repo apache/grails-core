@@ -19,14 +19,15 @@
 
 package grails.gorm.tests
 
+
+import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
 import grails.gorm.annotation.Entity
 
 
-class JoinCriteriaSpec extends GormDatastoreSpec {
+class JoinCriteriaSpec extends Neo4jGormDatastoreSpec {
 
-    @Override
-    List getDomainClasses() {
-        [AclClass, AclObjectIdentity]
+    void setupSpec() {
+        manager.registerDomainClasses(AclClass, AclObjectIdentity)
     }
 
     def "check if a criteria join get the expected results"() {
@@ -37,7 +38,7 @@ class JoinCriteriaSpec extends GormDatastoreSpec {
         def aclObjId1 = new AclObjectIdentity('aclClass':aclc1, objectId:1L).save(flush:true)
         def aclObjId2 = new AclObjectIdentity('aclClass':aclc2, objectId:2L).save(flush:true)
         
-        session.clear()
+        manager.session.clear()
 
         when:
         def theObjs = AclObjectIdentity.createCriteria().list {

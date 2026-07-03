@@ -21,24 +21,25 @@ package org.grails.datastore.gorm.mongo
 
 import grails.gorm.annotation.Entity
 import grails.neo4j.Neo4jEntity
+import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
 import org.neo4j.driver.types.Node
 import spock.lang.Ignore
 
-import javax.persistence.FlushModeType
+import jakarta.persistence.FlushModeType
 
 /**
  * @author Graeme Rocher
  */
 @Ignore
-class ReadManyObjectsSpec extends GormDatastoreSpec {
+class ReadManyObjectsSpec extends Neo4jGormDatastoreSpec {
 
 
 
     void "Test that reading thousands of objects natively performs well"() {
         given:"A lot of test data"
         createData()
-        session.flush()
-        session.clear()
+        manager.session.flush()
+        manager.session.clear()
 
         when:"The data is read"
         final now = System.currentTimeMillis()
@@ -66,10 +67,10 @@ class ReadManyObjectsSpec extends GormDatastoreSpec {
     void "Test that reading thousands of objects with GORM performs well"() {
         given:"A lot of test data"
         createData()
-        session.flush()
-        session.clear()
+        manager.session.flush()
+        manager.session.clear()
 
-        session.setFlushMode(FlushModeType.COMMIT)
+        manager.session.setFlushMode(FlushModeType.COMMIT)
         when:"The data is read"
         long took = 30000
         final now = System.currentTimeMillis()
@@ -82,7 +83,7 @@ class ReadManyObjectsSpec extends GormDatastoreSpec {
                 def date = p.date
             }
             print "Iteration $it "
-            session.clear()
+            manager.session.clear()
         }
         final then = System.currentTimeMillis()
         took = then-now
@@ -99,9 +100,8 @@ class ReadManyObjectsSpec extends GormDatastoreSpec {
         }
     }
 
-    @Override
-    List getDomainClasses() {
-        [ProfileDoc]
+    void setupSpec() {
+        manager.registerDomainClasses(ProfileDoc)
     }
 }
 

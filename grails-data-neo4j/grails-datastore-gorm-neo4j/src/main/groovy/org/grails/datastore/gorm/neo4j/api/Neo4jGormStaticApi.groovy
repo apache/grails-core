@@ -67,6 +67,25 @@ class Neo4jGormStaticApi<D> extends GormStaticApi<D> {
         super(persistentClass, datastore, finders, transactionManager)
     }
 
+    /**
+     * {@link GormStaticApi#saveAll(Iterable)}'s callback returns {@code session.flush()}'s result
+     * (its last statement), but flush() is void, so it always returns null instead of the ids from
+     * session.persist(...). Captures the ids explicitly and returns them after flushing.
+     */
+    @Override
+    List<Serializable> saveAll(Iterable<?> objectsToSave) {
+        execute({ Session session ->
+            List<Serializable> ids = session.persist(objectsToSave)
+            session.flush()
+            ids
+        } as SessionCallback<List<Serializable>>)
+    }
+
+    @Override
+    List<Serializable> saveAll(Object... objectsToSave) {
+        saveAll(Arrays.asList(objectsToSave))
+    }
+
     @Override
     List<D> findAll(CharSequence query, Map params, Map args) {
         execute({ Session session ->
@@ -194,7 +213,7 @@ class Neo4jGormStaticApi<D> extends GormStaticApi<D> {
             } else {
                 return map
             }
-        } as Function<Record, Map>)
+        } as Function<Record, Object>)
     }
 
     @Override
@@ -222,7 +241,7 @@ class Neo4jGormStaticApi<D> extends GormStaticApi<D> {
             }
 
             Result sr = boltSession.run(queryString, params)
-            return Neo4jEntityPersister.countUpdates(sr)
+            return (int) Neo4jEntityPersister.countUpdates(sr)
         } as SessionCallback<Integer>)
     }
 

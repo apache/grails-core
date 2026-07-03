@@ -19,12 +19,15 @@
 
 package grails.gorm.tests
 
+
+import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
 import spock.lang.Issue
+import org.apache.grails.data.testing.tck.domains.Dog
 
 /**
  * @author graemerocher
  */
-class ProjectionsSpec extends GormDatastoreSpec{
+class ProjectionsSpec extends Neo4jGormDatastoreSpec{
 
     void "Test sum projection"() {
         given:"Some test data"
@@ -69,9 +72,8 @@ class ProjectionsSpec extends GormDatastoreSpec{
         results == [["Fred", 6], ["Joe", 2]]
     }
 
-    @Override
-    List getDomainClasses() {
-        [Dog]
+    void setupSpec() {
+        manager.registerDomainClasses(Dog)
     }
 }
 

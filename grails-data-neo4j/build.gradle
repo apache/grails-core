@@ -19,6 +19,7 @@
 
 buildscript {
     repositories {
+        mavenLocal()
         maven { url "https://repo.grails.org/grails/restricted" }
         maven { url "https://plugins.gradle.org/m2/" }
     }
@@ -27,6 +28,7 @@ buildscript {
         classpath "org.apache.grails:grails-gradle-plugins:$grailsGradlePluginVersion"
         classpath "org.asciidoctor:asciidoctor-gradle-jvm:4.0.5"
         classpath "com.github.erdi:webdriver-binaries-gradle-plugin:3.2"
+        classpath "org.gradle:test-retry-gradle-plugin:1.6.2"
     }
 }
 
@@ -127,7 +129,7 @@ subprojects { subproject ->
 
         dependencies {
             testImplementation "org.hibernate:hibernate-validator:$hibernateValidatorVersion"
-            testImplementation "org.codehaus.groovy:groovy-test-junit5"
+            testImplementation "org.apache.groovy:groovy-test-junit5:$groovyVersion"
             testImplementation "org.spockframework:spock-core:$spockVersion", { transitive = false }
             testImplementation "org.junit.jupiter:junit-jupiter-api:$junitJupiterVersion"
             testImplementation "org.junit.platform:junit-platform-suite:$junitPlatformVersion"
@@ -202,6 +204,7 @@ subprojects { subproject ->
     apply plugin: "java-library"
     apply plugin: 'maven-publish'
     apply plugin: 'signing'
+    apply plugin: 'org.gradle.test-retry'
 
     if(isGrails3PluginProject) {
         apply plugin: 'org.apache.grails.gradle.grails-plugin'
@@ -209,10 +212,9 @@ subprojects { subproject ->
         apply plugin:"groovy"
     }
 
-    sourceCompatibility = "1.11"
-    targetCompatibility = "1.11"
-
     java {
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
         withJavadocJar()
         withSourcesJar()
     }
@@ -227,9 +229,7 @@ subprojects { subproject ->
                                                'grails-datamapping-async',
                                                'grails-datamapping-rx',
                                                'grails-datamapping-support',
-                                               'grails-datamapping-tck-tests',
-                                               'grails-datamapping-tck-base',
-                                               'grails-datamapping-tck-domains',
+                                               'grails-datamapping-tck',
                                                'grails-datamapping-core-test',
                                                'grails-datamapping-validation',
                                                'grails-datastore-web']
@@ -245,8 +245,8 @@ subprojects { subproject ->
 
 
     dependencies {
-        api "org.codehaus.groovy:groovy"
-        testImplementation "org.codehaus.groovy:groovy-test-junit5"
+        api "org.apache.groovy:groovy:$groovyVersion"
+        testImplementation "org.apache.groovy:groovy-test-junit5:$groovyVersion"
         testImplementation "org.spockframework:spock-core:$spockVersion", { transitive = false }
         testImplementation "org.junit.jupiter:junit-jupiter-api:$junitJupiterVersion"
         testImplementation "org.junit.platform:junit-platform-suite:$junitPlatformVersion"
