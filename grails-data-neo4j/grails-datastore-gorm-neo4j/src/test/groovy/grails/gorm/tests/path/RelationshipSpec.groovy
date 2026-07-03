@@ -25,7 +25,6 @@ import grails.neo4j.Path
 import grails.neo4j.Relationship
 import org.grails.datastore.gorm.neo4j.Neo4jDatastore
 import spock.lang.AutoCleanup
-import spock.lang.PendingFeature
 import spock.lang.Shared
 import spock.lang.Specification
 
@@ -36,7 +35,6 @@ class RelationshipSpec extends Specification {
     @Shared @AutoCleanup Neo4jDatastore datastore = new Neo4jDatastore(getClass().getPackage())
 
     @Rollback
-    @PendingFeature(reason = "Neo4jGormApiFactory isn't registered with GormRegistry yet (PR2 scope) - Person.findRelationship(s) resolve to the generic GormStaticApi instead of Neo4jGormStaticApi")
     void "test find relationship"() {
         given:
         def barney = new Person(name: "Barney")
@@ -64,7 +62,6 @@ class RelationshipSpec extends Specification {
     }
 
     @Rollback
-    @PendingFeature(reason = "Neo4jGormApiFactory isn't registered with GormRegistry yet (PR2 scope) - Person.findRelationship(s) resolve to the generic GormStaticApi instead of Neo4jGormStaticApi")
     void "test find relationships"() {
         given:
         def barney = new Person(name: "Barney")
@@ -93,7 +90,6 @@ class RelationshipSpec extends Specification {
     }
 
     @Rollback
-    @PendingFeature(reason = "Neo4jGormApiFactory isn't registered with GormRegistry yet (PR2 scope) - Person.findRelationship(s) resolve to the generic GormStaticApi instead of Neo4jGormStaticApi")
     void "test find relationships for types"() {
         given:
         def barney = new Person(name: "Barney")

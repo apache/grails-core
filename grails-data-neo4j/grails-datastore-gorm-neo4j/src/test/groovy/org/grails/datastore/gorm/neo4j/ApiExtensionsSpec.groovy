@@ -23,7 +23,6 @@ import grails.gorm.tests.Club
 import grails.gorm.tests.League
 import grails.gorm.tests.Team
 import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
-import spock.lang.PendingFeature
 
 /**
  * check the traverser extension
@@ -34,7 +33,6 @@ class ApiExtensionsSpec extends Neo4jGormDatastoreSpec {
         manager.registerDomainClasses(Club, Team, League)
     }
 
-    @PendingFeature(reason = "Neo4jGormApiFactory isn't registered with GormRegistry yet (PR2 scope) - static cypher calls resolve to the generic GormStaticApi instead of Neo4jGormStaticApi")
     def "test cypher queries"() {
         setup:
         new Club(name:'person1').save()

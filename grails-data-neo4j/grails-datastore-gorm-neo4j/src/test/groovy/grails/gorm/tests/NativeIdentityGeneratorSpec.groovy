@@ -22,7 +22,6 @@ package grails.gorm.tests
 
 import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
 import grails.gorm.annotation.Entity
-import spock.lang.PendingFeature
 
 /**
  * @author graemerocher
@@ -45,7 +44,6 @@ class NativeIdentityGeneratorSpec extends Neo4jGormDatastoreSpec {
         Competition.get(c2.id).id == 1L
     }
 
-    @PendingFeature(reason = "Neo4jGormApiFactory isn't registered with GormRegistry yet (PR2 scope) - Competition's static API always resolves to the generic GormStaticApi, whose saveAll() has its own bug (returns flush()'s null instead of the persisted ids). Neo4jGormStaticApi#saveAll already fixes this but is unreachable until PR2 wires up the factory")
     void "Test native id generator save multiple"() {
         when:"An entity with a native id is persisted"
         def c1 = new Competition(name:"FA Cup")
