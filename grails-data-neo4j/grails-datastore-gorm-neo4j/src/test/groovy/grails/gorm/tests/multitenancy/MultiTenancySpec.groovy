@@ -30,7 +30,6 @@ import org.grails.datastore.mapping.multitenancy.AllTenantsResolver
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
 import spock.lang.AutoCleanup
-import spock.lang.PendingFeature
 import spock.lang.Shared
 import spock.lang.Specification
 
@@ -63,7 +62,6 @@ class MultiTenancySpec extends Specification {
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "")
     }
 
-    @PendingFeature(reason = "Neo4jGormApiFactory isn't registered with GormRegistry yet (PR2 scope) - CompanyC.find(cypher, params) resolves to the generic GormStaticApi instead of Neo4jGormStaticApi")
     void "Test persist and retrieve entities with multi tenancy"() {
         when:"A tenant id is present"
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "test1")

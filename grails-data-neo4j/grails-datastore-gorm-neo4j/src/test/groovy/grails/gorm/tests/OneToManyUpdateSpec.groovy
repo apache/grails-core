@@ -22,7 +22,6 @@ package grails.gorm.tests
 
 import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
 import spock.lang.Issue
-import spock.lang.PendingFeature
 
 /**
  * @author graemerocher
@@ -31,7 +30,6 @@ class OneToManyUpdateSpec extends Neo4jGormDatastoreSpec {
 
 
     @Issue('https://github.com/apache/grails-data-mapping/issues/575')
-    @PendingFeature(reason = "Neo4jGormApiFactory isn't registered with GormRegistry yet (PR2 scope) - Club.cypherStatic(...) resolves to the generic GormStaticApi instead of Neo4jGormStaticApi")
     void "Test updates to one to many don't create duplicate relationships"() {
         given:" a one to many relationship"
         Club club = new Club(name:"Manchester United")

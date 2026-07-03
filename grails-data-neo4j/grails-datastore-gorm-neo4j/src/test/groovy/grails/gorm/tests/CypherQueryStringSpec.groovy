@@ -21,15 +21,12 @@ package grails.gorm.tests
 
 
 import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
-import spock.lang.PendingFeature
 import org.neo4j.driver.Result
 
 /**
  * @author graemerocher
  */
 class CypherQueryStringSpec extends Neo4jGormDatastoreSpec {
-
-    @PendingFeature(reason = "Neo4jGormApiFactory isn't registered with GormRegistry yet (PR2 scope) - static cypher/string-query calls resolve to the generic GormStaticApi instead of Neo4jGormStaticApi")
     void "test execute update method"() {
         given:
         setupDomain()
@@ -43,7 +40,6 @@ class CypherQueryStringSpec extends Neo4jGormDatastoreSpec {
         club.ground == "Alliance Arena"
     }
 
-    @PendingFeature(reason = "Neo4jGormApiFactory isn't registered with GormRegistry yet (PR2 scope) - static cypher/string-query calls resolve to the generic GormStaticApi instead of Neo4jGormStaticApi")
     void "test find method that accepts cypher"() {
         given:
         setupDomain()
@@ -87,7 +83,6 @@ class CypherQueryStringSpec extends Neo4jGormDatastoreSpec {
         team.club.name == 'FC Bayern Muenchen'
     }
 
-    @PendingFeature(reason = "Neo4jGormApiFactory isn't registered with GormRegistry yet (PR2 scope) - static cypher/string-query calls resolve to the generic GormStaticApi instead of Neo4jGormStaticApi")
     void "test findAll method that accepts cypher"() {
         given:
         setupDomain()
@@ -132,7 +127,6 @@ class CypherQueryStringSpec extends Neo4jGormDatastoreSpec {
         result.next().get('n').asMap().get('name') == name
     }
 
-    @PendingFeature(reason = "Neo4jGormApiFactory isn't registered with GormRegistry yet (PR2 scope) - static cypher/string-query calls resolve to the generic GormStaticApi instead of Neo4jGormStaticApi")
     void "Test convert nodes using asType for a cypher result"() {
         given:
         setupDomain()

@@ -434,6 +434,10 @@ public class Neo4jDatastore extends AbstractDatastore implements Closeable, Stat
     protected GormEnhancer initialize(Neo4jConnectionSourceSettings settings) {
         registerEventListeners(this.eventPublisher);
 
+        // Must run before the GormEnhancer constructor (below) registers this datastore's entities,
+        // otherwise GormRegistry falls back to the generic DefaultGormApiFactory for them.
+        org.grails.datastore.gorm.GormRegistry.getInstance().registerApiFactory(Neo4jDatastore.class, new Neo4jGormApiFactory());
+
         this.mappingContext.addMappingContextListener(new MappingContext.Listener() {
             @Override
             public void persistentEntityAdded(PersistentEntity entity) {
