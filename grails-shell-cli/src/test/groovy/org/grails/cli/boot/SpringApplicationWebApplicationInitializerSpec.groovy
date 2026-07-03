@@ -43,12 +43,16 @@ class SpringApplicationWebApplicationInitializerSpec extends Specification {
         then: 'the application boot is not disturbed and no NPE is raised'
         noExceptionThrown()
 
-        where: 'the manifest is missing or lacks the source-classes entry'
+        where: 'the manifest is missing, lacks the entry, or has a blank/whitespace-only entry'
         manifestStream << [
                 null,
                 new ByteArrayInputStream('Manifest-Version: 1.0\r\n\r\n'.getBytes('UTF-8')),
                 new ByteArrayInputStream(
-                        'Manifest-Version: 1.0\r\nImplementation-Title: my-app\r\n\r\n'.getBytes('UTF-8'))
+                        'Manifest-Version: 1.0\r\nImplementation-Title: my-app\r\n\r\n'.getBytes('UTF-8')),
+                new ByteArrayInputStream(
+                        'Manifest-Version: 1.0\r\nSpring-Application-Source-Classes: \r\n\r\n'.getBytes('UTF-8')),
+                new ByteArrayInputStream(
+                        'Manifest-Version: 1.0\r\nSpring-Application-Source-Classes:    \r\n\r\n'.getBytes('UTF-8'))
         ]
     }
 }
