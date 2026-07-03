@@ -108,14 +108,12 @@ class GrailsDataNeo4jTckManager extends GrailsDataTckManager {
         // neo4jDatastore/grailsApplication/mappingContext are shared across every test in this
         // spec class (see createSession()) and must survive to the next test - only wipe the
         // graph data here. Closing neo4jDatastore would also close the shared boltDriver.
-        def session = boltDriver.session()
         try {
-            def tx = session.beginTransaction()
-            try {
-                tx.run("MATCH (n) DETACH DELETE n")
-                tx.commit()
-            } finally {
-                session.close()
+            boltDriver.session().withCloseable { session ->
+                session.beginTransaction().withCloseable { tx ->
+                    tx.run("MATCH (n) DETACH DELETE n")
+                    tx.commit()
+                }
             }
         } catch (e) {
             // latest driver throws a nonsensical error in some cases. Ignore it for the moment
