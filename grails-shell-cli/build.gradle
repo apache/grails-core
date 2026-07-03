@@ -110,6 +110,11 @@ dependencies {
     testImplementation 'org.slf4j:slf4j-simple'
     testImplementation 'org.spockframework:spock-core'
 
+    // Required to load SpringApplicationWebApplicationInitializer (extends SpringBootServletInitializer)
+    // in tests; these are compileOnly for the main source set.
+    testImplementation 'org.springframework.boot:spring-boot'
+    testImplementation 'org.springframework:spring-web'
+
     testRuntimeOnly 'net.bytebuddy:byte-buddy' // Required by Spock's mocking support
 
     // any project that should be included in the end distribution should be included here
