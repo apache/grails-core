@@ -19,7 +19,11 @@
 
 buildscript {
     repositories {
-        mavenLocal()
+        // Scoped to org.apache.grails* so mavenLocal is only consulted for locally-published
+        // Grails/GORM snapshots (grails-gradle-plugins); everything else still resolves remotely.
+        mavenLocal {
+            content { includeGroupByRegex "org\\.apache\\.grails.*" }
+        }
         maven { url "https://repo.grails.org/grails/restricted" }
         maven { url "https://plugins.gradle.org/m2/" }
     }
@@ -80,7 +84,11 @@ subprojects { subproject ->
     ext['junit-jupiter.version'] = junitJupiterVersion
 
     repositories {
-        mavenLocal()
+        // Scoped to org.apache.grails* so mavenLocal is only consulted for locally-published
+        // Grails/GORM snapshots; everything else still resolves from the remote repositories.
+        mavenLocal {
+            content { includeGroupByRegex "org\\.apache\\.grails.*" }
+        }
         maven { url "https://repo.grails.org/grails/restricted" }
     }
 
