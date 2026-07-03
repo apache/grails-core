@@ -31,7 +31,6 @@ import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantR
 import org.neo4j.driver.exceptions.ClientException
 import org.neo4j.driver.exceptions.ServiceUnavailableException
 import org.neo4j.harness.ServerControls
-import org.springframework.util.SocketUtils
 import spock.lang.AutoCleanup
 import spock.lang.Ignore
 import spock.lang.Shared
@@ -46,10 +45,15 @@ import spock.util.environment.RestoreSystemProperties
 // when the Neo4j server is down so this test is no longer possible
 @RestoreSystemProperties
 class SingleTenancySpec extends Specification {
+
+    private static int findAvailableTcpPort() {
+        new ServerSocket(0).withCloseable { it.localPort }
+    }
+
     @Shared @AutoCleanup Neo4jDatastore datastore
     @Shared @AutoCleanup ServerControls serverControls
-    @Shared int port1 = SocketUtils.findAvailableTcpPort(7600)
-    @Shared int port2 = SocketUtils.findAvailableTcpPort(7600)
+    @Shared int port1 = findAvailableTcpPort()
+    @Shared int port2 = findAvailableTcpPort()
     void setupSpec() {
         Map config = [
                 "grails.gorm.multiTenancy.mode":"DATABASE",

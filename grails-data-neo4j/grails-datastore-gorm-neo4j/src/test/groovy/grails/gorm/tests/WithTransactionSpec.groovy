@@ -19,16 +19,20 @@
 
 package grails.gorm.tests
 
+
+import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
 import groovy.transform.InheritConstructors
+import org.apache.grails.data.testing.tck.domains.ChildEntity
+import org.apache.grails.data.testing.tck.domains.TestEntity
+import org.apache.grails.data.testing.tck.tests.TestCheckedException
 
 /**
  * Transaction tests.
  */
-class WithTransactionSpec extends GormDatastoreSpec {
+class WithTransactionSpec extends Neo4jGormDatastoreSpec {
 
-    @Override
-    List getDomainClasses() {
-        [TestEntity]
+    void setupSpec() {
+        manager.registerDomainClasses(TestEntity)
     }
 
     void "Test save() with transaction"() {

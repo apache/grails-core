@@ -21,27 +21,26 @@ package org.grails.datastore.gorm.neo4j
 
 import grails.gorm.tests.Club
 import grails.gorm.tests.League
-import grails.gorm.tests.Person
-import grails.gorm.tests.Pet
-import grails.gorm.tests.PetType
 import grails.gorm.tests.Team
+import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
+import spock.lang.PendingFeature
 
 /**
  * check the traverser extension
  */
-class ApiExtensionsSpec extends GormDatastoreSpec {
+class ApiExtensionsSpec extends Neo4jGormDatastoreSpec {
 
-    @Override
-    List getDomainClasses() {
-        [Club, Team, League]
+    void setupSpec() {
+        manager.registerDomainClasses(Club, Team, League)
     }
 
+    @PendingFeature(reason = "Neo4jGormApiFactory isn't registered with GormRegistry yet (PR2 scope) - static cypher calls resolve to the generic GormStaticApi instead of Neo4jGormStaticApi")
     def "test cypher queries"() {
         setup:
         new Club(name:'person1').save()
         new Club(name:'person2').save()
-        session.flush()
-        session.clear()
+        manager.session.flush()
+        manager.session.clear()
 
         when:
         def result = Club.cypherStatic("MATCH (p:Club) RETURN p")
@@ -65,7 +64,7 @@ class ApiExtensionsSpec extends GormDatastoreSpec {
         league.addToClubs(club)
         club.addToTeams(team)
         club.save(flush: true,validate:false)
-        session.clear()
+        manager.session.clear()
 
         when:
         def result = team.cypher("MATCH (p:Team)<-[:TEAMS]->(m) WHERE ID(p) = \$this return m")

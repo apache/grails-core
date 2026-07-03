@@ -19,21 +19,22 @@
 
 package grails.gorm.tests
 
+
+import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
 import grails.gorm.annotation.Entity
 
 
-class ProxySpec extends GormDatastoreSpec {
+class ProxySpec extends Neo4jGormDatastoreSpec {
 
-    @Override
-    List getDomainClasses() {
-        return [Owner, RockClub, Faculty, Student, SchoolEntity]
+    void setupSpec() {
+        manager.registerDomainClasses(Owner, RockClub, Faculty, Student, SchoolEntity)
     }
 
     void "test invokeEntityProxyMethods proxy id for ToOne association"() {
         given:
         bootstrapData()
-        session.flush()
-        session.clear()
+        manager.session.flush()
+        manager.session.clear()
 
         expect:
         RockClub.findByName("GR8 Club").owner.id ==
@@ -44,8 +45,8 @@ class ProxySpec extends GormDatastoreSpec {
     void "test getPropertyBeforeResolving proxy for ToOne association"() {
         given:
         bootstrapData2()
-        session.flush()
-        session.clear()
+        manager.session.flush()
+        manager.session.clear()
 
         expect:
         Student.findByName("Bruce").teacher.id ==

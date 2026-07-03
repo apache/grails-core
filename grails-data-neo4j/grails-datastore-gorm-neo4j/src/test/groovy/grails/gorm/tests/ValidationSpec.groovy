@@ -19,24 +19,31 @@
 
 package grails.gorm.tests
 
+
+import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.validation.CascadingValidator
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.springframework.validation.Validator
 import spock.lang.IgnoreIf
+import org.apache.grails.data.testing.tck.domains.ChildEntity
+import org.apache.grails.data.testing.tck.domains.ClassWithListArgBeforeValidate
+import org.apache.grails.data.testing.tck.domains.ClassWithNoArgBeforeValidate
+import org.apache.grails.data.testing.tck.domains.ClassWithOverloadedBeforeValidate
+import org.apache.grails.data.testing.tck.domains.Task
+import org.apache.grails.data.testing.tck.domains.TestEntity
 
 /**
  * Tests validation semantics.
  */
-class ValidationSpec extends GormDatastoreSpec {
-    @Override
-    List getDomainClasses() {
-        return [ClassWithListArgBeforeValidate, ClassWithNoArgBeforeValidate,
-                ClassWithOverloadedBeforeValidate, TestEntity, ChildEntity, Task]
+class ValidationSpec extends Neo4jGormDatastoreSpec {
+
+    void setupSpec() {
+        manager.registerDomainClasses(ClassWithListArgBeforeValidate, ClassWithNoArgBeforeValidate, ClassWithOverloadedBeforeValidate, TestEntity, ChildEntity, Task)
     }
 
     def setup() {
-        for(cls in domainClasses) {
+        for(cls in manager.domainClasses) {
             setupValidator(cls)
             GormEnhancer.findValidationApi(cls).validator = null
         }
@@ -45,7 +52,7 @@ class ValidationSpec extends GormDatastoreSpec {
     void "deepValidate parameter is honoured if entity validator implements CascadingValidator"() {
         given:
         def mockValidator = Mock(CascadingValidator)
-        mappingContext.addEntityValidator(persistentEntityFor(Task), mockValidator)
+        manager.mappingContext.addEntityValidator(persistentEntityFor(Task), mockValidator)
         def task = new Task()
 
         when:
@@ -70,7 +77,7 @@ class ValidationSpec extends GormDatastoreSpec {
     void "Two parameter validate is called on entity validator if it implements Validator interface"() {
         given:
         def mockValidator = Mock(Validator)
-        session.mappingContext.addEntityValidator(persistentEntityFor(Task), mockValidator)
+        manager.session.mappingContext.addEntityValidator(persistentEntityFor(Task), mockValidator)
         def task = new Task()
 
         when:
@@ -237,11 +244,11 @@ class ValidationSpec extends GormDatastoreSpec {
         def t
 
         when:
-        session.disconnect()
+        manager.session.disconnect()
         t = new TestEntity(name:"")
 
         then:
-        !session.datastore.hasCurrentSession()
+        !manager.session.datastore.hasCurrentSession()
         t.save() == null
         t.hasErrors() == true
         1 == t.errors.allErrors.size()
@@ -249,6 +256,6 @@ class ValidationSpec extends GormDatastoreSpec {
     }
 
     private PersistentEntity persistentEntityFor(Class c) {
-        session.mappingContext.persistentEntities.find { it.javaClass == c }
+        manager.session.mappingContext.persistentEntities.find { it.javaClass == c }
     }
 }

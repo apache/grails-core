@@ -68,8 +68,8 @@ import org.springframework.context.MessageSourceAware;
 import org.springframework.context.support.StaticMessageSource;
 import org.springframework.core.env.PropertyResolver;
 
-import javax.annotation.PreDestroy;
-import javax.persistence.FlushModeType;
+import jakarta.annotation.PreDestroy;
+import jakarta.persistence.FlushModeType;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.Serializable;

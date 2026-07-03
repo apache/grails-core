@@ -19,6 +19,8 @@
 
 package grails.gorm.tests
 
+
+import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
 import grails.gorm.annotation.Entity
 import org.grails.datastore.gorm.neo4j.Neo4jTransaction
 import org.grails.datastore.mapping.core.OptimisticLockingException
@@ -31,11 +33,10 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 /**
  * @author Burt Beckwith
  */
-class OptimisticLockingSpec extends GormDatastoreSpec {
+class OptimisticLockingSpec extends Neo4jGormDatastoreSpec {
 
-    @Override
-    List getDomainClasses() {
-        [OptLockNotVersioned, OptLockVersioned]
+    void setupSpec() {
+        manager.registerDomainClasses(OptLockNotVersioned, OptLockVersioned)
     }
 
     void "Test versioning"() {
@@ -50,7 +51,7 @@ class OptimisticLockingSpec extends GormDatastoreSpec {
         o.version == 0
 
         when:
-        session.clear()
+        manager.session.clear()
         o = OptLockVersioned.get(o.id)
         o.name = 'Fred'
         o.save flush: true
@@ -59,7 +60,7 @@ class OptimisticLockingSpec extends GormDatastoreSpec {
         o.version == 1
 
         when:
-        session.clear()
+        manager.session.clear()
         o = OptLockVersioned.get(o.id)
 
         then:
@@ -71,12 +72,12 @@ class OptimisticLockingSpec extends GormDatastoreSpec {
 
         given:
         def o = new OptLockVersioned(name: 'locked').save(flush: true)
-        session.transaction.commit()
-        session.transaction.nativeTransaction.close()
-        session.clear()
+        manager.session.transaction.commit()
+        manager.session.transaction.nativeTransaction.close()
+        manager.session.clear()
 
-        def neo4jSession = (org.neo4j.driver.Session) session.getNativeInterface()
-        SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(session.getDatastore());
+        def neo4jSession = (org.neo4j.driver.Session) manager.session.getNativeInterface()
+        SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(manager.session.getDatastore());
 //        sessionHolder.setTransaction( new Neo4jTransaction(neo4jSession))
 
         when:
@@ -91,14 +92,14 @@ class OptimisticLockingSpec extends GormDatastoreSpec {
                 OptLockVersioned.withTransaction {
                     def reloaded = OptLockVersioned.get(o.id)
                     assert reloaded
-                    reloaded.name += ' in new session'
+                    reloaded.name += ' in new manager.session'
                     reloaded.save(flush: true)
                 }
             }
         }.join()
         sleep 2000 // heisenbug
 
-        o.name += ' in main session'
+        o.name += ' in main manager.session'
         def ex
         try {
             o.save(flush: true)
@@ -108,20 +109,20 @@ class OptimisticLockingSpec extends GormDatastoreSpec {
             e.printStackTrace()
         }
 
-        session.clear()
+        manager.session.clear()
         o = OptLockVersioned.get(o.id)
 
         then:
         ex instanceof OptimisticLockingException
         o.version == 1
-        o.name == 'locked in new session'
+        o.name == 'locked in new manager.session'
     }
 
     void "Test optimistic locking disabled with 'version false'"() {
 
         given:
         def o = new OptLockNotVersioned(name: 'locked').save(flush: true)
-        session.clear()
+        manager.session.clear()
 
         when:
         o = OptLockNotVersioned.get(o.id)
@@ -130,7 +131,7 @@ class OptimisticLockingSpec extends GormDatastoreSpec {
             Thread.start {
                 OptLockNotVersioned.withNewSession { s ->
                     def reloaded = OptLockNotVersioned.get(o.id)
-                    reloaded.name += ' in new session'
+                    reloaded.name += ' in new manager.session'
                     reloaded.save(flush: true)
                 }
             }.join(2000)
@@ -139,7 +140,7 @@ class OptimisticLockingSpec extends GormDatastoreSpec {
         }
         sleep 2000 // heisenbug
 
-        o.name += ' in main session'
+        o.name += ' in main manager.session'
         def ex
         try {
             o.save(flush: true)
@@ -149,12 +150,12 @@ class OptimisticLockingSpec extends GormDatastoreSpec {
             e.printStackTrace()
         }
 
-        session.clear()
+        manager.session.clear()
         o = OptLockNotVersioned.get(o.id)
 
         then:
         ex == null
-        o.name == 'locked in main session'
+        o.name == 'locked in main manager.session'
     }
 }
 

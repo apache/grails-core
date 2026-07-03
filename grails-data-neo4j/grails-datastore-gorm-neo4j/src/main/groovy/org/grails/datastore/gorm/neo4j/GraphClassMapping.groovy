@@ -39,6 +39,8 @@ class GraphClassMapping extends AbstractClassMapping<NodeConfig> {
 
     @Override
     NodeConfig getMappedForm() {
-        ((GraphPersistentEntity)entity).mappedForm
+        // Explicit field access (.@) - entity.mappedForm would resolve to the getter,
+        // which recurses back here via PersistentEntity#getMappedForm()'s default method.
+        ((GraphPersistentEntity)entity).@mappedForm
     }
 }

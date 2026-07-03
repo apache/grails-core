@@ -19,6 +19,8 @@
 
 package grails.gorm.tests
 
+
+import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
 import grails.gorm.annotation.Entity
 import grails.neo4j.Neo4jEntity
 import grails.neo4j.Relationship
@@ -26,16 +28,15 @@ import groovy.transform.CompileStatic
 import org.grails.datastore.mapping.proxy.EntityProxy
 import spock.lang.Ignore
 
-import javax.persistence.FetchType
+import jakarta.persistence.FetchType
 import static grails.neo4j.mapping.MappingBuilder.*
 /**
  * Created by graemerocher on 08/12/16.
  */
-class RelationshipMappingSpec extends GormDatastoreSpec{
+class RelationshipMappingSpec extends Neo4jGormDatastoreSpec{
 
-    @Override
-    List getDomainClasses() {
-        [Movie, CastMember, Celeb]
+    void setupSpec() {
+        manager.registerDomainClasses(Movie, CastMember, Celeb)
     }
 
     void "Test save an retrieve a relationship directly"() {
@@ -54,11 +55,11 @@ class RelationshipMappingSpec extends GormDatastoreSpec{
         CastMember.countByRoles(['Neo']) == 1
 
         when:"The relationship is updated"
-        session.clear()
+        manager.session.clear()
         CastMember cm = CastMember.findByFrom(keanu)
         cm.roles = ['Neo', 'Thomas Anderson']
         cm.save(flush:true)
-        session.clear()
+        manager.session.clear()
         cm = CastMember.get(cm.id)
         def roles = CastMember.where {
             id == cm.id
@@ -128,7 +129,7 @@ class RelationshipMappingSpec extends GormDatastoreSpec{
             new CastMember(type: "ACTED_IN", from: c2, to: m, roles: ['Trinity'])
         )
         m.save(flush:true)
-        neo4jDatastore.currentSession.clear()
+        manager.neo4jDatastore.currentSession.clear()
 
 
         when:"The relationship is lazy loaded"
@@ -167,7 +168,7 @@ class RelationshipMappingSpec extends GormDatastoreSpec{
             new CastMember(type: "ACTED_IN", from: c2, to: m, roles: ['Trinity'])
         )
         m.save(flush:true)
-        neo4jDatastore.currentSession.clear()
+        manager.neo4jDatastore.currentSession.clear()
 
 
         when:"The relationship is lazy loaded"
@@ -180,7 +181,7 @@ class RelationshipMappingSpec extends GormDatastoreSpec{
         m.cast.find { it.type == 'ACTED_IN' }
 
         when:"The relationship is eagerly loaded"
-        session.clear()
+        manager.session.clear()
         m = Movie.first(fetch:[cast:FetchType.EAGER])
 
 
@@ -191,7 +192,7 @@ class RelationshipMappingSpec extends GormDatastoreSpec{
         m.cast.find { it.type == 'ACTED_IN' }
 
         when:'the relationship is defined on the other side and queried'
-        session.clear()
+        manager.session.clear()
         c = Celeb.first()
 
         then:"the relationship is loaded correctly"
@@ -201,7 +202,7 @@ class RelationshipMappingSpec extends GormDatastoreSpec{
         c.appearances.first().from == c
 
         when:'the relationship is eager loaded'
-        session.clear()
+        manager.session.clear()
         c = Celeb.findByName("Keanu",[fetch:[appearances: FetchType.EAGER]])
 
         then:"the relationship is loaded correctly"
@@ -266,7 +267,7 @@ class RelationshipMappingSpec extends GormDatastoreSpec{
                 new CastMember(type: "ACTED_IN", from: c2, to: m, roles: ['Trinity'])
         )
         m.save(flush: true)
-        neo4jDatastore.currentSession.clear()
+        manager.neo4jDatastore.currentSession.clear()
     }
 
 }

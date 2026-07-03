@@ -19,16 +19,17 @@
 
 package grails.gorm.tests
 
+
+import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
 import grails.gorm.annotation.Entity
 import grails.neo4j.Relationship
 import grails.neo4j.mapping.MappingBuilder
 import spock.lang.Issue
 
-class ManyToManyQuerySpec extends GormDatastoreSpec {
+class ManyToManyQuerySpec extends Neo4jGormDatastoreSpec {
 
-    @Override
-    List getDomainClasses() {
-        [TestA, TestB, TestC]
+    void setupSpec() {
+        manager.registerDomainClasses(TestA, TestB, TestC)
     }
 
     @Issue('309')

@@ -19,20 +19,22 @@
 
 package grails.gorm.tests
 
+
+import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
 import grails.gorm.annotation.Entity
 import spock.lang.Issue
 
 /**
  * @author graemerocher
  */
-class TransientsSpec extends GormDatastoreSpec {
+class TransientsSpec extends Neo4jGormDatastoreSpec {
 
     @Issue('https://github.com/apache/grails-data-mapping/issues/574')
     void "Test transients are actually transient"() {
         when:
         TransientChild child = new TransientChild(name:"Bob", transientProperty: "blah")
         child.save(flush:true)
-        session.clear()
+        manager.session.clear()
         child = TransientChild.get(child.id)
 
         then:
@@ -40,9 +42,8 @@ class TransientsSpec extends GormDatastoreSpec {
         child.transientProperty == null
     }
 
-    @Override
-    List getDomainClasses() {
-        [TransientParent, TransientChild]
+    void setupSpec() {
+        manager.registerDomainClasses(TransientParent, TransientChild)
     }
 }
 

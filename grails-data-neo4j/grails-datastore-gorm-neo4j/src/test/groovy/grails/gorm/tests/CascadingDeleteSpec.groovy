@@ -19,24 +19,27 @@
 
 package grails.gorm.tests
 
+
+import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
 import grails.gorm.DetachedCriteria
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.apache.grails.data.testing.tck.domains.Pet
+import org.apache.grails.data.testing.tck.domains.PetType
 
-class CascadingDeleteSpec extends GormDatastoreSpec {
+class CascadingDeleteSpec extends Neo4jGormDatastoreSpec {
 
     private static Logger log = LoggerFactory.getLogger(CascadingDeleteSpec.class);
 
-    @Override
-    List getDomainClasses() {
-        [Pet, PetType, Club, Team]
+    void setupSpec() {
+        manager.registerDomainClasses(Pet, PetType, Club, Team)
     }
 
     def "should belongsTo trigger cascading delete on OneToOne"() {
         when:
             def pet = new Pet(name: 'Cosima', type: new PetType(name: 'Cat')).save()
             pet.save(flush:true)
-            session.clear()
+            manager.session.clear()
 
         then:
             Pet.count() == 1
@@ -68,7 +71,7 @@ class CascadingDeleteSpec extends GormDatastoreSpec {
             otherClub.addToTeams(new Team(name: 'BVB 1'))
             otherClub.addToTeams(new Team(name: 'BVB 2'))
             otherClub.save(flush:true,validate:false)
-            session.clear()
+            manager.session.clear()
 
         then:
             Club.count() == 2
@@ -93,7 +96,7 @@ class CascadingDeleteSpec extends GormDatastoreSpec {
             otherClub.addToTeams(new Team(name: 'BVB 1'))
             otherClub.addToTeams(new Team(name: 'BVB 2'))
             otherClub.save(flush:true,validate:false)
-            session.clear()
+            manager.session.clear()
 
         then:
             def criteria = new DetachedCriteria(Club).build {}

@@ -19,6 +19,8 @@
 
 package grails.gorm.tests
 
+
+import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
 import grails.gorm.DetachedCriteria
 import grails.gorm.annotation.Entity
 import org.grails.datastore.mapping.core.Datastore
@@ -33,17 +35,16 @@ import org.springframework.context.ApplicationEvent
 /**
  * @author Tom Widmer
  */
-class PersistenceEventListenerSpec extends GormDatastoreSpec {
+class PersistenceEventListenerSpec extends Neo4jGormDatastoreSpec {
     SpecPersistenceListener listener
 
-    @Override
-    List getDomainClasses() {
-        [Simples]
+    void setupSpec() {
+        manager.registerDomainClasses(Simples)
     }
 
     def setup() {
-        listener = new SpecPersistenceListener(session.datastore)
-        session.datastore.applicationEventPublisher.addApplicationListener(listener)
+        listener = new SpecPersistenceListener(manager.session.datastore)
+        manager.session.datastore.applicationEventPublisher.addApplicationListener(listener)
     }
 
     void "Test delete events"() {
@@ -51,7 +52,7 @@ class PersistenceEventListenerSpec extends GormDatastoreSpec {
         def p = new Simples()
         p.name = "Fred"
         p.save(flush: true)
-        session.clear()
+        manager.session.clear()
 
         when:
         p = Simples.get(p.id)
@@ -79,7 +80,7 @@ class PersistenceEventListenerSpec extends GormDatastoreSpec {
         def freds = (1..3).collect {
             new Simples(name: "Fred$it").save(flush: true)
         }
-        session.clear()
+        manager.session.clear()
 
         when:
         freds = Simples.findAllByIdInList(freds*.id)
@@ -93,14 +94,14 @@ class PersistenceEventListenerSpec extends GormDatastoreSpec {
         new DetachedCriteria(Simples).build {
             'in'('id', freds*.id)
         }.deleteAll()
-        session.flush()
+        manager.session.flush()
 
         then:
         0 == Simples.count()
         0 == Simples.list().size()
 
         // conditional assertions because in the case of batch DML statements neither Hibernate nor JPA triggers delete events for individual entities
-        if (!session.getClass().simpleName in ['JpaSession', 'HibernateSession']) {
+        if (!manager.session.getClass().simpleName in ['JpaSession', 'HibernateSession']) {
             3 == listener.PreDeleteCount
             3 == listener.PostDeleteCount
         }
@@ -112,7 +113,7 @@ class PersistenceEventListenerSpec extends GormDatastoreSpec {
 
         p.name = "Fred"
         p.save(flush: true)
-        session.clear()
+        manager.session.clear()
 
         when:
         p = Simples.get(p.id)
@@ -125,7 +126,7 @@ class PersistenceEventListenerSpec extends GormDatastoreSpec {
         when:
         p.name = "Bob"
         p.save(flush: true)
-        session.clear()
+        manager.session.clear()
         p = Simples.get(p.id)
 
         then:
@@ -140,7 +141,7 @@ class PersistenceEventListenerSpec extends GormDatastoreSpec {
 
         p.name = "Fred"
         p.save(flush: true)
-        session.clear()
+        manager.session.clear()
 
         when:
         p = Simples.get(p.id)
@@ -155,7 +156,7 @@ class PersistenceEventListenerSpec extends GormDatastoreSpec {
         when:
         p.name = "Bob"
         p.save(flush: true)
-        session.clear()
+        manager.session.clear()
         p = Simples.get(p.id)
 
         then:
@@ -172,14 +173,14 @@ class PersistenceEventListenerSpec extends GormDatastoreSpec {
 
         p.name = "Fred"
         p.save(flush: true)
-        session.clear()
+        manager.session.clear()
 
         when:
         p = Simples.get(p.id)
 
         then:
         "Fred" == p.name
-        if (!'JpaSession'.equals(session.getClass().simpleName)) {
+        if (!'JpaSession'.equals(manager.session.getClass().simpleName)) {
             // JPA doesn't seem to support a pre-load event
             1 == listener.PreLoadCount
         }
@@ -191,7 +192,7 @@ class PersistenceEventListenerSpec extends GormDatastoreSpec {
         def freds = (1..3).collect {
             new Simples(name: "Fred$it").save(flush: true)
         }
-        session.clear()
+        manager.session.clear()
 
         when:
         freds = Simples.findAllByIdInList(freds*.id)
@@ -199,7 +200,7 @@ class PersistenceEventListenerSpec extends GormDatastoreSpec {
 
         then:
         3 == freds.size()
-        if (!'JpaSession'.equals(session.getClass().simpleName)) {
+        if (!'JpaSession'.equals(manager.session.getClass().simpleName)) {
             // JPA doesn't seem to support a pre-load event
             3 == listener.PreLoadCount
         }

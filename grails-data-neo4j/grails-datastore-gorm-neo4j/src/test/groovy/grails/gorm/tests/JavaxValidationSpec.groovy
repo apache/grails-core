@@ -19,14 +19,16 @@
 
 package grails.gorm.tests
 
+
+import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
 import grails.gorm.annotation.Entity
 
-import javax.validation.constraints.Digits
+import jakarta.validation.constraints.Digits
 
 /**
  * Created by graemerocher on 30/12/2016.
  */
-class JavaxValidationSpec extends GormDatastoreSpec {
+class JavaxValidationSpec extends Neo4jGormDatastoreSpec {
 
     void "test javax.validator validation"() {
         when:"An invalid entity is created"
@@ -38,9 +40,8 @@ class JavaxValidationSpec extends GormDatastoreSpec {
         p.errors.getFieldError('price')
     }
 
-    @Override
-    List getDomainClasses() {
-        [JavaxProduct]
+    void setupSpec() {
+        manager.registerDomainClasses(JavaxProduct)
     }
 }
 

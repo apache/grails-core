@@ -19,6 +19,8 @@
 
 package grails.gorm.tests
 
+
+import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
 import grails.gorm.annotation.Entity
 import grails.gorm.dirty.checking.DirtyCheck
 import grails.neo4j.Neo4jEntity
@@ -34,16 +36,15 @@ import spock.lang.Issue
  * test for various strategies to define Neo4j labels on domain classes and instances
  * @author Stefan Armbruster
  */
-class LabelStrategySpec extends GormDatastoreSpec {
+class LabelStrategySpec extends Neo4jGormDatastoreSpec {
 
-    @Override
-    List getDomainClasses() {
-        [FinalSubClass, ParentClass, ClassInTheMiddle, SubClass, Default, StaticLabel, StaticLabels, DynLabel, MixedLabels, InstanceDependentLabels, LabeledAbstract, LabeledSub]
+    void setupSpec() {
+        manager.registerDomainClasses(FinalSubClass, ParentClass, ClassInTheMiddle, SubClass, Default, StaticLabel, StaticLabels, DynLabel, MixedLabels, InstanceDependentLabels, LabeledAbstract, LabeledSub)
     }
 
     Transaction tx
     def setup() {
-        def graph = serverControls.graph()
+        def graph = manager.serverControls.graph()
         tx = graph.beginTx()
     }
 
@@ -200,7 +201,7 @@ class LabelStrategySpec extends GormDatastoreSpec {
     }
 
     private def verifyLabelsForId(id, labelz) {
-        def cypherResult = session.transaction.nativeTransaction.run("MATCH (n ) WHERE ID(n) = {1} return labels(n) as labels", ["1":id])
+        def cypherResult = manager.session.transaction.nativeTransaction.run("MATCH (n ) WHERE ID(n) = {1} return labels(n) as labels", ["1":id])
 
         def result = IteratorUtil.single(cypherResult)
         def labelsObject = result["labels"].asList()

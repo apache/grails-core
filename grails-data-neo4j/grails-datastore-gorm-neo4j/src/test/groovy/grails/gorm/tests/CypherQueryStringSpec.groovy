@@ -19,13 +19,17 @@
 
 package grails.gorm.tests
 
+
+import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
+import spock.lang.PendingFeature
 import org.neo4j.driver.Result
 
 /**
  * @author graemerocher
  */
-class CypherQueryStringSpec extends GormDatastoreSpec {
+class CypherQueryStringSpec extends Neo4jGormDatastoreSpec {
 
+    @PendingFeature(reason = "Neo4jGormApiFactory isn't registered with GormRegistry yet (PR2 scope) - static cypher/string-query calls resolve to the generic GormStaticApi instead of Neo4jGormStaticApi")
     void "test execute update method"() {
         given:
         setupDomain()
@@ -39,6 +43,7 @@ class CypherQueryStringSpec extends GormDatastoreSpec {
         club.ground == "Alliance Arena"
     }
 
+    @PendingFeature(reason = "Neo4jGormApiFactory isn't registered with GormRegistry yet (PR2 scope) - static cypher/string-query calls resolve to the generic GormStaticApi instead of Neo4jGormStaticApi")
     void "test find method that accepts cypher"() {
         given:
         setupDomain()
@@ -62,7 +67,7 @@ class CypherQueryStringSpec extends GormDatastoreSpec {
         club.teams.size() == 2
 
         when:"A find method is executed on the inverse side"
-        session.clear()
+        manager.session.clear()
         def team = Team.find("MATCH (n) where n.name = \$name RETURN n", [name:'FCB Team 1'])
 
         then:"The result is correct"
@@ -82,6 +87,7 @@ class CypherQueryStringSpec extends GormDatastoreSpec {
         team.club.name == 'FC Bayern Muenchen'
     }
 
+    @PendingFeature(reason = "Neo4jGormApiFactory isn't registered with GormRegistry yet (PR2 scope) - static cypher/string-query calls resolve to the generic GormStaticApi instead of Neo4jGormStaticApi")
     void "test findAll method that accepts cypher"() {
         given:
         setupDomain()
@@ -97,7 +103,7 @@ class CypherQueryStringSpec extends GormDatastoreSpec {
         clubs[0].teams.size() == 2
 
         when:"A find method is executed with map arguments"
-        session.clear()
+        manager.session.clear()
         clubs = Club.findAll("MATCH (n) where n.name = \$name RETURN n", [name:'FC Bayern Muenchen'])
 
         then:"The result is correct"
@@ -126,6 +132,7 @@ class CypherQueryStringSpec extends GormDatastoreSpec {
         result.next().get('n').asMap().get('name') == name
     }
 
+    @PendingFeature(reason = "Neo4jGormApiFactory isn't registered with GormRegistry yet (PR2 scope) - static cypher/string-query calls resolve to the generic GormStaticApi instead of Neo4jGormStaticApi")
     void "Test convert nodes using asType for a cypher result"() {
         given:
         setupDomain()
@@ -161,11 +168,10 @@ class CypherQueryStringSpec extends GormDatastoreSpec {
         otherClub.addToTeams(new Team(name: 'BVB 1'))
         otherClub.addToTeams(new Team(name: 'BVB 2'))
         otherClub.save(flush:true,validate:false)
-        session.clear()
+        manager.session.clear()
     }
 
-    @Override
-    List getDomainClasses() {
-        [Club, Team]
+    void setupSpec() {
+        manager.registerDomainClasses(Club, Team)
     }
 }

@@ -19,6 +19,8 @@
 
 package grails.gorm.tests
 
+
+import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
 import grails.gorm.annotation.Entity
 import grails.neo4j.Neo4jEntity
 import spock.lang.Ignore
@@ -27,7 +29,7 @@ import spock.lang.Ignore
  * Created by graemerocher on 09/09/2016.
  */
 @Ignore
-class MapPropertySpec extends GormDatastoreSpec {
+class MapPropertySpec extends Neo4jGormDatastoreSpec {
 
     @Ignore
     void "Test persist map property"() {
@@ -42,9 +44,8 @@ class MapPropertySpec extends GormDatastoreSpec {
         a.attributes.size() == 1
     }
 
-    @Override
-    List getDomainClasses() {
-        [Animal]
+    void setupSpec() {
+        manager.registerDomainClasses(Animal)
     }
 }
 

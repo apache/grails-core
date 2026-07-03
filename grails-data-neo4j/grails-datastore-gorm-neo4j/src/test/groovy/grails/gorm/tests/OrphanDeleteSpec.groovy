@@ -19,13 +19,16 @@
 
 package grails.gorm.tests
 
+
+import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
 import grails.gorm.annotation.Entity
+import org.apache.grails.data.testing.tck.domains.Person
 import spock.lang.Issue
 
 /**
  * Created by graemerocher on 15/08/2017.
  */
-class OrphanDeleteSpec extends GormDatastoreSpec {
+class OrphanDeleteSpec extends Neo4jGormDatastoreSpec {
 
 
     @Issue('https://github.com/grails/grails-data-neo4j/issues/6')
@@ -45,7 +48,7 @@ class OrphanDeleteSpec extends GormDatastoreSpec {
         Phone phone = c.phones.find() { it.phoneNumber == '1234'}
         c.phones.remove(phone)
         c.save(flush:true)
-        session.clear()
+        manager.session.clear()
 
         then:"The child was also deleted"
         Contact.count == 1
@@ -54,9 +57,8 @@ class OrphanDeleteSpec extends GormDatastoreSpec {
         Phone.count == 1
     }
 
-    @Override
-    List getDomainClasses() {
-        [Contact, Phone]
+    void setupSpec() {
+        manager.registerDomainClasses(Contact, Phone)
     }
 }
 

@@ -42,7 +42,7 @@ import org.neo4j.driver.QueryRunner
 import org.neo4j.driver.Value
 import org.neo4j.driver.types.Node
 
-import javax.persistence.FetchType
+import jakarta.persistence.FetchType
 
 /**
  * perform criteria queries on a Neo4j backend
@@ -167,7 +167,7 @@ class Neo4jQuery extends Query {
 
 
             }
-    ]
+    ] as Map<Class<? extends Query.Projection>, ProjectionHandler<? extends Projection>>
 
     public static Map<Class<? extends Query.Criterion>, CriterionHandler<? extends Criterion>> CRITERION_HANDLERS = [
             (Query.Conjunction): new CriterionHandler<Query.Conjunction>() {
@@ -380,7 +380,7 @@ class Neo4jQuery extends Query {
             (Query.SizeGreaterThan): SizeCriterionHandler.GREATER_THAN,
             (Query.SizeGreaterThanEquals): SizeCriterionHandler.GREATER_THAN_EQUALS
 
-    ]
+    ] as Map<Class<? extends Query.Criterion>, CriterionHandler<? extends Criterion>>
 
 
     private String applyOrderAndLimits(CypherBuilder cypherBuilder) {
@@ -392,12 +392,13 @@ class Neo4jQuery extends Query {
             }.join(", ")
         }
 
-        if (offset != 0) {
+        // offset/max are boxed Integer on Query and default to null (unset), not 0/-1
+        if (offset != null && offset != 0) {
             int skipParam = cypherBuilder.addParam(offset)
             cypher << " SKIP \$$skipParam"
         }
 
-        if (max != -1) {
+        if (max != null && max != -1) {
             int limitParam = cypherBuilder.addParam(max)
             cypher << " LIMIT \$$limitParam"
         }
@@ -518,7 +519,7 @@ class Neo4jQuery extends Query {
         QueryRunner statementRunner = session.hasTransaction() ? session.getTransaction().getTransaction() : boltSession
         Result executionResult = params.isEmpty() ? statementRunner.run(cypher) : statementRunner.run(cypher, params)
         if (projectionList.empty) {
-            return new Neo4jResultList(offset, executionResult, neo4jEntityPersister, lockResult)
+            return new Neo4jResultList(offset != null ? offset : 0, executionResult, neo4jEntityPersister, lockResult)
         } else {
 
             List projectedResults = []

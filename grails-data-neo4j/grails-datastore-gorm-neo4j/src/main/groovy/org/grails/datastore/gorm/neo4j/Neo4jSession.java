@@ -56,7 +56,7 @@ import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-import javax.persistence.CascadeType;
+import jakarta.persistence.CascadeType;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.*;
@@ -729,9 +729,11 @@ public class Neo4jSession extends AbstractSession<Session> {
         return simpleProps;
     }
 
+    @SuppressWarnings("unchecked")
     private void applyCustomType(EntityAccess access, PersistentProperty property, Map<String, Object> simpleProps) {
-        Custom<Map<String, Object>> custom = (Custom<Map<String, Object>>) property;
-        final CustomTypeMarshaller<Object, Map<String, Object>, Map<String, Object>> customTypeMarshaller = custom.getCustomTypeMarshaller();
+        Custom<?> custom = (Custom<?>) property;
+        final CustomTypeMarshaller<Object, Map<String, Object>, Map<String, Object>> customTypeMarshaller =
+                (CustomTypeMarshaller<Object, Map<String, Object>, Map<String, Object>>) custom.getCustomTypeMarshaller();
         Object value = access.getProperty(property.getName());
         customTypeMarshaller.write(custom, value, simpleProps);
     }
