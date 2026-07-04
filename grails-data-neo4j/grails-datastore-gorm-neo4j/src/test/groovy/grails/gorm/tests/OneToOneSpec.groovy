@@ -68,7 +68,7 @@ class OneToOneSpec extends Neo4jGormDatastoreSpec {
         association.bidirectional
         association.associatedEntity.javaClass == Nose
         face != null
-        face.noseId == face.id
+        face.noseId == nose.id
         face.nose != null
         face.nose.hasFreckles == true
 

@@ -29,18 +29,29 @@ import org.grails.datastore.mapping.model.PersistentEntity
 /**
  * Unit tests for {@link GormValidationApi}.
  *
- * Verifies that the resolved {@link Validator} is cached after first resolution, avoiding
- * repeated (and potentially expensive) validator lookups on every call.
+ * Verifies that an auto-discovered {@link Validator} is re-resolved from the {@link MappingContext}
+ * on every call rather than being frozen on this API instance. {@code GormValidationApi} instances
+ * are registered once per entity class and reused for the lifetime of the owning
+ * {@code GormRegistry}/datastore, so permanently caching whichever validator happened to be
+ * resolved first would make later calls to {@link MappingContext#addEntityValidator} invisible
+ * (this bit Neo4j's TCK manager, which reuses one long-lived datastore/GormEnhancer per spec
+ * class and registers a fresh mock validator per test). The {@link MappingContext} itself already
+ * caches the resolved validator per entity, so re-resolving here is still cheap.
+ *
+ * An explicitly assigned validator (via {@link GormValidationApi#setValidator}) is the one
+ * exception that remains sticky, since that is a deliberate, permanent override rather than an
+ * auto-discovered lookup.
  */
 class GormValidationApiSpec extends Specification {
 
     static class Foo {
     }
 
-    void "getValidator caches the resolved validator instead of re-resolving it on every call"() {
+    void "getValidator re-resolves an auto-discovered validator from the MappingContext on every call"() {
         given:
         PersistentEntity persistentEntity = Mock(PersistentEntity)
-        Validator validator = Mock(Validator)
+        Validator firstValidator = Mock(Validator)
+        Validator secondValidator = Mock(Validator)
         MappingContext mappingContext = Mock(MappingContext) {
             getPersistentEntity(Foo.name) >> persistentEntity
         }
@@ -51,12 +62,40 @@ class GormValidationApiSpec extends Specification {
 
         when:
         Validator first = api.getValidator()
+
+        then: "the first call resolves whatever validator is currently registered"
+        1 * mappingContext.getEntityValidator(persistentEntity) >> firstValidator
+        first == firstValidator
+
+        when: "the registered validator is replaced (e.g. via MappingContext#addEntityValidator)"
         Validator second = api.getValidator()
 
-        then: "the validator is only resolved once, on the first call"
-        1 * mappingContext.getEntityValidator(persistentEntity) >> validator
-        first == validator
-        second == validator
+        then: "the replacement is picked up rather than the stale first result"
+        1 * mappingContext.getEntityValidator(persistentEntity) >> secondValidator
+        second == secondValidator
+    }
+
+    void "getValidator returns the validator explicitly set via setValidator without consulting the MappingContext"() {
+        given:
+        PersistentEntity persistentEntity = Mock(PersistentEntity)
+        Validator explicitValidator = Mock(Validator)
+        MappingContext mappingContext = Mock(MappingContext) {
+            getPersistentEntity(Foo.name) >> persistentEntity
+        }
+        Datastore datastore = Mock(Datastore) {
+            getMappingContext() >> mappingContext
+        }
+        GormValidationApi<Foo> api = new GormValidationApi<>(Foo, datastore)
+        api.setValidator(explicitValidator)
+
+        when:
+        Validator first = api.getValidator()
+        Validator second = api.getValidator()
+
+        then: "the explicit override sticks and the MappingContext is never consulted"
+        0 * mappingContext.getEntityValidator(_)
+        first == explicitValidator
+        second == explicitValidator
     }
 
     void "getValidator returns null and does not cache when no validator can be resolved"() {

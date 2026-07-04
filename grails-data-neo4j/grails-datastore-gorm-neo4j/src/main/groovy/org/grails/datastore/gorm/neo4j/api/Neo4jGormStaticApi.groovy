@@ -249,7 +249,7 @@ class Neo4jGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     Integer executeUpdate(CharSequence query, Collection params, Map args) {
-        return Neo4jEntityPersister.countUpdates(cypherStatic(query, params.toList()) )
+        return (int) Neo4jEntityPersister.countUpdates(cypherStatic(query, params.toList()) )
     }
 
 

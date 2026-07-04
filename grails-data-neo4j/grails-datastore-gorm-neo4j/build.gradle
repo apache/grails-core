@@ -80,6 +80,7 @@ configurations.all {
 
 test {
     useJUnitPlatform()
+    systemProperty('neo4j.gorm.suite', System.getProperty('neo4j.gorm.suite') ?: true)
     maxParallelForks = (findProperty('maxTestParallel') as Integer) ?: 1
     forkEvery = 10
 

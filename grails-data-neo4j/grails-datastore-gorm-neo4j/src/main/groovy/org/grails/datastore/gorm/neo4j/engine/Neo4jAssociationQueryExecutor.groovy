@@ -155,11 +155,9 @@ class Neo4jAssociationQueryExecutor implements AssociationQueryExecutor<Serializ
                             boolean isToOne = association instanceof ToOne
 
                             boolean lazy  = false
-                            boolean isNullable = false
                             if(isToOne && !isEager) {
                                 Property propertyMapping = association.mapping.mappedForm
                                 Boolean isLazy = propertyMapping.getLazy()
-                                isNullable = propertyMapping.isNullable()
                                 lazy = (isLazy != null ? isLazy : (association instanceof ManyToOne ? !association.isCircular() : true))
 
                             }
@@ -175,9 +173,12 @@ class Neo4jAssociationQueryExecutor implements AssociationQueryExecutor<Serializ
 
                             boolean addOptionalMatch = false
                             // If it is a one-to-many and lazy=true
-                            // Or it is a one-to-one where the association is nullable or not lazy
-                            // then just collect the identifiers and not the nodes
-                            if((isToMany && lazy) || (isToOne && !isEager && (isNullable || !lazy ) )) {
+                            // Or it is any non-eager to-one (regardless of nullability/laziness)
+                            // then just collect the identifiers and not the nodes.
+                            // A mandatory, lazy to-one (e.g. a required hasOne) must still have its id
+                            // collected here - see the matching comment in Neo4jQuery.executeQuery()
+                            // for why omitting it corrupts <property>Id lookups.
+                            if((isToMany && lazy) || (isToOne && !isEager)) {
                                 withMatch += "collect(DISTINCT ${associatedGraphEntity.formatId(associationNodeRef)}) as ${associationIdsRef}"
                                 returnString.append(", ").append(associationIdsRef)
                                 previousAssociations << associationIdsRef
