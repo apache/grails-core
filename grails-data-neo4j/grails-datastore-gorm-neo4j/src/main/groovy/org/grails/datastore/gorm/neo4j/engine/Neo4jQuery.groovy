@@ -175,13 +175,7 @@ class Neo4jQuery extends Query {
                 @CompileStatic
                 CypherExpression handle(GraphPersistentEntity entity, Query.Conjunction criterion, CypherBuilder builder, String prefix) {
                     def inner = ((Query.Junction)criterion).criteria
-                            .collect { Query.Criterion it ->
-                                def handler = CRITERION_HANDLERS.get(it.getClass())
-                                if(handler == null) {
-                                    throw new UnsupportedOperationException("Criterion of type ${it.class.name} are not supported by GORM for Neo4j")
-                                }
-                                handler.handle(entity, it, builder, prefix).toString()
-                            }
+                            .collect { Query.Criterion it -> dispatchCriterion(it, entity, builder, prefix).toString() }
                             .join( CriterionHandler.OPERATOR_AND )
                     return new CypherExpression(inner ? "( $inner )" : inner)
                 }
@@ -191,13 +185,7 @@ class Neo4jQuery extends Query {
                 @CompileStatic
                 CypherExpression handle(GraphPersistentEntity entity, Query.Disjunction criterion, CypherBuilder builder, String prefix) {
                     def inner = ((Query.Junction)criterion).criteria
-                            .collect { Query.Criterion it ->
-                        def handler = CRITERION_HANDLERS.get(it.getClass())
-                        if(handler == null) {
-                            throw new UnsupportedOperationException("Criterion of type ${it.class.name} are not supported by GORM for Neo4j")
-                        }
-                        handler.handle(entity, it, builder, prefix).toString()
-                    }
+                            .collect { Query.Criterion it -> dispatchCriterion(it, entity, builder, prefix).toString() }
                     .join( CriterionHandler.OPERATOR_OR )
                     return new CypherExpression(inner ? "( $inner )" : inner)
                 }
@@ -208,10 +196,7 @@ class Neo4jQuery extends Query {
                 CypherExpression handle(GraphPersistentEntity entity, Query.Negation criterion, CypherBuilder builder, String prefix) {
                     List<Query.Criterion> criteria = criterion.criteria
                     def disjunction = new Query.Disjunction(criteria)
-                    CriterionHandler<Query.Criterion> handler = { ->
-                        CRITERION_HANDLERS.get(Query.Disjunction)
-                    }.call()
-                    new CypherExpression("NOT (${handler.handle(entity, disjunction, builder, prefix)})")
+                    new CypherExpression("NOT (${dispatchCriterion(disjunction, entity, builder, prefix)})")
                 }
             },
             (Query.Equals): new CriterionHandler<Query.Equals>() {
@@ -382,13 +367,33 @@ class Neo4jQuery extends Query {
 
     ] as Map<Class<? extends Query.Criterion>, CriterionHandler<? extends Criterion>>
 
+    /**
+     * Looks up and invokes the handler registered for the given criterion's runtime class.
+     * The unchecked cast is safe because CRITERION_HANDLERS is constructed so that each key's
+     * value only ever receives instances of that key's class - a property the wildcard map type
+     * can't express statically.
+     */
+    private static <C extends Query.Criterion> CypherExpression dispatchCriterion(C criterion, GraphPersistentEntity entity, CypherBuilder builder, String prefix) {
+        CriterionHandler<C> handler = (CriterionHandler<C>) CRITERION_HANDLERS.get(criterion.getClass())
+        if (handler == null) {
+            throw new UnsupportedOperationException("Criterion of type ${criterion.class.name} are not supported by GORM for Neo4j")
+        }
+        return handler.handle(entity, criterion, builder, prefix)
+    }
 
     private String applyOrderAndLimits(CypherBuilder cypherBuilder) {
         StringBuilder cypher = new StringBuilder(BLANK)
         if (!orderBy.empty) {
+            GraphPersistentEntity graphEntity = (GraphPersistentEntity) entity
+            String identityName = entity.identity?.name
+            String variable = isRelationshipEntity ? RelationshipPersistentEntity.FROM : CypherBuilder.NODE_VAR
             cypher << ORDER_BY_CLAUSE
             cypher << orderBy.collect { Query.Order order ->
-                "${isRelationshipEntity ? RelationshipPersistentEntity.FROM : CypherBuilder.NODE_VAR}.${order.property} $order.direction"
+                // The identity property isn't necessarily a stored node property (e.g. the default
+                // NATIVE id generator exposes it only via Neo4j's ID(n) function), so ordering by it
+                // must go through formatId() rather than a literal <variable>.<property> reference.
+                String propertyRef = order.property == identityName ? graphEntity.formatId(variable) : "${variable}.${order.property}"
+                "$propertyRef $order.direction"
             }.join(", ")
         }
 
@@ -447,11 +452,9 @@ class Neo4jQuery extends Query {
                          boolean isToOne = association instanceof ToOne
 
                          boolean lazy  = false
-                         boolean isNullable = false
                          if(isToOne && !isEager) {
                              Property propertyMapping = association.mapping.mappedForm
                              Boolean isLazy = propertyMapping.getLazy()
-                             isNullable = propertyMapping.isNullable()
                              lazy = (isLazy != null ? isLazy : (association instanceof ManyToOne ? !association.isCircular() : true))
 
                          }
@@ -467,9 +470,15 @@ class Neo4jQuery extends Query {
 
                          boolean addOptionalMatch = false
                          // If it is a one-to-many and lazy=true
-                         // Or it is a one-to-one where the association is nullable or not lazy
-                         // then just collect the identifiers and not the nodes
-                         if((isToMany && lazy) || (isToOne && !isEager && (isNullable || !lazy ) )) {
+                         // Or it is any non-eager to-one (regardless of nullability/laziness)
+                         // then just collect the identifiers and not the nodes.
+                         // A mandatory, lazy to-one (e.g. a required hasOne) must still have its id
+                         // collected here - otherwise the persister has no way to know the associated
+                         // entity's real identifier and falls back to an association-query-executor
+                         // proxy whose "key" is the *parent's* id, not the target's (see
+                         // AssociationQueryProxyHandler.getProxyKey()), corrupting things like
+                         // <property>Id lookups performed before the association is initialized.
+                         if((isToMany && lazy) || (isToOne && !isEager)) {
                              withMatch += "collect(DISTINCT ${associatedGraphEntity.formatId(associationNodeRef)}) as ${associationIdsRef}"
                              cypherBuilder.addReturnColumn(associationIdsRef)
                              previousAssociations << associationIdsRef
@@ -588,23 +597,25 @@ class Neo4jQuery extends Query {
 
 
     String buildProjection(Query.Projection projection, CypherBuilder cypherBuilder) {
-        def handler = PROJECT_HANDLERS.get(projection.getClass())
-        if(handler != null) {
-            return handler.handle(entity, projection, cypherBuilder)
-        }
-        else {
+        return dispatchProjection(projection, entity, cypherBuilder)
+    }
+
+    /**
+     * Looks up and invokes the handler registered for the given projection's runtime class.
+     * The unchecked cast is safe because PROJECT_HANDLERS is constructed so that each key's
+     * value only ever receives instances of that key's class - a property the wildcard map type
+     * can't express statically.
+     */
+    private static <P extends Query.Projection> String dispatchProjection(P projection, PersistentEntity entity, CypherBuilder builder) {
+        ProjectionHandler<P> handler = (ProjectionHandler<P>) PROJECT_HANDLERS.get(projection.getClass())
+        if (handler == null) {
             throw new UnsupportedOperationException("projection ${projection.class} not supported by GORM for Neo4j")
         }
+        return handler.handle(entity, projection, builder)
     }
 
     String buildConditions(Query.Criterion criterion, CypherBuilder builder, String prefix) {
-        def handler = CRITERION_HANDLERS.get(criterion.getClass())
-        if(handler != null) {
-            return handler.handle((GraphPersistentEntity)entity, criterion, builder, prefix).toString()
-        }
-        else {
-            throw new UnsupportedOperationException("Criterion of type ${criterion.class.name} are not supported by GORM for Neo4j")
-        }
+        return dispatchCriterion(criterion, (GraphPersistentEntity)entity, builder, prefix).toString()
     }
 
     private static Collection convertEnumsInList(Collection collection) {
@@ -712,8 +723,7 @@ class Neo4jQuery extends Query {
         CypherExpression handle(GraphPersistentEntity entity, AssociationQuery criterion, CypherBuilder builder, String prefix) {
             AssociationQuery aq = (AssociationQuery)criterion
             if(entity.isRelationshipEntity()) {
-                def s = CRITERION_HANDLERS.get(aq.criteria.getClass()).handle(entity, aq.criteria, builder, aq.association.name)
-                return new CypherExpression(s)
+                return dispatchCriterion(aq.criteria, entity, builder, aq.association.name)
             }
             else {
                 String targetNodeName = "m_${builder.getNextMatchNumber()}"
@@ -728,8 +738,7 @@ class Neo4jQuery extends Query {
                 builder.addMatch(
                     entity.formatAssociationPatternFromExisting(association, relationship, prefix, targetNodeName)
                 )
-                def s = CRITERION_HANDLERS.get(aq.criteria.getClass()).handle(entity, aq.criteria, builder, nextPrefix)
-                return new CypherExpression(s)
+                return dispatchCriterion(aq.criteria, entity, builder, nextPrefix)
             }
 
         }
@@ -784,7 +793,20 @@ class Neo4jQuery extends Query {
                 }
 
             }
-            return new CypherExpression(lhs, "\$$paramNumber", operator)
+            if (operator == CriterionHandler.OPERATOR_EQUALS && criterion.value == null) {
+                // Cypher's = follows SQL null semantics (n.prop = null is always NULL, matching no
+                // row), but GORM's findWhere/findAllWhere(prop: null) are expected to match rows
+                // where the property is unset - so an equals-null comparison means IS NULL.
+                return new CypherExpression("$lhs IS NULL")
+            }
+            CypherExpression expression = new CypherExpression(lhs, "\$$paramNumber", operator)
+            if (operator == CriterionHandler.OPERATOR_NOT_EQUALS) {
+                // Cypher's <> follows SQL null semantics (NULL <> x evaluates to NULL, excluding the
+                // row), but GORM's countByXNotEqual/findAllByXNotEqual etc. are expected to also match
+                // rows where the property is unset - so a not-equals comparison must also accept null.
+                return new CypherExpression("($expression OR $lhs IS NULL)")
+            }
+            return expression
         }
     }
 

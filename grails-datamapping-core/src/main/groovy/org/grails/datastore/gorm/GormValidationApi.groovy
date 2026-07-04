@@ -123,6 +123,14 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
     }
 
     Validator getValidator() {
+        // Only a validator explicitly assigned via setValidator() is cached on this API
+        // instance: GormValidationApi instances are registered once per entity class and
+        // reused for the lifetime of the owning GormRegistry/datastore (see GormRegistry's
+        // validationApiRegistry), so auto-discovered validators must always be re-resolved
+        // from the MappingContext (itself already backed by a cheap ConcurrentHashMap lookup)
+        // to pick up validators registered/replaced after this API instance was created -
+        // e.g. via MappingContext#addEntityValidator - instead of freezing whichever
+        // validator happened to be resolved first.
         if (internalValidator) {
             return internalValidator
         }
@@ -136,9 +144,6 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
             if (currentMappingContext) {
                 validator = currentMappingContext.getEntityValidator(persistentEntity)
             }
-        }
-        if (validator != null) {
-            internalValidator = validator
         }
         return validator
     }

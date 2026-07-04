@@ -21,7 +21,6 @@ package grails.gorm.tests
 
 
 import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
-import org.springframework.dao.DataIntegrityViolationException
 import spock.lang.Issue
 import spock.lang.PendingFeature
 
@@ -118,12 +117,7 @@ class OneToManyUpdateSpec extends Neo4jGormDatastoreSpec {
         t = Team.first()
         then:"The association was cleared"
         t != null
-
-        when:
-        t.club.name
-
-        then:
-        thrown DataIntegrityViolationException
+        t.club == null
 
     }
 
