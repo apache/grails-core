@@ -468,7 +468,7 @@ class FooCant {
 
         then:"A compilation error occurred"
         def e = thrown(MultipleCompilationErrorsException)
-        e.message.normalize().contains "No implementations possible for method 'void doStuff(java.lang.String)'"
+        e.message.normalize().contains "No implementations possible for method 'doStuff(java.lang.String):void'"
     }
 
     void "test service transform applied with a dynamic finder for a non-existent property"() {
