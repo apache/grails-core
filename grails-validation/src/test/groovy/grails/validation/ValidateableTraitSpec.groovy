@@ -347,6 +347,14 @@ class MyValidateable implements Validateable {
     String town
     private String _someProperty = 'default value'
 
+    static Map<String, Constrained> getConstraintsMap() {
+        Validateable$Trait$Helper.getConstraintsMap(MyValidateable)
+    }
+
+    static void clearConstraintsMapCache() {
+        Validateable$Trait$Helper.clearConstraintsMapCache(MyValidateable)
+    }
+
     void setSomeOtherProperty(String s) {}
 
     void setSomeProperty(String s) {
