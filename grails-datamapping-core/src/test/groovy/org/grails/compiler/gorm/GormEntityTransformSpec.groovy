@@ -221,12 +221,26 @@ class GormEntityTransformSpec extends Specification{
 
         expect: 'all GormEntity methods are marked as Generated on implementation class'
         GormEntity.methods.each { Method traitMethod ->
-            assert Book.getMethod(traitMethod.name, traitMethod.parameterTypes).isAnnotationPresent(Generated)
+            assert findGeneratedMethod(Book, traitMethod).isAnnotationPresent(Generated)
         }
 
         and: 'all GormValidateable methods are marked as Generated on implementation class'
         GormValidateable.methods.each { Method traitMethod ->
-            assert Book.getMethod(traitMethod.name, traitMethod.parameterTypes).isAnnotationPresent(Generated)
+            assert findGeneratedMethod(Book, traitMethod).isAnnotationPresent(Generated)
+        }
+    }
+
+    private static Method findGeneratedMethod(Class targetClass, Method traitMethod) {
+        try {
+            return targetClass.getMethod(traitMethod.name, traitMethod.parameterTypes)
+        } catch (NoSuchMethodException e) {
+            Class[] specializedParameterTypes = traitMethod.genericParameterTypes.withIndex().collect { type, index ->
+                type instanceof java.lang.reflect.TypeVariable ? targetClass : traitMethod.parameterTypes[index]
+            } as Class[]
+            if (specializedParameterTypes.toList() != traitMethod.parameterTypes.toList()) {
+                return targetClass.getMethod(traitMethod.name, specializedParameterTypes)
+            }
+            throw e
         }
     }
 

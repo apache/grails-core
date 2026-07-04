@@ -24,6 +24,8 @@ import groovy.transform.Generated
 
 import jakarta.persistence.Transient
 
+import org.codehaus.groovy.runtime.InvokerHelper
+
 import org.springframework.transaction.TransactionDefinition
 
 import grails.gorm.DetachedCriteria
