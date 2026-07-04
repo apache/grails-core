@@ -408,7 +408,7 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         setObjectToReadOnly target
         if (entity) {
             for (Association association in entity.associations) {
-                if (association instanceof ToOne && !association instanceof Embedded) {
+                if (association instanceof ToOne && !(association instanceof Embedded)) {
                     def bean = new BeanWrapperImpl(target)
                     def propertyValue = bean.getPropertyValue(association.name)
                     if (propertyValue != null) {
