@@ -22,50 +22,45 @@ import java.nio.charset.StandardCharsets
 
 import org.codehaus.groovy.runtime.NullObject
 
+import groovy.transform.CompileStatic
+
+@CompileStatic
 class HexCodecExtensionMethods {
 
-    static HEXDIGITS = '0123456789abcdef'
+    static Object HEXDIGITS = '0123456789abcdef'
 
     // Expects an array/list of numbers
-    static encodeAsHex(theTarget) {
+    static Object encodeAsHex(Object theTarget) {
         if (theTarget == null || theTarget instanceof NullObject) {
             return null
         }
 
-        def result = new StringBuilder()
-        if (theTarget instanceof String) {
-            theTarget = theTarget.getBytes(StandardCharsets.UTF_8)
-        }
-        theTarget.each() {
-            result << HexCodecExtensionMethods.HEXDIGITS[(it & 0xF0) >> 4]
-            result << HexCodecExtensionMethods.HEXDIGITS[it & 0x0F]
+        byte[] bytes = theTarget instanceof String ? ((String) theTarget).getBytes(StandardCharsets.UTF_8) : DigestUtils.toByteArray(theTarget)
+        StringBuilder result = new StringBuilder(bytes.length * 2)
+        String hexDigits = (String) HEXDIGITS
+        for (byte value : bytes) {
+            int unsignedValue = value & 0xFF
+            result.append(hexDigits.charAt((unsignedValue & 0xF0) >> 4))
+            result.append(hexDigits.charAt(unsignedValue & 0x0F))
         }
         return result.toString()
     }
 
-    static decodeHex(theTarget) {
-        if (!theTarget) return null
+    static Object decodeHex(Object theTarget) {
+        if (theTarget == null || theTarget instanceof NullObject || theTarget.toString().length() == 0) return null
 
-        def output = []
-
-        def str = theTarget.toString().toLowerCase()
-        if (str.size() % 2) {
+        String str = theTarget.toString().toLowerCase()
+        if (str.size() % 2 != 0) {
             throw new UnsupportedOperationException('Decode of hex strings requires strings of even length')
         }
 
-        def currentByte
-        str.eachWithIndex { val, idx ->
-            if (!(idx % 2)) {
-                currentByte = HEXDIGITS.indexOf(val) << 4
-            }
-            else {
-                output << (currentByte | HEXDIGITS.indexOf(val))
-                currentByte = 0
-            }
+        byte[] result = new byte[str.size().intdiv(2)]
+        String hexDigits = (String) HEXDIGITS
+        for (int i = 0; i < str.size(); i += 2) {
+            int high = hexDigits.indexOf((int) str.charAt(i))
+            int low = hexDigits.indexOf((int) str.charAt(i + 1))
+            result[i.intdiv(2)] = (byte) ((high << 4) | low)
         }
-
-        def result = new byte[output.size()]
-        output.eachWithIndex { v, i -> result[i] = v }
         return result
     }
 }

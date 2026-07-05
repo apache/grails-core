@@ -20,17 +20,20 @@ package org.grails.plugins.codecs
 
 import org.codehaus.groovy.runtime.NullObject
 
+import groovy.transform.CompileStatic
+
+@CompileStatic
 class SHA256CodecExtensionMethods extends DigestUtils {
 
     // Returns the byte[] of the digest
-    static encodeAsSHA256(theTarget) {
+    static Object encodeAsSHA256(Object theTarget) {
         if (theTarget == null || theTarget instanceof NullObject) {
             return null
         }
-        theTarget.encodeAsSHA256Bytes()?.encodeAsHex()
+        return HexCodecExtensionMethods.encodeAsHex(SHA256BytesCodecExtensionMethods.encodeAsSHA256Bytes(theTarget))
     }
 
-    static decodeSHA256(theTarget) {
+    static Object decodeSHA256(Object theTarget) {
         throw new UnsupportedOperationException('Cannot decode SHA-256 hashes')
     }
 }
