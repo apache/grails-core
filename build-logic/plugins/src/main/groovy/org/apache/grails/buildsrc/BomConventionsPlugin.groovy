@@ -207,9 +207,9 @@ class BomConventionsPlugin implements Plugin<Project> {
                 )
                 propertyNameCalculator.addForcedGroupPrefix('org.apache.grails.profiles', 'grails-profile')
                 propertyNameCalculator.addProjects(project.rootProject.subprojects)
-                for (String gradleArtifactId : project.ext.gradleBuildProjects) {
+                getGradleBuildProjects(project).each { String gradleArtifactId, String dependencyGroup ->
                     propertyNameCalculator.addProject(
-                            'org.apache.grails.gradle',
+                            dependencyGroup,
                             gradleArtifactId,
                             project.version as String,
                             gradleArtifactId
