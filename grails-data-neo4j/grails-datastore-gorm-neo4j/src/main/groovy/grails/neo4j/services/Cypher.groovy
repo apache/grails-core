@@ -33,5 +33,6 @@ import java.lang.annotation.Target
 @Retention(RetentionPolicy.SOURCE)
 @Target(ElementType.METHOD)
 @interface Cypher {
+
     String value()
 }

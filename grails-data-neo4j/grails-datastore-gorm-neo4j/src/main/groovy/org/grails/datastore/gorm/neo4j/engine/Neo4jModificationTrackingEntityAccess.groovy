@@ -19,6 +19,7 @@
 package org.grails.datastore.gorm.neo4j.engine
 
 import groovy.transform.CompileStatic
+
 import org.grails.datastore.mapping.engine.EntityAccess
 import org.grails.datastore.mapping.engine.ModificationTrackingEntityAccess
 

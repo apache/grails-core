@@ -19,15 +19,16 @@
 
 package org.grails.datastore.gorm.neo4j.services.implementers
 
-import grails.neo4j.services.Cypher
+import java.lang.annotation.Annotation
+
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.VariableScope
 import org.codehaus.groovy.control.SourceUnit
+
+import grails.neo4j.services.Cypher
 import org.grails.datastore.gorm.neo4j.services.transform.CypherQueryStringTransformer
 import org.grails.datastore.gorm.services.implementers.FindOneStringQueryImplementer
 import org.grails.datastore.gorm.services.transform.QueryStringTransformer
-
-import java.lang.annotation.Annotation
 
 /**
  * A cypher query implementer

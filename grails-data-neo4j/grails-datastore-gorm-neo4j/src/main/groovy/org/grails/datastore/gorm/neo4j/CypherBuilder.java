@@ -18,7 +18,11 @@
  */
 package org.grails.datastore.gorm.neo4j;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * A builder for Cypher queries
@@ -58,17 +62,16 @@ public class CypherBuilder {
     private static final String CYPHER_RELATIONSHIP_MATCH = "MATCH %s WHERE ";
     private static final String CYPHER_RELATIONSHIP = "(from%s)%s(to%s)";
 
-
-    private String forLabels;
-    private List<String> matches = new ArrayList<>();
-    private List<String> relationshipMatches = new ArrayList<>();
-    private List<String> optionalMatches = new ArrayList<String>();
+    private final String forLabels;
+    private final List<String> matches = new ArrayList<>();
+    private final List<String> relationshipMatches = new ArrayList<>();
+    private final List<String> optionalMatches = new ArrayList<String>();
     private String conditions;
     private String orderAndLimits;
-    private List<String> returnColumns = new ArrayList<String>();
-    private List<String> deleteColumns = new ArrayList<String>();
+    private final List<String> returnColumns = new ArrayList<String>();
+    private final List<String> deleteColumns = new ArrayList<String>();
     private Map<String, Object> sets = null;
-    private Map<String, Object> params = new LinkedHashMap<String, Object>();
+    private final Map<String, Object> params = new LinkedHashMap<String, Object>();
     private int setIndex;
     private String startNode = NODE_VAR;
     private String defaultReturnStatement = DEFAULT_RETURN_STATEMENT;
@@ -78,19 +81,50 @@ public class CypherBuilder {
     }
 
     /**
+     * Produces "MATCH (from%s)%s(to%s) WHERE "
+     * @param fromLabels The from node labels
+     * @param toLabels The to node labels
+     * @param relationship The relationship match
+     * @return The MATCH
+     */
+    public static String buildRelationshipMatch(String fromLabels, String relationship, String toLabels) {
+        return String.format(CYPHER_RELATIONSHIP_MATCH, buildRelationship(fromLabels, relationship, toLabels));
+    }
+
+    /**
+     * Produces "MATCH %s WHERE "
+     * @param relationship The relationship match
+     * @return The MATCH
+     */
+    public static String buildRelationshipMatch(String relationship) {
+        return String.format(CYPHER_RELATIONSHIP_MATCH, relationship);
+    }
+
+    /**
+     * Produces "(from%s)%s(to%s)"
+     * @param fromLabels The from node labels
+     * @param toLabels The to node labels
+     * @param relationship The relationship match
+     * @return The MATCH
+     */
+    public static String buildRelationship(String fromLabels, String relationship, String toLabels) {
+        return String.format(CypherBuilder.CYPHER_RELATIONSHIP, fromLabels, relationship, toLabels);
+    }
+
+    /**
      * Sets the node name to start matching from (defaults to 'n')
      *
      * @param startNode The start node
      */
     public void setStartNode(String startNode) {
-        if(startNode != null) {
+        if (startNode != null) {
             this.startNode = startNode;
             this.defaultReturnStatement = RETURN + startNode + " as data\n";
         }
     }
 
     public void addMatch(String match) {
-        if(!matches.contains(match)) {
+        if (!matches.contains(match)) {
             // Add empty match if the target entity is already defined
             final String lastNode = match.substring(match.lastIndexOf('('));
             final boolean alreadyDefined = matches.stream().anyMatch(m -> m.endsWith(lastNode));
@@ -99,19 +133,19 @@ public class CypherBuilder {
     }
 
     public void addRelationshipMatch(String match) {
-        if(!relationshipMatches.contains(match)) {
+        if (!relationshipMatches.contains(match)) {
             relationshipMatches.add(match);
         }
     }
 
     public void replaceFirstRelationshipMatch(String match) {
-        if(relationshipMatches.isEmpty()) {
+        if (relationshipMatches.isEmpty()) {
             relationshipMatches.add(match);
-        }
-        else {
-            relationshipMatches.set(0,match);
+        } else {
+            relationshipMatches.set(0, match);
         }
     }
+
     /**
      * Optional matches are added to do joins for relationships
      *
@@ -179,7 +213,7 @@ public class CypherBuilder {
      * @param sets The property to be set
      */
     public void addPropertySet(Map<String, Object> sets) {
-        if(sets != null) {
+        if (sets != null) {
             final int index = addParam(sets);
             this.setIndex = index;
             this.sets = sets;
@@ -190,7 +224,7 @@ public class CypherBuilder {
         StringBuilder cypher = new StringBuilder();
         cypher.append(START_MATCH).append(startNode).append(forLabels).append(")");
 
-        for(String r : relationshipMatches) {
+        for (String r : relationshipMatches) {
             cypher.append(r);
         }
 
@@ -200,21 +234,20 @@ public class CypherBuilder {
             cypher.append(COMMAND_SEPARATOR).append(m);
         }
 
-
-        if ((conditions!=null) && (!conditions.isEmpty())) {
+        if ((conditions != null) && (!conditions.isEmpty())) {
             cypher.append(WHERE).append(conditions);
         }
 
-        if(!optionalMatches.isEmpty()) {
+        if (!optionalMatches.isEmpty()) {
             for (String m : optionalMatches) {
                 cypher.append(NEW_LINE)
-                      .append(OPTIONAL_MATCH)
-                      .append(m);
+                    .append(OPTIONAL_MATCH)
+                    .append(m);
 
             }
         }
 
-        if(!deleteColumns.isEmpty()) {
+        if (!deleteColumns.isEmpty()) {
             cypher.append(DELETE);
             Iterator<String> iter = deleteColumns.iterator();   // same as Collection.join(String separator)
             if (iter.hasNext()) {
@@ -226,13 +259,13 @@ public class CypherBuilder {
             return cypher.toString();
         }
 
-        if(sets != null) {
+        if (sets != null) {
             cypher.append("\nSET n += {").append(setIndex).append("}\n");
         }
 
         if (returnColumns.isEmpty()) {
             cypher.append(defaultReturnStatement);
-            if (orderAndLimits!=null) {
+            if (orderAndLimits != null) {
                 cypher.append(orderAndLimits).append(NEW_LINE);
             }
         } else {
@@ -244,43 +277,12 @@ public class CypherBuilder {
                     cypher.append(COMMAND_SEPARATOR).append(iter.next());
                 }
             }
-            if (orderAndLimits!=null) {
+            if (orderAndLimits != null) {
                 cypher.append(SPACE);
                 cypher.append(orderAndLimits);
             }
         }
 
         return cypher.toString();
-    }
-
-    /**
-     * Produces "MATCH (from%s)%s(to%s) WHERE "
-     * @param fromLabels The from node labels
-     * @param toLabels The to node labels
-     * @param relationship The relationship match
-     * @return The MATCH
-     */
-    public static String buildRelationshipMatch(String fromLabels, String relationship, String toLabels) {
-        return String.format( CYPHER_RELATIONSHIP_MATCH, buildRelationship(fromLabels, relationship, toLabels));
-    }
-
-    /**
-     * Produces "MATCH %s WHERE "
-     * @param relationship The relationship match
-     * @return The MATCH
-     */
-    public static String buildRelationshipMatch(String relationship) {
-        return String.format( CYPHER_RELATIONSHIP_MATCH, relationship);
-    }
-
-    /**
-     * Produces "(from%s)%s(to%s)"
-     * @param fromLabels The from node labels
-     * @param toLabels The to node labels
-     * @param relationship The relationship match
-     * @return The MATCH
-     */
-    public static String buildRelationship(String fromLabels, String relationship, String toLabels) {
-        return String.format(CypherBuilder.CYPHER_RELATIONSHIP, fromLabels, relationship, toLabels);
     }
 }

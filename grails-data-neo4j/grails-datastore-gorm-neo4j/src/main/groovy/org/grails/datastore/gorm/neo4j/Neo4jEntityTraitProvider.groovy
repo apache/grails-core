@@ -18,11 +18,11 @@
  */
 package org.grails.datastore.gorm.neo4j
 
-import grails.neo4j.Neo4jEntity
 import groovy.transform.CompileStatic
+
+import grails.neo4j.Neo4jEntity
 import org.grails.compiler.gorm.GormEntityTraitProvider
 import org.grails.datastore.mapping.reflect.ClassUtils
-
 
 /**
  * Tells GORM to use the Neo4jEntity trait
@@ -32,6 +32,7 @@ import org.grails.datastore.mapping.reflect.ClassUtils
  */
 @CompileStatic
 class Neo4jEntityTraitProvider implements GormEntityTraitProvider {
+
     final Class entityTrait = Neo4jEntity
     final boolean available = ClassUtils.isPresent("org.neo4j.driver.Driver")
 }

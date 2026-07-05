@@ -20,8 +20,9 @@ package org.grails.datastore.gorm.neo4j.mapping.config
 
 import groovy.transform.CompileStatic
 import groovy.transform.builder.Builder
-import groovy.transform.builder.SimpleStrategy;
-import org.grails.datastore.mapping.config.Entity;
+import groovy.transform.builder.SimpleStrategy
+
+import org.grails.datastore.mapping.config.Entity
 
 /**
  * Extends the default {@link Entity} configuration adding the ability to assign labels

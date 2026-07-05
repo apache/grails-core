@@ -19,9 +19,9 @@
 
 package org.grails.datastore.gorm.neo4j
 
-import grails.neo4j.Direction
-import grails.neo4j.Relationship
 import groovy.transform.CompileStatic
+
+import grails.neo4j.Direction
 import org.grails.datastore.gorm.neo4j.mapping.config.NodeConfig
 import org.grails.datastore.gorm.neo4j.mapping.config.RelationshipConfig
 import org.grails.datastore.mapping.config.Property
@@ -41,11 +41,11 @@ import org.grails.datastore.mapping.model.types.Basic
 class RelationshipPersistentEntity extends GraphPersistentEntity {
     /**
      * The name of the from property
-    */
+     */
     public static final String FROM = "from"
     /**
-    * The name of the to property
-    */
+     * The name of the to property
+     */
     public static final String TO = "to"
 
     /**
@@ -66,19 +66,18 @@ class RelationshipPersistentEntity extends GraphPersistentEntity {
     }
 
 
-
     @Override
     void initialize() {
-        if(!isInitialized()) {
+        if (!isInitialized()) {
 
             super.initialize()
-            for(association in associations) {
-                if(!isRelationshipAssociation(association) && !(association instanceof Basic)) {
+            for (association in associations) {
+                if (!isRelationshipAssociation(association) && !(association instanceof Basic)) {
                     throw new IllegalMappingException("Invalid association $association. You cannot have associations to other nodes within a relationship entity")
                 }
             }
             NodeConfig mappedForm = getMapping().getMappedForm()
-            if(mappedForm instanceof RelationshipConfig) {
+            if (mappedForm instanceof RelationshipConfig) {
                 RelationshipConfig rc = (RelationshipConfig) mappedForm
                 this.type = rc.type ?: type
                 this.direction = rc.direction
@@ -115,21 +114,19 @@ ON CREATE SET r = row.props"""
     @Override
     String formatAssociationPatternFromExisting(Association association, String var = CypherBuilder.REL_VAR, String start = FROM, String end = TO) {
         String associationMatch
-        if(association.name == FROM || association.name == TO) {
-            associationMatch = RelationshipUtils.matchForRelationshipEntity(association, this,var)
+        if (association.name == FROM || association.name == TO) {
+            associationMatch = RelationshipUtils.matchForRelationshipEntity(association, this, var)
             return "(${start})${associationMatch}${toEntity.formatNode(end)}"
-        }
-        else {
+        } else {
             throw new IllegalStateException("Relationship entities cannot have associations")
         }
     }
 
     @Override
     String formatProperty(String variable, String property) {
-        if(property.startsWith(FROM) || property.startsWith(TO)) {
+        if (property.startsWith(FROM) || property.startsWith(TO)) {
             return property
-        }
-        else {
+        } else {
             return super.formatProperty(variable, property)
         }
     }
@@ -155,19 +152,19 @@ ON CREATE SET r = row.props"""
     }
 
     Association getFrom() {
-        (Association)getPropertyByName(FROM)
+        (Association) getPropertyByName(FROM)
     }
 
     Association getTo() {
-        (Association)getPropertyByName(TO)
+        (Association) getPropertyByName(TO)
     }
 
     GraphPersistentEntity getFromEntity() {
-        (GraphPersistentEntity)getFrom().getAssociatedEntity()
+        (GraphPersistentEntity) getFrom().getAssociatedEntity()
     }
 
     GraphPersistentEntity getToEntity() {
-        (GraphPersistentEntity)getTo().getAssociatedEntity()
+        (GraphPersistentEntity) getTo().getAssociatedEntity()
     }
 
 
@@ -186,16 +183,15 @@ ON CREATE SET r = row.props"""
     }
 
     String buildRelationshipMatchTo(String type, String var = "r") {
-        buildRelationshipMatch(type ,var) + toEntity.formatNode(TO)
+        buildRelationshipMatch(type, var) + toEntity.formatNode(TO)
     }
 
     String buildRelationshipMatch(String type, String var = "r") {
         boolean incoming = direction.isIncoming()
         boolean outgoing = direction.isOutgoing()
-        if(type != null) {
+        if (type != null) {
             return "${incoming ? RelationshipUtils.INCOMING_CHAR : ''}-[$var:${type}]-${outgoing ? RelationshipUtils.OUTGOING_CHAR : ''}"
-        }
-        else {
+        } else {
             return "${incoming ? RelationshipUtils.INCOMING_CHAR : ''}-[$var]-${outgoing ? RelationshipUtils.OUTGOING_CHAR : ''}"
         }
     }

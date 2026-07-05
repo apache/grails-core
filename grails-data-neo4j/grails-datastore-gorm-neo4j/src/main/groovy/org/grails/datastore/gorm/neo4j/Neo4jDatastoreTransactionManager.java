@@ -16,20 +16,21 @@
  */
 package org.grails.datastore.gorm.neo4j;
 
-import org.grails.datastore.mapping.core.DatastoreUtils;
-import org.grails.datastore.mapping.transactions.DatastoreTransactionManager;
-import org.grails.datastore.mapping.transactions.Transaction;
-import org.grails.datastore.mapping.transactions.TransactionObject;
+import jakarta.persistence.FlushModeType;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.springframework.transaction.CannotCreateTransactionException;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionException;
 import org.springframework.transaction.support.DefaultTransactionStatus;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-import jakarta.persistence.FlushModeType;
-import java.io.IOException;
+import org.grails.datastore.mapping.core.DatastoreUtils;
+import org.grails.datastore.mapping.transactions.DatastoreTransactionManager;
+import org.grails.datastore.mapping.transactions.Transaction;
+import org.grails.datastore.mapping.transactions.TransactionObject;
 
 /**
  * @author Stefan Armbruster
@@ -54,7 +55,7 @@ public class Neo4jDatastoreTransactionManager extends DatastoreTransactionManage
         super.doSetRollbackOnly(status);
         TransactionObject txObject = (TransactionObject) status.getTransaction();
         Neo4jTransaction neo4jTransaction = (Neo4jTransaction) txObject.getTransaction();
-        if(neo4jTransaction != null) {
+        if (neo4jTransaction != null) {
             neo4jTransaction.rollbackOnly();
         }
     }

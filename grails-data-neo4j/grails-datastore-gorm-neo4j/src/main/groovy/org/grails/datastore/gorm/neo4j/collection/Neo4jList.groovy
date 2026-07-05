@@ -19,12 +19,12 @@
 package org.grails.datastore.gorm.neo4j.collection
 
 import groovy.transform.CompileStatic
+
 import org.grails.datastore.gorm.neo4j.Neo4jSession
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckingList
 import org.grails.datastore.mapping.engine.EntityAccess
 import org.grails.datastore.mapping.model.types.Association
-
 
 /**
  *
@@ -36,13 +36,15 @@ import org.grails.datastore.mapping.model.types.Association
 
 @CompileStatic
 class Neo4jList extends DirtyCheckingList {
+
     final transient Association association
     final transient Neo4jSession session
 
-    protected final @Delegate GraphAdapter graphAdapter
+    protected final @Delegate
+    GraphAdapter graphAdapter
 
     Neo4jList(EntityAccess parentAccess, Association association, List delegate, Neo4jSession session) {
-        super(delegate, (DirtyCheckable)parentAccess.getEntity(), association.getName())
+        super(delegate, (DirtyCheckable) parentAccess.getEntity(), association.getName())
         this.association = association
         this.session = session
         this.graphAdapter = new GraphAdapter(session, parentAccess, association)
@@ -60,7 +62,7 @@ class Neo4jList extends DirtyCheckingList {
     boolean add(Object o) {
 
         def added = super.add(o)
-        if(added) {
+        if (added) {
             adaptGraphUponAdd(o)
         }
         return added
@@ -69,8 +71,8 @@ class Neo4jList extends DirtyCheckingList {
     @Override
     boolean addAll(Collection c) {
         def added = super.addAll(c)
-        if(added) {
-            for( o in c ) {
+        if (added) {
+            for (o in c) {
                 adaptGraphUponAdd(o)
             }
         }
@@ -81,8 +83,8 @@ class Neo4jList extends DirtyCheckingList {
     @Override
     boolean removeAll(Collection c) {
         def removed = super.removeAll(c)
-        if(removed) {
-            for(o in c) {
+        if (removed) {
+            for (o in c) {
                 adaptGraphUponRemove(o)
             }
         }
@@ -92,7 +94,7 @@ class Neo4jList extends DirtyCheckingList {
     @Override
     boolean remove(Object o) {
         def removed = super.remove(o)
-        if(removed) {
+        if (removed) {
             adaptGraphUponRemove(o)
         }
         return removed

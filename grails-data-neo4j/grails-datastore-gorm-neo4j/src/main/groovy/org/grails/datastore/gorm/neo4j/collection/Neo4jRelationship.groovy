@@ -19,9 +19,9 @@
 
 package org.grails.datastore.gorm.neo4j.collection
 
-import grails.neo4j.Relationship
 import groovy.transform.CompileStatic
-import org.grails.datastore.gorm.schemaless.DynamicAttributes
+
+import grails.neo4j.Relationship
 
 /**
  * Default implementation of the {@link Relationship} trait
@@ -31,6 +31,7 @@ import org.grails.datastore.gorm.schemaless.DynamicAttributes
  */
 @CompileStatic
 class Neo4jRelationship<F, T> implements Relationship<F, T> {
+
     String type
 
     Neo4jRelationship(F from, T to, String type) {

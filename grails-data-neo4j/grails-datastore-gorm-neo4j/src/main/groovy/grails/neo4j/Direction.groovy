@@ -29,6 +29,7 @@ import groovy.transform.CompileStatic
  */
 @CompileStatic
 enum Direction {
+
     INCOMING, OUTGOING, BOTH
 
     @Override

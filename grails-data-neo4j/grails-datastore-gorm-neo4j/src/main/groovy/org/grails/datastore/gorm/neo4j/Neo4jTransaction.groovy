@@ -20,13 +20,16 @@ package org.grails.datastore.gorm.neo4j
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+
 import org.neo4j.driver.AccessMode
 import org.neo4j.driver.Driver
 import org.neo4j.driver.Session
-import org.grails.datastore.mapping.transactions.Transaction
 import org.neo4j.driver.SessionConfig
+
 import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.support.DefaultTransactionDefinition
+
+import org.grails.datastore.mapping.transactions.Transaction
 
 /**
  * Represents a Neo4j transaction
@@ -58,7 +61,7 @@ class Neo4jTransaction implements Transaction<org.neo4j.driver.Transaction>, Clo
     }
 
     void commit() {
-        if(isActive() && !rollbackOnly) {
+        if (isActive() && !rollbackOnly) {
             log.debug("TX COMMIT: Neo4J commit()")
             transaction.commit()
             close()
@@ -66,7 +69,7 @@ class Neo4jTransaction implements Transaction<org.neo4j.driver.Transaction>, Clo
     }
 
     void rollback() {
-        if(isActive()) {
+        if (isActive()) {
             log.debug("TX ROLLBACK: Neo4J rollback()")
             transaction.rollback()
             close()
@@ -74,7 +77,7 @@ class Neo4jTransaction implements Transaction<org.neo4j.driver.Transaction>, Clo
     }
 
     void rollbackOnly() {
-        if(active) {
+        if (active) {
             rollbackOnly = true
             log.debug("TX ROLLBACK ONLY: Neo4J rollback()")
             transaction.rollback()
@@ -85,8 +88,8 @@ class Neo4jTransaction implements Transaction<org.neo4j.driver.Transaction>, Clo
     @Override
     void close() throws IOException {
 
-        if(active) {
-            log.debug("TX CLOSE: Neo4j tx.close()");
+        if (active) {
+            log.debug("TX CLOSE: Neo4j tx.close()")
             transaction.close()
             boltSession.close()
             active = false

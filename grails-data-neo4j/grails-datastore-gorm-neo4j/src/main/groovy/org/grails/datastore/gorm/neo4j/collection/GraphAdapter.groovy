@@ -20,17 +20,14 @@ package org.grails.datastore.gorm.neo4j.collection
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
-import org.grails.datastore.gorm.GormEnhancer
-import org.grails.datastore.gorm.GormEntity
+
 import org.grails.datastore.gorm.neo4j.Neo4jSession
 import org.grails.datastore.gorm.neo4j.RelationshipUtils
 import org.grails.datastore.mapping.engine.EntityAccess
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.ManyToMany
 import org.grails.datastore.mapping.model.types.ToOne
-import org.grails.datastore.mapping.proxy.ProxyFactory
 import org.grails.datastore.mapping.reflect.EntityReflector
-
 
 /**
  * Helps to Adapt a collection to the Neo4j graph
@@ -59,66 +56,63 @@ class GraphAdapter {
     }
 
     void adaptGraphUponRemove(Object o, boolean currentlyInitializing = false) {
-        if(currentlyInitializing) return
+        if (currentlyInitializing) return
 
-        Neo4jSession session = (Neo4jSession)this.session
+        Neo4jSession session = (Neo4jSession) this.session
         def childAccess = session.mappingContext.getEntityReflector(association.getAssociatedEntity())
 
         def proxyFactory = session.getMappingContext().getProxyFactory()
         Serializable id
         if (proxyFactory.isProxy(o)) {
             id = proxyFactory.getIdentifier(o)
-        }
-        else {
+        } else {
             id = (Serializable) childAccess.getIdentifier(o)
         }
-        if(association.isOrphanRemoval()) {
+        if (association.isOrphanRemoval()) {
             session.delete(o)
-        }
-        else if (!reversed && id != null) {
-            session.addPendingRelationshipDelete((Serializable)parentAccess.getIdentifier(), association, id)
+        } else if (!reversed && id != null) {
+            session.addPendingRelationshipDelete((Serializable) parentAccess.getIdentifier(), association, id)
         }
 
     }
 
     void adaptGraphUponAdd(Object t, boolean currentlyInitializing = false) {
         def proxyFactory = session.getMappingContext().getProxyFactory()
-        Neo4jSession session = (Neo4jSession)this.session
-        if(currentlyInitializing) {
+        Neo4jSession session = (Neo4jSession) this.session
+        if (currentlyInitializing) {
             // if the association is initializing then replace parent entities with non proxied version to prevent N+1 problem
             if (association.isBidirectional() && !proxyFactory.isProxy(t)) {
                 def inverseSide = association.inverseSide
-                if(inverseSide instanceof ToOne) {
+                if (inverseSide instanceof ToOne) {
                     EntityReflector target = session.mappingContext.getEntityReflector(association.getAssociatedEntity())
-                    target.setProperty( t, inverseSide.name, parentAccess.entity )
+                    target.setProperty(t, inverseSide.name, parentAccess.entity)
                 }
             }
-        }
-        else {
+        } else {
 
             if (proxyFactory.isProxy(t)) {
-                if ( !proxyFactory.isInitialized(t) ) return
-                if ( !childType.isInstance(t) ) return
+                if (!proxyFactory.isInitialized(t)) return
+                if (!childType.isInstance(t)) return
             }
             EntityReflector target = session.mappingContext.getEntityReflector(association.getAssociatedEntity())
 
             if (association.isBidirectional()) {
                 if (association instanceof ManyToMany) {
-                    Collection coll = (Collection) target.getProperty(t, association.getReferencedPropertyName());
-                    coll.add(parentAccess.entity);
+                    Collection coll = (Collection) target.getProperty(t, association.getReferencedPropertyName())
+                    coll.add(parentAccess.entity)
                 } else {
-                    target.setProperty(t, association.getReferencedPropertyName(), parentAccess.entity);
+                    target.setProperty(t, association.getReferencedPropertyName(), parentAccess.entity)
                 }
             }
 
 
             def identifier = target.getIdentifier(t)
             if (identifier == null) { // non-persistent instance
-                identifier = session.persist(t);
+                identifier = session.persist(t)
             }
 
             if (!reversed && identifier != null) { // prevent duplicated rels
-                session.addPendingRelationshipInsert((Serializable)parentAccess.getIdentifier(), association, identifier)
+                session.addPendingRelationshipInsert((Serializable) parentAccess.getIdentifier(), association, identifier)
             }
         }
 

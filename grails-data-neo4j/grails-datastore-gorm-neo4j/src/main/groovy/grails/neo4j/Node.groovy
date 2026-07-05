@@ -20,6 +20,7 @@
 package grails.neo4j
 
 import groovy.transform.CompileStatic
+
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.gorm.neo4j.api.Neo4jGormStaticApi
@@ -33,6 +34,7 @@ import org.grails.datastore.gorm.schemaless.DynamicAttributes
  */
 @CompileStatic
 trait Node<D> implements Neo4jEntity<D>, GormEntity<D>, DynamicAttributes {
+
     /**
      * Allows accessing to dynamic properties with the dot operator
      *

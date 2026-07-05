@@ -19,8 +19,6 @@
 
 package org.grails.datastore.gorm.neo4j.services.implementers
 
-import grails.gorm.services.Query
-import grails.neo4j.services.Cypher
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassHelper
@@ -30,6 +28,8 @@ import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.GStringExpression
 import org.codehaus.groovy.ast.stmt.Statement
+
+import grails.neo4j.services.Cypher
 import org.grails.datastore.gorm.transactions.transform.TransactionalTransform
 import org.grails.datastore.mapping.reflect.AstUtils
 
@@ -55,21 +55,20 @@ class UpdateCypherQueryImplementer extends FindAllCypherQueryImplementer {
     @Override
     boolean doesImplement(ClassNode domainClass, MethodNode methodNode) {
         AnnotationNode ann = AstUtils.findAnnotation(methodNode, Cypher)
-        if( ann != null) {
+        if (ann != null) {
             Expression expr = ann.getMember("value")
-            if(expr instanceof GStringExpression) {
-                GStringExpression gstring = (GStringExpression)expr
-                for(ConstantExpression ce in gstring.strings) {
+            if (expr instanceof GStringExpression) {
+                GStringExpression gstring = (GStringExpression) expr
+                for (ConstantExpression ce in gstring.strings) {
                     String queryStem = ce.text
-                    if(isWriteOperation(queryStem)) {
+                    if (isWriteOperation(queryStem)) {
                         return isCompatibleReturnType(domainClass, methodNode, methodNode.returnType, methodNode.name)
                     }
 
                 }
-            }
-            else if(expr instanceof ConstantExpression) {
-                String queryStem = ((ConstantExpression)expr).text
-                if(isWriteOperation(queryStem)) {
+            } else if (expr instanceof ConstantExpression) {
+                String queryStem = ((ConstantExpression) expr).text
+                if (isWriteOperation(queryStem)) {
                     return isCompatibleReturnType(domainClass, methodNode, methodNode.returnType, methodNode.name)
                 }
             }

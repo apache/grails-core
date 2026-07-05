@@ -27,6 +27,12 @@ import java.io.Serializable;
  * @author Graeme Rocher
  */
 public interface IdGenerator {
+
+    /**
+     * @return Generate and return the next identifier
+     */
+    Serializable nextId();
+
     /**
      * Default id generator types
      */
@@ -48,10 +54,5 @@ public interface IdGenerator {
          */
         CUSTOM
     }
-
-    /**
-     * @return Generate and return the next identifier
-     */
-    Serializable nextId();
 
 }

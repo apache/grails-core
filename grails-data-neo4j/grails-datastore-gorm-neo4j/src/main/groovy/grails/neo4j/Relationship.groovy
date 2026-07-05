@@ -20,6 +20,7 @@
 package grails.neo4j
 
 import groovy.transform.CompileStatic
+
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormEntity
 import org.grails.datastore.gorm.neo4j.RelationshipPersistentEntity
@@ -32,7 +33,7 @@ import org.grails.datastore.gorm.schemaless.DynamicAttributes
  * @since 6.1
  */
 @CompileStatic
-trait Relationship<F,T> implements DynamicAttributes, Serializable {
+trait Relationship<F, T> implements DynamicAttributes, Serializable {
 
     /**
      * The relationship type
@@ -54,13 +55,12 @@ trait Relationship<F,T> implements DynamicAttributes, Serializable {
      */
     T to
 
-
     /**
      * @return The type of the relationship
      */
     String type() {
-        if(this.theType == null) {
-            theType = ((RelationshipPersistentEntity)GormEnhancer.findEntity(getClass())).type()
+        if (this.theType == null) {
+            theType = ((RelationshipPersistentEntity) GormEnhancer.findEntity(getClass())).type()
         }
         return theType
     }
@@ -84,11 +84,11 @@ trait Relationship<F,T> implements DynamicAttributes, Serializable {
      * @return True if they are equal
      */
     boolean equals(Object object) {
-        if(object instanceof Relationship) {
-            Relationship other = (Relationship)object
-            GormEntity fromEntity = (GormEntity)this.from
-            GormEntity toEntity = (GormEntity)this.to
-            return fromEntity?.ident() == ((GormEntity)other.from)?.ident() && toEntity?.ident() == ((GormEntity)other.to)?.ident()
+        if (object instanceof Relationship) {
+            Relationship other = (Relationship) object
+            GormEntity fromEntity = (GormEntity) this.from
+            GormEntity toEntity = (GormEntity) this.to
+            return fromEntity?.ident() == ((GormEntity) other.from)?.ident() && toEntity?.ident() == ((GormEntity) other.to)?.ident()
         }
         return false
     }
@@ -97,16 +97,16 @@ trait Relationship<F,T> implements DynamicAttributes, Serializable {
      * @return hashCode
      */
     int hashCode() {
-        GormEntity fromEntity = (GormEntity)this.from
-        GormEntity toEntity = (GormEntity)this.to
+        GormEntity fromEntity = (GormEntity) this.from
+        GormEntity toEntity = (GormEntity) this.to
 
         int result = type != null ? type.hashCode() : 0
         def fromId = fromEntity?.ident()
-        if(fromId != null) {
+        if (fromId != null) {
             result = 31 * result + fromId.hashCode()
         }
         def toId = toEntity?.ident()
-        if(toId != null) {
+        if (toId != null) {
             result = 31 * result + toId.hashCode()
         }
         return result

@@ -20,6 +20,11 @@ package org.grails.datastore.gorm.neo4j.engine
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+
+import org.neo4j.driver.QueryRunner
+import org.neo4j.driver.Result
+import org.neo4j.driver.Session
+
 import org.grails.datastore.gorm.neo4j.CypherBuilder
 import org.grails.datastore.gorm.neo4j.GraphPersistentEntity
 import org.grails.datastore.gorm.neo4j.Neo4jSession
@@ -35,12 +40,6 @@ import org.grails.datastore.mapping.model.types.Basic
 import org.grails.datastore.mapping.model.types.ManyToOne
 import org.grails.datastore.mapping.model.types.ToMany
 import org.grails.datastore.mapping.model.types.ToOne
-import org.neo4j.driver.Session
-import org.neo4j.driver.Result
-import org.neo4j.driver.QueryRunner
-
-import jakarta.persistence.FetchType
-
 
 /**
  * Responsible for lazy loading associations
@@ -61,13 +60,12 @@ class Neo4jAssociationQueryExecutor implements AssociationQueryExecutor<Serializ
     Neo4jAssociationQueryExecutor(Neo4jSession session, Association association, boolean lazy = (association.mapping.mappedForm as Property).isLazy(), boolean singleResult = false) {
         this.session = session
         PersistentEntity associatedEntity = association.associatedEntity
-        if(associatedEntity != null) {
+        if (associatedEntity != null) {
             this.indexedEntity = associatedEntity
+        } else if (association instanceof Basic) {
+            this.indexedEntity = session.mappingContext.getPersistentEntity(((Basic) association).componentType.name)
         }
-        else if(association instanceof Basic) {
-            this.indexedEntity = session.mappingContext.getPersistentEntity(((Basic)association).componentType.name)
-        }
-        if(this.indexedEntity == null) {
+        if (this.indexedEntity == null) {
             throw new IllegalStateException("Cannot create association query loader for ${association}. No mapped associated entity could be located.")
         }
         this.association = association
@@ -83,29 +81,27 @@ class Neo4jAssociationQueryExecutor implements AssociationQueryExecutor<Serializ
     @Override
     List<Object> query(Serializable primaryKey) {
 
-        QueryRunner statementRunner = session.hasTransaction() ? session.getTransaction().getNativeTransaction() : (Session)session.nativeInterface
+        QueryRunner statementRunner = session.hasTransaction() ? session.getTransaction().getNativeTransaction() : (Session) session.nativeInterface
         String relType
 
-        GraphPersistentEntity parent = (GraphPersistentEntity)association.owner
-        GraphPersistentEntity related = (GraphPersistentEntity)indexedEntity
+        GraphPersistentEntity parent = (GraphPersistentEntity) association.owner
+        GraphPersistentEntity related = (GraphPersistentEntity) indexedEntity
 
         boolean isRelationship = related.isRelationshipEntity()
 
-        if(isRelationship) {
-            RelationshipPersistentEntity relEntity = (RelationshipPersistentEntity)related
+        if (isRelationship) {
+            RelationshipPersistentEntity relEntity = (RelationshipPersistentEntity) related
             GraphPersistentEntity fromEntity = (GraphPersistentEntity) relEntity.getFrom().getAssociatedEntity()
             GraphPersistentEntity toEntity = (GraphPersistentEntity) relEntity.getTo().getAssociatedEntity()
-            if(parent == fromEntity) {
+            if (parent == fromEntity) {
                 relType = "-[rel]->"
                 related = toEntity
-            }
-            else {
+            } else {
                 relType = "<-[rel]-"
                 parent = toEntity
                 related = fromEntity
             }
-        }
-        else {
+        } else {
             relType = RelationshipUtils.matchForAssociation(association)
         }
 
@@ -113,20 +109,19 @@ class Neo4jAssociationQueryExecutor implements AssociationQueryExecutor<Serializ
 
         StringBuilder cypher = new StringBuilder(CypherBuilder.buildRelationshipMatch(parent.labelsAsString, relType, related.labelsAsString))
         cypher.append('( ')
-              .append(parent.formatId(RelationshipPersistentEntity.FROM))
-              .append(" = \$id )")
+                .append(parent.formatId(RelationshipPersistentEntity.FROM))
+                .append(" = \$id )")
 
         boolean isLazyToMany = lazy && !isRelationship && association instanceof ToMany
-        if(isLazyToMany) {
+        if (isLazyToMany) {
             cypher.append(related.formatId(RelationshipPersistentEntity.TO))
-                  .append("RETURN as id")
-        }
-        else {
-            if(!isRelationship) {
+                    .append("RETURN as id")
+        } else {
+            if (!isRelationship) {
 
                 StringBuilder returnString = new StringBuilder("\nRETURN to as data")
 
-                Set<Association> associations = new TreeSet<Association>((Comparator<Association>){ Association a1, Association a2 -> a1.name <=> a2.name })
+                Set<Association> associations = new TreeSet<Association>((Comparator<Association>) { Association a1, Association a2 -> a1.name <=> a2.name })
                 PersistentEntity entity = association.associatedEntity
                 if (entity) {
                     Collection<PersistentEntity> childEntities = entity.mappingContext.getChildEntities(entity)
@@ -137,32 +132,31 @@ class Neo4jAssociationQueryExecutor implements AssociationQueryExecutor<Serializ
                     }
                     associations.addAll(entity.associations)
 
-                    if(associations.size() > 0) {
+                    if (associations.size() > 0) {
                         int i = 0
                         List previousAssociations = []
 
-                        for(Association association in associations) {
-                            if(association.isBasic()) continue
+                        for (Association association in associations) {
+                            if (association.isBasic()) continue
 
                             boolean isEager = ((Property) association.mapping.mappedForm).isLazy()
 
                             String r = "r${i++}"
 
                             String associationName = association.name
-                            GraphPersistentEntity associatedGraphEntity = (GraphPersistentEntity)association.associatedEntity
+                            GraphPersistentEntity associatedGraphEntity = (GraphPersistentEntity) association.associatedEntity
                             boolean isAssociationRelationshipEntity = associatedGraphEntity.isRelationshipEntity()
                             boolean isToMany = association instanceof ToMany
                             boolean isToOne = association instanceof ToOne
 
-                            boolean lazy  = false
-                            if(isToOne && !isEager) {
+                            boolean lazy = false
+                            if (isToOne && !isEager) {
                                 Property propertyMapping = association.mapping.mappedForm
                                 Boolean isLazy = propertyMapping.getLazy()
                                 lazy = (isLazy != null ? isLazy : (association instanceof ManyToOne ? !association.isCircular() : true))
 
-                            }
-                            else if(isToMany) {
-                                lazy = ((ToMany)association).lazy
+                            } else if (isToMany) {
+                                lazy = ((ToMany) association).lazy
                             }
 
                             // if there are associations, add a join to get them
@@ -178,16 +172,15 @@ class Neo4jAssociationQueryExecutor implements AssociationQueryExecutor<Serializ
                             // A mandatory, lazy to-one (e.g. a required hasOne) must still have its id
                             // collected here - see the matching comment in Neo4jQuery.executeQuery()
                             // for why omitting it corrupts <property>Id lookups.
-                            if((isToMany && lazy) || (isToOne && !isEager)) {
+                            if ((isToMany && lazy) || (isToOne && !isEager)) {
                                 withMatch += "collect(DISTINCT ${associatedGraphEntity.formatId(associationNodeRef)}) as ${associationIdsRef}"
                                 returnString.append(", ").append(associationIdsRef)
                                 previousAssociations << associationIdsRef
                                 addOptionalMatch = true
-                            }
-                            else if(isEager) {
+                            } else if (isEager) {
                                 withMatch += "collect(DISTINCT $associationNodeRef) as $associationNodesRef"
                                 returnString.append(", ").append(associationNodesRef)
-                                if(isAssociationRelationshipEntity) {
+                                if (isAssociationRelationshipEntity) {
                                     withMatch += ", collect($r) as ${associationName}Rels"
                                     returnString.append(", ").append("${associationName}Rels")
                                 }
@@ -195,15 +188,15 @@ class Neo4jAssociationQueryExecutor implements AssociationQueryExecutor<Serializ
                                 addOptionalMatch = true
                             }
 
-                            if(addOptionalMatch) {
+                            if (addOptionalMatch) {
 
                                 String relationshipPattern = related
                                         .formatAssociationPatternFromExisting(
-                                        association,
-                                        r,
-                                        "to",
-                                        associationNodeRef
-                                )
+                                                association,
+                                                r,
+                                                "to",
+                                                associationNodeRef
+                                        )
 
                                 cypher.append(CypherBuilder.NEW_LINE)
                                         .append(CypherBuilder.OPTIONAL_MATCH)
@@ -217,8 +210,7 @@ class Neo4jAssociationQueryExecutor implements AssociationQueryExecutor<Serializ
                 }
 
                 cypher.append(returnString.toString())
-            }
-            else {
+            } else {
                 cypher.append('RETURN rel as rel')
             }
         }
@@ -231,22 +223,21 @@ class Neo4jAssociationQueryExecutor implements AssociationQueryExecutor<Serializ
         log.debug("QUERY Cypher [$cypher] for params [$params]")
 
         Result result = statementRunner.run(cypher.toString(), params)
-        if(isLazyToMany) {
+        if (isLazyToMany) {
             List<Object> results = []
-            while(result.hasNext()) {
+            while (result.hasNext()) {
                 def id = result.next().get(GormProperties.IDENTITY).asObject()
-                results.add( session.proxy(related.javaClass, id as Serializable) )
+                results.add(session.proxy(related.javaClass, id as Serializable))
             }
             return results
-        }
-        else {
+        } else {
             def resultList = new Neo4jResultList(0, result, isRelationship ? session.getEntityPersister(indexedEntity) : session.getEntityPersister(related))
-            if(association.isBidirectional()) {
+            if (association.isBidirectional()) {
                 def inverseSide = association.inverseSide
-                if(inverseSide instanceof ToOne) {
+                if (inverseSide instanceof ToOne) {
                     def parentObject = session.getCachedInstance(association.getOwner().getJavaClass(), primaryKey)
-                    if(parentObject != null) {
-                        resultList.setInitializedAssociations(Collections.<Association,Object>singletonMap(inverseSide, parentObject))
+                    if (parentObject != null) {
+                        resultList.setInitializedAssociations(Collections.<Association, Object> singletonMap(inverseSide, parentObject))
                     }
                 }
             }

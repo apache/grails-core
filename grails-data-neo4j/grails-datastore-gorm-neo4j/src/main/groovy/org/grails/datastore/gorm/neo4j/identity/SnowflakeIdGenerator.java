@@ -18,15 +18,16 @@
  */
 package org.grails.datastore.gorm.neo4j.identity;
 
-import org.grails.datastore.gorm.neo4j.IdGenerator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.Serializable;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.util.Enumeration;
 import java.util.Random;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.grails.datastore.gorm.neo4j.IdGenerator;
 
 /**
  *
@@ -37,7 +38,7 @@ import java.util.Random;
 
 public class SnowflakeIdGenerator implements IdGenerator {
 
-    private static Logger log = LoggerFactory.getLogger(SnowflakeIdGenerator.class);
+    private static final Logger log = LoggerFactory.getLogger(SnowflakeIdGenerator.class);
 
     private final long datacenterIdBits = 10L;
     private final long maxDatacenterId = -1L ^ (-1L << datacenterIdBits);
@@ -64,7 +65,7 @@ public class SnowflakeIdGenerator implements IdGenerator {
         long timestamp = System.currentTimeMillis();
         if (timestamp < lastTimestamp) {
             throw new IllegalArgumentException("Clock moved backwards.  Refusing to generate id for " + (
-                    lastTimestamp - timestamp) + " milliseconds.");
+                lastTimestamp - timestamp) + " milliseconds.");
         }
         if (lastTimestamp == timestamp) {
             sequence = (sequence + 1) % sequenceMax;
@@ -76,8 +77,8 @@ public class SnowflakeIdGenerator implements IdGenerator {
         }
         lastTimestamp = timestamp;
         return ((timestamp - twepoch) << timestampLeftShift) |
-                (datacenterId << datacenterIdShift) |
-                sequence;
+            (datacenterId << datacenterIdShift) |
+            sequence;
     }
 
     protected long tilNextMillis(long lastTimestamp) {
@@ -110,7 +111,7 @@ public class SnowflakeIdGenerator implements IdGenerator {
     }
 
     private boolean isInvalidHardwareAddress(byte[] hardwareAddress) {
-        return ((hardwareAddress == null) || (hardwareAddress.length<6));
+        return ((hardwareAddress == null) || (hardwareAddress.length < 6));
     }
 
 }
