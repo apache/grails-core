@@ -20,7 +20,6 @@
 package grails.gorm.tests
 
 import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
-import spock.lang.PendingFeature
 import org.apache.grails.data.testing.tck.domains.TestEntity
 
 class NullValueEqualSpec extends Neo4jGormDatastoreSpec {
@@ -29,7 +28,6 @@ class NullValueEqualSpec extends Neo4jGormDatastoreSpec {
         manager.registerDomainClasses(TestEntity)
     }
 
-    @PendingFeature(reason = "GORM for Neo4j does not yet support null as a query value")
     void "test null value in equal and not equal"() {
         when:
         new TestEntity(name:"Fred", age: null).save(failOnError: true)

@@ -403,6 +403,19 @@ project(':grails-data-mongodb').projectDir = new File(settingsDir, 'grails-data-
 include 'grails-data-mongodb-gson-templates'
 project(':grails-data-mongodb-gson-templates').projectDir = new File(settingsDir, 'grails-data-mongodb/gson-templates')
 
+// Neo4j
+// core
+include 'grails-datastore-gorm-neo4j'
+project(':grails-datastore-gorm-neo4j').projectDir = new File(settingsDir, 'grails-data-neo4j/grails-datastore-gorm-neo4j')
+
+// boot plugin
+include 'gorm-neo4j-spring-boot'
+project(':gorm-neo4j-spring-boot').projectDir = new File(settingsDir, 'grails-data-neo4j/boot-plugin')
+
+// plugin
+include 'grails-data-neo4j'
+project(':grails-data-neo4j').projectDir = new File(settingsDir, 'grails-data-neo4j/grails-plugin')
+
 // GraphQL
 // core
 include 'grails-data-graphql-core'

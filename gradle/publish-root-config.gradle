@@ -159,6 +159,10 @@ def publishedProjects = [
         // graphql
         'grails-data-graphql',
         'grails-data-graphql-core',
+        // neo4j
+        'grails-data-neo4j',
+        'grails-datastore-gorm-neo4j',
+        'gorm-neo4j-spring-boot',
         // wrapper
         'grails-wrapper',
         // profiles
