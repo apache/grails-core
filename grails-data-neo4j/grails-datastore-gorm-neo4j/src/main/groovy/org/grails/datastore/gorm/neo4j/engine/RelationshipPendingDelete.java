@@ -18,6 +18,15 @@
  */
 package org.grails.datastore.gorm.neo4j.engine;
 
+import java.io.Serializable;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+import org.neo4j.driver.Transaction;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.grails.datastore.gorm.neo4j.CypherBuilder;
 import org.grails.datastore.gorm.neo4j.GraphPersistentEntity;
 import org.grails.datastore.gorm.neo4j.RelationshipPersistentEntity;
@@ -26,14 +35,6 @@ import org.grails.datastore.mapping.core.impl.PendingOperationAdapter;
 import org.grails.datastore.mapping.engine.EntityAccess;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.model.types.Association;
-import org.neo4j.driver.Transaction;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.Serializable;
-import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 import static org.grails.datastore.gorm.neo4j.engine.RelationshipPendingInsert.FROM;
 import static org.grails.datastore.gorm.neo4j.engine.RelationshipPendingInsert.TO;
@@ -46,13 +47,12 @@ import static org.grails.datastore.gorm.neo4j.engine.RelationshipPendingInsert.T
  */
 public class RelationshipPendingDelete extends PendingOperationAdapter<Object, Serializable> {
 
-    private static Logger log = LoggerFactory.getLogger(RelationshipPendingDelete.class);
+    private static final Logger log = LoggerFactory.getLogger(RelationshipPendingDelete.class);
 
     private final Transaction boltTransaction;
     private final Association association;
     private final Collection<Serializable> targetIdentifiers;
     private final EntityAccess entityAccess;
-
 
     public RelationshipPendingDelete(EntityAccess parent, Association association, Collection<Serializable> pendingInserts, Transaction boltTransaction) {
         super(parent.getPersistentEntity(), (Serializable) parent.getIdentifier(), parent.getEntity());
@@ -68,8 +68,8 @@ public class RelationshipPendingDelete extends PendingOperationAdapter<Object, S
 
         Serializable parentId = getNativeKey();
         final boolean isRelationshipAssociation = graphParent.isRelationshipEntity();
-        if(isRelationshipAssociation) {
-            if(association.getName().equals(FROM)) {
+        if (isRelationshipAssociation) {
+            if (association.getName().equals(FROM)) {
                 RelationshipPersistentEntity relEntity = (RelationshipPersistentEntity) graphParent;
                 GraphPersistentEntity graphChild = relEntity.getToEntity();
                 graphParent = relEntity.getFromEntity();
@@ -78,9 +78,8 @@ public class RelationshipPendingDelete extends PendingOperationAdapter<Object, S
                 Object startEntity = entityAccess.getProperty(FROM);
                 parentId = graphParent.getReflector().getIdentifier(startEntity);
                 this.targetIdentifiers.clear();
-                this.targetIdentifiers.add( graphChild.getReflector().getIdentifier(endEntity) );
-            }
-            else {
+                this.targetIdentifiers.add(graphChild.getReflector().getIdentifier(endEntity));
+            } else {
                 // don't do anything for the 'to' end
                 return;
             }
@@ -88,17 +87,15 @@ public class RelationshipPendingDelete extends PendingOperationAdapter<Object, S
 
         final Map<String, Object> params = new LinkedHashMap<>(2);
 
-        if(RelationshipUtils.useReversedMappingFor(association)) {
+        if (RelationshipUtils.useReversedMappingFor(association)) {
             params.put(GormProperties.IDENTITY, parentId);
-        }
-        else {
+        } else {
             params.put(CypherBuilder.START, parentId);
             params.put(CypherBuilder.END, targetIdentifiers);
         }
 
-
         String cypher = graphParent.formatAssociationDelete(association, entityAccess.getEntity());
-        if(cypher != null) {
+        if (cypher != null) {
             if (log.isDebugEnabled()) {
                 log.debug("DELETE Cypher [{}] for parameters [{}]", cypher, params);
             }

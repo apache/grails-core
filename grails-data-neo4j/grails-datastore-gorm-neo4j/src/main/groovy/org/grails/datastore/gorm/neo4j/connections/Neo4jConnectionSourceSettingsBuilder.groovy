@@ -19,10 +19,12 @@
 package org.grails.datastore.gorm.neo4j.connections
 
 import groovy.transform.CompileStatic
+
+import org.springframework.core.env.PropertyResolver
+
 import org.grails.datastore.gorm.neo4j.config.Settings
 import org.grails.datastore.mapping.config.ConfigurationBuilder
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
-import org.springframework.core.env.PropertyResolver
 
 /**
  * A builder for creating {@link Neo4jConnectionSourceSettings} objects

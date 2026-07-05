@@ -26,7 +26,7 @@ package grails.neo4j
  * @see org.neo4j.driver.types.Path
  * @since 6.1
  */
-interface Path<S, E> extends Iterable<Segment<S,E>> {
+interface Path<S, E> extends Iterable<Segment<S, E>> {
 
     /**
      * A segment
@@ -34,13 +34,13 @@ interface Path<S, E> extends Iterable<Segment<S,E>> {
      * @see org.neo4j.driver.types.Path.Segment
      */
     interface Segment<S, E> {
+
         Relationship<S, E> relationship()
 
         S start()
 
         E end()
     }
-
 
     /** @return the start node of this path */
     S start()

@@ -19,6 +19,7 @@
 package org.grails.datastore.gorm.neo4j.collection
 
 import groovy.transform.CompileStatic
+
 import org.grails.datastore.gorm.neo4j.Neo4jSession
 import org.grails.datastore.gorm.neo4j.engine.Neo4jAssociationQueryExecutor
 import org.grails.datastore.mapping.collection.PersistentSet
@@ -27,6 +28,7 @@ import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import org.grails.datastore.mapping.engine.EntityAccess
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.ToMany
+
 /**
  * Neo4j version of the {@link PersistentSet} class
  *
@@ -35,9 +37,11 @@ import org.grails.datastore.mapping.model.types.ToMany
  */
 @CompileStatic
 class Neo4jPersistentSortedSet extends PersistentSortedSet {
+
     protected final EntityAccess parentAccess
     protected final Association association
-    protected final @Delegate GraphAdapter graphAdapter
+    protected final @Delegate
+    GraphAdapter graphAdapter
 
     Neo4jPersistentSortedSet(Collection keys, Neo4jSession session, EntityAccess parentAccess, ToMany association) {
         super(keys, association.associatedEntity.javaClass, session)
@@ -58,8 +62,8 @@ class Neo4jPersistentSortedSet extends PersistentSortedSet {
     @Override
     boolean addAll(Collection c) {
         def added = super.addAll(c)
-        if(added) {
-            for( o in c ) {
+        if (added) {
+            for (o in c) {
                 adaptGraphUponAdd(o, currentlyInitializing())
             }
         }
@@ -70,7 +74,7 @@ class Neo4jPersistentSortedSet extends PersistentSortedSet {
     @Override
     boolean add(Object o) {
         def added = super.add(o)
-        if(added) {
+        if (added) {
             adaptGraphUponAdd(o, currentlyInitializing())
         }
 
@@ -80,8 +84,8 @@ class Neo4jPersistentSortedSet extends PersistentSortedSet {
     @Override
     boolean removeAll(Collection c) {
         def removed = super.removeAll(c)
-        if(removed) {
-            for(o in c) {
+        if (removed) {
+            for (o in c) {
                 adaptGraphUponRemove(o, currentlyInitializing())
             }
         }
@@ -91,7 +95,7 @@ class Neo4jPersistentSortedSet extends PersistentSortedSet {
     @Override
     boolean remove(Object o) {
         def removed = super.remove(o)
-        if(removed) {
+        if (removed) {
             adaptGraphUponRemove(o, currentlyInitializing())
         }
         return removed

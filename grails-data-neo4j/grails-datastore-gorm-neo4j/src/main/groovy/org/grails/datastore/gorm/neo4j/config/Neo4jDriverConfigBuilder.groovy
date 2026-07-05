@@ -18,15 +18,18 @@
  */
 package org.grails.datastore.gorm.neo4j.config
 
+import java.lang.reflect.Method
+import java.lang.reflect.Modifier
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import org.grails.datastore.mapping.config.ConfigurationBuilder
+
 import org.neo4j.driver.Config
+
 import org.springframework.core.env.PropertyResolver
 import org.springframework.util.ReflectionUtils
 
-import java.lang.reflect.Method
-import java.lang.reflect.Modifier
+import org.grails.datastore.mapping.config.ConfigurationBuilder
 
 /**
  * Constructs the Neo4j driver configuration
@@ -62,13 +65,12 @@ class Neo4jDriverConfigBuilder extends ConfigurationBuilder<Config.ConfigBuilder
 
     @Override
     protected Object getFallBackValue(Object fallBackConfig, String methodName) {
-        if(fallBackConfig != null) {
+        if (fallBackConfig != null) {
             Method fallBackMethod = ReflectionUtils.findMethod(fallBackConfig.getClass(), methodName)
-            if(fallBackMethod != null && Modifier.isPublic(fallBackMethod.getModifiers())) {
+            if (fallBackMethod != null && Modifier.isPublic(fallBackMethod.getModifiers())) {
                 return fallBackMethod.invoke(fallBackConfig)
 
-            }
-            else {
+            } else {
                 return super.getFallBackValue(fallBackConfig, methodName)
             }
         }

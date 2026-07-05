@@ -28,7 +28,6 @@ import java.util.Iterator;
  */
 public class IteratorUtil {
 
-
     /**
      * A single item or null
      *
@@ -38,7 +37,7 @@ public class IteratorUtil {
      */
     public static <T> T singleOrNull(Iterable<T> iterable) {
         Iterator<T> i = iterable.iterator();
-        if(i.hasNext()) {
+        if (i.hasNext()) {
             return i.next();
         }
         return null;
@@ -57,7 +56,7 @@ public class IteratorUtil {
     }
 
     public static <T> T single(Iterator<T> i) {
-        if(i.hasNext()) {
+        if (i.hasNext()) {
             return i.next();
         }
         return null;
@@ -73,7 +72,7 @@ public class IteratorUtil {
 
     public static int count(Iterator i) {
         int count = 0;
-        while(i.hasNext()) {
+        while (i.hasNext()) {
             count++;
             i.next();
         }

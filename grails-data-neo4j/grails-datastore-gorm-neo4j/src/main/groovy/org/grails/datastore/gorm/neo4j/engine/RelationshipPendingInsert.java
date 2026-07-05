@@ -18,22 +18,35 @@
  */
 package org.grails.datastore.gorm.neo4j.engine;
 
+import java.io.Serializable;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+import org.neo4j.driver.Transaction;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import grails.neo4j.Relationship;
-import org.grails.datastore.gorm.neo4j.*;
+import org.grails.datastore.gorm.neo4j.CypherBuilder;
+import org.grails.datastore.gorm.neo4j.GraphPersistentEntity;
+import org.grails.datastore.gorm.neo4j.Neo4jMappingContext;
+import org.grails.datastore.gorm.neo4j.Neo4jSession;
+import org.grails.datastore.gorm.neo4j.RelationshipPersistentEntity;
+import org.grails.datastore.gorm.neo4j.RelationshipUtils;
 import org.grails.datastore.gorm.neo4j.mapping.config.DynamicAssociation;
 import org.grails.datastore.gorm.neo4j.mapping.config.DynamicToOneAssociation;
 import org.grails.datastore.mapping.core.impl.PendingInsertAdapter;
 import org.grails.datastore.mapping.engine.EntityAccess;
 import org.grails.datastore.mapping.model.PersistentProperty;
-import org.grails.datastore.mapping.model.types.*;
+import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.Basic;
+import org.grails.datastore.mapping.model.types.OneToMany;
+import org.grails.datastore.mapping.model.types.OneToOne;
+import org.grails.datastore.mapping.model.types.Simple;
+import org.grails.datastore.mapping.model.types.TenantId;
 import org.grails.datastore.mapping.reflect.EntityReflector;
-import org.neo4j.driver.Session;
-import org.neo4j.driver.Transaction;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.Serializable;
-import java.util.*;
 
 /**
  * Represents a pending relationship insert
@@ -43,6 +56,7 @@ import java.util.*;
  *
  */
 public class RelationshipPendingInsert extends PendingInsertAdapter<Object, Serializable> {
+
     /**
      * The name of the from property
      */
@@ -54,7 +68,7 @@ public class RelationshipPendingInsert extends PendingInsertAdapter<Object, Seri
     public static final String SOURCE_TYPE = "sourceType";
     public static final String TARGET_TYPE = "targetType";
 
-    private static Logger log = LoggerFactory.getLogger(RelationshipPendingInsert.class);
+    private static final Logger log = LoggerFactory.getLogger(RelationshipPendingInsert.class);
     private final Transaction boltTransaction;
     private final Association association;
     private final Collection<Serializable> targetIdentifiers;
@@ -74,16 +88,15 @@ public class RelationshipPendingInsert extends PendingInsertAdapter<Object, Seri
     @Override
     public void run() {
 
-
         GraphPersistentEntity graphParent = (GraphPersistentEntity) getEntity();
         GraphPersistentEntity graphChild = (GraphPersistentEntity) association.getAssociatedEntity();
-        Map<String,Object> params = new LinkedHashMap<>(2);
+        Map<String, Object> params = new LinkedHashMap<>(2);
         EntityAccess entityAccess = getEntityAccess();
         Object parentId = entityAccess.getIdentifier();
 
         final boolean isRelationshipAssociation = Relationship.class.isAssignableFrom(graphParent.getJavaClass());
-        if(isRelationshipAssociation) {
-            if(association.getName().equals(FROM)) {
+        if (isRelationshipAssociation) {
+            if (association.getName().equals(FROM)) {
                 Association endProperty = (Association) graphParent.getPropertyByName(TO);
                 Association startProperty = (Association) graphParent.getPropertyByName(FROM);
 
@@ -94,9 +107,8 @@ public class RelationshipPendingInsert extends PendingInsertAdapter<Object, Seri
                 Object startEntity = entityAccess.getProperty(FROM);
                 parentId = graphParent.getReflector().getIdentifier(startEntity);
                 this.targetIdentifiers.clear();
-                this.targetIdentifiers.add( graphChild.getReflector().getIdentifier(endEntity) );
-            }
-            else {
+                this.targetIdentifiers.add(graphChild.getReflector().getIdentifier(endEntity));
+            } else {
                 // don't do anything for the 'to' end
                 return;
             }
@@ -110,65 +122,62 @@ public class RelationshipPendingInsert extends PendingInsertAdapter<Object, Seri
 
         final String relMatch;
 
-        if(association instanceof DynamicToOneAssociation) {
+        if (association instanceof DynamicToOneAssociation) {
             LinkedHashMap<String, String> attrs = new LinkedHashMap<String, String>();
             attrs.put(SOURCE_TYPE, graphParent.getJavaClass().getSimpleName());
             attrs.put(TARGET_TYPE, graphChild.getJavaClass().getSimpleName());
             relMatch = RelationshipUtils.matchForAssociation(association, "r", attrs);
-        }
-        else if(isRelationshipAssociation) {
+        } else if (isRelationshipAssociation) {
             LinkedHashMap<String, Object> attrs = new LinkedHashMap<>();
             GraphPersistentEntity relEntity = (GraphPersistentEntity) getEntity();
             EntityReflector reflector = relEntity.getReflector();
-            Neo4jMappingContext mappingContext = (Neo4jMappingContext)relEntity.getMappingContext();
+            Neo4jMappingContext mappingContext = (Neo4jMappingContext) relEntity.getMappingContext();
 
             Neo4jEntityPersister entityPersister = session.getEntityPersister(getEntityAccess().getEntity());
-            if(entityPersister.cancelInsert(entity, getEntityAccess())) {
+            if (entityPersister.cancelInsert(entity, getEntityAccess())) {
                 // operation cancelled, return
                 return;
             }
 
             for (PersistentProperty pp : relEntity.getPersistentProperties()) {
-                if(pp instanceof Simple || pp instanceof Basic || pp instanceof TenantId) {
+                if (pp instanceof Simple || pp instanceof Basic || pp instanceof TenantId) {
                     String propertyName = pp.getName();
-                    if(RelationshipPersistentEntity.TYPE.equals(propertyName)) {
+                    if (RelationshipPersistentEntity.TYPE.equals(propertyName)) {
                         continue;
                     }
 
                     Object v = reflector.getProperty(getNativeEntry(), propertyName);
-                    if(v != null) {
+                    if (v != null) {
                         attrs.put(propertyName, mappingContext.convertToNative(v));
                     }
                 }
             }
             Relationship relationship = (Relationship) getEntityAccess().getEntity();
-            attrs.putAll( relationship.attributes() );
+            attrs.putAll(relationship.attributes());
 
             params.put("rProps", attrs);
             relMatch = RelationshipUtils.toMatch(association, relationship);
-        }
-        else {
+        } else {
             relMatch = RelationshipUtils.matchForAssociation(association, "r");
         }
 
-        if(isUpdate &&
-           (association instanceof DynamicAssociation ||
-            ((association.isBidirectional() && (association instanceof OneToMany)) || (association instanceof OneToOne)) &&
-            !RelationshipUtils.useReversedMappingFor(association))) {
+        if (isUpdate &&
+            (association instanceof DynamicAssociation ||
+                ((association.isBidirectional() && (association instanceof OneToMany)) || (association instanceof OneToOne)) &&
+                    !RelationshipUtils.useReversedMappingFor(association))) {
             // delete any previous
 
             StringBuilder cypher = new StringBuilder(CypherBuilder.buildRelationshipMatch(labelsFrom, relMatch, labelsTo));
             Map<String, Object> deleteParams;
-            if(association instanceof DynamicToOneAssociation || association instanceof OneToOne) {
+            if (association instanceof DynamicToOneAssociation || association instanceof OneToOne) {
                 cypher.append(graphChild.formatId(FROM));
-                deleteParams = Collections.<String, Object>singletonMap(CypherBuilder.START, Collections.singletonList(parentId));
-            }
-            else {
+                deleteParams = Collections.singletonMap(CypherBuilder.START, Collections.singletonList(parentId));
+            } else {
                 cypher.append(graphChild.formatId(TO));
-                deleteParams = Collections.<String, Object>singletonMap(CypherBuilder.START, targetIdentifiers);
+                deleteParams = Collections.singletonMap(CypherBuilder.START, targetIdentifiers);
             }
             cypher.append(" IN $").append(CypherBuilder.START).append(" DELETE r");
-            if(log.isDebugEnabled()) {
+            if (log.isDebugEnabled()) {
                 log.debug("DELETE Cypher [{}] for parameters [{}]", cypher, deleteParams);
             }
             boltTransaction.run(cypher.toString(), deleteParams);
@@ -177,16 +186,16 @@ public class RelationshipPendingInsert extends PendingInsertAdapter<Object, Seri
         StringBuilder cypherQuery = new StringBuilder(String.format(CypherBuilder.CYPHER_FROM_TO_NODES_MATCH, labelsFrom, labelsTo));
 
         cypherQuery.append(graphParent.formatId(RelationshipPersistentEntity.FROM))
-                   .append(" = $")
-                   .append(CypherBuilder.START)
-                   .append(" AND ")
-                   .append(graphChild.formatId(RelationshipPersistentEntity.TO))
-                   .append(" IN $")
-                   .append(CypherBuilder.END)
-                   .append(" MERGE (from)")
-                   .append(relMatch)
-                   .append("(to)");
-        if(isRelationshipAssociation) {
+            .append(" = $")
+            .append(CypherBuilder.START)
+            .append(" AND ")
+            .append(graphChild.formatId(RelationshipPersistentEntity.TO))
+            .append(" IN $")
+            .append(CypherBuilder.END)
+            .append(" MERGE (from)")
+            .append(relMatch)
+            .append("(to)");
+        if (isRelationshipAssociation) {
             cypherQuery.append(" ON CREATE SET r=$rProps");
         }
 

@@ -53,7 +53,7 @@ class GraphGormMappingFactory extends AbstractGormMappingFactory {
 
     @Override
     Entity createMappedForm(PersistentEntity entity) {
-        if(entity instanceof RelationshipPersistentEntity) {
+        if (entity instanceof RelationshipPersistentEntity) {
             Class previousType = currentNodeConfigType
             try {
                 currentNodeConfigType = RelationshipConfig
@@ -61,8 +61,7 @@ class GraphGormMappingFactory extends AbstractGormMappingFactory {
             } finally {
                 currentNodeConfigType = previousType
             }
-        }
-        else {
+        } else {
             return super.createMappedForm(entity)
         }
     }

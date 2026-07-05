@@ -32,13 +32,15 @@ import org.grails.datastore.mapping.model.types.Association
  * @since 5.0
  */
 class Neo4jSortedSet extends DirtyCheckingSortedSet {
+
     final transient Association association
     final transient Neo4jSession session
 
-    protected final transient @Delegate GraphAdapter graphAdapter
+    protected final transient @Delegate
+    GraphAdapter graphAdapter
 
     Neo4jSortedSet(EntityAccess parentAccess, Association association, SortedSet delegate, Neo4jSession session) {
-        super(delegate, (DirtyCheckable)parentAccess.getEntity(), association.getName())
+        super(delegate, (DirtyCheckable) parentAccess.getEntity(), association.getName())
         this.association = association
         this.session = session
         this.graphAdapter = new GraphAdapter(session, parentAccess, association)
@@ -48,7 +50,7 @@ class Neo4jSortedSet extends DirtyCheckingSortedSet {
     boolean add(Object o) {
 
         def added = super.add(o)
-        if(added) {
+        if (added) {
             adaptGraphUponAdd(o)
         }
         return added
@@ -57,8 +59,8 @@ class Neo4jSortedSet extends DirtyCheckingSortedSet {
     @Override
     boolean addAll(Collection c) {
         def added = super.addAll(c)
-        if(added) {
-            for( o in c ) {
+        if (added) {
+            for (o in c) {
                 adaptGraphUponAdd(o)
             }
         }
@@ -69,8 +71,8 @@ class Neo4jSortedSet extends DirtyCheckingSortedSet {
     @Override
     boolean removeAll(Collection c) {
         def removed = super.removeAll(c)
-        if(removed) {
-            for(o in c) {
+        if (removed) {
+            for (o in c) {
                 adaptGraphUponRemove(o)
             }
         }
@@ -80,7 +82,7 @@ class Neo4jSortedSet extends DirtyCheckingSortedSet {
     @Override
     boolean remove(Object o) {
         def removed = super.remove(o)
-        if(removed) {
+        if (removed) {
             adaptGraphUponRemove(o)
         }
         return removed

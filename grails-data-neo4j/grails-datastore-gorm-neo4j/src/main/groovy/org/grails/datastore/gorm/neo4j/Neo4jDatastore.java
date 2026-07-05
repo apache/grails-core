@@ -18,8 +18,31 @@
  */
 package org.grails.datastore.gorm.neo4j;
 
-import grails.neo4j.Relationship;
+import java.io.Closeable;
+import java.io.IOException;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
 import groovy.lang.Closure;
+
+import jakarta.annotation.PreDestroy;
+import jakarta.persistence.FlushModeType;
+
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.Transaction;
+import org.neo4j.driver.exceptions.Neo4jException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.springframework.context.MessageSource;
+import org.springframework.context.MessageSourceAware;
+import org.springframework.context.support.StaticMessageSource;
+import org.springframework.core.env.PropertyResolver;
+
+import grails.neo4j.Relationship;
 import org.grails.datastore.gorm.GormEnhancer;
 import org.grails.datastore.gorm.GormInstanceApi;
 import org.grails.datastore.gorm.GormStaticApi;
@@ -44,7 +67,14 @@ import org.grails.datastore.mapping.core.AbstractDatastore;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.DatastoreUtils;
 import org.grails.datastore.mapping.core.StatelessDatastore;
-import org.grails.datastore.mapping.core.connections.*;
+import org.grails.datastore.mapping.core.connections.ConnectionSource;
+import org.grails.datastore.mapping.core.connections.ConnectionSources;
+import org.grails.datastore.mapping.core.connections.ConnectionSourcesInitializer;
+import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport;
+import org.grails.datastore.mapping.core.connections.DefaultConnectionSource;
+import org.grails.datastore.mapping.core.connections.InMemoryConnectionSources;
+import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore;
+import org.grails.datastore.mapping.core.connections.SingletonConnectionSources;
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
 import org.grails.datastore.mapping.graph.GraphDatastore;
 import org.grails.datastore.mapping.model.DatastoreConfigurationException;
@@ -54,29 +84,9 @@ import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Simple;
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore;
-import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore;
 import org.grails.datastore.mapping.multitenancy.TenantResolver;
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore;
 import org.grails.datastore.mapping.validation.ValidatorRegistry;
-import org.neo4j.driver.Driver;
-import org.neo4j.driver.Transaction;
-import org.neo4j.driver.exceptions.Neo4jException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.context.MessageSource;
-import org.springframework.context.MessageSourceAware;
-import org.springframework.context.support.StaticMessageSource;
-import org.springframework.core.env.PropertyResolver;
-
-import jakarta.annotation.PreDestroy;
-import jakarta.persistence.FlushModeType;
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 
 import static org.grails.datastore.gorm.neo4j.config.Settings.DATABASE_TYPE_EMBEDDED;
 import static org.grails.datastore.gorm.neo4j.config.Settings.SETTING_NEO4J_EMBEDDED_EPHEMERAL;
@@ -92,9 +102,7 @@ import static org.grails.datastore.gorm.neo4j.config.Settings.SETTING_NEO4J_TYPE
  */
 public class Neo4jDatastore extends AbstractDatastore implements Closeable, StatelessDatastore, GraphDatastore, Settings, MultipleConnectionSourceCapableDatastore, MultiTenantCapableDatastore<Driver, Neo4jConnectionSourceSettings>, MessageSourceAware, TransactionCapableDatastore {
 
-    private static Logger log = LoggerFactory.getLogger(Neo4jDatastore.class);
-
-    protected boolean skipIndexSetup = false;
+    private static final Logger log = LoggerFactory.getLogger(Neo4jDatastore.class);
     protected final Driver boltDriver;
     protected final FlushModeType defaultFlushMode;
     protected final ConfigurableApplicationEventPublisher eventPublisher;
@@ -105,6 +113,7 @@ public class Neo4jDatastore extends AbstractDatastore implements Closeable, Stat
     protected final TenantResolver tenantResolver;
     protected final MultiTenancySettings.MultiTenancyMode multiTenancyMode;
     protected final AutoTimestampEventListener autoTimestampEventListener;
+    protected boolean skipIndexSetup = false;
 
     /**
      * Configures a new {@link Neo4jDatastore} for the given arguments
@@ -127,22 +136,21 @@ public class Neo4jDatastore extends AbstractDatastore implements Closeable, Stat
         this.tenantResolver = multiTenancySettings.getTenantResolver();
         this.autoTimestampEventListener = new AutoTimestampEventListener(this);
 
-        if(!skipIndexSetup) {
+        if (!skipIndexSetup) {
             setupIndexing();
         }
 
         transactionManager = new Neo4jDatastoreTransactionManager(this);
-        if(!(connectionSources instanceof SingletonConnectionSources)) {
+        if (!(connectionSources instanceof SingletonConnectionSources)) {
 
             Iterable<ConnectionSource<Driver, Neo4jConnectionSourceSettings>> allConnectionSources = connectionSources.getAllConnectionSources();
             for (ConnectionSource<Driver, Neo4jConnectionSourceSettings> connectionSource : allConnectionSources) {
                 SingletonConnectionSources singletonConnectionSources = new SingletonConnectionSources(connectionSource, connectionSources.getBaseConfiguration());
                 Neo4jDatastore childDatastore;
 
-                if(ConnectionSource.DEFAULT.equals(connectionSource.getName())) {
+                if (ConnectionSource.DEFAULT.equals(connectionSource.getName())) {
                     childDatastore = this;
-                }
-                else {
+                } else {
                     childDatastore = new Neo4jDatastore(singletonConnectionSources, mappingContext, eventPublisher) {
                         @Override
                         protected GormEnhancer initialize(Neo4jConnectionSourceSettings settings) {
@@ -163,8 +171,8 @@ public class Neo4jDatastore extends AbstractDatastore implements Closeable, Stat
      * @param eventPublisher The Spring ApplicationContext
      * @param classes The persistent classes
      */
-    public Neo4jDatastore(ConnectionSources<Driver, Neo4jConnectionSourceSettings> connectionSources,  ConfigurableApplicationEventPublisher eventPublisher, Class...classes) {
-        this(connectionSources, createMappingContext(connectionSources,classes), eventPublisher);
+    public Neo4jDatastore(ConnectionSources<Driver, Neo4jConnectionSourceSettings> connectionSources, ConfigurableApplicationEventPublisher eventPublisher, Class... classes) {
+        this(connectionSources, createMappingContext(connectionSources, classes), eventPublisher);
     }
 
     /**
@@ -172,8 +180,8 @@ public class Neo4jDatastore extends AbstractDatastore implements Closeable, Stat
      *
      * @param classes The persistent classes
      */
-    public Neo4jDatastore(ConnectionSources<Driver, Neo4jConnectionSourceSettings> connectionSources, Class...classes) {
-        this(connectionSources, createMappingContext(connectionSources,classes), new DefaultApplicationEventPublisher());
+    public Neo4jDatastore(ConnectionSources<Driver, Neo4jConnectionSourceSettings> connectionSources, Class... classes) {
+        this(connectionSources, createMappingContext(connectionSources, classes), new DefaultApplicationEventPublisher());
     }
 
     /**
@@ -184,10 +192,9 @@ public class Neo4jDatastore extends AbstractDatastore implements Closeable, Stat
      * @param eventPublisher The Spring ApplicationContext
      * @param classes The persistent classes
      */
-    public Neo4jDatastore(Driver boltDriver, PropertyResolver configuration, ConfigurableApplicationEventPublisher eventPublisher, Class...classes) {
+    public Neo4jDatastore(Driver boltDriver, PropertyResolver configuration, ConfigurableApplicationEventPublisher eventPublisher, Class... classes) {
         this(createDefaultConnectionSources(boltDriver, configuration), eventPublisher, classes);
     }
-
 
     /**
      * Configures a new {@link Neo4jDatastore} for the given arguments
@@ -196,7 +203,7 @@ public class Neo4jDatastore extends AbstractDatastore implements Closeable, Stat
      * @param eventPublisher The Spring ApplicationContext
      * @param classes The persistent classes
      */
-    public Neo4jDatastore(Driver boltDriver, ConfigurableApplicationEventPublisher eventPublisher, Class...classes) {
+    public Neo4jDatastore(Driver boltDriver, ConfigurableApplicationEventPublisher eventPublisher, Class... classes) {
         this(createDefaultConnectionSources(boltDriver, DatastoreUtils.createPropertyResolver(null)), eventPublisher, classes);
     }
 
@@ -207,16 +214,17 @@ public class Neo4jDatastore extends AbstractDatastore implements Closeable, Stat
      * @param configuration The configuration for the datastore
      * @param classes The persistent classes
      */
-    public Neo4jDatastore(Driver boltDriver, PropertyResolver configuration, Class...classes) {
+    public Neo4jDatastore(Driver boltDriver, PropertyResolver configuration, Class... classes) {
         this(boltDriver, configuration, new DefaultApplicationEventPublisher(), classes);
     }
+
     /**
      * Configures a new {@link Neo4jDatastore} for the given arguments
      *
      * @param boltDriver The driver
      * @param classes The persistent classes
      */
-    public Neo4jDatastore(Driver boltDriver, Class...classes) {
+    public Neo4jDatastore(Driver boltDriver, Class... classes) {
         this(boltDriver, DatastoreUtils.createPropertyResolver(null), new DefaultApplicationEventPublisher(), classes);
     }
 
@@ -228,7 +236,7 @@ public class Neo4jDatastore extends AbstractDatastore implements Closeable, Stat
      * @param eventPublisher The Spring ApplicationContext
      * @param classes The persistent classes
      */
-    public Neo4jDatastore(PropertyResolver configuration, Neo4jConnectionSourceFactory connectionSourceFactory, ConfigurableApplicationEventPublisher eventPublisher, Class...classes) {
+    public Neo4jDatastore(PropertyResolver configuration, Neo4jConnectionSourceFactory connectionSourceFactory, ConfigurableApplicationEventPublisher eventPublisher, Class... classes) {
         this(ConnectionSourcesInitializer.create(connectionSourceFactory, configuration), eventPublisher, classes);
     }
 
@@ -239,8 +247,8 @@ public class Neo4jDatastore extends AbstractDatastore implements Closeable, Stat
      * @param eventPublisher The Spring ApplicationContext
      * @param packagesToScan The packages to scan
      */
-    public Neo4jDatastore(PropertyResolver configuration, Neo4jConnectionSourceFactory connectionSourceFactory, ConfigurableApplicationEventPublisher eventPublisher, Package...packagesToScan) {
-        this(configuration,connectionSourceFactory, eventPublisher, new ClasspathEntityScanner().scan(packagesToScan));
+    public Neo4jDatastore(PropertyResolver configuration, Neo4jConnectionSourceFactory connectionSourceFactory, ConfigurableApplicationEventPublisher eventPublisher, Package... packagesToScan) {
+        this(configuration, connectionSourceFactory, eventPublisher, new ClasspathEntityScanner().scan(packagesToScan));
     }
 
     /**
@@ -250,7 +258,7 @@ public class Neo4jDatastore extends AbstractDatastore implements Closeable, Stat
      * @param eventPublisher The Spring ApplicationContext
      * @param classes The persistent classes
      */
-    public Neo4jDatastore(PropertyResolver configuration, ConfigurableApplicationEventPublisher eventPublisher, Class...classes) {
+    public Neo4jDatastore(PropertyResolver configuration, ConfigurableApplicationEventPublisher eventPublisher, Class... classes) {
         this(ConnectionSourcesInitializer.create(new Neo4jConnectionSourceFactory(), configuration), eventPublisher, classes);
     }
 
@@ -261,10 +269,9 @@ public class Neo4jDatastore extends AbstractDatastore implements Closeable, Stat
      * @param eventPublisher The Spring ApplicationContext
      * @param packagesToScan The packages to scan
      */
-    public Neo4jDatastore(PropertyResolver configuration, ConfigurableApplicationEventPublisher eventPublisher, Package...packagesToScan) {
+    public Neo4jDatastore(PropertyResolver configuration, ConfigurableApplicationEventPublisher eventPublisher, Package... packagesToScan) {
         this(configuration, eventPublisher, new ClasspathEntityScanner().scan(packagesToScan));
     }
-
 
     /**
      * Configures a new {@link Neo4jDatastore} for the given arguments
@@ -272,7 +279,7 @@ public class Neo4jDatastore extends AbstractDatastore implements Closeable, Stat
      * @param configuration The configuration for the datastore
      * @param classes The persistent classes
      */
-    public Neo4jDatastore(PropertyResolver configuration, Class...classes) {
+    public Neo4jDatastore(PropertyResolver configuration, Class... classes) {
         this(configuration, new DefaultApplicationEventPublisher(), classes);
     }
 
@@ -282,7 +289,7 @@ public class Neo4jDatastore extends AbstractDatastore implements Closeable, Stat
      *
      * @param classes The persistent classes
      */
-    public Neo4jDatastore(Class...classes) {
+    public Neo4jDatastore(Class... classes) {
         this(resolveEmbeddedConfiguration(), classes);
     }
 
@@ -292,8 +299,8 @@ public class Neo4jDatastore extends AbstractDatastore implements Closeable, Stat
      * @param configuration The configuration
      * @param classes The persistent classes
      */
-    public Neo4jDatastore(Map<String, Object> configuration, ConfigurableApplicationEventPublisher eventPublisher,Class...classes) {
-        this(mapToPropertyResolver(configuration),eventPublisher, classes);
+    public Neo4jDatastore(Map<String, Object> configuration, ConfigurableApplicationEventPublisher eventPublisher, Class... classes) {
+        this(mapToPropertyResolver(configuration), eventPublisher, classes);
     }
 
     /**
@@ -302,7 +309,7 @@ public class Neo4jDatastore extends AbstractDatastore implements Closeable, Stat
      * @param configuration The configuration
      * @param classes The persistent classes
      */
-    public Neo4jDatastore(Map<String, Object> configuration, Class...classes) {
+    public Neo4jDatastore(Map<String, Object> configuration, Class... classes) {
         this(configuration, new DefaultApplicationEventPublisher(), classes);
     }
 
@@ -311,7 +318,7 @@ public class Neo4jDatastore extends AbstractDatastore implements Closeable, Stat
      *
      * @param packagesToScan The packages to scan
      */
-    public Neo4jDatastore(Package...packagesToScan) {
+    public Neo4jDatastore(Package... packagesToScan) {
         this(new ClasspathEntityScanner().scan(packagesToScan));
     }
 
@@ -324,14 +331,13 @@ public class Neo4jDatastore extends AbstractDatastore implements Closeable, Stat
         this(new ClasspathEntityScanner().scan(packageToScan));
     }
 
-
     /**
      * Construct a Mongo datastore scanning the given packages
      *
      * @param configuration The configuration
      * @param packagesToScan The packages to scan
      */
-    public Neo4jDatastore(PropertyResolver configuration, Package...packagesToScan) {
+    public Neo4jDatastore(PropertyResolver configuration, Package... packagesToScan) {
         this(configuration, new ClasspathEntityScanner().scan(packagesToScan));
     }
 
@@ -341,32 +347,8 @@ public class Neo4jDatastore extends AbstractDatastore implements Closeable, Stat
      * @param configuration The configuration
      * @param packagesToScan The packages to scan
      */
-    public Neo4jDatastore(Map<String,Object> configuration, Package...packagesToScan) {
+    public Neo4jDatastore(Map<String, Object> configuration, Package... packagesToScan) {
         this(DatastoreUtils.createPropertyResolver(configuration), packagesToScan);
-    }
-
-    /**
-     * @return The transaction manager
-     */
-    @Override
-    public Neo4jDatastoreTransactionManager getTransactionManager() {
-        return transactionManager;
-    }
-
-
-    @Override
-    public ConfigurableApplicationEventPublisher getApplicationEventPublisher() {
-        return this.eventPublisher;
-    }
-
-    @Override
-    public Datastore getDatastoreForConnection(String connectionName) {
-        return datastoresByConnectionSource.get(connectionName);
-    }
-
-    @Override
-    public Neo4jMappingContext getMappingContext() {
-        return (Neo4jMappingContext)super.getMappingContext();
     }
 
     /**
@@ -390,19 +372,18 @@ public class Neo4jDatastore extends AbstractDatastore implements Closeable, Stat
         MessageSource messageSource = new StaticMessageSource();
         ValidatorRegistry defaultValidatorRegistry = createValidatorRegistry(settings, neo4jMappingContext, messageSource);
         neo4jMappingContext.setValidatorRegistry(
-                defaultValidatorRegistry
+            defaultValidatorRegistry
         );
         return neo4jMappingContext;
     }
 
     private static PropertyResolver resolveEmbeddedConfiguration() {
-        if(Neo4jConnectionSourceFactory.isEmbeddedAvailable()) {
+        if (Neo4jConnectionSourceFactory.isEmbeddedAvailable()) {
             Map<String, Object> config = new LinkedHashMap<>();
             config.put(SETTING_NEO4J_TYPE, DATABASE_TYPE_EMBEDDED);
-            config.put(SETTING_NEO4J_EMBEDDED_EPHEMERAL, true );
+            config.put(SETTING_NEO4J_EMBEDDED_EPHEMERAL, true);
             return mapToPropertyResolver(config);
-        }
-        else {
+        } else {
             return mapToPropertyResolver(null);
         }
     }
@@ -415,21 +396,43 @@ public class Neo4jDatastore extends AbstractDatastore implements Closeable, Stat
     }
 
     private static void configureValidatorRegistry(Neo4jMappingContext neo4jMappingContext, MessageSource messageSource, ValidatorRegistry defaultValidatorRegistry) {
-        if(defaultValidatorRegistry instanceof ConstraintRegistry) {
-            ((ConstraintRegistry)defaultValidatorRegistry).addConstraintFactory(
-                    new MappingContextAwareConstraintFactory(UniqueConstraint.class, messageSource, neo4jMappingContext)
+        if (defaultValidatorRegistry instanceof ConstraintRegistry) {
+            ((ConstraintRegistry) defaultValidatorRegistry).addConstraintFactory(
+                new MappingContextAwareConstraintFactory(UniqueConstraint.class, messageSource, neo4jMappingContext)
             );
         }
+    }
+
+    /**
+     * @return The transaction manager
+     */
+    @Override
+    public Neo4jDatastoreTransactionManager getTransactionManager() {
+        return transactionManager;
+    }
+
+    @Override
+    public ConfigurableApplicationEventPublisher getApplicationEventPublisher() {
+        return this.eventPublisher;
+    }
+
+    @Override
+    public Datastore getDatastoreForConnection(String connectionName) {
+        return datastoresByConnectionSource.get(connectionName);
+    }
+
+    @Override
+    public Neo4jMappingContext getMappingContext() {
+        return (Neo4jMappingContext) super.getMappingContext();
     }
 
     protected void registerEventListeners(ConfigurableApplicationEventPublisher eventPublisher) {
         eventPublisher.addApplicationListener(new DomainEventListener(this));
         eventPublisher.addApplicationListener(autoTimestampEventListener);
-        if(multiTenancyMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
+        if (multiTenancyMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
             eventPublisher.addApplicationListener(new MultiTenantEventListener(this));
         }
     }
-
 
     protected GormEnhancer initialize(Neo4jConnectionSourceSettings settings) {
         registerEventListeners(this.eventPublisher);
@@ -462,7 +465,7 @@ public class Neo4jDatastore extends AbstractDatastore implements Closeable, Stat
             @Override
             protected <D> GormInstanceApi<D> getInstanceApi(Class<D> cls, String qualifier) {
                 Neo4jDatastore neo4jDatastore = getDatastoreForQualifier(cls, qualifier);
-                GormInstanceApi<D> instanceApi =  new GormInstanceApi<>(cls,neo4jDatastore);
+                GormInstanceApi<D> instanceApi = new GormInstanceApi<>(cls, neo4jDatastore);
                 instanceApi.setFailOnError(getFailOnError());
                 instanceApi.setMarkDirty(getMarkDirty());
                 return instanceApi;
@@ -471,16 +474,15 @@ public class Neo4jDatastore extends AbstractDatastore implements Closeable, Stat
             private <D> Neo4jDatastore getDatastoreForQualifier(Class<D> cls, String qualifier) {
                 String defaultConnectionSourceName = ConnectionSourcesSupport.getDefaultConnectionSourceName(getMappingContext().getPersistentEntity(cls.getName()));
                 boolean isDefaultQualifier = qualifier.equals(ConnectionSource.DEFAULT);
-                if(isDefaultQualifier && defaultConnectionSourceName.equals(ConnectionSource.DEFAULT)) {
+                if (isDefaultQualifier && defaultConnectionSourceName.equals(ConnectionSource.DEFAULT)) {
                     return Neo4jDatastore.this;
-                }
-                else {
-                    if(isDefaultQualifier) {
+                } else {
+                    if (isDefaultQualifier) {
                         qualifier = defaultConnectionSourceName;
                     }
                     ConnectionSource<Driver, Neo4jConnectionSourceSettings> connectionSource = connectionSources.getConnectionSource(qualifier);
-                    if(connectionSource == null) {
-                        throw new ConfigurationException("Invalid connection ["+defaultConnectionSourceName+"] configured for class ["+cls+"]");
+                    if (connectionSource == null) {
+                        throw new ConfigurationException("Invalid connection [" + defaultConnectionSourceName + "] configured for class [" + cls + "]");
                     }
                     return Neo4jDatastore.this.datastoresByConnectionSource.get(qualifier);
                 }
@@ -499,42 +501,39 @@ public class Neo4jDatastore extends AbstractDatastore implements Closeable, Stat
         return neo4jSession;
     }
 
-
     public void setupIndexing() {
-        if(skipIndexSetup) return;
+        if (skipIndexSetup) return;
         List<String> schemaStrings = new ArrayList<String>(); // using set to avoid duplicate index creation
 
-        for (PersistentEntity persistentEntity:  mappingContext.getPersistentEntities()) {
-            if(persistentEntity.isExternal() || Relationship.class.isAssignableFrom(persistentEntity.getJavaClass())) continue;
+        for (PersistentEntity persistentEntity : mappingContext.getPersistentEntities()) {
+            if (persistentEntity.isExternal() || Relationship.class.isAssignableFrom(persistentEntity.getJavaClass()))
+                continue;
 
-            if(log.isDebugEnabled()) {
+            if (log.isDebugEnabled()) {
                 log.debug("Setting up indexing for entity " + persistentEntity.getName());
             }
             final GraphPersistentEntity graphPersistentEntity = (GraphPersistentEntity) persistentEntity;
-            for (String label: graphPersistentEntity.getLabels()) {
+            for (String label : graphPersistentEntity.getLabels()) {
                 StringBuilder sb = new StringBuilder();
                 IdGenerator.Type idGeneratorType = graphPersistentEntity.getIdGeneratorType();
-                if(graphPersistentEntity.getIdGenerator() != null && idGeneratorType.equals(IdGenerator.Type.SNOWFLAKE)) {
+                if (graphPersistentEntity.getIdGenerator() != null && idGeneratorType.equals(IdGenerator.Type.SNOWFLAKE)) {
                     sb.append("CREATE CONSTRAINT ON (n:").append(label).append(") ASSERT n.").append(CypherBuilder.IDENTIFIER).append(" IS UNIQUE");
                     schemaStrings.add(sb.toString());
-                }
-                else if(!graphPersistentEntity.isNativeId()) {
+                } else if (!graphPersistentEntity.isNativeId()) {
                     createUniqueConstraintOnProperty(label, graphPersistentEntity.getIdentity(), schemaStrings);
                 }
 
-
                 for (PersistentProperty persistentProperty : persistentEntity.getPersistentProperties()) {
                     Property mappedForm = persistentProperty.getMapping().getMappedForm();
-                    if ((persistentProperty instanceof Simple) && (mappedForm != null) ) {
+                    if ((persistentProperty instanceof Simple) && (mappedForm != null)) {
 
-                        if(mappedForm.isUnique()) {
+                        if (mappedForm.isUnique()) {
                             createUniqueConstraintOnProperty(label, persistentProperty, schemaStrings);
-                        }
-                        else if(mappedForm.isIndex()) {
+                        } else if (mappedForm.isIndex()) {
                             sb = new StringBuilder();
                             sb.append("CREATE INDEX ON :").append(label).append("(").append(persistentProperty.getName()).append(")");
                             schemaStrings.add(sb.toString());
-                            if(log.isDebugEnabled()) {
+                            if (log.isDebugEnabled()) {
                                 log.debug("setting up indexing for " + label + " property " + persistentProperty.getName());
                             }
                         }
@@ -545,24 +544,23 @@ public class Neo4jDatastore extends AbstractDatastore implements Closeable, Stat
 
         org.neo4j.driver.Session boltSession = boltDriver.session();
 
-        final Transaction transaction = boltSession.beginTransaction();;
+        final Transaction transaction = boltSession.beginTransaction();
         try {
-            for (String cypher: schemaStrings) {
-                if(log.isDebugEnabled()) {
+            for (String cypher : schemaStrings) {
+                if (log.isDebugEnabled()) {
                     log.debug("CREATE INDEX Cypher [{}]", cypher);
                 }
                 transaction.run(cypher);
             }
             transaction.commit();
-        } catch(Throwable e) {
+        } catch (Throwable e) {
             log.error("Error creating Neo4j index: " + e.getMessage(), e);
             transaction.rollback();
             throw new DatastoreConfigurationException("Error creating Neo4j index: " + e.getMessage(), e);
-        }
-        finally {
+        } finally {
             boltSession.close();
         }
-        if(log.isDebugEnabled()) {
+        if (log.isDebugEnabled()) {
             log.debug("done setting up indexes");
         }
     }
@@ -619,7 +617,7 @@ public class Neo4jDatastore extends AbstractDatastore implements Closeable, Stat
 
     @Override
     public Neo4jDatastore getDatastoreForTenantId(Serializable tenantId) {
-        if(getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DATABASE) {
+        if (getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DATABASE) {
             return this.datastoresByConnectionSource.get(tenantId.toString());
         }
         return this;
@@ -632,12 +630,10 @@ public class Neo4jDatastore extends AbstractDatastore implements Closeable, Stat
         try {
             DatastoreUtils.bindNewSession(session);
             return callable.call(session);
-        }
-        finally {
+        } finally {
             DatastoreUtils.unbindSession(session);
         }
     }
-
 
     @Override
     public void setMessageSource(MessageSource messageSource) {

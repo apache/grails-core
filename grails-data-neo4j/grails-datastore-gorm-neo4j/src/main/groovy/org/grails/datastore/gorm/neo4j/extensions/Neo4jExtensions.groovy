@@ -20,17 +20,19 @@ package org.grails.datastore.gorm.neo4j.extensions
 
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.runtime.typehandling.GroovyCastException
+
+import org.neo4j.driver.QueryRunner
+import org.neo4j.driver.Result
+import org.neo4j.driver.types.MapAccessor
+import org.neo4j.driver.types.Node
+import org.neo4j.driver.types.Path
+import org.neo4j.driver.types.Relationship
+
 import org.grails.datastore.gorm.neo4j.Neo4jDatastore
 import org.grails.datastore.gorm.neo4j.Neo4jSession
 import org.grails.datastore.gorm.neo4j.collection.Neo4jPath
 import org.grails.datastore.gorm.neo4j.collection.Neo4jResultList
 import org.grails.datastore.mapping.core.AbstractDatastore
-import org.neo4j.driver.Result
-import org.neo4j.driver.QueryRunner
-import org.neo4j.driver.types.MapAccessor
-import org.neo4j.driver.types.Node
-import org.neo4j.driver.types.Path
-import org.neo4j.driver.types.Relationship
 
 /**
  * Extension methods to improve the Neo4j experience in Groovy.
@@ -72,16 +74,14 @@ class Neo4jExtensions {
      */
     static <N> N asType(Node node, Class<N> c) {
         //TODO: Remove explicit typecast to Class<?> once GROOVY-9460 is resolved
-        if(Map.isAssignableFrom((Class<?>) c)) {
-            return (N)node.asMap()
-        }
-        else {
-            Neo4jSession session = (Neo4jSession)AbstractDatastore.retrieveSession(Neo4jDatastore)
+        if (Map.isAssignableFrom((Class<?>) c)) {
+            return (N) node.asMap()
+        } else {
+            Neo4jSession session = (Neo4jSession) AbstractDatastore.retrieveSession(Neo4jDatastore)
             def entityPersister = session.getEntityPersister(c)
-            if(entityPersister != null) {
-                return (N)entityPersister.unmarshallOrFromCache(entityPersister.getPersistentEntity(), node)
-            }
-            else {
+            if (entityPersister != null) {
+                return (N) entityPersister.unmarshallOrFromCache(entityPersister.getPersistentEntity(), node)
+            } else {
                 throw new ClassCastException("Class [$c.name] is not a GORM entity")
             }
         }
@@ -96,12 +96,11 @@ class Neo4jExtensions {
      * @return The domain instance
      */
     static <N> N asType(Relationship rel, Class<N> c) {
-        Neo4jSession session = (Neo4jSession)AbstractDatastore.retrieveSession(Neo4jDatastore)
+        Neo4jSession session = (Neo4jSession) AbstractDatastore.retrieveSession(Neo4jDatastore)
         def entityPersister = session.getEntityPersister(c)
-        if(entityPersister != null) {
-            return (N)entityPersister.unmarshallOrFromCache(entityPersister.getPersistentEntity(), rel, Collections.emptyMap(), Collections.emptyMap())
-        }
-        else {
+        if (entityPersister != null) {
+            return (N) entityPersister.unmarshallOrFromCache(entityPersister.getPersistentEntity(), rel, Collections.emptyMap(), Collections.emptyMap())
+        } else {
             throw new ClassCastException("Class [$c.name] is not a GORM relationship entity")
         }
     }
@@ -115,11 +114,10 @@ class Neo4jExtensions {
      * @return The domain instance
      */
     static grails.neo4j.Path asType(Path path, Class<grails.neo4j.Path> c) {
-        if(grails.neo4j.Path.isAssignableFrom(c)) {
-            Neo4jSession session = (Neo4jSession)AbstractDatastore.retrieveSession(Neo4jDatastore)
+        if (grails.neo4j.Path.isAssignableFrom(c)) {
+            Neo4jSession session = (Neo4jSession) AbstractDatastore.retrieveSession(Neo4jDatastore)
             return new Neo4jPath<>(session.datastore, path)
-        }
-        else {
+        } else {
             throw new GroovyCastException(path, c)
         }
     }
@@ -133,18 +131,16 @@ class Neo4jExtensions {
      * @return The domain instance
      */
     static <N> N asType(Result result, Class<N> c) {
-        Neo4jSession session = (Neo4jSession)AbstractDatastore.retrieveSession(Neo4jDatastore)
+        Neo4jSession session = (Neo4jSession) AbstractDatastore.retrieveSession(Neo4jDatastore)
         def entityPersister = session.getEntityPersister(c)
-        if(entityPersister != null) {
+        if (entityPersister != null) {
             def resultList = new Neo4jResultList(0, result, entityPersister)
-            if(!resultList.isEmpty()) {
-                return (N)resultList.get(0)
-            }
-            else {
+            if (!resultList.isEmpty()) {
+                return (N) resultList.get(0)
+            } else {
                 return null
             }
-        }
-        else {
+        } else {
             throw new ClassCastException("Class [$c.name] is not a GORM entity")
         }
     }
@@ -158,12 +154,11 @@ class Neo4jExtensions {
      * @return The domain instance
      */
     static <N> List<N> toList(Result result, Class<N> c) {
-        Neo4jSession session = (Neo4jSession)AbstractDatastore.retrieveSession(Neo4jDatastore)
+        Neo4jSession session = (Neo4jSession) AbstractDatastore.retrieveSession(Neo4jDatastore)
         def entityPersister = session.getEntityPersister(c)
-        if(entityPersister != null) {
+        if (entityPersister != null) {
             return new Neo4jResultList(0, result, entityPersister)
-        }
-        else {
+        } else {
             throw new ClassCastException("Class [$c.name] is not a GORM entity")
         }
     }
@@ -177,9 +172,9 @@ class Neo4jExtensions {
      * @return The query result
      */
     static Result execute(QueryRunner session, String cypher, List<Object> positionalParameters) {
-        Map<String,Object> params = new LinkedHashMap<>()
-        int i = 0;
-        for(p in positionalParameters) {
+        Map<String, Object> params = new LinkedHashMap<>()
+        int i = 0
+        for (p in positionalParameters) {
             params.put(String.valueOf(++i), p)
         }
         session.run(cypher, params)

@@ -19,17 +19,18 @@
 
 package org.grails.datastore.gorm.neo4j.collection
 
+import groovy.transform.CompileStatic
+
+import org.neo4j.driver.types.Node
+
 import grails.neo4j.Neo4jEntity
 import grails.neo4j.Path
 import grails.neo4j.Relationship
-import groovy.transform.CompileStatic
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.neo4j.GraphPersistentEntity
 import org.grails.datastore.gorm.neo4j.Neo4jDatastore
-import org.grails.datastore.gorm.neo4j.Neo4jMappingContext
 import org.grails.datastore.gorm.neo4j.engine.Neo4jEntityPersister
 import org.grails.datastore.mapping.query.QueryException
-import org.neo4j.driver.types.Node
 
 /**
  * A neo4j {@link org.neo4j.driver.types.Path} adapter
@@ -39,6 +40,7 @@ import org.neo4j.driver.types.Node
  */
 @CompileStatic
 class Neo4jPath<S extends Neo4jEntity<S>, E extends Neo4jEntity<E>> implements Path<S, E> {
+
     final Neo4jDatastore datastore
     final org.neo4j.driver.types.Path neo4jPath
     final GraphPersistentEntity from
@@ -51,16 +53,16 @@ class Neo4jPath<S extends Neo4jEntity<S>, E extends Neo4jEntity<E>> implements P
     Neo4jPath(Neo4jDatastore datastore, org.neo4j.driver.types.Path neo4jPath, GraphPersistentEntity from, GraphPersistentEntity to) {
         this.datastore = datastore
         this.neo4jPath = neo4jPath
-        if(from == null) {
+        if (from == null) {
             from = datastore.mappingContext.findPersistentEntityForLabels(neo4jPath.start().labels())
         }
-        if(to == null) {
+        if (to == null) {
             to = datastore.mappingContext.findPersistentEntityForLabels(neo4jPath.end().labels())
         }
-        if(from == null) {
+        if (from == null) {
             throw new IllegalArgumentException("From domain class type cannot be established for path [$neo4jPath]")
         }
-        if(to == null) {
+        if (to == null) {
             throw new IllegalArgumentException("From domain class type cannot be established for path [$neo4jPath]")
         }
         this.from = from
@@ -69,33 +71,32 @@ class Neo4jPath<S extends Neo4jEntity<S>, E extends Neo4jEntity<E>> implements P
 
     Neo4jPath(Neo4jDatastore datastore, org.neo4j.driver.types.Path neo4jPath, Class from, Class to) {
         this(datastore, neo4jPath,
-                (GraphPersistentEntity)datastore.mappingContext.getPersistentEntity(from.name),
-                (GraphPersistentEntity)datastore.mappingContext.getPersistentEntity(to.name))
+                (GraphPersistentEntity) datastore.mappingContext.getPersistentEntity(from.name),
+                (GraphPersistentEntity) datastore.mappingContext.getPersistentEntity(to.name))
     }
 
     Neo4jPath(Neo4jDatastore datastore, org.neo4j.driver.types.Path neo4jPath) {
-        this(datastore, neo4jPath,(GraphPersistentEntity)null,null)
+        this(datastore, neo4jPath, (GraphPersistentEntity) null, null)
     }
-
 
 
     @Override
     S start() {
-        if(start == null) {
+        if (start == null) {
             Class clazz = from.javaClass
-            Neo4jEntityPersister persister = (Neo4jEntityPersister )GormEnhancer.findDatastore(clazz).currentSession.getPersister(clazz)
-            start = (S)persister.unmarshallOrFromCache(from, neo4jPath.start())
+            Neo4jEntityPersister persister = (Neo4jEntityPersister) GormEnhancer.findDatastore(clazz).currentSession.getPersister(clazz)
+            start = (S) persister.unmarshallOrFromCache(from, neo4jPath.start())
         }
         return start
     }
 
     @Override
     E end() {
-        if(end == null) {
+        if (end == null) {
             Class clazz = to.javaClass
-            Neo4jEntityPersister persister = (Neo4jEntityPersister )GormEnhancer.findDatastore(clazz).currentSession.getPersister(clazz)
+            Neo4jEntityPersister persister = (Neo4jEntityPersister) GormEnhancer.findDatastore(clazz).currentSession.getPersister(clazz)
 
-            end = (E)persister.unmarshallOrFromCache(to, neo4jPath.end())
+            end = (E) persister.unmarshallOrFromCache(to, neo4jPath.end())
         }
         return end
     }
@@ -107,9 +108,9 @@ class Neo4jPath<S extends Neo4jEntity<S>, E extends Neo4jEntity<E>> implements P
 
     @Override
     Iterable nodes() {
-        if(nodes == null) {
+        if (nodes == null) {
             List nodeList = []
-            for(Node n in neo4jPath.nodes()) {
+            for (Node n in neo4jPath.nodes()) {
                 nodeList.add(unmarshallNode(datastore, n))
             }
             nodes = nodeList
@@ -129,6 +130,7 @@ class Neo4jPath<S extends Neo4jEntity<S>, E extends Neo4jEntity<E>> implements P
     }
 
     static class Neo4jPathIterator implements Iterator<Path.Segment> {
+
         final Neo4jDatastore datastore
         final Iterator<org.neo4j.driver.types.Path.Segment> iterator
 
@@ -145,11 +147,12 @@ class Neo4jPath<S extends Neo4jEntity<S>, E extends Neo4jEntity<E>> implements P
         @Override
         Path.Segment next() {
             org.neo4j.driver.types.Path.Segment neoSegment = iterator.next()
-            return new Neo4jPathSegment(datastore,neoSegment)
+            return new Neo4jPathSegment(datastore, neoSegment)
         }
     }
 
-    static class Neo4jPathSegment implements  Path.Segment {
+    static class Neo4jPathSegment implements Path.Segment {
+
         final Neo4jDatastore datastore
         final org.neo4j.driver.types.Path.Segment neoSegment
 
@@ -168,14 +171,14 @@ class Neo4jPath<S extends Neo4jEntity<S>, E extends Neo4jEntity<E>> implements P
 
         @Override
         Neo4jEntity start() {
-            if(start == null)
+            if (start == null)
                 start = unmarshallNode(datastore, neoSegment.start())
             return start
         }
 
         @Override
         Neo4jEntity end() {
-            if(end == null) {
+            if (end == null) {
                 end = unmarshallNode(datastore, neoSegment.end())
             }
             return end

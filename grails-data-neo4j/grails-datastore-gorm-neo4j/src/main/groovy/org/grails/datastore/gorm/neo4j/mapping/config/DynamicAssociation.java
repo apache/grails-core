@@ -28,4 +28,5 @@ import org.grails.datastore.mapping.model.PersistentProperty;
  * @since 5.0
  */
 public interface DynamicAssociation<T extends Property> extends PersistentProperty<T> {
+
 }

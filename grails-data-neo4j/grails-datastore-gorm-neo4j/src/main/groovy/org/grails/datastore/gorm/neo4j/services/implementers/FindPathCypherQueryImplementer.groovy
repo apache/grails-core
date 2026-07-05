@@ -19,13 +19,13 @@
 
 package org.grails.datastore.gorm.neo4j.services.implementers
 
-import grails.neo4j.Path
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.stmt.Statement
-import org.grails.datastore.mapping.core.Ordered
+
+import grails.neo4j.Path
 import org.grails.datastore.mapping.reflect.AstUtils
 
 import static org.codehaus.groovy.ast.tools.GeneralUtils.callX

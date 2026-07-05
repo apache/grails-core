@@ -19,10 +19,10 @@
 package org.grails.datastore.gorm.neo4j.collection
 
 import groovy.transform.CompileStatic
+
 import org.grails.datastore.gorm.neo4j.Neo4jSession
 import org.grails.datastore.mapping.engine.EntityAccess
 import org.grails.datastore.mapping.model.types.Association
-
 
 /**
  * Extended result list aware of the parent entity and association to prevent N+1 queries
@@ -42,8 +42,8 @@ class Neo4jAssociationResultList extends Neo4jResultList {
         this.parent = parent
         this.association = association
         this.session = session
-        if(association.isBidirectional()) {
-            setInitializedAssociations(Collections.<Association,Object>singletonMap(association.inverseSide, parent.entity))
+        if (association.isBidirectional()) {
+            setInitializedAssociations(Collections.<Association, Object> singletonMap(association.inverseSide, parent.entity))
         }
     }
 

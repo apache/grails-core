@@ -18,16 +18,16 @@
  */
 package org.grails.datastore.gorm.neo4j
 
+import groovy.transform.CompileStatic
+
 import grails.neo4j.Direction
 import grails.neo4j.Relationship
-import groovy.transform.CompileStatic
 import org.grails.datastore.gorm.neo4j.mapping.config.Attribute
 import org.grails.datastore.gorm.neo4j.mapping.config.DynamicAssociation
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.ManyToMany
 import org.grails.datastore.mapping.model.types.ManyToOne
-import org.grails.datastore.mapping.model.types.OneToMany
 
 /**
  * Utility methods for manipulating relationships
@@ -37,6 +37,7 @@ import org.grails.datastore.mapping.model.types.OneToMany
  */
 @CompileStatic
 class RelationshipUtils {
+
     static final char INCOMING_CHAR = '<'
     static final char OUTGOING_CHAR = '>'
     private static final char OPEN_BRACE = '{'
@@ -54,12 +55,11 @@ class RelationshipUtils {
      * @return True if it is
      */
     static boolean useReversedMappingFor(Association association) {
-        GraphPersistentEntity entity = (GraphPersistentEntity)association.getOwner()
-        if(entity.isRelationshipEntity()) {
+        GraphPersistentEntity entity = (GraphPersistentEntity) association.getOwner()
+        if (entity.isRelationshipEntity()) {
             return false
-        }
-        else {
-            Attribute attr = (Attribute)association.getMapping()?.getMappedForm()
+        } else {
+            Attribute attr = (Attribute) association.getMapping()?.getMappedForm()
             return isIncomingRelationship(association, attr)
         }
     }
@@ -71,7 +71,7 @@ class RelationshipUtils {
      */
     static String relationshipTypeUsedFor(Association association) {
         Attribute mappedForm = (Attribute) association.getMapping()?.getMappedForm()
-        return getRelationshipType( association, mappedForm )
+        return getRelationshipType(association, mappedForm)
     }
 
     /**
@@ -91,17 +91,17 @@ class RelationshipUtils {
             sb.append(INCOMING_CHAR)
         }
         sb.append(START_RELATIONSHIP).append(var).append(COLON).append(relationshipType)
-        if(!attributes.isEmpty()) {
+        if (!attributes.isEmpty()) {
             sb.append(OPEN_BRACE)
             def i = attributes.entrySet().iterator()
-            while(i.hasNext()) {
+            while (i.hasNext()) {
                 def entry = i.next()
                 sb.append(entry.key)
                         .append(COLON).append(SINGLE_QUOTE)
                         .append(entry.value)
                         .append(SINGLE_QUOTE)
 
-                if(i.hasNext()) {
+                if (i.hasNext()) {
                     sb.append(COMMA)
                 }
             }
@@ -136,7 +136,7 @@ class RelationshipUtils {
         }
         sb.append(START_RELATIONSHIP).append(var).append(COLON).append(relationshipType)
         sb.append(END_RELATIONSHIP)
-        if (direction == Direction.OUTGOING || direction == Direction.BOTH ) {
+        if (direction == Direction.OUTGOING || direction == Direction.BOTH) {
             sb.append(OUTGOING_CHAR)
         }
         sb.toString()
@@ -160,9 +160,9 @@ class RelationshipUtils {
             sb.append(INCOMING_CHAR)
         }
         sb.append(START_RELATIONSHIP)
-          .append(var)
-          .append(END_RELATIONSHIP)
-        if (direction == Direction.OUTGOING || direction == Direction.BOTH ) {
+                .append(var)
+                .append(END_RELATIONSHIP)
+        if (direction == Direction.OUTGOING || direction == Direction.BOTH) {
             sb.append(OUTGOING_CHAR)
         }
         sb.toString()
@@ -183,19 +183,16 @@ class RelationshipUtils {
         String relationshipType = mappedForm?.getType()
         if (relationshipType != null) {
             return relationshipType
-        }
-        else if (association instanceof DynamicAssociation) {
+        } else if (association instanceof DynamicAssociation) {
             return association.getName()
-        }
-        else {
+        } else {
             boolean reversed = useReversedMappingFor(association)
             String name = reversed ?
                     association.getReferencedPropertyName() :
                     association.getName()
-            if(name != null) {
+            if (name != null) {
                 return name.toUpperCase(Locale.ENGLISH)
-            }
-            else {
+            } else {
                 return association.getName().toUpperCase(Locale.ENGLISH)
             }
         }

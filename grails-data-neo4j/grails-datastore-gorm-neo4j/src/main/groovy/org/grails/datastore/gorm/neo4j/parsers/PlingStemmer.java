@@ -18,8 +18,12 @@
  */
 package org.grails.datastore.gorm.neo4j.parsers;
 
-import java.util.*;
-
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * <p>
@@ -68,6 +72,717 @@ import java.util.*;
  * </p>
  */
 public class PlingStemmer {
+
+    /**
+     * Words that end in "-se" in their plural forms (like "nurse" etc.)
+     */
+    private static final Set<String> categorySE_SES = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
+        "nurses",
+        "cruises",
+        "premises",
+        "houses",
+        "courses",
+        "cases"
+    )));
+    /**
+     * Words that do not have a distinct plural form (like "atlas" etc.)
+     */
+    private static final Set<String> category00 = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
+        "alias",
+        "asbestos",
+        "atlas",
+        "barracks",
+        "bathos",
+        "bias",
+        "breeches",
+        "britches",
+        "canvas",
+        "chaos",
+        "clippers",
+        "contretemps",
+        "corps",
+        "cosmos",
+        "crossroads",
+        "diabetes",
+        "ethos",
+        "gallows",
+        "gas",
+        "graffiti",
+        "headquarters",
+        "herpes",
+        "high-jinks",
+        "innings",
+        "jackanapes",
+        "lens",
+        "means",
+        "measles",
+        "mews",
+        "mumps",
+        "news",
+        "pathos",
+        "pincers",
+        "pliers",
+        "proceedings",
+        "rabies",
+        "rhinoceros",
+        "sassafras",
+        "scissors",
+        "series",
+        "shears",
+        "species",
+        "tuna"
+    )));
+    /**
+     * Words that change from "-um" to "-a" (like "curriculum" etc.), listed in their plural forms
+     */
+    private static final Set<String> categoryUM_A = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
+        "addenda",
+        "agenda",
+        "aquaria",
+        "bacteria",
+        "candelabra",
+        "compendia",
+        "consortia",
+        "crania",
+        "curricula",
+        "data",
+        "desiderata",
+        "dicta",
+        "emporia",
+        "enconia",
+        "errata",
+        "extrema",
+        "gymnasia",
+        "honoraria",
+        "interregna",
+        "lustra",
+        "maxima",
+        "media",
+        "memoranda",
+        "millenia",
+        "minima",
+        "momenta",
+        "optima",
+        "ova",
+        "phyla",
+        "quanta",
+        "rostra",
+        "spectra",
+        "specula",
+        "stadia",
+        "strata",
+        "symposia",
+        "trapezia",
+        "ultimata",
+        "vacua",
+        "vela"
+    )));
+    /**
+     * Words that change from "-on" to "-a" (like "phenomenon" etc.), listed in their plural forms
+     */
+    private static final Set<String> categoryON_A = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
+        "aphelia",
+        "asyndeta",
+        "automata",
+        "criteria",
+        "hyperbata",
+        "noumena",
+        "organa",
+        "perihelia",
+        "phenomena",
+        "prolegomena"
+    )));
+    /**
+     * Words that change from "-o" to "-i" (like "libretto" etc.), listed in their plural forms
+     */
+    private static final Set<String> categoryO_I = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
+        "alti",
+        "bassi",
+        "canti",
+        "contralti",
+        "crescendi",
+        "libretti",
+        "soli",
+        "soprani",
+        "tempi",
+        "virtuosi"
+    )));
+    /**
+     * Words that change from "-us" to "-i" (like "fungus" etc.), listed in their plural forms
+     */
+    private static final Set<String> categoryUS_I = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
+        "alumni",
+        "bacilli",
+        "cacti",
+        "foci",
+        "fungi",
+        "genii",
+        "hippopotami",
+        "incubi",
+        "nimbi",
+        "nuclei",
+        "nucleoli",
+        "octopi",
+        "radii",
+        "stimuli",
+        "styli",
+        "succubi",
+        "syllabi",
+        "termini",
+        "tori",
+        "umbilici",
+        "uteri"
+    )));
+    /**
+     * Words that change from "-ix" to "-ices" (like "appendix" etc.), listed in their plural forms
+     */
+    private static final Set<String> categoryIX_ICES = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
+        "appendices",
+        "cervices"
+    )));
+    /**
+     * Words that change from "-is" to "-es" (like "axis" etc.), listed in their plural forms
+     */
+    private static final Set<String> categoryIS_ES = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
+        // plus everybody ending in theses
+        "analyses",
+        "axes",
+        "bases",
+        "crises",
+        "diagnoses",
+        "ellipses",
+        "emphases",
+        "neuroses",
+        "oases",
+        "paralyses",
+        "synopses"
+    )));
+    /**
+     * Words that change from "-oe" to "-oes" (like "toe" etc.), listed in their plural forms
+     */
+    private static final Set<String> categoryOE_OES = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
+        "aloes",
+        "backhoes",
+        "beroes",
+        "canoes",
+        "chigoes",
+        "cohoes",
+        "does",
+        "felloes",
+        "floes",
+        "foes",
+        "gumshoes",
+        "hammertoes",
+        "hoes",
+        "hoopoes",
+        "horseshoes",
+        "leucothoes",
+        "mahoes",
+        "mistletoes",
+        "oboes",
+        "overshoes",
+        "pahoehoes",
+        "pekoes",
+        "roes",
+        "shoes",
+        "sloes",
+        "snowshoes",
+        "throes",
+        "tic-tac-toes",
+        "tick-tack-toes",
+        "ticktacktoes",
+        "tiptoes",
+        "tit-tat-toes",
+        "toes",
+        "toetoes",
+        "tuckahoes",
+        "woes"
+    )));
+    /**
+     * Words that change from "-ex" to "-ices" (like "index" etc.), listed in their plural forms
+     */
+    private static final Set<String> categoryEX_ICES = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
+        "apices",
+        "codices",
+        "cortices",
+        "indices",
+        "latices",
+        "murices",
+        "pontifices",
+        "silices",
+        "simplices",
+        "vertices",
+        "vortices"
+    )));
+    /**
+     * Words that change from "-u" to "-us" (like "emu" etc.), listed in their plural forms
+     */
+    private static final Set<String> categoryU_US = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
+        "apercus",
+        "barbus",
+        "cornus",
+        "ecrus",
+        "emus",
+        "fondus",
+        "gnus",
+        "iglus",
+        "mus",
+        "nandus",
+        "napus",
+        "poilus",
+        "quipus",
+        "snafus",
+        "tabus",
+        "tamandus",
+        "tatus",
+        "timucus",
+        "tiramisus",
+        "tofus",
+        "tutus"
+    )));
+    /**
+     * Words that change from "-sse" to "-sses" (like "finesse" etc.), listed in their plural forms
+     */
+    private static final Set<String> categorySSE_SSES = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
+        //plus those ending in mousse
+        "bouillabaisses",
+        "coulisses",
+        "crevasses",
+        "crosses",
+        "cuisses",
+        "demitasses",
+        "ecrevisses",
+        "fesses",
+        "finesses",
+        "fosses",
+        "impasses",
+        "lacrosses",
+        "largesses",
+        "masses",
+        "noblesses",
+        "palliasses",
+        "pelisses",
+        "politesses",
+        "posses",
+        "tasses",
+        "wrasses"
+    )));
+    /**
+     * Words that change from "-che" to "-ches" (like "brioche" etc.), listed in their plural forms
+     */
+    private static final Set<String> categoryCHE_CHES = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
+        "adrenarches",
+        "attaches",
+        "avalanches",
+        "barouches",
+        "brioches",
+        "caches",
+        "caleches",
+        "caroches",
+        "cartouches",
+        "cliches",
+        "cloches",
+        "creches",
+        "demarches",
+        "douches",
+        "gouaches",
+        "guilloches",
+        "headaches",
+        "heartaches",
+        "huaraches",
+        "menarches",
+        "microfiches",
+        "moustaches",
+        "mustaches",
+        "niches",
+        "panaches",
+        "panoches",
+        "pastiches",
+        "penuches",
+        "pinches",
+        "postiches",
+        "psyches",
+        "quiches",
+        "schottisches",
+        "seiches",
+        "soutaches",
+        "synecdoches",
+        "thelarches",
+        "troches"
+    )));
+    /**
+     * Words that end with "-ics" and do not exist as nouns without the 's' (like "aerobics" etc.)
+     */
+    private static final Set<String> categoryICS = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
+        "aerobatics",
+        "aerobics",
+        "aerodynamics",
+        "aeromechanics",
+        "aeronautics",
+        "alphanumerics",
+        "animatronics",
+        "apologetics",
+        "architectonics",
+        "astrodynamics",
+        "astronautics",
+        "astrophysics",
+        "athletics",
+        "atmospherics",
+        "autogenics",
+        "avionics",
+        "ballistics",
+        "bibliotics",
+        "bioethics",
+        "biometrics",
+        "bionics",
+        "bionomics",
+        "biophysics",
+        "biosystematics",
+        "cacogenics",
+        "calisthenics",
+        "callisthenics",
+        "catoptrics",
+        "civics",
+        "cladistics",
+        "cryogenics",
+        "cryonics",
+        "cryptanalytics",
+        "cybernetics",
+        "cytoarchitectonics",
+        "cytogenetics",
+        "diagnostics",
+        "dietetics",
+        "dramatics",
+        "dysgenics",
+        "econometrics",
+        "economics",
+        "electromagnetics",
+        "electronics",
+        "electrostatics",
+        "endodontics",
+        "enterics",
+        "ergonomics",
+        "eugenics",
+        "eurhythmics",
+        "eurythmics",
+        "exodontics",
+        "fibreoptics",
+        "futuristics",
+        "genetics",
+        "genomics",
+        "geographics",
+        "geophysics",
+        "geopolitics",
+        "geriatrics",
+        "glyptics",
+        "graphics",
+        "gymnastics",
+        "hermeneutics",
+        "histrionics",
+        "homiletics",
+        "hydraulics",
+        "hydrodynamics",
+        "hydrokinetics",
+        "hydroponics",
+        "hydrostatics",
+        "hygienics",
+        "informatics",
+        "kinematics",
+        "kinesthetics",
+        "kinetics",
+        "lexicostatistics",
+        "linguistics",
+        "lithoglyptics",
+        "liturgics",
+        "logistics",
+        "macrobiotics",
+        "macroeconomics",
+        "magnetics",
+        "magnetohydrodynamics",
+        "mathematics",
+        "metamathematics",
+        "metaphysics",
+        "microeconomics",
+        "microelectronics",
+        "mnemonics",
+        "morphophonemics",
+        "neuroethics",
+        "neurolinguistics",
+        "nucleonics",
+        "numismatics",
+        "obstetrics",
+        "onomastics",
+        "orthodontics",
+        "orthopaedics",
+        "orthopedics",
+        "orthoptics",
+        "paediatrics",
+        "patristics",
+        "patristics",
+        "pedagogics",
+        "pediatrics",
+        "periodontics",
+        "pharmaceutics",
+        "pharmacogenetics",
+        "pharmacokinetics",
+        "phonemics",
+        "phonetics",
+        "phonics",
+        "photomechanics",
+        "physiatrics",
+        "pneumatics",
+        "poetics",
+        "politics",
+        "pragmatics",
+        "prosthetics",
+        "prosthodontics",
+        "proteomics",
+        "proxemics",
+        "psycholinguistics",
+        "psychometrics",
+        "psychonomics",
+        "psychophysics",
+        "psychotherapeutics",
+        "robotics",
+        "semantics",
+        "semiotics",
+        "semitropics",
+        "sociolinguistics",
+        "stemmatics",
+        "strategics",
+        "subtropics",
+        "systematics",
+        "tectonics",
+        "telerobotics",
+        "therapeutics",
+        "thermionics",
+        "thermodynamics",
+        "thermostatics"
+    )));
+    /**
+     * Words that change from "-ie" to "-ies" (like "auntie" etc.), listed in their plural forms
+     */
+    private static final Set<String> categoryIE_IES = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
+        "aeries",
+        "anomies",
+        "aunties",
+        "baddies",
+        "beanies",
+        "birdies",
+        "boccies",
+        "bogies",
+        "bolshies",
+        "bombies",
+        "bonhomies",
+        "bonxies",
+        "booboisies",
+        "boogies",
+        "boogie-woogies",
+        "bookies",
+        "booties",
+        "bosies",
+        "bourgeoisies",
+        "brasseries",
+        "brassies",
+        "brownies",
+        "budgies",
+        "byrnies",
+        "caddies",
+        "calories",
+        "camaraderies",
+        "capercaillies",
+        "capercailzies",
+        "cassies",
+        "catties",
+        "causeries",
+        "charcuteries",
+        "chinoiseries",
+        "collies",
+        "commies",
+        "cookies",
+        "coolies",
+        "coonties",
+        "cooties",
+        "corries",
+        "coteries",
+        "cowpies",
+        "cowries",
+        "cozies",
+        "crappies",
+        "crossties",
+        "curies",
+        "dachsies",
+        "darkies",
+        "dassies",
+        "dearies",
+        "dickies",
+        "dies",
+        "dixies",
+        "doggies",
+        "dogies",
+        "dominies",
+        "dovekies",
+        "eyries",
+        "faeries",
+        "falsies",
+        "floozies",
+        "folies",
+        "foodies",
+        "freebies",
+        "gaucheries",
+        "gendarmeries",
+        "genies",
+        "ghillies",
+        "gillies",
+        "goalies",
+        "goonies",
+        "grannies",
+        "grotesqueries",
+        "groupies",
+        "hankies",
+        "hippies",
+        "hoagies",
+        "honkies",
+        "hymies",
+        "indies",
+        "junkies",
+        "kelpies",
+        "kilocalories",
+        "knobkerries",
+        "koppies",
+        "kylies",
+        "laddies",
+        "lassies",
+        "lies",
+        "lingeries",
+        "magpies",
+        "magpies",
+        "marqueteries",
+        "mashies",
+        "mealies",
+        "meanies",
+        "menageries",
+        "millicuries",
+        "mollies",
+        "facts1",
+        "moxies",
+        "neckties",
+        "newbies",
+        "nighties",
+        "nookies",
+        "oldies",
+        "organdies",
+        "panties",
+        "parqueteries",
+        "passementeries",
+        "patisseries",
+        "pies",
+        "pinkies",
+        "pixies",
+        "porkpies",
+        "potpies",
+        "prairies",
+        "preemies",
+        "premies",
+        "punkies",
+        "pyxies",
+        "quickies",
+        "ramies",
+        "reveries",
+        "rookies",
+        "rotisseries",
+        "scrapies",
+        "sharpies",
+        "smoothies",
+        "softies",
+        "stoolies",
+        "stymies",
+        "swaggies",
+        "sweeties",
+        "talkies",
+        "techies",
+        "ties",
+        "tooshies",
+        "toughies",
+        "townies",
+        "veggies",
+        "walkie-talkies",
+        "wedgies",
+        "weenies",
+        "weirdies",
+        "yardies",
+        "yuppies",
+        "zombies"
+    )));
+    /**
+     * Maps irregular Germanic English plural nouns to their singular form
+     */
+    private static final Map<String, String> irregular = Collections.unmodifiableMap(new HashMap<String, String>() {
+        {
+            put("beefs", "beef");
+            put("beeves", "beef");
+            put("brethren", "brother");
+            put("busses", "bus");
+            put("cattle", "cattlebeast");
+            put("children", "child");
+            put("corpora", "corpus");
+            put("ephemerides", "ephemeris");
+            put("firemen", "fireman");
+            put("genera", "genus");
+            put("genies", "genie");
+            put("genii", "genie");
+            put("kine", "cow");
+            put("lice", "louse");
+            put("men", "man");
+            put("mice", "mouse");
+            put("mongooses", "mongoose");
+            put("monies", "money");
+            put("mythoi", "mythos");
+            put("octopodes", "octopus");
+            put("octopuses", "octopus");
+            put("oxen", "ox");
+            put("people", "person");
+            put("soliloquies", "soliloquy");
+            put("throes", "throes");
+            put("trilbys", "trilby");
+            put("women", "woman");
+        }
+    });
+    /**
+     * Contains word forms that can either be plural or singular
+     */
+    private static final Set<String> singAndPlur = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
+        "acoustics",
+        "aestetics",
+        "aquatics",
+        "basics",
+        "ceramics",
+        "classics",
+        "cosmetics",
+        "dermatoglyphics",
+        "dialectics",
+        "dynamics",
+        "esthetics",
+        "ethics",
+        "harmonics",
+        "heroics",
+        "isometrics",
+        "mechanics",
+        "metrics",
+        "statistics",
+        "optic",
+        "people",
+        "physics",
+        "polemics",
+        "premises",
+        "propaedeutics",
+        "pyrotechnics",
+        "quadratics",
+        "quarters",
+        "statistics",
+        "tactics",
+        "tropics"
+    )));
 
     /**
      * Tells whether a word form is plural. This method just checks whether the
@@ -124,7 +839,7 @@ public class PlingStemmer {
         if (categoryUS_I.contains(s)) return (stem = cut(s, "i") + "us");
         //Wrong plural
         if (s.endsWith("uses") && (categoryUS_I.contains(cut(s, "uses") + "i") ||
-                s.equals("genuses") || s.equals("corpuses"))) return (stem = cut(s, "es"));
+            s.equals("genuses") || s.equals("corpuses"))) return (stem = cut(s, "es"));
 
         // -ex to -ices
         if (categoryEX_ICES.contains(s)) return (stem = cut(s, "ices") + "ex");
@@ -152,8 +867,8 @@ public class PlingStemmer {
         // -us to -us
         //No other common word ends in -us, except for false plurals of French words
         //Catch words that are not latin or known to end in -u
-        if (s.endsWith("us") && !s.endsWith("eaus") && !s.endsWith("ieus") && !noLatin(s)
-                && !categoryU_US.contains(s)) return (stem = s);
+        if (s.endsWith("us") && !s.endsWith("eaus") && !s.endsWith("ieus") && !noLatin(s) &&
+            !categoryU_US.contains(s)) return (stem = s);
 
         // -tooth to -teeth
         // -goose to -geese
@@ -195,15 +910,15 @@ public class PlingStemmer {
         // -[nlw]ife to -[nlw]ives
         //No other common word ends with "[nlw]ive(s)" except for olive
         if (s.endsWith("nives") || s.endsWith("lives") && !s.endsWith("olives") ||
-                s.endsWith("wives")) return (stem = cut(s, "ves") + "fe");
+            s.endsWith("wives")) return (stem = cut(s, "ves") + "fe");
 
         // -[aeo]lf to -ves  exceptions: valve, solve
         // -[^d]eaf to -ves  exceptions: heave, weave
         // -arf to -ves      no exception
         if (s.endsWith("alves") && !s.endsWith("valves") ||
-                s.endsWith("olves") && !s.endsWith("solves") ||
-                s.endsWith("eaves") && !s.endsWith("heaves") && !s.endsWith("weaves") ||
-                s.endsWith("arves")) return (stem = cut(s, "ves") + "f");
+            s.endsWith("olves") && !s.endsWith("solves") ||
+            s.endsWith("eaves") && !s.endsWith("heaves") && !s.endsWith("weaves") ||
+            s.endsWith("arves")) return (stem = cut(s, "ves") + "f");
 
         // -y to -ies
         // -ies is very uncommon as a singular suffix
@@ -244,736 +959,8 @@ public class PlingStemmer {
      */
     private static boolean noLatin(String s) {
         return (s.indexOf('h') > 0 || s.indexOf('j') > 0 || s.indexOf('k') > 0 ||
-                s.indexOf('w') > 0 || s.indexOf('y') > 0 || s.indexOf('z') > 0 ||
-                s.indexOf("ou") > 0 || s.indexOf("sh") > 0 || s.indexOf("ch") > 0 ||
-                s.endsWith("aus"));
+            s.indexOf('w') > 0 || s.indexOf('y') > 0 || s.indexOf('z') > 0 ||
+            s.indexOf("ou") > 0 || s.indexOf("sh") > 0 || s.indexOf("ch") > 0 ||
+            s.endsWith("aus"));
     }
-
-    /**
-     * Words that end in "-se" in their plural forms (like "nurse" etc.)
-     */
-    private static Set<String> categorySE_SES = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
-            "nurses",
-            "cruises",
-            "premises",
-            "houses",
-            "courses",
-            "cases"
-    )));
-
-    /**
-     * Words that do not have a distinct plural form (like "atlas" etc.)
-     */
-    private static Set<String> category00 = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
-            "alias",
-            "asbestos",
-            "atlas",
-            "barracks",
-            "bathos",
-            "bias",
-            "breeches",
-            "britches",
-            "canvas",
-            "chaos",
-            "clippers",
-            "contretemps",
-            "corps",
-            "cosmos",
-            "crossroads",
-            "diabetes",
-            "ethos",
-            "gallows",
-            "gas",
-            "graffiti",
-            "headquarters",
-            "herpes",
-            "high-jinks",
-            "innings",
-            "jackanapes",
-            "lens",
-            "means",
-            "measles",
-            "mews",
-            "mumps",
-            "news",
-            "pathos",
-            "pincers",
-            "pliers",
-            "proceedings",
-            "rabies",
-            "rhinoceros",
-            "sassafras",
-            "scissors",
-            "series",
-            "shears",
-            "species",
-            "tuna"
-    )));
-
-    /**
-     * Words that change from "-um" to "-a" (like "curriculum" etc.), listed in their plural forms
-     */
-    private static Set<String> categoryUM_A = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
-            "addenda",
-            "agenda",
-            "aquaria",
-            "bacteria",
-            "candelabra",
-            "compendia",
-            "consortia",
-            "crania",
-            "curricula",
-            "data",
-            "desiderata",
-            "dicta",
-            "emporia",
-            "enconia",
-            "errata",
-            "extrema",
-            "gymnasia",
-            "honoraria",
-            "interregna",
-            "lustra",
-            "maxima",
-            "media",
-            "memoranda",
-            "millenia",
-            "minima",
-            "momenta",
-            "optima",
-            "ova",
-            "phyla",
-            "quanta",
-            "rostra",
-            "spectra",
-            "specula",
-            "stadia",
-            "strata",
-            "symposia",
-            "trapezia",
-            "ultimata",
-            "vacua",
-            "vela"
-    )));
-
-    /**
-     * Words that change from "-on" to "-a" (like "phenomenon" etc.), listed in their plural forms
-     */
-    private static Set<String> categoryON_A = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
-            "aphelia",
-            "asyndeta",
-            "automata",
-            "criteria",
-            "hyperbata",
-            "noumena",
-            "organa",
-            "perihelia",
-            "phenomena",
-            "prolegomena"
-    )));
-
-    /**
-     * Words that change from "-o" to "-i" (like "libretto" etc.), listed in their plural forms
-     */
-    private static Set<String> categoryO_I = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
-            "alti",
-            "bassi",
-            "canti",
-            "contralti",
-            "crescendi",
-            "libretti",
-            "soli",
-            "soprani",
-            "tempi",
-            "virtuosi"
-    )));
-
-    /**
-     * Words that change from "-us" to "-i" (like "fungus" etc.), listed in their plural forms
-     */
-    private static Set<String> categoryUS_I = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
-            "alumni",
-            "bacilli",
-            "cacti",
-            "foci",
-            "fungi",
-            "genii",
-            "hippopotami",
-            "incubi",
-            "nimbi",
-            "nuclei",
-            "nucleoli",
-            "octopi",
-            "radii",
-            "stimuli",
-            "styli",
-            "succubi",
-            "syllabi",
-            "termini",
-            "tori",
-            "umbilici",
-            "uteri"
-    )));
-
-    /**
-     * Words that change from "-ix" to "-ices" (like "appendix" etc.), listed in their plural forms
-     */
-    private static Set<String> categoryIX_ICES = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
-            "appendices",
-            "cervices"
-    )));
-
-    /**
-     * Words that change from "-is" to "-es" (like "axis" etc.), listed in their plural forms
-     */
-    private static Set<String> categoryIS_ES = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
-            // plus everybody ending in theses
-            "analyses",
-            "axes",
-            "bases",
-            "crises",
-            "diagnoses",
-            "ellipses",
-            "emphases",
-            "neuroses",
-            "oases",
-            "paralyses",
-            "synopses"
-    )));
-
-    /**
-     * Words that change from "-oe" to "-oes" (like "toe" etc.), listed in their plural forms
-     */
-    private static Set<String> categoryOE_OES = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
-            "aloes",
-            "backhoes",
-            "beroes",
-            "canoes",
-            "chigoes",
-            "cohoes",
-            "does",
-            "felloes",
-            "floes",
-            "foes",
-            "gumshoes",
-            "hammertoes",
-            "hoes",
-            "hoopoes",
-            "horseshoes",
-            "leucothoes",
-            "mahoes",
-            "mistletoes",
-            "oboes",
-            "overshoes",
-            "pahoehoes",
-            "pekoes",
-            "roes",
-            "shoes",
-            "sloes",
-            "snowshoes",
-            "throes",
-            "tic-tac-toes",
-            "tick-tack-toes",
-            "ticktacktoes",
-            "tiptoes",
-            "tit-tat-toes",
-            "toes",
-            "toetoes",
-            "tuckahoes",
-            "woes"
-    )));
-
-    /**
-     * Words that change from "-ex" to "-ices" (like "index" etc.), listed in their plural forms
-     */
-    private static Set<String> categoryEX_ICES = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
-            "apices",
-            "codices",
-            "cortices",
-            "indices",
-            "latices",
-            "murices",
-            "pontifices",
-            "silices",
-            "simplices",
-            "vertices",
-            "vortices"
-    )));
-
-    /**
-     * Words that change from "-u" to "-us" (like "emu" etc.), listed in their plural forms
-     */
-    private static Set<String> categoryU_US = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
-            "apercus",
-            "barbus",
-            "cornus",
-            "ecrus",
-            "emus",
-            "fondus",
-            "gnus",
-            "iglus",
-            "mus",
-            "nandus",
-            "napus",
-            "poilus",
-            "quipus",
-            "snafus",
-            "tabus",
-            "tamandus",
-            "tatus",
-            "timucus",
-            "tiramisus",
-            "tofus",
-            "tutus"
-    )));
-
-    /**
-     * Words that change from "-sse" to "-sses" (like "finesse" etc.), listed in their plural forms
-     */
-    private static Set<String> categorySSE_SSES = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
-            //plus those ending in mousse
-            "bouillabaisses",
-            "coulisses",
-            "crevasses",
-            "crosses",
-            "cuisses",
-            "demitasses",
-            "ecrevisses",
-            "fesses",
-            "finesses",
-            "fosses",
-            "impasses",
-            "lacrosses",
-            "largesses",
-            "masses",
-            "noblesses",
-            "palliasses",
-            "pelisses",
-            "politesses",
-            "posses",
-            "tasses",
-            "wrasses"
-    )));
-
-    /**
-     * Words that change from "-che" to "-ches" (like "brioche" etc.), listed in their plural forms
-     */
-    private static Set<String> categoryCHE_CHES = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
-            "adrenarches",
-            "attaches",
-            "avalanches",
-            "barouches",
-            "brioches",
-            "caches",
-            "caleches",
-            "caroches",
-            "cartouches",
-            "cliches",
-            "cloches",
-            "creches",
-            "demarches",
-            "douches",
-            "gouaches",
-            "guilloches",
-            "headaches",
-            "heartaches",
-            "huaraches",
-            "menarches",
-            "microfiches",
-            "moustaches",
-            "mustaches",
-            "niches",
-            "panaches",
-            "panoches",
-            "pastiches",
-            "penuches",
-            "pinches",
-            "postiches",
-            "psyches",
-            "quiches",
-            "schottisches",
-            "seiches",
-            "soutaches",
-            "synecdoches",
-            "thelarches",
-            "troches"
-    )));
-
-    /**
-     * Words that end with "-ics" and do not exist as nouns without the 's' (like "aerobics" etc.)
-     */
-    private static Set<String> categoryICS = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
-            "aerobatics",
-            "aerobics",
-            "aerodynamics",
-            "aeromechanics",
-            "aeronautics",
-            "alphanumerics",
-            "animatronics",
-            "apologetics",
-            "architectonics",
-            "astrodynamics",
-            "astronautics",
-            "astrophysics",
-            "athletics",
-            "atmospherics",
-            "autogenics",
-            "avionics",
-            "ballistics",
-            "bibliotics",
-            "bioethics",
-            "biometrics",
-            "bionics",
-            "bionomics",
-            "biophysics",
-            "biosystematics",
-            "cacogenics",
-            "calisthenics",
-            "callisthenics",
-            "catoptrics",
-            "civics",
-            "cladistics",
-            "cryogenics",
-            "cryonics",
-            "cryptanalytics",
-            "cybernetics",
-            "cytoarchitectonics",
-            "cytogenetics",
-            "diagnostics",
-            "dietetics",
-            "dramatics",
-            "dysgenics",
-            "econometrics",
-            "economics",
-            "electromagnetics",
-            "electronics",
-            "electrostatics",
-            "endodontics",
-            "enterics",
-            "ergonomics",
-            "eugenics",
-            "eurhythmics",
-            "eurythmics",
-            "exodontics",
-            "fibreoptics",
-            "futuristics",
-            "genetics",
-            "genomics",
-            "geographics",
-            "geophysics",
-            "geopolitics",
-            "geriatrics",
-            "glyptics",
-            "graphics",
-            "gymnastics",
-            "hermeneutics",
-            "histrionics",
-            "homiletics",
-            "hydraulics",
-            "hydrodynamics",
-            "hydrokinetics",
-            "hydroponics",
-            "hydrostatics",
-            "hygienics",
-            "informatics",
-            "kinematics",
-            "kinesthetics",
-            "kinetics",
-            "lexicostatistics",
-            "linguistics",
-            "lithoglyptics",
-            "liturgics",
-            "logistics",
-            "macrobiotics",
-            "macroeconomics",
-            "magnetics",
-            "magnetohydrodynamics",
-            "mathematics",
-            "metamathematics",
-            "metaphysics",
-            "microeconomics",
-            "microelectronics",
-            "mnemonics",
-            "morphophonemics",
-            "neuroethics",
-            "neurolinguistics",
-            "nucleonics",
-            "numismatics",
-            "obstetrics",
-            "onomastics",
-            "orthodontics",
-            "orthopaedics",
-            "orthopedics",
-            "orthoptics",
-            "paediatrics",
-            "patristics",
-            "patristics",
-            "pedagogics",
-            "pediatrics",
-            "periodontics",
-            "pharmaceutics",
-            "pharmacogenetics",
-            "pharmacokinetics",
-            "phonemics",
-            "phonetics",
-            "phonics",
-            "photomechanics",
-            "physiatrics",
-            "pneumatics",
-            "poetics",
-            "politics",
-            "pragmatics",
-            "prosthetics",
-            "prosthodontics",
-            "proteomics",
-            "proxemics",
-            "psycholinguistics",
-            "psychometrics",
-            "psychonomics",
-            "psychophysics",
-            "psychotherapeutics",
-            "robotics",
-            "semantics",
-            "semiotics",
-            "semitropics",
-            "sociolinguistics",
-            "stemmatics",
-            "strategics",
-            "subtropics",
-            "systematics",
-            "tectonics",
-            "telerobotics",
-            "therapeutics",
-            "thermionics",
-            "thermodynamics",
-            "thermostatics"
-    )));
-
-    /**
-     * Words that change from "-ie" to "-ies" (like "auntie" etc.), listed in their plural forms
-     */
-    private static Set<String> categoryIE_IES = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
-            "aeries",
-            "anomies",
-            "aunties",
-            "baddies",
-            "beanies",
-            "birdies",
-            "boccies",
-            "bogies",
-            "bolshies",
-            "bombies",
-            "bonhomies",
-            "bonxies",
-            "booboisies",
-            "boogies",
-            "boogie-woogies",
-            "bookies",
-            "booties",
-            "bosies",
-            "bourgeoisies",
-            "brasseries",
-            "brassies",
-            "brownies",
-            "budgies",
-            "byrnies",
-            "caddies",
-            "calories",
-            "camaraderies",
-            "capercaillies",
-            "capercailzies",
-            "cassies",
-            "catties",
-            "causeries",
-            "charcuteries",
-            "chinoiseries",
-            "collies",
-            "commies",
-            "cookies",
-            "coolies",
-            "coonties",
-            "cooties",
-            "corries",
-            "coteries",
-            "cowpies",
-            "cowries",
-            "cozies",
-            "crappies",
-            "crossties",
-            "curies",
-            "dachsies",
-            "darkies",
-            "dassies",
-            "dearies",
-            "dickies",
-            "dies",
-            "dixies",
-            "doggies",
-            "dogies",
-            "dominies",
-            "dovekies",
-            "eyries",
-            "faeries",
-            "falsies",
-            "floozies",
-            "folies",
-            "foodies",
-            "freebies",
-            "gaucheries",
-            "gendarmeries",
-            "genies",
-            "ghillies",
-            "gillies",
-            "goalies",
-            "goonies",
-            "grannies",
-            "grotesqueries",
-            "groupies",
-            "hankies",
-            "hippies",
-            "hoagies",
-            "honkies",
-            "hymies",
-            "indies",
-            "junkies",
-            "kelpies",
-            "kilocalories",
-            "knobkerries",
-            "koppies",
-            "kylies",
-            "laddies",
-            "lassies",
-            "lies",
-            "lingeries",
-            "magpies",
-            "magpies",
-            "marqueteries",
-            "mashies",
-            "mealies",
-            "meanies",
-            "menageries",
-            "millicuries",
-            "mollies",
-            "facts1",
-            "moxies",
-            "neckties",
-            "newbies",
-            "nighties",
-            "nookies",
-            "oldies",
-            "organdies",
-            "panties",
-            "parqueteries",
-            "passementeries",
-            "patisseries",
-            "pies",
-            "pinkies",
-            "pixies",
-            "porkpies",
-            "potpies",
-            "prairies",
-            "preemies",
-            "premies",
-            "punkies",
-            "pyxies",
-            "quickies",
-            "ramies",
-            "reveries",
-            "rookies",
-            "rotisseries",
-            "scrapies",
-            "sharpies",
-            "smoothies",
-            "softies",
-            "stoolies",
-            "stymies",
-            "swaggies",
-            "sweeties",
-            "talkies",
-            "techies",
-            "ties",
-            "tooshies",
-            "toughies",
-            "townies",
-            "veggies",
-            "walkie-talkies",
-            "wedgies",
-            "weenies",
-            "weirdies",
-            "yardies",
-            "yuppies",
-            "zombies"
-    )));
-
-    /**
-     * Maps irregular Germanic English plural nouns to their singular form
-     */
-    private static Map<String, String> irregular = Collections.unmodifiableMap(new HashMap<String, String>() {
-                                                                                   {
-                                                                                       put("beefs", "beef");
-                                                                                       put("beeves", "beef");
-                                                                                       put("brethren", "brother");
-                                                                                       put("busses", "bus");
-                                                                                       put("cattle", "cattlebeast");
-                                                                                       put("children", "child");
-                                                                                       put("corpora", "corpus");
-                                                                                       put("ephemerides", "ephemeris");
-                                                                                       put("firemen", "fireman");
-                                                                                       put("genera", "genus");
-                                                                                       put("genies", "genie");
-                                                                                       put("genii", "genie");
-                                                                                       put("kine", "cow");
-                                                                                       put("lice", "louse");
-                                                                                       put("men", "man");
-                                                                                       put("mice", "mouse");
-                                                                                       put("mongooses", "mongoose");
-                                                                                       put("monies", "money");
-                                                                                       put("mythoi", "mythos");
-                                                                                       put("octopodes", "octopus");
-                                                                                       put("octopuses", "octopus");
-                                                                                       put("oxen", "ox");
-                                                                                       put("people", "person");
-                                                                                       put("soliloquies", "soliloquy");
-                                                                                       put("throes", "throes");
-                                                                                       put("trilbys", "trilby");
-                                                                                       put("women", "woman");
-                                                                                   }
-                                                                               }
-    );
-
-    /**
-     * Contains word forms that can either be plural or singular
-     */
-    private static Set<String> singAndPlur = Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(
-            "acoustics",
-            "aestetics",
-            "aquatics",
-            "basics",
-            "ceramics",
-            "classics",
-            "cosmetics",
-            "dermatoglyphics",
-            "dialectics",
-            "dynamics",
-            "esthetics",
-            "ethics",
-            "harmonics",
-            "heroics",
-            "isometrics",
-            "mechanics",
-            "metrics",
-            "statistics",
-            "optic",
-            "people",
-            "physics",
-            "polemics",
-            "premises",
-            "propaedeutics",
-            "pyrotechnics",
-            "quadratics",
-            "quarters",
-            "statistics",
-            "tactics",
-            "tropics"
-    )));
 }

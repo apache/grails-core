@@ -16,8 +16,9 @@
  */
 package org.grails.datastore.gorm.neo4j;
 
-import org.grails.datastore.mapping.core.Session;
 import org.springframework.context.ApplicationEvent;
+
+import org.grails.datastore.mapping.core.Session;
 
 /**
  * event emitted when session is flushed

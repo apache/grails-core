@@ -19,11 +19,11 @@
 
 package org.grails.datastore.gorm.neo4j.mapping.config
 
-import grails.neo4j.Direction
 import groovy.transform.CompileStatic
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
-import org.grails.datastore.mapping.config.Entity
+
+import grails.neo4j.Direction
 
 /**
  * Config for a relationship

@@ -18,18 +18,68 @@
  */
 package org.grails.datastore.gorm.neo4j.engine;
 
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
+
 import groovy.lang.GroovyObject;
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
+
+import jakarta.persistence.FetchType;
+import jakarta.persistence.LockModeType;
+
+import org.neo4j.driver.QueryRunner;
+import org.neo4j.driver.Record;
+import org.neo4j.driver.Result;
+import org.neo4j.driver.summary.ResultSummary;
+import org.neo4j.driver.summary.SummaryCounters;
+import org.neo4j.driver.types.Entity;
+import org.neo4j.driver.types.Node;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.util.Assert;
+
 import org.grails.datastore.gorm.GormEntity;
-import org.grails.datastore.gorm.neo4j.*;
-import org.grails.datastore.gorm.neo4j.collection.*;
+import org.grails.datastore.gorm.neo4j.CypherBuilder;
+import org.grails.datastore.gorm.neo4j.GraphPersistentEntity;
+import org.grails.datastore.gorm.neo4j.IdGenerator;
+import org.grails.datastore.gorm.neo4j.Neo4jMappingContext;
+import org.grails.datastore.gorm.neo4j.Neo4jSession;
+import org.grails.datastore.gorm.neo4j.RelationshipPersistentEntity;
+import org.grails.datastore.gorm.neo4j.RelationshipUtils;
+import org.grails.datastore.gorm.neo4j.collection.Neo4jList;
+import org.grails.datastore.gorm.neo4j.collection.Neo4jPersistentList;
+import org.grails.datastore.gorm.neo4j.collection.Neo4jPersistentSet;
+import org.grails.datastore.gorm.neo4j.collection.Neo4jPersistentSortedSet;
+import org.grails.datastore.gorm.neo4j.collection.Neo4jResultList;
+import org.grails.datastore.gorm.neo4j.collection.Neo4jSet;
+import org.grails.datastore.gorm.neo4j.collection.Neo4jSortedSet;
 import org.grails.datastore.gorm.neo4j.mapping.config.DynamicToOneAssociation;
 import org.grails.datastore.gorm.neo4j.util.IteratorUtil;
 import org.grails.datastore.gorm.schemaless.DynamicAttributes;
 import org.grails.datastore.mapping.collection.PersistentCollection;
 import org.grails.datastore.mapping.core.IdentityGenerationException;
 import org.grails.datastore.mapping.core.Session;
-import org.grails.datastore.mapping.core.impl.*;
+import org.grails.datastore.mapping.core.impl.PendingDeleteAdapter;
+import org.grails.datastore.mapping.core.impl.PendingInsertAdapter;
+import org.grails.datastore.mapping.core.impl.PendingOperation;
+import org.grails.datastore.mapping.core.impl.PendingOperationAdapter;
+import org.grails.datastore.mapping.core.impl.PendingUpdateAdapter;
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable;
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckableCollection;
 import org.grails.datastore.mapping.engine.EntityAccess;
@@ -37,31 +87,24 @@ import org.grails.datastore.mapping.engine.EntityPersister;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
-import org.grails.datastore.mapping.model.config.GormMappingConfigurationStrategy;
 import org.grails.datastore.mapping.model.config.GormProperties;
-import org.grails.datastore.mapping.model.types.*;
+import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.Basic;
+import org.grails.datastore.mapping.model.types.ManyToMany;
+import org.grails.datastore.mapping.model.types.OneToMany;
+import org.grails.datastore.mapping.model.types.OneToOne;
+import org.grails.datastore.mapping.model.types.Simple;
+import org.grails.datastore.mapping.model.types.TenantId;
+import org.grails.datastore.mapping.model.types.ToMany;
+import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.proxy.EntityProxy;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.reflect.EntityReflector;
-import org.neo4j.driver.Record;
-import org.neo4j.driver.Result;
-import org.neo4j.driver.QueryRunner;
-import org.neo4j.driver.summary.ResultSummary;
-import org.neo4j.driver.summary.SummaryCounters;
-import org.neo4j.driver.types.Entity;
-import org.neo4j.driver.types.Node;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.util.Assert;
 
-import jakarta.persistence.FetchType;
-import jakarta.persistence.LockModeType;
-import java.io.Serializable;
-import java.util.*;
-
-import static org.grails.datastore.mapping.query.Query.*;
+import static org.grails.datastore.mapping.query.Query.Conjunction;
+import static org.grails.datastore.mapping.query.Query.Criterion;
+import static org.grails.datastore.mapping.query.Query.In;
+import static org.grails.datastore.mapping.query.Query.Junction;
 
 /**
  * Core {@link EntityPersister} implementation responsible for CRUD operations against the Graph.
@@ -72,16 +115,23 @@ import static org.grails.datastore.mapping.query.Query.*;
  */
 public class Neo4jEntityPersister extends EntityPersister {
 
-
     public static final String DYNAMIC_ASSOCIATION_PARAM = "org.grails.neo4j.DYNAMIC_ASSOCIATIONS";
 
-    private static Logger log = LoggerFactory.getLogger(Neo4jEntityPersister.class);
-
+    private static final Logger log = LoggerFactory.getLogger(Neo4jEntityPersister.class);
 
     public Neo4jEntityPersister(MappingContext mappingContext, PersistentEntity entity, Session session, ApplicationEventPublisher publisher) {
         super(mappingContext, entity, session, publisher);
     }
 
+    public static long countUpdates(Result execute) {
+        ResultSummary resultSummary = execute.consume();
+        SummaryCounters counters = resultSummary.counters();
+        if (counters.containsUpdates()) {
+            return counters.nodesCreated() + counters.nodesDeleted() + counters.propertiesSet() + counters.relationshipsCreated() + counters.relationshipsDeleted();
+        } else {
+            return 0;
+        }
+    }
 
     @Override
     public Neo4jSession getSession() {
@@ -107,23 +157,22 @@ public class Neo4jEntityPersister extends EntityPersister {
         GraphPersistentEntity graphPersistentEntity = (GraphPersistentEntity) pe;
 
         List<Serializable> idList = new ArrayList<>();
-        if(graphPersistentEntity.hasDynamicAssociations()) {
+        if (graphPersistentEntity.hasDynamicAssociations()) {
             // dynamic association entities cannot be batch inserted
             for (Object obj : objs) {
                 Serializable id = persistEntity(pe, obj);
-                if(id != null) {
+                if (id != null) {
                     idList.add(id);
                 }
             }
-        }
-        else if(graphPersistentEntity.isNativeId() && !graphPersistentEntity.isRelationshipEntity()) {
+        } else if (graphPersistentEntity.isNativeId() && !graphPersistentEntity.isRelationshipEntity()) {
             List<EntityAccess> entityAccesses = new ArrayList<>();
             // optimize batch inserts for multiple entities with native id
             final Neo4jSession session = getSession();
 
             StringBuilder createCypher = new StringBuilder(CypherBuilder.CYPHER_CREATE);
             int listIndex = 0;
-            List<PendingOperation<Object,Serializable>> cascadingOperations = new ArrayList<>();
+            List<PendingOperation<Object, Serializable>> cascadingOperations = new ArrayList<>();
             final Map<String, Object> params = new HashMap<>(1);
             final Map<Integer, Integer> indexMap = new HashMap<>();
             int insertIndex = 0;
@@ -153,8 +202,7 @@ public class Neo4jEntityPersister extends EntityPersister {
 
                     registerPendingUpdate(session, persistentEntity, entityAccess, obj, identifier);
                     idList.add(identifier);
-                }
-                else {
+                } else {
                     final PendingInsertAdapter<Object, Serializable> pendingInsert = new PendingInsertAdapter<Object, Serializable>(persistentEntity, identifier, obj, entityAccess) {
                         @Override
                         public void run() {
@@ -187,7 +235,7 @@ public class Neo4jEntityPersister extends EntityPersister {
                     // temporarily add null so it is replaced later
                     idList.add(null);
 
-                    if(pendingInsert.isVetoed()) {
+                    if (pendingInsert.isVetoed()) {
                         continue;
                     }
 
@@ -195,33 +243,33 @@ public class Neo4jEntityPersister extends EntityPersister {
 
                     indexMap.put(insertIndex++, listIndex - 1);
                     entityAccesses.add(entityAccess);
-                    if(previous) {
+                    if (previous) {
                         createCypher.append(CypherBuilder.COMMAND_SEPARATOR);
                     }
                     session.buildEntityCreateOperation(createCypher, String.valueOf(insertIndex), entityAccess.getPersistentEntity(), pendingInsert, params, cascadingOperations);
-                    if(iterator.hasNext()) {
+                    if (iterator.hasNext()) {
                         previous = true;
                     }
 
                 }
 
             }
-            if(insertIndex > 0) {
+            if (insertIndex > 0) {
 
                 QueryRunner statementRunner = session.hasTransaction() ? session.getTransaction().getNativeTransaction() : session.getNativeInterface();
 
-                final String finalCypher = createCypher.toString() + " RETURN *";
-                if(log.isDebugEnabled()) {
+                final String finalCypher = createCypher + " RETURN *";
+                if (log.isDebugEnabled()) {
                     log.debug("CREATE Cypher [{}] for parameters [{}]", finalCypher, params);
                 }
 
-                if(graphPersistentEntity.hasDynamicAssociations()) {
+                if (graphPersistentEntity.hasDynamicAssociations()) {
                     params.remove(DYNAMIC_ASSOCIATION_PARAM);
                 }
 
                 final Result result = statementRunner.run(finalCypher, params);
 
-                if(!result.hasNext()) {
+                if (!result.hasNext()) {
                     throw new IdentityGenerationException("CREATE operation did not generate an identifier for entity " + pe.getJavaClass());
                 }
 
@@ -231,7 +279,7 @@ public class Neo4jEntityPersister extends EntityPersister {
                     Assert.notNull(targetIndex, "Should never be null. Please file an issue");
 
                     final Node node = record.get("n" + (j + 1)).asNode();
-                    if(node == null) {
+                    if (node == null) {
                         throw new IdentityGenerationException("CREATE operation did not generate an identifier for entity " + pe.getJavaClass());
                     }
                     final long identifier = node.id();
@@ -242,13 +290,12 @@ public class Neo4jEntityPersister extends EntityPersister {
 
                 }
             }
-        }
-        else {
+        } else {
 
             for (Object obj : objs) {
                 final EntityAccess entityAccess = createEntityAccess(pe, obj);
                 Serializable id = persistEntity(entityAccess.getPersistentEntity(), obj);
-                if(id != null) {
+                if (id != null) {
                     idList.add(id);
                 }
             }
@@ -259,7 +306,7 @@ public class Neo4jEntityPersister extends EntityPersister {
     @Override
     protected Object retrieveEntity(PersistentEntity pe, Serializable key) {
 
-        if(log.isDebugEnabled()) {
+        if (log.isDebugEnabled()) {
             log.debug("Retrieving entity [{}] by node id [{}]", pe.getJavaClass(), key);
         }
 
@@ -270,25 +317,26 @@ public class Neo4jEntityPersister extends EntityPersister {
 
     public Object unmarshallOrFromCache(PersistentEntity defaultPersistentEntity, Map<String, Object> resultData) {
 
-        Node data = (Node)resultData.get(CypherBuilder.NODE_DATA);
+        Node data = (Node) resultData.get(CypherBuilder.NODE_DATA);
         return unmarshallOrFromCache(defaultPersistentEntity, data, resultData);
     }
 
     public Object unmarshallOrFromCache(PersistentEntity defaultPersistentEntity, Node data) {
-        return unmarshallOrFromCache(defaultPersistentEntity, data, Collections.<String,Object>emptyMap());
+        return unmarshallOrFromCache(defaultPersistentEntity, data, Collections.<String, Object>emptyMap());
     }
 
     public Object unmarshallOrFromCache(PersistentEntity defaultPersistentEntity, Node data, Map<String, Object> resultData) {
-        return unmarshallOrFromCache(defaultPersistentEntity, data, resultData, Collections.<Association, Object>emptyMap());
+        return unmarshallOrFromCache(defaultPersistentEntity, data, resultData, Collections.emptyMap());
     }
 
-    public Object unmarshallOrFromCache(PersistentEntity defaultPersistentEntity, Node data, Map<String, Object> resultData, Map<Association, Object> initializedAssociations ) {
+    public Object unmarshallOrFromCache(PersistentEntity defaultPersistentEntity, Node data, Map<String, Object> resultData, Map<Association, Object> initializedAssociations) {
         return unmarshallOrFromCache(defaultPersistentEntity, data, resultData, initializedAssociations, LockModeType.NONE);
     }
+
     public Object unmarshallOrFromCache(PersistentEntity defaultPersistentEntity, Node data, Map<String, Object> resultData, Map<Association, Object> initializedAssociations, LockModeType lockModeType) {
         final Neo4jSession session = getSession();
         if (LockModeType.PESSIMISTIC_WRITE.equals(lockModeType)) {
-            if(log.isDebugEnabled()) {
+            if (log.isDebugEnabled()) {
                 log.debug("Locking entity [{}] node [{}] for pessimistic write", defaultPersistentEntity.getName(), data.id());
             }
             throw new UnsupportedOperationException("Write locks are not supported by the Bolt Java Driver.");
@@ -306,48 +354,45 @@ public class Neo4jEntityPersister extends EntityPersister {
         return instance;
     }
 
-
     public Object unmarshallOrFromCache(PersistentEntity entity, org.neo4j.driver.types.Relationship data, Map<Association, Object> initializedAssociations, Map<Serializable, Node> initializedNodes) {
         Object object = unmarshallOrFromCache(entity, data, initializedAssociations);
         RelationshipPersistentEntity relEntity = (RelationshipPersistentEntity) entity;
-        if(object != null) {
+        if (object != null) {
             EntityReflector reflector = entity.getReflector();
             Object from = reflector.getProperty(object, RelationshipPersistentEntity.FROM);
-            if(from == null || from instanceof EntityProxy) {
+            if (from == null || from instanceof EntityProxy) {
                 long nodeId = data.startNodeId();
-                if(initializedNodes.containsKey(nodeId)) {
+                if (initializedNodes.containsKey(nodeId)) {
                     reflector.setProperty(
-                            object,
-                            RelationshipPersistentEntity.FROM, unmarshallOrFromCache(relEntity.getFromEntity(), initializedNodes.get(nodeId))
+                        object,
+                        RelationshipPersistentEntity.FROM, unmarshallOrFromCache(relEntity.getFromEntity(), initializedNodes.get(nodeId))
                     );
-                }
-                else {
+                } else {
                     reflector.setProperty(
-                            object,
-                            RelationshipPersistentEntity.FROM, session.proxy( relEntity.getFrom().getType(), nodeId)
+                        object,
+                        RelationshipPersistentEntity.FROM, session.proxy(relEntity.getFrom().getType(), nodeId)
                     );
                 }
             }
             Object to = reflector.getProperty(object, RelationshipPersistentEntity.TO);
-            if(to == null || to instanceof EntityProxy) {
+            if (to == null || to instanceof EntityProxy) {
                 long nodeId = data.endNodeId();
-                if(initializedNodes.containsKey(nodeId)) {
+                if (initializedNodes.containsKey(nodeId)) {
                     reflector.setProperty(
-                            object,
-                            RelationshipPersistentEntity.TO, unmarshallOrFromCache(relEntity.getToEntity(), initializedNodes.get(nodeId))
+                        object,
+                        RelationshipPersistentEntity.TO, unmarshallOrFromCache(relEntity.getToEntity(), initializedNodes.get(nodeId))
                     );
-                }
-                else {
+                } else {
                     reflector.setProperty(
-                            object,
-                            RelationshipPersistentEntity.TO, session.proxy( relEntity.getTo().getType(), nodeId)
+                        object,
+                        RelationshipPersistentEntity.TO, session.proxy(relEntity.getTo().getType(), nodeId)
                     );
                 }
 
             }
             reflector.setProperty(object,
-                    RelationshipPersistentEntity.TYPE,
-                    data.type());
+                RelationshipPersistentEntity.TYPE,
+                data.type());
         }
         return object;
     }
@@ -359,7 +404,7 @@ public class Neo4jEntityPersister extends EntityPersister {
         Object instance = session.getCachedInstance(entity.getJavaClass(), id);
 
         if (instance == null) {
-            instance = unmarshall(entity, id, data, Collections.<String, Object>emptyMap(), initializedAssociations);
+            instance = unmarshall(entity, id, data, Collections.emptyMap(), initializedAssociations);
         }
         return instance;
     }
@@ -368,9 +413,9 @@ public class Neo4jEntityPersister extends EntityPersister {
         PersistentEntity result = null;
         int longestInheritenceChain = -1;
 
-        for (String l: labels) {
+        for (String l : labels) {
             PersistentEntity persistentEntity = findDerivedPersistentEntityWithLabel(pe, l);
-            if (persistentEntity!=null) {
+            if (persistentEntity != null) {
                 int inheritenceChain = calcInheritenceChain(persistentEntity);
                 if (inheritenceChain > longestInheritenceChain) {
                     longestInheritenceChain = inheritenceChain;
@@ -378,18 +423,17 @@ public class Neo4jEntityPersister extends EntityPersister {
                 }
             }
         }
-        if(result != null) {
+        if (result != null) {
             return result;
-        }
-        else {
+        } else {
             return pe;
         }
     }
 
     private PersistentEntity findDerivedPersistentEntityWithLabel(PersistentEntity parent, String label) {
-        for (PersistentEntity pe: getMappingContext().getPersistentEntities()) {
+        for (PersistentEntity pe : getMappingContext().getPersistentEntities()) {
             if (isInParentsChain(parent, pe)) {
-                if (((GraphPersistentEntity)pe).getLabels().contains(label)) {
+                if (((GraphPersistentEntity) pe).getLabels().contains(label)) {
                     return pe;
                 }
             }
@@ -398,7 +442,7 @@ public class Neo4jEntityPersister extends EntityPersister {
     }
 
     private boolean isInParentsChain(PersistentEntity parent, PersistentEntity it) {
-        if (it==null) {
+        if (it == null) {
             return false;
         } else if (it.equals(parent)) {
             return true;
@@ -413,11 +457,10 @@ public class Neo4jEntityPersister extends EntityPersister {
         }
     }
 
-
     protected Object unmarshall(PersistentEntity persistentEntity, Serializable id, Entity node, Map<String, Object> resultData, Map<Association, Object> initializedAssociations) {
 
-        if(log.isDebugEnabled()) {
-            log.debug( "unmarshalling entity [{}] with id [{}], props {}, {}", persistentEntity.getName(), id, node);
+        if (log.isDebugEnabled()) {
+            log.debug("unmarshalling entity [{}] with id [{}], props {}, {}", persistentEntity.getName(), id, node);
         }
         final Neo4jSession session = getSession();
         GraphPersistentEntity graphPersistentEntity = (GraphPersistentEntity) persistentEntity;
@@ -426,8 +469,8 @@ public class Neo4jEntityPersister extends EntityPersister {
         entityAccess.setIdentifierNoConversion(id);
 
         PersistentProperty nodeId = graphPersistentEntity.getNodeId();
-        if( nodeId != null ) {
-            ((GroovyObject)entityAccess.getEntity()).setProperty(nodeId.getName(), node.id());
+        if (nodeId != null) {
+            ((GroovyObject) entityAccess.getEntity()).setProperty(nodeId.getName(), node.id());
         }
 
         final Object entity = entityAccess.getEntity();
@@ -435,24 +478,22 @@ public class Neo4jEntityPersister extends EntityPersister {
 
         final List<String> nodeProperties = DefaultGroovyMethods.toList(node.keys());
 
-        for (PersistentProperty property: entityAccess.getPersistentEntity().getPersistentProperties()) {
+        for (PersistentProperty property : entityAccess.getPersistentEntity().getPersistentProperties()) {
 
             String propertyName = property.getName();
-            if ( (property instanceof Simple) || (property instanceof TenantId) || (property instanceof Basic)) {
+            if ((property instanceof Simple) || (property instanceof TenantId) || (property instanceof Basic)) {
                 // implicitly sets version property as well
-                if(node.containsKey(propertyName)) {
+                if (node.containsKey(propertyName)) {
 
                     entityAccess.setProperty(propertyName, node.get(propertyName).asObject());
 
                     nodeProperties.remove(propertyName);
                 }
-            } else if (property instanceof Association) {
-
-                Association association = (Association) property;
+            } else if (property instanceof Association association) {
 
                 final String associationName = association.getName();
 
-                if(initializedAssociations.containsKey(association)) {
+                if (initializedAssociations.containsKey(association)) {
                     entityAccess.setPropertyNoConversion(associationName, initializedAssociations.get(association));
                     continue;
                 }
@@ -462,68 +503,61 @@ public class Neo4jEntityPersister extends EntityPersister {
                 final String associationIdsKey = associationName + "Ids";
 
                 // if the node key is present we have an eager fetch, so initialise the association
-                if(resultData.containsKey(associationNodesKey)) {
+                if (resultData.containsKey(associationNodesKey)) {
                     final PersistentEntity associatedEntity = association.getAssociatedEntity();
                     if (association instanceof ToOne) {
                         final Neo4jEntityPersister associationPersister = session.getEntityPersister(associatedEntity.getJavaClass());
                         final Iterable<Node> associationNodes = (Iterable<Node>) resultData.get(associationNodesKey);
                         final Node associationNode = IteratorUtil.singleOrNull(associationNodes);
-                        if(associationNode != null) {
+                        if (associationNode != null) {
                             entityAccess.setPropertyNoConversion(
-                                    associationName,
-                                    associationPersister.unmarshallOrFromCache(associatedEntity, associationNode)
+                                associationName,
+                                associationPersister.unmarshallOrFromCache(associatedEntity, associationNode)
                             );
                         }
-                    }
-                    else if(association instanceof ToMany) {
+                    } else if (association instanceof ToMany) {
                         Collection values;
                         final Class type = association.getType();
 
                         final Collection<Object> associationNodes;
                         boolean isRelationshipEntity = associatedEntity instanceof RelationshipPersistentEntity;
-                        if(isRelationshipEntity && resultData.containsKey(associationRelKey)) {
+                        if (isRelationshipEntity && resultData.containsKey(associationRelKey)) {
                             associationNodes = (Collection<Object>) resultData.get(associationRelKey);
-                        }
-                        else {
+                        } else {
                             associationNodes = (Collection<Object>) resultData.get(associationNodesKey);
                         }
                         final Neo4jResultList resultSet = new Neo4jResultList(0, associationNodes.size(), associationNodes.iterator(), session.getEntityPersister(associatedEntity));
-                        if(isRelationshipEntity) {
+                        if (isRelationshipEntity) {
                             RelationshipPersistentEntity relEntity = (RelationshipPersistentEntity) associatedEntity;
                             Association from = relEntity.getFrom();
                             Association to = relEntity.getTo();
                             handleRelationshipSide(persistentEntity, resultData, entity, associationNodesKey, resultSet, from);
                             handleRelationshipSide(persistentEntity, resultData, entity, associationNodesKey, resultSet, to);
-                        }
-                        else if(association.isBidirectional()) {
+                        } else if (association.isBidirectional()) {
                             final Association inverseSide = association.getInverseSide();
-                            if(inverseSide instanceof ToOne) {
+                            if (inverseSide instanceof ToOne) {
                                 resultSet.setInitializedAssociations(Collections.singletonMap(
-                                        inverseSide, entity
+                                    inverseSide, entity
                                 ));
                             }
                         }
-                        if(List.class.isAssignableFrom(type)) {
+                        if (List.class.isAssignableFrom(type)) {
                             values = new Neo4jList(entityAccess, association, resultSet, session);
-                        }
-                        else if(SortedSet.class.isAssignableFrom(type)) {
+                        } else if (SortedSet.class.isAssignableFrom(type)) {
                             values = new Neo4jSortedSet(entityAccess, association, new TreeSet<>(resultSet), session);
-                        }
-                        else {
+                        } else {
                             values = new Neo4jSet(entityAccess, association, new HashSet<>(resultSet), session);
                         }
                         entityAccess.setPropertyNoConversion(propertyName, values);
                     }
-                }
-                else if(resultData.containsKey(associationIdsKey)) {
+                } else if (resultData.containsKey(associationIdsKey)) {
 
                     final Object associationValues = resultData.get(associationIdsKey);
                     List<Serializable> targetIds = Collections.emptyList();
-                    if(associationValues instanceof Collection) {
+                    if (associationValues instanceof Collection) {
                         targetIds = (List<Serializable>) associationValues;
                     }
-                    if (association instanceof ToOne) {
-                        ToOne toOne = (ToOne) association;
+                    if (association instanceof ToOne toOne) {
                         if (!targetIds.isEmpty()) {
                             Serializable targetId;
                             try {
@@ -532,72 +566,64 @@ public class Neo4jEntityPersister extends EntityPersister {
                                 throw new DataIntegrityViolationException("Single-ended association has more than one associated identifier: " + association);
                             }
                             entityAccess.setPropertyNoConversion(propertyName,
-                                    getMappingContext().getProxyFactory().createProxy(
-                                            this.session,
-                                            toOne.getAssociatedEntity().getJavaClass(),
-                                            targetId
-                                    )
+                                getMappingContext().getProxyFactory().createProxy(
+                                    this.session,
+                                    toOne.getAssociatedEntity().getJavaClass(),
+                                    targetId
+                                )
                             );
                         }
                     } else if (association instanceof ToMany) {
 
                         Collection values;
                         final Class type = association.getType();
-                        if(List.class.isAssignableFrom(type)) {
+                        if (List.class.isAssignableFrom(type)) {
                             values = new Neo4jPersistentList(targetIds, session, entityAccess, (ToMany) association);
-                        }
-                        else if(SortedSet.class.isAssignableFrom(type)) {
+                        } else if (SortedSet.class.isAssignableFrom(type)) {
                             values = new Neo4jPersistentSortedSet(targetIds, session, entityAccess, (ToMany) association);
-                        }
-                        else {
+                        } else {
                             values = new Neo4jPersistentSet(targetIds, session, entityAccess, (ToMany) association);
                         }
                         entityAccess.setPropertyNoConversion(propertyName, values);
                     } else {
                         throw new IllegalArgumentException("association " + associationName + " is of type " + association.getClass().getSuperclass().getName());
                     }
-                }
-                else {
+                } else {
                     // No OPTIONAL MATCH specified so the association queries are lazily executed
-                    if(association instanceof ToOne) {
+                    if (association instanceof ToOne) {
                         // first check whether the object has already been loaded from the cache
 
                         // if a lazy proxy should be created for this association then create it,
                         // note that this strategy does not allow for null checks
                         final Neo4jAssociationQueryExecutor associationQueryExecutor = new Neo4jAssociationQueryExecutor(session, association);
-                        if(association.getMapping().getMappedForm().getFetchStrategy() == FetchType.LAZY) {
+                        if (association.getMapping().getMappedForm().getFetchStrategy() == FetchType.LAZY) {
                             final Object proxy = getMappingContext().getProxyFactory().createProxy(
-                                    this.session,
-                                    associationQueryExecutor,
-                                    id
+                                this.session,
+                                associationQueryExecutor,
+                                id
                             );
                             entityAccess.setPropertyNoConversion(propertyName,
-                                    proxy
+                                proxy
                             );
-                        }
-                        else {
+                        } else {
                             final List<Object> results = associationQueryExecutor.query(id);
-                            if(!results.isEmpty()) {
+                            if (!results.isEmpty()) {
                                 entityAccess.setPropertyNoConversion(propertyName, results.get(0));
                             }
                         }
-                    }
-                    else if(association instanceof ToMany) {
+                    } else if (association instanceof ToMany) {
                         Collection values;
                         final Class type = association.getType();
-                        if(List.class.isAssignableFrom(type)) {
+                        if (List.class.isAssignableFrom(type)) {
                             values = new Neo4jPersistentList(id, session, entityAccess, (ToMany) association);
-                        }
-                        else if(SortedSet.class.isAssignableFrom(type)) {
+                        } else if (SortedSet.class.isAssignableFrom(type)) {
                             values = new Neo4jPersistentSortedSet(id, session, entityAccess, (ToMany) association);
-                        }
-                        else {
+                        } else {
                             values = new Neo4jPersistentSet(id, session, entityAccess, (ToMany) association);
                         }
                         entityAccess.setPropertyNoConversion(propertyName, values);
                     }
                 }
-
 
             } else {
                 throw new IllegalArgumentException("property " + property.getName() + " is of type " + property.getClass().getSuperclass().getName());
@@ -605,20 +631,20 @@ public class Neo4jEntityPersister extends EntityPersister {
             }
         }
 
-        Map<String,Object> undeclared = new LinkedHashMap<>();
+        Map<String, Object> undeclared = new LinkedHashMap<>();
 
         if (!nodeProperties.isEmpty()) {
             for (String nodeProperty : nodeProperties) {
-                if(!nodeProperty.equals(CypherBuilder.IDENTIFIER)) {
+                if (!nodeProperty.equals(CypherBuilder.IDENTIFIER)) {
                     undeclared.put(nodeProperty, node.get(nodeProperty).asObject());
                 }
             }
         }
 
         final Object obj = entity;
-        if(!undeclared.isEmpty()) {
-            if(obj instanceof DynamicAttributes) {
-                ((DynamicAttributes)obj).attributes(undeclared);
+        if (!undeclared.isEmpty()) {
+            if (obj instanceof DynamicAttributes) {
+                ((DynamicAttributes) obj).attributes(undeclared);
             }
         }
 
@@ -629,10 +655,10 @@ public class Neo4jEntityPersister extends EntityPersister {
     private void handleRelationshipSide(PersistentEntity persistentEntity, Map<String, Object> resultData, Object entity, String associationNodesKey, Neo4jResultList resultSet, Association association) {
         if (persistentEntity.equals(association.getAssociatedEntity())) {
             resultSet.setInitializedAssociations(Collections.singletonMap(
-                    association, entity
+                association, entity
             ));
             // the associated nodes are the inverse nodes, pass those through to avoid additional queries
-            if(resultData.containsKey(associationNodesKey)) {
+            if (resultData.containsKey(associationNodesKey)) {
                 Collection<Node> nodes = (Collection<Node>) resultData.get(associationNodesKey);
                 for (Node n : nodes) {
                     resultSet.addInitializedNode(n);
@@ -646,41 +672,38 @@ public class Neo4jEntityPersister extends EntityPersister {
     }
 
     private Collection createDirtyCheckableAwareCollection(EntityAccess entityAccess, Association association, Collection delegate) {
-        if (delegate==null) {
+        if (delegate == null) {
             delegate = createCollection(association);
         }
 
-        if( !(delegate instanceof DirtyCheckableCollection)) {
+        if (!(delegate instanceof DirtyCheckableCollection dirtyCheckableCollection)) {
 
             final Object entity = entityAccess.getEntity();
-            if(entity instanceof DirtyCheckable) {
+            if (entity instanceof DirtyCheckable) {
                 final Neo4jSession session = getSession();
-                for( Object o : delegate ) {
+                for (Object o : delegate) {
                     final EntityAccess associationAccess = getSession().createEntityAccess(association.getAssociatedEntity(), o);
                     Serializable associationId = (Serializable) associationAccess.getIdentifier();
-                    if(associationId != null) {
+                    if (associationId != null) {
                         session.addPendingRelationshipInsert((Serializable) entityAccess.getIdentifier(), association, associationId);
                     }
                 }
 
                 delegate = association.isList() ?
-                        new Neo4jList(entityAccess, association, (List)delegate, session) :
-                        new Neo4jSet(entityAccess, association, (Set)delegate, session);
+                    new Neo4jList(entityAccess, association, (List) delegate, session) :
+                    new Neo4jSet(entityAccess, association, (Set) delegate, session);
             }
-        }
-        else {
-            final DirtyCheckableCollection dirtyCheckableCollection = (DirtyCheckableCollection) delegate;
+        } else {
             final Neo4jSession session = getSession();
-            if(dirtyCheckableCollection.hasChanged()) {
-                for (Object o : ((Iterable)dirtyCheckableCollection)) {
+            if (dirtyCheckableCollection.hasChanged()) {
+                for (Object o : ((Iterable) dirtyCheckableCollection)) {
                     final EntityAccess associationAccess = getSession().createEntityAccess(association.getAssociatedEntity(), o);
-                    session.addPendingRelationshipInsert((Serializable) entityAccess.getIdentifier(),association, (Serializable) associationAccess.getIdentifier());
+                    session.addPendingRelationshipInsert((Serializable) entityAccess.getIdentifier(), association, (Serializable) associationAccess.getIdentifier());
                 }
             }
         }
         return delegate;
     }
-
 
     @Override
     protected Serializable persistEntity(final PersistentEntity entity, Object obj, boolean isInsert) {
@@ -701,14 +724,13 @@ public class Neo4jEntityPersister extends EntityPersister {
         final EntityAccess entityAccess = createEntityAccess(entity, obj);
         Object identifier = entityAccess.getIdentifier();
 
-
         session.registerPending(obj);
 
         // cancel operation if vetoed
         boolean isUpdate = identifier != null && !isInsert;
         GraphPersistentEntity graphPersistentEntity = (GraphPersistentEntity) entity;
         boolean assignedId = graphPersistentEntity.isAssignedId();
-        if(assignedId && !session.contains(obj)) {
+        if (assignedId && !session.contains(obj)) {
             isUpdate = false;
         }
 
@@ -717,11 +739,11 @@ public class Neo4jEntityPersister extends EntityPersister {
         } else {
 
             boolean isNativeId = false;
-            if(identifier == null) {
+            if (identifier == null) {
 
                 final IdGenerator idGenerator = graphPersistentEntity.getIdGenerator();
                 isNativeId = idGenerator == null;
-                if(!isNativeId) {
+                if (!isNativeId) {
 
                     identifier = idGenerator.nextId();
                     entityAccess.setIdentifier(identifier);
@@ -748,7 +770,7 @@ public class Neo4jEntityPersister extends EntityPersister {
                 }
             });
 
-            if(isNativeId && !graphPersistentEntity.isRelationshipEntity()) {
+            if (isNativeId && !graphPersistentEntity.isRelationshipEntity()) {
                 // if we have a native identifier then we have to perform an insert to obtain the id
                 final List<PendingOperation<Object, Serializable>> preOperations = pendingInsert.getPreOperations();
                 for (PendingOperation preOperation : preOperations) {
@@ -758,7 +780,7 @@ public class Neo4jEntityPersister extends EntityPersister {
                 pendingInsert.run();
                 pendingInsert.setExecuted(true);
 
-                if(pendingInsert.isVetoed()) {
+                if (pendingInsert.isVetoed()) {
                     return null;
                 }
 
@@ -766,41 +788,39 @@ public class Neo4jEntityPersister extends EntityPersister {
 
                 final String cypher = session.buildEntityCreateOperation(entity, pendingInsert, params, pendingInsert.getCascadeOperations());
                 Map<String, List<Object>> dynamicAssociations = null;
-                if(graphPersistentEntity.hasDynamicAssociations()) {
+                if (graphPersistentEntity.hasDynamicAssociations()) {
                     dynamicAssociations = (Map<String, List<Object>>) params.remove(DYNAMIC_ASSOCIATION_PARAM);
                 }
                 final QueryRunner boltSession = session.hasTransaction() ? session.getTransaction().getNativeTransaction() : session.getNativeInterface();
                 final String finalCypher = cypher + graphPersistentEntity.formatReturnId();
-                if(log.isDebugEnabled()) {
+                if (log.isDebugEnabled()) {
                     log.debug("CREATE Cypher [{}] for parameters [{}]", finalCypher, params);
                 }
                 final Result result = boltSession.run(finalCypher, params);
 
-                if(!result.hasNext()) {
+                if (!result.hasNext()) {
                     throw new IdentityGenerationException("CREATE operation did not generate an identifier for entity " + entityAccess.getEntity());
                 }
 
                 Record idMap = result.next();
-                if(idMap != null) {
+                if (idMap != null) {
                     identifier = idMap.get(GormProperties.IDENTITY).asObject();
-                    if(identifier == null) {
+                    if (identifier == null) {
                         throw new IdentityGenerationException("CREATE operation did not generate an identifier for entity " + entityAccess.getEntity());
                     }
                     entityAccess.setIdentifier(identifier);
-                    if(obj instanceof DirtyCheckable) {
-                        ((DirtyCheckable)obj).trackChanges();
+                    if (obj instanceof DirtyCheckable) {
+                        ((DirtyCheckable) obj).trackChanges();
                     }
                     persistAssociationsOfEntity(graphPersistentEntity, entityAccess, false);
-                    if(dynamicAssociations != null) {
-                        processDynamicAssociations(graphPersistentEntity, entityAccess, (Neo4jMappingContext) getMappingContext(),dynamicAssociations, pendingInsert.getCascadeOperations(), false);
+                    if (dynamicAssociations != null) {
+                        processDynamicAssociations(graphPersistentEntity, entityAccess, (Neo4jMappingContext) getMappingContext(), dynamicAssociations, pendingInsert.getCascadeOperations(), false);
                     }
-                }
-                else {
+                } else {
                     throw new IdentityGenerationException("CREATE operation did not generate an identifier for entity " + entityAccess.getEntity());
                 }
                 session.addPendingInsert(pendingInsert);
-            }
-            else {
+            } else {
                 session.addPendingInsert(pendingInsert);
                 persistAssociationsOfEntity((GraphPersistentEntity) entity, entityAccess, false);
             }
@@ -815,7 +835,6 @@ public class Neo4jEntityPersister extends EntityPersister {
         return persistEntity(pe, obj, false);
     }
 
-
     private void registerPendingUpdate(Neo4jSession session, final PersistentEntity pe, final EntityAccess ea, final Object obj, final Serializable identifier) {
         final Neo4jModificationTrackingEntityAccess entityAccess = new Neo4jModificationTrackingEntityAccess(ea);
         final Object notEqualMarker = new Object();
@@ -826,9 +845,8 @@ public class Neo4jEntityPersister extends EntityPersister {
                     setVetoed(true);
                 } else {
                     Object entity = entityAccess.getEntity();
-                    if (entity instanceof DirtyCheckable) {
-                        DirtyCheckable dirtyCheckable = (DirtyCheckable) entity;
-                        for (Map.Entry<String, Object> entry: entityAccess.getModifiedProperties().entrySet()) {
+                    if (entity instanceof DirtyCheckable dirtyCheckable) {
+                        for (Map.Entry<String, Object> entry : entityAccess.getModifiedProperties().entrySet()) {
                             dirtyCheckable.markDirty(entry.getKey(), notEqualMarker, entry.getValue());
                         }
                     }
@@ -847,27 +865,27 @@ public class Neo4jEntityPersister extends EntityPersister {
     }
 
     private boolean shouldIgnore(Neo4jSession session, Object obj) {
-        boolean isDirty = obj instanceof DirtyCheckable ? ((DirtyCheckable)obj).hasChanged() : true;
+        boolean isDirty = !(obj instanceof DirtyCheckable) || ((DirtyCheckable) obj).hasChanged();
         return session.isPendingAlready(obj) || (!isDirty);
     }
 
     public void processDynamicAssociations(GraphPersistentEntity graphEntity, EntityAccess access, Neo4jMappingContext mappingContext, Map<String, List<Object>> dynamicRelProps, List<PendingOperation<Object, Serializable>> cascadingOperations, boolean isUpdate) {
-        if(graphEntity.hasDynamicAssociations()) {
+        if (graphEntity.hasDynamicAssociations()) {
             Serializable parentId = (Serializable) access.getIdentifier();
-            for (final Map.Entry<String, List<Object>> e: dynamicRelProps.entrySet()) {
-                for (final Object o :  e.getValue()) {
+            for (final Map.Entry<String, List<Object>> e : dynamicRelProps.entrySet()) {
+                for (final Object o : e.getValue()) {
 
-                    if (((DirtyCheckable)access.getEntity()).hasChanged(e.getKey()) || !isUpdate) {
+                    if (((DirtyCheckable) access.getEntity()).hasChanged(e.getKey()) || !isUpdate) {
                         final GraphPersistentEntity associated = (GraphPersistentEntity) mappingContext.getPersistentEntity(o.getClass().getName());
                         if (associated != null) {
                             Object childId = getSession().getEntityPersister(o).getObjectIdentifier(o);
                             if (childId == null) {
                                 childId = persist(o);
                             }
-                            getSession().
-                                addPendingRelationshipInsert(parentId,
-                                    new DynamicToOneAssociation(graphEntity, mappingContext, e.getKey(), associated),
-                                    (Serializable) childId);
+                            getSession()
+                                    .addPendingRelationshipInsert(parentId,
+                                        new DynamicToOneAssociation(graphEntity, mappingContext, e.getKey(), associated),
+                                        (Serializable) childId);
                         }
                     }
                 }
@@ -880,45 +898,41 @@ public class Neo4jEntityPersister extends EntityPersister {
         Object obj = entityAccess.getEntity();
         DirtyCheckable dirtyCheckable = null;
         if (obj instanceof DirtyCheckable) {
-            dirtyCheckable = (DirtyCheckable)obj;
+            dirtyCheckable = (DirtyCheckable) obj;
         }
 
         Neo4jSession neo4jSession = getSession();
-        if(graphEntity.hasDynamicAssociations()) {
+        if (graphEntity.hasDynamicAssociations()) {
             MappingContext mappingContext = graphEntity.getMappingContext();
             DynamicAttributes dynamicAttributes = (DynamicAttributes) obj;
             Map<String, Object> attributes = dynamicAttributes.attributes();
             for (Map.Entry<String, Object> entry : attributes.entrySet()) {
                 Object value = entry.getValue();
-                if(value == null) {
+                if (value == null) {
                     String associationName = entry.getKey();
                     Object originalValue = ((DirtyCheckable) obj).getOriginalValue(associationName);
-                    if(originalValue != null && mappingContext.isPersistentEntity(originalValue)) {
+                    if (originalValue != null && mappingContext.isPersistentEntity(originalValue)) {
                         processDynamicAssociationRemoval(graphEntity, entityAccess, neo4jSession, mappingContext, associationName, originalValue);
-                    }
-                    else if(originalValue instanceof Iterable) {
-                        Iterable i = (Iterable) originalValue;
+                    } else if (originalValue instanceof Iterable i) {
                         for (Object o : i) {
                             processDynamicAssociationRemoval(graphEntity, entityAccess, neo4jSession, mappingContext, associationName, o);
                         }
                     }
-                }
-                else if(mappingContext.isPersistentEntity(value)) {
-                    if( ((DirtyCheckable)value).hasChanged() ) {
+                } else if (mappingContext.isPersistentEntity(value)) {
+                    if (((DirtyCheckable) value).hasChanged()) {
                         neo4jSession.persist(value);
                     }
-                }
-                else if(value instanceof Iterable) {
+                } else if (value instanceof Iterable) {
                     boolean collectionChanged = false;
-                    for(Object o : ((Iterable)value)) {
-                        if(mappingContext.isPersistentEntity(o)) {
-                            collectionChanged = ((DirtyCheckable)o).hasChanged();
-                            if(collectionChanged) break;
+                    for (Object o : ((Iterable) value)) {
+                        if (mappingContext.isPersistentEntity(o)) {
+                            collectionChanged = ((DirtyCheckable) o).hasChanged();
+                            if (collectionChanged) break;
                         }
                     }
 
-                    if(collectionChanged) {
-                        neo4jSession.persist((Iterable)value);
+                    if (collectionChanged) {
+                        neo4jSession.persist((Iterable) value);
                     }
                 }
             }
@@ -926,35 +940,33 @@ public class Neo4jEntityPersister extends EntityPersister {
 
         for (PersistentProperty persistentProperty : graphEntity.getAssociations()) {
             String propertyName = persistentProperty.getName();
-            if(persistentProperty instanceof Basic) {
+            if (persistentProperty instanceof Basic) {
                 continue;
             }
 
-            if ((!isUpdate) || ((dirtyCheckable!=null) && dirtyCheckable.hasChanged(propertyName))) {
+            if ((!isUpdate) || ((dirtyCheckable != null) && dirtyCheckable.hasChanged(propertyName))) {
 
                 Object propertyValue = entityAccess.getProperty(propertyName);
 
                 if ((persistentProperty instanceof OneToMany) || (persistentProperty instanceof ManyToMany)) {
                     Association association = (Association) persistentProperty;
 
-                    if (propertyValue!= null) {
+                    if (propertyValue != null) {
 
-                        if(propertyValue instanceof PersistentCollection) {
-                            PersistentCollection pc = (PersistentCollection) propertyValue;
-                            if(!pc.isInitialized()) continue;
+                        if (propertyValue instanceof PersistentCollection pc) {
+                            if (!pc.isInitialized()) continue;
                         }
 
                         if (association.isBidirectional()) {
                             // Populate other side of bidi
-                            for (Object associatedObject: (Iterable)propertyValue) {
+                            for (Object associatedObject : (Iterable) propertyValue) {
                                 EntityAccess assocEntityAccess = createEntityAccess(association.getAssociatedEntity(), associatedObject);
                                 String referencedPropertyName = association.getReferencedPropertyName();
-                                if(association instanceof ManyToMany) {
-                                    ((GormEntity)associatedObject).addTo(referencedPropertyName, obj);
-                                }
-                                else {
+                                if (association instanceof ManyToMany) {
+                                    ((GormEntity) associatedObject).addTo(referencedPropertyName, obj);
+                                } else {
                                     assocEntityAccess.setPropertyNoConversion(referencedPropertyName, obj);
-                                    ((DirtyCheckable)associatedObject).markDirty(referencedPropertyName);
+                                    ((DirtyCheckable) associatedObject).markDirty(referencedPropertyName);
                                 }
                             }
                         }
@@ -979,22 +991,22 @@ public class Neo4jEntityPersister extends EntityPersister {
                                 assocEntityAccess.setProperty(to.getReferencedPropertyName(), obj);
                             } else {
                                 Collection collection = (Collection) assocEntityAccess.getProperty(to.getReferencedPropertyName());
-                                if (collection == null ) {
+                                if (collection == null) {
                                     collection = new ArrayList();
                                     assocEntityAccess.setProperty(to.getReferencedPropertyName(), collection);
                                 }
-                                if(proxyFactory.isInitialized(collection) && !collection.isEmpty()) {
+                                if (proxyFactory.isInitialized(collection) && !collection.isEmpty()) {
                                     boolean found = false;
                                     for (Object o : collection) {
-                                        if(o.equals(obj)) {
-                                            found = true; break;
+                                        if (o.equals(obj)) {
+                                            found = true;
+                                            break;
                                         }
                                     }
                                     if (!found) {
                                         collection.add(obj);
                                     }
-                                }
-                                else {
+                                } else {
                                     collection.add(obj);
                                 }
                             }
@@ -1002,41 +1014,37 @@ public class Neo4jEntityPersister extends EntityPersister {
 
                         persistEntity(to.getAssociatedEntity(), propertyValue);
 
-
                         Serializable thisId = (Serializable) entityAccess.getIdentifier();
                         final EntityAccess associationAccess = neo4jSession.createEntityAccess(to.getAssociatedEntity(), propertyValue);
                         Serializable associationId = (Serializable) associationAccess.getIdentifier();
 
-                        if(graphEntity.isRelationshipEntity() && propertyName.equals(RelationshipPersistentEntity.FROM)) {
+                        if (graphEntity.isRelationshipEntity() && propertyName.equals(RelationshipPersistentEntity.FROM)) {
                             RelationshipPersistentEntity relEntity = (RelationshipPersistentEntity) graphEntity;
                             // reverse the ids to correctly align from and to
                             thisId = associationId;
                             Object toValue = entityAccess.getProperty(RelationshipPersistentEntity.TO);
-                            if(toValue != null) {
+                            if (toValue != null) {
                                 GraphPersistentEntity toEntity = relEntity.getToEntity();
                                 associationId = toEntity.getReflector().getIdentifier(toValue);
-                                if(associationId == null) {
-                                    associationId = persistEntity(toEntity,toValue);
+                                if (associationId == null) {
+                                    associationId = persistEntity(toEntity, toValue);
                                 }
                             }
 
                         }
-                        if(thisId != null && associationId != null) {
+                        if (thisId != null && associationId != null) {
                             boolean reversed = RelationshipUtils.useReversedMappingFor(to);
                             if (reversed) {
                                 Association inverseSide = to.getInverseSide();
-                                if(inverseSide != null) {
+                                if (inverseSide != null) {
                                     neo4jSession.addPendingRelationshipInsert(associationId, inverseSide, thisId);
                                 }
-                            }
-                            else {
+                            } else {
                                 neo4jSession.addPendingRelationshipInsert(thisId, to, associationId);
                             }
                         }
 
-
-                    }
-                    else if(isUpdate) {
+                    } else if (isUpdate) {
                         Object previousValue = dirtyCheckable.getOriginalValue(propertyName);
                         if (previousValue != null) {
                             ToOne to = (ToOne) persistentProperty;
@@ -1047,10 +1055,9 @@ public class Neo4jEntityPersister extends EntityPersister {
                         }
                     }
                 } else {
-                    throw new IllegalArgumentException("GORM for Neo4j doesn't support properties of the given type " + persistentProperty + "(" + persistentProperty.getClass().getSuperclass() +")" );
+                    throw new IllegalArgumentException("GORM for Neo4j doesn't support properties of the given type " + persistentProperty + "(" + persistentProperty.getClass().getSuperclass() + ")");
                 }
             }
-
 
         }
     }
@@ -1060,9 +1067,9 @@ public class Neo4jEntityPersister extends EntityPersister {
         if (associated != null) {
 
             Object childId = getSession().getEntityPersister(originalValue).getObjectIdentifier(originalValue);
-            if(childId != null) {
+            if (childId != null) {
                 Serializable parentId = (Serializable) entityAccess.getIdentifier();
-                neo4jSession.addPendingRelationshipDelete(parentId,new DynamicToOneAssociation(graphEntity, mappingContext, associationName, associated), (Serializable)childId );
+                neo4jSession.addPendingRelationshipDelete(parentId, new DynamicToOneAssociation(graphEntity, mappingContext, associationName, associated), (Serializable) childId);
             }
         }
     }
@@ -1070,7 +1077,6 @@ public class Neo4jEntityPersister extends EntityPersister {
     @Override
     protected void deleteEntity(final PersistentEntity pe, final Object obj) {
         final EntityAccess entityAccess = createEntityAccess(pe, obj);
-
 
         final Neo4jSession session = getSession();
         session.clear(obj);
@@ -1097,8 +1103,6 @@ public class Neo4jEntityPersister extends EntityPersister {
         };
     }
 
-
-
     @Override
     protected void deleteEntities(PersistentEntity pe, @SuppressWarnings("rawtypes") Iterable objects) {
         for (Object object : objects) {
@@ -1114,15 +1118,5 @@ public class Neo4jEntityPersister extends EntityPersister {
     @Override
     public Serializable refresh(Object o) {
         throw new UnsupportedOperationException();
-    }
-
-    public static long countUpdates(Result execute) {
-        ResultSummary resultSummary = execute.consume();
-        SummaryCounters counters = resultSummary.counters();
-        if (counters.containsUpdates()) {
-            return counters.nodesCreated() + counters.nodesDeleted() + counters.propertiesSet() + counters.relationshipsCreated() + counters.relationshipsDeleted();
-        } else {
-            return 0;
-        }
     }
 }

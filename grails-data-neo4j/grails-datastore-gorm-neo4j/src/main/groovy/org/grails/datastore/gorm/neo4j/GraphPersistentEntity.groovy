@@ -19,9 +19,15 @@
 
 package org.grails.datastore.gorm.neo4j
 
-import grails.neo4j.Relationship
+import java.beans.Introspector
+
 import groovy.transform.CompileStatic
-import org.codehaus.groovy.runtime.HandleMetaClass
+
+import org.neo4j.driver.types.Entity
+
+import org.springframework.util.ClassUtils
+
+import grails.neo4j.Relationship
 import org.grails.datastore.gorm.neo4j.mapping.config.NodeConfig
 import org.grails.datastore.mapping.config.Property
 import org.grails.datastore.mapping.model.AbstractPersistentEntity
@@ -34,11 +40,9 @@ import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.config.GormMappingConfigurationStrategy
 import org.grails.datastore.mapping.model.config.GormProperties
 import org.grails.datastore.mapping.model.types.Association
-import org.neo4j.driver.types.Entity
-import org.springframework.util.ClassUtils
 
-import java.beans.Introspector
-import static org.grails.datastore.gorm.neo4j.RelationshipPersistentEntity.*
+import static org.grails.datastore.gorm.neo4j.RelationshipPersistentEntity.FROM
+import static org.grails.datastore.gorm.neo4j.RelationshipPersistentEntity.TO
 
 
 /**
@@ -78,10 +82,9 @@ class GraphPersistentEntity extends AbstractPersistentEntity<NodeConfig> {
 
     GraphPersistentEntity(Class javaClass, MappingContext context, boolean external) {
         super(javaClass, context)
-        if(isExternal()) {
+        if (isExternal()) {
             this.mappedForm = null
-        }
-        else {
+        } else {
             this.mappedForm = (NodeConfig) context.getMappingFactory().createMappedForm(this)
         }
         this.relationshipEntity = this instanceof RelationshipPersistentEntity
@@ -96,20 +99,20 @@ class GraphPersistentEntity extends AbstractPersistentEntity<NodeConfig> {
 
     @Override
     void initialize() {
-        if(!isInitialized()) {
+        if (!isInitialized()) {
 
             super.initialize()
 
-            if(!isExternal()) {
+            if (!isExternal()) {
                 PersistentProperty identity = getIdentity()
-                if(identity != null) {
+                if (identity != null) {
                     String generatorType = ((Property) identity.getMapping().getMappedForm()).getGenerator()
                     this.idGenerator = createIdGenerator(generatorType)
-                    if(identity.name != GormProperties.IDENTITY) {
+                    if (identity.name != GormProperties.IDENTITY) {
                         Class clazz = getJavaClass()
                         MetaClass metaClass = clazz.getMetaClass()
                         MetaProperty idProp = metaClass.getMetaProperty(GormProperties.IDENTITY)
-                        if(idProp != null && Long.class.isAssignableFrom(idProp.getType())) {
+                        if (idProp != null && Long.class.isAssignableFrom(idProp.getType())) {
                             MappingFactory mappingFactory = mappingContext.mappingFactory
                             nodeId = mappingFactory.createSimple(this, context, mappingFactory.createPropertyDescriptor(javaClass, idProp))
                             propertiesByName.put(GormProperties.IDENTITY, nodeId)
@@ -129,7 +132,7 @@ class GraphPersistentEntity extends AbstractPersistentEntity<NodeConfig> {
             IdGenerator.Type type = generatorType == null ? IdGenerator.Type.NATIVE : IdGenerator.Type.valueOf(generatorType.toUpperCase())
             idGeneratorType = type
 
-            switch(type) {
+            switch (type) {
                 case IdGenerator.Type.NATIVE:
                     // for the native generator use null to indicate that generation requires an insert
                     nativeId = true
@@ -139,10 +142,10 @@ class GraphPersistentEntity extends AbstractPersistentEntity<NodeConfig> {
                     ((Property) getIdentity().getMapping().getMappedForm()).setUnique(true)
                     return null
                 case IdGenerator.Type.SNOWFLAKE:
-                    return ((Neo4jMappingContext)mappingContext).getSnowflakeIdGenerator()
+                    return ((Neo4jMappingContext) mappingContext).getSnowflakeIdGenerator()
                 default:
                     def generator = ((Neo4jMappingContext) mappingContext).getIdGenerator()
-                    if(generator == null) {
+                    if (generator == null) {
                         nativeId = true
                     }
                     return generator
@@ -150,16 +153,15 @@ class GraphPersistentEntity extends AbstractPersistentEntity<NodeConfig> {
         } catch (IllegalArgumentException e) {
             try {
                 def generatorClass = ClassUtils.forName(generatorType)
-                if(IdGenerator.isAssignableFrom(generatorClass)) {
+                if (IdGenerator.isAssignableFrom(generatorClass)) {
                     idGeneratorType = IdGenerator.Type.CUSTOM
-                    return (IdGenerator)generatorClass.newInstance()
-                }
-                else {
+                    return (IdGenerator) generatorClass.newInstance()
+                } else {
                     throw new DatastoreConfigurationException("Entity $javaClass defines an invalid id generator [$generatorClass]. The class must implement the IdGenerator interface")
                 }
             } catch (Throwable e2) {
                 def types = IdGenerator.Type.values().collect() { Enum en -> "'${en.name()}'" }.join(',')
-                throw new DatastoreConfigurationException("Entity $javaClass defines an invalid id generator [$generatorType]. Should be one of ${types} or a class that implements the IdGenerator interface",e2 )
+                throw new DatastoreConfigurationException("Entity $javaClass defines an invalid id generator [$generatorType]. Should be one of ${types} or a class that implements the IdGenerator interface", e2)
             }
         }
     }
@@ -201,7 +203,7 @@ class GraphPersistentEntity extends AbstractPersistentEntity<NodeConfig> {
      * @return The batch create statement
      */
     String getBatchCreateStatement() {
-        if(this.batchCreateStatement == null) {
+        if (this.batchCreateStatement == null) {
             this.batchCreateStatement = formatBatchCreate("\$${batchId}")
         }
         return batchCreateStatement
@@ -269,13 +271,11 @@ class GraphPersistentEntity extends AbstractPersistentEntity<NodeConfig> {
      * @return The formatted id
      */
     String formatProperty(String variable, String property) {
-        if(property == identity.name) {
+        if (property == identity.name) {
             return formatId(variable)
-        }
-        else if(nodeId != null && property == nodeId.name) {
+        } else if (nodeId != null && property == nodeId.name) {
             return "ID($variable)"
-        }
-        else {
+        } else {
             return "${variable}.${property}"
         }
     }
@@ -316,30 +316,29 @@ class GraphPersistentEntity extends AbstractPersistentEntity<NodeConfig> {
      * @return The match for the ID
      */
     String formatMatchAndUpdate(String variable, Map<String, Object> props) {
-        StringBuilder builder = new StringBuilder( formatMatchId(variable) )
+        StringBuilder builder = new StringBuilder(formatMatchId(variable))
         Class clazz = Long
-        if(isVersioned() && hasProperty(GormProperties.VERSION, clazz)) {
+        if (isVersioned() && hasProperty(GormProperties.VERSION, clazz)) {
             builder.append(" AND ${variable}.version=\$version")
         }
         builder.append(" SET ").append(variable).append(" +=\$props")
         Set keysToRemove = []
-        for(key in props.keySet()) {
+        for (key in props.keySet()) {
             Object v = props.get(key)
-            if(v == null) {
+            if (v == null) {
                 builder.append(", ${variable}.").append(key).append(" = NULL")
-            }
-            else if(v instanceof Collection && ((Collection)v).isEmpty()) {
+            } else if (v instanceof Collection && ((Collection) v).isEmpty()) {
                 keysToRemove.add(key)
             }
         }
-        if(!keysToRemove.isEmpty()) {
+        if (!keysToRemove.isEmpty()) {
             builder.append(" REMOVE ")
             def i = keysToRemove.iterator()
-            while(i.hasNext()) {
+            while (i.hasNext()) {
                 String key = i.next()
                 builder.append(variable).append(".").append(key)
                 props.remove(key)
-                if(i.hasNext()) {
+                if (i.hasNext()) {
                     builder.append(", ")
                 }
             }
@@ -397,8 +396,8 @@ ${formatAssociationMerge(association, parentVariable, variableId)})"""
      * @return The match
      */
     String formatAssociationMatch(Association association, String var = CypherBuilder.REL_VAR, String start = FROM, String end = TO) {
-        GraphPersistentEntity parent = (GraphPersistentEntity)association.owner
-        GraphPersistentEntity child = (GraphPersistentEntity)association.associatedEntity
+        GraphPersistentEntity parent = (GraphPersistentEntity) association.owner
+        GraphPersistentEntity child = (GraphPersistentEntity) association.associatedEntity
 
         String associationMatch = calculateAssociationMatch(parent, child, association, var)
         return "MATCH ${parent.formatNode(start)}${associationMatch}${child.formatNode(end)}"
@@ -427,17 +426,17 @@ ${formatAssociationMerge(association, parentVariable, variableId)})"""
      * @return The match
      */
     String formatAssociationPatternFromExisting(Association association, String var = CypherBuilder.REL_VAR, String start = FROM, String end = TO) {
-        GraphPersistentEntity parent = (GraphPersistentEntity)association.owner
-        GraphPersistentEntity child = (GraphPersistentEntity)association.associatedEntity
-        String associationMatch = calculateAssociationMatch(parent,child, association, var)
-        if(child.isRelationshipEntity()) {
-            RelationshipPersistentEntity relEntity = (RelationshipPersistentEntity)child
+        GraphPersistentEntity parent = (GraphPersistentEntity) association.owner
+        GraphPersistentEntity child = (GraphPersistentEntity) association.associatedEntity
+        String associationMatch = calculateAssociationMatch(parent, child, association, var)
+        if (child.isRelationshipEntity()) {
+            RelationshipPersistentEntity relEntity = (RelationshipPersistentEntity) child
             child = (GraphPersistentEntity) (relEntity.from.associatedEntity == parent ? relEntity.to.associatedEntity : relEntity.from.associatedEntity)
         }
         return "(${start})${associationMatch}${child.formatNode(end)}"
     }
 
-    protected String calculateAssociationMatch(GraphPersistentEntity parent, GraphPersistentEntity child,Association association, String var) {
+    protected String calculateAssociationMatch(GraphPersistentEntity parent, GraphPersistentEntity child, Association association, String var) {
         String associationMatch
         if (parent.isRelationshipEntity()) {
             if (association.name == FROM || association.name == TO) {
@@ -447,12 +446,10 @@ ${formatAssociationMerge(association, parentVariable, variableId)})"""
                 throw new IllegalStateException("Relationship entities cannot have associations")
             }
 
-        }
-        else if(child.isRelationshipEntity()) {
+        } else if (child.isRelationshipEntity()) {
             RelationshipPersistentEntity relEntity = (RelationshipPersistentEntity) child
             associationMatch = RelationshipUtils.matchForRelationshipEntity(association, relEntity, var)
-        }
-        else {
+        } else {
             associationMatch = RelationshipUtils.matchForAssociation(association, var)
         }
         return associationMatch
@@ -467,31 +464,28 @@ ${formatAssociationMerge(association, parentVariable, variableId)})"""
      */
     String formatAssociationDelete(Association association, Object entity = null) {
 
-        GraphPersistentEntity parent = (GraphPersistentEntity)association.owner
-        GraphPersistentEntity child = (GraphPersistentEntity)association.associatedEntity
+        GraphPersistentEntity parent = (GraphPersistentEntity) association.owner
+        GraphPersistentEntity child = (GraphPersistentEntity) association.associatedEntity
         String associationMatch
-        if(parent.isRelationshipEntity() && entity instanceof Relationship) {
-            if(association.name == FROM) {
-                RelationshipPersistentEntity relEntity = (RelationshipPersistentEntity)parent
+        if (parent.isRelationshipEntity() && entity instanceof Relationship) {
+            if (association.name == FROM) {
+                RelationshipPersistentEntity relEntity = (RelationshipPersistentEntity) parent
                 child = relEntity.getToEntity()
                 parent = relEntity.getFromEntity()
                 associationMatch = RelationshipUtils.toMatch(association, (Relationship) entity)
-            }
-            else {
+            } else {
                 return null
             }
 
-        }
-        else {
+        } else {
             associationMatch = RelationshipUtils.matchForAssociation(association, CypherBuilder.REL_VAR)
         }
 
-        if(RelationshipUtils.useReversedMappingFor(association)) {
+        if (RelationshipUtils.useReversedMappingFor(association)) {
             return """MATCH ${parent.formatNode(FROM)}${associationMatch}${child.formatNode(TO)}
 WHERE ${parent.formatId(FROM)} = {${GormProperties.IDENTITY}}
 DELETE r"""
-        }
-        else {
+        } else {
             return """MATCH ${parent.formatNode(FROM)}${associationMatch}${child.formatNode(TO)}
 WHERE ${parent.formatId(FROM)} = {${CypherBuilder.START}} AND ${parent.formatId(TO)} IN {${CypherBuilder.END}}
 DELETE r"""
@@ -527,17 +521,16 @@ DELETE r"""
      * @return the abels
      */
     Collection<String> getLabels(Object domainInstance) {
-        if(hasDynamicLabels) {
+        if (hasDynamicLabels) {
             Collection<String> labels = []
-            for(obj in labelObjects) {
+            for (obj in labelObjects) {
                 String label = getLabelFor(obj, domainInstance)
-                if(label) {
+                if (label) {
                     labels.add(label)
                 }
             }
             return labels
-        }
-        else {
+        } else {
             return staticLabels
         }
     }
@@ -554,10 +547,9 @@ DELETE r"""
      * @return
      */
     String getLabelsAsString(Object domainInstance) {
-        if(hasDynamicLabels) {
+        if (hasDynamicLabels) {
             return ":${getLabels(domainInstance).join(LABEL_SEPARATOR)}"
-        }
-        else {
+        } else {
             return getLabelsAsString()
         }
     }
@@ -604,7 +596,7 @@ DELETE r"""
     }
 
     protected Collection<Object> establishLabelObjects() {
-        Object labels = mappedForm.getLabels();
+        Object labels = mappedForm.getLabels()
 
         List objs = labels instanceof Object[] ? labels as List : [labels]
 
@@ -620,9 +612,9 @@ DELETE r"""
             case null:
                 return discriminator
             case CharSequence:
-                return ((CharSequence)obj).toString()
+                return ((CharSequence) obj).toString()
             case Closure:
-                Closure closure = (Closure)obj
+                Closure closure = (Closure) obj
                 Object result = null
                 switch (closure.maximumNumberOfParameters) {
                     case 1:
@@ -640,7 +632,7 @@ DELETE r"""
         }
     }
 
-    private void appendRecursive(StringBuilder sb, domainInstance){
+    private void appendRecursive(StringBuilder sb, domainInstance) {
         sb.append(getLabelsAsString(domainInstance))
 
         GraphPersistentEntity parentEntity = (GraphPersistentEntity) getParentEntity()

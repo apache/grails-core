@@ -19,6 +19,7 @@
 package org.grails.datastore.gorm.neo4j
 
 import groovy.transform.CompileStatic
+
 import org.grails.datastore.gorm.neo4j.mapping.config.NodeConfig
 import org.grails.datastore.mapping.model.AbstractClassMapping
 import org.grails.datastore.mapping.model.MappingContext
@@ -41,6 +42,6 @@ class GraphClassMapping extends AbstractClassMapping<NodeConfig> {
     NodeConfig getMappedForm() {
         // Explicit field access (.@) - entity.mappedForm would resolve to the getter,
         // which recurses back here via PersistentEntity#getMappedForm()'s default method.
-        ((GraphPersistentEntity)entity).@mappedForm
+        ((GraphPersistentEntity) entity).@mappedForm
     }
 }

@@ -29,7 +29,7 @@ import org.grails.datastore.mapping.model.types.ToOne;
  * @author Graeme Rocher
  * @since 5.0
  */
-public class DynamicToOneAssociation extends ToOne implements DynamicAssociation{
+public class DynamicToOneAssociation extends ToOne implements DynamicAssociation {
 
     public DynamicToOneAssociation(PersistentEntity owner, MappingContext context, String name, PersistentEntity associatedType) {
         super(owner, context, name, associatedType.getJavaClass());
@@ -44,8 +44,7 @@ public class DynamicToOneAssociation extends ToOne implements DynamicAssociation
 
     @Override
     public boolean equals(Object obj) {
-        if(obj instanceof DynamicToOneAssociation) {
-            DynamicToOneAssociation other = (DynamicToOneAssociation) obj;
+        if (obj instanceof DynamicToOneAssociation other) {
             return other.getName().equals(name) && other.getOwner().getJavaClass().equals(getOwner().getJavaClass());
         }
         return false;

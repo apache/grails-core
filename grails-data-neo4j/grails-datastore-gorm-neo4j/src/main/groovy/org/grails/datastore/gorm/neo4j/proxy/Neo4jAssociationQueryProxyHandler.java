@@ -18,12 +18,12 @@
  */
 package org.grails.datastore.gorm.neo4j.proxy;
 
+import java.io.Serializable;
+
 import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.engine.AssociationQueryExecutor;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.proxy.AssociationQueryProxyHandler;
-
-import java.io.Serializable;
 
 public class Neo4jAssociationQueryProxyHandler extends AssociationQueryProxyHandler {
 
@@ -39,7 +39,6 @@ public class Neo4jAssociationQueryProxyHandler extends AssociationQueryProxyHand
             return super.invokeEntityProxyMethods(self, methodName, args);
         }
     }
-
 
     @Override
     protected Object getPropertyBeforeResolving(Object self, String property) {

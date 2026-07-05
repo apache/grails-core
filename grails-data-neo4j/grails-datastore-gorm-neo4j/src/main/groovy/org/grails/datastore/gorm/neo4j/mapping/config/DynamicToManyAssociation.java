@@ -29,7 +29,7 @@ import org.grails.datastore.mapping.model.types.ToMany;
  * @author Graeme Rocher
  * @since 5.0
  */
-public class DynamicToManyAssociation extends ToMany implements DynamicAssociation{
+public class DynamicToManyAssociation extends ToMany implements DynamicAssociation {
 
     public DynamicToManyAssociation(PersistentEntity owner, MappingContext context, String name, PersistentEntity associatedType) {
         super(owner, context, name, associatedType.getJavaClass());

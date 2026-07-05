@@ -1,4 +1,3 @@
-
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one
  *  or more contributor license agreements.  See the NOTICE file
@@ -20,6 +19,7 @@
 package org.grails.datastore.gorm.neo4j.collection
 
 import groovy.transform.CompileStatic
+
 import org.grails.datastore.gorm.neo4j.Neo4jSession
 import org.grails.datastore.gorm.neo4j.engine.Neo4jAssociationQueryExecutor
 import org.grails.datastore.mapping.collection.PersistentList
@@ -27,6 +27,7 @@ import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import org.grails.datastore.mapping.engine.EntityAccess
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.ToMany
+
 /**
  * Neo4j version of the {@link PersistentList} class
  *
@@ -38,7 +39,8 @@ class Neo4jPersistentList extends PersistentList {
 
     protected transient final EntityAccess parentAccess
     protected transient final Association association
-    protected transient final @Delegate GraphAdapter graphAdapter
+    protected transient final @Delegate
+    GraphAdapter graphAdapter
 
     Neo4jPersistentList(Collection keys, Neo4jSession session, EntityAccess parentAccess, ToMany association) {
         super(keys, association.associatedEntity.javaClass, session)
@@ -71,7 +73,7 @@ class Neo4jPersistentList extends PersistentList {
     @Override
     boolean add(Object o) {
         def added = super.add(o)
-        if(added) {
+        if (added) {
             adaptGraphUponAdd(o, currentlyInitializing())
         }
 
@@ -81,8 +83,8 @@ class Neo4jPersistentList extends PersistentList {
     @Override
     boolean removeAll(Collection c) {
         def removed = super.removeAll(c)
-        if(removed) {
-            for(o in c) {
+        if (removed) {
+            for (o in c) {
                 adaptGraphUponRemove(o, currentlyInitializing())
             }
         }
@@ -92,7 +94,7 @@ class Neo4jPersistentList extends PersistentList {
     @Override
     boolean remove(Object o) {
         def removed = super.remove(o)
-        if(removed) {
+        if (removed) {
             adaptGraphUponRemove(o, currentlyInitializing())
         }
         return removed

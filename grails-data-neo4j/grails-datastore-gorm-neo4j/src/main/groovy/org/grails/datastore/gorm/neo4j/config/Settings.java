@@ -25,6 +25,7 @@ package org.grails.datastore.gorm.neo4j.config;
  * @since 6.0
  */
 public interface Settings extends org.grails.datastore.mapping.config.Settings {
+
     /**
      * The default configuration prefix
      */
@@ -57,7 +58,7 @@ public interface Settings extends org.grails.datastore.mapping.config.Settings {
     /**
      * The Neo4j embedded data location
      */
-    String SETTING_NEO4J_LOCATION = PREFIX+ ".location";
+    String SETTING_NEO4J_LOCATION = PREFIX + ".location";
 
     /**
      * The connection type (either embedded or remote)

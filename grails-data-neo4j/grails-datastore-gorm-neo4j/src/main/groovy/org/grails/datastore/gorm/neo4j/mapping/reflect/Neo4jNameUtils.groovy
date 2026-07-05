@@ -19,9 +19,9 @@
 package org.grails.datastore.gorm.neo4j.mapping.reflect
 
 import groovy.transform.CompileStatic
+
 import org.grails.datastore.gorm.neo4j.parsers.PlingStemmer
 import org.grails.datastore.mapping.reflect.NameUtils
-
 
 /**
  * Utilities for Neo4j naming conventions
@@ -36,7 +36,7 @@ class Neo4jNameUtils extends NameUtils {
      * @param word The word
      * @return Whether the given word is plural
      */
-    static boolean isPlural( String word ) {
+    static boolean isPlural(String word) {
         PlingStemmer.isPlural(word)
     }
 
@@ -44,7 +44,7 @@ class Neo4jNameUtils extends NameUtils {
      * @param word The word
      * @return Whether the given word is singular
      */
-    static boolean isSingular( String word ) {
-        PlingStemmer.isSingular( word )
+    static boolean isSingular(String word) {
+        PlingStemmer.isSingular(word)
     }
 }

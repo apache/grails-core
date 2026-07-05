@@ -21,6 +21,7 @@ package org.grails.datastore.gorm.neo4j.connections
 import groovy.transform.AutoClone
 import groovy.transform.builder.Builder
 import groovy.transform.builder.SimpleStrategy
+
 import org.grails.datastore.gorm.neo4j.config.Neo4jDriverConfigBuilder
 import org.grails.datastore.gorm.neo4j.config.Settings
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
@@ -99,6 +100,7 @@ class Neo4jConnectionSourceSettings extends ConnectionSourceSettings implements 
     }
 
     static enum ConnectionType {
+
         remote, embedded
     }
 }
