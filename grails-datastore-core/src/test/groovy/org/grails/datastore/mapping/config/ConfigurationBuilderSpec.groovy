@@ -20,7 +20,10 @@
 package org.grails.datastore.mapping.config
 
 import org.grails.datastore.mapping.core.DatastoreUtils
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
+import org.springframework.core.convert.ConverterNotFoundException
+import org.springframework.core.convert.TypeDescriptor
 import org.grails.datastore.mapping.multitenancy.resolvers.FixedTenantResolver
 import org.springframework.core.env.PropertyResolver
 import org.springframework.util.ReflectionUtils
@@ -111,6 +114,68 @@ class ConfigurationBuilderSpec extends Specification {
         config.idleTimeBeforeConnectionTest == 600000
     }
 
+    void "Test nested map conversion does not default malformed configuration"() {
+
+        given: "A malformed nested configuration map"
+        def config = DatastoreUtils.createPropertyResolver(
+                (Settings.PREFIX + ".strictNested"): [value: 'bad']
+        )
+
+        when: "The configuration is built"
+        new StrictNestedConfigurationBuilder(config).build()
+
+        then: "The malformed nested value is rejected"
+        def e = thrown(ConfigurationException)
+        e.message.contains('strictNested')
+    }
+
+    void "Test nested map conversion does not use fallback for malformed configuration"() {
+
+        given: "A fallback and a malformed nested configuration map"
+        def config = DatastoreUtils.createPropertyResolver(
+                (Settings.PREFIX + ".strictNested"): [value: 'bad']
+        )
+        def fallback = new StrictNestedConfig(strictNested: new StrictNestedSettings(value: 'fallback'))
+
+        when: "The configuration is built"
+        new StrictNestedConfigurationBuilder(config, fallback).build()
+
+        then: "The malformed nested value is rejected"
+        def e = thrown(ConfigurationException)
+        e.message.contains('strictNested')
+    }
+
+    void "Test nested map conversion populates simple configuration types"() {
+
+        given: "A nested configuration map"
+        def config = DatastoreUtils.createPropertyResolver(
+                (Settings.PREFIX + ".strictNested"): [value: 'ok']
+        )
+
+        when: "The configuration is built"
+        StrictNestedConfig configuration = new StrictNestedConfigurationBuilder(config).build()
+
+        then: "The nested object is populated"
+        configuration.strictNested.value == 'ok'
+    }
+
+    void "Test nested map conversion preserves empty map defaults"() {
+
+        given: "An empty nested configuration map that Spring cannot convert directly"
+        PropertyResolver config = Mock()
+        config.getProperty(Settings.PREFIX + ".strictNested", StrictNestedSettings, null) >> {
+            throw new ConverterNotFoundException(TypeDescriptor.valueOf(Map), TypeDescriptor.valueOf(StrictNestedSettings))
+        }
+        config.getProperty(Settings.PREFIX + ".strictNested", Object) >> [:]
+
+        when: "The configuration is built"
+        StrictNestedConfig configuration = new StrictNestedConfigurationBuilder(config).build()
+
+        then: "The nested object is created with defaults"
+        configuration.strictNested != null
+        configuration.strictNested.value == null
+    }
+
     static class TestConfigurationBuilder extends ConfigurationBuilder<ConnectionSourceSettings, ConnectionSourceSettings> {
 
         TestConfigurationBuilder(PropertyResolver propertyResolver) {
@@ -129,6 +194,49 @@ class ConfigurationBuilderSpec extends Specification {
         @Override
         protected ConnectionSourceSettings toConfiguration(ConnectionSourceSettings builder) {
             return builder
+        }
+    }
+
+    static class StrictNestedConfigurationBuilder extends ConfigurationBuilder<StrictNestedConfig, StrictNestedConfig> {
+
+        StrictNestedConfigurationBuilder(PropertyResolver propertyResolver) {
+            super(propertyResolver, Settings.PREFIX)
+        }
+
+        StrictNestedConfigurationBuilder(PropertyResolver propertyResolver, StrictNestedConfig fallback) {
+            super(propertyResolver, Settings.PREFIX, fallback)
+        }
+
+        @Override
+        protected StrictNestedConfig createBuilder() {
+            return new StrictNestedConfig()
+        }
+
+        @Override
+        protected StrictNestedConfig toConfiguration(StrictNestedConfig builder) {
+            return builder
+        }
+    }
+
+    static class StrictNestedConfig {
+
+        StrictNestedSettings strictNested
+
+        StrictNestedConfig strictNested(StrictNestedSettings strictNested) {
+            this.strictNested = strictNested
+            return this
+        }
+    }
+
+    static class StrictNestedSettings {
+
+        String value
+
+        void setValue(String value) {
+            if (value == 'bad') {
+                throw new IllegalArgumentException('bad value')
+            }
+            this.value = value
         }
     }
 

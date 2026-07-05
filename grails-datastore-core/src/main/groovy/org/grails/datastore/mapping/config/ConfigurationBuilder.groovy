@@ -495,39 +495,39 @@ abstract class ConfigurationBuilder<B, C> {
     private Object handleConverterNotFoundException(ConverterNotFoundException e, Class argType, String propertyPathForArg, Object fallBackValue) {
         // Try to get the raw value as Object to avoid Spring 7 deep conversion,
         // then manually populate the target type from the Map
+        Throwable populationFailure = null
         try {
             // Use Object.class to prevent Spring's MapToMapConverter from deep-converting values
             def rawValue = propertyResolver.getProperty(propertyPathForArg, Object)
             if (rawValue instanceof Map) {
                 Map mapValue = (Map) rawValue
-                if (!mapValue.isEmpty()) {
-                    try {
-                        def instance = argType.getDeclaredConstructor().newInstance()
-                        mapValue.each { key, val ->
-                            if (instance.hasProperty(key as String)) {
-                                instance[key as String] = val
-                            }
+                if (mapValue.isEmpty()) {
+                    return argType.getDeclaredConstructor().newInstance()
+                }
+                try {
+                    def instance = argType.getDeclaredConstructor().newInstance()
+                    mapValue.each { key, val ->
+                        if (instance.hasProperty(key as String)) {
+                            instance[key as String] = val
                         }
-                        return instance
-                    } catch (Throwable e2) {
-                        log.debug('Failed to instantiate {} from Map: {}', argType, e2.message)
                     }
+                    return instance
+                } catch (Throwable e2) {
+                    log.debug('Failed to instantiate {} from Map: {}', argType, e2.message)
+                    populationFailure = e2
                 }
             }
         } catch (Throwable e3) {
             log.debug('Failed to get raw value for {}: {}', propertyPathForArg, e3.message)
         }
 
+        if (populationFailure != null) {
+            throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $populationFailure.message", populationFailure)
+        }
+
         // If we have a fallback value, return it
         if (fallBackValue != null) {
             return fallBackValue
-        }
-
-        // Try to instantiate the type with default constructor
-        try {
-            return argType.getDeclaredConstructor().newInstance()
-        } catch (Throwable e4) {
-            log.debug('Failed to instantiate {} with default constructor: {}', argType, e4.message)
         }
 
         if (e != null) {
