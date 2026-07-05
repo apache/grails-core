@@ -1,0 +1,97 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+plugins {
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.buildsrc.compile'
+}
+
+version = projectVersion
+group = 'examples'
+
+apply plugin: 'org.apache.grails.gradle.grails-web'
+apply plugin: 'cloud.wondrify.asset-pipeline'
+
+dependencies {
+
+    implementation platform(project(':grails-bom'))
+
+    implementation 'org.apache.grails:grails-data-neo4j'
+    implementation 'org.apache.grails:grails-core'
+    implementation 'org.apache.grails:grails-rest-transforms'
+    implementation 'org.apache.grails:grails-web-boot'
+    implementation 'org.apache.grails:grails-gsp'
+    implementation 'org.apache.grails:grails-sitemesh3'
+
+    testAndDevelopmentOnly platform(project(':grails-bom'))
+    testAndDevelopmentOnly 'org.webjars.npm:jquery'
+
+    runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
+    runtimeOnly 'org.fusesource.jansi:jansi'
+    runtimeOnly 'org.apache.grails:grails-scaffolding'
+    runtimeOnly 'org.apache.grails:grails-fields'
+    runtimeOnly 'org.apache.grails:grails-url-mappings'
+    runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'
+    runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
+    runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
+
+    testImplementation 'org.apache.grails.testing:grails-testing-support-core'
+    testImplementation 'org.apache.grails:grails-testing-support-datamapping'
+    testImplementation 'org.apache.grails:grails-testing-support-web'
+    testImplementation 'org.spockframework:spock-core'
+
+    testRuntimeOnly "org.neo4j.test:neo4j-harness:$neo4jVersion"
+
+    integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
+}
+
+// The Spring Boot BOM (pulled in transitively via grails-bom) force-upgrades Jetty to a 12.x
+// platform version and neo4j-java-driver to 6.x, both binary-incompatible with the embedded
+// Neo4j 3.5.x test harness this app's tests use. See
+// grails-data-neo4j/grails-datastore-gorm-neo4j/build.gradle for the full explanation.
+def neo4jHarnessJettyVersion = '9.4.43.v20210629'
+[configurations.testCompileClasspath, configurations.testRuntimeClasspath,
+ configurations.integrationTestCompileClasspath, configurations.integrationTestRuntimeClasspath].each {
+    it.resolutionStrategy {
+        force "org.eclipse.jetty:jetty-server:$neo4jHarnessJettyVersion",
+                "org.eclipse.jetty:jetty-servlet:$neo4jHarnessJettyVersion",
+                "org.eclipse.jetty:jetty-webapp:$neo4jHarnessJettyVersion",
+                "org.eclipse.jetty:jetty-security:$neo4jHarnessJettyVersion",
+                "org.eclipse.jetty:jetty-http:$neo4jHarnessJettyVersion",
+                "org.eclipse.jetty:jetty-io:$neo4jHarnessJettyVersion",
+                "org.eclipse.jetty:jetty-util:$neo4jHarnessJettyVersion",
+                "org.eclipse.jetty:jetty-util-ajax:$neo4jHarnessJettyVersion",
+                "org.eclipse.jetty:jetty-xml:$neo4jHarnessJettyVersion"
+    }
+}
+configurations.all {
+    resolutionStrategy {
+        force "org.neo4j.driver:neo4j-java-driver:$neo4jDriverVersion"
+    }
+}
+
+tasks.withType(Test) {
+    jvmArgs += ['--add-opens', 'java.base/java.lang=ALL-UNNAMED', '--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED']
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-webjar-asset-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
+}
