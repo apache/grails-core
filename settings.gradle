@@ -408,6 +408,10 @@ project(':grails-data-mongodb-gson-templates').projectDir = new File(settingsDir
 include 'grails-datastore-gorm-neo4j'
 project(':grails-datastore-gorm-neo4j').projectDir = new File(settingsDir, 'grails-data-neo4j/grails-datastore-gorm-neo4j')
 
+// documentation
+include 'grails-data-neo4j-docs'
+project(':grails-data-neo4j-docs').projectDir = new File(settingsDir, 'grails-data-neo4j/docs')
+
 // boot plugin
 include 'gorm-neo4j-spring-boot'
 project(':gorm-neo4j-spring-boot').projectDir = new File(settingsDir, 'grails-data-neo4j/boot-plugin')
@@ -447,6 +451,16 @@ project(':grails-test-examples-mongodb-test-data-service').projectDir = new File
 
 include 'grails-test-examples-mongodb-gson-templates'
 project(':grails-test-examples-mongodb-gson-templates').projectDir = new File(settingsDir, 'grails-test-examples/mongodb/gson-templates')
+
+// functional tests - neo4j examples
+include 'grails-test-examples-neo4j-grails3-neo4j'
+project(':grails-test-examples-neo4j-grails3-neo4j').projectDir = new File(settingsDir, 'grails-test-examples/neo4j/grails3-neo4j')
+
+include 'grails-test-examples-neo4j-grails3-neo4j-hibernate'
+project(':grails-test-examples-neo4j-grails3-neo4j-hibernate').projectDir = new File(settingsDir, 'grails-test-examples/neo4j/grails3-neo4j-hibernate')
+
+include 'grails-test-examples-neo4j-spring-boot'
+project(':grails-test-examples-neo4j-spring-boot').projectDir = new File(settingsDir, 'grails-test-examples/neo4j/spring-boot')
 
 // functional tests - graphql examples
 include 'grails-test-examples-graphql-grails-test-app'
