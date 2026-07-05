@@ -21,6 +21,7 @@ package org.grails.plugins.codecs
 import java.nio.charset.StandardCharsets
 
 import org.codehaus.groovy.runtime.NullObject
+import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
 
 import groovy.transform.CompileStatic
 
@@ -47,7 +48,7 @@ class HexCodecExtensionMethods {
     }
 
     static Object decodeHex(Object theTarget) {
-        if (theTarget == null || theTarget instanceof NullObject || theTarget.toString().length() == 0) return null
+        if (theTarget == null || theTarget instanceof NullObject || !DefaultTypeTransformation.castToBoolean(theTarget)) return null
 
         String str = theTarget.toString().toLowerCase()
         if (str.size() % 2 != 0) {

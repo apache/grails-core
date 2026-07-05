@@ -18,6 +18,7 @@
  */
 package org.grails.web.codecs
 
+import org.grails.plugins.codecs.HexCodecExtensionMethods
 import org.junit.jupiter.api.Test
 
 import static org.junit.jupiter.api.Assertions.assertEquals
@@ -48,6 +49,13 @@ class HexCodecTests {
         assertIterableEquals(new Byte[] {65, 32, 66, 32, 67, 32, 68, 32, 69}.toList(), result.toList())
         //make sure decoding null returns null
         assertEquals(null.decodeHex(), null)
+
+        //make sure decoding Groovy-falsy values returns null
+        assertEquals(null, HexCodecExtensionMethods.decodeHex(''))
+        assertEquals(null, HexCodecExtensionMethods.decodeHex(0))
+        assertEquals(null, HexCodecExtensionMethods.decodeHex(false))
+        assertEquals(null, HexCodecExtensionMethods.decodeHex([]))
+        assertEquals(null, HexCodecExtensionMethods.decodeHex(new byte[0]))
     }
 
     void testRoundtrip() {
