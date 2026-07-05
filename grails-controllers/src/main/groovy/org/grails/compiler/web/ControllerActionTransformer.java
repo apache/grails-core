@@ -73,6 +73,7 @@ import org.codehaus.groovy.ast.stmt.TryCatchStatement;
 import org.codehaus.groovy.classgen.GeneratorContext;
 import org.codehaus.groovy.control.CompilationUnit;
 import org.codehaus.groovy.control.SourceUnit;
+import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.codehaus.groovy.syntax.Token;
 import org.codehaus.groovy.syntax.Types;
 import org.codehaus.groovy.transform.trait.Traits;
@@ -266,12 +267,12 @@ public class ControllerActionTransformer implements GrailsArtefactClassInjector,
             if (methodShouldBeConfiguredAsControllerAction(method)) {
                 final List<MethodNode> declaredMethodsWithThisName = classNode.getDeclaredMethods(method.getName());
                 if (declaredMethodsWithThisName != null) {
-                    int numberOfNonExceptionHandlerMethodsWithThisName = 0;
-                    for (MethodNode candidate : declaredMethodsWithThisName) {
-                        if (!isExceptionHandlingMethod(candidate)) {
-                            numberOfNonExceptionHandlerMethodsWithThisName++;
+                    final int numberOfNonExceptionHandlerMethodsWithThisName = DefaultGroovyMethods.count((Iterable) declaredMethodsWithThisName, new Closure(this) {
+                        @Override
+                        public Object call(Object object) {
+                            return !isExceptionHandlingMethod((MethodNode) object);
                         }
-                    }
+                    }).intValue();
                     if (numberOfNonExceptionHandlerMethodsWithThisName > 1) {
                         String message = "Controller actions may not be overloaded.  The [" +
                                 method.getName() +
