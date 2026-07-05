@@ -496,9 +496,12 @@ abstract class ConfigurationBuilder<B, C> {
         // Try to get the raw value as Object to avoid Spring 7 deep conversion,
         // then manually populate the target type from the Map
         Throwable populationFailure = null
+        Object rawValue = null
+        boolean rawValueResolved = false
         try {
             // Use Object.class to prevent Spring's MapToMapConverter from deep-converting values
-            def rawValue = propertyResolver.getProperty(propertyPathForArg, Object)
+            rawValue = propertyResolver.getProperty(propertyPathForArg, Object)
+            rawValueResolved = true
             if (rawValue instanceof Map) {
                 Map mapValue = (Map) rawValue
                 if (mapValue.isEmpty()) {
@@ -523,6 +526,10 @@ abstract class ConfigurationBuilder<B, C> {
 
         if (populationFailure != null) {
             throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $populationFailure.message", populationFailure)
+        }
+
+        if (rawValueResolved && rawValue != null) {
+            throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: cannot convert value [$rawValue] to required type [$argType.name]", e)
         }
 
         // If we have a fallback value, return it

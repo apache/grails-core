@@ -145,6 +145,24 @@ class ConfigurationBuilderSpec extends Specification {
         e.message.contains('strictNested')
     }
 
+    void "Test nested map conversion does not use fallback for scalar malformed configuration"() {
+
+        given: "A fallback and a scalar nested configuration value"
+        PropertyResolver config = Mock()
+        config.getProperty(Settings.PREFIX + ".strictNested", StrictNestedSettings, _) >> {
+            throw new ConverterNotFoundException(TypeDescriptor.valueOf(String), TypeDescriptor.valueOf(StrictNestedSettings))
+        }
+        config.getProperty(Settings.PREFIX + ".strictNested", Object) >> 'bad'
+        def fallback = new StrictNestedConfig(strictNested: new StrictNestedSettings(value: 'fallback'))
+
+        when: "The configuration is built"
+        new StrictNestedConfigurationBuilder(config, fallback).build()
+
+        then: "The malformed nested value is rejected"
+        def e = thrown(ConfigurationException)
+        e.message.contains('strictNested')
+    }
+
     void "Test nested map conversion populates simple configuration types"() {
 
         given: "A nested configuration map"
