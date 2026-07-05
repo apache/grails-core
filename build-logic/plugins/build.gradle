@@ -35,6 +35,7 @@ project.layout.projectDirectory.file('../../gradle.properties').asFile.withInput
 }
 
 dependencies {
+    implementation project(':grails-docs-core')
     implementation "${gradleBomDependencies['grails-publish-plugin']}"
     implementation "org.gradle.crypto.checksum:org.gradle.crypto.checksum.gradle.plugin:${gradleProperties.gradleChecksumPluginVersion}"
     implementation "org.cyclonedx.bom:org.cyclonedx.bom.gradle.plugin:${gradleProperties.gradleCycloneDxPluginVersion}"
@@ -62,6 +63,10 @@ gradlePlugin {
         register('sbomPlugin') {
             id = 'org.apache.grails.buildsrc.sbom'
             implementationClass = 'org.apache.grails.buildsrc.SbomPlugin'
+        }
+        register('bomConventionsPlugin') {
+            id = 'org.apache.grails.buildsrc.bom-conventions'
+            implementationClass = 'org.apache.grails.buildsrc.BomConventionsPlugin'
         }
         register('sharedPropertyPlugin') {
             id = 'org.apache.grails.buildsrc.properties'
