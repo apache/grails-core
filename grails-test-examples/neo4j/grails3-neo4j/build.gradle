@@ -85,6 +85,18 @@ configurations.all {
         force "org.neo4j.driver:neo4j-java-driver:$neo4jDriverVersion"
     }
 }
+// Deliberately older than the BOM's Jetty/neo4j-java-driver versions (see comment above) -
+// exempt from validateDependencyVersions.
+project.ext.allowedBomOverrides = [
+        'org.neo4j.driver:neo4j-java-driver',
+        'org.eclipse.jetty:jetty-server',
+        'org.eclipse.jetty:jetty-http',
+        'org.eclipse.jetty:jetty-io',
+        'org.eclipse.jetty:jetty-security',
+        'org.eclipse.jetty:jetty-util',
+        'org.eclipse.jetty:jetty-util-ajax',
+        'org.eclipse.jetty:jetty-xml'
+]
 
 tasks.withType(Test) {
     jvmArgs += ['--add-opens', 'java.base/java.lang=ALL-UNNAMED', '--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED']
