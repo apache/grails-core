@@ -81,10 +81,11 @@ rootProject.name = 'grails.core.ROOT'
 //   * the grails-test-examples that consume grails-micronaut-bom
 //
 // The island builds against the Micronaut 5 platform, whose GA artifacts target JVM 25
-// bytecode and declare org.gradle.jvm.version=25. A build JDK older than 25 cannot resolve
-// or compile them, so by default the island is auto-excluded on a sub-25 JDK and auto-included
-// on JDK 25+. This lets a plain `./gradlew build` work on the Grails 8 baseline (JDK 21) and
-// transparently pick up the island when run on JDK 25+.
+// bytecode and declare org.gradle.jvm.version=25. It also pins Groovy 5 / Spock
+// 2.4-groovy-5.0, so it cannot run in the same build graph as a different root Groovy major.
+// By default the island is auto-excluded on a sub-25 JDK or when dependencies.gradle does not
+// target Groovy 5, and auto-included on JDK 25+ Groovy 5 builds. This lets a plain
+// `./gradlew build` work on the Grails 8 baseline (JDK 21) and on Groovy canary branches.
 //
 // Two presence-based overrides (matching project convention: skipFunctionalTests, skipCodeStyle):
 //   -PskipMicronautProjects    force-exclude the island on ANY JDK. Used by
@@ -103,7 +104,9 @@ rootProject.name = 'grails.core.ROOT'
 def explicitlySkipMicronaut = providers.gradleProperty('skipMicronautProjects').isPresent()
 def explicitlyIncludeMicronaut = providers.gradleProperty('includeMicronautProjects').isPresent()
 def buildJdkSupportsMicronaut = Runtime.version().feature() >= 25
-def skipMicronautProjects = explicitlySkipMicronaut || (!buildJdkSupportsMicronaut && !explicitlyIncludeMicronaut)
+def buildGroovyVersionLine = file('dependencies.gradle').readLines().find { it.contains("'groovy.version'") }
+def buildGroovySupportsMicronaut = buildGroovyVersionLine?.contains("'5.") ?: false
+def skipMicronautProjects = explicitlySkipMicronaut || ((!buildJdkSupportsMicronaut || !buildGroovySupportsMicronaut) && !explicitlyIncludeMicronaut)
 
 include(
         'grails-bootstrap',

@@ -274,7 +274,7 @@ ext {
         combinedDependencies += customBomDependencies
     } else if (project.name == 'grails-hibernate5-micronaut-bom') {
         customBomVersions = [
-                'groovy.version'             : bomDependencyVersions['groovy.version'],
+                'groovy.version'             : '5.0.7',
                 'liquibase-hibernate.version': '4.27.0',
                 'liquibase.version'          : '4.27.0',
                 'hibernate.version'          : '5.6.15.Final',
