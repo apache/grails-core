@@ -105,7 +105,7 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
             def projectName = classNode.getNodeMetaData('projectName')
             def projectVersion = classNode.getNodeMetaData('projectVersion')
             if (projectVersion == null) {
-                projectVersion = getClass().getPackage().getImplementationVersion()
+                projectVersion = grailsImplementationVersion
             }
 
             pluginVersion = projectVersion
@@ -301,6 +301,10 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
     static LinkedHashSet<String> pendingPluginClasses = []
     static Collection<String> pluginExcludes = []
 
+    private static String getGrailsImplementationVersion() {
+        GlobalGrailsClassInjectorTransformation.package.implementationVersion
+    }
+
     protected static void generatePluginXml(ClassNode pluginClassNode, String pluginVersion, Set<String> transformedClasses, File pluginXmlFile) {
         def pluginXmlExists = pluginXmlFile.exists()
         LinkedHashSet<String> pluginClasses = []
@@ -341,7 +345,7 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
                     pluginExcludes.addAll(excludes)
                 }
 
-                def grailsVersion = pluginProperties['grailsVersion'] ?: getClass().getPackage().getImplementationVersion() + ' > *'
+                def grailsVersion = pluginProperties['grailsVersion'] ?: grailsImplementationVersion + ' > *'
                 mkp.plugin(name: pluginName, version: pluginVersion, grailsVersion: grailsVersion) {
                     type(pluginClassNode.name)
 
@@ -385,7 +389,7 @@ class GlobalGrailsClassInjectorTransformation implements ASTTransformation, Comp
                 def info = pluginAstReader.readPluginInfo(pluginClassNode)
 
                 def pluginProperties = info.getProperties()
-                def grailsVersion = pluginProperties['grailsVersion'] ?: getClass().getPackage().getImplementationVersion() + ' > *'
+                def grailsVersion = pluginProperties['grailsVersion'] ?: grailsImplementationVersion + ' > *'
                 pluginXml.@grailsVersion = grailsVersion
                 for (entry in pluginProperties) {
                     pluginXml."$entry.key" = entry.value
