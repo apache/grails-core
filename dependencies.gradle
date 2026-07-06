@@ -82,6 +82,7 @@ ext {
             'graphql-java-extended-scalars.version': '24.0',
             'groovy.version'                : '6.0.0-SNAPSHOT',
             'hibernate-groovy-proxy.version': '1.1',
+            'jackson-annotations.version'   : '2.22',
             'jackson.version'               : '2.22.0',
             'jakarta-servlet-api.version'   : '6.1.0',
             'jakarta-validation.version'    : '3.1.1',
@@ -109,11 +110,26 @@ ext {
     bomPlatformDependencies = [
             'asset-pipeline-bom': "cloud.wondrify:asset-pipeline-bom:${bomDependencyVersions['asset-pipeline-bom.version']}",
             'groovy-bom'        : "org.apache.groovy:groovy-bom:${bomDependencyVersions['groovy.version']}",
-            'jackson-bom'       : "com.fasterxml.jackson:jackson-bom:${bomDependencyVersions['jackson.version']}",
             'junit-bom'         : "org.junit:junit-bom:${bomDependencyVersions['junit.version']}",
             'selenium-bom'      : "org.seleniumhq.selenium:selenium-bom:${bomDependencyVersions['selenium.version']}",
             'spock-bom'         : "org.spockframework:spock-bom:${bomDependencyVersions['spock.version']}",
     ]
+
+    jacksonBomDependencies = [
+            'jackson-annotations': "com.fasterxml.jackson.core:jackson-annotations:${bomDependencyVersions['jackson-annotations.version']}",
+    ] + [
+            'com.fasterxml.jackson.core'      : ['jackson-core', 'jackson-databind'],
+            'com.fasterxml.jackson.dataformat': ['jackson-dataformat-avro', 'jackson-dataformat-cbor', 'jackson-dataformat-csv', 'jackson-dataformat-ion', 'jackson-dataformat-properties', 'jackson-dataformat-protobuf', 'jackson-dataformat-smile', 'jackson-dataformat-toml', 'jackson-dataformat-xml', 'jackson-dataformat-yaml'],
+            'com.fasterxml.jackson.datatype'  : ['jackson-datatype-eclipse-collections', 'jackson-datatype-guava', 'jackson-datatype-hibernate4', 'jackson-datatype-hibernate5', 'jackson-datatype-hibernate5-jakarta', 'jackson-datatype-hibernate6', 'jackson-datatype-hibernate7', 'jackson-datatype-hppc', 'jackson-datatype-jakarta-jsonp', 'jackson-datatype-jaxrs', 'jackson-datatype-javax-money', 'jackson-datatype-jdk8', 'jackson-datatype-joda', 'jackson-datatype-joda-money', 'jackson-datatype-json-org', 'jackson-datatype-jsr310', 'jackson-datatype-jsr353', 'jackson-datatype-moneta', 'jackson-datatype-pcollections'],
+            'com.fasterxml.jackson.jakarta.rs': ['jackson-jakarta-rs-base', 'jackson-jakarta-rs-cbor-provider', 'jackson-jakarta-rs-json-provider', 'jackson-jakarta-rs-smile-provider', 'jackson-jakarta-rs-xml-provider', 'jackson-jakarta-rs-yaml-provider'],
+            'com.fasterxml.jackson.jaxrs'      : ['jackson-jaxrs-base', 'jackson-jaxrs-cbor-provider', 'jackson-jaxrs-json-provider', 'jackson-jaxrs-smile-provider', 'jackson-jaxrs-xml-provider', 'jackson-jaxrs-yaml-provider'],
+            'com.fasterxml.jackson.jr'         : ['jackson-jr-all', 'jackson-jr-annotation-support', 'jackson-jr-extension-javatime', 'jackson-jr-objects', 'jackson-jr-retrofit2', 'jackson-jr-stree'],
+            'com.fasterxml.jackson.module'     : ['jackson-module-afterburner', 'jackson-module-android-record', 'jackson-module-blackbird', 'jackson-module-guice', 'jackson-module-guice7', 'jackson-module-jaxb-annotations', 'jackson-module-jakarta-xmlbind-annotations', 'jackson-module-jsonSchema', 'jackson-module-jsonSchema-jakarta', 'jackson-module-kotlin', 'jackson-module-mrbean', 'jackson-module-no-ctor-deser', 'jackson-module-osgi', 'jackson-module-parameter-names', 'jackson-module-paranamer', 'jackson-module-scala_2.11', 'jackson-module-scala_2.12', 'jackson-module-scala_2.13', 'jackson-module-scala_3'],
+    ].collectEntries { String groupId, List<String> artifactIds ->
+        artifactIds.collectEntries { String artifactId ->
+            [(artifactId): "${groupId}:${artifactId}:${bomDependencyVersions['jackson.version']}"]
+        }
+    }
 
     // Note: the name of the dependency must be the prefix of the property name so properties in the pom are resolved correctly
     bomDependencies = [
@@ -156,6 +172,7 @@ ext {
             'groovy-typecheckers'      : "org.apache.groovy:groovy-typecheckers:${bomDependencyVersions['groovy.version']}",
             'groovy-xml'               : "org.apache.groovy:groovy-xml:${bomDependencyVersions['groovy.version']}",
             'groovy-yaml'              : "org.apache.groovy:groovy-yaml:${bomDependencyVersions['groovy.version']}",
+    ] + jacksonBomDependencies + [
             'hibernate-groovy-proxy'      : "org.yakworks:hibernate-groovy-proxy:${bomDependencyVersions['hibernate-groovy-proxy.version']}",
             'jakarta-servlet-api'         : "jakarta.servlet:jakarta.servlet-api:${bomDependencyVersions['jakarta-servlet-api.version']}",
             'jakarta-validation'      : "jakarta.validation:jakarta.validation-api:${bomDependencyVersions['jakarta-validation.version']}",
