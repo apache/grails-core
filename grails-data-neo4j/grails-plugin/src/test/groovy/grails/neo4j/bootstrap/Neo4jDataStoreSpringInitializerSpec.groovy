@@ -20,9 +20,11 @@
 package grails.neo4j.bootstrap
 
 import grails.gorm.annotation.Entity
+import groovy.transform.CompileStatic
 import org.grails.datastore.gorm.neo4j.config.Settings
 import org.grails.spring.DefaultRuntimeSpringConfiguration
 import org.springframework.core.env.MapPropertySource
+import org.springframework.core.env.PropertyResolver
 import org.springframework.core.env.StandardEnvironment
 import spock.lang.Specification
 
@@ -68,9 +70,19 @@ class Neo4jDataStoreSpringInitializerSpec extends Specification {
 //        init.configure()
 
         then:"GORM for Neo4j is correctly configured"
-        init.configuration.getProperty("grails.neo4j.url") == "jdbc:foo:bar"
-        init.configuration.getProperty("grails.neo4j.options", Map.class) == [one:"two"]
+        resolveProperty(init.configuration, "grails.neo4j.url") == "jdbc:foo:bar"
+        resolveProperty(init.configuration, "grails.neo4j.options", Map) == [one:"two"]
 
+    }
+
+    @CompileStatic
+    private static String resolveProperty(PropertyResolver resolver, String key) {
+        resolver.getProperty(key)
+    }
+
+    @CompileStatic
+    private static <T> T resolveProperty(PropertyResolver resolver, String key, Class<T> type) {
+        resolver.getProperty(key, type)
     }
 }
 
