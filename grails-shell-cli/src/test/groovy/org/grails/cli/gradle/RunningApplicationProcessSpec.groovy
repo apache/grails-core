@@ -214,6 +214,7 @@ class RunningApplicationProcessSpec extends Specification {
         then:
         result == RunningApplicationProcess.StopResult.STOPPED
         !pidFile.exists()
+        process.waitFor(5, TimeUnit.SECONDS)
         !process.isAlive()
     }
 }
