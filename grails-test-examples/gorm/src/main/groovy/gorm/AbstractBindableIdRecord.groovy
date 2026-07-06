@@ -19,22 +19,21 @@
 
 package gorm
 
+import grails.gorm.dirty.checking.DirtyCheck
+
 /**
- * Controller used by the functional tests for issues 15681 and 15795. It binds the incoming request
- * parameters to a new domain instance and renders the resulting {@code id}, {@code version} and
- * {@code description} so the tests can assert over HTTP which properties were bound.
+ * Abstract base class living in {@code src/main/groovy} (i.e. not itself a domain class) annotated with
+ * {@link DirtyCheck} that explicitly opts {@code id} into data binding via a {@code bindable: true} constraint.
+ * A concrete domain subclass which declares no constraint of its own must inherit this constraint, so that
+ * {@code id} is bound. This guards against the regression described in
+ * <a href="https://github.com/apache/grails-core/issues/15795">issue 15795</a>, where the inherited-whitelist
+ * filter stripped explicitly bindable special properties declared up the hierarchy.
  */
-class DirtyCheckBindingController {
+@DirtyCheck
+abstract class AbstractBindableIdRecord {
+    String description
 
-    def bind() {
-        def record = new DirtyCheckedRecord()
-        bindData(record, params)
-        render "id=${record.id}|version=${record.version}|description=${record.description}"
-    }
-
-    def bindInheritedBindableId() {
-        def record = new BindableIdRecord()
-        bindData(record, params)
-        render "id=${record.id}|version=${record.version}|description=${record.description}"
+    static constraints = {
+        id bindable: true
     }
 }

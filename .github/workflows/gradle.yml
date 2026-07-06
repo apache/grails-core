@@ -496,7 +496,7 @@ jobs:
           MAVEN_PUBLISH_USERNAME: ${{ secrets.NEXUS_USER }}
           MAVEN_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PW  }}
         with: 
-          timeout_seconds: 1200 # normal range 14min if build is not cached (no tests running)
+          timeout_seconds: 1800 # normal range ~14min uncached (no tests); headroom for slow Nexus uploads so a single attempt is not killed mid-publish
           max_attempts: 3 # Attempts to address: Could not write to resource 'https://repository.apache.org/content/repositories/snapshots/...' Read timed out
           retry_wait_seconds: 180
           command: ./gradlew publish aggregateChecksums aggregatePublishedArtifacts --no-build-cache --rerun-tasks
@@ -566,7 +566,7 @@ jobs:
           MAVEN_PUBLISH_USERNAME: ${{ secrets.NEXUS_USER }}
           MAVEN_PUBLISH_PASSWORD: ${{ secrets.NEXUS_PW  }}
         with:
-          timeout_seconds: 1200
+          timeout_seconds: 1800 # headroom for slow Nexus uploads so a single attempt is not killed mid-publish (see `publish` job)
           max_attempts: 3
           retry_wait_seconds: 180
           command: ./gradlew :grails-micronaut:publish :grails-micronaut-bom:publish --no-build-cache --rerun-tasks
