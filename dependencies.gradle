@@ -82,6 +82,7 @@ ext {
             'graphql-java-extended-scalars.version': '24.0',
             'groovy.version'                : '6.0.0-SNAPSHOT',
             'hibernate-groovy-proxy.version': '1.1',
+            'jackson.version'               : '2.22.0',
             'jakarta-servlet-api.version'   : '6.1.0',
             'jakarta-validation.version'    : '3.1.1',
             'jquery.version'                : '3.7.1',
@@ -108,6 +109,7 @@ ext {
     bomPlatformDependencies = [
             'asset-pipeline-bom': "cloud.wondrify:asset-pipeline-bom:${bomDependencyVersions['asset-pipeline-bom.version']}",
             'groovy-bom'        : "org.apache.groovy:groovy-bom:${bomDependencyVersions['groovy.version']}",
+            'jackson-bom'       : "com.fasterxml.jackson:jackson-bom:${bomDependencyVersions['jackson.version']}",
             'junit-bom'         : "org.junit:junit-bom:${bomDependencyVersions['junit.version']}",
             'selenium-bom'      : "org.seleniumhq.selenium:selenium-bom:${bomDependencyVersions['selenium.version']}",
             'spock-bom'         : "org.spockframework:spock-bom:${bomDependencyVersions['spock.version']}",
