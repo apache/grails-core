@@ -67,8 +67,6 @@ import org.grails.datastore.mapping.mongo.engine.codecs.PersistentEntityCodec
 import org.grails.datastore.mapping.mongo.query.MongoQuery
 import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.query.api.QueryableCriteria
-import org.grails.datastore.mapping.transactions.SessionOnlyTransaction
-import org.grails.datastore.mapping.transactions.Transaction
 
 /**
  * A MongoDB session for codec mapping style
@@ -236,8 +234,7 @@ class MongoCodecSession extends AbstractMongoSession {
                 def writes = writeModels[persistentEntity]
                 if (writes) {
 
-                    final BulkWriteResult bulkWriteResult = collection
-                                                                .bulkWrite(writes)
+                    final BulkWriteResult bulkWriteResult = bulkWrite(collection, writes)
 
                     final boolean isAcknowledged = wc.isAcknowledged()
                     if (!bulkWriteResult.wasAcknowledged() && isAcknowledged) {
@@ -321,11 +318,6 @@ class MongoCodecSession extends AbstractMongoSession {
     }
 
     @Override
-    protected Transaction beginTransactionInternal() {
-        return new SessionOnlyTransaction<MongoClient>(getNativeInterface(), this)
-    }
-
-    @Override
     protected MongoCodecEntityPersister createPersister(Class cls, MappingContext mappingContext) {
         return mongoCodecEntityPersisterMap[cls]
     }
@@ -336,7 +328,7 @@ class MongoCodecSession extends AbstractMongoSession {
         final Document nativeQuery = buildNativeDocumentQueryFromCriteria(criteria, entity)
 
         final MongoCollection collection = getCollection(entity)
-        final DeleteResult deleteResult = collection.deleteMany((Bson) nativeQuery)
+        final DeleteResult deleteResult = deleteMany(collection, (Bson) nativeQuery)
         if (deleteResult.wasAcknowledged()) {
             return deleteResult.deletedCount
         }
@@ -361,7 +353,7 @@ class MongoCodecSession extends AbstractMongoSession {
                 }
             }
         }
-        final UpdateResult updateResult = collection.updateMany(nativeQuery, new Document(MONGO_SET_OPERATOR, properties), updateOptions)
+        final UpdateResult updateResult = updateMany(collection, nativeQuery, new Document(MONGO_SET_OPERATOR, properties), updateOptions)
         if (updateResult.wasAcknowledged()) {
             try {
                 return updateResult.modifiedCount

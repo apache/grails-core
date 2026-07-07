@@ -147,7 +147,6 @@ jobs:
           --continue
           --stacktrace
           -x groovydoc
-          -PgebAtCheckWaiting
           -PskipCodeStyle
           -PskipMicronautProjects
           -PmaxTestParallel=3

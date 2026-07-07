@@ -156,11 +156,10 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
             return null
         } else {
             MongoCollection mongoCollection = getMongoCollection(pe)
-            Document idQuery = createIdQuery(coerceIdToStoredType(key, pe))
-            o = mongoCollection
                     .withDocumentClass(persistentEntity.javaClass)
                     .withCodecRegistry(mongoDatastore.codecRegistry)
-                    .find(idQuery, pe.javaClass)
+            Document idQuery = createIdQuery(coerceIdToStoredType(key, pe))
+            o = mongoSession.find(mongoCollection, idQuery, pe.javaClass)
                     .limit(1)
                     .first()
 

@@ -1,0 +1,359 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-ajax]]
+=== Ajax Authentication
+
+The typical pattern of using web site authentication to access restricted pages involves intercepting access requests for secure pages, redirecting to a login page (possibly off-site, for example when using a Single Sign-on implementation such as xref:springSecurityCas.adoc#springSecurityCas[CAS]), and redirecting back to the originally-requested page after a successful login. Each page can also have a login link to allow explicit logins at any time.
+
+Another option is to also have a login link on each page and to use JavaScript to present a login form within the current page in a popup. The JavaScript code submits the authentication request and displays success or error messages as appropriate.
+
+The plugin supports Ajax logins, but you need to create your own client-side code. There are only a few necessary changes, and of course the sample code here is pretty basic so you should enhance it for your needs.
+
+The approach here involves editing your template page(s) to show "`You're logged in as ...`" text if logged in and a login link if not, along with a hidden login form that is shown using JavaScript.
+
+This example uses https://jquery.com/[jQuery] and https://jquery.iceburg.net/jqModal/[jqModal], a jQuery plugin that creates and manages dialogs and popups. Download `jqModal.js` and copy it to `grails-app/assets/javascripts`, and download `jqModal.css` and copy it to `grails-app/assets/stylesheets`.
+
+Create `grails-app/assets/javascripts/ajaxLogin.js` and add this JavaScript code:
+
+[source,javascript]
+.`ajaxLogin.js`
+----
+var onLogin;
+
+$.ajaxSetup({
+   beforeSend: function(jqXHR, event) {
+      if (event.url != $("#ajaxLoginForm").attr("action")) {
+         // save the 'success' function for later use if
+         // it wasn't triggered by an explicit login click
+         onLogin = event.success;
+      }
+   },
+   statusCode: {
+      // Set up a global Ajax error handler to handle 401
+      // unauthorized responses. If a 401 status code is
+      // returned the user is no longer logged in (e.g. when
+      // the session times out), so re-display the login form.
+      401: function() {
+         showLogin();
+      }
+   }
+});
+
+function showLogin() {
+   var ajaxLogin = $("#ajaxLogin");
+   ajaxLogin.css("text-align", "center");
+   ajaxLogin.jqmShow();
+}
+
+function logout(event) {
+   event.preventDefault();
+   $.ajax({
+      url: $("#_logout").attr("href"),
+      method: "POST",
+      success: function(data, textStatus, jqXHR) {
+         window.location = "/";
+      },
+      error: function(jqXHR, textStatus, errorThrown) {
+         console.log("Logout error, textStatus: " + textStatus +
+                     ", errorThrown: " + errorThrown);
+      }
+   });
+}
+
+function authAjax() {
+   $("#loginMessage").html("Sending request ...").show();
+
+   var form = $("#ajaxLoginForm");
+   $.ajax({
+      url:       form.attr("action"),
+      method:   "POST",
+      data:      form.serialize(),
+      dataType: "JSON",
+      success: function(json, textStatus, jqXHR) {
+         if (json.success) {
+            form[0].reset();
+            $("#loginMessage").empty();
+            $("#ajaxLogin").jqmHide();
+            $("#loginLink").html(
+               'Logged in as ' + json.username +
+               ' (<a href="' + $("#_logout").attr("href") +
+               '" id="logout">Logout</a>)');
+            $("#logout").click(logout);
+            if (onLogin) {
+               // execute the saved event.success function
+               onLogin(json, textStatus, jqXHR);
+            }
+         }
+         else if (json.error) {
+            $("#loginMessage").html('<span class="errorMessage">' +
+                                    json.error + "</error>");
+         }
+         else {
+            $("#loginMessage").html(jqXHR.responseText);
+         }
+      },
+      error: function(jqXHR, textStatus, errorThrown) {
+         if (jqXHR.status == 401 && jqXHR.getResponseHeader("Location")) {
+            // the login request itself wasn't allowed, possibly because the
+            // post url is incorrect and access was denied to it
+            $("#loginMessage").html('<span class="errorMessage">' +
+               'Sorry, there was a problem with the login request</error>');
+         }
+         else {
+            var responseText = jqXHR.responseText;
+            if (responseText) {
+               var json = $.parseJSON(responseText);
+               if (json.error) {
+                  $("#loginMessage").html('<span class="errorMessage">' +
+                                          json.error + "</error>");
+                  return;
+               }
+            }
+            else {
+               responseText = "Sorry, an error occurred (status: " +
+                              textStatus + ", error: " + errorThrown + ")";
+            }
+            $("#loginMessage").html('<span class="errorMessage">' +
+                                    responseText + "</error>");
+         }
+      }
+   });
+}
+
+$(function() {
+   $("#ajaxLogin").jqm({ closeOnEsc: true });
+   $("#ajaxLogin").jqmAddClose("#cancelLogin");
+   $("#ajaxLoginForm").submit(function(event) {
+      event.preventDefault();
+      authAjax();
+   });
+   $("#authAjax").click(authAjax);
+   $("#logout").click(logout);
+});
+----
+
+and create `grails-app/assets/stylesheets/ajaxLogin.css` and add this CSS:
+
+[source,css]
+.`ajaxLogin.css`
+----
+#ajaxLogin {
+   padding:    0px;
+   text-align: center;
+   display:    none;
+}
+
+#ajaxLogin .inner {
+   width:              400px;
+   padding-bottom:     6px;
+   margin:             60px auto;
+   text-align:         left;
+   border:             1px solid #aab;
+   background-color:   #f0f0fa;
+   -moz-box-shadow:    2px 2px 2px #eee;
+   -webkit-box-shadow: 2px 2px 2px #eee;
+   -khtml-box-shadow:  2px 2px 2px #eee;
+   box-shadow:         2px 2px 2px #eee;
+}
+
+#ajaxLogin .inner .fheader {
+   padding:          18px 26px 14px 26px;
+   background-color: #f7f7ff;
+   margin:           0px 0 14px 0;
+   color:            #2e3741;
+   font-size:        18px;
+   font-weight:      bold;
+}
+
+#ajaxLogin .inner .cssform p {
+   clear:         left;
+   margin:        0;
+   padding:       4px 0 3px 0;
+   padding-left:  105px;
+   margin-bottom: 20px;
+   height:        1%;
+}
+
+#ajaxLogin .inner .cssform input[type="text"],
+#ajaxLogin .inner .cssform input[type="password"] {
+   width: 150px;
+}
+
+#ajaxLogin .inner .cssform label {
+   font-weight:   bold;
+   float:         left;
+   text-align:    right;
+   margin-left:  -105px;
+   width:         150px;
+   padding-top:   3px;
+   padding-right: 10px;
+}
+
+.ajaxLoginButton {
+   background-color: #efefef;
+   font-weight: bold;
+   padding: 0.5em 1em;
+   display: -moz-inline-stack;
+   display: inline-block;
+   vertical-align: middle;
+   white-space: nowrap;
+   overflow: visible;
+   text-decoration: none;
+      -moz-border-radius: 0.3em;
+   -webkit-border-radius: 0.3em;
+           border-radius: 0.3em;
+}
+
+.ajaxLoginButton:hover, .ajaxLoginButton:focus {
+   background-color: #999999;
+   color: #ffffff;
+}
+
+#ajaxLogin .inner .login_message {
+   padding: 6px 25px 20px 25px;
+   color:   #c33;
+}
+
+#ajaxLogin .inner .text_ {
+   width: 120px;
+}
+
+#ajaxLogin .inner .chk {
+   height: 12px;
+}
+
+.errorMessage {
+   color: red;
+}
+----
+
+There's no need to register the JavaScript files in `grails-app/assets/javascripts/application.js` if you have this `require_tree` directive:
+
+[source,javascript]
+.`application.js`
+----
+//= require_tree .
+----
+
+but you can explicitly include them if you want. Register the two CSS files in `/grails-app/assets/stylesheets/application.css`:
+
+[source,css]
+.`application.css`
+----
+/*
+ ...
+ *= require ajaxLogin
+ *= require jqModal
+ ...
+ */
+----
+
+We'll need some GSP code to define the HTML, so create `grails-app/views/includes/_ajaxLogin.gsp` and add this:
+
+[source,html]
+.`_ajaxLogin.gsp`
+----
+<span id="logoutLink" style="display: none;">
+<g:link elementId='_logout' controller='logout'>Logout</g:link>
+</span>
+
+<span id="loginLink" style="position: relative; margin-right: 30px; float: right">
+<sec:ifLoggedIn>
+   Logged in as <sec:username/> (<g:link elementId='logout' controller='logout'>Logout</g:link>)
+</sec:ifLoggedIn>
+<sec:ifNotLoggedIn>
+   <a href="#" onclick="showLogin(); return false;">Login</a>
+</sec:ifNotLoggedIn>
+</span>
+
+<div id="ajaxLogin" class="jqmWindow" style="z-index: 3000;">
+   <div class="inner">
+      <div class="fheader">Please Login..</div>
+      <form action="${request.contextPath}/login/authenticate" method="POST"
+            id="ajaxLoginForm" name="ajaxLoginForm" class="cssform" autocomplete="off">
+         <p>
+            <label for="username">Username:</label>
+            <input type="text" class="text_" name="username" id="username" />
+         </p>
+         <p>
+            <label for="password">Password</label>
+            <input type="password" class="text_" name="password" id="password" />
+         </p>
+         <p>
+            <label for="remember_me">Remember me</label>
+            <input type="checkbox" class="chk" id="remember_me" name="remember-me"/>
+         </p>
+         <p>
+            <input type="submit" id="authAjax" name="authAjax"
+                   value="Login" class="ajaxLoginButton" />
+            <input type="button" id="cancelLogin" value="Cancel"
+                   class="ajaxLoginButton" />
+         </p>
+      </form>
+      <div style="display: none; text-align: left;" id="loginMessage"></div>
+   </div>
+</div>
+----
+
+And finally, update the `grails-app/views/layouts/main.gsp` layout to include `_ajaxLogin.gsp`, adding it after the `<body>` tag:
+
+[source,html]
+.`main.gsp`
+----
+<html lang="en" class="no-js">
+   <head>
+      ...
+      <g:layoutHead/>
+   </head>
+   <body>
+      <g:render template='/includes/ajaxLogin'/>
+      ...
+      <g:layoutBody/>
+   </body>
+</html>
+----
+
+The important aspects of this code are:
+
+* There is a <span> positioned in the top-right that shows the username and a logout link when logged in, and a login link otherwise.
+* The form posts to the same URL as the regular form, `/login/authenticate`, and is mostly the same except for the addition of a "`Cancel`" button (you can also dismiss the dialog by clicking outside of it or with the escape key).
+* Error messages are displayed within the popup <div>.
+* Because there is no page redirect after successful login, the Javascript replaces the login link to give a visual indication that the user is logged in.
+* The Logout link also uses Ajax to submit a POST request to the standard logout url and redirect you to the index page after the request finishes.
+** Note that in the JavaScript `logout` function, you'll need to change the url in the `success` callback to the correct post-logout value, e.g. `window.location = "/appname";` if you have configured the contextPath to be "/appname"
+
+==== How Does Ajax login Work?
+
+Most Ajax libraries include an `X-Requested-With` header that indicates that the request was made by `XMLHttpRequest` instead of being triggered by clicking a regular hyperlink or form submit button. The plugin uses this header to detect Ajax login requests, and uses subclasses of some of Spring Security's classes to use different redirect urls for Ajax requests than regular requests. Instead of showing full pages, `LoginController` has JSON-generating methods `ajaxSuccess()`, `ajaxDenied()`, and `authfail()` that generate JSON that the login Javascript code can use to appropriately display success or error messages.
+
+To summarize, the typical flow would be
+
+* click the link to display the login form
+* enter authentication details and click Login
+* the form is submitted using an Ajax request
+* if the authentication succeeds:
+** a redirect to `/login/ajaxSuccess` occurs (this URL is configurable)
+** the rendered response is JSON and it contains two values, a boolean value `success` with the value `true` and a string value `username` with the authenticated user's login name
+** the client determines that the login was successful and updates the page to indicate the the user is logged in; this is necessary since there's no page redirect like there would be for a non-Ajax login
+* if the authentication fails:
+** a redirect to `/login/authfail?ajax=true` occurs (this URL is configurable)
+** the rendered response is JSON and it contains one value, a string value `error` with the displayable error message; this will be different depending on why the login was unsuccessful (bad username or password, account locked, etc.)
+** the client determines that the login was not successful and displays the error message
+* note that both a successful and an unsuccessful login will trigger the `onSuccess` Ajax callback; the `onError` callback will only be triggered if there's an exception or network issue
