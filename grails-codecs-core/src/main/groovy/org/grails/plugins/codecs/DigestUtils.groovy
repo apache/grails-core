@@ -23,6 +23,7 @@ import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 
 import groovy.transform.CompileStatic
+import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
 
 @CompileStatic
 abstract class DigestUtils {
@@ -46,8 +47,11 @@ abstract class DigestUtils {
         if (data instanceof Byte[]) {
             return toByteArrayFromWrapper((Byte[]) data)
         }
-        if (data instanceof List) {
-            return toByteArrayFromList((List<?>) data)
+        if (data instanceof Iterable) {
+            return toByteArrayFromIterable((Iterable<?>) data)
+        }
+        if (data instanceof Iterator) {
+            return toByteArrayFromIterator((Iterator<?>) data)
         }
         if (data.getClass().isArray()) {
             return toByteArrayFromArray(data, Array.getLength(data))
@@ -64,10 +68,26 @@ abstract class DigestUtils {
         return result
     }
 
-    private static byte[] toByteArrayFromList(List<?> data) {
+    private static byte[] toByteArrayFromIterable(Iterable<?> data) {
+        List<Byte> bytes = new ArrayList<Byte>()
+        for (Object value : data) {
+            bytes.add(toByte(value))
+        }
+        return toByteArrayFromList(bytes)
+    }
+
+    private static byte[] toByteArrayFromIterator(Iterator<?> data) {
+        List<Byte> bytes = new ArrayList<Byte>()
+        while (data.hasNext()) {
+            bytes.add(toByte(data.next()))
+        }
+        return toByteArrayFromList(bytes)
+    }
+
+    private static byte[] toByteArrayFromList(List<Byte> data) {
         byte[] result = new byte[data.size()]
         for (int i = 0; i < data.size(); i++) {
-            result[i] = toByte(data.get(i))
+            result[i] = data.get(i)
         }
         return result
     }
@@ -81,6 +101,6 @@ abstract class DigestUtils {
     }
 
     private static byte toByte(Object value) {
-        return ((Number) value).byteValue()
+        DefaultTypeTransformation.castToNumber(value).byteValue()
     }
 }

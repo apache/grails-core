@@ -18,7 +18,6 @@
  */
 package org.grails.web.codecs
 
-import org.grails.plugins.codecs.HexCodecExtensionMethods
 import org.junit.jupiter.api.Test
 
 import static org.junit.jupiter.api.Assertions.assertEquals
@@ -51,15 +50,23 @@ class HexCodecTests {
         assertEquals(null.decodeHex(), null)
 
         //make sure decoding Groovy-falsy values returns null
-        assertEquals(null, HexCodecExtensionMethods.decodeHex(''))
-        assertEquals(null, HexCodecExtensionMethods.decodeHex(0))
-        assertEquals(null, HexCodecExtensionMethods.decodeHex(false))
-        assertEquals(null, HexCodecExtensionMethods.decodeHex([]))
-        assertEquals(null, HexCodecExtensionMethods.decodeHex(new byte[0]))
+        assertIterableEquals([], ''.decodeHex().toList())
+        assertEquals(null, 0.decodeHex())
+        assertEquals(null, false.decodeHex())
+        assertEquals(null, [].decodeHex())
+        assertEquals(null, new byte[0].decodeHex())
     }
 
+    @Test
     void testRoundtrip() {
-        assertIterableEquals([65, 32, 66, 32, 67, 32, 68, 32, 69], [65, 32, 66, 32, 67, 32, 68, 32, 69].encodeAsHex().decodeHex().toList())
-        assertIterableEquals([65, 32, 66, 32, 67, 32, 68, 32, 69], 'A B C D E'.encodeAsHex().decodeHex().toList())
+        List<Byte> expected = [65, 32, 66, 32, 67, 32, 68, 32, 69].collect { ((Number) it).byteValue() }
+        assertIterableEquals(expected, [65, 32, 66, 32, 67, 32, 68, 32, 69].encodeAsHex().decodeHex().toList())
+        assertIterableEquals(expected, 'A B C D E'.encodeAsHex().decodeHex().toList())
+    }
+
+    @Test
+    void testEncodeIterableCoercion() {
+        assertEquals('4142', ['A' as char, 'B' as char].encodeAsHex())
+        assertEquals('4142', new LinkedHashSet<Integer>([65, 66]).encodeAsHex())
     }
 }

@@ -18,6 +18,7 @@
  */
 package org.grails.plugins.codecs
 
+import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 
 import org.codehaus.groovy.runtime.NullObject
@@ -34,7 +35,7 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class Base64CodecExtensionMethods {
 
-    static Object encodeAsBase64(Object theTarget) {
+    static Object encodeAsBase64(Object theTarget, Charset charset = StandardCharsets.UTF_8) {
         if (theTarget == null || theTarget instanceof NullObject) {
             return null
         }
@@ -43,10 +44,10 @@ class Base64CodecExtensionMethods {
             return new String(Base64.encodeBase64(DigestUtils.toByteArray(theTarget)), StandardCharsets.UTF_8)
         }
 
-        return new String(Base64.encodeBase64(theTarget.toString().getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8)
+        return new String(Base64.encodeBase64(theTarget.toString().getBytes(charset)), StandardCharsets.UTF_8)
     }
 
-    static Object decodeBase64(Object theTarget) {
+    static Object decodeBase64(Object theTarget, Charset charset = StandardCharsets.UTF_8) {
         if (theTarget == null || theTarget instanceof NullObject) {
             return null
         }

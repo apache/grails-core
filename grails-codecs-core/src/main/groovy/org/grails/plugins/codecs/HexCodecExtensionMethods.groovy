@@ -48,19 +48,20 @@ class HexCodecExtensionMethods {
     }
 
     static Object decodeHex(Object theTarget) {
-        if (theTarget == null || theTarget instanceof NullObject || !DefaultTypeTransformation.castToBoolean(theTarget)) return null
+        if (theTarget instanceof CharSequence && theTarget.length() == 0) return new byte[0]
+        if (!DefaultTypeTransformation.castToBoolean(theTarget)) return null
 
         String str = theTarget.toString().toLowerCase()
-        if (str.size() % 2 != 0) {
+        if (str.length() % 2 != 0) {
             throw new UnsupportedOperationException('Decode of hex strings requires strings of even length')
         }
 
-        byte[] result = new byte[str.size().intdiv(2)]
+        byte[] result = new byte[str.length() >> 1]
         String hexDigits = (String) HEXDIGITS
-        for (int i = 0; i < str.size(); i += 2) {
+        for (int i = 0; i < str.length(); i += 2) {
             int high = hexDigits.indexOf((int) str.charAt(i))
             int low = hexDigits.indexOf((int) str.charAt(i + 1))
-            result[i.intdiv(2)] = (byte) ((high << 4) | low)
+            result[i >> 1] = (byte) ((high << 4) | low)
         }
         return result
     }
