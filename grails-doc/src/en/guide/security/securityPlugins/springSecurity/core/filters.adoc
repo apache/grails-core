@@ -1,0 +1,130 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-filters]]
+== Filters
+
+There are a few different approaches to configuring filter chains.
+
+=== Default Approach to Configuring Filter Chains
+The default is to use configuration attributes to determine which extra filters to use (for example, Basic Auth, Switch User, etc.) and add these to the "`core`" filters. For example, setting `grails.plugin.springsecurity.useSwitchUserFilter = true` adds `switchUserProcessingFilter` to the filter chain (and in the correct order). The filter chain built here is applied to all URLs. If you need more flexibility, you can use `filterChain.chainMap` as discussed in *chainMap* below.
+
+=== filterNames
+To define custom filters, to remove a core filter from the Spring Security filter chain (not recommended), or to otherwise have control over the Spring Security filter chain, you can specify the `filterNames` property as a list of strings. As with the default approach, the Spring Security filter chain built here is applied to all URLs.
+
+For example:
+
+[source,groovy]
+.Listing {counter:listing}. Sample `grails.plugin.springsecurity.filterChain.filterNames` configuration
+----
+grails.plugin.springsecurity.filterChain.filterNames = [
+   'securityContextPersistenceFilter', 'logoutFilter',
+   'authenticationProcessingFilter', 'myCustomProcessingFilter',
+   'rememberMeAuthenticationFilter', 'anonymousAuthenticationFilter',
+   'exceptionTranslationFilter', 'filterInvocationInterceptor'
+]
+----
+
+This example creates a Spring Security filter chain corresponding to the Spring beans with the specified names.
+
+=== chainMap
+Use the `filterChain.chainMap` attribute to define which filters are applied to different URL patterns. You define a Map that specifies one or more lists of filter bean names, each with a corresponding URL pattern.
+
+[source,groovy]
+.Listing {counter:listing}. Sample `grails.plugin.springsecurity.filterChain.chainMap` configuration
+----
+grails.plugin.springsecurity.filterChain.chainMap = [
+   [pattern: '/urlpattern1/**', filters: 'filter1,filter2,filter3,filter4'],
+   [pattern: '/urlpattern2/**', filters: 'filter1,filter3,filter5'],
+   [pattern: '/**',             filters: 'JOINED_FILTERS']
+]
+----
+
+[WARNING]
+====
+The format of `filterChain.chainMap` has changed from previous versions to avoid configuration parsing issues. In previous versions the property was a single Map, where the keys were the access patterns and the values were filter names. The old format is no longer supported and your configurations must be updated to the newer format.
+====
+
+In this example, four filters are applied to URLs matching `/urlpattern1/pass:[**]` and three different filters are applied to URLs matching `/urlpattern2/pass:[**]`. In addition the special token `JOINED_FILTERS` is applied to all URLs. This is a conventient way to specify that all defined filters (configured either with configuration rules like `useSwitchUserFilter` or explicitly using `filterNames`) should apply to this pattern.
+
+The order of the mappings is important. Each URL will be tested in order from top to bottom to find the first matching one. So you need a `/pass:[**]` catch-all rule at the end for URLs that do not match one of the earlier rules.
+
+There's also a filter negation syntax that can be very convenient. Rather than specifying all of the filter names (and risking forgetting one or putting them in the wrong order), you can use the `JOINED_FILTERS` keyword and one or more filter names prefixed with a `-` . This means to use all configured filters except for the excluded ones. For example, if you had a web service that uses Basic Auth for `/webservice/pass:[**]` URLs, you would configure that using:
+
+[source,groovy]
+.Listing {counter:listing}. Using `JOINED_FILTERS` in a `filterChain.chainMap` configuration
+----
+grails.plugin.springsecurity.filterChain.chainMap = [
+   [pattern: '/webservice/**', filters: 'JOINED_FILTERS,-exceptionTranslationFilter'],
+   [pattern: '/**',            filters: 'JOINED_FILTERS,-basicAuthenticationFilter,-basicExceptionTranslationFilter']
+]
+----
+
+For the `/webservice/pass:[**]` URLs, we want all filters except for the standard `ExceptionTranslationFilter` since we want to use just the one configured for Basic Auth. And for the `/pass:[**]` URLs (everything else) we want everything except for the Basic Auth filter and its configured `ExceptionTranslationFilter`.
+
+Additionally, you can use a `chainMap` configuration to declare one or more URL patterns which should have no filters applied. Use the name `'none'` for these patterns, e.g.
+
+[source,groovy]
+.Listing {counter:listing}. Using `none` in a `filterChain.chainMap` configuration
+----
+grails.plugin.springsecurity.filterChain.chainMap = [
+   [pattern: '/someurlpattern/**', filters: 'none'],
+   [pattern: '/**',                filters: 'JOINED_FILTERS']
+]
+----
+
+=== clientRegisterFilter
+An alternative to setting the `filterNames` property is `grails.plugin.springsecurity.SpringSecurityUtils.clientRegisterFilter()`. This property allows you to add a custom filter to the chain at a specified position. Each standard filter has a corresponding position in the chain (see `grails.plugin.springsecurity.SecurityFilterPosition` for details). So if you have created an application-specific filter, register it in `grails-app/conf/spring/resources.groovy`:
+
+[source,groovy]
+----
+import com.mycompany.myapp.MyFilter
+import org.springframework.boot.context.embedded.FilterRegistrationBean
+
+beans = {
+   myFilter(MyFilter) {
+      // properties
+   }
+
+   myFilterDeregistrationBean(FilterRegistrationBean) {
+      filter = ref('myFilter')
+      enabled = false
+   }
+}
+----
+
+Note that in addition to the filter bean, there is also a disabled `FilterRegistrationBean` registered. This is needed because Spring Boot automatically registers filter beans in the `ApplicationContext`, so you must register your own `FilterRegistrationBean` and set its `enabled` property to `false` to prevent this.
+
+Then register the filter in `grails-app/init/BootStrap.groovy`:
+
+[source,groovy]
+----
+import grails.plugin.springsecurity.SecurityFilterPosition
+import grails.plugin.springsecurity.SpringSecurityUtils
+
+class BootStrap {
+
+   def init = {
+      SpringSecurityUtils.clientRegisterFilter(
+          'myFilter', SecurityFilterPosition.OPENID_FILTER.order + 10)
+   }
+}
+----
+
+This bootstrap code registers your filter just after the Open ID filter (if it's configured). You cannot register a filter in the same position as another, so it's a good idea to add a small delta to its position to put it after or before a filter that it should be next to in the chain. The Open ID filter position is just an example - add your filter in the position that makes sense.

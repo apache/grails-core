@@ -27,6 +27,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.web.filter.CorsFilter;
 
 import grails.config.Settings;
 import grails.util.Environment;
@@ -75,13 +76,18 @@ public class UrlMappingsAutoConfiguration {
         return cacheUrls ? new CachingLinkGenerator(serverURL) : new DefaultLinkGenerator(serverURL);
     }
 
+    // Guarded on CorsFilter (the Spring type GrailsCorsFilter extends), not GrailsCorsFilter:
+    // a user replacing CORS handling with any CorsFilter registration should not end up with
+    // two CORS filters answering the same requests.
     @Bean
+    @ConditionalOnMissingBean(CorsFilter.class)
     @ConditionalOnProperty(name = Settings.SETTING_CORS_FILTER, havingValue = "true", matchIfMissing = true)
     public GrailsCorsFilter grailsCorsFilter(GrailsCorsConfiguration grailsCorsConfiguration) {
         return new GrailsCorsFilter(grailsCorsConfiguration);
     }
 
     @Bean
+    @ConditionalOnMissingBean(UrlMappingsErrorPageCustomizer.class)
     public UrlMappingsErrorPageCustomizer urlMappingsErrorPageCustomizer(ObjectProvider<UrlMappings> urlMappingsProvider) {
         UrlMappingsErrorPageCustomizer errorPageCustomizer = new UrlMappingsErrorPageCustomizer();
         errorPageCustomizer.setUrlMappings(urlMappingsProvider.getIfAvailable());
@@ -89,6 +95,7 @@ public class UrlMappingsAutoConfiguration {
     }
 
     @Bean
+    @ConditionalOnMissingBean(UrlMappingsInfoHandlerAdapter.class)
     public UrlMappingsInfoHandlerAdapter urlMappingsInfoHandlerAdapter() {
         return new UrlMappingsInfoHandlerAdapter();
     }

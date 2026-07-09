@@ -60,7 +60,7 @@ public class GrailsSessionContext implements CurrentSessionContext {
     protected final SessionFactoryImplementor sessionFactory;
     protected CurrentSessionContext jtaSessionContext;
 
-    // TODO make configurable?
+    // Match Spring's default: currentSession() must not create a Session outside an active transaction.
     protected boolean allowCreate = false;
 
     /**

@@ -812,6 +812,9 @@ If your application contributed `HttpMessageConverter` beans through this class,
 Spring Framework 7 deprecated `org.springframework.lang.Nullable` and `org.springframework.lang.NonNull` in favor of the JSpecify annotations (`org.jspecify.annotations.Nullable`, `org.jspecify.annotations.NonNull`).
 The Spring annotations still work, so this is non-blocking, but new code should prefer the JSpecify equivalents.
 
+* **Namespaced link generation is namespace-aware.**
+When a link, form action, pagination link, sortable column link, redirect, chain, or include targets a controller without an explicit `namespace`, Grails now resolves the namespace automatically. In the normal case, where only one controller has the target name, `controller` and `action` generate the correct namespaced or non-namespaced URL. Ambiguity only occurs when multiple controllers share the same name. In that case, specify `namespace` to choose the target explicitly. Pass `namespace: null` from Groovy code or `namespace=""` in a GSP tag to target the non-namespaced controller explicitly.
+
 ==== 21. Tag Library Test Cleanup Changes
 
 Grails 8 removes the `purgeTagLibMetaClass` test hook used by some web and TagLib unit tests.
@@ -1346,3 +1349,64 @@ grails:
                         - Presto
                         - Trident
 ----
+
+==== 31. @EnableWebMvc No Longer Added to Grails Applications
+
+In earlier versions, Grails added Spring's `@EnableWebMvc` annotation to the generated `Application` class at compile time.
+`@EnableWebMvc` is a Spring Framework configuration annotation that is not intended to be combined with Spring Boot: it imports `DelegatingWebMvcConfiguration`, which eagerly registers a fixed set of MVC beans and switches off Spring Boot's `WebMvcAutoConfiguration`.
+In a Boot application this produced bean-definition override warnings at startup (for example for `localeResolver` and `internalAutoProxyCreator`) and prevented Boot's conditional, more configurable auto-configuration from taking effect.
+
+Grails 8 removes the auto-injected `@EnableWebMvc`.
+Spring Boot's `WebMvcAutoConfiguration` is now active for Grails servlet web applications, which is the intended Boot behavior and resolves those override warnings.
+
+**No action is required for most applications.**
+Grails adapts internally so the change is transparent.
+The notes below explain the two behavioral differences this introduces and the configuration toggles available if you need to control them.
+
+===== 31.1 Boot's default view resolver is removed automatically
+
+With `WebMvcAutoConfiguration` active, Boot contributes a catch-all `defaultViewResolver` (an `InternalResourceViewResolver`).
+For a Grails application that does not use JSP/`InternalResource` views (for example a REST/JSON-views application) this resolver maps any unmatched view name to a servlet forward, which can surface as:
+
+[source]
+----
+Circular view path [index]: would dispatch back to the current handler URL
+----
+
+To prevent this, Grails removes Boot's `defaultViewResolver` for every Grails servlet web application so that Grails' own view resolution is used instead.
+If you need to keep Boot's `defaultViewResolver` (for example, an application that genuinely relies on JSP/`InternalResource` views), opt out:
+
+[source,yaml]
+.application.yml
+----
+grails:
+    web:
+        removeDefaultViewResolverBean: false
+----
+
+NOTE: In GSP applications the GSP view resolver continues to be installed as the primary `viewResolver`, controlled as before by `spring.gsp.replaceViewResolverBean`.
+The earlier `spring.gsp.removeDefaultViewResolverBean` property (from when this removal lived in the GSP module) is still honoured for backward compatibility but is **deprecated** — `defaultViewResolver` removal is now handled centrally for all Grails servlet web applications by the `grails.web.removeDefaultViewResolverBean` property above, which takes precedence. Setting the old name logs a deprecation warning at startup.
+
+===== 31.2 GrailsWebRequest binding
+
+With `WebMvcAutoConfiguration` active, Boot would otherwise register its own `RequestContextFilter` that rebinds a plain `ServletRequestAttributes`, replacing the `GrailsWebRequest` bound earlier in the filter chain.
+Downstream code that expects a `GrailsWebRequest` would then fail with a `ClassCastException`.
+
+Grails 8 registers its request-binding filter as a `RequestContextFilter` bean so that Boot's filter backs off and the `GrailsWebRequest` remains bound for the whole request.
+This is handled internally and requires no configuration changes.
+Applications that defined their own `GrailsWebRequestFilter` bean, or their own `grailsWebRequestFilter` filter-registration bean, continue to override the Grails-provided ones.
+
+==== 32. More Framework Beans Are Cleanly Overridable
+
+Several Grails framework beans that were previously registered unconditionally are now guarded with `@ConditionalOnMissingBean`, so a bean of the same name (or type) defined in an application configuration class (a `@Bean` method) takes precedence cleanly instead of relying on bean-definition overriding:
+
+* i18n: `localeResolver`, `localeChangeInterceptor` and `messageSource`
+* URL mappings: `grailsCorsFilter`, `urlMappingsErrorPageCustomizer` and `urlMappingsInfoHandlerAdapter`
+
+**No action is required.**
+The framework beans still register by default; this only changes what happens when you define your own.
+Previously, defining one of these beans produced a bean-definition override (with a startup warning, or a failure when `spring.main.allow-bean-definition-overriding` is `false`).
+Now the framework bean simply backs off.
+
+NOTE: The back-off applies to beans that are registered before auto-configuration conditions are evaluated — `@Bean` methods in application configuration classes.
+Beans contributed later, through a plugin's `doWithSpring` or the application's `resources.groovy`, continue to take effect through bean-definition overriding, exactly as in previous releases.

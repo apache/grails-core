@@ -37,6 +37,8 @@ public class ByteBuddyGroovyInterceptor extends ByteBuddyInterceptor {
 
     protected final Method getIdentifierMethod;
 
+    private final boolean lazyToString;
+
     public ByteBuddyGroovyInterceptor(
             String entityName,
             Class<?> persistentClass,
@@ -46,7 +48,8 @@ public class ByteBuddyGroovyInterceptor extends ByteBuddyInterceptor {
             Method setIdentifierMethod,
             CompositeType componentIdType,
             SharedSessionContractImplementor session,
-            boolean overridesEquals) {
+            boolean overridesEquals,
+            boolean lazyToString) {
         super(
                 entityName,
                 persistentClass,
@@ -58,6 +61,7 @@ public class ByteBuddyGroovyInterceptor extends ByteBuddyInterceptor {
                 session,
                 overridesEquals);
         this.getIdentifierMethod = getIdentifierMethod;
+        this.lazyToString = lazyToString;
     }
 
     @Override
@@ -72,7 +76,7 @@ public class ByteBuddyGroovyInterceptor extends ByteBuddyInterceptor {
         }
 
         GroovyProxyInterceptorLogic.InterceptorState state = new GroovyProxyInterceptorLogic.InterceptorState(
-                getEntityName(), getPersistentClass(), getIdentifier());
+                getEntityName(), getPersistentClass(), getIdentifier(), lazyToString);
 
         if (isUninitialized()) {
             Object result = GroovyProxyInterceptorLogic.handleUninitialized(state, methodName, args);

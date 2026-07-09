@@ -1,0 +1,45 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[rest-whatsNew60]]
+== Grails 7 support
+
+This major release is working with Grails 7. It's based on the newer versions of Spring Security Core plugin,
+which in turn uses newer Spring Security versions, so make sure you read carefully what the new versions have changed:
+
+|===
+| Grails Version | `spring-security-rest` version | Spring Security Core docs
+
+| 6.x
+| `7.0.0-SNAPSHOT`
+| https://apache.github.io/grails-spring-security/7.0.x/index.html#whatsNew[]
+
+|===
+
+== Only allow refresh tokens to be used on refresh token endpoint
+
+See issue https://github.com/grails/grails-spring-security-rest/issues/515[#515]
+
+== Minimum Java Version
+
+The minimum java version is now 17.
+
+== Dependency updates
+
+Dependencies are updated as of Grails 7.0.0 release date.

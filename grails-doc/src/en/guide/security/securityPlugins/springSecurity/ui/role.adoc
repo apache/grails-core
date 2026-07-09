@@ -1,0 +1,49 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[ui-role]]
+== Role Management
+
+=== Role search
+
+The default action for the Role controller is search. By default only the `authority` field is available but this is customizable with the <<ui-s2ui-override>> script - see the <<ui-customization>> section for details.
+
+The `authority` field has an Ajax autocomplete to assist in finding instances. Leave the field empty to return all instances.
+
+image::role_search_start.png[]
+
+Search is case-insensitive and the search string can appear anywhere in the name (and you can omit the `ROLE_` prefix). Results are shown paginated in groups of 10 but if there's only one result you'll be forwarded to the edit page for that Role. The `authority` column header is clickable and will sort the results by that field.
+
+=== Role edit
+
+After clicking through to a Role you get to the edit page (there are no view pages):
+
+image::role_edit.png[]
+
+You can update any of the attributes or delete the Role. Any user that had been granted the Role will lose the grant but otherwise be unaffected.
+
+If you click the Users tab you can see which users have a grant for this Role and can click through to their edit page:
+
+image::role_edit_users.png[]
+
+=== Role creation
+
+You can create new Roles by going to `/role/create` or by clicking the `Create` action in the `Roles` menu.
+
+image::role_create.png[]

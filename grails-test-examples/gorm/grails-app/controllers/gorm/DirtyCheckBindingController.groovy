@@ -20,14 +20,20 @@
 package gorm
 
 /**
- * Controller used by the functional test for issue 15681. It binds the incoming request parameters to a new
- * {@link DirtyCheckedRecord} and renders the resulting {@code id}, {@code version} and {@code description} so the
- * test can assert over HTTP that {@code id}/{@code version} were not bound by default.
+ * Controller used by the functional tests for issues 15681 and 15795. It binds the incoming request
+ * parameters to a new domain instance and renders the resulting {@code id}, {@code version} and
+ * {@code description} so the tests can assert over HTTP which properties were bound.
  */
 class DirtyCheckBindingController {
 
     def bind() {
         def record = new DirtyCheckedRecord()
+        bindData(record, params)
+        render "id=${record.id}|version=${record.version}|description=${record.description}"
+    }
+
+    def bindInheritedBindableId() {
+        def record = new BindableIdRecord()
         bindData(record, params)
         render "id=${record.id}|version=${record.version}|description=${record.description}"
     }

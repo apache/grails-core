@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta name="layout" content="\${layoutUi}" />
+        <s2ui:title messageCode='default.list.label' entityNameMessageCode='${camelCaseSaName}.label' entityNameDefault='${saClassName}'/>
+    </head>
+    <body>
+        <div id="list-${camelCaseSaName}" class="body" role="main">
+           <div class="list">
+           		<table>
+           			<thead>
+           			<tr>
+           				<s2ui:sortableColumn property='id' titleDefault='ID'/>
+                     <% for(int i=1; i <= numberOfQuestions.toInteger(); i++) {  %>
+                        <s2ui:sortableColumn property='myQuestion${i}' titleDefault='myQuestion${i}'/>
+                        <s2ui:sortableColumn property='myAnswer${i}' titleDefault='myAnswer${i}'/>
+                     <%  } %>
+                     <s2ui:sortableColumn property='${userPropName}' titleDefault='${userPropName}'/>
+           			</tr>
+           			</thead>
+           			<tbody>
+           			<g:each in='\${results}' status='i' var='entry'>
+           				<tr class="\${(i % 2) == 0 ? 'odd' : 'even'}">
+           					<td><g:link action='edit' id='\${entry.id}'>\${entry.id}</g:link></td>
+           					 <% for(int j=1; j <= numberOfQuestions.toInteger(); j++) {  %>
+                                                    <td>\${entry.myQuestion${j}}</td>
+                                                    <td>\${entry.myAnswer${j}}</td>
+                                                 <%  } %>
+           					<td><g:link action='edit' controller='${userDomainName}' id='\${entry.${userPropName}Id}'>\${entry.${userPropName}}</g:link></td>
+           				</tr>
+           			</g:each>
+           			</tbody>
+           		</table>
+           	</div>
+           	<s2ui:paginate total='\${totalCount}'/>
+        </div>
+    </body>
+</html>

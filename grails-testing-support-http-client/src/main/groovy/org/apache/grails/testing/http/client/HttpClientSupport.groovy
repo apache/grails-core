@@ -27,6 +27,7 @@ import java.time.Duration
 import groovy.json.JsonGenerator
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.xml.MarkupBuilder
 
 import org.springframework.beans.factory.annotation.Value
@@ -44,7 +45,8 @@ import org.apache.grails.testing.http.client.utils.XmlUtils
  * <ul>
  *   <li>Shared singleton JDK client for connection reuse across tests.</li>
  *   <li>Client connect timeout of 60 seconds.</li>
- *   <li>Request timeout of 60 seconds on requests built via this helper.</li>
+ *   <li>Request timeout of 60 seconds on requests built via this helper, overridable via the
+ *       {@code grails.http.client.timeout} system property (value in seconds).</li>
  *   <li>Redirect policy {@code ALWAYS} for the shared singleton client.</li>
  * </ul>
  * <p>
@@ -95,6 +97,9 @@ trait HttpClientSupport {
      */
     private static volatile HttpClient sharedClient
     private static final Object HTTP_CLIENT_SYNC_LOCK = new Object()
+
+    private static final String DEFAULT_REQUEST_TIMEOUT_PROPERTY = 'grails.http.client.timeout'
+    private static final int DEFAULT_REQUEST_TIMEOUT_SECONDS = 60
 
     private static final Map<String, String> EMPTY = Collections.emptyMap()
     private static final String APPLICATION_JSON = 'application/json'
@@ -1174,7 +1179,21 @@ trait HttpClientSupport {
     }
 
     private void setDefaultRequestConfig(HttpRequest.Builder builder) {
-        builder.timeout(Duration.ofSeconds(60))
+        builder.timeout(defaultRequestTimeout)
+    }
+
+    /**
+     * The request timeout applied to requests built via this helper.
+     * <p>
+     * Defaults to 60 seconds and can be overridden per test run via the
+     * {@code grails.http.client.timeout} system property (value in seconds),
+     * for example {@code systemProperty('grails.http.client.timeout', '120')} in the test config.
+     *
+     * @return the default request timeout
+     */
+    @Memoized
+    Duration getDefaultRequestTimeout() {
+        Duration.ofSeconds(Integer.getInteger(DEFAULT_REQUEST_TIMEOUT_PROPERTY, DEFAULT_REQUEST_TIMEOUT_SECONDS))
     }
 
     private String encodeFormData(Map<String, ?> formData) {

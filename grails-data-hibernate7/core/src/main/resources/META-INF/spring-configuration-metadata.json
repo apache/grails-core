@@ -3,6 +3,10 @@
         {
             "name": "hibernate.cache",
             "description": "Hibernate"
+        },
+        {
+            "name": "hibernate.grails.proxy",
+            "description": "Grails entity proxy behavior"
         }
     ],
     "properties": [
@@ -22,6 +26,12 @@
             "name": "hibernate.cache.use_query_cache",
             "type": "java.lang.Boolean",
             "description": "Whether to enable Hibernate's query cache.",
+            "defaultValue": false
+        },
+        {
+            "name": "hibernate.grails.proxy.lazy_to_string",
+            "type": "java.lang.Boolean",
+            "description": "Whether toString() on an uninitialized entity proxy returns entityName:id without initializing it. When false (the default, matching Grails 7 and earlier), toString() initializes the proxy and delegates to the domain class's own implementation.",
             "defaultValue": false
         }
     ]

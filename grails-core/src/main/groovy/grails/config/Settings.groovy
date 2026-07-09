@@ -265,6 +265,12 @@ interface Settings {
     String WEB_SERVLET_PATH = 'grails.web.servlet.path'
 
     /**
+     * Whether to remove Spring Boot's {@code defaultViewResolver} bean so Grails' own view
+     * resolution is used. Defaults to true
+     */
+    String WEB_REMOVE_DEFAULT_VIEW_RESOLVER_BEAN = 'grails.web.removeDefaultViewResolverBean'
+
+    /**
      * The URL of the server
      */
     String SERVER_URL = 'grails.serverURL'

@@ -79,7 +79,7 @@ class HttpClientSupportSpec extends Specification {
         mainThreadClient.is(otherThreadClientRef.get())
     }
 
-    void 'newHttpRequestWith uses hard-coded default request timeout'() {
+    void 'newHttpRequestWith uses the default request timeout of 60 seconds'() {
         given:
         def testClient = new TestClient('http://localhost:8080')
 
@@ -89,6 +89,25 @@ class HttpClientSupportSpec extends Specification {
         then:
         request.timeout().isPresent()
         request.timeout().get() == Duration.ofSeconds(60)
+    }
+
+    void 'request timeout is overridable via the grails.http.client.timeout system property'() {
+        given:
+        def testClient = new TestClient('http://localhost:8080')
+        System.setProperty('grails.http.client.timeout', '120')
+
+        expect:
+        testClient.defaultRequestTimeout == Duration.ofSeconds(120)
+
+        when:
+        def request = testClient.newHttpRequestWith('/demo')
+
+        then:
+        request.timeout().isPresent()
+        request.timeout().get() == Duration.ofSeconds(120)
+
+        cleanup:
+        System.clearProperty('grails.http.client.timeout')
     }
 
     void 'newHttpClientWith applies custom client builder configuration'() {

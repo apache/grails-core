@@ -37,6 +37,14 @@ public class GroovyProxyInterceptorLogic {
 
     public static final Object INVOKE_IMPLEMENTATION = new Object();
 
+    /**
+     * Setting that controls {@code toString()} on an uninitialized proxy. When {@code false}
+     * (the default, matching Grails 7 and earlier), {@code toString()} initializes the proxy
+     * and delegates to the entity's own implementation. When {@code true}, the proxy answers
+     * {@code entityName:id} without initializing.
+     */
+    public static final String PROPERTY_LAZY_TO_STRING = "hibernate.grails.proxy.lazy_to_string";
+
     private static final String GET_META_CLASS = "getMetaClass";
     private static final String SET_META_CLASS = "setMetaClass";
     private static final String META_CLASS_PROPERTY = "metaClass";
@@ -66,7 +74,7 @@ public class GroovyProxyInterceptorLogic {
         if ((IS_DIRTY.equals(methodName) || HAS_CHANGED.equals(methodName)) && (args == null || args.length == 0)) {
             return false;
         }
-        if (TO_STRING.equals(methodName) && (args == null || args.length == 0)) {
+        if (state.lazyToString() && TO_STRING.equals(methodName) && (args == null || args.length == 0)) {
             return state.entityName() + ":" + state.identifier();
         }
         return INVOKE_IMPLEMENTATION;
@@ -121,5 +129,10 @@ public class GroovyProxyInterceptorLogic {
         return null;
     }
 
-    public record InterceptorState(String entityName, Class<?> persistentClass, Object identifier) {}
+    public record InterceptorState(String entityName, Class<?> persistentClass, Object identifier, boolean lazyToString) {
+
+        public InterceptorState(String entityName, Class<?> persistentClass, Object identifier) {
+            this(entityName, persistentClass, identifier, false);
+        }
+    }
 }

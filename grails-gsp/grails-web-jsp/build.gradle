@@ -26,6 +26,7 @@ plugins {
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
     id 'org.apache.grails.gradle.grails-code-style'
     id 'org.apache.grails.gradle.grails-jacoco'
 }
@@ -110,6 +111,15 @@ dependencies {
 //    compileOnly 'jakarta.servlet:jakarta.servlet-api' // Provided by servlet container
 //    compileOnly "jakarta.servlet.jsp:jakarta.servlet.jsp-api:$jspApiVersion" // Provided by servlet container
 //    compileOnly "jakarta.el:jakarta.el-api:$elApiVersion" // Provided by servlet container
+}
+
+// Package the canonical license texts referenced by META-INF/LICENSE
+tasks.withType(Jar).configureEach { jarTask ->
+    jarTask.into('META-INF/licenses') {
+        from rootProject.layout.projectDirectory.file('licenses/LICENSE-EPL2.txt')
+        from rootProject.layout.projectDirectory.file('licenses/LICENSE-CDDL.txt')
+        include { jarTask.archiveClassifier.getOrElse('') != 'javadoc' }
+    }
 }
 
 apply {
