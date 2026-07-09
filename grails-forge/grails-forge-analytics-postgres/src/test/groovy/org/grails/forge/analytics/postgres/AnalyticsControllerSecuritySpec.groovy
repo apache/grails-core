@@ -54,6 +54,7 @@ class AnalyticsControllerSecuritySpec extends Specification {
 
     @Inject @Client('/analytics') HttpClient client
     @Inject ApplicationRepository applicationRepository
+    @Inject FeatureRepository featureRepository
     @Inject JdbcOperations jdbcOperations
     @Inject TokenGenerator tokenGenerator
 
@@ -80,11 +81,12 @@ class AnalyticsControllerSecuritySpec extends Specification {
 
     void 'top analytics data is not rejected as unauthenticated'() {
         when:
-        client.toBlocking().exchange(HttpRequest.GET('/top/features'), String)
+        def response = client.toBlocking().exchange(HttpRequest.GET('/top/features'), String)
 
         then:
-        HttpClientResponseException e = thrown(HttpClientResponseException)
-        e.status == HttpStatus.INTERNAL_SERVER_ERROR
+        response.status == HttpStatus.OK
+        response.body() == '[]'
+        1 * featureRepository.topFeatures() >> []
         0 * applicationRepository._
     }
 
@@ -134,6 +136,12 @@ class AnalyticsControllerSecuritySpec extends Specification {
     @NonNull
     ApplicationRepository applicationRepository() {
         Mock(ApplicationRepository)
+    }
+
+    @MockBean(FeatureRepository)
+    @NonNull
+    FeatureRepository featureRepository() {
+        Mock(FeatureRepository)
     }
 
     @MockBean(JdbcOperations)

@@ -36,6 +36,7 @@ import java.util.stream.Collectors;
 
 @Controller("/analytics")
 @ExecuteOn(TaskExecutors.IO)
+@Secured(SecurityRule.IS_AUTHENTICATED)
 public class AnalyticsController {
 
     private final ApplicationRepository applicationRepository;
@@ -84,7 +85,6 @@ public class AnalyticsController {
      * @return A future
      */
     @Post("/report")
-    @Secured(SecurityRule.IS_AUTHENTICATED)
     @Transactional
     @ExecuteOn(TaskExecutors.IO)
     HttpStatus applicationGenerated(@NonNull @Body Generated generated) {
