@@ -216,7 +216,7 @@
 
                         <g:each var="nsEntry" in="${controllersByNamespace}" status="nsIndex">
                             <div class="${nsIndex > 0 ? 'mt-4' : ''}">
-                                <div class="px-0 py-2 bg-body-tertiary">
+                                <div class="px-2 py-2 bg-body-tertiary">
                                     <div class="d-flex align-items-center justify-content-between">
                                         <div class="small text-uppercase text-body-secondary fw-semibold"
                                              style="letter-spacing: .04em;">
@@ -240,7 +240,7 @@
                                         <g:set var="controllerUrl"
                                                value="${createLink(controller: c.logicalPropertyName, namespace: c.namespace)}"/>
 
-                                        <li class="list-group-item px-0">
+                                        <li class="list-group-item list-group-item-action px-2">
                                             <div class="d-flex align-items-center justify-content-between gap-3">
                                                 <g:link controller="${c.logicalPropertyName}"
                                                         namespace="${c.namespace}"
@@ -279,7 +279,7 @@
 
                         <div class="table-responsive">
                             <table class="table table-sm table-striped table-hover" data-sortable="true">
-                                <thead class="table-light small">
+                                <thead class="small">
                                 <tr>
                                     <th scope="col"
                                         class="text-body-secondary ps-0 fw-semibold sortable"

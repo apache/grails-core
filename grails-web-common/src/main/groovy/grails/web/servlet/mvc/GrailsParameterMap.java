@@ -18,7 +18,6 @@
  */
 package grails.web.servlet.mvc;
 
-import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -34,9 +33,6 @@ import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.util.MultiValueMap;
@@ -44,9 +40,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.multipart.MultipartHttpServletRequest;
 
 import grails.databinding.DataBinder;
-import grails.io.IOUtils;
 import grails.util.TypeConvertingMap;
-import grails.web.mime.MimeType;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.web.binding.StructuredDateEditor;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
@@ -65,11 +59,16 @@ import org.grails.web.util.WebUtils;
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public class GrailsParameterMap extends TypeConvertingMap implements Cloneable {
 
-    private static final Logger LOG = LoggerFactory.getLogger(GrailsParameterMap.class);
     private static final Map<String, String> CACHED_DATE_FORMATS = new ConcurrentHashMap<>();
 
     private final Map nestedDateMap = new LinkedHashMap();
     private final HttpServletRequest request;
+
+    /**
+     * Retained for binary compatibility. Request-body parsing for form-encoded {@code PUT}, {@code PATCH}
+     * and {@code DELETE} requests is now handled at the servlet layer by Spring's {@code FormContentFilter}
+     * (registered by Boot's {@code WebMvcAutoConfiguration}), not by this map.
+     */
     public static final String REQUEST_BODY_PARSED = "org.codehaus.groovy.grails.web.REQUEST_BODY_PARSED";
 
     public static final Object[] EMPTY_ARGS = new Object[0];
@@ -91,23 +90,9 @@ public class GrailsParameterMap extends TypeConvertingMap implements Cloneable {
      */
     public GrailsParameterMap(HttpServletRequest request) {
         this.request = request;
+        // Request parameters (including form-encoded PUT/PATCH/DELETE bodies parsed at the servlet
+        // layer by Spring's FormContentFilter) are read straight from the request parameter map.
         final Map requestMap = new LinkedHashMap(request.getParameterMap());
-        if (requestMap.isEmpty() && ("PUT".equals(request.getMethod()) || "PATCH".equals(request.getMethod())) && request.getAttribute(REQUEST_BODY_PARSED) == null) {
-            // attempt manual parse of request body. This is here because some containers don't parse the request body automatically for PUT request
-            String contentType = request.getContentType();
-            if (MimeType.FORM.equals(new MimeType(contentType))) {
-                try {
-                    Reader reader = request.getReader();
-                    if (reader != null) {
-                        String contents = IOUtils.toString(reader);
-                        request.setAttribute(REQUEST_BODY_PARSED, true);
-                        requestMap.putAll(WebUtils.fromQueryString(contents));
-                    }
-                } catch (Exception e) {
-                    LOG.error("Error processing form encoded " + request.getMethod() + " request", e);
-                }
-            }
-        }
 
         if (request instanceof MultipartHttpServletRequest) {
             MultiValueMap<String, MultipartFile> fileMap = ((MultipartHttpServletRequest) request).getMultiFileMap();

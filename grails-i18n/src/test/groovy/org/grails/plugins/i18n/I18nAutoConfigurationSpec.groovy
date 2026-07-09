@@ -21,6 +21,7 @@ package org.grails.plugins.i18n
 
 import java.util.function.Supplier
 
+import grails.config.Settings
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
 import grails.plugins.GrailsPlugin
@@ -33,6 +34,8 @@ import org.springframework.context.MessageSource
 import org.springframework.context.support.GenericApplicationContext
 import org.springframework.context.support.StaticMessageSource
 import org.springframework.web.servlet.LocaleResolver
+import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver
+import org.springframework.web.servlet.i18n.CookieLocaleResolver
 import org.springframework.web.servlet.i18n.FixedLocaleResolver
 import org.springframework.web.servlet.i18n.LocaleChangeInterceptor
 import org.springframework.web.servlet.i18n.SessionLocaleResolver
@@ -66,6 +69,41 @@ class I18nAutoConfigurationSpec extends Specification {
             assert context.getBean(LocaleChangeInterceptor) instanceof ParamsAwareLocaleChangeInterceptor
             assert context.getBean('messageSource') instanceof PluginAwareResourceBundleMessageSource
         }
+    }
+
+    void 'grails.i18n.localeResolver=cookie uses a CookieLocaleResolver and keeps the ?lang= interceptor'() {
+        expect:
+        contextRunner()
+                .withPropertyValues("${Settings.I18N_LOCALE_RESOLVER}=cookie")
+                .run { context ->
+                    assert context.getBean('localeResolver') instanceof CookieLocaleResolver
+                    assert context.getBean(LocaleChangeInterceptor) instanceof ParamsAwareLocaleChangeInterceptor
+                }
+    }
+
+    void 'grails.i18n.localeResolver=acceptHeader uses an AcceptHeaderLocaleResolver'() {
+        expect:
+        contextRunner()
+                .withPropertyValues("${Settings.I18N_LOCALE_RESOLVER}=acceptHeader")
+                .run { context ->
+                    assert context.getBean('localeResolver') instanceof AcceptHeaderLocaleResolver
+                    // the ?lang= interceptor is still registered; it no-ops for a read-only resolver
+                    assert context.getBean(LocaleChangeInterceptor) instanceof ParamsAwareLocaleChangeInterceptor
+                }
+    }
+
+    void 'grails.i18n.localeResolver=fixed uses a FixedLocaleResolver honouring grails.i18n.default.locale'() {
+        expect:
+        contextRunner()
+                .withPropertyValues(
+                        "${Settings.I18N_LOCALE_RESOLVER}=fixed",
+                        'grails.i18n.default.locale=de')
+                .run { context ->
+                    def resolver = context.getBean('localeResolver')
+                    assert resolver instanceof FixedLocaleResolver
+                    assert resolver.resolveLocale(null).language == 'de'
+                    assert context.getBean(LocaleChangeInterceptor) instanceof ParamsAwareLocaleChangeInterceptor
+                }
     }
 
     void 'a user-defined localeResolver bean makes the Grails localeResolver back off'() {

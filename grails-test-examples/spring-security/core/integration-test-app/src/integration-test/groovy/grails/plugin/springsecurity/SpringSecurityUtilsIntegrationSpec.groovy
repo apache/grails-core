@@ -18,8 +18,6 @@
  */
 package grails.plugin.springsecurity
 
-import org.springframework.web.filter.FormContentFilter
-
 import static org.springframework.beans.factory.config.BeanDefinition.SCOPE_PROTOTYPE
 import static org.springframework.beans.factory.support.AbstractBeanDefinition.AUTOWIRE_BY_NAME
 import grails.plugin.springsecurity.userdetails.GrailsUser
@@ -89,7 +87,7 @@ class SpringSecurityUtilsIntegrationSpec extends AbstractIntegrationSpec {
         def map = SpringSecurityUtils.configuredOrderedFilters
 
         expect:
-        10 == map.size()
+        9 == map.size()
         map[Integer.MIN_VALUE + 10] instanceof SecurityRequestHolderFilter
         map[SecurityFilterPosition.SECURITY_CONTEXT_FILTER.order] instanceof SecurityContextPersistenceFilter
         map[SecurityFilterPosition.LOGOUT_FILTER.order] instanceof MutableLogoutFilter
@@ -97,7 +95,6 @@ class SpringSecurityUtilsIntegrationSpec extends AbstractIntegrationSpec {
         map[SecurityFilterPosition.SERVLET_API_SUPPORT_FILTER.order] instanceof SecurityContextHolderAwareRequestFilter
         map[SecurityFilterPosition.REMEMBER_ME_FILTER.order] instanceof GrailsRememberMeAuthenticationFilter
         map[SecurityFilterPosition.ANONYMOUS_FILTER.order] instanceof GrailsAnonymousAuthenticationFilter
-        map[SecurityFilterPosition.EXCEPTION_TRANSLATION_FILTER.order-10] instanceof FormContentFilter
         map[SecurityFilterPosition.EXCEPTION_TRANSLATION_FILTER.order] instanceof ExceptionTranslationFilter
         map[SecurityFilterPosition.FILTER_SECURITY_INTERCEPTOR.order] instanceof FilterSecurityInterceptor
 
@@ -126,7 +123,7 @@ class SpringSecurityUtilsIntegrationSpec extends AbstractIntegrationSpec {
         SpringSecurityUtils.clientRegisterFilter 'dummyFilter', SecurityFilterPosition.LOGOUT_FILTER.order + 10
 
         then:
-        11 == map.size()
+        10 == map.size()
         map[SecurityFilterPosition.LOGOUT_FILTER.order + 10] instanceof DummyFilter
 
         when:
@@ -141,9 +138,8 @@ class SpringSecurityUtilsIntegrationSpec extends AbstractIntegrationSpec {
         filters[5] instanceof SecurityContextHolderAwareRequestFilter
         filters[6] instanceof GrailsRememberMeAuthenticationFilter
         filters[7] instanceof GrailsAnonymousAuthenticationFilter
-        filters[8] instanceof FormContentFilter
-        filters[9] instanceof ExceptionTranslationFilter
-        filters[10] instanceof FilterSecurityInterceptor
+        filters[8] instanceof ExceptionTranslationFilter
+        filters[9] instanceof FilterSecurityInterceptor
     }
 
     void 'reauthenticate'() {
