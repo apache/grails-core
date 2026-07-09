@@ -1,0 +1,97 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+Memoization is a write-through caching technique. The plugin provides a number of methods that take a key and a closure. Each method first checks Redis for the key: if it exists, the cached value is returned and the closure is not executed; if it does not, the closure is executed and its result is stored in Redis under the key. Subsequent calls are served the cached value rather than recalculating it.
+
+This is very useful for values that are frequently requested but expensive to calculate.
+
+==== String memoization
+
+[source,groovy]
+----
+redisService.memoize("user:$userId:helloMessage") {
+    // expensive calculation that returns a String
+    "Hello ${security.currentLoggedInUser().firstName}"
+}
+----
+
+By default the key/value is cached indefinitely. You can refresh it by deleting the key, by including a date or timestamp in the key, or by using the optional `expire` parameter (the number of seconds before Redis expires the key):
+
+[source,groovy]
+----
+def ONE_HOUR = 3600
+redisService.memoize("user:$userId:helloMessage", [expire: ONE_HOUR]) {
+    "Hello ${security.currentLoggedInUser().firstName}. The temperature this hour is ${currentTemperature()}"
+}
+----
+
+==== Domain object memoization
+
+You can memoize a single domain object. The plugin caches the id of the object returned by the closure and, on subsequent cache hits, returns a proxy via `DomainObject.load(cachedId)`:
+
+[source,groovy]
+----
+String key = 'user:42:favorite:author'
+Author author = redisService.memoizeDomainObject(Author, key) {
+    Author a = ... // expensive calculation of user 42's favorite author
+    return a
+}
+----
+
+Because a proxy is returned, you can query with it without hydrating the full object:
+
+[source,groovy]
+----
+def recommendedBooks = Book.findByAuthor(author)
+----
+
+The id field is populated and the remaining fields are loaded lazily only when requested, so `author.name` still resolves correctly.
+
+==== Domain list memoization
+
+You can also memoize a list of domain object identifiers. Only the database ids are cached, not the full objects, so you still fetch the freshest objects from the database while avoiding the cost of repeatedly building an expensive list:
+
+[source,groovy]
+----
+def key = "user:$id:friends-books-user-does-not-own"
+redisService.memoizeDomainList(Book, key, ONE_HOUR) { redis ->
+    // expensive process to determine the relevant Book ids; the ids are stored in
+    // Redis, but the Book objects are hydrated from the database
+}
+----
+
+==== Other memoization methods
+
+The plugin provides memoization methods for the other Redis data types:
+
+[source,groovy]
+----
+// Redis hash
+redisService.memoizeHash('saved-hash') { return [foo: 'bar'] }
+redisService.memoizeHashField('saved-hash', 'foo') { return 'bar' }
+
+// Redis list
+redisService.memoizeList('saved-list') { return ['foo', 'bar', 'baz'] }
+
+// Redis set
+redisService.memoizeSet('saved-set') { return ['foo', 'bar', 'baz'] as Set }
+
+// Redis sorted set
+redisService.memoizeScore('saved-sorted-set', 'set-item') { return score }
+----

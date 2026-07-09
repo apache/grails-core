@@ -55,7 +55,7 @@ class TemplateRendererImpl implements TemplateRenderer {
     @Override
     @CompileDynamic
     void render(Map<String, Object> namedArguments) {
-        if (namedArguments?.template && namedArguments?.destination) {
+        if (namedArguments?.template && namedArguments?.destination != null) {
             def templateArg = namedArguments.template
             Resource template = templateArg instanceof Resource ? templateArg : template(templateArg)
             boolean overwrite = namedArguments.overwrite as Boolean ?: false
@@ -83,7 +83,7 @@ class TemplateRendererImpl implements TemplateRenderer {
      * @param model The model
      */
     void render(CharSequence template, File destination, Map model = Collections.emptyMap(), boolean overwrite = false) {
-        if (template && destination) {
+        if (template && destination != null) {
             if (destination.exists() && !overwrite) {
                 println("Warning | Destination file ${projectPath(destination)} already exists, skipping...")
             } else {
@@ -117,7 +117,7 @@ class TemplateRendererImpl implements TemplateRenderer {
      * @param model The model
      */
     void render(File template, File destination, Map model = Collections.emptyMap(), boolean overwrite = false) {
-        if (template && destination) {
+        if (template != null && destination != null) {
             if (destination.exists() && !overwrite) {
                 println("Warning | Destination file ${projectPath(destination)} already exists, skipping...")
             } else {
@@ -159,7 +159,7 @@ class TemplateRendererImpl implements TemplateRenderer {
      * @param model The model
      */
     void render(Resource template, File destination, Map model = Collections.emptyMap(), boolean overwrite = false) {
-        if (template && destination) {
+        if (template != null && destination != null) {
             if (destination.exists() && !overwrite) {
                 println("Warning | Destination file ${projectPath(destination)} already exists, skipping...")
             } else if (!template?.exists()) {

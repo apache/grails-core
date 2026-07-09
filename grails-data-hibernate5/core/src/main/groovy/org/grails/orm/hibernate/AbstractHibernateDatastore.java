@@ -384,7 +384,6 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
         if (getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DATABASE) {
             AbstractHibernateDatastore datastore = getDatastoreForConnection(tenantId.toString());
             SessionFactory sessionFactory = datastore.getSessionFactory();
-
             return datastore.getHibernateTemplate().executeWithExistingOrCreateNewSession(sessionFactory, callable);
         }
         else {

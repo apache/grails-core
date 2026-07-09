@@ -21,7 +21,9 @@ package org.grails.plugins.i18n;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
+import org.springframework.boot.autoconfigure.condition.SearchStrategy;
 import org.springframework.boot.autoconfigure.context.MessageSourceAutoConfiguration;
 import org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration;
 import org.springframework.context.MessageSource;
@@ -55,12 +57,17 @@ public class I18nAutoConfiguration {
     @Value("${" + Settings.I18N_FILE_CACHE_SECONDS + ":5}")
     private int fileCacheSeconds;
 
+    // SearchStrategy.CURRENT on all three guards: DispatcherServlet resolves these beans from its
+    // own context, and Boot's MessageSourceAutoConfiguration uses the same scoping — a bean in a
+    // parent context must not make the child context's bean back off.
     @Bean(DispatcherServlet.LOCALE_RESOLVER_BEAN_NAME)
+    @ConditionalOnMissingBean(name = DispatcherServlet.LOCALE_RESOLVER_BEAN_NAME, search = SearchStrategy.CURRENT)
     public LocaleResolver localeResolver() {
         return new SessionLocaleResolver();
     }
 
     @Bean
+    @ConditionalOnMissingBean(name = "localeChangeInterceptor", search = SearchStrategy.CURRENT)
     public LocaleChangeInterceptor localeChangeInterceptor() {
         ParamsAwareLocaleChangeInterceptor localeChangeInterceptor = new ParamsAwareLocaleChangeInterceptor();
         localeChangeInterceptor.setParamName("lang");
@@ -68,6 +75,7 @@ public class I18nAutoConfiguration {
     }
 
     @Bean(AbstractApplicationContext.MESSAGE_SOURCE_BEAN_NAME)
+    @ConditionalOnMissingBean(name = AbstractApplicationContext.MESSAGE_SOURCE_BEAN_NAME, search = SearchStrategy.CURRENT)
     public MessageSource messageSource(GrailsApplication grailsApplication, GrailsPluginManager pluginManager) {
         PluginAwareResourceBundleMessageSource messageSource = new PluginAwareResourceBundleMessageSource(grailsApplication, pluginManager);
         messageSource.setDefaultEncoding(encoding);

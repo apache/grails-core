@@ -1,0 +1,81 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[rest-whatsNew20]]
+== Grails 3 and 4 support
+
+This major release is working with Grails 3 and 4. It's based on the newer versions of Spring Security Core plugin,
+which in turn uses newer Spring Security versions, so make sure you read carefully what the new versions have changed:
+
+|===
+| Grails Version | `spring-security-rest` version | Spring Security Core docs
+
+| 3.x
+| `2.0.0.RC1`
+| https://apache.github.io/grails-spring-security/3.2.x/index.html#newInV3[]
+
+| 4.x
+| `3.0.0.RC1` or later
+| https://apache.github.io/grails-spring-security/4.0.x/index.html#newInV3[]
+
+|===
+
+Special thanks to https://github.com/Schlogen[James Kleeh]  and
+https://github.com/rvanderwerf[Ryan Vanderwerf] for their help in the upgrade steps.
+
+== Plugin broken down into multiple modules
+
+Starting from this version, `org.grails.plugins:spring-security-rest` just contains support for JWT. Artifact size has
+been reduced from 429 KB in version 1.5.3 to 194K in 2.0.x!
+
+For those using a different token storage system, the following artifacts are also published:
+
+* `org.grails.plugins:spring-security-rest-gorm`.
+* `org.grails.plugins:spring-security-rest-grailscache`.
+* `org.grails.plugins:spring-security-rest-memcached`.
+* `org.grails.plugins:spring-security-rest-redis`.
+
+The version is the same in all modules. For more details, check the <<configuration>> section.
+
+As a consequence, configuration properties like `grails.plugin.springsecurity.rest.token.storage.useMemcached` are no
+longer used.
+
+== CORS is now supported in Grails core
+
+As of Grails 3.2.1, Grails natively supports CORS. Refer to the http://docs.grails.org/3.2.0/[Grails documentation] for
+more information about how to configure it.
+
+== JWT improvements
+
+As of this version, there is no longer a default value for the configuration property
+`grails.plugin.springsecurity.rest.token.storage.jwt.secret`. Furthermore, if you are using JWT and no value has
+been provided for that configuration property, an exception will be thrown during application startup.
+
+It is also possible to influence the JWT generation by providing additional claims. Finally, the signing / encryption
+algorithms used are configurable. Check the <<rest-tokenGeneration>> section for more information.
+
+== Other minor updates
+
+* Classes have been annotated with `@CompileStatic`, for performance reasons.
+* Documentation has been migrated to Asciidoctor.
+* All libraries used have been upgraded to their latest versions.
+* Snapshots are now published automatically to https://oss.jfrog.org[Artifactory OSS] on every successful build. You can
+  use them by defining this Maven repository inside the `repositories` block in your `build.gradle`:
+
+  maven { url "https://oss.jfrog.org/artifactory/oss-snapshot-local" }

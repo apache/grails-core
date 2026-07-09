@@ -39,6 +39,7 @@ dependencies {
     implementation "org.gradle.crypto.checksum:org.gradle.crypto.checksum.gradle.plugin:${gradleProperties.gradleChecksumPluginVersion}"
     implementation "org.cyclonedx.bom:org.cyclonedx.bom.gradle.plugin:${gradleProperties.gradleCycloneDxPluginVersion}"
     implementation "com.github.spotbugs.snom:spotbugs-gradle-plugin:${gradleProperties.spotbugsPluginVersion}"
+    implementation "org.sonatype.gradle.plugins:scan-gradle-plugin:${gradleProperties.sonatypeScanPluginVersion}"
 
     testImplementation "org.spockframework:spock-core:${gradleBomDependencyVersions['gradle-spock.version']}"
     testImplementation gradleTestKit()
@@ -83,6 +84,10 @@ gradlePlugin {
             id = 'org.apache.grails.gradle.grails-violation-aggregation'
             implementationClass = 'org.apache.grails.buildsrc.GrailsViolationAggregationPlugin'
         }
+        register('grailsIJFormatter') {
+            id = 'org.apache.grails.gradle.grails-ij-formatter'
+            implementationClass = 'org.apache.grails.buildsrc.GrailsIJFormatterPlugin'
+        }
         register('groovydocEnhancer') {
             id = 'org.apache.grails.buildsrc.groovydoc-enhancer'
             implementationClass = 'org.apache.grails.buildsrc.GroovydocEnhancerPlugin'
@@ -98,6 +103,10 @@ gradlePlugin {
         register('grailsDependencyValidator') {
             id = 'org.apache.grails.buildsrc.dependency-validator'
             implementationClass = 'org.apache.grails.buildsrc.GrailsDependencyValidatorPlugin'
+        }
+        register('vulnerabilityScanPlugin') {
+            id = 'org.apache.grails.buildsrc.vulnerability-scan'
+            implementationClass = 'org.apache.grails.buildsrc.VulnerabilityScanPlugin'
         }
     }
 }

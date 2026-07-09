@@ -812,6 +812,9 @@ If your application contributed `HttpMessageConverter` beans through this class,
 Spring Framework 7 deprecated `org.springframework.lang.Nullable` and `org.springframework.lang.NonNull` in favor of the JSpecify annotations (`org.jspecify.annotations.Nullable`, `org.jspecify.annotations.NonNull`).
 The Spring annotations still work, so this is non-blocking, but new code should prefer the JSpecify equivalents.
 
+* **Namespaced link generation is namespace-aware.**
+When a link, form action, pagination link, sortable column link, redirect, chain, or include targets a controller without an explicit `namespace`, Grails now resolves the namespace automatically. In the normal case, where only one controller has the target name, `controller` and `action` generate the correct namespaced or non-namespaced URL. Ambiguity only occurs when multiple controllers share the same name. In that case, specify `namespace` to choose the target explicitly. Pass `namespace: null` from Groovy code or `namespace=""` in a GSP tag to target the non-namespaced controller explicitly.
+
 ==== 21. Tag Library Test Cleanup Changes
 
 Grails 8 removes the `purgeTagLibMetaClass` test hook used by some web and TagLib unit tests.
@@ -1243,18 +1246,60 @@ grails.gorm.default.constraints = {
 }
 ----
 
-==== 28. MIME Types Are Now Framework Defaults
+==== 28. Apache Groovy 5 Behavior Changes
+
+Grails 8 upgrades from Apache Groovy 4 to Apache Groovy 5.
+Most applications need no changes, but a few stricter behaviors can affect application code.
+
+===== 28.1 Assigning a static field from a static closure requires the class name
+
+Under Groovy 5 with static compilation (`@CompileStatic` / `@GrailsCompileStatic`), assigning to a static field from inside a static closure - such as the `constraints`, `mapping`, or `namedQueries` blocks of a statically compiled class - no longer resolves an unqualified field name to the enclosing class's static field.
+Qualify the assignment with the class name:
+
+[source,groovy]
+----
+@GrailsCompileStatic
+class Book implements Validateable {
+    static boolean constraintsClosureCalled = false
+
+    static constraints = {
+        // Groovy 4: an unqualified assignment resolved to Book.constraintsClosureCalled
+        // Groovy 5: the field must be qualified with the class name
+        Book.constraintsClosureCalled = true
+    }
+}
+----
+
+Reading a static field is unaffected; only assignment from within the static closure needs the class-name qualifier.
+
+===== 28.2 Probing a `ConfigObject` for a missing key
+
+In Groovy 5, indexing a `groovy.util.ConfigObject` with the subscript operator for a key that does not exist creates and inserts an empty nested `ConfigObject` for that key, rather than reading back as a falsy value.
+Code that walks a configuration source with `[]` and expects a missing key to be `null` should test for the key explicitly before reading it:
+
+[source,groovy]
+----
+// Under Groovy 5 this inserts an empty entry for a missing key
+def value = configObject[key]
+
+// Probe without creating an entry
+def value = configObject.containsKey(key) ? configObject.get(key) : null
+----
+
+Grails applies this guard internally when resolving Spring profile activation keys; you only need it in application code that navigates a raw `ConfigObject` by subscript.
+
+==== 29. MIME Types Are Now Framework Defaults
 
 Grails 8 ships the full set of supported MIME types as built-in framework defaults.
 Previously every newly generated application declared a `grails.mime.types` block in `grails-app/conf/application.yml`; the Grails Forge and the application profiles no longer generate that block, because the framework now supplies the same defaults out of the box.
 
-The built-in defaults cover `all`, `atom`, `css`, `csv`, `form`, `html`, `js`, `json`, `multipartForm`, `pdf`, `rss`, `text`, `hal` and `xml` — the same set new applications historically declared.
+The built-in defaults cover `all`, `atom`, `css`, `csv`, `form`, `html`, `js`, `json`, `multipartForm`, `pdf`, `rss`, `text`, `hal` and `xml`, the same set new applications historically declared.
 
 **No action is required.**
-A declared `grails.mime.types` still *replaces* the defaults, exactly as in Grails 7 — your existing block remains authoritative and you get precisely the types you declared (including a deliberately narrowed set). New applications simply no longer need the block, because the framework supplies these defaults when none is configured.
+A declared `grails.mime.types` still *replaces* the defaults, exactly as in Grails 7. Your existing block remains authoritative and you get precisely the types you declared (including a deliberately narrowed set). New applications simply no longer need the block, because the framework supplies these defaults when none is configured.
 
 **Optional: merge instead of replace.**
-If you would rather add to the defaults than re-declare them, set `grails.mime.mergeDefaults` to `true`. Your declared entries are then merged over the built-in defaults — an entry replaces the default for its extension, and any extension you do not declare keeps its default — so you can register a single custom type without restating the full list:
+If you would rather add to the defaults than re-declare them, set `grails.mime.mergeDefaults` to `true`. Your declared entries are then merged over the built-in defaults. An entry replaces the default for its extension, and any extension you do not declare keeps its default, so you can register a single custom type without restating the full list:
 
 [source,yaml]
 .application.yml
@@ -1266,7 +1311,7 @@ grails:
             custom: application/vnd.example+json
 ----
 
-==== 29. Accept Header Honored for All Clients
+==== 30. Accept Header Honored for All Clients
 
 Grails 8 honors the HTTP `Accept` header for content negotiation for **every** client by default, including browsers.
 
@@ -1283,7 +1328,7 @@ In Grails 8 such a request correctly receives JSON.
 Browser page loads still resolve to HTML because modern browsers rank `text/html` highest, and `withFormat { html { } json { } }` continues to serve HTML to browsers and JSON to clients that ask for it.
 
 **`respond` endpoints without an HTML view now error for browser requests.**
-Because browsers now negotiate `text/html`, an action that uses `respond(...)` but has no corresponding HTML view (GSP) can no longer return JSON to a browser by accident — it negotiates `html` and attempts to render the missing view, which results in an error.
+Because browsers now negotiate `text/html`, an action that uses `respond(...)` but has no corresponding HTML view (GSP) can no longer return JSON to a browser by accident. It negotiates `html` and attempts to render the missing view, which results in an error.
 Previously the browser's `Accept` header was ignored, so such an endpoint happened to return JSON.
 If you have browser-facing `respond` endpoints, add an HTML view for the action (or `render` an appropriate response directly).
 API clients that send a specific `Accept` such as `application/json` are unaffected.
@@ -1305,7 +1350,7 @@ grails:
                         - Trident
 ----
 
-==== 30. Render Defaults Harden Unsafe Content
+==== 31. Render Defaults Harden Unsafe Content
 
 Grails 8 hardens controller `render(...)` defaults for responses that could otherwise be interpreted as browser-rendered HTML.
 Rendering an arbitrary object with `render(object)`, or rendering a map that does not contain a recognized render argument, now writes the Groovy `inspect()` value as `text/plain` by default instead of `text/html`.
@@ -1324,3 +1369,64 @@ For example:
 render(text: myObject.inspect(), contentType: 'text/html')
 render(file: new File(absolutePath), inline: true)
 ----
+
+==== 32. @EnableWebMvc No Longer Added to Grails Applications
+
+In earlier versions, Grails added Spring's `@EnableWebMvc` annotation to the generated `Application` class at compile time.
+`@EnableWebMvc` is a Spring Framework configuration annotation that is not intended to be combined with Spring Boot: it imports `DelegatingWebMvcConfiguration`, which eagerly registers a fixed set of MVC beans and switches off Spring Boot's `WebMvcAutoConfiguration`.
+In a Boot application this produced bean-definition override warnings at startup (for example for `localeResolver` and `internalAutoProxyCreator`) and prevented Boot's conditional, more configurable auto-configuration from taking effect.
+
+Grails 8 removes the auto-injected `@EnableWebMvc`.
+Spring Boot's `WebMvcAutoConfiguration` is now active for Grails servlet web applications, which is the intended Boot behavior and resolves those override warnings.
+
+**No action is required for most applications.**
+Grails adapts internally so the change is transparent.
+The notes below explain the two behavioral differences this introduces and the configuration toggles available if you need to control them.
+
+===== 32.1 Boot's default view resolver is removed automatically
+
+With `WebMvcAutoConfiguration` active, Boot contributes a catch-all `defaultViewResolver` (an `InternalResourceViewResolver`).
+For a Grails application that does not use JSP/`InternalResource` views (for example a REST/JSON-views application) this resolver maps any unmatched view name to a servlet forward, which can surface as:
+
+[source]
+----
+Circular view path [index]: would dispatch back to the current handler URL
+----
+
+To prevent this, Grails removes Boot's `defaultViewResolver` for every Grails servlet web application so that Grails' own view resolution is used instead.
+If you need to keep Boot's `defaultViewResolver` (for example, an application that genuinely relies on JSP/`InternalResource` views), opt out:
+
+[source,yaml]
+.application.yml
+----
+grails:
+    web:
+        removeDefaultViewResolverBean: false
+----
+
+NOTE: In GSP applications the GSP view resolver continues to be installed as the primary `viewResolver`, controlled as before by `spring.gsp.replaceViewResolverBean`.
+The earlier `spring.gsp.removeDefaultViewResolverBean` property (from when this removal lived in the GSP module) is still honoured for backward compatibility but is **deprecated** — `defaultViewResolver` removal is now handled centrally for all Grails servlet web applications by the `grails.web.removeDefaultViewResolverBean` property above, which takes precedence. Setting the old name logs a deprecation warning at startup.
+
+===== 32.2 GrailsWebRequest binding
+
+With `WebMvcAutoConfiguration` active, Boot would otherwise register its own `RequestContextFilter` that rebinds a plain `ServletRequestAttributes`, replacing the `GrailsWebRequest` bound earlier in the filter chain.
+Downstream code that expects a `GrailsWebRequest` would then fail with a `ClassCastException`.
+
+Grails 8 registers its request-binding filter as a `RequestContextFilter` bean so that Boot's filter backs off and the `GrailsWebRequest` remains bound for the whole request.
+This is handled internally and requires no configuration changes.
+Applications that defined their own `GrailsWebRequestFilter` bean, or their own `grailsWebRequestFilter` filter-registration bean, continue to override the Grails-provided ones.
+
+==== 33. More Framework Beans Are Cleanly Overridable
+
+Several Grails framework beans that were previously registered unconditionally are now guarded with `@ConditionalOnMissingBean`, so a bean of the same name (or type) defined in an application configuration class (a `@Bean` method) takes precedence cleanly instead of relying on bean-definition overriding:
+
+* i18n: `localeResolver`, `localeChangeInterceptor` and `messageSource`
+* URL mappings: `grailsCorsFilter`, `urlMappingsErrorPageCustomizer` and `urlMappingsInfoHandlerAdapter`
+
+**No action is required.**
+The framework beans still register by default; this only changes what happens when you define your own.
+Previously, defining one of these beans produced a bean-definition override (with a startup warning, or a failure when `spring.main.allow-bean-definition-overriding` is `false`).
+Now the framework bean simply backs off.
+
+NOTE: The back-off applies to beans that are registered before auto-configuration conditions are evaluated — `@Bean` methods in application configuration classes.
+Beans contributed later, through a plugin's `doWithSpring` or the application's `resources.groovy`, continue to take effect through bean-definition overriding, exactly as in previous releases.

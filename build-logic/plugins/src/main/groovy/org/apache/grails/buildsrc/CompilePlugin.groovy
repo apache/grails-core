@@ -110,7 +110,18 @@ class CompilePlugin implements Plugin<Project> {
                 // encoding needs to be the same since it's different across platforms
                 it.options.encoding = StandardCharsets.UTF_8.name()
                 it.options.fork = true
-                it.options.forkOptions.jvmArgs = ['-Xms128M', '-Xmx2G']
+                // always set an isolated build to ensure grails.factories aren't accidentally merged since every project
+                // in this mono repo should be an isolated projected
+                it.options.forkOptions.jvmArgs = ['-Xms128M', '-Xmx2G', '-Dgrails.isolated.build=true']
+                // Publish THIS project's base.dir to the forked Groovy compiler. Gradle reuses a forked
+                // compiler daemon for a task whose requested fork arguments the daemon already satisfies,
+                // so a compile that does NOT request base.dir can be handed a daemon started for another
+                // module and inherit that module's base.dir — merging one module's checked-in
+                // grails.factories into another (a real, data-dependent leak in this mono repo). Requesting
+                // a unique base.dir on EVERY module's compile keeps daemons partitioned per project, so the
+                // value can never cross modules. Mirrors GrailsAppBaseDirProvider from the Grails Gradle
+                // plugins (which is not on build-logic's classpath).
+                it.options.forkOptions.jvmArgumentProviders.add(new BaseDirArgumentProvider(project.projectDir))
                 if (System.getenv('SUPPRESS_DEPRECATION_WARNINGS') == 'true') {
                     it.options.compilerArgs += ['-Xlint:-removal']
                 }

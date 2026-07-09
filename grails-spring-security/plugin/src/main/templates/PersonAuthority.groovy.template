@@ -1,0 +1,86 @@
+package ${packageName}
+
+import grails.gorm.DetachedCriteria
+import grails.compiler.GrailsCompileStatic
+import groovy.transform.ToString
+import org.codehaus.groovy.util.HashCodeHelper
+
+@GrailsCompileStatic
+@ToString(cache=true, includeNames=true, includePackage=false)
+class ${userClassName}${roleClassName} implements Serializable {
+
+	private static final long serialVersionUID = 1
+
+	${userClassName} ${userClassProperty}
+	${roleClassName} ${roleClassProperty}
+
+	@Override
+	boolean equals(other) {
+		if (other instanceof ${userClassName}${roleClassName}) {
+			other.${userClassProperty}Id == ${userClassProperty}?.id && other.${roleClassProperty}Id == ${roleClassProperty}?.id
+		}
+	}
+
+    @Override
+	int hashCode() {
+	    int hashCode = HashCodeHelper.initHash()
+        if (${userClassProperty}) {
+            hashCode = HashCodeHelper.updateHash(hashCode, ${userClassProperty}.id)
+		}
+		if (${roleClassProperty}) {
+		    hashCode = HashCodeHelper.updateHash(hashCode, ${roleClassProperty}.id)
+		}
+		hashCode
+	}
+
+	static ${userClassName}${roleClassName} get(long ${userClassProperty}Id, long ${roleClassProperty}Id) {
+		criteriaFor(${userClassProperty}Id, ${roleClassProperty}Id).get()
+	}
+
+	static boolean exists(long ${userClassProperty}Id, long ${roleClassProperty}Id) {
+		criteriaFor(${userClassProperty}Id, ${roleClassProperty}Id).count()
+	}
+
+	private static DetachedCriteria<${userClassName}${roleClassName}> criteriaFor(long ${userClassProperty}Id, long ${roleClassProperty}Id) {
+		${userClassName}${roleClassName}.where {
+			${userClassProperty} == ${userClassName}.load(${userClassProperty}Id) &&
+			${roleClassProperty} == ${roleClassName}.load(${roleClassProperty}Id)
+		}
+	}
+
+	static ${userClassName}${roleClassName} create(${userClassName} ${userClassProperty}, ${roleClassName} ${roleClassProperty}, boolean flush = false) {
+		def instance = new ${userClassName}${roleClassName}(${userClassProperty}: ${userClassProperty}, ${roleClassProperty}: ${roleClassProperty})
+		instance.save(flush: flush)
+		instance
+	}
+
+	static boolean remove(${userClassName} u, ${roleClassName} r) {
+		if (u != null && r != null) {
+			${userClassName}${roleClassName}.where { ${userClassProperty} == u && ${roleClassProperty} == r }.deleteAll()
+		}
+	}
+
+	static int removeAll(${userClassName} u) {
+		u == null ? 0 : ${userClassName}${roleClassName}.where { ${userClassProperty} == u }.deleteAll() as int
+	}
+
+	static int removeAll(${roleClassName} r) {
+		r == null ? 0 : ${userClassName}${roleClassName}.where { ${roleClassProperty} == r }.deleteAll() as int
+	}
+
+	static constraints = {
+	    ${userClassProperty} nullable: false
+		${roleClassProperty} nullable: false, validator: { ${roleClassName} r, ${userClassName}${roleClassName} ur ->
+			if (ur.${userClassProperty}?.id) {
+				if (${userClassName}${roleClassName}.exists(ur.${userClassProperty}.id, r.id)) {
+				    return ['userRole.exists']
+				}
+			}
+		}
+	}
+
+	static mapping = {
+		id composite: ['${userClassProperty}', '${roleClassProperty}']
+		version false
+	}
+}

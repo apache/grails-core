@@ -50,6 +50,7 @@ class GrailsExtension {
         this.pluginDefiner = new PluginDefiner(project)
         this.indy = project.objects.property(Boolean).convention(false)
         this.preserveParameterNames = project.objects.property(Boolean).convention(true)
+        this.compileStatic = project.objects.newInstance(GrailsCompileStaticOptions)
         this.bom = project.objects.property(String)
         // Use set() rather than convention() so that clearing the value (bom = null,
         // or the deprecated springDependencyManagement = false) results in no BOM being
@@ -92,6 +93,38 @@ class GrailsExtension {
      * imports added by importJavaTime and importGrailsCommonAnnotations flags.
      */
     List<String> starImports = []
+
+    /**
+     * Lazy opt-ins for compiling controllers, services and tag libraries with {@code @GrailsCompileStatic}
+     * automatically, configured through the nested {@code compileStatic} block. Each flag is a lazy
+     * {@link Property} (read at compile time, not configuration time) and defaults to {@code false}:
+     *
+     * <pre>
+     * grails {
+     *     compileStatic {
+     *         controllers = true
+     *         services = true
+     *         tagLibs = true
+     *     }
+     * }
+     * </pre>
+     *
+     * Use {@code compileStatic { all = true }} as a shortcut to enable all three at once. A per-class
+     * {@code @CompileDynamic} (or {@code @CompileStatic}/{@code @GrailsCompileStatic}) annotation always
+     * wins over these defaults.
+     */
+    final GrailsCompileStaticOptions compileStatic
+
+    /**
+     * Configures the nested {@link #compileStatic} opt-ins.
+     *
+     * @param configureClosure a closure applied to the {@link GrailsCompileStaticOptions}
+     */
+    void compileStatic(@DelegatesTo(value = GrailsCompileStaticOptions, strategy = Closure.DELEGATE_FIRST) Closure<?> configureClosure) {
+        configureClosure.delegate = this.compileStatic
+        configureClosure.resolveStrategy = Closure.DELEGATE_FIRST
+        configureClosure.call()
+    }
 
     /**
      * @deprecated The Spring Dependency Management plugin has been replaced with Gradle's native

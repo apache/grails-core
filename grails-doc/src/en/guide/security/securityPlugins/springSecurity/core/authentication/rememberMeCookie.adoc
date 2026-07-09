@@ -1,0 +1,95 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-rememberMeCookie]]
+=== Remember-Me Cookie
+
+Spring Security supports creating a remember-me cookie so that users are not required to log in with a username and password for each session. This is optional and is usually implemented as a checkbox on the login form; the default `auth.gsp` supplied by the plugin has this feature.
+
+.Remember-me configuration options
+[cols="30,30,40"]
+|====================
+| *Property* | *Default Value* | *Meaning*
+
+|rememberMe.cookieName
+|`grails_remember_me`
+|remember-me cookie name; should be unique per application
+
+|rememberMe.cookieDomain
+|_none_
+|remember-me cookie domain
+
+|rememberMe.alwaysRemember
+|`false`
+|If `true`, create a remember-me cookie even if no checkbox is on the form
+
+|rememberMe.tokenValiditySeconds
+|`1209600` (14 days)
+|Max age of the cookie in seconds
+
+|rememberMe.parameter
+|`remember-me`
+|Login form remember-me checkbox name
+
+|rememberMe.key
+|`grailsRocks`
+|Value used to encode cookies; should be unique per application
+
+|rememberMe.useSecureCookie
+|_none_
+|Whether to use a secure cookie or not; if `true` a secure cookie is created, if `false` a non-secure cookie is created, and if not set, a secure cookie is created if the request used HTTPS
+
+|rememberMe.createSessionOnSuccess
+|`true`
+|Whether to create a session of one doesn't exist to ensure that the `Authentication` is stored for future requests
+
+|rememberMe.persistent
+|`false`
+|If `true`, stores persistent login information in the database
+
+|rememberMe.persistentToken.domainClassName
+|_none_
+|Domain class used to manage persistent logins
+
+|rememberMe.persistentToken.seriesLength
+|16
+|Number of characters in the cookie's `series` attribute
+
+|rememberMe.persistentToken.tokenLength
+|16
+|Number of characters in the cookie's `token` attribute
+
+|atr.rememberMeClass
+|{springSecurityApiDocsUrl}org/springframework/security/authentication/RememberMeAuthenticationToken.html[RememberMeAuthenticationToken]
+|remember-me authentication class
+|====================
+
+You are most likely to change these attributes:
+
+* `rememberMe.cookieName`. Purely aesthetic as most users will not look at their cookies, but you probably want the display name to be application-specific rather than "`grails_remember_me`".
+* `rememberMe.key`. Part of a salt when the cookie is hashed. Changing the default makes it harder to execute brute-force attacks.
+* `rememberMe.tokenValiditySeconds`. Default is two weeks; set it to what makes sense for your application.
+
+==== Persistent Logins
+
+The remember-me cookie is very secure, but for an even stronger solution you can use persistent logins that store the username in the database. See the https://{springSecurityHtmlSingleUrl}#remember-me[Spring Security docs] for a description of the implementation.
+
+Persistent login is also useful for authentication schemes like Facebook, where you do not manage passwords in your database, but most of the other user information is stored locally. Without a password you cannot use the standard cookie format, so persistent logins enable remember-me cookies in these scenarios.
+
+To use this feature, run the <<core-s2-create-persistent-token>> script. This will create the domain class, and register its name in `grails-app/conf/application.groovy`. It will also enable persistent logins by setting `rememberMe.persistent` to `true`.

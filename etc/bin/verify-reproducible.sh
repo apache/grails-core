@@ -70,6 +70,24 @@ cd grails-forge
 ./gradlew publishToMavenLocal --rerun-tasks -PskipTests --no-build-cache --no-daemon -PskipMicronautProjects
 cd ..
 
+# Snapshot the JDK 21 build outputs before switching JDKs. The JDK 25 island pass
+# below runs with --rerun-tasks, which recompiles grails-micronaut's transitive
+# *project* dependencies (grails-core, grails-spring, the grails-gradle plugins,
+# etc.) under JDK 25 and overwrites their JDK 21 jars in build/libs. The release
+# builds those modules on JDK 21, so we restore them from this snapshot after the
+# island pass. Only grails-micronaut / grails-micronaut-bom are meant to be JDK 25
+# artifacts; they are skipped on the JDK 21 passes (-PskipMicronautProjects), so
+# they are absent from this snapshot and are left as their JDK 25 outputs.
+JDK21_LIBS_SNAPSHOT="${DOWNLOAD_LOCATION}/grails/etc/bin/results/jdk21-libs-snapshot"
+rm -rf "${JDK21_LIBS_SNAPSHOT}"
+mkdir -p "${JDK21_LIBS_SNAPSHOT}"
+echo "Snapshotting JDK 21 build outputs to ${JDK21_LIBS_SNAPSHOT}..."
+while IFS= read -r -d '' jar; do
+  rel="${jar#./}"
+  mkdir -p "${JDK21_LIBS_SNAPSHOT}/$(dirname "${rel}")"
+  cp -p "${jar}" "${JDK21_LIBS_SNAPSHOT}/${rel}"
+done < <(find . -path ./etc -prune -o -type f -path '*/build/libs/*.jar' ! -name "buildSrc.jar" -print0)
+
 # JDK 25 pass: the Grails-Micronaut "island" only (grails-micronaut,
 # grails-micronaut-bom). Micronaut 5 platform GA targets JVM 25 bytecode so
 # these two artifacts cannot be reproduced on JDK 21. The verification
@@ -88,6 +106,22 @@ JAVA_HOME="${JDK_25_HOME}" PATH="${JDK_25_HOME}/bin:${PATH}" \
   ./gradlew :grails-micronaut:publishToMavenLocal :grails-micronaut-bom:publishToMavenLocal \
   --rerun-tasks -PskipTests --no-build-cache --no-daemon
 killall -e java || true
+
+# Restore the JDK 21 build outputs that the island pass recompiled under JDK 25.
+# This overwrites the JDK 25 jars of grails-micronaut's transitive dependencies
+# with their JDK 21 equivalents, matching the published release. The island
+# modules themselves are not in the snapshot, so their JDK 25 jars are preserved.
+echo "Restoring JDK 21 build outputs (keeping only the JDK 25 Micronaut island)..."
+while IFS= read -r -d '' snap; do
+  rel="${snap#"${JDK21_LIBS_SNAPSHOT}/"}"
+  case "${rel}" in
+    grails-micronaut/*|grails-bom/micronaut/*) continue ;; # leave island JDK 25 outputs in place
+  esac
+  mkdir -p "$(dirname "${rel}")"
+  cp -p "${snap}" "${rel}"
+done < <(find "${JDK21_LIBS_SNAPSHOT}" -type f -name '*.jar' -print0)
+rm -rf "${JDK21_LIBS_SNAPSHOT}"
+
 echo "Generating Checksums for Built Jars"
 "${SCRIPT_DIR}/generate-build-artifact-hashes.groovy" "${DOWNLOAD_LOCATION}/grails" > "${DOWNLOAD_LOCATION}/grails/etc/bin/results/second.txt"
 if [ -e "${DOWNLOAD_LOCATION}/grails/etc/bin/results/second.txt" ] && [ ! -s "${DOWNLOAD_LOCATION}/grails/etc/bin/results/second.txt" ]; then

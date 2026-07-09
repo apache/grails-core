@@ -37,7 +37,7 @@ import groovy.transform.CompileStatic
         'org.grails.compiler.ValidateableTypeCheckingExtension',
         'org.grails.compiler.WhereQueryTypeCheckingExtension',
         // Catch-all: must run last so it can defer to any extension above that has
-        // already resolved an unrecognised call (see ControllerTagLibTypeCheckingExtension).
-        'org.grails.compiler.ControllerTagLibTypeCheckingExtension',
+        // already resolved an unrecognised call (see TagLibraryInvokerTypeCheckingExtension).
+        'org.grails.compiler.TagLibraryInvokerTypeCheckingExtension',
 ])
 @interface GrailsCompileStatic {}

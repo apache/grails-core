@@ -178,6 +178,24 @@ class BuildSettings {
     public static final String CONVERT_CLOSURES_KEY = 'grails.compile.artefacts.closures.convert'
 
     /**
+     * A property name that, when set to {@code true}, opts every controller into
+     * {@code @GrailsCompileStatic} automatically during compilation.
+     */
+    public static final String COMPILE_STATIC_CONTROLLERS = 'grails.compile.artefacts.controllers.static'
+
+    /**
+     * A property name that, when set to {@code true}, opts every service into
+     * {@code @GrailsCompileStatic} automatically during compilation.
+     */
+    public static final String COMPILE_STATIC_SERVICES = 'grails.compile.artefacts.services.static'
+
+    /**
+     * A property name that, when set to {@code true}, opts every tag library into
+     * {@code @GrailsCompileStatic} automatically during compilation.
+     */
+    public static final String COMPILE_STATIC_TAGLIBS = 'grails.compile.artefacts.taglibs.static'
+
+    /**
      * The base directory of the project
      */
     public static final File BASE_DIR

@@ -1,0 +1,58 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-registeringCallbackClosures]]
+=== Registering Callback Closures
+
+Alternatively, enable events with `grails.plugin.springsecurity.useSecurityEventListener = true` and register one or more callback closure(s) in `grails-app/conf/application.groovy` and let `SecurityEventListener` do the filtering.
+
+Implement the event handlers that you need, for example:
+
+[source,groovy]
+.Listing {counter:listing}. Adding event handling closures in `application.groovy`
+----
+grails.plugin.springsecurity.useSecurityEventListener = true
+
+grails.plugin.springsecurity.onInteractiveAuthenticationSuccessEvent = { e, appCtx ->
+   // handle InteractiveAuthenticationSuccessEvent
+}
+
+grails.plugin.springsecurity.onAbstractAuthenticationFailureEvent = { e, appCtx ->
+   // handle AbstractAuthenticationFailureEvent
+}
+
+grails.plugin.springsecurity.onAuthenticationSuccessEvent = { e, appCtx ->
+   // handle AuthenticationSuccessEvent
+}
+
+grails.plugin.springsecurity.onAuthenticationSwitchUserEvent = { e, appCtx ->
+   // handle AuthenticationSwitchUserEvent
+}
+
+grails.plugin.springsecurity.onAuthorizationEvent = { e, appCtx ->
+   // handle AuthorizationEvent
+}
+----
+
+None of these closures are required; if none are configured, nothing will be called. Just implement the event handlers that you need.
+
+[NOTE]
+====
+When a user authenticates, Spring Security initially fires an `AuthenticationSuccessEvent`. This event fires before the `Authentication` is registered in the `SecurityContextHolder`, which means that the `springSecurityService` methods that access the logged-in user will not work. Later in the processing a second event is fired, an `InteractiveAuthenticationSuccessEvent`, and when this happens the `SecurityContextHolder` will have the `Authentication`. Depending on your needs, you can implement a callback for either or both events.
+====

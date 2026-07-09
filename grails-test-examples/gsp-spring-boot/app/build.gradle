@@ -28,6 +28,7 @@ plugins {
     id 'org.springframework.boot'
     id 'groovy'
     id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
 }
 
 // grails-gsp compiles the GSP templates at build time. It is a build-time view-compilation

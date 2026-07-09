@@ -49,6 +49,13 @@ The Grails Gradle extension now defaults `preserveParameterNames` to `true`, so 
 Tag library unit tests also clean up and rebuild TagLib metadata automatically between features.
 Tests that use `TagLibUnitTest` no longer need to manage `purgeTagLibMetaClass`, and specs that mock additional tag libraries continue to work across feature methods.
 
+==== Namespace-Aware Link Generation
+
+Links, form actions, pagination links, sortable column links, redirects, chains, and includes now resolve the target controller namespace automatically when `namespace` is omitted.
+In the normal case, where only one controller has the target name, `controller` and `action` are enough to generate the correct namespaced or non-namespaced URL.
+If multiple controllers share the same name, specify `namespace` to choose one explicitly.
+Use `namespace=""` in GSP markup, or `namespace: null` in Groovy code, to target a non-namespaced controller.
+
 ==== @GrailsCompileStatic on Controllers That Use Tag Libraries
 
 Controllers annotated with `@GrailsCompileStatic` can now invoke tag library methods without compile-time errors.
@@ -72,7 +79,25 @@ class BookController {
 }
 ----
 
-The new `ControllerTagLibTypeCheckingExtension` (bundled with `@GrailsCompileStatic`) recognises controller classes by convention and marks tag dispatch points as permissible dynamic calls, while leaving the rest of the controller fully type-checked.
+`@GrailsCompileStatic` recognises controllers and tag libraries by convention and marks tag dispatch points as permissible dynamic calls, while leaving the rest of the class fully type-checked.
+
+==== Opt All Controllers, Services and Tag Libraries into GrailsCompileStatic
+
+Static compilation can now be enabled for every controller, service and tag library in an application from the nested `compileStatic` block of the `grails` build configuration, without annotating each class:
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    compileStatic {
+        controllers = true
+        services = true
+        tagLibs = true
+    }
+}
+----
+
+All three options are disabled by default and independent, or `compileStatic { all = true }` can be used as a shortcut to enable all of them. Any class that declares its own `@CompileDynamic` (or `@GrailsCompileStatic`/`@CompileStatic`/`@GrailsTypeChecked`/`@TypeChecked`) annotation keeps that setting, so the opt-in never overrides an explicit per-class choice. Tag libraries that still declare tags as closure fields (the deprecated form) are skipped automatically by the `tagLibs` opt-in — left dynamically compiled with a build warning — so define tags as methods to opt them in. See the xref:staticTypeCheckingAndCompilation/grailsCompileStatic[GrailsCompileStatic] section for details.
 
 ==== Test HTTP Client Form Requests
 

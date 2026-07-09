@@ -21,6 +21,8 @@ package org.apache.grails.data.testing.tck.tests
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.ChildEntity
 import org.apache.grails.data.testing.tck.domains.TestEntity
+import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 
 /**
  * @author graemerocher
@@ -284,5 +286,34 @@ class GormEnhancerSpec extends GrailsDataTckSpec {
 
         then:
         2 == TestEntity.count()
+    }
+
+    void 'findStaticApi returns a non-null API for the default qualifier after enhancement'() {
+        when:
+        def staticApi = GormEnhancer.findStaticApi(TestEntity, ConnectionSource.DEFAULT)
+        def instanceApi = GormEnhancer.findInstanceApi(TestEntity, ConnectionSource.DEFAULT)
+        def validationApi = GormEnhancer.findValidationApi(TestEntity, ConnectionSource.DEFAULT)
+
+        then:
+        staticApi != null
+        instanceApi != null
+        validationApi != null
+    }
+
+    void 'findStaticApi returns the same cached instance on repeated calls'() {
+        when:
+        def staticApi1 = GormEnhancer.findStaticApi(TestEntity, ConnectionSource.DEFAULT)
+        def instanceApi1 = GormEnhancer.findInstanceApi(TestEntity, ConnectionSource.DEFAULT)
+        def validationApi1 = GormEnhancer.findValidationApi(TestEntity, ConnectionSource.DEFAULT)
+
+        and:
+        def staticApi2 = GormEnhancer.findStaticApi(TestEntity, ConnectionSource.DEFAULT)
+        def instanceApi2 = GormEnhancer.findInstanceApi(TestEntity, ConnectionSource.DEFAULT)
+        def validationApi2 = GormEnhancer.findValidationApi(TestEntity, ConnectionSource.DEFAULT)
+
+        then:
+        staticApi1.is(staticApi2)
+        instanceApi1.is(instanceApi2)
+        validationApi1.is(validationApi2)
     }
 }

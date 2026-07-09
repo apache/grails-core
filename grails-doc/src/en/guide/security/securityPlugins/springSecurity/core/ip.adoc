@@ -1,0 +1,61 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-ip]]
+== IP Address Restrictions
+
+Ordinarily you can guard URLs sufficiently with roles, but the plugin provides an extra layer of security with its ability to restrict by IP address.
+
+.IP Address Restriction configuration options
+[cols="30,30,40"]
+|====================
+| *Property* | *Default Value* | *Meaning*
+
+|ipRestrictions
+|_none_
+|Map of URL patterns to IP address patterns.
+|====================
+
+For example, make an admin-only part of your site accessible only from IP addresses of the local LAN or VPN, such as 192.168.1.xxx or 10.xxx.xxx.xxx. You can also set this up at your firewall and/or routers, but it is convenient to encapsulate it within your application.
+
+To use this feature, specify an `ipRestrictions` configuration as a `List` of ``Map``s, one for each combination of URL pattern to IP address patterns that can access those URLs. The IP patterns can be single-value strings, or multi-value lists of strings. They can use https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing[CIDR] masks, and can specify either IPv4 or IPv6 patterns. For example, given this configuration:
+
+[source,groovy]
+.Listing {counter:listing}. Sample `grails.plugin.springsecurity.ipRestrictions` configuration
+----
+grails.plugin.springsecurity.ipRestrictions = [
+   [pattern: '/pattern1/**', access: '123.234.345.456'],
+   [pattern: '/pattern2/**', access: '10.0.0.0/8'],
+   [pattern: '/pattern3/**', access: ['10.10.200.42', '10.10.200.63']]
+]
+----
+
+`pattern1` URLs can be accessed only from the external address 123.234.345.456, `pattern2` URLs can be accessed only from a 10.xxx.xxx.xxx intranet address, and `pattern3` URLs can be accessed only from 10.10.200.42 or 10.10.200.63. All other URL patterns are accessible from any IP address.
+
+[WARNING]
+====
+The format of `ipRestrictions` has changed from previous versions to avoid configuration parsing issues. In previous versions the property was a single Map, where the keys were the access patterns and the values were the IP addresses that are allowed. The old format is no longer supported and your configurations must be updated to the newer format.
+====
+
+All addresses can always be accessed from localhost regardless of IP pattern, primarily to support local development mode.
+
+[NOTE]
+====
+You cannot compare IPv4 and IPv6 addresses, so if your server supports both, you need to specify the IP patterns using the address format that is actually being used. Otherwise the filter throws exceptions. One option is to set the `java.net.preferIPv4Stack` system property, for example, by adding it to `JAVA_OPTS` or `GRAILS_OPTS` as `-Djava.net.preferIPv4Stack=true`.
+====

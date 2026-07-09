@@ -37,6 +37,8 @@ These can be set on the command line like so:
 * `onlyHibernate5Tests` - runs only a hibernate5 related test
 * `onlyHibernate7Tests` - runs only a hibernate7 related test
 * `onlyMongodbTests` - runs only a mongodb related test
+* `onlyRedisTests` - runs only redis related tests
+* `onlySpringSecurityTests` - runs only spring security related tests
 * `serializeMongoTests` - if true, only integration tests from one mongo project will run at a time
 * `skipCodeStyle` - does not run code style checks
 * `skipCoreTests` - does not run the "core" tests
@@ -44,6 +46,8 @@ These can be set on the command line like so:
 * `skipHibernate5Tests` - does not run hibernate5 related tests
 * `skipHibernate7Tests` - does not run hibernate7 related tests
 * `skipMongodbTests` - does not run mongo related tests
+* `skipRedisTests` - does not run redis related tests
+* `skipSpringSecurityTests` - does not run spring security related tests
 * `skipTests` - no tests will run
 
 ## Test slicing

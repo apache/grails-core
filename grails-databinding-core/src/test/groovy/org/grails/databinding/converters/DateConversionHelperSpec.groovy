@@ -24,7 +24,6 @@ import java.text.ParseException
 
 import spock.lang.Specification
 
-import java.text.SimpleDateFormat
 import static java.util.Calendar.*
 
 class DateConversionHelperSpec extends Specification {

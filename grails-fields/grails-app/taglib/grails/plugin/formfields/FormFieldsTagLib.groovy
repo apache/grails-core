@@ -556,8 +556,12 @@ class FormFieldsTagLib {
     }
 
     private resolvePageScopeVariable(attributeName) {
-        // Tomcat throws NPE if you query pageScope for null/empty values
-        attributeName?.toString() ? pageScope.variables[attributeName] : null
+        def variableName = attributeName?.toString()
+        if (!variableName) {
+            // Tomcat throws NPE if you query pageScope for null/empty values
+            return null
+        }
+        pageScope.variables[variableName]
     }
 
     private BeanAndPrefix resolveBeanAndPrefix(beanAttribute, prefixAttribute, attributes) {

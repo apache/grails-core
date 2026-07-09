@@ -41,7 +41,7 @@ class DatastoreUtilsSpec extends Specification {
         PropertyResolver resolver = DatastoreUtils.preparePropertyResolver(env)
         expect:
         env != null
-        resolver.getProperty('grails.foo') == 'baz'
+        resolver.getProperty('grails.foo', String) == 'baz'
     }
 
     void "deferred close lifecycle is isolated on a virtual thread"() {

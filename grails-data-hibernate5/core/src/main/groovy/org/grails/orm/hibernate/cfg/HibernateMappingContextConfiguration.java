@@ -48,6 +48,7 @@ import org.hibernate.boot.registry.classloading.internal.ClassLoaderServiceImpl;
 import org.hibernate.boot.registry.classloading.spi.ClassLoaderService;
 import org.hibernate.boot.registry.selector.spi.StrategySelector;
 import org.hibernate.boot.spi.MetadataContributor;
+import org.hibernate.bytecode.spi.ProxyFactoryFactory;
 import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.cfg.Environment;
@@ -80,6 +81,7 @@ import org.grails.orm.hibernate.GrailsSessionContext;
 import org.grails.orm.hibernate.HibernateEventListeners;
 import org.grails.orm.hibernate.MetadataIntegrator;
 import org.grails.orm.hibernate.access.TraitPropertyAccessStrategy;
+import org.grails.orm.hibernate.proxy.GrailsBytecodeProvider;
 
 /**
  * A Configuration that uses a MappingContext to configure Hibernate
@@ -314,6 +316,13 @@ public class HibernateMappingContextConfiguration extends Configuration implemen
 
         StandardServiceRegistryBuilder standardServiceRegistryBuilder = createStandardServiceRegistryBuilder(bootstrapServiceRegistry)
                                                                                     .applySettings(getProperties());
+
+        // Groovy-aware entity proxies: without this, any Groovy MOP dispatch through a proxy
+        // (proxy.id, getMetaClass(), truthy checks) initializes it. PojoEntityTuplizer resolves
+        // the ProxyFactoryFactory from the service registry, so a provided service wins over the
+        // default initiator. Hibernate 7 gets the same behavior via GrailsBytecodeProvider.
+        standardServiceRegistryBuilder.addService(ProxyFactoryFactory.class,
+                new GrailsBytecodeProvider().getProxyFactoryFactory());
 
         StandardServiceRegistry serviceRegistry = standardServiceRegistryBuilder.build();
         sessionFactory = super.buildSessionFactory(serviceRegistry);

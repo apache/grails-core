@@ -204,6 +204,15 @@ class GrailsGradlePlugin implements Plugin<Project> {
             // "build"/"target" output-directory names. Reuses the same CommandLineArgumentProvider
             // pattern as forked test/run tasks (see configureForkSettings).
             c.groovyOptions.forkOptions.jvmArgumentProviders.add(new GrailsAppBaseDirProvider(project.projectDir))
+
+            // Publish the grails { compileStatic { controllers / services / tagLibs } } opt-ins to the
+            // compiler worker JVM as system properties so CompileStaticArtefactInjector can stamp
+            // @GrailsCompileStatic onto the matching artefacts. Read lazily (asArguments) so the value
+            // reflects the user's grails { } block regardless of configuration ordering.
+            GrailsExtension grailsExtension = project.extensions.findByType(GrailsExtension)
+            if (grailsExtension != null) {
+                c.groovyOptions.forkOptions.jvmArgumentProviders.add(new GrailsCompileStaticArtefactsProvider(grailsExtension.compileStatic))
+            }
             Closure<String> userScriptGenerator = getGroovyCompilerScript(c, project)
             c.doFirst {
                 // This isn't ideal - we're performing configuration at execution time, but the alternative would be having

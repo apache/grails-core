@@ -86,7 +86,6 @@ public class PropertyBinder {
         prop.setPropertyAccessorName(accessorName);
 
         prop.setOptional(persistentProperty.isNullable());
-        //TODO Change to Hibernate hierarchy
         if (persistentProperty instanceof Association<?> association &&
                 !(persistentProperty instanceof HibernateEnumProperty)) {
             prop.setCascade(cascadeBehaviorFetcher.getCascadeBehaviour(association));

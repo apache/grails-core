@@ -35,6 +35,7 @@ import org.springframework.core.env.ConfigurableEnvironment
 import org.springframework.core.io.ResourceLoader
 
 import grails.compiler.ast.ClassInjector
+import grails.config.Settings
 import grails.core.GrailsApplication
 import grails.io.IOUtils
 import grails.plugins.GrailsPlugin
@@ -143,8 +144,8 @@ class GrailsApp extends SpringApplication {
 
     @Override
     protected ConfigurableApplicationContext createApplicationContext() {
-        setAllowBeanDefinitionOverriding(true)
-        setAllowCircularReferences(true)
+        setAllowBeanDefinitionOverriding(configuredEnvironment.getProperty(Settings.SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING, Boolean, Boolean.TRUE))
+        setAllowCircularReferences(configuredEnvironment.getProperty(Settings.SPRING_MAIN_ALLOW_CIRCULAR_REFERENCES, Boolean, Boolean.TRUE))
         ConfigurableApplicationContext applicationContext = super.createApplicationContext()
 
         if (enableBeanCreationProfiler) {

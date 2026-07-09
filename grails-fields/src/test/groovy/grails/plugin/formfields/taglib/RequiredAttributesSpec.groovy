@@ -80,6 +80,15 @@ class RequiredAttributesSpec extends AbstractFormFieldsTagLibSpec implements Tag
 		applyTemplate('<f:field bean="personInstance" property="name"/>', [personInstance: personInstance]) == "Person"
 	}
 
+	void "bean attribute can be resolved from a GString page-scope reference"() {
+		given:
+		views["/_fields/default/_wrapper.gsp"] = '${bean.getClass().simpleName}'
+		def beanName = "${'personInstance'}"
+
+		expect:
+		applyTemplate('<f:field bean="${beanName}" property="name"/>', [beanName: beanName, personInstance: personInstance]) == "Person"
+	}
+
 	void "bean attribute string must refer to variable in page"() {
 		when:
 		applyTemplate('<f:field bean="personInstance" property="name"/>')

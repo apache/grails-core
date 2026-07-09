@@ -20,8 +20,8 @@ package grails.ui.shell.support
 
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
-import org.apache.groovy.groovysh.Groovysh
-import org.codehaus.groovy.tools.shell.IO
+
+import org.apache.groovy.groovysh.Main
 
 import grails.core.GrailsApplication
 import grails.ui.support.DevelopmentWebApplicationContext
@@ -41,12 +41,9 @@ class GroovyshWebApplicationContext extends DevelopmentWebApplicationContext {
     }
 
     protected void startConsole() {
-        Binding binding = new Binding()
-        binding.setVariable('ctx', this)
-        binding.setVariable(GrailsApplication.APPLICATION_ID, getBean(GrailsApplication))
-
-        final GroovyshWebApplicationContext self = this
-
-        new Groovysh(binding, new IO()).run('')
+        Main.start([
+                ctx: this,
+                (GrailsApplication.APPLICATION_ID): getBean(GrailsApplication)
+        ])
     }
 }

@@ -81,6 +81,16 @@ abstract class AbstractMongoConnectionSourceSettings extends ConnectionSourceSet
     boolean stateless = false
 
     /**
+     * Whether GORM should use real MongoDB multi-document transactions (a server-side
+     * {@code ClientSession}) for transactional operations. Requires a replica set or sharded
+     * cluster. When {@code false} (the default) a GORM transaction remains a client-side flush
+     * boundary, preserving the historical behavior. Bound from {@code grails.mongodb.transactional}.
+     *
+     * @since 8.0
+     */
+    boolean transactional = false
+
+    /**
      * Whether to use the decimal128 type for BigDecimal values
      *
      * @see org.bson.types.Decimal128

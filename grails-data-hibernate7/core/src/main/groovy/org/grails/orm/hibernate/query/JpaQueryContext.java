@@ -24,8 +24,8 @@ import jakarta.persistence.criteria.Path;
 /**
  * Orchestrator for JPA query translation state (Aliases, Joins, Expressions).
  *
- * TODO: Better separation of concerns between JpaQueryContext and ExpressionResolver.
- * It is a bit icky that AliasRegistry and JoinTracker are passed into ExpressionResolver.
+ * {@link ExpressionResolver} receives the shared {@link AliasRegistry} and {@link JoinTracker}
+ * so aliases and joins remain scoped to the current root or subquery context.
  *
  * @author walterduquedeestrada
  * @author graemerocher
