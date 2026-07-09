@@ -1,0 +1,31 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+The following external resources are useful when working with Redis and the Jedis client:
+
+* https://redis.io[Redis] — the official Redis website
+* https://redis.io/commands[Redis commands] — a comprehensive reference for every Redis command, each with an embedded REPL to try against a live server
+* https://redis.io/topics/sentinel[Redis Sentinel] — high-availability documentation
+* https://redis.io/topics/benchmarks[Redis benchmarks] — performance benchmarks
+* https://redis.io/topics/whos-using-redis[Who's using Redis] — production users of Redis
+* https://github.com/redis/jedis[Jedis] — the Java Redis client used by this plugin
+* https://github.com/redis/jedis/blob/master/src/main/java/redis/clients/jedis/JedisPoolConfig.java[JedisPoolConfig] — the pool configuration options surfaced through `poolConfig`
+* https://commons.apache.org/proper/commons-pool/apidocs/org/apache/commons/pool2/impl/GenericObjectPool.html[Apache Commons GenericObjectPool] — the pool implementation underlying the Jedis pool configuration
+* http://naleid.com/blog/2010/12/28/intro-to-using-redis-with-groovy/[Intro to using Redis with Groovy] — a hands-on introduction
+* http://naleid.com/blog/2011/06/27/redis-groovy-and-grails-presentation-at-gr8conf-2011-and-gum/[Redis, Groovy and Grails (gr8conf 2011)] — presentation

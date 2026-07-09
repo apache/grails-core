@@ -365,7 +365,6 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
         thrown(IllegalArgumentException)
     }
 
-    //TODO no transaction is in progress
     void "Test withNewSession"() {
         given:
         new HibernateGormStaticApiEntity(name: "outer").save(flush: true, failOnError: true)

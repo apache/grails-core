@@ -1,0 +1,61 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-logoutHandlers]]
+== Logout Handlers
+
+You register a list of logout handlers by implementing the {springSecurityApiDocsUrl}org/springframework/security/web/authentication/logout/LogoutHandler.html[LogoutHandler] interface. The list is called when a user explicitly logs out.
+
+By default, a `securityContextLogoutHandler` bean is registered to clear the {springSecurityApiDocsUrl}org/springframework/security/core/context/SecurityContextHolder.html[SecurityContextHolder]. Also, unless you are using Facebook or OpenID, `rememberMeServices` bean is registered to reset your cookie. (Facebook and OpenID authenticate externally so we don't have access to the password to create a remember-me cookie.) If you are using Facebook, a `facebookLogoutHandler` is registered to reset its session cookies.
+
+To customize this list, you define a `logout.handlerNames` attribute with a list of bean names.
+
+.Logout Handler configuration options
+[cols="30,30,40"]
+|====================
+| *Property* | *Default Value* | *Meaning*
+
+|logout.handlerNames
+|`['rememberMeServices', 'securityContextLogoutHandler']`
+|Logout handler bean names
+|====================
+
+The beans must be declared either by the plugin or by you in `resources.groovy`. For example, suppose you have a custom `MyLogoutHandler` in `resources.groovy`:
+
+[source,groovy]
+.Listing {counter:listing}. Registering a custom logout handler in `resources.groovy`
+----
+import com.foo.MyLogoutHandler
+
+beans = {
+   myLogoutHandler(MyLogoutHandler) {
+      // attributes
+   }
+}
+----
+
+You register it in `grails-app/conf/application.groovy` as:
+
+[source,groovy]
+.Listing {counter:listing}. Adding a custom logout handler in `grails.plugin.springsecurity.logout.handlerNames`
+----
+grails.plugin.springsecurity.logout.handlerNames = [
+   'rememberMeServices', 'securityContextLogoutHandler', 'myLogoutHandler'
+]
+----

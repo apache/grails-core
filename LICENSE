@@ -242,3 +242,14 @@ licensed under the OpenSymphony Software License, Version 1.1.
 See licenses/LICENSE-opensymphony.txt for the full license terms.
 
 --------------------------------------------------------------------------
+
+The following files are licensed under the MIT:
+
+    grails-spring-security/ui/plugin/grails-app/assets/javascripts/jquery/jquery.jdMenu.js
+    grails-spring-security/ui/plugin/grails-app/assets/javascripts/jquery/jquery.positionBy.js
+    grails-spring-security/ui/plugin/grails-app/assets/stylesheets/jquery.jdMenu.slate.css
+    grails-spring-security/ui/plugin/grails-app/assets/stylesheets/jquery.jdMenu.css
+
+See licenses/LICENSE-MIT.txt for the full license terms.
+
+--------------------------------------------------------------------------

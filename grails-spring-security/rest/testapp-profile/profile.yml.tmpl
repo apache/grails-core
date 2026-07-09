@@ -1,0 +1,52 @@
+description: Creates a test app for Spring Security REST plugin
+build:
+    plugins:
+        - org.gradle.test-retry
+        - com.adarshr.test-logger
+    excludes:
+        - org.apache.grails.gradle.grails-web
+dependencies:
+    - scope: build
+      coords: "org.gradle:test-retry-gradle-plugin:1.6.4"
+    - scope: build
+      coords: "com.adarshr.test-logger:com.adarshr.test-logger.gradle.plugin:4.0.0"
+    - scope: implementation
+      coords: "org.apache.grails:grails-spring-security-rest:${pluginVersion}"
+    - scope: implementation
+      coords: "org.springframework.security:spring-security-core"
+    - scope: testImplementation
+      coords: "io.github.gpc:grails-datastore-rest-client-legacy:7.0.1"
+    - scope: integrationTestImplementation
+      coords: 'testFixtures("org.apache.grails:grails-geb")'
+    - scope: testImplementation
+      coords: "com.codeborne:phantomjsdriver:1.5.0"
+    - scope: testImplementation
+      coords: "org.seleniumhq.selenium:selenium-api"
+    - scope: testImplementation
+      coords: "org.seleniumhq.selenium:selenium-remote-driver"
+    - scope: testImplementation
+      coords: "org.seleniumhq.selenium:selenium-firefox-driver"
+    - scope: implementation
+      coords: "org.apache.httpcomponents:httpclient:4.5.14"
+    - scope: implementation
+      coords: "jakarta.servlet:jakarta.servlet-api"
+    - scope: implementation
+      coords: "org.pac4j:pac4j-oauth:6.2.2"
+    - scope: implementation
+      coords: "org.springframework.boot:spring-boot-starter-actuator"
+    - scope: implementation
+      coords: "org.springframework.boot:spring-boot-starter-tomcat"
+    - scope: implementation
+      coords: "org.apache.grails:grails-web-boot"
+    - scope: implementation
+      coords: "org.apache.grails:grails-logging"
+    - scope: implementation
+      coords: "org.apache.grails:grails-rest-transforms"
+    - scope: implementation
+      coords: "org.apache.grails:grails-databinding"
+    - scope: implementation
+      coords: "org.apache.grails:grails-services"
+    - scope: implementation
+      coords: "org.apache.grails:grails-url-mappings"
+    - scope: implementation
+      coords: "org.apache.grails:grails-interceptors"

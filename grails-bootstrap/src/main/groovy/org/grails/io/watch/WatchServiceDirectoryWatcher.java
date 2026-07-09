@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardWatchEventKinds;
@@ -196,7 +197,15 @@ class WatchServiceDirectoryWatcher extends AbstractDirectoryWatcher {
                     }
                     return FileVisitResult.CONTINUE;
                 }
+
+                @Override
+                public FileVisitResult visitFileFailed(Path file, IOException exc) {
+                    // Files may be deleted while the tree is being walked; skip them instead of failing
+                    return FileVisitResult.CONTINUE;
+                }
             });
+        } catch (NoSuchFileException e) {
+            // The directory may have been deleted while the tree was being walked; nothing to watch
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

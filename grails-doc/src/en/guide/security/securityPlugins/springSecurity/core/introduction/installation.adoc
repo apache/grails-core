@@ -1,0 +1,150 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-installation]]
+== Installation
+
+=== Prerequisites
+
+Ensure you have the following set up:
+
+* A Grails project
+* A working internet connection
+
+=== Installation Steps
+
+1. Open your Grails project.
+
+2. Locate your `build.gradle` file in the root directory of your project.
+
+3. Add the Spring Security Core Plugin dependency to the `dependencies` section in your `build.gradle`:
+
++
+[source,groovy,subs="+attributes"]
+----
+dependencies {
+    // ... other dependencies
+    implementation 'org.apache.grails:grails-spring-security'
+}
+----
++
+
+4. Save the `build.gradle` file.
+
+5. Open a terminal or command prompt.
+
+6. Navigate to your project's root directory using the `cd` command.
+
+7. Run the following Gradle command to update your project's dependencies:
+
++
+[source,bash]
+----
+./gradlew clean build
+----
++
+
+8. The Spring Security Core Plugin {version} is now installed and integrated into your Grails project.
+
+9. You can start using the plugin's features and commands in your application.
+
+10. Run the <<core-s2-quickstart>> script to generate domain classes and add the initial configuration settings in `application.groovy`:
+
++
+[source,bash]
+```
+./grailsw s2-quickstart com.yourapp User Role
+```
+
+=== Spring Boot Auto-Configuration
+
+The plugin automatically excludes Spring Boot's servlet security auto-configuration classes (such as `SecurityAutoConfiguration`, `SecurityFilterAutoConfiguration`, `UserDetailsServiceAutoConfiguration`, the OAuth2 client/resource-server/authorization-server starters, and the SAML2 relying-party starter) that conflict with the plugin's own security setup. This means you do not need to manually add `spring.autoconfigure.exclude` entries to your `application.yml`.
+
+IMPORTANT: While the plugin is active, `grails.plugin.springsecurity.*` is the authoritative configuration namespace for security. Spring Boot's `spring.security.*` properties are not merged into the plugin configuration. Use the plugin's keys to configure security; do not mix them with Boot's `spring.security.*` keys.
+
+==== Coexistence with the component-based Spring Security configuration model
+
+Spring Security 5.7 deprecated and Spring Security 6 removed `WebSecurityConfigurerAdapter`, replacing it with a component-based configuration model that registers individual `@Bean` components (see https://spring.io/blog/2022/02/21/spring-security-without-the-websecurityconfigureradapter[Spring Security without the WebSecurityConfigurerAdapter]). This plugin pre-dates that model and provides equivalent functionality through the `grails.plugin.springsecurity.*` configuration namespace, but it now *blends* the most common component-based patterns automatically. You can configure security from either side (or both) and the effective configuration is the union of both sources.
+
+[cols="1,1,1",options="header"]
+|===
+| Spring component-based pattern | Blending behaviour with this plugin active | Disable via
+
+| `@Bean SecurityFilterChain`
+| *Auto-merged* into the plugin's `FilterChainProxy`; user chains are prepended (higher precedence) so their typically more-specific request matchers win against the plugin's catch-all chain.
+| `grails.plugin.springsecurity.componentBased.autoMergeSecurityFilterChain: false`
+
+| `@Bean AuthenticationProvider`
+| *Auto-merged* into the plugin's `authenticationManager` (`ProviderManager`); user providers are appended so the plugin's primary GORM-backed provider runs first; providers already declared via `providerNames` are not re-added.
+| `grails.plugin.springsecurity.componentBased.autoMergeAuthenticationProviders: false`
+
+| `@Bean InMemoryUserDetailsManager` / `JdbcUserDetailsManager` (or any extra `UserDetailsService`)
+| For each additional `UserDetailsService` bean, a new `DaoAuthenticationProvider` is created and *appended* to the plugin's `authenticationManager` providers list. The plugin's primary GORM-backed provider runs first; if it does not authenticate the user, each additional provider is tried in turn. (Spring Security 7 made `DaoAuthenticationProvider.userDetailsService` final, so we add new providers instead of mutating the existing one.)
+| `grails.plugin.springsecurity.componentBased.autoChainUserDetailsServices: false`
+
+| `spring.security.user.name` / `spring.security.user.password` / `spring.security.user.roles`
+| If `spring.security.user.name` is set, an `InMemoryUserDetailsManager` is created from those properties (mimicking what Spring Boot's `UserDetailsServiceAutoConfiguration` would have done), wrapped in a `DaoAuthenticationProvider`, and added to the plugin's authenticationManager.
+| `grails.plugin.springsecurity.componentBased.bridgeSpringSecurityUserProperties: false`
+
+| `@Bean WebSecurityCustomizer`
+| Still a no-op. The plugin does not use Spring's `WebSecurity` builder. To exclude URLs from security checks, use `grails.plugin.springsecurity.staticRules` with `permitAll`, or `grails.plugin.springsecurity.ipRestrictions`.
+| n/a
+
+| `@Bean AuthenticationManager`
+| Conflicts with the plugin's `authenticationManager` (`ProviderManager`) bean by name. Use `@Bean AuthenticationProvider` (auto-merged - see above) or `grails.plugin.springsecurity.providerNames` instead.
+| n/a
+
+| LDAP factory beans (`EmbeddedLdapServerContextSourceFactoryBean`, `LdapBindAuthenticationManagerFactory`, `LdapPasswordComparisonAuthenticationManagerFactory`)
+| Coexist but are not wired into the plugin's authentication providers.
+| Use the `grails-spring-security-ldap` plugin and the `grails.plugin.springsecurity.ldap.*` configuration.
+|===
+
+To delegate the entire servlet security stack to Spring Boot's component-based model (and stop using the plugin's `grails.plugin.springsecurity.*` configuration), disable the excluder via the property below.
+
+If you need to disable this automatic exclusion - for example, to delegate the entire servlet security stack to Spring Boot instead of the plugin - set the following property in `application.yml`:
+
+[source,yaml]
+----
+grails:
+  plugin:
+    springsecurity:
+      excludeSpringSecurityAutoConfiguration: false
+----
+
+WARNING: Disabling the exclusion is intentionally a footgun. The plugin can no longer guarantee that its filter chain is the only servlet security stack in the application context, and a startup `WARN` will be logged.
+
+=== Verifying Installation
+
+To verify that the plugin has been successfully installed, you can run a simple test:
+
+1. In your Grails project, create a new controller or use an existing one.
+
+2. Add a secure annotation, such as `@Secured(['ROLE_USER'])`, to a method in your controller.
+
+3. Run your Grails application using the command:
+
++
+[source,bash]
+----
+./gradlew bootRun
+----
++
+
+4. Access the URL associated with the method you secured. If the plugin is correctly installed, it should enforce the security constraint you defined.
+

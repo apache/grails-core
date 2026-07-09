@@ -20,6 +20,7 @@ plugins {
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
 }
 
 version = '0.1-SNAPSHOT'
@@ -41,7 +42,7 @@ dependencies {
     api 'com.h2database:h2'
     api 'jakarta.servlet:jakarta.servlet-api'
 
-    implementation "org.apache.grails:grails-spring-security:$grailsSpringSecurityVersion"
+    implementation 'org.apache.grails:grails-spring-security'
 
     console 'org.apache.grails:grails-console'
 

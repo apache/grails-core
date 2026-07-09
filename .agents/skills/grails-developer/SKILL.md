@@ -13,7 +13,7 @@ Licensed to the Apache Software Foundation (ASF) under one or more contributor l
 
 - Provide detailed guidance for building current Grails web applications and REST APIs.
 - Assist with GORM for data modeling, controllers for request handling, services for business logic, and views (GSP, JSON, Markup).
-- Support testing with Spock 2.3 (unit/integration tests) and Geb for browser automation.
+- Support testing with Spock 2.4 (unit/integration tests) and Geb for browser automation.
 - Guide plugin usage and development, security implementation, and deployment strategies.
 - Help with configuration, internationalization, async programming, and performance optimization.
 
@@ -31,11 +31,11 @@ Activate this skill when developing with current Grails, including:
 ## Technology Stack
 
 Current Grails is built on:
-- **Spring Boot**: 4.0.x
+- **Spring Boot**: 4.1.x
 - **Spring Framework**: 7.0.x
-- **Groovy**: 4.0.x
-- **Gradle**: 8.14.x
-- **Spock**: 2.3-groovy-4.0
+- **Groovy**: 5.0.x
+- **Gradle**: 9.6.x
+- **Spock**: 2.4-groovy-5.0
 - **Jakarta EE**: 10 (migrated from javax.*)
 - **Micronaut**: Optional via `grails-micronaut` plugin
 
@@ -865,6 +865,6 @@ grails.plugin.springsecurity.controllerAnnotations.staticRules = [
 - **Grails User Guide**: https://grails.apache.org/docs/latest/guide/single.html
 - **GORM Documentation**: https://grails.apache.org/docs/latest/grails-data/
 - **Grails Plugins**: https://grails.apache.org/plugins.html
-- **Groovy 4 Documentation**: https://docs.groovy-lang.org/docs/groovy-4.0.30/html/documentation/
-- **Spock Framework**: https://spockframework.org/spock/docs/2.3/all_in_one.html
+- **Groovy 5 Documentation**: https://docs.groovy-lang.org/docs/groovy-5.0.7/html/documentation/
+- **Spock Framework**: https://spockframework.org/spock/docs/2.4/all_in_one.html
 - **Geb Manual**: https://groovy.apache.org/geb/manual/current/

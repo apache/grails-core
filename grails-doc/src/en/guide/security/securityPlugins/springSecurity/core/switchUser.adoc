@@ -1,0 +1,167 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-switchUser]]
+== Switch User
+
+To enable a user to switch from the current `Authentication` to another user's, set the `useSwitchUserFilter` attribute to `true`. This feature is similar to the "`su`" command in Unix. It enables, for example, an admin to act as a regular user to perform some actions, and then switch back.
+
+[WARNING]
+====
+This feature is very powerful; it allows full access to everything the switched-to user can access without requiring the user's password. Limit who can use this feature by guarding the user switch URL with a role, for example, `ROLE_SWITCH_USER`, `ROLE_ADMIN`, and so on.
+====
+
+=== Switching to Another User
+
+To switch to another user, typically you create a form that submits to `/login/impersonate`:
+
+[source,html]
+.Listing {counter:listing}. An HTML form for switching to another user
+----
+<sec:ifAllGranted roles='ROLE_SWITCH_USER'>
+
+   <form action='/login/impersonate' method='POST'>
+      Switch to user: <input type='text' name='username'/> <br/>
+      <input type='submit' value='Switch'/>
+   </form>
+
+</sec:ifAllGranted>
+----
+
+Here the form is guarded by a check that the logged-in user has `ROLE_SWITCH_USER` and is not shown otherwise. You also need to guard the user switch URL, and the approach depends on your mapping scheme. If you use annotations, add a rule to the `controllerAnnotations.staticRules` attribute:
+
+[source,groovy]
+.Listing {counter:listing}. Guarding the switch user url with `controllerAnnotations.staticRules`
+----
+grails.plugin.springsecurity.controllerAnnotations.staticRules = [
+   ...
+   [pattern: '/login/impersonate', access: ['ROLE_SWITCH_USER', 'IS_AUTHENTICATED_FULLY']]
+]
+----
+
+If you use ``Requestmap``s, create a rule like this (for example, in `BootStrap`):
+
+[source,groovy]
+.Listing {counter:listing}. Guarding the switch user url with a database requestmap
+----
+new Requestmap(url: '/login/impersonate',
+               configAttribute: 'ROLE_SWITCH_USER,IS_AUTHENTICATED_FULLY').save(flush: true)
+----
+
+If you use the static `application.groovy` map, add the rule there:
+
+[source,groovy]
+.Listing {counter:listing}. Guarding the switch user url with `interceptUrlMap`
+----
+grails.plugin.springsecurity.interceptUrlMap = [
+   ...
+   [pattern: '/login/impersonate', access: ['ROLE_SWITCH_USER', 'IS_AUTHENTICATED_FULLY']]
+]
+----
+
+=== Switching Back to Original User
+To resume as the original user, POST to `/logout/impersonate`.
+
+[source,html]
+.Listing {counter:listing}. A link to switch back to the real user
+----
+<sec:ifSwitched>
+    <form action='${request.contextPath}/logout/impersonate' method='POST'>
+        <input type='submit' value="Resume as ${grails.plugin.springsecurity.SpringSecurityUtils.switchedUserOriginalUsername}"/>
+    </form>
+</sec:ifSwitched>
+----
+
+=== Customizing URLs
+You can customize the URLs that are used for this feature, although it is rarely necessary:
+
+[source,groovy]
+----
+grails.plugin.springsecurity.switchUser.switchUserUrl = ...
+grails.plugin.springsecurity.switchUser.exitUserUrl = ...
+grails.plugin.springsecurity.switchUser.targetUrl = ...
+grails.plugin.springsecurity.switchUser.switchFailureUrl = ...
+----
+
+.Switch user configuration options
+[cols="30,30,40"]
+|====================
+| *Property* | *Default* | *Meaning*
+
+|useSwitchUserFilter
+|`false`
+|Whether to use the switch user filter
+
+|switchUser.switchUserUrl
+|"`/login/impersonate`"
+|URL to access (via POST) to switch to another user
+
+|switchUser.exitUserUrl
+|"`/logout/impersonate`"
+|URL to access (via POST) to switch to another user
+
+|switchUser.switchUserMatcher
+|`SwitchUserFilter.switchUserMatcher`
+|An alternative to `switchUserUrl`, define an `AntPathRequestMatcher` to determine if a request needs to switch user.
+
+|switchUser.exitUserMatcher
+|`SwitchUserFilter.exitUserMatcher`
+|An alternative to `exitUserUrl`, define an `AntPathRequestMatcher` to determine if a request needs to exit switch user.
+
+|switchUser.targetUrl
+|Same as `successHandler.defaultTargetUrl`
+|URL for redirect after switching
+
+|switchUser.switchFailureUrl
+|Same as `failureHandler.defaultFailureUrl`
+|URL for redirect after an error during an attempt to switch
+
+|switchUser.usernameParameter
+|`SwitchUserFilter.SPRING_SECURITY_SWITCH_USERNAME_KEY`
+|The username request parameter name
+|====================
+
+=== GSP Code
+
+One approach to supporting the switch user feature is to add code to one or more of your GSP templates. In this example the current username is displayed, and if the user has switched from another (using the `sec:ifSwitched` tag) then a "`resume`" button is displayed. If not, and the user has the required role, a form is displayed to allow input of the username to switch to:
+
+[source,html]
+.Listing {counter:listing}. Example GSP code to conditionally display a switch user form and resume form
+----
+<sec:ifLoggedIn>
+Logged in as <sec:username/>
+</sec:ifLoggedIn>
+
+<sec:ifSwitched>
+    <form action='${request.contextPath}/logout/impersonate' method='POST'>
+      <input type='submit' value="Resume as ${grails.plugin.springsecurity.SpringSecurityUtils.switchedUserOriginalUsername}"/>
+   </form>
+</sec:ifSwitched>
+
+<sec:ifNotSwitched>
+   <sec:ifAllGranted roles='ROLE_SWITCH_USER'>
+
+   <form action='${request.contextPath}/login/impersonate' method='POST'>
+      Switch to user: <input type='text' name='username'/><br/>
+      <input type='submit' value='Switch'/>
+   </form>
+
+   </sec:ifAllGranted>
+</sec:ifNotSwitched>
+----

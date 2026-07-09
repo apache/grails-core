@@ -30,7 +30,7 @@ import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.i18n.LocaleContextHolder;
-import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.filter.RequestContextFilter;
 
 import grails.web.mvc.FlashScope;
 import org.grails.web.util.WebUtils;
@@ -41,7 +41,7 @@ import org.grails.web.util.WebUtils;
  * @author Graeme Rocher
  * @since 0.4
  */
-public class GrailsWebRequestFilter extends OncePerRequestFilter implements ApplicationContextAware {
+public class GrailsWebRequestFilter extends RequestContextFilter implements ApplicationContextAware {
     Collection<ParameterCreationListener> paramListenerBeans;
 
     /* (non-Javadoc)

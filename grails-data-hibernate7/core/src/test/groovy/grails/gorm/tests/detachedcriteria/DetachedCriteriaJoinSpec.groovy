@@ -46,9 +46,6 @@ class DetachedCriteriaJoinSpec extends HibernateGormDatastoreSpec {
         new DetachedCriteria<>(Club).max(10).offset(0).count() == 4
         Club.where {}.max(2).offset(0).count() == 4
         new DetachedCriteria<>(Club).max(2).offset(0).count() == 4
-//TODO THESE SHOULD NOT PASS!
-//        Club.where {}.max(10).offset(10).count() == 4
-//        new DetachedCriteria<>(Club).max(10).offset(10).count() == 4
     }
 
     def 'check if inner join is applied correctly'(){

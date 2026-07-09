@@ -4,7 +4,7 @@ import java.sql.Date;
 
 public class Posts {
     int id;
-    int authorId; //TODO this might not be needed depending on mapping strategy
+    int authorId;
     String title;
     String description;
     String content;

@@ -60,12 +60,30 @@ class GroovyProxyInterceptorLogicSpec extends Specification {
         "ident"        | [] as Object[]
     }
 
-    def "handleUninitialized handles toString"() {
-        given:
+    def "handleUninitialized delegates toString to the implementation by default"() {
+        given: "state without lazy toString enabled, matching pre-Grails 8 behavior"
         def state = new InterceptorState("Book", Object, 1L)
+
+        expect: "the proxy implementation is invoked so the entity's own toString runs"
+        GroovyProxyInterceptorLogic.handleUninitialized(state, "toString", [] as Object[]) ==
+                GroovyProxyInterceptorLogic.INVOKE_IMPLEMENTATION
+    }
+
+    def "handleUninitialized answers toString without initialization when lazy toString is enabled"() {
+        given:
+        def state = new InterceptorState("Book", Object, 1L, true)
 
         expect:
         GroovyProxyInterceptorLogic.handleUninitialized(state, "toString", [] as Object[]) == "Book:1"
+    }
+
+    def "handleUninitialized delegates toString with arguments even when lazy toString is enabled"() {
+        given:
+        def state = new InterceptorState("Book", Object, 1L, true)
+
+        expect:
+        GroovyProxyInterceptorLogic.handleUninitialized(state, "toString", ["arg"] as Object[]) ==
+                GroovyProxyInterceptorLogic.INVOKE_IMPLEMENTATION
     }
 
     def "handleUninitialized handles dirty checking methods"() {

@@ -163,6 +163,68 @@ public interface LinkGenerator {
     String link(@SuppressWarnings("rawtypes") Map params, String encoding);
 
     /**
+     * Resolves the effective namespace to use for a link/redirect that targets the given controller
+     * when the caller did not supply an explicit {@code namespace} attribute.
+     *
+     * <p>Implementations infer the namespace from the registered controllers so that links generated
+     * from {@code controller} and {@code action} alone "just work" without a namespace attribute. The
+     * contract is:</p>
+     *
+     * <ul>
+     *    <li>If the target controller is the controller currently handling the request, the current
+     *        request namespace is returned.</li>
+     *    <li>Otherwise, if exactly one controller has the given name, that controller's namespace is
+     *        returned (which may be {@code null} when that single controller is non-namespaced).</li>
+     *    <li>Otherwise the name is defined by more than one controller in different namespaces - a
+     *        discouraged design - so a sensible default is chosen: the non-namespaced controller if one
+     *        exists, then a controller in the current request namespace; any remaining ambiguity yields
+     *        {@code null} and must be disambiguated by specifying the namespace explicitly.</li>
+     * </ul>
+     *
+     * <p>Callers must only use this when no explicit {@code namespace} attribute was supplied; an
+     * explicit {@code namespace} (including an explicit blank one) must always take precedence so that
+     * {@code namespace=""} (or {@code namespace: null}) can be used to target a non-namespaced
+     * controller.</p>
+     *
+     * <p>When a {@code pluginName} is supplied the target lives in a plugin, so cross-controller
+     * inference from the application's own controllers is not performed.</p>
+     *
+     * @param controller The logical name of the target controller
+     * @param pluginName The name of the plugin providing the target controller, or {@code null}
+     * @return The resolved namespace, or {@code null} for the default namespace
+     */
+    default String getDefaultNamespace(String controller, String pluginName) {
+        return null;
+    }
+
+    /**
+     * Resolves the namespace to pass to reverse URL mapping when a caller may have supplied an
+     * explicit {@code namespace} attribute.
+     *
+     * <p>An explicit namespace always wins, including an explicit {@code null} or blank value. Blank
+     * values are normalised to {@code null} because reverse mappings key non-namespaced controllers on
+     * {@code null}. Only when the attribute is absent is {@link #getDefaultNamespace(String, String)}
+     * consulted.</p>
+     *
+     * @param controller The logical name of the target controller
+     * @param pluginName The name of the plugin providing the target controller, or {@code null}
+     * @param attrs The attributes that may contain {@link #ATTRIBUTE_NAMESPACE}
+     * @return The explicit or inferred namespace, or {@code null} for the default namespace
+     */
+    @SuppressWarnings("rawtypes")
+    default String resolveNamespace(String controller, String pluginName, Map attrs) {
+        if (attrs != null && attrs.containsKey(ATTRIBUTE_NAMESPACE)) {
+            Object namespace = attrs.get(ATTRIBUTE_NAMESPACE);
+            if (namespace == null) {
+                return null;
+            }
+            String namespaceValue = namespace.toString();
+            return namespaceValue.trim().isEmpty() ? null : namespaceValue;
+        }
+        return getDefaultNamespace(controller, pluginName);
+    }
+
+    /**
      * Obtains the context path from which this link generator is operating.
      *
      * @return The base context path

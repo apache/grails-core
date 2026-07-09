@@ -28,7 +28,6 @@ import spock.lang.Issue
 /**
  * Created by graemerocher on 03/11/16.
  */
-//TODO : How to create an alias inside a closure
 class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
     void setupSpec() {
         manager.registerDomainClasses(Club, Team)

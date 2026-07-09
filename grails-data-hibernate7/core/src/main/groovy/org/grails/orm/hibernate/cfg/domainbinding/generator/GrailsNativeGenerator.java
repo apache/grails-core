@@ -36,7 +36,6 @@ import org.hibernate.id.enhanced.SequenceStyleGenerator;
  * @author Graeme Rocher
  * @since 7.0
  */
-//TODO Hacky implementation
 public class GrailsNativeGenerator extends NativeGenerator {
 
     @Serial

@@ -75,7 +75,12 @@ class ConfigReportCommandSpec extends Specification {
             environment.getProperty(key) >> value.toString()
         }
 
-        ExecutionContext executionContext = new ExecutionContext(Mock(CommandLine))
+        // Write the report to a temp dir: writing it into the project directory races with
+        // other specs in this module (e.g. DevelopmentModeWatchSpec) that walk the project
+        // tree in a parallel fork while the report file appears and is deleted again
+        ExecutionContext executionContext = Spy(new ExecutionContext(Mock(CommandLine))) {
+            getBaseDir() >> tempDir
+        }
 
         when:
         boolean result = command.handle(executionContext)
