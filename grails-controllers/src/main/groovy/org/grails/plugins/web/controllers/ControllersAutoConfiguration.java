@@ -109,14 +109,12 @@ public class ControllersAutoConfiguration {
         return registrationBean;
     }
 
-    // Exposed as a RequestContextFilter bean (GrailsWebRequestFilter extends it) so that Boot's
-    // WebMvcAutoConfiguration RequestContextFilter — @ConditionalOnMissingBean(RequestContextFilter) —
-    // backs off in favour of Grails' GrailsWebRequest binding. Without @EnableWebMvc, Boot's
-    // WebMvcAutoConfiguration is active and would otherwise register an OrderedRequestContextFilter
-    // (order -105) that rebinds a plain ServletRequestAttributes between GrailsWebRequestFilter (-150)
-    // and the Spring Security chain (-100), causing a GrailsWebRequest ClassCastException downstream.
+    // GrailsWebRequestFilter extends RequestContextFilter, so Boot's WebMvcAutoConfiguration backs off
+    // its own RequestContextFilter and the GrailsWebRequest stays bound. Also gated on the
+    // "grailsWebRequestFilter" registration bean name so an application overriding only that registration
+    // makes this raw filter back off with it, rather than leaving a duplicate filter on the chain.
     @Bean
-    @ConditionalOnMissingBean(GrailsWebRequestFilter.class)
+    @ConditionalOnMissingBean(value = GrailsWebRequestFilter.class, name = "grailsWebRequestFilter")
     public GrailsWebRequestFilter grailsWebRequest(ApplicationContext applicationContext) {
         GrailsWebRequestFilter grailsWebRequestFilter = new GrailsWebRequestFilter();
         grailsWebRequestFilter.setApplicationContext(applicationContext);

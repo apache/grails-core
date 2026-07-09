@@ -127,3 +127,29 @@ A single property can likewise declare a `$text` index — or another special ty
 When the options of an already-created index change between restarts, GORM now reconciles the difference instead of only
 logging a conflict. A changed TTL is applied in place with MongoDB's `collMod` command — no drop, no rebuild — while any
 other option change is applied by declaring `indexAttributes: [recreateOnConflict: true]`.
+
+==== GORM for MongoDB and Spring Data MongoDB Interoperability
+
+A new optional module, `grails-data-mongodb-spring-data`, lets an application use GORM for MongoDB and
+https://spring.io/projects/spring-data-mongodb[Spring Data MongoDB] — its `MongoTemplate` and repositories — side by
+side over the *same* `MongoClient`, database and codecs, and, within a single `@Transactional` method, the *same*
+MongoDB transaction. When the module and `spring-data-mongodb` are on the classpath of a Spring Boot application that
+already has a GORM `MongoDatastore`, it auto-configures a `MongoDatabaseFactory`, a `MongoTemplate` and a primary
+`transactionManager` over GORM's existing connection — GORM keeps ownership of the client:
+
+[source,groovy]
+----
+@Transactional
+void transfer(MongoTemplate mongoTemplate) {
+    new Account(name: "from").save()                  // GORM
+    mongoTemplate.insert(new LedgerEntry(amount: 10)) // Spring Data
+    // both commit together, or neither is applied if an exception is thrown
+}
+----
+
+The unified transaction shares GORM's server-side `ClientSession`, so it requires GORM multi-document transactions to
+be enabled (`grails.mongodb.transactional = true`). Spring Data repositories are enabled the usual way with
+`@EnableMongoRepositories`, on a package separate from the GORM `@Entity` classes; only the connection, codecs and
+session are shared, and the two object-mapping models stay separate. See the
+link:{mongodb5Guide}index.html#springDataInterop[Spring Data MongoDB Interoperability] section of the GORM for MongoDB
+guide for details.

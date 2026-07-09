@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.servlet.DispatcherServlet
+import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver
 import org.springframework.web.servlet.i18n.SessionLocaleResolver
 
 import static org.junit.jupiter.api.Assertions.assertEquals
@@ -102,6 +103,28 @@ class ParamsAwareLocaleChangeInterceptorTests {
 
         assertEquals "de", locale.getLanguage()
         assertEquals "DE", locale.getCountry()
+    }
+
+    @Test
+    void testReadOnlyLocaleResolverIsIgnoredGracefully() {
+
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+
+        def request = webRequest.getCurrentRequest()
+        def response = webRequest.getCurrentResponse()
+
+        // AcceptHeaderLocaleResolver.setLocale throws UnsupportedOperationException
+        def localeResolver = new AcceptHeaderLocaleResolver()
+
+        request.setAttribute(DispatcherServlet.LOCALE_RESOLVER_ATTRIBUTE, localeResolver)
+
+        def localeChangeInterceptor = new ParamsAwareLocaleChangeInterceptor()
+        localeChangeInterceptor.paramName = "lang"
+
+        webRequest.params.lang = "de_DE"
+
+        // preHandle must not propagate the UnsupportedOperationException from the read-only resolver
+        assert localeChangeInterceptor.preHandle(request, response, null)
     }
 
     @Test

@@ -50,6 +50,35 @@ class I18nGrailsPlugin extends Plugin {
 
 This plugin configures the Grails `messageSource` bean and a couple of other beans to manage Locale resolution and switching. It using the link:spring.html#theBeanBuilderDSLExplained[Spring Bean Builder] syntax to do so.
 
+Alternatively, you can override the `doWithSpring(BeanBuilder)` method and register beans directly against the supplied `BeanBuilder` instead of returning a closure. This avoids the closure indirection and is the recommended form for statically compiled plugins:
+
+[source,groovy]
+----
+import org.springframework.web.servlet.i18n.CookieLocaleResolver
+import org.springframework.web.servlet.i18n.LocaleChangeInterceptor
+import org.springframework.context.support.ReloadableResourceBundleMessageSource
+import grails.plugins.*
+import grails.spring.BeanBuilder
+
+class I18nGrailsPlugin extends Plugin {
+
+    def version = "0.1"
+
+    @Override
+    void doWithSpring(BeanBuilder beans) {
+        beans.messageSource(ReloadableResourceBundleMessageSource) {
+            basename = "WEB-INF/grails-app/i18n/messages"
+        }
+        beans.localeChangeInterceptor(LocaleChangeInterceptor) {
+            paramName = "lang"
+        }
+        beans.localeResolver(CookieLocaleResolver)
+    }
+}
+----
+
+A plugin may override either `doWithSpring()` or `doWithSpring(BeanBuilder)`, but not both. The closure-returning `doWithSpring()` remains fully supported for backwards compatibility. Defining both forms in the same plugin is an error: the plugin will fail to load with an exception, since the two forms are alternatives and defining both indicates an incomplete migration between them. Consolidate the bean definitions into a single form.
+
 
 ==== Customizing the Servlet Environment
 

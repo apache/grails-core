@@ -69,6 +69,7 @@ class GrailsMockHttpServletRequest extends MockHttpServletRequest implements Mul
     DispatcherType dispatcherType
     AsyncContext asyncContext
     private ServletInputStream cachedInputStream
+    private boolean formBodyParsed
 
     GrailsMockHttpServletRequest() {
         super()
@@ -446,6 +447,64 @@ class GrailsMockHttpServletRequest extends MockHttpServletRequest implements Mul
             cachedInputStream = super.getInputStream()
         }
         cachedInputStream
+    }
+
+    @Override
+    String getParameter(String name) {
+        parseFormBodyIfNecessary()
+        super.getParameter(name)
+    }
+
+    @Override
+    Map<String, String[]> getParameterMap() {
+        parseFormBodyIfNecessary()
+        super.getParameterMap()
+    }
+
+    @Override
+    Enumeration<String> getParameterNames() {
+        parseFormBodyIfNecessary()
+        super.getParameterNames()
+    }
+
+    @Override
+    String[] getParameterValues(String name) {
+        parseFormBodyIfNecessary()
+        super.getParameterValues(name)
+    }
+
+    /**
+     * Simulates Spring's {@code FormContentFilter}: parses an {@code application/x-www-form-urlencoded}
+     * body of a {@code PUT}, {@code PATCH} or {@code DELETE} request into request parameters, so a mock
+     * request reflects what application code sees after that filter has run in a real deployment. Runs
+     * once, the first time a non-empty form body is observed on parameter access.
+     */
+    private void parseFormBodyIfNecessary() {
+        if (formBodyParsed) {
+            return
+        }
+        String httpMethod = getMethod()
+        if (httpMethod != 'PUT' && httpMethod != 'PATCH' && httpMethod != 'DELETE') {
+            return
+        }
+        String currentContentType = getContentType()
+        if (currentContentType == null || MimeType.FORM != new MimeType(currentContentType)) {
+            return
+        }
+        byte[] body = getContentAsByteArray()
+        if (!body) {
+            return
+        }
+        formBodyParsed = true
+        String charset = getCharacterEncoding() ?: StandardCharsets.UTF_8.name()
+        WebUtils.fromQueryString(new String(body, charset)).each { key, value ->
+            if (value instanceof List) {
+                addParameter((String) key, ((List) value)*.toString() as String[])
+            }
+            else {
+                addParameter((String) key, value?.toString())
+            }
+        }
     }
 }
 

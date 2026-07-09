@@ -110,6 +110,20 @@ abstract class Plugin implements GrailsApplicationLifeCycle, GrailsApplicationAw
     Closure doWithSpring() { null }
 
     /**
+     * Registers Spring beans directly against the supplied {@link BeanBuilder}. This is the statically-compilable
+     * alternative to {@link #doWithSpring()}: instead of returning a closure whose delegate the container wires up,
+     * an implementation registers beans against the builder passed as an argument. Subclasses should override.
+     *
+     * A plugin should override either this method or {@link #doWithSpring()}, but not both: the two forms are
+     * alternatives, and defining both causes the plugin to fail to load.
+     *
+     * @param beans The {@link BeanBuilder} to register beans against
+     */
+    void doWithSpring(BeanBuilder beans) {
+        // no-op
+    }
+
+    /**
      * Invoked in a phase where plugins can add dynamic methods. Subclasses should override
      */
     @Override

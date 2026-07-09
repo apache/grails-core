@@ -65,6 +65,8 @@ dependencyManagement {
 // sourcing the number from dependencies.gradle so it stays the single source of truth.
 apply from: rootProject.layout.projectDirectory.file('dependencies.gradle')
 ext['logback.version'] = bomDependencyVersions['logback.version']
+// Same situation for the Jackson 3 security override (CVE-2026-59889) - see jackson3.version in dependencies.gradle.
+ext['jackson-bom.version'] = bomDependencyVersions['jackson3.version']
 
 dependencies {
     implementation 'org.apache.grails:grails-dependencies-starter-web'

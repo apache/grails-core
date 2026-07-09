@@ -21,6 +21,7 @@ package org.grails.plugins;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -391,13 +392,23 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
         b.setVariable("resolver", getResolver());
 
         if (plugin instanceof Plugin) {
-            Closure c = ((Plugin) plugin).doWithSpring();
+            Plugin pluginObject = (Plugin) plugin;
+            // Legacy closure-returning hook: doWithSpring() returns a bean-defining closure
+            Closure c = pluginObject.doWithSpring();
+            // A plugin must define at most one Spring configuration hook. Both forms are explicit
+            // overrides, so defining both is an authoring error rather than a supported combination.
+            if (c != null && isDoWithSpringMethodOverridden(pluginObject)) {
+                throw new PluginException("Plugin [" + this + "] defines both the closure-returning doWithSpring() " +
+                        "and the doWithSpring(BeanBuilder) method. Define only one Spring configuration hook.");
+            }
+            BeanBuilder bb = new BeanBuilder(getParentCtx(), springConfig, grailsApplication.getClassLoader());
+            bb.setBinding(b);
             if (c != null) {
-                BeanBuilder bb = new BeanBuilder(getParentCtx(), springConfig, grailsApplication.getClassLoader());
-                bb.setBinding(b);
                 c.setDelegate(bb);
                 bb.invokeMethod("beans", new Object[]{c});
             }
+            // Method-based hook: doWithSpring(BeanBuilder) registers beans directly against the builder
+            pluginObject.doWithSpring(bb);
         } else {
             if (!pluginBean.isReadableProperty(DO_WITH_SPRING)) {
                 return;
@@ -414,6 +425,24 @@ public class DefaultGrailsPlugin extends AbstractGrailsPlugin implements ParentA
             bb.invokeMethod("beans", new Object[]{c});
         }
 
+    }
+
+    /**
+     * Determines whether the plugin overrides the {@link Plugin#doWithSpring(BeanBuilder)} method, as opposed to
+     * inheriting the no-op base implementation. Used to detect a plugin that defines both the closure-returning and
+     * method-based Spring configuration hooks.
+     *
+     * @param pluginObject the plugin instance
+     * @return true if {@code doWithSpring(BeanBuilder)} is declared below {@link Plugin}
+     */
+    private boolean isDoWithSpringMethodOverridden(Plugin pluginObject) {
+        try {
+            Method method = pluginObject.getClass().getMethod(DO_WITH_SPRING, BeanBuilder.class);
+            return method.getDeclaringClass() != Plugin.class;
+        }
+        catch (NoSuchMethodException e) {
+            return false;
+        }
     }
 
     @Override

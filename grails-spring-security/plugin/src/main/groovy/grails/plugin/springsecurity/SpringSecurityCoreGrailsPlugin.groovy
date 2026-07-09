@@ -131,7 +131,6 @@ import org.springframework.security.web.savedrequest.NullRequestCache
 import org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter
 import org.springframework.security.web.session.HttpSessionEventPublisher
 import org.springframework.security.web.util.matcher.AnyRequestMatcher
-import org.springframework.web.filter.FormContentFilter
 
 import jakarta.servlet.DispatcherType
 
@@ -626,8 +625,6 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
                 log.info message
                 println message
             }
-
-            formContentFilter(classFor('formContentFilter', FormContentFilter))
         }
     }
 
