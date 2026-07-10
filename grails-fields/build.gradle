@@ -54,10 +54,6 @@ dependencies {
     testImplementation project(':grails-testing-support-datamapping')
     testImplementation project(':grails-testing-support-web')
     testImplementation "org.javassist:javassist:$javassistVersion"
-    testImplementation("org.jodd:jodd-wot:$joddWotVersion") {
-        exclude module: 'slf4j-api'
-        exclude module: 'asm'
-    }
 
     testRuntimeOnly 'org.objenesis:objenesis' // Required by Spock for mocking classes without default constructor
 }

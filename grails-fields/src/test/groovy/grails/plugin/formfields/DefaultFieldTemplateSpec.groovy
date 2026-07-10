@@ -19,13 +19,11 @@
 package grails.plugin.formfields
 
 import grails.testing.web.taglib.TagLibUnitTest
-import jodd.lagarto.dom.jerry.Jerry
 import spock.lang.Specification
-import static jodd.lagarto.dom.jerry.Jerry.jerry
 
 class DefaultFieldTemplateSpec extends Specification implements TagLibUnitTest<FormFieldsTagLib> {
-	
-	Map model = [:]
+
+    Map model = [:]
 
     void setup() {
         model.invalid = false
@@ -46,54 +44,42 @@ class DefaultFieldTemplateSpec extends Specification implements TagLibUnitTest<F
     <%= widget %>
 </div>'''
     }
-	
-	static Jerry $(String html) {
-		jerry(html).children()
-	}
-	
-	void "default rendering"() {
-		when:
-		def output = tagLib.renderDefaultField(model)
 
-		then:
-		def root = $(output.toString())
-		root.is('div.fieldcontain')
+    void "default rendering"() {
+        when:
+        String output = tagLib.renderDefaultField(model).toString()
 
-		and:
-		def label = root.find('label')
-		label.text() == 'label'
-		label.attr('for') == 'property'
-		
-		and:
-		label.next().is('input[name=property]')
-	}
+        then:
+        output.contains('<div class="fieldcontain">')
 
-	void "container marked as invalid"() {
-		given:
-		model.invalid = true
+        and:
+        output.contains('<label class="" for="property">label</label>')
+        output.indexOf('<label class="" for="property">label</label>') < output.indexOf('<input name="property">')
+    }
 
-		when:
-		def output = tagLib.renderDefaultField(model)
-		
-		then:
-		$(output.toString()).hasClass('error')
-	}
+    void "container marked as invalid"() {
+        given:
+        model.invalid = true
 
-	void "container marked as required"() {
-		given:
-		model.required = true
+        when:
+        String output = tagLib.renderDefaultField(model).toString()
 
-		when:
-		def output = tagLib.renderDefaultField(model)
+        then:
+        output.contains('<div class="fieldcontain error">')
+    }
 
-		then:
-		def root = $(output.toString())
-		root.hasClass('required')
-		
-		and:
-		def indicator = root.find('label .required-indicator')
-		indicator.size()
-		indicator.text() == '*'
-	}
+    void "container marked as required"() {
+        given:
+        model.required = true
+
+        when:
+        String output = tagLib.renderDefaultField(model).toString()
+
+        then:
+        output.contains('<div class="fieldcontain required">')
+
+        and:
+        output.contains('<span class="required-indicator">*</span>')
+    }
 
 }
