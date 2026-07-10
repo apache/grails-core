@@ -98,7 +98,8 @@ public abstract class AbstractPersistentEntity<T extends Entity> implements Pers
     }
 
     public TenantId getTenantId() {
-        if (this.tenantId == null && isMultiTenant()) {
+        if (this.tenantId == null && persistentProperties != null &&
+                isMultiTenant() && context.getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
             for (PersistentProperty prop : persistentProperties) {
                 if (prop instanceof TenantId) {
                     this.tenantId = (TenantId) prop;

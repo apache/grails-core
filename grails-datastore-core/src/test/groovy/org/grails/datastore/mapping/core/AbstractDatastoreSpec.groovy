@@ -25,6 +25,7 @@ import org.springframework.context.ApplicationEvent
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.ApplicationListener
 import org.springframework.context.ConfigurableApplicationContext
+import org.springframework.context.PayloadApplicationEvent
 import org.springframework.context.support.GenericApplicationContext
 import org.springframework.core.env.PropertyResolver
 import spock.lang.Specification
@@ -159,6 +160,71 @@ class AbstractDatastoreSpec extends Specification {
         datastore.sessionResolver.resolve() == null
     }
 
+    void "destroy() logs and continues closing remaining sessions when a session's disconnect() throws"() {
+        given:
+        def mappingContext = Mock(MappingContext) {
+            getPersistentEntities() >> []
+        }
+        def datastore = new TestDatastore(mappingContext, (PropertyResolver) null, null)
+        def session = Mock(Session)
+        session.getDatastore() >> datastore
+        session.disconnect() >> { throw new IllegalStateException("boom") }
+        DatastoreUtils.bindSession(session)
+
+        when:
+        datastore.destroy()
+
+        then:
+        noExceptionThrown()
+        !datastore.hasCurrentSession()
+    }
+
+    void "the default event publisher wraps a non-ApplicationEvent payload in a PayloadApplicationEvent before dispatching"() {
+        given:
+        def mappingContext = Mock(MappingContext)
+        def datastore = new TestDatastore(mappingContext, (PropertyResolver) null, null)
+        def listener = new RecordingAnyEventListener()
+        datastore.addApplicationListener(listener)
+
+        when:
+        datastore.getApplicationEventPublisher().publishEvent("a plain payload")
+
+        then:
+        listener.received.size() == 1
+        listener.received[0] instanceof PayloadApplicationEvent
+        ((PayloadApplicationEvent) listener.received[0]).payload == "a plain payload"
+    }
+
+    void "addApplicationListener falls back to reflection when the publisher exposes its own addApplicationListener method"() {
+        given:
+        def mappingContext = Mock(MappingContext)
+        def datastore = new TestDatastore(mappingContext, (PropertyResolver) null, null)
+        def customPublisher = new ReflectiveApplicationEventPublisher()
+        datastore.setApplicationEventPublisher(customPublisher)
+        def listener = new RecordingSessionCreationListener()
+
+        when:
+        datastore.addApplicationListener(listener)
+
+        then:
+        customPublisher.registered == [listener]
+    }
+
+    void "addApplicationListener silently ignores registration when the publisher exposes no addApplicationListener method"() {
+        given:
+        def mappingContext = Mock(MappingContext)
+        def datastore = new TestDatastore(mappingContext, (PropertyResolver) null, null)
+        def bareCustomPublisher = Mock(ApplicationEventPublisher)
+        datastore.setApplicationEventPublisher(bareCustomPublisher)
+        def listener = new RecordingSessionCreationListener()
+
+        when:
+        datastore.addApplicationListener(listener)
+
+        then:
+        noExceptionThrown()
+    }
+
     static class RecordingSessionCreationListener implements ApplicationListener<SessionCreationEvent> {
         List<SessionCreationEvent> received = []
 
@@ -180,6 +246,36 @@ class AbstractDatastoreSpec extends Specification {
         @Override
         void onApplicationEvent(OtherEvent event) {
             received << event
+        }
+    }
+
+    static class RecordingAnyEventListener implements ApplicationListener<ApplicationEvent> {
+        List<ApplicationEvent> received = []
+
+        @Override
+        void onApplicationEvent(ApplicationEvent event) {
+            received << event
+        }
+    }
+
+    /**
+     * Mirrors a custom {@link ApplicationEventPublisher} that is neither a {@link ConfigurableApplicationContext}
+     * nor the datastore's own multicaster, but still exposes an addApplicationListener(ApplicationListener) method
+     * that {@link AbstractDatastore#addApplicationListener(ApplicationListener)} discovers via reflection.
+     */
+    static class ReflectiveApplicationEventPublisher implements ApplicationEventPublisher {
+        List<ApplicationListener> registered = []
+
+        @Override
+        void publishEvent(ApplicationEvent event) {
+        }
+
+        @Override
+        void publishEvent(Object event) {
+        }
+
+        void addApplicationListener(ApplicationListener listener) {
+            registered << listener
         }
     }
 
