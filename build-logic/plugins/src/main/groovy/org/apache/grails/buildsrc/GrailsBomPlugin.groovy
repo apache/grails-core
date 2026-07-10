@@ -36,7 +36,7 @@ import org.apache.grails.gradle.tasks.bom.ExtractedDependencyConstraint
 import org.apache.grails.gradle.tasks.bom.PropertyNameCalculator
 
 @CompileStatic
-class BomConventionsPlugin implements Plugin<Project> {
+class GrailsBomPlugin implements Plugin<Project> {
 
     private static final String BASE_CONSTRAINTS_FILE = 'grails-bom-constraints.adoc'
 
@@ -64,9 +64,6 @@ class BomConventionsPlugin implements Plugin<Project> {
         project.extensions.configure(JavaPlatformExtension) { JavaPlatformExtension extension ->
             extension.allowDependencies()
         }
-        project.pluginManager.apply('org.apache.grails.buildsrc.publish')
-        project.pluginManager.apply('org.apache.grails.buildsrc.sbom')
-
         configureBomDependencies(project)
         configureExtractConstraints(project)
         configureSnapshotValidation(project)
@@ -77,7 +74,7 @@ class BomConventionsPlugin implements Plugin<Project> {
     }
 
     private static void configureCoordinates(Project project) {
-        project.version = project.findProperty('projectVersion')
+        project.version = project.property('projectVersion')
         project.group = 'org.apache.grails'
     }
 
@@ -99,7 +96,7 @@ class BomConventionsPlugin implements Plugin<Project> {
     }
 
     private static void configureExtractConstraints(Project project) {
-        TaskProvider<ExtractDependenciesTask> extractConstraints = project.tasks.register(
+        project.tasks.register(
                 'extractConstraints',
                 ExtractDependenciesTask
         ) { ExtractDependenciesTask task ->
@@ -119,10 +116,6 @@ class BomConventionsPlugin implements Plugin<Project> {
             task.forcedGroupPrefixes.set(['org.apache.grails.profiles': 'grails-profile'])
             task.projectCoordinateProperties.set(project.provider { projectCoordinateProperties(project) })
             task.dependsOn('generateMetadataFileForMavenPublication', 'generatePomFileForMavenPublication')
-        }
-
-        project.tasks.named('check') { Task task ->
-            task.dependsOn(extractConstraints)
         }
     }
 
@@ -178,10 +171,11 @@ class BomConventionsPlugin implements Plugin<Project> {
 
         if (project.extensions.extraProperties.get('isReleaseBuild') &&
                 project.extensions.extraProperties.get('isPublishedExternal')) {
-            project.tasks.matching { Task task ->
-                task.name in ['generateMetadataFileForMavenPublication', 'generatePomFileForMavenPublication']
-            }.configureEach { Task task ->
-                task.dependsOn(validateNoSnapshotDependencies)
+            Set<String> publicationTasks = ['generateMetadataFileForMavenPublication', 'generatePomFileForMavenPublication'] as Set<String>
+            project.tasks.configureEach { Task task ->
+                if (publicationTasks.contains(task.name)) {
+                    task.dependsOn(validateNoSnapshotDependencies)
+                }
             }
         }
     }
@@ -238,7 +232,7 @@ class BomConventionsPlugin implements Plugin<Project> {
                             dep.version[0].value = extractedConstraint.versionPropertyReference
                             pomProperties.put(extractedConstraint.versionPropertyName, inlineVersion)
                         }
-                    } else if (!inlineVersion) {
+                    } else {
                         throw new GradleException("Dependency $groupId:$artifactId does not have a version.")
                     }
                 }

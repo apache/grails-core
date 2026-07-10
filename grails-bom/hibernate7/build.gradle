@@ -18,6 +18,8 @@
  */
 
 plugins {
+    id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.buildsrc.bom-conventions'
 }
 

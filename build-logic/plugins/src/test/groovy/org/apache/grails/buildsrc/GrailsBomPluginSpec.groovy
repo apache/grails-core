@@ -25,7 +25,7 @@ import org.gradle.testkit.runner.TaskOutcome
 import spock.lang.Specification
 import spock.lang.TempDir
 
-class BomConventionsPluginSpec extends Specification {
+class GrailsBomPluginSpec extends Specification {
 
     @TempDir
     Path testProjectDir
@@ -37,7 +37,6 @@ class BomConventionsPluginSpec extends Specification {
         testProjectDir.resolve('dependencies.gradle').toFile().text = ''
         testProjectDir.resolve('build.gradle').toFile().text = '''
             plugins {
-                id 'org.apache.grails.gradle.grails-publish'
                 id 'org.apache.grails.buildsrc.bom-conventions'
             }
 
@@ -75,6 +74,9 @@ class BomConventionsPluginSpec extends Specification {
                     pomFile.text = writer.toString()
                 }
             }
+
+            tasks.register('generateMetadataFileForMavenPublication')
+            tasks.register('generatePomFileForMavenPublication')
 
             void addDependency(Node dependencies, String groupId, String artifactId) {
                 def dependency = dependencies.appendNode('dependency')
@@ -122,5 +124,22 @@ class BomConventionsPluginSpec extends Specification {
             it.groupId.text().trim() == 'org.apache.grails.gradle' &&
                     it.artifactId.text().trim() == 'grails-gradle-common'
         }.version.text().trim() == '${grails-gradle-common.version}'
+    }
+
+    def "release snapshot validation wires lazily to publication tasks"() {
+        when:
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('generateMetadataFileForMavenPublication', '--stacktrace')
+                .withEnvironment([
+                        'GRAILS_PUBLISH_RELEASE'          : 'true',
+                        'NEXUS_PUBLISH_STAGING_PROFILE_ID': 'test'
+                ])
+                .withPluginClasspath()
+                .build()
+
+        then:
+        result.task(':validateNoSnapshotDependencies').outcome == TaskOutcome.SUCCESS
+        result.task(':generateMetadataFileForMavenPublication').outcome == TaskOutcome.SUCCESS
     }
 }

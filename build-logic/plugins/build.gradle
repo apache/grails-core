@@ -65,9 +65,9 @@ gradlePlugin {
             id = 'org.apache.grails.buildsrc.sbom'
             implementationClass = 'org.apache.grails.buildsrc.SbomPlugin'
         }
-        register('bomConventionsPlugin') {
+        register('grailsBomPlugin') {
             id = 'org.apache.grails.buildsrc.bom-conventions'
-            implementationClass = 'org.apache.grails.buildsrc.BomConventionsPlugin'
+            implementationClass = 'org.apache.grails.buildsrc.GrailsBomPlugin'
         }
         register('sharedPropertyPlugin') {
             id = 'org.apache.grails.buildsrc.properties'
