@@ -1,0 +1,7 @@
+=== URL mapping precomputation seed
+
+Grails 8.1 starts reserving `META-INF/grails/url-mappings-index.properties` as the build-time URL mappings index location.
+The runtime `DefaultUrlMappingsHolder` now detects that descriptor and keeps the existing runtime mapping evaluation path as the fallback when no descriptor is packaged.
+
+This is a first compatibility slice only.
+Applications do not need to generate the descriptor yet, and existing `UrlMappings.groovy` behavior remains authoritative until a later release wires a complete build-time index generator.
