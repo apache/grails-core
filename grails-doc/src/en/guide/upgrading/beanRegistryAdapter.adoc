@@ -1,0 +1,7 @@
+=== BeanBuilder to BeanRegistry strategy
+
+Grails 8.1 introduces an experimental `grails.spring.BeanRegistryAdapter` seam as the first step toward the Spring 7 `BeanRegistrar` direction tracked in issue #15824.
+The initial `BeanBuilderBeanRegistryAdapter` delegates to the existing `BeanBuilder`, so `resources.groovy`, plugin `doWithSpring`, and existing BeanBuilder APIs continue to work unchanged.
+
+The intended migration path is to move call sites behind the adapter first, then add a Spring 7 BeanRegistrar-backed implementation once the framework integration points are ready.
+BeanBuilder is not removed or behaviorally changed by this seed.
