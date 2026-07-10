@@ -25,9 +25,12 @@ import grails.core.GrailsApplication
 
 import org.springframework.boot.autoconfigure.AutoConfigurations
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner
+import org.springframework.boot.web.servlet.AbstractFilterRegistrationBean
 import org.springframework.boot.web.servlet.FilterRegistrationBean
+import org.springframework.boot.web.servlet.ServletContextInitializerBeans
 import org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration
 import org.springframework.context.ApplicationContext
+import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.web.filter.RequestContextFilter
 
 import org.grails.web.config.http.GrailsFilters
@@ -87,6 +90,7 @@ class ControllersAutoConfigurationSpec extends Specification {
                 .run { context ->
                     assert !context.containsBean('requestContextFilter')
                     assert context.getBeanNamesForType(GrailsWebRequestFilter).length == 1
+                    assert grailsWebRequestFilterRegistrations(context) == 1
                 }
     }
 
@@ -101,13 +105,15 @@ class ControllersAutoConfigurationSpec extends Specification {
         FilterRegistrationBean<GrailsWebRequestFilter> userRegistration = new FilterRegistrationBean<>()
         Supplier<FilterRegistrationBean> userRegistrationSupplier = () -> userRegistration
 
-        expect: 'the user bean wins and the auto-configuration does not register a second one'
+        expect: 'the user bean wins and the framework filter backs off entirely — no second, Boot-adapted copy on the chain'
         new WebApplicationContextRunner()
                 .withBean(GrailsApplication, grailsApplicationSupplier)
                 .withBean('grailsWebRequestFilter', FilterRegistrationBean, userRegistrationSupplier)
                 .withConfiguration(AutoConfigurations.of(ControllersAutoConfiguration, WebMvcAutoConfiguration))
                 .run { context ->
                     assert context.getBean('grailsWebRequestFilter').is(userRegistration)
+                    assert context.getBeanNamesForType(GrailsWebRequestFilter).length == 0
+                    assert grailsWebRequestFilterRegistrations(context) == 0
                 }
     }
 
@@ -132,5 +138,15 @@ class ControllersAutoConfigurationSpec extends Specification {
                     assert names.length == 1
                     assert context.getBean(names[0]).is(userConfigurer)
                 }
+    }
+
+    // Reconstructs the servlet filter chain the way Boot assembles it at container start, so the specs
+    // assert on the real chain — including any raw filter bean Boot auto-adapts onto "/*" — rather than
+    // mere bean presence in the context.
+    private static int grailsWebRequestFilterRegistrations(ConfigurableApplicationContext context) {
+        new ServletContextInitializerBeans(context.beanFactory).count { initializer ->
+            initializer instanceof AbstractFilterRegistrationBean &&
+                    ((AbstractFilterRegistrationBean) initializer).filter instanceof GrailsWebRequestFilter
+        }
     }
 }

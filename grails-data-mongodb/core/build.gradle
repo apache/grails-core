@@ -132,6 +132,12 @@ dependencies {
     testImplementation 'org.apache.grails.testing:grails-testing-support-core'
     testImplementation 'org.spockframework:spock-core'
     testImplementation project(':grails-testing-support-mongodb')
+    testImplementation project(':grails-datastore-web'), {
+        // test: OpenSessionInViewInterceptor, spring-web's GenericWebApplicationContext
+    }
+    testImplementation 'jakarta.servlet:jakarta.servlet-api', {
+        // test: GenericWebApplicationContext requires ServletContext on the classpath
+    }
 
     testImplementation 'org.testcontainers:testcontainers'
     testImplementation 'org.testcontainers:testcontainers-mongodb'

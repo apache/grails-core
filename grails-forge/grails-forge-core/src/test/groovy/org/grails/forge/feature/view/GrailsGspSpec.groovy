@@ -81,6 +81,26 @@ class GrailsGspSpec extends ApplicationContextSpec implements CommandOutputFixtu
         output.containsKey("grails-app/views/notFound.gsp")
     }
 
+    void "test default layout includes the light/dark/auto theme selector"() {
+        when:
+        final def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS))
+        final String layout = output["grails-app/views/layouts/main.gsp"]
+
+        then: "the theme switcher script is shipped and loaded in the head to avoid a flash of the wrong theme"
+        output.containsKey("grails-app/assets/javascripts/theme.js")
+        layout.contains('<asset:javascript src="theme.js"/>')
+
+        and: "the navbar offers light, dark and auto options"
+        layout.contains('data-bs-theme-value="light"')
+        layout.contains('data-bs-theme-value="dark"')
+        layout.contains('data-bs-theme-value="auto"')
+
+        and: "the plugins table header does not force a fixed light background (stays theme-adaptive)"
+        final String index = output["grails-app/views/index.gsp"]
+        !index.contains('table-light')
+        index.contains('<thead class="small">')
+    }
+
     @Unroll
     void "test grails-gsp gradle plugins and dependencies are present for #applicationType application"() {
         when:

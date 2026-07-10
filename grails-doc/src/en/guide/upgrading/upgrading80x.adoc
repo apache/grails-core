@@ -1361,7 +1361,7 @@ Spring Boot's `WebMvcAutoConfiguration` is now active for Grails servlet web app
 
 **No action is required for most applications.**
 Grails adapts internally so the change is transparent.
-The notes below explain the two behavioral differences this introduces and the configuration toggles available if you need to control them.
+The notes below explain the behavioral differences this introduces and the configuration toggles available if you need to control them.
 
 ===== 31.1 Boot's default view resolver is removed automatically
 
@@ -1396,6 +1396,44 @@ Grails 8 registers its request-binding filter as a `RequestContextFilter` bean s
 This is handled internally and requires no configuration changes.
 Applications that defined their own `GrailsWebRequestFilter` bean, or their own `grailsWebRequestFilter` filter-registration bean, continue to override the Grails-provided ones.
 
+===== 31.3 Boot's static resources and welcome page are removed
+
+With `WebMvcAutoConfiguration` active, Boot would register a catch-all static-resource handler (`classpath:/META-INF/resources/`, `/resources/`, `/static/`, `/public/`) and a `WelcomePageHandlerMapping` that serves a static `index.html` for the root path.
+In a Grails application these can shadow URL mappings — a request that should fall through to Grails' URL-mapping error handling could instead be served as a static resource, and `/` could return a static `index.html` rather than being handled by your `UrlMappings`.
+
+So that Grails' own URL mappings and resource handling stay in control, Grails 8 disables both by default:
+
+* `spring.web.resources.add-mappings` defaults to `false`, which disables Boot's catch-all static-resource handler. Re-enable it with `spring.web.resources.add-mappings: true`.
+* Boot's welcome-page mapping is removed so `UrlMappings` owns `/`. Opt out with `grails.web.removeWelcomePageMapping: false`.
+
+===== 31.4 Other Boot MVC features now active
+
+Because Boot's `WebMvcAutoConfiguration` is now active, a handful of its features that `@EnableWebMvc` previously suppressed take effect for Grails servlet web applications.
+None require action for a typical application, but they are behavioral differences worth knowing about when you upgrade:
+
+* **Form-content filter for `PUT` / `PATCH` / `DELETE`.** A `FormContentFilter` parses `application/x-www-form-urlencoded` bodies of `PUT`, `PATCH` and `DELETE` requests so their fields are visible through the standard `request.getParameter(...)` API (and therefore in `params`). Boot's `OrderedFormContentFilter` provides it for a default application; for an application that declares `@EnableWebMvc` — where Boot's MVC auto-configuration backs off — Grails contributes an equivalent filter itself, so form parameters behave the same either way. In Grails 7 only `PUT` and `PATCH` bodies were parsed (by `GrailsParameterMap`) and `DELETE` was not; all three are now handled uniformly by the filter. It is enabled by default via `spring.mvc.formcontent.filter.enabled`; setting that to `false` disables `PUT` / `PATCH` / `DELETE` form-parameter parsing entirely. An application that reads those bodies itself can disable it:
++
+[source,yaml]
+.application.yml
+----
+spring:
+    mvc:
+        formcontent:
+            filter:
+                enabled: false
+----
+
+* **`spring.mvc.*` and `spring.web.*` properties now apply.** Properties such as `spring.web.locale`, `spring.mvc.format.date` / `time` / `date-time`, and `spring.web.resources.*` were inert before and now take effect. Review any of these you may have set inadvertently (for example copied from Boot documentation).
+
+* **View resolution.** For non-GSP applications the primary `viewResolver` is now Boot's `ContentNegotiatingViewResolver`, which negotiates and delegates to the available view resolvers. GSP applications continue to use the GSP view resolver as before.
+
+* **Conversion and message converters.** `mvcConversionService` is now Boot's `ApplicationConversionService` (which honours the `spring.mvc.format.*` properties above), and the MVC HTTP message converters pick up Boot's customizations, including the application's Jackson `ObjectMapper`. This mainly affects MVC-layer data binding and `@RestController`-style endpoints.
+
+===== 31.5 Locale resolution
+
+Grails' locale resolution — including `?lang=` switching via `SessionLocaleResolver` — continues to work as before, and the resolver strategy is now configurable through `grails.i18n.localeResolver` (`session` (default), `cookie`, `acceptHeader` or `fixed`).
+Applications that opt into `@EnableWebMvc` are unaffected too: Grails removes the `AcceptHeaderLocaleResolver` that Spring's `WebMvcConfigurationSupport` would otherwise contribute, so the configured Grails resolver still wins.
+
 ==== 32. More Framework Beans Are Cleanly Overridable
 
 Several Grails framework beans that were previously registered unconditionally are now guarded with `@ConditionalOnMissingBean`, so a bean of the same name (or type) defined in an application configuration class (a `@Bean` method) takes precedence cleanly instead of relying on bean-definition overriding:
@@ -1408,5 +1446,71 @@ The framework beans still register by default; this only changes what happens wh
 Previously, defining one of these beans produced a bean-definition override (with a startup warning, or a failure when `spring.main.allow-bean-definition-overriding` is `false`).
 Now the framework bean simply backs off.
 
-NOTE: The back-off applies to beans that are registered before auto-configuration conditions are evaluated — `@Bean` methods in application configuration classes.
-Beans contributed later, through a plugin's `doWithSpring` or the application's `resources.groovy`, continue to take effect through bean-definition overriding, exactly as in previous releases.
+NOTE: The clean back-off applies to beans that are registered before auto-configuration conditions are evaluated: `@Bean` methods in application configuration classes, and — as of the retimed plugin lifecycle (see _Plugin Beans Now Register Before Spring Boot Auto-Configuration_ below) — beans contributed through a plugin's `doWithSpring` or `beanRegistrar()`.
+Beans contributed through the application's `resources.groovy` or `resources.xml` register later and continue to take effect through bean-definition overriding, exactly as in previous releases.
+
+==== 33. Plugin Beans Now Register Before Spring Boot Auto-Configuration
+
+In Grails 7 and earlier, the beans a plugin contributed through `doWithSpring` were registered *after* Spring Boot had processed its auto-configurations.
+A plugin that wanted to replace a Boot-provided bean therefore had to rely on bean-definition overriding, and Boot beans guarded by `@ConditionalOnMissingBean` never saw the plugin's bean in time to back off.
+
+In Grails 8 the plugin lifecycle is unified and retimed: plugin bean definitions — both `doWithSpring` and the new `beanRegistrar()` hook — are drained into the bean definition registry *before* Spring Boot expands its auto-configurations. The practical effects are:
+
+* **Plugin beans win `@ConditionalOnMissingBean` races.** When a plugin registers a bean, a Boot auto-configuration bean of the same name or type that is guarded by `@ConditionalOnMissingBean` now backs off in favor of the plugin's bean. Plugins no longer need to override or remove Boot's defaults after the fact.
+* **A single plugin manager and `GrailsApplication`.** The plugin manager and the `grailsApplication` are built once, early in the context lifecycle, and reused for the rest of startup, so plugins are loaded by a single manager pass rather than a throwaway pass followed by the real one. `Holders.grailsApplication` is available earlier than before.
+* **Artefact discovery happens earlier.** Controllers, services, domain classes and other artefacts are discovered before plugin beans are registered, because core plugins iterate the application's artefacts while defining beans. The set of discovered artefacts is unchanged — only the timing moved.
+* **Side-effectful `doWithSpring` closures still run once**, just earlier. Closures that read `grailsApplication.config` continue to work; the configuration is fully loaded (including plugin-contributed configuration) before any bean-definition code runs.
+* **The application class is instantiated a second time during early artefact discovery.** A throwaway instance is created solely to compute the application's class scan; the real lifecycle bean is still created by Spring. An application-class constructor with side effects therefore runs twice per boot, so keep application-class constructors free of side effects.
+* **Plugins that inspect the bean definition registry see a pre-auto-configuration registry.** A `doWithSpring` closure that checks for the presence of a bean definition (for example `dispatcherServlet` as a "web application" signal) now runs before Spring Boot has registered its auto-configured beans, so such a check returns `false` where it previously returned `true`. Plugin code should test a registration-order-independent signal instead — for example whether the application context is a web application context.
+* **The `annotationHandlerMapping` and `annotationHandlerAdapter` beans were removed.** These duplicated the request-mapping infrastructure that Spring's own MVC configuration already provides and were never consulted at runtime, but with plugin beans now registering first the bare duplicate adapter started shadowing Spring's fully configured one. `@Controller` annotated beans continue to be handled by Spring Boot's standard MVC infrastructure.
+
+**The bean builder DSL is deprecated.** `doWithSpring()` on `GrailsApplicationLifeCycle` and `grails.plugins.Plugin` is deprecated as of Grails 8 — it continues to work, but the recommended way to register beans is the new `beanRegistrar()` hook, which returns a Spring Framework `org.springframework.beans.factory.BeanRegistrar`.
+
+Before (deprecated bean builder DSL):
+
+[source,groovy]
+----
+import grails.plugins.Plugin
+
+class MyGrailsPlugin extends Plugin {
+
+    @Override
+    Closure doWithSpring() {
+        { ->
+            myService(MyServiceImpl) {
+                timeout = config.getProperty('myPlugin.timeout', Integer, 30)
+            }
+        }
+    }
+}
+----
+
+After (Spring `BeanRegistrar`). `BeanRegistrar` is a functional interface, so a closure coerced with `as BeanRegistrar` is all that is required — a separate class is optional and only worth it for more involved or reusable registration:
+
+[source,groovy]
+----
+import grails.plugins.Plugin
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
+import org.springframework.core.env.Environment
+
+class MyGrailsPlugin extends Plugin {
+
+    @Override
+    BeanRegistrar beanRegistrar() {
+        { BeanRegistry registry, Environment environment ->
+            registry.registerBean('myService', MyServiceImpl) { spec ->
+                spec.supplier { context ->
+                    new MyServiceImpl(timeout: environment.getProperty('myPlugin.timeout', Integer, 30))
+                }
+            }
+        } as BeanRegistrar
+    }
+}
+----
+
+Both hooks may be used on the same plugin during migration; when a registrar and the DSL register a bean under the same name, the registrar's definition wins.
+
+**Bean-definition overriding edge case.** Grails defaults `spring.main.allow-bean-definition-overriding` to `true`, and under that default nothing changes: an application bean (from the application class, `resources.groovy` or `resources.xml`) that uses the same name as a plugin bean still replaces the plugin's bean. However, because plugin beans now register earlier and application beans register in a separate, later step, an application that explicitly sets `spring.main.allow-bean-definition-overriding` to `false` will see a `BeanDefinitionOverrideException` for an application bean that shadows a plugin bean — in previous releases the two definitions were merged before a single registry write, so the shadowing was silent even with overriding disabled.
+
+**Most applications and plugins need no action.** Behavior only changes where a plugin bean and a conditional Boot bean competed for the same name or type — the plugin bean now wins, which is almost always the intended outcome.

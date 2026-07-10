@@ -18,9 +18,7 @@
  */
 package com.example.pages
 
-import geb.Page
-
-class LoginPage extends Page {
+class LoginPage extends NavigationPage {
 
     static String pageTitle = 'Please sign in'
 
@@ -35,7 +33,6 @@ class LoginPage extends Page {
     void login(String username = 'test@grails.org', String password = 'letmein') {
         this.username = username
         this.password = password
-        loginButton.click()
-        waitFor { title && title != pageTitle }
+        clickAndWaitForNavigation(loginButton)
     }
 }

@@ -58,9 +58,7 @@ dependencies {
     testRuntimeOnly 'org.fusesource.jansi:jansi'
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
-    compileOnly 'org.springframework:spring-test', {
-        // MockHttpServletRequest/Response/Context used in many classes
-    }
+    compileOnly 'org.springframework:spring-test'
 
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
     testImplementation 'org.springframework:spring-test'

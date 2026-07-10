@@ -18,9 +18,7 @@
  */
 package com.example.pages
 
-import geb.Page
-
-class LogoutPage extends Page {
+class LogoutPage extends NavigationPage {
 
     static String pageTitle = 'Confirm Log Out?'
 
@@ -31,7 +29,6 @@ class LogoutPage extends Page {
     }
 
     void logout() {
-        logoutButton.click()
-        waitFor { title != pageTitle }
+        clickAndWaitForNavigation(logoutButton)
     }
 }

@@ -87,6 +87,15 @@ class ParamsAwareLocaleChangeInterceptor extends LocaleChangeInterceptor {
             localeResolver?.setLocale(request, response, (Locale) localeEditor.value)
             return true
         }
+        catch (UnsupportedOperationException e) {
+            // The active LocaleResolver is read-only (for example AcceptHeaderLocaleResolver or
+            // FixedLocaleResolver), so switching the locale via the request parameter is not
+            // supported. Skip quietly rather than logging an error on every request.
+            if (LOG.debugEnabled) {
+                LOG.debug("Ignoring locale change parameter '${paramName}'; the active LocaleResolver does not support setLocale: ${e.message}")
+            }
+            return true
+        }
         catch (Exception e) {
             LOG.error("Error intercepting locale change: ${e.message}", e)
             return true

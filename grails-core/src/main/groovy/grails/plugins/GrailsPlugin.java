@@ -24,6 +24,7 @@ import java.util.Map;
 
 import groovy.lang.GroovyObject;
 
+import org.springframework.beans.factory.BeanRegistrar;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.env.PropertySource;
@@ -192,6 +193,20 @@ public interface GrailsPlugin extends ApplicationContextAware, Comparable, Grail
      * @param springConfig The RuntimeSpringConfiguration instance
      */
     void doWithRuntimeConfiguration(RuntimeSpringConfiguration springConfig);
+
+    /**
+     * Returns the {@link BeanRegistrar} exposed by this plugin's
+     * {@link grails.core.GrailsApplicationLifeCycle#beanRegistrar()} hook, if any. The registrar
+     * is applied to the bean definition registry before Spring Boot auto-configuration is
+     * processed, so its beans take precedence over Boot's {@code @ConditionalOnMissingBean}
+     * defaults.
+     *
+     * @return The plugin's {@link BeanRegistrar}, or {@code null} if the plugin does not define one
+     * @since 8.0
+     */
+    default BeanRegistrar getBeanRegistrar() {
+        return null;
+    }
 
     /**
      * Makes the plugin excluded for a particular Environment

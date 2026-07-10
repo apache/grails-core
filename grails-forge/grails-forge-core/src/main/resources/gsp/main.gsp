@@ -6,6 +6,7 @@
     <title><g:layoutTitle default="Grails"/></title>
     <asset:link rel="icon" href="favicon.ico" type="image/x-ico"/>
     <asset:stylesheet src="application.css"/>
+    <asset:javascript src="theme.js"/>
     <g:layoutHead/>
 </head>
 
@@ -16,6 +17,31 @@
         <a class="navbar-brand d-flex align-items-center" href="${request.contextPath}/">
             <asset:image class="w-75" src="grails.svg" alt="Grails Logo"/>
         </a>
+        <ul class="navbar-nav ms-auto">
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="themeDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Toggle theme">
+                    <i class="bi bi-circle-half theme-icon-active"></i>
+                    <span class="d-lg-none ms-2">Toggle theme</span>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="themeDropdown">
+                    <li>
+                        <button type="button" class="dropdown-item d-flex align-items-center" data-bs-theme-value="light" aria-pressed="false">
+                            <i class="bi bi-sun-fill me-2"></i>Light<i class="bi bi-check ms-auto d-none"></i>
+                        </button>
+                    </li>
+                    <li>
+                        <button type="button" class="dropdown-item d-flex align-items-center" data-bs-theme-value="dark" aria-pressed="false">
+                            <i class="bi bi-moon-stars-fill me-2"></i>Dark<i class="bi bi-check ms-auto d-none"></i>
+                        </button>
+                    </li>
+                    <li>
+                        <button type="button" class="dropdown-item d-flex align-items-center" data-bs-theme-value="auto" aria-pressed="false">
+                            <i class="bi bi-circle-half me-2"></i>Auto<i class="bi bi-check ms-auto d-none"></i>
+                        </button>
+                    </li>
+                </ul>
+            </li>
+        </ul>
     </div>
 </nav>
 
