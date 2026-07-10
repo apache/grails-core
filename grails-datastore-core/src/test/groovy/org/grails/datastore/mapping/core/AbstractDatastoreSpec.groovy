@@ -107,6 +107,58 @@ class AbstractDatastoreSpec extends Specification {
         nonMatchingListener.received.isEmpty()
     }
 
+    void "addApplicationListener registers against a subclass's overridden getApplicationEventPublisher, not the superclass field"() {
+        given: "a subclass that publishes through its own field, like MongoDatastore/HibernateDatastore/Neo4jDatastore do"
+        def mappingContext = Mock(MappingContext)
+        def datastore = new OwnPublisherTestDatastore(mappingContext, (PropertyResolver) null, null)
+        def listener = new RecordingSessionCreationListener()
+        def mockSession = Mock(Session)
+        mockSession.getDatastore() >> datastore
+
+        when: "a listener is registered via the base class API"
+        datastore.addApplicationListener(listener)
+        and: "an event is published through the subclass's own publisher"
+        datastore.ownPublisher.publishEvent(new SessionCreationEvent(mockSession))
+
+        then: "the listener actually receives it, rather than being registered on an unused superclass publisher"
+        listener.received.size() == 1
+    }
+
+    void "setApplicationContext(null) does not discard an explicitly-installed custom publisher"() {
+        given:
+        def mappingContext = Mock(MappingContext)
+        def ctx = new GenericApplicationContext()
+        ctx.refresh()
+        def datastore = new TestDatastore(mappingContext, (PropertyResolver) null, ctx)
+        def customPublisher = Mock(ApplicationEventPublisher)
+        datastore.setApplicationEventPublisher(customPublisher)
+
+        when:
+        datastore.setApplicationContext(null)
+
+        then:
+        datastore.getApplicationEventPublisher().is(customPublisher)
+    }
+
+    void "destroy() closes every session held on the current thread and clears resolver-bound state"() {
+        given:
+        def mappingContext = Mock(MappingContext) {
+            getPersistentEntities() >> []
+        }
+        def datastore = new TestDatastore(mappingContext, (PropertyResolver) null, null)
+        def session = Mock(Session)
+        session.getDatastore() >> datastore
+        DatastoreUtils.bindSession(session)
+
+        when:
+        datastore.destroy()
+
+        then:
+        1 * session.disconnect()
+        !datastore.hasCurrentSession()
+        datastore.sessionResolver.resolve() == null
+    }
+
     static class RecordingSessionCreationListener implements ApplicationListener<SessionCreationEvent> {
         List<SessionCreationEvent> received = []
 
@@ -133,7 +185,7 @@ class AbstractDatastoreSpec extends Specification {
 
     static class TestDatastore extends AbstractDatastore {
         Closure<Session> sessionCreator = { null }
-        
+
         TestDatastore(MappingContext mappingContext, PropertyResolver connectionDetails, ConfigurableApplicationContext ctx) {
             super(mappingContext, (PropertyResolver)connectionDetails, ctx)
         }
@@ -141,6 +193,31 @@ class AbstractDatastoreSpec extends Specification {
         @Override
         protected Session createSession(PropertyResolver connectionDetails) {
             return sessionCreator.call(connectionDetails)
+        }
+    }
+
+    /**
+     * Mirrors how MongoDatastore/HibernateDatastore/Neo4jDatastore keep their own
+     * {@code eventPublisher} field and override {@link #getApplicationEventPublisher()}
+     * to return it, bypassing the superclass field.
+     */
+    static class OwnPublisherTestDatastore extends AbstractDatastore {
+        GenericApplicationContext ownPublisher
+
+        OwnPublisherTestDatastore(MappingContext mappingContext, PropertyResolver connectionDetails, ConfigurableApplicationContext ctx) {
+            super(mappingContext, connectionDetails, ctx)
+            ownPublisher = new GenericApplicationContext()
+            ownPublisher.refresh()
+        }
+
+        @Override
+        ApplicationEventPublisher getApplicationEventPublisher() {
+            return ownPublisher
+        }
+
+        @Override
+        protected Session createSession(PropertyResolver connectionDetails) {
+            return null
         }
     }
 }

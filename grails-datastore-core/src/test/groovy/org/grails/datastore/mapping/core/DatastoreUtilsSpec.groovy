@@ -93,7 +93,7 @@ class DatastoreUtilsSpec extends Specification {
         threadLocal.remove()
     }
 
-    void "bindSession adds the session to the existing holder instead of dropping it when a session is already bound"() {
+    void "bindSession fails fast when a session is already bound for the datastore"() {
         given:
         Datastore datastore = Mock()
         Session first = Mock()
@@ -104,35 +104,106 @@ class DatastoreUtilsSpec extends Specification {
         when:
         DatastoreUtils.bindSession(first)
         DatastoreUtils.bindSession(second)
-        SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.getResource(datastore)
 
-        then:
-        holder.containsSession(first)
-        holder.containsSession(second)
-        holder.getSession() == second
+        then: "the second bind is rejected rather than silently stacked, so a leaked prior bind is surfaced immediately"
+        thrown(IllegalStateException)
 
         cleanup:
         TransactionSynchronizationManager.unbindResourceIfPossible(datastore)
     }
 
-    void "bindSession with a creator preserves the original holder's creator when adding to an existing holder"() {
+    void "bindSession with a creator fails fast when a session is already bound for the datastore"() {
         given:
         Datastore datastore = Mock()
         Session first = Mock()
         Session second = Mock()
         first.getDatastore() >> datastore
         second.getDatastore() >> datastore
-        Object originalCreator = new Object()
 
         when:
-        DatastoreUtils.bindSession(first, originalCreator)
+        DatastoreUtils.bindSession(first, new Object())
         DatastoreUtils.bindSession(second, new Object())
+
+        then:
+        thrown(IllegalStateException)
+
+        cleanup:
+        TransactionSynchronizationManager.unbindResourceIfPossible(datastore)
+    }
+
+    void "executeWithNewSession(SessionCallback) binds a new session, runs the callback, and unbinds/closes it afterwards"() {
+        given:
+        Datastore datastore = Mock()
+        Session newSession = Mock()
+        newSession.getDatastore() >> datastore
+        datastore.connect() >> newSession
+
+        when:
+        def result = DatastoreUtils.executeWithNewSession(datastore, { Session session -> session } as SessionCallback)
+
+        then:
+        result.is(newSession)
+        1 * newSession.disconnect()
+        !TransactionSynchronizationManager.hasResource(datastore)
+    }
+
+    void "executeWithNewSession(VoidSessionCallback) delegates to the SessionCallback overload"() {
+        given:
+        Datastore datastore = Mock()
+        Session newSession = Mock()
+        newSession.getDatastore() >> datastore
+        datastore.connect() >> newSession
+        Session received = null
+
+        when:
+        DatastoreUtils.executeWithNewSession(datastore, { Session session -> received = session } as VoidSessionCallback)
+
+        then:
+        received.is(newSession)
+        1 * newSession.disconnect()
+        !TransactionSynchronizationManager.hasResource(datastore)
+    }
+
+    void "executeWithNewSession stacks onto an existing bound session rather than replacing it"() {
+        given:
+        Datastore datastore = Mock()
+        Session existing = Mock()
+        Session inner = Mock()
+        existing.getDatastore() >> datastore
+        inner.getDatastore() >> datastore
+        datastore.connect() >> inner
+        DatastoreUtils.bindSession(existing)
+
+        when:
+        DatastoreUtils.executeWithNewSession(datastore, { Session session -> session } as SessionCallback)
+        SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.getResource(datastore)
+
+        then: "the callback's session is unbound again, leaving the pre-existing one intact"
+        holder != null
+        holder.containsSession(existing)
+        !holder.containsSession(inner)
+
+        cleanup:
+        TransactionSynchronizationManager.unbindResourceIfPossible(datastore)
+    }
+
+    void "bindNewSession adds the session to the existing holder instead of failing when a session is already bound"() {
+        given:
+        Datastore datastore = Mock()
+        Session first = Mock()
+        Session second = Mock()
+        first.getDatastore() >> datastore
+        second.getDatastore() >> datastore
+
+        when:
+        DatastoreUtils.bindSession(first)
+        DatastoreUtils.bindNewSession(second)
         SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.getResource(datastore)
 
         then:
         holder.containsSession(first)
         holder.containsSession(second)
-        holder.creator == originalCreator
+        holder.getSession() == second
 
         cleanup:
         TransactionSynchronizationManager.unbindResourceIfPossible(datastore)

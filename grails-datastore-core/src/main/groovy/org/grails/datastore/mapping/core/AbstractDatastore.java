@@ -15,9 +15,8 @@
 package org.grails.datastore.mapping.core;
 
 import java.lang.reflect.Method;
-import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 import groovy.lang.Closure;
 import groovy.lang.GroovySystem;
@@ -34,7 +33,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.PayloadApplicationEvent;
-import org.springframework.context.event.GenericApplicationListenerAdapter;
+import org.springframework.context.event.SimpleApplicationEventMulticaster;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.convert.converter.ConverterRegistry;
 import org.springframework.core.env.PropertyResolver;
@@ -64,35 +63,35 @@ import org.grails.datastore.mapping.transactions.SessionHolder;
 public abstract class AbstractDatastore implements Datastore, StatelessDatastore, ServiceRegistry {
     protected static final Logger LOG = LoggerFactory.getLogger(AbstractDatastore.class);
 
-    private static final class DefaultApplicationEventPublisher implements ApplicationEventPublisher {
-        private final List<ApplicationListener> listeners = new CopyOnWriteArrayList<>();
+    /**
+     * A minimal {@link ApplicationEventPublisher} that composes a {@link SimpleApplicationEventMulticaster}
+     * rather than hand-rolling dispatch, so listener type/source filtering, ordering, and thread-safe
+     * listener management are Spring's, not a partial reimplementation.
+     */
+    private static final class MulticasterApplicationEventPublisher implements ApplicationEventPublisher {
+        private final SimpleApplicationEventMulticaster multicaster = new SimpleApplicationEventMulticaster();
 
         @Override
         public void publishEvent(ApplicationEvent event) {
-            publishEvent((Object) event);
+            multicaster.multicastEvent(event);
         }
 
         @Override
         public void publishEvent(Object event) {
             ApplicationEvent applicationEvent = (event instanceof ApplicationEvent) ?
                     (ApplicationEvent) event :
-                    new PayloadApplicationEvent(this, event);
-            ResolvableType eventType = ResolvableType.forInstance(applicationEvent);
-            for (ApplicationListener listener : listeners) {
-                GenericApplicationListenerAdapter adapter = new GenericApplicationListenerAdapter(listener);
-                if (adapter.supportsEventType(eventType)) {
-                    adapter.onApplicationEvent(applicationEvent);
-                }
-            }
+                    new PayloadApplicationEvent<>(this, event);
+            multicaster.multicastEvent(applicationEvent, ResolvableType.forInstance(applicationEvent));
         }
 
         public void addApplicationListener(ApplicationListener<?> listener) {
-            listeners.add(listener);
+            multicaster.addApplicationListener(listener);
         }
     }
 
     private ApplicationContext applicationContext;
-    protected ApplicationEventPublisher applicationEventPublisher = new DefaultApplicationEventPublisher();
+    private boolean applicationEventPublisherExplicitlySet;
+    protected ApplicationEventPublisher applicationEventPublisher;
 
     protected final MappingContext mappingContext;
     protected final ServiceRegistry serviceRegistry;
@@ -128,8 +127,7 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
         this.mappingContext = mappingContext;
         this.connectionDetails = connectionDetails;
         this.cacheAdapterRepository = cacheAdapterRepository;
-        this.applicationEventPublisher = ctx != null ? ctx : new DefaultApplicationEventPublisher();
-        this.sessionResolver = new ThreadLocalSessionResolver<>();
+        this.sessionResolver = new ThreadLocalSessionResolver<>(this);
         setApplicationContext(ctx);
         DefaultServiceRegistry defaultServiceRegistry = new DefaultServiceRegistry(this);
         this.serviceRegistry = defaultServiceRegistry;
@@ -155,10 +153,27 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
         return serviceRegistry.getServices();
     }
 
+    /**
+     * Closes every session held by the current thread's {@link SessionHolder}, if any. Since
+     * {@link TransactionSynchronizationManager} is thread-local, and {@link #sessionResolver} is
+     * just a view over the same state, this only reaches the thread invoking {@code @PreDestroy} -
+     * sessions bound on other threads are not visible here and must be closed by their own owning
+     * thread.
+     */
     @PreDestroy
     public void destroy() {
         if (TransactionSynchronizationManager.hasResource(this)) {
-            TransactionSynchronizationManager.unbindResource(this);
+            Object resource = TransactionSynchronizationManager.unbindResource(this);
+            if (resource instanceof SessionHolder) {
+                for (Session session : new ArrayList<>(((SessionHolder) resource).getSessions())) {
+                    try {
+                        session.disconnect();
+                    }
+                    catch (Exception e) {
+                        LOG.error("There was an error closing session [" + session + "] during datastore shutdown: " + e.getMessage(), e);
+                    }
+                }
+            }
         }
         FieldEntityAccess.clearReflectors();
         final MetaClassRegistry registry = GroovySystem.getMetaClassRegistry();
@@ -177,31 +192,39 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
         if (ctx instanceof ApplicationEventPublisher) {
             this.applicationEventPublisher = (ApplicationEventPublisher) ctx;
         }
-        else if (ctx == null && !(this.applicationEventPublisher instanceof DefaultApplicationEventPublisher)) {
-            this.applicationEventPublisher = new DefaultApplicationEventPublisher();
+        else if (ctx == null && !applicationEventPublisherExplicitlySet) {
+            this.applicationEventPublisher = new MulticasterApplicationEventPublisher();
         }
     }
 
     public void setApplicationEventPublisher(ApplicationEventPublisher applicationEventPublisher) {
         this.applicationEventPublisher = applicationEventPublisher;
+        this.applicationEventPublisherExplicitlySet = true;
     }
 
     /**
-     * Adds an application listener to the datastore
+     * Adds an application listener to the datastore. Registers against {@link #getApplicationEventPublisher()}
+     * rather than the raw field, so the listener reaches whatever publisher this datastore (or a subclass
+     * overriding {@link #getApplicationEventPublisher()} with its own field) actually publishes events through.
+     *
      * @param listener The listener
      */
     public void addApplicationListener(ApplicationListener<?> listener) {
-        if (applicationEventPublisher instanceof ConfigurableApplicationContext) {
-            ((ConfigurableApplicationContext) applicationEventPublisher).addApplicationListener(listener);
-        } else if (applicationEventPublisher instanceof DefaultApplicationEventPublisher) {
-            ((DefaultApplicationEventPublisher) applicationEventPublisher).addApplicationListener(listener);
+        ApplicationEventPublisher publisher = getApplicationEventPublisher();
+        if (publisher instanceof ConfigurableApplicationContext) {
+            ((ConfigurableApplicationContext) publisher).addApplicationListener(listener);
         }
-        else {
+        else if (publisher instanceof MulticasterApplicationEventPublisher) {
+            ((MulticasterApplicationEventPublisher) publisher).addApplicationListener(listener);
+        }
+        else if (publisher != null) {
             try {
-                Method method = applicationEventPublisher.getClass().getMethod("addApplicationListener", ApplicationListener.class);
-                method.invoke(applicationEventPublisher, listener);
-            } catch (Exception e) {
-                // ignore
+                Method method = publisher.getClass().getMethod("addApplicationListener", ApplicationListener.class);
+                method.invoke(publisher, listener);
+            }
+            catch (Exception e) {
+                LOG.warn("Could not register application listener [" + listener + "] with publisher [" + publisher +
+                        "]: it does not expose an addApplicationListener(ApplicationListener) method", e);
             }
         }
     }
@@ -253,7 +276,7 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
     }
 
     public boolean hasCurrentSession() {
-        return sessionResolver.resolve() != null || TransactionSynchronizationManager.hasResource(this);
+        return sessionResolver.resolve() != null;
     }
 
     /**

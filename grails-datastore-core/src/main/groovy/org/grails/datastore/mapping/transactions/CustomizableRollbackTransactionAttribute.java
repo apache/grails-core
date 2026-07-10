@@ -19,6 +19,7 @@
 
 package org.grails.datastore.mapping.transactions;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -79,10 +80,13 @@ public class CustomizableRollbackTransactionAttribute extends RuleBasedTransacti
         setReadOnly(other.isReadOnly());
         setName(other.getName());
         if (other instanceof TransactionAttribute) {
-            setQualifier(((TransactionAttribute) other).getQualifier());
+            TransactionAttribute otherAttribute = (TransactionAttribute) other;
+            setQualifier(otherAttribute.getQualifier());
+            setLabels(otherAttribute.getLabels());
         }
         if (other instanceof RuleBasedTransactionAttribute) {
-            setRollbackRules(((RuleBasedTransactionAttribute) other).getRollbackRules());
+            List<RollbackRuleAttribute> otherRules = ((RuleBasedTransactionAttribute) other).getRollbackRules();
+            setRollbackRules(otherRules != null ? new ArrayList<>(otherRules) : null);
         }
         if (other instanceof CustomizableRollbackTransactionAttribute) {
             this.inheritRollbackOnly = ((CustomizableRollbackTransactionAttribute) other).inheritRollbackOnly;

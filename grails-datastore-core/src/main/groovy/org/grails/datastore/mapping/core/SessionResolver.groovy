@@ -22,7 +22,11 @@ package org.grails.datastore.mapping.core
 import groovy.transform.CompileStatic
 
 /**
- * Resolver for sessions in the current context (thread, tenant, etc)
+ * Resolver for the current session bound to a datastore in the current context (thread).
+ * Implementations compose over {@link org.grails.datastore.mapping.transactions.SessionHolder}/
+ * {@link org.springframework.transaction.support.TransactionSynchronizationManager} rather than
+ * maintaining independent state, so this never disagrees with Spring's own transactional session
+ * bookkeeping.
  *
  * @author borinquenkid
  * @since 8.0
@@ -30,11 +34,8 @@ import groovy.transform.CompileStatic
 @CompileStatic
 interface SessionResolver<S extends Session> {
 
-    /** Resolves the current session based on current context (thread, tenant, etc) */
+    /** Resolves the current session based on current context (thread) */
     S resolve()
-
-    /** Resolves a session for a specific qualifier/tenant */
-    S resolve(String qualifier)
 
     /** Binds a session to the current context */
     void bind(S session)

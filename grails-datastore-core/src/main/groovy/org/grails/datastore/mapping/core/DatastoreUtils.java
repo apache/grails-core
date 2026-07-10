@@ -116,15 +116,11 @@ public abstract class DatastoreUtils {
 
         Assert.notNull(datastore, "No Datastore specified");
 
-        Session session = datastore.getSessionResolver().resolve();
-        if (session != null) {
-            return session;
-        }
-
         SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(datastore);
 
         if (sessionHolder != null && !sessionHolder.isEmpty()) {
             // pre-bound Datastore Session
+            Session session;
             if (TransactionSynchronizationManager.isSynchronizationActive() &&
                     sessionHolder.doesNotHoldNonDefaultSession()) {
                 // Spring transaction management is active ->
@@ -154,7 +150,7 @@ public abstract class DatastoreUtils {
         if (logger.isDebugEnabled()) {
             logger.debug("Opening Datastore Session");
         }
-        session = datastore.connect();
+        Session session = datastore.connect();
 
         // Use same Session for further Datastore actions within the transaction.
         // Thread object will get removed by synchronization at transaction completion.
@@ -395,20 +391,10 @@ public abstract class DatastoreUtils {
      * @param callback The callback
      */
     public static void executeWithNewSession(Datastore datastore, VoidSessionCallback callback) {
-        Session session = bindNewSession(datastore.connect());
-        try {
+        executeWithNewSession(datastore, (SessionCallback<Void>) session -> {
             callback.doInSession(session);
-        }
-        finally {
-            SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(datastore);
-            if (sessionHolder != null) {
-                sessionHolder.removeSession(session);
-                if (sessionHolder.isEmpty()) {
-                    TransactionSynchronizationManager.unbindResource(datastore);
-                }
-            }
-            closeSessionOrRegisterDeferredClose(session, datastore);
-        }
+            return null;
+        });
     }
 
     /**
@@ -417,13 +403,7 @@ public abstract class DatastoreUtils {
      * @return the session (for method chaining)
      */
     public static Session bindSession(final Session session) {
-        SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(session.getDatastore());
-        if (sessionHolder == null) {
-            TransactionSynchronizationManager.bindResource(session.getDatastore(), new SessionHolder(session));
-        }
-        else {
-            sessionHolder.addSession(session);
-        }
+        TransactionSynchronizationManager.bindResource(session.getDatastore(), new SessionHolder(session));
         return session;
     }
 
@@ -433,13 +413,7 @@ public abstract class DatastoreUtils {
      * @return the session (for method chaining)
      */
     public static Session bindSession(final Session session, Object creator) {
-        SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(session.getDatastore());
-        if (sessionHolder == null) {
-            TransactionSynchronizationManager.bindResource(session.getDatastore(), new SessionHolder(session, creator));
-        }
-        else {
-            sessionHolder.addSession(session);
-        }
+        TransactionSynchronizationManager.bindResource(session.getDatastore(), new SessionHolder(session, creator));
         return session;
     }
 

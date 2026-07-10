@@ -40,9 +40,15 @@ import org.grails.datastore.mapping.services.ServiceRegistry;
 public interface Datastore extends ServiceRegistry {
 
     /**
-     * @return The session resolver for this datastore
+     * @return The session resolver for this datastore. The default implementation is a stateless
+     * view over the same {@link org.grails.datastore.mapping.transactions.SessionHolder}/
+     * {@link org.springframework.transaction.support.TransactionSynchronizationManager} state used
+     * elsewhere for this datastore, so implementations only need to override this if they resolve
+     * sessions some other way.
      */
-    SessionResolver getSessionResolver();
+    default SessionResolver getSessionResolver() {
+        return new ThreadLocalSessionResolver<>(this);
+    }
 
     /**
      * Connects to the datastore with the default connection details, normally provided via the datastore implementations constructor

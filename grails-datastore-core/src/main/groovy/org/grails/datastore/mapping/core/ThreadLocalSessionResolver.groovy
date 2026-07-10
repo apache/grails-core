@@ -21,8 +21,17 @@ package org.grails.datastore.mapping.core
 
 import groovy.transform.CompileStatic
 
+import org.springframework.transaction.support.TransactionSynchronizationManager
+
+import org.grails.datastore.mapping.transactions.SessionHolder
+
 /**
- * A default thread-bound SessionResolver
+ * The default {@link SessionResolver}, backed by the same {@link SessionHolder}/
+ * {@link TransactionSynchronizationManager} state as {@link DatastoreUtils}'s session binding -
+ * a thin, stateless view over the one authoritative session stack for its owning datastore, rather
+ * than an independent thread-local store that could disagree with it. Nested bindings are supported
+ * because {@link SessionHolder} itself is a stack: {@link #bind(Session)} pushes, {@link #resolve()}
+ * returns the top, and {@link #unbind()} clears the whole binding for the current thread.
  *
  * @author borinquenkid
  * @since 8.0
@@ -30,36 +39,25 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class ThreadLocalSessionResolver<S extends Session> implements SessionResolver<S> {
 
-    private final ThreadLocal<S> currentSession = new ThreadLocal<>()
-    private final ThreadLocal<Map<String, S>> qualifiedSessions = ThreadLocal.<Map<String, S>> withInitial { new HashMap<String, S>() }
+    private final Datastore datastore
 
-    @Override
-    S resolve() {
-        return currentSession.get()
+    ThreadLocalSessionResolver(Datastore datastore) {
+        this.datastore = datastore
     }
 
     @Override
-    S resolve(String qualifier) {
-        return qualifiedSessions.get().get(qualifier)
+    S resolve() {
+        SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.getResource(datastore)
+        return holder != null ? (S) holder.getSession() : null
     }
 
     @Override
     void bind(S session) {
-        currentSession.set(session)
-        // Note: In a production scenario, we'd need to link the session's datastore qualifier here.
-    }
-
-    void bind(String qualifier, S session) {
-        qualifiedSessions.get().put(qualifier, session)
+        DatastoreUtils.bindNewSession(session)
     }
 
     @Override
     void unbind() {
-        currentSession.remove()
-        qualifiedSessions.remove()
-    }
-
-    void unbind(String qualifier) {
-        qualifiedSessions.get().remove(qualifier)
+        TransactionSynchronizationManager.unbindResourceIfPossible(datastore)
     }
 }
