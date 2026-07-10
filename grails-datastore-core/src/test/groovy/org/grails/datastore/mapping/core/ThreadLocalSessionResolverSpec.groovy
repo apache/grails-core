@@ -104,7 +104,25 @@ class ThreadLocalSessionResolverSpec extends Specification {
         when:
         resolver.unbind()
 
-        then: "unbind() clears the whole binding, not just the top"
+        then: "unbind() closes and pops only the top session, restoring the outer binding"
+        1 * second.disconnect()
+        0 * first.disconnect()
+        resolver.resolve() == first
+
+        when:
+        resolver.unbind()
+
+        then: "unbinding the last remaining session closes it and clears the binding entirely"
+        1 * first.disconnect()
+        resolver.resolve() == null
+    }
+
+    def "unbind() is a no-op when nothing is bound"() {
+        when:
+        resolver.unbind()
+
+        then:
+        noExceptionThrown()
         resolver.resolve() == null
     }
 }

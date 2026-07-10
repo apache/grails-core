@@ -210,7 +210,7 @@ class AbstractDatastoreSpec extends Specification {
         customPublisher.registered == [listener]
     }
 
-    void "addApplicationListener silently ignores registration when the publisher exposes no addApplicationListener method"() {
+    void "addApplicationListener fails loudly rather than silently dropping the listener when the publisher exposes no addApplicationListener method"() {
         given:
         def mappingContext = Mock(MappingContext)
         def datastore = new TestDatastore(mappingContext, (PropertyResolver) null, null)
@@ -221,8 +221,8 @@ class AbstractDatastoreSpec extends Specification {
         when:
         datastore.addApplicationListener(listener)
 
-        then:
-        noExceptionThrown()
+        then: "the caller finds out immediately that the listener will never receive events, instead of it being silently dropped"
+        thrown(IllegalStateException)
     }
 
     static class RecordingSessionCreationListener implements ApplicationListener<SessionCreationEvent> {
