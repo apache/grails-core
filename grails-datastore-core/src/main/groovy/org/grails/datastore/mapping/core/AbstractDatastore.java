@@ -97,15 +97,11 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
     protected final ServiceRegistry serviceRegistry;
     protected final PropertyResolver connectionDetails;
     protected final TPCacheAdapterRepository cacheAdapterRepository;
-    protected SessionResolver sessionResolver;
+    protected final SessionResolver sessionResolver;
 
     @Override
     public SessionResolver getSessionResolver() {
         return sessionResolver;
-    }
-
-    public void setSessionResolver(SessionResolver sessionResolver) {
-        this.sessionResolver = sessionResolver;
     }
 
     public AbstractDatastore(MappingContext mappingContext) {
@@ -208,6 +204,8 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
      * overriding {@link #getApplicationEventPublisher()} with its own field) actually publishes events through.
      *
      * @param listener The listener
+     * @throws IllegalStateException if the configured publisher exposes no way to register a listener - silently
+     * dropping the listener would violate this method's contract that the listener receives future events
      */
     public void addApplicationListener(ApplicationListener<?> listener) {
         ApplicationEventPublisher publisher = getApplicationEventPublisher();
@@ -223,8 +221,8 @@ public abstract class AbstractDatastore implements Datastore, StatelessDatastore
                 method.invoke(publisher, listener);
             }
             catch (Exception e) {
-                LOG.warn("Could not register application listener [" + listener + "] with publisher [" + publisher +
-                        "]: it does not expose an addApplicationListener(ApplicationListener) method", e);
+                throw new IllegalStateException("Could not register application listener [" + listener + "] with publisher [" +
+                        publisher + "]: it does not expose an addApplicationListener(ApplicationListener) method", e);
             }
         }
     }

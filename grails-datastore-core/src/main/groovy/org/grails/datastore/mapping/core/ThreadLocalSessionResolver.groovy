@@ -31,7 +31,8 @@ import org.grails.datastore.mapping.transactions.SessionHolder
  * a thin, stateless view over the one authoritative session stack for its owning datastore, rather
  * than an independent thread-local store that could disagree with it. Nested bindings are supported
  * because {@link SessionHolder} itself is a stack: {@link #bind(Session)} pushes, {@link #resolve()}
- * returns the top, and {@link #unbind()} clears the whole binding for the current thread.
+ * returns the top, and {@link #unbind()} closes and pops only the top session, restoring the outer
+ * binding rather than discarding the whole holder.
  *
  * @author borinquenkid
  * @since 8.0
@@ -58,6 +59,19 @@ class ThreadLocalSessionResolver<S extends Session> implements SessionResolver<S
 
     @Override
     void unbind() {
-        TransactionSynchronizationManager.unbindResourceIfPossible(datastore)
+        SessionHolder holder = (SessionHolder) TransactionSynchronizationManager.getResource(datastore)
+        if (holder == null) {
+            return
+        }
+        Session session = holder.getSession()
+        if (session != null) {
+            holder.removeSession(session)
+        }
+        if (holder.isEmpty()) {
+            TransactionSynchronizationManager.unbindResourceIfPossible(datastore)
+        }
+        if (session != null) {
+            DatastoreUtils.closeSessionOrRegisterDeferredClose(session, datastore)
+        }
     }
 }
