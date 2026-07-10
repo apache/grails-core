@@ -31,3 +31,53 @@ Grails has a few built in safety mechanisms by default.
 * The default link:scaffolding.html[scaffolding] templates HTML escape all data fields when displayed
 * Grails link creating tags (link:{gspTagsRef}link.html[link], link:{gspTagsRef}form.html[form], link:{gspTagsRef}createLink.html[createLink], link:{gspTagsRef}createLinkTo.html[createLinkTo] and others) all use appropriate escaping mechanisms to prevent code injection
 * Grails provides <<codecs,codecs>> to let you trivially escape data when rendered as HTML, JavaScript and URLs to prevent injection attacks here.
+
+==== HTTP Security Headers
+
+Grails servlet web applications send a small set of browser hardening headers by default:
+
+[cols="1,1", options="header"]
+|===
+| Header
+| Default value
+
+| `X-Content-Type-Options`
+| `nosniff`
+
+| `X-Frame-Options`
+| `SAMEORIGIN`
+
+| `Referrer-Policy`
+| `strict-origin-when-cross-origin`
+
+| `X-XSS-Protection`
+| `0`
+|===
+
+HSTS and Content Security Policy are not enabled by default because their correct values depend on deployment topology and application assets.
+When HSTS is enabled, Grails sends `Strict-Transport-Security` only for secure requests.
+
+You can disable the whole filter, disable individual headers, or override values from `application.yml`:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    security:
+        headers:
+            enabled: true
+            frame-options:
+                value: DENY
+            referrer-policy:
+                value: no-referrer-when-downgrade
+            hsts:
+                enabled: true
+                value: max-age=31536000; includeSubDomains
+            content-security-policy:
+                enabled: true
+                value: default-src 'self'
+----
+
+Set `grails.security.headers.<header>.enabled` to `false` to omit a single header.
+For example, `grails.security.headers.xss-protection.enabled: false` omits `X-XSS-Protection`.
+If an application or another filter has already set one of these headers on the response, Grails leaves that value unchanged.

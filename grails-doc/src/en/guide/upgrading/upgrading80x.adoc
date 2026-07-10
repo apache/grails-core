@@ -537,6 +537,10 @@ Spring Security is moving toward the fluent `HttpSecurity` configuration API for
 If your application references `DEFAULT_FILTER_ORDER` for custom filter positioning, replace it with the concrete value `-100` (computed as `OrderedFilter.REQUEST_WRAPPER_FILTER_MAX_ORDER - 100`).
 Longer term, consider migrating to the fluent `HttpSecurity` API for filter chain configuration.
 
+Grails 8 also registers a servlet filter that sends default browser hardening headers for servlet web applications.
+Applications that already set these headers through Spring Security or a custom filter keep their existing response values.
+To disable or customize the Grails defaults, configure `grails.security.headers.*`; see the Security guide's HTTP Security Headers section for the full list.
+
 ==== 14. Spring Dependency Management Plugin Replaced by Gradle Platforms
 
 Grails 8 standardizes on Gradle's native `platform()` dependency management and **no longer applies the `io.spring.dependency-management` plugin**.
