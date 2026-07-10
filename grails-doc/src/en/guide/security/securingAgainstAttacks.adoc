@@ -39,17 +39,7 @@ def vulnerable() {
 }
 ----
 
-Do *not* do this. Use named or positional parameters instead to pass in parameters:
-
-[source,groovy]
-----
-def safe() {
-    def books = Book.find("from Book as b where b.title = ?",
-                          [params.title])
-}
-----
-
-or
+Do *not* do this. Use named parameters instead to pass values separately from the HQL text:
 
 [source,groovy]
 ----
@@ -58,6 +48,19 @@ def safe() {
                           [title: params.title])
 }
 ----
+
+Positional parameters are also supported:
+
+[source,groovy]
+----
+def safe() {
+    def books = Book.find("from Book as b where b.title = ?1",
+                          [params.title])
+}
+----
+
+GORM binds interpolated values in `GString` HQL as query parameters, but Grails logs a warning when a `GString` query is passed to methods such as `find`, `findAll`, `executeQuery`, or `executeUpdate`.
+Prefer explicit named parameters in application code because they make the safe boundary between query structure and user-controlled values clear.
 
 
 ==== Phishing

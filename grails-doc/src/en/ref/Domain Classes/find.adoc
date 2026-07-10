@@ -80,3 +80,13 @@ Parameters:
 * `namedParams` - A `Map` of named parameters a HQL query
 * `queryParams` - A `Map` of query parameters such as `cache`, `readOnly`, `fetchSize`, `timeout`, `flushMode`, and `lock`
 * `example` - An instance of the domain class for query by example
+
+Prefer named parameters for values that come from users or external systems:
+
+[source,groovy]
+----
+Book.find("from Book as b where b.author = :author", [author: params.author])
+----
+
+GORM binds interpolated values in `GString` HQL as query parameters, but Grails logs a warning for `GString` queries so applications can migrate toward explicit named parameters.
+Do not concatenate or interpolate untrusted values into a plain `String` query.

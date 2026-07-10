@@ -49,6 +49,7 @@ import grails.orm.HibernateCriteriaBuilder
 import grails.gorm.DetachedCriteria
 import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.finders.FinderMethod
+import org.grails.datastore.gorm.query.GormQuerySafetyWarnings
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
 import org.grails.datastore.mapping.proxy.ProxyHandler
@@ -480,6 +481,8 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
         if (hints.isEmpty() && querySettings != null) {
             hints = querySettings.findAll { AvailableHints.getDefinedHints().contains(it.key) }
         }
+        String operation = isNative ? 'native SQL query' : (isUpdate ? 'executeUpdate' : 'find/executeQuery')
+        GormQuerySafetyWarnings.warnIfGStringQuery(log, hql, operation)
         Map<String, Object> coercedParams = namedParams?.collectEntries { k, v -> [k.toString(), v] } ?: [:]
         def ctx = HqlQueryContext.prepare(persistentEntity, hql, coercedParams, positionalParams, querySettings, hints, isNative, isUpdate)
         return HibernateHqlQueryCreator.createHqlQuery(

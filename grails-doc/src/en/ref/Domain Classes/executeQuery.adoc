@@ -108,3 +108,13 @@ Parameters:
 * `positionalParams` - A `List` of parameters for a positional parameterized query
 * `namedParams` - A `Map` of named parameters for a named parameterized query
 * `metaParams` - A `Map` of pagination parameters `max` and/or `offset`, as well as Hibernate query parameters `readOnly`, `fetchSize`, `timeout`, `flushMode`, `cache`, and `lock`
+
+Prefer named parameters for values that come from users or external systems:
+
+[source,groovy]
+----
+Book.executeQuery("from Book b where b.title = :title", [title: params.title])
+----
+
+GORM binds interpolated values in `GString` HQL as query parameters, but Grails logs a warning for `GString` queries so applications can migrate toward explicit named parameters.
+Do not concatenate or interpolate untrusted values into a plain `String` query.
