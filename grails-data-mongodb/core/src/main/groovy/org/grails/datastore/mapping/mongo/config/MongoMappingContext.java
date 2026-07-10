@@ -231,7 +231,7 @@ public class MongoMappingContext extends DocumentMappingContext {
     }
 
     @Override
-    public void initialize(ConnectionSourceSettings settings) {
+    protected void initialize(ConnectionSourceSettings settings) {
         super.initialize(settings);
 
         AbstractMongoConnectionSourceSettings mongoConnectionSourceSettings = (AbstractMongoConnectionSourceSettings) settings;

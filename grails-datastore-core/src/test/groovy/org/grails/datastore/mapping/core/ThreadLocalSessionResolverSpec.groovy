@@ -22,44 +22,34 @@ package org.grails.datastore.mapping.core
 import java.util.concurrent.Callable
 import java.util.concurrent.Executors
 
+import org.springframework.transaction.support.TransactionSynchronizationManager
 import spock.lang.Specification
 
 class ThreadLocalSessionResolverSpec extends Specification {
 
-    ThreadLocalSessionResolver<Session> resolver = new ThreadLocalSessionResolver<>()
+    Datastore datastore = Mock()
+    ThreadLocalSessionResolver<Session> resolver = new ThreadLocalSessionResolver<>(datastore)
+
+    void cleanup() {
+        TransactionSynchronizationManager.unbindResourceIfPossible(datastore)
+    }
 
     def "should bind and resolve session"() {
         given:
         Session session = Mock(Session)
+        session.getDatastore() >> datastore
 
         when:
         resolver.bind(session)
 
         then:
         resolver.resolve() == session
-
-        cleanup:
-        resolver.unbind()
-    }
-
-    def "should bind and resolve qualified session"() {
-        given:
-        Session session = Mock(Session)
-        String qualifier = "secondary"
-
-        when:
-        resolver.bind(qualifier, session)
-
-        then:
-        resolver.resolve(qualifier) == session
-
-        cleanup:
-        resolver.unbind(qualifier)
     }
 
     def "should unbind session"() {
         given:
         Session session = Mock(Session)
+        session.getDatastore() >> datastore
         resolver.bind(session)
 
         when:
@@ -69,37 +59,52 @@ class ThreadLocalSessionResolverSpec extends Specification {
         resolver.resolve() == null
     }
 
-    def "a qualified session bound on one thread is not visible to another thread"() {
+    def "resolve() returns the same session DatastoreUtils.bindSession bound, not an independent copy"() {
+        given: "a session bound the way GORM's own transaction/session machinery binds it"
+        Session session = Mock(Session)
+        session.getDatastore() >> datastore
+
+        when:
+        DatastoreUtils.bindSession(session)
+
+        then: "the resolver sees it too - there is only one authoritative store"
+        resolver.resolve() == session
+    }
+
+    def "a session bound on one thread is not visible to another thread"() {
         given:
         Session session = Mock(Session)
-        String qualifier = "secondary"
-        resolver.bind(qualifier, session)
+        session.getDatastore() >> datastore
+        resolver.bind(session)
 
         when:
         def resolvedOnOtherThread = Executors.newVirtualThreadPerTaskExecutor().withCloseable { executor ->
-            executor.submit({ resolver.resolve(qualifier) } as Callable<Session>).get()
+            executor.submit({ resolver.resolve() } as Callable<Session>).get()
         }
 
         then:
         resolvedOnOtherThread == null
-        resolver.resolve(qualifier) == session
-
-        cleanup:
-        resolver.unbind(qualifier)
+        resolver.resolve() == session
     }
 
-    def "unbind clears both the current session and the qualified sessions for the thread"() {
+    def "bind() stacks onto an already-bound session rather than replacing it, mirroring SessionHolder's nested-scope support"() {
         given:
-        Session session = Mock(Session)
-        Session qualifiedSession = Mock(Session)
-        resolver.bind(session)
-        resolver.bind("secondary", qualifiedSession)
+        Session first = Mock(Session)
+        Session second = Mock(Session)
+        first.getDatastore() >> datastore
+        second.getDatastore() >> datastore
+
+        when:
+        resolver.bind(first)
+        resolver.bind(second)
+
+        then: "resolve() returns the most recently bound (top-of-stack) session"
+        resolver.resolve() == second
 
         when:
         resolver.unbind()
 
-        then:
+        then: "unbind() clears the whole binding, not just the top"
         resolver.resolve() == null
-        resolver.resolve("secondary") == null
     }
 }

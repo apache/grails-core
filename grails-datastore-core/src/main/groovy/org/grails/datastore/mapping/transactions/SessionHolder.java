@@ -18,6 +18,8 @@
  */
 package org.grails.datastore.mapping.transactions;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.concurrent.LinkedBlockingDeque;
 
@@ -72,6 +74,13 @@ public class SessionHolder extends ResourceHolderSupport {
 
     public Session getSession() {
         return sessions.peekLast();
+    }
+
+    /**
+     * @return An unmodifiable view of every session held, in binding order
+     */
+    public Collection<Session> getSessions() {
+        return Collections.unmodifiableCollection(sessions);
     }
 
     public boolean isEmpty() {

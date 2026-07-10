@@ -60,6 +60,19 @@ public abstract class AbstractConnectionSourceFactory<T, S extends ConnectionSou
 
     @Override
     public ConnectionSource<T, S> create(String name, PropertyResolver configuration) {
+        ConnectionSourceSettings fallbackSettings = buildFallbackSettings(configuration);
+        return create(name, configuration, fallbackSettings);
+    }
+
+    /**
+     * Builds the fallback settings for the given configuration, applying the injected
+     * {@link #setTenantResolver(TenantResolver) tenantResolver} and
+     * {@link #setCustomTypes(List) customTypes} collaborators.
+     *
+     * @param configuration The configuration
+     * @return The fallback settings
+     */
+    private ConnectionSourceSettings buildFallbackSettings(PropertyResolver configuration) {
         ConnectionSourceSettingsBuilder builder = new ConnectionSourceSettingsBuilder(configuration);
         ConnectionSourceSettings fallbackSettings = builder.build();
         if (tenantResolver != null) {
@@ -68,7 +81,7 @@ public abstract class AbstractConnectionSourceFactory<T, S extends ConnectionSou
         if (customTypes != null) {
             fallbackSettings.getCustom().getTypes().addAll(this.customTypes);
         }
-        return create(name, configuration, fallbackSettings);
+        return fallbackSettings;
     }
 
     @Override
@@ -94,9 +107,9 @@ public abstract class AbstractConnectionSourceFactory<T, S extends ConnectionSou
      * @param configuration The configuration
      * @return The settings
      */
+    @SuppressWarnings("unchecked")
     public S createSettings(PropertyResolver configuration) {
-        ConnectionSourceSettingsBuilder builder = new ConnectionSourceSettingsBuilder(configuration);
-        ConnectionSourceSettings fallbackSettings = builder.build();
+        ConnectionSourceSettings fallbackSettings = buildFallbackSettings(configuration);
         return (S) buildSettings(ConnectionSource.DEFAULT, configuration, fallbackSettings, true);
     }
     

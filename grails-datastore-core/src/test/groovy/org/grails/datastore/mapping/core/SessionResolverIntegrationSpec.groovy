@@ -29,19 +29,19 @@ class SessionResolverIntegrationSpec extends Specification {
         given:
         def datastore = new TestDatastore(Mock(MappingContext))
         def session = Mock(Session)
-        
-        // Ensure resolver is available
+        session.getDatastore() >> datastore
+
         def resolver = datastore.getSessionResolver()
-        
+
         when:
         resolver.bind(session)
-        
+
         then:
         resolver.resolve() == session
-        
+
         when:
         resolver.unbind()
-        
+
         then:
         resolver.resolve() == null
     }
@@ -49,8 +49,6 @@ class SessionResolverIntegrationSpec extends Specification {
     static class TestDatastore extends AbstractDatastore {
         TestDatastore(MappingContext mappingContext) {
             super(mappingContext)
-            // Manually inject the resolver since we are testing the integration
-            this.sessionResolver = new ThreadLocalSessionResolver<Session>()
         }
 
         @Override
