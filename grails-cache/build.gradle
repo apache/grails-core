@@ -47,7 +47,7 @@ dependencies {
 
     api project(':grails-gsp')
     api "org.codehaus.gpars:gpars:$gparsVersion"
-    api "com.googlecode.concurrentlinkedhashmap:concurrentlinkedhashmap-lru:$concurrentlinkedhashmapLruVersion"
+    api 'com.github.ben-manes.caffeine:caffeine'
 
     compileOnly project(':grails-domain-class')
 
