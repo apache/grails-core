@@ -18,9 +18,11 @@
  */
 package org.grails.datastore.mapping.transactions
 
+import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.interceptor.NoRollbackRuleAttribute
 import org.springframework.transaction.interceptor.RollbackRuleAttribute
 import org.springframework.transaction.interceptor.RuleBasedTransactionAttribute
+import org.springframework.transaction.support.DefaultTransactionDefinition
 import spock.lang.Specification
 
 class CustomizableRollbackTransactionAttributeSpec extends Specification {
@@ -68,5 +70,33 @@ class CustomizableRollbackTransactionAttributeSpec extends Specification {
         then:
         copy.getRollbackRules().size() == 1
         !copy.getRollbackRules().is(source.getRollbackRules())
+    }
+
+    void "copy constructor from a plain TransactionDefinition copies only definition-level properties"() {
+        given: "a source that is neither a TransactionAttribute nor a RuleBasedTransactionAttribute"
+        TransactionDefinition source = new DefaultTransactionDefinition().tap {
+            propagationBehavior = TransactionDefinition.PROPAGATION_REQUIRES_NEW
+            isolationLevel = TransactionDefinition.ISOLATION_SERIALIZABLE
+            timeout = 42
+            readOnly = true
+            name = 'plainDefinition'
+        }
+
+        when:
+        def copy = new CustomizableRollbackTransactionAttribute(source)
+
+        then: "the base TransactionDefinition properties are copied"
+        copy.getPropagationBehavior() == TransactionDefinition.PROPAGATION_REQUIRES_NEW
+        copy.getIsolationLevel() == TransactionDefinition.ISOLATION_SERIALIZABLE
+        copy.getTimeout() == 42
+        copy.isReadOnly()
+        copy.getName() == 'plainDefinition'
+
+        and: "attribute-only metadata that TransactionDefinition doesn't expose is left at its default"
+        copy.getQualifier() == null
+        !copy.getLabels()
+        !copy.getRollbackRules()
+        copy.getConnection() == null
+        copy.isInheritRollbackOnly()
     }
 }
