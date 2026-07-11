@@ -42,7 +42,7 @@ dependencies {
     // DispatcherServletAutoConfiguration (referenced via @AutoConfigureBefore) moved to spring-boot-webmvc.
     api 'org.springframework.boot:spring-boot-webmvc'
     api 'org.apache.groovy:groovy'
-    api project(':grails-datastore-gorm-neo4j')
+    api project(':grails-data-neo4j-core')
     api 'org.springframework:spring-tx'
 
     testRuntimeOnly "org.neo4j.test:neo4j-harness:$neo4jVersion"
@@ -65,7 +65,7 @@ test {
 // The Spring Boot BOM (pulled in transitively via grails-bom) force-upgrades Jetty to a 12.x
 // platform version. The embedded Neo4j 3.5.x test harness (neo4j-harness, test-only) is compiled
 // against Jetty 9.4 and is binary-incompatible with Jetty 12's restructured handler/server APIs.
-// Scoped to the test classpaths only, matching grails-datastore-gorm-neo4j/build.gradle.
+// Scoped to the test classpaths only, matching grails-data-neo4j/core/build.gradle.
 def neo4jHarnessJettyVersion = '9.4.43.v20210629'
 [configurations.testCompileClasspath, configurations.testRuntimeClasspath].each {
     it.resolutionStrategy {
@@ -81,7 +81,7 @@ def neo4jHarnessJettyVersion = '9.4.43.v20210629'
     }
 }
 
-// grails-datastore-gorm-neo4j's own code (e.g. Neo4jQuery#executeQuery) calls
+// grails-data-neo4j-core's own code (e.g. Neo4jQuery#executeQuery) calls
 // Driver#defaultTypeSystem(), which neo4j-java-driver 6.x (pulled in transitively via the Spring
 // Boot BOM) removed - so this module's test classpath needs the same force to actually exercise
 // that code path.

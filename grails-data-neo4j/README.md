@@ -35,7 +35,7 @@ This project is part of the main Grails monorepo build. The modules are wired in
 
 | Module         | Gradle path                    | Maven coordinates                                |
 | -------------- | ------------------------------- | ------------------------------------------------- |
-| Core           | `:grails-datastore-gorm-neo4j` | `org.apache.grails.data:grails-datastore-gorm-neo4j` |
+| Core           | `:grails-data-neo4j-core`      | `org.apache.grails.data:grails-data-neo4j-core`    |
 | Spring Boot    | `:grails-data-neo4j-spring-boot` | `org.apache.grails:grails-data-neo4j-spring-boot` |
 | Grails plugin  | `:grails-data-neo4j`           | `org.apache.grails:grails-data-neo4j`              |
 

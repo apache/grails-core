@@ -74,7 +74,7 @@ tasks.named('asciidoctor', AsciidoctorTask) { AsciidoctorTask it ->
             'pluginVersion': projectVersion,
             'neo4jVersion' : neo4jVersion,
             'exampledir'   : rootProject.findProject(':grails-test-examples-neo4j-grails3-neo4j').layout.projectDirectory.asFile.absolutePath,
-            'testsdir'     : rootProject.findProject(':grails-datastore-gorm-neo4j').layout.projectDirectory.dir('src/test/groovy').asFile.absolutePath
+            'testsdir'     : rootProject.findProject(':grails-data-neo4j-core').layout.projectDirectory.dir('src/test/groovy').asFile.absolutePath
     ]
 }
 

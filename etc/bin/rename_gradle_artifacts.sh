@@ -208,7 +208,7 @@ declare -a gorm_mappings=(
   "org[.]grails:gorm-mongodb-spring-boot|org.apache.grails:grails-data-mongodb-spring-boot"
   "org[.]grails:gorm-hibernate5-spring-boot|org.apache.grails:grails-data-hibernate5-spring-boot"
   "org[.]grails[.]plugins:neo4j|org.apache.grails:grails-data-neo4j"
-  "org[.]grails:grails-datastore-gorm-neo4j|org.apache.grails.data:grails-datastore-gorm-neo4j"
+  "org[.]grails:grails-datastore-gorm-neo4j|org.apache.grails.data:grails-data-neo4j-core"
   "org[.]grails:gorm-neo4j-spring-boot|org.apache.grails:grails-data-neo4j-spring-boot"
 )
 declare -a excluded_gorm_mappings=(
@@ -234,7 +234,7 @@ declare -a excluded_gorm_mappings=(
   "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]gorm-hibernate5-spring-boot['\"]|exclude module:'grails-data-hibernate5-spring-boot'"
   "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]database-migration['\"]|exclude module:'grails-data-hibernate5-dbmigration'"
   "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]neo4j['\"]|exclude module:'grails-data-neo4j'"
-  "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-datastore-gorm-neo4j['\"]|exclude module:'grails-datastore-gorm-neo4j'"
+  "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-datastore-gorm-neo4j['\"]|exclude module:'grails-data-neo4j-core'"
   "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]gorm-neo4j-spring-boot['\"]|exclude module:'grails-data-neo4j-spring-boot'"
 )
 mappings+=("${gorm_mappings[@]}")

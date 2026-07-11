@@ -405,8 +405,8 @@ project(':grails-data-mongodb-gson-templates').projectDir = new File(settingsDir
 
 // Neo4j
 // core
-include 'grails-datastore-gorm-neo4j'
-project(':grails-datastore-gorm-neo4j').projectDir = new File(settingsDir, 'grails-data-neo4j/grails-datastore-gorm-neo4j')
+include 'grails-data-neo4j-core'
+project(':grails-data-neo4j-core').projectDir = new File(settingsDir, 'grails-data-neo4j/core')
 
 // documentation
 include 'grails-data-neo4j-docs'
