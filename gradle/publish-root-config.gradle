@@ -162,7 +162,7 @@ def publishedProjects = [
         // neo4j
         'grails-data-neo4j',
         'grails-datastore-gorm-neo4j',
-        'gorm-neo4j-spring-boot',
+        'grails-data-neo4j-spring-boot',
         // wrapper
         'grails-wrapper',
         // profiles

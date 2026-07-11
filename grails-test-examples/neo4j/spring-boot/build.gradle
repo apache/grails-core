@@ -37,7 +37,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-web'
 
-    implementation 'org.apache.grails:gorm-neo4j-spring-boot'
+    implementation 'org.apache.grails:grails-data-neo4j-spring-boot'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.spockframework:spock-core'

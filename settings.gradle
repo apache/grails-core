@@ -413,8 +413,8 @@ include 'grails-data-neo4j-docs'
 project(':grails-data-neo4j-docs').projectDir = new File(settingsDir, 'grails-data-neo4j/docs')
 
 // boot plugin
-include 'gorm-neo4j-spring-boot'
-project(':gorm-neo4j-spring-boot').projectDir = new File(settingsDir, 'grails-data-neo4j/boot-plugin')
+include 'grails-data-neo4j-spring-boot'
+project(':grails-data-neo4j-spring-boot').projectDir = new File(settingsDir, 'grails-data-neo4j/boot-plugin')
 
 // plugin
 include 'grails-data-neo4j'
