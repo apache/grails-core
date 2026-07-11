@@ -462,6 +462,9 @@ project(':grails-test-examples-neo4j-grails3-neo4j-hibernate').projectDir = new 
 include 'grails-test-examples-neo4j-spring-boot'
 project(':grails-test-examples-neo4j-spring-boot').projectDir = new File(settingsDir, 'grails-test-examples/neo4j/spring-boot')
 
+include 'grails-test-examples-neo4j-standalone'
+project(':grails-test-examples-neo4j-standalone').projectDir = new File(settingsDir, 'grails-test-examples/neo4j/neo4j-standalone')
+
 // functional tests - graphql examples
 include 'grails-test-examples-graphql-grails-test-app'
 project(':grails-test-examples-graphql-grails-test-app').projectDir = new File(settingsDir, 'grails-test-examples/graphql/grails-test-app')

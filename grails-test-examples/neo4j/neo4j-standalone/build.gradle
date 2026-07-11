@@ -1,0 +1,83 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'groovy'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.buildsrc.compile'
+}
+
+version = '0.0.1'
+group = 'examples'
+
+dependencies {
+
+    implementation platform(project(':grails-bom'))
+    implementation 'org.apache.grails.data:grails-datastore-gorm-neo4j'
+
+    testImplementation 'org.spockframework:spock-core'
+    testRuntimeOnly "org.neo4j.test:neo4j-harness:$neo4jVersion"
+
+    // This project also has unit tests in it, so we must define the launcher per
+    // https://docs.gradle.org/8.3/userguide/upgrading_version_8.html#test_framework_implementation_dependencies
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+// The Spring Boot BOM (pulled in transitively via grails-bom) force-upgrades Jetty to a 12.x
+// platform version, binary-incompatible with the embedded Neo4j 3.5.x test harness this app's
+// tests use. See grails-data-neo4j/grails-datastore-gorm-neo4j/build.gradle for the full
+// explanation.
+def neo4jHarnessJettyVersion = '9.4.43.v20210629'
+[configurations.testCompileClasspath, configurations.testRuntimeClasspath].each {
+    it.resolutionStrategy {
+        force "org.eclipse.jetty:jetty-server:$neo4jHarnessJettyVersion",
+                "org.eclipse.jetty:jetty-servlet:$neo4jHarnessJettyVersion",
+                "org.eclipse.jetty:jetty-webapp:$neo4jHarnessJettyVersion",
+                "org.eclipse.jetty:jetty-security:$neo4jHarnessJettyVersion",
+                "org.eclipse.jetty:jetty-http:$neo4jHarnessJettyVersion",
+                "org.eclipse.jetty:jetty-io:$neo4jHarnessJettyVersion",
+                "org.eclipse.jetty:jetty-util:$neo4jHarnessJettyVersion",
+                "org.eclipse.jetty:jetty-util-ajax:$neo4jHarnessJettyVersion",
+                "org.eclipse.jetty:jetty-xml:$neo4jHarnessJettyVersion"
+    }
+}
+// Deliberately older than the BOM's Jetty version (see comment above) - exempt from
+// validateDependencyVersions.
+project.ext.allowedBomOverrides = [
+        'org.eclipse.jetty:jetty-server',
+        'org.eclipse.jetty:jetty-servlet',
+        'org.eclipse.jetty:jetty-webapp',
+        'org.eclipse.jetty:jetty-security',
+        'org.eclipse.jetty:jetty-http',
+        'org.eclipse.jetty:jetty-io',
+        'org.eclipse.jetty:jetty-util',
+        'org.eclipse.jetty:jetty-util-ajax',
+        'org.eclipse.jetty:jetty-xml'
+]
+
+tasks.withType(Test) {
+    // The embedded Neo4j 3.5.x test harness reflectively pokes JDK internals at startup; JDK 9+
+    // strong encapsulation blocks that without these opens.
+    jvmArgs += ['--add-opens', 'java.base/java.lang=ALL-UNNAMED', '--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED']
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
+}
