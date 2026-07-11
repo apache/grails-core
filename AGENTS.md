@@ -247,12 +247,31 @@ class MyService { }
 
 ## Pull Request Guidelines
 
+### PR Sizing: Prefer One Large PR Over a Reviewability Stack
+
+Stacking a feature/migration into a chain of small PRs (as with the Neo4j GormRegistry
+migration: #15779 → #15780 → #15790 → #15816 → #15817, later consolidated into #15972)
+was a strategy for keeping individual diffs small enough for human reviewers and for
+GitHub's Copilot PR reviewer, which refuses to review a PR over ~300 files (#15972 hit
+this cap and got zero automated review on the consolidated result — each sub-PR had been
+reviewed individually, but the integration between them never was).
+
+Now that adversarial self-review (Guideline 6 below) is mandatory on every PR regardless
+of size, and collaborators are routinely using agents to review PRs, splitting for
+reviewability no longer buys review coverage — it only adds coordination overhead
+(rebasing a stack, keeping sub-PRs in sync, re-reviewing everything again at consolidation
+time). **Default to a single PR for a feature or migration.** Split only for reasons other
+than reviewability — e.g. independently revertable or independently mergeable units of
+work.
+
+### Checklist
+
 1. **Fork & branch** from the target release branch (e.g., `7.0.x`)
 2. **Run tests** before submitting: `./gradlew build --rerun-tasks`
 3. **Run code style checks**: `./gradlew codeStyle`
 4. **Clean violations**: Before committing, run `./gradlew clean aggregateViolations` from the root and ensure that `build/reports/violations/CHECKSTYLE_VIOLATIONS.md`, `build/reports/violations/CODENARC_VIOLATIONS.md`, `build/reports/violations/PMD_VIOLATIONS.md`, and `build/reports/violations/SPOTBUGS_VIOLATIONS.md` have no issues.
 5. **Verify test coverage**: Ensure any touched class is covered by tests verifying all behavior. You must run ALL tests in the affected module(s) and ensure they pass before submission.
-6. **Adversarial self-review**: Before requesting human review, run an adversarial review pass (e.g. `/code-review`, or a fresh-context agent) against this file's rules — jakarta not javax, no wildcard imports, BOM version rules, test coverage — and against the change's own logic. Fix or flag anything it finds. This is a supplement to human review, not a replacement for it.
+6. **Adversarial self-review (always, regardless of PR size)**: Run an adversarial review pass (e.g. `/code-review`, or a fresh-context agent) against this file's rules — jakarta not javax, no wildcard imports, BOM version rules, test coverage — and against the change's own logic. Do this for every PR, including large/consolidated ones; do not rely on GitHub's Copilot reviewer alone, since it silently skips PRs over ~300 files. Fix or flag anything it finds. This is a supplement to human review, not a replacement for it.
 7. **Squash commits** into a single meaningful commit message
 8. **Reference issues** in PR description (e.g., "Fixes #1234")
 
