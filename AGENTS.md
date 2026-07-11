@@ -66,7 +66,6 @@ export GRADLE_OPTS="-Xms2G -Xmx5G"
 > - Writing Hibernate code → Read `.agents/skills/hibernate-developer/SKILL.md`
 > - Fixing style/analysis violations → Read `.agents/skills/violation-fixer/SKILL.md`
 > - Fixing broken test → Read `.agents/skills/test-fixer/SKILL.md`
-> - Indexing code -> Read `.agents/skills/codebase-memory/SKILL.md`
 >
 > Use your file reading capability to load the skill content before proceeding with any code changes.
 
