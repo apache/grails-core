@@ -32,4 +32,5 @@ import java.time.Period
  */
 @CompileStatic
 class StringToPeriodConverter implements Converter<String, Period>, PeriodConverter {
+
 }

@@ -33,16 +33,10 @@ import org.grails.datastore.gorm.support.AbstractDatastorePersistenceContextInte
 import org.grails.datastore.gorm.support.DatastorePersistenceContextInterceptor
 import org.grails.datastore.mapping.config.DatastoreServiceMethodInvokingFactoryBean
 import org.grails.datastore.mapping.core.grailsversion.GrailsVersion
-import org.grails.datastore.mapping.reflect.NameUtils
-import org.grails.datastore.mapping.services.Service
-import org.grails.datastore.mapping.services.ServiceDefinition
-import org.grails.datastore.mapping.services.SoftServiceLoader
 import org.springframework.beans.factory.groovy.GroovyBeanDefinitionReader
 import org.springframework.beans.factory.support.BeanDefinitionRegistry
 import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.util.ClassUtils
-
-import java.beans.Introspector
 
 /**
  * An {@link AbstractDatastoreInitializer} used for initializing GORM for Neo4j when using Spring.
@@ -54,7 +48,8 @@ import java.beans.Introspector
  */
 @InheritConstructors
 class Neo4jDataStoreSpringInitializer extends AbstractDatastoreInitializer {
-    public static final String DATASTORE_TYPE = "neo4j"
+
+    public static final String DATASTORE_TYPE = 'neo4j'
 
     protected Closure defaultMapping
 
@@ -123,42 +118,37 @@ class Neo4jDataStoreSpringInitializer extends AbstractDatastoreInitializer {
             neo4jConnectionSourceFactory(Neo4jConnectionSourceFactory) { bean ->
                 bean.autowire = true
             }
-            // The configuration is held rather than named. Naming the environment instead is what
-            // lets a definition be generated without writing the build machine's own settings into
-            // it, but that is asked through a method added to AbstractDatastoreInitializer, and this
-            // build resolves that class from a released grails-datamapping-core rather than from the
-            // source beside it -- so the call compiles here and goes missing at run time.
-            neo4jDatastore(Neo4jDatastore, configuration, ref("neo4jConnectionSourceFactory"), ref('grailsDatastoreEventPublisher'), collectMappedClasses(DATASTORE_TYPE))
-            neo4jMappingContext(neo4jDatastore: "getMappingContext")
-            neo4jTransactionManager(neo4jDatastore: "getTransactionManager")
-            neo4jAutoTimestampEventListener(neo4jDatastore: "getAutoTimestampEventListener")
-            neo4jDriver(neo4jDatastore: "getBoltDriver")
-            neo4jPersistenceInterceptor(getPersistenceInterceptorClass(), ref("neo4jDatastore"))
+            neo4jDatastore(Neo4jDatastore, configuration, ref('neo4jConnectionSourceFactory'), ref('grailsDatastoreEventPublisher'), collectMappedClasses(DATASTORE_TYPE))
+            neo4jMappingContext(neo4jDatastore: 'getMappingContext')
+            neo4jTransactionManager(neo4jDatastore: 'getTransactionManager')
+            neo4jAutoTimestampEventListener(neo4jDatastore: 'getAutoTimestampEventListener')
+            neo4jDriver(neo4jDatastore: 'getBoltDriver')
+            neo4jPersistenceInterceptor(getPersistenceInterceptorClass(), ref('neo4jDatastore'))
             neo4jPersistenceContextInterceptorAggregator(PersistenceContextInterceptorAggregator)
             if (!secondaryDatastore) {
                 if (delegate instanceof BeanBuilder) {
-                    springConfig.addAlias "grailsDomainClassMappingContext", "neo4jMappingContext"
+                    springConfig.addAlias 'grailsDomainClassMappingContext', 'neo4jMappingContext'
                 } else if (delegate instanceof GroovyBeanDefinitionReader) {
-                    registerAlias "neo4jMappingContext", "grailsDomainClassMappingContext"
+                    registerAlias 'neo4jMappingContext', 'grailsDomainClassMappingContext'
                 }
             }
 
             String transactionManagerBeanName = TRANSACTION_MANAGER_BEAN
             if (!containsRegisteredBean(delegate, beanDefinitionRegistry, transactionManagerBeanName)) {
-                beanDefinitionRegistry.registerAlias("neo4jTransactionManager", transactionManagerBeanName)
+                beanDefinitionRegistry.registerAlias('neo4jTransactionManager', transactionManagerBeanName)
             }
 
             ClassLoader classLoader = getClass().getClassLoader()
             if (isWebApplicationRegistry(beanDefinitionRegistry) && ClassUtils.isPresent(OSIV_CLASS_NAME, classLoader)) {
                 String interceptorName = "neo4jOpenSessionInViewInterceptor"
                 "${interceptorName}"(ClassUtils.forName(OSIV_CLASS_NAME, classLoader)) {
-                    datastore = ref("neo4jDatastore")
+                    datastore = ref('neo4jDatastore')
                 }
             }
 
-            loadDataServices(secondaryDatastore ? 'neo4j': null).each {serviceName, serviceClass->
+            loadDataServices(secondaryDatastore ? 'neo4j' : null).each { serviceName, serviceClass ->
                 "$serviceName"(DatastoreServiceMethodInvokingFactoryBean, serviceClass) {
-                    targetObject = ref("neo4jDatastore")
+                    targetObject = ref('neo4jDatastore')
                     targetMethod = 'getService'
                     arguments = [serviceClass]
                 }

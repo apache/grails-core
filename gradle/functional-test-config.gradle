@@ -89,6 +89,7 @@ tasks.withType(Test).configureEach { Test task ->
     boolean isMongo = project.name.startsWith('grails-test-examples-mongodb')
     boolean isSpringSecurity = project.name.startsWith('grails-test-examples-spring-security')
     boolean isRedis = project.name.startsWith('grails-test-examples-redis')
+    boolean isNeo4j = project.name.startsWith('grails-test-examples-neo4j')
 
     // Honor DO_NOT_CACHE_TESTS=1 so developers can repeatedly invoke the same test command
     // without --rerun-tasks (and without recompiling everything else).
@@ -105,6 +106,10 @@ tasks.withType(Test).configureEach { Test task ->
         }
 
         if (!isHibernate7 && project.hasProperty('onlyHibernate7Tests')) {
+            return false
+        }
+
+        if (!isNeo4j && project.hasProperty('onlyNeo4jTests')) {
             return false
         }
 
@@ -137,6 +142,10 @@ tasks.withType(Test).configureEach { Test task ->
         }
 
         if (isRedis && project.hasProperty('skipRedisTests')) {
+            return false
+        }
+
+        if (isNeo4j && project.hasProperty('skipNeo4jTests')) {
             return false
         }
 

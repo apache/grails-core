@@ -43,6 +43,14 @@ dependencies {
 
     implementation platform(project(':grails-bom'))
 
+    // Deliberately NOT BOM-managed (see dependencies.gradle's validateDependencyVersions rule):
+    // 4.4.13 is an intentional downgrade below what Spring Boot's BOM would otherwise resolve,
+    // needed only for this module's embedded Neo4j 3.5.x test harness compatibility - registering
+    // it as a BOM constraint would make every other module in the repo (e.g. grails-data-mongodb-docs,
+    // which has no reason to downgrade) fail validateDependencyVersions against their own,
+    // correctly-newer, transitively-resolved version. The resolutionStrategy.force below is what
+    // actually pins this module's own classpath; this explicit version just keeps the published
+    // POM's declared dependency version consistent with what force actually resolves to.
     api "org.neo4j.driver:neo4j-java-driver:$neo4jDriverVersion"
     api project(':grails-datamapping-validation')
     api project(':grails-datamapping-core')
@@ -68,7 +76,7 @@ dependencies {
     testRuntimeOnly "io.leangen.geantyref:geantyref:$geantyrefVersion"
     testRuntimeOnly 'net.bytebuddy:byte-buddy' // Required by Spock's mocking support (cglib doesn't work on JDK 21+)
     testRuntimeOnly 'org.springframework:spring-aop'
-    testRuntimeOnly "ch.qos.logback:logback-classic:$logbackClassicVersion"
+    testRuntimeOnly 'ch.qos.logback:logback-classic'
     testRuntimeOnly "jakarta.el:jakarta.el-api:$elApiVersion"
     testRuntimeOnly "org.glassfish.expressly:expressly:$defaultElImplementationVersion"
 }
@@ -129,16 +137,16 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
 }
 
-// This module predates the repo's Checkstyle/CodeNarc gate entirely: it was a standalone Gradle
-// build (never included in root settings.gradle) until this PR wired it in, so its Grails 3-era
-// source has never been checked against these rules. ~1,400 pre-existing violations across the
-// module are tracked as a follow-up cleanup PR rather than fixed here - codenarcFix's automated
-// fixes for SpaceAroundMapEntryColon/UnnecessaryGString are unsafe on this module specifically,
-// since they rewrite string *contents* and this module embeds Cypher queries in string literals
-// throughout (e.g. "MATCH (n:Label)"). Reports still generate; only build-breaking is suppressed.
-tasks.withType(Checkstyle).configureEach {
-    ignoreFailures = true
-}
+// Checkstyle is clean (0 violations across the 23 Java files). CodeNarc is not: 270 violations
+// remain across 24 of this module's Groovy files - PR5 (#15833) only cleaned the grails.neo4j.*,
+// grails.neo4j.mapping.MappingBuilder, and grails.neo4j.services.Cypher packages; the internal
+// org.grails.datastore.gorm.neo4j.* implementation packages (including the Cypher query builder
+// classes, e.g. GraphPersistentEntity) were never addressed, despite this module's own PR5 test
+// plan claiming 0 CodeNarc violations. codenarcFix is unsafe here without a careful review pass:
+// it only changes quote style (never string content), but a query literal that already contains
+// an embedded single quote would become syntactically broken if its outer quotes were flipped.
+// Tracked as a follow-up cleanup; only build-breaking is suppressed, reports still generate.
 tasks.withType(CodeNarc).configureEach {
     ignoreFailures = true
 }
+

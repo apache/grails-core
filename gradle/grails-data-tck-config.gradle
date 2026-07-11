@@ -102,6 +102,16 @@ tasks.withType(Test).configureEach { Test it ->
             return false
         }
 
+        // Neo4j module names don't share a common prefix (grails-datastore-gorm-neo4j predates
+        // the grails-data-<x> naming convention), so match on the coordinate substring instead.
+        if (project.hasProperty('skipNeo4jTests') && project.name.contains('neo4j')) {
+            return false
+        }
+
+        if (project.hasProperty('onlyNeo4jTests') && !project.name.contains('neo4j')) {
+            return false
+        }
+
         if (project.hasProperty('onlyCoreTests')) {
             return false
         }

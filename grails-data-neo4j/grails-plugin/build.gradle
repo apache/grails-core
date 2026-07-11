@@ -114,11 +114,3 @@ configurations.all {
     }
 }
 
-// See grails-datastore-gorm-neo4j/build.gradle for why this module's pre-existing violations
-// are deferred to a follow-up cleanup PR rather than fixed here.
-tasks.withType(Checkstyle).configureEach {
-    ignoreFailures = true
-}
-tasks.withType(CodeNarc).configureEach {
-    ignoreFailures = true
-}
