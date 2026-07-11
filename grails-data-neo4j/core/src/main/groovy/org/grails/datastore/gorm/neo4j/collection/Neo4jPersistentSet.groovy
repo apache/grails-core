@@ -39,6 +39,7 @@ class Neo4jPersistentSet extends PersistentSet {
 
     protected final EntityAccess parentAccess
     protected final Association association
+
     protected final @Delegate
     GraphAdapter graphAdapter
 
@@ -57,7 +58,6 @@ class Neo4jPersistentSet extends PersistentSet {
         this.graphAdapter = new GraphAdapter(session, parentAccess, association)
         setProxyEntities(association.isLazy())
     }
-
 
     @Override
     boolean addAll(Collection c) {

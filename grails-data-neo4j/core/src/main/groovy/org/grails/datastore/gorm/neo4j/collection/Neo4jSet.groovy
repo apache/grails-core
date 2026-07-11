@@ -90,7 +90,6 @@ class Neo4jSet extends DirtyCheckingSet {
         return removed
     }
 
-
     @Override
     boolean retainAll(Collection c) {
         return super.retainAll(c)

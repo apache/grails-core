@@ -39,7 +39,6 @@ import org.grails.datastore.gorm.services.transform.QueryStringTransformer
 @CompileStatic
 class FindOneCypherQueryImplementer extends FindOneStringQueryImplementer {
 
-
     @Override
     protected Class<? extends Annotation> getAnnotationType() {
         Cypher

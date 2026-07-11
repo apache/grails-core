@@ -105,7 +105,6 @@ class GraphAdapter {
                 }
             }
 
-
             def identifier = target.getIdentifier(t)
             if (identifier == null) { // non-persistent instance
                 identifier = session.persist(t)

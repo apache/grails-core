@@ -54,7 +54,7 @@ class FindPathCypherQueryImplementer extends FindOneCypherQueryImplementer {
     @Override
     protected Statement buildQueryReturnStatement(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, Expression args) {
         ClassNode returnType = newMethodNode.returnType
-        Expression methodCall = callX(domainClassNode, "findPath", args)
+        Expression methodCall = callX(domainClassNode, 'findPath', args)
         methodCall = castX(returnType.plainNodeReference, methodCall)
         return returnS(methodCall)
     }

@@ -24,7 +24,6 @@ import org.grails.datastore.mapping.dirty.checking.DirtyCheckingSortedSet
 import org.grails.datastore.mapping.engine.EntityAccess
 import org.grails.datastore.mapping.model.types.Association
 
-
 /**
  * A Neo4j sorted set
  *
@@ -87,7 +86,6 @@ class Neo4jSortedSet extends DirtyCheckingSortedSet {
         }
         return removed
     }
-
 
     @Override
     boolean retainAll(Collection c) {

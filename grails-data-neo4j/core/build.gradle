@@ -133,16 +133,3 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
 }
 
-// Checkstyle is clean (0 violations across the 23 Java files). CodeNarc is not: 270 violations
-// remain across 24 of this module's Groovy files - PR5 (#15833) only cleaned the grails.neo4j.*,
-// grails.neo4j.mapping.MappingBuilder, and grails.neo4j.services.Cypher packages; the internal
-// org.grails.datastore.gorm.neo4j.* implementation packages (including the Cypher query builder
-// classes, e.g. GraphPersistentEntity) were never addressed, despite this module's own PR5 test
-// plan claiming 0 CodeNarc violations. codenarcFix is unsafe here without a careful review pass:
-// it only changes quote style (never string content), but a query literal that already contains
-// an embedded single quote would become syntactically broken if its outer quotes were flipped.
-// Tracked as a follow-up cleanup; only build-breaking is suppressed, reports still generate.
-tasks.withType(CodeNarc).configureEach {
-    ignoreFailures = true
-}
-

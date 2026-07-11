@@ -55,7 +55,7 @@ class FindShortestPathImplementer extends AbstractReadOperationImplementer imple
     void doImplement(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, ClassNode targetClassNode) {
         ClassNode returnType = newMethodNode.returnType
 
-        Expression methodCall = callX(domainClassNode, "findShortestPath", args(newMethodNode.parameters))
+        Expression methodCall = callX(domainClassNode, 'findShortestPath', args(newMethodNode.parameters))
         methodCall = castX(returnType.plainNodeReference, methodCall)
         BlockStatement bs = (BlockStatement) newMethodNode.code
         bs.addStatement(
@@ -71,7 +71,7 @@ class FindShortestPathImplementer extends AbstractReadOperationImplementer imple
         if (!alreadyImplemented && AstUtils.implementsInterface(methodNode.returnType, Path.name) && paramCount > 1 && paramCount < 4) {
             if (AstUtils.isDomainClass(parameters[0].type) && AstUtils.isDomainClass(parameters[1].type)) {
                 if (paramCount == 3) {
-                    if (AstUtils.implementsInterface(parameters[2].type, "java.lang.Number")) {
+                    if (AstUtils.implementsInterface(parameters[2].type, 'java.lang.Number')) {
                         return true
                     }
                 } else {

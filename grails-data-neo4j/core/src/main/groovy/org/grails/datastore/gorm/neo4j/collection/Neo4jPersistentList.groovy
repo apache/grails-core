@@ -39,6 +39,7 @@ class Neo4jPersistentList extends PersistentList {
 
     protected transient final EntityAccess parentAccess
     protected transient final Association association
+
     protected transient final @Delegate
     GraphAdapter graphAdapter
 

@@ -122,7 +122,6 @@ class Neo4jGormStaticApi<D> extends GormStaticApi<D> {
         } as SessionCallback<List<D>>)
     }
 
-
     @Override
     List<D> findAll(CharSequence query, Collection params, Map args) {
         if (query instanceof GString) {
@@ -247,12 +246,10 @@ class Neo4jGormStaticApi<D> extends GormStaticApi<D> {
         } as SessionCallback<Integer>)
     }
 
-
     @Override
     Integer executeUpdate(CharSequence query, Collection params, Map args) {
         return (int) Neo4jEntityPersister.countUpdates(cypherStatic(query, params.toList()))
     }
-
 
     Path findPath(CharSequence query, Map params) {
         Result result = cypherStatic(query, params)
@@ -472,7 +469,6 @@ RETURN DISTINCT(r), from, to$skip$limit"""
         } as SessionCallback<Result>)
     }
 
-
     /**
      * perform a cypher query
      *
@@ -491,7 +487,7 @@ RETURN DISTINCT(r), from, to$skip$limit"""
             }
             if (persistentEntity.isMultiTenant() && neo4jSession.getDatastore().multiTenancyMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
                 if (!queryString.contains("\$tenantId")) {
-                    throw new TenantNotFoundException("Query does not specify a tenant id, but multi tenant mode is DISCRIMINATOR!")
+                    throw new TenantNotFoundException('Query does not specify a tenant id, but multi tenant mode is DISCRIMINATOR!')
                 } else {
                     Map<String, Object> paramsMap = new LinkedHashMap<>()
                     paramsMap.put(GormProperties.TENANT_IDENTITY, Tenants.currentId(Neo4jDatastore))
@@ -548,7 +544,7 @@ RETURN DISTINCT(r), from, to$skip$limit"""
     private void includeTenantIdIfNecessary(Neo4jSession session, String queryString, Map<String, Object> paramsMap) {
         if (persistentEntity.isMultiTenant() && session.getDatastore().multiTenancyMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
             if (!queryString.contains("\$tenantId")) {
-                throw new TenantNotFoundException("Query does not specify a tenant id, but multi tenant mode is DISCRIMINATOR!")
+                throw new TenantNotFoundException('Query does not specify a tenant id, but multi tenant mode is DISCRIMINATOR!')
             } else {
                 paramsMap.put(GormProperties.TENANT_IDENTITY, Tenants.currentId(Neo4jDatastore))
             }

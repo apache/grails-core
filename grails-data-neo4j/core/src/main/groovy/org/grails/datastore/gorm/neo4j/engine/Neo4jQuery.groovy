@@ -59,8 +59,8 @@ import org.grails.datastore.mapping.query.QueryException
 @Slf4j
 class Neo4jQuery extends Query {
 
-    private static final String ORDER_BY_CLAUSE = " ORDER BY "
-    private static final String BLANK = ""
+    private static final String ORDER_BY_CLAUSE = ' ORDER BY '
+    private static final String BLANK = ''
 
     final Neo4jEntityPersister neo4jEntityPersister
     final boolean isRelationshipEntity
@@ -74,318 +74,316 @@ class Neo4jQuery extends Query {
 
     private static Map<Class<? extends Query.PropertyComparisonCriterion>, String> COMPARISON_OPERATORS = [
             (Query.GreaterThanEqualsProperty): CriterionHandler.OPERATOR_GREATER_THAN_EQUALS,
-            (Query.EqualsProperty)           : CriterionHandler.OPERATOR_EQUALS,
-            (Query.NotEqualsProperty)        : CriterionHandler.OPERATOR_NOT_EQUALS,
-            (Query.LessThanEqualsProperty)   : CriterionHandler.OPERATOR_LESS_THAN_EQUALS,
-            (Query.LessThanProperty)         : CriterionHandler.OPERATOR_LESS_THAN,
-            (Query.GreaterThanProperty)      : CriterionHandler.OPERATOR_GREATER_THAN
+            (Query.EqualsProperty): CriterionHandler.OPERATOR_EQUALS,
+            (Query.NotEqualsProperty): CriterionHandler.OPERATOR_NOT_EQUALS,
+            (Query.LessThanEqualsProperty): CriterionHandler.OPERATOR_LESS_THAN_EQUALS,
+            (Query.LessThanProperty): CriterionHandler.OPERATOR_LESS_THAN,
+            (Query.GreaterThanProperty): CriterionHandler.OPERATOR_GREATER_THAN
     ]
 
     protected static Map<Class<? extends Query.Projection>, ProjectionHandler<? extends Projection>> PROJECT_HANDLERS = [
-            (Query.CountProjection)        : new ProjectionHandler<Query.CountProjection>() {
+            (Query.CountProjection): new ProjectionHandler<Query.CountProjection>() {
 
-                @Override
-                @CompileStatic
-                String handle(PersistentEntity entity, Query.CountProjection projection, CypherBuilder builder) {
-                    return ProjectionHandler.COUNT
-                }
+        @Override
+        @CompileStatic
+        String handle(PersistentEntity entity, Query.CountProjection projection, CypherBuilder builder) {
+            return ProjectionHandler.COUNT
+        }
             },
-            (Query.IdProjection)           : new ProjectionHandler<Query.IdProjection>() {
+            (Query.IdProjection): new ProjectionHandler<Query.IdProjection>() {
 
-                @Override
-                @CompileStatic
-                String handle(PersistentEntity entity, Query.IdProjection projection, CypherBuilder builder) {
-                    GraphPersistentEntity graphEntity = (GraphPersistentEntity) entity
+        @Override
+        @CompileStatic
+        String handle(PersistentEntity entity, Query.IdProjection projection, CypherBuilder builder) {
+            GraphPersistentEntity graphEntity = (GraphPersistentEntity) entity
 
-                    if (graphEntity.isRelationshipEntity()) {
-                        return graphEntity.formatId(CypherBuilder.REL_VAR)
-                    } else {
-                        return graphEntity.formatId(CypherBuilder.NODE_VAR)
-                    }
-                }
+            if (graphEntity.isRelationshipEntity()) {
+                return graphEntity.formatId(CypherBuilder.REL_VAR)
+            } else {
+                return graphEntity.formatId(CypherBuilder.NODE_VAR)
+            }
+        }
             },
             (Query.CountDistinctProjection): new ProjectionHandler<Query.CountDistinctProjection>() {
 
-                @Override
-                @CompileStatic
-                String handle(PersistentEntity entity, Query.CountDistinctProjection projection, CypherBuilder builder) {
-                    GraphPersistentEntity graphEntity = (GraphPersistentEntity) entity
-                    String var = graphEntity.formatProperty(graphEntity.variableName, projection.propertyName)
-                    return "count( distinct ${var} )"
-                }
+        @Override
+        @CompileStatic
+        String handle(PersistentEntity entity, Query.CountDistinctProjection projection, CypherBuilder builder) {
+            GraphPersistentEntity graphEntity = (GraphPersistentEntity) entity
+            String var = graphEntity.formatProperty(graphEntity.variableName, projection.propertyName)
+            return "count( distinct ${var} )"
+        }
             },
-            (Query.MinProjection)          : new ProjectionHandler<Query.MinProjection>() {
+            (Query.MinProjection): new ProjectionHandler<Query.MinProjection>() {
 
-                @Override
-                @CompileStatic
-                String handle(PersistentEntity entity, Query.MinProjection projection, CypherBuilder builder) {
-                    GraphPersistentEntity graphEntity = (GraphPersistentEntity) entity
-                    String var = graphEntity.formatProperty(graphEntity.variableName, projection.propertyName)
+        @Override
+        @CompileStatic
+        String handle(PersistentEntity entity, Query.MinProjection projection, CypherBuilder builder) {
+            GraphPersistentEntity graphEntity = (GraphPersistentEntity) entity
+            String var = graphEntity.formatProperty(graphEntity.variableName, projection.propertyName)
 
-                    return "min(${var})"
-                }
+            return "min(${var})"
+        }
             },
-            (Query.MaxProjection)          : new ProjectionHandler<Query.MaxProjection>() {
+            (Query.MaxProjection): new ProjectionHandler<Query.MaxProjection>() {
 
-                @Override
-                @CompileStatic
-                String handle(PersistentEntity entity, Query.MaxProjection projection, CypherBuilder builder) {
-                    GraphPersistentEntity graphEntity = (GraphPersistentEntity) entity
-                    String var = graphEntity.formatProperty(graphEntity.variableName, projection.propertyName)
+        @Override
+        @CompileStatic
+        String handle(PersistentEntity entity, Query.MaxProjection projection, CypherBuilder builder) {
+            GraphPersistentEntity graphEntity = (GraphPersistentEntity) entity
+            String var = graphEntity.formatProperty(graphEntity.variableName, projection.propertyName)
 
-                    return "max(${var})"
-                }
+            return "max(${var})"
+        }
             },
-            (Query.SumProjection)          : new ProjectionHandler<Query.SumProjection>() {
+            (Query.SumProjection): new ProjectionHandler<Query.SumProjection>() {
 
-                @Override
-                @CompileStatic
-                String handle(PersistentEntity entity, Query.SumProjection projection, CypherBuilder builder) {
-                    GraphPersistentEntity graphEntity = (GraphPersistentEntity) entity
-                    String var = graphEntity.formatProperty(graphEntity.variableName, projection.propertyName)
-                    return "sum(${var})"
-                }
+        @Override
+        @CompileStatic
+        String handle(PersistentEntity entity, Query.SumProjection projection, CypherBuilder builder) {
+            GraphPersistentEntity graphEntity = (GraphPersistentEntity) entity
+            String var = graphEntity.formatProperty(graphEntity.variableName, projection.propertyName)
+            return "sum(${var})"
+        }
             },
-            (Query.AvgProjection)          : new ProjectionHandler<Query.AvgProjection>() {
+            (Query.AvgProjection): new ProjectionHandler<Query.AvgProjection>() {
 
-                @Override
-                @CompileStatic
-                String handle(PersistentEntity entity, Query.AvgProjection projection, CypherBuilder builder) {
-                    GraphPersistentEntity graphEntity = (GraphPersistentEntity) entity
-                    String var = graphEntity.formatProperty(graphEntity.variableName, projection.propertyName)
-                    return "avg($var)"
-                }
+        @Override
+        @CompileStatic
+        String handle(PersistentEntity entity, Query.AvgProjection projection, CypherBuilder builder) {
+            GraphPersistentEntity graphEntity = (GraphPersistentEntity) entity
+            String var = graphEntity.formatProperty(graphEntity.variableName, projection.propertyName)
+            return "avg($var)"
+        }
             },
-            (Query.PropertyProjection)     : new ProjectionHandler<Query.PropertyProjection>() {
+            (Query.PropertyProjection): new ProjectionHandler<Query.PropertyProjection>() {
 
-                @Override
-                @CompileStatic
-                String handle(PersistentEntity entity, Query.PropertyProjection projection, CypherBuilder builder) {
-                    String propertyName = ((Query.PropertyProjection) projection).propertyName
-                    PersistentProperty association = entity.getPropertyByName(propertyName)
-                    GraphPersistentEntity graphEntity = (GraphPersistentEntity) entity
-                    String var = graphEntity.variableName
-                    if (association instanceof Association && !(association instanceof Basic)) {
-                        if (entity instanceof RelationshipPersistentEntity) {
-                            throw new QueryException("Cannot apply projection on property [$propertyName] of class [$entity.name]. Associations on relationships are not allowed")
-                        }
-                        def targetNodeName = "${association.name}_${builder.getNextMatchNumber()}"
-                        builder.addMatch("(n)${RelationshipUtils.matchForAssociation((Association) association)}(${targetNodeName})")
-                        return targetNodeName
-                    } else {
-                        return graphEntity.formatProperty(var, propertyName)
-                    }
+        @Override
+        @CompileStatic
+        String handle(PersistentEntity entity, Query.PropertyProjection projection, CypherBuilder builder) {
+            String propertyName = ((Query.PropertyProjection) projection).propertyName
+            PersistentProperty association = entity.getPropertyByName(propertyName)
+            GraphPersistentEntity graphEntity = (GraphPersistentEntity) entity
+            String var = graphEntity.variableName
+            if (association instanceof Association && !(association instanceof Basic)) {
+                if (entity instanceof RelationshipPersistentEntity) {
+                    throw new QueryException("Cannot apply projection on property [$propertyName] of class [$entity.name]. Associations on relationships are not allowed")
                 }
-
-
+                def targetNodeName = "${association.name}_${builder.getNextMatchNumber()}"
+                builder.addMatch("(n)${RelationshipUtils.matchForAssociation((Association) association)}(${targetNodeName})")
+                return targetNodeName
+            } else {
+                return graphEntity.formatProperty(var, propertyName)
+            }
+        }
             }
     ] as Map<Class<? extends Query.Projection>, ProjectionHandler<? extends Projection>>
 
     public static Map<Class<? extends Query.Criterion>, CriterionHandler<? extends Criterion>> CRITERION_HANDLERS = [
-            (Query.Conjunction)              : new CriterionHandler<Query.Conjunction>() {
+            (Query.Conjunction): new CriterionHandler<Query.Conjunction>() {
 
-                @Override
-                @CompileStatic
-                CypherExpression handle(GraphPersistentEntity entity, Query.Conjunction criterion, CypherBuilder builder, String prefix) {
-                    def inner = ((Query.Junction) criterion).criteria
-                            .collect { Query.Criterion it -> dispatchCriterion(it, entity, builder, prefix).toString() }
-                            .join(CriterionHandler.OPERATOR_AND)
-                    return new CypherExpression(inner ? "( $inner )" : inner)
-                }
+        @Override
+        @CompileStatic
+        CypherExpression handle(GraphPersistentEntity entity, Query.Conjunction criterion, CypherBuilder builder, String prefix) {
+            def inner = ((Query.Junction) criterion).criteria
+                    .collect { Query.Criterion it -> dispatchCriterion(it, entity, builder, prefix).toString() }
+                    .join(CriterionHandler.OPERATOR_AND)
+            return new CypherExpression(inner ? "( $inner )" : inner)
+        }
             },
-            (Query.Disjunction)              : new CriterionHandler<Query.Disjunction>() {
+            (Query.Disjunction): new CriterionHandler<Query.Disjunction>() {
 
-                @Override
-                @CompileStatic
-                CypherExpression handle(GraphPersistentEntity entity, Query.Disjunction criterion, CypherBuilder builder, String prefix) {
-                    def inner = ((Query.Junction) criterion).criteria
-                            .collect { Query.Criterion it -> dispatchCriterion(it, entity, builder, prefix).toString() }
-                            .join(CriterionHandler.OPERATOR_OR)
-                    return new CypherExpression(inner ? "( $inner )" : inner)
-                }
+        @Override
+        @CompileStatic
+        CypherExpression handle(GraphPersistentEntity entity, Query.Disjunction criterion, CypherBuilder builder, String prefix) {
+            def inner = ((Query.Junction) criterion).criteria
+                    .collect { Query.Criterion it -> dispatchCriterion(it, entity, builder, prefix).toString() }
+                    .join(CriterionHandler.OPERATOR_OR)
+            return new CypherExpression(inner ? "( $inner )" : inner)
+        }
             },
-            (Query.Negation)                 : new CriterionHandler<Query.Negation>() {
+            (Query.Negation): new CriterionHandler<Query.Negation>() {
 
-                @Override
-                @CompileStatic
-                CypherExpression handle(GraphPersistentEntity entity, Query.Negation criterion, CypherBuilder builder, String prefix) {
-                    List<Query.Criterion> criteria = criterion.criteria
-                    def disjunction = new Query.Disjunction(criteria)
-                    new CypherExpression("NOT (${dispatchCriterion(disjunction, entity, builder, prefix)})")
-                }
+        @Override
+        @CompileStatic
+        CypherExpression handle(GraphPersistentEntity entity, Query.Negation criterion, CypherBuilder builder, String prefix) {
+            List<Query.Criterion> criteria = criterion.criteria
+            def disjunction = new Query.Disjunction(criteria)
+            new CypherExpression("NOT (${dispatchCriterion(disjunction, entity, builder, prefix)})")
+        }
             },
-            (Query.Equals)                   : new CriterionHandler<Query.Equals>() {
+            (Query.Equals): new CriterionHandler<Query.Equals>() {
 
-                @Override
-                @CompileStatic
-                CypherExpression handle(GraphPersistentEntity graphEntity, Query.Equals criterion, CypherBuilder builder, String prefix) {
-                    Neo4jMappingContext mappingContext = (Neo4jMappingContext) graphEntity.mappingContext
-                    int paramNumber = builder.addParam(mappingContext.convertToNative(criterion.value))
-                    PersistentProperty association = graphEntity.getPropertyByName(criterion.property)
-                    boolean isRelationshipEntity = graphEntity.isRelationshipEntity()
+        @Override
+        @CompileStatic
+        CypherExpression handle(GraphPersistentEntity graphEntity, Query.Equals criterion, CypherBuilder builder, String prefix) {
+            Neo4jMappingContext mappingContext = (Neo4jMappingContext) graphEntity.mappingContext
+            int paramNumber = builder.addParam(mappingContext.convertToNative(criterion.value))
+            PersistentProperty association = graphEntity.getPropertyByName(criterion.property)
+            boolean isRelationshipEntity = graphEntity.isRelationshipEntity()
 
-                    String lhs
-                    if (association instanceof Association && !(association instanceof Basic)) {
+            String lhs
+            if (association instanceof Association && !(association instanceof Basic)) {
 
-                        if (isRelationshipEntity && RelationshipPersistentEntity.isRelationshipAssociation((Association) association)) {
-                            lhs = graphEntity.formatId(association.name)
-                        } else {
-                            String targetNodeName = "m_${builder.getNextMatchNumber()}"
-                            builder.addMatch(
-                                    graphEntity.formatAssociationPatternFromExisting((Association) association, "", prefix, targetNodeName)
-                            )
-                            lhs = graphEntity.formatId(targetNodeName)
-                        }
+                if (isRelationshipEntity && RelationshipPersistentEntity.isRelationshipAssociation((Association) association)) {
+                    lhs = graphEntity.formatId(association.name)
+                } else {
+                    String targetNodeName = "m_${builder.getNextMatchNumber()}"
+                    builder.addMatch(
+                            graphEntity.formatAssociationPatternFromExisting((Association) association, '', prefix, targetNodeName)
+                    )
+                    lhs = graphEntity.formatId(targetNodeName)
+                }
 
-                    } else {
-                        if (isRelationshipEntity && criterion.property == RelationshipPersistentEntity.TYPE) {
-                            builder.replaceFirstRelationshipMatch(((RelationshipPersistentEntity) graphEntity).buildRelationshipMatchTo(null, CypherBuilder.REL_VAR))
-                            lhs = "TYPE($CypherBuilder.REL_VAR)"
-                        } else {
-                            lhs = graphEntity.formatProperty(prefix, criterion.property)
-                        }
+            } else {
+                if (isRelationshipEntity && criterion.property == RelationshipPersistentEntity.TYPE) {
+                    builder.replaceFirstRelationshipMatch(((RelationshipPersistentEntity) graphEntity).buildRelationshipMatchTo(null, CypherBuilder.REL_VAR))
+                    lhs = "TYPE($CypherBuilder.REL_VAR)"
+                } else {
+                    lhs = graphEntity.formatProperty(prefix, criterion.property)
+                }
+            }
+
+            return new CypherExpression(lhs, "\$$paramNumber", CriterionHandler.OPERATOR_EQUALS)
+        }
+
+            },
+            (Query.IdEquals): new CriterionHandler<Query.IdEquals>() {
+
+        @Override
+        @CompileStatic
+        CypherExpression handle(GraphPersistentEntity entity, Query.IdEquals criterion, CypherBuilder builder, String prefix) {
+            int paramNumber = addBuildParameterForCriterion(builder, entity, criterion)
+            return new CypherExpression(entity.formatId(prefix), "\$$paramNumber", CriterionHandler.OPERATOR_EQUALS)
+        }
+            },
+            (Query.Like): new CriterionHandler<Query.Like>() {
+
+        @Override
+        @CompileStatic
+        CypherExpression handle(GraphPersistentEntity entity, Query.Like criterion, CypherBuilder builder, String prefix) {
+            int paramNumber = addBuildParameterForCriterion(builder, entity, criterion)
+            String operator = handleLike(criterion, builder, paramNumber, false)
+            return new CypherExpression(entity.formatProperty(prefix, criterion.property), "\$$paramNumber", operator)
+        }
+            },
+            (Query.ILike): new CriterionHandler<Query.ILike>() {
+
+        @Override
+        @CompileStatic
+        CypherExpression handle(GraphPersistentEntity entity, Query.ILike criterion, CypherBuilder builder, String prefix) {
+            int paramNumber = addBuildParameterForCriterion(builder, entity, criterion)
+            String operator = handleLike(criterion, builder, paramNumber, true)
+            String propertyRef = entity.formatProperty(prefix, criterion.property)
+            String parameterRef = "\$$paramNumber"
+            if (operator != CriterionHandler.OPERATOR_LIKE) {
+                propertyRef = "lower($propertyRef)"
+                parameterRef = "lower($parameterRef)"
+            }
+            return new CypherExpression(propertyRef, parameterRef, operator)
+        }
+            },
+            (Query.RLike): new CriterionHandler<Query.RLike>() {
+
+        @Override
+        @CompileStatic
+        CypherExpression handle(GraphPersistentEntity entity, Query.RLike criterion, CypherBuilder builder, String prefix) {
+            int paramNumber = addBuildParameterForCriterion(builder, entity, criterion)
+            return new CypherExpression(entity.formatProperty(prefix, criterion.property), "\$$paramNumber", CriterionHandler.OPERATOR_LIKE)
+        }
+            },
+            (Query.In): new CriterionHandler<Query.In>() {
+
+        @Override
+        @CompileStatic
+        CypherExpression handle(GraphPersistentEntity entity, Query.In criterion, CypherBuilder builder, String prefix) {
+            int paramNumber = addBuildParameterForCriterion(builder, entity, criterion)
+            GraphPersistentEntity graphPersistentEntity = (GraphPersistentEntity) entity
+            String lhs
+            Collection values = ((Query.In) criterion).values
+            if (graphPersistentEntity.isRelationshipEntity()) {
+                PersistentProperty persistentProperty = entity.getPropertyByName(criterion.property)
+                if (RelationshipPersistentEntity.isRelationshipAssociation(persistentProperty)) {
+                    GraphPersistentEntity associatedEntity = (GraphPersistentEntity) ((Association) persistentProperty).associatedEntity
+                    lhs = associatedEntity.formatId(criterion.property)
+                    def associatedReflector = associatedEntity.reflector
+                    values = values?.collect {
+                        associatedReflector.getIdentifier(it)
                     }
-
-                    return new CypherExpression(lhs, "\$$paramNumber", CriterionHandler.OPERATOR_EQUALS)
+                } else {
+                    lhs = graphPersistentEntity.formatProperty(prefix, criterion.property)
                 }
-
+            } else {
+                lhs = graphPersistentEntity.formatProperty(prefix, criterion.property)
+            }
+            builder.replaceParamAt(paramNumber, convertEnumsInList(values))
+            return new CypherExpression(lhs, "\$$paramNumber", CriterionHandler.OPERATOR_IN)
+        }
             },
-            (Query.IdEquals)                 : new CriterionHandler<Query.IdEquals>() {
+            (Query.IsNull): new CriterionHandler<Query.IsNull>() {
 
-                @Override
-                @CompileStatic
-                CypherExpression handle(GraphPersistentEntity entity, Query.IdEquals criterion, CypherBuilder builder, String prefix) {
-                    int paramNumber = addBuildParameterForCriterion(builder, entity, criterion)
-                    return new CypherExpression(entity.formatId(prefix), "\$$paramNumber", CriterionHandler.OPERATOR_EQUALS)
-                }
+        @Override
+        @CompileStatic
+        CypherExpression handle(GraphPersistentEntity entity, Query.IsNull criterion, CypherBuilder builder, String prefix) {
+            return new CypherExpression("${entity.formatProperty(prefix, criterion.property)} IS NULL")
+        }
             },
-            (Query.Like)                     : new CriterionHandler<Query.Like>() {
+            (Query.IsEmpty): new CriterionHandler<Query.IsEmpty>() {
 
-                @Override
-                @CompileStatic
-                CypherExpression handle(GraphPersistentEntity entity, Query.Like criterion, CypherBuilder builder, String prefix) {
-                    int paramNumber = addBuildParameterForCriterion(builder, entity, criterion)
-                    String operator = handleLike(criterion, builder, paramNumber, false)
-                    return new CypherExpression(entity.formatProperty(prefix, criterion.property), "\$$paramNumber", operator)
-                }
+        @Override
+        @CompileStatic
+        CypherExpression handle(GraphPersistentEntity entity, Query.IsEmpty criterion, CypherBuilder builder, String prefix) {
+            return new CypherExpression("length(${entity.formatProperty(prefix, criterion.property)}) = 0")
+        }
             },
-            (Query.ILike)                    : new CriterionHandler<Query.ILike>() {
+            (Query.IsNotEmpty): new CriterionHandler<Query.IsNotEmpty>() {
 
-                @Override
-                @CompileStatic
-                CypherExpression handle(GraphPersistentEntity entity, Query.ILike criterion, CypherBuilder builder, String prefix) {
-                    int paramNumber = addBuildParameterForCriterion(builder, entity, criterion)
-                    String operator = handleLike(criterion, builder, paramNumber, true)
-                    String propertyRef = entity.formatProperty(prefix, criterion.property)
-                    String parameterRef = "\$$paramNumber"
-                    if (operator != CriterionHandler.OPERATOR_LIKE) {
-                        propertyRef = "lower($propertyRef)"
-                        parameterRef = "lower($parameterRef)"
-                    }
-                    return new CypherExpression(propertyRef, parameterRef, operator)
-                }
+        @Override
+        @CompileStatic
+        CypherExpression handle(GraphPersistentEntity entity, Query.IsNotEmpty criterion, CypherBuilder builder, String prefix) {
+            return new CypherExpression("length(${entity.formatProperty(prefix, criterion.property)}) > 0")
+        }
             },
-            (Query.RLike)                    : new CriterionHandler<Query.RLike>() {
+            (Query.IsNotNull): new CriterionHandler<Query.IsNotNull>() {
 
-                @Override
-                @CompileStatic
-                CypherExpression handle(GraphPersistentEntity entity, Query.RLike criterion, CypherBuilder builder, String prefix) {
-                    int paramNumber = addBuildParameterForCriterion(builder, entity, criterion)
-                    return new CypherExpression(entity.formatProperty(prefix, criterion.property), "\$$paramNumber", CriterionHandler.OPERATOR_LIKE)
-                }
+        @Override
+        @CompileStatic
+        CypherExpression handle(GraphPersistentEntity entity, Query.IsNotNull criterion, CypherBuilder builder, String prefix) {
+            return new CypherExpression("${entity.formatProperty(prefix, criterion.property)} IS NOT NULL")
+        }
             },
-            (Query.In)                       : new CriterionHandler<Query.In>() {
+            (AssociationQuery): new AssociationQueryHandler(),
+            (Query.GreaterThan): ComparisonCriterionHandler.GREATER_THAN,
+            (Query.GreaterThanEquals): ComparisonCriterionHandler.GREATER_THAN_EQUALS,
+            (Query.LessThan): ComparisonCriterionHandler.LESS_THAN,
+            (Query.LessThanEquals): ComparisonCriterionHandler.LESS_THAN_EQUALS,
+            (Query.NotEquals): ComparisonCriterionHandler.NOT_EQUALS,
 
-                @Override
-                @CompileStatic
-                CypherExpression handle(GraphPersistentEntity entity, Query.In criterion, CypherBuilder builder, String prefix) {
-                    int paramNumber = addBuildParameterForCriterion(builder, entity, criterion)
-                    GraphPersistentEntity graphPersistentEntity = (GraphPersistentEntity) entity
-                    String lhs
-                    Collection values = ((Query.In) criterion).values
-                    if (graphPersistentEntity.isRelationshipEntity()) {
-                        PersistentProperty persistentProperty = entity.getPropertyByName(criterion.property)
-                        if (RelationshipPersistentEntity.isRelationshipAssociation(persistentProperty)) {
-                            GraphPersistentEntity associatedEntity = (GraphPersistentEntity) ((Association) persistentProperty).associatedEntity
-                            lhs = associatedEntity.formatId(criterion.property)
-                            def associatedReflector = associatedEntity.reflector
-                            values = values?.collect {
-                                associatedReflector.getIdentifier(it)
-                            }
-                        } else {
-                            lhs = graphPersistentEntity.formatProperty(prefix, criterion.property)
-                        }
-                    } else {
-                        lhs = graphPersistentEntity.formatProperty(prefix, criterion.property)
-                    }
-                    builder.replaceParamAt(paramNumber, convertEnumsInList(values))
-                    return new CypherExpression(lhs, "\$$paramNumber", CriterionHandler.OPERATOR_IN)
-                }
-            },
-            (Query.IsNull)                   : new CriterionHandler<Query.IsNull>() {
-
-                @Override
-                @CompileStatic
-                CypherExpression handle(GraphPersistentEntity entity, Query.IsNull criterion, CypherBuilder builder, String prefix) {
-                    return new CypherExpression("${entity.formatProperty(prefix, criterion.property)} IS NULL")
-                }
-            },
-            (Query.IsEmpty)                  : new CriterionHandler<Query.IsEmpty>() {
-
-                @Override
-                @CompileStatic
-                CypherExpression handle(GraphPersistentEntity entity, Query.IsEmpty criterion, CypherBuilder builder, String prefix) {
-                    return new CypherExpression("length(${entity.formatProperty(prefix, criterion.property)}) = 0")
-                }
-            },
-            (Query.IsNotEmpty)               : new CriterionHandler<Query.IsNotEmpty>() {
-
-                @Override
-                @CompileStatic
-                CypherExpression handle(GraphPersistentEntity entity, Query.IsNotEmpty criterion, CypherBuilder builder, String prefix) {
-                    return new CypherExpression("length(${entity.formatProperty(prefix, criterion.property)}) > 0")
-                }
-            },
-            (Query.IsNotNull)                : new CriterionHandler<Query.IsNotNull>() {
-
-                @Override
-                @CompileStatic
-                CypherExpression handle(GraphPersistentEntity entity, Query.IsNotNull criterion, CypherBuilder builder, String prefix) {
-                    return new CypherExpression("${entity.formatProperty(prefix, criterion.property)} IS NOT NULL")
-                }
-            },
-            (AssociationQuery)               : new AssociationQueryHandler(),
-            (Query.GreaterThan)              : ComparisonCriterionHandler.GREATER_THAN,
-            (Query.GreaterThanEquals)        : ComparisonCriterionHandler.GREATER_THAN_EQUALS,
-            (Query.LessThan)                 : ComparisonCriterionHandler.LESS_THAN,
-            (Query.LessThanEquals)           : ComparisonCriterionHandler.LESS_THAN_EQUALS,
-            (Query.NotEquals)                : ComparisonCriterionHandler.NOT_EQUALS,
-
-            (Query.GreaterThanProperty)      : PropertyComparisonCriterionHandler.GREATER_THAN,
+            (Query.GreaterThanProperty): PropertyComparisonCriterionHandler.GREATER_THAN,
             (Query.GreaterThanEqualsProperty): PropertyComparisonCriterionHandler.GREATER_THAN_EQUALS,
-            (Query.LessThanProperty)         : PropertyComparisonCriterionHandler.LESS_THAN,
-            (Query.LessThanEqualsProperty)   : PropertyComparisonCriterionHandler.LESS_THAN_EQUALS,
-            (Query.NotEqualsProperty)        : PropertyComparisonCriterionHandler.NOT_EQUALS,
-            (Query.EqualsProperty)           : PropertyComparisonCriterionHandler.EQUALS,
+            (Query.LessThanProperty): PropertyComparisonCriterionHandler.LESS_THAN,
+            (Query.LessThanEqualsProperty): PropertyComparisonCriterionHandler.LESS_THAN_EQUALS,
+            (Query.NotEqualsProperty): PropertyComparisonCriterionHandler.NOT_EQUALS,
+            (Query.EqualsProperty): PropertyComparisonCriterionHandler.EQUALS,
 
-            (Query.Between)                  : new CriterionHandler<Query.Between>() {
+            (Query.Between): new CriterionHandler<Query.Between>() {
 
-                @Override
-                @CompileStatic
-                CypherExpression handle(GraphPersistentEntity entity, Query.Between criterion, CypherBuilder builder, String prefix) {
-                    int paramNumber = addBuildParameterForCriterion(builder, entity, criterion)
-                    Neo4jMappingContext mappingContext = (Neo4jMappingContext) entity.mappingContext
-                    int paramNumberFrom = builder.addParam(mappingContext.convertToNative(criterion.from))
-                    int parmaNumberTo = builder.addParam(mappingContext.convertToNative(criterion.to))
-                    new CypherExpression("\$$paramNumberFrom<=${prefix}.$criterion.property and ${prefix}.$criterion.property<=\$$parmaNumberTo")
-                }
+        @Override
+        @CompileStatic
+        CypherExpression handle(GraphPersistentEntity entity, Query.Between criterion, CypherBuilder builder, String prefix) {
+            int paramNumber = addBuildParameterForCriterion(builder, entity, criterion)
+            Neo4jMappingContext mappingContext = (Neo4jMappingContext) entity.mappingContext
+            int paramNumberFrom = builder.addParam(mappingContext.convertToNative(criterion.from))
+            int parmaNumberTo = builder.addParam(mappingContext.convertToNative(criterion.to))
+            new CypherExpression("\$$paramNumberFrom<=${prefix}.$criterion.property and ${prefix}.$criterion.property<=\$$parmaNumberTo")
+        }
             },
-            (Query.SizeLessThanEquals)       : SizeCriterionHandler.LESS_THAN_EQUALS,
-            (Query.SizeLessThan)             : SizeCriterionHandler.LESS_THAN,
-            (Query.SizeEquals)               : SizeCriterionHandler.EQUALS,
-            (Query.SizeNotEquals)            : SizeCriterionHandler.NOT_EQUALS,
-            (Query.SizeGreaterThan)          : SizeCriterionHandler.GREATER_THAN,
-            (Query.SizeGreaterThanEquals)    : SizeCriterionHandler.GREATER_THAN_EQUALS
+            (Query.SizeLessThanEquals): SizeCriterionHandler.LESS_THAN_EQUALS,
+            (Query.SizeLessThan): SizeCriterionHandler.LESS_THAN,
+            (Query.SizeEquals): SizeCriterionHandler.EQUALS,
+            (Query.SizeNotEquals): SizeCriterionHandler.NOT_EQUALS,
+            (Query.SizeGreaterThan): SizeCriterionHandler.GREATER_THAN,
+            (Query.SizeGreaterThanEquals): SizeCriterionHandler.GREATER_THAN_EQUALS
 
     ] as Map<Class<? extends Query.Criterion>, CriterionHandler<? extends Criterion>>
 
@@ -416,7 +414,7 @@ class Neo4jQuery extends Query {
                 // must go through formatId() rather than a literal <variable>.<property> reference.
                 String propertyRef = order.property == identityName ? graphEntity.formatId(variable) : "${variable}.${order.property}"
                 "$propertyRef $order.direction"
-            }.join(", ")
+            }.join(', ')
         }
 
         // offset/max are boxed Integer on Query and default to null (unset), not 0/-1
@@ -483,7 +481,7 @@ class Neo4jQuery extends Query {
                         }
 
                         // if there are associations, add a join to get them
-                        String withMatch = "WITH n, ${previousAssociations.size() > 0 ? previousAssociations.join(", ") + ", " : ""}"
+                        String withMatch = "WITH n, ${previousAssociations.size() > 0 ? previousAssociations.join(', ') + ', ' : ''}"
                         String associationIdsRef = "${associationName}Ids"
                         String associationNodeRef = "${associationName}Node"
                         String associationNodesRef = "${associationName}Nodes"
@@ -536,7 +534,6 @@ class Neo4jQuery extends Query {
                 cypherBuilder.addReturnColumn(buildProjection(projection, cypherBuilder))
             }
         }
-
 
         String cypher = cypherBuilder.build()
         Map<String, Object> params = cypherBuilder.getParams()
@@ -611,7 +608,6 @@ class Neo4jQuery extends Query {
         cypherBuilder
     }
 
-
     String buildProjection(Query.Projection projection, CypherBuilder cypherBuilder) {
         return dispatchProjection(projection, entity, cypherBuilder)
     }
@@ -641,7 +637,7 @@ class Neo4jQuery extends Query {
     }
 
     @Deprecated
-    static String matchForAssociation(Association association, String var = "", Map<String, String> attributes = Collections.emptyMap()) {
+    static String matchForAssociation(Association association, String var = '', Map<String, String> attributes = Collections.emptyMap()) {
         RelationshipUtils.matchForAssociation(association, var, attributes)
     }
 
@@ -658,7 +654,6 @@ class Neo4jQuery extends Query {
     org.neo4j.driver.Session getBoltSession() {
         return (org.neo4j.driver.Session) getSession().getNativeInterface()
     }
-
 
     protected static String handleLike(Query.PropertyCriterion criterion, CypherBuilder builder, int paramNumber, boolean caseSensitive) {
         String value = criterion.value?.toString()
@@ -700,7 +695,7 @@ class Neo4jQuery extends Query {
      */
     static interface ProjectionHandler<T extends Query.Projection> {
 
-        String COUNT = "count(*)"
+        String COUNT = 'count(*)'
 
         String handle(PersistentEntity entity, T projection, CypherBuilder builder)
     }
@@ -713,20 +708,20 @@ class Neo4jQuery extends Query {
     static interface CriterionHandler<T extends Query.Criterion> {
 
         char PATTERN_CHAR = '%'
-        String COUNT = "count"
+        String COUNT = 'count'
         String OPERATOR_EQUALS = '='
         String OPERATOR_NOT_EQUALS = '<>'
-        String OPERATOR_LIKE = "=~"
-        String OPERATOR_CONTAINS = " CONTAINS "
-        String OPERATOR_STARTS_WITH = " STARTS WITH "
-        String OPERATOR_ENDS_WITH = " ENDS WITH "
-        String OPERATOR_IN = " IN "
-        String OPERATOR_AND = " AND "
-        String OPERATOR_OR = " OR "
-        String OPERATOR_GREATER_THAN = ">"
-        String OPERATOR_LESS_THAN = "<"
-        String OPERATOR_GREATER_THAN_EQUALS = ">="
-        String OPERATOR_LESS_THAN_EQUALS = "<="
+        String OPERATOR_LIKE = '=~'
+        String OPERATOR_CONTAINS = ' CONTAINS '
+        String OPERATOR_STARTS_WITH = ' STARTS WITH '
+        String OPERATOR_ENDS_WITH = ' ENDS WITH '
+        String OPERATOR_IN = ' IN '
+        String OPERATOR_AND = ' AND '
+        String OPERATOR_OR = ' OR '
+        String OPERATOR_GREATER_THAN = '>'
+        String OPERATOR_LESS_THAN = '<'
+        String OPERATOR_GREATER_THAN_EQUALS = '>='
+        String OPERATOR_LESS_THAN_EQUALS = '<='
 
         CypherExpression handle(GraphPersistentEntity entity, T criterion, CypherBuilder builder, String prefix)
     }
@@ -745,7 +740,7 @@ class Neo4jQuery extends Query {
             } else {
                 String targetNodeName = "m_${builder.getNextMatchNumber()}"
                 String nextPrefix = targetNodeName
-                String relationship = ""
+                String relationship = ''
                 Association association = (Association) aq.association
                 if (criterion.entity instanceof RelationshipPersistentEntity) {
                     String type = (criterion.entity as RelationshipPersistentEntity).type()
@@ -794,7 +789,7 @@ class Neo4jQuery extends Query {
                 } else {
                     String targetNodeName = "m_${builder.getNextMatchNumber()}"
                     builder.addMatch(
-                            graphEntity.formatAssociationPatternFromExisting((Association) association, "", prefix, targetNodeName)
+                            graphEntity.formatAssociationPatternFromExisting((Association) association, '', prefix, targetNodeName)
                     )
 
                     lhs = graphEntity.formatId(targetNodeName)
@@ -802,7 +797,7 @@ class Neo4jQuery extends Query {
             } else {
                 if (graphEntity.isRelationshipEntity() && criterion.property == RelationshipPersistentEntity.TYPE) {
                     builder.replaceFirstRelationshipMatch(((RelationshipPersistentEntity) graphEntity).buildRelationshipMatchTo(null, CypherBuilder.REL_VAR))
-                    lhs = "TYPE(r)"
+                    lhs = 'TYPE(r)'
                 } else {
                     lhs = graphEntity.formatProperty(prefix, criterion.property)
                 }
@@ -824,7 +819,6 @@ class Neo4jQuery extends Query {
             return expression
         }
     }
-
 
     /**
      * A criterion handler for comparison criterion
@@ -907,5 +901,3 @@ class Neo4jQuery extends Query {
         }
     }
 }
-
-

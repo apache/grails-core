@@ -92,5 +92,3 @@ class GraphGormMappingFactory extends AbstractGormMappingFactory {
         new DefaultIdentityMapping(classMapping, property, identifierNames, generator)
     }
 }
-
-

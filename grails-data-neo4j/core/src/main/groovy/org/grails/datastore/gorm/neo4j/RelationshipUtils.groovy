@@ -45,8 +45,8 @@ class RelationshipUtils {
     private static final char COMMA = ','
     private static final char COLON = ':'
     private static final String SINGLE_QUOTE = "'"
-    private static final String START_RELATIONSHIP = "-["
-    private static final String END_RELATIONSHIP = "]-"
+    private static final String START_RELATIONSHIP = '-['
+    private static final String END_RELATIONSHIP = ']-'
 
     /**
      * Whether the association is inverse
@@ -82,7 +82,7 @@ class RelationshipUtils {
      * @param attributes The attributes
      * @return
      */
-    static String matchForAssociation(Association association, String var = "", Map<String, String> attributes = Collections.emptyMap()) {
+    static String matchForAssociation(Association association, String var = '', Map<String, String> attributes = Collections.emptyMap()) {
         Attribute mappedForm = (Attribute) association.getMapping()?.getMappedForm()
         final String relationshipType = getRelationshipType(association, mappedForm)
         final boolean reversed = isIncomingRelationship(association, mappedForm)
@@ -116,7 +116,6 @@ class RelationshipUtils {
         sb.toString()
     }
 
-
     /**
      * Build an association match for the given association, variable name and attributes
      *
@@ -125,7 +124,7 @@ class RelationshipUtils {
      * @param attributes The attributes
      * @return
      */
-    static String toMatch(Association association, Relationship relationship, String var = "r") {
+    static String toMatch(Association association, Relationship relationship, String var = 'r') {
         Attribute mappedForm = (Attribute) association.getMapping()?.getMappedForm()
         final String relationshipType = relationship.type()
         Direction direction = mappedForm.direction ?: Direction.OUTGOING
@@ -150,7 +149,7 @@ class RelationshipUtils {
      * @param attributes The attributes
      * @return
      */
-    static String matchForRelationshipEntity(Association association, RelationshipPersistentEntity entity, String var = "r") {
+    static String matchForRelationshipEntity(Association association, RelationshipPersistentEntity entity, String var = 'r') {
         Attribute mappedForm = (Attribute) association.getMapping()?.getMappedForm()
         PersistentEntity owningEntity = association.getOwner()
         Direction direction = mappedForm.direction ?: owningEntity == entity.getTo().associatedEntity ? Direction.INCOMING : Direction.OUTGOING

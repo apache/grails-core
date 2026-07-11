@@ -107,7 +107,7 @@ class Neo4jResultList extends AbstractResultList {
                 Relationship data = (Relationship) next
                 return entityPersister.unmarshallOrFromCache(entityPersister.getPersistentEntity(), data, initializedAssociations, initializedNodes)
             } else {
-                throw new QueryException("Query must return a node as the first column of the RETURN statement")
+                throw new QueryException('Query must return a node as the first column of the RETURN statement')
             }
         } else {
             Record record = (Record) next
@@ -139,7 +139,7 @@ class Neo4jResultList extends AbstractResultList {
                     }
                     return entityPersister.unmarshallOrFromCache(entityPersister.getPersistentEntity(), data, initializedAssociations, initializedNodes)
                 } else {
-                    throw new QueryException("Query must return a node as the first column of the RETURN statement")
+                    throw new QueryException('Query must return a node as the first column of the RETURN statement')
                 }
             } else {
 
@@ -150,7 +150,7 @@ class Neo4jResultList extends AbstractResultList {
                 if (node != null) {
                     return entityPersister.unmarshallOrFromCache(entityPersister.getPersistentEntity(), node, record.asMap(), initializedAssociations, lockMode)
                 } else {
-                    throw new QueryException("Query must return a node as the first column of the RETURN statement")
+                    throw new QueryException('Query must return a node as the first column of the RETURN statement')
                 }
             }
         }

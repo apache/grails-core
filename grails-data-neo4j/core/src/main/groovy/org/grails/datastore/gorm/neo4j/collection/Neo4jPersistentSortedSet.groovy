@@ -40,6 +40,7 @@ class Neo4jPersistentSortedSet extends PersistentSortedSet {
 
     protected final EntityAccess parentAccess
     protected final Association association
+
     protected final @Delegate
     GraphAdapter graphAdapter
 

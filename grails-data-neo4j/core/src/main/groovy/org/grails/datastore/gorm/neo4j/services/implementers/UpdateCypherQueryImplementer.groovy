@@ -56,7 +56,7 @@ class UpdateCypherQueryImplementer extends FindAllCypherQueryImplementer {
     boolean doesImplement(ClassNode domainClass, MethodNode methodNode) {
         AnnotationNode ann = AstUtils.findAnnotation(methodNode, Cypher)
         if (ann != null) {
-            Expression expr = ann.getMember("value")
+            Expression expr = ann.getMember('value')
             if (expr instanceof GStringExpression) {
                 GStringExpression gstring = (GStringExpression) expr
                 for (ConstantExpression ce in gstring.strings) {
@@ -89,7 +89,7 @@ class UpdateCypherQueryImplementer extends FindAllCypherQueryImplementer {
     protected Statement buildQueryReturnStatement(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, Expression args) {
         ClassNode returnType = newMethodNode.returnType
         boolean isVoid = returnType == ClassHelper.VOID_TYPE
-        Expression methodCall = callX(domainClassNode, "executeUpdate", args)
+        Expression methodCall = callX(domainClassNode, 'executeUpdate', args)
         methodCall = isVoid ? methodCall : castX(returnType.plainNodeReference, methodCall)
         return isVoid ? stmt(methodCall) : returnS(methodCall)
     }

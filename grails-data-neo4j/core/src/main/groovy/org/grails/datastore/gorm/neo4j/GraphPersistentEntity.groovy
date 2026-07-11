@@ -44,7 +44,6 @@ import org.grails.datastore.mapping.model.types.Association
 import static org.grails.datastore.gorm.neo4j.RelationshipPersistentEntity.FROM
 import static org.grails.datastore.gorm.neo4j.RelationshipPersistentEntity.TO
 
-
 /**
  * Represents an entity mapped to the Neo4j graph, adding support for dynamic labelling
  *
@@ -58,7 +57,7 @@ import static org.grails.datastore.gorm.neo4j.RelationshipPersistentEntity.TO
 class GraphPersistentEntity extends AbstractPersistentEntity<NodeConfig> {
 
     public static final String LABEL_SEPARATOR = ':'
-    protected static final String MATCH = "MATCH %s"
+    protected static final String MATCH = 'MATCH %s'
     protected static final String MATCH_ID = "$MATCH WHERE %s = \$id"
     protected final NodeConfig mappedForm
     protected final Collection<String> staticLabels = []
@@ -96,7 +95,6 @@ class GraphPersistentEntity extends AbstractPersistentEntity<NodeConfig> {
         this.batchId = "${variableId}Batch"
     }
 
-
     @Override
     void initialize() {
         if (!isInitialized()) {
@@ -112,7 +110,7 @@ class GraphPersistentEntity extends AbstractPersistentEntity<NodeConfig> {
                         Class clazz = getJavaClass()
                         MetaClass metaClass = clazz.getMetaClass()
                         MetaProperty idProp = metaClass.getMetaProperty(GormProperties.IDENTITY)
-                        if (idProp != null && Long.class.isAssignableFrom(idProp.getType())) {
+                        if (idProp != null && Long.isAssignableFrom(idProp.getType())) {
                             MappingFactory mappingFactory = mappingContext.mappingFactory
                             nodeId = mappingFactory.createSimple(this, context, mappingFactory.createPropertyDescriptor(javaClass, idProp))
                             propertiesByName.put(GormProperties.IDENTITY, nodeId)
@@ -239,7 +237,7 @@ class GraphPersistentEntity extends AbstractPersistentEntity<NodeConfig> {
      * @return The query which accepts an $id argument
      */
     String formatDynamicAssociationQuery(String variable = CypherBuilder.NODE_VAR) {
-        """${formatMatch(variable)}-[r]-(o) WHERE ${formatId(variable)} = \$${GormProperties.IDENTITY} RETURN type(r) as relType, startNode(r) = $variable as out, r.sourceType as sourceType, r.targetType as targetType, {ids: collect(${formatId("o")}), labels: collect(labels(o))} as values"""
+        """${formatMatch(variable)}-[r]-(o) WHERE ${formatId(variable)} = \$${GormProperties.IDENTITY} RETURN type(r) as relType, startNode(r) = $variable as out, r.sourceType as sourceType, r.targetType as targetType, {ids: collect(${formatId('o')}), labels: collect(labels(o))} as values"""
     }
 
     /**
@@ -321,25 +319,25 @@ class GraphPersistentEntity extends AbstractPersistentEntity<NodeConfig> {
         if (isVersioned() && hasProperty(GormProperties.VERSION, clazz)) {
             builder.append(" AND ${variable}.version=\$version")
         }
-        builder.append(" SET ").append(variable).append(" +=\$props")
+        builder.append(' SET ').append(variable).append(" +=\$props")
         Set keysToRemove = []
         for (key in props.keySet()) {
             Object v = props.get(key)
             if (v == null) {
-                builder.append(", ${variable}.").append(key).append(" = NULL")
+                builder.append(", ${variable}.").append(key).append(' = NULL')
             } else if (v instanceof Collection && ((Collection) v).isEmpty()) {
                 keysToRemove.add(key)
             }
         }
         if (!keysToRemove.isEmpty()) {
-            builder.append(" REMOVE ")
+            builder.append(' REMOVE ')
             def i = keysToRemove.iterator()
             while (i.hasNext()) {
                 String key = i.next()
-                builder.append(variable).append(".").append(key)
+                builder.append(variable).append('.').append(key)
                 props.remove(key)
                 if (i.hasNext()) {
-                    builder.append(", ")
+                    builder.append(', ')
                 }
             }
         }
@@ -443,7 +441,7 @@ ${formatAssociationMerge(association, parentVariable, variableId)})"""
                 RelationshipPersistentEntity relEntity = (RelationshipPersistentEntity) parent
                 associationMatch = RelationshipUtils.matchForRelationshipEntity(association, relEntity)
             } else {
-                throw new IllegalStateException("Relationship entities cannot have associations")
+                throw new IllegalStateException('Relationship entities cannot have associations')
             }
 
         } else if (child.isRelationshipEntity()) {

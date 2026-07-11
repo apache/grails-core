@@ -39,19 +39,20 @@ import org.grails.datastore.mapping.model.types.Basic
  */
 @CompileStatic
 class RelationshipPersistentEntity extends GraphPersistentEntity {
+
     /**
      * The name of the from property
      */
-    public static final String FROM = "from"
+    public static final String FROM = 'from'
     /**
      * The name of the to property
      */
-    public static final String TO = "to"
+    public static final String TO = 'to'
 
     /**
      * The relationship type
      */
-    public static final String TYPE = "type"
+    public static final String TYPE = 'type'
 
     protected String type
     protected Direction direction = Direction.OUTGOING
@@ -64,7 +65,6 @@ class RelationshipPersistentEntity extends GraphPersistentEntity {
     static boolean isRelationshipAssociation(PersistentProperty association) {
         return TO == association.name || (FROM == association.name)
     }
-
 
     @Override
     void initialize() {
@@ -118,7 +118,7 @@ ON CREATE SET r = row.props"""
             associationMatch = RelationshipUtils.matchForRelationshipEntity(association, this, var)
             return "(${start})${associationMatch}${toEntity.formatNode(end)}"
         } else {
-            throw new IllegalStateException("Relationship entities cannot have associations")
+            throw new IllegalStateException('Relationship entities cannot have associations')
         }
     }
 
@@ -167,13 +167,12 @@ ON CREATE SET r = row.props"""
         (GraphPersistentEntity) getTo().getAssociatedEntity()
     }
 
-
-    String buildMatch(String type = this.type(), String var = "r") {
+    String buildMatch(String type = this.type(), String var = 'r') {
         String toMatch = buildRelationshipMatchTo(type, var)
         return fromEntity.formatNode(FROM) + toMatch
     }
 
-    String buildToMatch(String var = "r") {
+    String buildToMatch(String var = 'r') {
         String type = type()
         return buildRelationshipMatchTo(type, var)
     }
@@ -182,11 +181,11 @@ ON CREATE SET r = row.props"""
         return this.type
     }
 
-    String buildRelationshipMatchTo(String type, String var = "r") {
+    String buildRelationshipMatchTo(String type, String var = 'r') {
         buildRelationshipMatch(type, var) + toEntity.formatNode(TO)
     }
 
-    String buildRelationshipMatch(String type, String var = "r") {
+    String buildRelationshipMatch(String type, String var = 'r') {
         boolean incoming = direction.isIncoming()
         boolean outgoing = direction.isOutgoing()
         if (type != null) {

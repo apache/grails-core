@@ -79,7 +79,6 @@ class Neo4jPath<S extends Neo4jEntity<S>, E extends Neo4jEntity<E>> implements P
         this(datastore, neo4jPath, (GraphPersistentEntity) null, null)
     }
 
-
     @Override
     S start() {
         if (start == null) {
@@ -124,7 +123,7 @@ class Neo4jPath<S extends Neo4jEntity<S>, E extends Neo4jEntity<E>> implements P
     }
 
     @Override
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings('unchecked')
     Iterator<Path.Segment<S, E>> iterator() {
         return (Iterator<Path.Segment<S, E>>) new Neo4jPathIterator(datastore, neo4jPath.iterator())
     }
@@ -183,7 +182,6 @@ class Neo4jPath<S extends Neo4jEntity<S>, E extends Neo4jEntity<E>> implements P
             }
             return end
         }
-
 
     }
 

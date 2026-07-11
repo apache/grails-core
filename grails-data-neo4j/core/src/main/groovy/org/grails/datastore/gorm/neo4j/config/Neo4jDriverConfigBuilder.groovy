@@ -42,15 +42,15 @@ import org.grails.datastore.mapping.config.ConfigurationBuilder
 class Neo4jDriverConfigBuilder extends ConfigurationBuilder<Config.ConfigBuilder, Config> {
 
     Neo4jDriverConfigBuilder(PropertyResolver propertyResolver) {
-        super(propertyResolver, Settings.SETTING_NEO4J_DRIVER_PROPERTIES, "with")
+        super(propertyResolver, Settings.SETTING_NEO4J_DRIVER_PROPERTIES, 'with')
     }
 
     Neo4jDriverConfigBuilder(PropertyResolver propertyResolver, String configurationPrefix) {
-        super(propertyResolver, configurationPrefix, "with")
+        super(propertyResolver, configurationPrefix, 'with')
     }
 
     Neo4jDriverConfigBuilder(PropertyResolver propertyResolver, String configurationPrefix, Object fallBackConfiguration) {
-        super(propertyResolver, configurationPrefix, fallBackConfiguration, "with")
+        super(propertyResolver, configurationPrefix, fallBackConfiguration, 'with')
     }
 
     @Override

@@ -50,7 +50,7 @@ class StatementResultCypherQueryImplementer extends FindAllCypherQueryImplemente
     @Override
     protected Statement buildQueryReturnStatement(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, Expression args) {
         ClassNode returnType = newMethodNode.returnType
-        Expression methodCall = callX(domainClassNode, "cypherStatic", args)
+        Expression methodCall = callX(domainClassNode, 'cypherStatic', args)
         methodCall = castX(returnType.plainNodeReference, methodCall)
         return returnS(methodCall)
     }

@@ -94,10 +94,10 @@ class Neo4jAssociationQueryExecutor implements AssociationQueryExecutor<Serializ
             GraphPersistentEntity fromEntity = (GraphPersistentEntity) relEntity.getFrom().getAssociatedEntity()
             GraphPersistentEntity toEntity = (GraphPersistentEntity) relEntity.getTo().getAssociatedEntity()
             if (parent == fromEntity) {
-                relType = "-[rel]->"
+                relType = '-[rel]->'
                 related = toEntity
             } else {
-                relType = "<-[rel]-"
+                relType = '<-[rel]-'
                 parent = toEntity
                 related = fromEntity
             }
@@ -108,18 +108,18 @@ class Neo4jAssociationQueryExecutor implements AssociationQueryExecutor<Serializ
         String relationship = CypherBuilder.buildRelationship(parent.labelsAsString, relType, related.labelsAsString)
 
         StringBuilder cypher = new StringBuilder(CypherBuilder.buildRelationshipMatch(parent.labelsAsString, relType, related.labelsAsString))
-        cypher.append('( ')
+        cypher.append('(').append(' ')
                 .append(parent.formatId(RelationshipPersistentEntity.FROM))
-                .append(" = \$id )")
+                .append(' = \$id )')
 
         boolean isLazyToMany = lazy && !isRelationship && association instanceof ToMany
         if (isLazyToMany) {
             cypher.append(related.formatId(RelationshipPersistentEntity.TO))
-                    .append("RETURN as id")
+                    .append('RETURN as id')
         } else {
             if (!isRelationship) {
 
-                StringBuilder returnString = new StringBuilder("\nRETURN to as data")
+                StringBuilder returnString = new StringBuilder('\nRETURN to as data')
 
                 Set<Association> associations = new TreeSet<Association>((Comparator<Association>) { Association a1, Association a2 -> a1.name <=> a2.name })
                 PersistentEntity entity = association.associatedEntity
@@ -160,7 +160,7 @@ class Neo4jAssociationQueryExecutor implements AssociationQueryExecutor<Serializ
                             }
 
                             // if there are associations, add a join to get them
-                            String withMatch = "WITH to, ${previousAssociations.size() > 0 ? previousAssociations.join(", ") + ", " : ""}"
+                            String withMatch = "WITH to, ${previousAssociations.size() > 0 ? previousAssociations.join(', ') + ', ' : ''}"
                             String associationIdsRef = "${associationName}Ids"
                             String associationNodeRef = "${associationName}Node"
                             String associationNodesRef = "${associationName}Nodes"
@@ -174,15 +174,15 @@ class Neo4jAssociationQueryExecutor implements AssociationQueryExecutor<Serializ
                             // for why omitting it corrupts <property>Id lookups.
                             if ((isToMany && lazy) || (isToOne && !isEager)) {
                                 withMatch += "collect(DISTINCT ${associatedGraphEntity.formatId(associationNodeRef)}) as ${associationIdsRef}"
-                                returnString.append(", ").append(associationIdsRef)
+                                returnString.append(', ').append(associationIdsRef)
                                 previousAssociations << associationIdsRef
                                 addOptionalMatch = true
                             } else if (isEager) {
                                 withMatch += "collect(DISTINCT $associationNodeRef) as $associationNodesRef"
-                                returnString.append(", ").append(associationNodesRef)
+                                returnString.append(', ').append(associationNodesRef)
                                 if (isAssociationRelationshipEntity) {
                                     withMatch += ", collect($r) as ${associationName}Rels"
-                                    returnString.append(", ").append("${associationName}Rels")
+                                    returnString.append(', ').append("${associationName}Rels")
                                 }
                                 previousAssociations << associationNodesRef
                                 addOptionalMatch = true
@@ -194,14 +194,14 @@ class Neo4jAssociationQueryExecutor implements AssociationQueryExecutor<Serializ
                                         .formatAssociationPatternFromExisting(
                                                 association,
                                                 r,
-                                                "to",
+                                                'to',
                                                 associationNodeRef
                                         )
 
                                 cypher.append(CypherBuilder.NEW_LINE)
                                         .append(CypherBuilder.OPTIONAL_MATCH)
                                         .append(relationshipPattern)
-                                        .append(" ")
+                                        .append(' ')
                                         .append(withMatch)
                             }
 
@@ -215,7 +215,6 @@ class Neo4jAssociationQueryExecutor implements AssociationQueryExecutor<Serializ
             }
         }
         cypher.append(singleResult ? 'LIMIT 1' : '')
-
 
         Map<String, Object> params = Collections.singletonMap(GormProperties.IDENTITY, (Object) primaryKey)
 

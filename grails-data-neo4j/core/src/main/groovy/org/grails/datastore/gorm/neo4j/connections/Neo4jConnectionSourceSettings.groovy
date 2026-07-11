@@ -66,7 +66,6 @@ class Neo4jConnectionSourceSettings extends ConnectionSourceSettings implements 
      */
     String location
 
-
     /**
      * Neo4j driver options
      */
