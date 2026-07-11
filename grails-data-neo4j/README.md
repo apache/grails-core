@@ -20,13 +20,13 @@ This project implements [GORM](https://grails.apache.org/docs/latest/grails-data
 
 For more information see the following links:
 
-* [Documentation](https://gorm.grails.org/latest/neo4j/manual)
-* [API](https://gorm.grails.org/latest/neo4j/api)
+* [Documentation](https://grails.apache.org/docs/latest/grails-data/neo4j/manual/)
+* [API](https://grails.apache.org/docs/latest/api)
 
 For the current development version see the following links:
 
-* [Snapshot Documentation](https://gorm.grails.org/snapshot/neo4j/manual)
-* [Snapshot API](https://gorm.grails.org/snapshot/neo4j/api)
+* [Snapshot Documentation](https://grails.apache.org/docs/snapshot/grails-data/neo4j/manual/)
+* [Snapshot API](https://grails.apache.org/docs/snapshot/api)
 
 ## Modules
 
@@ -38,11 +38,7 @@ This project is part of the main Grails monorepo build. The modules are wired in
 | Core           | `:grails-data-neo4j-core`      | `org.apache.grails.data:grails-data-neo4j-core`    |
 | Spring Boot    | `:grails-data-neo4j-spring-boot` | `org.apache.grails:grails-data-neo4j-spring-boot` |
 | Grails plugin  | `:grails-data-neo4j`           | `org.apache.grails:grails-data-neo4j`              |
+| Docs           | `:grails-data-neo4j-docs`      | (not published)                                    |
 
-## Deferred: example applications and reference guide
-
-The standalone example apps previously declared in this module's own `settings.gradle`
-(`examples-grails3-neo4j`, `examples-grails3-neo4j-hibernate`, `examples-neo4j-standalone`,
-`examples-neo4j-spring-boot`, `examples-test-data-service`) and the `docs` reference-guide module
-are not yet part of the monorepo build. They are expected to be re-added in a follow-up, mirroring
-how `grails-data-graphql`'s example apps were migrated into `grails-test-examples/graphql/`.
+Example apps live under `grails-test-examples/neo4j/` (`base`, `hibernate5`, `spring-boot`,
+`neo4j-standalone`, `test-data-service`), matching the layout used by the other datastores.
