@@ -263,6 +263,12 @@ ext {
                 'liquibase-hibernate.version': '4.27.0',
                 'liquibase.version'          : '4.27.0',
                 'hibernate.version'          : '5.6.15.Final',
+                // Spring Boot's BOM manages a newer, binary-incompatible major version of the
+                // driver; grails-datastore-gorm-neo4j needs this older one for its embedded
+                // Neo4j 3.5.x test harness. Declared here (with 'strictly' below, like liquibase/
+                // hibernate above) since a plain constraint can't out-rank a version Spring Boot's
+                // platform already offers.
+                'neo4j-driver.version'       : '4.4.13',
         ]
         combinedVersions += customBomVersions
         customBomDependencies = [
@@ -272,6 +278,7 @@ ext {
                 'liquibase-hibernate'   : "org.liquibase.ext:liquibase-hibernate5:${combinedVersions['liquibase-hibernate.version']}",
                 'hibernate-core-jakarta': "org.hibernate:hibernate-core-jakarta:${combinedVersions['hibernate.version']}",
                 'hibernate-ehcache'     : "org.hibernate:hibernate-ehcache:${combinedVersions['hibernate.version']}",
+                'neo4j-driver'          : "org.neo4j.driver:neo4j-java-driver:${combinedVersions['neo4j-driver.version']}",
                 'hibernate-envers'      : "org.hibernate:hibernate-envers:${combinedVersions['hibernate.version']}",
         ]
         combinedDependencies += customBomDependencies

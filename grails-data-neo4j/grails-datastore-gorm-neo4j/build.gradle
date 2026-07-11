@@ -43,15 +43,11 @@ dependencies {
 
     implementation platform(project(':grails-bom'))
 
-    // Deliberately NOT BOM-managed (see dependencies.gradle's validateDependencyVersions rule):
-    // 4.4.13 is an intentional downgrade below what Spring Boot's BOM would otherwise resolve,
-    // needed only for this module's embedded Neo4j 3.5.x test harness compatibility - registering
-    // it as a BOM constraint would make every other module in the repo (e.g. grails-data-mongodb-docs,
-    // which has no reason to downgrade) fail validateDependencyVersions against their own,
-    // correctly-newer, transitively-resolved version. The resolutionStrategy.force below is what
-    // actually pins this module's own classpath; this explicit version just keeps the published
-    // POM's declared dependency version consistent with what force actually resolves to.
-    api "org.neo4j.driver:neo4j-java-driver:$neo4jDriverVersion"
+    // Version comes from grails-bom's neo4j-driver constraint (dependencies.gradle), declared
+    // 'strictly' there so it out-ranks the newer, binary-incompatible version Spring Boot's BOM
+    // would otherwise offer. The resolutionStrategy.force below is a defense-in-depth pin for
+    // this module's own classpath.
+    api 'org.neo4j.driver:neo4j-java-driver'
     api project(':grails-datamapping-validation')
     api project(':grails-datamapping-core')
 
