@@ -252,8 +252,9 @@ class MyService { }
 3. **Run code style checks**: `./gradlew codeStyle`
 4. **Clean violations**: Before committing, run `./gradlew clean aggregateViolations` from the root and ensure that `build/reports/violations/CHECKSTYLE_VIOLATIONS.md`, `build/reports/violations/CODENARC_VIOLATIONS.md`, `build/reports/violations/PMD_VIOLATIONS.md`, and `build/reports/violations/SPOTBUGS_VIOLATIONS.md` have no issues.
 5. **Verify test coverage**: Ensure any touched class is covered by tests verifying all behavior. You must run ALL tests in the affected module(s) and ensure they pass before submission.
-6. **Squash commits** into a single meaningful commit message
-6. **Reference issues** in PR description (e.g., "Fixes #1234")
+6. **Adversarial self-review**: Before requesting human review, run an adversarial review pass (e.g. `/code-review`, or a fresh-context agent) against this file's rules — jakarta not javax, no wildcard imports, BOM version rules, test coverage — and against the change's own logic. Fix or flag anything it finds. This is a supplement to human review, not a replacement for it.
+7. **Squash commits** into a single meaningful commit message
+8. **Reference issues** in PR description (e.g., "Fixes #1234")
 
 ### Review Process
 
