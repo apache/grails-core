@@ -58,26 +58,13 @@ export GRADLE_OPTS="-Xms2G -Xmx5G"
 
 ## Available Skills
 
-> **AI AGENTS - MANDATORY**: Before writing or modifying any code, you **MUST** read the relevant skill file(s) below. Do not write Groovy/Grails code without first loading these instructions:
-> - Writing Grails code → Read `.agents/skills/grails-developer/SKILL.md`
-> - Writing Groovy code → Read `.agents/skills/groovy-developer/SKILL.md`
-> - Writing Java code → Read `.agents/skills/java-developer/SKILL.md`
-> - Upgrading applications to Grails 8 → Read `.agents/skills/grails-8-upgrade/SKILL.md`
-> - Writing Hibernate code → Read `.agents/skills/hibernate-developer/SKILL.md`
-> - Fixing style/analysis violations → Read `.agents/skills/violation-fixer/SKILL.md`
-> - Fixing broken test → Read `.agents/skills/test-fixer/SKILL.md`
+> **AI AGENTS - MANDATORY**: Before writing or modifying any code, list `.agents/skills/*/SKILL.md`, read each one's front-matter `description`, and load the full file for any skill whose description matches the task at hand. Do not write Groovy/Grails/Java code without first loading the skill(s) that apply.
 >
-> Use your file reading capability to load the skill content before proceeding with any code changes.
-
-| Skill | Path | Use For |
-|-------|------|---------|
-| **grails-developer** | `.agents/skills/grails-developer/SKILL.md` | Current Grails apps, GORM, controllers, views |
-| **groovy-developer** | `.agents/skills/groovy-developer/SKILL.md` | Groovy 5 syntax, closures, DSLs, Spock |
-| **grails-8-upgrade** | `.agents/skills/grails-8-upgrade/SKILL.md` | Upgrading Grails applications from 7.x to 8 |
-| **java-developer** | `.agents/skills/java-developer/SKILL.md` | Java 21 features, Groovy interop |
-| **hibernate-developer** | `.agents/skills/hibernate-developer/SKILL.md` | Hibernate 7 mapping, binders, generators |
-| **violation-fixer** | `.agents/skills/violation-fixer/SKILL.md` | Fix style/analysis violations (CodeNarc, Checkstyle, PMD, SpotBugs) |
-| **test-fixer** | `.agents/skills/test-fixer/SKILL.md` | Aggregate and fix test failures |
+> ```bash
+> for f in .agents/skills/*/SKILL.md; do awk -F': *' '/^description:/{print FILENAME": "$2; exit}' "$f"; done
+> ```
+>
+> The directory is the source of truth, not a list in this file — a hardcoded skill index here would drift the moment a skill is added, renamed, or removed. Each `SKILL.md`'s front-matter (`name`, `description`, `compatibility`) is what makes it discoverable to any agent, per the Agent Skills Specification.
 
 ## Technology Stack
 
