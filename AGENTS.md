@@ -61,10 +61,12 @@ export GRADLE_OPTS="-Xms2G -Xmx5G"
 > **AI AGENTS - MANDATORY**: Before writing or modifying any code, list `.agents/skills/*/SKILL.md`, read each one's front-matter `description`, and load the full file for any skill whose description matches the task at hand. Do not write Groovy/Grails/Java code without first loading the skill(s) that apply.
 >
 > ```bash
-> for f in .agents/skills/*/SKILL.md; do awk -F': *' '/^description:/{print FILENAME": "$2; exit}' "$f"; done
+> for f in .agents/skills/*/SKILL.md; do awk -F': *' '/^description:/{d=$2} /^paths:/{p=$2} END{print FILENAME": "d (p?" [paths: "p"]":"")}' "$f"; done
 > ```
 >
-> The directory is the source of truth, not a list in this file — a hardcoded skill index here would drift the moment a skill is added, renamed, or removed. Each `SKILL.md`'s front-matter (`name`, `description`, `compatibility`) is what makes it discoverable to any agent, per the Agent Skills Specification.
+> Some skills also declare an optional front-matter `paths:` glob (e.g. `paths: grails-data-hibernate7/**`) scoping them to a specific module — if the file(s) you're touching match a skill's `paths`, load it regardless of whether you'd have matched it on description alone. `paths` is a stronger, structural signal than prose; not every skill needs one (repo-wide skills like `grails-developer`/`groovy-developer` intentionally have none).
+>
+> The directory is the source of truth, not a list in this file — a hardcoded skill index here would drift the moment a skill is added, renamed, or removed. Each `SKILL.md`'s front-matter (`name`, `description`, `paths`, `compatibility`) is what makes it discoverable to any agent, per the Agent Skills Specification.
 
 ## Technology Stack
 
