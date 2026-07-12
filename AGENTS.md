@@ -87,11 +87,11 @@ This repository contains multiple independent Gradle projects:
 | Project | Description | Build Command |
 |---------|-------------|---------------|
 | **grails-core** (root) | Main framework with 60+ modules | `./gradlew build` |
-| **build-logic/** | Gradle convention plugins for the build | `cd build-logic && ../gradlew build` |
-| **grails-gradle/** | Grails Gradle plugins | `cd grails-gradle && ./gradlew build` |
+| **build-logic/** | Gradle convention plugins for the build — every other build here consumes it transitively; see [`build-logic/AGENTS.md`](build-logic/AGENTS.md) | `cd build-logic && ../gradlew build` |
+| **grails-gradle/** | Grails Gradle plugins — hybrid: own settings.gradle/tests, but shares root's dependency versions; see [`grails-gradle/AGENTS.md`](grails-gradle/AGENTS.md) | `cd grails-gradle && ./gradlew build` |
 | **grails-forge/** | Application generator (like Spring Initializr) — Micronaut, not Grails; see [`grails-forge/AGENTS.md`](grails-forge/AGENTS.md) | `cd grails-forge && ./gradlew build` |
 
-Each project has its own `settings.gradle` and independent build. When working on a specific project, run Gradle commands from that project's directory. `grails-forge/` has its own nested `AGENTS.md` — read it before working there, since most of this file's Grails/GORM/Hibernate content doesn't apply to it.
+Each project has its own `settings.gradle` and independent build. When working on a specific project, run Gradle commands from that project's directory. All three subprojects above have their own nested `AGENTS.md` — read the relevant one before working there. `grails-forge/` is the cleanest case (fully independent, most of this file's Grails/GORM/Hibernate content doesn't apply); `grails-gradle/` and `build-logic/` are hybrids — independent `settings.gradle`/testing, but they deliberately share this file's dependency-version management rather than pinning their own.
 
 ## Dependency Management
 
