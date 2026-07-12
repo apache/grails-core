@@ -222,6 +222,21 @@ class MyService { }
 | Build docs | `./gradlew :grails-doc:publishGuide -x aggregateGroovydoc` |
 | Debug | `./gradlew bootRun --debug-jvm` |
 
+## Coverage
+
+Coverage is uploaded to Codecov (`codecov.yml`), but the underlying data is fully visible locally — it does not require CI:
+
+| Task | Output | Scope |
+|------|--------|-------|
+| `./gradlew aggregateJacocoCoverage` | `build/reports/violations/JACOCO_COVERAGE.md` | Human-readable per-module Markdown table |
+| `./gradlew jacocoAggregateReport` | `build/reports/jacoco/aggregate/jacocoAggregateReport.xml` | The exact XML CI uploads to Codecov — same data, same command, runnable locally |
+
+Both are ordinary local Gradle tasks (`GrailsJacocoPlugin`/`GrailsViolationAggregationPlugin` in `build-logic`); neither needs network access or a Codecov token. Run either before committing to see current coverage — don't wait on a CI round-trip to find out.
+
+What genuinely requires CI/Codecov's cloud service (not reproducible locally): the diff-coverage comparison against the PR's base branch, the PR comment Codecov posts, and the codecov.io dashboard/badge. Per `codecov.yml`, both the `patch` and `project` status checks are `informational: true` — they don't block merge today, so a red Codecov check is a signal to look at, not a hard gate.
+
+`grails-forge/` and `build-logic/` are not wired into `coverage.yml` (only `grails-core` and `grails-gradle` are) — no Codecov data exists for them either locally or in CI.
+
 ## Branch Naming (Auto-Labels PRs)
 
 | Prefix | Label |
