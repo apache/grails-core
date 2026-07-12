@@ -87,9 +87,9 @@ This repository contains multiple independent Gradle projects:
 | **grails-core** (root) | Main framework with 60+ modules | `./gradlew build` |
 | **build-logic/** | Gradle convention plugins for the build | `cd build-logic && ../gradlew build` |
 | **grails-gradle/** | Grails Gradle plugins | `cd grails-gradle && ./gradlew build` |
-| **grails-forge/** | Application generator (like Spring Initializr) | `cd grails-forge && ./gradlew build` |
+| **grails-forge/** | Application generator (like Spring Initializr) — Micronaut, not Grails; see [`grails-forge/AGENTS.md`](grails-forge/AGENTS.md) | `cd grails-forge && ./gradlew build` |
 
-Each project has its own `settings.gradle` and independent build. When working on a specific project, run Gradle commands from that project's directory.
+Each project has its own `settings.gradle` and independent build. When working on a specific project, run Gradle commands from that project's directory. `grails-forge/` has its own nested `AGENTS.md` — read it before working there, since most of this file's Grails/GORM/Hibernate content doesn't apply to it.
 
 ## Dependency Management
 
