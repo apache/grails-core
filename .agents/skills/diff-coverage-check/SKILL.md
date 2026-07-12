@@ -39,6 +39,8 @@ Codecov (`codecov.yml`) computes diff coverage in CI, but that's a cloud round-t
 - When asked to check coverage on specific touched files, or "diff coverage" generally.
 - A single change frequently spans multiple modules in this monorepo — expect to loop the procedure below once per affected module, not just once.
 
+This skill assumes the module's tests already pass. If `:module:test` fails, that's a different problem — use the `test-fixer` skill first; a failing test run won't produce a trustworthy JaCoCo report either.
+
 ## Procedure
 
 ### 1. Find which files changed, and group them by Gradle module

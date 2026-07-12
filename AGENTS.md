@@ -269,7 +269,7 @@ work.
 ### Checklist
 
 1. **Fork & branch** from the target release branch (e.g., `7.0.x`)
-2. **Run tests** before submitting: `./gradlew build --rerun-tasks`
+2. **Run tests** before submitting: `./gradlew build --rerun-tasks`. If anything fails, use the `test-fixer` skill rather than guessing.
 3. **Run code style checks**: `./gradlew codeStyle`
 4. **Clean violations**: Before committing, run `./gradlew clean aggregateViolations` from the root and ensure that `build/reports/violations/CHECKSTYLE_VIOLATIONS.md`, `build/reports/violations/CODENARC_VIOLATIONS.md`, `build/reports/violations/PMD_VIOLATIONS.md`, and `build/reports/violations/SPOTBUGS_VIOLATIONS.md` have no issues.
 5. **Verify test coverage**: Ensure any touched class is covered by tests verifying all behavior. You must run ALL tests in the affected module(s) and ensure they pass before submission. Run the `diff-coverage-check` skill against your changed files before submitting — don't rely on "the class has some tests" as a proxy for "the lines I changed are covered."
