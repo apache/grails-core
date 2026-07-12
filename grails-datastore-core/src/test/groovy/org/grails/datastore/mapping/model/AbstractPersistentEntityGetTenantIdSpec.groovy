@@ -56,6 +56,46 @@ class AbstractPersistentEntityGetTenantIdSpec extends Specification {
         entity.getTenantId() == null
     }
 
+    def "getTenantId lazily resolves the TenantId property when the context switches to DISCRIMINATOR mode after the entity was already initialized"() {
+        given: "an entity initialized while the context is still in NONE mode, so initialize()'s eager loop never assigns tenantId"
+        TestMappingContext context = new TestMappingContext()
+        def entity = context.addPersistentEntity(TenantScopedEntity)
+
+        expect:
+        context.multiTenancyMode == MultiTenancySettings.MultiTenancyMode.NONE
+        entity.getTenantId() == null
+
+        when: "the context is reconfigured into DISCRIMINATOR mode afterwards"
+        context.initialize(discriminatorSettings())
+
+        then: "getTenantId() falls back to a lazy scan of the already-populated persistentProperties instead of staying stuck at null"
+        entity.getTenantId() != null
+        entity.getTenantId().name == 'tenantId'
+    }
+
+    def "getTenantId's lazy scan completes without a match and returns null for a multi-tenant entity with no tenantId property"() {
+        given: "initialized in NONE mode - DISCRIMINATOR mode at initialize() time would reject this class for lacking a tenant identifier property"
+        TestMappingContext context = new TestMappingContext()
+        def entity = context.addPersistentEntity(TenantScopedEntityWithoutTenantIdProperty)
+
+        when: "the context is reconfigured into DISCRIMINATOR mode afterwards, same as the successful-lookup case above"
+        context.initialize(discriminatorSettings())
+
+        then: "the lazy scan runs to completion without finding a TenantId property, rather than throwing or looping forever"
+        entity.getTenantId() == null
+    }
+
+    def "getTenantId's lazy fallback short-circuits on isMultiTenant() for a non-multi-tenant entity, even in DISCRIMINATOR mode"() {
+        given:
+        TestMappingContext context = new TestMappingContext()
+        context.initialize(discriminatorSettings())
+        def entity = context.addPersistentEntity(NonTenantScopedEntity)
+
+        expect:
+        !entity.isMultiTenant()
+        entity.getTenantId() == null
+    }
+
     private static ConnectionSourceSettings discriminatorSettings() {
         ConnectionSourceSettings settings = new ConnectionSourceSettings()
         settings.multiTenancy.mode = MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR
@@ -69,4 +109,14 @@ interface MultiTenant {
 class TenantScopedEntity implements MultiTenant {
     Long id
     String tenantId
+}
+
+class TenantScopedEntityWithoutTenantIdProperty implements MultiTenant {
+    Long id
+    String name
+}
+
+class NonTenantScopedEntity {
+    Long id
+    String name
 }
