@@ -15,7 +15,7 @@ limitations under the License.
 -->
 ---
 name: micronaut-developer
-description: Guide for working in grails-forge (grails-forge-core, grails-forge-api, grails-forge-cli, grails-forge-web-netty) — a Micronaut application, not a Grails one. Covers Micronaut DI/bean patterns, HTTP controllers, MicronautTest+Spock, Picocli CLI commands, Rocker templating, and the Feature extension-point system. Use this instead of grails-developer/hibernate-developer when changing code under grails-forge/.
+description: Guide for working in grails-forge (grails-forge-core, grails-forge-api, grails-forge-cli, grails-forge-web-netty) — a Micronaut application, not a Grails one. Covers Micronaut DI/bean patterns, HTTP controllers, two distinct Spock testing patterns (MicronautTest for HTTP controllers, ApplicationContextSpec for Feature classes), Picocli CLI commands, Rocker templating, and the Feature extension-point system. Use this instead of grails-developer/hibernate-developer when changing code under grails-forge/.
 license: Apache-2.0
 compatibility: opencode, claude, grok, gemini, copilot, cursor, windsurf
 metadata:
@@ -26,7 +26,7 @@ metadata:
 ## What I Do
 
 - Provide repository-specific guidance for `grails-forge/` — the project generator behind start.grails.org (the Grails equivalent of Spring Initializr).
-- Cover Micronaut idioms actually used in this codebase: DI (`@Singleton`, `@Inject`), HTTP (`@Controller`, `@Get`, `@Post`), testing (`@MicronautTest` + Spock), and bean indexing for plugin-style extension points (`@Indexed`).
+- Cover Micronaut idioms actually used in this codebase: DI (`@Singleton`, `@Inject`), HTTP (`@Controller`, `@Get`, `@Post`), the two distinct Spock testing patterns (`@MicronautTest` for HTTP controllers, `ApplicationContextSpec` for `Feature` classes — don't conflate them), and bean indexing for plugin-style extension points (`@Indexed`).
 - Cover the Picocli CLI layer in `grails-forge-cli` and the Rocker templating engine used for both code generation output and API responses.
 - Correct root `AGENTS.md` rules that do not apply here — see "Where Root AGENTS.md Rules Don't Apply" below.
 
@@ -114,9 +114,9 @@ public class ApplicationController {
 }
 ```
 
-### Testing: MicronautTest + Spock
+### Testing HTTP Controllers: MicronautTest + Spock
 
-Not `HibernateGormDatastoreSpec` or any grails-core testing-support class — full HTTP round-trip tests via an injected client:
+For `grails-forge-api` controllers specifically. Not `HibernateGormDatastoreSpec` or any grails-core testing-support class — full HTTP round-trip tests via an injected client:
 
 ```groovy
 @MicronautTest
@@ -133,6 +133,56 @@ class ApplicationControllerSpec extends Specification {
     }
 }
 ```
+
+### Testing Feature Classes: ApplicationContextSpec (not MicronautTest)
+
+For `grails-forge-core` `Feature` implementations, this is a **different, lighter-weight pattern** from the HTTP-controller one above — no full server startup, just a real Micronaut `ApplicationContext`. Don't reach for `@MicronautTest` here; it's the wrong tool for testing generation logic.
+
+`ApplicationContextSpec` (`grails-forge-core/src/test/groovy/org/grails/forge/ApplicationContextSpec.groovy`) is a plain Spock `Specification`, not `@MicronautTest`-annotated, that spins up a shared context manually:
+
+```groovy
+abstract class ApplicationContextSpec extends Specification implements ProjectFixture, ContextFixture {
+    Map<String, Object> getConfiguration() { [:] }
+
+    @Shared
+    @AutoCleanup
+    ApplicationContext beanContext = ApplicationContext.run(configuration)
+}
+```
+
+A feature spec extends it and mixes in `CommandOutputFixture` for generated-file assertions:
+
+```groovy
+class MongoSyncSpec extends ApplicationContextSpec implements CommandOutputFixture {
+
+    void 'test readme.md with feature mongo-sync contains links to micronaut and 3rd party docs'() {
+        when:
+        def output = generate(['mongo-sync'])
+        then:
+        output["README.md"].contains("https://www.mongodb.com/docs/drivers/java/sync/current/")
+    }
+
+    void "test mongo sync features"() {
+        when:
+        Features features = getFeatures(['mongo-sync'])
+        then:
+        features.contains("mongo-sync")
+    }
+
+    void "test mongo sync dependencies are present for gradle"() {
+        when:
+        String template = new BuildBuilder(beanContext).features(["mongo-sync"]).render()
+        then:
+        template.contains('implementation "org.mongodb:mongodb-driver-sync"')
+    }
+}
+```
+
+Three distinct helpers, each answering a different question about a feature — use whichever fits what you're actually asserting:
+
+- **`generate(List<String> features)`** (from `CommandOutputFixture`) — generates a full project, returns `Map<String, String>` of file path → content. Use for README/scaffolding-output assertions.
+- **`getFeatures(List<String> features)`** (from `ContextFixture`, mixed into `ApplicationContextSpec`) — returns the resolved `Features` collection. Use to assert a feature applies/registers correctly.
+- **`new BuildBuilder(beanContext).features([...]).render()`** — renders just the generated `build.gradle` content as a string. Use for dependency/build-file assertions without generating a whole project.
 
 ### CLI Commands (Picocli, DI-wired)
 
