@@ -29,7 +29,7 @@ apply plugin: 'org.apache.grails.gradle.grails-web'
 
 dependencies {
 
-    implementation platform(project(':grails-bom'))
+    implementation platform(project(':grails-neo4j-bom'))
 
     implementation 'org.apache.grails:grails-data-neo4j'
 
@@ -53,9 +53,9 @@ dependencies {
     testRuntimeOnly "org.neo4j.test:neo4j-harness:$neo4jVersion"
 }
 
-// The Spring Boot BOM (pulled in transitively via grails-bom) force-upgrades Jetty to a 12.x
-// platform version, binary-incompatible with the embedded Neo4j 3.5.x test harness this app's
-// tests use. See grails-data-neo4j/core/build.gradle for the full
+// The Spring Boot BOM (pulled in transitively via grails-neo4j-bom) force-upgrades Jetty to a
+// 12.x platform version, binary-incompatible with the embedded Neo4j 3.5.x test harness this
+// app's tests use. See grails-data-neo4j/core/build.gradle for the full
 // explanation.
 def neo4jHarnessJettyVersion = '9.4.43.v20210629'
 [configurations.testCompileClasspath, configurations.testRuntimeClasspath,

@@ -31,7 +31,7 @@ apply plugin: 'cloud.wondrify.asset-pipeline'
 
 dependencies {
 
-    implementation platform(project(':grails-bom'))
+    implementation platform(project(':grails-neo4j-bom'))
 
     implementation 'org.apache.grails:grails-data-neo4j'
     implementation 'org.apache.grails:grails-data-hibernate5'
@@ -41,7 +41,7 @@ dependencies {
     implementation 'org.apache.grails:grails-gsp'
     implementation 'org.apache.grails:grails-sitemesh3'
 
-    testAndDevelopmentOnly platform(project(':grails-bom'))
+    testAndDevelopmentOnly platform(project(':grails-neo4j-bom'))
     testAndDevelopmentOnly 'org.webjars.npm:jquery'
 
     runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
@@ -72,10 +72,10 @@ dependencies {
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
 }
 
-// The Spring Boot BOM (pulled in transitively via grails-bom) force-upgrades Jetty to a 12.x
-// platform version and neo4j-java-driver to 6.x, both binary-incompatible with the embedded
-// Neo4j 3.5.x test harness this app's tests use. See
-// grails-data-neo4j/core/build.gradle for the full explanation.
+// The Spring Boot BOM (pulled in transitively via grails-neo4j-bom) force-upgrades Jetty to a
+// 12.x platform version, both binary-incompatible with the embedded Neo4j 3.5.x test harness
+// this app's tests use (neo4j-java-driver itself is already pinned by grails-neo4j-bom's
+// 'strictly' constraint). See grails-data-neo4j/core/build.gradle for the full explanation.
 def neo4jHarnessJettyVersion = '9.4.43.v20210629'
 [configurations.testCompileClasspath, configurations.testRuntimeClasspath,
  configurations.integrationTestCompileClasspath, configurations.integrationTestRuntimeClasspath].each {
@@ -91,15 +91,10 @@ def neo4jHarnessJettyVersion = '9.4.43.v20210629'
                 "org.eclipse.jetty:jetty-xml:$neo4jHarnessJettyVersion"
     }
 }
-configurations.all {
-    resolutionStrategy {
-        force "org.neo4j.driver:neo4j-java-driver:$neo4jDriverVersion"
-    }
-}
-// Deliberately older than the BOM's Jetty/neo4j-java-driver versions (see comment above) -
-// exempt from validateDependencyVersions.
+// Deliberately older than the BOM's Jetty version (see comment above) - exempt from
+// validateDependencyVersions. neo4j-java-driver itself no longer needs an override here: it's
+// already pinned to the same version by grails-neo4j-bom's 'strictly' constraint.
 project.ext.allowedBomOverrides = [
-        'org.neo4j.driver:neo4j-java-driver',
         'org.eclipse.jetty:jetty-server',
         'org.eclipse.jetty:jetty-http',
         'org.eclipse.jetty:jetty-io',

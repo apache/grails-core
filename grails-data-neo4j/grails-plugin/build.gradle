@@ -19,6 +19,7 @@
 
 plugins {
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.gradle.grails-plugin'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
@@ -29,6 +30,16 @@ plugins {
 version = projectVersion
 group = 'org.apache.grails'
 
+// GrailsGradlePlugin (applied by org.apache.grails.gradle.grails-plugin) otherwise
+// auto-applies the default grails-bom as an *external* org.apache.grails:grails-bom:$version
+// coordinate to every declarable configuration that doesn't already declare a Grails BOM by
+// hand. grails-neo4j-bom is new and not yet published anywhere resolvable, so suppress that
+// automatic application and rely solely on the platform(project(':grails-neo4j-bom')) below,
+// matching the escape hatch documented on GrailsExtension.bom.
+grails {
+    bom = null
+}
+
 ext {
     gormApiDocs = true
     pomTitle = 'GORM for Neo4j'
@@ -37,7 +48,7 @@ ext {
 
 dependencies {
 
-    implementation platform(project(':grails-bom'))
+    implementation platform(project(':grails-neo4j-bom'))
 
     compileOnly 'org.apache.grails:grails-core'
     compileOnly 'org.apache.grails.bootstrap:grails-bootstrap'
@@ -75,7 +86,7 @@ springBoot {
 
 // Jetty/JUnit-platform/reflection-opens config for the embedded Neo4j 3.5.x test harness is
 // shared across every grails-data-neo4j module - see neo4j-harness-test-config.gradle. The
-// neo4j-java-driver version comes from grails-bom's 'strictly' constraint (dependencies.gradle);
+// neo4j-java-driver version comes from grails-neo4j-bom's 'strictly' constraint (dependencies.gradle);
 // no local resolutionStrategy.force is needed for it.
 apply from: rootProject.layout.projectDirectory.file('grails-data-neo4j/gradle/neo4j-harness-test-config.gradle')
 

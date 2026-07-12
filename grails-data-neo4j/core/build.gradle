@@ -21,6 +21,7 @@ plugins {
     id 'groovy'
     id 'java-library'
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
@@ -41,12 +42,12 @@ sourceSets.main.groovy.srcDirs += ["src/main/java"]
 
 dependencies {
 
-    implementation platform(project(':grails-bom'))
+    implementation platform(project(':grails-neo4j-bom'))
 
-    // Version comes from grails-bom's neo4j-driver constraint (dependencies.gradle), declared
-    // 'strictly' there so it out-ranks the newer, binary-incompatible version Spring Boot's BOM
-    // would otherwise offer. The resolutionStrategy.force below is a defense-in-depth pin for
-    // this module's own classpath.
+    // Version comes from grails-neo4j-bom's neo4j-driver constraint (dependencies.gradle),
+    // declared 'strictly' there so it out-ranks the newer, binary-incompatible version Spring
+    // Boot's BOM would otherwise offer. Scoped to grails-neo4j-bom (not the default grails-bom)
+    // so apps that don't use grails-data-neo4j keep Spring Boot's managed driver version.
     api 'org.neo4j.driver:neo4j-java-driver'
     api project(':grails-datamapping-validation')
     api project(':grails-datamapping-core')
@@ -79,7 +80,7 @@ dependencies {
 
 // Jetty/JUnit-platform/reflection-opens config for the embedded Neo4j 3.5.x test harness is
 // shared across every grails-data-neo4j module - see neo4j-harness-test-config.gradle, applied
-// below. The neo4j-java-driver version comes from grails-bom's 'strictly' constraint
+// below. The neo4j-java-driver version comes from grails-neo4j-bom's 'strictly' constraint
 // (dependencies.gradle); no local resolutionStrategy.force is needed for it.
 test {
     systemProperty('neo4j.gorm.suite', System.getProperty('neo4j.gorm.suite') ?: true)

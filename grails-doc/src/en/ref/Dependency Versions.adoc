@@ -23,7 +23,7 @@ Grails applications rely on a set of dependencies managed through a Bill of Mate
 
 === BOM Variants
 
-The Grails BOM is published in three variants to support different Hibernate versions:
+The Grails BOM is published in several variants to support different Hibernate versions and datastores:
 
 [cols="1,2,2", options="header"]
 |===
@@ -31,6 +31,7 @@ The Grails BOM is published in three variants to support different Hibernate ver
 | **Default** | `org.apache.grails:grails-bom` | The default BOM, uses Hibernate 5 compatible dependency versions (link:{versionsRef}Grails%20BOM.html[view dependencies])
 | **Hibernate 5** | `org.apache.grails:grails-hibernate5-bom` | Explicit Hibernate 5 BOM with Hibernate 5 compatible Liquibase versions (link:{versionsRef}Grails%20BOM%20Hibernate5.html[view dependencies])
 | **Hibernate 7** | `org.apache.grails:grails-hibernate7-bom` | Hibernate 7 BOM with Hibernate 7 compatible Liquibase versions (link:{versionsRef}Grails%20BOM%20Hibernate7.html[view dependencies])
+| **Neo4j** | `org.apache.grails:grails-neo4j-bom` | Inherits from the default BOM and pins a Neo4j driver version compatible with `grails-data-neo4j` (link:{versionsRef}Grails%20BOM%20Neo4j.html[view dependencies])
 |===
 
-The primary difference between the variants is the Liquibase dependency versions and the Liquibase Hibernate extension used (`liquibase-hibernate5` vs `liquibase-hibernate7`).
+The primary difference between the Hibernate variants is the Liquibase dependency versions and the Liquibase Hibernate extension used (`liquibase-hibernate5` vs `liquibase-hibernate7`). The Neo4j variant only overrides the Neo4j driver version, so it does not affect Hibernate-related dependencies.

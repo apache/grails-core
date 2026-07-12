@@ -590,6 +590,7 @@ ${importStatements}
             'grails-base-bom',
             'grails-hibernate5-bom',
             'grails-hibernate7-bom',
+            'grails-neo4j-bom',
             'grails-micronaut-bom',
             'grails-hibernate5-micronaut-bom',
             'grails-hibernate7-micronaut-bom',

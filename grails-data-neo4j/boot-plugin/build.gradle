@@ -21,6 +21,7 @@ plugins {
     id 'groovy'
     id 'java-library'
     id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
@@ -36,7 +37,7 @@ ext {
 
 dependencies {
 
-    implementation platform(project(':grails-bom'))
+    implementation platform(project(':grails-neo4j-bom'))
 
     api 'org.springframework.boot:spring-boot-autoconfigure'
     // DispatcherServletAutoConfiguration (referenced via @AutoConfigureBefore) moved to spring-boot-webmvc.
@@ -52,7 +53,7 @@ dependencies {
 
 // Jetty/JUnit-platform/reflection-opens config for the embedded Neo4j 3.5.x test harness is
 // shared across every grails-data-neo4j module - see neo4j-harness-test-config.gradle. The
-// neo4j-java-driver version comes from grails-bom's 'strictly' constraint (dependencies.gradle);
+// neo4j-java-driver version comes from grails-neo4j-bom's 'strictly' constraint (dependencies.gradle);
 // no local resolutionStrategy.force is needed for it.
 apply from: rootProject.layout.projectDirectory.file('grails-data-neo4j/gradle/neo4j-harness-test-config.gradle')
 
