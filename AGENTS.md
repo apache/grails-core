@@ -233,7 +233,7 @@ Coverage is uploaded to Codecov (`codecov.yml`), but the underlying data is full
 
 Both are ordinary local Gradle tasks (`GrailsJacocoPlugin`/`GrailsViolationAggregationPlugin` in `build-logic`); neither needs network access or a Codecov token. Run either before committing to see current coverage — don't wait on a CI round-trip to find out.
 
-What genuinely requires CI/Codecov's cloud service (not reproducible locally): the diff-coverage comparison against the PR's base branch, the PR comment Codecov posts, and the codecov.io dashboard/badge. Per `codecov.yml`, both the `patch` and `project` status checks are `informational: true` — they don't block merge today, so a red Codecov check is a signal to look at, not a hard gate.
+Diff coverage (coverage of only the lines you changed, which is what Codecov's PR comment shows) is also reproducible locally — see the `diff-coverage-check` skill, which cross-references a module's JaCoCo XML against `git diff`. What's still cloud-only: the PR comment itself, and the codecov.io dashboard/badge. Per `codecov.yml`, both the `patch` and `project` status checks are `informational: true` — they don't block merge today, so a red Codecov check is a signal to look at, not a hard gate.
 
 `grails-forge/` and `build-logic/` are not wired into `coverage.yml` (only `grails-core` and `grails-gradle` are) — no Codecov data exists for them either locally or in CI.
 
@@ -272,7 +272,7 @@ work.
 2. **Run tests** before submitting: `./gradlew build --rerun-tasks`
 3. **Run code style checks**: `./gradlew codeStyle`
 4. **Clean violations**: Before committing, run `./gradlew clean aggregateViolations` from the root and ensure that `build/reports/violations/CHECKSTYLE_VIOLATIONS.md`, `build/reports/violations/CODENARC_VIOLATIONS.md`, `build/reports/violations/PMD_VIOLATIONS.md`, and `build/reports/violations/SPOTBUGS_VIOLATIONS.md` have no issues.
-5. **Verify test coverage**: Ensure any touched class is covered by tests verifying all behavior. You must run ALL tests in the affected module(s) and ensure they pass before submission.
+5. **Verify test coverage**: Ensure any touched class is covered by tests verifying all behavior. You must run ALL tests in the affected module(s) and ensure they pass before submission. Run the `diff-coverage-check` skill against your changed files before submitting — don't rely on "the class has some tests" as a proxy for "the lines I changed are covered."
 6. **Adversarial self-review (always, regardless of PR size)**: Run an adversarial review pass (e.g. `/code-review`, or a fresh-context agent) against this file's rules — jakarta not javax, no wildcard imports, BOM version rules, test coverage — and against the change's own logic. Do this for every PR, including large/consolidated ones; do not rely on GitHub's Copilot reviewer alone, since it silently skips PRs over ~300 files. Fix or flag anything it finds. This is a supplement to human review, not a replacement for it.
 7. **Squash commits** into a single meaningful commit message
 8. **Reference issues** in PR description (e.g., "Fixes #1234")
