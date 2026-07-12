@@ -1,3 +1,12 @@
+---
+name: diff-coverage-check
+description: Computes real diff coverage (coverage of only the lines you actually changed, not whole-file coverage) entirely locally, without CI or Codecov — by running each affected module's own tests and cross-referencing its JaCoCo XML against git diff. Use before committing, or when asked "is my change covered" / "check coverage on the files I touched" / "diff coverage". A change often spans several modules; run this per module.
+license: Apache-2.0
+compatibility: opencode, claude, grok, gemini, copilot, cursor, windsurf
+metadata:
+  audience: maintainers
+  frameworks: grails
+---
 <!--
 SPDX-License-Identifier: Apache-2.0
 
@@ -13,15 +22,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
----
-name: diff-coverage-check
-description: Computes real diff coverage (coverage of only the lines you actually changed, not whole-file coverage) entirely locally, without CI or Codecov — by running each affected module's own tests and cross-referencing its JaCoCo XML against git diff. Use before committing, or when asked "is my change covered" / "check coverage on the files I touched" / "diff coverage". A change often spans several modules; run this per module.
-license: Apache-2.0
-compatibility: opencode, claude, grok, gemini, copilot, cursor, windsurf
-metadata:
-  audience: maintainers
-  frameworks: grails
----
 
 ## What I Do
 

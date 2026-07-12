@@ -1,3 +1,12 @@
+---
+name: migration-scoping
+description: Before starting any refactor/rewrite/optimization-shaped task on a core subsystem (GORM registry, datastore internals, binder/mapping layer, etc.), classify it as mechanical (bounded, safe to just do) or architectural (a project, not a patch) and check whether another local or remote branch already attempted it. Use this before writing code for anything that sounds like "improve/refactor/optimize/rewrite X", not for ordinary bug fixes or additive features.
+license: Apache-2.0
+compatibility: opencode, claude, grok, gemini, copilot, cursor, windsurf
+metadata:
+  audience: maintainers
+  frameworks: grails
+---
 <!--
 SPDX-License-Identifier: Apache-2.0
 
@@ -13,15 +22,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
----
-name: migration-scoping
-description: Before starting any refactor/rewrite/optimization-shaped task on a core subsystem (GORM registry, datastore internals, binder/mapping layer, etc.), classify it as mechanical (bounded, safe to just do) or architectural (a project, not a patch) and check whether another local or remote branch already attempted it. Use this before writing code for anything that sounds like "improve/refactor/optimize/rewrite X", not for ordinary bug fixes or additive features.
-license: Apache-2.0
-compatibility: opencode, claude, grok, gemini, copilot, cursor, windsurf
-metadata:
-  audience: maintainers
-  frameworks: grails
----
 
 ## What I Do
 

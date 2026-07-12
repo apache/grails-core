@@ -1,3 +1,13 @@
+---
+name: worktree-hygiene
+description: Reports stale or orphaned git worktrees under .claude/worktrees/ (the agent-managed worktree directory) by checking each worktree's branch against its GitHub PR state and merge-into-default-branch status, not commit age. Use at the start of a session in this repo when .claude/worktrees/ has accumulated entries, or when asked to clean up worktrees or check branch hygiene. Report-only — never deletes without explicit confirmation, and never touches worktrees outside .claude/worktrees/.
+license: Apache-2.0
+compatibility: opencode, claude, grok, gemini, copilot, cursor, windsurf
+paths: .claude/worktrees/**
+metadata:
+  audience: maintainers
+  frameworks: grails
+---
 <!--
 SPDX-License-Identifier: Apache-2.0
 
@@ -13,16 +23,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
----
-name: worktree-hygiene
-description: Reports stale or orphaned git worktrees under .claude/worktrees/ (the agent-managed worktree directory) by checking each worktree's branch against its GitHub PR state and merge-into-default-branch status, not commit age. Use at the start of a session in this repo when .claude/worktrees/ has accumulated entries, or when asked to clean up worktrees or check branch hygiene. Report-only — never deletes without explicit confirmation, and never touches worktrees outside .claude/worktrees/.
-license: Apache-2.0
-compatibility: opencode, claude, grok, gemini, copilot, cursor, windsurf
-paths: .claude/worktrees/**
-metadata:
-  audience: maintainers
-  frameworks: grails
----
 
 ## What I Do
 

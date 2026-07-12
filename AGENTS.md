@@ -64,9 +64,9 @@ export GRADLE_OPTS="-Xms2G -Xmx5G"
 > for f in .agents/skills/*/SKILL.md; do awk -F': *' '/^description:/{d=$2} /^paths:/{p=$2} END{print FILENAME": "d (p?" [paths: "p"]":"")}' "$f"; done
 > ```
 >
-> Some skills also declare an optional front-matter `paths:` glob (e.g. `paths: grails-data-hibernate7/**`) scoping them to a specific module — if the file(s) you're touching match a skill's `paths`, load it regardless of whether you'd have matched it on description alone. `paths` is a stronger, structural signal than prose; not every skill needs one (repo-wide skills like `grails-developer`/`groovy-developer` intentionally have none).
+> Some skills also declare an optional front-matter `paths:` glob (e.g. `paths: grails-data-hibernate7/**`) scoping them to a specific module — if the file(s) you're touching match a skill's `paths`, load it regardless of whether you'd have matched it on description alone. `paths` is a stronger, structural signal than prose; not every skill needs one (repo-wide skills like `groovy-developer`/`java-developer` intentionally have none). Skills may also declare an optional `compatibility:` field listing which agent tools they've been verified against — its absence doesn't mean a skill is unusable, just unverified.
 >
-> The directory is the source of truth, not a list in this file — a hardcoded skill index here would drift the moment a skill is added, renamed, or removed. Each `SKILL.md`'s front-matter (`name`, `description`, `paths`, `compatibility`) is what makes it discoverable to any agent, per the Agent Skills Specification.
+> The directory is the source of truth, not a list in this file — a hardcoded skill index here would drift the moment a skill is added, renamed, or removed. Each `SKILL.md`'s front-matter (`name`, `description`, and optionally `paths`, `compatibility`) is what makes it discoverable to any agent, per the Agent Skills Specification.
 
 ## Technology Stack
 

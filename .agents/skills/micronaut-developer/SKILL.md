@@ -1,3 +1,13 @@
+---
+name: micronaut-developer
+description: Guide for working in grails-forge (grails-forge-core, grails-forge-api, grails-forge-cli, grails-forge-web-netty) — a Micronaut application, not a Grails one. Covers Micronaut DI/bean patterns, HTTP controllers, two distinct Spock testing patterns (MicronautTest for HTTP controllers, ApplicationContextSpec for Feature classes), Picocli CLI commands, Rocker templating, and the Feature extension-point system. Use this instead of grails-developer/hibernate-developer when changing code under grails-forge/.
+license: Apache-2.0
+compatibility: opencode, claude, grok, gemini, copilot, cursor, windsurf
+paths: grails-forge/**
+metadata:
+  audience: maintainers
+  frameworks: micronaut
+---
 <!--
 SPDX-License-Identifier: Apache-2.0
 
@@ -13,16 +23,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
----
-name: micronaut-developer
-description: Guide for working in grails-forge (grails-forge-core, grails-forge-api, grails-forge-cli, grails-forge-web-netty) — a Micronaut application, not a Grails one. Covers Micronaut DI/bean patterns, HTTP controllers, two distinct Spock testing patterns (MicronautTest for HTTP controllers, ApplicationContextSpec for Feature classes), Picocli CLI commands, Rocker templating, and the Feature extension-point system. Use this instead of grails-developer/hibernate-developer when changing code under grails-forge/.
-license: Apache-2.0
-compatibility: opencode, claude, grok, gemini, copilot, cursor, windsurf
-paths: grails-forge/**
-metadata:
-  audience: maintainers
-  frameworks: micronaut
----
 
 ## What I Do
 
