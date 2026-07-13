@@ -71,6 +71,7 @@ public class CriteriaBuilder<T> extends AbstractCriteriaBuilder implements Build
 
     @Override
     public BuildableCriteria cache(boolean cache) {
+        ensureQueryIsInitialized();
         query.cache(cache);
         return this;
     }
@@ -83,18 +84,21 @@ public class CriteriaBuilder<T> extends AbstractCriteriaBuilder implements Build
 
     @Override
     public BuildableCriteria join(String property) {
+        ensureQueryIsInitialized();
         query.join(property);
         return this;
     }
 
     @Override
     public BuildableCriteria join(String property, JoinType joinType) {
+        ensureQueryIsInitialized();
         query.join(property, joinType);
         return this;
     }
 
     @Override
     public BuildableCriteria select(String property) {
+        ensureQueryIsInitialized();
         query.select(property);
         return this;
     }
