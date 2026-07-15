@@ -19,6 +19,8 @@
 
 package org.grails.plugins.web.controllers
 
+import jakarta.servlet.FilterChain
+
 import org.springframework.boot.autoconfigure.AutoConfigurations
 import org.springframework.boot.test.context.runner.ApplicationContextRunner
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner
@@ -146,5 +148,25 @@ class GrailsSecurityHeadersAutoConfigurationSpec extends Specification {
         response.getHeader('X-XSS-Protection') == null
         response.getHeader('X-Frame-Options') == 'DENY'
         response.getHeader('Referrer-Policy') == 'strict-origin-when-cross-origin'
+    }
+
+    void 'filter writes security headers before downstream commits the response'() {
+        given:
+        def request = new MockHttpServletRequest('GET', '/')
+        def response = new MockHttpServletResponse()
+        FilterChain downstream = { downstreamRequest, downstreamResponse ->
+            downstreamResponse.sendRedirect('/target')
+        } as FilterChain
+
+        when:
+        new GrailsSecurityHeadersFilter(new GrailsSecurityHeadersProperties()).doFilter(request, response, downstream)
+
+        then:
+        response.committed
+        response.redirectedUrl == '/target'
+        response.getHeader('X-Content-Type-Options') == 'nosniff'
+        response.getHeader('X-Frame-Options') == 'SAMEORIGIN'
+        response.getHeader('Referrer-Policy') == 'strict-origin-when-cross-origin'
+        response.getHeader('X-XSS-Protection') == '0'
     }
 }
