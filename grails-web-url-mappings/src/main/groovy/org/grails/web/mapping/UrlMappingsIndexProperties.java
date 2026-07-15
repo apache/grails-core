@@ -23,6 +23,9 @@ import java.io.InputStream;
 import java.util.Collections;
 import java.util.Properties;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 /**
  * Descriptor for a future build-time URL mappings index.
  *
@@ -32,6 +35,7 @@ public final class UrlMappingsIndexProperties {
 
     public static final String LOCATION = "META-INF/grails/url-mappings-index.properties";
 
+    private static final Log LOG = LogFactory.getLog(UrlMappingsIndexProperties.class);
     private static final UrlMappingsIndexProperties EMPTY = new UrlMappingsIndexProperties(false, new Properties());
 
     private final boolean present;
@@ -43,21 +47,27 @@ public final class UrlMappingsIndexProperties {
     }
 
     public static UrlMappingsIndexProperties load(ClassLoader classLoader) {
-        ClassLoader loader = classLoader == null ? Thread.currentThread().getContextClassLoader() : classLoader;
-        if (loader == null) {
-            return EMPTY;
-        }
-        try (InputStream inputStream = loader.getResourceAsStream(LOCATION)) {
-            if (inputStream == null) {
+        ClassLoader threadContextClassLoader = Thread.currentThread().getContextClassLoader();
+        for (ClassLoader loader : new ClassLoader[] {threadContextClassLoader, classLoader}) {
+            if (loader == null) {
+                continue;
+            }
+            try (InputStream inputStream = loader.getResourceAsStream(LOCATION)) {
+                if (inputStream == null) {
+                    continue;
+                }
+                Properties properties = new Properties();
+                properties.load(inputStream);
+                return new UrlMappingsIndexProperties(true, properties);
+            }
+            catch (IOException | IllegalArgumentException e) {
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Unable to load " + LOCATION + "; ignoring descriptor", e);
+                }
                 return EMPTY;
             }
-            Properties properties = new Properties();
-            properties.load(inputStream);
-            return new UrlMappingsIndexProperties(true, properties);
         }
-        catch (IOException e) {
-            throw new IllegalStateException("Unable to load " + LOCATION, e);
-        }
+        return EMPTY;
     }
 
     public boolean isPresent() {

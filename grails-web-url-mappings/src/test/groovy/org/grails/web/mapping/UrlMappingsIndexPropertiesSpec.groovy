@@ -18,6 +18,9 @@
  */
 package org.grails.web.mapping
 
+import java.io.ByteArrayInputStream
+import java.io.InputStream
+
 import grails.web.mapping.UrlMapping
 import spock.lang.Specification
 
@@ -31,5 +34,42 @@ class UrlMappingsIndexPropertiesSpec extends Specification {
         !holder.precomputedIndexProperties.present
         holder.urlMappings.length == 0
         holder.matchAll('/books').length == 0
+    }
+
+    void 'thread context classloader takes precedence for build-time URL mapping index'() {
+        given:
+        Thread currentThread = Thread.currentThread()
+        ClassLoader originalClassLoader = currentThread.contextClassLoader
+        ClassLoader threadContextClassLoader = classLoaderWithProperties('source=thread-context')
+        ClassLoader fallbackClassLoader = classLoaderWithProperties('source=fallback')
+        currentThread.contextClassLoader = threadContextClassLoader
+
+        when:
+        UrlMappingsIndexProperties indexProperties = UrlMappingsIndexProperties.load(fallbackClassLoader)
+
+        then:
+        indexProperties.present
+        indexProperties.getProperty('source') == 'thread-context'
+
+        cleanup:
+        currentThread.contextClassLoader = originalClassLoader
+    }
+
+    void 'malformed build-time URL mapping index keeps runtime fallback active'() {
+        when:
+        UrlMappingsIndexProperties indexProperties = UrlMappingsIndexProperties.load(classLoaderWithProperties('source=\\uZZZZ'))
+
+        then:
+        !indexProperties.present
+        indexProperties.asProperties().isEmpty()
+    }
+
+    private static ClassLoader classLoaderWithProperties(String properties) {
+        new ClassLoader() {
+            @Override
+            InputStream getResourceAsStream(String name) {
+                name == UrlMappingsIndexProperties.LOCATION ? new ByteArrayInputStream(properties.bytes) : null
+            }
+        }
     }
 }
