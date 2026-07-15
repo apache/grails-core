@@ -19,6 +19,7 @@
 
 package org.grails.plugins.web.controllers
 
+import jakarta.servlet.DispatcherType
 import jakarta.servlet.FilterChain
 
 import org.springframework.boot.autoconfigure.AutoConfigurations
@@ -106,6 +107,23 @@ class GrailsSecurityHeadersAutoConfigurationSpec extends Specification {
         response.getHeader('X-XSS-Protection') == '0'
         response.getHeader('Strict-Transport-Security') == null
         response.getHeader('Content-Security-Policy') == null
+    }
+
+    void 'default filter writes browser hardening headers for error dispatches'() {
+        given:
+        def request = new MockHttpServletRequest('GET', '/')
+        request.dispatcherType = DispatcherType.ERROR
+        def response = new MockHttpServletResponse()
+        def filter = new GrailsSecurityHeadersFilter(new GrailsSecurityHeadersProperties())
+
+        when:
+        filter.doFilter(request, response, new MockFilterChain())
+
+        then:
+        response.getHeader('X-Content-Type-Options') == 'nosniff'
+        response.getHeader('X-Frame-Options') == 'SAMEORIGIN'
+        response.getHeader('Referrer-Policy') == 'strict-origin-when-cross-origin'
+        response.getHeader('X-XSS-Protection') == '0'
     }
 
     void 'filter applies configured overrides and optional headers'() {

@@ -37,6 +37,11 @@ public class GrailsSecurityHeadersFilter extends OncePerRequestFilter {
     }
 
     @Override
+    protected boolean shouldNotFilterErrorDispatch() {
+        return false;
+    }
+
+    @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         applyHeader(response, "X-Content-Type-Options", properties.getContentTypeOptions());
