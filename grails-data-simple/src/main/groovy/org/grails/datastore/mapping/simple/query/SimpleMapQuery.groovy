@@ -29,6 +29,7 @@ import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.Custom
+import org.grails.datastore.mapping.model.types.Embedded
 import org.grails.datastore.mapping.model.types.ToOne
 import org.grails.datastore.mapping.query.AssociationQuery
 import org.grails.datastore.mapping.query.Query
@@ -294,7 +295,13 @@ class SimpleMapQuery extends Query {
     protected queryAssociation(allEntities, Association association, Closure callable) {
         allEntities?.findAll {
             def propertyName = association.name
-            if (association instanceof ToOne) {
+            if (association instanceof Embedded) {
+                def embedded = it.value[propertyName]
+                if (embedded != null) {
+                    callable.call(embedded)
+                }
+            }
+            else if (association instanceof ToOne) {
 
                 def id = it.value[propertyName]
 
