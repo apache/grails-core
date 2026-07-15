@@ -29,7 +29,7 @@ import org.apache.commons.logging.LogFactory;
 /**
  * Descriptor for a future build-time URL mappings index.
  *
- * @since 8.1
+ * @since 8.0.x
  */
 public final class UrlMappingsIndexProperties {
 
@@ -47,25 +47,27 @@ public final class UrlMappingsIndexProperties {
     }
 
     public static UrlMappingsIndexProperties load(ClassLoader classLoader) {
-        ClassLoader threadContextClassLoader = Thread.currentThread().getContextClassLoader();
-        for (ClassLoader loader : new ClassLoader[] {threadContextClassLoader, classLoader}) {
-            if (loader == null) {
-                continue;
-            }
-            try (InputStream inputStream = loader.getResourceAsStream(LOCATION)) {
-                if (inputStream == null) {
+        try {
+            ClassLoader threadContextClassLoader = Thread.currentThread().getContextClassLoader();
+            for (ClassLoader loader : new ClassLoader[] {threadContextClassLoader, classLoader}) {
+                if (loader == null) {
                     continue;
                 }
-                Properties properties = new Properties();
-                properties.load(inputStream);
-                return new UrlMappingsIndexProperties(true, properties);
-            }
-            catch (IOException | IllegalArgumentException e) {
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("Unable to load " + LOCATION + "; ignoring descriptor", e);
+                try (InputStream inputStream = loader.getResourceAsStream(LOCATION)) {
+                    if (inputStream == null) {
+                        continue;
+                    }
+                    Properties properties = new Properties();
+                    properties.load(inputStream);
+                    return new UrlMappingsIndexProperties(true, properties);
                 }
-                return EMPTY;
             }
+        }
+        catch (IOException | RuntimeException e) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Unable to load " + LOCATION + "; ignoring descriptor", e);
+            }
+            return EMPTY;
         }
         return EMPTY;
     }

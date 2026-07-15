@@ -64,6 +64,29 @@ class UrlMappingsIndexPropertiesSpec extends Specification {
         indexProperties.asProperties().isEmpty()
     }
 
+    void 'unreadable build-time URL mapping index keeps runtime fallback active'() {
+        when:
+        UrlMappingsIndexProperties indexProperties = UrlMappingsIndexProperties.load(new ClassLoader() {
+            @Override
+            InputStream getResourceAsStream(String name) {
+                throw new SecurityException('Resource access denied')
+            }
+        })
+
+        then:
+        !indexProperties.present
+        indexProperties.asProperties().isEmpty()
+    }
+
+    void 'valid build-time URL mapping index is present'() {
+        when:
+        UrlMappingsIndexProperties indexProperties = UrlMappingsIndexProperties.load(classLoaderWithProperties('source=descriptor'))
+
+        then:
+        indexProperties.present
+        indexProperties.getProperty('source') == 'descriptor'
+    }
+
     private static ClassLoader classLoaderWithProperties(String properties) {
         new ClassLoader() {
             @Override
