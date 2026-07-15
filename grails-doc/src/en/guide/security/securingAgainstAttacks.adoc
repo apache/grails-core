@@ -30,15 +30,6 @@ def vulnerable() {
 }
 ----
 
-or the analogous call using a GString:
-
-[source,groovy]
-----
-def vulnerable() {
-    def books = Book.find("from Book as b where b.title ='${params.title}'")
-}
-----
-
 Do *not* do this. Use named parameters instead to pass values separately from the HQL text:
 
 [source,groovy]
@@ -59,8 +50,7 @@ def safe() {
 }
 ----
 
-GORM binds interpolated values in `GString` HQL as query parameters, but Grails logs a warning when a `GString` query is passed to methods such as `find`, `findAll`, `executeQuery`, or `executeUpdate`.
-Prefer explicit named parameters in application code because they make the safe boundary between query structure and user-controlled values clear.
+A `GString` HQL query is not equivalent to the string concatenation above. When using Hibernate 7, GORM binds the interpolated values of an unquoted `GString` query as query parameters rather than splicing them into the HQL text, so a query such as `Book.find("from Book as b where b.title = ${params.title}")` is parameterized rather than injectable. To encourage explicit parameterization, GORM logs a warning when a `GString` query is passed to methods such as `find`, `findAll`, `executeQuery`, or `executeUpdate` on Hibernate 7. Prefer explicit named parameters in application code because they make the safe boundary between query structure and user-controlled values clear, and do not wrap an interpolated value in quotes, which produces misleading HQL.
 
 
 ==== Phishing

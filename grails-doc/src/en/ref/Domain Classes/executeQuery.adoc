@@ -116,5 +116,5 @@ Prefer named parameters for values that come from users or external systems:
 Book.executeQuery("from Book b where b.title = :title", [title: params.title])
 ----
 
-GORM binds interpolated values in `GString` HQL as query parameters, but Grails logs a warning for `GString` queries so applications can migrate toward explicit named parameters.
+When using Hibernate 7, GORM binds interpolated values in a `GString` HQL query as query parameters, and GORM logs a warning for `GString` queries so applications can migrate toward explicit named parameters.
 Do not concatenate or interpolate untrusted values into a plain `String` query.
