@@ -24,17 +24,43 @@ import groovy.lang.Closure;
 
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
+import org.springframework.util.Assert;
 
 /**
- * Experimental adapter seam for the BeanBuilder to Spring BeanRegistrar transition.
+ * GrailsBeanRegistryAdapter backed by the existing BeanBuilder implementation.
  *
- * @since 8.1
+ * @since 8.0.x
  */
-public interface BeanRegistryAdapter {
+public class BeanBuilderGrailsBeanRegistryAdapter implements GrailsBeanRegistryAdapter {
 
-    BeanRegistryAdapter beans(Closure<?> closure);
+    private final BeanBuilder beanBuilder;
 
-    Map<String, BeanDefinition> getBeanDefinitions();
+    public BeanBuilderGrailsBeanRegistryAdapter() {
+        this(new BeanBuilder());
+    }
 
-    void registerBeans(BeanDefinitionRegistry registry);
+    public BeanBuilderGrailsBeanRegistryAdapter(BeanBuilder beanBuilder) {
+        Assert.notNull(beanBuilder, "The argument [beanBuilder] cannot be null");
+        this.beanBuilder = beanBuilder;
+    }
+
+    public BeanBuilder getBeanBuilder() {
+        return beanBuilder;
+    }
+
+    @Override
+    public GrailsBeanRegistryAdapter beans(Closure<?> closure) {
+        beanBuilder.beans(closure);
+        return this;
+    }
+
+    @Override
+    public Map<String, BeanDefinition> getBeanDefinitions() {
+        return beanBuilder.getBeanDefinitions();
+    }
+
+    @Override
+    public void registerBeans(BeanDefinitionRegistry registry) {
+        beanBuilder.registerBeans(registry);
+    }
 }

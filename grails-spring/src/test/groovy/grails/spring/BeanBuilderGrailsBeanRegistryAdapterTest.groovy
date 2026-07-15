@@ -23,13 +23,14 @@ import org.junit.jupiter.api.Test
 import org.springframework.context.support.GenericApplicationContext
 
 import static org.junit.jupiter.api.Assertions.assertEquals
+import static org.junit.jupiter.api.Assertions.assertThrows
 import static org.junit.jupiter.api.Assertions.assertTrue
 
-class BeanBuilderBeanRegistryAdapterTest {
+class BeanBuilderGrailsBeanRegistryAdapterTest {
 
     @Test
     void adapterRegistersBeansThroughExistingBeanBuilderPath() {
-        BeanRegistryAdapter adapter = new BeanBuilderBeanRegistryAdapter()
+        GrailsBeanRegistryAdapter adapter = new BeanBuilderGrailsBeanRegistryAdapter()
         GenericApplicationContext applicationContext = new GenericApplicationContext()
         try {
             adapter.beans {
@@ -43,6 +44,13 @@ class BeanBuilderBeanRegistryAdapterTest {
         }
         finally {
             applicationContext.close()
+        }
+    }
+
+    @Test
+    void adapterRejectsNullBeanBuilder() {
+        assertThrows(IllegalArgumentException) {
+            new BeanBuilderGrailsBeanRegistryAdapter(null)
         }
     }
 }

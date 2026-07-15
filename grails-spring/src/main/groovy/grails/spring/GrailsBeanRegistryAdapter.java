@@ -26,39 +26,15 @@ import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 
 /**
- * BeanRegistryAdapter backed by the existing BeanBuilder implementation.
+ * Experimental adapter seam for the BeanBuilder to Spring BeanRegistrar transition.
  *
- * @since 8.1
+ * @since 8.0.x
  */
-public class BeanBuilderBeanRegistryAdapter implements BeanRegistryAdapter {
+public interface GrailsBeanRegistryAdapter {
 
-    private final BeanBuilder beanBuilder;
+    GrailsBeanRegistryAdapter beans(Closure<?> closure);
 
-    public BeanBuilderBeanRegistryAdapter() {
-        this(new BeanBuilder());
-    }
+    Map<String, BeanDefinition> getBeanDefinitions();
 
-    public BeanBuilderBeanRegistryAdapter(BeanBuilder beanBuilder) {
-        this.beanBuilder = beanBuilder;
-    }
-
-    public BeanBuilder getBeanBuilder() {
-        return beanBuilder;
-    }
-
-    @Override
-    public BeanRegistryAdapter beans(Closure<?> closure) {
-        beanBuilder.beans(closure);
-        return this;
-    }
-
-    @Override
-    public Map<String, BeanDefinition> getBeanDefinitions() {
-        return beanBuilder.getBeanDefinitions();
-    }
-
-    @Override
-    public void registerBeans(BeanDefinitionRegistry registry) {
-        beanBuilder.registerBeans(registry);
-    }
+    void registerBeans(BeanDefinitionRegistry registry);
 }
