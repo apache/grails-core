@@ -140,13 +140,22 @@ grails {
 }
 ----
 
-All three options are disabled by default and independent, or `compileStatic { all = true }` can be used as a shortcut to enable all of them. Any class that declares its own `@CompileDynamic` (or `@GrailsCompileStatic`/`@CompileStatic`/`@GrailsTypeChecked`/`@TypeChecked`) annotation keeps that setting, so the opt-in never overrides an explicit per-class choice. Tag libraries that still declare tags as closure fields (the deprecated form) are skipped automatically by the `tagLibs` opt-in — left dynamically compiled with a build warning — so define tags as methods to opt them in. See the xref:staticTypeCheckingAndCompilation/grailsCompileStatic[GrailsCompileStatic] section for details.
+All three options are disabled by default and independent, or `compileStatic { all = true }` can be used as a shortcut to enable all of them. Any class that declares its own `@CompileDynamic` (or `@GrailsCompileStatic`/`@CompileStatic`/`@GrailsTypeChecked`/`@TypeChecked`) annotation keeps that setting, so the opt-in never overrides an explicit per-class choice. Tag libraries that still declare tags as closure fields (the deprecated form) are skipped automatically by the `tagLibs` opt-in and left dynamically compiled with a build warning, so define tags as methods to opt them in. See the xref:staticTypeCheckingAndCompilation/grailsCompileStatic[GrailsCompileStatic] section for details.
 
 ==== Test HTTP Client Form Requests
 
 Integration tests that implement `HttpClientSupport` can now use `httpPostForm(...)` to send `application/x-www-form-urlencoded`
 request bodies. The helper URL-encodes form fields using UTF-8, and repeated values in a `Collection` or array are encoded as
 repeated keys in insertion order.
+
+==== Latency Testing Support
+
+The new `grails-testing-support-latency` module injects artificial latency into the application under test, so that
+requests randomly take longer. Slower responses widen the window in which timing bugs occur, turning intermittently
+flaky functional tests — assertions that race a navigation, missing waits, ordering assumptions — into deterministic
+failures. The module is inert until `grails.testing.latency.enabled` is set to `true`, and the delay range, the
+fraction of requests affected, and the url patterns are all configurable. See the
+xref:testing/functionalTesting[Functional Testing] section for details.
 
 ==== GORM for MongoDB: TTL, Text, and Reconciled Indexes
 
