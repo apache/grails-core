@@ -117,7 +117,7 @@ dependencies {
     testImplementation 'org.apache.tomcat:tomcat-jdbc'
     testImplementation 'org.spockframework:spock-core'
 
-    testRuntimeOnly 'org.slf4j:slf4j-simple'
+    testImplementation 'ch.qos.logback:logback-classic'
     testRuntimeOnly 'org.slf4j:jcl-over-slf4j'
     testRuntimeOnly 'org.springframework:spring-aop'
     testRuntimeOnly 'org.mockito:mockito-inline'

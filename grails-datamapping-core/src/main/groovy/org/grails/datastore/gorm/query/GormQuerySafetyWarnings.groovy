@@ -28,6 +28,7 @@ import org.slf4j.Logger
 final class GormQuerySafetyWarnings {
 
     private static final String GSTRING_VALUE_PLACEHOLDER = '${...}'
+    private static final int MAX_WARNED_QUERY_SHAPES = 1000
     private static final Set<String> WARNED_GSTRING_QUERY_SHAPES = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>())
 
     private GormQuerySafetyWarnings() {
@@ -38,17 +39,22 @@ final class GormQuerySafetyWarnings {
             return false
         }
 
-        String queryShape = buildQueryShape((GString) query)
         if (!logger.warnEnabled) {
             return false
         }
 
+        String queryShape = buildQueryShape((GString) query)
         String warningKey = "${operation}\n${queryShape}"
-        if (!WARNED_GSTRING_QUERY_SHAPES.add(warningKey)) {
-            return false
+        synchronized (WARNED_GSTRING_QUERY_SHAPES) {
+            if (WARNED_GSTRING_QUERY_SHAPES.size() >= MAX_WARNED_QUERY_SHAPES) {
+                WARNED_GSTRING_QUERY_SHAPES.clear()
+            }
+            if (!WARNED_GSTRING_QUERY_SHAPES.add(warningKey)) {
+                return false
+            }
         }
 
-        logger.warn('GString-interpolated HQL passed to [{}]. GORM binds interpolated values as query parameters, but explicit named parameters are recommended for query safety and readability. Query shape: [{}]', operation, queryShape)
+        logger.warn('GString-interpolated query passed to [{}]. GORM binds interpolated values as query parameters, but explicit named parameters are recommended for query safety and readability. Query shape: [{}]', operation, queryShape)
         return true
     }
 

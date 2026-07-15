@@ -76,4 +76,25 @@ class GormQuerySafetyWarningsSpec extends Specification {
         secondWarning
         1 * logger.warn(_ as String, 'Book.executeQuery', 'from Book b where b.title <> ${...}')
     }
+
+    void 'resets the warned-shape cache after exceeding the bound so a warning can recur'() {
+        given:
+        Logger logger = Mock() {
+            isWarnEnabled() >> true
+        }
+        String title = 'boundary'
+        GString repeatedQuery = "from Book b where b.title = ${title}"
+
+        when: 'a shape is warned, then more than the cache bound of distinct shapes are seen'
+        boolean firstWarning = GormQuerySafetyWarnings.warnIfGStringQuery(logger, repeatedQuery, 'Book.boundary')
+        (0..1000).each { int i ->
+            GString unique = "from Book b where b.rank = ${i} and b.tag = ${title}"
+            GormQuerySafetyWarnings.warnIfGStringQuery(logger, unique, "Book.fill${i}")
+        }
+        boolean warnsAgain = GormQuerySafetyWarnings.warnIfGStringQuery(logger, repeatedQuery, 'Book.boundary')
+
+        then: 'the original shape is evicted by the bounded reset and warns again instead of being suppressed forever'
+        firstWarning
+        warnsAgain
+    }
 }

@@ -19,11 +19,16 @@
 
 package org.grails.orm.hibernate
 
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.annotation.Entity
 import grails.gorm.tests.entities.Club
 import org.hibernate.jpa.AvailableHints
+import org.slf4j.LoggerFactory
 
 class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
 
@@ -335,6 +340,29 @@ class HibernateGormStaticApiSpec extends HibernateGormDatastoreSpec {
 
         then: "the value is bound as a parameter rather than interpolated, so the injection matches no rows"
         results.isEmpty()
+    }
+
+    void "Test GString query warning is emitted once without interpolated values"() {
+        given:
+        Logger logger = (Logger) LoggerFactory.getLogger(HibernateGormStaticApi)
+        ListAppender<ILoggingEvent> appender = new ListAppender<>()
+        appender.start()
+        logger.addAppender(appender)
+        String secret = 'do-not-log-this-secret'
+
+        when:
+        HibernateGormStaticApiEntity.executeQuery("from HibernateGormStaticApiEntity where name = ${secret} and id is not null")
+        HibernateGormStaticApiEntity.executeQuery("from HibernateGormStaticApiEntity where name = ${secret} and id is not null")
+
+        then:
+        List<ILoggingEvent> warnings = appender.list.findAll { it.level == Level.WARN }
+        warnings.size() == 1
+        warnings[0].formattedMessage.contains('GString-interpolated query')
+        !warnings[0].formattedMessage.contains(secret)
+
+        cleanup:
+        logger.detachAppender(appender)
+        appender.stop()
     }
 
 
