@@ -19,8 +19,9 @@ under the License.
 
 === BeanBuilder to BeanRegistry strategy
 
-Grails 8.0 introduces an experimental `grails.spring.GrailsBeanRegistryAdapter` seam as the first step toward the Spring 7 `BeanRegistrar` direction. See PR #15824 for related work.
+Grails 8.0 introduces an experimental `grails.spring.GrailsBeanRegistryAdapter` seam that provides a stable boundary over the remaining `BeanBuilder` DSL registration paths, as a first step toward aligning them with Spring 7's programmatic bean-registration APIs. See PR #15824 for related work.
 The initial `BeanBuilderGrailsBeanRegistryAdapter` delegates to the existing `BeanBuilder`, so `resources.groovy`, plugin `doWithSpring`, and existing BeanBuilder APIs continue to work unchanged.
 
-The intended migration path is to move call sites behind the adapter first, then add a Spring 7 BeanRegistrar-backed implementation once the framework integration points are ready.
+The intended migration path is to move call sites behind the adapter first, then add an implementation backed by Spring's `BeanRegistry` registration APIs once the framework integration points are ready.
 BeanBuilder is not removed or behaviorally changed by this seed.
+`BeanRegistrar` itself is a Spring registration callback rather than a registry backend, and Grails 8 already integrates it separately; this seam is specifically about the BeanBuilder DSL surface.
