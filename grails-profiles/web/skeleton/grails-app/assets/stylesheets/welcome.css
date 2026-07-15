@@ -61,3 +61,71 @@ th.sortable[data-sort-dir="desc"] .sort-hint::before {
 @media (prefers-reduced-motion: reduce) {
     .reload-dot::before { animation: none; }
 }
+
+/* Welcome hero: the classic Grails cups, back as the page's signature.
+   The panel stays charcoal in both themes so the white mark always reads;
+   the warm halo picks up the brand accent from the logo. */
+.welcome-hero {
+    color: #fff;
+    background:
+        radial-gradient(46rem 30rem at 74% 52%, rgba(254, 182, 114, .32), transparent 58%),
+        linear-gradient(135deg, #14161b 0%, #1e222a 58%, #262b35 100%);
+}
+
+[data-bs-theme="dark"] .welcome-hero {
+    border: 1px solid rgba(255, 255, 255, .08);
+}
+
+.welcome-hero-cups {
+    position: absolute;
+    top: 50%;
+    right: 1.75rem;
+    height: 100%;
+    transform: translateY(-50%);
+    color: #fff;
+    opacity: .95;
+    pointer-events: none;
+    filter: drop-shadow(0 .75rem 1.75rem rgba(0, 0, 0, .45));
+}
+
+.welcome-hero-body {
+    max-width: 30rem;
+}
+
+.welcome-hero-note {
+    color: rgba(255, 255, 255, .72);
+}
+
+@media (max-width: 767.98px) {
+    .welcome-hero-cups {
+        right: -30%;
+        opacity: .14;
+        filter: none;
+    }
+    .welcome-hero-body {
+        max-width: none;
+    }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .welcome-hero-cups {
+        animation: welcome-cups-in .7s ease-out both;
+    }
+    .welcome-hero-body {
+        animation: welcome-body-in .55s ease-out both;
+    }
+}
+
+@keyframes welcome-cups-in {
+    from { opacity: 0; transform: translateY(-50%) translateX(1.25rem); }
+    to   { opacity: .95; transform: translateY(-50%) translateX(0); }
+}
+
+@keyframes welcome-body-in {
+    from { opacity: 0; transform: translateY(.4rem); }
+    to   { opacity: 1; transform: none; }
+}
+
+.filter-input {
+    min-width: 12rem;
+}

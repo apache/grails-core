@@ -186,6 +186,12 @@ if [ -s diff.txt ]; then
       java -jar vineflower.jar secondArtifact secondSource > /dev/null 2>&1
       echo "✅ Decompiled ${jar_file}"
 
+      # Annotation member order in class files is not semantically meaningful and Groovy
+      # emits it nondeterministically for annotations copied from precompiled classes
+      # (e.g. @DelegatesTo on trait methods), so canonicalize it before comparing
+      "${SCRIPT_DIR}/normalize_annotations.groovy" "firstSource" "secondSource"
+      echo "✅ Normalized annotation member order for ${jar_file}"
+
       set +e
       DIFF_RESULT=$(diff -r -q "firstSource" "secondSource")
       set -e

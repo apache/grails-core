@@ -70,18 +70,15 @@ dependencies {
     testImplementation 'org.spockframework:spock-core'
 }
 
-tasks.register('copyGspIntoTemplates', Copy) {
-    from(layout.projectDirectory.dir('grails-app/views'))
-    into(layout.projectDirectory.dir('src/main/templates/views'))
-    dependsOn('copyTemplates', 'processResources')
-}
-
-tasks.register('removeGspFromTemplates', Delete) {
-    delete(layout.projectDirectory.dir('src/main/templates/views'))
-}
-
-tasks.named('compileAstJava') {
-    dependsOn('copyGspIntoTemplates')
+// Ship the plugin views as templates (used by the s2ui-override command).
+// 'copyTemplates' is registered by the grails-plugin gradle plugin in afterEvaluate,
+// so it can only be configured from a later afterEvaluate block.
+afterEvaluate {
+    tasks.named('copyTemplates', Copy) {
+        from(layout.projectDirectory.dir('grails-app/views')) {
+            into('views')
+        }
+    }
 }
 
 assets {

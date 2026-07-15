@@ -18,6 +18,7 @@
  */
 package org.apache.grails.core.plugins
 
+import org.springframework.core.env.StandardEnvironment
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -299,6 +300,77 @@ class PluginDiscoverySpec extends Specification {
             PLUGIN_GROOVY_CONFIG == 'plugin.groovy'
             DEFAULT_CONFIG_IGNORE_LIST == ['dataSource', 'hibernate']
         }
+    }
+
+    def 'a plugin class declared in multiple classpath descriptors is registered only once'() {
+        given: 'a plugin class compiled by a Groovy class loader'
+        def gcl = new GroovyClassLoader()
+        gcl.parseClass('''
+class DuplicateDescriptorProbeGrailsPlugin {
+    def version = "1.0.0"
+}
+''')
+
+        and: 'two classpath roots each declaring the same plugin class in META-INF/grails-plugin.xml'
+        def tempDirs = (1..2).collect { index ->
+            def tempDir = File.createTempDir()
+            def metaInfDir = new File(tempDir, 'META-INF').tap { mkdirs() }
+            new File(metaInfDir, 'grails-plugin.xml').text = """<plugin name='descriptor${index}'>
+  <type>DuplicateDescriptorProbeGrailsPlugin</type>
+</plugin>"""
+            tempDir
+        }
+        def classLoader = new URLClassLoader(tempDirs*.toURI()*.toURL() as URL[], gcl)
+
+        and: 'the discovery resolves plugins from the thread context class loader'
+        def originalContextClassLoader = Thread.currentThread().contextClassLoader
+        Thread.currentThread().contextClassLoader = classLoader
+        def discovery = new DefaultPluginDiscovery()
+
+        when:
+        discovery.init(new StandardEnvironment())
+
+        then: 'the plugin is registered under its name'
+        discovery.hasPlugin('duplicateDescriptorProbe')
+
+        and: 'only one registration appears in the load order'
+        discovery.getPluginsInLoadOrder().count { it.name == 'duplicateDescriptorProbe' } == 1
+
+        cleanup:
+        Thread.currentThread().contextClassLoader = originalContextClassLoader
+        tempDirs*.deleteDir()
+    }
+
+    def 'a plugin class supplied more than once is registered only once and skipping is logged at WARN'() {
+        given: 'a discovery bean supplied the same plugin class twice'
+        def gcl = new GroovyClassLoader()
+        def pluginClass = gcl.parseClass('''
+class RepeatedProbeGrailsPlugin {
+    def version = "1.0.0"
+}
+''')
+        def discovery = new DefaultPluginDiscovery(new Class<?>[]{pluginClass, pluginClass})
+        discovery.loadPluginsFromClasspath = false
+
+        and: 'standard error is captured to observe slf4j-simple output'
+        def originalErr = System.err
+        def captured = new ByteArrayOutputStream()
+        System.setErr(new PrintStream(captured, true))
+
+        when:
+        discovery.init(new StandardEnvironment())
+
+        then: 'only one registration appears in the load order'
+        discovery.hasPlugin('repeatedProbe')
+        discovery.getPluginsInLoadOrder().count { it.name == 'repeatedProbe' } == 1
+
+        and: 'the skipped duplicate is reported at WARN'
+        captured.toString().readLines().any {
+            it.contains('WARN') && it.contains('repeatedProbe') && it.contains('already registered')
+        }
+
+        cleanup:
+        System.setErr(originalErr)
     }
 }
 

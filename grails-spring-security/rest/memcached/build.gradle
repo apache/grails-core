@@ -36,9 +36,6 @@ group = 'org.apache.grails'
 ext {
     pomTitle = 'Grails Spring Security REST Plugin'
     pomDescription = 'Grails plugin to implement token-based, RESTful authentication using Spring Security'
-    pomDevelopers = [
-            alvarosanchez: 'Alvaro Sanchez-Mariscal',
-    ]
 }
 
 dependencies {

@@ -21,6 +21,7 @@ package org.grails.plugins.web.rest.render.html
 import groovy.transform.CompileStatic
 
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.validation.BeanPropertyBindingResult
 import org.springframework.validation.Errors
 
@@ -28,6 +29,7 @@ import grails.core.support.proxy.ProxyHandler
 import grails.rest.render.RenderContext
 import grails.rest.render.Renderer
 import grails.util.GrailsNameUtils
+import grails.util.GrailsWebUtil
 import grails.web.mime.MimeType
 
 /**
@@ -47,6 +49,9 @@ class DefaultHtmlRenderer<T> implements Renderer<T> {
 
     String suffix = ''
 
+    @Value('${grails.converters.encoding:UTF-8}')
+    String encoding = GrailsWebUtil.DEFAULT_ENCODING
+
     DefaultHtmlRenderer(Class<T> targetType) {
         this.targetType = targetType
     }
@@ -64,7 +69,12 @@ class DefaultHtmlRenderer<T> implements Renderer<T> {
     void render(Object object, RenderContext context) {
         final mimeType = context.acceptMimeType ?: MimeType.HTML
         if (!mimeType.equals(MimeType.ALL)) {
-            context.setContentType(mimeType.name)
+            // Include the charset like the JSON/XML renderers do: a bare
+            // "text/html" leaves the response charset to the container
+            // (ISO-8859-1 on Tomcat), and view technologies that only apply
+            // their configured content type when none is set yet back off,
+            // corrupting every non-Latin-1 character on the page.
+            context.setContentType(GrailsWebUtil.getContentType(mimeType.name, encoding))
         }
 
         if (context.arguments?.view) {

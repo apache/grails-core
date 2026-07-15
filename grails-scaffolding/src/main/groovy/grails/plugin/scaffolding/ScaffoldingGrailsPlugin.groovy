@@ -19,10 +19,24 @@
 
 package grails.plugin.scaffolding
 
-import grails.plugins.Plugin
-import grails.util.Environment
-import grails.util.Metadata
+import groovy.transform.CompileStatic
 
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
+import org.springframework.core.env.Environment
+
+import grails.plugins.Plugin
+
+/**
+ * Generates scaffolded controllers and views for a Grails application.
+ *
+ * <p>The scaffolding view resolver is contributed by
+ * {@link ScaffoldingViewResolverDefinitionPostProcessor}, registered here
+ * through {@link #beanRegistrar()} — the modern replacement for the deprecated
+ * {@code doWithSpring()} bean DSL, whose absence is also what allows this
+ * descriptor to be statically compiled.</p>
+ */
+@CompileStatic
 class ScaffoldingGrailsPlugin extends Plugin {
 
    // the version or versions of Grails the plugin is designed for
@@ -56,18 +70,10 @@ Plugin that generates scaffolded controllers and views for a Grails application.
     def loadAfter = ['groovyPages']
 
     @Override
-    Closure doWithSpring() {
-        { ->
-            Environment env = Environment.current
-            boolean reloadEnabled = env.isReloadEnabled() || (Metadata.getCurrent().isDevelopmentEnvironmentAvailable() && env == Environment.DEVELOPMENT)
-
-            // Configure a Spring MVC view resolver
-            jspViewResolver(ScaffoldingViewResolver) { bean ->
-                bean.lazyInit = true
-                bean.parent = 'abstractViewResolver'
-                enableReload = reloadEnabled
-                enableNamespaceViewDefaults = config.getProperty('grails.scaffolding.enableNamespaceViewDefaults', Boolean, false)
-            }
+    BeanRegistrar beanRegistrar() {
+        return { BeanRegistry registry, Environment environment ->
+            registry.registerBean('scaffoldingViewResolverDefinitionPostProcessor',
+                    ScaffoldingViewResolverDefinitionPostProcessor)
         }
     }
 }

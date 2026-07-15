@@ -125,6 +125,13 @@ class CompilePlugin implements Plugin<Project> {
                 if (System.getenv('SUPPRESS_DEPRECATION_WARNINGS') == 'true') {
                     it.options.compilerArgs += ['-Xlint:-removal']
                 }
+                // Canonicalize annotation member order for reproducible builds. Annotations copied from
+                // precompiled classes (e.g. @DelegatesTo on trait methods woven into controllers and GORM
+                // entities) have their members ordered by Class.getDeclaredMethods(), which varies between
+                // JVM runs. The GrailsGradlePlugin merges this script with its own configuration script
+                // when both are present.
+                it.groovyOptions.configurationScript =
+                        GradleUtils.findRootGrailsCoreDir(project).file('gradle/groovy-compile-configscript.groovy').asFile
             }
         }
     }
