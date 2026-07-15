@@ -113,12 +113,19 @@ ext {
             'sitemesh.version'              : '2.6.0',
             'scribejava.version'            : '8.3.3',
             'spock.version'                 : '2.4-groovy-5.0',
-            'starter-sitemesh.version'      : '3.3.0-M1',
-            'spring-webmvc-sitemesh.version': '3.3.0-M1',
+            'starter-sitemesh.version'      : '3.3.0-M3',
+            'spring-webmvc-sitemesh.version': '3.3.0-M3',
             // Spring Boot 4 no longer manages spring-retry; pin it here so the
             // grails-shell-cli SpringRetryCompilerAutoConfiguration's unversioned
             // reference resolves and consumer apps using @Retryable get a known version.
             'spring-retry.version'          : '2.0.11',
+            // Undertow is no longer managed by spring-boot-dependencies: Spring Boot 4
+            // removed its Undertow support before GA. Servlet 6.1 support ships as
+            // undertow-core 2.4.x plus the io.undertow.ee servlet/websockets artifacts,
+            // consumed by the vendored grails-undertow-spring-boot module.
+            'undertow.version'              : '2.4.2.Final',
+            'undertow-servlet.version'      : '2.0.1.Final',
+            'undertow-websockets.version'   : '2.0.1.Final',
     ]
 
     // Note: the name of the dependency must be the prefix of the property name so properties in the pom are resolved correctly
@@ -206,6 +213,10 @@ ext {
             'spring-retry'             : "org.springframework.retry:spring-retry:${bomDependencyVersions['spring-retry.version']}",
             'starter-sitemesh'         : "org.sitemesh:spring-boot-starter-sitemesh:${bomDependencyVersions['starter-sitemesh.version']}",
             'spring-webmvc-sitemesh'   : "org.sitemesh:spring-webmvc-sitemesh:${bomDependencyVersions['spring-webmvc-sitemesh.version']}",
+            // Not managed by spring-boot-dependencies - see undertow.version
+            'undertow-core'            : "io.undertow:undertow-core:${bomDependencyVersions['undertow.version']}",
+            'undertow-servlet'         : "io.undertow.ee:undertow-servlet:${bomDependencyVersions['undertow-servlet.version']}",
+            'undertow-websockets'      : "io.undertow.ee:undertow-websockets:${bomDependencyVersions['undertow-websockets.version']}",
     ]
 
     // Because pom exclusions aren't properly supported by gradle, we can't inherit the grails-gradle-bom

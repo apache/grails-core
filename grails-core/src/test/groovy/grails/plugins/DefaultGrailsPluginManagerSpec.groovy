@@ -18,10 +18,14 @@
  */
 package grails.plugins
 
+import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
+import org.apache.grails.core.plugins.DefaultPluginDiscovery
 import org.apache.grails.core.plugins.PluginInfo
 import org.apache.grails.core.plugins.PluginDiscovery
 import org.apache.grails.core.plugins.PluginUtils
+import org.springframework.context.support.GenericApplicationContext
+import org.springframework.core.env.StandardEnvironment
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -104,6 +108,55 @@ class DefaultGrailsPluginManagerSpec extends Specification {
         "7.0.5-M1"       | "7.0.3 > *"                || true
         "7.0.0-M1"       | "7.0.0-M1"                 || true
         "7.0.0-M2"       | "7.0.0-M1"                 || false
+    }
+
+    def "per-plugin loaded messages are DEBUG and a single INFO summary reports the load order"() {
+        given: 'a discovery bean with two plugins registered in reverse of their load order'
+        def gcl = new GroovyClassLoader()
+        def alphaClass = gcl.parseClass('''
+class AlphaProbeGrailsPlugin {
+    def version = "1.0.0"
+}
+''')
+        def betaClass = gcl.parseClass('''
+class BetaProbeGrailsPlugin {
+    def version = "2.0.0"
+    def loadAfter = ['alphaProbe']
+}
+''')
+        def application = new DefaultGrailsApplication()
+        application.mainContext = new GenericApplicationContext()
+        def discovery = new DefaultPluginDiscovery(new Class<?>[]{betaClass, alphaClass})
+        discovery.loadPluginsFromClasspath = false
+
+        and: 'standard error is captured to observe slf4j-simple output'
+        def originalErr = System.err
+        def captured = new ByteArrayOutputStream()
+        System.setErr(new PrintStream(captured, true))
+
+        when:
+        discovery.init(new StandardEnvironment())
+        def manager = new DefaultGrailsPluginManager(application, discovery)
+        manager.loadPlugins()
+
+        then: 'both plugins are loaded'
+        manager.getGrailsPlugin('alphaProbe') != null
+        manager.getGrailsPlugin('betaProbe') != null
+
+        and: 'the per-plugin loaded-successfully messages are not emitted at INFO'
+        captured.toString().readLines()
+                .findAll { it.contains('loaded successfully') }
+                .every { !it.contains('INFO') }
+
+        and: 'a single INFO summary line reports the plugins in load order'
+        def summaryLines = captured.toString().readLines()
+                .findAll { it.contains('Grails plugins in load order') }
+        summaryLines.size() == 1
+        summaryLines[0].contains('INFO')
+        summaryLines[0].contains('Loaded 2 Grails plugins in load order: [alphaProbe (1.0.0), betaProbe (2.0.0)]')
+
+        cleanup:
+        System.setErr(originalErr)
     }
 
     PluginInfo stubPluginWithGrailsVersion(String grailsVersion) {

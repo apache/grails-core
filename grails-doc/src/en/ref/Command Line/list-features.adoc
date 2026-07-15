@@ -99,7 +99,7 @@ Available Features
   Server
   spring-boot-starter-jetty           spring-boot-starter-jetty
   spring-boot-starter-tomcat (+)      spring-boot-starter-tomcat
-  spring-boot-starter-undertow        spring-boot-starter-undertow
+  grails-undertow                     grails-undertow
 
   Validation
   hibernate-validator                 Adds support for the Hibernate Validator

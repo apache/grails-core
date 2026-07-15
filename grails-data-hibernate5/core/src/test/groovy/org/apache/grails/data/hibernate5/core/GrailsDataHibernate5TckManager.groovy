@@ -72,7 +72,6 @@ class GrailsDataHibernate5TckManager extends GrailsDataTckManager {
         }
         boolean isTransactional = true
 
-        System.setProperty('hibernate5.gorm.suite', "true")
         grailsApplication = new DefaultGrailsApplication(domainClasses, new GroovyClassLoader(GrailsDataHibernate5TckManager.getClassLoader()))
         grailsApplication.config.putAll(config)
 

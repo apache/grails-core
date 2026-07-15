@@ -189,7 +189,7 @@ if [ -s diff.txt ]; then
       # Annotation member order in class files is not semantically meaningful and Groovy
       # emits it nondeterministically for annotations copied from precompiled classes
       # (e.g. @DelegatesTo on trait methods), so canonicalize it before comparing
-      "${SCRIPT_DIR}/normalize-annotations.groovy" "firstSource" "secondSource"
+      "${SCRIPT_DIR}/normalize_annotations.groovy" "firstSource" "secondSource"
       echo "✅ Normalized annotation member order for ${jar_file}"
 
       set +e

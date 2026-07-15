@@ -359,7 +359,9 @@ grails:
                 format: simple
 ----
 
-If you need to restore the legacy behavior temporarily, the deprecated marshallers remain available but will be removed in a future release.
+The legacy `org.grails.web.converters.marshaller.json.EnumMarshaller` and `org.grails.web.converters.marshaller.xml.EnumMarshaller` classes were removed in Grails 8.
+There is no Grails 8 configuration switch that restores the verbose enum-object shape.
+If an external API contract still requires that shape, register a custom object marshaller explicitly.
 
 ==== 9. Jackson 3 is the New Default
 
@@ -517,11 +519,19 @@ If your application or tests reference these classes directly, update the import
 Applications using embedded Tomcat or Jetty should check for any direct class references and update accordingly.
 The `spring-boot-tomcat` module must now be an explicit dependency if you reference Tomcat classes directly.
 
-**Undertow is temporarily unsupported.**
-Undertow has not yet been updated for Servlet 6.1, which Spring Boot 4 requires.
-As a result, Undertow is **not** an available embedded servlet container in Grails 8.
-Applications that previously used `spring-boot-starter-undertow` must switch to Tomcat or Jetty until Undertow ships Servlet 6.1 compatibility.
-The Grails Forge generator no longer offers Undertow as a selectable servlet implementation, and explicitly selecting it (for example, `--servlet=undertow` on the API/CLI) fails fast with `IllegalArgumentException` and a clear error message.
+**Undertow support is now provided by the Grails Undertow plugin.**
+Spring Boot 4 removed its Undertow support (`spring-boot-starter-undertow`) before Undertow shipped Servlet 6.1 compatibility.
+Undertow has since released Servlet 6.1 support, and Grails 8 restores Undertow as an embedded servlet container through the `grails-undertow` plugin, which bundles the Spring Boot Undertow web server support.
+Applications that previously used `spring-boot-starter-undertow` should replace it with:
+
+[source,groovy]
+----
+implementation 'org.apache.grails:grails-undertow'
+----
+
+The existing `server.undertow.*` configuration properties continue to work.
+Note that `server.undertow.max-http-post-size` now defaults to 2MB, matching Undertow's hardened default (CVE-2024-3884, CVE-2024-4027); set it to `-1` to restore the previous unlimited behavior.
+The Grails Forge generator offers Undertow as a selectable servlet implementation again (for example, `--servlet=undertow` on the API/CLI, or the `grails-undertow` feature).
 
 ==== 12. HandlerAdapter.getLastModified Removed
 
@@ -869,7 +879,8 @@ class DemoTagLib {
 
 Method tags with the conventional signatures `def tag(Map attrs)`, `def tag(Closure body)`, and `def tag(Map attrs, Closure body)` are discovered automatically. Zero-argument method tags and method tags that bind named attributes directly to method parameters must use `@grails.gsp.Tag`; this avoids exposing ordinary public helper methods as tags.
 
-Grails Gradle application builds preserve Java and Groovy method parameter names by default (see §22.3 below). If you compile TagLib classes outside those plugins, enable Java `-parameters` and Groovy `groovyOptions.parameters = true` so `@Tag` methods can bind attributes by parameter name.
+Grails Gradle application builds preserve Java and Groovy method parameter names by default (see §22.3 below).
+If you compile TagLib classes outside those plugins, enable Java `-parameters` and Groovy `groovyOptions.parameters = true` so `@Tag` methods can bind attributes by parameter name.
 
 To exclude a conventional public method from being exposed as a tag (for example, a helper that must remain public to satisfy an interface), annotate it with `@grails.gsp.NotATag`:
 
@@ -965,7 +976,8 @@ grails {
 }
 ----
 
-NOTE: This Gradle extension property controls Groovy compilation only (`groovyOptions.parameters`). Java parameter-name preservation is enabled by the Spring Boot Gradle plugin, which adds `-parameters` to every `JavaCompile` task by default since Spring Boot 3.2. Grails 8 applications inherit this through the Spring Boot Gradle plugin and require no additional configuration for Java sources.
+NOTE: This Gradle extension property controls Groovy compilation only (`groovyOptions.parameters`).
+Java parameter-name preservation is enabled by the Spring Boot Gradle plugin, which adds `-parameters` to every `JavaCompile` task by default since Spring Boot 3.2. Grails 8 applications inherit this through the Spring Boot Gradle plugin and require no additional configuration for Java sources.
 
 If you compile TagLib classes outside the Grails Gradle plugin (for example, in a standalone Groovy module, a plain Spring Boot application that does not apply `org.springframework.boot`, or a build that disables the Spring Boot plugin's compiler configuration), enable parameter-name preservation explicitly so `@grails.gsp.Tag` methods can bind attributes by parameter name:
 
@@ -980,7 +992,8 @@ tasks.withType(GroovyCompile).configureEach {
 }
 ----
 
-Without these flags, `Parameter.getName()` returns synthetic names such as `arg0`, the attribute lookup misses, and the call surfaces as `MissingMethodException` at runtime. The `@Tag`-annotated method itself produces no compile-time warning, because preservation is a property of the build, not of the source file.
+Without these flags, `Parameter.getName()` returns synthetic names such as `arg0`, the attribute lookup misses, and the call surfaces as `MissingMethodException` at runtime.
+The `@Tag`-annotated method itself produces no compile-time warning, because preservation is a property of the build, not of the source file.
 
 ==== 23. Known Plugin Incompatibilities
 
@@ -1518,3 +1531,77 @@ Both hooks may be used on the same plugin during migration; when a registrar and
 **Bean-definition overriding edge case.** Grails defaults `spring.main.allow-bean-definition-overriding` to `true`, and under that default nothing changes: an application bean (from the application class, `resources.groovy` or `resources.xml`) that uses the same name as a plugin bean still replaces the plugin's bean. However, because plugin beans now register earlier and application beans register in a separate, later step, an application that explicitly sets `spring.main.allow-bean-definition-overriding` to `false` will see a `BeanDefinitionOverrideException` for an application bean that shadows a plugin bean — in previous releases the two definitions were merged before a single registry write, so the shadowing was silent even with overriding disabled.
 
 **Most applications and plugins need no action.** Behavior only changes where a plugin bean and a conditional Boot bean competed for the same name or type — the plugin bean now wins, which is almost always the intended outcome.
+
+==== 34. Extension API Compatibility Notes
+
+Most Grails applications do not call the Grails extension APIs listed below directly.
+They can affect applications, plugins, or build logic that import these public classes or override these public extension points directly.
+Unsupported internal implementation details are not covered here.
+
+[cols="1,2,2", options="header"]
+|===
+| Module
+| Changed or removed API
+| Migration note
+
+| `grails-codecs`
+| `org.grails.plugins.codecs.CodecsGrailsPlugin` no longer overrides `doWithSpring()`
+| Do not depend on that plugin override to contribute codec bean definitions.
+Custom plugins should register their own beans from their own `doWithSpring()` implementation.
+
+| `grails-controllers`
+| `ControllersAutoConfiguration.dispatcherServletRegistration(...)` now returns Spring Boot 4's `org.springframework.boot.webmvc.autoconfigure.DispatcherServletRegistrationBean`
+| Update direct imports, overrides, and binary integrations that referenced the Spring Boot 3 return type.
+
+| `grails-converters`
+| `grails.web.JSONBuilder`
+| Use Groovy's `groovy.json.JsonBuilder` or `groovy.json.StreamingJsonBuilder` for JSON builder code.
+
+| `grails-core`
+| `GrailsApplicationPostProcessor`, `ProfilingGrailsApplicationPostProcessor`, and `DefaultGrailsPluginManager` plugin-discovery wiring changed
+| Update custom bootstrapping code or subclasses that construct `GrailsApplicationPostProcessor` or `DefaultGrailsPluginManager` directly to pass the plugin-discovery dependency.
+`ProfilingGrailsApplicationPostProcessor` keeps its `GrailsApplicationLifeCycle`, `ApplicationContext`, and `Class...` constructor shape, but the application context must expose the `grailsPluginDiscovery` bean.
+This was introduced during the Grails 7.1 plugin-loading changes and remains required in Grails 8.
+
+| `grails-core`
+| `grails.plugins.PluginFilter`, `IncludingPluginFilter`, `ExcludingPluginFilter`, `NoOpPluginFilter`, and related filter types
+| Import replacement types from the `org.apache.grails.core.plugins.filters` package, such as `PluginFilter`, `IncludingPluginFilter`, `ExcludingPluginFilter`, and `NoOpPluginFilter`.
+
+| `grails-core`
+| Legacy mixin transform APIs such as `grails.util.Mixin`, `MixinTargetAware`, and `MixinTransformation`
+| Replace legacy mixin usage with Groovy traits, extension methods, or explicit composition.
+
+| `grails-core`
+| `grails.validation.ConstraintsEvaluator`
+| Use `org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator`.
+
+| `grails-core`
+| `BinaryGrailsPluginDescriptor`, `CorePluginFinder`, and `BinaryGrailsPlugin.getBinaryDescriptor()`
+| Use the current plugin-discovery APIs and `BinaryGrailsPlugin.getPluginDescriptor()`.
+
+| `grails-domain-class`
+| `ConstraintEvaluatorAdapter` and `GrailsDomainClassAutoConfiguration.constraintsEvaluator(...)`
+| Code that imported the auto-configuration method should use the current `validateableConstraintsEvaluator(...)` bean path and the datastore constraint evaluator APIs.
+
+| `grails-fields`
+| `BeanPropertyAccessor.getBeanClass()`, its setter, `PropertyPathAccessor.getBeanClass()`, `FormFieldsTagLib.input(...)`, and direct `render*` helper methods
+| Use the `beanType` property exposed by the accessors.
+Custom field renderers should go through the documented `f:field`, `f:widget`, and `f:displayWidget` tags and templates instead of calling private render helpers directly.
+
+| `grails-gradle-plugins`
+| `ApplicationContextCommandTask`, `ApplicationContextScriptTask`, `ProfileCompilerTask`, and `GrailsRunTask` are abstract; `GrailsGradlePlugin.createBuildPropertiesTask(...)` no longer returns a task value; several `IntegrationTestGradlePlugin` constants were removed
+| Register these task types through Gradle task registration and update custom plugins that subclass `GrailsGradlePlugin` or read integration-test constants to use Gradle source sets, configurations, and the current test-phase APIs.
+
+| `grails-shell-cli`
+| `AetherGrapeEngine` and `AetherGrapeEngineFactory`
+| Use `MavenResolverGrapeEngine` and `MavenResolverGrapeEngineFactory` if you extend the legacy shell dependency resolver.
+
+| `grails-shell-cli`
+| JLine 2 `complete(...)` signatures
+| Implement the JLine 3 `org.jline.reader.Completer` contract, `complete(LineReader, ParsedLine, List<Candidate>)`.
+
+| `grails-spring`
+| `GrailsApplicationContext.onRefresh()`
+| Custom context subclasses should use supported Spring lifecycle extension points instead of overriding this removed hook.
+Spring theme APIs removed from the same area are covered in section 10.
+|===

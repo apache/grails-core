@@ -81,6 +81,43 @@ class GrailsGspSpec extends ApplicationContextSpec implements CommandOutputFixtu
         output.containsKey("grails-app/views/notFound.gsp")
     }
 
+    void "test default index page is internationalized"() {
+        when:
+        final def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS))
+        final String index = output["grails-app/views/index.gsp"]
+
+        then: "user-facing text renders through message codes, so the language selector actually translates the page"
+        index.contains('<title><g:message code="welcome.title"/></title>')
+        index.contains('<g:message code="welcome.congratulations"/>')
+        index.contains("message(code: 'welcome.reloading.active')")
+        index.contains("message(code: 'welcome.filter.name')")
+
+        and: "no user-facing English remains hardcoded (product names like Grails/Spring stay literal)"
+        !index.contains("Congratulations, you have successfully started")
+        !index.contains(">Available Controllers<")
+        !index.contains(">Installed plugins<")
+    }
+
+    void "test default index page carries the brand hero and per-card name filters"() {
+        when:
+        final def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS))
+        final String index = output["grails-app/views/index.gsp"]
+
+        then: "the Grails cups hero opens the page"
+        index.contains('class="welcome-hero-cups"')
+        index.contains('welcome-hero-body')
+
+        and: "controllers and plugins are filterable by name, with empty states"
+        index.contains('data-filter-list="#controllers-list"')
+        index.contains('data-filter-list="#plugins-table tbody"')
+        index.contains('id="controllers-empty"')
+        index.contains('id="plugins-empty"')
+
+        and: "count badges are theme-adaptive rather than hardcoded light"
+        index.contains('badge bg-body-tertiary text-body border')
+        !index.contains('text-bg-light')
+    }
+
     void "test default layout includes the language selector dropdown"() {
         when:
         final def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS))
@@ -92,6 +129,102 @@ class GrailsGspSpec extends ApplicationContextSpec implements CommandOutputFixtu
         and: "and renders a Bootstrap dropdown that switches language via ?lang="
         layout.contains("dropdown-toggle")
         layout.contains('?lang=${availableLocale.toLanguageTag()}')
+    }
+
+    void "test default layout includes a controllers dropdown on every page"() {
+        when:
+        final def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS))
+        final String layout = output["grails-app/views/layouts/main.gsp"]
+
+        then: "the navbar lists every controller and links to its default action"
+        layout.contains('id="controllersDropdown"')
+        layout.contains('<g:message code="welcome.artefact.controllers"/>')
+        layout.contains('grailsApplication.controllerClasses')
+        layout.contains('<g:link controller="${c.logicalPropertyName}" namespace="${c.namespace}"')
+    }
+
+    void "test the profile skeleton mirrors the forge welcome templates"() {
+        given: "the two app generators ship the same default UI from different trees"
+        final File forgeResources = new File("src/main/resources").canonicalFile
+        final File profiles = new File("../../grails-profiles").canonicalFile
+        final Map<String, String> mirrored = [
+                "gsp/index.gsp"                     : "web/skeleton/grails-app/views/index.gsp",
+                "gsp/main.gsp"                      : "web/skeleton/grails-app/views/layouts/main.gsp",
+                "assets/stylesheets/welcome.css"    : "web/skeleton/grails-app/assets/stylesheets/welcome.css",
+                "assets/javascripts/welcome.js"     : "web/skeleton/grails-app/assets/javascripts/welcome.js",
+        ]
+        new File(forgeResources, "i18n").listFiles({ File f -> f.name.startsWith("messages") } as FileFilter).each {
+            mirrored["i18n/" + it.name] = "base/skeleton/grails-app/i18n/" + it.name
+        }
+
+        expect: "every mirrored file is byte-identical, so create-app and forge generate the same application"
+        mirrored.every { forgePath, profilePath ->
+            final File forgeFile = new File(forgeResources, forgePath)
+            final File profileFile = new File(profiles, profilePath)
+            assert forgeFile.file, "missing forge template ${forgeFile}"
+            assert profileFile.file, "missing profile skeleton ${profileFile}"
+            assert forgeFile.bytes == profileFile.bytes, "${forgePath} has drifted from ${profilePath}"
+            true
+        }
+    }
+
+    void "test default layout keeps the navbar minimal and pins the default language"() {
+        when:
+        final def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS))
+        final String layout = output["grails-app/views/layouts/main.gsp"]
+
+        then: "only controllers, language and theme live in the navbar"
+        layout.contains('id="controllersDropdown"')
+        layout.contains('id="localeDropdown"')
+        layout.contains('id="themeDropdown"')
+        !layout.contains('id="statusDropdown"')
+        !layout.contains('id="pluginsDropdown"')
+        !layout.contains('id="actuatorsDropdown"')
+
+        and: "the language menu pins the default language on top so users can always navigate back"
+        layout.contains("getProperty('spring.web.locale', 'en')")
+        layout.contains('java.util.Locale.ENGLISH')
+        layout.indexOf('defaultLocale.getDisplayName(defaultLocale)') < layout.indexOf('availableLocale.getDisplayName(availableLocale)')
+    }
+
+    void "test default index page lists exposed actuator endpoints when actuator is present"() {
+        when:
+        final def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS))
+        final String index = output["grails-app/views/index.gsp"]
+
+        then: "the actuators card renders only when actuator exposes web endpoints, resolved without a hard class reference"
+        index.contains('<g:message code="welcome.actuators"/>')
+        index.contains("ClassUtils.isPresent('org.springframework.boot.actuate.endpoint.web.WebEndpointsSupplier'")
+        index.contains('management.endpoints.web.base-path')
+        index.contains('${actuatorUrlBase}${actuatorBasePath}/${endpoint.rootPath}')
+
+        and: "a separate management port redirects the links off the application port"
+        index.contains("getProperty('management.server.port')")
+
+        and: "the runtime versions card reports Spring Security only when the dependency is present"
+        index.contains("ClassUtils.isPresent('org.springframework.security.core.SpringSecurityCoreVersion'")
+        index.contains('Spring Security')
+    }
+
+    void "test default layout chrome is internationalized"() {
+        when:
+        final def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS))
+        final String layout = output["grails-app/views/layouts/main.gsp"]
+
+        then: "footer cards, theme selector and spinner render through message codes"
+        layout.contains('<g:message code="layout.guides.text"/>')
+        layout.contains('<g:message code="layout.docs.text"/>')
+        layout.contains('<g:message code="layout.community.text"/>')
+        layout.contains('<g:message code="layout.theme.light"/>')
+        layout.contains("message(code: 'layout.theme.toggle')")
+        layout.contains('<g:message code="layout.loading"/>')
+
+        and: "no user-facing English remains hardcoded in the layout"
+        !layout.contains("Building your first Grails app")
+        !layout.contains("Ready to dig in?")
+        !layout.contains("Get feedback and share your experience")
+        !layout.contains(">Toggle theme<")
+        !layout.contains(">Loading...<")
     }
 
     void "test default layout includes the light/dark/auto theme selector"() {

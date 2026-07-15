@@ -1059,8 +1059,14 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
 
         def alias = args[0] instanceof CharSequence ? args[0].toString() : null
 
-        def existing = associationCriteriaMap[methodName]
-        alias = !alias && existing ? existing.alias : alias
+        // Explicit null checks: Groovy truth on a DetachedCriteria invokes asBoolean(),
+        // which executes the criteria as a query - a spurious query for a repeated
+        // reference to a persistent association, and an outright failure for a repeated
+        // reference to an embedded component (its class is not a queryable root entity).
+        DetachedAssociationCriteria existing = associationCriteriaMap[methodName]
+        if (alias == null && existing != null) {
+            alias = existing.alias
+        }
         DetachedAssociationCriteria associationCriteria = alias ? new DetachedAssociationCriteria(prop.associatedEntity.javaClass, prop, alias)
                 : new DetachedAssociationCriteria(prop.associatedEntity.javaClass, prop)
 
