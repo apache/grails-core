@@ -47,27 +47,33 @@ public final class UrlMappingsIndexProperties {
     }
 
     public static UrlMappingsIndexProperties load(ClassLoader classLoader) {
+        ClassLoader threadContextClassLoader;
         try {
-            ClassLoader threadContextClassLoader = Thread.currentThread().getContextClassLoader();
-            for (ClassLoader loader : new ClassLoader[] {threadContextClassLoader, classLoader}) {
-                if (loader == null) {
+            threadContextClassLoader = Thread.currentThread().getContextClassLoader();
+        }
+        catch (RuntimeException e) {
+            threadContextClassLoader = null;
+        }
+        for (ClassLoader loader : new ClassLoader[] {threadContextClassLoader, classLoader}) {
+            if (loader == null) {
+                continue;
+            }
+            try (InputStream inputStream = loader.getResourceAsStream(LOCATION)) {
+                if (inputStream == null) {
                     continue;
                 }
-                try (InputStream inputStream = loader.getResourceAsStream(LOCATION)) {
-                    if (inputStream == null) {
-                        continue;
-                    }
-                    Properties properties = new Properties();
-                    properties.load(inputStream);
-                    return new UrlMappingsIndexProperties(true, properties);
+                Properties properties = new Properties();
+                properties.load(inputStream);
+                return new UrlMappingsIndexProperties(true, properties);
+            }
+            catch (IOException | RuntimeException e) {
+                // An unreadable or malformed optional descriptor from one classloader must
+                // never abort startup and must not stop discovery through the remaining
+                // classloader; log and continue to the fallback loader.
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Unable to load " + LOCATION + " from " + loader + "; ignoring descriptor", e);
                 }
             }
-        }
-        catch (IOException | RuntimeException e) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Unable to load " + LOCATION + "; ignoring descriptor", e);
-            }
-            return EMPTY;
         }
         return EMPTY;
     }
