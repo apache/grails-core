@@ -48,7 +48,7 @@ public abstract class FeatureRepository implements CrudRepository<Feature, Long>
     }
 
     @ReadOnly
-    List<TotalDTO> topFeatures() {
+    public List<TotalDTO> topFeatures() {
         return this.jdbcOperations
                 .prepareStatement(query("name", "feature"),
                         statement -> {
@@ -59,7 +59,7 @@ public abstract class FeatureRepository implements CrudRepository<Feature, Long>
     }
 
     @ReadOnly
-    List<TotalDTO> topGorm() {
+    public List<TotalDTO> topGorm() {
         return this.jdbcOperations
                 .prepareStatement(query("gorm", "application"),
                         statement -> {
@@ -70,7 +70,7 @@ public abstract class FeatureRepository implements CrudRepository<Feature, Long>
     }
 
     @ReadOnly
-    List<TotalDTO> topBuildTools() {
+    public List<TotalDTO> topBuildTools() {
         return this.jdbcOperations
                 .prepareStatement(query("build_tool", "application"),
                         statement -> {
@@ -81,7 +81,7 @@ public abstract class FeatureRepository implements CrudRepository<Feature, Long>
     }
 
     @ReadOnly
-    List<TotalDTO> topReloading() {
+    public List<TotalDTO> topReloading() {
         return this.jdbcOperations
                 .prepareStatement(query("reloading", "application"),
                         statement -> {
@@ -92,7 +92,7 @@ public abstract class FeatureRepository implements CrudRepository<Feature, Long>
     }
 
     @ReadOnly
-    List<TotalDTO> topJdkVersion() {
+    public List<TotalDTO> topJdkVersion() {
         return this.jdbcOperations
                 .prepareStatement(query("jdk_version", "application"),
                         statement -> {

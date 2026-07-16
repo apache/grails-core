@@ -49,10 +49,11 @@ import jakarta.inject.Inject
 @Property(name = 'micronaut.security.token.jwt.claims-validators.audience', value = 'forge-analytics')
 @Property(name = 'micronaut.security.token.jwt.claims-validators.issuer', value = 'forge-test')
 @Property(name = 'micronaut.security.token.jwt.signatures.secret.generator.secret', value = 'pleaseChangeThisSecretForANewOneAndMakeItLongEnough')
+@Property(name = 'micronaut.security.token.jwt.signatures.secret.validation.secret', value = 'pleaseChangeThisSecretForANewOneAndMakeItLongEnough')
 @Property(name = 'grails.forge.analytics.caller-subject', value = '1234567890')
 class AnalyticsControllerSecuritySpec extends Specification {
 
-    @Inject @Client('/analytics') HttpClient client
+    @Inject @Client('/') HttpClient client
     @Inject ApplicationRepository applicationRepository
     @Inject FeatureRepository featureRepository
     @Inject JdbcOperations jdbcOperations
@@ -62,7 +63,7 @@ class AnalyticsControllerSecuritySpec extends Specification {
         given:
         Generated generated = new Generated(
                 ApplicationType.WEB,
-                GormImpl.HIBERNATE,
+                GormImpl.HIBERNATE5,
                 ServletImpl.TOMCAT,
                 DevelopmentReloading.DEVTOOLS,
                 JdkVersion.DEFAULT_OPTION
@@ -70,7 +71,7 @@ class AnalyticsControllerSecuritySpec extends Specification {
         generated.setSelectedFeatures([new SelectedFeature('google-cloud-function')])
 
         when:
-        client.toBlocking().exchange(HttpRequest.POST('/report', generated), String)
+        client.toBlocking().exchange(HttpRequest.POST('/analytics/report', generated), String)
 
         then:
         HttpClientResponseException e = thrown(HttpClientResponseException)
@@ -81,12 +82,11 @@ class AnalyticsControllerSecuritySpec extends Specification {
 
     void 'top analytics data is not rejected as unauthenticated'() {
         when:
-        def response = client.toBlocking().exchange(HttpRequest.GET('/top/features'), String)
+        def response = client.toBlocking().exchange(HttpRequest.GET('/analytics/top/features'), String)
 
         then:
         response.status == HttpStatus.OK
         response.body() == '[]'
-        1 * featureRepository.topFeatures() >> []
         0 * applicationRepository._
     }
 
@@ -94,7 +94,7 @@ class AnalyticsControllerSecuritySpec extends Specification {
         given:
         Generated generated = new Generated(
                 ApplicationType.WEB,
-                GormImpl.HIBERNATE,
+                GormImpl.HIBERNATE5,
                 ServletImpl.TOMCAT,
                 DevelopmentReloading.DEVTOOLS,
                 JdkVersion.DEFAULT_OPTION
@@ -102,7 +102,7 @@ class AnalyticsControllerSecuritySpec extends Specification {
         generated.setSelectedFeatures([new SelectedFeature('google-cloud-function')])
 
         when:
-        client.toBlocking().exchange(HttpRequest.POST('/report', generated).bearerAuth(wrongAudienceToken()), String)
+        client.toBlocking().exchange(HttpRequest.POST('/analytics/report', generated).bearerAuth(wrongAudienceToken()), String)
 
         then:
         HttpClientResponseException e = thrown(HttpClientResponseException)
@@ -115,7 +115,7 @@ class AnalyticsControllerSecuritySpec extends Specification {
         given:
         Generated generated = new Generated(
                 ApplicationType.WEB,
-                GormImpl.HIBERNATE,
+                GormImpl.HIBERNATE5,
                 ServletImpl.TOMCAT,
                 DevelopmentReloading.DEVTOOLS,
                 JdkVersion.DEFAULT_OPTION
@@ -123,7 +123,7 @@ class AnalyticsControllerSecuritySpec extends Specification {
         generated.setSelectedFeatures([new SelectedFeature('google-cloud-function')])
 
         when:
-        client.toBlocking().exchange(HttpRequest.POST('/report', generated).bearerAuth(wrongCallerToken()), String)
+        client.toBlocking().exchange(HttpRequest.POST('/analytics/report', generated).bearerAuth(wrongCallerToken()), String)
 
         then:
         HttpClientResponseException e = thrown(HttpClientResponseException)
@@ -141,7 +141,9 @@ class AnalyticsControllerSecuritySpec extends Specification {
     @MockBean(FeatureRepository)
     @NonNull
     FeatureRepository featureRepository() {
-        Mock(FeatureRepository)
+        Mock(FeatureRepository) {
+            topFeatures() >> []
+        }
     }
 
     @MockBean(JdbcOperations)
@@ -167,4 +169,5 @@ class AnalyticsControllerSecuritySpec extends Specification {
                 aud: 'forge-analytics'
         ]).orElseThrow()
     }
+
 }

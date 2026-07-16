@@ -30,52 +30,49 @@ import io.micronaut.security.annotation.Secured;
 import io.micronaut.security.rules.SecurityRule;
 import org.grails.forge.analytics.Generated;
 
-import jakarta.transaction.Transactional;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Controller("/analytics")
 @ExecuteOn(TaskExecutors.IO)
-@Secured(SecurityRule.IS_AUTHENTICATED)
 public class AnalyticsController {
 
-    private final ApplicationRepository applicationRepository;
     private final FeatureRepository featureRepository;
+    private final AnalyticsReporter analyticsReporter;
 
     public AnalyticsController(
-            ApplicationRepository applicationRepository,
-            FeatureRepository featureRepository) {
-        this.applicationRepository = applicationRepository;
+            FeatureRepository featureRepository,
+            AnalyticsReporter analyticsReporter) {
         this.featureRepository = featureRepository;
+        this.analyticsReporter = analyticsReporter;
     }
 
-    @Get("/top/features")
+    @Get("top/features")
     @Secured(SecurityRule.IS_ANONYMOUS)
-    List<TotalDTO> topFeatures() {
+    public List<TotalDTO> topFeatures() {
         return featureRepository.topFeatures();
     }
 
-    @Get("/top/jdks")
+    @Get("top/jdks")
     @Secured(SecurityRule.IS_ANONYMOUS)
-    List<TotalDTO> topJdks() {
+    public List<TotalDTO> topJdks() {
         return featureRepository.topJdkVersion();
     }
 
-    @Get("/top/buildTools")
+    @Get("top/buildTools")
     @Secured(SecurityRule.IS_ANONYMOUS)
-    List<TotalDTO> topBuilds() {
+    public List<TotalDTO> topBuilds() {
         return featureRepository.topBuildTools();
     }
 
-    @Get("/top/gorm")
+    @Get("top/gorm")
     @Secured(SecurityRule.IS_ANONYMOUS)
-    List<TotalDTO> topGorm() {
+    public List<TotalDTO> topGorm() {
         return featureRepository.topGorm();
     }
 
-    @Get("/top/reloading")
+    @Get("top/reloading")
     @Secured(SecurityRule.IS_ANONYMOUS)
-    List<TotalDTO> topReloading() {
+    public List<TotalDTO> topReloading() {
         return featureRepository.topReloading();
     }
 
@@ -84,23 +81,10 @@ public class AnalyticsController {
      * @param generated The generated data
      * @return A future
      */
-    @Post("/report")
-    @Transactional
+    @Post("report")
+    @Secured(SecurityRule.IS_AUTHENTICATED)
     @ExecuteOn(TaskExecutors.IO)
-    HttpStatus applicationGenerated(@NonNull @Body Generated generated) {
-        Application application = new Application(
-                generated.getType(),
-                generated.getGorm(),
-                generated.getReloading(),
-                generated.getJdkVersion(),
-                generated.getGrailsVersion()
-        );
-        Application saved = applicationRepository.save(application);
-        List<Feature> features = generated.getSelectedFeatures().stream()
-                .map(f -> new Feature(saved, f.getName()))
-                .collect(Collectors.toList());
-
-        featureRepository.saveAll(features);
-        return HttpStatus.ACCEPTED;
+    public HttpStatus applicationGenerated(@NonNull @Body Generated generated) {
+        return analyticsReporter.report(generated);
     }
 }

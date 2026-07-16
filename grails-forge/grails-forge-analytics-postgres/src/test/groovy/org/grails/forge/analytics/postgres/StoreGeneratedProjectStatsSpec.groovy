@@ -64,10 +64,11 @@ class StoreGeneratedProjectStatsSpec extends Specification implements TestProper
          "datasources.default.username":postgres.getUsername(),
          "datasources.default.password":postgres.getPassword(),
          "datasources.default.dialect": Dialect.POSTGRES.name(),
-         "micronaut.security.token.jwt.claims-validators.audience":"forge-analytics",
-         "micronaut.security.token.jwt.claims-validators.issuer":"forge-test",
-         "micronaut.security.token.jwt.signatures.secret.generator.secret":"pleaseChangeThisSecretForANewOneAndMakeItLongEnough",
-         "grails.forge.analytics.caller-subject":"1234567890"]
+          "micronaut.security.token.jwt.claims-validators.audience":"forge-analytics",
+          "micronaut.security.token.jwt.claims-validators.issuer":"forge-test",
+          "micronaut.security.token.jwt.signatures.secret.generator.secret":"pleaseChangeThisSecretForANewOneAndMakeItLongEnough",
+          "micronaut.security.token.jwt.signatures.secret.validation.secret":"pleaseChangeThisSecretForANewOneAndMakeItLongEnough",
+          "grails.forge.analytics.caller-subject":"1234567890"]
     }
 
     @Inject @Client('/analytics') HttpClient client
@@ -125,7 +126,7 @@ class StoreGeneratedProjectStatsSpec extends Specification implements TestProper
 
     @NonNull
     private HttpRequest<Generated> authorizedRequest(@NonNull Generated generated) {
-        HttpRequest.POST('/report', generated).bearerAuth(bearerToken())
+        HttpRequest.POST('report', generated).bearerAuth(bearerToken())
     }
 
     @NonNull
